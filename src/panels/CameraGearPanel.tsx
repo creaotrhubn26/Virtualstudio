@@ -22,6 +22,7 @@ interface CameraBody {
   sensor: string;
   megapixels: number;
   maxISO: number;
+  image?: string;
 }
 
 interface Lens {
@@ -31,31 +32,32 @@ interface Lens {
   focalLength: string;
   aperture: string;
   type: 'prime' | 'zoom' | 'macro' | 'tele' | 'probe';
+  image?: string;
 }
 
 const CAMERA_BODIES: CameraBody[] = [
-  { id: 'sony-a7iv', name: 'Sony A7 IV', brand: 'Sony', sensor: 'Full Frame', megapixels: 33, maxISO: 51200 },
-  { id: 'canon-r5', name: 'Canon EOS R5', brand: 'Canon', sensor: 'Full Frame', megapixels: 45, maxISO: 51200 },
-  { id: 'nikon-z8', name: 'Nikon Z8', brand: 'Nikon', sensor: 'Full Frame', megapixels: 45.7, maxISO: 25600 },
+  { id: 'sony-a7iv', name: 'Sony A7 IV', brand: 'Sony', sensor: 'Full Frame', megapixels: 33, maxISO: 51200, image: '/images/gear/sony_a7_iv_camera.png' },
+  { id: 'canon-r5', name: 'Canon EOS R5', brand: 'Canon', sensor: 'Full Frame', megapixels: 45, maxISO: 51200, image: '/images/gear/canon_eos_r5_camera.png' },
+  { id: 'nikon-z8', name: 'Nikon Z8', brand: 'Nikon', sensor: 'Full Frame', megapixels: 45.7, maxISO: 25600, image: '/images/gear/nikon_z8_camera.png' },
   { id: 'fuji-xh2s', name: 'Fujifilm X-H2S', brand: 'Fujifilm', sensor: 'APS-C', megapixels: 26.1, maxISO: 12800 },
-  { id: 'hasselblad-x2d', name: 'Hasselblad X2D', brand: 'Hasselblad', sensor: 'Medium Format', megapixels: 100, maxISO: 25600 },
+  { id: 'hasselblad-x2d', name: 'Hasselblad X2D', brand: 'Hasselblad', sensor: 'Medium Format', megapixels: 100, maxISO: 25600, image: '/images/gear/hasselblad_x2d_camera.png' },
   { id: 'phase-one', name: 'Phase One IQ4', brand: 'Phase One', sensor: 'Medium Format', megapixels: 150, maxISO: 12800 },
 ];
 
 const LENSES: Lens[] = [
   { id: 'sony-24-70', name: 'Sony 24-70mm f/2.8 GM II', brand: 'Sony', focalLength: '24-70mm', aperture: 'f/2.8', type: 'zoom' },
-  { id: 'sony-85', name: 'Sony 85mm f/1.4 GM', brand: 'Sony', focalLength: '85mm', aperture: 'f/1.4', type: 'prime' },
+  { id: 'sony-85', name: 'Sony 85mm f/1.4 GM', brand: 'Sony', focalLength: '85mm', aperture: 'f/1.4', type: 'prime', image: '/images/gear/sony_85mm_gm_lens.png' },
   { id: 'sony-50', name: 'Sony 50mm f/1.2 GM', brand: 'Sony', focalLength: '50mm', aperture: 'f/1.2', type: 'prime' },
   { id: 'sony-90-macro', name: 'Sony 90mm f/2.8 Macro G', brand: 'Sony', focalLength: '90mm', aperture: 'f/2.8', type: 'macro' },
   { id: 'canon-rf85', name: 'Canon RF 85mm f/1.2L', brand: 'Canon', focalLength: '85mm', aperture: 'f/1.2', type: 'prime' },
   { id: 'canon-rf100-macro', name: 'Canon RF 100mm f/2.8L Macro', brand: 'Canon', focalLength: '100mm', aperture: 'f/2.8', type: 'macro' },
-  { id: 'canon-rf70-200', name: 'Canon RF 70-200mm f/2.8L', brand: 'Canon', focalLength: '70-200mm', aperture: 'f/2.8', type: 'tele' },
+  { id: 'canon-rf70-200', name: 'Canon RF 70-200mm f/2.8L', brand: 'Canon', focalLength: '70-200mm', aperture: 'f/2.8', type: 'tele', image: '/images/gear/canon_rf_70-200mm_lens.png' },
   { id: 'nikon-z50', name: 'Nikon Z 50mm f/1.2 S', brand: 'Nikon', focalLength: '50mm', aperture: 'f/1.2', type: 'prime' },
   { id: 'nikon-z105-macro', name: 'Nikon Z MC 105mm f/2.8 VR S', brand: 'Nikon', focalLength: '105mm', aperture: 'f/2.8', type: 'macro' },
-  { id: 'sigma-art35', name: 'Sigma 35mm f/1.4 DG DN Art', brand: 'Sigma', focalLength: '35mm', aperture: 'f/1.4', type: 'prime' },
+  { id: 'sigma-art35', name: 'Sigma 35mm f/1.4 DG DN Art', brand: 'Sigma', focalLength: '35mm', aperture: 'f/1.4', type: 'prime', image: '/images/gear/sigma_35mm_art_lens.png' },
   { id: 'sigma-105-macro', name: 'Sigma 105mm f/2.8 DG DN Macro', brand: 'Sigma', focalLength: '105mm', aperture: 'f/2.8', type: 'macro' },
   { id: 'zeiss-otus85', name: 'Zeiss Otus 85mm f/1.4', brand: 'Zeiss', focalLength: '85mm', aperture: 'f/1.4', type: 'prime' },
-  { id: 'laowa-probe', name: 'Laowa 24mm f/14 2x Macro Probe', brand: 'Laowa', focalLength: '24mm', aperture: 'f/14', type: 'probe' },
+  { id: 'laowa-probe', name: 'Laowa 24mm f/14 2x Macro Probe', brand: 'Laowa', focalLength: '24mm', aperture: 'f/14', type: 'probe', image: '/images/gear/laowa_probe_macro_lens.png' },
   { id: 'laowa-probe-cine', name: 'Laowa 24mm T14 2x Periprobe Cine', brand: 'Laowa', focalLength: '24mm', aperture: 'T/14', type: 'probe' },
   { id: 'innovision-probe', name: 'Innovision Probe II Plus', brand: 'Innovision', focalLength: '9.8mm', aperture: 'f/5.6', type: 'probe' },
 ];
@@ -150,12 +152,24 @@ export function CameraGearPanel() {
               borderRadius: 1,
               cursor: 'pointer',
               display: 'flex',
-              justifyContent: 'space-between',
               alignItems: 'center',
+              gap: 1.5,
               '&:hover': { bgcolor: '#2a2a2a' },
             }}
           >
-            <Box>
+            {camera.image ? (
+              <Box
+                component="img"
+                src={camera.image}
+                alt={camera.name}
+                sx={{ width: 48, height: 48, borderRadius: 1, objectFit: 'cover', bgcolor: '#333' }}
+              />
+            ) : (
+              <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <CameraAltIcon sx={{ color: '#666' }} />
+              </Box>
+            )}
+            <Box sx={{ flex: 1 }}>
               <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>{camera.name}</Typography>
               <Typography variant="caption" sx={{ color: '#888' }}>
                 {camera.sensor} · {camera.megapixels}MP · ISO {camera.maxISO}
@@ -204,12 +218,24 @@ export function CameraGearPanel() {
               borderRadius: 1,
               cursor: 'pointer',
               display: 'flex',
-              justifyContent: 'space-between',
               alignItems: 'center',
+              gap: 1.5,
               '&:hover': { bgcolor: '#2a2a2a' },
             }}
           >
-            <Box>
+            {lens.image ? (
+              <Box
+                component="img"
+                src={lens.image}
+                alt={lens.name}
+                sx={{ width: 48, height: 48, borderRadius: 1, objectFit: 'cover', bgcolor: '#333' }}
+              />
+            ) : (
+              <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <CameraIcon sx={{ color: '#666' }} />
+              </Box>
+            )}
+            <Box sx={{ flex: 1 }}>
               <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>{lens.name}</Typography>
               <Typography variant="caption" sx={{ color: '#888' }}>
                 {lens.focalLength} · {lens.aperture} · {lens.type === 'macro' ? 'Makro' : lens.type.charAt(0).toUpperCase() + lens.type.slice(1)}
