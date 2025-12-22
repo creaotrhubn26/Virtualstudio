@@ -620,6 +620,7 @@
         <button class="actor-tab" data-tab="camera">CAMERA GEAR</button>
         <button class="actor-tab" data-tab="equipment">EQUIPMENT</button>
         <button class="actor-tab" data-tab="assets">ASSETS</button>
+        <button class="actor-tab" data-tab="hdri">HDRI</button>
         <div class="actor-panel-actions">
           <span class="panel-toggle-icon">▽ ✕</span>
         </div>
@@ -640,108 +641,10 @@
             <div id="characterLoaderRoot"></div>
           </div>
           <div class="tab-content" data-content="lights">
-            <div class="equipment-grid">
-              <div class="equipment-card" data-light="250ws">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
-                <div class="equipment-name">250 Ws</div>
-              </div>
-              <div class="equipment-card" data-light="360ws">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
-                <div class="equipment-name">360 Ws</div>
-              </div>
-              <div class="equipment-card" data-light="500ws">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
-                <div class="equipment-name">500 Ws</div>
-              </div>
-              <div class="equipment-card" data-light="1000ws">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
-                <div class="equipment-name">1000 Ws</div>
-              </div>
-              <div class="equipment-card" data-light="godox-ad200">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
-                <div class="equipment-name">Godox AD200</div>
-              </div>
-              <div class="equipment-card" data-light="ring-flash">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
-                <div class="equipment-name">Ring Flash</div>
-              </div>
-              <div class="equipment-card" data-light="aputure-60x">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
-                <div class="equipment-name">Aputure LS 60x</div>
-              </div>
-              <div class="equipment-card" data-light="aputure-120d">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
-                <div class="equipment-name">Aputure LS 120d II</div>
-              </div>
-              <div class="equipment-card" data-light="aputure-300x">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
-                <div class="equipment-name">Aputure LS 300x</div>
-              </div>
-              <div class="equipment-card" data-light="aputure-600d">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
-                <div class="equipment-name">Aputure LS 600d Pro</div>
-              </div>
-              <div class="equipment-card" data-light="softbox-60" data-category="light-shapers">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #4a4a4a 0%, #6a6a6a 100%);"></div>
-                <div class="equipment-name">Softbox 60×90</div>
-              </div>
-              <div class="equipment-card" data-light="softbox-90" data-category="light-shapers">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #4a4a4a 0%, #6a6a6a 100%);"></div>
-                <div class="equipment-name">Softbox 90×120</div>
-              </div>
-              <div class="equipment-card" data-light="umbrella" data-category="light-shapers">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #4a4a4a 0%, #6a6a6a 100%);"></div>
-                <div class="equipment-name">Paraply</div>
-              </div>
-              <div class="equipment-card" data-light="beauty-dish" data-category="light-shapers">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #4a4a4a 0%, #6a6a6a 100%);"></div>
-                <div class="equipment-name">Beauty Dish</div>
-              </div>
-              <div class="equipment-card" data-light="reflector" data-category="light-shapers">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #4a4a4a 0%, #6a6a6a 100%);"></div>
-                <div class="equipment-name">Reflektor</div>
-              </div>
-              <div class="equipment-card" data-light="c-stand" data-category="light-shapers">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #4a4a4a 0%, #6a6a6a 100%);"></div>
-                <div class="equipment-name">C-Stand</div>
-              </div>
-            </div>
+            <div id="lightsBrowserRoot"></div>
           </div>
           <div class="tab-content" data-content="camera">
-            <div class="equipment-grid">
-              <div class="equipment-card" data-camera="dslr-canon">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #2a2a2a 0%, #4a4a4a 100%);"></div>
-                <div class="equipment-name">Canon EOS R5</div>
-              </div>
-              <div class="equipment-card" data-camera="dslr-sony">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #2a2a2a 0%, #4a4a4a 100%);"></div>
-                <div class="equipment-name">Sony A7 IV</div>
-              </div>
-              <div class="equipment-card" data-camera="dslr-nikon">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #2a2a2a 0%, #4a4a4a 100%);"></div>
-                <div class="equipment-name">Nikon Z8</div>
-              </div>
-              <div class="equipment-card" data-camera="lens-24">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
-                <div class="equipment-name">24mm f/1.4</div>
-              </div>
-              <div class="equipment-card" data-camera="lens-50">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
-                <div class="equipment-name">50mm f/1.2</div>
-              </div>
-              <div class="equipment-card" data-camera="lens-85">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
-                <div class="equipment-name">85mm f/1.4</div>
-              </div>
-              <div class="equipment-card" data-camera="lens-70-200">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
-                <div class="equipment-name">70-200mm f/2.8</div>
-              </div>
-              <div class="equipment-card" data-camera="trigger">
-                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
-                <div class="equipment-name">Trigger</div>
-              </div>
-            </div>
+            <div id="cameraGearRoot"></div>
           </div>
           <div class="tab-content" data-content="equipment">
             <div class="equipment-grid">
@@ -817,6 +720,9 @@
           </div>
           <div class="tab-content" data-content="assets">
             <div id="assetLibraryRoot"></div>
+          </div>
+          <div class="tab-content" data-content="hdri">
+            <div id="hdriPanelRoot"></div>
           </div>
           <div class="tab-content" data-content="timeline">
             <div id="keyframeTimelineRoot"></div>

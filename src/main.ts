@@ -2,7 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp } from './App';
+import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp } from './App';
 import { useAppStore } from './state/store';
 import { virtualActorService } from './core/services/virtualActorService';
 import { propRenderingService } from './core/services/propRenderingService';
@@ -1975,6 +1975,24 @@ window.addEventListener('DOMContentLoaded', () => {
     if (characterLoaderRoot) {
       const characterRoot = createRoot(characterLoaderRoot);
       characterRoot.render(React.createElement(CharacterLoaderApp, {}));
+    }
+    
+    const lightsBrowserRoot = document.getElementById('lightsBrowserRoot');
+    if (lightsBrowserRoot) {
+      const lightsRoot = createRoot(lightsBrowserRoot);
+      lightsRoot.render(React.createElement(LightsBrowserApp, {}));
+    }
+    
+    const cameraGearRoot = document.getElementById('cameraGearRoot');
+    if (cameraGearRoot) {
+      const cameraRoot = createRoot(cameraGearRoot);
+      cameraRoot.render(React.createElement(CameraGearApp, {}));
+    }
+    
+    const hdriPanelRoot = document.getElementById('hdriPanelRoot');
+    if (hdriPanelRoot) {
+      const hdriRoot = createRoot(hdriPanelRoot);
+      hdriRoot.render(React.createElement(HDRIPanelApp, {}));
     }
     
     if (actorPanelRoot && actorBottomPanel && actorPanelTrigger) {

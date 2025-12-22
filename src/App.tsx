@@ -4,6 +4,9 @@ import { VirtualActorPanel } from './panels/VirtualActorPanel';
 import { KeyframeTimeline } from './panels/KeyframeTimeline';
 import AssetLibraryPanel from './panels/AssetLibraryPanel';
 import { CharacterModelLoader } from './panels/CharacterModelLoader';
+import { LightsBrowser } from './panels/LightsBrowser';
+import { CameraGearPanel } from './panels/CameraGearPanel';
+import { HDRIPanel } from './panels/HDRIPanel';
 
 const darkTheme = createTheme({
   palette: {
@@ -73,6 +76,33 @@ export const CharacterLoaderApp: React.FC = () => {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <CharacterModelLoader />
+    </ThemeProvider>
+  );
+};
+
+export const LightsBrowserApp: React.FC = () => {
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <LightsBrowser />
+    </ThemeProvider>
+  );
+};
+
+export const CameraGearApp: React.FC = () => {
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <CameraGearPanel />
+    </ThemeProvider>
+  );
+};
+
+export const HDRIPanelApp: React.FC = () => {
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <HDRIPanel />
     </ThemeProvider>
   );
 };
