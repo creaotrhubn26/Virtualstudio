@@ -34,7 +34,17 @@ A professional web-based virtual photography studio application built with Babyl
 - Modifier settings
 - Size, contrast, IES, Gobo, Focus sliders
 - Camera settings (Aperture, Shutter, ISO, ND)
+- Light meter display (lux and calculated EV)
 - Export buttons (PNG, Compare A/B)
+
+### Realistic Lighting System
+- 17 professional lights with accurate specifications
+- Lux output at 1 meter for LED continuous lights
+- Guide numbers and lumen-seconds for strobes
+- CRI/TLCI color accuracy ratings
+- Beam angle specifications
+- Inverse square law light falloff calculation
+- Real-time light meter readings at subject position
 
 ### Top Bar
 - Project name (editable)
@@ -125,6 +135,14 @@ Run `npm run dev` to start the development server on port 5000.
 - Interactive light placement with gizmos
 
 ## Recent Changes
+- 2025-12-22: Implemented realistic lighting specifications and light meter
+  - Added technical specs for 17 lights: lux@1m, guide number, CRI/TLCI, beam angle, lumens
+  - Created addLightWithSpecs() for accurate light intensity based on real specs
+  - Inverse square law calculation for light falloff (lux = lux1m / distance^2)
+  - Real-time light meter display showing lux at subject position
+  - Calculated EV based on incident light
+  - Light cards show CRI, guide number, lux output, beam angle
+  - Thumbnail images for all lighting equipment brands
 - 2025-12-22: Integrated LightsBrowser, CameraGearPanel, and HDRIPanel into Studio Library
   - LightsBrowser: 17 professional lights (Godox, Profoto, Aputure), search/filter, favorites
   - CameraGearPanel: Exposure controls (aperture, ISO, shutter speed), lens presets, EV readout

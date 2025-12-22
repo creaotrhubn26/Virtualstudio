@@ -8,6 +8,17 @@ import { virtualActorService } from './core/services/virtualActorService';
 import { propRenderingService } from './core/services/propRenderingService';
 import { getPropById } from './core/data/propDefinitions';
 
+interface LightSpecs {
+  power: number;
+  powerUnit: 'Ws' | 'W';
+  cri?: number;
+  tlci?: number;
+  lux1m?: number;
+  beamAngle?: number;
+  guideNumber?: number;
+  lumens?: number;
+}
+
 interface LightData {
   light: BABYLON.Light;
   mesh: BABYLON.Mesh;
@@ -15,6 +26,8 @@ interface LightData {
   name: string;
   cct: number;
   modifier: string;
+  specs?: LightSpecs;
+  intensity: number;
 }
 
 interface CameraSettings {
@@ -667,6 +680,28 @@ class VirtualStudio {
       const { actorParams } = e.detail;
       console.log('Actor params changed:', actorParams);
       this.updateActorMesh(actorParams);
+    }) as EventListener);
+
+    window.addEventListener('ch-add-light', ((e: CustomEvent) => {
+      const { id, brand, model, type, power, powerUnit, cct, cri, lux1m, beamAngle, guideNumber, lumens } = e.detail;
+      console.log('Adding light from library:', brand, model);
+      
+      const position = new BABYLON.Vector3(
+        Math.random() * 4 - 2,
+        3 + Math.random() * 2,
+        Math.random() * 4 - 2
+      );
+      
+      this.addLightWithSpecs(id, `${brand} ${model}`, type, position, {
+        power,
+        powerUnit,
+        cct,
+        cri,
+        lux1m,
+        beamAngle,
+        guideNumber,
+        lumens
+      });
     }) as EventListener);
   }
 
@@ -1321,30 +1356,83 @@ class VirtualStudio {
     return names[type] || type;
   }
 
-  addLight(type: string, position: BABYLON.Vector3): void {
-    const id = `light_${this.lightCounter++}`;
-    const cct = 5600;
+  private calculateLightIntensity(specs: LightSpecs): number {
+    if (specs.lux1m) {
+      return specs.lux1m / 5000;
+    }
+    
+    if (specs.guideNumber) {
+      return (specs.guideNumber * specs.guideNumber) / 400;
+    }
+    
+    if (specs.lumens) {
+      return specs.lumens / 2000;
+    }
+    
+    if (specs.powerUnit === 'Ws') {
+      const lumens = specs.power * 40;
+      return lumens / 2000;
+    }
+    
+    return specs.power / 50;
+  }
+
+  private calculateBeamAngle(specs: LightSpecs): number {
+    if (specs.beamAngle) {
+      return (specs.beamAngle * Math.PI) / 180;
+    }
+    return Math.PI / 4;
+  }
+
+  addLightWithSpecs(
+    nodeId: string,
+    name: string,
+    type: string,
+    position: BABYLON.Vector3,
+    specs: { power: number; powerUnit: string; cct?: number; cri?: number; lux1m?: number; beamAngle?: number; guideNumber?: number; lumens?: number }
+  ): void {
+    const id = nodeId || `light_${this.lightCounter++}`;
+    const cct = specs.cct || 5600;
     const color = this.cctToColor(cct);
-    const name = this.getLightName(type);
+    
+    const lightSpecs: LightSpecs = {
+      power: specs.power,
+      powerUnit: specs.powerUnit as 'Ws' | 'W',
+      cri: specs.cri,
+      lux1m: specs.lux1m,
+      beamAngle: specs.beamAngle,
+      guideNumber: specs.guideNumber,
+      lumens: specs.lumens
+    };
+    
+    const intensity = this.calculateLightIntensity(lightSpecs);
+    const beamAngle = this.calculateBeamAngle(lightSpecs);
 
     let light: BABYLON.Light;
     let mesh: BABYLON.Mesh;
 
-    if (type.includes('softbox') || type.includes('umbrella')) {
-      light = new BABYLON.PointLight(id, position.clone(), this.scene);
-      light.intensity = 8;
+    if (type === 'led' || type === 'continuous') {
+      light = new BABYLON.SpotLight(
+        id, position.clone(),
+        new BABYLON.Vector3(0, -0.8, -0.2).normalize(),
+        beamAngle, 2,
+        this.scene
+      );
+      light.intensity = intensity;
       light.diffuse = color;
-      (light as BABYLON.PointLight).range = 15;
 
-      mesh = BABYLON.MeshBuilder.CreateBox(`mesh_${id}`, { width: 1.2, height: 0.1, depth: 0.9 }, this.scene);
+      mesh = BABYLON.MeshBuilder.CreateCylinder(`mesh_${id}`, { 
+        height: 0.4, diameterTop: 0.15, diameterBottom: 0.3 
+      }, this.scene);
+      mesh.rotation.x = Math.PI;
     } else {
       light = new BABYLON.SpotLight(
         id, position.clone(),
         new BABYLON.Vector3(0, -0.8, -0.2).normalize(),
-        Math.PI / 4, 2,
+        beamAngle, 2,
         this.scene
       );
-      light.intensity = 12;
+      light.intensity = intensity;
       light.diffuse = color;
 
       mesh = BABYLON.MeshBuilder.CreateCylinder(`mesh_${id}`, { 
@@ -1371,13 +1459,118 @@ class VirtualStudio {
       type,
       name,
       cct,
-      modifier: type.includes('softbox') ? 'Softbox' : 'Ingen'
+      modifier: 'Ingen',
+      specs: lightSpecs,
+      intensity: intensity
     };
 
     this.lights.set(id, lightData);
     this.gizmoManager?.attachableMeshes?.push(mesh);
     this.selectLight(id);
     this.updateSceneList();
+    this.updateLightMeterReading();
+  }
+
+  addLight(type: string, position: BABYLON.Vector3): void {
+    const id = `light_${this.lightCounter++}`;
+    const cct = 5600;
+    const color = this.cctToColor(cct);
+    const name = this.getLightName(type);
+    
+    const defaultSpecs: LightSpecs = {
+      power: 600,
+      powerUnit: 'Ws',
+      guideNumber: 87,
+      lumens: 24000
+    };
+    
+    const intensity = this.calculateLightIntensity(defaultSpecs);
+
+    let light: BABYLON.Light;
+    let mesh: BABYLON.Mesh;
+
+    if (type.includes('softbox') || type.includes('umbrella')) {
+      light = new BABYLON.PointLight(id, position.clone(), this.scene);
+      light.intensity = intensity * 0.6;
+      light.diffuse = color;
+      (light as BABYLON.PointLight).range = 15;
+
+      mesh = BABYLON.MeshBuilder.CreateBox(`mesh_${id}`, { width: 1.2, height: 0.1, depth: 0.9 }, this.scene);
+    } else {
+      light = new BABYLON.SpotLight(
+        id, position.clone(),
+        new BABYLON.Vector3(0, -0.8, -0.2).normalize(),
+        Math.PI / 4, 2,
+        this.scene
+      );
+      light.intensity = intensity;
+      light.diffuse = color;
+
+      mesh = BABYLON.MeshBuilder.CreateCylinder(`mesh_${id}`, { 
+        height: 0.5, diameterTop: 0.12, diameterBottom: 0.35 
+      }, this.scene);
+      mesh.rotation.x = Math.PI;
+    }
+
+    mesh.position = position.clone();
+    const mat = new BABYLON.StandardMaterial(`mat_${id}`, this.scene);
+    mat.emissiveColor = color;
+    mat.disableLighting = true;
+    mesh.material = mat;
+
+    this.scene.onBeforeRenderObservable.add(() => {
+      if (light instanceof BABYLON.SpotLight || light instanceof BABYLON.PointLight) {
+        light.position = mesh.position.clone();
+      }
+    });
+
+    const lightData: LightData = {
+      light,
+      mesh,
+      type,
+      name,
+      cct,
+      modifier: type.includes('softbox') ? 'Softbox' : 'Ingen',
+      specs: defaultSpecs,
+      intensity: intensity
+    };
+
+    this.lights.set(id, lightData);
+    this.gizmoManager?.attachableMeshes?.push(mesh);
+    this.selectLight(id);
+    this.updateSceneList();
+  }
+
+  private updateLightMeterReading(): void {
+    let totalLux = 0;
+    const subjectPos = new BABYLON.Vector3(0, 1, 0);
+    
+    for (const [, data] of this.lights) {
+      const lightPos = data.mesh.position;
+      const distance = BABYLON.Vector3.Distance(lightPos, subjectPos);
+      
+      if (data.specs?.lux1m) {
+        const luxAtSubject = data.specs.lux1m / (distance * distance);
+        totalLux += luxAtSubject;
+      } else if (data.specs?.guideNumber) {
+        const luxEstimate = (data.specs.guideNumber * data.specs.guideNumber * 12.5) / (distance * distance);
+        totalLux += luxEstimate;
+      } else if (data.specs?.lumens) {
+        const luxEstimate = data.specs.lumens / (4 * Math.PI * distance * distance);
+        totalLux += luxEstimate;
+      }
+    }
+    
+    const ev = Math.log2(totalLux / 2.5);
+    const evDisplay = document.getElementById('evValue');
+    if (evDisplay) {
+      evDisplay.textContent = `EV ${ev.toFixed(1)}`;
+    }
+    
+    const luxDisplay = document.getElementById('luxValue');
+    if (luxDisplay) {
+      luxDisplay.textContent = `${Math.round(totalLux)} lux`;
+    }
   }
 
   private selectLight(id: string): void {
