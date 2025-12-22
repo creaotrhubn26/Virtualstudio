@@ -135,6 +135,13 @@ Run `npm run dev` to start the development server on port 5000.
 - Interactive light placement with gizmos
 
 ## Recent Changes
+- 2025-12-22: Added realistic camera and lens specifications
+  - Camera specs: sensor size, base ISO, dynamic range (EV), color depth, flash sync speed, IBIS rating, burst fps
+  - Lens specs: min aperture, min focus distance, weight, filter size
+  - 6 camera bodies: Sony A7 IV, Canon R5, Nikon Z8, Fujifilm X-H2S, Hasselblad X2D 100C, Phase One IQ4
+  - 15 lenses: Prime, Zoom, Macro, Tele, Probe types from Sony, Canon, Nikon, Sigma, Zeiss, Laowa
+  - Cards now display DR, ISO range, sync speed, IBIS for cameras
+  - Cards now display aperture range, weight, min focus distance, filter size for lenses
 - 2025-12-22: Implemented realistic lighting specifications and light meter
   - Added technical specs for 17 lights: lux@1m, guide number, CRI/TLCI, beam angle, lumens
   - Created addLightWithSpecs() for accurate light intensity based on real specs
