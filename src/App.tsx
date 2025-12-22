@@ -2,6 +2,8 @@ import React from 'react';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { VirtualActorPanel } from './panels/VirtualActorPanel';
 import { KeyframeTimeline } from './panels/KeyframeTimeline';
+import AssetLibraryPanel from './panels/AssetLibraryPanel';
+import { CharacterModelLoader } from './panels/CharacterModelLoader';
 
 const darkTheme = createTheme({
   palette: {
@@ -53,6 +55,24 @@ export const TimelineApp: React.FC<TimelineAppProps> = ({ clipId }) => {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <KeyframeTimeline clipId={clipId} height={250} />
+    </ThemeProvider>
+  );
+};
+
+export const AssetLibraryApp: React.FC = () => {
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <AssetLibraryPanel />
+    </ThemeProvider>
+  );
+};
+
+export const CharacterLoaderApp: React.FC = () => {
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <CharacterModelLoader />
     </ThemeProvider>
   );
 };
