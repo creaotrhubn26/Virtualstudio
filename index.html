@@ -65,8 +65,8 @@
           <span class="collapse-arrow" aria-hidden="true">▾</span>
           <h2 class="panel-title">Scene Hierarchy</h2>
           <div class="hierarchy-actions" role="group" aria-label="Hierarki-handlinger">
-            <button class="hierarchy-action-btn" id="toggleAllBtn" title="Kollaps/utvid alle" aria-label="Veksle alle grupper" aria-pressed="true">
-              <span aria-hidden="true">⊟</span>
+            <button class="hierarchy-action-btn" id="toggleAllBtn" title="Utvid alle" aria-label="Veksle alle grupper" aria-pressed="false">
+              <span aria-hidden="true">⊞</span>
             </button>
           </div>
           <div class="view-toggle" role="group" aria-label="Visningsvalg">
@@ -85,14 +85,14 @@
         </div>
         
         <div class="hierarchy-section list-view" id="hierarchySection" role="tree" aria-label="Scene-objekter">
-          <div class="hierarchy-group" role="treeitem" aria-expanded="true">
-            <div class="hierarchy-header" data-group="cameras" role="button" tabindex="0" aria-expanded="true" aria-controls="camerasGroup">
-              <span class="hierarchy-arrow" aria-hidden="true">▾</span>
+          <div class="hierarchy-group collapsed" role="treeitem" aria-expanded="false">
+            <div class="hierarchy-header" data-group="cameras" role="button" tabindex="0" aria-expanded="false" aria-controls="camerasGroup">
+              <span class="hierarchy-arrow" aria-hidden="true">▸</span>
               <div class="header-icon camera-icon" aria-hidden="true"></div>
               <span>Kameraer</span>
               <span class="group-count" aria-label="1 element">1</span>
             </div>
-            <ul class="hierarchy-items" id="camerasGroup" role="group">
+            <ul class="hierarchy-items" id="camerasGroup" role="group" style="display: none;">
               <li class="hierarchy-item" data-id="cam-a" role="treeitem" tabindex="0" aria-selected="false">
                 <div class="item-thumbnail camera-thumb" aria-hidden="true"></div>
                 <div class="item-info">
@@ -107,14 +107,14 @@
             </ul>
           </div>
           
-          <div class="hierarchy-group" role="treeitem" aria-expanded="true">
-            <div class="hierarchy-header" data-group="lights" role="button" tabindex="0" aria-expanded="true" aria-controls="lightsGroup">
-              <span class="hierarchy-arrow" aria-hidden="true">▾</span>
+          <div class="hierarchy-group collapsed" role="treeitem" aria-expanded="false">
+            <div class="hierarchy-header" data-group="lights" role="button" tabindex="0" aria-expanded="false" aria-controls="lightsGroup">
+              <span class="hierarchy-arrow" aria-hidden="true">▸</span>
               <div class="header-icon light-icon" aria-hidden="true"></div>
               <span>Lys</span>
               <span class="group-count" id="lightsCount" aria-label="0 elementer">0</span>
             </div>
-            <ul class="hierarchy-items" id="lightsGroup" role="group">
+            <ul class="hierarchy-items" id="lightsGroup" role="group" style="display: none;">
               <li class="hierarchy-empty" role="status" aria-live="polite">
                 <div class="empty-icon light-empty" aria-hidden="true"></div>
                 <span>Ingen lys</span>
@@ -123,14 +123,14 @@
             </ul>
           </div>
           
-          <div class="hierarchy-group" role="treeitem" aria-expanded="true">
-            <div class="hierarchy-header" data-group="models" role="button" tabindex="0" aria-expanded="true" aria-controls="modelsGroup">
-              <span class="hierarchy-arrow" aria-hidden="true">▾</span>
+          <div class="hierarchy-group collapsed" role="treeitem" aria-expanded="false">
+            <div class="hierarchy-header" data-group="models" role="button" tabindex="0" aria-expanded="false" aria-controls="modelsGroup">
+              <span class="hierarchy-arrow" aria-hidden="true">▸</span>
               <div class="header-icon model-icon" aria-hidden="true"></div>
               <span>Modeller</span>
               <span class="group-count" id="modelsCount" aria-label="0 elementer">0</span>
             </div>
-            <ul class="hierarchy-items" id="modelsGroup" role="group">
+            <ul class="hierarchy-items" id="modelsGroup" role="group" style="display: none;">
               <li class="hierarchy-empty" role="status" aria-live="polite">
                 <div class="empty-icon model-empty" aria-hidden="true"></div>
                 <span>Ingen modeller</span>
@@ -139,14 +139,14 @@
             </ul>
           </div>
           
-          <div class="hierarchy-group" role="treeitem" aria-expanded="true">
-            <div class="hierarchy-header" data-group="equipment" role="button" tabindex="0" aria-expanded="true" aria-controls="equipmentGroup">
-              <span class="hierarchy-arrow" aria-hidden="true">▾</span>
+          <div class="hierarchy-group collapsed" role="treeitem" aria-expanded="false">
+            <div class="hierarchy-header" data-group="equipment" role="button" tabindex="0" aria-expanded="false" aria-controls="equipmentGroup">
+              <span class="hierarchy-arrow" aria-hidden="true">▸</span>
               <div class="header-icon equip-icon" aria-hidden="true"></div>
               <span>Utstyr</span>
               <span class="group-count" id="equipmentCount" aria-label="0 elementer">0</span>
             </div>
-            <ul class="hierarchy-items" id="equipmentGroup" role="group">
+            <ul class="hierarchy-items" id="equipmentGroup" role="group" style="display: none;">
               <li class="hierarchy-empty" role="status" aria-live="polite">
                 <div class="empty-icon equip-empty" aria-hidden="true"></div>
                 <span>Ingen utstyr</span>
@@ -155,14 +155,14 @@
             </ul>
           </div>
           
-          <div class="hierarchy-group" role="treeitem" aria-expanded="true">
-            <div class="hierarchy-header" data-group="backgrounds" role="button" tabindex="0" aria-expanded="true" aria-controls="backgroundsGroup">
-              <span class="hierarchy-arrow" aria-hidden="true">▾</span>
+          <div class="hierarchy-group collapsed" role="treeitem" aria-expanded="false">
+            <div class="hierarchy-header" data-group="backgrounds" role="button" tabindex="0" aria-expanded="false" aria-controls="backgroundsGroup">
+              <span class="hierarchy-arrow" aria-hidden="true">▸</span>
               <div class="header-icon bg-icon" aria-hidden="true"></div>
               <span>Bakgrunner</span>
               <span class="group-count" aria-label="1 element">1</span>
             </div>
-            <ul class="hierarchy-items" id="backgroundsGroup" role="group">
+            <ul class="hierarchy-items" id="backgroundsGroup" role="group" style="display: none;">
               <li class="hierarchy-item" data-id="studio-bg" role="treeitem" tabindex="0" aria-selected="false">
                 <div class="item-thumbnail bg-thumb" aria-hidden="true"></div>
                 <div class="item-info">

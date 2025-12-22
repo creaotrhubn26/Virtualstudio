@@ -2225,7 +2225,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     
     const toggleAllBtn = document.getElementById('toggleAllBtn');
-    let allExpanded = true;
+    let allExpanded = false;
     
     const toggleGroup = (header: HTMLElement, expand: boolean) => {
       const group = header.closest('.hierarchy-group');
