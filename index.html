@@ -549,6 +549,34 @@
           </div>
         </div>
 
+        <div class="panel-section scope-section" role="region" aria-label="Scope-visning">
+          <div class="scope-panel-row">
+            <span class="scope-panel-label">
+              <span class="prop-icon scope-icon" aria-hidden="true"></span>
+              Scope
+            </span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="scopeVisibleToggle" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="scope-mode-row">
+            <select id="scopeModeSelect" class="scope-mode-select" aria-label="Velg scope-modus">
+              <option value="histogram">Histogram</option>
+              <option value="waveform">Waveform</option>
+              <option value="vectorscope">Vectorscope</option>
+              <option value="skin">Hudtone</option>
+              <option value="zebra">Zebra</option>
+              <option value="falsecolor">False Color</option>
+            </select>
+            <button class="scope-size-btn" id="scopeSizeBtn" aria-label="Utvid scope" aria-pressed="false">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
         <div class="panel-section export-section" role="region" aria-label="Eksporter">
           <div class="export-row">
             <span class="export-label">
