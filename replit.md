@@ -44,3 +44,15 @@ The application employs a hybrid architecture, combining Vanilla TypeScript with
 - **zustand**: A small, fast, and scalable state-management solution.
 - **vite**: Used as the development server and build tool.
 - **typescript**: Provides static type checking for improved code quality and maintainability.
+
+## Recent Changes
+- 2025-12-22: Added Foto/Cine category filter to Kamera tab in CameraGearPanel
+  - Filter chips: Alle, Foto, Cine with icons
+  - 8 foto cameras (Sony A7 IV, A1, Canon R5, Nikon Z8, Fujifilm X-H2S, Hasselblad X2D, Phase One IQ4, Leica SL3)
+  - 9 cine cameras (ARRI ALEXA 35, ALEXA Mini LF, RED V-RAPTOR, KOMODO, Blackmagic URSA 12K, Sony VENICE 2, FX6, Canon C70, Panasonic S1H)
+  - Cine cameras show recording resolution, max fps, and codec info
+- 2025-12-22: Split CameraGearPanel into two internal tabs (Kamera and Linser)
+  - Tab-based navigation with MUI Tabs component
+  - Lens type filtering (Alle, Prime, Zoom, Makro, Tele, Probe)
+- 2025-12-22: Converted Equipment tab to React component (EquipmentPanel.tsx)
+  - 17 equipment items with category filtering

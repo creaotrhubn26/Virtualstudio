@@ -17,6 +17,8 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import CameraIcon from '@mui/icons-material/Camera';
+import VideocamIcon from '@mui/icons-material/Videocam';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import AddIcon from '@mui/icons-material/Add';
 
 interface CameraBody {
@@ -32,8 +34,12 @@ interface CameraBody {
   colorDepth: number;
   maxShutter: string;
   flashSync: string;
+  category: 'foto' | 'cine';
   ibis?: number;
   burstFps?: number;
+  maxFps?: number;
+  codec?: string;
+  recording?: string;
   image?: string;
 }
 
@@ -58,6 +64,7 @@ const CAMERA_BODIES: CameraBody[] = [
     sensor: 'Full Frame', sensorSize: '35.9×24mm', megapixels: 33, 
     baseISO: 100, maxISO: 51200, dynamicRange: 14.7, colorDepth: 25.4,
     maxShutter: '1/8000', flashSync: '1/250', ibis: 5.5, burstFps: 10,
+    category: 'foto',
     image: '/images/gear/sony_a7_iv_camera.png' 
   },
   { 
@@ -65,6 +72,7 @@ const CAMERA_BODIES: CameraBody[] = [
     sensor: 'Full Frame', sensorSize: '36×24mm', megapixels: 45, 
     baseISO: 100, maxISO: 51200, dynamicRange: 14.6, colorDepth: 25.3,
     maxShutter: '1/8000', flashSync: '1/200', ibis: 8, burstFps: 12,
+    category: 'foto',
     image: '/images/gear/canon_eos_r5_camera.png' 
   },
   { 
@@ -72,26 +80,116 @@ const CAMERA_BODIES: CameraBody[] = [
     sensor: 'Full Frame', sensorSize: '35.9×23.9mm', megapixels: 45.7, 
     baseISO: 64, maxISO: 25600, dynamicRange: 14.8, colorDepth: 25.5,
     maxShutter: '1/8000', flashSync: '1/200', ibis: 6, burstFps: 20,
+    category: 'foto',
     image: '/images/gear/nikon_z8_camera.png' 
   },
   { 
     id: 'fuji-xh2s', name: 'Fujifilm X-H2S', brand: 'Fujifilm', 
     sensor: 'APS-C', sensorSize: '23.5×15.6mm', megapixels: 26.1, 
     baseISO: 160, maxISO: 12800, dynamicRange: 12.8, colorDepth: 23.8,
-    maxShutter: '1/8000', flashSync: '1/250', ibis: 7, burstFps: 40
+    maxShutter: '1/8000', flashSync: '1/250', ibis: 7, burstFps: 40,
+    category: 'foto'
   },
   { 
     id: 'hasselblad-x2d', name: 'Hasselblad X2D 100C', brand: 'Hasselblad', 
     sensor: 'Medium Format', sensorSize: '43.8×32.9mm', megapixels: 100, 
     baseISO: 64, maxISO: 25600, dynamicRange: 15.0, colorDepth: 26.2,
     maxShutter: '1/4000', flashSync: '1/4000', ibis: 7,
+    category: 'foto',
     image: '/images/gear/hasselblad_x2d_camera.png' 
   },
   { 
     id: 'phase-one', name: 'Phase One IQ4 150MP', brand: 'Phase One', 
     sensor: 'Medium Format', sensorSize: '53.4×40mm', megapixels: 150, 
     baseISO: 50, maxISO: 12800, dynamicRange: 15.3, colorDepth: 26.4,
-    maxShutter: '1/4000', flashSync: '1/1600'
+    maxShutter: '1/4000', flashSync: '1/1600',
+    category: 'foto'
+  },
+  { 
+    id: 'sony-a1', name: 'Sony A1', brand: 'Sony', 
+    sensor: 'Full Frame', sensorSize: '35.9×24mm', megapixels: 50.1, 
+    baseISO: 100, maxISO: 32000, dynamicRange: 15.0, colorDepth: 25.6,
+    maxShutter: '1/8000', flashSync: '1/400', ibis: 5.5, burstFps: 30,
+    category: 'foto'
+  },
+  { 
+    id: 'leica-sl3', name: 'Leica SL3', brand: 'Leica', 
+    sensor: 'Full Frame', sensorSize: '36×24mm', megapixels: 60, 
+    baseISO: 100, maxISO: 100000, dynamicRange: 15.0, colorDepth: 25.5,
+    maxShutter: '1/8000', flashSync: '1/250', ibis: 5,
+    category: 'foto'
+  },
+  { 
+    id: 'arri-alexa35', name: 'ARRI ALEXA 35', brand: 'ARRI', 
+    sensor: 'Super 35', sensorSize: '27.99×19.22mm', megapixels: 4.6, 
+    baseISO: 800, maxISO: 6400, dynamicRange: 17.0, colorDepth: 26.0,
+    maxShutter: '1/8000', flashSync: '-', maxFps: 120,
+    codec: 'ARRIRAW, ProRes', recording: '4.6K',
+    category: 'cine'
+  },
+  { 
+    id: 'arri-alexamini', name: 'ARRI ALEXA Mini LF', brand: 'ARRI', 
+    sensor: 'Large Format', sensorSize: '36.70×25.54mm', megapixels: 4.5, 
+    baseISO: 800, maxISO: 3200, dynamicRange: 14.5, colorDepth: 25.8,
+    maxShutter: '1/8000', flashSync: '-', maxFps: 90,
+    codec: 'ARRIRAW, ProRes', recording: '4.5K',
+    category: 'cine'
+  },
+  { 
+    id: 'red-v-raptor', name: 'RED V-RAPTOR 8K VV', brand: 'RED', 
+    sensor: 'Vista Vision', sensorSize: '40.96×21.60mm', megapixels: 35.4, 
+    baseISO: 800, maxISO: 12800, dynamicRange: 17.0, colorDepth: 26.0,
+    maxShutter: '1/8000', flashSync: '-', maxFps: 120,
+    codec: 'REDCODE RAW', recording: '8K',
+    category: 'cine'
+  },
+  { 
+    id: 'red-komodo', name: 'RED KOMODO 6K', brand: 'RED', 
+    sensor: 'Super 35', sensorSize: '27.03×14.26mm', megapixels: 19.9, 
+    baseISO: 800, maxISO: 25600, dynamicRange: 16.5, colorDepth: 25.5,
+    maxShutter: '1/8000', flashSync: '-', maxFps: 120,
+    codec: 'REDCODE RAW', recording: '6K',
+    category: 'cine'
+  },
+  { 
+    id: 'blackmagic-ursa', name: 'Blackmagic URSA Mini Pro 12K', brand: 'Blackmagic', 
+    sensor: 'Super 35', sensorSize: '27.03×14.26mm', megapixels: 80, 
+    baseISO: 800, maxISO: 3200, dynamicRange: 14.0, colorDepth: 25.0,
+    maxShutter: '1/8000', flashSync: '-', maxFps: 60,
+    codec: 'Blackmagic RAW', recording: '12K',
+    category: 'cine'
+  },
+  { 
+    id: 'sony-venice2', name: 'Sony VENICE 2 8K', brand: 'Sony', 
+    sensor: 'Full Frame', sensorSize: '36×24mm', megapixels: 8.6, 
+    baseISO: 800, maxISO: 4500, dynamicRange: 16.0, colorDepth: 25.8,
+    maxShutter: '1/8000', flashSync: '-', maxFps: 120,
+    codec: 'X-OCN, ProRes', recording: '8.6K',
+    category: 'cine'
+  },
+  { 
+    id: 'canon-c70', name: 'Canon EOS C70', brand: 'Canon', 
+    sensor: 'Super 35', sensorSize: '26.2×13.8mm', megapixels: 8.85, 
+    baseISO: 800, maxISO: 102400, dynamicRange: 16.0, colorDepth: 25.5,
+    maxShutter: '1/8000', flashSync: '-', maxFps: 120,
+    codec: 'Cinema RAW Light, XF-AVC', recording: '4K DCI',
+    category: 'cine'
+  },
+  { 
+    id: 'sony-fx6', name: 'Sony FX6', brand: 'Sony', 
+    sensor: 'Full Frame', sensorSize: '35.6×23.8mm', megapixels: 10.2, 
+    baseISO: 800, maxISO: 409600, dynamicRange: 15.0, colorDepth: 25.2,
+    maxShutter: '1/8000', flashSync: '-', maxFps: 120,
+    codec: 'XAVC S, XAVC HS', recording: '4K',
+    category: 'cine'
+  },
+  { 
+    id: 'panasonic-s1h', name: 'Panasonic S1H', brand: 'Panasonic', 
+    sensor: 'Full Frame', sensorSize: '35.6×23.8mm', megapixels: 24.2, 
+    baseISO: 100, maxISO: 51200, dynamicRange: 14.0, colorDepth: 24.8,
+    maxShutter: '1/8000', flashSync: '1/250', maxFps: 60,
+    codec: 'V-Log, ProRes RAW', recording: '6K',
+    category: 'cine'
   },
 ];
 
@@ -114,6 +212,7 @@ const LENSES: Lens[] = [
 ];
 
 type LensType = 'all' | 'prime' | 'zoom' | 'macro' | 'tele' | 'probe';
+type CameraCategory = 'all' | 'foto' | 'cine';
 
 export function CameraGearPanel() {
   const [activeTab, setActiveTab] = useState(0);
@@ -123,6 +222,7 @@ export function CameraGearPanel() {
   const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
   const [selectedLens, setSelectedLens] = useState<string | null>(null);
   const [lensFilter, setLensFilter] = useState<LensType>('all');
+  const [cameraFilter, setCameraFilter] = useState<CameraCategory>('all');
   const isTablet = useMediaQuery('(max-width: 1024px), (pointer: coarse)');
 
   const toggleFavorite = (id: string) => {
@@ -162,10 +262,12 @@ export function CameraGearPanel() {
     selectLens(lens);
   };
 
-  const filteredCameras = CAMERA_BODIES.filter(c =>
-    c.name.toLowerCase().includes(cameraSearch.toLowerCase()) ||
-    c.brand.toLowerCase().includes(cameraSearch.toLowerCase())
-  );
+  const filteredCameras = CAMERA_BODIES.filter(c => {
+    const matchesSearch = c.name.toLowerCase().includes(cameraSearch.toLowerCase()) ||
+      c.brand.toLowerCase().includes(cameraSearch.toLowerCase());
+    const matchesCategory = cameraFilter === 'all' || c.category === cameraFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   const filteredLenses = LENSES.filter(l => {
     const matchesSearch = l.name.toLowerCase().includes(lensSearch.toLowerCase()) ||
@@ -222,6 +324,25 @@ export function CameraGearPanel() {
               }}
             />
 
+            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 2 }}>
+              {(['all', 'foto', 'cine'] as CameraCategory[]).map(cat => (
+                <Chip
+                  key={cat}
+                  icon={cat === 'foto' ? <PhotoCameraIcon sx={{ fontSize: 14 }} /> : cat === 'cine' ? <VideocamIcon sx={{ fontSize: 14 }} /> : undefined}
+                  label={cat === 'all' ? 'Alle' : cat === 'foto' ? 'Foto' : 'Cine'}
+                  size="small"
+                  onClick={() => setCameraFilter(cat)}
+                  sx={{
+                    bgcolor: cameraFilter === cat ? '#00a8ff' : '#333',
+                    color: cameraFilter === cat ? '#fff' : '#aaa',
+                    fontSize: 11,
+                    '& .MuiChip-icon': { color: cameraFilter === cat ? '#fff' : '#888' },
+                    '&:hover': { bgcolor: cameraFilter === cat ? '#00a8ff' : '#444' },
+                  }}
+                />
+              ))}
+            </Box>
+
             <Stack spacing={1}>
               {filteredCameras.map(camera => (
                 <Box
@@ -248,20 +369,45 @@ export function CameraGearPanel() {
                     />
                   ) : (
                     <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <CameraAltIcon sx={{ color: '#666' }} />
+                      {camera.category === 'cine' ? <VideocamIcon sx={{ color: '#666' }} /> : <CameraAltIcon sx={{ color: '#666' }} />}
                     </Box>
                   )}
                   <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>{camera.name}</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>{camera.name}</Typography>
+                      <Chip 
+                        label={camera.category === 'cine' ? 'Cine' : 'Foto'} 
+                        size="small" 
+                        sx={{ 
+                          height: 16, 
+                          fontSize: 8, 
+                          bgcolor: camera.category === 'cine' ? '#4a2a4a' : '#2a4a3a',
+                          color: '#fff'
+                        }} 
+                      />
+                    </Box>
                     <Typography variant="caption" sx={{ color: '#888', display: 'block' }}>
                       {camera.sensor} ({camera.sensorSize}) · {camera.megapixels}MP
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
                       <Chip label={`DR ${camera.dynamicRange}EV`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#2a4a2a' }} />
                       <Chip label={`ISO ${camera.baseISO}-${camera.maxISO}`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#333' }} />
-                      <Chip label={`Sync ${camera.flashSync}`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#4a3a2a' }} />
+                      {camera.category === 'foto' && camera.flashSync !== '-' && (
+                        <Chip label={`Sync ${camera.flashSync}`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#4a3a2a' }} />
+                      )}
                       {camera.ibis && <Chip label={`IBIS ${camera.ibis}`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#2a3a4a' }} />}
+                      {camera.category === 'cine' && camera.recording && (
+                        <Chip label={camera.recording} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#4a2a4a' }} />
+                      )}
+                      {camera.category === 'cine' && camera.maxFps && (
+                        <Chip label={`${camera.maxFps}fps`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#3a3a4a' }} />
+                      )}
                     </Box>
+                    {camera.category === 'cine' && camera.codec && (
+                      <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 0.5, fontSize: 9 }}>
+                        {camera.codec}
+                      </Typography>
+                    )}
                   </Box>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
                     <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleFavorite(camera.id); }}>
