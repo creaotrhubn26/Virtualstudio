@@ -46,88 +46,81 @@
       <aside class="left-panel">
         <div class="panel-header">
           <span class="panel-icon">☰</span>
-          <span>Utstyr</span>
+          <span>Scene Hierarchy</span>
         </div>
         <div class="search-box">
-          <input type="text" id="equipmentSearch" placeholder="Søk...">
+          <input type="text" id="sceneSearch" placeholder="Søk i scene...">
         </div>
-        <div class="tabs">
-          <button class="tab active" data-tab="lights">Lys</button>
-          <button class="tab" data-tab="modifiers">Modifiers</button>
-        </div>
-        <div class="category-list">
-          <div class="category-item expanded" data-category="lights">
-            <span class="category-arrow">▼</span>
-            <span>Lys</span>
-          </div>
-          <div class="category-item" data-category="modifiers">
-            <span class="category-arrow">▶</span>
-            <span>Modifiers</span>
-          </div>
-          <div class="category-item" data-category="stands">
-            <span class="category-arrow">▶</span>
-            <span>Stativer & Grip</span>
-          </div>
-          <div class="category-item" data-category="backgrounds">
-            <span class="category-arrow">▶</span>
-            <span>Bakgrunner</span>
-          </div>
-          <div class="category-item" data-category="props">
-            <span class="category-arrow">▶</span>
-            <span>Møbler & Rekvisitter</span>
-          </div>
-        </div>
-        <div class="equipment-section">
-          <div class="section-header">Sgatdot</div>
-          <div class="equipment-list" id="equipmentList">
-            <div class="equipment-item" data-type="godox-ad600" draggable="true">
-              <span class="equip-icon">●</span>
-              <div class="equip-info">
-                <span class="equip-name">Godox AD600Pro</span>
-                <span class="equip-desc">Blitslampe</span>
+        
+        <div class="hierarchy-section">
+          <div class="hierarchy-group">
+            <div class="hierarchy-header">
+              <span class="hierarchy-arrow">▼</span>
+              <span class="hierarchy-icon">📷</span>
+              <span>Kameraer</span>
+            </div>
+            <div class="hierarchy-items" id="camerasGroup">
+              <div class="hierarchy-item" data-id="cam-a">
+                <span class="item-icon">📷</span>
+                <span class="item-name">Cam A</span>
+                <div class="item-actions">
+                  <button class="visibility-btn active" title="Synlig">👁</button>
+                </div>
               </div>
             </div>
-            <div class="equipment-item" data-type="profoto-b10" draggable="true">
-              <span class="equip-icon">●</span>
-              <div class="equip-info">
-                <span class="equip-name">Profoto B10</span>
-                <span class="equip-desc">Kompakt blits</span>
-              </div>
+          </div>
+          
+          <div class="hierarchy-group">
+            <div class="hierarchy-header">
+              <span class="hierarchy-arrow">▼</span>
+              <span class="hierarchy-icon">💡</span>
+              <span>Lys</span>
             </div>
-            <div class="equipment-item" data-type="aputure-120d" draggable="true">
-              <span class="equip-icon">●</span>
-              <div class="equip-info">
-                <span class="equip-name">Aputure LS 120d II</span>
-                <span class="equip-desc">LED kontinuerlig</span>
-              </div>
+            <div class="hierarchy-items" id="lightsGroup">
+              <div class="hierarchy-empty">Ingen lys i scenen</div>
             </div>
-            <div class="equipment-item" data-type="softbox" draggable="true">
-              <span class="equip-icon modifier">◇</span>
-              <div class="equip-info">
-                <span class="equip-name">Softbox 90×120</span>
-                <span class="equip-desc">Modifier</span>
-              </div>
+          </div>
+          
+          <div class="hierarchy-group">
+            <div class="hierarchy-header">
+              <span class="hierarchy-arrow">▼</span>
+              <span class="hierarchy-icon">🧍</span>
+              <span>Modeller</span>
             </div>
-            <div class="equipment-item" data-type="umbrella" draggable="true">
-              <span class="equip-icon modifier">◇</span>
-              <div class="equip-info">
-                <span class="equip-name">Sølv Paraply</span>
-                <span class="equip-desc">Reflekterende</span>
-              </div>
+            <div class="hierarchy-items" id="modelsGroup">
+              <div class="hierarchy-empty">Ingen modeller i scenen</div>
             </div>
-            <div class="equipment-item" data-type="reflector" draggable="true">
-              <span class="equip-icon modifier">◇</span>
-              <div class="equip-info">
-                <span class="equip-name">Sammenleggbar Reflektor</span>
-                <span class="equip-desc">5-i-1</span>
+          </div>
+          
+          <div class="hierarchy-group">
+            <div class="hierarchy-header">
+              <span class="hierarchy-arrow">▼</span>
+              <span class="hierarchy-icon">🔧</span>
+              <span>Utstyr</span>
+            </div>
+            <div class="hierarchy-items" id="equipmentGroup">
+              <div class="hierarchy-empty">Ingen utstyr i scenen</div>
+            </div>
+          </div>
+          
+          <div class="hierarchy-group">
+            <div class="hierarchy-header">
+              <span class="hierarchy-arrow">▼</span>
+              <span class="hierarchy-icon">🖼️</span>
+              <span>Bakgrunner</span>
+            </div>
+            <div class="hierarchy-items" id="backgroundsGroup">
+              <div class="hierarchy-item" data-id="studio-bg">
+                <span class="item-icon">🖼️</span>
+                <span class="item-name">Studio Bakgrunn</span>
+                <div class="item-actions">
+                  <button class="visibility-btn active" title="Synlig">👁</button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-        <div class="scene-objects">
-          <div class="section-header">Scene</div>
-          <div class="scene-list" id="sceneList"></div>
-        </div>
+        
         <div class="actor-panel-trigger" id="actorPanelTrigger">
           <div class="section-header">
             <span class="category-arrow">▶</span>

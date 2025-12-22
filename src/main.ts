@@ -758,6 +758,88 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       });
       
+      const addToHierarchy = (id: string, name: string, type: 'model' | 'light' | 'equipment') => {
+        let groupId = '';
+        let icon = '';
+        
+        switch (type) {
+          case 'model':
+            groupId = 'modelsGroup';
+            icon = '🧍';
+            break;
+          case 'light':
+            groupId = 'lightsGroup';
+            icon = '💡';
+            break;
+          case 'equipment':
+            groupId = 'equipmentGroup';
+            icon = '🔧';
+            break;
+        }
+        
+        const group = document.getElementById(groupId);
+        if (group) {
+          const emptyMsg = group.querySelector('.hierarchy-empty');
+          if (emptyMsg) emptyMsg.remove();
+          
+          const itemHtml = `
+            <div class="hierarchy-item selected" data-id="${id}">
+              <span class="item-icon">${icon}</span>
+              <span class="item-name">${name}</span>
+              <div class="item-actions">
+                <button class="visibility-btn active" title="Synlig">👁</button>
+                <button class="delete-btn" title="Slett">🗑</button>
+              </div>
+            </div>
+          `;
+          group.insertAdjacentHTML('beforeend', itemHtml);
+          
+          document.querySelectorAll('.hierarchy-item').forEach(item => item.classList.remove('selected'));
+          const newItem = group.querySelector(`[data-id="${id}"]`);
+          if (newItem) {
+            newItem.classList.add('selected');
+            
+            newItem.addEventListener('click', () => {
+              document.querySelectorAll('.hierarchy-item').forEach(i => i.classList.remove('selected'));
+              newItem.classList.add('selected');
+            });
+            
+            const deleteBtn = newItem.querySelector('.delete-btn');
+            if (deleteBtn) {
+              deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                newItem.remove();
+                if (group.querySelectorAll('.hierarchy-item').length === 0) {
+                  const emptyText = type === 'model' ? 'Ingen modeller i scenen' : 
+                                   type === 'light' ? 'Ingen lys i scenen' : 'Ingen utstyr i scenen';
+                  group.innerHTML = `<div class="hierarchy-empty">${emptyText}</div>`;
+                }
+                const noSelection = document.getElementById('noSelection');
+                const objectHeader = document.getElementById('objectHeader');
+                const transformSection = document.getElementById('transformSection');
+                const feetSection = document.getElementById('feetSection');
+                const handsSection = document.getElementById('handsSection');
+                const lightProperties = document.getElementById('lightProperties');
+                if (noSelection) noSelection.style.display = 'block';
+                if (objectHeader) objectHeader.style.display = 'none';
+                if (transformSection) transformSection.style.display = 'none';
+                if (feetSection) feetSection.style.display = 'none';
+                if (handsSection) handsSection.style.display = 'none';
+                if (lightProperties) lightProperties.style.display = 'none';
+              });
+            }
+            
+            const visibilityBtn = newItem.querySelector('.visibility-btn');
+            if (visibilityBtn) {
+              visibilityBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                visibilityBtn.classList.toggle('active');
+              });
+            }
+          }
+        }
+      };
+      
       const showObjectProperties = (name: string, type: 'model' | 'light' | 'equipment', position = [0, 0, 0], rotation = [0, 0, 0]) => {
         const noSelection = document.getElementById('noSelection');
         const objectHeader = document.getElementById('objectHeader');
@@ -817,6 +899,7 @@ window.addEventListener('DOMContentLoaded', () => {
           });
           
           studio.addActorToScene(actorId);
+          addToHierarchy(actorId, displayName, 'model');
           showObjectProperties(displayName, 'model', [0, 0, 0], [0, 0, 0]);
           console.log('Added actor:', actorName);
         });
@@ -836,6 +919,7 @@ window.addEventListener('DOMContentLoaded', () => {
             userData: { power: 100, cct: 5600 }
           });
           
+          addToHierarchy(lightId, lightName, 'light');
           showObjectProperties(lightName, 'light', [2, 3, 0], [0, 0, 0]);
           console.log('Added light:', lightName);
         });
@@ -846,6 +930,7 @@ window.addEventListener('DOMContentLoaded', () => {
           const equipName = card.querySelector('.equipment-name')?.textContent?.split('<br>')[0] || 'Equipment';
           const equipId = `equip-${Date.now()}`;
           
+          addToHierarchy(equipId, equipName, 'equipment');
           showObjectProperties(equipName, 'equipment', [0, 0, 0], [0, 0, 0]);
           console.log('Added equipment:', equipName);
         });

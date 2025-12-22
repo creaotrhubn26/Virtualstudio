@@ -749,6 +749,122 @@ html, body {
   padding: 12px;
 }
 
+/* Scene Hierarchy */
+.hierarchy-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.hierarchy-group {
+  margin-bottom: 4px;
+}
+
+.hierarchy-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.hierarchy-header:hover {
+  background: var(--bg-hover);
+}
+
+.hierarchy-arrow {
+  font-size: 8px;
+  color: var(--text-muted);
+  width: 12px;
+}
+
+.hierarchy-icon {
+  font-size: 14px;
+}
+
+.hierarchy-items {
+  padding-left: 20px;
+}
+
+.hierarchy-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-left: 2px solid transparent;
+}
+
+.hierarchy-item:hover {
+  background: var(--bg-hover);
+}
+
+.hierarchy-item.selected {
+  background: rgba(78, 205, 196, 0.15);
+  border-left-color: var(--accent-cyan);
+  color: var(--text-primary);
+}
+
+.item-icon {
+  font-size: 12px;
+}
+
+.item-name {
+  flex: 1;
+}
+
+.item-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.hierarchy-item:hover .item-actions {
+  opacity: 1;
+}
+
+.visibility-btn,
+.delete-btn {
+  width: 20px;
+  height: 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  opacity: 0.6;
+  padding: 0;
+}
+
+.visibility-btn:hover,
+.delete-btn:hover {
+  opacity: 1;
+}
+
+.visibility-btn.active {
+  opacity: 1;
+}
+
+.visibility-btn:not(.active) {
+  opacity: 0.3;
+}
+
+.delete-btn {
+  color: #e74c3c;
+}
+
+.hierarchy-empty {
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 .actor-model-card {
   width: 90px;
   flex-shrink: 0;
