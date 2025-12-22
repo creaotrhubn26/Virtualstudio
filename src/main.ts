@@ -2290,6 +2290,8 @@ window.addEventListener('DOMContentLoaded', () => {
     const actorPanelTrigger = document.getElementById('actorPanelTrigger');
     const actorTab = document.getElementById('actorTab');
     
+    console.log('Studio Library elements:', { actorPanelRoot: !!actorPanelRoot, actorBottomPanel: !!actorBottomPanel, actorPanelTrigger: !!actorPanelTrigger });
+    
     const keyframeTimelineRoot = document.getElementById('keyframeTimelineRoot');
     if (keyframeTimelineRoot) {
       const timelineRoot = createRoot(keyframeTimelineRoot);
@@ -2336,7 +2338,9 @@ window.addEventListener('DOMContentLoaded', () => {
       }));
       
       const togglePanel = () => {
+        console.log('togglePanel called');
         const isOpen = actorBottomPanel.classList.contains('open');
+        console.log('isOpen:', isOpen);
         if (isOpen) {
           actorBottomPanel.classList.remove('open');
           actorPanelTrigger.classList.remove('active');
@@ -2352,9 +2356,13 @@ window.addEventListener('DOMContentLoaded', () => {
           if (arrow) arrow.textContent = '−';
           if (actorTab) actorTab.classList.add('panel-open');
         }
+        console.log('Panel classes after toggle:', actorBottomPanel.className);
       };
       
-      actorPanelTrigger.addEventListener('click', togglePanel);
+      actorPanelTrigger.addEventListener('click', (e) => {
+        console.log('Studio Library button clicked', e);
+        togglePanel();
+      });
       
       if (actorTab) {
         actorTab.addEventListener('click', togglePanel);
