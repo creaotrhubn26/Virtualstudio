@@ -5,6 +5,8 @@ import { createRoot } from 'react-dom/client';
 import { App, TimelineApp } from './App';
 import { useAppStore } from './state/store';
 import { virtualActorService } from './core/services/virtualActorService';
+import { propRenderingService } from './core/services/propRenderingService';
+import { getPropById } from './core/data/propDefinitions';
 
 interface LightData {
   light: BABYLON.Light;
@@ -114,10 +116,12 @@ class VirtualStudio {
     this.gizmoManager.attachableMeshes = [];
 
     virtualActorService.setScene(this.scene);
+    propRenderingService.setScene(this.scene);
     
     this.setupStudio();
     this.setupUI();
     this.setup2DViews();
+    this.setupAssetEventListeners();
 
     this.engine.runRenderLoop(() => {
       this.scene.render();
@@ -584,6 +588,211 @@ class VirtualStudio {
     }
 
     this.resizeCanvases();
+  }
+
+  private setupAssetEventListeners(): void {
+    window.addEventListener('ch-add-asset', ((e: CustomEvent) => {
+      const { asset } = e.detail;
+      console.log('Asset added:', asset.title);
+      
+      if (asset.type === 'light') {
+        const position = new BABYLON.Vector3(
+          Math.random() * 4 - 2,
+          3 + Math.random() * 2,
+          Math.random() * 4 - 2
+        );
+        this.addLight('godox-ad600', position);
+      } else {
+        this.loadAssetFromLibrary(asset.id, asset.title, asset.data);
+      }
+    }) as EventListener);
+
+    window.addEventListener('ch-add-asset-at', ((e: CustomEvent) => {
+      const { asset, position } = e.detail;
+      console.log('Asset placed at:', position);
+      
+      const pos = new BABYLON.Vector3(position[0], position[1], position[2]);
+      
+      if (asset.type === 'light') {
+        this.addLight('godox-ad600', pos);
+      } else {
+        this.loadAssetFromLibrary(asset.id, asset.title, asset.data, pos);
+      }
+    }) as EventListener);
+
+    window.addEventListener('ch-load-character', ((e: CustomEvent) => {
+      const { modelUrl, name, skinTone, height } = e.detail;
+      console.log('Loading character:', name);
+      this.loadCharacterModel(modelUrl, name, skinTone, height);
+    }) as EventListener);
+
+    window.addEventListener('ch-remove-character', (() => {
+      console.log('Removing character');
+      this.removeCharacterModel();
+    }) as EventListener);
+
+    window.addEventListener('ch-apply-pose', ((e: CustomEvent) => {
+      const { poseId, poseName } = e.detail;
+      console.log('Applying pose:', poseName);
+    }) as EventListener);
+
+    window.addEventListener('ch-actor-params-changed', ((e: CustomEvent) => {
+      const { actorParams } = e.detail;
+      console.log('Actor params changed:', actorParams);
+      this.updateActorMesh(actorParams);
+    }) as EventListener);
+  }
+
+  private updateActorMesh(params: { height: number; weight: number; skinTone?: string }): void {
+    const heightScale = 0.8 + params.height * 0.4;
+    const weightScale = 0.8 + params.weight * 0.4;
+    const mesh = this.characterMesh || this.scene.getMeshByName('mannequin');
+
+    if (mesh) {
+      mesh.scaling = new BABYLON.Vector3(weightScale, heightScale, weightScale);
+      mesh.position.y = 0.875 * heightScale;
+
+      if (params.skinTone) {
+        this.applyMaterialColor(mesh, params.skinTone);
+      }
+    }
+  }
+
+  private applyMaterialColor(mesh: BABYLON.AbstractMesh, colorHex: string): void {
+    const color = BABYLON.Color3.FromHexString(colorHex);
+    const mat = mesh.material;
+    
+    if (!mat) return;
+
+    if ((mat as BABYLON.PBRMaterial).albedoColor !== undefined) {
+      (mat as BABYLON.PBRMaterial).albedoColor = color;
+    } else if ((mat as BABYLON.StandardMaterial).diffuseColor !== undefined) {
+      (mat as BABYLON.StandardMaterial).diffuseColor = color;
+    }
+  }
+
+  private async loadAssetFromLibrary(
+    assetId: string,
+    name: string,
+    data?: { modelUrl?: string; metadata?: Record<string, unknown> },
+    position?: BABYLON.Vector3
+  ): Promise<void> {
+    const propDef = getPropById(assetId);
+    const pos = position || new BABYLON.Vector3(0, 0, 0);
+
+    if (propDef) {
+      try {
+        const mesh = await propRenderingService.loadProp(propDef, {
+          position: pos,
+          scale: propDef.defaultScale,
+        });
+        if (this.gizmoManager) {
+          this.gizmoManager.attachToMesh(mesh as BABYLON.AbstractMesh);
+        }
+        console.log(`Loaded prop via service: ${propDef.name}`);
+        return;
+      } catch (error) {
+        console.warn(`propRenderingService failed for ${assetId}, using fallback`);
+      }
+    }
+
+    if (data?.modelUrl) {
+      try {
+        const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', data.modelUrl, this.scene);
+        const mesh = result.meshes[0];
+        mesh.name = name;
+        mesh.position = pos;
+        
+        if (this.gizmoManager) {
+          this.gizmoManager.attachToMesh(mesh as BABYLON.AbstractMesh);
+        }
+        console.log(`Loaded asset model: ${name}`);
+        return;
+      } catch (error) {
+        console.warn(`Model not found: ${data.modelUrl}`);
+      }
+    }
+
+    this.createPlaceholderAsset(name, data?.metadata, pos);
+  }
+
+  private createPlaceholderAsset(
+    name: string,
+    metadata?: Record<string, unknown>,
+    position?: BABYLON.Vector3
+  ): void {
+    const pos = position || new BABYLON.Vector3(0, 0, 0);
+    let mesh: BABYLON.Mesh;
+
+    if (metadata?.width && metadata?.height) {
+      mesh = BABYLON.MeshBuilder.CreatePlane(name, {
+        width: metadata.width as number,
+        height: metadata.height as number,
+      }, this.scene);
+      mesh.rotation.x = -Math.PI / 2;
+      pos.y = (metadata.height as number) / 2;
+    } else {
+      mesh = BABYLON.MeshBuilder.CreateBox(name, { size: 0.5 }, this.scene);
+      pos.y = 0.25;
+    }
+
+    mesh.position = pos;
+
+    const mat = new BABYLON.StandardMaterial(`${name}_mat`, this.scene);
+    if (metadata?.color) {
+      mat.diffuseColor = BABYLON.Color3.FromHexString(metadata.color as string);
+    } else {
+      mat.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+    }
+    mesh.material = mat;
+
+    if (this.gizmoManager) {
+      this.gizmoManager.attachToMesh(mesh);
+    }
+    console.log(`Created placeholder asset: ${name}`);
+  }
+
+  private characterMesh: BABYLON.AbstractMesh | null = null;
+
+  private async loadCharacterModel(modelUrl: string, name: string, skinTone: string, height: number): Promise<void> {
+    this.removeCharacterModel();
+    
+    try {
+      const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
+      this.characterMesh = result.meshes[0];
+      this.characterMesh.name = name;
+      this.characterMesh.position = new BABYLON.Vector3(0, 0, 0);
+      
+      console.log(`Loaded character: ${name}`);
+    } catch (error) {
+      console.warn(`Character model not found: ${modelUrl}, creating placeholder`);
+      const capsule = BABYLON.MeshBuilder.CreateCapsule(name, { height: 1.75, radius: 0.22 }, this.scene);
+      capsule.position = new BABYLON.Vector3(0, 0.875, 0);
+      
+      const mat = new BABYLON.StandardMaterial(`${name}_mat`, this.scene);
+      mat.diffuseColor = new BABYLON.Color3(0.6, 0.55, 0.5);
+      capsule.material = mat;
+      
+      this.characterMesh = capsule;
+    }
+
+    this.applyCurrentActorParams();
+  }
+
+  private applyCurrentActorParams(): void {
+    const store = useAppStore.getState();
+    this.updateActorMesh({
+      height: store.actorParams.height,
+      weight: store.actorParams.weight,
+      skinTone: store.actorParams.skinTone,
+    });
+  }
+
+  private removeCharacterModel(): void {
+    if (this.characterMesh) {
+      this.characterMesh.dispose();
+      this.characterMesh = null;
+    }
   }
 
   private resizeCanvases(): void {

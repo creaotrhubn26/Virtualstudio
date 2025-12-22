@@ -15,9 +15,19 @@ export interface SceneNode {
   userData?: Record<string, unknown>;
 }
 
+export interface ActorParams {
+  height: number;
+  weight: number;
+  skinTone: string;
+  gender: 'male' | 'female' | 'neutral';
+  age: number;
+  muscle: number;
+}
+
 interface AppState {
   scene: SceneNode[];
   selectedNodeId: string | null;
+  actorParams: ActorParams;
   
   addNode: (node: SceneNode) => void;
   removeNode: (id: string) => void;
@@ -25,11 +35,20 @@ interface AppState {
   selectNode: (id: string | null) => void;
   getNode: (id: string) => SceneNode | undefined;
   clearScene: () => void;
+  setActorParams: (params: Partial<ActorParams>) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
   scene: [],
   selectedNodeId: null,
+  actorParams: {
+    height: 0.5,
+    weight: 0.5,
+    skinTone: '#FFDAB9',
+    gender: 'neutral',
+    age: 30,
+    muscle: 0.5,
+  },
 
   addNode: (node) => set((state) => ({
     scene: [...state.scene, node]
@@ -50,5 +69,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   getNode: (id) => get().scene.find((n) => n.id === id),
 
-  clearScene: () => set({ scene: [], selectedNodeId: null })
+  clearScene: () => set({ scene: [], selectedNodeId: null }),
+
+  setActorParams: (params) => set((state) => ({
+    actorParams: { ...state.actorParams, ...params }
+  })),
 }));

@@ -61,7 +61,7 @@ A professional web-based virtual photography studio application built with Babyl
 ```
 /
 ├── src/
-│   ├── main.ts                         # Main Babylon.js application with studio logic
+│   ├── main.ts                         # Main Babylon.js application with studio logic + asset events
 │   ├── styles.css                      # Professional dark theme UI styling
 │   ├── App.tsx                         # React root component (App + TimelineApp)
 │   ├── state/
@@ -69,18 +69,36 @@ A professional web-based virtual photography studio application built with Babyl
 │   ├── core/
 │   │   ├── animation/
 │   │   │   └── SceneGraphAnimationEngine.ts  # Animation engine with easing functions
+│   │   ├── data/
+│   │   │   └── propDefinitions.ts      # Prop catalog with furniture, backdrops, decorations
+│   │   ├── models/
+│   │   │   └── scene.ts                # Scene node types and transform utilities
 │   │   └── services/
 │   │       ├── virtualActorService.ts  # Actor mesh generation service
+│   │       ├── propRenderingService.ts # Prop loading and rendering service
+│   │       ├── assetLibrary.ts         # Asset library with favorites and usage tracking
 │   │       └── logger.ts               # Logging service
+│   ├── components/
+│   │   ├── ActorMesh.tsx               # Actor parameter controls panel
+│   │   └── PropMesh.tsx                # Prop selection and scaling panel
 │   ├── panels/
 │   │   ├── KeyframeTimeline.tsx        # React keyframe timeline editor
 │   │   ├── VirtualActorPanel.tsx       # Actor configuration panel
+│   │   ├── CharacterModelLoader.tsx    # Character selection with pose library
+│   │   ├── AssetLibraryPanel.tsx       # Asset library with drag & drop
 │   │   ├── GlassesSelector.tsx         # Glasses selection component
 │   │   └── ActorLibraryPanel.tsx       # Actor presets library
 │   └── data/
 │       ├── actorPresets.ts             # Predefined actor presets
 │       ├── hairStyles.ts               # Hair style configurations
 │       └── glassesModels.ts            # Glasses model data
+├── public/
+│   └── models/                         # 3D model assets (GLB/GLTF)
+│       ├── characters/                 # Character models
+│       ├── props/                      # Furniture and props
+│       ├── modifiers/                  # Light modifiers
+│       ├── accessories/                # Accessories
+│       └── hdri/                       # HDRI environments
 ├── index.html        # 3-panel layout structure
 ├── package.json      # Dependencies
 ├── tsconfig.json     # TypeScript config
@@ -107,6 +125,13 @@ Run `npm run dev` to start the development server on port 5000.
 - Interactive light placement with gizmos
 
 ## Recent Changes
+- 2025-12-22: Implemented comprehensive 3D asset loading system
+  - Created AssetLibraryPanel with drag & drop and manual placement
+  - CharacterModelLoader with 6 character types and pose library
+  - Asset event system (ch-add-asset, ch-load-character, ch-apply-pose)
+  - propRenderingService for Babylon.js mesh loading
+  - assetLibraryService with favorites and usage tracking
+  - Model folder structure (characters, props, modifiers, accessories, hdri)
 - 2025-12-22: Integrated React KeyframeTimeline component
   - Created SceneGraphAnimationEngine with easing functions
   - Multi-track timeline with keyframe editing
