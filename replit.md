@@ -125,11 +125,16 @@ Run `npm run dev` to start the development server on port 5000.
 - Interactive light placement with gizmos
 
 ## Recent Changes
+- 2025-12-22: Integrated LightsBrowser, CameraGearPanel, and HDRIPanel into Studio Library
+  - LightsBrowser: 17 professional lights (Godox, Profoto, Aputure), search/filter, favorites
+  - CameraGearPanel: Exposure controls (aperture, ISO, shutter speed), lens presets, EV readout
+  - HDRIPanel: 6 environment presets with category filtering, intensity/rotation controls
+  - Tab switching now includes TIMELINE, MODELS, LIGHTS, CAMERA GEAR, EQUIPMENT, ASSETS, HDRI
+  - All panels use Zustand store and CustomEvent system for Babylon.js communication
 - 2025-12-22: Integrated asset panels into Studio Library bottom panel
   - MODELS tab now uses React CharacterModelLoader with pose library
   - Added ASSETS tab with React AssetLibraryPanel component
   - Mounted both components from App.tsx with AssetLibraryApp and CharacterLoaderApp
-  - Tab switching between TIMELINE, MODELS, LIGHTS, CAMERA GEAR, EQUIPMENT, ASSETS
 - 2025-12-22: Implemented comprehensive 3D asset loading system
   - Created AssetLibraryPanel with drag & drop and manual placement
   - CharacterModelLoader with 6 character types and pose library
