@@ -2139,35 +2139,47 @@ html, body {
   text-align: right;
 }
 
-.group-toggle-btn {
+.axis-select-btn {
   background: transparent;
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
   border-radius: 4px;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
-  margin-left: auto;
+  flex-shrink: 0;
 }
 
-.group-toggle-btn:hover {
+.axis-select-btn:hover {
   background: rgba(255, 255, 255, 0.1);
   border-color: var(--text-secondary);
 }
 
-.group-toggle-btn.active {
+.axis-select-btn.selected {
   background: var(--accent-blue);
   color: white;
   border-color: var(--accent-blue);
 }
 
-.group-toggle-btn svg {
-  width: 12px;
-  height: 12px;
+.axis-select-btn[data-axis="x"].selected {
+  background: #e74c3c;
+  border-color: #e74c3c;
+}
+
+.axis-select-btn[data-axis="y"].selected {
+  background: #2ecc71;
+  border-color: #2ecc71;
+}
+
+.axis-select-btn[data-axis="z"].selected {
+  background: #3498db;
+  border-color: #3498db;
 }
 
 .keyframe-btn {

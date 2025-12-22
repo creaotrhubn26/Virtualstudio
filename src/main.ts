@@ -49,8 +49,8 @@ class VirtualStudio {
   private lights: Map<string, LightData> = new Map();
   private selectedLightId: string | null = null;
   private lightCounter = 0;
-  private positionGrouped: boolean = true;
-  private rotationGrouped: boolean = true;
+  private selectedPosAxes: Set<string> = new Set(['x', 'y', 'z']);
+  private selectedRotAxes: Set<string> = new Set(['x', 'y', 'z']);
   private gridMesh: BABYLON.Mesh | null = null;
   private gizmoManager: BABYLON.GizmoManager | null = null;
   private topViewCanvas: HTMLCanvasElement | null = null;
@@ -356,33 +356,41 @@ class VirtualStudio {
       });
     });
     
-    // Group toggle buttons
-    document.getElementById('posGroupToggle')?.addEventListener('click', (e) => {
-      const btn = e.currentTarget as HTMLButtonElement;
-      btn.classList.toggle('active');
-      btn.setAttribute('aria-pressed', btn.classList.contains('active').toString());
-      this.positionGrouped = btn.classList.contains('active');
-    });
-    
-    document.getElementById('rotGroupToggle')?.addEventListener('click', (e) => {
-      const btn = e.currentTarget as HTMLButtonElement;
-      btn.classList.toggle('active');
-      btn.setAttribute('aria-pressed', btn.classList.contains('active').toString());
-      this.rotationGrouped = btn.classList.contains('active');
-    });
-    
-    // Axis keyframe buttons
-    document.querySelectorAll('.axis-keyframe').forEach(btn => {
+    // Axis select buttons - toggle selection
+    document.querySelectorAll('.axis-select-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const target = e.currentTarget as HTMLButtonElement;
         const type = target.dataset.type as 'position' | 'rotation';
         const axis = target.dataset.axis as 'x' | 'y' | 'z';
-        const isGrouped = type === 'position' ? this.positionGrouped : this.rotationGrouped;
+        const selectedAxes = type === 'position' ? this.selectedPosAxes : this.selectedRotAxes;
         
-        if (isGrouped) {
-          this.addKeyframe(type);
+        if (selectedAxes.has(axis)) {
+          selectedAxes.delete(axis);
+          target.classList.remove('selected');
+          target.setAttribute('aria-pressed', 'false');
         } else {
-          this.addKeyframeForAxis(type, axis);
+          selectedAxes.add(axis);
+          target.classList.add('selected');
+          target.setAttribute('aria-pressed', 'true');
+        }
+      });
+    });
+    
+    // Axis keyframe buttons - add keyframes for selected axes
+    document.querySelectorAll('.axis-keyframe').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLButtonElement;
+        const type = target.dataset.type as 'position' | 'rotation';
+        const selectedAxes = type === 'position' ? this.selectedPosAxes : this.selectedRotAxes;
+        
+        if (selectedAxes.size === 3) {
+          // All axes selected - use grouped keyframe
+          this.addKeyframe(type);
+        } else if (selectedAxes.size > 0) {
+          // Add keyframe for each selected axis
+          selectedAxes.forEach(axis => {
+            this.addKeyframeForAxis(type, axis as 'x' | 'y' | 'z');
+          });
         }
       });
     });
@@ -1483,7 +1491,7 @@ class VirtualStudio {
     // Update all position axis buttons
     document.querySelectorAll('.pos-keyframe').forEach(btn => {
       const axis = (btn as HTMLElement).dataset.axis;
-      if (this.positionGrouped) {
+      if (this.selectedPosAxes.size === 3) {
         btn.classList.toggle('has-keyframe', !!hasPosKeyframe);
       } else {
         const axisTrack = this.animationState.tracks.find(t => t.id === `${this.selectedLightId}_position_${axis}`);
@@ -1495,7 +1503,7 @@ class VirtualStudio {
     // Update all rotation axis buttons
     document.querySelectorAll('.rot-keyframe').forEach(btn => {
       const axis = (btn as HTMLElement).dataset.axis;
-      if (this.rotationGrouped) {
+      if (this.selectedRotAxes.size === 3) {
         btn.classList.toggle('has-keyframe', !!hasRotKeyframe);
       } else {
         const axisTrack = this.animationState.tracks.find(t => t.id === `${this.selectedLightId}_rotation_${axis}`);
