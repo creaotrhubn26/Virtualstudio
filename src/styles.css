@@ -1457,7 +1457,11 @@ html, body {
   position: absolute;
   top: 12px;
   left: 12px;
+  right: 12px;
   pointer-events: none;
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
 }
 
 .cam-info {
@@ -1478,19 +1482,15 @@ html, body {
 }
 
 .exposure-display {
-  position: absolute;
-  top: 12px;
-  left: 80px;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .highlight-info {
-  position: absolute;
-  top: 12px;
-  right: 160px;
   color: var(--accent-green);
-  font-size: 11px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-left: auto;
 }
 
 .histogram {
