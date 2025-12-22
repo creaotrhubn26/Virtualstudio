@@ -200,29 +200,81 @@ class VirtualStudio {
   }
 
   private setupPropertyListeners(): void {
-    ['posX', 'posY', 'posZ'].forEach((id, index) => {
-      document.getElementById(id)?.addEventListener('change', (e) => {
+    // Position sliders and inputs
+    const posAxes = ['X', 'Y', 'Z'];
+    posAxes.forEach((axis, index) => {
+      const slider = document.getElementById(`pos${axis}Slider`) as HTMLInputElement;
+      const input = document.getElementById(`pos${axis}Input`) as HTMLInputElement;
+      
+      const updatePosition = (val: number) => {
         if (!this.selectedLightId) return;
         const data = this.lights.get(this.selectedLightId);
         if (data) {
-          const val = parseFloat((e.target as HTMLInputElement).value);
           if (index === 0) data.mesh.position.x = val;
           if (index === 1) data.mesh.position.y = val;
           if (index === 2) data.mesh.position.z = val;
         }
+      };
+      
+      slider?.addEventListener('input', () => {
+        const val = parseFloat(slider.value);
+        if (input) input.value = val.toFixed(1);
+        updatePosition(val);
+      });
+      
+      input?.addEventListener('change', () => {
+        const val = parseFloat(input.value);
+        if (slider) slider.value = val.toString();
+        updatePosition(val);
       });
     });
-
-    ['rotX', 'rotY', 'rotZ'].forEach((id, index) => {
-      document.getElementById(id)?.addEventListener('change', (e) => {
+    
+    // Rotation sliders and inputs
+    const rotAxes = ['X', 'Y', 'Z'];
+    rotAxes.forEach((axis, index) => {
+      const slider = document.getElementById(`rot${axis}Slider`) as HTMLInputElement;
+      const input = document.getElementById(`rot${axis}Input`) as HTMLInputElement;
+      
+      const updateRotation = (val: number) => {
         if (!this.selectedLightId) return;
         const data = this.lights.get(this.selectedLightId);
         if (data) {
-          const val = parseFloat((e.target as HTMLInputElement).value) * Math.PI / 180;
-          if (index === 0) data.mesh.rotation.x = val;
-          if (index === 1) data.mesh.rotation.y = val;
-          if (index === 2) data.mesh.rotation.z = val;
+          const rad = val * Math.PI / 180;
+          if (index === 0) data.mesh.rotation.x = rad;
+          if (index === 1) data.mesh.rotation.y = rad;
+          if (index === 2) data.mesh.rotation.z = rad;
         }
+      };
+      
+      slider?.addEventListener('input', () => {
+        const val = parseFloat(slider.value);
+        if (input) input.value = val.toString();
+        updateRotation(val);
+      });
+      
+      input?.addEventListener('change', () => {
+        const val = parseFloat(input.value);
+        if (slider) slider.value = val.toString();
+        updateRotation(val);
+      });
+    });
+    
+    // Increment/decrement buttons
+    document.querySelectorAll('.inc-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute('data-target');
+        if (!targetId) return;
+        const slider = document.getElementById(targetId) as HTMLInputElement;
+        if (!slider) return;
+        
+        const isInc = btn.classList.contains('inc');
+        const step = parseFloat(slider.step) || 1;
+        const currentVal = parseFloat(slider.value);
+        const newVal = isInc ? currentVal + step : currentVal - step;
+        const clampedVal = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), newVal));
+        
+        slider.value = clampedVal.toString();
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
       });
     });
 
