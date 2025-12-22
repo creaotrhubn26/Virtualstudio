@@ -56,6 +56,18 @@ import { getPropById } from './core/data/propDefinitions';
       e.stopPropagation();
       togglePanel();
     }
+    
+    // Handle equipment add buttons
+    const equipBtn = target.closest('.equipment-add-btn') as HTMLElement;
+    if (equipBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const equipId = equipBtn.getAttribute('data-equip');
+      if (equipId) {
+        window.dispatchEvent(new CustomEvent('ch-add-equipment', { detail: { id: equipId } }));
+        console.log('Equipment added:', equipId);
+      }
+    }
   }, true); // Use capture phase for earliest possible handling
   
   // Also handle keyboard for accessibility

@@ -138,8 +138,10 @@ Run `npm run dev` to start the development server on port 5000.
 - 2025-12-22: Added "Legg til" buttons to all Studio Library tabs
   - CameraGearPanel: Add buttons for cameras and lenses with touch-friendly sizing
   - HDRIPanel: Add buttons for HDRI environments with responsive sizing
+  - Equipment tab: Add buttons for all 17 equipment items (backgrounds, diffusers, reflectors, etc.)
   - Consistent cyan accent color (#00a8ff) across all add buttons
   - Touch-optimized with 36px minimum height on tablet/touch devices
+  - Event system: 'ch-add-equipment' for Babylon.js integration
 - 2025-12-22: Improved Studio Library button reliability
   - Event delegation with capture phase for immediate click handling
   - Debouncing to prevent rapid double-click issues
