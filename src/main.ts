@@ -974,6 +974,72 @@ window.addEventListener('DOMContentLoaded', () => {
         });
       });
       
+      // Panel resizing functionality
+      const leftPanel = document.querySelector('.left-panel') as HTMLElement;
+      const rightPanel = document.querySelector('.right-panel') as HTMLElement;
+      const leftResizeHandle = document.getElementById('leftResizeHandle');
+      const rightResizeHandle = document.getElementById('rightResizeHandle');
+      
+      let isResizing = false;
+      let currentHandle: 'left' | 'right' | null = null;
+      let startX = 0;
+      let startWidth = 0;
+      
+      const startResize = (e: MouseEvent, handle: 'left' | 'right') => {
+        isResizing = true;
+        currentHandle = handle;
+        startX = e.clientX;
+        startWidth = handle === 'left' ? leftPanel.offsetWidth : rightPanel.offsetWidth;
+        document.body.classList.add('resizing-panels');
+        (handle === 'left' ? leftResizeHandle : rightResizeHandle)?.classList.add('resizing');
+      };
+      
+      const doResize = (e: MouseEvent) => {
+        if (!isResizing || !currentHandle) return;
+        
+        const diff = e.clientX - startX;
+        const minWidth = 180;
+        const maxWidth = 400;
+        
+        if (currentHandle === 'left') {
+          const newWidth = Math.min(maxWidth, Math.max(minWidth, startWidth + diff));
+          leftPanel.style.width = `${newWidth}px`;
+        } else {
+          const newWidth = Math.min(maxWidth, Math.max(minWidth, startWidth - diff));
+          rightPanel.style.width = `${newWidth}px`;
+        }
+      };
+      
+      const stopResize = () => {
+        if (isResizing) {
+          isResizing = false;
+          document.body.classList.remove('resizing-panels');
+          leftResizeHandle?.classList.remove('resizing');
+          rightResizeHandle?.classList.remove('resizing');
+          currentHandle = null;
+        }
+      };
+      
+      leftResizeHandle?.addEventListener('mousedown', (e) => startResize(e, 'left'));
+      rightResizeHandle?.addEventListener('mousedown', (e) => startResize(e, 'right'));
+      document.addEventListener('mousemove', doResize);
+      document.addEventListener('mouseup', stopResize);
+      
+      // Keyboard support for resize handles
+      const handleKeyResize = (e: KeyboardEvent, panel: HTMLElement, direction: number) => {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+          e.preventDefault();
+          const currentWidth = panel.offsetWidth;
+          const step = e.shiftKey ? 50 : 10;
+          const diff = (e.key === 'ArrowRight' ? 1 : -1) * step * direction;
+          const newWidth = Math.min(400, Math.max(180, currentWidth + diff));
+          panel.style.width = `${newWidth}px`;
+        }
+      };
+      
+      leftResizeHandle?.addEventListener('keydown', (e) => handleKeyResize(e, leftPanel, 1));
+      rightResizeHandle?.addEventListener('keydown', (e) => handleKeyResize(e, rightPanel, -1));
+      
       const categoryConfig: Record<string, string[]> = {
         models: ['All', 'Women', 'Men', 'Children', 'Animals'],
         lights: ['All', 'Flash', 'Continuous', 'Practical Light', 'Light Shapers'],
