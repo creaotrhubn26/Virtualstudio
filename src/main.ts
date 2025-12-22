@@ -285,6 +285,39 @@ class VirtualStudio {
         slider.dispatchEvent(new Event('input', { bubbles: true }));
       });
     });
+    
+    // Reset position button
+    document.getElementById('resetPosBtn')?.addEventListener('click', () => {
+      if (!this.selectedLightId) return;
+      const data = this.lights.get(this.selectedLightId);
+      if (!data) return;
+      
+      data.mesh.position.set(0, 3, 0);
+      
+      ['X', 'Y', 'Z'].forEach((axis, i) => {
+        const slider = document.getElementById(`pos${axis}Slider`) as HTMLInputElement;
+        const input = document.getElementById(`pos${axis}Input`) as HTMLInputElement;
+        const val = i === 1 ? 3 : 0;
+        if (slider) slider.value = val.toString();
+        if (input) input.value = val.toFixed(1);
+      });
+    });
+    
+    // Reset rotation button
+    document.getElementById('resetRotBtn')?.addEventListener('click', () => {
+      if (!this.selectedLightId) return;
+      const data = this.lights.get(this.selectedLightId);
+      if (!data) return;
+      
+      data.mesh.rotation.set(0, 0, 0);
+      
+      ['X', 'Y', 'Z'].forEach(axis => {
+        const slider = document.getElementById(`rot${axis}Slider`) as HTMLInputElement;
+        const input = document.getElementById(`rot${axis}Input`) as HTMLInputElement;
+        if (slider) slider.value = '0';
+        if (input) input.value = '0';
+      });
+    });
 
     document.getElementById('cctSelect')?.addEventListener('change', (e) => {
       if (!this.selectedLightId) return;
