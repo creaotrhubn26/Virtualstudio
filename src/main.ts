@@ -788,7 +788,7 @@ window.addEventListener('DOMContentLoaded', () => {
         models: ['All', 'Women', 'Men', 'Children', 'Animals'],
         lights: ['All', 'Flash', 'Continuous', 'Practical Light', 'Light Shapers'],
         camera: ['All', 'Kameraer', 'Objektiver', 'Tilbehør'],
-        equipment: ['All', 'Stativer', 'Grip', 'Bakgrunnsutstyr'],
+        equipment: ['All', 'Diffusers', 'Reflectors', 'Blockers'],
         assets: ['All', 'Bakgrunner', 'Rekvisitter', 'Møbler'],
         timeline: []
       };
