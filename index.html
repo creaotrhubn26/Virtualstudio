@@ -406,6 +406,7 @@
               <span class="prop-icon position-icon" aria-hidden="true"></span>
               Posisjon
             </label>
+            <button class="keyframe-btn" id="addPosKeyframeBtn" title="Legg til keyframe" aria-label="Legg til posisjon keyframe">◆</button>
             <button class="reset-btn" id="resetPosBtn" title="Tilbakestill posisjon" aria-label="Tilbakestill posisjon">↺</button>
             <span class="unit" aria-hidden="true">m</span>
           </div>
@@ -437,6 +438,7 @@
               <span class="prop-icon rotation-icon" aria-hidden="true"></span>
               Rotasjon
             </label>
+            <button class="keyframe-btn" id="addRotKeyframeBtn" title="Legg til keyframe" aria-label="Legg til rotasjon keyframe">◆</button>
             <button class="reset-btn" id="resetRotBtn" title="Tilbakestill rotasjon" aria-label="Tilbakestill rotasjon">↺</button>
             <span class="unit" aria-hidden="true">°</span>
           </div>
@@ -868,6 +870,26 @@
         </div>
         <div id="actorPanelRoot" style="display: none;"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- Animation Timeline -->
+  <div class="timeline-container" id="animationTimeline">
+    <div class="timeline-header">
+      <h3>Animasjon Tidslinje</h3>
+      <div class="timeline-controls">
+        <button class="timeline-btn" id="tlPrevKeyframe" title="Forrige keyframe">⏮</button>
+        <button class="timeline-btn" id="tlPlay" title="Spill av">▶</button>
+        <button class="timeline-btn" id="tlStop" title="Stopp">⏹</button>
+        <button class="timeline-btn" id="tlNextKeyframe" title="Neste keyframe">⏭</button>
+        <span class="timeline-time" id="tlCurrentTime">0.00s</span>
+        <input type="range" id="tlScrubber" min="0" max="100" value="0" style="width: 120px;">
+        <span class="timeline-time" id="tlDuration">/ 5.00s</span>
+        <button class="timeline-btn" id="tlClose" title="Lukk tidslinje">✕</button>
+      </div>
+    </div>
+    <div class="timeline-tracks" id="tlTracksContainer">
+      <!-- Tracks will be added dynamically -->
     </div>
   </div>
 

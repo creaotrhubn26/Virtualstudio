@@ -2139,6 +2139,38 @@ html, body {
   text-align: right;
 }
 
+.keyframe-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  margin-left: auto;
+}
+
+.keyframe-btn:hover {
+  background: var(--accent-orange);
+  color: var(--bg-primary);
+  border-color: var(--accent-orange);
+}
+
+.keyframe-btn.has-keyframe {
+  background: var(--accent-orange);
+  color: var(--bg-primary);
+  border-color: var(--accent-orange);
+}
+
+.keyframe-btn:active {
+  transform: scale(0.95);
+}
+
 .reset-btn {
   background: transparent;
   border: 1px solid var(--border-color);
@@ -2152,7 +2184,6 @@ html, body {
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
-  margin-left: auto;
 }
 
 .reset-btn:hover {
@@ -2163,6 +2194,152 @@ html, body {
 
 .reset-btn:active {
   transform: scale(0.95);
+}
+
+/* Animation Timeline */
+.timeline-container {
+  position: fixed;
+  bottom: 0;
+  left: 280px;
+  right: 280px;
+  height: 180px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  z-index: 100;
+  display: none;
+}
+
+.timeline-container.visible {
+  display: block;
+}
+
+.timeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.timeline-header h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.timeline-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeline-btn {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.timeline-btn:hover {
+  background: var(--accent-cyan);
+  color: var(--bg-primary);
+  border-color: var(--accent-cyan);
+}
+
+.timeline-btn.active {
+  background: var(--accent-green);
+  color: var(--bg-primary);
+  border-color: var(--accent-green);
+}
+
+.timeline-time {
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--accent-cyan);
+  min-width: 60px;
+  text-align: center;
+}
+
+.timeline-tracks {
+  height: calc(100% - 44px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.timeline-track {
+  display: flex;
+  height: 32px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.track-label {
+  width: 120px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-tertiary);
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-right: 1px solid var(--border-color);
+}
+
+.track-lane {
+  flex: 1;
+  position: relative;
+  background: var(--bg-primary);
+}
+
+.keyframe-diamond {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--accent-orange);
+  transform: rotate(45deg) translateY(-50%);
+  top: 50%;
+  margin-left: -5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.keyframe-diamond:hover {
+  background: var(--accent-yellow);
+  transform: rotate(45deg) translateY(-50%) scale(1.2);
+}
+
+.keyframe-diamond.selected {
+  background: var(--accent-cyan);
+  box-shadow: 0 0 8px var(--accent-cyan);
+}
+
+.playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent-red);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.playhead::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 10px;
+  height: 10px;
+  background: var(--accent-red);
+  border-radius: 2px;
 }
 
 .camera-slider-section {
