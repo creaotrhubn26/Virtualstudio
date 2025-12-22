@@ -177,18 +177,18 @@ const CAMERA_BODIES: CameraBody[] = [
   },
   { 
     id: 'canon-c80', name: 'Canon EOS C80', brand: 'Canon', 
-    sensor: 'Full Frame', sensorSize: '36×24mm', megapixels: 45, 
-    baseISO: 800, maxISO: 102400, dynamicRange: 16.0, colorDepth: 25.5,
+    sensor: 'Full Frame', sensorSize: '36.0×19.0mm', megapixels: 26.67, 
+    baseISO: 800, maxISO: 12800, dynamicRange: 16.0, colorDepth: 25.5,
     maxShutter: '1/8000', flashSync: '-', maxFps: 120,
-    codec: 'Cinema RAW Light, XF-AVC', recording: '6K',
+    codec: 'Cinema RAW Light, XF-AVC, ProRes RAW', recording: '6K',
     category: 'cine'
   },
   { 
     id: 'canon-c50', name: 'Canon EOS C50', brand: 'Canon', 
-    sensor: 'Super 35', sensorSize: '26.2×13.8mm', megapixels: 8.85, 
-    baseISO: 800, maxISO: 102400, dynamicRange: 15.0, colorDepth: 25.2,
-    maxShutter: '1/8000', flashSync: '-', maxFps: 60,
-    codec: 'XF-AVC', recording: '4K DCI',
+    sensor: 'Full Frame', sensorSize: '36.0×24.0mm', megapixels: 32, 
+    baseISO: 800, maxISO: 6400, dynamicRange: 15.0, colorDepth: 25.0,
+    maxShutter: '1/8000', flashSync: '-', maxFps: 120,
+    codec: 'Cinema RAW Light, XF-AVC, XF-HEVC', recording: '7K',
     category: 'cine'
   },
   { 
