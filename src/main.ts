@@ -518,6 +518,9 @@ class VirtualStudio {
     const ev = Math.log2(100 / this.cameraSettings.iso) + Math.log2(this.cameraSettings.aperture * this.cameraSettings.aperture) - this.cameraSettings.nd * 0.3;
     const quickEV = document.getElementById('quickEV');
     if (quickEV) quickEV.textContent = `${ev.toFixed(1)} EV`;
+    
+    const evDisplay = document.getElementById('evDisplay');
+    if (evDisplay) evDisplay.textContent = `EV ${ev.toFixed(1)}`;
 
     this.updateSceneBrightness();
   }

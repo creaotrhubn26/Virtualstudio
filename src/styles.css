@@ -2392,6 +2392,27 @@ html, body {
   border-radius: 2px;
 }
 
+.ev-display-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  margin-bottom: 14px;
+}
+
+.ev-label {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.ev-value {
+  color: var(--accent-cyan);
+  font-size: 18px;
+  font-weight: 700;
+}
+
 .camera-slider-section {
   margin-bottom: 12px;
 }
