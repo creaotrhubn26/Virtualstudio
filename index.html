@@ -3,64 +3,334 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Virtual Studio - 3D Lighting Simulator</title>
+  <title>Virtual Studio</title>
   <link rel="stylesheet" href="/src/styles.css">
 </head>
 <body>
   <div id="app">
-    <canvas id="renderCanvas"></canvas>
-    <div id="ui-panel">
-      <h2>Virtual Studio</h2>
-      
-      <div class="section">
-        <h3>Lys</h3>
-        <div class="controls">
-          <button id="addSpotlight">+ Spotlight</button>
-          <button id="addPointLight">+ Punktlys</button>
-          <button id="addAreaLight">+ Softbox</button>
+    <header class="top-bar">
+      <div class="logo">
+        <span class="logo-icon">●</span>
+        <span class="logo-text">CreatorHub</span>
+        <span class="app-name">Virtual Studio</span>
+      </div>
+      <div class="project-title">
+        <input type="text" id="projectName" value="NYTT PROSJEKT" class="project-input">
+      </div>
+      <div class="toolbar">
+        <button class="tool-btn" id="undoBtn" title="Angre">↶</button>
+        <button class="tool-btn" id="redoBtn" title="Gjør om">↷</button>
+        <button class="tool-btn play-btn" id="playBtn">▶</button>
+        <div class="toolbar-divider"></div>
+        <select id="fpsSelect" class="toolbar-select">
+          <option value="30">30</option>
+          <option value="60">60</option>
+        </select>
+        <select id="resolutionSelect" class="toolbar-select">
+          <option value="1080">1920×1080</option>
+          <option value="4k">3840×2160</option>
+        </select>
+        <select id="cameraSelect" class="toolbar-select">
+          <option value="camA">Cam A</option>
+          <option value="camB">Cam B</option>
+        </select>
+        <button class="export-btn" id="exportPdfBtn">Eksporter PDF</button>
+      </div>
+      <div class="top-right">
+        <button class="icon-btn" id="importModelBtn" title="Importer modell">+</button>
+        <span class="user-icon">○</span>
+      </div>
+    </header>
+
+    <div class="main-container">
+      <aside class="left-panel">
+        <div class="panel-header">
+          <span class="panel-icon">☰</span>
+          <span>Utstyr</span>
         </div>
-      </div>
+        <div class="search-box">
+          <input type="text" id="equipmentSearch" placeholder="Søk...">
+        </div>
+        <div class="tabs">
+          <button class="tab active" data-tab="lights">Lys</button>
+          <button class="tab" data-tab="modifiers">Modifiers</button>
+        </div>
+        <div class="category-list">
+          <div class="category-item expanded" data-category="lights">
+            <span class="category-arrow">▼</span>
+            <span>Lys</span>
+          </div>
+          <div class="category-item" data-category="modifiers">
+            <span class="category-arrow">▶</span>
+            <span>Modifiers</span>
+          </div>
+          <div class="category-item" data-category="stands">
+            <span class="category-arrow">▶</span>
+            <span>Stativer & Grip</span>
+          </div>
+          <div class="category-item" data-category="backgrounds">
+            <span class="category-arrow">▶</span>
+            <span>Bakgrunner</span>
+          </div>
+          <div class="category-item" data-category="props">
+            <span class="category-arrow">▶</span>
+            <span>Møbler & Rekvisitter</span>
+          </div>
+        </div>
+        <div class="equipment-section">
+          <div class="section-header">Sgatdot</div>
+          <div class="equipment-list" id="equipmentList">
+            <div class="equipment-item" data-type="godox-ad600" draggable="true">
+              <span class="equip-icon">●</span>
+              <div class="equip-info">
+                <span class="equip-name">Godox AD600Pro</span>
+                <span class="equip-desc">Blitslampe</span>
+              </div>
+            </div>
+            <div class="equipment-item" data-type="profoto-b10" draggable="true">
+              <span class="equip-icon">●</span>
+              <div class="equip-info">
+                <span class="equip-name">Profoto B10</span>
+                <span class="equip-desc">Kompakt blits</span>
+              </div>
+            </div>
+            <div class="equipment-item" data-type="aputure-120d" draggable="true">
+              <span class="equip-icon">●</span>
+              <div class="equip-info">
+                <span class="equip-name">Aputure LS 120d II</span>
+                <span class="equip-desc">LED kontinuerlig</span>
+              </div>
+            </div>
+            <div class="equipment-item" data-type="softbox" draggable="true">
+              <span class="equip-icon modifier">◇</span>
+              <div class="equip-info">
+                <span class="equip-name">Softbox 90×120</span>
+                <span class="equip-desc">Modifier</span>
+              </div>
+            </div>
+            <div class="equipment-item" data-type="umbrella" draggable="true">
+              <span class="equip-icon modifier">◇</span>
+              <div class="equip-info">
+                <span class="equip-name">Sølv Paraply</span>
+                <span class="equip-desc">Reflekterende</span>
+              </div>
+            </div>
+            <div class="equipment-item" data-type="reflector" draggable="true">
+              <span class="equip-icon modifier">◇</span>
+              <div class="equip-info">
+                <span class="equip-name">Sammenleggbar Reflektor</span>
+                <span class="equip-desc">5-i-1</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="scene-objects">
+          <div class="section-header">Scene</div>
+          <div class="scene-list" id="sceneList"></div>
+        </div>
+        <div class="panel-footer">
+          <button class="footer-tab" id="notesTab">Notater</button>
+          <button class="footer-tab" id="assetsTab">Assets</button>
+        </div>
+      </aside>
 
-      <div class="section">
+      <main class="viewport-container">
+        <div class="viewport-3d">
+          <canvas id="renderCanvas"></canvas>
+          <div class="viewport-overlay">
+            <div class="cam-info">
+              <span class="cam-label" id="camLabel">Cam A</span>
+              <span class="cam-subtitle">Studiooppsett</span>
+            </div>
+            <div class="exposure-display">
+              <span id="exposureInfo">f/2.8 · 1/125s · ISO 100</span>
+            </div>
+            <div class="highlight-info">
+              <span id="highlightPercent">Høylys 0.0%</span>
+            </div>
+          </div>
+          <div class="histogram" id="histogram">
+            <canvas id="histogramCanvas" width="140" height="70"></canvas>
+          </div>
+          <div class="light-indicator" id="lightIndicator">
+            <span class="light-key">F= Key</span>
+            <span class="light-distance">1.5 m</span>
+            <span class="light-power">20</span>
+            <span class="light-total">11/20 m</span>
+          </div>
+        </div>
+        <div class="viewport-2d">
+          <div class="view-label">2D Toppvisning</div>
+          <canvas id="topViewCanvas"></canvas>
+          <div class="scale-info">
+            <span class="scale-h">4.0 m</span>
+            <span class="scale-v">4.0 m</span>
+          </div>
+        </div>
+        <div class="viewport-bottom">
+          <div class="focal-controls">
+            <button class="focal-btn" data-focal="24">24</button>
+            <button class="focal-btn active" data-focal="35">35</button>
+            <button class="focal-btn" data-focal="50">50</button>
+            <button class="focal-btn" data-focal="85">85</button>
+            <button class="focal-btn" data-focal="135">135</button>
+          </div>
+          <div class="bottom-divider"></div>
+          <div class="camera-quick">
+            <span id="quickFocal">45 mm</span>
+            <span class="quick-sep">|</span>
+            <span>Sko/lime® 2.3</span>
+            <span class="quick-sep">|</span>
+            <span>Nøy f-A+</span>
+            <span class="quick-sep">|</span>
+            <span id="quickISO">ISO 100</span>
+            <span class="quick-sep">|</span>
+            <span>Rtm</span>
+            <span class="quick-sep">|</span>
+            <span id="quickEV">-1.5 EV</span>
+          </div>
+          <div class="bottom-actions">
+            <button class="action-btn" id="notesBtn">Notater</button>
+            <button class="action-btn primary" id="snapshotBtn">Snapshot</button>
+            <button class="action-btn" id="exportPdfBtn2">Eksporter PDF</button>
+          </div>
+        </div>
+      </main>
+
+      <aside class="right-panel">
+        <div class="panel-section">
+          <div class="section-title">Valg</div>
+          <div id="selectionInfo" class="selection-info">
+            <span class="selection-name" id="selectedName">Ingen valgt</span>
+            <span class="selection-type" id="selectedType"></span>
+          </div>
+        </div>
+
+        <div class="panel-section properties" id="lightProperties" style="display: none;">
+          <div class="property-row">
+            <label>Posisjon</label>
+            <div class="input-group triple">
+              <input type="number" id="posX" step="0.1" value="0" class="prop-input">
+              <input type="number" id="posY" step="0.1" value="3" class="prop-input">
+              <input type="number" id="posZ" step="0.1" value="0" class="prop-input">
+              <span class="unit">m</span>
+            </div>
+          </div>
+          <div class="property-row">
+            <label>Rotasjon</label>
+            <div class="input-group triple">
+              <input type="number" id="rotX" step="1" value="0" class="prop-input">
+              <input type="number" id="rotY" step="1" value="0" class="prop-input">
+              <input type="number" id="rotZ" step="1" value="0" class="prop-input">
+              <span class="unit">°</span>
+            </div>
+          </div>
+          <div class="property-row">
+            <label>CCT</label>
+            <select id="cctSelect" class="prop-select full">
+              <option value="2700">Tungsten</option>
+              <option value="3200">Halogen</option>
+              <option value="4000">Nøytral</option>
+              <option value="5600" selected>Dagslys</option>
+              <option value="6500">Overskyet</option>
+            </select>
+          </div>
+          <div class="property-row">
+            <label>Modifier</label>
+            <div class="input-group">
+              <button class="prop-btn active" id="modSoftbox">Softbox</button>
+              <input type="number" id="modSize" value="80" class="prop-input small">
+              <span class="unit">cm</span>
+            </div>
+          </div>
+          <div class="property-row">
+            <label>Størrelse</label>
+            <input type="range" id="sizeSlider" min="20" max="200" value="90" class="prop-slider">
+          </div>
+          <div class="property-row">
+            <label>IES Profil</label>
+            <div class="button-group">
+              <button class="prop-btn active" id="iesSoftbox">Softox</button>
+              <button class="prop-btn" id="iesDaylight">Dayvlt</button>
+            </div>
+          </div>
+          <div class="property-row">
+            <label>Kontrast</label>
+            <input type="range" id="contrastSlider" min="0" max="10" value="4" step="0.1" class="prop-slider">
+            <span class="slider-value" id="contrastValue">4.0</span>
+          </div>
+          <div class="property-row">
+            <label>IES</label>
+            <div class="button-group">
+              <button class="prop-btn" id="iesScid">Sdidil</button>
+              <button class="prop-btn active" id="iesFlat">Flat</button>
+            </div>
+          </div>
+          <div class="property-row">
+            <label>Gobo</label>
+            <span class="slider-label">Focusos</span>
+            <input type="range" id="focusSlider" min="0" max="20" value="10.5" step="0.5" class="prop-slider">
+            <span class="slider-value" id="focusValue">10.5</span>
+          </div>
+          <div class="property-row">
+            <label>Crokes</label>
+            <input type="range" id="crokesSlider" min="0" max="100" value="30" class="prop-slider full">
+          </div>
+          <div class="property-row">
+            <label>Kontro Lol</label>
+            <input type="range" id="controlSlider" min="0" max="100" value="60" class="prop-slider full">
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-title">Camara</div>
+          <div class="property-row">
+            <label>Aperature</label>
+            <select id="apertureSelect" class="prop-select full">
+              <option value="godox">Godox</option>
+              <option value="canon">Canon</option>
+              <option value="sony">Sony</option>
+            </select>
+          </div>
+          <div class="property-row">
+            <label>Shutter</label>
+            <input type="range" id="shutterSlider" min="0" max="100" value="50" class="prop-slider full">
+          </div>
+          <div class="property-row">
+            <label>ISO</label>
+            <div class="button-group triple">
+              <button class="prop-btn" id="isoFlat">Flat</button>
+              <button class="prop-btn active" id="isoHoj">Høj</button>
+              <button class="prop-btn" id="isoHun">HUN</button>
+            </div>
+          </div>
+          <div class="property-row">
+            <label>ND</label>
+            <input type="range" id="ndSlider" min="0" max="100" value="0" class="prop-slider full">
+          </div>
+        </div>
+
+        <div class="panel-section export-section">
+          <div class="export-row">
+            <span class="export-label">Eksporter PDF</span>
+            <button class="export-btn small" id="exportPng">PNG</button>
+            <button class="export-btn small" id="compareAB">Compare AB</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="modal-overlay" id="modelModal" style="display: none;">
+      <div class="modal-content">
         <h3>Importer 3D-modell</h3>
-        <input type="file" id="modelInput" accept=".glb,.gltf" />
-      </div>
-
-      <div class="section" id="selectedLight" style="display: none;">
-        <h3>Valgt lys</h3>
-        <label>
-          Intensitet
-          <input type="range" id="lightIntensity" min="0" max="10" step="0.1" value="1">
-        </label>
-        <label>
-          Farge
-          <input type="color" id="lightColor" value="#ffffff">
-        </label>
-        <button id="deleteLight">Slett lys</button>
-      </div>
-
-      <div class="section">
-        <h3>Kamera</h3>
-        <label>
-          FOV
-          <input type="range" id="cameraFov" min="20" max="120" value="60">
-        </label>
-        <button id="screenshot">Ta skjermbilde</button>
-      </div>
-
-      <div class="section">
-        <h3>Miljø</h3>
-        <label>
-          Bakgrunnsfarge
-          <input type="color" id="bgColor" value="#1a1a2e">
-        </label>
-        <label>
-          <input type="checkbox" id="showGrid" checked>
-          Vis gulvnett
-        </label>
+        <input type="file" id="modelInput" accept=".glb,.gltf">
+        <div class="modal-actions">
+          <button class="modal-btn" id="closeModal">Lukk</button>
+        </div>
       </div>
     </div>
   </div>
+
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
