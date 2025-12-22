@@ -135,6 +135,15 @@ Run `npm run dev` to start the development server on port 5000.
 - Interactive light placement with gizmos
 
 ## Recent Changes
+- 2025-12-22: Comprehensive responsive design improvements for Studio Library
+  - Added CSS responsive tokens (--sidebar-left-width, --sidebar-right-width, --bottom-panel-height, --card-min-width)
+  - 5-tier breakpoint system: Extra large (1440px+), Large (1280-1439px), Medium (1024-1279px), Tablet (768-1023px), Mobile (<768px)
+  - Adaptive CSS Grid layout with auto-fill and minmax for card grids
+  - Sidebars auto-collapse on tablet and mobile views
+  - Bottom panel height adapts per breakpoint (45vh tablet, 50vh mobile portrait, 60vh mobile)
+  - Updated LightsBrowser and AssetLibraryPanel with tiered useMediaQuery hooks
+  - Mobile-optimized single-column card layout with horizontal card display
+  - Touch-optimized controls with 44px+ minimum touch targets
 - 2025-12-22: Touch-friendly Studio Library improvements for PC and iPad
   - Added "Legg til" buttons on all asset cards as alternative to double-click
   - Increased touch targets to 44px minimum for all interactive elements

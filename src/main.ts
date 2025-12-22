@@ -2292,12 +2292,6 @@ window.addEventListener('DOMContentLoaded', () => {
     
     console.log('Studio Library elements:', { actorPanelRoot: !!actorPanelRoot, actorBottomPanel: !!actorBottomPanel, actorPanelTrigger: !!actorPanelTrigger });
     
-    // Debug: Global click listener
-    document.addEventListener('click', (e) => {
-      const target = e.target as HTMLElement;
-      console.log('Click detected on:', target.tagName, target.className, target.id);
-    });
-    
     const keyframeTimelineRoot = document.getElementById('keyframeTimelineRoot');
     if (keyframeTimelineRoot) {
       const timelineRoot = createRoot(keyframeTimelineRoot);

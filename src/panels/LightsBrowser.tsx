@@ -116,9 +116,14 @@ type BrowserTab = 'lights' | 'modifiers';
 
 export function LightsBrowser() {
   const { addNode } = useAppStore();
-  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1024px)');
+  const isExtraLarge = useMediaQuery('(min-width: 1440px)');
+  const isLarge = useMediaQuery('(min-width: 1280px) and (max-width: 1439px)');
+  const isMedium = useMediaQuery('(min-width: 1024px) and (max-width: 1279px)');
+  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1023px)');
+  const isMobile = useMediaQuery('(max-width: 767px)');
   const isTouchDevice = useMediaQuery('(pointer: coarse)');
-  const shouldUseTabletMode = isTablet || isTouchDevice;
+  const shouldUseTabletMode = isTablet || isTouchDevice || isMobile;
+  const cardMinWidth = isExtraLarge ? 200 : isLarge ? 180 : isMedium ? 160 : isTablet ? 180 : isMobile ? '100%' : 140;
   
   const [activeTab, setActiveTab] = useState<BrowserTab>('lights');
   const [searchQuery, setSearchQuery] = useState('');
@@ -338,10 +343,13 @@ export function LightsBrowser() {
 
       <Box sx={{ 
         display: 'grid', 
-        gridTemplateColumns: shouldUseTabletMode 
-          ? 'repeat(auto-fill, minmax(180px, 1fr))' 
-          : 'repeat(auto-fill, minmax(140px, 1fr))', 
+        gridTemplateColumns: isMobile 
+          ? '1fr' 
+          : `repeat(auto-fill, minmax(${typeof cardMinWidth === 'number' ? cardMinWidth + 'px' : cardMinWidth}, 1fr))`, 
         gap: shouldUseTabletMode ? 2 : 1,
+        maxHeight: 'calc(100% - 100px)',
+        overflowY: 'auto',
+        pb: 2,
       }}>
         {filteredLights.map((light) => (
           <Card 
@@ -520,10 +528,13 @@ export function LightsBrowser() {
 
           <Box sx={{ 
             display: 'grid', 
-            gridTemplateColumns: shouldUseTabletMode 
-              ? 'repeat(auto-fill, minmax(180px, 1fr))' 
-              : 'repeat(auto-fill, minmax(140px, 1fr))', 
+            gridTemplateColumns: isMobile 
+              ? '1fr' 
+              : `repeat(auto-fill, minmax(${typeof cardMinWidth === 'number' ? cardMinWidth + 'px' : cardMinWidth}, 1fr))`, 
             gap: shouldUseTabletMode ? 2 : 1,
+            maxHeight: 'calc(100% - 100px)',
+            overflowY: 'auto',
+            pb: 2,
           }}>
             {filteredModifiers.map((modifier) => (
               <Card 

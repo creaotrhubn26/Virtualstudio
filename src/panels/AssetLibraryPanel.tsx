@@ -305,9 +305,14 @@ function ManualPlacementDialog({ open, asset, onClose, onPlace }: ManualPlacemen
 
 export default function AssetLibraryPanel() {
   const theme = useTheme();
-  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1024px)');
+  const isExtraLarge = useMediaQuery('(min-width: 1440px)');
+  const isLarge = useMediaQuery('(min-width: 1280px) and (max-width: 1439px)');
+  const isMedium = useMediaQuery('(min-width: 1024px) and (max-width: 1279px)');
+  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1023px)');
+  const isMobile = useMediaQuery('(max-width: 767px)');
   const isTouchDevice = useMediaQuery('(pointer: coarse)');
-  const shouldUseTabletMode = isTablet || isTouchDevice;
+  const shouldUseTabletMode = isTablet || isTouchDevice || isMobile;
+  const cardMinWidth = isExtraLarge ? 180 : isLarge ? 160 : isMedium ? 140 : isTablet ? 160 : isMobile ? 140 : 120;
   
   const [category, setCategory] = useState<string>('light');
   const [search, setSearch] = useState('');
@@ -441,10 +446,11 @@ export default function AssetLibraryPanel() {
       ) : (
         <Box sx={{ 
           display: 'grid', 
-          gridTemplateColumns: shouldUseTabletMode 
-            ? 'repeat(auto-fill, minmax(180px, 1fr))' 
-            : 'repeat(2, 1fr)', 
-          gap: shouldUseTabletMode ? 2 : 1,
+          gridTemplateColumns: isMobile 
+            ? '1fr' 
+            : `repeat(auto-fill, minmax(${cardMinWidth}px, 1fr))`, 
+          gap: shouldUseTabletMode ? 2 : 1.5,
+          pb: 2,
         }}>
           {assets.map((asset) => (
             <AssetCard
