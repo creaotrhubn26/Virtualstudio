@@ -323,7 +323,7 @@ class VirtualStudio {
       });
     });
     
-    // Reset position button
+    // Reset position button - also centers camera on object
     document.getElementById('resetPosBtn')?.addEventListener('click', () => {
       if (!this.selectedLightId) return;
       const data = this.lights.get(this.selectedLightId);
@@ -338,9 +338,12 @@ class VirtualStudio {
         if (slider) slider.value = val.toString();
         if (input) input.value = val.toFixed(1);
       });
+      
+      // Center camera on object
+      this.centerCameraOnObject(data.mesh);
     });
     
-    // Reset rotation button
+    // Reset rotation button - also centers camera on object
     document.getElementById('resetRotBtn')?.addEventListener('click', () => {
       if (!this.selectedLightId) return;
       const data = this.lights.get(this.selectedLightId);
@@ -354,6 +357,9 @@ class VirtualStudio {
         if (slider) slider.value = '0';
         if (input) input.value = '0';
       });
+      
+      // Center camera on object
+      this.centerCameraOnObject(data.mesh);
     });
     
     // Axis select buttons - toggle selection
@@ -1192,6 +1198,37 @@ class VirtualStudio {
     if (lens) {
       this.updateApertureForLens(lens.maxAperture, lens.minAperture);
     }
+  }
+  
+  private centerCameraOnObject(mesh: BABYLON.Mesh): void {
+    const targetPos = mesh.getAbsolutePosition();
+    
+    // Smoothly animate camera to target
+    const currentTarget = this.camera.target.clone();
+    const startRadius = this.camera.radius;
+    const targetRadius = Math.max(5, startRadius); // Ensure good viewing distance
+    
+    // Animate camera target over 500ms
+    const animationDuration = 500;
+    const startTime = Date.now();
+    
+    const animateCamera = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(1, elapsed / animationDuration);
+      const easeProgress = 1 - Math.pow(1 - progress, 3); // Ease out cubic
+      
+      // Interpolate target position
+      this.camera.target = BABYLON.Vector3.Lerp(currentTarget, targetPos, easeProgress);
+      
+      // Adjust radius if needed
+      this.camera.radius = startRadius + (targetRadius - startRadius) * easeProgress;
+      
+      if (progress < 1) {
+        requestAnimationFrame(animateCamera);
+      }
+    };
+    
+    animateCamera();
   }
   
   private updateApertureForLens(maxAperture: number, minAperture: number): void {
