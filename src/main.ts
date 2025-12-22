@@ -2,7 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App } from './App';
+import { App, TimelineApp } from './App';
 import { useAppStore } from './state/store';
 import { virtualActorService } from './core/services/virtualActorService';
 
@@ -1749,6 +1749,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const actorBottomPanel = document.getElementById('actorBottomPanel');
     const actorPanelTrigger = document.getElementById('actorPanelTrigger');
     const actorTab = document.getElementById('actorTab');
+    
+    const keyframeTimelineRoot = document.getElementById('keyframeTimelineRoot');
+    if (keyframeTimelineRoot) {
+      const timelineRoot = createRoot(keyframeTimelineRoot);
+      timelineRoot.render(React.createElement(TimelineApp, {}));
+    }
     
     if (actorPanelRoot && actorBottomPanel && actorPanelTrigger) {
       const root = createRoot(actorPanelRoot);

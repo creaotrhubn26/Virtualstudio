@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { VirtualActorPanel } from './panels/VirtualActorPanel';
+import { KeyframeTimeline } from './panels/KeyframeTimeline';
 
 const darkTheme = createTheme({
   palette: {
@@ -39,6 +40,19 @@ export const App: React.FC<AppProps> = ({ onActorGenerated }) => {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <VirtualActorPanel onActorGenerated={onActorGenerated} />
+    </ThemeProvider>
+  );
+};
+
+interface TimelineAppProps {
+  clipId?: string;
+}
+
+export const TimelineApp: React.FC<TimelineAppProps> = ({ clipId }) => {
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <KeyframeTimeline clipId={clipId} height={250} />
     </ThemeProvider>
   );
 };
