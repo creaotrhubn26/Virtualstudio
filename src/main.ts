@@ -8,6 +8,67 @@ import { virtualActorService } from './core/services/virtualActorService';
 import { propRenderingService } from './core/services/propRenderingService';
 import { getPropById } from './core/data/propDefinitions';
 
+// Early initialization of Studio Library button - runs immediately
+(function initStudioLibraryButton() {
+  let isToggling = false;
+  
+  const togglePanel = () => {
+    if (isToggling) return;
+    isToggling = true;
+    
+    const panel = document.getElementById('actorBottomPanel');
+    const trigger = document.getElementById('actorPanelTrigger');
+    const actorTab = document.getElementById('actorTab');
+    
+    if (!panel || !trigger) {
+      isToggling = false;
+      return;
+    }
+    
+    const isOpen = panel.classList.contains('open');
+    
+    if (isOpen) {
+      panel.classList.remove('open');
+      trigger.classList.remove('active');
+      trigger.setAttribute('aria-expanded', 'false');
+      const arrow = trigger.querySelector('.library-arrow');
+      if (arrow) arrow.textContent = '+';
+      if (actorTab) actorTab.classList.remove('panel-open');
+    } else {
+      panel.classList.add('open');
+      trigger.classList.add('active');
+      trigger.setAttribute('aria-expanded', 'true');
+      const arrow = trigger.querySelector('.library-arrow');
+      if (arrow) arrow.textContent = '−';
+      if (actorTab) actorTab.classList.add('panel-open');
+    }
+    
+    // Debounce to prevent rapid toggling
+    setTimeout(() => { isToggling = false; }, 100);
+  };
+  
+  // Event delegation - catches clicks even before specific handlers are attached
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const trigger = target.closest('#actorPanelTrigger');
+    if (trigger) {
+      e.preventDefault();
+      e.stopPropagation();
+      togglePanel();
+    }
+  }, true); // Use capture phase for earliest possible handling
+  
+  // Also handle keyboard for accessibility
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const panel = document.getElementById('actorBottomPanel');
+      if (panel && panel.classList.contains('open')) {
+        togglePanel();
+      }
+    }
+  });
+})();
+
 interface LightSpecs {
   power: number;
   powerUnit: 'Ws' | 'W';
@@ -2359,20 +2420,11 @@ window.addEventListener('DOMContentLoaded', () => {
         console.log('Panel classes after toggle:', actorBottomPanel.className);
       };
       
-      actorPanelTrigger.addEventListener('click', (e) => {
-        console.log('Studio Library button clicked', e);
-        togglePanel();
-      });
-      
+      // Note: Primary click handler is set up via event delegation at top of file
+      // This is a backup that runs after React components are mounted
       if (actorTab) {
         actorTab.addEventListener('click', togglePanel);
       }
-      
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && actorBottomPanel.classList.contains('open')) {
-          togglePanel();
-        }
-      });
       
       const panelFullscreenBtn = document.getElementById('panelFullscreenBtn');
       const panelCloseBtn = document.getElementById('panelCloseBtn');
