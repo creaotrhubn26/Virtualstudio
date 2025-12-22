@@ -2198,6 +2198,32 @@ window.addEventListener('DOMContentLoaded', () => {
       });
     }
     
+    const listViewBtn = document.getElementById('listViewBtn');
+    const gridViewBtn = document.getElementById('gridViewBtn');
+    const hierarchySection = document.getElementById('hierarchySection');
+    
+    if (listViewBtn && gridViewBtn && hierarchySection) {
+      listViewBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        listViewBtn.classList.add('active');
+        listViewBtn.setAttribute('aria-pressed', 'true');
+        gridViewBtn.classList.remove('active');
+        gridViewBtn.setAttribute('aria-pressed', 'false');
+        hierarchySection.classList.remove('grid-view');
+        hierarchySection.classList.add('list-view');
+      });
+      
+      gridViewBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        gridViewBtn.classList.add('active');
+        gridViewBtn.setAttribute('aria-pressed', 'true');
+        listViewBtn.classList.remove('active');
+        listViewBtn.setAttribute('aria-pressed', 'false');
+        hierarchySection.classList.remove('list-view');
+        hierarchySection.classList.add('grid-view');
+      });
+    }
+    
     const actorPanelRoot = document.getElementById('actorPanelRoot');
     const actorBottomPanel = document.getElementById('actorBottomPanel');
     const actorPanelTrigger = document.getElementById('actorPanelTrigger');
