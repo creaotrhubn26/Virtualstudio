@@ -39,23 +39,23 @@ interface LightSpec {
 }
 
 const LIGHT_DATABASE: LightSpec[] = [
-  { id: 'godox-ad600pro', brand: 'Godox', model: 'AD600 Pro', type: 'strobe', power: 600, powerUnit: 'Ws', cct: 5600, cri: 96 },
-  { id: 'godox-ad200pro', brand: 'Godox', model: 'AD200 Pro', type: 'strobe', power: 200, powerUnit: 'Ws', cct: 5600, cri: 96 },
-  { id: 'godox-ad400pro', brand: 'Godox', model: 'AD400 Pro', type: 'strobe', power: 400, powerUnit: 'Ws', cct: 5600, cri: 96 },
-  { id: 'profoto-b10', brand: 'Profoto', model: 'B10', type: 'strobe', power: 250, powerUnit: 'Ws', cct: 5500, cri: 98 },
-  { id: 'profoto-b10plus', brand: 'Profoto', model: 'B10 Plus', type: 'strobe', power: 500, powerUnit: 'Ws', cct: 5500, cri: 98 },
-  { id: 'profoto-d2', brand: 'Profoto', model: 'D2 1000', type: 'strobe', power: 1000, powerUnit: 'Ws', cct: 5500, cri: 98 },
-  { id: 'aputure-120d', brand: 'Aputure', model: 'LS 120d II', type: 'led', power: 120, powerUnit: 'W', cct: 5500, cri: 96 },
-  { id: 'aputure-300d', brand: 'Aputure', model: 'LS 300d II', type: 'led', power: 300, powerUnit: 'W', cct: 5500, cri: 96 },
-  { id: 'aputure-600d', brand: 'Aputure', model: 'LS 600d Pro', type: 'led', power: 600, powerUnit: 'W', cct: 5600, cri: 96 },
-  { id: 'aputure-60x', brand: 'Aputure', model: 'LS 60x', type: 'led', power: 60, powerUnit: 'W', cct: 2700, cri: 95 },
-  { id: 'nanlite-forza60', brand: 'Nanlite', model: 'Forza 60', type: 'led', power: 60, powerUnit: 'W', cct: 5600, cri: 98 },
-  { id: 'nanlite-forza300', brand: 'Nanlite', model: 'Forza 300', type: 'led', power: 300, powerUnit: 'W', cct: 5600, cri: 98 },
-  { id: 'nanlite-forza500', brand: 'Nanlite', model: 'Forza 500', type: 'led', power: 500, powerUnit: 'W', cct: 5600, cri: 98 },
-  { id: 'elinchrom-elc500', brand: 'Elinchrom', model: 'ELC Pro HD 500', type: 'strobe', power: 500, powerUnit: 'Ws', cct: 5500, cri: 97 },
-  { id: 'elinchrom-elc1000', brand: 'Elinchrom', model: 'ELC Pro HD 1000', type: 'strobe', power: 1000, powerUnit: 'Ws', cct: 5500, cri: 97 },
-  { id: 'broncolor-siros400', brand: 'Broncolor', model: 'Siros 400 S', type: 'strobe', power: 400, powerUnit: 'Ws', cct: 5500, cri: 99 },
-  { id: 'broncolor-siros800', brand: 'Broncolor', model: 'Siros 800 S', type: 'strobe', power: 800, powerUnit: 'Ws', cct: 5500, cri: 99 },
+  { id: 'godox-ad600pro', brand: 'Godox', model: 'AD600 Pro', type: 'strobe', power: 600, powerUnit: 'Ws', cct: 5600, cri: 96, thumbnail: '/images/gear/godox_ad600_pro_strobe.png' },
+  { id: 'godox-ad200pro', brand: 'Godox', model: 'AD200 Pro', type: 'strobe', power: 200, powerUnit: 'Ws', cct: 5600, cri: 96, thumbnail: '/images/gear/godox_ad600_pro_strobe.png' },
+  { id: 'godox-ad400pro', brand: 'Godox', model: 'AD400 Pro', type: 'strobe', power: 400, powerUnit: 'Ws', cct: 5600, cri: 96, thumbnail: '/images/gear/godox_ad600_pro_strobe.png' },
+  { id: 'profoto-b10', brand: 'Profoto', model: 'B10', type: 'strobe', power: 250, powerUnit: 'Ws', cct: 5500, cri: 98, thumbnail: '/images/gear/profoto_b10_flash.png' },
+  { id: 'profoto-b10plus', brand: 'Profoto', model: 'B10 Plus', type: 'strobe', power: 500, powerUnit: 'Ws', cct: 5500, cri: 98, thumbnail: '/images/gear/profoto_b10_flash.png' },
+  { id: 'profoto-d2', brand: 'Profoto', model: 'D2 1000', type: 'strobe', power: 1000, powerUnit: 'Ws', cct: 5500, cri: 98, thumbnail: '/images/gear/profoto_b10_flash.png' },
+  { id: 'aputure-120d', brand: 'Aputure', model: 'LS 120d II', type: 'led', power: 120, powerUnit: 'W', cct: 5500, cri: 96, thumbnail: '/images/gear/aputure_300d_ii_led.png' },
+  { id: 'aputure-300d', brand: 'Aputure', model: 'LS 300d II', type: 'led', power: 300, powerUnit: 'W', cct: 5500, cri: 96, thumbnail: '/images/gear/aputure_300d_ii_led.png' },
+  { id: 'aputure-600d', brand: 'Aputure', model: 'LS 600d Pro', type: 'led', power: 600, powerUnit: 'W', cct: 5600, cri: 96, thumbnail: '/images/gear/aputure_300d_ii_led.png' },
+  { id: 'aputure-60x', brand: 'Aputure', model: 'LS 60x', type: 'led', power: 60, powerUnit: 'W', cct: 2700, cri: 95, thumbnail: '/images/gear/aputure_300d_ii_led.png' },
+  { id: 'nanlite-forza60', brand: 'Nanlite', model: 'Forza 60', type: 'led', power: 60, powerUnit: 'W', cct: 5600, cri: 98, thumbnail: '/images/gear/nanlite_forza_300_led.png' },
+  { id: 'nanlite-forza300', brand: 'Nanlite', model: 'Forza 300', type: 'led', power: 300, powerUnit: 'W', cct: 5600, cri: 98, thumbnail: '/images/gear/nanlite_forza_300_led.png' },
+  { id: 'nanlite-forza500', brand: 'Nanlite', model: 'Forza 500', type: 'led', power: 500, powerUnit: 'W', cct: 5600, cri: 98, thumbnail: '/images/gear/nanlite_forza_300_led.png' },
+  { id: 'elinchrom-elc500', brand: 'Elinchrom', model: 'ELC Pro HD 500', type: 'strobe', power: 500, powerUnit: 'Ws', cct: 5500, cri: 97, thumbnail: '/images/gear/elinchrom_elc_pro_strobe.png' },
+  { id: 'elinchrom-elc1000', brand: 'Elinchrom', model: 'ELC Pro HD 1000', type: 'strobe', power: 1000, powerUnit: 'Ws', cct: 5500, cri: 97, thumbnail: '/images/gear/elinchrom_elc_pro_strobe.png' },
+  { id: 'broncolor-siros400', brand: 'Broncolor', model: 'Siros 400 S', type: 'strobe', power: 400, powerUnit: 'Ws', cct: 5500, cri: 99, thumbnail: '/images/gear/broncolor_siros_strobe.png' },
+  { id: 'broncolor-siros800', brand: 'Broncolor', model: 'Siros 800 S', type: 'strobe', power: 800, powerUnit: 'Ws', cct: 5500, cri: 99, thumbnail: '/images/gear/broncolor_siros_strobe.png' },
 ];
 
 const BRANDS = ['Alle', 'Godox', 'Profoto', 'Aputure', 'Nanlite', 'Elinchrom', 'Broncolor'];
@@ -211,8 +211,18 @@ export function LightsBrowser() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              overflow: 'hidden',
             }}>
-              <Typography sx={{ fontSize: 24 }}>💡</Typography>
+              {light.thumbnail ? (
+                <Box
+                  component="img"
+                  src={light.thumbnail}
+                  alt={light.model}
+                  sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <Typography sx={{ fontSize: 24 }}>💡</Typography>
+              )}
             </Box>
             
             <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
