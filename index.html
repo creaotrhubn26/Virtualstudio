@@ -197,8 +197,49 @@
               <span id="highlightPercent">Høylys 0.0%</span>
             </div>
           </div>
-          <div class="histogram" id="histogram">
+          <div class="scope-container" id="scopeContainer">
+            <div class="scope-header">
+              <span class="scope-label" id="scopeLabel">Histogram</span>
+              <div class="scope-controls">
+                <button class="scope-btn scope-menu-btn" id="scopeMenuBtn" title="Velg visning" aria-label="Velg scope-visning" aria-haspopup="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </button>
+                <button class="scope-btn scope-expand-btn" id="scopeExpandBtn" title="Utvid" aria-label="Utvid scope" aria-pressed="false">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
             <canvas id="histogramCanvas" width="140" height="70"></canvas>
+            <div class="scope-menu" id="scopeMenu" role="menu" aria-hidden="true">
+              <button class="scope-menu-item active" data-scope="histogram" role="menuitem">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="14" width="3" height="8"/><rect x="7" y="8" width="3" height="14"/><rect x="12" y="4" width="3" height="18"/><rect x="17" y="10" width="3" height="12"/></svg>
+                Histogram
+              </button>
+              <button class="scope-menu-item" data-scope="waveform" role="menuitem">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h4l3-9 4 18 3-9h6"/></svg>
+                Waveform
+              </button>
+              <button class="scope-menu-item" data-scope="vectorscope" role="menuitem">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
+                Vectorscope
+              </button>
+              <button class="scope-menu-item" data-scope="skin" role="menuitem">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="5"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg>
+                Hudtone
+              </button>
+              <button class="scope-menu-item" data-scope="zebra" role="menuitem">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l16 16M8 4l12 12M12 4l8 8M4 8l12 12M4 12l8 8M4 16l4 4"/></svg>
+                Zebra
+              </button>
+              <button class="scope-menu-item" data-scope="falsecolor" role="menuitem">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="4" height="16" fill="#0000ff"/><rect x="6" y="4" width="4" height="16" fill="#00ff00"/><rect x="10" y="4" width="4" height="16" fill="#ffff00"/><rect x="14" y="4" width="4" height="16" fill="#ff8800"/><rect x="18" y="4" width="4" height="16" fill="#ff0000"/></svg>
+                False Color
+              </button>
+            </div>
           </div>
           <div class="light-indicator" id="lightIndicator">
             <span class="light-key">F= Key</span>

@@ -183,6 +183,71 @@ class VirtualStudio {
     this.setupPropertyListeners();
     this.setupModalListeners();
     this.setupExportListeners();
+    this.setupScopeControls();
+  }
+
+  private currentScopeMode: 'histogram' | 'waveform' | 'vectorscope' | 'skin' | 'zebra' | 'falsecolor' = 'histogram';
+  private scopeExpanded: boolean = false;
+
+  private setupScopeControls(): void {
+    const menuBtn = document.getElementById('scopeMenuBtn');
+    const expandBtn = document.getElementById('scopeExpandBtn');
+    const menu = document.getElementById('scopeMenu');
+    const container = document.getElementById('scopeContainer');
+    const label = document.getElementById('scopeLabel');
+
+    menuBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menu?.classList.toggle('visible');
+      menuBtn.setAttribute('aria-expanded', menu?.classList.contains('visible') ? 'true' : 'false');
+    });
+
+    expandBtn?.addEventListener('click', () => {
+      this.scopeExpanded = !this.scopeExpanded;
+      container?.classList.toggle('expanded', this.scopeExpanded);
+      expandBtn.setAttribute('aria-pressed', this.scopeExpanded ? 'true' : 'false');
+      
+      const canvas = this.histogramCanvas;
+      if (canvas) {
+        if (this.scopeExpanded) {
+          canvas.width = 300;
+          canvas.height = 150;
+        } else {
+          canvas.width = 140;
+          canvas.height = 70;
+        }
+      }
+    });
+
+    document.querySelectorAll('.scope-menu-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const mode = item.getAttribute('data-scope') as typeof this.currentScopeMode;
+        if (mode) {
+          this.currentScopeMode = mode;
+          
+          document.querySelectorAll('.scope-menu-item').forEach(i => i.classList.remove('active'));
+          item.classList.add('active');
+          
+          const modeLabels: Record<string, string> = {
+            'histogram': 'Histogram',
+            'waveform': 'Waveform',
+            'vectorscope': 'Vectorscope',
+            'skin': 'Hudtone',
+            'zebra': 'Zebra',
+            'falsecolor': 'False Color'
+          };
+          if (label) label.textContent = modeLabels[mode] || mode;
+          
+          menu?.classList.remove('visible');
+        }
+      });
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!container?.contains(e.target as Node)) {
+        menu?.classList.remove('visible');
+      }
+    });
   }
 
   private setupPropertyListeners(): void {
@@ -461,7 +526,28 @@ class VirtualStudio {
       this.calculateHistogramFromScene();
     }
 
-    this.drawHistogram();
+    switch (this.currentScopeMode) {
+      case 'histogram':
+        this.drawHistogram();
+        break;
+      case 'waveform':
+        this.drawWaveform();
+        break;
+      case 'vectorscope':
+        this.drawVectorscope();
+        break;
+      case 'skin':
+        this.drawSkinIndicator();
+        break;
+      case 'zebra':
+        this.drawZebra();
+        break;
+      case 'falsecolor':
+        this.drawFalseColor();
+        break;
+      default:
+        this.drawHistogram();
+    }
   }
 
   private calculateHistogramFromScene(): void {
@@ -601,6 +687,201 @@ class VirtualStudio {
     }
     
     ctx.stroke();
+  }
+
+  private drawWaveform(): void {
+    const ctx = this.histogramCtx!;
+    const w = this.histogramCanvas!.width;
+    const h = this.histogramCanvas!.height;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw grid lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    for (let y = 0; y <= 100; y += 25) {
+      const py = h - (y / 100) * h;
+      ctx.beginPath();
+      ctx.moveTo(0, py);
+      ctx.lineTo(w, py);
+      ctx.stroke();
+    }
+
+    // Draw waveform based on luminance distribution
+    const maxVal = Math.max(...this.histogramData.lum.slice(5, 250), 1);
+    
+    for (let i = 0; i < 256; i++) {
+      const x = (i / 256) * w;
+      const intensity = this.histogramData.lum[i] / maxVal;
+      
+      if (intensity > 0.01) {
+        const lumY = h - (i / 255) * h;
+        const alpha = Math.min(intensity * 2, 1);
+        ctx.fillStyle = `rgba(0, 255, 150, ${alpha * 0.5})`;
+        ctx.fillRect(x, lumY - 1, w / 256 + 1, 3);
+      }
+    }
+  }
+
+  private drawVectorscope(): void {
+    const ctx = this.histogramCtx!;
+    const w = this.histogramCanvas!.width;
+    const h = this.histogramCanvas!.height;
+    const cx = w / 2;
+    const cy = h / 2;
+    const radius = Math.min(w, h) / 2 - 4;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw circular grid
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius * 0.5, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Draw crosshairs
+    ctx.beginPath();
+    ctx.moveTo(cx - radius, cy);
+    ctx.lineTo(cx + radius, cy);
+    ctx.moveTo(cx, cy - radius);
+    ctx.lineTo(cx, cy + radius);
+    ctx.stroke();
+
+    // Draw color targets (skin tone line, etc)
+    ctx.strokeStyle = 'rgba(255, 200, 150, 0.4)';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + radius * 0.7, cy - radius * 0.4);
+    ctx.stroke();
+
+    // Plot color distribution
+    const maxR = Math.max(...this.histogramData.r, 1);
+    const maxG = Math.max(...this.histogramData.g, 1);
+    const maxB = Math.max(...this.histogramData.b, 1);
+
+    for (let i = 0; i < 256; i++) {
+      const rVal = this.histogramData.r[i] / maxR;
+      const gVal = this.histogramData.g[i] / maxG;
+      const bVal = this.histogramData.b[i] / maxB;
+      
+      if (rVal > 0.05 || gVal > 0.05 || bVal > 0.05) {
+        const u = (rVal - gVal) * radius * 0.5;
+        const v = (bVal - (rVal + gVal) / 2) * radius * 0.5;
+        const alpha = Math.max(rVal, gVal, bVal) * 0.8;
+        ctx.fillStyle = `rgba(100, 200, 255, ${alpha})`;
+        ctx.fillRect(cx + u - 1, cy + v - 1, 2, 2);
+      }
+    }
+  }
+
+  private drawSkinIndicator(): void {
+    const ctx = this.histogramCtx!;
+    const w = this.histogramCanvas!.width;
+    const h = this.histogramCanvas!.height;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw skin tone reference zones
+    const skinZones = [
+      { name: 'Lys', y: 0.15, color: 'rgba(255, 220, 200, 0.3)' },
+      { name: 'Medium', y: 0.45, color: 'rgba(200, 150, 120, 0.3)' },
+      { name: 'Mørk', y: 0.75, color: 'rgba(120, 80, 60, 0.3)' }
+    ];
+
+    skinZones.forEach(zone => {
+      const y = zone.y * h;
+      ctx.fillStyle = zone.color;
+      ctx.fillRect(0, y, w, h * 0.25);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.font = '9px sans-serif';
+      ctx.fillText(zone.name, 4, y + 14);
+    });
+
+    // Draw optimal skin tone line
+    ctx.strokeStyle = 'rgba(255, 200, 150, 0.8)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(w * 0.3, 0);
+    ctx.lineTo(w * 0.7, h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = 'rgba(255, 200, 150, 0.6)';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('Hudtone-linje', w * 0.5, h - 6);
+  }
+
+  private drawZebra(): void {
+    const ctx = this.histogramCtx!;
+    const w = this.histogramCanvas!.width;
+    const h = this.histogramCanvas!.height;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw exposure zones
+    const zones = [
+      { level: '100%+', y: 0, h: h * 0.15, color: 'rgba(255, 0, 0, 0.4)', text: 'Utbrent' },
+      { level: '95-100%', y: h * 0.15, h: h * 0.15, color: 'rgba(255, 150, 0, 0.3)', text: 'Advarsel' },
+      { level: '70-95%', y: h * 0.3, h: h * 0.25, color: 'rgba(255, 255, 100, 0.2)', text: 'Høylys' },
+      { level: '30-70%', y: h * 0.55, h: h * 0.25, color: 'rgba(100, 200, 100, 0.2)', text: 'Mellomtoner' },
+      { level: '0-30%', y: h * 0.8, h: h * 0.2, color: 'rgba(50, 100, 200, 0.2)', text: 'Skygger' }
+    ];
+
+    zones.forEach(zone => {
+      ctx.fillStyle = zone.color;
+      ctx.fillRect(0, zone.y, w, zone.h);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.font = '9px sans-serif';
+      ctx.fillText(zone.text, 4, zone.y + zone.h / 2 + 3);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.fillText(zone.level, w - 40, zone.y + zone.h / 2 + 3);
+    });
+
+    // Show clipping percentage
+    ctx.fillStyle = this.highlightClipping > 1 ? 'rgba(255, 100, 100, 1)' : 'rgba(100, 255, 100, 1)';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText(`${this.highlightClipping.toFixed(1)}% klippet`, w / 2 - 30, 12);
+  }
+
+  private drawFalseColor(): void {
+    const ctx = this.histogramCtx!;
+    const w = this.histogramCanvas!.width;
+    const h = this.histogramCanvas!.height;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+    ctx.fillRect(0, 0, w, h);
+
+    // False color legend
+    const colors = [
+      { range: '0-10%', color: '#0000ff', label: 'Undereks.' },
+      { range: '10-30%', color: '#00aa00', label: 'Skygger' },
+      { range: '30-50%', color: '#00ff00', label: 'Mellom' },
+      { range: '50-70%', color: '#ffff00', label: 'Høylys' },
+      { range: '70-90%', color: '#ff8800', label: 'Varsel' },
+      { range: '90-100%', color: '#ff0000', label: 'Overeks.' }
+    ];
+
+    const barHeight = h / colors.length;
+    colors.forEach((c, i) => {
+      const y = i * barHeight;
+      ctx.fillStyle = c.color;
+      ctx.fillRect(0, y, w * 0.15, barHeight - 1);
+      
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.font = '9px sans-serif';
+      ctx.fillText(c.label, w * 0.18, y + barHeight / 2 + 3);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.fillText(c.range, w * 0.6, y + barHeight / 2 + 3);
+    });
   }
 
   private updateSelectedLightProperties(): void {
