@@ -344,6 +344,20 @@ html, body {
   background: var(--hover);
 }
 
+.actor-panel-trigger.active .section-header {
+  background: var(--accent-cyan);
+  color: var(--bg-dark);
+}
+
+.actor-panel-trigger.active .section-header .category-arrow {
+  color: var(--bg-dark);
+}
+
+.footer-tab.panel-open {
+  background: var(--accent-cyan);
+  color: var(--bg-dark);
+}
+
 .actor-bottom-panel {
   position: fixed;
   left: 0;
@@ -397,16 +411,19 @@ html, body {
   border-bottom: 2px solid #d4a84b;
 }
 
-.actor-panel-collapse {
+.actor-panel-close-btn {
   margin-left: auto;
+  background: transparent;
+  border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  padding: 8px 12px;
-  font-size: 12px;
+  padding: 4px 12px;
+  font-size: 20px;
+  line-height: 1;
 }
 
-.actor-panel-collapse:hover {
-  color: var(--text-primary);
+.actor-panel-close-btn:hover {
+  color: #ff6b6b;
 }
 
 .actor-panel-content {

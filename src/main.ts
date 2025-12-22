@@ -731,11 +731,29 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       }));
       
-      const togglePanel = () => {
+      const openPanel = () => {
+        actorBottomPanel.style.display = 'flex';
+        actorPanelTrigger.classList.add('active');
         const arrow = actorPanelTrigger.querySelector('.category-arrow');
+        if (arrow) arrow.textContent = '▼';
+        if (actorTab) actorTab.classList.add('panel-open');
+      };
+      
+      const closePanel = () => {
+        actorBottomPanel.style.display = 'none';
+        actorPanelTrigger.classList.remove('active');
+        const arrow = actorPanelTrigger.querySelector('.category-arrow');
+        if (arrow) arrow.textContent = '▶';
+        if (actorTab) actorTab.classList.remove('panel-open');
+      };
+      
+      const togglePanel = () => {
         const isOpen = actorBottomPanel.style.display !== 'none';
-        actorBottomPanel.style.display = isOpen ? 'none' : 'flex';
-        if (arrow) arrow.textContent = isOpen ? '▶' : '▼';
+        if (isOpen) {
+          closePanel();
+        } else {
+          openPanel();
+        }
       };
       
       actorPanelTrigger.addEventListener('click', togglePanel);
@@ -745,12 +763,14 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       
       if (actorPanelCollapse) {
-        actorPanelCollapse.addEventListener('click', () => {
-          actorBottomPanel.style.display = 'none';
-          const arrow = actorPanelTrigger.querySelector('.category-arrow');
-          if (arrow) arrow.textContent = '▶';
-        });
+        actorPanelCollapse.addEventListener('click', closePanel);
       }
+      
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && actorBottomPanel.style.display !== 'none') {
+          closePanel();
+        }
+      });
       
       if (actorPanelResizeHandle) {
         let isResizing = false;
