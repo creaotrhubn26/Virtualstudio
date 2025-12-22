@@ -10,7 +10,17 @@
   "dependencies": {
     "@babylonjs/core": "^8.42.0",
     "@babylonjs/gui": "^8.42.0",
-    "@babylonjs/loaders": "^8.42.0"
+    "@babylonjs/loaders": "^8.42.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.6",
+    "@mui/material": "^7.3.6",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.2",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

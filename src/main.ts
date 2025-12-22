@@ -1,5 +1,9 @@
 import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { App } from './App';
+import { useAppStore } from './state/store';
 
 interface LightData {
   light: BABYLON.Light;
@@ -652,11 +656,72 @@ class VirtualStudio {
       }
     );
   }
+
+  public addActorToScene(actorId: string): void {
+    const state = useAppStore.getState();
+    const actorNode = state.getNode(actorId);
+    
+    if (!actorNode) {
+      console.warn('Actor not found in state:', actorId);
+      return;
+    }
+
+    const userData = actorNode.userData as Record<string, unknown> | undefined;
+    const skinTone = (userData?.skinTone as string) || '#EAC086';
+
+    const capsule = BABYLON.MeshBuilder.CreateCapsule(actorId, {
+      height: 1.75,
+      radius: 0.22,
+      tessellation: 16,
+      subdivisions: 4
+    }, this.scene);
+
+    const pos = actorNode.transform.position;
+    capsule.position = new BABYLON.Vector3(pos[0], pos[1] + 0.875, pos[2]);
+
+    const material = new BABYLON.StandardMaterial(`${actorId}_mat`, this.scene);
+    material.diffuseColor = BABYLON.Color3.FromHexString(skinTone);
+    material.specularColor = new BABYLON.Color3(0.15, 0.12, 0.1);
+    capsule.material = material;
+
+    console.log('Actor added to 3D scene:', actorId);
+  }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
   const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement;
   if (canvas) {
-    new VirtualStudio(canvas);
+    const studio = new VirtualStudio(canvas);
+    
+    const actorPanelRoot = document.getElementById('actorPanelRoot');
+    const actorPanelContainer = document.getElementById('actorPanelContainer');
+    const actorTab = document.getElementById('actorTab');
+    
+    if (actorPanelRoot && actorTab && actorPanelContainer) {
+      const root = createRoot(actorPanelRoot);
+      root.render(React.createElement(App, { 
+        onActorGenerated: (actorId: string) => {
+          console.log('Actor generated:', actorId);
+          studio.addActorToScene(actorId);
+        }
+      }));
+      
+      const header = actorPanelContainer.querySelector('.section-header');
+      if (header) {
+        header.addEventListener('click', () => {
+          const arrow = header.querySelector('.category-arrow');
+          const isExpanded = actorPanelRoot.style.display !== 'none';
+          actorPanelRoot.style.display = isExpanded ? 'none' : 'block';
+          if (arrow) arrow.textContent = isExpanded ? '▶' : '▼';
+        });
+      }
+      
+      actorTab.addEventListener('click', () => {
+        const arrow = actorPanelContainer.querySelector('.category-arrow');
+        const isExpanded = actorPanelRoot.style.display !== 'none';
+        actorPanelRoot.style.display = isExpanded ? 'none' : 'block';
+        if (arrow) arrow.textContent = isExpanded ? '▶' : '▼';
+      });
+    }
   }
 });
