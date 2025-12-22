@@ -2341,15 +2341,15 @@ window.addEventListener('DOMContentLoaded', () => {
           actorBottomPanel.classList.remove('open');
           actorPanelTrigger.classList.remove('active');
           actorPanelTrigger.setAttribute('aria-expanded', 'false');
-          const arrow = actorPanelTrigger.querySelector('.category-arrow');
-          if (arrow) arrow.textContent = '▶';
+          const arrow = actorPanelTrigger.querySelector('.library-arrow');
+          if (arrow) arrow.textContent = '+';
           if (actorTab) actorTab.classList.remove('panel-open');
         } else {
           actorBottomPanel.classList.add('open');
           actorPanelTrigger.classList.add('active');
           actorPanelTrigger.setAttribute('aria-expanded', 'true');
-          const arrow = actorPanelTrigger.querySelector('.category-arrow');
-          if (arrow) arrow.textContent = '▼';
+          const arrow = actorPanelTrigger.querySelector('.library-arrow');
+          if (arrow) arrow.textContent = '−';
           if (actorTab) actorTab.classList.add('panel-open');
         }
       };
