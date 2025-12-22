@@ -716,13 +716,11 @@ window.addEventListener('DOMContentLoaded', () => {
     const studio = new VirtualStudio(canvas);
     
     const actorPanelRoot = document.getElementById('actorPanelRoot');
-    const actorBottomPanel = document.getElementById('actorBottomPanel');
+    const actorSlideoutPanel = document.getElementById('actorSlideoutPanel');
     const actorPanelTrigger = document.getElementById('actorPanelTrigger');
-    const actorPanelCollapse = document.getElementById('actorPanelCollapse');
-    const actorPanelResizeHandle = document.getElementById('actorPanelResizeHandle');
     const actorTab = document.getElementById('actorTab');
     
-    if (actorPanelRoot && actorBottomPanel && actorPanelTrigger) {
+    if (actorPanelRoot && actorSlideoutPanel && actorPanelTrigger) {
       const root = createRoot(actorPanelRoot);
       root.render(React.createElement(App, { 
         onActorGenerated: (actorId: string) => {
@@ -731,28 +729,20 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       }));
       
-      const openPanel = () => {
-        actorBottomPanel.style.display = 'flex';
-        actorPanelTrigger.classList.add('active');
-        const arrow = actorPanelTrigger.querySelector('.category-arrow');
-        if (arrow) arrow.textContent = '▼';
-        if (actorTab) actorTab.classList.add('panel-open');
-      };
-      
-      const closePanel = () => {
-        actorBottomPanel.style.display = 'none';
-        actorPanelTrigger.classList.remove('active');
-        const arrow = actorPanelTrigger.querySelector('.category-arrow');
-        if (arrow) arrow.textContent = '▶';
-        if (actorTab) actorTab.classList.remove('panel-open');
-      };
-      
       const togglePanel = () => {
-        const isOpen = actorBottomPanel.style.display !== 'none';
+        const isOpen = actorSlideoutPanel.classList.contains('open');
         if (isOpen) {
-          closePanel();
+          actorSlideoutPanel.classList.remove('open');
+          actorPanelTrigger.classList.remove('active');
+          const arrow = actorPanelTrigger.querySelector('.category-arrow');
+          if (arrow) arrow.textContent = '▶';
+          if (actorTab) actorTab.classList.remove('panel-open');
         } else {
-          openPanel();
+          actorSlideoutPanel.classList.add('open');
+          actorPanelTrigger.classList.add('active');
+          const arrow = actorPanelTrigger.querySelector('.category-arrow');
+          if (arrow) arrow.textContent = '▼';
+          if (actorTab) actorTab.classList.add('panel-open');
         }
       };
       
@@ -762,57 +752,10 @@ window.addEventListener('DOMContentLoaded', () => {
         actorTab.addEventListener('click', togglePanel);
       }
       
-      if (actorPanelCollapse) {
-        actorPanelCollapse.addEventListener('click', closePanel);
-      }
-      
       document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && actorBottomPanel.style.display !== 'none') {
-          closePanel();
+        if (e.key === 'Escape' && actorSlideoutPanel.classList.contains('open')) {
+          togglePanel();
         }
-      });
-      
-      if (actorPanelResizeHandle) {
-        let isResizing = false;
-        let startY = 0;
-        let startHeight = 0;
-        
-        actorPanelResizeHandle.addEventListener('mousedown', (e) => {
-          isResizing = true;
-          startY = e.clientY;
-          startHeight = actorBottomPanel.offsetHeight;
-          document.body.style.cursor = 'ns-resize';
-          document.body.style.userSelect = 'none';
-        });
-        
-        document.addEventListener('mousemove', (e) => {
-          if (!isResizing) return;
-          const deltaY = startY - e.clientY;
-          const newHeight = Math.max(150, Math.min(500, startHeight + deltaY));
-          actorBottomPanel.style.height = `${newHeight}px`;
-        });
-        
-        document.addEventListener('mouseup', () => {
-          if (isResizing) {
-            isResizing = false;
-            document.body.style.cursor = '';
-            document.body.style.userSelect = '';
-          }
-        });
-      }
-      
-      document.querySelectorAll('.actor-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-          document.querySelectorAll('.actor-tab').forEach(t => t.classList.remove('active'));
-          tab.classList.add('active');
-        });
-      });
-      
-      document.querySelectorAll('.actor-category').forEach(cat => {
-        cat.addEventListener('click', () => {
-          document.querySelectorAll('.actor-category').forEach(c => c.classList.remove('active'));
-          cat.classList.add('active');
-        });
       });
     }
   }
