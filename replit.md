@@ -135,10 +135,15 @@ Run `npm run dev` to start the development server on port 5000.
 - Interactive light placement with gizmos
 
 ## Recent Changes
+- 2025-12-22: Converted Equipment tab to React component (EquipmentPanel.tsx)
+  - 17 equipment items with category filtering (Bakgrunn, Diffuser, Reflektor, Blocker, Annet)
+  - Search functionality for equipment
+  - Automatic "Legg til" buttons on all items
+  - Touch-friendly responsive design
+  - New items added to EQUIPMENT_ITEMS array will automatically get buttons
 - 2025-12-22: Added "Legg til" buttons to all Studio Library tabs
   - CameraGearPanel: Add buttons for cameras and lenses with touch-friendly sizing
   - HDRIPanel: Add buttons for HDRI environments with responsive sizing
-  - Equipment tab: Add buttons for all 17 equipment items (backgrounds, diffusers, reflectors, etc.)
   - Consistent cyan accent color (#00a8ff) across all add buttons
   - Touch-optimized with 36px minimum height on tablet/touch devices
   - Event system: 'ch-add-equipment' for Babylon.js integration

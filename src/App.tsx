@@ -7,6 +7,7 @@ import { CharacterModelLoader } from './panels/CharacterModelLoader';
 import { LightsBrowser } from './panels/LightsBrowser';
 import { CameraGearPanel } from './panels/CameraGearPanel';
 import { HDRIPanel } from './panels/HDRIPanel';
+import { EquipmentPanel } from './panels/EquipmentPanel';
 
 const darkTheme = createTheme({
   palette: {
@@ -103,6 +104,15 @@ export const HDRIPanelApp: React.FC = () => {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <HDRIPanel />
+    </ThemeProvider>
+  );
+};
+
+export const EquipmentPanelApp: React.FC = () => {
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <EquipmentPanel />
     </ThemeProvider>
   );
 };
