@@ -633,10 +633,12 @@ html, body {
   flex-direction: column;
   transform: translateY(100%);
   transition: transform 0.25s ease;
+  pointer-events: none;
 }
 
 .actor-bottom-panel.open {
   transform: translateY(0);
+  pointer-events: auto;
 }
 
 .actor-bottom-panel.fullscreen {
