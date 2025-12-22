@@ -1650,19 +1650,19 @@ html, body {
 }
 
 .section-title {
-  color: var(--text-secondary);
-  font-size: 13px;
+  color: var(--text-primary);
+  font-size: 14px;
   font-weight: 600;
   margin-bottom: 12px;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .prop-icon {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   display: inline-block;
   background-size: contain;
   background-repeat: no-repeat;
@@ -1754,7 +1754,7 @@ html, body {
 
 .selection-name {
   color: var(--accent-cyan);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
 }
 
@@ -1771,19 +1771,19 @@ html, body {
 }
 
 .property-row label {
-  width: 85px;
-  color: var(--text-secondary);
-  font-size: 13px;
+  width: 95px;
+  color: var(--text-primary);
+  font-size: 14px;
   font-weight: 500;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .property-row label .prop-icon {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
 }
 
 .input-group {
@@ -1854,11 +1854,11 @@ html, body {
 .prop-btn {
   background: var(--bg-input);
   border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  padding: 8px 12px;
+  color: var(--text-primary);
+  padding: 8px 14px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -1910,16 +1910,17 @@ html, body {
 }
 
 .slider-value {
-  color: var(--text-secondary);
-  font-size: 12px;
-  width: 36px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  width: 40px;
   text-align: right;
 }
 
 .slider-label {
-  color: var(--text-muted);
-  font-size: 11px;
-  margin-right: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-right: 8px;
 }
 
 .export-section {
@@ -1934,12 +1935,12 @@ html, body {
 
 .export-label {
   flex: 1;
-  color: var(--text-secondary);
-  font-size: 13px;
+  color: var(--text-primary);
+  font-size: 14px;
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .export-btn:focus-visible {
@@ -1953,8 +1954,9 @@ html, body {
 }
 
 .export-btn.small {
-  padding: 8px 14px;
-  font-size: 12px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .modal-overlay {
