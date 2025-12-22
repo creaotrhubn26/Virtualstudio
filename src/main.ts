@@ -327,34 +327,40 @@ class VirtualStudio {
   }
 
   private setupCameraControls(): void {
+    const shutterValues = ['1/8', '1/15', '1/30', '1/60', '1/125', '1/250', '1/500', '1/1000', '1/2000', '1/4000', '1/8000', '1/16000', '1/32000'];
+    const isoValues = [100, 125, 160, 200, 250, 320, 400, 500, 640, 800, 1600];
+    const ndValues = [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12];
+    
     document.getElementById('apertureSelect')?.addEventListener('change', (e) => {
       const value = (e.target as HTMLSelectElement).value;
       this.cameraSettings.aperture = parseFloat(value) || 2.8;
       this.updateExposureDisplay();
     });
 
-    document.getElementById('shutterSlider')?.addEventListener('input', (e) => {
-      const val = parseFloat((e.target as HTMLInputElement).value);
-      const shutters = ['1/30', '1/60', '1/125', '1/250', '1/500', '1/1000'];
-      const idx = Math.floor(val / 100 * (shutters.length - 1));
-      this.cameraSettings.shutter = shutters[idx];
+    const shutterSlider = document.getElementById('shutterSlider') as HTMLInputElement;
+    const shutterDisplay = document.getElementById('shutterDisplay');
+    shutterSlider?.addEventListener('input', () => {
+      const idx = parseInt(shutterSlider.value);
+      this.cameraSettings.shutter = shutterValues[idx];
+      if (shutterDisplay) shutterDisplay.textContent = shutterValues[idx];
       this.updateExposureDisplay();
     });
 
-    ['isoFlat', 'isoHoj', 'isoHun'].forEach(id => {
-      document.getElementById(id)?.addEventListener('click', () => {
-        document.querySelectorAll('#isoFlat, #isoHoj, #isoHun').forEach(b => b.classList.remove('active'));
-        document.getElementById(id)?.classList.add('active');
-        if (id === 'isoFlat') this.cameraSettings.iso = 100;
-        if (id === 'isoHoj') this.cameraSettings.iso = 400;
-        if (id === 'isoHun') this.cameraSettings.iso = 1600;
-        this.updateExposureDisplay();
-      });
+    const isoSlider = document.getElementById('isoSlider') as HTMLInputElement;
+    const isoDisplay = document.getElementById('isoDisplay');
+    isoSlider?.addEventListener('input', () => {
+      const idx = parseInt(isoSlider.value);
+      this.cameraSettings.iso = isoValues[idx];
+      if (isoDisplay) isoDisplay.textContent = isoValues[idx].toString();
+      this.updateExposureDisplay();
     });
 
-    document.getElementById('ndSlider')?.addEventListener('input', (e) => {
-      const val = parseFloat((e.target as HTMLInputElement).value);
-      this.cameraSettings.nd = Math.floor(val / 25) * 2;
+    const ndSlider = document.getElementById('ndSlider') as HTMLInputElement;
+    const ndDisplay = document.getElementById('ndDisplay');
+    ndSlider?.addEventListener('input', () => {
+      const idx = parseInt(ndSlider.value);
+      this.cameraSettings.nd = ndValues[idx];
+      if (ndDisplay) ndDisplay.textContent = ndValues[idx] === 0 ? '0' : `ND${ndValues[idx]}`;
       this.updateExposureDisplay();
     });
   }

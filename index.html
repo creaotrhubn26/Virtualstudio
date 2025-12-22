@@ -542,30 +542,47 @@
               <option value="sony">Sony</option>
             </select>
           </div>
-          <div class="property-row">
-            <label for="shutterSlider">
-              <span class="prop-icon shutter-icon" aria-hidden="true"></span>
-              Lukker
-            </label>
-            <input type="range" id="shutterSlider" min="0" max="100" value="50" class="prop-slider full" aria-label="Lukkerhastighet">
-          </div>
-          <div class="property-row">
-            <label id="isoLabel">
-              <span class="prop-icon iso-icon" aria-hidden="true"></span>
-              ISO
-            </label>
-            <div class="button-group triple" role="group" aria-labelledby="isoLabel">
-              <button class="prop-btn" id="isoFlat" aria-pressed="false">Flat</button>
-              <button class="prop-btn active" id="isoHoj" aria-pressed="true">Høy</button>
-              <button class="prop-btn" id="isoHun" aria-pressed="false">HØY+</button>
+          <div class="camera-slider-section">
+            <div class="camera-slider-row">
+              <label>
+                <span class="prop-icon shutter-icon" aria-hidden="true"></span>
+                Lukker
+              </label>
+              <span class="slider-display" id="shutterDisplay">1/125</span>
+            </div>
+            <div class="slider-with-buttons">
+              <button class="inc-btn dec" data-target="shutterSlider" aria-label="Reduser lukker">−</button>
+              <input type="range" id="shutterSlider" min="0" max="12" step="1" value="6" class="prop-slider flex" aria-label="Lukkerhastighet">
+              <button class="inc-btn inc" data-target="shutterSlider" aria-label="Øk lukker">+</button>
             </div>
           </div>
-          <div class="property-row">
-            <label for="ndSlider">
-              <span class="prop-icon nd-icon" aria-hidden="true"></span>
-              ND
-            </label>
-            <input type="range" id="ndSlider" min="0" max="100" value="0" class="prop-slider full" aria-label="ND filter">
+          <div class="camera-slider-section">
+            <div class="camera-slider-row">
+              <label>
+                <span class="prop-icon iso-icon" aria-hidden="true"></span>
+                ISO
+              </label>
+              <span class="slider-display" id="isoDisplay">100</span>
+            </div>
+            <div class="slider-with-buttons">
+              <button class="inc-btn dec" data-target="isoSlider" aria-label="Reduser ISO">−</button>
+              <input type="range" id="isoSlider" min="0" max="10" step="1" value="0" class="prop-slider flex" aria-label="ISO">
+              <button class="inc-btn inc" data-target="isoSlider" aria-label="Øk ISO">+</button>
+            </div>
+          </div>
+          <div class="camera-slider-section">
+            <div class="camera-slider-row">
+              <label>
+                <span class="prop-icon nd-icon" aria-hidden="true"></span>
+                ND
+              </label>
+              <span class="slider-display" id="ndDisplay">0</span>
+            </div>
+            <div class="slider-with-buttons">
+              <button class="inc-btn dec" data-target="ndSlider" aria-label="Reduser ND">−</button>
+              <input type="range" id="ndSlider" min="0" max="10" step="1" value="0" class="prop-slider flex" aria-label="ND filter">
+              <button class="inc-btn inc" data-target="ndSlider" aria-label="Øk ND">+</button>
+            </div>
           </div>
         </div>
 

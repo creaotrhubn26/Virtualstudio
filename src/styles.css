@@ -2139,6 +2139,47 @@ html, body {
   text-align: right;
 }
 
+.camera-slider-section {
+  margin-bottom: 12px;
+}
+
+.camera-slider-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.camera-slider-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.slider-display {
+  color: var(--accent-cyan);
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 60px;
+  text-align: right;
+}
+
+.slider-with-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+}
+
+.prop-slider.flex {
+  flex: 1;
+}
+
 .slider-label {
   color: var(--text-secondary);
   font-size: 12px;
