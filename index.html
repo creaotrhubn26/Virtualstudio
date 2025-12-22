@@ -337,12 +337,29 @@
       </div>
     </div>
 
-    <div class="actor-floating-panel" id="actorFloatingPanel" style="display: none;">
-      <div class="actor-panel-header">
-        <span class="actor-panel-title">Virtuell Aktør</span>
-        <button class="actor-panel-close" id="actorPanelClose">×</button>
+    <div class="actor-bottom-panel" id="actorBottomPanel" style="display: none;">
+      <div class="actor-panel-resize-handle" id="actorPanelResizeHandle"></div>
+      <div class="actor-panel-tabs">
+        <button class="actor-tab" data-tab="timeline">TIMELINE</button>
+        <button class="actor-tab active" data-tab="models">MODELS</button>
+        <button class="actor-tab" data-tab="lights">LIGHTS</button>
+        <button class="actor-tab" data-tab="equipment">EQUIPMENT</button>
+        <button class="actor-tab" data-tab="assets">ASSETS</button>
+        <div class="actor-panel-collapse" id="actorPanelCollapse">▼ ✕</div>
       </div>
-      <div id="actorPanelRoot"></div>
+      <div class="actor-panel-content">
+        <div class="actor-sidebar">
+          <input type="text" class="actor-search" placeholder="Search" id="actorSearch">
+          <div class="actor-categories">
+            <div class="actor-category" data-category="all">All</div>
+            <div class="actor-category" data-category="women">Women</div>
+            <div class="actor-category" data-category="men">Men</div>
+            <div class="actor-category active" data-category="children">Children</div>
+            <div class="actor-category" data-category="animals">Animals</div>
+          </div>
+        </div>
+        <div class="actor-grid" id="actorPanelRoot"></div>
+      </div>
     </div>
   </div>
 

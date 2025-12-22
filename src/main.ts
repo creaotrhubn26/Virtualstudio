@@ -716,12 +716,13 @@ window.addEventListener('DOMContentLoaded', () => {
     const studio = new VirtualStudio(canvas);
     
     const actorPanelRoot = document.getElementById('actorPanelRoot');
-    const actorFloatingPanel = document.getElementById('actorFloatingPanel');
+    const actorBottomPanel = document.getElementById('actorBottomPanel');
     const actorPanelTrigger = document.getElementById('actorPanelTrigger');
-    const actorPanelClose = document.getElementById('actorPanelClose');
+    const actorPanelCollapse = document.getElementById('actorPanelCollapse');
+    const actorPanelResizeHandle = document.getElementById('actorPanelResizeHandle');
     const actorTab = document.getElementById('actorTab');
     
-    if (actorPanelRoot && actorFloatingPanel && actorPanelTrigger) {
+    if (actorPanelRoot && actorBottomPanel && actorPanelTrigger) {
       const root = createRoot(actorPanelRoot);
       root.render(React.createElement(App, { 
         onActorGenerated: (actorId: string) => {
@@ -732,8 +733,8 @@ window.addEventListener('DOMContentLoaded', () => {
       
       const togglePanel = () => {
         const arrow = actorPanelTrigger.querySelector('.category-arrow');
-        const isOpen = actorFloatingPanel.style.display !== 'none';
-        actorFloatingPanel.style.display = isOpen ? 'none' : 'flex';
+        const isOpen = actorBottomPanel.style.display !== 'none';
+        actorBottomPanel.style.display = isOpen ? 'none' : 'flex';
         if (arrow) arrow.textContent = isOpen ? '▶' : '▼';
       };
       
@@ -743,13 +744,56 @@ window.addEventListener('DOMContentLoaded', () => {
         actorTab.addEventListener('click', togglePanel);
       }
       
-      if (actorPanelClose) {
-        actorPanelClose.addEventListener('click', () => {
-          actorFloatingPanel.style.display = 'none';
+      if (actorPanelCollapse) {
+        actorPanelCollapse.addEventListener('click', () => {
+          actorBottomPanel.style.display = 'none';
           const arrow = actorPanelTrigger.querySelector('.category-arrow');
           if (arrow) arrow.textContent = '▶';
         });
       }
+      
+      if (actorPanelResizeHandle) {
+        let isResizing = false;
+        let startY = 0;
+        let startHeight = 0;
+        
+        actorPanelResizeHandle.addEventListener('mousedown', (e) => {
+          isResizing = true;
+          startY = e.clientY;
+          startHeight = actorBottomPanel.offsetHeight;
+          document.body.style.cursor = 'ns-resize';
+          document.body.style.userSelect = 'none';
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+          if (!isResizing) return;
+          const deltaY = startY - e.clientY;
+          const newHeight = Math.max(150, Math.min(500, startHeight + deltaY));
+          actorBottomPanel.style.height = `${newHeight}px`;
+        });
+        
+        document.addEventListener('mouseup', () => {
+          if (isResizing) {
+            isResizing = false;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+          }
+        });
+      }
+      
+      document.querySelectorAll('.actor-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.actor-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+        });
+      });
+      
+      document.querySelectorAll('.actor-category').forEach(cat => {
+        cat.addEventListener('click', () => {
+          document.querySelectorAll('.actor-category').forEach(c => c.classList.remove('active'));
+          cat.classList.add('active');
+        });
+      });
     }
   }
 });
