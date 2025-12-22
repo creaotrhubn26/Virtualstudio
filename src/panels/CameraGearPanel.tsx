@@ -30,7 +30,7 @@ interface Lens {
   brand: string;
   focalLength: string;
   aperture: string;
-  type: 'prime' | 'zoom' | 'macro' | 'tele';
+  type: 'prime' | 'zoom' | 'macro' | 'tele' | 'probe';
 }
 
 const CAMERA_BODIES: CameraBody[] = [
@@ -55,9 +55,12 @@ const LENSES: Lens[] = [
   { id: 'sigma-art35', name: 'Sigma 35mm f/1.4 DG DN Art', brand: 'Sigma', focalLength: '35mm', aperture: 'f/1.4', type: 'prime' },
   { id: 'sigma-105-macro', name: 'Sigma 105mm f/2.8 DG DN Macro', brand: 'Sigma', focalLength: '105mm', aperture: 'f/2.8', type: 'macro' },
   { id: 'zeiss-otus85', name: 'Zeiss Otus 85mm f/1.4', brand: 'Zeiss', focalLength: '85mm', aperture: 'f/1.4', type: 'prime' },
+  { id: 'laowa-probe', name: 'Laowa 24mm f/14 2x Macro Probe', brand: 'Laowa', focalLength: '24mm', aperture: 'f/14', type: 'probe' },
+  { id: 'laowa-probe-cine', name: 'Laowa 24mm T14 2x Periprobe Cine', brand: 'Laowa', focalLength: '24mm', aperture: 'T/14', type: 'probe' },
+  { id: 'innovision-probe', name: 'Innovision Probe II Plus', brand: 'Innovision', focalLength: '9.8mm', aperture: 'f/5.6', type: 'probe' },
 ];
 
-type LensType = 'all' | 'prime' | 'zoom' | 'macro' | 'tele';
+type LensType = 'all' | 'prime' | 'zoom' | 'macro' | 'tele' | 'probe';
 
 export function CameraGearPanel() {
   const [search, setSearch] = useState('');
@@ -173,10 +176,10 @@ export function CameraGearPanel() {
       </Typography>
 
       <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 2 }}>
-        {(['all', 'prime', 'zoom', 'macro', 'tele'] as LensType[]).map(type => (
+        {(['all', 'prime', 'zoom', 'macro', 'tele', 'probe'] as LensType[]).map(type => (
           <Chip
             key={type}
-            label={type === 'all' ? 'Alle' : type === 'prime' ? 'Prime' : type === 'zoom' ? 'Zoom' : type === 'macro' ? 'Makro' : 'Tele'}
+            label={type === 'all' ? 'Alle' : type === 'prime' ? 'Prime' : type === 'zoom' ? 'Zoom' : type === 'macro' ? 'Makro' : type === 'tele' ? 'Tele' : 'Probe'}
             size="small"
             onClick={() => setLensFilter(type)}
             sx={{
