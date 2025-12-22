@@ -2224,8 +2224,8 @@ window.addEventListener('DOMContentLoaded', () => {
       });
     }
     
-    const expandAllBtn = document.getElementById('expandAllBtn');
-    const collapseAllBtn = document.getElementById('collapseAllBtn');
+    const toggleAllBtn = document.getElementById('toggleAllBtn');
+    let allExpanded = true;
     
     const toggleGroup = (header: HTMLElement, expand: boolean) => {
       const group = header.closest('.hierarchy-group');
@@ -2268,20 +2268,19 @@ window.addEventListener('DOMContentLoaded', () => {
       });
     });
     
-    if (expandAllBtn) {
-      expandAllBtn.addEventListener('click', (e) => {
+    if (toggleAllBtn) {
+      toggleAllBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        allExpanded = !allExpanded;
+        const icon = toggleAllBtn.querySelector('span');
+        if (icon) {
+          icon.textContent = allExpanded ? '⊟' : '⊞';
+        }
+        toggleAllBtn.setAttribute('aria-pressed', String(allExpanded));
+        toggleAllBtn.title = allExpanded ? 'Kollaps alle' : 'Utvid alle';
+        
         document.querySelectorAll('.hierarchy-header').forEach((header) => {
-          toggleGroup(header as HTMLElement, true);
-        });
-      });
-    }
-    
-    if (collapseAllBtn) {
-      collapseAllBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        document.querySelectorAll('.hierarchy-header').forEach((header) => {
-          toggleGroup(header as HTMLElement, false);
+          toggleGroup(header as HTMLElement, allExpanded);
         });
       });
     }
