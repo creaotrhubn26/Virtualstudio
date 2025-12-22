@@ -337,11 +337,62 @@
       </div>
     </div>
 
-    <div class="actor-slideout-panel" id="actorSlideoutPanel">
-      <div class="slideout-header">
-        <span class="slideout-title">Virtuell Aktør</span>
+    <div class="actor-bottom-panel" id="actorBottomPanel">
+      <div class="actor-panel-tabs">
+        <button class="actor-tab" data-tab="timeline">TIMELINE</button>
+        <button class="actor-tab active" data-tab="models">MODELS</button>
+        <button class="actor-tab" data-tab="lights">LIGHTS</button>
+        <button class="actor-tab" data-tab="equipment">EQUIPMENT</button>
+        <button class="actor-tab" data-tab="assets">ASSETS</button>
+        <div class="actor-panel-actions">
+          <span class="panel-toggle-icon">▽ ✕</span>
+        </div>
       </div>
-      <div class="slideout-content" id="actorPanelRoot"></div>
+      <div class="actor-panel-body">
+        <div class="actor-sidebar">
+          <input type="text" class="actor-search" placeholder="Search">
+          <div class="actor-categories">
+            <div class="actor-category" data-category="all">All</div>
+            <div class="actor-category" data-category="women">Women</div>
+            <div class="actor-category" data-category="men">Men</div>
+            <div class="actor-category active" data-category="children">Children</div>
+            <div class="actor-category" data-category="animals">Animals</div>
+          </div>
+        </div>
+        <div class="actor-models-grid">
+          <div class="actor-model-card" data-actor="sarah">
+            <div class="model-favorite">☆</div>
+            <div class="model-portrait" style="background: linear-gradient(135deg, #8b7355 0%, #d4a574 100%);"></div>
+            <div class="model-name">Sarah</div>
+          </div>
+          <div class="actor-model-card" data-actor="lucas">
+            <div class="model-favorite">☆</div>
+            <div class="model-portrait" style="background: linear-gradient(135deg, #6b5344 0%, #a08070 100%);"></div>
+            <div class="model-name">Lucas</div>
+          </div>
+          <div class="actor-model-card" data-actor="denzel">
+            <div class="model-favorite">☆</div>
+            <div class="model-portrait" style="background: linear-gradient(135deg, #4a3728 0%, #7a5a48 100%);"></div>
+            <div class="model-name">Denzel</div>
+          </div>
+          <div class="actor-model-card" data-actor="toddler">
+            <div class="model-favorite">☆</div>
+            <div class="model-portrait" style="background: linear-gradient(135deg, #c9b8a8 0%, #e8d8c8 100%);"></div>
+            <div class="model-name">Toddler</div>
+          </div>
+          <div class="actor-model-card" data-actor="emma">
+            <div class="model-favorite">☆</div>
+            <div class="model-portrait" style="background: linear-gradient(135deg, #9a8070 0%, #c4a890 100%);"></div>
+            <div class="model-name">Emma</div>
+          </div>
+          <div class="actor-model-card" data-actor="james">
+            <div class="model-favorite">☆</div>
+            <div class="model-portrait" style="background: linear-gradient(135deg, #5a4a3a 0%, #8a7a6a 100%);"></div>
+            <div class="model-name">James</div>
+          </div>
+        </div>
+        <div id="actorPanelRoot" style="display: none;"></div>
+      </div>
     </div>
   </div>
 

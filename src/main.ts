@@ -716,11 +716,11 @@ window.addEventListener('DOMContentLoaded', () => {
     const studio = new VirtualStudio(canvas);
     
     const actorPanelRoot = document.getElementById('actorPanelRoot');
-    const actorSlideoutPanel = document.getElementById('actorSlideoutPanel');
+    const actorBottomPanel = document.getElementById('actorBottomPanel');
     const actorPanelTrigger = document.getElementById('actorPanelTrigger');
     const actorTab = document.getElementById('actorTab');
     
-    if (actorPanelRoot && actorSlideoutPanel && actorPanelTrigger) {
+    if (actorPanelRoot && actorBottomPanel && actorPanelTrigger) {
       const root = createRoot(actorPanelRoot);
       root.render(React.createElement(App, { 
         onActorGenerated: (actorId: string) => {
@@ -730,15 +730,15 @@ window.addEventListener('DOMContentLoaded', () => {
       }));
       
       const togglePanel = () => {
-        const isOpen = actorSlideoutPanel.classList.contains('open');
+        const isOpen = actorBottomPanel.classList.contains('open');
         if (isOpen) {
-          actorSlideoutPanel.classList.remove('open');
+          actorBottomPanel.classList.remove('open');
           actorPanelTrigger.classList.remove('active');
           const arrow = actorPanelTrigger.querySelector('.category-arrow');
           if (arrow) arrow.textContent = '▶';
           if (actorTab) actorTab.classList.remove('panel-open');
         } else {
-          actorSlideoutPanel.classList.add('open');
+          actorBottomPanel.classList.add('open');
           actorPanelTrigger.classList.add('active');
           const arrow = actorPanelTrigger.querySelector('.category-arrow');
           if (arrow) arrow.textContent = '▼';
@@ -753,9 +753,42 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       
       document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && actorSlideoutPanel.classList.contains('open')) {
+        if (e.key === 'Escape' && actorBottomPanel.classList.contains('open')) {
           togglePanel();
         }
+      });
+      
+      document.querySelectorAll('.actor-model-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const actorName = card.getAttribute('data-actor') || 'Actor';
+          const actorId = `actor-${Date.now()}`;
+          
+          useAppStore.getState().addNode({
+            id: actorId,
+            type: 'model',
+            name: actorName.charAt(0).toUpperCase() + actorName.slice(1),
+            transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+            visible: true,
+            userData: { skinTone: '#D4A574', height: 170 }
+          });
+          
+          studio.addActorToScene(actorId);
+          console.log('Added actor:', actorName);
+        });
+      });
+      
+      document.querySelectorAll('.actor-category').forEach(cat => {
+        cat.addEventListener('click', () => {
+          document.querySelectorAll('.actor-category').forEach(c => c.classList.remove('active'));
+          cat.classList.add('active');
+        });
+      });
+      
+      document.querySelectorAll('.actor-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.actor-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+        });
       });
     }
   }
