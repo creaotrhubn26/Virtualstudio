@@ -620,7 +620,6 @@
         <button class="actor-tab" data-tab="camera">CAMERA GEAR</button>
         <button class="actor-tab" data-tab="equipment">EQUIPMENT</button>
         <button class="actor-tab" data-tab="assets">ASSETS</button>
-        <button class="actor-tab" data-tab="characters">KARAKTERER</button>
         <div class="actor-panel-actions">
           <span class="panel-toggle-icon">▽ ✕</span>
         </div>
@@ -638,38 +637,7 @@
         </div>
         <div class="panel-content-area" id="panelContentArea">
           <div class="tab-content active" data-content="models">
-            <div class="actor-models-grid">
-              <div class="actor-model-card" data-actor="sarah">
-                <div class="model-favorite">☆</div>
-                <div class="model-portrait" style="background: linear-gradient(135deg, #8b7355 0%, #d4a574 100%);"></div>
-                <div class="model-name">Sarah</div>
-              </div>
-              <div class="actor-model-card" data-actor="lucas">
-                <div class="model-favorite">☆</div>
-                <div class="model-portrait" style="background: linear-gradient(135deg, #6b5344 0%, #a08070 100%);"></div>
-                <div class="model-name">Lucas</div>
-              </div>
-              <div class="actor-model-card" data-actor="denzel">
-                <div class="model-favorite">☆</div>
-                <div class="model-portrait" style="background: linear-gradient(135deg, #4a3728 0%, #7a5a48 100%);"></div>
-                <div class="model-name">Denzel</div>
-              </div>
-              <div class="actor-model-card" data-actor="toddler">
-                <div class="model-favorite">☆</div>
-                <div class="model-portrait" style="background: linear-gradient(135deg, #c9b8a8 0%, #e8d8c8 100%);"></div>
-                <div class="model-name">Toddler</div>
-              </div>
-              <div class="actor-model-card" data-actor="emma">
-                <div class="model-favorite">☆</div>
-                <div class="model-portrait" style="background: linear-gradient(135deg, #9a8070 0%, #c4a890 100%);"></div>
-                <div class="model-name">Emma</div>
-              </div>
-              <div class="actor-model-card" data-actor="james">
-                <div class="model-favorite">☆</div>
-                <div class="model-portrait" style="background: linear-gradient(135deg, #5a4a3a 0%, #8a7a6a 100%);"></div>
-                <div class="model-name">James</div>
-              </div>
-            </div>
+            <div id="characterLoaderRoot"></div>
           </div>
           <div class="tab-content" data-content="lights">
             <div class="equipment-grid">
@@ -849,9 +817,6 @@
           </div>
           <div class="tab-content" data-content="assets">
             <div id="assetLibraryRoot"></div>
-          </div>
-          <div class="tab-content" data-content="characters">
-            <div id="characterLoaderRoot"></div>
           </div>
           <div class="tab-content" data-content="timeline">
             <div id="keyframeTimelineRoot"></div>

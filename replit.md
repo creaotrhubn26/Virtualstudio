@@ -126,10 +126,10 @@ Run `npm run dev` to start the development server on port 5000.
 
 ## Recent Changes
 - 2025-12-22: Integrated asset panels into Studio Library bottom panel
+  - MODELS tab now uses React CharacterModelLoader with pose library
   - Added ASSETS tab with React AssetLibraryPanel component
-  - Added KARAKTERER tab with React CharacterModelLoader component  
   - Mounted both components from App.tsx with AssetLibraryApp and CharacterLoaderApp
-  - Tab switching between TIMELINE, MODELS, LIGHTS, CAMERA GEAR, EQUIPMENT, ASSETS, KARAKTERER
+  - Tab switching between TIMELINE, MODELS, LIGHTS, CAMERA GEAR, EQUIPMENT, ASSETS
 - 2025-12-22: Implemented comprehensive 3D asset loading system
   - Created AssetLibraryPanel with drag & drop and manual placement
   - CharacterModelLoader with 6 character types and pose library
