@@ -192,6 +192,19 @@ class VirtualStudio {
       });
     });
 
+    ['rotX', 'rotY', 'rotZ'].forEach((id, index) => {
+      document.getElementById(id)?.addEventListener('change', (e) => {
+        if (!this.selectedLightId) return;
+        const data = this.lights.get(this.selectedLightId);
+        if (data) {
+          const val = parseFloat((e.target as HTMLInputElement).value) * Math.PI / 180;
+          if (index === 0) data.mesh.rotation.x = val;
+          if (index === 1) data.mesh.rotation.y = val;
+          if (index === 2) data.mesh.rotation.z = val;
+        }
+      });
+    });
+
     document.getElementById('cctSelect')?.addEventListener('change', (e) => {
       if (!this.selectedLightId) return;
       const data = this.lights.get(this.selectedLightId);
@@ -217,13 +230,88 @@ class VirtualStudio {
       const val = parseFloat((e.target as HTMLInputElement).value);
       const display = document.getElementById('contrastValue');
       if (display) display.textContent = val.toFixed(1);
+      if (this.selectedLightId) {
+        const data = this.lights.get(this.selectedLightId);
+        if (data && data.light instanceof BABYLON.SpotLight) {
+          data.light.exponent = val;
+        }
+      }
     });
 
     document.getElementById('focusSlider')?.addEventListener('input', (e) => {
       const val = parseFloat((e.target as HTMLInputElement).value);
       const display = document.getElementById('focusValue');
       if (display) display.textContent = val.toFixed(1);
+      if (this.selectedLightId) {
+        const data = this.lights.get(this.selectedLightId);
+        if (data && data.light instanceof BABYLON.SpotLight) {
+          data.light.angle = (val / 20) * Math.PI / 2;
+        }
+      }
     });
+
+    this.setupCameraControls();
+  }
+
+  private setupCameraControls(): void {
+    document.getElementById('apertureSelect')?.addEventListener('change', (e) => {
+      const value = (e.target as HTMLSelectElement).value;
+      this.cameraSettings.aperture = parseFloat(value) || 2.8;
+      this.updateExposureDisplay();
+    });
+
+    document.getElementById('shutterSlider')?.addEventListener('input', (e) => {
+      const val = parseFloat((e.target as HTMLInputElement).value);
+      const shutters = ['1/30', '1/60', '1/125', '1/250', '1/500', '1/1000'];
+      const idx = Math.floor(val / 100 * (shutters.length - 1));
+      this.cameraSettings.shutter = shutters[idx];
+      this.updateExposureDisplay();
+    });
+
+    ['isoFlat', 'isoHoj', 'isoHun'].forEach(id => {
+      document.getElementById(id)?.addEventListener('click', () => {
+        document.querySelectorAll('#isoFlat, #isoHoj, #isoHun').forEach(b => b.classList.remove('active'));
+        document.getElementById(id)?.classList.add('active');
+        if (id === 'isoFlat') this.cameraSettings.iso = 100;
+        if (id === 'isoHoj') this.cameraSettings.iso = 400;
+        if (id === 'isoHun') this.cameraSettings.iso = 1600;
+        this.updateExposureDisplay();
+      });
+    });
+
+    document.getElementById('ndSlider')?.addEventListener('input', (e) => {
+      const val = parseFloat((e.target as HTMLInputElement).value);
+      this.cameraSettings.nd = Math.floor(val / 25) * 2;
+      this.updateExposureDisplay();
+    });
+  }
+
+  private updateExposureDisplay(): void {
+    const exposureInfo = document.getElementById('exposureInfo');
+    if (exposureInfo) {
+      exposureInfo.textContent = `f/${this.cameraSettings.aperture} · ${this.cameraSettings.shutter}s · ISO ${this.cameraSettings.iso}`;
+    }
+    
+    const quickISO = document.getElementById('quickISO');
+    if (quickISO) quickISO.textContent = `ISO ${this.cameraSettings.iso}`;
+    
+    const ev = Math.log2(100 / this.cameraSettings.iso) + Math.log2(this.cameraSettings.aperture * this.cameraSettings.aperture) - this.cameraSettings.nd * 0.3;
+    const quickEV = document.getElementById('quickEV');
+    if (quickEV) quickEV.textContent = `${ev.toFixed(1)} EV`;
+
+    this.updateSceneBrightness();
+  }
+
+  private updateSceneBrightness(): void {
+    const isoFactor = this.cameraSettings.iso / 100;
+    const apertureFactor = 1 / (this.cameraSettings.aperture * this.cameraSettings.aperture);
+    const ndFactor = 1 / Math.pow(2, this.cameraSettings.nd);
+    const brightness = isoFactor * apertureFactor * ndFactor * 2;
+    
+    for (const [, data] of this.lights) {
+      const baseIntensity = data.type.includes('softbox') || data.type.includes('umbrella') ? 8 : 12;
+      data.light.intensity = baseIntensity * brightness;
+    }
   }
 
   private setupModalListeners(): void {

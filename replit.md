@@ -1,34 +1,57 @@
-# Virtual Studio - 3D Lighting Simulator
+# Virtual Studio - Professional 3D Lighting Simulator
 
 ## Overview
-A web-based virtual photography studio application built with Babylon.js. Designed to simulate studio lighting setups for photographers and filmmakers, similar to Set.a.Light 3D but accessible directly in the browser.
+A professional web-based virtual photography studio application built with Babylon.js. Designed to simulate studio lighting setups for photographers and filmmakers, with a UI similar to Set.a.Light 3D but accessible directly in the browser.
 
 ## Current State
 - **Framework**: Babylon.js v8.42+ with WebGL2
-- **UI**: Custom HTML/CSS sidebar panel
+- **UI**: Professional 3-panel layout (Equipment | Viewport | Properties)
 - **Server**: Vite dev server on port 5000
+- **Language**: Norwegian UI labels
 
 ## Features
-- 3D studio environment with ground and grid
-- Multiple light types: Spotlight, Point Light, Area Light (Softbox)
-- Interactive light placement and selection
-- Light controls: intensity, color adjustment
-- GLB/GLTF 3D model import
-- Camera FOV adjustment
-- Screenshot export
-- Background color customization
-- Grid visibility toggle
+
+### Equipment Panel (Left)
+- Equipment library with brand lights (Godox AD600Pro, Profoto B10, Aputure LS 120d II)
+- Modifiers (Softbox, Umbrella, Reflector)
+- Category filters (Lights, Modifiers, Stands & Grip, Backgrounds, Props)
+- Search functionality
+- Scene object list
+
+### Viewport (Center)
+- 3D studio environment with ground, walls, and grid
+- Camera info overlay (name, exposure settings)
+- Histogram display
+- Light indicator showing key light info
+- 2D Top View with light positions and camera
+- Focal length controls (24, 35, 50, 85, 135mm)
+
+### Properties Panel (Right)
+- Selection info with light name and type
+- Position controls (X, Y, Z)
+- Rotation controls
+- CCT (Color Temperature) selector
+- Modifier settings
+- Size, contrast, IES, Gobo, Focus sliders
+- Camera settings (Aperture, Shutter, ISO, ND)
+- Export buttons (PNG, Compare A/B)
+
+### Top Bar
+- Project name (editable)
+- Undo/Redo buttons
+- Resolution and camera selection
+- Export PDF button
 
 ## Project Structure
 ```
 /
 ├── src/
-│   ├── main.ts       # Main Babylon.js application
-│   └── styles.css    # UI styling
-├── index.html        # Entry point
+│   ├── main.ts       # Main Babylon.js application with studio logic
+│   └── styles.css    # Professional dark theme UI styling
+├── index.html        # 3-panel layout structure
 ├── package.json      # Dependencies
 ├── tsconfig.json     # TypeScript config
-└── vite.config.ts    # Vite config
+└── vite.config.ts    # Vite config (port 5000)
 ```
 
 ## Key Dependencies
@@ -42,13 +65,17 @@ A web-based virtual photography studio application built with Babylon.js. Design
 Run `npm run dev` to start the development server on port 5000.
 
 ## User Preferences
-- Norwegian language for UI labels
-- Dark, modern UI design
-- Focus on realistic lighting simulation
+- Norwegian language for all UI labels
+- Dark, professional UI design matching Set.a.Light 3D aesthetic
+- Focus on realistic lighting simulation for photographers
+- Interactive light placement with gizmos
 
 ## Recent Changes
-- 2024-12-22: Initial project setup with Babylon.js
-- Created basic studio environment
-- Implemented light system (spotlight, point, area)
-- Added GLB model import functionality
-- Built control panel UI
+- 2024-12-22: Complete UI redesign to match Set.a.Light 3D style
+- Implemented 3-panel professional layout
+- Added equipment library with brand names
+- Added 2D top view visualization
+- Added camera controls (aperture, shutter, ISO, ND)
+- Added light properties panel with CCT, modifier, IES controls
+- Added focal length controls
+- Added histogram display
