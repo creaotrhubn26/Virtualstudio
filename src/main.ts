@@ -382,19 +382,24 @@ class VirtualStudio {
       });
     });
     
-    // Axis keyframe buttons - add keyframes for selected axes
+    // Axis keyframe buttons - add keyframe for clicked axis plus any other selected axes
     document.querySelectorAll('.axis-keyframe').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const target = e.currentTarget as HTMLButtonElement;
         const type = target.dataset.type as 'position' | 'rotation';
+        const clickedAxis = target.dataset.axis as 'x' | 'y' | 'z';
         const selectedAxes = type === 'position' ? this.selectedPosAxes : this.selectedRotAxes;
         
-        if (selectedAxes.size === 3) {
-          // All axes selected - use grouped keyframe
+        // Build set of axes to keyframe: clicked axis plus any selected axes
+        const axesToKeyframe = new Set<string>([clickedAxis]);
+        selectedAxes.forEach(axis => axesToKeyframe.add(axis));
+        
+        if (axesToKeyframe.size === 3) {
+          // All axes - use grouped keyframe for better animation interpolation
           this.addKeyframe(type);
-        } else if (selectedAxes.size > 0) {
-          // Add keyframe for each selected axis
-          selectedAxes.forEach(axis => {
+        } else {
+          // Add individual keyframes for each axis
+          axesToKeyframe.forEach(axis => {
             this.addKeyframeForAxis(type, axis as 'x' | 'y' | 'z');
           });
         }
@@ -1522,31 +1527,25 @@ class VirtualStudio {
     const posTrack = this.animationState.tracks.find(t => t.id === `${this.selectedLightId}_position`);
     const rotTrack = this.animationState.tracks.find(t => t.id === `${this.selectedLightId}_rotation`);
     
-    const hasPosKeyframe = posTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
-    const hasRotKeyframe = rotTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
+    const hasGroupedPosKeyframe = posTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
+    const hasGroupedRotKeyframe = rotTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
     
-    // Update all position axis buttons
+    // Update each position axis button independently
     document.querySelectorAll('.pos-keyframe').forEach(btn => {
       const axis = (btn as HTMLElement).dataset.axis;
-      if (this.selectedPosAxes.size === 3) {
-        btn.classList.toggle('has-keyframe', !!hasPosKeyframe);
-      } else {
-        const axisTrack = this.animationState.tracks.find(t => t.id === `${this.selectedLightId}_position_${axis}`);
-        const hasAxisKeyframe = axisTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
-        btn.classList.toggle('has-keyframe', !!hasAxisKeyframe);
-      }
+      // Check both grouped track and individual axis track
+      const axisTrack = this.animationState.tracks.find(t => t.id === `${this.selectedLightId}_position_${axis}`);
+      const hasAxisKeyframe = axisTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
+      btn.classList.toggle('has-keyframe', !!hasGroupedPosKeyframe || !!hasAxisKeyframe);
     });
     
-    // Update all rotation axis buttons
+    // Update each rotation axis button independently
     document.querySelectorAll('.rot-keyframe').forEach(btn => {
       const axis = (btn as HTMLElement).dataset.axis;
-      if (this.selectedRotAxes.size === 3) {
-        btn.classList.toggle('has-keyframe', !!hasRotKeyframe);
-      } else {
-        const axisTrack = this.animationState.tracks.find(t => t.id === `${this.selectedLightId}_rotation_${axis}`);
-        const hasAxisKeyframe = axisTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
-        btn.classList.toggle('has-keyframe', !!hasAxisKeyframe);
-      }
+      // Check both grouped track and individual axis track
+      const axisTrack = this.animationState.tracks.find(t => t.id === `${this.selectedLightId}_rotation_${axis}`);
+      const hasAxisKeyframe = axisTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
+      btn.classList.toggle('has-keyframe', !!hasGroupedRotKeyframe || !!hasAxisKeyframe);
     });
   }
   
