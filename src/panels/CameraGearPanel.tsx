@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Box,
   Typography,
-  Divider,
   Chip,
   Stack,
   TextField,
@@ -10,6 +9,8 @@ import {
   IconButton,
   Button,
   useMediaQuery,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import StarIcon from '@mui/icons-material/Star';
@@ -115,7 +116,9 @@ const LENSES: Lens[] = [
 type LensType = 'all' | 'prime' | 'zoom' | 'macro' | 'tele' | 'probe';
 
 export function CameraGearPanel() {
-  const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState(0);
+  const [cameraSearch, setCameraSearch] = useState('');
+  const [lensSearch, setLensSearch] = useState('');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
   const [selectedLens, setSelectedLens] = useState<string | null>(null);
@@ -160,204 +163,245 @@ export function CameraGearPanel() {
   };
 
   const filteredCameras = CAMERA_BODIES.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.brand.toLowerCase().includes(search.toLowerCase())
+    c.name.toLowerCase().includes(cameraSearch.toLowerCase()) ||
+    c.brand.toLowerCase().includes(cameraSearch.toLowerCase())
   );
 
   const filteredLenses = LENSES.filter(l => {
-    const matchesSearch = l.name.toLowerCase().includes(search.toLowerCase()) ||
-      l.brand.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = l.name.toLowerCase().includes(lensSearch.toLowerCase()) ||
+      l.brand.toLowerCase().includes(lensSearch.toLowerCase());
     const matchesType = lensFilter === 'all' || l.type === lensFilter;
     return matchesSearch && matchesType;
   });
 
   return (
-    <Box sx={{ p: 2, height: '100%', overflow: 'auto', bgcolor: '#1a1a1a' }}>
-      <TextField
-        fullWidth
-        size="small"
-        placeholder="Søk kamerautstyr..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <SearchIcon sx={{ color: '#666' }} />
-            </InputAdornment>
-          ),
-        }}
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#1a1a1a' }}>
+      <Tabs 
+        value={activeTab} 
+        onChange={(_, v) => setActiveTab(v)}
         sx={{
-          mb: 2,
-          '& .MuiOutlinedInput-root': {
-            bgcolor: '#252525',
-            '& fieldset': { borderColor: '#333' },
+          minHeight: 40,
+          borderBottom: '1px solid #333',
+          '& .MuiTab-root': {
+            color: '#888',
+            minHeight: 40,
+            fontSize: 12,
+            textTransform: 'none',
+            '&.Mui-selected': { color: '#00a8ff' },
           },
-          '& .MuiInputBase-input': { color: '#fff' },
+          '& .MuiTabs-indicator': { backgroundColor: '#00a8ff' },
         }}
-      />
+      >
+        <Tab icon={<CameraAltIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Kamera" />
+        <Tab icon={<CameraIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Linser" />
+      </Tabs>
 
-      <Typography variant="subtitle2" sx={{ color: '#00a8ff', mb: 1.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <CameraAltIcon fontSize="small" />
-        Kamerahus
-      </Typography>
+      <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+        {activeTab === 0 && (
+          <>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Søk kameraer..."
+              value={cameraSearch}
+              onChange={(e) => setCameraSearch(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: '#666' }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: '#252525',
+                  '& fieldset': { borderColor: '#333' },
+                },
+                '& .MuiInputBase-input': { color: '#fff' },
+              }}
+            />
 
-      <Stack spacing={1} sx={{ mb: 3 }}>
-        {filteredCameras.map(camera => (
-          <Box
-            key={camera.id}
-            onClick={() => selectCamera(camera)}
-            sx={{
-              p: 1.5,
-              bgcolor: selectedCamera === camera.id ? '#00a8ff22' : '#252525',
-              border: selectedCamera === camera.id ? '1px solid #00a8ff' : '1px solid #333',
-              borderRadius: 1,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.5,
-              '&:hover': { bgcolor: '#2a2a2a' },
-            }}
-          >
-            {camera.image ? (
-              <Box
-                component="img"
-                src={camera.image}
-                alt={camera.name}
-                sx={{ width: 48, height: 48, borderRadius: 1, objectFit: 'cover', bgcolor: '#333' }}
-              />
-            ) : (
-              <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CameraAltIcon sx={{ color: '#666' }} />
-              </Box>
-            )}
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>{camera.name}</Typography>
-              <Typography variant="caption" sx={{ color: '#888', display: 'block' }}>
-                {camera.sensor} ({camera.sensorSize}) · {camera.megapixels}MP
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
-                <Chip label={`DR ${camera.dynamicRange}EV`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#2a4a2a' }} />
-                <Chip label={`ISO ${camera.baseISO}-${camera.maxISO}`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#333' }} />
-                <Chip label={`Sync ${camera.flashSync}`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#4a3a2a' }} />
-                {camera.ibis && <Chip label={`IBIS ${camera.ibis}`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#2a3a4a' }} />}
-              </Box>
+            <Stack spacing={1}>
+              {filteredCameras.map(camera => (
+                <Box
+                  key={camera.id}
+                  onClick={() => selectCamera(camera)}
+                  sx={{
+                    p: 1.5,
+                    bgcolor: selectedCamera === camera.id ? '#00a8ff22' : '#252525',
+                    border: selectedCamera === camera.id ? '1px solid #00a8ff' : '1px solid #333',
+                    borderRadius: 1,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    '&:hover': { bgcolor: '#2a2a2a' },
+                  }}
+                >
+                  {camera.image ? (
+                    <Box
+                      component="img"
+                      src={camera.image}
+                      alt={camera.name}
+                      sx={{ width: 48, height: 48, borderRadius: 1, objectFit: 'cover', bgcolor: '#333' }}
+                    />
+                  ) : (
+                    <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CameraAltIcon sx={{ color: '#666' }} />
+                    </Box>
+                  )}
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>{camera.name}</Typography>
+                    <Typography variant="caption" sx={{ color: '#888', display: 'block' }}>
+                      {camera.sensor} ({camera.sensorSize}) · {camera.megapixels}MP
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
+                      <Chip label={`DR ${camera.dynamicRange}EV`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#2a4a2a' }} />
+                      <Chip label={`ISO ${camera.baseISO}-${camera.maxISO}`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#333' }} />
+                      <Chip label={`Sync ${camera.flashSync}`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#4a3a2a' }} />
+                      {camera.ibis && <Chip label={`IBIS ${camera.ibis}`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#2a3a4a' }} />}
+                    </Box>
+                  </Box>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
+                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleFavorite(camera.id); }}>
+                      {favorites.has(camera.id) ? <StarIcon sx={{ color: '#ffd700', fontSize: 18 }} /> : <StarBorderIcon sx={{ color: '#666', fontSize: 18 }} />}
+                    </IconButton>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      startIcon={<AddIcon sx={{ fontSize: 14 }} />}
+                      onClick={(e) => addCamera(camera, e)}
+                      aria-label={`Legg til ${camera.name}`}
+                      sx={{
+                        minWidth: isTablet ? 80 : 70,
+                        minHeight: isTablet ? 36 : 28,
+                        fontSize: 10,
+                        bgcolor: '#00a8ff',
+                        '&:hover': { bgcolor: '#0090dd' },
+                        textTransform: 'none',
+                      }}
+                    >
+                      Legg til
+                    </Button>
+                  </Box>
+                </Box>
+              ))}
+            </Stack>
+          </>
+        )}
+
+        {activeTab === 1 && (
+          <>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Søk linser..."
+              value={lensSearch}
+              onChange={(e) => setLensSearch(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: '#666' }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: '#252525',
+                  '& fieldset': { borderColor: '#333' },
+                },
+                '& .MuiInputBase-input': { color: '#fff' },
+              }}
+            />
+
+            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 2 }}>
+              {(['all', 'prime', 'zoom', 'macro', 'tele', 'probe'] as LensType[]).map(type => (
+                <Chip
+                  key={type}
+                  label={type === 'all' ? 'Alle' : type === 'prime' ? 'Prime' : type === 'zoom' ? 'Zoom' : type === 'macro' ? 'Makro' : type === 'tele' ? 'Tele' : 'Probe'}
+                  size="small"
+                  onClick={() => setLensFilter(type)}
+                  sx={{
+                    bgcolor: lensFilter === type ? '#00a8ff' : '#333',
+                    color: lensFilter === type ? '#fff' : '#aaa',
+                    fontSize: 11,
+                    '&:hover': { bgcolor: lensFilter === type ? '#00a8ff' : '#444' },
+                  }}
+                />
+              ))}
             </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
-              <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleFavorite(camera.id); }}>
-                {favorites.has(camera.id) ? <StarIcon sx={{ color: '#ffd700', fontSize: 18 }} /> : <StarBorderIcon sx={{ color: '#666', fontSize: 18 }} />}
-              </IconButton>
-              <Button
-                size="small"
-                variant="contained"
-                startIcon={<AddIcon sx={{ fontSize: 14 }} />}
-                onClick={(e) => addCamera(camera, e)}
-                aria-label={`Legg til ${camera.name}`}
-                sx={{
-                  minWidth: isTablet ? 80 : 70,
-                  minHeight: isTablet ? 36 : 28,
-                  fontSize: 10,
-                  bgcolor: '#00a8ff',
-                  '&:hover': { bgcolor: '#0090dd' },
-                  textTransform: 'none',
-                }}
-              >
-                Legg til
-              </Button>
-            </Box>
-          </Box>
-        ))}
-      </Stack>
 
-      <Divider sx={{ borderColor: '#333', mb: 2 }} />
-
-      <Typography variant="subtitle2" sx={{ color: '#00a8ff', mb: 1.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <CameraIcon fontSize="small" />
-        Objektiver
-      </Typography>
-
-      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 2 }}>
-        {(['all', 'prime', 'zoom', 'macro', 'tele', 'probe'] as LensType[]).map(type => (
-          <Chip
-            key={type}
-            label={type === 'all' ? 'Alle' : type === 'prime' ? 'Prime' : type === 'zoom' ? 'Zoom' : type === 'macro' ? 'Makro' : type === 'tele' ? 'Tele' : 'Probe'}
-            size="small"
-            onClick={() => setLensFilter(type)}
-            sx={{
-              bgcolor: lensFilter === type ? '#00a8ff' : '#333',
-              color: lensFilter === type ? '#fff' : '#aaa',
-              fontSize: 11,
-              '&:hover': { bgcolor: lensFilter === type ? '#00a8ff' : '#444' },
-            }}
-          />
-        ))}
+            <Stack spacing={1}>
+              {filteredLenses.map(lens => (
+                <Box
+                  key={lens.id}
+                  onClick={() => selectLens(lens)}
+                  sx={{
+                    p: 1.5,
+                    bgcolor: selectedLens === lens.id ? '#00a8ff22' : '#252525',
+                    border: selectedLens === lens.id ? '1px solid #00a8ff' : '1px solid #333',
+                    borderRadius: 1,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    '&:hover': { bgcolor: '#2a2a2a' },
+                  }}
+                >
+                  {lens.image ? (
+                    <Box
+                      component="img"
+                      src={lens.image}
+                      alt={lens.name}
+                      sx={{ width: 48, height: 48, borderRadius: 1, objectFit: 'cover', bgcolor: '#333' }}
+                    />
+                  ) : (
+                    <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CameraIcon sx={{ color: '#666' }} />
+                    </Box>
+                  )}
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>{lens.name}</Typography>
+                    <Typography variant="caption" sx={{ color: '#888', display: 'block' }}>
+                      {lens.focalLength} · {lens.aperture}-{lens.minAperture}
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
+                      <Chip label={lens.type === 'macro' ? 'Makro' : lens.type.charAt(0).toUpperCase() + lens.type.slice(1)} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#333' }} />
+                      {lens.weight && <Chip label={`${lens.weight}g`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#333' }} />}
+                      {lens.minFocusDistance && <Chip label={`Min ${(lens.minFocusDistance * 100).toFixed(0)}cm`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#2a3a4a' }} />}
+                      {lens.filterSize && <Chip label={`ø${lens.filterSize}mm`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#3a3a4a' }} />}
+                    </Box>
+                  </Box>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
+                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleFavorite(lens.id); }}>
+                      {favorites.has(lens.id) ? <StarIcon sx={{ color: '#ffd700', fontSize: 18 }} /> : <StarBorderIcon sx={{ color: '#666', fontSize: 18 }} />}
+                    </IconButton>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      startIcon={<AddIcon sx={{ fontSize: 14 }} />}
+                      onClick={(e) => addLens(lens, e)}
+                      aria-label={`Legg til ${lens.name}`}
+                      sx={{
+                        minWidth: isTablet ? 80 : 70,
+                        minHeight: isTablet ? 36 : 28,
+                        fontSize: 10,
+                        bgcolor: '#00a8ff',
+                        '&:hover': { bgcolor: '#0090dd' },
+                        textTransform: 'none',
+                      }}
+                    >
+                      Legg til
+                    </Button>
+                  </Box>
+                </Box>
+              ))}
+            </Stack>
+          </>
+        )}
       </Box>
-
-      <Stack spacing={1}>
-        {filteredLenses.map(lens => (
-          <Box
-            key={lens.id}
-            onClick={() => selectLens(lens)}
-            sx={{
-              p: 1.5,
-              bgcolor: selectedLens === lens.id ? '#00a8ff22' : '#252525',
-              border: selectedLens === lens.id ? '1px solid #00a8ff' : '1px solid #333',
-              borderRadius: 1,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.5,
-              '&:hover': { bgcolor: '#2a2a2a' },
-            }}
-          >
-            {lens.image ? (
-              <Box
-                component="img"
-                src={lens.image}
-                alt={lens.name}
-                sx={{ width: 48, height: 48, borderRadius: 1, objectFit: 'cover', bgcolor: '#333' }}
-              />
-            ) : (
-              <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CameraIcon sx={{ color: '#666' }} />
-              </Box>
-            )}
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>{lens.name}</Typography>
-              <Typography variant="caption" sx={{ color: '#888', display: 'block' }}>
-                {lens.focalLength} · {lens.aperture}-{lens.minAperture}
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
-                <Chip label={lens.type === 'macro' ? 'Makro' : lens.type.charAt(0).toUpperCase() + lens.type.slice(1)} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#333' }} />
-                {lens.weight && <Chip label={`${lens.weight}g`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#333' }} />}
-                {lens.minFocusDistance && <Chip label={`Min ${(lens.minFocusDistance * 100).toFixed(0)}cm`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#2a3a4a' }} />}
-                {lens.filterSize && <Chip label={`ø${lens.filterSize}mm`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#3a3a4a' }} />}
-              </Box>
-            </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
-              <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleFavorite(lens.id); }}>
-                {favorites.has(lens.id) ? <StarIcon sx={{ color: '#ffd700', fontSize: 18 }} /> : <StarBorderIcon sx={{ color: '#666', fontSize: 18 }} />}
-              </IconButton>
-              <Button
-                size="small"
-                variant="contained"
-                startIcon={<AddIcon sx={{ fontSize: 14 }} />}
-                onClick={(e) => addLens(lens, e)}
-                aria-label={`Legg til ${lens.name}`}
-                sx={{
-                  minWidth: isTablet ? 80 : 70,
-                  minHeight: isTablet ? 36 : 28,
-                  fontSize: 10,
-                  bgcolor: '#00a8ff',
-                  '&:hover': { bgcolor: '#0090dd' },
-                  textTransform: 'none',
-                }}
-              >
-                Legg til
-              </Button>
-            </Box>
-          </Box>
-        ))}
-      </Stack>
     </Box>
   );
 }
