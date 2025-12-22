@@ -716,10 +716,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const studio = new VirtualStudio(canvas);
     
     const actorPanelRoot = document.getElementById('actorPanelRoot');
-    const actorPanelContainer = document.getElementById('actorPanelContainer');
+    const actorFloatingPanel = document.getElementById('actorFloatingPanel');
+    const actorPanelTrigger = document.getElementById('actorPanelTrigger');
+    const actorPanelClose = document.getElementById('actorPanelClose');
     const actorTab = document.getElementById('actorTab');
     
-    if (actorPanelRoot && actorTab && actorPanelContainer) {
+    if (actorPanelRoot && actorFloatingPanel && actorPanelTrigger) {
       const root = createRoot(actorPanelRoot);
       root.render(React.createElement(App, { 
         onActorGenerated: (actorId: string) => {
@@ -728,22 +730,26 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       }));
       
-      const header = actorPanelContainer.querySelector('.section-header');
-      if (header) {
-        header.addEventListener('click', () => {
-          const arrow = header.querySelector('.category-arrow');
-          const isExpanded = actorPanelRoot.style.display !== 'none';
-          actorPanelRoot.style.display = isExpanded ? 'none' : 'block';
-          if (arrow) arrow.textContent = isExpanded ? '▶' : '▼';
-        });
+      const togglePanel = () => {
+        const arrow = actorPanelTrigger.querySelector('.category-arrow');
+        const isOpen = actorFloatingPanel.style.display !== 'none';
+        actorFloatingPanel.style.display = isOpen ? 'none' : 'flex';
+        if (arrow) arrow.textContent = isOpen ? '▶' : '▼';
+      };
+      
+      actorPanelTrigger.addEventListener('click', togglePanel);
+      
+      if (actorTab) {
+        actorTab.addEventListener('click', togglePanel);
       }
       
-      actorTab.addEventListener('click', () => {
-        const arrow = actorPanelContainer.querySelector('.category-arrow');
-        const isExpanded = actorPanelRoot.style.display !== 'none';
-        actorPanelRoot.style.display = isExpanded ? 'none' : 'block';
-        if (arrow) arrow.textContent = isExpanded ? '▶' : '▼';
-      });
+      if (actorPanelClose) {
+        actorPanelClose.addEventListener('click', () => {
+          actorFloatingPanel.style.display = 'none';
+          const arrow = actorPanelTrigger.querySelector('.category-arrow');
+          if (arrow) arrow.textContent = '▶';
+        });
+      }
     }
   }
 });

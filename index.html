@@ -128,12 +128,11 @@
           <div class="section-header">Scene</div>
           <div class="scene-list" id="sceneList"></div>
         </div>
-        <div class="actor-panel-container" id="actorPanelContainer">
+        <div class="actor-panel-trigger" id="actorPanelTrigger">
           <div class="section-header">
             <span class="category-arrow">▶</span>
             <span>Virtuell Aktør</span>
           </div>
-          <div id="actorPanelRoot" style="display: none;"></div>
         </div>
         <div class="panel-footer">
           <button class="footer-tab" id="notesTab">Notater</button>
@@ -336,6 +335,14 @@
           <button class="modal-btn" id="closeModal">Lukk</button>
         </div>
       </div>
+    </div>
+
+    <div class="actor-floating-panel" id="actorFloatingPanel" style="display: none;">
+      <div class="actor-panel-header">
+        <span class="actor-panel-title">Virtuell Aktør</span>
+        <button class="actor-panel-close" id="actorPanelClose">×</button>
+      </div>
+      <div id="actorPanelRoot"></div>
     </div>
   </div>
 
