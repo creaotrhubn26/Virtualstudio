@@ -360,7 +360,7 @@ html, body {
 
 .actor-bottom-panel {
   position: fixed;
-  left: 0;
+  left: 220px;
   right: 0;
   bottom: 0;
   height: 200px;
