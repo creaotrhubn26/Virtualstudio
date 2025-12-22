@@ -758,22 +758,96 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       });
       
+      const showObjectProperties = (name: string, type: 'model' | 'light' | 'equipment', position = [0, 0, 0], rotation = [0, 0, 0]) => {
+        const noSelection = document.getElementById('noSelection');
+        const objectHeader = document.getElementById('objectHeader');
+        const transformSection = document.getElementById('transformSection');
+        const feetSection = document.getElementById('feetSection');
+        const handsSection = document.getElementById('handsSection');
+        const lightProperties = document.getElementById('lightProperties');
+        const objectName = document.getElementById('objectName');
+        
+        if (noSelection) noSelection.style.display = 'none';
+        if (objectHeader) objectHeader.style.display = 'block';
+        if (transformSection) transformSection.style.display = 'block';
+        if (objectName) objectName.textContent = name;
+        
+        const posXInput = document.getElementById('posX') as HTMLInputElement;
+        const posYInput = document.getElementById('posY') as HTMLInputElement;
+        const posZInput = document.getElementById('posZ') as HTMLInputElement;
+        const rotXInput = document.getElementById('rotX') as HTMLInputElement;
+        const rotYInput = document.getElementById('rotY') as HTMLInputElement;
+        const rotZInput = document.getElementById('rotZ') as HTMLInputElement;
+        
+        if (posXInput) posXInput.value = `${position[0].toFixed(2)} m`;
+        if (posYInput) posYInput.value = `${position[1].toFixed(2)} m`;
+        if (posZInput) posZInput.value = `${position[2].toFixed(2)} m`;
+        if (rotXInput) rotXInput.value = `${rotation[0].toFixed(0)} °`;
+        if (rotYInput) rotYInput.value = `${rotation[1].toFixed(0)} °`;
+        if (rotZInput) rotZInput.value = `${rotation[2].toFixed(0)} °`;
+        
+        if (type === 'model') {
+          if (feetSection) feetSection.style.display = 'block';
+          if (handsSection) handsSection.style.display = 'block';
+          if (lightProperties) lightProperties.style.display = 'none';
+        } else if (type === 'light') {
+          if (feetSection) feetSection.style.display = 'none';
+          if (handsSection) handsSection.style.display = 'none';
+          if (lightProperties) lightProperties.style.display = 'block';
+        } else {
+          if (feetSection) feetSection.style.display = 'none';
+          if (handsSection) handsSection.style.display = 'none';
+          if (lightProperties) lightProperties.style.display = 'none';
+        }
+      };
+      
       document.querySelectorAll('.actor-model-card').forEach(card => {
         card.addEventListener('click', () => {
           const actorName = card.getAttribute('data-actor') || 'Actor';
           const actorId = `actor-${Date.now()}`;
+          const displayName = actorName.charAt(0).toUpperCase() + actorName.slice(1);
           
           useAppStore.getState().addNode({
             id: actorId,
             type: 'model',
-            name: actorName.charAt(0).toUpperCase() + actorName.slice(1),
+            name: displayName,
             transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
             visible: true,
             userData: { skinTone: '#D4A574', height: 170 }
           });
           
           studio.addActorToScene(actorId);
+          showObjectProperties(displayName, 'model', [0, 0, 0], [0, 0, 0]);
           console.log('Added actor:', actorName);
+        });
+      });
+      
+      document.querySelectorAll('.equipment-card[data-light]').forEach(card => {
+        card.addEventListener('click', () => {
+          const lightName = card.querySelector('.equipment-name')?.textContent || 'Light';
+          const lightId = `light-${Date.now()}`;
+          
+          useAppStore.getState().addNode({
+            id: lightId,
+            type: 'light',
+            name: lightName,
+            transform: { position: [2, 3, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+            visible: true,
+            userData: { power: 100, cct: 5600 }
+          });
+          
+          showObjectProperties(lightName, 'light', [2, 3, 0], [0, 0, 0]);
+          console.log('Added light:', lightName);
+        });
+      });
+      
+      document.querySelectorAll('.equipment-card[data-equip]').forEach(card => {
+        card.addEventListener('click', () => {
+          const equipName = card.querySelector('.equipment-name')?.textContent?.split('<br>')[0] || 'Equipment';
+          const equipId = `equip-${Date.now()}`;
+          
+          showObjectProperties(equipName, 'equipment', [0, 0, 0], [0, 0, 0]);
+          console.log('Added equipment:', equipName);
         });
       });
       
