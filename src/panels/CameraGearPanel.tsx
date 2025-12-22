@@ -176,6 +176,22 @@ const CAMERA_BODIES: CameraBody[] = [
     category: 'cine'
   },
   { 
+    id: 'canon-c80', name: 'Canon EOS C80', brand: 'Canon', 
+    sensor: 'Full Frame', sensorSize: '36×24mm', megapixels: 45, 
+    baseISO: 800, maxISO: 102400, dynamicRange: 16.0, colorDepth: 25.5,
+    maxShutter: '1/8000', flashSync: '-', maxFps: 120,
+    codec: 'Cinema RAW Light, XF-AVC', recording: '6K',
+    category: 'cine'
+  },
+  { 
+    id: 'canon-c50', name: 'Canon EOS C50', brand: 'Canon', 
+    sensor: 'Super 35', sensorSize: '26.2×13.8mm', megapixels: 8.85, 
+    baseISO: 800, maxISO: 102400, dynamicRange: 15.0, colorDepth: 25.2,
+    maxShutter: '1/8000', flashSync: '-', maxFps: 60,
+    codec: 'XF-AVC', recording: '4K DCI',
+    category: 'cine'
+  },
+  { 
     id: 'sony-fx6', name: 'Sony FX6', brand: 'Sony', 
     sensor: 'Full Frame', sensorSize: '35.6×23.8mm', megapixels: 10.2, 
     baseISO: 800, maxISO: 409600, dynamicRange: 15.0, colorDepth: 25.2,
