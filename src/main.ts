@@ -2224,6 +2224,68 @@ window.addEventListener('DOMContentLoaded', () => {
       });
     }
     
+    const expandAllBtn = document.getElementById('expandAllBtn');
+    const collapseAllBtn = document.getElementById('collapseAllBtn');
+    
+    const toggleGroup = (header: HTMLElement, expand: boolean) => {
+      const group = header.closest('.hierarchy-group');
+      const arrow = header.querySelector('.hierarchy-arrow');
+      const itemsId = header.getAttribute('aria-controls');
+      const items = itemsId ? document.getElementById(itemsId) : null;
+      
+      if (group && arrow && items) {
+        header.setAttribute('aria-expanded', String(expand));
+        group.setAttribute('aria-expanded', String(expand));
+        
+        if (expand) {
+          group.classList.remove('collapsed');
+          arrow.textContent = '▾';
+          items.style.display = '';
+        } else {
+          group.classList.add('collapsed');
+          arrow.textContent = '▸';
+          items.style.display = 'none';
+        }
+      }
+    };
+    
+    document.querySelectorAll('.hierarchy-header').forEach((header) => {
+      header.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('.group-count')) return;
+        
+        const isExpanded = header.getAttribute('aria-expanded') === 'true';
+        toggleGroup(header as HTMLElement, !isExpanded);
+      });
+      
+      header.addEventListener('keydown', (e) => {
+        const keyEvent = e as KeyboardEvent;
+        if (keyEvent.key === 'Enter' || keyEvent.key === ' ') {
+          keyEvent.preventDefault();
+          const isExpanded = header.getAttribute('aria-expanded') === 'true';
+          toggleGroup(header as HTMLElement, !isExpanded);
+        }
+      });
+    });
+    
+    if (expandAllBtn) {
+      expandAllBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.hierarchy-header').forEach((header) => {
+          toggleGroup(header as HTMLElement, true);
+        });
+      });
+    }
+    
+    if (collapseAllBtn) {
+      collapseAllBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.hierarchy-header').forEach((header) => {
+          toggleGroup(header as HTMLElement, false);
+        });
+      });
+    }
+    
     const actorPanelRoot = document.getElementById('actorPanelRoot');
     const actorBottomPanel = document.getElementById('actorBottomPanel');
     const actorPanelTrigger = document.getElementById('actorPanelTrigger');

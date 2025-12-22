@@ -405,6 +405,38 @@ html, body {
   text-align: center;
 }
 
+.hierarchy-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.hierarchy-action-btn {
+  width: 24px;
+  height: 24px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+
+.hierarchy-action-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+.hierarchy-action-btn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+
 .panel-header.collapsed .collapse-arrow {
   transform: rotate(-90deg);
 }
