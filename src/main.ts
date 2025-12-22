@@ -399,15 +399,30 @@ class VirtualStudio {
   }
 
   private updateSceneBrightness(): void {
+    // Parse shutter speed to get exposure time
+    const shutterMatch = this.cameraSettings.shutter.match(/1\/(\d+)/);
+    const shutterSeconds = shutterMatch ? 1 / parseInt(shutterMatch[1]) : 1/125;
+    
+    // Calculate exposure value (EV)
     const isoFactor = this.cameraSettings.iso / 100;
     const apertureFactor = 1 / (this.cameraSettings.aperture * this.cameraSettings.aperture);
+    const shutterFactor = shutterSeconds * 125; // Normalize to 1/125s baseline
     const ndFactor = 1 / Math.pow(2, this.cameraSettings.nd);
-    const brightness = isoFactor * apertureFactor * ndFactor * 2;
     
+    const brightness = isoFactor * apertureFactor * shutterFactor * ndFactor * 2;
+    
+    // Update all studio lights
     for (const [, data] of this.lights) {
       const baseIntensity = data.type.includes('softbox') || data.type.includes('umbrella') ? 8 : 12;
       data.light.intensity = baseIntensity * brightness;
     }
+    
+    // Update ambient/hemisphere light if exists
+    this.scene.lights.forEach(light => {
+      if (light instanceof BABYLON.HemisphericLight) {
+        light.intensity = 0.3 * brightness;
+      }
+    });
   }
 
   private setupModalListeners(): void {
