@@ -784,10 +784,42 @@ window.addEventListener('DOMContentLoaded', () => {
         });
       });
       
+      const categoryConfig: Record<string, string[]> = {
+        models: ['All', 'Women', 'Men', 'Children', 'Animals'],
+        lights: ['All', 'Flash', 'Continuous', 'Practical Light', 'Light Shapers'],
+        equipment: ['All', 'Softboxes', 'Umbrellas', 'Reflectors', 'Stands'],
+        assets: ['All', 'Backdrops', 'Props', 'Furniture'],
+        timeline: []
+      };
+      
       document.querySelectorAll('.actor-tab').forEach(tab => {
         tab.addEventListener('click', () => {
+          const tabName = tab.getAttribute('data-tab') || 'models';
+          
           document.querySelectorAll('.actor-tab').forEach(t => t.classList.remove('active'));
           tab.classList.add('active');
+          
+          document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+            if (content.getAttribute('data-content') === tabName) {
+              content.classList.add('active');
+            }
+          });
+          
+          const categoriesEl = document.getElementById('panelCategories');
+          if (categoriesEl) {
+            const cats = categoryConfig[tabName] || [];
+            categoriesEl.innerHTML = cats.map((cat, i) => 
+              `<div class="actor-category${i === 0 ? ' active' : ''}" data-category="${cat.toLowerCase().replace(' ', '-')}">${cat}</div>`
+            ).join('');
+            
+            categoriesEl.querySelectorAll('.actor-category').forEach(catEl => {
+              catEl.addEventListener('click', () => {
+                categoriesEl.querySelectorAll('.actor-category').forEach(c => c.classList.remove('active'));
+                catEl.classList.add('active');
+              });
+            });
+          }
         });
       });
     }

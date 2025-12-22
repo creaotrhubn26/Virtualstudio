@@ -466,13 +466,60 @@ html, body {
   color: var(--text-primary);
 }
 
-.actor-models-grid {
+.panel-content-area {
   flex: 1;
+  overflow: hidden;
+}
+
+.tab-content {
+  display: none;
+  height: 100%;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.actor-models-grid,
+.equipment-grid {
   display: flex;
   gap: 12px;
   padding: 12px;
   overflow-x: auto;
+  height: 100%;
   align-items: flex-start;
+}
+
+.equipment-card {
+  width: 90px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.equipment-card:hover {
+  transform: scale(1.02);
+}
+
+.equipment-image {
+  width: 90px;
+  height: 70px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
+
+.equipment-name {
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-primary);
+}
+
+.timeline-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .actor-model-card {

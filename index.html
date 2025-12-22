@@ -351,7 +351,7 @@
       <div class="actor-panel-body">
         <div class="actor-sidebar">
           <input type="text" class="actor-search" placeholder="Search">
-          <div class="actor-categories">
+          <div class="actor-categories" id="panelCategories">
             <div class="actor-category" data-category="all">All</div>
             <div class="actor-category" data-category="women">Women</div>
             <div class="actor-category" data-category="men">Men</div>
@@ -359,36 +359,137 @@
             <div class="actor-category" data-category="animals">Animals</div>
           </div>
         </div>
-        <div class="actor-models-grid">
-          <div class="actor-model-card" data-actor="sarah">
-            <div class="model-favorite">☆</div>
-            <div class="model-portrait" style="background: linear-gradient(135deg, #8b7355 0%, #d4a574 100%);"></div>
-            <div class="model-name">Sarah</div>
+        <div class="panel-content-area" id="panelContentArea">
+          <div class="tab-content active" data-content="models">
+            <div class="actor-models-grid">
+              <div class="actor-model-card" data-actor="sarah">
+                <div class="model-favorite">☆</div>
+                <div class="model-portrait" style="background: linear-gradient(135deg, #8b7355 0%, #d4a574 100%);"></div>
+                <div class="model-name">Sarah</div>
+              </div>
+              <div class="actor-model-card" data-actor="lucas">
+                <div class="model-favorite">☆</div>
+                <div class="model-portrait" style="background: linear-gradient(135deg, #6b5344 0%, #a08070 100%);"></div>
+                <div class="model-name">Lucas</div>
+              </div>
+              <div class="actor-model-card" data-actor="denzel">
+                <div class="model-favorite">☆</div>
+                <div class="model-portrait" style="background: linear-gradient(135deg, #4a3728 0%, #7a5a48 100%);"></div>
+                <div class="model-name">Denzel</div>
+              </div>
+              <div class="actor-model-card" data-actor="toddler">
+                <div class="model-favorite">☆</div>
+                <div class="model-portrait" style="background: linear-gradient(135deg, #c9b8a8 0%, #e8d8c8 100%);"></div>
+                <div class="model-name">Toddler</div>
+              </div>
+              <div class="actor-model-card" data-actor="emma">
+                <div class="model-favorite">☆</div>
+                <div class="model-portrait" style="background: linear-gradient(135deg, #9a8070 0%, #c4a890 100%);"></div>
+                <div class="model-name">Emma</div>
+              </div>
+              <div class="actor-model-card" data-actor="james">
+                <div class="model-favorite">☆</div>
+                <div class="model-portrait" style="background: linear-gradient(135deg, #5a4a3a 0%, #8a7a6a 100%);"></div>
+                <div class="model-name">James</div>
+              </div>
+            </div>
           </div>
-          <div class="actor-model-card" data-actor="lucas">
-            <div class="model-favorite">☆</div>
-            <div class="model-portrait" style="background: linear-gradient(135deg, #6b5344 0%, #a08070 100%);"></div>
-            <div class="model-name">Lucas</div>
+          <div class="tab-content" data-content="lights">
+            <div class="equipment-grid">
+              <div class="equipment-card" data-light="250ws">
+                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
+                <div class="equipment-name">250 Ws</div>
+              </div>
+              <div class="equipment-card" data-light="360ws">
+                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
+                <div class="equipment-name">360 Ws</div>
+              </div>
+              <div class="equipment-card" data-light="500ws">
+                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
+                <div class="equipment-name">500 Ws</div>
+              </div>
+              <div class="equipment-card" data-light="1000ws">
+                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
+                <div class="equipment-name">1000 Ws</div>
+              </div>
+              <div class="equipment-card" data-light="godox-ad200">
+                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
+                <div class="equipment-name">Godox AD200</div>
+              </div>
+              <div class="equipment-card" data-light="ring-flash">
+                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
+                <div class="equipment-name">Ring Flash</div>
+              </div>
+              <div class="equipment-card" data-light="aputure-60x">
+                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
+                <div class="equipment-name">Aputure LS 60x</div>
+              </div>
+              <div class="equipment-card" data-light="aputure-120d">
+                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
+                <div class="equipment-name">Aputure LS 120d II</div>
+              </div>
+              <div class="equipment-card" data-light="aputure-300x">
+                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
+                <div class="equipment-name">Aputure LS 300x</div>
+              </div>
+              <div class="equipment-card" data-light="aputure-600d">
+                <div class="equipment-image" style="background: linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%);"></div>
+                <div class="equipment-name">Aputure LS 600d Pro</div>
+              </div>
+            </div>
           </div>
-          <div class="actor-model-card" data-actor="denzel">
-            <div class="model-favorite">☆</div>
-            <div class="model-portrait" style="background: linear-gradient(135deg, #4a3728 0%, #7a5a48 100%);"></div>
-            <div class="model-name">Denzel</div>
+          <div class="tab-content" data-content="equipment">
+            <div class="equipment-grid">
+              <div class="equipment-card" data-equip="softbox-60">
+                <div class="equipment-image" style="background: linear-gradient(135deg, #4a4a4a 0%, #6a6a6a 100%);"></div>
+                <div class="equipment-name">Softbox 60×90</div>
+              </div>
+              <div class="equipment-card" data-equip="softbox-90">
+                <div class="equipment-image" style="background: linear-gradient(135deg, #4a4a4a 0%, #6a6a6a 100%);"></div>
+                <div class="equipment-name">Softbox 90×120</div>
+              </div>
+              <div class="equipment-card" data-equip="umbrella">
+                <div class="equipment-image" style="background: linear-gradient(135deg, #4a4a4a 0%, #6a6a6a 100%);"></div>
+                <div class="equipment-name">Paraply</div>
+              </div>
+              <div class="equipment-card" data-equip="beauty-dish">
+                <div class="equipment-image" style="background: linear-gradient(135deg, #4a4a4a 0%, #6a6a6a 100%);"></div>
+                <div class="equipment-name">Beauty Dish</div>
+              </div>
+              <div class="equipment-card" data-equip="reflector">
+                <div class="equipment-image" style="background: linear-gradient(135deg, #4a4a4a 0%, #6a6a6a 100%);"></div>
+                <div class="equipment-name">Reflektor</div>
+              </div>
+              <div class="equipment-card" data-equip="c-stand">
+                <div class="equipment-image" style="background: linear-gradient(135deg, #4a4a4a 0%, #6a6a6a 100%);"></div>
+                <div class="equipment-name">C-Stand</div>
+              </div>
+            </div>
           </div>
-          <div class="actor-model-card" data-actor="toddler">
-            <div class="model-favorite">☆</div>
-            <div class="model-portrait" style="background: linear-gradient(135deg, #c9b8a8 0%, #e8d8c8 100%);"></div>
-            <div class="model-name">Toddler</div>
+          <div class="tab-content" data-content="assets">
+            <div class="equipment-grid">
+              <div class="equipment-card" data-asset="backdrop-white">
+                <div class="equipment-image" style="background: #e0e0e0;"></div>
+                <div class="equipment-name">Hvit Bakgrunn</div>
+              </div>
+              <div class="equipment-card" data-asset="backdrop-black">
+                <div class="equipment-image" style="background: #1a1a1a;"></div>
+                <div class="equipment-name">Sort Bakgrunn</div>
+              </div>
+              <div class="equipment-card" data-asset="backdrop-grey">
+                <div class="equipment-image" style="background: #666;"></div>
+                <div class="equipment-name">Grå Bakgrunn</div>
+              </div>
+              <div class="equipment-card" data-asset="backdrop-cyan">
+                <div class="equipment-image" style="background: #4a9da8;"></div>
+                <div class="equipment-name">Cyan Bakgrunn</div>
+              </div>
+            </div>
           </div>
-          <div class="actor-model-card" data-actor="emma">
-            <div class="model-favorite">☆</div>
-            <div class="model-portrait" style="background: linear-gradient(135deg, #9a8070 0%, #c4a890 100%);"></div>
-            <div class="model-name">Emma</div>
-          </div>
-          <div class="actor-model-card" data-actor="james">
-            <div class="model-favorite">☆</div>
-            <div class="model-portrait" style="background: linear-gradient(135deg, #5a4a3a 0%, #8a7a6a 100%);"></div>
-            <div class="model-name">James</div>
+          <div class="tab-content" data-content="timeline">
+            <div class="timeline-placeholder">
+              <span>Timeline kommer snart...</span>
+            </div>
           </div>
         </div>
         <div id="actorPanelRoot" style="display: none;"></div>
