@@ -49,6 +49,8 @@ class VirtualStudio {
   private lights: Map<string, LightData> = new Map();
   private selectedLightId: string | null = null;
   private lightCounter = 0;
+  private positionGrouped: boolean = true;
+  private rotationGrouped: boolean = true;
   private gridMesh: BABYLON.Mesh | null = null;
   private gizmoManager: BABYLON.GizmoManager | null = null;
   private topViewCanvas: HTMLCanvasElement | null = null;
@@ -354,13 +356,35 @@ class VirtualStudio {
       });
     });
     
-    // Keyframe buttons
-    document.getElementById('addPosKeyframeBtn')?.addEventListener('click', () => {
-      this.addKeyframe('position');
+    // Group toggle buttons
+    document.getElementById('posGroupToggle')?.addEventListener('click', (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      btn.classList.toggle('active');
+      btn.setAttribute('aria-pressed', btn.classList.contains('active').toString());
+      this.positionGrouped = btn.classList.contains('active');
     });
     
-    document.getElementById('addRotKeyframeBtn')?.addEventListener('click', () => {
-      this.addKeyframe('rotation');
+    document.getElementById('rotGroupToggle')?.addEventListener('click', (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      btn.classList.toggle('active');
+      btn.setAttribute('aria-pressed', btn.classList.contains('active').toString());
+      this.rotationGrouped = btn.classList.contains('active');
+    });
+    
+    // Axis keyframe buttons
+    document.querySelectorAll('.axis-keyframe').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLButtonElement;
+        const type = target.dataset.type as 'position' | 'rotation';
+        const axis = target.dataset.axis as 'x' | 'y' | 'z';
+        const isGrouped = type === 'position' ? this.positionGrouped : this.rotationGrouped;
+        
+        if (isGrouped) {
+          this.addKeyframe(type);
+        } else {
+          this.addKeyframeForAxis(type, axis);
+        }
+      });
     });
 
     document.getElementById('cctSelect')?.addEventListener('change', (e) => {
@@ -1272,6 +1296,48 @@ class VirtualStudio {
     timeline?.classList.add('visible');
   }
   
+  private addKeyframeForAxis(type: 'position' | 'rotation', axis: 'x' | 'y' | 'z'): void {
+    if (!this.selectedLightId) return;
+    const data = this.lights.get(this.selectedLightId);
+    if (!data) return;
+    
+    const trackId = `${this.selectedLightId}_${type}_${axis}`;
+    let track = this.animationState.tracks.find(t => t.id === trackId);
+    
+    if (!track) {
+      track = {
+        id: trackId,
+        nodeId: this.selectedLightId,
+        type: type,
+        keyframes: []
+      };
+      this.animationState.tracks.push(track);
+    }
+    
+    let value: { x: number; y: number; z: number };
+    if (type === 'position') {
+      const axisVal = axis === 'x' ? data.mesh.position.x : axis === 'y' ? data.mesh.position.y : data.mesh.position.z;
+      value = { x: axis === 'x' ? axisVal : 0, y: axis === 'y' ? axisVal : 0, z: axis === 'z' ? axisVal : 0 };
+    } else {
+      const axisVal = axis === 'x' ? data.mesh.rotation.x * 180 / Math.PI : axis === 'y' ? data.mesh.rotation.y * 180 / Math.PI : data.mesh.rotation.z * 180 / Math.PI;
+      value = { x: axis === 'x' ? axisVal : 0, y: axis === 'y' ? axisVal : 0, z: axis === 'z' ? axisVal : 0 };
+    }
+    
+    const existingIdx = track.keyframes.findIndex(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.01);
+    if (existingIdx >= 0) {
+      track.keyframes[existingIdx].value = value;
+    } else {
+      track.keyframes.push({ time: this.animationState.currentTime, value });
+      track.keyframes.sort((a, b) => a.time - b.time);
+    }
+    
+    this.updateTimelineUI(false);
+    this.renderTimelineTracks();
+    
+    const timeline = document.getElementById('animationTimeline');
+    timeline?.classList.add('visible');
+  }
+  
   private togglePlayAnimation(): void {
     if (this.animationState.isPlaying) {
       this.pauseAnimation();
@@ -1408,17 +1474,35 @@ class VirtualStudio {
   private updateKeyframeButtonStates(): void {
     if (!this.selectedLightId) return;
     
-    const posBtn = document.getElementById('addPosKeyframeBtn');
-    const rotBtn = document.getElementById('addRotKeyframeBtn');
-    
     const posTrack = this.animationState.tracks.find(t => t.id === `${this.selectedLightId}_position`);
     const rotTrack = this.animationState.tracks.find(t => t.id === `${this.selectedLightId}_rotation`);
     
-    const hasPoKeyframe = posTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
+    const hasPosKeyframe = posTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
     const hasRotKeyframe = rotTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
     
-    posBtn?.classList.toggle('has-keyframe', !!hasPoKeyframe);
-    rotBtn?.classList.toggle('has-keyframe', !!hasRotKeyframe);
+    // Update all position axis buttons
+    document.querySelectorAll('.pos-keyframe').forEach(btn => {
+      const axis = (btn as HTMLElement).dataset.axis;
+      if (this.positionGrouped) {
+        btn.classList.toggle('has-keyframe', !!hasPosKeyframe);
+      } else {
+        const axisTrack = this.animationState.tracks.find(t => t.id === `${this.selectedLightId}_position_${axis}`);
+        const hasAxisKeyframe = axisTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
+        btn.classList.toggle('has-keyframe', !!hasAxisKeyframe);
+      }
+    });
+    
+    // Update all rotation axis buttons
+    document.querySelectorAll('.rot-keyframe').forEach(btn => {
+      const axis = (btn as HTMLElement).dataset.axis;
+      if (this.rotationGrouped) {
+        btn.classList.toggle('has-keyframe', !!hasRotKeyframe);
+      } else {
+        const axisTrack = this.animationState.tracks.find(t => t.id === `${this.selectedLightId}_rotation_${axis}`);
+        const hasAxisKeyframe = axisTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
+        btn.classList.toggle('has-keyframe', !!hasAxisKeyframe);
+      }
+    });
   }
   
   private updatePlayhead(): void {

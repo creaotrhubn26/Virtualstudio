@@ -2139,6 +2139,37 @@ html, body {
   text-align: right;
 }
 
+.group-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  margin-left: auto;
+}
+
+.group-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--text-secondary);
+}
+
+.group-toggle-btn.active {
+  background: var(--accent-blue);
+  color: white;
+  border-color: var(--accent-blue);
+}
+
+.group-toggle-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
 .keyframe-btn {
   background: transparent;
   border: 1px solid var(--border-color);
@@ -2152,7 +2183,14 @@ html, body {
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
-  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.keyframe-btn.axis-keyframe {
+  width: 20px;
+  height: 20px;
+  font-size: 10px;
+  margin-right: 4px;
 }
 
 .keyframe-btn:hover {
