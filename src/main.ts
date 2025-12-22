@@ -787,6 +787,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const categoryConfig: Record<string, string[]> = {
         models: ['All', 'Women', 'Men', 'Children', 'Animals'],
         lights: ['All', 'Flash', 'Continuous', 'Practical Light', 'Light Shapers'],
+        camera: ['All', 'Kameraer', 'Objektiver', 'Tilbehør'],
         equipment: ['All', 'Stativer', 'Grip', 'Bakgrunnsutstyr'],
         assets: ['All', 'Bakgrunner', 'Rekvisitter', 'Møbler'],
         timeline: []
