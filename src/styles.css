@@ -592,8 +592,8 @@ html, body {
 
 .actor-bottom-panel {
   position: fixed;
-  left: 220px;
-  right: 0;
+  left: 320px;
+  right: 280px;
   bottom: 0;
   height: 200px;
   min-height: 150px;
