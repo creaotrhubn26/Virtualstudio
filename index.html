@@ -61,8 +61,8 @@
 
     <div class="main-container">
       <aside class="left-panel" role="complementary" aria-label="Scene Hierarchy">
-        <div class="panel-header">
-          <span class="panel-icon" aria-hidden="true">☰</span>
+        <div class="panel-header collapsible-header" id="hierarchyToggle" role="button" tabindex="0" aria-expanded="true" aria-controls="hierarchyContent">
+          <span class="collapse-arrow" aria-hidden="true">▾</span>
           <h2 class="panel-title">Scene Hierarchy</h2>
           <div class="view-toggle" role="group" aria-label="Visningsvalg">
             <button class="view-btn active" id="listViewBtn" title="Listevisning" aria-label="Listevisning" aria-pressed="true">
@@ -73,6 +73,7 @@
             </button>
           </div>
         </div>
+        <div class="collapsible-content" id="hierarchyContent">
         <div class="search-box" role="search">
           <label for="sceneSearch" class="visually-hidden">Sak i scene</label>
           <input type="search" id="sceneSearch" placeholder="Sak i scene..." aria-label="Sak i scene-elementer">
@@ -170,6 +171,7 @@
               </li>
             </ul>
           </div>
+        </div>
         </div>
         
         <button class="actor-panel-trigger" id="actorPanelTrigger" aria-expanded="false" aria-controls="studioLibraryPanel">

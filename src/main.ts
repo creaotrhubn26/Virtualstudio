@@ -2174,6 +2174,30 @@ window.addEventListener('DOMContentLoaded', () => {
   if (canvas) {
     const studio = new VirtualStudio(canvas);
     
+    const hierarchyToggle = document.getElementById('hierarchyToggle');
+    const hierarchyContent = document.getElementById('hierarchyContent');
+    if (hierarchyToggle && hierarchyContent) {
+      const toggleHierarchy = () => {
+        const isExpanded = hierarchyToggle.getAttribute('aria-expanded') === 'true';
+        hierarchyToggle.setAttribute('aria-expanded', String(!isExpanded));
+        hierarchyToggle.classList.toggle('collapsed', isExpanded);
+        hierarchyContent.classList.toggle('collapsed', isExpanded);
+      };
+      
+      hierarchyToggle.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).closest('.view-toggle')) return;
+        toggleHierarchy();
+      });
+      
+      hierarchyToggle.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          if ((e.target as HTMLElement).closest('.view-toggle')) return;
+          e.preventDefault();
+          toggleHierarchy();
+        }
+      });
+    }
+    
     const actorPanelRoot = document.getElementById('actorPanelRoot');
     const actorBottomPanel = document.getElementById('actorBottomPanel');
     const actorPanelTrigger = document.getElementById('actorPanelTrigger');

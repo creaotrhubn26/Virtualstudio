@@ -382,6 +382,46 @@ html, body {
   font-weight: 500;
 }
 
+.panel-header.collapsible-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+.panel-header.collapsible-header:hover {
+  background-color: var(--bg-secondary);
+}
+
+.panel-header.collapsible-header:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
+}
+
+.collapse-arrow {
+  font-size: 10px;
+  color: var(--text-secondary);
+  transition: transform 0.2s ease;
+  width: 12px;
+  text-align: center;
+}
+
+.panel-header.collapsed .collapse-arrow {
+  transform: rotate(-90deg);
+}
+
+.collapsible-content {
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+  max-height: 2000px;
+  opacity: 1;
+}
+
+.collapsible-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .panel-icon {
   color: var(--text-secondary);
 }
