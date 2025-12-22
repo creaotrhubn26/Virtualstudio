@@ -9,14 +9,151 @@
   --bg-panel: #161b22;
   --bg-section: #1c2128;
   --bg-input: #21262d;
+  --bg-hover: #30363d;
   --border-color: #30363d;
-  --text-primary: #c9d1d9;
-  --text-secondary: #8b949e;
-  --text-muted: #484f58;
+  --text-primary: #e6edf3;
+  --text-secondary: #9198a1;
+  --text-muted: #6e7681;
   --accent-cyan: #00d4ff;
   --accent-blue: #58a6ff;
   --accent-green: #3fb950;
   --accent-orange: #d29922;
+  --focus-ring: #58a6ff;
+  --focus-ring-offset: 2px;
+}
+
+/* WCAG 2.2 Skip Link */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent-cyan);
+  color: var(--bg-dark);
+  padding: 12px 24px;
+  border-radius: 0 0 8px 8px;
+  font-weight: 600;
+  font-size: 14px;
+  z-index: 10000;
+  text-decoration: none;
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: none;
+}
+
+/* WCAG 2.2 Visually Hidden (for screen readers) */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* WCAG 2.2 Focus Indicators - Enhanced visibility */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: 4px;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  box-shadow: 0 0 0 4px rgba(88, 166, 255, 0.25);
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 0;
+  border-color: var(--focus-ring);
+}
+
+/* WCAG 2.2 Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* WCAG 2.2 High Contrast Mode */
+@media (prefers-contrast: more) {
+  :root {
+    --bg-dark: #000000;
+    --bg-panel: #0a0a0a;
+    --bg-section: #141414;
+    --bg-input: #1a1a1a;
+    --border-color: #ffffff;
+    --text-primary: #ffffff;
+    --text-secondary: #e0e0e0;
+    --text-muted: #b0b0b0;
+    --accent-cyan: #00ffff;
+    --focus-ring: #ffff00;
+  }
+  
+  button,
+  [role="button"] {
+    border: 2px solid var(--text-primary) !important;
+  }
+  
+  input,
+  select {
+    border: 2px solid var(--text-primary) !important;
+  }
+}
+
+/* WCAG 2.2 Forced Colors Mode (Windows High Contrast) */
+@media (forced-colors: active) {
+  .header-icon,
+  .item-thumbnail,
+  .empty-icon {
+    forced-color-adjust: none;
+  }
+  
+  button,
+  [role="button"] {
+    border: 2px solid ButtonText;
+  }
+  
+  :focus-visible {
+    outline: 3px solid Highlight;
+  }
+}
+
+/* Minimum target size 24x24px (WCAG 2.2 Level AA) */
+button,
+[role="button"],
+input[type="checkbox"],
+input[type="radio"],
+.action-icon {
+  min-width: 24px;
+  min-height: 24px;
+}
+
+/* Panel title styling for semantic headings */
+.panel-title {
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0;
 }
 
 html, body {

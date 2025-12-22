@@ -3,165 +3,187 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Virtual Studio</title>
+  <meta name="description" content="Virtual Studio - Profesjonell 3D lysstudio simulator for fotografer og filmskapere">
+  <meta name="theme-color" content="#1a1a2e">
+  <title>Virtual Studio - 3D Lysstudio Simulator</title>
   <link rel="stylesheet" href="/src/styles.css">
 </head>
 <body>
-  <div id="app">
-    <header class="top-bar">
+  <a href="#main-viewport" class="skip-link">Hopp til hovedinnhold</a>
+  <div id="app" role="application" aria-label="Virtual Studio applikasjon">
+    <header class="top-bar" role="banner">
       <div class="logo">
-        <span class="logo-icon">●</span>
+        <span class="logo-icon" aria-hidden="true">●</span>
         <span class="logo-text">CreatorHub</span>
         <span class="app-name">Virtual Studio</span>
       </div>
       <div class="project-title">
-        <input type="text" id="projectName" value="NYTT PROSJEKT" class="project-input">
+        <label for="projectName" class="visually-hidden">Prosjektnavn</label>
+        <input type="text" id="projectName" value="NYTT PROSJEKT" class="project-input" aria-label="Prosjektnavn">
       </div>
-      <div class="toolbar">
-        <button class="tool-btn" id="undoBtn" title="Angre">↶</button>
-        <button class="tool-btn" id="redoBtn" title="Gjør om">↷</button>
-        <button class="tool-btn play-btn" id="playBtn">▶</button>
-        <div class="toolbar-divider"></div>
-        <select id="fpsSelect" class="toolbar-select">
+      <nav class="toolbar" role="toolbar" aria-label="Hovedverktoy">
+        <button class="tool-btn" id="undoBtn" title="Angre" aria-label="Angre siste handling">
+          <span aria-hidden="true">↶</span>
+        </button>
+        <button class="tool-btn" id="redoBtn" title="Gjor om" aria-label="Gjor om siste handling">
+          <span aria-hidden="true">↷</span>
+        </button>
+        <button class="tool-btn play-btn" id="playBtn" aria-label="Spill av forhondsvisning">
+          <span aria-hidden="true">▶</span>
+        </button>
+        <div class="toolbar-divider" role="separator" aria-hidden="true"></div>
+        <label for="fpsSelect" class="visually-hidden">Bilder per sekund</label>
+        <select id="fpsSelect" class="toolbar-select" aria-label="Bilder per sekund">
           <option value="30">30</option>
           <option value="60">60</option>
         </select>
-        <select id="resolutionSelect" class="toolbar-select">
+        <label for="resolutionSelect" class="visually-hidden">Opplasning</label>
+        <select id="resolutionSelect" class="toolbar-select" aria-label="Opplasning">
           <option value="1080">1920×1080</option>
           <option value="4k">3840×2160</option>
         </select>
-        <select id="cameraSelect" class="toolbar-select">
+        <label for="cameraSelect" class="visually-hidden">Velg kamera</label>
+        <select id="cameraSelect" class="toolbar-select" aria-label="Velg kamera">
           <option value="camA">Cam A</option>
           <option value="camB">Cam B</option>
         </select>
-        <button class="export-btn" id="exportPdfBtn">Eksporter PDF</button>
-      </div>
+        <button class="export-btn" id="exportPdfBtn" aria-label="Eksporter til PDF">Eksporter PDF</button>
+      </nav>
       <div class="top-right">
-        <button class="icon-btn" id="importModelBtn" title="Importer modell">+</button>
-        <span class="user-icon">○</span>
+        <button class="icon-btn" id="importModelBtn" title="Importer modell" aria-label="Importer 3D-modell">
+          <span aria-hidden="true">+</span>
+        </button>
+        <button class="user-icon" aria-label="Brukermeny">
+          <span aria-hidden="true">○</span>
+        </button>
       </div>
     </header>
 
     <div class="main-container">
-      <aside class="left-panel">
+      <aside class="left-panel" role="complementary" aria-label="Scene Hierarchy">
         <div class="panel-header">
-          <span class="panel-icon">☰</span>
-          <span>Scene Hierarchy</span>
-          <div class="view-toggle">
-            <button class="view-btn active" id="listViewBtn" title="Listevisning">☰</button>
-            <button class="view-btn" id="gridViewBtn" title="Rutenett">⊞</button>
+          <span class="panel-icon" aria-hidden="true">☰</span>
+          <h2 class="panel-title">Scene Hierarchy</h2>
+          <div class="view-toggle" role="group" aria-label="Visningsvalg">
+            <button class="view-btn active" id="listViewBtn" title="Listevisning" aria-label="Listevisning" aria-pressed="true">
+              <span aria-hidden="true">☰</span>
+            </button>
+            <button class="view-btn" id="gridViewBtn" title="Rutenett" aria-label="Rutenettvisning" aria-pressed="false">
+              <span aria-hidden="true">⊞</span>
+            </button>
           </div>
         </div>
-        <div class="search-box">
-          <input type="text" id="sceneSearch" placeholder="Søk i scene...">
+        <div class="search-box" role="search">
+          <label for="sceneSearch" class="visually-hidden">Sak i scene</label>
+          <input type="search" id="sceneSearch" placeholder="Sak i scene..." aria-label="Sak i scene-elementer">
         </div>
         
-        <div class="hierarchy-section" id="hierarchySection">
-          <div class="hierarchy-group">
-            <div class="hierarchy-header" data-group="cameras">
-              <span class="hierarchy-arrow">▾</span>
-              <div class="header-icon camera-icon"></div>
+        <div class="hierarchy-section" id="hierarchySection" role="tree" aria-label="Scene-objekter">
+          <div class="hierarchy-group" role="treeitem" aria-expanded="true">
+            <div class="hierarchy-header" data-group="cameras" role="button" tabindex="0" aria-expanded="true" aria-controls="camerasGroup">
+              <span class="hierarchy-arrow" aria-hidden="true">▾</span>
+              <div class="header-icon camera-icon" aria-hidden="true"></div>
               <span>Kameraer</span>
-              <span class="group-count">1</span>
+              <span class="group-count" aria-label="1 element">1</span>
             </div>
-            <div class="hierarchy-items" id="camerasGroup">
-              <div class="hierarchy-item" data-id="cam-a">
-                <div class="item-thumbnail camera-thumb"></div>
+            <ul class="hierarchy-items" id="camerasGroup" role="group">
+              <li class="hierarchy-item" data-id="cam-a" role="treeitem" tabindex="0" aria-selected="false">
+                <div class="item-thumbnail camera-thumb" aria-hidden="true"></div>
                 <div class="item-info">
                   <span class="item-name">Cam A</span>
                   <span class="item-type">Hovedkamera</span>
                 </div>
-                <div class="item-actions">
-                  <button class="action-icon visibility-btn active" title="Synlig"></button>
-                  <button class="action-icon lock-btn" title="Lås"></button>
+                <div class="item-actions" role="group" aria-label="Handlinger">
+                  <button class="action-icon visibility-btn active" title="Synlig" aria-label="Veksle synlighet" aria-pressed="true"></button>
+                  <button class="action-icon lock-btn" title="Laas" aria-label="Veksle laas" aria-pressed="false"></button>
                 </div>
-              </div>
-            </div>
+              </li>
+            </ul>
           </div>
           
-          <div class="hierarchy-group">
-            <div class="hierarchy-header" data-group="lights">
-              <span class="hierarchy-arrow">▾</span>
-              <div class="header-icon light-icon"></div>
+          <div class="hierarchy-group" role="treeitem" aria-expanded="true">
+            <div class="hierarchy-header" data-group="lights" role="button" tabindex="0" aria-expanded="true" aria-controls="lightsGroup">
+              <span class="hierarchy-arrow" aria-hidden="true">▾</span>
+              <div class="header-icon light-icon" aria-hidden="true"></div>
               <span>Lys</span>
-              <span class="group-count" id="lightsCount">0</span>
+              <span class="group-count" id="lightsCount" aria-label="0 elementer">0</span>
             </div>
-            <div class="hierarchy-items" id="lightsGroup">
-              <div class="hierarchy-empty">
-                <div class="empty-icon light-empty"></div>
+            <ul class="hierarchy-items" id="lightsGroup" role="group">
+              <li class="hierarchy-empty" role="status" aria-live="polite">
+                <div class="empty-icon light-empty" aria-hidden="true"></div>
                 <span>Ingen lys</span>
                 <span class="empty-hint">Legg til fra Studio Library</span>
-              </div>
-            </div>
+              </li>
+            </ul>
           </div>
           
-          <div class="hierarchy-group">
-            <div class="hierarchy-header" data-group="models">
-              <span class="hierarchy-arrow">▾</span>
-              <div class="header-icon model-icon"></div>
+          <div class="hierarchy-group" role="treeitem" aria-expanded="true">
+            <div class="hierarchy-header" data-group="models" role="button" tabindex="0" aria-expanded="true" aria-controls="modelsGroup">
+              <span class="hierarchy-arrow" aria-hidden="true">▾</span>
+              <div class="header-icon model-icon" aria-hidden="true"></div>
               <span>Modeller</span>
-              <span class="group-count" id="modelsCount">0</span>
+              <span class="group-count" id="modelsCount" aria-label="0 elementer">0</span>
             </div>
-            <div class="hierarchy-items" id="modelsGroup">
-              <div class="hierarchy-empty">
-                <div class="empty-icon model-empty"></div>
+            <ul class="hierarchy-items" id="modelsGroup" role="group">
+              <li class="hierarchy-empty" role="status" aria-live="polite">
+                <div class="empty-icon model-empty" aria-hidden="true"></div>
                 <span>Ingen modeller</span>
                 <span class="empty-hint">Legg til fra Studio Library</span>
-              </div>
-            </div>
+              </li>
+            </ul>
           </div>
           
-          <div class="hierarchy-group">
-            <div class="hierarchy-header" data-group="equipment">
-              <span class="hierarchy-arrow">▾</span>
-              <div class="header-icon equip-icon"></div>
+          <div class="hierarchy-group" role="treeitem" aria-expanded="true">
+            <div class="hierarchy-header" data-group="equipment" role="button" tabindex="0" aria-expanded="true" aria-controls="equipmentGroup">
+              <span class="hierarchy-arrow" aria-hidden="true">▾</span>
+              <div class="header-icon equip-icon" aria-hidden="true"></div>
               <span>Utstyr</span>
-              <span class="group-count" id="equipmentCount">0</span>
+              <span class="group-count" id="equipmentCount" aria-label="0 elementer">0</span>
             </div>
-            <div class="hierarchy-items" id="equipmentGroup">
-              <div class="hierarchy-empty">
-                <div class="empty-icon equip-empty"></div>
+            <ul class="hierarchy-items" id="equipmentGroup" role="group">
+              <li class="hierarchy-empty" role="status" aria-live="polite">
+                <div class="empty-icon equip-empty" aria-hidden="true"></div>
                 <span>Ingen utstyr</span>
                 <span class="empty-hint">Legg til fra Studio Library</span>
-              </div>
-            </div>
+              </li>
+            </ul>
           </div>
           
-          <div class="hierarchy-group">
-            <div class="hierarchy-header" data-group="backgrounds">
-              <span class="hierarchy-arrow">▾</span>
-              <div class="header-icon bg-icon"></div>
+          <div class="hierarchy-group" role="treeitem" aria-expanded="true">
+            <div class="hierarchy-header" data-group="backgrounds" role="button" tabindex="0" aria-expanded="true" aria-controls="backgroundsGroup">
+              <span class="hierarchy-arrow" aria-hidden="true">▾</span>
+              <div class="header-icon bg-icon" aria-hidden="true"></div>
               <span>Bakgrunner</span>
-              <span class="group-count">1</span>
+              <span class="group-count" aria-label="1 element">1</span>
             </div>
-            <div class="hierarchy-items" id="backgroundsGroup">
-              <div class="hierarchy-item" data-id="studio-bg">
-                <div class="item-thumbnail bg-thumb"></div>
+            <ul class="hierarchy-items" id="backgroundsGroup" role="group">
+              <li class="hierarchy-item" data-id="studio-bg" role="treeitem" tabindex="0" aria-selected="false">
+                <div class="item-thumbnail bg-thumb" aria-hidden="true"></div>
                 <div class="item-info">
                   <span class="item-name">Studio Bakgrunn</span>
                   <span class="item-type">Seamless</span>
                 </div>
-                <div class="item-actions">
-                  <button class="action-icon visibility-btn active" title="Synlig"></button>
-                  <button class="action-icon lock-btn" title="Lås"></button>
+                <div class="item-actions" role="group" aria-label="Handlinger">
+                  <button class="action-icon visibility-btn active" title="Synlig" aria-label="Veksle synlighet" aria-pressed="true"></button>
+                  <button class="action-icon lock-btn" title="Laas" aria-label="Veksle laas" aria-pressed="false"></button>
                 </div>
-              </div>
-            </div>
+              </li>
+            </ul>
           </div>
         </div>
         
-        <div class="actor-panel-trigger" id="actorPanelTrigger">
+        <button class="actor-panel-trigger" id="actorPanelTrigger" aria-expanded="false" aria-controls="studioLibraryPanel">
           <div class="library-trigger-content">
-            <div class="library-icon"></div>
+            <div class="library-icon" aria-hidden="true"></div>
             <span>Studio Library</span>
-            <span class="library-arrow">+</span>
+            <span class="library-arrow" aria-hidden="true">+</span>
           </div>
-        </div>
+        </button>
       </aside>
 
-      <main class="viewport-container">
+      <main class="viewport-container" id="main-viewport" role="main" aria-label="3D Viewport">
         <div class="viewport-3d">
-          <canvas id="renderCanvas"></canvas>
+          <canvas id="renderCanvas" tabindex="0" aria-label="3D scene visning - bruk mus for aa navigere"></canvas>
           <div class="viewport-overlay">
             <div class="cam-info">
               <span class="cam-label" id="camLabel">Cam A</span>
@@ -222,8 +244,8 @@
         </div>
       </main>
 
-      <aside class="right-panel">
-        <div class="panel-section object-header" id="objectHeader" style="display: none;">
+      <aside class="right-panel" role="complementary" aria-label="Objekt-egenskaper">
+        <div class="panel-section object-header" id="objectHeader" style="display: none;" aria-live="polite">
           <div class="object-title-row">
             <span class="object-name" id="objectName">Sarah</span>
             <button class="pin-btn" id="pinBtn">📌</button>

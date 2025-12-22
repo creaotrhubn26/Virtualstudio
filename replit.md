@@ -103,6 +103,19 @@ Run `npm run dev` to start the development server on port 5000.
 - Interactive light placement with gizmos
 
 ## Recent Changes
+- 2025-12-22: Implemented WCAG 2.2 Level AA+ accessibility compliance
+  - Skip link for keyboard navigation
+  - Proper ARIA labels, roles, and states throughout
+  - Focus indicators with :focus-visible
+  - Reduced motion support (@prefers-reduced-motion)
+  - High contrast mode support (@prefers-contrast: more)
+  - Windows High Contrast mode support (@forced-colors: active)
+  - Minimum 24x24px touch targets
+  - Semantic HTML structure with proper headings
+  - Screen reader compatible tree view for hierarchy
+  - Visually hidden labels for form elements
+- 2025-12-22: Replaced emojis with professional SVG studio icons
+- 2025-12-22: Enhanced Scene Hierarchy with thumbnails and improved UI
 - 2025-12-22: Integrated Virtual Actor Panel with React/MUI
   - Added React mounting in main.ts alongside Babylon.js
   - Created VirtualActorPanel with body parameters and appearance controls
