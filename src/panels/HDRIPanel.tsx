@@ -13,6 +13,7 @@ import {
   Chip,
   IconButton,
   Tooltip,
+  useMediaQuery,
 } from '@mui/material';
 import {
   WbSunny,
@@ -21,6 +22,7 @@ import {
   NightsStay,
   Landscape,
   CheckCircle,
+  Add as AddIcon,
 } from '@mui/icons-material';
 
 interface HDRIPreset {
@@ -105,6 +107,7 @@ export function HDRIPanel() {
   const [intensity, setIntensity] = useState(1.0);
   const [rotation, setRotation] = useState(0);
   const [showBackground, setShowBackground] = useState(true);
+  const isTablet = useMediaQuery('(max-width: 1024px), (pointer: coarse)');
 
   const filteredPresets = HDRI_PRESETS.filter(
     hdri => category === 'all' || hdri.category === category
@@ -124,6 +127,11 @@ export function HDRIPanel() {
         showBackground,
       }
     }));
+  };
+
+  const handleAddHDRI = (hdri: HDRIPreset, e: React.MouseEvent) => {
+    e.stopPropagation();
+    handleSelectHDRI(hdri);
   };
 
   const updateHDRISettings = () => {
@@ -211,9 +219,27 @@ export function HDRIPanel() {
               <Typography variant="body2" sx={{ color: '#fff', fontSize: 11, fontWeight: 500 }}>
                 {hdri.name}
               </Typography>
-              <Typography variant="caption" sx={{ color: '#666', fontSize: 9 }}>
+              <Typography variant="caption" sx={{ color: '#666', fontSize: 9, display: 'block', mb: 0.5 }}>
                 {hdri.description}
               </Typography>
+              <Button
+                size="small"
+                variant="contained"
+                fullWidth
+                startIcon={<AddIcon sx={{ fontSize: 14 }} />}
+                onClick={(e) => handleAddHDRI(hdri, e)}
+                aria-label={`Legg til ${hdri.name}`}
+                sx={{
+                  minHeight: isTablet ? 36 : 24,
+                  fontSize: 9,
+                  bgcolor: '#00a8ff',
+                  '&:hover': { bgcolor: '#0090dd' },
+                  textTransform: 'none',
+                  mt: 0.5,
+                }}
+              >
+                Legg til
+              </Button>
             </CardContent>
           </Card>
         ))}

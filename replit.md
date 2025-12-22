@@ -135,6 +135,15 @@ Run `npm run dev` to start the development server on port 5000.
 - Interactive light placement with gizmos
 
 ## Recent Changes
+- 2025-12-22: Added "Legg til" buttons to all Studio Library tabs
+  - CameraGearPanel: Add buttons for cameras and lenses with touch-friendly sizing
+  - HDRIPanel: Add buttons for HDRI environments with responsive sizing
+  - Consistent cyan accent color (#00a8ff) across all add buttons
+  - Touch-optimized with 36px minimum height on tablet/touch devices
+- 2025-12-22: Improved Studio Library button reliability
+  - Event delegation with capture phase for immediate click handling
+  - Debouncing to prevent rapid double-click issues
+  - Early initialization before React/Babylon.js loads
 - 2025-12-22: Enhanced Studio Library panel visual appearance
   - Spring-effect opening animation with cubic-bezier timing and opacity fade
   - Premium gradient background with rounded top corners and enhanced shadows

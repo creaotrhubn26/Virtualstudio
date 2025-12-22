@@ -8,12 +8,15 @@ import {
   TextField,
   InputAdornment,
   IconButton,
+  Button,
+  useMediaQuery,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import CameraIcon from '@mui/icons-material/Camera';
+import AddIcon from '@mui/icons-material/Add';
 
 interface CameraBody {
   id: string;
@@ -117,6 +120,7 @@ export function CameraGearPanel() {
   const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
   const [selectedLens, setSelectedLens] = useState<string | null>(null);
   const [lensFilter, setLensFilter] = useState<LensType>('all');
+  const isTablet = useMediaQuery('(max-width: 1024px), (pointer: coarse)');
 
   const toggleFavorite = (id: string) => {
     setFavorites(prev => {
@@ -132,6 +136,11 @@ export function CameraGearPanel() {
     window.dispatchEvent(new CustomEvent('ch-select-camera', { detail: camera }));
   };
 
+  const addCamera = (camera: CameraBody, e: React.MouseEvent) => {
+    e.stopPropagation();
+    selectCamera(camera);
+  };
+
   const selectLens = (lens: Lens) => {
     setSelectedLens(lens.id);
     const focalMatch = lens.focalLength.match(/(\d+)/);
@@ -143,6 +152,11 @@ export function CameraGearPanel() {
         apertureValue: apertureMatch ? parseFloat(apertureMatch[1]) : 2.8,
       }
     }));
+  };
+
+  const addLens = (lens: Lens, e: React.MouseEvent) => {
+    e.stopPropagation();
+    selectLens(lens);
   };
 
   const filteredCameras = CAMERA_BODIES.filter(c =>
@@ -228,9 +242,28 @@ export function CameraGearPanel() {
                 {camera.ibis && <Chip label={`IBIS ${camera.ibis}`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#2a3a4a' }} />}
               </Box>
             </Box>
-            <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleFavorite(camera.id); }}>
-              {favorites.has(camera.id) ? <StarIcon sx={{ color: '#ffd700', fontSize: 18 }} /> : <StarBorderIcon sx={{ color: '#666', fontSize: 18 }} />}
-            </IconButton>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleFavorite(camera.id); }}>
+                {favorites.has(camera.id) ? <StarIcon sx={{ color: '#ffd700', fontSize: 18 }} /> : <StarBorderIcon sx={{ color: '#666', fontSize: 18 }} />}
+              </IconButton>
+              <Button
+                size="small"
+                variant="contained"
+                startIcon={<AddIcon sx={{ fontSize: 14 }} />}
+                onClick={(e) => addCamera(camera, e)}
+                aria-label={`Legg til ${camera.name}`}
+                sx={{
+                  minWidth: isTablet ? 80 : 70,
+                  minHeight: isTablet ? 36 : 28,
+                  fontSize: 10,
+                  bgcolor: '#00a8ff',
+                  '&:hover': { bgcolor: '#0090dd' },
+                  textTransform: 'none',
+                }}
+              >
+                Legg til
+              </Button>
+            </Box>
           </Box>
         ))}
       </Stack>
@@ -300,9 +333,28 @@ export function CameraGearPanel() {
                 {lens.filterSize && <Chip label={`ø${lens.filterSize}mm`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#3a3a4a' }} />}
               </Box>
             </Box>
-            <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleFavorite(lens.id); }}>
-              {favorites.has(lens.id) ? <StarIcon sx={{ color: '#ffd700', fontSize: 18 }} /> : <StarBorderIcon sx={{ color: '#666', fontSize: 18 }} />}
-            </IconButton>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleFavorite(lens.id); }}>
+                {favorites.has(lens.id) ? <StarIcon sx={{ color: '#ffd700', fontSize: 18 }} /> : <StarBorderIcon sx={{ color: '#666', fontSize: 18 }} />}
+              </IconButton>
+              <Button
+                size="small"
+                variant="contained"
+                startIcon={<AddIcon sx={{ fontSize: 14 }} />}
+                onClick={(e) => addLens(lens, e)}
+                aria-label={`Legg til ${lens.name}`}
+                sx={{
+                  minWidth: isTablet ? 80 : 70,
+                  minHeight: isTablet ? 36 : 28,
+                  fontSize: 10,
+                  bgcolor: '#00a8ff',
+                  '&:hover': { bgcolor: '#0090dd' },
+                  textTransform: 'none',
+                }}
+              >
+                Legg til
+              </Button>
+            </Box>
           </Box>
         ))}
       </Stack>
