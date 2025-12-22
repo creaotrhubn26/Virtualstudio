@@ -1638,7 +1638,7 @@ html, body {
 }
 
 .right-panel {
-  width: 320px;
+  width: 380px;
   background: var(--bg-panel);
   border-left: 1px solid var(--border-color);
   overflow-y: auto;
