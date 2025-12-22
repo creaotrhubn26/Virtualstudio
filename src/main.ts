@@ -327,13 +327,17 @@ class VirtualStudio {
   }
 
   private setupCameraControls(): void {
+    const apertureValues = [1.0, 1.2, 1.4, 1.8, 2.0, 2.8, 4.0, 5.6, 8.0, 11, 16, 22, 32];
     const shutterValues = ['1/8', '1/15', '1/30', '1/60', '1/125', '1/250', '1/500', '1/1000', '1/2000', '1/4000', '1/8000', '1/16000', '1/32000'];
     const isoValues = [100, 125, 160, 200, 250, 320, 400, 500, 640, 800, 1600];
     const ndValues = [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12];
     
-    document.getElementById('apertureSelect')?.addEventListener('change', (e) => {
-      const value = (e.target as HTMLSelectElement).value;
-      this.cameraSettings.aperture = parseFloat(value) || 2.8;
+    const apertureSlider = document.getElementById('apertureSlider') as HTMLInputElement;
+    const apertureDisplay = document.getElementById('apertureDisplay');
+    apertureSlider?.addEventListener('input', () => {
+      const idx = parseInt(apertureSlider.value);
+      this.cameraSettings.aperture = apertureValues[idx];
+      if (apertureDisplay) apertureDisplay.textContent = `f/${apertureValues[idx]}`;
       this.updateExposureDisplay();
     });
 

@@ -531,16 +531,19 @@
             <span class="prop-icon camera-settings-icon" aria-hidden="true"></span>
             Kamera
           </div>
-          <div class="property-row">
-            <label for="apertureSelect">
-              <span class="prop-icon aperture-icon" aria-hidden="true"></span>
-              Blender
-            </label>
-            <select id="apertureSelect" class="prop-select full" aria-label="Velg blender">
-              <option value="godox">Godox</option>
-              <option value="canon">Canon</option>
-              <option value="sony">Sony</option>
-            </select>
+          <div class="camera-slider-section">
+            <div class="camera-slider-row">
+              <label>
+                <span class="prop-icon aperture-icon" aria-hidden="true"></span>
+                Blender
+              </label>
+              <span class="slider-display" id="apertureDisplay">f/2.8</span>
+            </div>
+            <div class="slider-with-buttons">
+              <button class="inc-btn dec" data-target="apertureSlider" aria-label="Reduser blender">−</button>
+              <input type="range" id="apertureSlider" min="0" max="12" step="1" value="4" class="prop-slider flex" aria-label="Blenderåpning">
+              <button class="inc-btn inc" data-target="apertureSlider" aria-label="Øk blender">+</button>
+            </div>
           </div>
           <div class="camera-slider-section">
             <div class="camera-slider-row">
