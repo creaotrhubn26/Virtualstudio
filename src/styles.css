@@ -366,7 +366,7 @@ html, body {
 }
 
 .left-panel {
-  width: 220px;
+  width: 320px;
   background: var(--bg-panel);
   border-right: 1px solid var(--border-color);
   display: flex;
@@ -1638,7 +1638,7 @@ html, body {
 }
 
 .right-panel {
-  width: 240px;
+  width: 320px;
   background: var(--bg-panel);
   border-left: 1px solid var(--border-color);
   overflow-y: auto;
