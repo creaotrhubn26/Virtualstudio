@@ -4,6 +4,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { useAppStore } from './state/store';
+import { virtualActorService } from './core/services/virtualActorService';
 
 interface LightData {
   light: BABYLON.Light;
@@ -74,6 +75,8 @@ class VirtualStudio {
     this.gizmoManager.scaleGizmoEnabled = false;
     this.gizmoManager.attachableMeshes = [];
 
+    virtualActorService.setScene(this.scene);
+    
     this.setupStudio();
     this.setupUI();
     this.setup2DViews();
@@ -605,6 +608,17 @@ class VirtualStudio {
       item.addEventListener('click', () => this.selectLight(id));
       list.appendChild(item);
     }
+
+    const actors = this.scene.meshes.filter(m => 
+      m.name.startsWith('actor-') && !m.name.includes('gizmo')
+    );
+    
+    for (const actor of actors) {
+      const item = document.createElement('div');
+      item.className = 'scene-item';
+      item.innerHTML = `<span class="equip-icon" style="color: var(--accent-cyan);">◆</span><span>${actor.name}</span>`;
+      list.appendChild(item);
+    }
   }
 
   private setFocalLength(mm: number): void {
@@ -666,24 +680,32 @@ class VirtualStudio {
       return;
     }
 
+    const existingMesh = this.scene.getMeshByName(actorId);
+    if (existingMesh) {
+      existingMesh.dispose();
+    }
+
     const userData = actorNode.userData as Record<string, unknown> | undefined;
     const skinTone = (userData?.skinTone as string) || '#EAC086';
+    const height = (userData?.height as number) || 175;
+    const scaledHeight = height / 100;
 
     const capsule = BABYLON.MeshBuilder.CreateCapsule(actorId, {
-      height: 1.75,
-      radius: 0.22,
+      height: scaledHeight,
+      radius: scaledHeight * 0.125,
       tessellation: 16,
       subdivisions: 4
     }, this.scene);
 
     const pos = actorNode.transform.position;
-    capsule.position = new BABYLON.Vector3(pos[0], pos[1] + 0.875, pos[2]);
+    capsule.position = new BABYLON.Vector3(pos[0], pos[1] + scaledHeight / 2, pos[2]);
 
     const material = new BABYLON.StandardMaterial(`${actorId}_mat`, this.scene);
     material.diffuseColor = BABYLON.Color3.FromHexString(skinTone);
     material.specularColor = new BABYLON.Color3(0.15, 0.12, 0.1);
     capsule.material = material;
 
+    this.updateSceneList();
     console.log('Actor added to 3D scene:', actorId);
   }
 }

@@ -42,12 +42,41 @@ A professional web-based virtual photography studio application built with Babyl
 - Resolution and camera selection
 - Export PDF button
 
+### Virtual Actor Panel
+- Collapsible "Virtuell Aktør" section in left sidebar
+- Body parameters (age, gender, height, weight, muscle)
+- Appearance customization (skin tone, hair style)
+- Actor presets library
+- Glasses selector
+- Generate button to create 3D actor mesh in scene
+
+## Architecture
+- **Hybrid design**: Vanilla TypeScript Babylon.js + React components
+- **State management**: Zustand store bridges React and Babylon.js
+- **Scene integration**: virtualActorService provides fallback capsule meshes
+- **Future**: Python ML service integration for Anny parametric body model
+
 ## Project Structure
 ```
 /
 ├── src/
-│   ├── main.ts       # Main Babylon.js application with studio logic
-│   └── styles.css    # Professional dark theme UI styling
+│   ├── main.ts                         # Main Babylon.js application with studio logic
+│   ├── styles.css                      # Professional dark theme UI styling
+│   ├── App.tsx                         # React root component for actor panel
+│   ├── state/
+│   │   └── store.ts                    # Zustand store for state management
+│   ├── core/
+│   │   └── services/
+│   │       ├── virtualActorService.ts  # Actor mesh generation service
+│   │       └── logger.ts               # Logging service
+│   ├── panels/
+│   │   ├── VirtualActorPanel.tsx       # Actor configuration panel
+│   │   ├── GlassesSelector.tsx         # Glasses selection component
+│   │   └── ActorLibraryPanel.tsx       # Actor presets library
+│   └── data/
+│       ├── actorPresets.ts             # Predefined actor presets
+│       ├── hairStyles.ts               # Hair style configurations
+│       └── glassesModels.ts            # Glasses model data
 ├── index.html        # 3-panel layout structure
 ├── package.json      # Dependencies
 ├── tsconfig.json     # TypeScript config
@@ -58,6 +87,9 @@ A professional web-based virtual photography studio application built with Babyl
 - @babylonjs/core - 3D engine
 - @babylonjs/loaders - GLB/GLTF model loading
 - @babylonjs/gui - GUI components
+- react, react-dom - UI components
+- @mui/material, @emotion/react - Material UI styling
+- zustand - State management
 - vite - Dev server and bundler
 - typescript - Type checking
 
@@ -71,6 +103,12 @@ Run `npm run dev` to start the development server on port 5000.
 - Interactive light placement with gizmos
 
 ## Recent Changes
+- 2025-12-22: Integrated Virtual Actor Panel with React/MUI
+  - Added React mounting in main.ts alongside Babylon.js
+  - Created VirtualActorPanel with body parameters and appearance controls
+  - Implemented Zustand store for state management
+  - Added virtualActorService for actor mesh generation
+  - Connected actor generation to 3D scene
 - 2024-12-22: Complete UI redesign to match Set.a.Light 3D style
 - Implemented 3-panel professional layout
 - Added equipment library with brand names
