@@ -8,7 +8,7 @@ export interface NodeTransform {
 
 export interface SceneNode {
   id: string;
-  type: 'light' | 'model' | 'camera' | 'accessory' | 'background';
+  type: 'light' | 'model' | 'camera' | 'accessory' | 'background' | 'modifier';
   name: string;
   transform: NodeTransform;
   visible: boolean;

@@ -135,6 +135,13 @@ Run `npm run dev` to start the development server on port 5000.
 - Interactive light placement with gizmos
 
 ## Recent Changes
+- 2025-12-22: Moved light modifiers to LightsBrowser as separate category
+  - Added 25 professional modifiers: softbox, octabox, stripbox, umbrella, beauty dish, reflector, grid, snoot, barn doors, diffuser
+  - Brands: Profoto, Godox, Aputure, Westcott, Photoflex, Broncolor, Mola
+  - Modifier specs: size, shape, stop loss, mount type (OCF, Bowens, Broncolor)
+  - Tab-based UI: "Lyskilder" and "Lysformere" tabs in LIGHTS panel
+  - Norwegian labels for modifier types
+  - Event system: 'ch-add-modifier' for Babylon.js integration
 - 2025-12-22: Added realistic camera and lens specifications
   - Camera specs: sensor size, base ISO, dynamic range (EV), color depth, flash sync speed, IBIS rating, burst fps
   - Lens specs: min aperture, min focus distance, weight, filter size

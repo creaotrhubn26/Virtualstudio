@@ -68,11 +68,59 @@ const LIGHT_DATABASE: LightSpec[] = [
 const BRANDS = ['Alle', 'Godox', 'Profoto', 'Aputure', 'Nanlite', 'Elinchrom', 'Broncolor'];
 const TYPES = ['Alle', 'strobe', 'led', 'continuous', 'flash'];
 
+interface ModifierSpec {
+  id: string;
+  brand: string;
+  model: string;
+  type: 'softbox' | 'octabox' | 'stripbox' | 'umbrella' | 'beauty-dish' | 'reflector' | 'grid' | 'snoot' | 'barn-doors' | 'diffuser';
+  size?: string;
+  shape?: string;
+  stopLoss?: number;
+  mount?: string;
+  thumbnail?: string;
+}
+
+const MODIFIER_DATABASE: ModifierSpec[] = [
+  { id: 'profoto-ocf-60', brand: 'Profoto', model: 'OCF Softbox 60cm', type: 'softbox', size: '60cm', shape: 'square', stopLoss: 1.5, mount: 'OCF', thumbnail: '/images/gear/softbox_generic.png' },
+  { id: 'profoto-ocf-90', brand: 'Profoto', model: 'OCF Softbox 90cm', type: 'softbox', size: '90cm', shape: 'rectangle', stopLoss: 1.5, mount: 'OCF', thumbnail: '/images/gear/softbox_generic.png' },
+  { id: 'profoto-ocf-octa', brand: 'Profoto', model: 'OCF Octa 90cm', type: 'octabox', size: '90cm', shape: 'octagon', stopLoss: 1.5, mount: 'OCF', thumbnail: '/images/gear/octabox_generic.png' },
+  { id: 'profoto-ocf-strip', brand: 'Profoto', model: 'OCF Striplight 30x90', type: 'stripbox', size: '30x90cm', shape: 'strip', stopLoss: 1.5, mount: 'OCF', thumbnail: '/images/gear/stripbox_generic.png' },
+  { id: 'profoto-beauty', brand: 'Profoto', model: 'Softlight Reflector', type: 'beauty-dish', size: '65cm', stopLoss: 0.5, mount: 'Profoto', thumbnail: '/images/gear/beauty_dish_generic.png' },
+  { id: 'godox-qr-p90', brand: 'Godox', model: 'QR-P90 Parabolic', type: 'softbox', size: '90cm', shape: 'parabolic', stopLoss: 1.5, mount: 'Bowens', thumbnail: '/images/gear/softbox_generic.png' },
+  { id: 'godox-qr-p120', brand: 'Godox', model: 'QR-P120 Parabolic', type: 'softbox', size: '120cm', shape: 'parabolic', stopLoss: 2.0, mount: 'Bowens', thumbnail: '/images/gear/softbox_generic.png' },
+  { id: 'godox-sl60-softbox', brand: 'Godox', model: 'Lantern Softbox 65cm', type: 'softbox', size: '65cm', shape: 'lantern', stopLoss: 1.0, mount: 'Bowens', thumbnail: '/images/gear/softbox_generic.png' },
+  { id: 'godox-octa-120', brand: 'Godox', model: 'Octa 120cm', type: 'octabox', size: '120cm', shape: 'octagon', stopLoss: 2.0, mount: 'Bowens', thumbnail: '/images/gear/octabox_generic.png' },
+  { id: 'godox-strip-35x160', brand: 'Godox', model: 'Strip 35x160cm', type: 'stripbox', size: '35x160cm', shape: 'strip', stopLoss: 2.0, mount: 'Bowens', thumbnail: '/images/gear/stripbox_generic.png' },
+  { id: 'aputure-light-dome', brand: 'Aputure', model: 'Light Dome II', type: 'softbox', size: '90cm', shape: 'parabolic', stopLoss: 1.5, mount: 'Bowens', thumbnail: '/images/gear/softbox_generic.png' },
+  { id: 'aputure-lantern', brand: 'Aputure', model: 'Lantern 90', type: 'softbox', size: '90cm', shape: 'lantern', stopLoss: 1.0, mount: 'Bowens', thumbnail: '/images/gear/softbox_generic.png' },
+  { id: 'aputure-fresnel', brand: 'Aputure', model: 'Fresnel 2X', type: 'reflector', size: '2X', stopLoss: -1.0, mount: 'Bowens', thumbnail: '/images/gear/reflector_generic.png' },
+  { id: 'westcott-rapid-box', brand: 'Westcott', model: 'Rapid Box Duo 32"', type: 'octabox', size: '32"', shape: 'octagon', stopLoss: 1.5, mount: 'Bowens', thumbnail: '/images/gear/octabox_generic.png' },
+  { id: 'westcott-scrim', brand: 'Westcott', model: 'Scrim Jim 4x4', type: 'diffuser', size: '4x4ft', stopLoss: 1.0, thumbnail: '/images/gear/diffuser_generic.png' },
+  { id: 'photoflex-umbrella-w', brand: 'Photoflex', model: 'Umbrella White 45"', type: 'umbrella', size: '45"', stopLoss: 1.0, thumbnail: '/images/gear/umbrella_generic.png' },
+  { id: 'photoflex-umbrella-s', brand: 'Photoflex', model: 'Umbrella Silver 45"', type: 'umbrella', size: '45"', stopLoss: 0.5, thumbnail: '/images/gear/umbrella_generic.png' },
+  { id: 'broncolor-para88', brand: 'Broncolor', model: 'Para 88', type: 'softbox', size: '88cm', shape: 'parabolic', stopLoss: 1.0, mount: 'Broncolor', thumbnail: '/images/gear/softbox_generic.png' },
+  { id: 'broncolor-para133', brand: 'Broncolor', model: 'Para 133', type: 'softbox', size: '133cm', shape: 'parabolic', stopLoss: 1.5, mount: 'Broncolor', thumbnail: '/images/gear/softbox_generic.png' },
+  { id: 'broncolor-beauty', brand: 'Broncolor', model: 'Beauty Dish', type: 'beauty-dish', size: '55cm', stopLoss: 0.5, mount: 'Broncolor', thumbnail: '/images/gear/beauty_dish_generic.png' },
+  { id: 'mola-setti', brand: 'Mola', model: 'Setti Beauty Dish 28"', type: 'beauty-dish', size: '28"', stopLoss: 0.5, mount: 'Bowens', thumbnail: '/images/gear/beauty_dish_generic.png' },
+  { id: 'honeycomb-grid-20', brand: 'Generic', model: 'Honeycomb Grid 20°', type: 'grid', size: '20°', stopLoss: 1.0, thumbnail: '/images/gear/grid_generic.png' },
+  { id: 'honeycomb-grid-40', brand: 'Generic', model: 'Honeycomb Grid 40°', type: 'grid', size: '40°', stopLoss: 0.5, thumbnail: '/images/gear/grid_generic.png' },
+  { id: 'snoot-standard', brand: 'Generic', model: 'Snoot Standard', type: 'snoot', stopLoss: 0, thumbnail: '/images/gear/snoot_generic.png' },
+  { id: 'barn-doors-4leaf', brand: 'Generic', model: 'Barn Doors 4-Leaf', type: 'barn-doors', stopLoss: 0, thumbnail: '/images/gear/barn_doors_generic.png' },
+];
+
+const MODIFIER_BRANDS = ['Alle', 'Profoto', 'Godox', 'Aputure', 'Westcott', 'Photoflex', 'Broncolor', 'Mola', 'Generic'];
+const MODIFIER_TYPES = ['Alle', 'softbox', 'octabox', 'stripbox', 'umbrella', 'beauty-dish', 'reflector', 'grid', 'snoot', 'barn-doors', 'diffuser'];
+
+type BrowserTab = 'lights' | 'modifiers';
+
 export function LightsBrowser() {
   const { addNode } = useAppStore();
+  const [activeTab, setActiveTab] = useState<BrowserTab>('lights');
   const [searchQuery, setSearchQuery] = useState('');
   const [brandFilter, setBrandFilter] = useState('Alle');
   const [typeFilter, setTypeFilter] = useState('Alle');
+  const [modifierBrandFilter, setModifierBrandFilter] = useState('Alle');
+  const [modifierTypeFilter, setModifierTypeFilter] = useState('Alle');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   const filteredLights = useMemo(() => {
@@ -85,6 +133,17 @@ export function LightsBrowser() {
       return matchesSearch && matchesBrand && matchesType;
     });
   }, [searchQuery, brandFilter, typeFilter]);
+
+  const filteredModifiers = useMemo(() => {
+    return MODIFIER_DATABASE.filter((mod) => {
+      const matchesSearch = searchQuery === '' || 
+        mod.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        mod.brand.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesBrand = modifierBrandFilter === 'Alle' || mod.brand === modifierBrandFilter;
+      const matchesType = modifierTypeFilter === 'Alle' || mod.type === modifierTypeFilter;
+      return matchesSearch && matchesBrand && matchesType;
+    });
+  }, [searchQuery, modifierBrandFilter, modifierTypeFilter]);
 
   const toggleFavorite = (id: string) => {
     setFavorites(prev => {
@@ -145,50 +204,115 @@ export function LightsBrowser() {
     }));
   };
 
+  const handleAddModifier = (modifier: ModifierSpec) => {
+    const nodeId = `modifier-${modifier.id}-${Date.now()}`;
+    
+    addNode({
+      id: nodeId,
+      type: 'modifier',
+      name: `${modifier.brand} ${modifier.model}`,
+      transform: {
+        position: [0, 2, 0],
+        rotation: [0, 0, 0],
+        scale: [1, 1, 1],
+      },
+      visible: true,
+      userData: {
+        brand: modifier.brand,
+        model: modifier.model,
+        modifierType: modifier.type,
+        size: modifier.size,
+        shape: modifier.shape,
+        stopLoss: modifier.stopLoss,
+        mount: modifier.mount,
+      },
+    });
+
+    window.dispatchEvent(new CustomEvent('ch-add-modifier', {
+      detail: {
+        id: nodeId,
+        brand: modifier.brand,
+        model: modifier.model,
+        type: modifier.type,
+        size: modifier.size,
+        shape: modifier.shape,
+        stopLoss: modifier.stopLoss,
+        mount: modifier.mount,
+      }
+    }));
+  };
+
+  const getModifierTypeLabel = (type: string): string => {
+    const labels: Record<string, string> = {
+      'softbox': 'Softboks',
+      'octabox': 'Oktaboks',
+      'stripbox': 'Stripboks',
+      'umbrella': 'Paraply',
+      'beauty-dish': 'Beauty Dish',
+      'reflector': 'Reflektor',
+      'grid': 'Grid/Raster',
+      'snoot': 'Snoot',
+      'barn-doors': 'Klaffedører',
+      'diffuser': 'Diffuser',
+    };
+    return labels[type] || type;
+  };
+
   return (
     <Box sx={{ p: 1, height: '100%', overflow: 'auto', bgcolor: '#1a1a1a' }}>
-      <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
-        <TextField
-          size="small"
-          placeholder="Søk lys..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          sx={{ flex: 1, minWidth: 150 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ fontSize: 18, color: '#888' }} />
-              </InputAdornment>
-            ),
-          }}
-        />
-        <FormControl size="small" sx={{ minWidth: 100 }}>
-          <Select
-            value={brandFilter}
-            onChange={(e) => setBrandFilter(e.target.value)}
-            displayEmpty
-          >
-            {BRANDS.map(brand => (
-              <MenuItem key={brand} value={brand}>{brand}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <FormControl size="small" sx={{ minWidth: 80 }}>
-          <Select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            displayEmpty
-          >
-            {TYPES.map(type => (
-              <MenuItem key={type} value={type}>{type === 'Alle' ? 'Alle' : type.toUpperCase()}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
+      <Tabs 
+        value={activeTab} 
+        onChange={(_, v) => setActiveTab(v)}
+        sx={{ mb: 1, minHeight: 32, '& .MuiTab-root': { minHeight: 32, py: 0.5, fontSize: 12 } }}
+      >
+        <Tab value="lights" label="Lyskilder" />
+        <Tab value="modifiers" label="Lysformere" />
+      </Tabs>
 
-      <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block' }}>
-        {filteredLights.length} lys funnet
-      </Typography>
+      {activeTab === 'lights' && (
+        <>
+          <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+            <TextField
+              size="small"
+              placeholder="Søk lys..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              sx={{ flex: 1, minWidth: 150 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ fontSize: 18, color: '#888' }} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <FormControl size="small" sx={{ minWidth: 100 }}>
+              <Select
+                value={brandFilter}
+                onChange={(e) => setBrandFilter(e.target.value)}
+                displayEmpty
+              >
+                {BRANDS.map(brand => (
+                  <MenuItem key={brand} value={brand}>{brand}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 80 }}>
+              <Select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                displayEmpty
+              >
+                {TYPES.map(type => (
+                  <MenuItem key={type} value={type}>{type === 'Alle' ? 'Alle' : type.toUpperCase()}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+
+          <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block' }}>
+            {filteredLights.length} lys funnet
+          </Typography>
 
       <Box sx={{ 
         display: 'grid', 
@@ -314,6 +438,166 @@ export function LightsBrowser() {
           </Card>
         ))}
       </Box>
+        </>
+      )}
+
+      {activeTab === 'modifiers' && (
+        <>
+          <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+            <TextField
+              size="small"
+              placeholder="Søk lysformere..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              sx={{ flex: 1, minWidth: 150 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ fontSize: 18, color: '#888' }} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <FormControl size="small" sx={{ minWidth: 100 }}>
+              <Select
+                value={modifierBrandFilter}
+                onChange={(e) => setModifierBrandFilter(e.target.value)}
+                displayEmpty
+              >
+                {MODIFIER_BRANDS.map(brand => (
+                  <MenuItem key={brand} value={brand}>{brand}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 90 }}>
+              <Select
+                value={modifierTypeFilter}
+                onChange={(e) => setModifierTypeFilter(e.target.value)}
+                displayEmpty
+              >
+                {MODIFIER_TYPES.map(type => (
+                  <MenuItem key={type} value={type}>{type === 'Alle' ? 'Alle' : getModifierTypeLabel(type)}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+
+          <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block' }}>
+            {filteredModifiers.length} lysformere funnet
+          </Typography>
+
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
+            gap: 1 
+          }}>
+            {filteredModifiers.map((modifier) => (
+              <Card 
+                key={modifier.id}
+                sx={{ 
+                  bgcolor: '#252525', 
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  '&:hover': { 
+                    bgcolor: '#303030',
+                    transform: 'translateY(-2px)',
+                  },
+                  position: 'relative',
+                }}
+              >
+                <IconButton
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); toggleFavorite(modifier.id); }}
+                  sx={{ 
+                    position: 'absolute', 
+                    top: 2, 
+                    right: 2, 
+                    color: favorites.has(modifier.id) ? '#ffd700' : '#666',
+                    p: 0.5,
+                  }}
+                >
+                  {favorites.has(modifier.id) ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
+                </IconButton>
+                
+                <Box sx={{ 
+                  height: 60, 
+                  background: 'linear-gradient(135deg, #2a3a4a 0%, #3a4a5a 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                }}>
+                  {modifier.thumbnail ? (
+                    <Box
+                      component="img"
+                      src={modifier.thumbnail}
+                      alt={modifier.model}
+                      sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <Typography sx={{ fontSize: 24 }}>🔲</Typography>
+                  )}
+                </Box>
+                
+                <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+                  <Typography variant="caption" sx={{ color: '#888', display: 'block' }}>
+                    {modifier.brand}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500, fontSize: 11 }}>
+                    {modifier.model}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
+                    <Chip 
+                      label={getModifierTypeLabel(modifier.type)} 
+                      size="small" 
+                      sx={{ height: 16, fontSize: 9, bgcolor: '#333' }} 
+                    />
+                    {modifier.size && (
+                      <Chip 
+                        label={modifier.size} 
+                        size="small" 
+                        sx={{ height: 16, fontSize: 9, bgcolor: '#333' }} 
+                      />
+                    )}
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
+                    {modifier.mount && (
+                      <Chip 
+                        label={modifier.mount} 
+                        size="small" 
+                        sx={{ height: 16, fontSize: 8, bgcolor: '#2a3a4a' }} 
+                      />
+                    )}
+                    {modifier.stopLoss !== undefined && (
+                      <Chip 
+                        label={modifier.stopLoss >= 0 ? `-${modifier.stopLoss} stop` : `+${Math.abs(modifier.stopLoss)} stop`} 
+                        size="small" 
+                        sx={{ height: 16, fontSize: 8, bgcolor: modifier.stopLoss >= 0 ? '#4a3a2a' : '#2a4a3a' }} 
+                      />
+                    )}
+                  </Box>
+                  <Button
+                    size="small"
+                    startIcon={<AddIcon />}
+                    onClick={() => handleAddModifier(modifier)}
+                    sx={{ 
+                      mt: 0.5, 
+                      width: '100%', 
+                      fontSize: 10,
+                      py: 0.25,
+                      bgcolor: '#00a8ff22',
+                      color: '#00a8ff',
+                      '&:hover': { bgcolor: '#00a8ff44' },
+                    }}
+                  >
+                    Legg til
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </Box>
+        </>
+      )}
     </Box>
   );
 }
