@@ -834,12 +834,12 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 if (group.querySelectorAll('.hierarchy-item').length === 0) {
-                  const emptyIcon = type === 'model' ? '🧍' : type === 'light' ? '💡' : '🔧';
+                  const emptyClass = type === 'model' ? 'model-empty' : type === 'light' ? 'light-empty' : 'equip-empty';
                   const emptyText = type === 'model' ? 'Ingen modeller' : 
                                    type === 'light' ? 'Ingen lys' : 'Ingen utstyr';
                   group.innerHTML = `
                     <div class="hierarchy-empty">
-                      <div class="empty-icon">${emptyIcon}</div>
+                      <div class="empty-icon ${emptyClass}"></div>
                       <span>${emptyText}</span>
                       <span class="empty-hint">Legg til fra Studio Library</span>
                     </div>
