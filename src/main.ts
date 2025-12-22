@@ -23,6 +23,25 @@ interface CameraSettings {
   nd: number;
 }
 
+interface Keyframe {
+  time: number;
+  value: { x: number; y: number; z: number };
+}
+
+interface AnimationTrack {
+  id: string;
+  nodeId: string;
+  type: 'position' | 'rotation';
+  keyframes: Keyframe[];
+}
+
+interface AnimationState {
+  isPlaying: boolean;
+  currentTime: number;
+  duration: number;
+  tracks: AnimationTrack[];
+}
+
 class VirtualStudio {
   private engine: BABYLON.Engine;
   private scene: BABYLON.Scene;
@@ -52,6 +71,15 @@ class VirtualStudio {
     85: { maxAperture: 1.4, minAperture: 16, name: '85mm f/1.4' },
     135: { maxAperture: 2.0, minAperture: 22, name: '135mm f/2.0' }
   };
+  
+  private animationState: AnimationState = {
+    isPlaying: false,
+    currentTime: 0,
+    duration: 5,
+    tracks: []
+  };
+  
+  private animationFrameId: number | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.engine = new BABYLON.Engine(canvas, true, { 
@@ -192,6 +220,7 @@ class VirtualStudio {
     this.setupModalListeners();
     this.setupExportListeners();
     this.setupScopeControls();
+    this.setupTimelineListeners();
   }
 
   private currentScopeMode: 'histogram' | 'waveform' | 'vectorscope' | 'skin' | 'zebra' | 'falsecolor' = 'histogram';
@@ -216,6 +245,7 @@ class VirtualStudio {
       
       const updatePosition = (val: number) => {
         if (!this.selectedLightId) return;
+        if (this.animationState.isPlaying) return; // Skip during playback
         const data = this.lights.get(this.selectedLightId);
         if (data) {
           if (index === 0) data.mesh.position.x = val;
@@ -225,12 +255,14 @@ class VirtualStudio {
       };
       
       slider?.addEventListener('input', () => {
+        if (this.animationState.isPlaying) return;
         const val = parseFloat(slider.value);
         if (input) input.value = val.toFixed(1);
         updatePosition(val);
       });
       
       input?.addEventListener('change', () => {
+        if (this.animationState.isPlaying) return;
         const val = parseFloat(input.value);
         if (slider) slider.value = val.toString();
         updatePosition(val);
@@ -245,6 +277,7 @@ class VirtualStudio {
       
       const updateRotation = (val: number) => {
         if (!this.selectedLightId) return;
+        if (this.animationState.isPlaying) return; // Skip during playback
         const data = this.lights.get(this.selectedLightId);
         if (data) {
           const rad = val * Math.PI / 180;
@@ -255,12 +288,14 @@ class VirtualStudio {
       };
       
       slider?.addEventListener('input', () => {
+        if (this.animationState.isPlaying) return;
         const val = parseFloat(slider.value);
         if (input) input.value = val.toString();
         updateRotation(val);
       });
       
       input?.addEventListener('change', () => {
+        if (this.animationState.isPlaying) return;
         const val = parseFloat(input.value);
         if (slider) slider.value = val.toString();
         updateRotation(val);
@@ -317,6 +352,15 @@ class VirtualStudio {
         if (slider) slider.value = '0';
         if (input) input.value = '0';
       });
+    });
+    
+    // Keyframe buttons
+    document.getElementById('addPosKeyframeBtn')?.addEventListener('click', () => {
+      this.addKeyframe('position');
+    });
+    
+    document.getElementById('addRotKeyframeBtn')?.addEventListener('click', () => {
+      this.addKeyframe('rotation');
     });
 
     document.getElementById('cctSelect')?.addEventListener('change', (e) => {
@@ -1149,6 +1193,342 @@ class VirtualStudio {
     }
     
     this.updateExposureDisplay();
+  }
+
+  // ============================================================================
+  // Animation / Keyframe System
+  // ============================================================================
+  
+  private setupTimelineListeners(): void {
+    const timeline = document.getElementById('animationTimeline');
+    const playBtn = document.getElementById('tlPlay');
+    const stopBtn = document.getElementById('tlStop');
+    const closeBtn = document.getElementById('tlClose');
+    const scrubber = document.getElementById('tlScrubber') as HTMLInputElement;
+    const prevBtn = document.getElementById('tlPrevKeyframe');
+    const nextBtn = document.getElementById('tlNextKeyframe');
+    
+    playBtn?.addEventListener('click', () => this.togglePlayAnimation());
+    stopBtn?.addEventListener('click', () => this.stopAnimation());
+    closeBtn?.addEventListener('click', () => {
+      timeline?.classList.remove('visible');
+    });
+    
+    scrubber?.addEventListener('mousedown', () => {
+      this.isScrubbing = true;
+    });
+    
+    scrubber?.addEventListener('mouseup', () => {
+      this.isScrubbing = false;
+    });
+    
+    scrubber?.addEventListener('input', () => {
+      const percent = parseFloat(scrubber.value) / 100;
+      this.animationState.currentTime = percent * this.animationState.duration;
+      this.updateTimelineUI(false);
+      this.applyAnimationAtTime(this.animationState.currentTime);
+    });
+    
+    prevBtn?.addEventListener('click', () => this.jumpToPreviousKeyframe());
+    nextBtn?.addEventListener('click', () => this.jumpToNextKeyframe());
+  }
+  
+  private addKeyframe(type: 'position' | 'rotation'): void {
+    if (!this.selectedLightId) return;
+    const data = this.lights.get(this.selectedLightId);
+    if (!data) return;
+    
+    const trackId = `${this.selectedLightId}_${type}`;
+    let track = this.animationState.tracks.find(t => t.id === trackId);
+    
+    if (!track) {
+      track = {
+        id: trackId,
+        nodeId: this.selectedLightId,
+        type: type,
+        keyframes: []
+      };
+      this.animationState.tracks.push(track);
+    }
+    
+    const value = type === 'position' 
+      ? { x: data.mesh.position.x, y: data.mesh.position.y, z: data.mesh.position.z }
+      : { x: data.mesh.rotation.x * 180 / Math.PI, y: data.mesh.rotation.y * 180 / Math.PI, z: data.mesh.rotation.z * 180 / Math.PI };
+    
+    // Check if keyframe exists at current time
+    const existingIdx = track.keyframes.findIndex(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.01);
+    if (existingIdx >= 0) {
+      track.keyframes[existingIdx].value = value;
+    } else {
+      track.keyframes.push({ time: this.animationState.currentTime, value });
+      track.keyframes.sort((a, b) => a.time - b.time);
+    }
+    
+    this.updateTimelineUI(false);
+    this.renderTimelineTracks();
+    
+    // Show timeline if hidden
+    const timeline = document.getElementById('animationTimeline');
+    timeline?.classList.add('visible');
+  }
+  
+  private togglePlayAnimation(): void {
+    if (this.animationState.isPlaying) {
+      this.pauseAnimation();
+    } else {
+      this.playAnimation();
+    }
+  }
+  
+  private playAnimation(): void {
+    if (this.animationState.tracks.length === 0) return;
+    
+    this.animationState.isPlaying = true;
+    const playBtn = document.getElementById('tlPlay');
+    if (playBtn) {
+      playBtn.textContent = '⏸';
+      playBtn.classList.add('active');
+    }
+    
+    let lastTime = performance.now();
+    
+    const animate = (currentTime: number) => {
+      const delta = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+      
+      this.animationState.currentTime += delta;
+      
+      if (this.animationState.currentTime >= this.animationState.duration) {
+        this.animationState.currentTime = 0;
+      }
+      
+      this.applyAnimationAtTime(this.animationState.currentTime);
+      this.updateTimelineUI(true);
+      
+      if (this.animationState.isPlaying) {
+        this.animationFrameId = requestAnimationFrame(animate);
+      }
+    };
+    
+    this.animationFrameId = requestAnimationFrame(animate);
+  }
+  
+  private pauseAnimation(): void {
+    this.animationState.isPlaying = false;
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    
+    const playBtn = document.getElementById('tlPlay');
+    if (playBtn) {
+      playBtn.textContent = '▶';
+      playBtn.classList.remove('active');
+    }
+  }
+  
+  private stopAnimation(): void {
+    this.pauseAnimation();
+    this.animationState.currentTime = 0;
+    this.updateTimelineUI();
+    this.applyAnimationAtTime(0);
+  }
+  
+  private applyAnimationAtTime(time: number): void {
+    for (const track of this.animationState.tracks) {
+      const data = this.lights.get(track.nodeId);
+      if (!data) continue;
+      
+      const value = this.interpolateKeyframes(track.keyframes, time);
+      if (!value) continue;
+      
+      if (track.type === 'position') {
+        data.mesh.position.set(value.x, value.y, value.z);
+      } else {
+        data.mesh.rotation.set(value.x * Math.PI / 180, value.y * Math.PI / 180, value.z * Math.PI / 180);
+      }
+    }
+    
+    // Update UI if this is the selected light
+    if (this.selectedLightId) {
+      this.updatePropertyPanel();
+    }
+  }
+  
+  private interpolateKeyframes(keyframes: Keyframe[], time: number): { x: number; y: number; z: number } | null {
+    if (keyframes.length === 0) return null;
+    if (keyframes.length === 1) return keyframes[0].value;
+    
+    // Find surrounding keyframes
+    let prev = keyframes[0];
+    let next = keyframes[keyframes.length - 1];
+    
+    for (let i = 0; i < keyframes.length - 1; i++) {
+      if (time >= keyframes[i].time && time <= keyframes[i + 1].time) {
+        prev = keyframes[i];
+        next = keyframes[i + 1];
+        break;
+      }
+    }
+    
+    if (time <= prev.time) return prev.value;
+    if (time >= next.time) return next.value;
+    
+    // Linear interpolation
+    const t = (time - prev.time) / (next.time - prev.time);
+    return {
+      x: prev.value.x + (next.value.x - prev.value.x) * t,
+      y: prev.value.y + (next.value.y - prev.value.y) * t,
+      z: prev.value.z + (next.value.z - prev.value.z) * t
+    };
+  }
+  
+  private isScrubbing: boolean = false;
+  
+  private updateTimelineUI(fromPlayback: boolean = false): void {
+    const currentTimeEl = document.getElementById('tlCurrentTime');
+    const scrubber = document.getElementById('tlScrubber') as HTMLInputElement;
+    
+    if (currentTimeEl) {
+      currentTimeEl.textContent = `${this.animationState.currentTime.toFixed(2)}s`;
+    }
+    
+    // Only update scrubber if we're not actively scrubbing and update is from playback
+    if (scrubber && fromPlayback && !this.isScrubbing) {
+      scrubber.value = ((this.animationState.currentTime / this.animationState.duration) * 100).toString();
+    }
+    
+    // Update playhead position
+    this.updatePlayhead();
+    
+    // Update keyframe button states
+    this.updateKeyframeButtonStates();
+  }
+  
+  private updateKeyframeButtonStates(): void {
+    if (!this.selectedLightId) return;
+    
+    const posBtn = document.getElementById('addPosKeyframeBtn');
+    const rotBtn = document.getElementById('addRotKeyframeBtn');
+    
+    const posTrack = this.animationState.tracks.find(t => t.id === `${this.selectedLightId}_position`);
+    const rotTrack = this.animationState.tracks.find(t => t.id === `${this.selectedLightId}_rotation`);
+    
+    const hasPoKeyframe = posTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
+    const hasRotKeyframe = rotTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
+    
+    posBtn?.classList.toggle('has-keyframe', !!hasPoKeyframe);
+    rotBtn?.classList.toggle('has-keyframe', !!hasRotKeyframe);
+  }
+  
+  private updatePlayhead(): void {
+    const tracks = document.getElementById('tlTracksContainer');
+    if (!tracks) return;
+    
+    let playhead = document.getElementById('animationPlayhead');
+    if (!playhead) {
+      playhead = document.createElement('div');
+      playhead.id = 'animationPlayhead';
+      playhead.className = 'playhead';
+      tracks.style.position = 'relative';
+      tracks.appendChild(playhead);
+    }
+    
+    const percent = (this.animationState.currentTime / this.animationState.duration) * 100;
+    playhead.style.left = `calc(120px + ${percent}% * 0.85)`;
+  }
+  
+  private renderTimelineTracks(): void {
+    const container = document.getElementById('tlTracksContainer');
+    if (!container) return;
+    
+    // Remove existing tracks (keep playhead)
+    Array.from(container.children).forEach(child => {
+      if (child.id !== 'animationPlayhead') {
+        container.removeChild(child);
+      }
+    });
+    
+    for (const track of this.animationState.tracks) {
+      const lightData = this.lights.get(track.nodeId);
+      const trackEl = document.createElement('div');
+      trackEl.className = 'timeline-track';
+      
+      const label = document.createElement('div');
+      label.className = 'track-label';
+      label.innerHTML = `<span>${lightData?.name || track.nodeId}</span><small>${track.type === 'position' ? 'Pos' : 'Rot'}</small>`;
+      
+      const lane = document.createElement('div');
+      lane.className = 'track-lane';
+      
+      for (const kf of track.keyframes) {
+        const diamond = document.createElement('div');
+        diamond.className = 'keyframe-diamond';
+        diamond.style.left = `${(kf.time / this.animationState.duration) * 100}%`;
+        diamond.title = `${kf.time.toFixed(2)}s`;
+        diamond.addEventListener('click', () => {
+          this.animationState.currentTime = kf.time;
+          this.updateTimelineUI();
+          this.applyAnimationAtTime(kf.time);
+        });
+        lane.appendChild(diamond);
+      }
+      
+      trackEl.appendChild(label);
+      trackEl.appendChild(lane);
+      container.appendChild(trackEl);
+    }
+  }
+  
+  private jumpToPreviousKeyframe(): void {
+    const allTimes = this.getAllKeyframeTimes();
+    const prev = allTimes.filter(t => t < this.animationState.currentTime - 0.01).pop();
+    if (prev !== undefined) {
+      this.animationState.currentTime = prev;
+      this.updateTimelineUI();
+      this.applyAnimationAtTime(prev);
+    }
+  }
+  
+  private jumpToNextKeyframe(): void {
+    const allTimes = this.getAllKeyframeTimes();
+    const next = allTimes.find(t => t > this.animationState.currentTime + 0.01);
+    if (next !== undefined) {
+      this.animationState.currentTime = next;
+      this.updateTimelineUI();
+      this.applyAnimationAtTime(next);
+    }
+  }
+  
+  private getAllKeyframeTimes(): number[] {
+    const times = new Set<number>();
+    for (const track of this.animationState.tracks) {
+      for (const kf of track.keyframes) {
+        times.add(kf.time);
+      }
+    }
+    return Array.from(times).sort((a, b) => a - b);
+  }
+  
+  private updatePropertyPanel(): void {
+    if (!this.selectedLightId) return;
+    const data = this.lights.get(this.selectedLightId);
+    if (!data) return;
+    
+    ['X', 'Y', 'Z'].forEach((axis, i) => {
+      const posSlider = document.getElementById(`pos${axis}Slider`) as HTMLInputElement;
+      const posInput = document.getElementById(`pos${axis}Input`) as HTMLInputElement;
+      const rotSlider = document.getElementById(`rot${axis}Slider`) as HTMLInputElement;
+      const rotInput = document.getElementById(`rot${axis}Input`) as HTMLInputElement;
+      
+      const posVal = i === 0 ? data.mesh.position.x : i === 1 ? data.mesh.position.y : data.mesh.position.z;
+      const rotVal = (i === 0 ? data.mesh.rotation.x : i === 1 ? data.mesh.rotation.y : data.mesh.rotation.z) * 180 / Math.PI;
+      
+      if (posSlider) posSlider.value = posVal.toFixed(1);
+      if (posInput) posInput.value = posVal.toFixed(1);
+      if (rotSlider) rotSlider.value = rotVal.toFixed(0);
+      if (rotInput) rotInput.value = rotVal.toFixed(0);
+    });
   }
 
   private async loadModel(file: File): Promise<void> {
