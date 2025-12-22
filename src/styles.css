@@ -371,6 +371,8 @@ html, body {
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 50;
 }
 
 .panel-header {
@@ -1581,13 +1583,13 @@ html, body {
   border: none;
   border-top: 1px solid var(--border-color);
   margin-top: auto;
-  background: transparent;
+  background: var(--bg-panel);
   width: 100%;
   padding: 0;
   cursor: pointer;
   text-align: left;
   position: relative;
-  z-index: 100;
+  z-index: 9999;
   flex-shrink: 0;
 }
 
