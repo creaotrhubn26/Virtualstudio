@@ -443,35 +443,164 @@ class VirtualStudio {
     ctx.fill();
   }
 
+  private histogramData: { r: number[], g: number[], b: number[], lum: number[] } = {
+    r: new Array(256).fill(0),
+    g: new Array(256).fill(0),
+    b: new Array(256).fill(0),
+    lum: new Array(256).fill(0)
+  };
+  private highlightClipping: number = 0;
+  private histogramFrameCount: number = 0;
+
   private updateHistogram(): void {
     if (!this.histogramCtx || !this.histogramCanvas) return;
 
-    const ctx = this.histogramCtx;
-    const w = this.histogramCanvas.width;
-    const h = this.histogramCanvas.height;
+    // Only update histogram every 10 frames for performance
+    this.histogramFrameCount++;
+    if (this.histogramFrameCount % 10 === 0) {
+      this.calculateHistogramFromScene();
+    }
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    this.drawHistogram();
+  }
+
+  private calculateHistogramFromScene(): void {
+    // Read pixels from the render canvas
+    const width = this.engine.getRenderWidth();
+    const height = this.engine.getRenderHeight();
+    
+    // Sample every Nth pixel for performance (sample ~10000 pixels)
+    const sampleStep = Math.max(1, Math.floor(Math.sqrt((width * height) / 10000)));
+    
+    // Reset histogram bins
+    this.histogramData.r.fill(0);
+    this.histogramData.g.fill(0);
+    this.histogramData.b.fill(0);
+    this.histogramData.lum.fill(0);
+    
+    let totalPixels = 0;
+    let clippedPixels = 0;
+
+    // Read pixels from engine
+    this.engine.readPixels(0, 0, width, height).then((pixels) => {
+      if (!pixels) return;
+      
+      const data = new Uint8Array(pixels.buffer);
+      
+      for (let y = 0; y < height; y += sampleStep) {
+        for (let x = 0; x < width; x += sampleStep) {
+          const idx = (y * width + x) * 4;
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+          
+          // Calculate luminance (Rec. 709)
+          const lum = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
+          
+          this.histogramData.r[r]++;
+          this.histogramData.g[g]++;
+          this.histogramData.b[b]++;
+          this.histogramData.lum[lum]++;
+          
+          totalPixels++;
+          
+          // Check for highlight clipping (values near 255)
+          if (r >= 250 || g >= 250 || b >= 250) {
+            clippedPixels++;
+          }
+        }
+      }
+      
+      // Calculate highlight clipping percentage
+      this.highlightClipping = totalPixels > 0 ? (clippedPixels / totalPixels) * 100 : 0;
+      
+      // Update highlight display
+      const highlightEl = document.getElementById('highlightPercent');
+      if (highlightEl) {
+        highlightEl.textContent = `Høylys ${this.highlightClipping.toFixed(1)}%`;
+      }
+    });
+  }
+
+  private drawHistogram(): void {
+    const ctx = this.histogramCtx!;
+    const w = this.histogramCanvas!.width;
+    const h = this.histogramCanvas!.height;
+
+    // Clear with dark background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
     ctx.fillRect(0, 0, w, h);
 
-    const gradient = ctx.createLinearGradient(0, h, w, 0);
-    gradient.addColorStop(0, 'rgba(0, 100, 150, 0.6)');
-    gradient.addColorStop(0.5, 'rgba(0, 150, 200, 0.8)');
-    gradient.addColorStop(1, 'rgba(100, 200, 255, 0.4)');
+    // Find max value for normalization
+    const maxVal = Math.max(
+      ...this.histogramData.lum.slice(5, 250), // Ignore extreme ends
+      1
+    );
 
+    // Draw luminance histogram
+    const binWidth = w / 256;
+    
+    // Draw gradient fill
+    const gradient = ctx.createLinearGradient(0, h, w, 0);
+    gradient.addColorStop(0, 'rgba(0, 80, 120, 0.7)');
+    gradient.addColorStop(0.5, 'rgba(0, 150, 200, 0.8)');
+    gradient.addColorStop(1, 'rgba(100, 200, 255, 0.6)');
+    
     ctx.fillStyle = gradient;
     ctx.beginPath();
     ctx.moveTo(0, h);
     
-    for (let x = 0; x < w; x++) {
-      const noise = Math.random() * 0.3;
-      const curve = Math.sin((x / w) * Math.PI) * 0.7 + noise;
-      const y = h - (curve * h * 0.8);
-      ctx.lineTo(x, y);
+    for (let i = 0; i < 256; i++) {
+      const x = i * binWidth;
+      const barHeight = (this.histogramData.lum[i] / maxVal) * (h - 4);
+      const y = h - Math.min(barHeight, h - 2);
+      
+      if (i === 0) {
+        ctx.lineTo(x, y);
+      } else {
+        // Smooth curve
+        const prevX = (i - 1) * binWidth;
+        const prevY = h - Math.min((this.histogramData.lum[i - 1] / maxVal) * (h - 4), h - 2);
+        const cpX = (prevX + x) / 2;
+        ctx.quadraticCurveTo(prevX, prevY, cpX, (prevY + y) / 2);
+      }
     }
     
     ctx.lineTo(w, h);
     ctx.closePath();
     ctx.fill();
+
+    // Draw thin RGB lines on top
+    this.drawChannelLine(ctx, this.histogramData.r, maxVal, 'rgba(255, 80, 80, 0.5)', w, h);
+    this.drawChannelLine(ctx, this.histogramData.g, maxVal, 'rgba(80, 255, 80, 0.5)', w, h);
+    this.drawChannelLine(ctx, this.histogramData.b, maxVal, 'rgba(80, 80, 255, 0.5)', w, h);
+
+    // Draw highlight clipping warning if > 1%
+    if (this.highlightClipping > 1) {
+      ctx.fillStyle = 'rgba(255, 100, 100, 0.3)';
+      ctx.fillRect(w - 20, 0, 20, h);
+    }
+  }
+
+  private drawChannelLine(ctx: CanvasRenderingContext2D, data: number[], maxVal: number, color: string, w: number, h: number): void {
+    const binWidth = w / 256;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    
+    for (let i = 0; i < 256; i++) {
+      const x = i * binWidth;
+      const barHeight = (data[i] / maxVal) * (h - 4);
+      const y = h - Math.min(barHeight, h - 2);
+      
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    
+    ctx.stroke();
   }
 
   private updateSelectedLightProperties(): void {
