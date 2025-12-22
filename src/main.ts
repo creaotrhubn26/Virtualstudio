@@ -504,6 +504,30 @@ class VirtualStudio {
       if (ndDisplay) ndDisplay.textContent = ndValues[idx] === 0 ? '0' : `ND${ndValues[idx]}`;
       this.updateExposureDisplay();
     });
+
+    const lensPresetChips = document.querySelectorAll('.lens-preset-chip');
+    lensPresetChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        const focal = parseInt(chip.getAttribute('data-focal') || '50');
+        const aperture = parseFloat(chip.getAttribute('data-aperture') || '2.8');
+        
+        lensPresetChips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        
+        const closestApertureIdx = apertureValues.reduce((prev, curr, idx) => 
+          Math.abs(curr - aperture) < Math.abs(apertureValues[prev] - aperture) ? idx : prev, 0);
+        
+        this.cameraSettings.aperture = apertureValues[closestApertureIdx];
+        if (apertureSlider) apertureSlider.value = closestApertureIdx.toString();
+        if (apertureDisplay) apertureDisplay.textContent = `f/${apertureValues[closestApertureIdx]}`;
+        
+        this.updateExposureDisplay();
+        
+        window.dispatchEvent(new CustomEvent('ch-lens-preset', {
+          detail: { focal, aperture: apertureValues[closestApertureIdx] }
+        }));
+      });
+    });
   }
 
   private updateExposureDisplay(): void {

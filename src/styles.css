@@ -2413,6 +2413,48 @@ html, body {
   font-weight: 700;
 }
 
+.lens-presets-section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.lens-presets-label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.lens-preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lens-preset-chip {
+  padding: 6px 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lens-preset-chip:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.lens-preset-chip.active {
+  background: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  color: #000;
+  font-weight: 600;
+}
+
 .camera-slider-section {
   margin-bottom: 12px;
 }
