@@ -760,38 +760,56 @@ window.addEventListener('DOMContentLoaded', () => {
       
       const addToHierarchy = (id: string, name: string, type: 'model' | 'light' | 'equipment') => {
         let groupId = '';
-        let icon = '';
+        let countId = '';
+        let thumbClass = '';
+        let itemType = '';
         
         switch (type) {
           case 'model':
             groupId = 'modelsGroup';
-            icon = '🧍';
+            countId = 'modelsCount';
+            thumbClass = 'model-thumb';
+            itemType = 'Karakter';
             break;
           case 'light':
             groupId = 'lightsGroup';
-            icon = '💡';
+            countId = 'lightsCount';
+            thumbClass = 'light-thumb';
+            itemType = 'Lyskilde';
             break;
           case 'equipment':
             groupId = 'equipmentGroup';
-            icon = '🔧';
+            countId = 'equipmentCount';
+            thumbClass = 'equip-thumb';
+            itemType = 'Modifier';
             break;
         }
         
         const group = document.getElementById(groupId);
+        const countEl = document.getElementById(countId);
+        
         if (group) {
           const emptyMsg = group.querySelector('.hierarchy-empty');
           if (emptyMsg) emptyMsg.remove();
           
           const itemHtml = `
             <div class="hierarchy-item selected" data-id="${id}">
-              <span class="item-icon">${icon}</span>
-              <span class="item-name">${name}</span>
+              <div class="item-thumbnail ${thumbClass}"></div>
+              <div class="item-info">
+                <span class="item-name">${name}</span>
+                <span class="item-type">${itemType}</span>
+              </div>
               <div class="item-actions">
-                <button class="visibility-btn active" title="Synlig">👁</button>
-                <button class="delete-btn" title="Slett">🗑</button>
+                <button class="action-icon visibility-btn active" title="Synlig"></button>
+                <button class="action-icon delete-btn" title="Slett"></button>
               </div>
             </div>
           `;
+          
+          if (countEl) {
+            const currentCount = parseInt(countEl.textContent || '0');
+            countEl.textContent = String(currentCount + 1);
+          }
           group.insertAdjacentHTML('beforeend', itemHtml);
           
           document.querySelectorAll('.hierarchy-item').forEach(item => item.classList.remove('selected'));
@@ -809,10 +827,23 @@ window.addEventListener('DOMContentLoaded', () => {
               deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 newItem.remove();
+                
+                if (countEl) {
+                  const currentCount = parseInt(countEl.textContent || '1');
+                  countEl.textContent = String(Math.max(0, currentCount - 1));
+                }
+                
                 if (group.querySelectorAll('.hierarchy-item').length === 0) {
-                  const emptyText = type === 'model' ? 'Ingen modeller i scenen' : 
-                                   type === 'light' ? 'Ingen lys i scenen' : 'Ingen utstyr i scenen';
-                  group.innerHTML = `<div class="hierarchy-empty">${emptyText}</div>`;
+                  const emptyIcon = type === 'model' ? '🧍' : type === 'light' ? '💡' : '🔧';
+                  const emptyText = type === 'model' ? 'Ingen modeller' : 
+                                   type === 'light' ? 'Ingen lys' : 'Ingen utstyr';
+                  group.innerHTML = `
+                    <div class="hierarchy-empty">
+                      <div class="empty-icon">${emptyIcon}</div>
+                      <span>${emptyText}</span>
+                      <span class="empty-hint">Legg til fra Studio Library</span>
+                    </div>
+                  `;
                 }
                 const noSelection = document.getElementById('noSelection');
                 const objectHeader = document.getElementById('objectHeader');

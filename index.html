@@ -47,74 +47,104 @@
         <div class="panel-header">
           <span class="panel-icon">☰</span>
           <span>Scene Hierarchy</span>
+          <div class="view-toggle">
+            <button class="view-btn active" id="listViewBtn" title="Listevisning">☰</button>
+            <button class="view-btn" id="gridViewBtn" title="Rutenett">⊞</button>
+          </div>
         </div>
         <div class="search-box">
           <input type="text" id="sceneSearch" placeholder="Søk i scene...">
+          <span class="search-icon">🔍</span>
         </div>
         
-        <div class="hierarchy-section">
+        <div class="hierarchy-section" id="hierarchySection">
           <div class="hierarchy-group">
-            <div class="hierarchy-header">
-              <span class="hierarchy-arrow">▼</span>
-              <span class="hierarchy-icon">📷</span>
+            <div class="hierarchy-header" data-group="cameras">
+              <span class="hierarchy-arrow">▾</span>
+              <div class="header-icon camera-icon"></div>
               <span>Kameraer</span>
+              <span class="group-count">1</span>
             </div>
             <div class="hierarchy-items" id="camerasGroup">
               <div class="hierarchy-item" data-id="cam-a">
-                <span class="item-icon">📷</span>
-                <span class="item-name">Cam A</span>
+                <div class="item-thumbnail camera-thumb"></div>
+                <div class="item-info">
+                  <span class="item-name">Cam A</span>
+                  <span class="item-type">Hovedkamera</span>
+                </div>
                 <div class="item-actions">
-                  <button class="visibility-btn active" title="Synlig">👁</button>
+                  <button class="action-icon visibility-btn active" title="Synlig"></button>
+                  <button class="action-icon lock-btn" title="Lås"></button>
                 </div>
               </div>
             </div>
           </div>
           
           <div class="hierarchy-group">
-            <div class="hierarchy-header">
-              <span class="hierarchy-arrow">▼</span>
-              <span class="hierarchy-icon">💡</span>
+            <div class="hierarchy-header" data-group="lights">
+              <span class="hierarchy-arrow">▾</span>
+              <div class="header-icon light-icon"></div>
               <span>Lys</span>
+              <span class="group-count" id="lightsCount">0</span>
             </div>
             <div class="hierarchy-items" id="lightsGroup">
-              <div class="hierarchy-empty">Ingen lys i scenen</div>
+              <div class="hierarchy-empty">
+                <div class="empty-icon">💡</div>
+                <span>Ingen lys</span>
+                <span class="empty-hint">Legg til fra Studio Library</span>
+              </div>
             </div>
           </div>
           
           <div class="hierarchy-group">
-            <div class="hierarchy-header">
-              <span class="hierarchy-arrow">▼</span>
-              <span class="hierarchy-icon">🧍</span>
+            <div class="hierarchy-header" data-group="models">
+              <span class="hierarchy-arrow">▾</span>
+              <div class="header-icon model-icon"></div>
               <span>Modeller</span>
+              <span class="group-count" id="modelsCount">0</span>
             </div>
             <div class="hierarchy-items" id="modelsGroup">
-              <div class="hierarchy-empty">Ingen modeller i scenen</div>
+              <div class="hierarchy-empty">
+                <div class="empty-icon">🧍</div>
+                <span>Ingen modeller</span>
+                <span class="empty-hint">Legg til fra Studio Library</span>
+              </div>
             </div>
           </div>
           
           <div class="hierarchy-group">
-            <div class="hierarchy-header">
-              <span class="hierarchy-arrow">▼</span>
-              <span class="hierarchy-icon">🔧</span>
+            <div class="hierarchy-header" data-group="equipment">
+              <span class="hierarchy-arrow">▾</span>
+              <div class="header-icon equip-icon"></div>
               <span>Utstyr</span>
+              <span class="group-count" id="equipmentCount">0</span>
             </div>
             <div class="hierarchy-items" id="equipmentGroup">
-              <div class="hierarchy-empty">Ingen utstyr i scenen</div>
+              <div class="hierarchy-empty">
+                <div class="empty-icon">🔧</div>
+                <span>Ingen utstyr</span>
+                <span class="empty-hint">Legg til fra Studio Library</span>
+              </div>
             </div>
           </div>
           
           <div class="hierarchy-group">
-            <div class="hierarchy-header">
-              <span class="hierarchy-arrow">▼</span>
-              <span class="hierarchy-icon">🖼️</span>
+            <div class="hierarchy-header" data-group="backgrounds">
+              <span class="hierarchy-arrow">▾</span>
+              <div class="header-icon bg-icon"></div>
               <span>Bakgrunner</span>
+              <span class="group-count">1</span>
             </div>
             <div class="hierarchy-items" id="backgroundsGroup">
               <div class="hierarchy-item" data-id="studio-bg">
-                <span class="item-icon">🖼️</span>
-                <span class="item-name">Studio Bakgrunn</span>
+                <div class="item-thumbnail bg-thumb"></div>
+                <div class="item-info">
+                  <span class="item-name">Studio Bakgrunn</span>
+                  <span class="item-type">Seamless</span>
+                </div>
                 <div class="item-actions">
-                  <button class="visibility-btn active" title="Synlig">👁</button>
+                  <button class="action-icon visibility-btn active" title="Synlig"></button>
+                  <button class="action-icon lock-btn" title="Lås"></button>
                 </div>
               </div>
             </div>
@@ -122,9 +152,10 @@
         </div>
         
         <div class="actor-panel-trigger" id="actorPanelTrigger">
-          <div class="section-header">
-            <span class="category-arrow">▶</span>
+          <div class="library-trigger-content">
+            <span class="library-icon">📚</span>
             <span>Studio Library</span>
+            <span class="library-arrow">▸</span>
           </div>
         </div>
       </aside>
