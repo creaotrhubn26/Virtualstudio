@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Virtual Studio - 3D Lighting Simulator</title>
+  <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+  <div id="app">
+    <canvas id="renderCanvas"></canvas>
+    <div id="ui-panel">
+      <h2>Virtual Studio</h2>
+      
+      <div class="section">
+        <h3>Lys</h3>
+        <div class="controls">
+          <button id="addSpotlight">+ Spotlight</button>
+          <button id="addPointLight">+ Punktlys</button>
+          <button id="addAreaLight">+ Softbox</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>Importer 3D-modell</h3>
+        <input type="file" id="modelInput" accept=".glb,.gltf" />
+      </div>
+
+      <div class="section" id="selectedLight" style="display: none;">
+        <h3>Valgt lys</h3>
+        <label>
+          Intensitet
+          <input type="range" id="lightIntensity" min="0" max="10" step="0.1" value="1">
+        </label>
+        <label>
+          Farge
+          <input type="color" id="lightColor" value="#ffffff">
+        </label>
+        <button id="deleteLight">Slett lys</button>
+      </div>
+
+      <div class="section">
+        <h3>Kamera</h3>
+        <label>
+          FOV
+          <input type="range" id="cameraFov" min="20" max="120" value="60">
+        </label>
+        <button id="screenshot">Ta skjermbilde</button>
+      </div>
+
+      <div class="section">
+        <h3>Miljø</h3>
+        <label>
+          Bakgrunnsfarge
+          <input type="color" id="bgColor" value="#1a1a2e">
+        </label>
+        <label>
+          <input type="checkbox" id="showGrid" checked>
+          Vis gulvnett
+        </label>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
