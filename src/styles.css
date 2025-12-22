@@ -624,6 +624,8 @@ html, body {
   right: 0;
   bottom: 0;
   height: 200px;
+  min-height: 150px;
+  max-height: 80vh;
   background: #1a1a1a;
   border-top: 1px solid var(--border-color);
   z-index: 1000;
@@ -637,12 +639,64 @@ html, body {
   transform: translateY(0);
 }
 
+.actor-bottom-panel.fullscreen {
+  height: calc(100vh - 50px) !important;
+  max-height: calc(100vh - 50px) !important;
+}
+
+.panel-resize-handle {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: transparent;
+  cursor: ns-resize;
+  z-index: 10;
+}
+
+.panel-resize-handle::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 3px;
+  background: var(--border-color);
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+
+.panel-resize-handle:hover::before,
+.panel-resize-handle:active::before {
+  background: var(--accent-cyan);
+}
+
 .actor-panel-tabs {
   display: flex;
   align-items: center;
   background: #2a2a2a;
   border-bottom: 1px solid var(--border-color);
   padding: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #444 transparent;
+}
+
+.actor-panel-tabs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.actor-panel-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.actor-panel-tabs::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 2px;
 }
 
 .actor-tab {
@@ -656,6 +710,10 @@ html, body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 .actor-tab:hover {
@@ -669,10 +727,86 @@ html, body {
 
 .actor-panel-actions {
   margin-left: auto;
-  padding: 0 16px;
+  padding: 0 8px;
   color: var(--text-secondary);
   cursor: pointer;
   font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.panel-fullscreen-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  border-radius: 4px;
+}
+
+.panel-fullscreen-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.panel-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  border-radius: 4px;
+}
+
+.panel-close-btn:hover {
+  background: rgba(255, 0, 0, 0.1);
+  color: #ef4444;
+}
+
+@media (max-width: 1024px) {
+  .actor-bottom-panel {
+    left: 0;
+  }
+  
+  .actor-tab {
+    padding: 12px 16px;
+    font-size: 12px;
+  }
+  
+  .actor-sidebar {
+    width: 90px;
+  }
+}
+
+@media (pointer: coarse) {
+  .actor-tab {
+    padding: 14px 18px;
+    min-height: 48px;
+  }
+  
+  .panel-resize-handle {
+    height: 12px;
+    top: -6px;
+  }
+  
+  .panel-resize-handle::before {
+    width: 60px;
+    height: 4px;
+  }
 }
 
 .actor-panel-body {

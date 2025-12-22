@@ -12,8 +12,9 @@ import {
   Slider,
   Chip,
   Divider,
+  useMediaQuery,
 } from '@mui/material';
-import { Person, Delete, Refresh } from '@mui/icons-material';
+import { Person, Delete, Refresh, Add } from '@mui/icons-material';
 import { logger } from '../core/services/logger';
 
 const log = logger.module('CharacterLoader');
@@ -133,6 +134,10 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
   onLoadCharacter,
   onRemoveCharacter,
 }) => {
+  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1024px)');
+  const isTouchDevice = useMediaQuery('(pointer: coarse)');
+  const shouldUseTabletMode = isTablet || isTouchDevice;
+
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedModel, setSelectedModel] = useState<CharacterModel | null>(null);
   const [loading, setLoading] = useState(false);
@@ -204,22 +209,39 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
         />
       </Box>
 
-      <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 2, minHeight: 36 }}>
-        <Tab label="Modeller" sx={{ minHeight: 36, py: 0 }} />
-        <Tab label="Poser" sx={{ minHeight: 36, py: 0 }} />
-        <Tab label="Tilpass" sx={{ minHeight: 36, py: 0 }} />
+      <Tabs 
+        value={activeTab} 
+        onChange={(_, v) => setActiveTab(v)} 
+        variant="scrollable"
+        scrollButtons="auto"
+        sx={{ 
+          mb: 2, 
+          minHeight: shouldUseTabletMode ? 48 : 36,
+          '& .MuiTabs-scrollButtons': {
+            minWidth: shouldUseTabletMode ? 44 : 32,
+          },
+        }}
+      >
+        <Tab label="Modeller" sx={{ minHeight: shouldUseTabletMode ? 48 : 36, py: shouldUseTabletMode ? 1 : 0, fontSize: shouldUseTabletMode ? 14 : 12 }} />
+        <Tab label="Poser" sx={{ minHeight: shouldUseTabletMode ? 48 : 36, py: shouldUseTabletMode ? 1 : 0, fontSize: shouldUseTabletMode ? 14 : 12 }} />
+        <Tab label="Tilpass" sx={{ minHeight: shouldUseTabletMode ? 48 : 36, py: shouldUseTabletMode ? 1 : 0, fontSize: shouldUseTabletMode ? 14 : 12 }} />
       </Tabs>
 
       {activeTab === 0 && (
         <>
-          <Box sx={{ mb: 2, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+          <Box sx={{ mb: 2, display: 'flex', gap: shouldUseTabletMode ? 1 : 0.5, flexWrap: 'wrap' }}>
             {categories.map((cat) => (
               <Button
                 key={cat}
                 variant={selectedCategory === cat ? 'contained' : 'outlined'}
-                size="small"
+                size={shouldUseTabletMode ? 'medium' : 'small'}
                 onClick={() => setSelectedCategory(cat)}
-                sx={{ fontSize: 11, py: 0.5, px: 1 }}
+                sx={{ 
+                  fontSize: shouldUseTabletMode ? 13 : 11, 
+                  py: shouldUseTabletMode ? 1 : 0.5, 
+                  px: shouldUseTabletMode ? 2 : 1,
+                  minHeight: 44,
+                }}
               >
                 {cat === 'all' ? 'Alle' : cat.charAt(0).toUpperCase() + cat.slice(1)}
               </Button>
@@ -228,8 +250,14 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
 
           <Divider sx={{ my: 1.5, borderColor: '#333' }} />
 
-          <Box sx={{ maxHeight: 300, overflowY: 'auto', mb: 2 }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
+          <Box sx={{ maxHeight: shouldUseTabletMode ? 400 : 300, overflowY: 'auto', mb: 2 }}>
+            <Box sx={{ 
+              display: 'grid', 
+              gridTemplateColumns: shouldUseTabletMode 
+                ? 'repeat(auto-fill, minmax(150px, 1fr))' 
+                : 'repeat(3, 1fr)', 
+              gap: shouldUseTabletMode ? 2 : 1,
+            }}>
               {filteredModels.map((model) => (
                 <Card
                   key={model.id}
@@ -239,22 +267,40 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
                     backgroundColor: '#1a1a1a',
                     '&:hover': { borderColor: '#3b82f6' },
                   }}
-                  onClick={() => loadCharacter(model)}
                 >
                   <CardMedia
                     component="img"
-                    height="100"
+                    height={shouldUseTabletMode ? 120 : 100}
                     image={model.thumbnail}
                     alt={model.name}
                     sx={{ backgroundColor: '#2a2a2a', objectFit: 'contain', p: 1 }}
+                    onClick={() => !shouldUseTabletMode && loadCharacter(model)}
                   />
-                  <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
-                    <Typography variant="caption" noWrap sx={{ color: '#fff' }}>
+                  <CardContent sx={{ p: shouldUseTabletMode ? 1.5 : 1, '&:last-child': { pb: shouldUseTabletMode ? 1.5 : 1 } }}>
+                    <Typography variant="caption" noWrap sx={{ color: '#fff', fontSize: shouldUseTabletMode ? 13 : 11 }}>
                       {model.name}
                     </Typography>
-                    <Typography variant="caption" display="block" sx={{ color: '#888' }}>
+                    <Typography variant="caption" display="block" sx={{ color: '#888', fontSize: shouldUseTabletMode ? 12 : 10 }}>
                       {model.poses} poser
                     </Typography>
+                    <Button
+                      size="small"
+                      startIcon={<Add sx={{ fontSize: shouldUseTabletMode ? 18 : 14 }} />}
+                      onClick={() => loadCharacter(model)}
+                      aria-label={`Legg til ${model.name}`}
+                      sx={{ 
+                        mt: 0.5, 
+                        width: '100%', 
+                        fontSize: shouldUseTabletMode ? 12 : 10,
+                        py: shouldUseTabletMode ? 1 : 0.5,
+                        minHeight: 44,
+                        bgcolor: '#3b82f622',
+                        color: '#3b82f6',
+                        '&:hover': { bgcolor: '#3b82f644' },
+                      }}
+                    >
+                      Legg til
+                    </Button>
                   </CardContent>
                 </Card>
               ))}
@@ -268,7 +314,8 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
               startIcon={<Delete />}
               onClick={removeCharacter}
               fullWidth
-              size="small"
+              size={shouldUseTabletMode ? 'medium' : 'small'}
+              sx={{ minHeight: 44 }}
             >
               Fjern Karakter
             </Button>
@@ -277,8 +324,14 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
       )}
 
       {activeTab === 1 && (
-        <Box sx={{ maxHeight: 350, overflowY: 'auto' }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1 }}>
+        <Box sx={{ maxHeight: shouldUseTabletMode ? 400 : 350, overflowY: 'auto' }}>
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: shouldUseTabletMode 
+              ? 'repeat(auto-fill, minmax(120px, 1fr))' 
+              : 'repeat(4, 1fr)', 
+            gap: shouldUseTabletMode ? 2 : 1,
+          }}>
             {POSE_LIBRARY.map((pose) => (
               <Card
                 key={pose.id}
@@ -288,19 +341,35 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
                   backgroundColor: '#1a1a1a',
                   '&:hover': { borderColor: '#22c55e' },
                 }}
-                onClick={() => applyPose(pose)}
               >
                 <CardMedia
                   component="img"
-                  height="80"
+                  height={shouldUseTabletMode ? 100 : 80}
                   image={pose.thumbnail}
                   alt={pose.name}
                   sx={{ backgroundColor: '#2a2a2a', objectFit: 'contain', p: 1 }}
                 />
-                <CardContent sx={{ p: 0.5, '&:last-child': { pb: 0.5 } }}>
-                  <Typography variant="caption" noWrap sx={{ color: '#fff', fontSize: 10 }}>
+                <CardContent sx={{ p: shouldUseTabletMode ? 1 : 0.5, '&:last-child': { pb: shouldUseTabletMode ? 1 : 0.5 } }}>
+                  <Typography variant="caption" noWrap sx={{ color: '#fff', fontSize: shouldUseTabletMode ? 12 : 10 }}>
                     {pose.name}
                   </Typography>
+                  <Button
+                    size="small"
+                    onClick={() => applyPose(pose)}
+                    aria-label={`Bruk pose ${pose.name}`}
+                    sx={{ 
+                      mt: 0.5, 
+                      width: '100%', 
+                      fontSize: shouldUseTabletMode ? 11 : 9,
+                      py: shouldUseTabletMode ? 0.75 : 0.25,
+                      minHeight: 36,
+                      bgcolor: '#22c55e22',
+                      color: '#22c55e',
+                      '&:hover': { bgcolor: '#22c55e44' },
+                    }}
+                  >
+                    Bruk
+                  </Button>
                 </CardContent>
               </Card>
             ))}
@@ -310,28 +379,34 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
 
       {activeTab === 2 && (
         <Box>
-          <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+          <Typography variant="caption" color="text.secondary" display="block" gutterBottom sx={{ fontSize: shouldUseTabletMode ? 13 : 11 }}>
             Hudtone
           </Typography>
-          <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+          <Box sx={{ display: 'flex', gap: shouldUseTabletMode ? 1.5 : 1, mb: 2 }}>
             {['#FFDAB9', '#F0C19F', '#D4A574', '#8D5524', '#4A2C2A'].map((color) => (
               <Box
                 key={color}
                 onClick={() => setSkinTone(color)}
+                role="button"
+                tabIndex={0}
+                aria-label={`Velg hudtone ${color}`}
+                aria-pressed={skinTone === color}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSkinTone(color); }}
                 sx={{
-                  width: 28,
-                  height: 28,
+                  width: shouldUseTabletMode ? 44 : 28,
+                  height: shouldUseTabletMode ? 44 : 28,
                   borderRadius: '50%',
                   backgroundColor: color,
                   cursor: 'pointer',
                   border: skinTone === color ? '3px solid #3b82f6' : '2px solid #333',
                   '&:hover': { transform: 'scale(1.1)' },
+                  '&:focus-visible': { outline: '2px solid #3b82f6', outlineOffset: 2 },
                 }}
               />
             ))}
           </Box>
 
-          <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+          <Typography variant="caption" color="text.secondary" display="block" gutterBottom sx={{ fontSize: shouldUseTabletMode ? 13 : 11 }}>
             Hoyde: {(height * 1.7).toFixed(2)}m
           </Typography>
           <Slider
@@ -340,7 +415,13 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
             min={0.8}
             max={1.2}
             step={0.01}
-            size="small"
+            size={shouldUseTabletMode ? 'medium' : 'small'}
+            sx={{ 
+              '& .MuiSlider-thumb': { 
+                width: shouldUseTabletMode ? 24 : 16, 
+                height: shouldUseTabletMode ? 24 : 16,
+              },
+            }}
           />
 
           <Button
@@ -348,7 +429,7 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
             startIcon={<Refresh />}
             onClick={() => selectedModel && loadCharacter(selectedModel)}
             fullWidth
-            sx={{ mt: 2 }}
+            sx={{ mt: 2, minHeight: 44 }}
             disabled={!selectedModel}
           >
             Oppdater Karakter

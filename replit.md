@@ -135,6 +135,16 @@ Run `npm run dev` to start the development server on port 5000.
 - Interactive light placement with gizmos
 
 ## Recent Changes
+- 2025-12-22: Touch-friendly Studio Library improvements for PC and iPad
+  - Added "Legg til" buttons on all asset cards as alternative to double-click
+  - Increased touch targets to 44px minimum for all interactive elements
+  - Responsive breakpoints using useMediaQuery for tablet mode (768-1024px or pointer: coarse)
+  - Scrollable tabs with proper overflow handling and scrollbar styling
+  - Bottom panel resize handle with touch and mouse drag support
+  - Fullscreen button for maximizing Studio Library panel
+  - Close button with proper state management for reopening
+  - Larger cards, fonts, and spacing on tablet/touch devices
+  - ARIA labels and accessibility improvements (aria-expanded, aria-pressed)
 - 2025-12-22: Moved light modifiers to LightsBrowser as separate category
   - Added 25 professional modifiers: softbox, octabox, stripbox, umbrella, beauty dish, reflector, grid, snoot, barn doors, diffuser
   - Brands: Profoto, Godox, Aputure, Westcott, Photoflex, Broncolor, Mola

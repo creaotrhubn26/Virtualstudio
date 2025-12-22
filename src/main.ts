@@ -2340,12 +2340,14 @@ window.addEventListener('DOMContentLoaded', () => {
         if (isOpen) {
           actorBottomPanel.classList.remove('open');
           actorPanelTrigger.classList.remove('active');
+          actorPanelTrigger.setAttribute('aria-expanded', 'false');
           const arrow = actorPanelTrigger.querySelector('.category-arrow');
           if (arrow) arrow.textContent = '▶';
           if (actorTab) actorTab.classList.remove('panel-open');
         } else {
           actorBottomPanel.classList.add('open');
           actorPanelTrigger.classList.add('active');
+          actorPanelTrigger.setAttribute('aria-expanded', 'true');
           const arrow = actorPanelTrigger.querySelector('.category-arrow');
           if (arrow) arrow.textContent = '▼';
           if (actorTab) actorTab.classList.add('panel-open');
@@ -2363,6 +2365,106 @@ window.addEventListener('DOMContentLoaded', () => {
           togglePanel();
         }
       });
+      
+      const panelFullscreenBtn = document.getElementById('panelFullscreenBtn');
+      const panelCloseBtn = document.getElementById('panelCloseBtn');
+      const panelResizeHandle = document.getElementById('panelResizeHandle');
+      let savedPanelHeight = '200px';
+      let isFullscreenMode = false;
+      
+      const closePanel = () => {
+        actorBottomPanel.classList.remove('open');
+        actorBottomPanel.classList.remove('fullscreen');
+        isFullscreenMode = false;
+        actorPanelTrigger.classList.remove('active');
+        actorPanelTrigger.setAttribute('aria-expanded', 'false');
+        const arrow = actorPanelTrigger.querySelector('.library-arrow');
+        if (arrow) arrow.textContent = '+';
+        if (actorTab) actorTab.classList.remove('panel-open');
+        actorBottomPanel.style.height = '';
+        if (panelFullscreenBtn) {
+          const icon = panelFullscreenBtn.querySelector('span');
+          if (icon) icon.textContent = '⛶';
+          panelFullscreenBtn.setAttribute('aria-pressed', 'false');
+        }
+      };
+      
+      if (panelFullscreenBtn) {
+        panelFullscreenBtn.addEventListener('click', () => {
+          isFullscreenMode = !isFullscreenMode;
+          if (isFullscreenMode) {
+            savedPanelHeight = actorBottomPanel.style.height || '200px';
+            actorBottomPanel.classList.add('fullscreen');
+            actorBottomPanel.style.height = '';
+          } else {
+            actorBottomPanel.classList.remove('fullscreen');
+            actorBottomPanel.style.height = savedPanelHeight;
+          }
+          const icon = panelFullscreenBtn.querySelector('span');
+          if (icon) {
+            icon.textContent = isFullscreenMode ? '⛶' : '⛶';
+          }
+          panelFullscreenBtn.title = isFullscreenMode ? 'Avslutt fullskjerm' : 'Fullskjerm';
+          panelFullscreenBtn.setAttribute('aria-pressed', String(isFullscreenMode));
+        });
+      }
+      
+      if (panelCloseBtn) {
+        panelCloseBtn.addEventListener('click', closePanel);
+      }
+      
+      if (panelResizeHandle) {
+        let isResizing = false;
+        let startY = 0;
+        let startHeight = 0;
+        
+        const startResize = (clientY: number) => {
+          if (isFullscreenMode) return;
+          isResizing = true;
+          startY = clientY;
+          startHeight = actorBottomPanel.offsetHeight;
+          document.body.style.cursor = 'ns-resize';
+          document.body.style.userSelect = 'none';
+        };
+        
+        const doResize = (clientY: number) => {
+          if (!isResizing || isFullscreenMode) return;
+          const diff = startY - clientY;
+          const newHeight = Math.min(Math.max(startHeight + diff, 150), window.innerHeight * 0.8);
+          actorBottomPanel.style.height = `${newHeight}px`;
+          savedPanelHeight = `${newHeight}px`;
+        };
+        
+        const stopResize = () => {
+          isResizing = false;
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+        };
+        
+        panelResizeHandle.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          startResize(e.clientY);
+        });
+        
+        panelResizeHandle.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 1) {
+            startResize(e.touches[0].clientY);
+          }
+        }, { passive: true });
+        
+        document.addEventListener('mousemove', (e) => {
+          doResize(e.clientY);
+        });
+        
+        document.addEventListener('touchmove', (e) => {
+          if (isResizing && e.touches.length === 1) {
+            doResize(e.touches[0].clientY);
+          }
+        }, { passive: true });
+        
+        document.addEventListener('mouseup', stopResize);
+        document.addEventListener('touchend', stopResize);
+      }
       
       const addToHierarchy = (id: string, name: string, type: 'model' | 'light' | 'equipment') => {
         let groupId = '';

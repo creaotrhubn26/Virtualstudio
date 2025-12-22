@@ -643,16 +643,22 @@
     </div>
 
     <div class="actor-bottom-panel" id="actorBottomPanel">
-      <div class="actor-panel-tabs">
-        <button class="actor-tab" data-tab="timeline">TIMELINE</button>
-        <button class="actor-tab active" data-tab="models">MODELS</button>
-        <button class="actor-tab" data-tab="lights">LIGHTS</button>
-        <button class="actor-tab" data-tab="camera">CAMERA GEAR</button>
-        <button class="actor-tab" data-tab="equipment">EQUIPMENT</button>
-        <button class="actor-tab" data-tab="assets">ASSETS</button>
-        <button class="actor-tab" data-tab="hdri">HDRI</button>
+      <div class="panel-resize-handle" id="panelResizeHandle" aria-label="Dra for a endre panelstorrelse"></div>
+      <div class="actor-panel-tabs" role="tablist" aria-label="Studio Library faner">
+        <button class="actor-tab" data-tab="timeline" role="tab" aria-selected="false">TIMELINE</button>
+        <button class="actor-tab active" data-tab="models" role="tab" aria-selected="true">MODELS</button>
+        <button class="actor-tab" data-tab="lights" role="tab" aria-selected="false">LIGHTS</button>
+        <button class="actor-tab" data-tab="camera" role="tab" aria-selected="false">CAMERA GEAR</button>
+        <button class="actor-tab" data-tab="equipment" role="tab" aria-selected="false">EQUIPMENT</button>
+        <button class="actor-tab" data-tab="assets" role="tab" aria-selected="false">ASSETS</button>
+        <button class="actor-tab" data-tab="hdri" role="tab" aria-selected="false">HDRI</button>
         <div class="actor-panel-actions">
-          <span class="panel-toggle-icon">▽ ✕</span>
+          <button class="panel-fullscreen-btn" id="panelFullscreenBtn" title="Fullskjerm" aria-label="Veksle fullskjermmodus">
+            <span aria-hidden="true">⛶</span>
+          </button>
+          <button class="panel-close-btn" id="panelCloseBtn" title="Lukk panel" aria-label="Lukk Studio Library panel">
+            <span aria-hidden="true">✕</span>
+          </button>
         </div>
       </div>
       <div class="actor-panel-body">

@@ -15,11 +15,14 @@ import {
   DialogActions,
   Button,
   Slider,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import PlaceIcon from '@mui/icons-material/Place';
+import AddIcon from '@mui/icons-material/Add';
 import { assetLibraryService, type AssetLibraryItem } from '../core/services/assetLibrary';
 import { logger } from '../core/services/logger';
 
@@ -38,10 +41,11 @@ interface AssetCardProps {
   isFavorite: boolean;
   onToggleFavorite: (id: string) => void;
   onPlaceManually?: (asset: AssetLibraryItem) => void;
+  isTablet?: boolean;
 }
 
-function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually }: AssetCardProps) {
-  const handleDoubleClick = () => {
+function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually, isTablet = false }: AssetCardProps) {
+  const handleAddToScene = () => {
     const event = new CustomEvent('ch-add-asset', {
       detail: {
         asset: {
@@ -58,6 +62,12 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually }: Ass
     });
     window.dispatchEvent(event);
     assetLibraryService.trackUsage(asset.id);
+  };
+
+  const handleDoubleClick = () => {
+    if (!isTablet) {
+      handleAddToScene();
+    }
   };
 
   const handlePlaceManually = (e: React.MouseEvent) => {
@@ -85,7 +95,7 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually }: Ass
   return (
     <Box
       onDoubleClick={handleDoubleClick}
-      draggable
+      draggable={!isTablet}
       onDragStart={handleDragStart}
       sx={{
         position: 'relative',
@@ -105,12 +115,12 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually }: Ass
       <Box
         sx={{
           width: '100%',
-          height: 80,
+          height: isTablet ? 100 : 80,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: '#2a2a2a',
-          fontSize: 32,
+          fontSize: isTablet ? 40 : 32,
         }}
       >
         {CATEGORIES[asset.category]?.icon || '📦'}
@@ -126,8 +136,8 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually }: Ass
             left: 4,
             bgcolor: '#3B82F6',
             color: '#fff',
-            fontSize: 9,
-            height: 18,
+            fontSize: isTablet ? 11 : 9,
+            height: isTablet ? 24 : 18,
           }}
         />
       )}
@@ -138,23 +148,26 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually }: Ass
           e.stopPropagation();
           onToggleFavorite(asset.id);
         }}
+        aria-label={isFavorite ? 'Fjern fra favoritter' : 'Legg til favoritter'}
         sx={{
           position: 'absolute',
           top: 4,
           right: 4,
           bgcolor: 'rgba(0,0,0,0.5)',
           '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
-          padding: 0.5,
+          minWidth: 44,
+          minHeight: 44,
+          padding: isTablet ? 1 : 0.5,
         }}
       >
         {isFavorite ? (
-          <StarIcon sx={{ fontSize: 16, color: '#FCD34D' }} />
+          <StarIcon sx={{ fontSize: isTablet ? 24 : 16, color: '#FCD34D' }} />
         ) : (
-          <StarBorderIcon sx={{ fontSize: 16, color: '#888' }} />
+          <StarBorderIcon sx={{ fontSize: isTablet ? 24 : 16, color: '#888' }} />
         )}
       </IconButton>
 
-      <Box sx={{ p: 1 }}>
+      <Box sx={{ p: isTablet ? 1.5 : 1 }}>
         <Typography
           variant="caption"
           sx={{
@@ -163,22 +176,43 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually }: Ass
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            fontSize: 11,
+            fontSize: isTablet ? 13 : 11,
             color: '#fff',
           }}
         >
           {asset.name}
         </Typography>
 
+        <Button
+          size="small"
+          startIcon={<AddIcon sx={{ fontSize: isTablet ? 18 : 14 }} />}
+          onClick={(e) => { e.stopPropagation(); handleAddToScene(); }}
+          aria-label={`Legg til ${asset.name}`}
+          sx={{
+            mt: 0.5,
+            fontSize: isTablet ? 12 : 10,
+            py: isTablet ? 1 : 0.5,
+            minHeight: 44,
+            width: '100%',
+            bgcolor: '#3b82f622',
+            color: '#3b82f6',
+            '&:hover': { bgcolor: '#3b82f644' },
+          }}
+        >
+          Legg til
+        </Button>
+
         {onPlaceManually && (
           <Button
             size="small"
-            startIcon={<PlaceIcon sx={{ fontSize: 12 }} />}
+            startIcon={<PlaceIcon sx={{ fontSize: isTablet ? 16 : 12 }} />}
             onClick={handlePlaceManually}
+            aria-label={`Plasser ${asset.name} manuelt`}
             sx={{
               mt: 0.5,
-              fontSize: 9,
-              py: 0.25,
+              fontSize: isTablet ? 11 : 9,
+              py: isTablet ? 0.75 : 0.25,
+              minHeight: 36,
               width: '100%',
               bgcolor: '#F59E0B',
               color: '#fff',
@@ -270,6 +304,11 @@ function ManualPlacementDialog({ open, asset, onClose, onPlace }: ManualPlacemen
 }
 
 export default function AssetLibraryPanel() {
+  const theme = useTheme();
+  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1024px)');
+  const isTouchDevice = useMediaQuery('(pointer: coarse)');
+  const shouldUseTabletMode = isTablet || isTouchDevice;
+  
   const [category, setCategory] = useState<string>('light');
   const [search, setSearch] = useState('');
   const [assets, setAssets] = useState<AssetLibraryItem[]>([]);
@@ -336,8 +375,8 @@ export default function AssetLibraryPanel() {
   };
 
   return (
-    <Box sx={{ p: 2 }}>
-      <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600, color: '#fff' }}>
+    <Box sx={{ p: shouldUseTabletMode ? 2.5 : 2 }}>
+      <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600, color: '#fff', fontSize: shouldUseTabletMode ? 16 : 14 }}>
         Ressursbibliotek
       </Typography>
 
@@ -346,7 +385,13 @@ export default function AssetLibraryPanel() {
         onChange={(_, v) => setCategory(v)}
         variant="scrollable"
         scrollButtons="auto"
-        sx={{ mb: 2, minHeight: 36 }}
+        sx={{ 
+          mb: 2, 
+          minHeight: shouldUseTabletMode ? 48 : 36,
+          '& .MuiTabs-scrollButtons': {
+            minWidth: shouldUseTabletMode ? 44 : 32,
+          },
+        }}
       >
         {Object.entries(CATEGORIES).map(([key, { label, icon }]) => (
           <Tab
@@ -354,17 +399,21 @@ export default function AssetLibraryPanel() {
             value={key}
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <span>{icon}</span>
-                <span style={{ fontSize: 11 }}>{label}</span>
+                <span style={{ fontSize: shouldUseTabletMode ? 18 : 14 }}>{icon}</span>
+                <span style={{ fontSize: shouldUseTabletMode ? 13 : 11 }}>{label}</span>
               </Box>
             }
-            sx={{ minHeight: 36, py: 0.5 }}
+            sx={{ 
+              minHeight: shouldUseTabletMode ? 48 : 36, 
+              py: shouldUseTabletMode ? 1 : 0.5,
+              minWidth: shouldUseTabletMode ? 80 : 'auto',
+            }}
           />
         ))}
       </Tabs>
 
       <TextField
-        size="small"
+        size={shouldUseTabletMode ? 'medium' : 'small'}
         placeholder="Sok etter ressurser..."
         fullWidth
         value={search}
@@ -372,16 +421,17 @@ export default function AssetLibraryPanel() {
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <SearchIcon fontSize="small" />
+              <SearchIcon fontSize={shouldUseTabletMode ? 'medium' : 'small'} />
             </InputAdornment>
           ),
+          sx: { minHeight: shouldUseTabletMode ? 48 : 40 },
         }}
         sx={{ mb: 2 }}
       />
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <CircularProgress size={32} />
+          <CircularProgress size={shouldUseTabletMode ? 40 : 32} />
         </Box>
       ) : assets.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
@@ -389,7 +439,13 @@ export default function AssetLibraryPanel() {
           <Typography variant="caption">Prov et annet sok eller kategori</Typography>
         </Box>
       ) : (
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1 }}>
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: shouldUseTabletMode 
+            ? 'repeat(auto-fill, minmax(180px, 1fr))' 
+            : 'repeat(2, 1fr)', 
+          gap: shouldUseTabletMode ? 2 : 1,
+        }}>
           {assets.map((asset) => (
             <AssetCard
               key={asset.id}
@@ -397,6 +453,7 @@ export default function AssetLibraryPanel() {
               isFavorite={favorites.includes(asset.id)}
               onToggleFavorite={handleToggleFavorite}
               onPlaceManually={handlePlaceManually}
+              isTablet={shouldUseTabletMode}
             />
           ))}
         </Box>

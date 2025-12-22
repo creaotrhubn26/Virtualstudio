@@ -16,6 +16,7 @@ import {
   Tooltip,
   Chip,
   InputAdornment,
+  useMediaQuery,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -115,6 +116,10 @@ type BrowserTab = 'lights' | 'modifiers';
 
 export function LightsBrowser() {
   const { addNode } = useAppStore();
+  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1024px)');
+  const isTouchDevice = useMediaQuery('(pointer: coarse)');
+  const shouldUseTabletMode = isTablet || isTouchDevice;
+  
   const [activeTab, setActiveTab] = useState<BrowserTab>('lights');
   const [searchQuery, setSearchQuery] = useState('');
   const [brandFilter, setBrandFilter] = useState('Alle');
@@ -259,11 +264,25 @@ export function LightsBrowser() {
   };
 
   return (
-    <Box sx={{ p: 1, height: '100%', overflow: 'auto', bgcolor: '#1a1a1a' }}>
+    <Box sx={{ p: shouldUseTabletMode ? 2 : 1, height: '100%', overflow: 'auto', bgcolor: '#1a1a1a' }}>
       <Tabs 
         value={activeTab} 
         onChange={(_, v) => setActiveTab(v)}
-        sx={{ mb: 1, minHeight: 32, '& .MuiTab-root': { minHeight: 32, py: 0.5, fontSize: 12 } }}
+        variant="scrollable"
+        scrollButtons="auto"
+        sx={{ 
+          mb: 1, 
+          minHeight: shouldUseTabletMode ? 48 : 32, 
+          '& .MuiTab-root': { 
+            minHeight: shouldUseTabletMode ? 48 : 32, 
+            py: shouldUseTabletMode ? 1 : 0.5, 
+            fontSize: shouldUseTabletMode ? 14 : 12,
+            minWidth: shouldUseTabletMode ? 100 : 'auto',
+          },
+          '& .MuiTabs-scrollButtons': {
+            minWidth: shouldUseTabletMode ? 44 : 32,
+          },
+        }}
       >
         <Tab value="lights" label="Lyskilder" />
         <Tab value="modifiers" label="Lysformere" />
@@ -273,7 +292,7 @@ export function LightsBrowser() {
         <>
           <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
             <TextField
-              size="small"
+              size={shouldUseTabletMode ? 'medium' : 'small'}
               placeholder="Søk lys..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -281,43 +300,48 @@ export function LightsBrowser() {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon sx={{ fontSize: 18, color: '#888' }} />
+                    <SearchIcon sx={{ fontSize: shouldUseTabletMode ? 22 : 18, color: '#888' }} />
                   </InputAdornment>
                 ),
+                sx: { minHeight: shouldUseTabletMode ? 48 : 40 },
               }}
             />
-            <FormControl size="small" sx={{ minWidth: 100 }}>
+            <FormControl size={shouldUseTabletMode ? 'medium' : 'small'} sx={{ minWidth: shouldUseTabletMode ? 120 : 100 }}>
               <Select
                 value={brandFilter}
                 onChange={(e) => setBrandFilter(e.target.value)}
                 displayEmpty
+                sx={{ minHeight: shouldUseTabletMode ? 48 : 40 }}
               >
                 {BRANDS.map(brand => (
-                  <MenuItem key={brand} value={brand}>{brand}</MenuItem>
+                  <MenuItem key={brand} value={brand} sx={{ minHeight: shouldUseTabletMode ? 44 : 36 }}>{brand}</MenuItem>
                 ))}
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: 80 }}>
+            <FormControl size={shouldUseTabletMode ? 'medium' : 'small'} sx={{ minWidth: shouldUseTabletMode ? 100 : 80 }}>
               <Select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
                 displayEmpty
+                sx={{ minHeight: shouldUseTabletMode ? 48 : 40 }}
               >
                 {TYPES.map(type => (
-                  <MenuItem key={type} value={type}>{type === 'Alle' ? 'Alle' : type.toUpperCase()}</MenuItem>
+                  <MenuItem key={type} value={type} sx={{ minHeight: shouldUseTabletMode ? 44 : 36 }}>{type === 'Alle' ? 'Alle' : type.toUpperCase()}</MenuItem>
                 ))}
               </Select>
             </FormControl>
           </Box>
 
-          <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block' }}>
+          <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block', fontSize: shouldUseTabletMode ? 13 : 11 }}>
             {filteredLights.length} lys funnet
           </Typography>
 
       <Box sx={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
-        gap: 1 
+        gridTemplateColumns: shouldUseTabletMode 
+          ? 'repeat(auto-fill, minmax(180px, 1fr))' 
+          : 'repeat(auto-fill, minmax(140px, 1fr))', 
+        gap: shouldUseTabletMode ? 2 : 1,
       }}>
         {filteredLights.map((light) => (
           <Card 
@@ -336,19 +360,22 @@ export function LightsBrowser() {
             <IconButton
               size="small"
               onClick={(e) => { e.stopPropagation(); toggleFavorite(light.id); }}
+              aria-label={favorites.has(light.id) ? 'Fjern fra favoritter' : 'Legg til favoritter'}
               sx={{ 
                 position: 'absolute', 
                 top: 2, 
                 right: 2, 
                 color: favorites.has(light.id) ? '#ffd700' : '#666',
-                p: 0.5,
+                minWidth: 44,
+                minHeight: 44,
+                p: shouldUseTabletMode ? 1 : 0.5,
               }}
             >
-              {favorites.has(light.id) ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
+              {favorites.has(light.id) ? <StarIcon fontSize={shouldUseTabletMode ? 'medium' : 'small'} /> : <StarBorderIcon fontSize={shouldUseTabletMode ? 'medium' : 'small'} />}
             </IconButton>
             
             <Box sx={{ 
-              height: 60, 
+              height: shouldUseTabletMode ? 80 : 60, 
               background: 'linear-gradient(135deg, #3a3a3a 0%, #5a5a5a 100%)',
               display: 'flex',
               alignItems: 'center',
@@ -363,15 +390,15 @@ export function LightsBrowser() {
                   sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               ) : (
-                <Typography sx={{ fontSize: 24 }}>💡</Typography>
+                <Typography sx={{ fontSize: shouldUseTabletMode ? 32 : 24 }}>💡</Typography>
               )}
             </Box>
             
-            <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
-              <Typography variant="caption" sx={{ color: '#888', display: 'block' }}>
+            <CardContent sx={{ p: shouldUseTabletMode ? 1.5 : 1, '&:last-child': { pb: shouldUseTabletMode ? 1.5 : 1 } }}>
+              <Typography variant="caption" sx={{ color: '#888', display: 'block', fontSize: shouldUseTabletMode ? 12 : 10 }}>
                 {light.brand}
               </Typography>
-              <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500, fontSize: 11 }}>
+              <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500, fontSize: shouldUseTabletMode ? 13 : 11 }}>
                 {light.model}
               </Typography>
               <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
@@ -420,13 +447,15 @@ export function LightsBrowser() {
               </Box>
               <Button
                 size="small"
-                startIcon={<AddIcon />}
+                startIcon={<AddIcon sx={{ fontSize: shouldUseTabletMode ? 18 : 14 }} />}
                 onClick={() => handleAddToScene(light)}
+                aria-label={`Legg til ${light.model}`}
                 sx={{ 
                   mt: 0.5, 
                   width: '100%', 
-                  fontSize: 10,
-                  py: 0.25,
+                  fontSize: shouldUseTabletMode ? 12 : 10,
+                  py: shouldUseTabletMode ? 1 : 0.5,
+                  minHeight: 44,
                   bgcolor: '#00a8ff22',
                   color: '#00a8ff',
                   '&:hover': { bgcolor: '#00a8ff44' },
@@ -445,7 +474,7 @@ export function LightsBrowser() {
         <>
           <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
             <TextField
-              size="small"
+              size={shouldUseTabletMode ? 'medium' : 'small'}
               placeholder="Søk lysformere..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -453,43 +482,48 @@ export function LightsBrowser() {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon sx={{ fontSize: 18, color: '#888' }} />
+                    <SearchIcon sx={{ fontSize: shouldUseTabletMode ? 22 : 18, color: '#888' }} />
                   </InputAdornment>
                 ),
+                sx: { minHeight: shouldUseTabletMode ? 48 : 40 },
               }}
             />
-            <FormControl size="small" sx={{ minWidth: 100 }}>
+            <FormControl size={shouldUseTabletMode ? 'medium' : 'small'} sx={{ minWidth: shouldUseTabletMode ? 120 : 100 }}>
               <Select
                 value={modifierBrandFilter}
                 onChange={(e) => setModifierBrandFilter(e.target.value)}
                 displayEmpty
+                sx={{ minHeight: shouldUseTabletMode ? 48 : 40 }}
               >
                 {MODIFIER_BRANDS.map(brand => (
-                  <MenuItem key={brand} value={brand}>{brand}</MenuItem>
+                  <MenuItem key={brand} value={brand} sx={{ minHeight: shouldUseTabletMode ? 44 : 36 }}>{brand}</MenuItem>
                 ))}
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: 90 }}>
+            <FormControl size={shouldUseTabletMode ? 'medium' : 'small'} sx={{ minWidth: shouldUseTabletMode ? 110 : 90 }}>
               <Select
                 value={modifierTypeFilter}
                 onChange={(e) => setModifierTypeFilter(e.target.value)}
                 displayEmpty
+                sx={{ minHeight: shouldUseTabletMode ? 48 : 40 }}
               >
                 {MODIFIER_TYPES.map(type => (
-                  <MenuItem key={type} value={type}>{type === 'Alle' ? 'Alle' : getModifierTypeLabel(type)}</MenuItem>
+                  <MenuItem key={type} value={type} sx={{ minHeight: shouldUseTabletMode ? 44 : 36 }}>{type === 'Alle' ? 'Alle' : getModifierTypeLabel(type)}</MenuItem>
                 ))}
               </Select>
             </FormControl>
           </Box>
 
-          <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block' }}>
+          <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block', fontSize: shouldUseTabletMode ? 13 : 11 }}>
             {filteredModifiers.length} lysformere funnet
           </Typography>
 
           <Box sx={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
-            gap: 1 
+            gridTemplateColumns: shouldUseTabletMode 
+              ? 'repeat(auto-fill, minmax(180px, 1fr))' 
+              : 'repeat(auto-fill, minmax(140px, 1fr))', 
+            gap: shouldUseTabletMode ? 2 : 1,
           }}>
             {filteredModifiers.map((modifier) => (
               <Card 
@@ -508,19 +542,22 @@ export function LightsBrowser() {
                 <IconButton
                   size="small"
                   onClick={(e) => { e.stopPropagation(); toggleFavorite(modifier.id); }}
+                  aria-label={favorites.has(modifier.id) ? 'Fjern fra favoritter' : 'Legg til favoritter'}
                   sx={{ 
                     position: 'absolute', 
                     top: 2, 
                     right: 2, 
                     color: favorites.has(modifier.id) ? '#ffd700' : '#666',
-                    p: 0.5,
+                    minWidth: 44,
+                    minHeight: 44,
+                    p: shouldUseTabletMode ? 1 : 0.5,
                   }}
                 >
-                  {favorites.has(modifier.id) ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
+                  {favorites.has(modifier.id) ? <StarIcon fontSize={shouldUseTabletMode ? 'medium' : 'small'} /> : <StarBorderIcon fontSize={shouldUseTabletMode ? 'medium' : 'small'} />}
                 </IconButton>
                 
                 <Box sx={{ 
-                  height: 60, 
+                  height: shouldUseTabletMode ? 80 : 60, 
                   background: 'linear-gradient(135deg, #2a3a4a 0%, #3a4a5a 100%)',
                   display: 'flex',
                   alignItems: 'center',
@@ -535,28 +572,28 @@ export function LightsBrowser() {
                       sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   ) : (
-                    <Typography sx={{ fontSize: 24 }}>🔲</Typography>
+                    <Typography sx={{ fontSize: shouldUseTabletMode ? 32 : 24 }}>🔲</Typography>
                   )}
                 </Box>
                 
-                <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
-                  <Typography variant="caption" sx={{ color: '#888', display: 'block' }}>
+                <CardContent sx={{ p: shouldUseTabletMode ? 1.5 : 1, '&:last-child': { pb: shouldUseTabletMode ? 1.5 : 1 } }}>
+                  <Typography variant="caption" sx={{ color: '#888', display: 'block', fontSize: shouldUseTabletMode ? 12 : 10 }}>
                     {modifier.brand}
                   </Typography>
-                  <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500, fontSize: 11 }}>
+                  <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500, fontSize: shouldUseTabletMode ? 13 : 11 }}>
                     {modifier.model}
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
                     <Chip 
                       label={getModifierTypeLabel(modifier.type)} 
                       size="small" 
-                      sx={{ height: 16, fontSize: 9, bgcolor: '#333' }} 
+                      sx={{ height: shouldUseTabletMode ? 20 : 16, fontSize: shouldUseTabletMode ? 11 : 9, bgcolor: '#333' }} 
                     />
                     {modifier.size && (
                       <Chip 
                         label={modifier.size} 
                         size="small" 
-                        sx={{ height: 16, fontSize: 9, bgcolor: '#333' }} 
+                        sx={{ height: shouldUseTabletMode ? 20 : 16, fontSize: shouldUseTabletMode ? 11 : 9, bgcolor: '#333' }} 
                       />
                     )}
                   </Box>
@@ -565,26 +602,28 @@ export function LightsBrowser() {
                       <Chip 
                         label={modifier.mount} 
                         size="small" 
-                        sx={{ height: 16, fontSize: 8, bgcolor: '#2a3a4a' }} 
+                        sx={{ height: shouldUseTabletMode ? 20 : 16, fontSize: shouldUseTabletMode ? 10 : 8, bgcolor: '#2a3a4a' }} 
                       />
                     )}
                     {modifier.stopLoss !== undefined && (
                       <Chip 
                         label={modifier.stopLoss >= 0 ? `-${modifier.stopLoss} stop` : `+${Math.abs(modifier.stopLoss)} stop`} 
                         size="small" 
-                        sx={{ height: 16, fontSize: 8, bgcolor: modifier.stopLoss >= 0 ? '#4a3a2a' : '#2a4a3a' }} 
+                        sx={{ height: shouldUseTabletMode ? 20 : 16, fontSize: shouldUseTabletMode ? 10 : 8, bgcolor: modifier.stopLoss >= 0 ? '#4a3a2a' : '#2a4a3a' }} 
                       />
                     )}
                   </Box>
                   <Button
                     size="small"
-                    startIcon={<AddIcon />}
+                    startIcon={<AddIcon sx={{ fontSize: shouldUseTabletMode ? 18 : 14 }} />}
                     onClick={() => handleAddModifier(modifier)}
+                    aria-label={`Legg til ${modifier.model}`}
                     sx={{ 
                       mt: 0.5, 
                       width: '100%', 
-                      fontSize: 10,
-                      py: 0.25,
+                      fontSize: shouldUseTabletMode ? 12 : 10,
+                      py: shouldUseTabletMode ? 1 : 0.5,
+                      minHeight: 44,
                       bgcolor: '#00a8ff22',
                       color: '#00a8ff',
                       '&:hover': { bgcolor: '#00a8ff44' },
