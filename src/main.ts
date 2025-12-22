@@ -190,112 +190,12 @@ class VirtualStudio {
   private scopeExpanded: boolean = false;
 
   private setupScopeControls(): void {
-    const menuBtn = document.getElementById('scopeMenuBtn');
-    const expandBtn = document.getElementById('scopeExpandBtn');
-    const menu = document.getElementById('scopeMenu');
-    const container = document.getElementById('scopeContainer');
-    const label = document.getElementById('scopeLabel');
-
-    menuBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      menu?.classList.toggle('visible');
-      menuBtn.setAttribute('aria-expanded', menu?.classList.contains('visible') ? 'true' : 'false');
-    });
-
-    expandBtn?.addEventListener('click', () => {
-      this.scopeExpanded = !this.scopeExpanded;
-      container?.classList.toggle('expanded', this.scopeExpanded);
-      expandBtn.setAttribute('aria-pressed', this.scopeExpanded ? 'true' : 'false');
-      
-      const canvas = this.histogramCanvas;
-      if (canvas) {
-        if (this.scopeExpanded) {
-          canvas.width = 300;
-          canvas.height = 150;
-        } else {
-          canvas.width = 140;
-          canvas.height = 70;
-        }
-      }
-    });
-
-    document.querySelectorAll('.scope-menu-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const mode = item.getAttribute('data-scope') as typeof this.currentScopeMode;
-        if (mode) {
-          this.currentScopeMode = mode;
-          
-          document.querySelectorAll('.scope-menu-item').forEach(i => i.classList.remove('active'));
-          item.classList.add('active');
-          
-          const modeLabels: Record<string, string> = {
-            'histogram': 'Histogram',
-            'waveform': 'Waveform',
-            'vectorscope': 'Vectorscope',
-            'skin': 'Hudtone',
-            'zebra': 'Zebra',
-            'falsecolor': 'False Color'
-          };
-          if (label) label.textContent = modeLabels[mode] || mode;
-          
-          menu?.classList.remove('visible');
-        }
-      });
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!container?.contains(e.target as Node)) {
-        menu?.classList.remove('visible');
-      }
-    });
-
     // Right panel scope controls
-    const scopeVisibleToggle = document.getElementById('scopeVisibleToggle') as HTMLInputElement;
     const scopeModeSelect = document.getElementById('scopeModeSelect') as HTMLSelectElement;
-    const scopeSizeBtn = document.getElementById('scopeSizeBtn');
-
-    scopeVisibleToggle?.addEventListener('change', () => {
-      if (container) {
-        container.style.display = scopeVisibleToggle.checked ? 'block' : 'none';
-      }
-    });
 
     scopeModeSelect?.addEventListener('change', () => {
       const mode = scopeModeSelect.value as typeof this.currentScopeMode;
       this.currentScopeMode = mode;
-      
-      // Sync with dropdown menu
-      document.querySelectorAll('.scope-menu-item').forEach(i => {
-        i.classList.toggle('active', i.getAttribute('data-scope') === mode);
-      });
-      
-      const modeLabels: Record<string, string> = {
-        'histogram': 'Histogram',
-        'waveform': 'Waveform',
-        'vectorscope': 'Vectorscope',
-        'skin': 'Hudtone',
-        'zebra': 'Zebra',
-        'falsecolor': 'False Color'
-      };
-      if (label) label.textContent = modeLabels[mode] || mode;
-    });
-
-    scopeSizeBtn?.addEventListener('click', () => {
-      this.scopeExpanded = !this.scopeExpanded;
-      container?.classList.toggle('expanded', this.scopeExpanded);
-      scopeSizeBtn.setAttribute('aria-pressed', this.scopeExpanded ? 'true' : 'false');
-      expandBtn?.setAttribute('aria-pressed', this.scopeExpanded ? 'true' : 'false');
-      
-      const canvas = this.histogramCanvas;
-      if (canvas) {
-        if (this.scopeExpanded) {
-          canvas.width = 300;
-          canvas.height = 150;
-        } else {
-          canvas.width = 140;
-          canvas.height = 70;
-        }
-      }
     });
   }
 
@@ -467,7 +367,8 @@ class VirtualStudio {
       this.topViewCtx = this.topViewCanvas.getContext('2d');
     }
 
-    this.histogramCanvas = document.getElementById('histogramCanvas') as HTMLCanvasElement;
+    // Use embedded scope canvas in right panel
+    this.histogramCanvas = document.getElementById('scopeCanvasEmbed') as HTMLCanvasElement;
     if (this.histogramCanvas) {
       this.histogramCtx = this.histogramCanvas.getContext('2d');
     }

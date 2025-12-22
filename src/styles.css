@@ -2049,7 +2049,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  gap: 12px;
 }
 
 .scope-panel-label {
@@ -2116,6 +2116,20 @@ html, body {
 .toggle-switch input:focus-visible + .toggle-slider {
   outline: 2px solid var(--accent-cyan);
   outline-offset: 2px;
+}
+
+.scope-embed-container {
+  margin-top: 10px;
+  background: rgba(0, 0, 0, 0.9);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+#scopeCanvasEmbed {
+  display: block;
+  width: 100%;
+  height: 140px;
 }
 
 .scope-mode-row {
