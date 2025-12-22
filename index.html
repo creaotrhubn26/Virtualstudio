@@ -250,37 +250,70 @@
         <div class="panel-section object-header" id="objectHeader" style="display: none;" aria-live="polite">
           <div class="object-title-row">
             <span class="object-name" id="objectName">Sarah</span>
-            <button class="pin-btn" id="pinBtn">📌</button>
+            <button class="pin-btn" id="pinBtn" aria-label="Fest panel" aria-pressed="false">
+              <span class="prop-icon pin-icon" aria-hidden="true"></span>
+            </button>
           </div>
           <div class="object-preview-row">
-            <div class="object-thumbnail" id="objectThumbnail"></div>
-            <div class="object-actions">
-              <button class="mode-btn" id="selectModeBtn">⊡</button>
-              <button class="mode-btn" id="moveModeBtn">✥</button>
-              <button class="mode-btn" id="rotateModeBtn">↻</button>
+            <div class="object-thumbnail" id="objectThumbnail" aria-hidden="true"></div>
+            <div class="object-actions" role="group" aria-label="Transformasjonsmoduser">
+              <button class="mode-btn" id="selectModeBtn" aria-label="Velg modus" aria-pressed="false">
+                <span class="prop-icon select-icon" aria-hidden="true"></span>
+              </button>
+              <button class="mode-btn" id="moveModeBtn" aria-label="Flytt modus" aria-pressed="false">
+                <span class="prop-icon move-icon" aria-hidden="true"></span>
+              </button>
+              <button class="mode-btn" id="rotateModeBtn" aria-label="Roter modus" aria-pressed="false">
+                <span class="prop-icon rotate-icon" aria-hidden="true"></span>
+              </button>
             </div>
           </div>
-          <button class="posing-mode-btn" id="posingModeBtn">POSING MODE</button>
-          <div class="object-category-tabs">
-            <button class="cat-tab" data-cat="face">😊</button>
-            <button class="cat-tab" data-cat="body">🧍</button>
-            <button class="cat-tab active" data-cat="clothes">👕</button>
-            <button class="cat-tab" data-cat="pose">🏃</button>
-            <button class="cat-tab" data-cat="expression">😀</button>
+          <button class="posing-mode-btn" id="posingModeBtn" aria-pressed="false">POSERING</button>
+          <div class="object-category-tabs" role="tablist" aria-label="Objektkategorier">
+            <button class="cat-tab" data-cat="face" role="tab" aria-selected="false" aria-label="Ansikt">
+              <span class="prop-icon face-icon" aria-hidden="true"></span>
+            </button>
+            <button class="cat-tab" data-cat="body" role="tab" aria-selected="false" aria-label="Kropp">
+              <span class="prop-icon body-icon" aria-hidden="true"></span>
+            </button>
+            <button class="cat-tab active" data-cat="clothes" role="tab" aria-selected="true" aria-label="Klaer">
+              <span class="prop-icon clothes-icon" aria-hidden="true"></span>
+            </button>
+            <button class="cat-tab" data-cat="pose" role="tab" aria-selected="false" aria-label="Positur">
+              <span class="prop-icon pose-icon" aria-hidden="true"></span>
+            </button>
+            <button class="cat-tab" data-cat="expression" role="tab" aria-selected="false" aria-label="Uttrykk">
+              <span class="prop-icon expression-icon" aria-hidden="true"></span>
+            </button>
           </div>
-          <div class="object-sub-tabs">
-            <button class="sub-tab">👗</button>
-            <button class="sub-tab">👔</button>
-            <button class="sub-tab">🎒</button>
-            <button class="sub-tab">👟</button>
-            <button class="sub-tab">✋</button>
-            <button class="sub-tab">🖐️</button>
+          <div class="object-sub-tabs" role="tablist" aria-label="Underkategorier">
+            <button class="sub-tab" role="tab" aria-label="Kjole">
+              <span class="prop-icon dress-icon" aria-hidden="true"></span>
+            </button>
+            <button class="sub-tab" role="tab" aria-label="Skjorte">
+              <span class="prop-icon shirt-icon" aria-hidden="true"></span>
+            </button>
+            <button class="sub-tab" role="tab" aria-label="Sekk">
+              <span class="prop-icon bag-icon" aria-hidden="true"></span>
+            </button>
+            <button class="sub-tab" role="tab" aria-label="Sko">
+              <span class="prop-icon shoe-icon" aria-hidden="true"></span>
+            </button>
+            <button class="sub-tab" role="tab" aria-label="Venstre hand">
+              <span class="prop-icon hand-left-icon" aria-hidden="true"></span>
+            </button>
+            <button class="sub-tab" role="tab" aria-label="Hoyre hand">
+              <span class="prop-icon hand-right-icon" aria-hidden="true"></span>
+            </button>
           </div>
         </div>
 
         <div class="panel-section no-selection" id="noSelection">
-          <div class="section-title">Valg</div>
-          <div class="selection-info">
+          <div class="section-title">
+            <span class="prop-icon selection-icon" aria-hidden="true"></span>
+            Valg
+          </div>
+          <div class="selection-info" role="status" aria-live="polite">
             <span class="selection-name">Ingen valgt</span>
           </div>
         </div>
@@ -350,23 +383,29 @@
           </div>
         </div>
 
-        <div class="panel-section properties" id="lightProperties" style="display: none;">
+        <div class="panel-section properties" id="lightProperties" style="display: none;" role="region" aria-label="Lysegenskaper">
           <div class="property-row">
-            <label>Posisjon</label>
+            <label for="posXInput">
+              <span class="prop-icon position-icon" aria-hidden="true"></span>
+              Posisjon
+            </label>
             <div class="input-group triple">
-              <input type="number" id="posX" step="0.1" value="0" class="prop-input">
-              <input type="number" id="posY" step="0.1" value="3" class="prop-input">
-              <input type="number" id="posZ" step="0.1" value="0" class="prop-input">
-              <span class="unit">m</span>
+              <input type="number" id="posXInput" step="0.1" value="0" class="prop-input" aria-label="X posisjon">
+              <input type="number" id="posYInput" step="0.1" value="3" class="prop-input" aria-label="Y posisjon">
+              <input type="number" id="posZInput" step="0.1" value="0" class="prop-input" aria-label="Z posisjon">
+              <span class="unit" aria-hidden="true">m</span>
             </div>
           </div>
           <div class="property-row">
-            <label>Rotasjon</label>
+            <label for="rotXInput">
+              <span class="prop-icon rotation-icon" aria-hidden="true"></span>
+              Rotasjon
+            </label>
             <div class="input-group triple">
-              <input type="number" id="rotX" step="1" value="0" class="prop-input">
-              <input type="number" id="rotY" step="1" value="0" class="prop-input">
-              <input type="number" id="rotZ" step="1" value="0" class="prop-input">
-              <span class="unit">°</span>
+              <input type="number" id="rotXInput" step="1" value="0" class="prop-input" aria-label="X rotasjon">
+              <input type="number" id="rotYInput" step="1" value="0" class="prop-input" aria-label="Y rotasjon">
+              <input type="number" id="rotZInput" step="1" value="0" class="prop-input" aria-label="Z rotasjon">
+              <span class="unit" aria-hidden="true">°</span>
             </div>
           </div>
           <div class="property-row">
@@ -426,39 +465,57 @@
           </div>
         </div>
 
-        <div class="panel-section">
-          <div class="section-title">Camara</div>
+        <div class="panel-section" role="region" aria-label="Kamerainnstillinger">
+          <div class="section-title">
+            <span class="prop-icon camera-settings-icon" aria-hidden="true"></span>
+            Kamera
+          </div>
           <div class="property-row">
-            <label>Aperature</label>
-            <select id="apertureSelect" class="prop-select full">
+            <label for="apertureSelect">
+              <span class="prop-icon aperture-icon" aria-hidden="true"></span>
+              Blender
+            </label>
+            <select id="apertureSelect" class="prop-select full" aria-label="Velg blender">
               <option value="godox">Godox</option>
               <option value="canon">Canon</option>
               <option value="sony">Sony</option>
             </select>
           </div>
           <div class="property-row">
-            <label>Shutter</label>
-            <input type="range" id="shutterSlider" min="0" max="100" value="50" class="prop-slider full">
+            <label for="shutterSlider">
+              <span class="prop-icon shutter-icon" aria-hidden="true"></span>
+              Lukker
+            </label>
+            <input type="range" id="shutterSlider" min="0" max="100" value="50" class="prop-slider full" aria-label="Lukkerhastighet">
           </div>
           <div class="property-row">
-            <label>ISO</label>
-            <div class="button-group triple">
-              <button class="prop-btn" id="isoFlat">Flat</button>
-              <button class="prop-btn active" id="isoHoj">Høj</button>
-              <button class="prop-btn" id="isoHun">HUN</button>
+            <label id="isoLabel">
+              <span class="prop-icon iso-icon" aria-hidden="true"></span>
+              ISO
+            </label>
+            <div class="button-group triple" role="group" aria-labelledby="isoLabel">
+              <button class="prop-btn" id="isoFlat" aria-pressed="false">Flat</button>
+              <button class="prop-btn active" id="isoHoj" aria-pressed="true">Høy</button>
+              <button class="prop-btn" id="isoHun" aria-pressed="false">HØY+</button>
             </div>
           </div>
           <div class="property-row">
-            <label>ND</label>
-            <input type="range" id="ndSlider" min="0" max="100" value="0" class="prop-slider full">
+            <label for="ndSlider">
+              <span class="prop-icon nd-icon" aria-hidden="true"></span>
+              ND
+            </label>
+            <input type="range" id="ndSlider" min="0" max="100" value="0" class="prop-slider full" aria-label="ND filter">
           </div>
         </div>
 
-        <div class="panel-section export-section">
+        <div class="panel-section export-section" role="region" aria-label="Eksporter">
           <div class="export-row">
-            <span class="export-label">Eksporter PDF</span>
-            <button class="export-btn small" id="exportPng">PNG</button>
-            <button class="export-btn small" id="compareAB">Compare AB</button>
+            <span class="export-label">
+              <span class="prop-icon export-icon" aria-hidden="true"></span>
+              Eksporter
+            </span>
+            <button class="export-btn small" id="exportPng" aria-label="Eksporter som PNG">PNG</button>
+            <button class="export-btn small" id="compareAB" aria-label="Sammenlign A og B">A/B</button>
           </div>
         </div>
       </aside>
