@@ -1223,8 +1223,14 @@ html, body {
 }
 
 .actor-panel-trigger {
+  border: none;
   border-top: 1px solid var(--border-color);
   margin-top: auto;
+  background: transparent;
+  width: 100%;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
 }
 
 .library-trigger-content {
