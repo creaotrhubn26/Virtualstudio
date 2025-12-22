@@ -44,6 +44,14 @@ class VirtualStudio {
     focalLength: 35,
     nd: 0
   };
+  
+  private lensData: { [key: number]: { maxAperture: number; minAperture: number; name: string } } = {
+    24: { maxAperture: 1.4, minAperture: 22, name: '24mm f/1.4' },
+    35: { maxAperture: 1.4, minAperture: 22, name: '35mm f/1.4' },
+    50: { maxAperture: 1.2, minAperture: 16, name: '50mm f/1.2' },
+    85: { maxAperture: 1.4, minAperture: 16, name: '85mm f/1.4' },
+    135: { maxAperture: 2.0, minAperture: 22, name: '135mm f/2.0' }
+  };
 
   constructor(canvas: HTMLCanvasElement) {
     this.engine = new BABYLON.Engine(canvas, true, { 
@@ -334,10 +342,15 @@ class VirtualStudio {
     
     const apertureSlider = document.getElementById('apertureSlider') as HTMLInputElement;
     const apertureDisplay = document.getElementById('apertureDisplay');
+    // Initialize with default lens apertures
+    (apertureSlider as any)._validApertures = apertureValues;
+    
     apertureSlider?.addEventListener('input', () => {
+      const validApertures = (apertureSlider as any)._validApertures || apertureValues;
       const idx = parseInt(apertureSlider.value);
-      this.cameraSettings.aperture = apertureValues[idx];
-      if (apertureDisplay) apertureDisplay.textContent = `f/${apertureValues[idx]}`;
+      const aperture = validApertures[Math.min(idx, validApertures.length - 1)];
+      this.cameraSettings.aperture = aperture;
+      if (apertureDisplay) apertureDisplay.textContent = `f/${aperture}`;
       this.updateExposureDisplay();
     });
 
@@ -1049,6 +1062,45 @@ class VirtualStudio {
     
     const quickFocal = document.getElementById('quickFocal');
     if (quickFocal) quickFocal.textContent = `${mm} mm`;
+    
+    // Update aperture based on lens
+    const lens = this.lensData[mm];
+    if (lens) {
+      this.updateApertureForLens(lens.maxAperture, lens.minAperture);
+    }
+  }
+  
+  private updateApertureForLens(maxAperture: number, minAperture: number): void {
+    const allApertures = [1.0, 1.2, 1.4, 1.8, 2.0, 2.8, 4.0, 5.6, 8.0, 11, 16, 22, 32];
+    const validApertures = allApertures.filter(a => a >= maxAperture && a <= minAperture);
+    
+    const apertureSlider = document.getElementById('apertureSlider') as HTMLInputElement;
+    const apertureDisplay = document.getElementById('apertureDisplay');
+    
+    if (apertureSlider && validApertures.length > 0) {
+      apertureSlider.min = '0';
+      apertureSlider.max = (validApertures.length - 1).toString();
+      
+      // Find closest valid aperture to current setting
+      let closestIdx = 0;
+      let minDiff = Math.abs(validApertures[0] - this.cameraSettings.aperture);
+      validApertures.forEach((a, i) => {
+        const diff = Math.abs(a - this.cameraSettings.aperture);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestIdx = i;
+        }
+      });
+      
+      apertureSlider.value = closestIdx.toString();
+      this.cameraSettings.aperture = validApertures[closestIdx];
+      if (apertureDisplay) apertureDisplay.textContent = `f/${validApertures[closestIdx]}`;
+      
+      // Store current valid apertures for slider handler
+      (apertureSlider as any)._validApertures = validApertures;
+    }
+    
+    this.updateExposureDisplay();
   }
 
   private async loadModel(file: File): Promise<void> {
