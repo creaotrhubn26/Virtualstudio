@@ -53,6 +53,7 @@ A professional web-based virtual photography studio application built with Babyl
 ## Architecture
 - **Hybrid design**: Vanilla TypeScript Babylon.js + React components
 - **State management**: Zustand store bridges React and Babylon.js
+- **Animation engine**: SceneGraphAnimationEngine for keyframe-based animations
 - **Scene integration**: virtualActorService provides fallback capsule meshes
 - **Future**: Python ML service integration for Anny parametric body model
 
@@ -62,14 +63,17 @@ A professional web-based virtual photography studio application built with Babyl
 ├── src/
 │   ├── main.ts                         # Main Babylon.js application with studio logic
 │   ├── styles.css                      # Professional dark theme UI styling
-│   ├── App.tsx                         # React root component for actor panel
+│   ├── App.tsx                         # React root component (App + TimelineApp)
 │   ├── state/
 │   │   └── store.ts                    # Zustand store for state management
 │   ├── core/
+│   │   ├── animation/
+│   │   │   └── SceneGraphAnimationEngine.ts  # Animation engine with easing functions
 │   │   └── services/
 │   │       ├── virtualActorService.ts  # Actor mesh generation service
 │   │       └── logger.ts               # Logging service
 │   ├── panels/
+│   │   ├── KeyframeTimeline.tsx        # React keyframe timeline editor
 │   │   ├── VirtualActorPanel.tsx       # Actor configuration panel
 │   │   ├── GlassesSelector.tsx         # Glasses selection component
 │   │   └── ActorLibraryPanel.tsx       # Actor presets library
@@ -103,6 +107,18 @@ Run `npm run dev` to start the development server on port 5000.
 - Interactive light placement with gizmos
 
 ## Recent Changes
+- 2025-12-22: Integrated React KeyframeTimeline component
+  - Created SceneGraphAnimationEngine with easing functions
+  - Multi-track timeline with keyframe editing
+  - Drag & drop keyframe support
+  - Zoom/scroll navigation
+  - Playback controls
+  - Track enable/disable
+  - Keyframe edit dialog with easing selection
+- 2025-12-22: Implemented per-axis keyframe controls
+  - Independent X, Y, Z keyframe buttons
+  - Flexible axis grouping selection
+  - Camera centering on object reset
 - 2025-12-22: Implemented WCAG 2.2 Level AA+ accessibility compliance
   - Skip link for keyboard navigation
   - Proper ARIA labels, roles, and states throughout
