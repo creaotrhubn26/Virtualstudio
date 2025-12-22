@@ -46,10 +46,14 @@ The application employs a hybrid architecture, combining Vanilla TypeScript with
 - **typescript**: Provides static type checking for improved code quality and maintainability.
 
 ## Recent Changes
+- 2025-12-22: Verified and updated all camera and lens specifications
+  - All 11 cine cameras with accurate specs (sensor size, dynamic range, ISO, fps, codec)
+  - All 15 lenses with verified specs (weight, filter size, min focus distance, optical elements)
+  - Added Canon C80 (6K Full Frame BSI) and Canon C50 (7K Full Frame BSI)
 - 2025-12-22: Added Foto/Cine category filter to Kamera tab in CameraGearPanel
   - Filter chips: Alle, Foto, Cine with icons
   - 8 foto cameras (Sony A7 IV, A1, Canon R5, Nikon Z8, Fujifilm X-H2S, Hasselblad X2D, Phase One IQ4, Leica SL3)
-  - 9 cine cameras (ARRI ALEXA 35, ALEXA Mini LF, RED V-RAPTOR, KOMODO, Blackmagic URSA 12K, Sony VENICE 2, FX6, Canon C70, Panasonic S1H)
+  - 11 cine cameras (ARRI ALEXA 35, ALEXA Mini LF, RED V-RAPTOR, KOMODO, Blackmagic URSA 12K, Sony VENICE 2, FX6, Canon C70, C80, C50, Panasonic S1H)
   - Cine cameras show recording resolution, max fps, and codec info
 - 2025-12-22: Split CameraGearPanel into two internal tabs (Kamera and Linser)
   - Tab-based navigation with MUI Tabs component
