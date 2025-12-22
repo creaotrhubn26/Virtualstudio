@@ -121,55 +121,55 @@ const CAMERA_BODIES: CameraBody[] = [
   },
   { 
     id: 'arri-alexa35', name: 'ARRI ALEXA 35', brand: 'ARRI', 
-    sensor: 'Super 35', sensorSize: '27.99×19.22mm', megapixels: 4.6, 
-    baseISO: 800, maxISO: 6400, dynamicRange: 17.0, colorDepth: 26.0,
+    sensor: 'Super 35', sensorSize: '27.99×19.22mm', megapixels: 14.5, 
+    baseISO: 160, maxISO: 6400, dynamicRange: 17.0, colorDepth: 26.0,
     maxShutter: '1/8000', flashSync: '-', maxFps: 120,
-    codec: 'ARRIRAW, ProRes', recording: '4.6K',
+    codec: 'ARRIRAW, ProRes 4444 XQ', recording: '4.6K',
     category: 'cine'
   },
   { 
     id: 'arri-alexamini', name: 'ARRI ALEXA Mini LF', brand: 'ARRI', 
-    sensor: 'Large Format', sensorSize: '36.70×25.54mm', megapixels: 4.5, 
+    sensor: 'Large Format', sensorSize: '36.70×25.54mm', megapixels: 13.8, 
     baseISO: 800, maxISO: 3200, dynamicRange: 14.5, colorDepth: 25.8,
     maxShutter: '1/8000', flashSync: '-', maxFps: 90,
-    codec: 'ARRIRAW, ProRes', recording: '4.5K',
+    codec: 'ARRIRAW, ProRes 4444 XQ', recording: '4.5K',
     category: 'cine'
   },
   { 
     id: 'red-v-raptor', name: 'RED V-RAPTOR 8K VV', brand: 'RED', 
     sensor: 'Vista Vision', sensorSize: '40.96×21.60mm', megapixels: 35.4, 
-    baseISO: 800, maxISO: 12800, dynamicRange: 17.0, colorDepth: 26.0,
-    maxShutter: '1/8000', flashSync: '-', maxFps: 120,
-    codec: 'REDCODE RAW', recording: '8K',
+    baseISO: 800, maxISO: 6400, dynamicRange: 17.0, colorDepth: 26.0,
+    maxShutter: '1/8000', flashSync: '-', maxFps: 150,
+    codec: 'REDCODE RAW 16-bit', recording: '8K',
     category: 'cine'
   },
   { 
     id: 'red-komodo', name: 'RED KOMODO 6K', brand: 'RED', 
     sensor: 'Super 35', sensorSize: '27.03×14.26mm', megapixels: 19.9, 
-    baseISO: 800, maxISO: 25600, dynamicRange: 16.5, colorDepth: 25.5,
-    maxShutter: '1/8000', flashSync: '-', maxFps: 120,
-    codec: 'REDCODE RAW', recording: '6K',
+    baseISO: 800, maxISO: 3200, dynamicRange: 16.0, colorDepth: 25.5,
+    maxShutter: '1/8000', flashSync: '-', maxFps: 40,
+    codec: 'REDCODE RAW, ProRes 422 HQ', recording: '6K',
     category: 'cine'
   },
   { 
     id: 'blackmagic-ursa', name: 'Blackmagic URSA Mini Pro 12K', brand: 'Blackmagic', 
-    sensor: 'Super 35', sensorSize: '27.03×14.26mm', megapixels: 80, 
+    sensor: 'Super 35', sensorSize: '27.03×14.25mm', megapixels: 80, 
     baseISO: 800, maxISO: 3200, dynamicRange: 14.0, colorDepth: 25.0,
     maxShutter: '1/8000', flashSync: '-', maxFps: 60,
-    codec: 'Blackmagic RAW', recording: '12K',
+    codec: 'Blackmagic RAW 12-bit', recording: '12K',
     category: 'cine'
   },
   { 
     id: 'sony-venice2', name: 'Sony VENICE 2 8K', brand: 'Sony', 
-    sensor: 'Full Frame', sensorSize: '36×24mm', megapixels: 8.6, 
-    baseISO: 800, maxISO: 4500, dynamicRange: 16.0, colorDepth: 25.8,
-    maxShutter: '1/8000', flashSync: '-', maxFps: 120,
-    codec: 'X-OCN, ProRes', recording: '8.6K',
+    sensor: 'Full Frame', sensorSize: '36×24mm', megapixels: 49.7, 
+    baseISO: 800, maxISO: 3200, dynamicRange: 16.0, colorDepth: 25.8,
+    maxShutter: '1/8000', flashSync: '-', maxFps: 60,
+    codec: 'X-OCN RAW, ProRes 4444', recording: '8.6K',
     category: 'cine'
   },
   { 
     id: 'canon-c70', name: 'Canon EOS C70', brand: 'Canon', 
-    sensor: 'Super 35', sensorSize: '26.2×13.8mm', megapixels: 8.85, 
+    sensor: 'Super 35 DGO', sensorSize: '26.2×13.8mm', megapixels: 8.85, 
     baseISO: 800, maxISO: 102400, dynamicRange: 16.0, colorDepth: 25.5,
     maxShutter: '1/8000', flashSync: '-', maxFps: 120,
     codec: 'Cinema RAW Light, XF-AVC', recording: '4K DCI',
@@ -177,7 +177,7 @@ const CAMERA_BODIES: CameraBody[] = [
   },
   { 
     id: 'canon-c80', name: 'Canon EOS C80', brand: 'Canon', 
-    sensor: 'Full Frame', sensorSize: '36.0×19.0mm', megapixels: 26.67, 
+    sensor: 'Full Frame BSI', sensorSize: '36.0×19.0mm', megapixels: 26.67, 
     baseISO: 800, maxISO: 12800, dynamicRange: 16.0, colorDepth: 25.5,
     maxShutter: '1/8000', flashSync: '-', maxFps: 120,
     codec: 'Cinema RAW Light, XF-AVC, ProRes RAW', recording: '6K',
@@ -185,7 +185,7 @@ const CAMERA_BODIES: CameraBody[] = [
   },
   { 
     id: 'canon-c50', name: 'Canon EOS C50', brand: 'Canon', 
-    sensor: 'Full Frame', sensorSize: '36.0×24.0mm', megapixels: 32, 
+    sensor: 'Full Frame BSI', sensorSize: '36.0×24.0mm', megapixels: 32, 
     baseISO: 800, maxISO: 6400, dynamicRange: 15.0, colorDepth: 25.0,
     maxShutter: '1/8000', flashSync: '-', maxFps: 120,
     codec: 'Cinema RAW Light, XF-AVC, XF-HEVC', recording: '7K',
@@ -193,17 +193,17 @@ const CAMERA_BODIES: CameraBody[] = [
   },
   { 
     id: 'sony-fx6', name: 'Sony FX6', brand: 'Sony', 
-    sensor: 'Full Frame', sensorSize: '35.6×23.8mm', megapixels: 10.2, 
-    baseISO: 800, maxISO: 409600, dynamicRange: 15.0, colorDepth: 25.2,
+    sensor: 'Full Frame BSI', sensorSize: '35.6×23.8mm', megapixels: 10.2, 
+    baseISO: 800, maxISO: 12800, dynamicRange: 15.0, colorDepth: 25.2,
     maxShutter: '1/8000', flashSync: '-', maxFps: 120,
-    codec: 'XAVC S, XAVC HS', recording: '4K',
+    codec: 'XAVC-I, XAVC-HS 10-bit', recording: '4K',
     category: 'cine'
   },
   { 
     id: 'panasonic-s1h', name: 'Panasonic S1H', brand: 'Panasonic', 
     sensor: 'Full Frame', sensorSize: '35.6×23.8mm', megapixels: 24.2, 
-    baseISO: 100, maxISO: 51200, dynamicRange: 14.0, colorDepth: 24.8,
-    maxShutter: '1/8000', flashSync: '1/250', maxFps: 60,
+    baseISO: 640, maxISO: 51200, dynamicRange: 14.0, colorDepth: 24.8,
+    maxShutter: '1/8000', flashSync: '1/250', maxFps: 180,
     codec: 'V-Log, ProRes RAW', recording: '6K',
     category: 'cine'
   },
