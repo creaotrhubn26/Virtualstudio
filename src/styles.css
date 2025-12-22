@@ -1213,24 +1213,70 @@ html, body {
   min-width: 0;
 }
 
+.hierarchy-section.list-view .hierarchy-item {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  margin-bottom: 6px;
+  transition: all 0.2s ease;
+}
+
+.hierarchy-section.list-view .hierarchy-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-cyan);
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.hierarchy-section.list-view .hierarchy-item.selected {
+  background: rgba(78, 205, 196, 0.12);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 1px rgba(78, 205, 196, 0.3);
+}
+
+.hierarchy-section.list-view .item-thumbnail {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+}
+
 .hierarchy-section.grid-view .hierarchy-items {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  gap: 8px;
-  padding: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 10px;
+  padding: 10px;
 }
 
 .hierarchy-section.grid-view .hierarchy-item {
   flex-direction: column;
-  padding: 8px;
+  padding: 12px 8px;
   text-align: center;
-  gap: 6px;
+  gap: 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.hierarchy-section.grid-view .hierarchy-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-cyan);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.hierarchy-section.grid-view .hierarchy-item.selected {
+  background: rgba(78, 205, 196, 0.12);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.3);
 }
 
 .hierarchy-section.grid-view .item-thumbnail {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   margin: 0 auto;
+  border-radius: 8px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
 }
 
 .hierarchy-section.grid-view .item-info {
@@ -1239,11 +1285,20 @@ html, body {
 
 .hierarchy-section.grid-view .item-name {
   font-size: 11px;
+  font-weight: 500;
   text-align: center;
+  line-height: 1.3;
+  max-height: 2.6em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .hierarchy-section.grid-view .item-type {
-  display: none;
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-top: 2px;
 }
 
 .hierarchy-section.grid-view .item-actions {
@@ -1251,10 +1306,9 @@ html, body {
   top: 4px;
   right: 4px;
   opacity: 0;
-}
-
-.hierarchy-section.grid-view .hierarchy-item {
-  position: relative;
+  background: rgba(30, 30, 30, 0.9);
+  border-radius: 4px;
+  padding: 2px;
 }
 
 .hierarchy-section.grid-view .hierarchy-item:hover .item-actions {
@@ -1265,6 +1319,17 @@ html, body {
   grid-column: 1 / -1;
   flex-direction: column;
   text-align: center;
+  padding: 20px;
+  background: transparent;
+  border: 1px dashed var(--border-color);
+}
+
+.hierarchy-section.grid-view .hierarchy-group {
+  margin-bottom: 12px;
+}
+
+.hierarchy-section.grid-view .hierarchy-header {
+  margin-bottom: 8px;
 }
 
 .item-name {
