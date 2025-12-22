@@ -82,7 +82,7 @@ import {
   SceneGraphNode,
   EasingName,
   EASING_FUNCTIONS,
-} from '../../core/animation/SceneGraphAnimationEngine';
+} from '../core/animation/SceneGraphAnimationEngine';
 
 // ============================================================================
 // Types
@@ -175,11 +175,11 @@ function KeyframeDiamond({
       setIsDragging(false);
     };
 
-    window.addEventListener('mousemove,', handleMouseMove);
-    window.addEventListener('mouseup,', handleMouseUp);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
 
     return () => {
-      window.removeEventListener('mousemove, ', handleMouseMove);
+      window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDragging, zoom, onMove]);
@@ -198,11 +198,13 @@ function KeyframeDiamond({
         backgroundColor: selected ? '#f44336' : '#2196f3',
         border: `2px solid ${selected ? '#fff' : '#1565c0'}`,
         cursor: isDragging ? 'grabbing' : 'grab',
-        zIndex: , selected ? 10 : 1,
-        transition: isDragging ? 'none' : 'all 0.1s','&:hover': {
+        zIndex: selected ? 10 : 1,
+        transition: isDragging ? 'none' : 'all 0.1s',
+        '&:hover': {
           transform: 'translateY(-50%) rotate(45deg) scale(1.2)',
           boxShadow: '0 0 8px rgba(33, 150, 243, 0.5)',
-        }}}
+        },
+      }}
     />
   );
 }
@@ -247,9 +249,11 @@ function TrackHeader({
         backgroundColor: selected ? '#2a3a4a' : '#1a1a2a',
         borderBottom: '1px solid #333',
         borderRight: '1px solid #333',
-        cursor: 'pointer', '&:hover': {
+        cursor: 'pointer',
+        '&:hover': {
           backgroundColor: '#252535',
-        }}}
+        },
+      }}
     >
       <IconButton size="small" onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}>
         {expanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
@@ -330,10 +334,11 @@ function TrackLane({
         backgroundColor: track.enabled ? '#1a1a1a' : '#151515',
         borderBottom: '1px solid #333',
         position: 'relative',
-        overflow: 'hidden'}}
+        overflow: 'hidden',
+      }}
     >
       {/* Keyframes */}
-      {track.keyframes.map((kf, index) => {
+      {track.keyframes.map((kf: Keyframe, index: number) => {
         const isSelected = state.selectedKeyframes.some(
           (s) => s.trackId === track.id && s.time === kf.time
         );
@@ -360,9 +365,10 @@ function TrackLane({
             left: 0,
             width: '100%',
             height: '100%',
-            pointerEvents: 'none'}}
+            pointerEvents: 'none',
+          }}
         >
-          {track.keyframes.slice(0, -1).map((kf, index) => {
+          {track.keyframes.slice(0, -1).map((kf: Keyframe, index: number) => {
             const nextKf = track.keyframes[index + 1];
             const x1 = kf.time * state.zoom;
             const x2 = nextKf.time * state.zoom;
@@ -428,13 +434,15 @@ function TimelineRuler({ duration, currentTime, zoom, scrollX, onSeek }: Timelin
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center'}}
+            alignItems: 'center',
+          }}
         >
           <Box
             sx={{
               width: 1,
               height: isMajor ? 12 : 6,
-              backgroundColor: '#555'}}
+              backgroundColor: '#555',
+            }}
           />
           {isMajor && (
             <Typography
@@ -444,7 +452,8 @@ function TimelineRuler({ duration, currentTime, zoom, scrollX, onSeek }: Timelin
                 color: '#888',
                 position: 'absolute',
                 top: 14,
-                transform: 'translateX(-50%)'}}
+                transform: 'translateX(-50%)',
+              }}
             >
               {t.toFixed(1)}s
             </Typography>
@@ -466,7 +475,8 @@ function TimelineRuler({ duration, currentTime, zoom, scrollX, onSeek }: Timelin
         borderBottom: '1px solid #333',
         position: 'relative',
         cursor: 'pointer',
-        overflow: 'hidden'}}
+        overflow: 'hidden',
+      }}
     >
       <Box
         sx={{
@@ -474,7 +484,8 @@ function TimelineRuler({ duration, currentTime, zoom, scrollX, onSeek }: Timelin
           left: -scrollX,
           top: 0,
           height: '100%',
-          width: (duration + 5) * zoom}}
+          width: (duration + 5) * zoom,
+        }}
       >
         {markers}
       </Box>
@@ -489,7 +500,8 @@ function TimelineRuler({ duration, currentTime, zoom, scrollX, onSeek }: Timelin
           width: 2,
           backgroundColor: '#f44336',
           zIndex: 10,
-          pointerEvents: 'none'}}
+          pointerEvents: 'none',
+        }}
       >
         <Box
           sx={{
@@ -501,7 +513,8 @@ function TimelineRuler({ duration, currentTime, zoom, scrollX, onSeek }: Timelin
             height: 0,
             borderLeft: '8px solid transparent',
             borderRight: '8px solid transparent',
-            borderTop: '10px solid #f44336'}}
+            borderTop: '10px solid #f44336',
+          }}
         />
       </Box>
     </Box>
@@ -552,7 +565,7 @@ export function KeyframeTimeline({ clipId, height = 300 }: KeyframeTimelineProps
       }
     }
 
-    setNodes(new Map(sceneGraphAnimationEngine.getAllNodes().map((n) => [n.id, n])));
+    setNodes(new Map(sceneGraphAnimationEngine.getAllNodes().map((n: SceneGraphNode) => [n.id, n])));
   }, [clipId]);
 
   // Animation frame update
@@ -642,7 +655,7 @@ export function KeyframeTimeline({ clipId, height = 300 }: KeyframeTimelineProps
 
   const handleToggleTrackEnabled = useCallback((trackId: string) => {
     if (!clip) return;
-    const track = clip.tracks.find((t) => t.id === trackId);
+    const track = clip.tracks.find((t: AnimationTrack) => t.id === trackId);
     if (track) {
       track.enabled = !track.enabled;
       setClip({ ...clip });
@@ -654,7 +667,7 @@ export function KeyframeTimeline({ clipId, height = 300 }: KeyframeTimelineProps
     sceneGraphAnimationEngine.removeTrack(clipId, trackId);
     setClip({
       ...clip,
-      tracks: clip.tracks.filter((t) => t.id !== trackId),
+      tracks: clip.tracks.filter((t: AnimationTrack) => t.id !== trackId),
     });
   }, [clip, clipId]);
 
@@ -672,12 +685,12 @@ export function KeyframeTimeline({ clipId, height = 300 }: KeyframeTimelineProps
     sceneGraphAnimationEngine.moveKeyframe(clipId, trackId, oldTime, newTime);
     
     // Update local state
-    const track = clip.tracks.find((t) => t.id === trackId);
+    const track = clip.tracks.find((t: AnimationTrack) => t.id === trackId);
     if (track) {
-      const kf = track.keyframes.find((k) => k.time === oldTime);
+      const kf = track.keyframes.find((k: Keyframe) => k.time === oldTime);
       if (kf) {
         kf.time = newTime;
-        track.keyframes.sort((a, b) => a.time - b.time);
+        track.keyframes.sort((a: Keyframe, b: Keyframe) => a.time - b.time);
         setClip({ ...clip });
       }
     }
@@ -695,8 +708,8 @@ export function KeyframeTimeline({ clipId, height = 300 }: KeyframeTimelineProps
 
   const handleKeyframeEdit = useCallback((trackId: string, time: number) => {
     if (!clip) return;
-    const track = clip.tracks.find((t) => t.id === trackId);
-    const keyframe = track?.keyframes.find((kf) => kf.time === time);
+    const track = clip.tracks.find((t: AnimationTrack) => t.id === trackId);
+    const keyframe = track?.keyframes.find((kf: Keyframe) => kf.time === time);
     if (keyframe) {
       setKeyframeEditDialog({ trackId, time, keyframe: { ...keyframe } });
     }
@@ -705,7 +718,7 @@ export function KeyframeTimeline({ clipId, height = 300 }: KeyframeTimelineProps
   const handleAddKeyframe = useCallback((trackId: string, time: number) => {
     if (!clip || !clipId) return;
 
-    const track = clip.tracks.find((t) => t.id === trackId);
+    const track = clip.tracks.find((t: AnimationTrack) => t.id === trackId);
     if (!track) return;
 
     // Get interpolated value at this time (or default)
@@ -723,7 +736,7 @@ export function KeyframeTimeline({ clipId, height = 300 }: KeyframeTimelineProps
 
     // Update local state
     track.keyframes.push(newKeyframe);
-    track.keyframes.sort((a, b) => a.time - b.time);
+    track.keyframes.sort((a: Keyframe, b: Keyframe) => a.time - b.time);
     setClip({ ...clip });
   }, [clip, clipId]);
 
@@ -731,10 +744,10 @@ export function KeyframeTimeline({ clipId, height = 300 }: KeyframeTimelineProps
     if (!keyframeEditDialog || !clip || !clipId) return;
 
     const { trackId, time, keyframe } = keyframeEditDialog;
-    const track = clip.tracks.find((t) => t.id === trackId);
+    const track = clip.tracks.find((t: AnimationTrack) => t.id === trackId);
     if (!track) return;
 
-    const kfIndex = track.keyframes.findIndex((kf) => kf.time === time);
+    const kfIndex = track.keyframes.findIndex((kf: Keyframe) => kf.time === time);
     if (kfIndex !== -1) {
       track.keyframes[kfIndex] = keyframe;
       setClip({ ...clip });
@@ -749,9 +762,9 @@ export function KeyframeTimeline({ clipId, height = 300 }: KeyframeTimelineProps
     for (const { trackId, time } of state.selectedKeyframes) {
       sceneGraphAnimationEngine.removeKeyframe(clipId, trackId, time);
 
-      const track = clip.tracks.find((t) => t.id === trackId);
+      const track = clip.tracks.find((t: AnimationTrack) => t.id === trackId);
       if (track) {
-        track.keyframes = track.keyframes.filter((kf) => kf.time !== time);
+        track.keyframes = track.keyframes.filter((kf: Keyframe) => kf.time !== time);
       }
     }
 
@@ -786,7 +799,8 @@ export function KeyframeTimeline({ clipId, height = 300 }: KeyframeTimelineProps
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#121212'}}
+          backgroundColor: '#121212',
+        }}
       >
         <Typography color="text.secondary">No animation clip selected</Typography>
       </Box>
@@ -804,7 +818,8 @@ export function KeyframeTimeline({ clipId, height = 300 }: KeyframeTimelineProps
           px: 1,
           py: 0.5,
           borderBottom: '1px solid #333',
-          backgroundColor: '#1a1a1a'}}
+          backgroundColor: '#1a1a1a',
+        }}
       >
         {/* Playback controls */}
         <IconButton size="small" onClick={() => handleSeek(0)}>
@@ -883,13 +898,14 @@ export function KeyframeTimeline({ clipId, height = 300 }: KeyframeTimelineProps
             width: TRACK_HEADER_WIDTH,
             flexShrink: 0,
             overflowY: 'auto',
-            borderRight: '1px solid #333'}}
+            borderRight: '1px solid #333',
+          }}
         >
           {/* Header spacer */}
           <Box sx={{ height: TIMELINE_HEADER_HEIGHT, borderBottom: '1px solid #333', backgroundColor: '#0a0a0a' }} />
           
           {/* Track headers */}
-          {clip.tracks.map((track) => (
+          {clip.tracks.map((track: AnimationTrack) => (
             <TrackHeader
               key={track.id}
               track={track}
@@ -910,7 +926,8 @@ export function KeyframeTimeline({ clipId, height = 300 }: KeyframeTimelineProps
           onScroll={handleScroll}
           sx={{
             flex: 1,
-            overflow: 'auto'}}
+            overflow: 'auto',
+          }}
         >
           {/* Timeline ruler */}
           <TimelineRuler
@@ -923,7 +940,7 @@ export function KeyframeTimeline({ clipId, height = 300 }: KeyframeTimelineProps
 
           {/* Track lanes */}
           <Box sx={{ position: 'relative', width: (state.duration + 5) * state.zoom }}>
-            {clip.tracks.map((track) => (
+            {clip.tracks.map((track: AnimationTrack) => (
               <TrackLane
                 key={track.id}
                 track={track}
@@ -945,7 +962,8 @@ export function KeyframeTimeline({ clipId, height = 300 }: KeyframeTimelineProps
                 width: 1,
                 backgroundColor: '#f44336',
                 zIndex: 5,
-                pointerEvents: 'none'}}
+                pointerEvents: 'none',
+              }}
             />
           </Box>
         </Box>
