@@ -200,11 +200,106 @@
       </main>
 
       <aside class="right-panel">
-        <div class="panel-section">
+        <div class="panel-section object-header" id="objectHeader" style="display: none;">
+          <div class="object-title-row">
+            <span class="object-name" id="objectName">Sarah</span>
+            <button class="pin-btn" id="pinBtn">📌</button>
+          </div>
+          <div class="object-preview-row">
+            <div class="object-thumbnail" id="objectThumbnail"></div>
+            <div class="object-actions">
+              <button class="mode-btn" id="selectModeBtn">⊡</button>
+              <button class="mode-btn" id="moveModeBtn">✥</button>
+              <button class="mode-btn" id="rotateModeBtn">↻</button>
+            </div>
+          </div>
+          <button class="posing-mode-btn" id="posingModeBtn">POSING MODE</button>
+          <div class="object-category-tabs">
+            <button class="cat-tab" data-cat="face">😊</button>
+            <button class="cat-tab" data-cat="body">🧍</button>
+            <button class="cat-tab active" data-cat="clothes">👕</button>
+            <button class="cat-tab" data-cat="pose">🏃</button>
+            <button class="cat-tab" data-cat="expression">😀</button>
+          </div>
+          <div class="object-sub-tabs">
+            <button class="sub-tab">👗</button>
+            <button class="sub-tab">👔</button>
+            <button class="sub-tab">🎒</button>
+            <button class="sub-tab">👟</button>
+            <button class="sub-tab">✋</button>
+            <button class="sub-tab">🖐️</button>
+          </div>
+        </div>
+
+        <div class="panel-section no-selection" id="noSelection">
           <div class="section-title">Valg</div>
-          <div id="selectionInfo" class="selection-info">
-            <span class="selection-name" id="selectedName">Ingen valgt</span>
-            <span class="selection-type" id="selectedType"></span>
+          <div class="selection-info">
+            <span class="selection-name">Ingen valgt</span>
+          </div>
+        </div>
+
+        <div class="panel-section transform-section" id="transformSection" style="display: none;">
+          <div class="section-header-collapsible">
+            <span>Transform</span>
+            <span class="collapse-icon">▼</span>
+          </div>
+          <div class="transform-content">
+            <div class="transform-row">
+              <label>Position X:</label>
+              <button class="reset-btn">↺</button>
+              <input type="text" id="posX" value="-0.19 m" class="transform-input">
+            </div>
+            <div class="transform-row">
+              <label>Position Y:</label>
+              <button class="reset-btn">↺</button>
+              <input type="text" id="posY" value="-7.01 m" class="transform-input">
+            </div>
+            <div class="transform-row">
+              <label>Position Z:</label>
+              <button class="reset-btn">↺</button>
+              <input type="text" id="posZ" value="0 m" class="transform-input">
+            </div>
+            <div class="transform-row">
+              <label>Rotation X:</label>
+              <button class="reset-btn">↺</button>
+              <input type="text" id="rotX" value="0 °" class="transform-input">
+            </div>
+            <div class="transform-row">
+              <label>Rotation Y:</label>
+              <button class="reset-btn">↺</button>
+              <input type="text" id="rotY" value="0 °" class="transform-input">
+            </div>
+            <div class="transform-row">
+              <label>Rotation Z:</label>
+              <button class="reset-btn">↺</button>
+              <input type="text" id="rotZ" value="-20 °" class="transform-input">
+            </div>
+          </div>
+          <div class="group-buttons">
+            <button class="group-btn" id="createGroupBtn">Create Group</button>
+            <button class="group-btn" id="importGroupBtn">Import Group</button>
+          </div>
+        </div>
+
+        <div class="panel-section model-section" id="feetSection" style="display: none;">
+          <div class="section-header-collapsible">
+            <span>Feet</span>
+            <span class="collapse-icon">▼</span>
+          </div>
+          <div class="slider-row">
+            <label>Toes pitch:</label>
+            <input type="range" id="toesPitchSlider" min="0" max="100" value="30" class="prop-slider">
+          </div>
+        </div>
+
+        <div class="panel-section model-section" id="handsSection" style="display: none;">
+          <div class="section-header-collapsible">
+            <span>Hands</span>
+            <span class="collapse-icon">▼</span>
+          </div>
+          <div class="slider-row">
+            <label>Finger fold:</label>
+            <input type="range" id="fingerFoldSlider" min="0" max="100" value="50" class="prop-slider">
           </div>
         </div>
 
