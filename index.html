@@ -244,6 +244,26 @@
       <div class="resize-handle resize-handle-right" id="rightResizeHandle" role="separator" aria-orientation="vertical" aria-label="Endre storrelse paa hoyre panel" tabindex="0"></div>
 
       <aside class="right-panel" role="complementary" aria-label="Objekt-egenskaper">
+        <div class="panel-section scope-section" role="region" aria-label="Scope-visning">
+          <div class="scope-panel-row">
+            <span class="scope-panel-label">
+              <span class="prop-icon scope-icon" aria-hidden="true"></span>
+              Scope
+            </span>
+            <select id="scopeModeSelect" class="scope-mode-select" aria-label="Velg scope-modus">
+              <option value="histogram">Histogram</option>
+              <option value="waveform">Waveform</option>
+              <option value="vectorscope">Vectorscope</option>
+              <option value="skin">Hudtone</option>
+              <option value="zebra">Zebra</option>
+              <option value="falsecolor">False Color</option>
+            </select>
+          </div>
+          <div class="scope-embed-container">
+            <canvas id="scopeCanvasEmbed" width="320" height="140"></canvas>
+          </div>
+        </div>
+
         <div class="panel-section object-header" id="objectHeader" style="display: none;" aria-live="polite">
           <div class="object-title-row">
             <span class="object-name" id="objectName">Sarah</span>
@@ -502,26 +522,6 @@
               ND
             </label>
             <input type="range" id="ndSlider" min="0" max="100" value="0" class="prop-slider full" aria-label="ND filter">
-          </div>
-        </div>
-
-        <div class="panel-section scope-section" role="region" aria-label="Scope-visning">
-          <div class="scope-panel-row">
-            <span class="scope-panel-label">
-              <span class="prop-icon scope-icon" aria-hidden="true"></span>
-              Scope
-            </span>
-            <select id="scopeModeSelect" class="scope-mode-select" aria-label="Velg scope-modus">
-              <option value="histogram">Histogram</option>
-              <option value="waveform">Waveform</option>
-              <option value="vectorscope">Vectorscope</option>
-              <option value="skin">Hudtone</option>
-              <option value="zebra">Zebra</option>
-              <option value="falsecolor">False Color</option>
-            </select>
-          </div>
-          <div class="scope-embed-container">
-            <canvas id="scopeCanvasEmbed" width="320" height="140"></canvas>
           </div>
         </div>
 
