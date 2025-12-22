@@ -1,14 +1,10 @@
-import * as React from 'react';
-import { logger } from '../../core/services/logger';
-
-const log = logger.module('AssetLibraryPanel, ');
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Tabs,
   Tab,
   TextField,
   InputAdornment,
-  Grid,
   Typography,
   Chip,
   IconButton,
@@ -23,18 +19,18 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
-import {
-  assetLibraryService,
-  type AssetLibraryItem,
-} from '@/core/services/assetLibrary';
+import PlaceIcon from '@mui/icons-material/Place';
+import { assetLibraryService, type AssetLibraryItem } from '../core/services/assetLibrary';
+import { logger } from '../core/services/logger';
 
-// Category configuration with Norwegian labels
-const CATEGORIES = {
+const log = logger.module('AssetLibraryPanel');
+
+const CATEGORIES: Record<string, { label: string; icon: string }> = {
   light: { label: 'Lys', icon: '💡' },
   light_shaper: { label: 'Lysformere', icon: '📦' },
-  accessory: { label: 'Tilbehør', icon: '🔧' },
+  accessory: { label: 'Tilbehor', icon: '🔧' },
   prop: { label: 'Rekvisitter', icon: '🎭' },
-  furniture: { label: 'Møbler', icon: '🪑' },
+  furniture: { label: 'Mobler', icon: '🪑' },
 };
 
 interface AssetCardProps {
@@ -46,8 +42,7 @@ interface AssetCardProps {
 
 function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually }: AssetCardProps) {
   const handleDoubleClick = () => {
-    // Dispatch custom event to add asset to scene
-    const event = new CustomEvent('ch-add-asset,', {
+    const event = new CustomEvent('ch-add-asset', {
       detail: {
         asset: {
           id: asset.id,
@@ -62,8 +57,6 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually }: Ass
       },
     });
     window.dispatchEvent(event);
-
-    // Track usage
     assetLibraryService.trackUsage(asset.id);
   };
 
@@ -76,7 +69,7 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually }: Ass
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData(
-      , 'application/json',
+      'application/json',
       JSON.stringify({
         asset: {
           id: asset.id,
@@ -89,10 +82,6 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually }: Ass
     );
   };
 
-  // Get recommended patterns (if available)
-  const recommendedPatterns = (asset as any).recommended_patterns || [];
-  const hasPatterns = recommendedPatterns.length > 0;
-
   return (
     <Box
       onDoubleClick={handleDoubleClick}
@@ -101,38 +90,45 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually }: Ass
       sx={{
         position: 'relative',
         cursor: 'pointer',
-        border: '1px solid #e2e8f0',
-        borderRadius: 1.5,
+        border: '1px solid #333',
+        borderRadius: 1,
         overflow: 'hidden',
-        bgcolor: '#fff', '&:hover': {
+        bgcolor: '#1a1a1a',
+        '&:hover': {
           transform: 'scale(1.02)',
           boxShadow: 2,
+          borderColor: '#3b82f6',
         },
-        transition: 'all 0.2s'}}
+        transition: 'all 0.2s',
+      }}
     >
-      <img
-        src={asset.thumbnail_url || '/library/generic.png'}
-        alt={asset.name}
-        style={{
+      <Box
+        sx={{
           width: '100%',
-          height: 120,
-          objectFit: 'cover',
-          backgroundColor: '#f1f5f9'}}
-      />
+          height: 80,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#2a2a2a',
+          fontSize: 32,
+        }}
+      >
+        {CATEGORIES[asset.category]?.icon || '📦'}
+      </Box>
 
       {asset.is_system && (
         <Chip
-          label="AI"
+          label="System"
           size="small"
           sx={{
             position: 'absolute',
-            top: 6,
-            left: 6,
+            top: 4,
+            left: 4,
             bgcolor: '#3B82F6',
             color: '#fff',
-            fontSize: 10,
-            height: 20,
-            fontWeight: 600}}
+            fontSize: 9,
+            height: 18,
+          }}
         />
       )}
 
@@ -144,14 +140,17 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually }: Ass
         }}
         sx={{
           position: 'absolute',
-          top: 6,
-          right: 6,
-          bgcolor: 'rgba(255,255,255,0.9)','&:hover': { bgcolor: '#fff' }}}
+          top: 4,
+          right: 4,
+          bgcolor: 'rgba(0,0,0,0.5)',
+          '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
+          padding: 0.5,
+        }}
       >
         {isFavorite ? (
-          <StarIcon fontSize="small" sx={{ color: '#FCD34D' }} />
+          <StarIcon sx={{ fontSize: 16, color: '#FCD34D' }} />
         ) : (
-          <StarBorderIcon fontSize="small" />
+          <StarBorderIcon sx={{ fontSize: 16, color: '#888' }} />
         )}
       </IconButton>
 
@@ -165,76 +164,35 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually }: Ass
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             fontSize: 11,
-            fontWeight: 50,
-            mb: hasPatterns ? 0.5 : 0}}
+            color: '#fff',
+          }}
         >
           {asset.name}
         </Typography>
 
-        {/* Pattern Badges */}
-        {hasPatterns && (
-          <Box sx={{ mt: 0.5 }}>
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 0.5,
-                flexWrap: 'wrap',
-                justifyContent: 'center',
-                alignItems: 'center'}}
-            >
-              {recommendedPatterns.slice(0, 2).map((pattern: any) => (
-                <Chip
-                  key={pattern.pattern_id}
-                  label={pattern.pattern_name}
-                  size="small"
-                  sx={{
-                    height: 16,
-                    fontSize: 8,
-                    fontWeight: 50,
-                    bgcolor:
-                      pattern.recommendation_strength === 'essential'
-                        ? '#10B981'
-                        : pattern.recommendation_strength === 'recommended'
-                        ? '#3B82F6'
-                        : '#6B7280',
-                    color: '#fff','& .MuiChip-label': { px: 0.5 }}}
-                />
-              ))}
-              {recommendedPatterns.length > 2 && (
-                <Typography
-                  variant="caption"
-                  sx={{ fontSize: 8, color: '#94A3B8' }}
-                >
-                  +{recommendedPatterns.length - 2}
-                </Typography>
-              )}
-            </Box>
-          </Box>
-        )}
-
-        {/* Manual Placement Button */}
         {onPlaceManually && (
-          <Chip
-            label="📍 Place"
+          <Button
             size="small"
+            startIcon={<PlaceIcon sx={{ fontSize: 12 }} />}
             onClick={handlePlaceManually}
             sx={{
               mt: 0.5,
-              height: 20,
               fontSize: 9,
-              fontWeight: 50,
+              py: 0.25,
+              width: '100%',
               bgcolor: '#F59E0B',
               color: '#fff',
-              cursor: 'pointer',
-              width: '100%','&:hover': { bgcolor: '#D97706' }, '& .MuiChip-label': { px: 0.5 }}}
-          />
+              '&:hover': { bgcolor: '#D97706' },
+            }}
+          >
+            Plasser
+          </Button>
         )}
       </Box>
     </Box>
   );
 }
 
-// Manual Placement Dialog Component
 interface ManualPlacementDialogProps {
   open: boolean;
   asset: AssetLibraryItem | null;
@@ -242,15 +200,10 @@ interface ManualPlacementDialogProps {
   onPlace: (position: [number, number, number]) => void;
 }
 
-function ManualPlacementDialog({
-  open,
-  asset,
-  onClose,
-  onPlace,
-}: ManualPlacementDialogProps) {
-  const [x, setX] = React.useState(0);
-  const [y, setY] = React.useState(1.5);
-  const [z, setZ] = React.useState(0);
+function ManualPlacementDialog({ open, asset, onClose, onPlace }: ManualPlacementDialogProps) {
+  const [x, setX] = useState(0);
+  const [y, setY] = useState(1.5);
+  const [z, setZ] = useState(0);
 
   const handlePlace = () => {
     onPlace([x, y, z]);
@@ -261,15 +214,15 @@ function ManualPlacementDialog({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>📍 Place {asset.name}</DialogTitle>
+      <DialogTitle>Plasser {asset.name}</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Adjust the position where you want to place this asset in the 3D scene.
+          Juster posisjonen der du vil plassere denne ressursen i 3D-scenen.
         </Typography>
 
         <Box sx={{ mb: 3 }}>
           <Typography variant="caption" gutterBottom>
-            X Position (Left ← → Right): {x.toFixed(2)}m
+            X Posisjon (Venstre - Hoyre): {x.toFixed(2)}m
           </Typography>
           <Slider
             value={x}
@@ -277,17 +230,12 @@ function ManualPlacementDialog({
             min={-5}
             max={5}
             step={0.1}
-            marks={[
-              { value: -5, label: '-5m' },
-              { value: 0, label: '0' },
-              { value: 5, label: '5m' },
-            ]}
           />
         </Box>
 
         <Box sx={{ mb: 3 }}>
           <Typography variant="caption" gutterBottom>
-            Y Position (Down ↓ ↑ Up): {y.toFixed(2)}m
+            Y Posisjon (Ned - Opp): {y.toFixed(2)}m
           </Typography>
           <Slider
             value={y}
@@ -295,17 +243,12 @@ function ManualPlacementDialog({
             min={0}
             max={5}
             step={0.1}
-            marks={[
-              { value: 0, label: '0m' },
-              { value: 1.5, label: '1.5m' },
-              { value: 5, label: '5m' },
-            ]}
           />
         </Box>
 
         <Box sx={{ mb: 2 }}>
           <Typography variant="caption" gutterBottom>
-            Z Position (Back ← → Front): {z.toFixed(2)}m
+            Z Posisjon (Bak - Foran): {z.toFixed(2)}m
           </Typography>
           <Slider
             value={z}
@@ -313,18 +256,13 @@ function ManualPlacementDialog({
             min={-5}
             max={5}
             step={0.1}
-            marks={[
-              { value: -5, label: '-5m' },
-              { value: 0, label: '0' },
-              { value: 5, label: '5m' },
-            ]}
           />
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>Avbryt</Button>
         <Button onClick={handlePlace} variant="contained" color="primary">
-          Place Asset
+          Plasser Ressurs
         </Button>
       </DialogActions>
     </Dialog>
@@ -332,39 +270,35 @@ function ManualPlacementDialog({
 }
 
 export default function AssetLibraryPanel() {
-  const [category, setCategory] = React.useState<string>('light');
-  const [search, setSearch] = React.useState(', ');
-  const [assets, setAssets] = React.useState<AssetLibraryItem[]>([]);
-  const [favorites, setFavorites] = React.useState<string[]>([]);
-  const [loading, setLoading] = React.useState(false);
-  const [placementDialogOpen, setPlacementDialogOpen] = React.useState(false);
-  const [selectedAsset, setSelectedAsset] = React.useState<AssetLibraryItem | null>(null);
+  const [category, setCategory] = useState<string>('light');
+  const [search, setSearch] = useState('');
+  const [assets, setAssets] = useState<AssetLibraryItem[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [placementDialogOpen, setPlacementDialogOpen] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<AssetLibraryItem | null>(null);
 
-  // Load assets when category or search changes
-  const loadAssets = React.useCallback(async () => {
+  const loadAssets = useCallback(async () => {
     setLoading(true);
     try {
       const data = await assetLibraryService.getAssets({
         category,
         search: search || undefined,
-        is_system: true, // Only show AI-generated assets for now
         limit: 100,
       });
       setAssets(data);
     } catch (error) {
-      log.error('Failed to load assets: ', error);
+      log.error('Failed to load assets:', error);
     } finally {
       setLoading(false);
     }
   }, [category, search]);
 
-  // Load favorites on mount
-  React.useEffect(() => {
+  useEffect(() => {
     assetLibraryService.getFavorites().then(setFavorites);
   }, []);
 
-  // Load assets when filters change
-  React.useEffect(() => {
+  useEffect(() => {
     loadAssets();
   }, [loadAssets]);
 
@@ -382,7 +316,6 @@ export default function AssetLibraryPanel() {
   const handlePlaceAsset = (position: [number, number, number]) => {
     if (!selectedAsset) return;
 
-    // Dispatch custom event to add asset at specific position
     const event = new CustomEvent('ch-add-asset-at', {
       detail: {
         asset: {
@@ -399,15 +332,13 @@ export default function AssetLibraryPanel() {
       },
     });
     window.dispatchEvent(event);
-
-    // Track usage
     assetLibraryService.trackUsage(selectedAsset.id);
   };
 
   return (
     <Box sx={{ p: 2 }}>
-      <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600}}>
-        📚 Asset Library
+      <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600, color: '#fff' }}>
+        Ressursbibliotek
       </Typography>
 
       <Tabs
@@ -415,7 +346,7 @@ export default function AssetLibraryPanel() {
         onChange={(_, v) => setCategory(v)}
         variant="scrollable"
         scrollButtons="auto"
-        sx={{ mb: 2, minHeight: 40 }}
+        sx={{ mb: 2, minHeight: 36 }}
       >
         {Object.entries(CATEGORIES).map(([key, { label, icon }]) => (
           <Tab
@@ -424,17 +355,17 @@ export default function AssetLibraryPanel() {
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <span>{icon}</span>
-                <span style={{ fontSize: 12 }}>{label}</span>
+                <span style={{ fontSize: 11 }}>{label}</span>
               </Box>
             }
-            sx={{ minHeight: 40, py: 0.5 }}
+            sx={{ minHeight: 36, py: 0.5 }}
           />
         ))}
       </Tabs>
 
       <TextField
         size="small"
-        placeholder="Søk etter ressurser..."
+        placeholder="Sok etter ressurser..."
         fullWidth
         value={search}
         onChange={(e) => setSearch(e.target.value)}
@@ -443,7 +374,8 @@ export default function AssetLibraryPanel() {
             <InputAdornment position="start">
               <SearchIcon fontSize="small" />
             </InputAdornment>
-          )}}
+          ),
+        }}
         sx={{ mb: 2 }}
       />
 
@@ -454,35 +386,31 @@ export default function AssetLibraryPanel() {
       ) : assets.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
           <Typography variant="body2">Ingen ressurser funnet</Typography>
-          <Typography variant="caption">
-            Prøv et annet søk eller kategori
-          </Typography>
+          <Typography variant="caption">Prov et annet sok eller kategori</Typography>
         </Box>
       ) : (
-        <Grid container spacing={1.5}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1 }}>
           {assets.map((asset) => (
-            <Grid item xs={6} key={asset.id}>
-              <AssetCard
-                asset={asset}
-                isFavorite={favorites.includes(asset.id)}
-                onToggleFavorite={handleToggleFavorite}
-                onPlaceManually={handlePlaceManually}
-              />
-            </Grid>
+            <AssetCard
+              key={asset.id}
+              asset={asset}
+              isFavorite={favorites.includes(asset.id)}
+              onToggleFavorite={handleToggleFavorite}
+              onPlaceManually={handlePlaceManually}
+            />
           ))}
-        </Grid>
+        </Box>
       )}
 
       {!loading && assets.length > 0 && (
         <Typography
           variant="caption"
-          sx={{ display: 'block', mt: 2, textAlign: 'center', color:'text.secondary' }}
+          sx={{ display: 'block', mt: 2, textAlign: 'center', color: 'text.secondary' }}
         >
           {assets.length} ressurser
         </Typography>
       )}
 
-      {/* Manual Placement Dialog */}
       <ManualPlacementDialog
         open={placementDialogOpen}
         asset={selectedAsset}
@@ -492,4 +420,3 @@ export default function AssetLibraryPanel() {
     </Box>
   );
 }
-
