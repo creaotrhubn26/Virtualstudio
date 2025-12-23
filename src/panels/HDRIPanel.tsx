@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -6,13 +6,9 @@ import {
   CardMedia,
   CardContent,
   Slider,
-  FormControl,
-  Select,
-  MenuItem,
   Button,
-  Chip,
-  IconButton,
-  Tooltip,
+  InputBase,
+  Divider,
   useMediaQuery,
 } from '@mui/material';
 import {
@@ -23,6 +19,7 @@ import {
   Landscape,
   CheckCircle,
   Add as AddIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 
 interface HDRIPreset {
@@ -92,26 +89,39 @@ const HDRI_PRESETS: HDRIPreset[] = [
   },
 ];
 
-const CATEGORIES = [
+interface CategoryInfo {
+  id: string;
+  name: string;
+  icon: React.ReactNode;
+}
+
+const CATEGORIES: CategoryInfo[] = [
   { id: 'all', name: 'Alle', icon: null },
-  { id: 'studio', name: 'Studio', icon: <Brightness4 fontSize="small" /> },
-  { id: 'outdoor', name: 'Utendørs', icon: <Landscape fontSize="small" /> },
-  { id: 'sunset', name: 'Solnedgang', icon: <WbSunny fontSize="small" /> },
-  { id: 'overcast', name: 'Overskyet', icon: <CloudQueue fontSize="small" /> },
-  { id: 'night', name: 'Natt', icon: <NightsStay fontSize="small" /> },
+  { id: 'studio', name: 'Studio', icon: <Brightness4 sx={{ fontSize: 20 }} /> },
+  { id: 'outdoor', name: 'Utendørs', icon: <Landscape sx={{ fontSize: 20 }} /> },
+  { id: 'sunset', name: 'Solnedgang', icon: <WbSunny sx={{ fontSize: 20 }} /> },
+  { id: 'overcast', name: 'Overskyet', icon: <CloudQueue sx={{ fontSize: 20 }} /> },
+  { id: 'night', name: 'Natt', icon: <NightsStay sx={{ fontSize: 20 }} /> },
 ];
 
 export function HDRIPanel() {
   const [selectedHDRI, setSelectedHDRI] = useState<string | null>(null);
   const [category, setCategory] = useState('all');
+  const [search, setSearch] = useState('');
   const [intensity, setIntensity] = useState(1.0);
   const [rotation, setRotation] = useState(0);
   const [showBackground, setShowBackground] = useState(true);
-  const isTablet = useMediaQuery('(max-width: 1024px), (pointer: coarse)');
+  const isTouchDevice = useMediaQuery('(pointer: coarse)');
 
-  const filteredPresets = HDRI_PRESETS.filter(
-    hdri => category === 'all' || hdri.category === category
-  );
+  const filteredPresets = useMemo(() => {
+    return HDRI_PRESETS.filter(hdri => {
+      const matchesCategory = category === 'all' || hdri.category === category;
+      const matchesSearch = search === '' ||
+        hdri.name.toLowerCase().includes(search.toLowerCase()) ||
+        hdri.description.toLowerCase().includes(search.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [category, search]);
 
   const handleSelectHDRI = (hdri: HDRIPreset) => {
     setSelectedHDRI(hdri.id);
@@ -147,34 +157,88 @@ export function HDRIPanel() {
     }
   };
 
+  const buttonStyle = {
+    minHeight: 56,
+    minWidth: 100,
+    fontSize: 15,
+    fontWeight: 600,
+    textTransform: 'none' as const,
+    borderRadius: '10px',
+    borderWidth: 2,
+    transition: 'all 0.2s ease',
+    WebkitTapHighlightColor: 'transparent',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+    '&:active': {
+      transform: 'scale(0.97)',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+    },
+  };
+
   return (
-    <Box sx={{ p: 1.5, height: '100%', overflow: 'auto', bgcolor: '#1a1a1a' }}>
-      <Typography variant="subtitle2" sx={{ color: '#00a8ff', mb: 1.5, fontWeight: 600 }}>
+    <Box sx={{ p: 2, height: '100%', overflow: 'auto', bgcolor: '#1a1a1a' }}>
+      <Typography variant="subtitle2" sx={{ color: '#00a8ff', mb: 2, fontWeight: 600, fontSize: 16 }}>
         HDRI Miljø
       </Typography>
 
-      <Box sx={{ display: 'flex', gap: 0.5, mb: 1.5, flexWrap: 'wrap' }}>
+      <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
         {CATEGORIES.map(cat => (
-          <Chip
+          <Button
             key={cat.id}
-            icon={cat.icon || undefined}
-            label={cat.name}
-            size="small"
+            variant={category === cat.id ? 'contained' : 'outlined'}
+            startIcon={cat.icon}
             onClick={() => setCategory(cat.id)}
             sx={{
-              bgcolor: category === cat.id ? '#00a8ff' : '#333',
+              ...buttonStyle,
+              bgcolor: category === cat.id ? '#00a8ff' : 'transparent',
+              borderColor: category === cat.id ? '#00a8ff' : '#444',
               color: category === cat.id ? '#fff' : '#aaa',
-              fontSize: 11,
-              '&:hover': { bgcolor: category === cat.id ? '#00a8ff' : '#444' },
+              boxShadow: category === cat.id ? '0 4px 12px rgba(0,168,255,0.3)' : '0 2px 6px rgba(0,0,0,0.2)',
+              '&:hover': {
+                bgcolor: category === cat.id ? '#0090dd' : '#333',
+                borderColor: category === cat.id ? '#0090dd' : '#555',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 16px rgba(0,0,0,0.4)',
+              },
+            }}
+          >
+            {cat.name}
+          </Button>
+        ))}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          bgcolor: '#2a2a2a', 
+          borderRadius: '10px', 
+          px: 2, 
+          py: 0.5,
+          minHeight: 56,
+          border: '2px solid #444',
+          flex: 1,
+          minWidth: 140,
+          maxWidth: 220,
+        }}>
+          <SearchIcon sx={{ color: '#888', fontSize: 22, mr: 1 }} />
+          <InputBase
+            placeholder="Søk HDRI..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            sx={{
+              color: '#fff',
+              fontSize: 15,
+              fontWeight: 500,
+              flex: 1,
+              '& input::placeholder': { color: '#666', opacity: 1 },
             }}
           />
-        ))}
+        </Box>
       </Box>
+
+      <Divider sx={{ my: 2, borderColor: '#333' }} />
 
       <Box sx={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(2, 1fr)', 
-        gap: 1,
+        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
+        gap: 1.5,
         mb: 2,
       }}>
         {filteredPresets.map((hdri) => (
@@ -184,10 +248,14 @@ export function HDRIPanel() {
             sx={{ 
               bgcolor: '#252525', 
               cursor: 'pointer',
-              border: selectedHDRI === hdri.id ? '2px solid #00a8ff' : '2px solid transparent',
-              transition: 'all 0.2s',
+              border: selectedHDRI === hdri.id ? '2px solid #00a8ff' : '2px solid #333',
+              borderRadius: 2,
+              transition: 'all 0.2s ease',
               '&:hover': { 
                 bgcolor: '#303030',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
+                borderColor: '#00a8ff',
               },
               position: 'relative',
             }}
@@ -196,46 +264,48 @@ export function HDRIPanel() {
               <CheckCircle 
                 sx={{ 
                   position: 'absolute', 
-                  top: 4, 
-                  right: 4, 
+                  top: 6, 
+                  right: 6, 
                   color: '#00a8ff',
-                  fontSize: 18,
+                  fontSize: 22,
                   bgcolor: '#1a1a1a',
                   borderRadius: '50%',
+                  zIndex: 1,
                 }} 
               />
             )}
             <CardMedia
               component="img"
-              height="60"
+              height="80"
               image={hdri.thumbnail}
               alt={hdri.name}
               sx={{ objectFit: 'cover' }}
               onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="60"><rect fill="%23333" width="100%" height="100%"/><text x="50%" y="50%" fill="%23666" text-anchor="middle" dy=".3em">HDRI</text></svg>';
+                e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="80"><rect fill="%23333" width="100%" height="100%"/><text x="50%" y="50%" fill="%23666" text-anchor="middle" dy=".3em">HDRI</text></svg>';
               }}
             />
-            <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
-              <Typography variant="body2" sx={{ color: '#fff', fontSize: 11, fontWeight: 500 }}>
+            <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+              <Typography variant="body2" sx={{ color: '#fff', fontSize: 12, fontWeight: 600, mb: 0.5 }}>
                 {hdri.name}
               </Typography>
-              <Typography variant="caption" sx={{ color: '#666', fontSize: 9, display: 'block', mb: 0.5 }}>
+              <Typography variant="caption" sx={{ color: '#888', fontSize: 10, display: 'block', mb: 1, lineHeight: 1.3 }}>
                 {hdri.description}
               </Typography>
               <Button
-                size="small"
+                size="medium"
                 variant="contained"
                 fullWidth
-                startIcon={<AddIcon sx={{ fontSize: 14 }} />}
+                startIcon={<AddIcon sx={{ fontSize: 16 }} />}
                 onClick={(e) => handleAddHDRI(hdri, e)}
                 aria-label={`Legg til ${hdri.name}`}
                 sx={{
-                  minHeight: isTablet ? 36 : 24,
-                  fontSize: 9,
+                  minHeight: 44,
+                  fontSize: 12,
+                  fontWeight: 600,
                   bgcolor: '#00a8ff',
+                  borderRadius: '8px',
                   '&:hover': { bgcolor: '#0090dd' },
                   textTransform: 'none',
-                  mt: 0.5,
                 }}
               >
                 Legg til
@@ -246,13 +316,13 @@ export function HDRIPanel() {
       </Box>
 
       {selectedHDRI && (
-        <Box sx={{ p: 1.5, bgcolor: '#252525', borderRadius: 1 }}>
-          <Typography variant="caption" sx={{ color: '#888', display: 'block', mb: 1 }}>
+        <Box sx={{ p: 2, bgcolor: '#252525', borderRadius: 2, border: '1px solid #333' }}>
+          <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600, mb: 2 }}>
             Innstillinger
           </Typography>
 
           <Box sx={{ mb: 2 }}>
-            <Typography variant="caption" sx={{ color: '#666' }}>
+            <Typography variant="caption" sx={{ color: '#888', fontSize: 12 }}>
               Intensitet: {intensity.toFixed(1)}
             </Typography>
             <Slider
@@ -267,7 +337,7 @@ export function HDRIPanel() {
           </Box>
 
           <Box sx={{ mb: 2 }}>
-            <Typography variant="caption" sx={{ color: '#666' }}>
+            <Typography variant="caption" sx={{ color: '#888', fontSize: 12 }}>
               Rotasjon: {rotation}°
             </Typography>
             <Slider
@@ -282,13 +352,23 @@ export function HDRIPanel() {
           </Box>
 
           <Button
-            size="small"
+            size="large"
             variant="outlined"
             onClick={() => { setShowBackground(!showBackground); setTimeout(updateHDRISettings, 0); }}
             sx={{
               width: '100%',
+              minHeight: 48,
+              fontSize: 14,
+              fontWeight: 600,
+              borderRadius: '10px',
+              borderWidth: 2,
               borderColor: showBackground ? '#00a8ff' : '#444',
               color: showBackground ? '#00a8ff' : '#888',
+              textTransform: 'none',
+              '&:hover': {
+                borderColor: '#00a8ff',
+                bgcolor: 'rgba(0, 168, 255, 0.1)',
+              },
             }}
           >
             {showBackground ? 'Skjul bakgrunn' : 'Vis bakgrunn'}
