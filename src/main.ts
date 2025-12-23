@@ -2679,13 +2679,60 @@ window.addEventListener('DOMContentLoaded', () => {
     const cameraControlBtn = document.getElementById('cameraControlBtn');
     const cameraControlsPanel = document.getElementById('cameraControlsPanel');
     const cameraControlsClose = document.getElementById('cameraControlsClose');
+    const leftPanel = document.querySelector('.equipment-panel') as HTMLElement;
+    const rightPanel = document.querySelector('.properties-panel') as HTMLElement;
+    const leftResizeHandle = document.getElementById('leftResizeHandle') as HTMLElement;
+    const rightResizeHandle = document.getElementById('rightResizeHandle') as HTMLElement;
     
-    // Toggle function for camera controls panel
+    // Store original panel widths
+    let savedLeftWidth = '';
+    let savedRightWidth = '';
+    let panelsCollapsed = false;
+    
+    // Toggle function for camera controls panel with panel collapse
     const toggleCameraControls = () => {
       if (!cameraControlsPanel) return;
       const isVisible = cameraControlsPanel.style.display !== 'none';
-      cameraControlsPanel.style.display = isVisible ? 'none' : 'block';
-      cameraControlBtn?.classList.toggle('active', !isVisible);
+      
+      if (isVisible) {
+        // Closing camera controls - restore panels
+        cameraControlsPanel.style.display = 'none';
+        cameraControlBtn?.classList.remove('active');
+        if (panelsCollapsed) {
+          if (leftPanel) {
+            leftPanel.style.width = savedLeftWidth || '280px';
+            leftPanel.style.minWidth = '200px';
+            leftPanel.style.display = '';
+          }
+          if (rightPanel) {
+            rightPanel.style.width = savedRightWidth || '320px';
+            rightPanel.style.minWidth = '280px';
+            rightPanel.style.display = '';
+          }
+          if (leftResizeHandle) leftResizeHandle.style.display = '';
+          if (rightResizeHandle) rightResizeHandle.style.display = '';
+          panelsCollapsed = false;
+        }
+      } else {
+        // Opening camera controls - collapse panels
+        cameraControlsPanel.style.display = 'block';
+        cameraControlBtn?.classList.add('active');
+        if (leftPanel) {
+          savedLeftWidth = leftPanel.style.width || getComputedStyle(leftPanel).width;
+          leftPanel.style.width = '0';
+          leftPanel.style.minWidth = '0';
+          leftPanel.style.display = 'none';
+        }
+        if (rightPanel) {
+          savedRightWidth = rightPanel.style.width || getComputedStyle(rightPanel).width;
+          rightPanel.style.width = '0';
+          rightPanel.style.minWidth = '0';
+          rightPanel.style.display = 'none';
+        }
+        if (leftResizeHandle) leftResizeHandle.style.display = 'none';
+        if (rightResizeHandle) rightResizeHandle.style.display = 'none';
+        panelsCollapsed = true;
+      }
     };
     
     // Bind camera button
@@ -2695,6 +2742,22 @@ window.addEventListener('DOMContentLoaded', () => {
       cameraControlsClose.addEventListener('click', () => {
         if (cameraControlsPanel) cameraControlsPanel.style.display = 'none';
         cameraControlBtn?.classList.remove('active');
+        // Restore panels when closing
+        if (panelsCollapsed) {
+          if (leftPanel) {
+            leftPanel.style.width = savedLeftWidth || '280px';
+            leftPanel.style.minWidth = '200px';
+            leftPanel.style.display = '';
+          }
+          if (rightPanel) {
+            rightPanel.style.width = savedRightWidth || '320px';
+            rightPanel.style.minWidth = '280px';
+            rightPanel.style.display = '';
+          }
+          if (leftResizeHandle) leftResizeHandle.style.display = '';
+          if (rightResizeHandle) rightResizeHandle.style.display = '';
+          panelsCollapsed = false;
+        }
       });
     }
     
