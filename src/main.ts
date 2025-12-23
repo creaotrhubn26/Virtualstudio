@@ -2944,7 +2944,7 @@ window.addEventListener('DOMContentLoaded', () => {
         models: ['Alle', 'Kvinner', 'Menn', 'Barn', 'Dyr'],
         lights: [],
         camera: [],
-        equipment: ['Alle', 'Diffusorer', 'Reflektorer', 'Blokkere'],
+        equipment: [],
         assets: ['Alle', 'Bakgrunner', 'Rekvisitter', 'Møbler'],
         timeline: []
       };
