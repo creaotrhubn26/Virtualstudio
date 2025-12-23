@@ -2942,8 +2942,8 @@ window.addEventListener('DOMContentLoaded', () => {
       
       const categoryConfig: Record<string, string[]> = {
         models: ['Alle', 'Kvinner', 'Menn', 'Barn', 'Dyr'],
-        lights: ['Alle', 'Blits', 'Kontinuerlig', 'Praktisk lys', 'Lysformere'],
-        camera: ['Alle', 'Kameraer', 'Objektiver', 'Tilbehør'],
+        lights: [],
+        camera: [],
         equipment: ['Alle', 'Diffusorer', 'Reflektorer', 'Blokkere'],
         assets: ['Alle', 'Bakgrunner', 'Rekvisitter', 'Møbler'],
         timeline: []
