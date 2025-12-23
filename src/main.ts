@@ -2964,11 +2964,13 @@ window.addEventListener('DOMContentLoaded', () => {
           });
           
           const categoriesEl = document.getElementById('panelCategories');
-          if (categoriesEl) {
+          const sidebarEl = document.querySelector('.actor-sidebar') as HTMLElement;
+          if (categoriesEl && sidebarEl) {
             const cats = categoryConfig[tabName] || [];
             if (cats.length === 0) {
-              categoriesEl.style.display = 'none';
+              sidebarEl.style.display = 'none';
             } else {
+              sidebarEl.style.display = 'flex';
               categoriesEl.style.display = 'flex';
               categoriesEl.innerHTML = cats.map((cat, i) => 
                 `<div class="actor-category${i === 0 ? ' active' : ''}" data-category="${cat.toLowerCase().replace(' ', '-')}">${cat}</div>`
