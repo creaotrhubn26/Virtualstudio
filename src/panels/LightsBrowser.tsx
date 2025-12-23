@@ -75,12 +75,12 @@ const LIGHT_CATEGORIES: CategoryInfo[] = [
 
 const LIGHT_BRANDS: CategoryInfo[] = [
   { key: 'all', label: 'Alle merker' },
-  { key: 'Godox', label: 'Godox', logo: 'https://seeklogo.com/images/G/godox-logo-9B6C2B9B47-seeklogo.com.png' },
-  { key: 'Profoto', label: 'Profoto', logo: 'https://seeklogo.com/images/P/profoto-logo-9F0F0A8D35-seeklogo.com.png' },
-  { key: 'Aputure', label: 'Aputure', logo: 'https://seeklogo.com/images/A/aputure-logo-2D8C0D0C5D-seeklogo.com.png' },
-  { key: 'Nanlite', label: 'Nanlite', logo: 'https://seeklogo.com/images/N/nanlite-logo-9B69A76927-seeklogo.com.png' },
-  { key: 'Elinchrom', label: 'Elinchrom', logo: 'https://seeklogo.com/images/E/elinchrom-logo-A9DE3C4E2C-seeklogo.com.png' },
-  { key: 'Broncolor', label: 'Broncolor', logo: 'https://seeklogo.com/images/B/broncolor-logo-71E7F6D8DD-seeklogo.com.png' },
+  { key: 'Godox', label: 'Godox', logo: 'https://asset.brandfetch.io/idlSpJFp1E/idH5TmZD7L.png' },
+  { key: 'Profoto', label: 'Profoto', logo: 'https://asset.brandfetch.io/idPwTmvFpk/idHYbMrT7j.svg' },
+  { key: 'Aputure', label: 'Aputure', logo: 'https://asset.brandfetch.io/idJz4ZNkqC/idkZl7DXKF.png' },
+  { key: 'Nanlite', label: 'Nanlite', logo: 'https://asset.brandfetch.io/id2S-04u1u/idpU5KHZK7.png' },
+  { key: 'Elinchrom', label: 'Elinchrom', logo: 'https://asset.brandfetch.io/idNrCHn4vz/idC2hZaEpI.svg' },
+  { key: 'Broncolor', label: 'Broncolor', logo: 'https://asset.brandfetch.io/id8WFe7yPp/idubvCY_NJ.svg' },
 ];
 
 interface ModifierSpec {
