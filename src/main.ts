@@ -2941,11 +2941,11 @@ window.addEventListener('DOMContentLoaded', () => {
       rightResizeHandle?.addEventListener('keydown', (e) => handleKeyResize(e, rightPanel, -1));
       
       const categoryConfig: Record<string, string[]> = {
-        models: ['All', 'Women', 'Men', 'Children', 'Animals'],
-        lights: ['All', 'Flash', 'Continuous', 'Practical Light', 'Light Shapers'],
-        camera: ['All', 'Kameraer', 'Objektiver', 'Tilbehør'],
-        equipment: ['All', 'Diffusers', 'Reflectors', 'Blockers'],
-        assets: ['All', 'Bakgrunner', 'Rekvisitter', 'Møbler'],
+        models: ['Alle', 'Kvinner', 'Menn', 'Barn', 'Dyr'],
+        lights: ['Alle', 'Blits', 'Kontinuerlig', 'Praktisk lys', 'Lysformere'],
+        camera: ['Alle', 'Kameraer', 'Objektiver', 'Tilbehør'],
+        equipment: ['Alle', 'Diffusorer', 'Reflektorer', 'Blokkere'],
+        assets: ['Alle', 'Bakgrunner', 'Rekvisitter', 'Møbler'],
         timeline: []
       };
       
