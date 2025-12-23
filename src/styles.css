@@ -707,19 +707,26 @@ html, body {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 10px 16px;
+  padding: 12px 18px;
   cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   border-radius: 8px 8px 0 0;
   white-space: nowrap;
   flex-shrink: 0;
-  min-height: 44px;
-  min-width: 44px;
+  min-height: 48px;
+  min-width: 48px;
   transition: all 0.2s ease;
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tab-icon {
+  font-size: 16px;
+  line-height: 1;
 }
 
 .actor-tab:hover {
