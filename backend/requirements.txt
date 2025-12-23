@@ -8,3 +8,4 @@ scipy>=1.10.0
 torch>=2.0.0
 torchvision>=0.15.0
 pillow>=9.0.0
+smplx>=0.1.28
