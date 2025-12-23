@@ -345,20 +345,34 @@ export function CameraGearPanel() {
         value={activeTab} 
         onChange={(_, v) => setActiveTab(v)}
         sx={{
-          minHeight: 44,
-          borderBottom: '1px solid #333',
+          minHeight: 60,
+          borderBottom: '2px solid #333',
           '& .MuiTab-root': {
-            color: '#888',
-            minHeight: 44,
-            fontSize: 13,
+            color: '#aaa',
+            minHeight: 60,
+            fontSize: 16,
+            fontWeight: 600,
             textTransform: 'none',
-            '&.Mui-selected': { color: '#00a8ff' },
+            px: 3,
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              color: '#fff',
+              bgcolor: 'rgba(0, 168, 255, 0.1)',
+            },
+            '&.Mui-selected': { 
+              color: '#00a8ff',
+              fontWeight: 700,
+            },
           },
-          '& .MuiTabs-indicator': { backgroundColor: '#00a8ff' },
+          '& .MuiTabs-indicator': { 
+            backgroundColor: '#00a8ff',
+            height: 3,
+            borderRadius: '3px 3px 0 0',
+          },
         }}
       >
-        <Tab icon={<CameraAltIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Kameraer" />
-        <Tab icon={<CameraIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Objektiver" />
+        <Tab icon={<CameraAltIcon sx={{ fontSize: 22 }} />} iconPosition="start" label="Kameraer" />
+        <Tab icon={<CameraIcon sx={{ fontSize: 22 }} />} iconPosition="start" label="Objektiver" />
       </Tabs>
 
       <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
