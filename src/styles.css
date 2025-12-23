@@ -2580,12 +2580,9 @@ html, body {
 }
 
 .viewfinder-controls {
-  position: absolute;
-  top: 50px;
-  right: 12px;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  gap: 6px;
   pointer-events: auto;
 }
 
@@ -2929,6 +2926,7 @@ html, body {
   border-top: 1px solid var(--border-color);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 12px;
   gap: 12px;
 }
