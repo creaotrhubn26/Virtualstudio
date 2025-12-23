@@ -2176,272 +2176,425 @@ html, body {
 
 .helper-guide-panel {
   position: absolute;
-  background: linear-gradient(135deg, rgba(20, 30, 45, 0.95) 0%, rgba(10, 20, 35, 0.98) 100%);
-  border-radius: 12px;
-  padding: 16px 18px;
-  font-size: 13px;
+  background: linear-gradient(135deg, rgba(15, 25, 40, 0.97) 0%, rgba(8, 15, 30, 0.99) 100%);
+  border-radius: 16px;
+  padding: 20px 24px;
+  font-size: 14px;
   color: #fff;
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(0, 200, 255, 0.25);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 168, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  border: 2px solid rgba(0, 229, 255, 0.4);
+  box-shadow: 
+    0 12px 48px rgba(0, 0, 0, 0.6), 
+    0 0 40px rgba(0, 168, 255, 0.25),
+    0 0 80px rgba(0, 168, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  animation: helperGuideAppear 0.3s ease-out;
+}
+
+@keyframes helperGuideAppear {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .helper-guide-panel.bottom-left {
-  bottom: 80px;
-  left: 20px;
-  max-width: 280px;
-  min-width: 240px;
+  bottom: 90px;
+  left: 24px;
+  max-width: 340px;
+  min-width: 300px;
 }
 
 .helper-guide-panel.bottom-right {
-  bottom: 80px;
-  right: 80px;
-  max-width: 240px;
-  min-width: 180px;
+  bottom: 90px;
+  right: 90px;
+  max-width: 280px;
+  min-width: 220px;
 }
 
 .helper-guide-panel h4 {
-  margin: 0 0 14px 0;
-  font-size: 15px;
-  font-weight: 600;
+  margin: 0 0 18px 0;
+  font-size: 18px;
+  font-weight: 700;
   color: #00e5ff;
   display: flex;
   align-items: center;
-  gap: 10px;
-  text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+  gap: 12px;
+  text-shadow: 0 0 20px rgba(0, 229, 255, 0.7), 0 0 40px rgba(0, 229, 255, 0.3);
+  padding-bottom: 14px;
+  border-bottom: 2px solid rgba(0, 229, 255, 0.3);
+  letter-spacing: 0.5px;
 }
 
 .helper-guide-panel h4::before {
   content: '';
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
   background: currentColor;
-  border-radius: 3px;
-  box-shadow: 0 0 8px currentColor;
+  border-radius: 4px;
+  box-shadow: 0 0 12px currentColor, 0 0 24px currentColor;
+  animation: helperIconPulse 2s ease-in-out infinite;
+}
+
+@keyframes helperIconPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.1); }
 }
 
 .color-temp-scale {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .color-temp-bar {
-  height: 24px;
-  border-radius: 6px;
+  height: 32px;
+  border-radius: 8px;
   background: linear-gradient(to right, 
-    #ff9329 0%, 
-    #ffb46b 15%, 
-    #ffc89c 25%, 
-    #ffdfc7 35%, 
-    #fff4e5 45%, 
+    #ff7700 0%, 
+    #ff9329 10%, 
+    #ffb46b 20%, 
+    #ffc89c 30%, 
+    #ffdfc7 40%, 
+    #fff4e5 50%, 
     #ffffff 55%, 
     #e6f0ff 65%, 
-    #cce0ff 80%, 
-    #99c2ff 100%
+    #cce0ff 75%, 
+    #99c2ff 85%,
+    #66a3ff 100%
   );
   position: relative;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.4), 
+    inset 0 2px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .color-temp-marker {
   position: absolute;
-  top: -6px;
-  width: 3px;
-  height: 36px;
-  background: #fff;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.8), 0 0 4px rgba(0, 0, 0, 0.5);
+  top: -8px;
+  width: 4px;
+  height: 48px;
+  background: linear-gradient(180deg, #fff 0%, #00e5ff 100%);
+  box-shadow: 0 0 16px rgba(0, 229, 255, 1), 0 0 32px rgba(0, 229, 255, 0.6);
   transform: translateX(-50%);
-  border-radius: 2px;
+  border-radius: 3px;
+  animation: markerGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes markerGlow {
+  0%, 100% { box-shadow: 0 0 16px rgba(0, 229, 255, 1), 0 0 32px rgba(0, 229, 255, 0.6); }
+  50% { box-shadow: 0 0 24px rgba(0, 229, 255, 1), 0 0 48px rgba(0, 229, 255, 0.8); }
 }
 
 .color-temp-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
-  color: #aaa;
-  font-weight: 500;
+  font-size: 13px;
+  color: #ccc;
+  font-weight: 600;
 }
 
 .exposure-zones {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .exposure-zone {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 6px;
-  transition: background 0.15s ease;
+  gap: 14px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
 }
 
 .exposure-zone:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(0, 229, 255, 0.3);
+  transform: translateX(4px);
 }
 
 .exposure-zone-box {
-  width: 28px;
-  height: 18px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  width: 36px;
+  height: 24px;
+  border-radius: 6px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
 }
 
 .exposure-zone-label {
   flex: 1;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 500;
 }
 
 .exposure-zone-ev {
-  font-size: 11px;
+  font-size: 14px;
   color: #00e5ff;
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 500;
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+  padding: 4px 8px;
+  background: rgba(0, 229, 255, 0.1);
+  border-radius: 4px;
 }
 
 .height-markers {
   position: absolute;
-  left: 20px;
+  left: 30px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0;
-  height: 60%;
+  height: 70%;
 }
 
 .height-marker {
   position: absolute;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
+  animation: heightMarkerAppear 0.4s ease-out backwards;
+}
+
+.height-marker:nth-child(1) { animation-delay: 0.05s; }
+.height-marker:nth-child(2) { animation-delay: 0.1s; }
+.height-marker:nth-child(3) { animation-delay: 0.15s; }
+.height-marker:nth-child(4) { animation-delay: 0.2s; }
+.height-marker:nth-child(5) { animation-delay: 0.25s; }
+
+@keyframes heightMarkerAppear {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .height-line {
-  width: 60px;
-  height: 2px;
+  width: 80px;
+  height: 3px;
   background: currentColor;
-  box-shadow: 0 0 8px currentColor;
-  border-radius: 1px;
+  box-shadow: 0 0 16px currentColor, 0 0 32px currentColor;
+  border-radius: 2px;
 }
 
 .height-label {
-  font-size: 12px;
-  padding: 5px 10px;
-  background: rgba(0, 0, 0, 0.85);
-  border-radius: 6px;
+  font-size: 15px;
+  padding: 8px 14px;
+  background: rgba(0, 0, 0, 0.9);
+  border-radius: 8px;
   white-space: nowrap;
-  border: 1px solid currentColor;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 12px currentColor;
-  font-weight: 500;
+  border: 2px solid currentColor;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 20px currentColor;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
 .glasses-tips {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .glasses-tip {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: 14px;
+  padding: 14px 16px;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: background 0.15s ease;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
 }
 
 .glasses-tip:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(0, 255, 136, 0.3);
+  transform: translateX(4px);
 }
 
 .glasses-tip-icon {
-  width: 26px;
-  height: 26px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0,255,136,0.2);
-  border-radius: 4px;
-  font-size: 10px;
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.25) 0%, rgba(0, 200, 100, 0.15) 100%);
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #00ff88;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+  flex-shrink: 0;
 }
 
 .glasses-tip-text {
   flex: 1;
-  font-size: 12px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .classphoto-guides {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .classphoto-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 10px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 6px;
+  gap: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.classphoto-row:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(4px);
 }
 
 .classphoto-row span {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 500;
 }
 
 .classphoto-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 5px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   flex-shrink: 0;
+  border: 1px solid currentColor;
+  text-shadow: 0 0 10px currentColor;
 }
 
 .safety-zones {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .safety-zone-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 10px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 6px;
+  gap: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.safety-zone-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(4px);
 }
 
 .safety-zone-item span {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 500;
 }
 
 .safety-zone-color {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  border: 2px solid currentColor;
-  box-shadow: 0 0 8px currentColor;
+  border: 3px solid currentColor;
+  box-shadow: 0 0 16px currentColor, 0 0 32px currentColor;
   flex-shrink: 0;
+  animation: safetyPulse 2s ease-in-out infinite;
+}
+
+@keyframes safetyPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.scene-info-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.2) 0%, rgba(0, 168, 255, 0.1) 100%);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #00e5ff;
+  text-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+  animation: badgePulse 3s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(0, 229, 255, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(0, 229, 255, 0.5); }
+}
+
+.scene-info-badge .live-dot {
+  width: 8px;
+  height: 8px;
+  background: #00ff88;
+  border-radius: 50%;
+  animation: liveDotBlink 1s ease-in-out infinite;
+}
+
+@keyframes liveDotBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.scene-lights-list {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.scene-light-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+.scene-light-item:last-child {
+  margin-bottom: 0;
+}
+
+.scene-light-name {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.scene-light-cct {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 3px 8px;
+  border-radius: 4px;
 }
 
 .viewfinder-controls .helper-guide .icon {

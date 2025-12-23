@@ -1,4 +1,4 @@
-import { useFocusStore, FocusMode, SafeAreaMode, CompositionGuide, HelperGuide } from '../state/store';
+import { useFocusStore, useAppStore, FocusMode, SafeAreaMode, CompositionGuide, HelperGuide } from '../state/store';
 
 export class FocusController {
   private viewportElement: HTMLElement | null = null;
@@ -462,40 +462,95 @@ export class FocusController {
     return labels[guide];
   }
 
+  private getSceneLights(): { name: string; cct: number }[] {
+    const scene = useAppStore.getState().scene;
+    return scene
+      .filter(node => node.type === 'light')
+      .map(node => ({
+        name: node.name,
+        cct: (node.userData?.cct as number) || 5500
+      }));
+  }
+
+  private cctToColor(cct: number): string {
+    if (cct < 2000) return '#ff7700';
+    if (cct < 3000) return '#ff9329';
+    if (cct < 4000) return '#ffb46b';
+    if (cct < 5000) return '#ffdfc7';
+    if (cct < 6000) return '#ffffff';
+    if (cct < 7000) return '#e6f0ff';
+    if (cct < 8000) return '#cce0ff';
+    return '#99c2ff';
+  }
+
+  private cctToPosition(cct: number): number {
+    // Map 1800K-10000K to 0-100%
+    return Math.max(0, Math.min(100, ((cct - 1800) / (10000 - 1800)) * 100));
+  }
+
   private getHelperGuideHTML(guide: HelperGuide): string {
+    const sceneLights = this.getSceneLights();
+    const hasLights = sceneLights.length > 0;
+    
     switch (guide) {
       case 'colortemp':
+        const lightsMarkersHTML = sceneLights.map((light, i) => 
+          `<div class="color-temp-marker" style="left: ${this.cctToPosition(light.cct)}%; background: linear-gradient(180deg, ${this.cctToColor(light.cct)} 0%, #00e5ff 100%);" title="${light.name}: ${light.cct}K"></div>`
+        ).join('');
+        
+        const sceneLightsListHTML = hasLights ? `
+          <div class="scene-lights-list">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+              <span class="scene-info-badge"><span class="live-dot"></span>Scene lys</span>
+            </div>
+            ${sceneLights.map(light => `
+              <div class="scene-light-item">
+                <span class="scene-light-name">${light.name}</span>
+                <span class="scene-light-cct" style="background: ${this.cctToColor(light.cct)}20; color: ${this.cctToColor(light.cct)};">${light.cct}K</span>
+              </div>
+            `).join('')}
+          </div>
+        ` : `
+          <div class="scene-lights-list">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="scene-info-badge"><span class="live-dot"></span>Ingen lys i scenen</span>
+            </div>
+            <p style="font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 10px;">Legg til lys fra Lys-panelet for å se verdier her.</p>
+          </div>
+        `;
+        
         return `
           <div class="helper-guide-panel bottom-left">
             <h4>Fargetemperatur (K)</h4>
             <div class="color-temp-scale">
               <div class="color-temp-bar">
-                <div class="color-temp-marker" style="left: 55%"></div>
+                ${hasLights ? lightsMarkersHTML : '<div class="color-temp-marker" style="left: 55%"></div>'}
               </div>
               <div class="color-temp-labels">
                 <span>1800K</span>
                 <span>5500K</span>
                 <span>10000K</span>
               </div>
-              <div style="margin-top: 8px; font-size: 10px; color: #888;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                  <span style="color: #ff9329;">Stearinlys</span>
-                  <span>1800K</span>
+              <div style="margin-top: 14px;">
+                <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                  <span style="color: #ff9329; font-size: 14px;">Stearinlys</span>
+                  <span style="font-size: 14px; font-family: monospace;">1800K</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                  <span style="color: #ffb46b;">Glødelampe</span>
-                  <span>2700K</span>
+                <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                  <span style="color: #ffb46b; font-size: 14px;">Glødelampe</span>
+                  <span style="font-size: 14px; font-family: monospace;">2700K</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                  <span style="color: #ffffff;">Dagslys</span>
-                  <span>5500K</span>
+                <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                  <span style="color: #ffffff; font-size: 14px;">Dagslys</span>
+                  <span style="font-size: 14px; font-family: monospace;">5500K</span>
                 </div>
-                <div style="display: flex; justify-content: space-between;">
-                  <span style="color: #cce0ff;">Skygge</span>
-                  <span>7500K</span>
+                <div style="display: flex; justify-content: space-between; padding: 6px 0;">
+                  <span style="color: #cce0ff; font-size: 14px;">Skygge</span>
+                  <span style="font-size: 14px; font-family: monospace;">7500K</span>
                 </div>
               </div>
             </div>
+            ${sceneLightsListHTML}
           </div>
         `;
       case 'exposure':
