@@ -2914,38 +2914,52 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       };
       
+      // Helper to add pointer handlers for touch-friendly controls
+      const addSettingHandler = (btnId: string, handler: () => void) => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+          btn.addEventListener('pointerup', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handler();
+          });
+        }
+      };
+      
       // Aperture controls
-      document.getElementById('apertureUp')?.addEventListener('click', () => {
+      addSettingHandler('apertureUp', () => {
         apertureIndex = Math.min(apertureStops.length - 1, apertureIndex + 1);
         updateCameraDisplay();
+        console.log('Aperture:', apertureStops[apertureIndex]);
       });
-      document.getElementById('apertureDown')?.addEventListener('click', () => {
+      addSettingHandler('apertureDown', () => {
         apertureIndex = Math.max(0, apertureIndex - 1);
         updateCameraDisplay();
+        console.log('Aperture:', apertureStops[apertureIndex]);
       });
       
       // Shutter controls
-      document.getElementById('shutterUp')?.addEventListener('click', () => {
+      addSettingHandler('shutterUp', () => {
         shutterIndex = Math.max(0, shutterIndex - 1);
         updateCameraDisplay();
       });
-      document.getElementById('shutterDown')?.addEventListener('click', () => {
+      addSettingHandler('shutterDown', () => {
         shutterIndex = Math.min(shutterSpeeds.length - 1, shutterIndex + 1);
         updateCameraDisplay();
       });
       
       // ISO controls
-      document.getElementById('isoUp')?.addEventListener('click', () => {
+      addSettingHandler('isoUp', () => {
         isoIndex = Math.min(isoValues.length - 1, isoIndex + 1);
         updateCameraDisplay();
       });
-      document.getElementById('isoDown')?.addEventListener('click', () => {
+      addSettingHandler('isoDown', () => {
         isoIndex = Math.max(0, isoIndex - 1);
         updateCameraDisplay();
       });
       
       // Focal length controls
-      document.getElementById('focalUp')?.addEventListener('click', () => {
+      addSettingHandler('focalUp', () => {
         focalIndex = Math.min(focalLengths.length - 1, focalIndex + 1);
         updateCameraDisplay();
         const camera = studio.getCamera();
@@ -2953,7 +2967,7 @@ window.addEventListener('DOMContentLoaded', () => {
           camera.fov = (50 / focalLengths[focalIndex]) * 0.8;
         }
       });
-      document.getElementById('focalDown')?.addEventListener('click', () => {
+      addSettingHandler('focalDown', () => {
         focalIndex = Math.max(0, focalIndex - 1);
         updateCameraDisplay();
         const camera = studio.getCamera();
@@ -2963,11 +2977,11 @@ window.addEventListener('DOMContentLoaded', () => {
       });
       
       // White balance controls
-      document.getElementById('wbUp')?.addEventListener('click', () => {
+      addSettingHandler('wbUp', () => {
         wbIndex = Math.min(whiteBalances.length - 1, wbIndex + 1);
         updateCameraDisplay();
       });
-      document.getElementById('wbDown')?.addEventListener('click', () => {
+      addSettingHandler('wbDown', () => {
         wbIndex = Math.max(0, wbIndex - 1);
         updateCameraDisplay();
       });
