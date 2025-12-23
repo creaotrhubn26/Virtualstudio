@@ -2679,8 +2679,8 @@ window.addEventListener('DOMContentLoaded', () => {
     const cameraControlBtn = document.getElementById('cameraControlBtn');
     const cameraControlsPanel = document.getElementById('cameraControlsPanel');
     const cameraControlsClose = document.getElementById('cameraControlsClose');
-    const leftPanel = document.querySelector('.equipment-panel') as HTMLElement;
-    const rightPanel = document.querySelector('.properties-panel') as HTMLElement;
+    const leftPanel = document.querySelector('.left-panel') as HTMLElement;
+    const rightPanel = document.querySelector('.right-panel') as HTMLElement;
     const leftResizeHandle = document.getElementById('leftResizeHandle') as HTMLElement;
     const rightResizeHandle = document.getElementById('rightResizeHandle') as HTMLElement;
     
