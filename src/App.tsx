@@ -8,7 +8,6 @@ import { LightsBrowser } from './panels/LightsBrowser';
 import { CameraGearPanel } from './panels/CameraGearPanel';
 import { HDRIPanel } from './panels/HDRIPanel';
 import { EquipmentPanel } from './panels/EquipmentPanel';
-import { ViewfinderOverlay } from './overlays/ViewfinderOverlay';
 
 const darkTheme = createTheme({
   palette: {
@@ -118,24 +117,3 @@ export const EquipmentPanelApp: React.FC = () => {
   );
 };
 
-interface ViewfinderAppProps {
-  isVideoMode?: boolean;
-  isRecording?: boolean;
-}
-
-export const ViewfinderApp: React.FC<ViewfinderAppProps> = ({ isVideoMode = true, isRecording = false }) => {
-  return (
-    <ThemeProvider theme={darkTheme}>
-      <ViewfinderOverlay 
-        isVideoMode={isVideoMode}
-        isRecording={isRecording}
-        showFocusPoints={true}
-        focusMode="zone"
-        safeAreaMode="none"
-        showTimecode={true}
-        timecodeValue="00:00:00:00"
-        fps={24}
-      />
-    </ThemeProvider>
-  );
-};

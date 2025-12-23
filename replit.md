@@ -46,6 +46,12 @@ The application employs a hybrid architecture, combining Vanilla TypeScript with
 - **typescript**: Provides static type checking for improved code quality and maintainability.
 
 ## Recent Changes
+- 2025-12-23: Implemented professional viewfinder overlay HUD
+  - 3x3 focus point grid (zone mode) with center point activation
+  - Center crosshair for precise framing
+  - VIDEO/16:9 mode indicator at top center
+  - Viewfinder controls: focus mode, safe area, grid toggle
+  - Static HTML/CSS implementation for reliable Babylon.js integration
 - 2025-12-23: Added unique thumbnail images for all 17 lights in LightsBrowser
   - Godox AD200 Pro (pocket flash), AD400 Pro (battery strobe), AD600 Pro (monolight)
   - Profoto B10 (compact cylindrical), B10 Plus (larger), D2 1000 (studio monolight)
