@@ -688,10 +688,123 @@ class VirtualStudio {
   private setupExportListeners(): void {
     document.getElementById('snapshotBtn')?.addEventListener('click', () => this.takeScreenshot());
     document.getElementById('exportPng')?.addEventListener('click', () => this.takeScreenshot());
+    document.getElementById('exportPdfBtn2')?.addEventListener('click', () => this.exportPdf());
     
     document.getElementById('notesBtn')?.addEventListener('click', () => {
       window.dispatchEvent(new CustomEvent('toggle-notes-panel'));
     });
+  }
+
+  private exportPdf(): void {
+    BABYLON.Tools.CreateScreenshot(
+      this.engine,
+      this.camera,
+      { width: 1920, height: 1080 },
+      (screenshotData: string) => {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('nb-NO', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        const lightsArray = Array.from(this.lights.values());
+        const cameraSettings = {
+          focalLength: 50,
+          aperture: 2.8,
+          iso: 100,
+          shutter: '1/125'
+        };
+
+        const notes = JSON.parse(localStorage.getItem('virtualstudio_notes') || '[]');
+        const notesHtml = notes.length > 0 
+          ? notes.map((n: any) => `<div style="margin-bottom:8px;"><strong>${n.title}</strong><br/><span style="color:#666;">${n.content || ''}</span></div>`).join('')
+          : '<p style="color:#888;">Ingen notater</p>';
+
+        const lightsHtml = lightsArray.length > 0
+          ? lightsArray.map((l: LightData) => `<div style="margin-bottom:4px;">• ${l.type || 'Lys'} - ${l.light?.intensity?.toFixed(1) || '1.0'} intensitet</div>`).join('')
+          : '<p style="color:#888;">Ingen lys i scenen</p>';
+
+        const htmlContent = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>Virtual Studio - Lysoppsett</title>
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: #fff; padding: 40px; }
+              .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+              .title { font-size: 28px; font-weight: 700; color: #00a8ff; }
+              .date { color: #888; font-size: 14px; }
+              .screenshot { width: 100%; border-radius: 8px; margin-bottom: 30px; border: 2px solid #333; }
+              .section { background: #252525; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+              .section-title { font-size: 16px; font-weight: 600; color: #fbbf24; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+              .section-title.camera { color: #00a8ff; }
+              .section-title.notes { color: #10b981; }
+              .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+              .param { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; }
+              .param-label { color: #888; }
+              .param-value { font-weight: 600; }
+              .footer { text-align: center; color: #555; font-size: 12px; margin-top: 30px; }
+              @media print {
+                body { background: white; color: black; }
+                .section { background: #f5f5f5; }
+                .section-title { color: #333; }
+                .param-label { color: #666; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="title">Virtual Studio - Lysoppsett</div>
+              <div class="date">${dateStr}</div>
+            </div>
+            
+            <img class="screenshot" src="${screenshotData}" alt="Studio oppsett" />
+            
+            <div class="grid">
+              <div class="section">
+                <div class="section-title">🎥 Kamerainnstillinger</div>
+                <div class="param"><span class="param-label">Brennvidde</span><span class="param-value">${cameraSettings.focalLength}mm</span></div>
+                <div class="param"><span class="param-label">Blender</span><span class="param-value">f/${cameraSettings.aperture}</span></div>
+                <div class="param"><span class="param-label">ISO</span><span class="param-value">${cameraSettings.iso}</span></div>
+                <div class="param"><span class="param-label">Lukker</span><span class="param-value">${cameraSettings.shutter}s</span></div>
+              </div>
+              
+              <div class="section">
+                <div class="section-title" style="color:#fbbf24;">💡 Lys (${lightsArray.length})</div>
+                ${lightsHtml}
+              </div>
+            </div>
+            
+            <div class="section">
+              <div class="section-title notes">📝 Notater</div>
+              ${notesHtml}
+            </div>
+            
+            <div class="footer">
+              Generert med Virtual Studio | ${dateStr}
+            </div>
+          </body>
+          </html>
+        `;
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(htmlContent);
+          printWindow.document.close();
+          
+          printWindow.onload = () => {
+            setTimeout(() => {
+              printWindow.print();
+            }, 500);
+          };
+        }
+      }
+    );
   }
 
   private setup2DViews(): void {
