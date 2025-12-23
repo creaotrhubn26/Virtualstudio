@@ -279,21 +279,36 @@ export function LightsBrowser() {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
         <Lightbulb sx={{ color: '#fbbf24' }} />
         <Typography variant="subtitle1" fontWeight={600}>Lyskilder</Typography>
-        <Chip
-          label={`${LIGHT_DATABASE.length} lys`}
-          size="medium"
-          sx={{ 
-            ml: 'auto', 
-            bgcolor: '#fbbf24', 
-            color: '#000',
-            fontSize: 14,
-            fontWeight: 700,
-            px: 1.5,
-            height: 32,
-            boxShadow: '0 2px 8px rgba(251, 191, 36, 0.4)',
-            border: '2px solid rgba(255, 255, 255, 0.2)',
-          }}
-        />
+        <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+          <Chip
+            label={`${LIGHT_DATABASE.length} lys`}
+            size="medium"
+            sx={{ 
+              bgcolor: '#fbbf24', 
+              color: '#000',
+              fontSize: 14,
+              fontWeight: 700,
+              px: 1.5,
+              height: 32,
+              boxShadow: '0 2px 8px rgba(251, 191, 36, 0.4)',
+              border: '2px solid rgba(255, 255, 255, 0.2)',
+            }}
+          />
+          <Chip
+            label={`${MODIFIER_DATABASE.length} lysformere`}
+            size="medium"
+            sx={{ 
+              bgcolor: '#8b5cf6', 
+              color: '#fff',
+              fontSize: 14,
+              fontWeight: 700,
+              px: 1.5,
+              height: 32,
+              boxShadow: '0 2px 8px rgba(139, 92, 246, 0.4)',
+              border: '2px solid rgba(255, 255, 255, 0.2)',
+            }}
+          />
+        </Box>
       </Box>
 
       {/* Main tabs */}
