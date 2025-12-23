@@ -2,7 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, NotesPanelApp } from './App';
+import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, NotesPanelApp, Accessible3DControlsApp } from './App';
 import { useAppStore, useFocusStore, SceneNode } from './state/store';
 import { focusController } from './core/FocusController';
 import { virtualActorService } from './core/services/virtualActorService';
@@ -225,6 +225,37 @@ class VirtualStudio {
     
     this.engine.resize();
     this.resizeCanvases();
+  }
+
+  // Public camera accessors for 3D controls integration
+  public getCameraPosition(): BABYLON.Vector3 {
+    return this.camera.position.clone();
+  }
+  
+  public getCameraTarget(): BABYLON.Vector3 {
+    return this.camera.target.clone();
+  }
+  
+  public getCameraFov(): number {
+    return this.camera.fov;
+  }
+  
+  public setCameraPosition(position: BABYLON.Vector3): void {
+    this.camera.position = position;
+  }
+  
+  public setCameraTarget(target: BABYLON.Vector3): void {
+    this.camera.target = target;
+  }
+  
+  public setCameraFov(fov: number): void {
+    this.camera.fov = fov;
+  }
+  
+  public resetCamera(): void {
+    this.camera.position = new BABYLON.Vector3(0, 2.5, -8);
+    this.camera.target = new BABYLON.Vector3(0, 1, 0);
+    this.camera.fov = 0.8;
   }
 
   private setupStudio(): void {
@@ -2638,6 +2669,134 @@ window.addEventListener('DOMContentLoaded', () => {
     if (notesPanelRoot) {
       const notesRoot = createRoot(notesPanelRoot);
       notesRoot.render(React.createElement(NotesPanelApp, {}));
+    }
+    
+    // Mount Accessible 3D Controls with camera connection
+    const accessible3DControlsRoot = document.getElementById('accessible3DControlsRoot');
+    if (accessible3DControlsRoot) {
+      const controls3DRoot = createRoot(accessible3DControlsRoot);
+      
+      // Get initial camera state from Babylon.js camera
+      const getCameraState = () => {
+        const pos = studio.getCameraPosition();
+        const target = studio.getCameraTarget();
+        return {
+          position: [pos.x, pos.y, pos.z] as [number, number, number],
+          target: [target.x, target.y, target.z] as [number, number, number],
+          zoom: 1.0,
+          fov: studio.getCameraFov()
+        };
+      };
+      
+      // Get scene objects from store
+      const getSceneObjects = () => {
+        const store = useAppStore.getState();
+        return store.scene.map(node => ({
+          id: node.id,
+          name: node.name,
+          type: node.type,
+          position: node.transform.position,
+          rotation: node.transform.rotation,
+          scale: node.transform.scale,
+          visible: node.visible
+        }));
+      };
+      
+      // Get selected object
+      const getSelectedObject = () => {
+        const store = useAppStore.getState();
+        const selectedId = store.selectedNodeId;
+        if (!selectedId) return null;
+        const node = store.getNode(selectedId);
+        if (!node) return null;
+        return {
+          id: node.id,
+          name: node.name,
+          type: node.type,
+          position: node.transform.position,
+          rotation: node.transform.rotation,
+          scale: node.transform.scale,
+          visible: node.visible
+        };
+      };
+      
+      // Camera change handler
+      const handleCameraChange = (state: Partial<{
+        position: [number, number, number];
+        target: [number, number, number];
+        zoom: number;
+        fov: number;
+      }>) => {
+        if (state.position) {
+          studio.setCameraPosition(new BABYLON.Vector3(state.position[0], state.position[1], state.position[2]));
+        }
+        if (state.target) {
+          studio.setCameraTarget(new BABYLON.Vector3(state.target[0], state.target[1], state.target[2]));
+        }
+        if (state.fov !== undefined) {
+          studio.setCameraFov(state.fov);
+        }
+        renderControls();
+      };
+      
+      // Camera reset handler
+      const handleCameraReset = () => {
+        studio.resetCamera();
+        renderControls();
+      };
+      
+      // Object select handler
+      const handleObjectSelect = (id: string | null) => {
+        const store = useAppStore.getState();
+        store.selectNode(id);
+        renderControls();
+      };
+      
+      // Object transform handler
+      const handleObjectTransform = (id: string, transform: Partial<{
+        id: string;
+        name: string;
+        type: string;
+        position: [number, number, number];
+        rotation: [number, number, number];
+        scale: [number, number, number];
+        visible: boolean;
+      }>) => {
+        const store = useAppStore.getState();
+        if (transform.position || transform.rotation || transform.scale) {
+          store.updateNode(id, {
+            transform: {
+              position: transform.position || store.getNode(id)?.transform.position || [0, 0, 0],
+              rotation: transform.rotation || store.getNode(id)?.transform.rotation || [0, 0, 0],
+              scale: transform.scale || store.getNode(id)?.transform.scale || [1, 1, 1]
+            }
+          });
+        }
+        if (transform.visible !== undefined) {
+          store.updateNode(id, { visible: transform.visible });
+        }
+        renderControls();
+      };
+      
+      const renderControls = () => {
+        controls3DRoot.render(React.createElement(Accessible3DControlsApp, {
+          cameraState: getCameraState(),
+          selectedObject: getSelectedObject(),
+          objects: getSceneObjects(),
+          onCameraChange: handleCameraChange,
+          onCameraReset: handleCameraReset,
+          onObjectSelect: handleObjectSelect,
+          onObjectTransform: handleObjectTransform
+        }));
+      };
+      
+      // Initial render
+      renderControls();
+      
+      // Re-render when store changes
+      useAppStore.subscribe(() => {
+        renderControls();
+      });
     }
     
     if (actorPanelRoot && actorBottomPanel && actorPanelTrigger) {
