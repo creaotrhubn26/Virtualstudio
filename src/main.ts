@@ -2966,16 +2966,21 @@ window.addEventListener('DOMContentLoaded', () => {
           const categoriesEl = document.getElementById('panelCategories');
           if (categoriesEl) {
             const cats = categoryConfig[tabName] || [];
-            categoriesEl.innerHTML = cats.map((cat, i) => 
-              `<div class="actor-category${i === 0 ? ' active' : ''}" data-category="${cat.toLowerCase().replace(' ', '-')}">${cat}</div>`
-            ).join('');
-            
-            categoriesEl.querySelectorAll('.actor-category').forEach(catEl => {
-              catEl.addEventListener('click', () => {
-                categoriesEl.querySelectorAll('.actor-category').forEach(c => c.classList.remove('active'));
-                catEl.classList.add('active');
+            if (cats.length === 0) {
+              categoriesEl.style.display = 'none';
+            } else {
+              categoriesEl.style.display = 'flex';
+              categoriesEl.innerHTML = cats.map((cat, i) => 
+                `<div class="actor-category${i === 0 ? ' active' : ''}" data-category="${cat.toLowerCase().replace(' ', '-')}">${cat}</div>`
+              ).join('');
+              
+              categoriesEl.querySelectorAll('.actor-category').forEach(catEl => {
+                catEl.addEventListener('click', () => {
+                  categoriesEl.querySelectorAll('.actor-category').forEach(c => c.classList.remove('active'));
+                  catEl.classList.add('active');
+                });
               });
-            });
+            }
           }
         });
       });
