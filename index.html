@@ -192,6 +192,39 @@
       <main class="viewport-container" id="main-viewport" role="main" aria-label="3D Viewport">
         <div class="viewport-3d">
           <canvas id="renderCanvas" tabindex="0" aria-label="3D scene visning - bruk mus for aa navigere"></canvas>
+          <div id="viewfinderOverlay" class="viewfinder-overlay-hud">
+            <div class="viewfinder-center-crosshair">
+              <div class="crosshair-h"></div>
+              <div class="crosshair-v"></div>
+            </div>
+            <div class="viewfinder-focus-grid zone-mode" id="focusGrid">
+              <div class="focus-point" data-point="0"></div>
+              <div class="focus-point" data-point="1"></div>
+              <div class="focus-point" data-point="2"></div>
+              <div class="focus-point" data-point="3"></div>
+              <div class="focus-point active" data-point="4"></div>
+              <div class="focus-point" data-point="5"></div>
+              <div class="focus-point" data-point="6"></div>
+              <div class="focus-point" data-point="7"></div>
+              <div class="focus-point" data-point="8"></div>
+            </div>
+            <div class="viewfinder-mode-indicator" id="modeIndicator">
+              <span class="mode-icon video"></span>
+              <span class="mode-label">VIDEO</span>
+              <span class="mode-ratio">16:9</span>
+            </div>
+            <div class="viewfinder-controls" id="viewfinderControls">
+              <button class="vf-btn focus-mode active" data-mode="zone" title="Sone fokus">
+                <span class="icon"></span>
+              </button>
+              <button class="vf-btn safe-area" data-mode="none" title="Trygge områder">
+                <span class="icon"></span>
+              </button>
+              <button class="vf-btn grid-toggle" title="Tredjedelsrutenett">
+                <span class="icon"></span>
+              </button>
+            </div>
+          </div>
           <div class="viewport-overlay">
             <div class="cam-info">
               <span class="cam-label" id="camLabel">Cam A</span>
@@ -720,6 +753,6 @@
     </div>
   </div>
 
-  <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

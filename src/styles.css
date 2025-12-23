@@ -2044,6 +2044,203 @@ html, body {
   outline: none;
 }
 
+.viewfinder-overlay-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.viewfinder-center-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.viewfinder-center-crosshair .crosshair-h {
+  width: 30px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.6);
+  position: absolute;
+  left: -15px;
+  top: 0;
+}
+
+.viewfinder-center-crosshair .crosshair-v {
+  width: 2px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.6);
+  position: absolute;
+  top: -15px;
+  left: 0;
+}
+
+.viewfinder-focus-grid {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: 20px;
+}
+
+.viewfinder-focus-grid.zone-mode {
+  grid-template-columns: repeat(3, 1fr);
+  width: 180px;
+  height: 120px;
+}
+
+.viewfinder-focus-grid .focus-point {
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.15s ease;
+  pointer-events: auto;
+  cursor: pointer;
+  place-self: center;
+}
+
+.viewfinder-focus-grid .focus-point:hover {
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.viewfinder-focus-grid .focus-point.active {
+  border-color: #00a8ff;
+  background: rgba(0, 168, 255, 0.2);
+  box-shadow: 0 0 8px rgba(0, 168, 255, 0.5);
+}
+
+.viewfinder-mode-indicator {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  pointer-events: auto;
+}
+
+.viewfinder-mode-indicator .mode-icon {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.viewfinder-mode-indicator .mode-icon.video {
+  background: #ff4444;
+}
+
+.viewfinder-mode-indicator .mode-icon.photo {
+  background: #00a8ff;
+}
+
+.viewfinder-mode-indicator .mode-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  letter-spacing: 0.5px;
+}
+
+.viewfinder-mode-indicator .mode-ratio {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.viewfinder-controls {
+  position: absolute;
+  top: 50px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: auto;
+}
+
+.viewfinder-controls .vf-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.viewfinder-controls .vf-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.viewfinder-controls .vf-btn.active {
+  background: rgba(0, 168, 255, 0.3);
+  color: #00a8ff;
+}
+
+.viewfinder-controls .vf-btn .icon {
+  width: 16px;
+  height: 16px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.viewfinder-controls .focus-mode .icon {
+  border: 2px solid currentColor;
+  border-radius: 2px;
+  width: 12px;
+  height: 12px;
+}
+
+.viewfinder-controls .safe-area .icon {
+  border: 1px dashed currentColor;
+  width: 14px;
+  height: 10px;
+}
+
+.viewfinder-controls .grid-toggle .icon {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  width: 12px;
+  height: 12px;
+}
+
+.viewfinder-controls .grid-toggle .icon::before,
+.viewfinder-controls .grid-toggle .icon::after {
+  content: '';
+  position: absolute;
+  background: currentColor;
+}
+
+.viewfinder-controls .grid-toggle .icon::before {
+  width: 100%;
+  height: 1px;
+  top: 33%;
+  left: 0;
+}
+
+.viewfinder-controls .grid-toggle .icon::after {
+  width: 1px;
+  height: 100%;
+  left: 33%;
+  top: 0;
+}
+
 .viewport-overlay {
   position: absolute;
   top: 12px;
