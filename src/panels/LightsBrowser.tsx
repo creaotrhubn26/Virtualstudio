@@ -341,30 +341,40 @@ export function LightsBrowser() {
           </Box>
 
           {/* Brand category buttons */}
-          <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block', fontSize: 11 }}>
+          <Typography variant="body2" sx={{ color: '#aaa', mb: 1.5, display: 'block', fontSize: 13, fontWeight: 600 }}>
             Merke
           </Typography>
-          <Box sx={{ mb: 2, display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+          <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             {LIGHT_BRANDS.map((brand) => (
               <Button
                 key={brand.key}
                 variant={selectedBrandCategory === brand.key ? 'contained' : 'outlined'}
-                size="small"
+                size="large"
                 onClick={() => setSelectedBrandCategory(brand.key)}
                 sx={{ 
-                  fontSize: 11, 
-                  py: 1, 
-                  px: 1.5,
-                  minHeight: 36,
-                  borderRadius: 1.5,
-                  fontWeight: selectedBrandCategory === brand.key ? 700 : 500,
-                  bgcolor: selectedBrandCategory === brand.key ? '#3b82f6' : 'transparent',
-                  borderColor: selectedBrandCategory === brand.key ? '#3b82f6' : '#444',
-                  color: selectedBrandCategory === brand.key ? '#fff' : '#aaa',
+                  fontSize: 14, 
+                  py: 1.5, 
+                  px: 2.5,
+                  minHeight: 52,
+                  minWidth: 100,
+                  borderRadius: 2,
+                  fontWeight: selectedBrandCategory === brand.key ? 700 : 600,
+                  bgcolor: selectedBrandCategory === brand.key ? '#3b82f6' : '#2a2a2a',
+                  borderColor: selectedBrandCategory === brand.key ? '#3b82f6' : '#555',
+                  borderWidth: 2,
+                  color: selectedBrandCategory === brand.key ? '#fff' : '#ddd',
+                  boxShadow: selectedBrandCategory === brand.key ? '0 4px 12px rgba(59, 130, 246, 0.4)' : '0 2px 4px rgba(0,0,0,0.2)',
                   transition: 'all 0.2s ease',
+                  WebkitTapHighlightColor: 'transparent',
                   '&:hover': {
-                    bgcolor: selectedBrandCategory === brand.key ? '#2563eb' : 'rgba(59, 130, 246, 0.15)',
+                    bgcolor: selectedBrandCategory === brand.key ? '#2563eb' : '#3a3a3a',
                     borderColor: '#3b82f6',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 6px 16px rgba(59, 130, 246, 0.3)',
+                  },
+                  '&:active': {
+                    transform: 'translateY(0)',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
                   },
                 }}
               >
