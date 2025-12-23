@@ -2617,6 +2617,27 @@ html, body {
   letter-spacing: 0.02em;
 }
 
+.vf-dropdown .vf-btn::after {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 4px solid currentColor;
+  margin-left: 4px;
+  opacity: 0.6;
+  transition: transform 0.2s ease;
+}
+
+.vf-dropdown.open .vf-btn::after {
+  transform: rotate(180deg);
+}
+
+/* Remove arrow for buttons without dropdown menus */
+.vf-dropdown:not(:has(.vf-dropdown-menu)) .vf-btn::after {
+  display: none;
+}
+
 .viewfinder-controls .vf-btn:hover {
   background: linear-gradient(180deg, rgba(60, 75, 90, 0.98) 0%, rgba(45, 55, 70, 0.98) 100%);
   border-color: rgba(255, 255, 255, 0.15);
@@ -2661,9 +2682,20 @@ html, body {
   backdrop-filter: blur(8px);
 }
 
-.vf-dropdown:hover .vf-dropdown-menu,
 .vf-dropdown.open .vf-dropdown-menu {
   display: flex;
+  animation: dropdownFadeIn 0.15s ease;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .vf-menu-item {

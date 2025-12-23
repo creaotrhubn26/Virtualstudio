@@ -82,6 +82,22 @@ export class FocusController {
     const menu = document.getElementById(menuId);
     if (!menu) return;
 
+    const dropdown = menu.closest('.vf-dropdown');
+    const btn = dropdown?.querySelector('.vf-btn');
+
+    // Toggle dropdown on button click
+    if (btn && dropdown) {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = dropdown.classList.contains('open');
+        // Close all other dropdowns first
+        document.querySelectorAll('.vf-dropdown.open').forEach(d => d.classList.remove('open'));
+        if (!isOpen) {
+          dropdown.classList.add('open');
+        }
+      });
+    }
+
     const items = menu.querySelectorAll('.vf-menu-item');
     items.forEach((item) => {
       item.addEventListener('click', (e) => {
@@ -92,8 +108,15 @@ export class FocusController {
           // Update active state
           items.forEach((i) => i.classList.remove('active'));
           item.classList.add('active');
+          // Close dropdown after selection
+          dropdown?.classList.remove('open');
         }
       });
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', () => {
+      dropdown?.classList.remove('open');
     });
   }
 
