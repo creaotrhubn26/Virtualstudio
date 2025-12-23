@@ -1004,6 +1004,11 @@ class VirtualStudio {
     store.selectNode(modelId);
     this.characterModelId = modelId;
     
+    // Update DOM hierarchy
+    if ((window as any).addToHierarchy) {
+      (window as any).addToHierarchy(modelId, name, 'model');
+    }
+    
     // Attach gizmo for interaction
     if (this.gizmoManager && this.characterMesh) {
       this.gizmoManager.attachToMesh(this.characterMesh as BABYLON.Mesh);
@@ -2762,6 +2767,9 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       };
+      
+      // Expose addToHierarchy globally for use by character loader
+      (window as any).addToHierarchy = addToHierarchy;
       
       const showObjectProperties = (name: string, type: 'model' | 'light' | 'equipment', position = [0, 0, 0], rotation = [0, 0, 0]) => {
         const noSelection = document.getElementById('noSelection');
