@@ -64,7 +64,6 @@ const LIGHT_DATABASE: LightSpec[] = [
 interface CategoryInfo {
   key: string;
   label: string;
-  logo?: string;
 }
 
 const LIGHT_CATEGORIES: CategoryInfo[] = [
@@ -75,12 +74,12 @@ const LIGHT_CATEGORIES: CategoryInfo[] = [
 
 const LIGHT_BRANDS: CategoryInfo[] = [
   { key: 'all', label: 'Alle merker' },
-  { key: 'Godox', label: 'Godox', logo: 'https://asset.brandfetch.io/idlSpJFp1E/idH5TmZD7L.png' },
-  { key: 'Profoto', label: 'Profoto', logo: 'https://asset.brandfetch.io/idPwTmvFpk/idHYbMrT7j.svg' },
-  { key: 'Aputure', label: 'Aputure', logo: 'https://asset.brandfetch.io/idJz4ZNkqC/idkZl7DXKF.png' },
-  { key: 'Nanlite', label: 'Nanlite', logo: 'https://asset.brandfetch.io/id2S-04u1u/idpU5KHZK7.png' },
-  { key: 'Elinchrom', label: 'Elinchrom', logo: 'https://asset.brandfetch.io/idNrCHn4vz/idC2hZaEpI.svg' },
-  { key: 'Broncolor', label: 'Broncolor', logo: 'https://asset.brandfetch.io/id8WFe7yPp/idubvCY_NJ.svg' },
+  { key: 'Godox', label: 'Godox' },
+  { key: 'Profoto', label: 'Profoto' },
+  { key: 'Aputure', label: 'Aputure' },
+  { key: 'Nanlite', label: 'Nanlite' },
+  { key: 'Elinchrom', label: 'Elinchrom' },
+  { key: 'Broncolor', label: 'Broncolor' },
 ];
 
 interface ModifierSpec {
@@ -369,21 +368,7 @@ export function LightsBrowser() {
                   },
                 }}
               >
-                {brand.logo ? (
-                  <Box
-                    component="img"
-                    src={brand.logo}
-                    alt={brand.label}
-                    sx={{ 
-                      height: 16, 
-                      maxWidth: 60,
-                      objectFit: 'contain',
-                      filter: selectedBrandCategory === brand.key ? 'brightness(0) invert(1)' : 'brightness(0.8)',
-                    }}
-                  />
-                ) : (
-                  brand.label
-                )}
+                {brand.label}
               </Button>
             ))}
           </Box>
