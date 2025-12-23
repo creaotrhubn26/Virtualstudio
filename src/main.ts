@@ -228,6 +228,10 @@ class VirtualStudio {
   }
 
   // Public camera accessors for 3D controls integration
+  public getCamera(): BABYLON.ArcRotateCamera {
+    return this.camera;
+  }
+  
   public getCameraPosition(): BABYLON.Vector3 {
     return this.camera.position.clone();
   }
@@ -2671,7 +2675,91 @@ window.addEventListener('DOMContentLoaded', () => {
       notesRoot.render(React.createElement(NotesPanelApp, {}));
     }
     
-    // Mount Accessible 3D Controls with camera connection
+    // Setup Camera Controls (Touch-friendly overlay)
+    const cameraControlBtn = document.getElementById('cameraControlBtn');
+    const cameraControlsPanel = document.getElementById('cameraControlsPanel');
+    const cameraControlsClose = document.getElementById('cameraControlsClose');
+    
+    // Toggle function for camera controls panel
+    const toggleCameraControls = () => {
+      if (!cameraControlsPanel) return;
+      const isVisible = cameraControlsPanel.style.display !== 'none';
+      cameraControlsPanel.style.display = isVisible ? 'none' : 'block';
+      cameraControlBtn?.classList.toggle('active', !isVisible);
+    };
+    
+    // Bind camera button
+    cameraControlBtn?.addEventListener('click', toggleCameraControls);
+    
+    if (cameraControlsClose) {
+      cameraControlsClose.addEventListener('click', () => {
+        if (cameraControlsPanel) cameraControlsPanel.style.display = 'none';
+        cameraControlBtn?.classList.remove('active');
+      });
+    }
+    
+    if (cameraControlsPanel) {
+      
+      // Camera control handlers
+      const orbitStep = 0.1;
+      const zoomStep = 0.5;
+      const panStep = 0.3;
+      
+      // Orbit controls
+      document.getElementById('orbitLeft')?.addEventListener('click', () => {
+        const camera = studio.getCamera();
+        if (camera) camera.alpha -= orbitStep;
+      });
+      document.getElementById('orbitRight')?.addEventListener('click', () => {
+        const camera = studio.getCamera();
+        if (camera) camera.alpha += orbitStep;
+      });
+      document.getElementById('orbitUp')?.addEventListener('click', () => {
+        const camera = studio.getCamera();
+        if (camera) camera.beta = Math.max(0.1, camera.beta - orbitStep);
+      });
+      document.getElementById('orbitDown')?.addEventListener('click', () => {
+        const camera = studio.getCamera();
+        if (camera) camera.beta = Math.min(Math.PI - 0.1, camera.beta + orbitStep);
+      });
+      
+      // Zoom controls
+      document.getElementById('zoomIn')?.addEventListener('click', () => {
+        const camera = studio.getCamera();
+        if (camera) camera.radius = Math.max(1, camera.radius - zoomStep);
+      });
+      document.getElementById('zoomOut')?.addEventListener('click', () => {
+        const camera = studio.getCamera();
+        if (camera) camera.radius = Math.min(20, camera.radius + zoomStep);
+      });
+      
+      // Pan controls
+      document.getElementById('panLeft')?.addEventListener('click', () => {
+        const target = studio.getCameraTarget();
+        studio.setCameraTarget(new BABYLON.Vector3(target.x - panStep, target.y, target.z));
+      });
+      document.getElementById('panRight')?.addEventListener('click', () => {
+        const target = studio.getCameraTarget();
+        studio.setCameraTarget(new BABYLON.Vector3(target.x + panStep, target.y, target.z));
+      });
+      document.getElementById('panUp')?.addEventListener('click', () => {
+        const target = studio.getCameraTarget();
+        studio.setCameraTarget(new BABYLON.Vector3(target.x, target.y + panStep, target.z));
+      });
+      document.getElementById('panDown')?.addEventListener('click', () => {
+        const target = studio.getCameraTarget();
+        studio.setCameraTarget(new BABYLON.Vector3(target.x, target.y - panStep, target.z));
+      });
+      
+      // Reset camera
+      document.getElementById('resetCamera')?.addEventListener('click', () => {
+        studio.resetCamera();
+      });
+      
+      console.log('Camera controls initialized');
+    }
+    
+    // Mount Accessible 3D Controls with camera connection (hidden, kept for accessibility)
     const accessible3DControlsRoot = document.getElementById('accessible3DControlsRoot');
     if (accessible3DControlsRoot) {
       const controls3DRoot = createRoot(accessible3DControlsRoot);

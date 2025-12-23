@@ -46,6 +46,16 @@ The application employs a hybrid architecture, combining Vanilla TypeScript with
 - **typescript**: Provides static type checking for improved code quality and maintainability.
 
 ## Recent Changes
+- 2025-12-23: Added touch-friendly camera controls overlay
+  - "Kamera" button in bottom bar toolbar opens camera controls panel
+  - Touch-friendly 56px minimum touch targets for iPad/tablet use
+  - Orbit controls (up/down/left/right arrows in D-pad layout)
+  - Zoom controls (+/− buttons)
+  - Pan controls (directional arrows in D-pad layout)
+  - Reset camera button
+  - Panel positioned as overlay inside 3D viewport
+  - All labels in Norwegian
+  - VirtualStudio class now has public getCamera() accessor method
 - 2025-12-23: Implemented WCAG 2.2 AccessibilityProvider system
   - Created src/providers/AccessibilityProvider.tsx with comprehensive accessibility hooks
   - useAccessibility hook for settings, announce function, keyboard shortcuts

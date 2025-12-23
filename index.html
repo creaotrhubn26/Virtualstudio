@@ -190,6 +190,41 @@
       <div class="resize-handle resize-handle-left" id="leftResizeHandle" role="separator" aria-orientation="vertical" aria-label="Endre storrelse paa venstre panel" tabindex="0"></div>
 
       <main class="viewport-container" id="main-viewport" role="main" aria-label="3D Viewport">
+        <!-- Camera Controls Panel -->
+        <div id="cameraControlsPanel" style="display:none;position:absolute;top:80px;right:16px;width:280px;z-index:9998;background:rgba(20,25,32,0.95);border:2px solid rgba(0,212,255,0.4);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.6);overflow:hidden;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:rgba(0,212,255,0.1);border-bottom:1px solid rgba(0,212,255,0.2);">
+            <span style="font-size:16px;font-weight:600;color:#00d4ff;">Kamerakontroller</span>
+            <button id="cameraControlsClose" aria-label="Lukk" style="width:40px;height:40px;border-radius:8px;background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&times;</button>
+          </div>
+          <div style="padding:16px;display:flex;flex-direction:column;gap:20px;">
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <label style="font-size:13px;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">Orbit</label>
+              <div style="display:grid;grid-template-columns:repeat(3,56px);grid-template-rows:repeat(3,56px);gap:4px;justify-content:center;">
+                <button id="orbitUp" style="grid-area:1/2;min-width:56px;min-height:56px;border-radius:12px;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);color:#fff;font-size:20px;cursor:pointer;">↑</button>
+                <button id="orbitLeft" style="grid-area:2/1;min-width:56px;min-height:56px;border-radius:12px;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);color:#fff;font-size:20px;cursor:pointer;">←</button>
+                <button id="orbitRight" style="grid-area:2/3;min-width:56px;min-height:56px;border-radius:12px;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);color:#fff;font-size:20px;cursor:pointer;">→</button>
+                <button id="orbitDown" style="grid-area:3/2;min-width:56px;min-height:56px;border-radius:12px;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);color:#fff;font-size:20px;cursor:pointer;">↓</button>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <label style="font-size:13px;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">Zoom</label>
+              <div style="display:flex;gap:8px;justify-content:center;">
+                <button id="zoomIn" style="width:80px;min-height:56px;border-radius:12px;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);color:#fff;font-size:28px;font-weight:bold;cursor:pointer;">+</button>
+                <button id="zoomOut" style="width:80px;min-height:56px;border-radius:12px;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);color:#fff;font-size:28px;font-weight:bold;cursor:pointer;">−</button>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <label style="font-size:13px;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">Pan</label>
+              <div style="display:grid;grid-template-columns:repeat(3,56px);grid-template-rows:repeat(3,56px);gap:4px;justify-content:center;">
+                <button id="panUp" style="grid-area:1/2;min-width:56px;min-height:56px;border-radius:12px;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);color:#fff;font-size:20px;cursor:pointer;">▲</button>
+                <button id="panLeft" style="grid-area:2/1;min-width:56px;min-height:56px;border-radius:12px;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);color:#fff;font-size:20px;cursor:pointer;">◀</button>
+                <button id="panRight" style="grid-area:2/3;min-width:56px;min-height:56px;border-radius:12px;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);color:#fff;font-size:20px;cursor:pointer;">▶</button>
+                <button id="panDown" style="grid-area:3/2;min-width:56px;min-height:56px;border-radius:12px;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);color:#fff;font-size:20px;cursor:pointer;">▼</button>
+              </div>
+            </div>
+            <button id="resetCamera" style="width:100%;min-height:48px;border-radius:12px;background:rgba(0,212,255,0.15);border:2px solid rgba(0,212,255,0.4);color:#fff;font-size:14px;font-weight:600;cursor:pointer;">Tilbakestill kamera</button>
+          </div>
+        </div>
         <div class="viewport-3d">
           <canvas id="renderCanvas" tabindex="0" aria-label="3D scene visning - bruk mus for aa navigere"></canvas>
           <div id="viewfinderOverlay" class="viewfinder-overlay-hud">
@@ -306,6 +341,12 @@
               <button class="vf-btn grid-toggle" title="Rutenett">
                 <span class="icon"></span>
                 <span class="vf-label">Rutenett</span>
+              </button>
+            </div>
+            <div class="vf-dropdown">
+              <button class="vf-btn camera-control-toggle" id="cameraControlBtn" title="Kamerakontroller">
+                <span class="icon">⚙</span>
+                <span class="vf-label">Kamera</span>
               </button>
             </div>
             <div class="vf-dropdown">
@@ -809,8 +850,6 @@
   <!-- Notes Panel Root -->
   <div id="notesPanelRoot"></div>
   
-  <!-- Accessible 3D Controls Root -->
-  <div id="accessible3DControlsRoot"></div>
 
   <!-- Animation Timeline -->
   <div class="timeline-container" id="animationTimeline">

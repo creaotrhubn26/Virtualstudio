@@ -184,19 +184,53 @@ export interface Accessible3DControlsAppProps {
 }
 
 export const Accessible3DControlsApp: React.FC<Accessible3DControlsAppProps> = (props) => {
+  const [isVisible, setIsVisible] = React.useState(false);
+
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <AccessibilityProvider>
-        <Accessible3DControls
-          cameraState={props.cameraState}
-          selectedObject={props.selectedObject}
-          objects={props.objects}
-          onCameraChange={props.onCameraChange}
-          onCameraReset={props.onCameraReset}
-          onObjectSelect={props.onObjectSelect}
-          onObjectTransform={props.onObjectTransform}
-        />
+        {/* Toggle button - always visible */}
+        <button
+          onClick={() => setIsVisible(!isVisible)}
+          style={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            width: 48,
+            height: 48,
+            borderRadius: 8,
+            background: isVisible ? '#00d4ff' : 'rgba(28, 33, 40, 0.95)',
+            border: '2px solid rgba(0, 212, 255, 0.5)',
+            color: isVisible ? '#000' : '#fff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 20,
+            zIndex: 200,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+          }}
+          aria-label={isVisible ? 'Skjul kamerakontroller' : 'Vis kamerakontroller'}
+          title={isVisible ? 'Skjul kamerakontroller' : 'Vis kamerakontroller'}
+        >
+          ⌨
+        </button>
+
+        {/* Controls panel - shown when toggled */}
+        {isVisible && (
+          <div style={{ position: 'absolute', top: 72, right: 16, zIndex: 150 }}>
+            <Accessible3DControls
+              cameraState={props.cameraState}
+              selectedObject={props.selectedObject}
+              objects={props.objects}
+              onCameraChange={props.onCameraChange}
+              onCameraReset={props.onCameraReset}
+              onObjectSelect={props.onObjectSelect}
+              onObjectTransform={props.onObjectTransform}
+            />
+          </div>
+        )}
       </AccessibilityProvider>
     </ThemeProvider>
   );
