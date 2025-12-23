@@ -319,14 +319,63 @@ export function LightsBrowser() {
         scrollButtons="auto"
         sx={{ 
           mb: 2, 
-          minHeight: shouldUseTabletMode ? 48 : 36,
+          minHeight: 60,
           '& .MuiTabs-scrollButtons': {
-            minWidth: shouldUseTabletMode ? 44 : 32,
+            minWidth: 44,
+          },
+          '& .MuiTabs-indicator': {
+            height: 3,
+            borderRadius: '3px 3px 0 0',
+            backgroundColor: '#fbbf24',
           },
         }}
       >
-        <Tab value="lights" label="Lyskilder" sx={{ minHeight: shouldUseTabletMode ? 48 : 36, py: shouldUseTabletMode ? 1 : 0, fontSize: shouldUseTabletMode ? 14 : 12 }} />
-        <Tab value="modifiers" label="Lysformere" sx={{ minHeight: shouldUseTabletMode ? 48 : 36, py: shouldUseTabletMode ? 1 : 0, fontSize: shouldUseTabletMode ? 14 : 12 }} />
+        <Tab 
+          value="lights" 
+          icon={<FlashOn sx={{ fontSize: 22 }} />}
+          iconPosition="start"
+          label="Lyskilder" 
+          sx={{ 
+            minHeight: 60, 
+            py: 1.5, 
+            px: 3,
+            fontSize: 16, 
+            fontWeight: 600,
+            textTransform: 'none',
+            color: activeTab === 'lights' ? '#fbbf24' : '#888',
+            '&.Mui-selected': {
+              color: '#fbbf24',
+              fontWeight: 700,
+            },
+            '&:hover': {
+              color: '#fbbf24',
+              bgcolor: 'rgba(251, 191, 36, 0.1)',
+            },
+          }} 
+        />
+        <Tab 
+          value="modifiers" 
+          icon={<Camera sx={{ fontSize: 22 }} />}
+          iconPosition="start"
+          label="Lysformere" 
+          sx={{ 
+            minHeight: 60, 
+            py: 1.5, 
+            px: 3,
+            fontSize: 16, 
+            fontWeight: 600,
+            textTransform: 'none',
+            color: activeTab === 'modifiers' ? '#8b5cf6' : '#888',
+            '&.Mui-selected': {
+              color: '#8b5cf6',
+              fontWeight: 700,
+            },
+            '&:hover': {
+              color: '#8b5cf6',
+              bgcolor: 'rgba(139, 92, 246, 0.1)',
+            },
+          }} 
+        />
       </Tabs>
 
       {activeTab === 'lights' && (
@@ -337,29 +386,34 @@ export function LightsBrowser() {
               <Button
                 key={cat.key}
                 variant={selectedTypeCategory === cat.key ? 'contained' : 'outlined'}
-                size="medium"
+                size="large"
                 onClick={() => setSelectedTypeCategory(cat.key)}
-                startIcon={cat.key === 'strobe' ? <FlashOn /> : cat.key === 'led' ? <Lightbulb /> : undefined}
+                startIcon={cat.key === 'strobe' ? <FlashOn sx={{ fontSize: 20 }} /> : cat.key === 'led' ? <Lightbulb sx={{ fontSize: 20 }} /> : undefined}
                 sx={{ 
-                  fontSize: 13, 
+                  fontSize: 15, 
                   py: 1.5, 
-                  px: 2.5,
-                  minHeight: 48,
-                  minWidth: 90,
-                  borderRadius: 2,
-                  fontWeight: selectedTypeCategory === cat.key ? 700 : 500,
+                  px: 3,
+                  minHeight: 56,
+                  minWidth: 100,
+                  borderRadius: '10px',
+                  borderWidth: 2,
+                  fontWeight: 600,
+                  textTransform: 'none',
                   bgcolor: selectedTypeCategory === cat.key ? '#fbbf24' : 'transparent',
-                  borderColor: selectedTypeCategory === cat.key ? '#fbbf24' : '#555',
-                  color: selectedTypeCategory === cat.key ? '#000' : '#ccc',
-                  boxShadow: selectedTypeCategory === cat.key ? '0 4px 12px rgba(251, 191, 36, 0.4)' : 'none',
+                  borderColor: selectedTypeCategory === cat.key ? '#fbbf24' : '#444',
+                  color: selectedTypeCategory === cat.key ? '#000' : '#aaa',
+                  boxShadow: selectedTypeCategory === cat.key ? '0 4px 12px rgba(251, 191, 36, 0.4)' : '0 2px 6px rgba(0,0,0,0.2)',
                   transition: 'all 0.2s ease',
+                  WebkitTapHighlightColor: 'transparent',
                   '&:hover': {
-                    bgcolor: selectedTypeCategory === cat.key ? '#f59e0b' : 'rgba(251, 191, 36, 0.15)',
-                    borderColor: '#fbbf24',
-                    transform: 'translateY(-1px)',
+                    bgcolor: selectedTypeCategory === cat.key ? '#f59e0b' : '#333',
+                    borderColor: selectedTypeCategory === cat.key ? '#f59e0b' : '#555',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 6px 16px rgba(0,0,0,0.4)',
                   },
                   '&:active': {
-                    transform: 'translateY(0)',
+                    transform: 'scale(0.97)',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
                   },
                 }}
               >
@@ -370,23 +424,24 @@ export function LightsBrowser() {
               display: 'flex', 
               alignItems: 'center', 
               bgcolor: '#2a2a2a', 
-              borderRadius: 2, 
-              px: 1.5, 
+              borderRadius: '10px', 
+              px: 2, 
               py: 0.5,
-              minHeight: 48,
-              border: '1px solid #444',
+              minHeight: 56,
+              border: '2px solid #444',
               flex: 1,
-              minWidth: 120,
-              maxWidth: 200,
+              minWidth: 140,
+              maxWidth: 220,
             }}>
-              <SearchIcon sx={{ color: '#888', fontSize: 20, mr: 1 }} />
+              <SearchIcon sx={{ color: '#888', fontSize: 22, mr: 1 }} />
               <InputBase
                 placeholder="Søk..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 sx={{
                   color: '#fff',
-                  fontSize: 14,
+                  fontSize: 15,
+                  fontWeight: 500,
                   flex: 1,
                   '& input::placeholder': { color: '#666', opacity: 1 },
                 }}
@@ -395,7 +450,7 @@ export function LightsBrowser() {
           </Box>
 
           {/* Brand category buttons */}
-          <Typography variant="body2" sx={{ color: '#aaa', mb: 1.5, display: 'block', fontSize: 13, fontWeight: 600 }}>
+          <Typography variant="body2" sx={{ color: '#aaa', mb: 1.5, display: 'block', fontSize: 14, fontWeight: 600 }}>
             Merke
           </Typography>
           <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -406,29 +461,30 @@ export function LightsBrowser() {
                 size="large"
                 onClick={() => setSelectedBrandCategory(brand.key)}
                 sx={{ 
-                  fontSize: 14, 
+                  fontSize: 15, 
                   py: 1.5, 
-                  px: 2.5,
-                  minHeight: 52,
-                  minWidth: 100,
-                  borderRadius: 2,
-                  fontWeight: selectedBrandCategory === brand.key ? 700 : 600,
-                  bgcolor: selectedBrandCategory === brand.key ? '#3b82f6' : '#2a2a2a',
-                  borderColor: selectedBrandCategory === brand.key ? '#3b82f6' : '#555',
+                  px: 3,
+                  minHeight: 56,
+                  minWidth: 110,
+                  borderRadius: '10px',
                   borderWidth: 2,
-                  color: selectedBrandCategory === brand.key ? '#fff' : '#ddd',
-                  boxShadow: selectedBrandCategory === brand.key ? '0 4px 12px rgba(59, 130, 246, 0.4)' : '0 2px 4px rgba(0,0,0,0.2)',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  bgcolor: selectedBrandCategory === brand.key ? '#3b82f6' : 'transparent',
+                  borderColor: selectedBrandCategory === brand.key ? '#3b82f6' : '#444',
+                  color: selectedBrandCategory === brand.key ? '#fff' : '#aaa',
+                  boxShadow: selectedBrandCategory === brand.key ? '0 4px 12px rgba(59, 130, 246, 0.4)' : '0 2px 6px rgba(0,0,0,0.2)',
                   transition: 'all 0.2s ease',
                   WebkitTapHighlightColor: 'transparent',
                   '&:hover': {
-                    bgcolor: selectedBrandCategory === brand.key ? '#2563eb' : '#3a3a3a',
-                    borderColor: '#3b82f6',
+                    bgcolor: selectedBrandCategory === brand.key ? '#2563eb' : '#333',
+                    borderColor: selectedBrandCategory === brand.key ? '#2563eb' : '#555',
                     transform: 'translateY(-2px)',
-                    boxShadow: '0 6px 16px rgba(59, 130, 246, 0.3)',
+                    boxShadow: '0 6px 16px rgba(0,0,0,0.4)',
                   },
                   '&:active': {
-                    transform: 'translateY(0)',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    transform: 'scale(0.97)',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
                   },
                 }}
               >
@@ -523,28 +579,33 @@ export function LightsBrowser() {
               <Button
                 key={cat.key}
                 variant={selectedModifierCategory === cat.key ? 'contained' : 'outlined'}
-                size="medium"
+                size="large"
                 onClick={() => setSelectedModifierCategory(cat.key)}
                 sx={{ 
-                  fontSize: 13, 
+                  fontSize: 15, 
                   py: 1.5, 
-                  px: 2.5,
-                  minHeight: 48,
-                  minWidth: 90,
-                  borderRadius: 2,
-                  fontWeight: selectedModifierCategory === cat.key ? 700 : 500,
+                  px: 3,
+                  minHeight: 56,
+                  minWidth: 100,
+                  borderRadius: '10px',
+                  borderWidth: 2,
+                  fontWeight: 600,
+                  textTransform: 'none',
                   bgcolor: selectedModifierCategory === cat.key ? '#8b5cf6' : 'transparent',
-                  borderColor: selectedModifierCategory === cat.key ? '#8b5cf6' : '#555',
-                  color: selectedModifierCategory === cat.key ? '#fff' : '#ccc',
-                  boxShadow: selectedModifierCategory === cat.key ? '0 4px 12px rgba(139, 92, 246, 0.4)' : 'none',
+                  borderColor: selectedModifierCategory === cat.key ? '#8b5cf6' : '#444',
+                  color: selectedModifierCategory === cat.key ? '#fff' : '#aaa',
+                  boxShadow: selectedModifierCategory === cat.key ? '0 4px 12px rgba(139, 92, 246, 0.4)' : '0 2px 6px rgba(0,0,0,0.2)',
                   transition: 'all 0.2s ease',
+                  WebkitTapHighlightColor: 'transparent',
                   '&:hover': {
-                    bgcolor: selectedModifierCategory === cat.key ? '#7c3aed' : 'rgba(139, 92, 246, 0.15)',
-                    borderColor: '#8b5cf6',
-                    transform: 'translateY(-1px)',
+                    bgcolor: selectedModifierCategory === cat.key ? '#7c3aed' : '#333',
+                    borderColor: selectedModifierCategory === cat.key ? '#7c3aed' : '#555',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 6px 16px rgba(0,0,0,0.4)',
                   },
                   '&:active': {
-                    transform: 'translateY(0)',
+                    transform: 'scale(0.97)',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
                   },
                 }}
               >
@@ -555,23 +616,24 @@ export function LightsBrowser() {
               display: 'flex', 
               alignItems: 'center', 
               bgcolor: '#2a2a2a', 
-              borderRadius: 2, 
-              px: 1.5, 
+              borderRadius: '10px', 
+              px: 2, 
               py: 0.5,
-              minHeight: 48,
-              border: '1px solid #444',
+              minHeight: 56,
+              border: '2px solid #444',
               flex: 1,
-              minWidth: 120,
-              maxWidth: 200,
+              minWidth: 140,
+              maxWidth: 220,
             }}>
-              <SearchIcon sx={{ color: '#888', fontSize: 20, mr: 1 }} />
+              <SearchIcon sx={{ color: '#888', fontSize: 22, mr: 1 }} />
               <InputBase
                 placeholder="Søk..."
                 value={modifierSearchQuery}
                 onChange={(e) => setModifierSearchQuery(e.target.value)}
                 sx={{
                   color: '#fff',
-                  fontSize: 14,
+                  fontSize: 15,
+                  fontWeight: 500,
                   flex: 1,
                   '& input::placeholder': { color: '#666', opacity: 1 },
                 }}
