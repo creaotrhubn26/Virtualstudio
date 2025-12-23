@@ -2881,7 +2881,98 @@ window.addEventListener('DOMContentLoaded', () => {
         studio.resetCamera();
       });
       
-      console.log('Camera controls initialized with hold-to-move and speed control');
+      // Camera settings state
+      const apertureStops = ['f/1.4', 'f/2', 'f/2.8', 'f/4', 'f/5.6', 'f/8', 'f/11', 'f/16', 'f/22'];
+      const shutterSpeeds = ['1/8000s', '1/4000s', '1/2000s', '1/1000s', '1/500s', '1/250s', '1/125s', '1/60s', '1/30s', '1/15s', '1/8s', '1/4s', '1/2s', '1s'];
+      const isoValues = [50, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600];
+      const focalLengths = [14, 16, 20, 24, 28, 35, 50, 70, 85, 105, 135, 200, 300, 400];
+      const whiteBalances = [2700, 3200, 4000, 4500, 5000, 5600, 6500, 7500, 9000, 10000];
+      
+      let apertureIndex = 2; // f/2.8
+      let shutterIndex = 6; // 1/125s
+      let isoIndex = 1; // 100
+      let focalIndex = 6; // 50mm
+      let wbIndex = 5; // 5600K
+      
+      const updateCameraDisplay = () => {
+        const apertureEl = document.getElementById('apertureValue');
+        const shutterEl = document.getElementById('shutterValue');
+        const isoEl = document.getElementById('isoValue');
+        const focalEl = document.getElementById('focalValue');
+        const wbEl = document.getElementById('wbValue');
+        const camExposure = document.getElementById('camExposure');
+        
+        if (apertureEl) apertureEl.textContent = apertureStops[apertureIndex];
+        if (shutterEl) shutterEl.textContent = shutterSpeeds[shutterIndex];
+        if (isoEl) isoEl.textContent = isoValues[isoIndex].toString();
+        if (focalEl) focalEl.textContent = focalLengths[focalIndex] + 'mm';
+        if (wbEl) wbEl.textContent = whiteBalances[wbIndex] + 'K';
+        
+        // Update viewport camera info display
+        if (camExposure) {
+          camExposure.textContent = `${apertureStops[apertureIndex]} · ${shutterSpeeds[shutterIndex]} · ISO ${isoValues[isoIndex]}`;
+        }
+      };
+      
+      // Aperture controls
+      document.getElementById('apertureUp')?.addEventListener('click', () => {
+        apertureIndex = Math.min(apertureStops.length - 1, apertureIndex + 1);
+        updateCameraDisplay();
+      });
+      document.getElementById('apertureDown')?.addEventListener('click', () => {
+        apertureIndex = Math.max(0, apertureIndex - 1);
+        updateCameraDisplay();
+      });
+      
+      // Shutter controls
+      document.getElementById('shutterUp')?.addEventListener('click', () => {
+        shutterIndex = Math.max(0, shutterIndex - 1);
+        updateCameraDisplay();
+      });
+      document.getElementById('shutterDown')?.addEventListener('click', () => {
+        shutterIndex = Math.min(shutterSpeeds.length - 1, shutterIndex + 1);
+        updateCameraDisplay();
+      });
+      
+      // ISO controls
+      document.getElementById('isoUp')?.addEventListener('click', () => {
+        isoIndex = Math.min(isoValues.length - 1, isoIndex + 1);
+        updateCameraDisplay();
+      });
+      document.getElementById('isoDown')?.addEventListener('click', () => {
+        isoIndex = Math.max(0, isoIndex - 1);
+        updateCameraDisplay();
+      });
+      
+      // Focal length controls
+      document.getElementById('focalUp')?.addEventListener('click', () => {
+        focalIndex = Math.min(focalLengths.length - 1, focalIndex + 1);
+        updateCameraDisplay();
+        const camera = studio.getCamera();
+        if (camera) {
+          camera.fov = (50 / focalLengths[focalIndex]) * 0.8;
+        }
+      });
+      document.getElementById('focalDown')?.addEventListener('click', () => {
+        focalIndex = Math.max(0, focalIndex - 1);
+        updateCameraDisplay();
+        const camera = studio.getCamera();
+        if (camera) {
+          camera.fov = (50 / focalLengths[focalIndex]) * 0.8;
+        }
+      });
+      
+      // White balance controls
+      document.getElementById('wbUp')?.addEventListener('click', () => {
+        wbIndex = Math.min(whiteBalances.length - 1, wbIndex + 1);
+        updateCameraDisplay();
+      });
+      document.getElementById('wbDown')?.addEventListener('click', () => {
+        wbIndex = Math.max(0, wbIndex - 1);
+        updateCameraDisplay();
+      });
+      
+      console.log('Camera controls initialized with hold-to-move, speed control, and camera settings');
     }
     
     // Mount Accessible 3D Controls with camera connection (hidden, kept for accessibility)
