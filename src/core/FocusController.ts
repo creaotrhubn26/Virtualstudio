@@ -51,31 +51,50 @@ export class FocusController {
 
   private setupControlButtons() {
     const overlayToggleBtn = document.querySelector('.vf-btn.overlay-toggle');
-    const focusModeBtn = document.querySelector('.vf-btn.focus-mode');
-    const compositionBtn = document.querySelector('.vf-btn.composition-guide');
-    const safeAreaBtn = document.querySelector('.vf-btn.safe-area');
     const gridToggleBtn = document.querySelector('.vf-btn.grid-toggle');
 
     if (overlayToggleBtn) {
       overlayToggleBtn.addEventListener('click', this.handleOverlayToggle.bind(this));
     }
-    if (focusModeBtn) {
-      focusModeBtn.addEventListener('click', this.handleModeChange);
-    }
-    if (compositionBtn) {
-      compositionBtn.addEventListener('click', this.handleCompositionChange.bind(this));
-    }
-    if (safeAreaBtn) {
-      safeAreaBtn.addEventListener('click', this.handleSafeAreaChange);
-    }
     if (gridToggleBtn) {
       gridToggleBtn.addEventListener('click', this.handleGridToggle);
     }
 
-    const helperGuideBtn = document.querySelector('.vf-btn.helper-guide');
-    if (helperGuideBtn) {
-      helperGuideBtn.addEventListener('click', this.handleHelperGuideChange.bind(this));
-    }
+    // Setup dropdown menu handlers
+    this.setupDropdownMenu('focusModeMenu', (value) => {
+      useFocusStore.getState().setMode(value as FocusMode);
+    });
+
+    this.setupDropdownMenu('compositionMenu', (value) => {
+      useFocusStore.getState().setCompositionGuide(value as CompositionGuide);
+    });
+
+    this.setupDropdownMenu('safeAreaMenu', (value) => {
+      useFocusStore.getState().setSafeAreaMode(value as SafeAreaMode);
+    });
+
+    this.setupDropdownMenu('helperGuideMenu', (value) => {
+      useFocusStore.getState().setHelperGuide(value as HelperGuide);
+    });
+  }
+
+  private setupDropdownMenu(menuId: string, onSelect: (value: string) => void) {
+    const menu = document.getElementById(menuId);
+    if (!menu) return;
+
+    const items = menu.querySelectorAll('.vf-menu-item');
+    items.forEach((item) => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const value = (item as HTMLElement).dataset.value;
+        if (value) {
+          onSelect(value);
+          // Update active state
+          items.forEach((i) => i.classList.remove('active'));
+          item.classList.add('active');
+        }
+      });
+    });
   }
 
   private subscribeToStore() {

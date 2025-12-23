@@ -256,24 +256,73 @@
         </div>
         <div class="viewport-bottom">
           <div class="viewfinder-controls" id="viewfinderControls">
-            <button class="vf-btn overlay-toggle active" title="Vis/skjul overlay">
-              <span class="icon"></span>
-            </button>
-            <button class="vf-btn focus-mode active" data-mode="zone" title="Sone fokus">
-              <span class="icon"></span>
-            </button>
-            <button class="vf-btn composition-guide" data-guide="none" title="Komposisjonsguide">
-              <span class="icon"></span>
-            </button>
-            <button class="vf-btn safe-area" data-mode="none" title="Trygge områder">
-              <span class="icon"></span>
-            </button>
-            <button class="vf-btn grid-toggle" title="Tredjedelsrutenett">
-              <span class="icon"></span>
-            </button>
-            <button class="vf-btn helper-guide" data-guide="none" title="Hjelpeguider">
-              <span class="icon"></span>
-            </button>
+            <div class="vf-dropdown">
+              <button class="vf-btn overlay-toggle active" title="Vis/skjul overlay">
+                <span class="icon"></span>
+                <span class="vf-label">Overlay</span>
+              </button>
+            </div>
+            <div class="vf-dropdown">
+              <button class="vf-btn focus-mode active" data-mode="zone" title="Fokusmodus">
+                <span class="icon"></span>
+                <span class="vf-label">Fokus</span>
+              </button>
+              <div class="vf-dropdown-menu" id="focusModeMenu">
+                <button class="vf-menu-item" data-value="single">Enkeltpunkt</button>
+                <button class="vf-menu-item" data-value="zone">Sone</button>
+                <button class="vf-menu-item" data-value="wide">Bred</button>
+                <button class="vf-menu-item" data-value="tracking">Sporing</button>
+              </div>
+            </div>
+            <div class="vf-dropdown">
+              <button class="vf-btn composition-guide" data-guide="none" title="Komposisjonsguide">
+                <span class="icon"></span>
+                <span class="vf-label">Komposisjon</span>
+              </button>
+              <div class="vf-dropdown-menu" id="compositionMenu">
+                <button class="vf-menu-item" data-value="none">Ingen</button>
+                <button class="vf-menu-item" data-value="thirds">Tredjedeler</button>
+                <button class="vf-menu-item" data-value="golden">Gyllent snitt</button>
+                <button class="vf-menu-item" data-value="spiral">Fibonacci spiral</button>
+                <button class="vf-menu-item" data-value="diagonal">Diagonaler</button>
+                <button class="vf-menu-item" data-value="center">Senterkryss</button>
+                <button class="vf-menu-item" data-value="triangle">Gyllen trekant</button>
+                <button class="vf-menu-item" data-value="dynamic">Dynamisk symmetri</button>
+              </div>
+            </div>
+            <div class="vf-dropdown">
+              <button class="vf-btn safe-area" data-mode="none" title="Trygge områder">
+                <span class="icon"></span>
+                <span class="vf-label">Trygg sone</span>
+              </button>
+              <div class="vf-dropdown-menu" id="safeAreaMenu">
+                <button class="vf-menu-item" data-value="none">Ingen</button>
+                <button class="vf-menu-item" data-value="action">Action safe</button>
+                <button class="vf-menu-item" data-value="title">Tittel safe</button>
+                <button class="vf-menu-item" data-value="both">Begge</button>
+              </div>
+            </div>
+            <div class="vf-dropdown">
+              <button class="vf-btn grid-toggle" title="Rutenett">
+                <span class="icon"></span>
+                <span class="vf-label">Rutenett</span>
+              </button>
+            </div>
+            <div class="vf-dropdown">
+              <button class="vf-btn helper-guide" data-guide="none" title="Hjelpeguider">
+                <span class="icon"></span>
+                <span class="vf-label">Hjelp</span>
+              </button>
+              <div class="vf-dropdown-menu" id="helperGuideMenu">
+                <button class="vf-menu-item" data-value="none">Ingen</button>
+                <button class="vf-menu-item" data-value="colortemp">Fargetemperatur</button>
+                <button class="vf-menu-item" data-value="exposure">Eksponeringssoner</button>
+                <button class="vf-menu-item" data-value="height">Høydereferanser</button>
+                <button class="vf-menu-item" data-value="glasses">Brillerefleksjoner</button>
+                <button class="vf-menu-item" data-value="classphoto">Klassefoto</button>
+                <button class="vf-menu-item" data-value="safety">Sikkerhetssoner</button>
+              </div>
+            </div>
           </div>
           <div class="bottom-actions">
             <button class="action-btn" id="notesBtn">Notater</button>
