@@ -15,32 +15,25 @@ import AddIcon from '@mui/icons-material/Add';
 interface Equipment {
   id: string;
   name: string;
-  category: 'background' | 'diffuser' | 'reflector' | 'blocker' | 'other';
+  category: 'background' | 'diffuser' | 'blocker' | 'other';
   size?: string;
-  gradient: string;
+  thumbnail: string;
 }
 
 const EQUIPMENT_ITEMS: Equipment[] = [
-  { id: 'background', name: 'Bakgrunn', category: 'background', gradient: 'linear-gradient(135deg, #888 0%, #aaa 100%)' },
-  { id: 'cove', name: 'Syklorama', category: 'background', gradient: 'linear-gradient(135deg, #ccc 0%, #fff 100%)' },
-  { id: 'shooting-table', name: 'Fotograferingsbord', category: 'other', gradient: 'linear-gradient(135deg, #bbb 0%, #eee 100%)' },
-  { id: 'diffuser-panel', name: 'Diffuserpanel', category: 'diffuser', gradient: 'linear-gradient(135deg, #ddd 0%, #fff 100%)' },
-  { id: 'diffuser-scrim-120', name: 'Diffuser Scrim', size: '120 x 120 cm', category: 'diffuser', gradient: 'linear-gradient(135deg, #ccc 0%, #eee 100%)' },
-  { id: 'diffuser-scrim-180', name: 'Diffuser Scrim', size: '180 x 180 cm', category: 'diffuser', gradient: 'linear-gradient(135deg, #ccc 0%, #eee 100%)' },
-  { id: 'diffuser-scrim-240', name: 'Diffuser Scrim', size: '240 x 240 cm', category: 'diffuser', gradient: 'linear-gradient(135deg, #555 0%, #888 100%)' },
-  { id: 'diffuser-scrim-360', name: 'Diffuser Scrim', size: '360 x 360 cm', category: 'diffuser', gradient: 'linear-gradient(135deg, #333 0%, #555 100%)' },
-  { id: 'light-blocker', name: 'Lysblokkerer', category: 'blocker', gradient: 'linear-gradient(135deg, #1a1a1a 0%, #333 100%)' },
-  { id: 'reflector', name: 'Reflektor', category: 'reflector', gradient: 'linear-gradient(135deg, #ddd 0%, #fff 100%)' },
-  { id: 'reflector-90x60', name: 'Reflektor', size: '90 x 60 cm', category: 'reflector', gradient: 'linear-gradient(135deg, #c9a227 0%, #e6c84a 100%)' },
-  { id: 'reflector-125x90', name: 'Reflektor', size: '125 x 90 cm', category: 'reflector', gradient: 'linear-gradient(135deg, #c9a227 0%, #e6c84a 100%)' },
-  { id: 'reflector-190x130', name: 'Reflektor', size: '190 x 130 cm', category: 'reflector', gradient: 'linear-gradient(135deg, #c9a227 0%, #e6c84a 100%)' },
-  { id: 'reflector-245x180', name: 'Reflektor', size: '245 x 180 cm', category: 'reflector', gradient: 'linear-gradient(135deg, #c9a227 0%, #e6c84a 100%)' },
-  { id: 'reflector-round', name: 'Rund reflektor', size: 'Ø 56 cm', category: 'reflector', gradient: 'radial-gradient(circle, #e6c84a 0%, #c9a227 100%)' },
-  { id: 'styrofoam-reflector', name: 'Isopor-reflektor', size: '110 x 70 cm', category: 'reflector', gradient: 'linear-gradient(135deg, #f5f5f5 0%, #fff 100%)' },
-  { id: 'v-flat', name: 'V-Flat', size: '200 x 100 cm', category: 'other', gradient: 'linear-gradient(135deg, #eee 0%, #fff 100%)' },
+  { id: 'background', name: 'Bakgrunn', category: 'background', thumbnail: '/images/gear/equipment_backdrop.png' },
+  { id: 'cove', name: 'Syklorama', category: 'background', thumbnail: '/images/gear/equipment_cove.png' },
+  { id: 'shooting-table', name: 'Fotograferingsbord', category: 'other', thumbnail: '/images/gear/equipment_shooting_table.png' },
+  { id: 'diffuser-panel', name: 'Diffuserpanel', category: 'diffuser', thumbnail: '/images/gear/equipment_diffuser_panel.png' },
+  { id: 'diffuser-scrim-120', name: 'Diffuser Scrim', size: '120 x 120 cm', category: 'diffuser', thumbnail: '/images/gear/equipment_diffuser_panel.png' },
+  { id: 'diffuser-scrim-180', name: 'Diffuser Scrim', size: '180 x 180 cm', category: 'diffuser', thumbnail: '/images/gear/equipment_diffuser_panel.png' },
+  { id: 'diffuser-scrim-240', name: 'Diffuser Scrim', size: '240 x 240 cm', category: 'diffuser', thumbnail: '/images/gear/equipment_diffuser_panel.png' },
+  { id: 'diffuser-scrim-360', name: 'Diffuser Scrim', size: '360 x 360 cm', category: 'diffuser', thumbnail: '/images/gear/equipment_diffuser_panel.png' },
+  { id: 'light-blocker', name: 'Lysblokkerer', category: 'blocker', thumbnail: '/images/gear/equipment_light_blocker.png' },
+  { id: 'v-flat', name: 'V-Flat', size: '200 x 100 cm', category: 'other', thumbnail: '/images/gear/equipment_vflat.png' },
 ];
 
-type CategoryFilter = 'all' | 'background' | 'diffuser' | 'reflector' | 'blocker' | 'other';
+type CategoryFilter = 'all' | 'background' | 'diffuser' | 'blocker' | 'other';
 
 interface CategoryInfo {
   key: CategoryFilter;
@@ -51,7 +44,6 @@ const CATEGORIES: CategoryInfo[] = [
   { key: 'all', label: 'Alle' },
   { key: 'background', label: 'Bakgrunn' },
   { key: 'diffuser', label: 'Diffuser' },
-  { key: 'reflector', label: 'Reflektor' },
   { key: 'blocker', label: 'Blokkere' },
   { key: 'other', label: 'Annet' },
 ];
@@ -174,9 +166,22 @@ export function EquipmentPanel() {
             <Box
               sx={{
                 height: 90,
-                background: item.gradient,
+                bgcolor: '#2a2a2a',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
-            />
+            >
+              <img 
+                src={item.thumbnail} 
+                alt={item.name}
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  objectFit: 'cover',
+                }}
+              />
+            </Box>
             <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
               <Typography 
                 variant="body2" 

@@ -123,6 +123,7 @@ const MODIFIER_DATABASE: ModifierSpec[] = [
   { id: 'honeycomb-grid-40', brand: 'Generic', model: 'Honeycomb Grid 40°', type: 'grid', size: '40°', stopLoss: 0.5, thumbnail: '/images/gear/modifier_grid.png' },
   { id: 'snoot-standard', brand: 'Generic', model: 'Snoot Standard', type: 'snoot', stopLoss: 0, thumbnail: '/images/gear/modifier_snoot.png' },
   { id: 'barn-doors-4leaf', brand: 'Generic', model: 'Barn Doors 4-Leaf', type: 'barn-doors', stopLoss: 0, thumbnail: '/images/gear/modifier_barndoors.png' },
+  { id: 'reflector-5in1', brand: 'Generic', model: 'Reflektor 5-i-1', type: 'reflector', size: '110cm', stopLoss: 0.5, thumbnail: '/images/gear/reflector_5in1.png' },
 ];
 
 const MODIFIER_CATEGORIES: CategoryInfo[] = [
@@ -131,6 +132,7 @@ const MODIFIER_CATEGORIES: CategoryInfo[] = [
   { key: 'octabox', label: 'Oktaboks' },
   { key: 'umbrella', label: 'Paraply' },
   { key: 'beauty-dish', label: 'Beauty Dish' },
+  { key: 'reflector', label: 'Reflektor' },
   { key: 'grid', label: 'Grid' },
 ];
 
