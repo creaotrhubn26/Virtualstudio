@@ -340,13 +340,185 @@ export class FocusController {
     
     if (overlay) {
       overlay.setAttribute('data-guide', guide);
-      overlay.innerHTML = this.getCompositionSVG(guide);
+      overlay.innerHTML = this.getCompositionSVG(guide) + (guide !== 'none' ? this.getCompositionFeedbackHTML(guide) : '');
     }
 
     if (btn) {
       btn.classList.toggle('active', guide !== 'none');
       btn.setAttribute('title', this.getGuideLabel(guide));
     }
+  }
+
+  private getCompositionPowerPoints(guide: CompositionGuide): { x: number; y: number }[] {
+    const phi = 1.618;
+    const pos1 = 1 / (1 + phi);
+    const pos2 = phi / (1 + phi);
+    
+    switch (guide) {
+      case 'thirds':
+        return [
+          { x: 0.3333, y: 0.3333 },
+          { x: 0.6667, y: 0.3333 },
+          { x: 0.3333, y: 0.6667 },
+          { x: 0.6667, y: 0.6667 }
+        ];
+      case 'golden':
+        return [
+          { x: pos1, y: pos1 },
+          { x: pos2, y: pos1 },
+          { x: pos1, y: pos2 },
+          { x: pos2, y: pos2 }
+        ];
+      case 'center':
+        return [{ x: 0.5, y: 0.5 }];
+      case 'spiral':
+        return [{ x: 0.382, y: 0.382 }, { x: 0.618, y: 0.618 }];
+      case 'triangle':
+        return [{ x: 0.5, y: 0.5 }];
+      case 'diagonal':
+        return [{ x: 0.5, y: 0.5 }, { x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 }];
+      case 'symmetry':
+        return [{ x: 0.5, y: 0.5 }];
+      default:
+        return [];
+    }
+  }
+
+  private calculateCompositionScore(guide: CompositionGuide): { score: number; level: string; color: string; message: string; objectName: string | null } {
+    const scene = useAppStore.getState().scene;
+    const models = scene.filter(n => n.type === 'model');
+    
+    if (models.length === 0) {
+      return { 
+        score: 0, 
+        level: 'ingen', 
+        color: '#666666', 
+        message: 'Legg til en modell for å analysere komposisjon',
+        objectName: null
+      };
+    }
+
+    const powerPoints = this.getCompositionPowerPoints(guide);
+    if (powerPoints.length === 0) {
+      return { 
+        score: 0, 
+        level: 'ukjent', 
+        color: '#666666', 
+        message: 'Velg en komposisjonsguide',
+        objectName: null
+      };
+    }
+
+    // Get the first model's position (simplified - in real scenario would use screen projection)
+    const model = models[0];
+    const pos = model.transform.position;
+    
+    // Convert 3D position to approximate 2D viewport position (simplified)
+    // In a real implementation, this would project through the camera
+    const viewportX = 0.5 + (pos[0] / 10);  // Approximate mapping
+    const viewportY = 0.5 - (pos[1] / 6);   // Approximate mapping
+    
+    // Find the closest power point
+    let minDistance = Infinity;
+    for (const point of powerPoints) {
+      const dist = Math.sqrt(Math.pow(viewportX - point.x, 2) + Math.pow(viewportY - point.y, 2));
+      minDistance = Math.min(minDistance, dist);
+    }
+
+    // Convert distance to score (0-100)
+    // 0 distance = 100 score, 0.5 distance = 0 score
+    const score = Math.max(0, Math.min(100, (1 - minDistance * 2) * 100));
+
+    let level: string;
+    let color: string;
+    let message: string;
+
+    if (score >= 90) {
+      level = 'Perfekt';
+      color = '#00ff88';
+      message = 'Objektet er perfekt plassert på kraftpunktet!';
+    } else if (score >= 70) {
+      level = 'Meget bra';
+      color = '#88ff00';
+      message = 'God plassering nær kraftpunktet';
+    } else if (score >= 50) {
+      level = 'Godt nok';
+      color = '#ffcc00';
+      message = 'Akseptabel plassering, kan forbedres';
+    } else if (score >= 25) {
+      level = 'Svak';
+      color = '#ff8800';
+      message = 'Flytt objektet nærmere kraftpunktet';
+    } else {
+      level = 'Dårlig';
+      color = '#ff4444';
+      message = 'Objektet er langt fra ideell plassering';
+    }
+
+    return { score, level, color, message, objectName: model.name };
+  }
+
+  private getCompositionFeedbackHTML(guide: CompositionGuide): string {
+    const feedback = this.calculateCompositionScore(guide);
+    const powerPoints = this.getCompositionPowerPoints(guide);
+    
+    const guideDescriptions: Record<CompositionGuide, string> = {
+      none: '',
+      thirds: 'Plasser hovedmotivet på ett av de fire skjæringspunktene',
+      golden: 'Det gyldne snitt gir naturlig balansert komposisjon',
+      spiral: 'Led blikket langs spiralen mot fokuspunktet',
+      diagonal: 'Bruk diagonaler for dynamikk og bevegelse',
+      center: 'Senterkomposisjon for symmetri og kraftfulle portretter',
+      triangle: 'Trekantformasjon skaper stabilitet',
+      symmetry: 'Dynamisk symmetri for klassisk harmoni'
+    };
+
+    const scoreBarWidth = Math.max(5, feedback.score);
+    
+    return `
+      <div class="composition-feedback-panel">
+        <div class="composition-feedback-header">
+          <h4>${this.getGuideLabel(guide)}</h4>
+          <div class="composition-score-badge" style="background: ${feedback.color}20; border-color: ${feedback.color}; color: ${feedback.color};">
+            ${feedback.level}
+          </div>
+        </div>
+        
+        <p class="composition-description">${guideDescriptions[guide]}</p>
+        
+        <div class="composition-score-container">
+          <div class="composition-score-bar-bg">
+            <div class="composition-score-bar" style="width: ${scoreBarWidth}%; background: linear-gradient(90deg, ${feedback.color} 0%, ${feedback.color}88 100%);"></div>
+          </div>
+          <div class="composition-score-labels">
+            <span class="score-label-bad">Dårlig</span>
+            <span class="score-label-ok">Godt nok</span>
+            <span class="score-label-good">Meget bra</span>
+            <span class="score-label-perfect">Perfekt</span>
+          </div>
+        </div>
+        
+        ${feedback.objectName ? `
+          <div class="composition-object-info">
+            <span class="object-icon">📍</span>
+            <span class="object-name">${feedback.objectName}</span>
+          </div>
+        ` : ''}
+        
+        <div class="composition-message" style="border-left-color: ${feedback.color};">
+          ${feedback.message}
+        </div>
+        
+        <div class="composition-tips">
+          <div class="tip-header">Tips:</div>
+          <ul>
+            <li>Flytt modellen for å endre komposisjon</li>
+            <li>Kraftpunktene markeres med prikker</li>
+            <li>Se på historigrammet for eksponering</li>
+          </ul>
+        </div>
+      </div>
+    `;
   }
 
   private getGuideLabel(guide: CompositionGuide): string {
@@ -364,70 +536,108 @@ export class FocusController {
   }
 
   private getCompositionSVG(guide: CompositionGuide): string {
-    const color = 'rgba(0, 255, 136, 0.5)';
+    const lineColor = 'rgba(0, 255, 136, 0.7)';
+    const glowColor = 'rgba(0, 255, 136, 0.3)';
+    const pointColor = '#00ff88';
     const phi = 1.618;
     const pos1 = (1 / (1 + phi)) * 100;
     const pos2 = (phi / (1 + phi)) * 100;
 
+    const glowFilter = `
+      <defs>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        <filter id="glowStrong" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+    `;
+
+    const powerPointStyle = `fill="${pointColor}" filter="url(#glowStrong)"`;
+
     switch (guide) {
       case 'thirds':
-        return `<svg width="100%" height="100%">
-          <line x1="33.33%" y1="0" x2="33.33%" y2="100%" stroke="${color}" stroke-width="1"/>
-          <line x1="66.67%" y1="0" x2="66.67%" y2="100%" stroke="${color}" stroke-width="1"/>
-          <line x1="0" y1="33.33%" x2="100%" y2="33.33%" stroke="${color}" stroke-width="1"/>
-          <line x1="0" y1="66.67%" x2="100%" y2="66.67%" stroke="${color}" stroke-width="1"/>
-          <circle cx="33.33%" cy="33.33%" r="4" fill="${color}"/>
-          <circle cx="66.67%" cy="33.33%" r="4" fill="${color}"/>
-          <circle cx="33.33%" cy="66.67%" r="4" fill="${color}"/>
-          <circle cx="66.67%" cy="66.67%" r="4" fill="${color}"/>
+        return `<svg width="100%" height="100%" class="composition-svg">
+          ${glowFilter}
+          <line x1="33.33%" y1="0" x2="33.33%" y2="100%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
+          <line x1="66.67%" y1="0" x2="66.67%" y2="100%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
+          <line x1="0" y1="33.33%" x2="100%" y2="33.33%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
+          <line x1="0" y1="66.67%" x2="100%" y2="66.67%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
+          <circle cx="33.33%" cy="33.33%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
+          <circle cx="66.67%" cy="33.33%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
+          <circle cx="33.33%" cy="66.67%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
+          <circle cx="66.67%" cy="66.67%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
         </svg>`;
       case 'golden':
-        return `<svg width="100%" height="100%">
-          <line x1="${pos1}%" y1="0" x2="${pos1}%" y2="100%" stroke="${color}" stroke-width="1"/>
-          <line x1="${pos2}%" y1="0" x2="${pos2}%" y2="100%" stroke="${color}" stroke-width="1"/>
-          <line x1="0" y1="${pos1}%" x2="100%" y2="${pos1}%" stroke="${color}" stroke-width="1"/>
-          <line x1="0" y1="${pos2}%" x2="100%" y2="${pos2}%" stroke="${color}" stroke-width="1"/>
-          <circle cx="${pos1}%" cy="${pos1}%" r="4" fill="${color}"/>
-          <circle cx="${pos2}%" cy="${pos1}%" r="4" fill="${color}"/>
-          <circle cx="${pos1}%" cy="${pos2}%" r="4" fill="${color}"/>
-          <circle cx="${pos2}%" cy="${pos2}%" r="4" fill="${color}"/>
+        return `<svg width="100%" height="100%" class="composition-svg">
+          ${glowFilter}
+          <line x1="${pos1}%" y1="0" x2="${pos1}%" y2="100%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
+          <line x1="${pos2}%" y1="0" x2="${pos2}%" y2="100%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
+          <line x1="0" y1="${pos1}%" x2="100%" y2="${pos1}%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
+          <line x1="0" y1="${pos2}%" x2="100%" y2="${pos2}%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
+          <circle cx="${pos1}%" cy="${pos1}%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
+          <circle cx="${pos2}%" cy="${pos1}%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
+          <circle cx="${pos1}%" cy="${pos2}%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
+          <circle cx="${pos2}%" cy="${pos2}%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
+          <text x="5" y="20" fill="${lineColor}" font-size="11" opacity="0.8">φ = 1.618</text>
         </svg>`;
       case 'spiral':
-        return `<svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-          <rect x="0" y="0" width="61.8" height="100" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.5"/>
-          <rect x="61.8" y="0" width="38.2" height="61.8" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.5"/>
-          <rect x="61.8" y="61.8" width="23.6" height="38.2" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.5"/>
-          <path d="M 100 100 Q 100 61.8, 61.8 61.8 Q 38.2 61.8, 38.2 38.2 Q 38.2 23.6, 52.8 23.6 Q 61.8 23.6, 61.8 32.6 Q 61.8 38.2, 56.2 38.2" fill="none" stroke="${color}" stroke-width="1.5"/>
+        return `<svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" class="composition-svg">
+          ${glowFilter}
+          <rect x="0" y="0" width="61.8" height="100" fill="none" stroke="${glowColor}" stroke-width="0.8"/>
+          <rect x="61.8" y="0" width="38.2" height="61.8" fill="none" stroke="${glowColor}" stroke-width="0.8"/>
+          <rect x="61.8" y="61.8" width="23.6" height="38.2" fill="none" stroke="${glowColor}" stroke-width="0.8"/>
+          <rect x="85.4" y="61.8" width="14.6" height="23.6" fill="none" stroke="${glowColor}" stroke-width="0.8"/>
+          <path d="M 100 100 Q 100 61.8, 61.8 61.8 Q 38.2 61.8, 38.2 38.2 Q 38.2 23.6, 52.8 23.6 Q 61.8 23.6, 61.8 32.6 Q 61.8 38.2, 56.2 38.2" fill="none" stroke="${pointColor}" stroke-width="3" filter="url(#glow)"/>
+          <circle cx="38.2" cy="38.2" r="1.5" ${powerPointStyle}/>
         </svg>`;
       case 'diagonal':
-        return `<svg width="100%" height="100%">
-          <line x1="0" y1="0" x2="100%" y2="100%" stroke="${color}" stroke-width="1"/>
-          <line x1="100%" y1="0" x2="0" y2="100%" stroke="${color}" stroke-width="1"/>
-          <line x1="0" y1="0" x2="50%" y2="100%" stroke="${color}" stroke-width="0.5" stroke-dasharray="4,4" opacity="0.6"/>
-          <line x1="50%" y1="0" x2="100%" y2="100%" stroke="${color}" stroke-width="0.5" stroke-dasharray="4,4" opacity="0.6"/>
+        return `<svg width="100%" height="100%" class="composition-svg">
+          ${glowFilter}
+          <line x1="0" y1="0" x2="100%" y2="100%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
+          <line x1="100%" y1="0" x2="0" y2="100%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
+          <line x1="0" y1="0" x2="50%" y2="100%" stroke="${glowColor}" stroke-width="1" stroke-dasharray="6,4"/>
+          <line x1="50%" y1="0" x2="100%" y2="100%" stroke="${glowColor}" stroke-width="1" stroke-dasharray="6,4"/>
+          <line x1="0" y1="0" x2="100%" y2="50%" stroke="${glowColor}" stroke-width="1" stroke-dasharray="6,4"/>
+          <line x1="0" y1="50%" x2="100%" y2="100%" stroke="${glowColor}" stroke-width="1" stroke-dasharray="6,4"/>
+          <circle cx="50%" cy="50%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
         </svg>`;
       case 'center':
-        return `<svg width="100%" height="100%">
-          <line x1="50%" y1="0" x2="50%" y2="100%" stroke="${color}" stroke-width="1" stroke-dasharray="8,4"/>
-          <line x1="0" y1="50%" x2="100%" y2="50%" stroke="${color}" stroke-width="1" stroke-dasharray="8,4"/>
-          <circle cx="50%" cy="50%" r="8" fill="none" stroke="${color}" stroke-width="2"/>
-          <circle cx="50%" cy="50%" r="2" fill="${color}"/>
+        return `<svg width="100%" height="100%" class="composition-svg">
+          ${glowFilter}
+          <line x1="50%" y1="0" x2="50%" y2="100%" stroke="${lineColor}" stroke-width="2" stroke-dasharray="12,6" filter="url(#glow)"/>
+          <line x1="0" y1="50%" x2="100%" y2="50%" stroke="${lineColor}" stroke-width="2" stroke-dasharray="12,6" filter="url(#glow)"/>
+          <circle cx="50%" cy="50%" r="20" fill="none" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"><animate attributeName="r" values="18;24;18" dur="3s" repeatCount="indefinite"/></circle>
+          <circle cx="50%" cy="50%" r="8" ${powerPointStyle}/>
+          <text x="52%" y="47%" fill="${lineColor}" font-size="11" opacity="0.8">Sentrum</text>
         </svg>`;
       case 'triangle':
-        return `<svg width="100%" height="100%">
-          <line x1="0" y1="100%" x2="100%" y2="0" stroke="${color}" stroke-width="1.5"/>
-          <line x1="0" y1="0" x2="50%" y2="50%" stroke="${color}" stroke-width="1" opacity="0.8"/>
-          <line x1="100%" y1="100%" x2="50%" y2="50%" stroke="${color}" stroke-width="1" opacity="0.8"/>
-          <circle cx="50%" cy="50%" r="4" fill="${color}"/>
+        return `<svg width="100%" height="100%" class="composition-svg">
+          ${glowFilter}
+          <line x1="0" y1="100%" x2="100%" y2="0" stroke="${lineColor}" stroke-width="2.5" filter="url(#glow)"/>
+          <line x1="0" y1="0" x2="50%" y2="50%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
+          <line x1="100%" y1="100%" x2="50%" y2="50%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
+          <circle cx="50%" cy="50%" r="10" ${powerPointStyle}><animate attributeName="r" values="8;12;8" dur="2s" repeatCount="indefinite"/></circle>
         </svg>`;
       case 'symmetry':
-        return `<svg width="100%" height="100%">
-          <line x1="0" y1="0" x2="70.7%" y2="100%" stroke="${color}" stroke-width="1" opacity="0.7"/>
-          <line x1="29.3%" y1="0" x2="100%" y2="100%" stroke="${color}" stroke-width="1" opacity="0.7"/>
-          <line x1="0" y1="0" x2="100%" y2="70.7%" stroke="${color}" stroke-width="1" opacity="0.7"/>
-          <line x1="0" y1="29.3%" x2="100%" y2="100%" stroke="${color}" stroke-width="1" opacity="0.7"/>
-          <line x1="0" y1="0" x2="100%" y2="100%" stroke="${color}" stroke-width="1"/>
-          <line x1="100%" y1="0" x2="0" y2="100%" stroke="${color}" stroke-width="1"/>
+        return `<svg width="100%" height="100%" class="composition-svg">
+          ${glowFilter}
+          <line x1="0" y1="0" x2="70.7%" y2="100%" stroke="${glowColor}" stroke-width="1.5"/>
+          <line x1="29.3%" y1="0" x2="100%" y2="100%" stroke="${glowColor}" stroke-width="1.5"/>
+          <line x1="0" y1="0" x2="100%" y2="70.7%" stroke="${glowColor}" stroke-width="1.5"/>
+          <line x1="0" y1="29.3%" x2="100%" y2="100%" stroke="${glowColor}" stroke-width="1.5"/>
+          <line x1="0" y1="0" x2="100%" y2="100%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
+          <line x1="100%" y1="0" x2="0" y2="100%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
+          <circle cx="50%" cy="50%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
         </svg>`;
       default:
         return '';
