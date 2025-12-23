@@ -12,12 +12,14 @@ import {
   Divider,
   Paper,
   useMediaQuery,
+  InputBase,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Lightbulb,
   FlashOn,
   Camera,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../state/store';
 
@@ -144,21 +146,29 @@ export function LightsBrowser() {
   const [selectedTypeCategory, setSelectedTypeCategory] = useState('all');
   const [selectedBrandCategory, setSelectedBrandCategory] = useState('all');
   const [selectedModifierCategory, setSelectedModifierCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [modifierSearchQuery, setModifierSearchQuery] = useState('');
 
   const filteredLights = useMemo(() => {
     return LIGHT_DATABASE.filter((light) => {
       const matchesType = selectedTypeCategory === 'all' || light.type === selectedTypeCategory;
       const matchesBrand = selectedBrandCategory === 'all' || light.brand === selectedBrandCategory;
-      return matchesType && matchesBrand;
+      const matchesSearch = searchQuery === '' || 
+        light.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        light.model.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesType && matchesBrand && matchesSearch;
     });
-  }, [selectedTypeCategory, selectedBrandCategory]);
+  }, [selectedTypeCategory, selectedBrandCategory, searchQuery]);
 
   const filteredModifiers = useMemo(() => {
     return MODIFIER_DATABASE.filter((mod) => {
       const matchesType = selectedModifierCategory === 'all' || mod.type === selectedModifierCategory;
-      return matchesType;
+      const matchesSearch = modifierSearchQuery === '' || 
+        mod.brand.toLowerCase().includes(modifierSearchQuery.toLowerCase()) ||
+        mod.model.toLowerCase().includes(modifierSearchQuery.toLowerCase());
+      return matchesType && matchesSearch;
     });
-  }, [selectedModifierCategory]);
+  }, [selectedModifierCategory, modifierSearchQuery]);
 
   const handleAddToScene = (light: LightSpec) => {
     const nodeId = `light-${light.id}-${Date.now()}`;
@@ -304,8 +314,8 @@ export function LightsBrowser() {
 
       {activeTab === 'lights' && (
         <>
-          {/* Type category buttons */}
-          <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          {/* Type category buttons with search */}
+          <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
             {LIGHT_CATEGORIES.map((cat) => (
               <Button
                 key={cat.key}
@@ -339,6 +349,32 @@ export function LightsBrowser() {
                 {cat.label}
               </Button>
             ))}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              bgcolor: '#2a2a2a', 
+              borderRadius: 2, 
+              px: 1.5, 
+              py: 0.5,
+              minHeight: 48,
+              border: '1px solid #444',
+              flex: 1,
+              minWidth: 120,
+              maxWidth: 200,
+            }}>
+              <SearchIcon sx={{ color: '#888', fontSize: 20, mr: 1 }} />
+              <InputBase
+                placeholder="Søk..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                sx={{
+                  color: '#fff',
+                  fontSize: 14,
+                  flex: 1,
+                  '& input::placeholder': { color: '#666', opacity: 1 },
+                }}
+              />
+            </Box>
           </Box>
 
           {/* Brand category buttons */}
@@ -464,8 +500,8 @@ export function LightsBrowser() {
 
       {activeTab === 'modifiers' && (
         <>
-          {/* Modifier type category buttons */}
-          <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          {/* Modifier type category buttons with search */}
+          <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
             {MODIFIER_CATEGORIES.map((cat) => (
               <Button
                 key={cat.key}
@@ -498,6 +534,32 @@ export function LightsBrowser() {
                 {cat.label}
               </Button>
             ))}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              bgcolor: '#2a2a2a', 
+              borderRadius: 2, 
+              px: 1.5, 
+              py: 0.5,
+              minHeight: 48,
+              border: '1px solid #444',
+              flex: 1,
+              minWidth: 120,
+              maxWidth: 200,
+            }}>
+              <SearchIcon sx={{ color: '#888', fontSize: 20, mr: 1 }} />
+              <InputBase
+                placeholder="Søk..."
+                value={modifierSearchQuery}
+                onChange={(e) => setModifierSearchQuery(e.target.value)}
+                sx={{
+                  color: '#fff',
+                  fontSize: 14,
+                  flex: 1,
+                  '& input::placeholder': { color: '#666', opacity: 1 },
+                }}
+              />
+            </Box>
           </Box>
 
           <Divider sx={{ my: 1.5, borderColor: '#333' }} />
