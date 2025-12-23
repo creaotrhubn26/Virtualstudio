@@ -46,6 +46,15 @@ The application employs a hybrid architecture, combining Vanilla TypeScript with
 - **typescript**: Provides static type checking for improved code quality and maintainability.
 
 ## Recent Changes
+- 2025-12-23: Added 6 professional helper guide overlays to viewfinder
+  - Color Temperature (Fargetemperatur) - Shows Kelvin scale 1800K-10000K with reference points
+  - Exposure Zones (Eksponeringssoner) - Ansel Adams zone system with EV values
+  - Height References (Høydereferanser) - Subject and camera height markers in cm
+  - Glasses Reflection (Brillerefleksjoner) - Tips for avoiding eyeglass reflections
+  - Class Photo (Klassefoto) - Row alignment and spacing guides for group photos
+  - Safety Zones (Sikkerhetssoner) - Equipment clearance zones and cable routing
+  - Helper guide button cycles through all 7 states (none + 6 guides)
+  - All Norwegian text uses proper diacritics (å, ø, æ)
 - 2025-12-23: Made viewfinder focus points interactive and draggable
   - Focus points can be moved anywhere in the viewport
   - Focus distance calculated via Babylon.js ray picking
