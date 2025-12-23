@@ -2,7 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp } from './App';
+import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, NotesPanelApp } from './App';
 import { useAppStore, useFocusStore, SceneNode } from './state/store';
 import { focusController } from './core/FocusController';
 import { virtualActorService } from './core/services/virtualActorService';
@@ -688,6 +688,10 @@ class VirtualStudio {
   private setupExportListeners(): void {
     document.getElementById('snapshotBtn')?.addEventListener('click', () => this.takeScreenshot());
     document.getElementById('exportPng')?.addEventListener('click', () => this.takeScreenshot());
+    
+    document.getElementById('notesBtn')?.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('toggle-notes-panel'));
+    });
   }
 
   private setup2DViews(): void {
@@ -2517,6 +2521,11 @@ window.addEventListener('DOMContentLoaded', () => {
       equipRoot.render(React.createElement(EquipmentPanelApp, {}));
     }
     
+    const notesPanelRoot = document.getElementById('notesPanelRoot');
+    if (notesPanelRoot) {
+      const notesRoot = createRoot(notesPanelRoot);
+      notesRoot.render(React.createElement(NotesPanelApp, {}));
+    }
     
     if (actorPanelRoot && actorBottomPanel && actorPanelTrigger) {
       const root = createRoot(actorPanelRoot);

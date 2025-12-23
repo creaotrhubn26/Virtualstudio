@@ -46,6 +46,17 @@ The application employs a hybrid architecture, combining Vanilla TypeScript with
 - **typescript**: Provides static type checking for improved code quality and maintainability.
 
 ## Recent Changes
+- 2025-12-23: Implemented professional NotesPanel solution
+  - Popup panel accessible via "Notater" button in bottom bar
+  - 5 categories: Generelt, Lys, Kamera, Modell, Oppsett (color-coded)
+  - Full CRUD operations: create, edit, delete notes
+  - localStorage persistence for notes
+  - Touch-friendly 48px buttons and controls
+  - Norwegian labels throughout
+- 2025-12-23: Updated HDRI panel to touch-friendly design
+  - 56px category filter buttons with icons
+  - Inline search field for HDRI environments
+  - Larger card buttons and hover effects
 - 2025-12-23: Added 6 professional helper guide overlays to viewfinder
   - Color Temperature (Fargetemperatur) - Shows Kelvin scale 1800K-10000K with reference points
   - Exposure Zones (Eksponeringssoner) - Ansel Adams zone system with EV values

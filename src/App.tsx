@@ -8,6 +8,7 @@ import { LightsBrowser } from './panels/LightsBrowser';
 import { CameraGearPanel } from './panels/CameraGearPanel';
 import { HDRIPanel } from './panels/HDRIPanel';
 import { EquipmentPanel } from './panels/EquipmentPanel';
+import { NotesPanel } from './components/NotesPanel';
 
 const darkTheme = createTheme({
   palette: {
@@ -117,3 +118,21 @@ export const EquipmentPanelApp: React.FC = () => {
   );
 };
 
+export const NotesPanelApp: React.FC = () => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleToggle = () => setIsOpen(prev => !prev);
+    window.addEventListener('toggle-notes-panel', handleToggle);
+    return () => window.removeEventListener('toggle-notes-panel', handleToggle);
+  }, []);
+
+  if (!isOpen) return null;
+
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <NotesPanel onClose={() => setIsOpen(false)} />
+    </ThemeProvider>
+  );
+};
