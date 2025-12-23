@@ -3,7 +3,7 @@ import '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp } from './App';
-import { useAppStore, useFocusStore } from './state/store';
+import { useAppStore, useFocusStore, SceneNode } from './state/store';
 import { focusController } from './core/FocusController';
 import { virtualActorService } from './core/services/virtualActorService';
 import { propRenderingService } from './core/services/propRenderingService';
@@ -843,7 +843,8 @@ class VirtualStudio {
   private updateCameraFocus(distance: number): void {
     if (!this.camera) return;
     
-    (this.camera as BABYLON.ArcRotateCamera).focalLength = distance * 1000;
+    // Store focus distance for DOF effects (Babylon.js doesn't have focalLength on ArcRotateCamera)
+    (this.camera as any)._focusDistance = distance;
   }
 
   private updateActorMesh(params: { height: number; weight: number; skinTone?: string }): void {
@@ -956,21 +957,25 @@ class VirtualStudio {
   }
 
   private characterMesh: BABYLON.AbstractMesh | null = null;
+  private characterModelId: string | null = null;
 
   private async loadCharacterModel(modelUrl: string, name: string, skinTone: string, height: number): Promise<void> {
     this.removeCharacterModel();
+    
+    let meshPosition = new BABYLON.Vector3(0, 0, 0);
     
     try {
       const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
       this.characterMesh = result.meshes[0];
       this.characterMesh.name = name;
-      this.characterMesh.position = new BABYLON.Vector3(0, 0, 0);
+      this.characterMesh.position = meshPosition;
       
       console.log(`Loaded character: ${name}`);
     } catch (error) {
       console.warn(`Character model not found: ${modelUrl}, creating placeholder`);
       const capsule = BABYLON.MeshBuilder.CreateCapsule(name, { height: 1.75, radius: 0.22 }, this.scene);
-      capsule.position = new BABYLON.Vector3(0, 0.875, 0);
+      meshPosition = new BABYLON.Vector3(0, 0.875, 0);
+      capsule.position = meshPosition;
       
       const mat = new BABYLON.StandardMaterial(`${name}_mat`, this.scene);
       mat.diffuseColor = new BABYLON.Color3(0.6, 0.55, 0.5);
@@ -979,7 +984,33 @@ class VirtualStudio {
       this.characterMesh = capsule;
     }
 
+    // Add to scene hierarchy store
+    const store = useAppStore.getState();
+    const modelId = `model_${Date.now()}`;
+    const newNode: SceneNode = {
+      id: modelId,
+      name: name,
+      type: 'model',
+      visible: true,
+      locked: false,
+      transform: {
+        position: [meshPosition.x, meshPosition.y, meshPosition.z],
+        rotation: [0, 0, 0],
+        scale: [1, 1, 1]
+      }
+    };
+    
+    store.addNode(newNode);
+    store.selectNode(modelId);
+    this.characterModelId = modelId;
+    
+    // Attach gizmo for interaction
+    if (this.gizmoManager && this.characterMesh) {
+      this.gizmoManager.attachToMesh(this.characterMesh as BABYLON.Mesh);
+    }
+
     this.applyCurrentActorParams();
+    console.log(`Added model "${name}" to scene hierarchy`);
   }
 
   private applyCurrentActorParams(): void {
@@ -995,6 +1026,10 @@ class VirtualStudio {
     if (this.characterMesh) {
       this.characterMesh.dispose();
       this.characterMesh = null;
+    }
+    if (this.characterModelId) {
+      useAppStore.getState().removeNode(this.characterModelId);
+      this.characterModelId = null;
     }
   }
 
