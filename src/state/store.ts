@@ -128,6 +128,7 @@ export interface SceneNode {
   name: string;
   transform: NodeTransform;
   visible: boolean;
+  locked?: boolean;
   userData?: Record<string, unknown>;
 }
 

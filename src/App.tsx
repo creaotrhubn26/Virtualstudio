@@ -9,6 +9,8 @@ import { CameraGearPanel } from './panels/CameraGearPanel';
 import { HDRIPanel } from './panels/HDRIPanel';
 import { EquipmentPanel } from './panels/EquipmentPanel';
 import { NotesPanel } from './components/NotesPanel';
+import { AccessibilityProvider } from './providers/AccessibilityProvider';
+import { Accessible3DControls } from './components/Accessible3DControls';
 
 const darkTheme = createTheme({
   palette: {
@@ -133,6 +135,69 @@ export const NotesPanelApp: React.FC = () => {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <NotesPanel onClose={() => setIsOpen(false)} />
+    </ThemeProvider>
+  );
+};
+
+export interface Accessible3DControlsAppProps {
+  cameraState: {
+    position: [number, number, number];
+    target: [number, number, number];
+    zoom: number;
+    fov: number;
+  };
+  selectedObject: {
+    id: string;
+    name: string;
+    type: string;
+    position: [number, number, number];
+    rotation: [number, number, number];
+    scale: [number, number, number];
+    visible: boolean;
+  } | null;
+  objects: Array<{
+    id: string;
+    name: string;
+    type: string;
+    position: [number, number, number];
+    rotation: [number, number, number];
+    scale: [number, number, number];
+    visible: boolean;
+  }>;
+  onCameraChange: (state: Partial<{
+    position: [number, number, number];
+    target: [number, number, number];
+    zoom: number;
+    fov: number;
+  }>) => void;
+  onCameraReset: () => void;
+  onObjectSelect: (id: string | null) => void;
+  onObjectTransform: (id: string, transform: Partial<{
+    id: string;
+    name: string;
+    type: string;
+    position: [number, number, number];
+    rotation: [number, number, number];
+    scale: [number, number, number];
+    visible: boolean;
+  }>) => void;
+}
+
+export const Accessible3DControlsApp: React.FC<Accessible3DControlsAppProps> = (props) => {
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <AccessibilityProvider>
+        <Accessible3DControls
+          cameraState={props.cameraState}
+          selectedObject={props.selectedObject}
+          objects={props.objects}
+          onCameraChange={props.onCameraChange}
+          onCameraReset={props.onCameraReset}
+          onObjectSelect={props.onObjectSelect}
+          onObjectTransform={props.onObjectTransform}
+        />
+      </AccessibilityProvider>
     </ThemeProvider>
   );
 };

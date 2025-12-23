@@ -46,7 +46,7 @@ interface AccessibilityContextValue {
 const defaultSettings: AccessibilitySettings = {
   reduceMotion: false,
   highContrast: false,
-  minimumTargetSize: 44,
+  minimumTargetSize: 56,
   announceDelay: 100,
 };
 
