@@ -1,20 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Typography,
-  Chip,
-  Stack,
-  TextField,
-  InputAdornment,
-  IconButton,
   Button,
+  Card,
+  CardMedia,
+  CardContent,
+  Divider,
   useMediaQuery,
   Tabs,
   Tab,
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import StarIcon from '@mui/icons-material/Star';
-import StarBorderIcon from '@mui/icons-material/StarBorder';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import CameraIcon from '@mui/icons-material/Camera';
 import VideocamIcon from '@mui/icons-material/Videocam';
@@ -173,54 +169,54 @@ const CAMERA_BODIES: CameraBody[] = [
     sensor: 'Full Frame', sensorSize: '36×24mm', megapixels: 49.7, 
     baseISO: 800, maxISO: 3200, dynamicRange: 16.0, colorDepth: 25.8,
     maxShutter: '1/8000', flashSync: '-', maxFps: 60,
-    codec: 'X-OCN RAW, ProRes 4444', recording: '8.6K',
+    codec: 'X-OCN, XAVC', recording: '8.6K',
     category: 'cine',
     image: '/images/gear/sony_venice_2_cinema_camera.png'
   },
   { 
-    id: 'canon-c70', name: 'Canon EOS C70', brand: 'Canon', 
-    sensor: 'Super 35 DGO', sensorSize: '26.2×13.8mm', megapixels: 8.85, 
-    baseISO: 800, maxISO: 102400, dynamicRange: 16.0, colorDepth: 25.5,
-    maxShutter: '1/8000', flashSync: '-', maxFps: 120,
-    codec: 'Cinema RAW Light, XF-AVC', recording: '4K DCI',
-    category: 'cine',
-    image: '/images/gear/canon_eos_c70_cinema_camera.png'
-  },
-  { 
-    id: 'canon-c80', name: 'Canon EOS C80', brand: 'Canon', 
-    sensor: 'Full Frame BSI', sensorSize: '36.0×19.0mm', megapixels: 26.67, 
-    baseISO: 800, maxISO: 12800, dynamicRange: 16.0, colorDepth: 25.5,
-    maxShutter: '1/8000', flashSync: '-', maxFps: 120,
-    codec: 'Cinema RAW Light, XF-AVC, ProRes RAW', recording: '6K',
-    category: 'cine',
-    image: '/images/gear/canon_eos_c80_cinema_camera.png'
-  },
-  { 
-    id: 'canon-c50', name: 'Canon EOS C50', brand: 'Canon', 
-    sensor: 'Full Frame BSI', sensorSize: '36.0×24.0mm', megapixels: 32, 
-    baseISO: 800, maxISO: 6400, dynamicRange: 15.0, colorDepth: 25.0,
-    maxShutter: '1/8000', flashSync: '-', maxFps: 120,
-    codec: 'Cinema RAW Light, XF-AVC, XF-HEVC', recording: '7K',
-    category: 'cine',
-    image: '/images/gear/canon_c50_compact_cinema_camera.png'
-  },
-  { 
     id: 'sony-fx6', name: 'Sony FX6', brand: 'Sony', 
-    sensor: 'Full Frame BSI', sensorSize: '35.6×23.8mm', megapixels: 10.2, 
-    baseISO: 800, maxISO: 12800, dynamicRange: 15.0, colorDepth: 25.2,
+    sensor: 'Full Frame', sensorSize: '35.6×23.8mm', megapixels: 10.2, 
+    baseISO: 800, maxISO: 409600, dynamicRange: 15.0, colorDepth: 25.0,
     maxShutter: '1/8000', flashSync: '-', maxFps: 120,
-    codec: 'XAVC-I, XAVC-HS 10-bit', recording: '4K',
+    codec: 'XAVC-I, XAVC-L', recording: '4K',
     category: 'cine',
-    image: '/images/gear/sony_fx6_compact_cinema_camera.png'
+    image: '/images/gear/sony_fx6_cinema_camera.png'
+  },
+  { 
+    id: 'canon-c70', name: 'Canon C70', brand: 'Canon', 
+    sensor: 'Super 35', sensorSize: '26.2×13.8mm', megapixels: 8.85, 
+    baseISO: 800, maxISO: 102400, dynamicRange: 16.0, colorDepth: 25.0,
+    maxShutter: '1/8000', flashSync: '-', maxFps: 120,
+    codec: 'Cinema RAW Light, XF-AVC', recording: '4K',
+    category: 'cine',
+    image: '/images/gear/canon_c70_cinema_camera.png'
+  },
+  { 
+    id: 'canon-c80', name: 'Canon C80', brand: 'Canon', 
+    sensor: 'Full Frame BSI', sensorSize: '36×24mm', megapixels: 18.0, 
+    baseISO: 800, maxISO: 102400, dynamicRange: 16.5, colorDepth: 25.5,
+    maxShutter: '1/8000', flashSync: '-', maxFps: 120,
+    codec: 'Cinema RAW Light, XF-AVC', recording: '6K',
+    category: 'cine',
+    image: '/images/gear/canon_c80_camera.png'
+  },
+  { 
+    id: 'canon-c50', name: 'Canon C50', brand: 'Canon', 
+    sensor: 'Full Frame BSI', sensorSize: '36×24mm', megapixels: 20.0, 
+    baseISO: 800, maxISO: 102400, dynamicRange: 16.5, colorDepth: 25.5,
+    maxShutter: '1/8000', flashSync: '-', maxFps: 60,
+    codec: 'Cinema RAW Light, XF-AVC', recording: '7K',
+    category: 'cine',
+    image: '/images/gear/canon_c50_camera.png'
   },
   { 
     id: 'panasonic-s1h', name: 'Panasonic S1H', brand: 'Panasonic', 
     sensor: 'Full Frame', sensorSize: '35.6×23.8mm', megapixels: 24.2, 
-    baseISO: 640, maxISO: 51200, dynamicRange: 14.0, colorDepth: 24.8,
-    maxShutter: '1/8000', flashSync: '1/250', maxFps: 180,
-    codec: 'V-Log, ProRes RAW', recording: '6K',
+    baseISO: 100, maxISO: 51200, dynamicRange: 14.0, colorDepth: 24.8,
+    maxShutter: '1/8000', flashSync: '1/320', ibis: 6.5, maxFps: 60,
+    codec: 'V-Log, 10-bit 4:2:2', recording: '6K',
     category: 'cine',
-    image: '/images/gear/panasonic_s1h_hybrid_cinema_camera.png'
+    image: '/images/gear/panasonic_s1h_camera.png'
   },
 ];
 
@@ -242,37 +238,59 @@ const LENSES: Lens[] = [
   { id: 'innovision-probe', name: 'Innovision Probe II Plus', brand: 'Innovision', focalLength: '9.8mm', aperture: 'f/5.6', minAperture: 'f/22', type: 'probe', minFocusDistance: 0.01, weight: 1200, image: '/images/gear/innovision_probe_ii_plus_lens.png' },
 ];
 
-type LensType = 'all' | 'prime' | 'zoom' | 'macro' | 'tele' | 'probe';
-type CameraCategory = 'all' | 'foto' | 'cine';
+interface CategoryInfo {
+  key: string;
+  label: string;
+}
+
+const CAMERA_TYPE_CATEGORIES: CategoryInfo[] = [
+  { key: 'all', label: 'Alle' },
+  { key: 'foto', label: 'Foto' },
+  { key: 'cine', label: 'Cine' },
+];
+
+const CAMERA_BRANDS: CategoryInfo[] = [
+  { key: 'all', label: 'Alle merker' },
+  { key: 'Sony', label: 'Sony' },
+  { key: 'Canon', label: 'Canon' },
+  { key: 'Nikon', label: 'Nikon' },
+  { key: 'ARRI', label: 'ARRI' },
+  { key: 'RED', label: 'RED' },
+  { key: 'Blackmagic', label: 'Blackmagic' },
+];
+
+const LENS_TYPE_CATEGORIES: CategoryInfo[] = [
+  { key: 'all', label: 'Alle' },
+  { key: 'prime', label: 'Prime' },
+  { key: 'zoom', label: 'Zoom' },
+  { key: 'macro', label: 'Makro' },
+  { key: 'tele', label: 'Tele' },
+  { key: 'probe', label: 'Probe' },
+];
+
+const LENS_BRANDS: CategoryInfo[] = [
+  { key: 'all', label: 'Alle merker' },
+  { key: 'Sony', label: 'Sony' },
+  { key: 'Canon', label: 'Canon' },
+  { key: 'Nikon', label: 'Nikon' },
+  { key: 'Sigma', label: 'Sigma' },
+  { key: 'Zeiss', label: 'Zeiss' },
+  { key: 'Laowa', label: 'Laowa' },
+];
 
 export function CameraGearPanel() {
   const [activeTab, setActiveTab] = useState(0);
-  const [cameraSearch, setCameraSearch] = useState('');
-  const [lensSearch, setLensSearch] = useState('');
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [cameraTypeFilter, setCameraTypeFilter] = useState('all');
+  const [cameraBrandFilter, setCameraBrandFilter] = useState('all');
+  const [lensTypeFilter, setLensTypeFilter] = useState('all');
+  const [lensBrandFilter, setLensBrandFilter] = useState('all');
   const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
   const [selectedLens, setSelectedLens] = useState<string | null>(null);
-  const [lensFilter, setLensFilter] = useState<LensType>('all');
-  const [cameraFilter, setCameraFilter] = useState<CameraCategory>('all');
-  const isTablet = useMediaQuery('(max-width: 1024px), (pointer: coarse)');
-
-  const toggleFavorite = (id: string) => {
-    setFavorites(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+  const isTouchDevice = useMediaQuery('(pointer: coarse)');
 
   const selectCamera = (camera: CameraBody) => {
     setSelectedCamera(camera.id);
     window.dispatchEvent(new CustomEvent('ch-select-camera', { detail: camera }));
-  };
-
-  const addCamera = (camera: CameraBody, e: React.MouseEvent) => {
-    e.stopPropagation();
-    selectCamera(camera);
   };
 
   const selectLens = (lens: Lens) => {
@@ -288,24 +306,36 @@ export function CameraGearPanel() {
     }));
   };
 
-  const addLens = (lens: Lens, e: React.MouseEvent) => {
-    e.stopPropagation();
-    selectLens(lens);
+  const filteredCameras = useMemo(() => {
+    return CAMERA_BODIES.filter(c => {
+      const matchesType = cameraTypeFilter === 'all' || c.category === cameraTypeFilter;
+      const matchesBrand = cameraBrandFilter === 'all' || c.brand === cameraBrandFilter;
+      return matchesType && matchesBrand;
+    });
+  }, [cameraTypeFilter, cameraBrandFilter]);
+
+  const filteredLenses = useMemo(() => {
+    return LENSES.filter(l => {
+      const matchesType = lensTypeFilter === 'all' || l.type === lensTypeFilter;
+      const matchesBrand = lensBrandFilter === 'all' || l.brand === lensBrandFilter;
+      return matchesType && matchesBrand;
+    });
+  }, [lensTypeFilter, lensBrandFilter]);
+
+  const buttonStyle = {
+    minHeight: isTouchDevice ? 52 : 40,
+    minWidth: isTouchDevice ? 100 : 80,
+    fontSize: isTouchDevice ? 14 : 12,
+    fontWeight: 500,
+    textTransform: 'none' as const,
+    borderRadius: 2,
+    transition: 'all 0.15s ease',
+    WebkitTapHighlightColor: 'transparent',
+    '&:active': {
+      transform: 'translateY(0)',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+    },
   };
-
-  const filteredCameras = CAMERA_BODIES.filter(c => {
-    const matchesSearch = c.name.toLowerCase().includes(cameraSearch.toLowerCase()) ||
-      c.brand.toLowerCase().includes(cameraSearch.toLowerCase());
-    const matchesCategory = cameraFilter === 'all' || c.category === cameraFilter;
-    return matchesSearch && matchesCategory;
-  });
-
-  const filteredLenses = LENSES.filter(l => {
-    const matchesSearch = l.name.toLowerCase().includes(lensSearch.toLowerCase()) ||
-      l.brand.toLowerCase().includes(lensSearch.toLowerCase());
-    const matchesType = lensFilter === 'all' || l.type === lensFilter;
-    return matchesSearch && matchesType;
-  });
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#1a1a1a' }}>
@@ -313,272 +343,298 @@ export function CameraGearPanel() {
         value={activeTab} 
         onChange={(_, v) => setActiveTab(v)}
         sx={{
-          minHeight: 40,
+          minHeight: 44,
           borderBottom: '1px solid #333',
           '& .MuiTab-root': {
             color: '#888',
-            minHeight: 40,
-            fontSize: 12,
+            minHeight: 44,
+            fontSize: 13,
             textTransform: 'none',
             '&.Mui-selected': { color: '#00a8ff' },
           },
           '& .MuiTabs-indicator': { backgroundColor: '#00a8ff' },
         }}
       >
-        <Tab icon={<CameraAltIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Kamera" />
-        <Tab icon={<CameraIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Linser" />
+        <Tab icon={<CameraAltIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Kameraer" />
+        <Tab icon={<CameraIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Objektiver" />
       </Tabs>
 
       <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
         {activeTab === 0 && (
           <>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Søk kameraer..."
-              value={cameraSearch}
-              onChange={(e) => setCameraSearch(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: '#666' }} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                mb: 2,
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: '#252525',
-                  '& fieldset': { borderColor: '#333' },
-                },
-                '& .MuiInputBase-input': { color: '#fff' },
-              }}
-            />
-
-            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 2 }}>
-              {(['all', 'foto', 'cine'] as CameraCategory[]).map(cat => (
-                <Chip
-                  key={cat}
-                  icon={cat === 'foto' ? <PhotoCameraIcon sx={{ fontSize: 14 }} /> : cat === 'cine' ? <VideocamIcon sx={{ fontSize: 14 }} /> : undefined}
-                  label={cat === 'all' ? 'Alle' : cat === 'foto' ? 'Foto' : 'Cine'}
-                  size="small"
-                  onClick={() => setCameraFilter(cat)}
+            <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block' }}>
+              Type
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+              {CAMERA_TYPE_CATEGORIES.map(cat => (
+                <Button
+                  key={cat.key}
+                  variant={cameraTypeFilter === cat.key ? 'contained' : 'outlined'}
+                  startIcon={cat.key === 'foto' ? <PhotoCameraIcon /> : cat.key === 'cine' ? <VideocamIcon /> : undefined}
+                  onClick={() => setCameraTypeFilter(cat.key)}
                   sx={{
-                    bgcolor: cameraFilter === cat ? '#00a8ff' : '#333',
-                    color: cameraFilter === cat ? '#fff' : '#aaa',
-                    fontSize: 11,
-                    '& .MuiChip-icon': { color: cameraFilter === cat ? '#fff' : '#888' },
-                    '&:hover': { bgcolor: cameraFilter === cat ? '#00a8ff' : '#444' },
+                    ...buttonStyle,
+                    bgcolor: cameraTypeFilter === cat.key ? '#00a8ff' : 'transparent',
+                    borderColor: cameraTypeFilter === cat.key ? '#00a8ff' : '#444',
+                    color: cameraTypeFilter === cat.key ? '#fff' : '#aaa',
+                    boxShadow: cameraTypeFilter === cat.key ? '0 4px 12px rgba(0,168,255,0.3)' : 'none',
+                    '&:hover': {
+                      bgcolor: cameraTypeFilter === cat.key ? '#0090dd' : '#333',
+                      borderColor: cameraTypeFilter === cat.key ? '#0090dd' : '#555',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 6px 16px rgba(0,0,0,0.4)',
+                    },
                   }}
-                />
+                >
+                  {cat.label}
+                </Button>
               ))}
             </Box>
 
-            <Stack spacing={1}>
+            <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block' }}>
+              Merke
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+              {CAMERA_BRANDS.map(brand => (
+                <Button
+                  key={brand.key}
+                  variant={cameraBrandFilter === brand.key ? 'contained' : 'outlined'}
+                  onClick={() => setCameraBrandFilter(brand.key)}
+                  sx={{
+                    ...buttonStyle,
+                    bgcolor: cameraBrandFilter === brand.key ? '#00a8ff' : 'transparent',
+                    borderColor: cameraBrandFilter === brand.key ? '#00a8ff' : '#444',
+                    color: cameraBrandFilter === brand.key ? '#fff' : '#aaa',
+                    boxShadow: cameraBrandFilter === brand.key ? '0 4px 12px rgba(0,168,255,0.3)' : 'none',
+                    '&:hover': {
+                      bgcolor: cameraBrandFilter === brand.key ? '#0090dd' : '#333',
+                      borderColor: cameraBrandFilter === brand.key ? '#0090dd' : '#555',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 6px 16px rgba(0,0,0,0.4)',
+                    },
+                  }}
+                >
+                  {brand.label}
+                </Button>
+              ))}
+            </Box>
+
+            <Divider sx={{ my: 1.5, borderColor: '#333' }} />
+
+            <Box sx={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
+              gap: 1.5,
+            }}>
               {filteredCameras.map(camera => (
-                <Box
+                <Card
                   key={camera.id}
                   onClick={() => selectCamera(camera)}
                   sx={{
-                    p: 1.5,
                     bgcolor: selectedCamera === camera.id ? '#00a8ff22' : '#252525',
-                    border: selectedCamera === camera.id ? '1px solid #00a8ff' : '1px solid #333',
-                    borderRadius: 1,
+                    border: selectedCamera === camera.id ? '2px solid #00a8ff' : '1px solid #333',
+                    borderRadius: 2,
                     cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1.5,
-                    '&:hover': { bgcolor: '#2a2a2a' },
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: '#2a2a2a',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                    },
                   }}
                 >
-                  {camera.image ? (
-                    <Box
-                      component="img"
-                      src={camera.image}
-                      alt={camera.name}
-                      sx={{ width: 48, height: 48, borderRadius: 1, objectFit: 'cover', bgcolor: '#333' }}
-                    />
-                  ) : (
-                    <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {camera.category === 'cine' ? <VideocamIcon sx={{ color: '#666' }} /> : <CameraAltIcon sx={{ color: '#666' }} />}
-                    </Box>
-                  )}
-                  <Box sx={{ flex: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>{camera.name}</Typography>
-                      <Chip 
-                        label={camera.category === 'cine' ? 'Cine' : 'Foto'} 
-                        size="small" 
-                        sx={{ 
-                          height: 16, 
-                          fontSize: 8, 
-                          bgcolor: camera.category === 'cine' ? '#4a2a4a' : '#2a4a3a',
-                          color: '#fff'
-                        }} 
-                      />
-                    </Box>
-                    <Typography variant="caption" sx={{ color: '#888', display: 'block' }}>
-                      {camera.sensor} ({camera.sensorSize}) · {camera.megapixels}MP
+                  <CardMedia
+                    component="img"
+                    height="100"
+                    image={camera.image || '/images/gear/placeholder_camera.png'}
+                    alt={camera.name}
+                    sx={{ 
+                      objectFit: 'contain', 
+                      bgcolor: '#1a1a1a',
+                      p: 1,
+                    }}
+                  />
+                  <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: '#fff', 
+                        fontWeight: 600, 
+                        fontSize: 11, 
+                        lineHeight: 1.2,
+                        mb: 0.5,
+                      }}
+                    >
+                      {camera.name}
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
-                      <Chip label={`DR ${camera.dynamicRange}EV`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#2a4a2a' }} />
-                      <Chip label={`ISO ${camera.baseISO}-${camera.maxISO}`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#333' }} />
-                      {camera.category === 'foto' && camera.flashSync !== '-' && (
-                        <Chip label={`Sync ${camera.flashSync}`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#4a3a2a' }} />
-                      )}
-                      {camera.ibis && <Chip label={`IBIS ${camera.ibis}`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#2a3a4a' }} />}
-                      {camera.category === 'cine' && camera.recording && (
-                        <Chip label={camera.recording} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#4a2a4a' }} />
-                      )}
-                      {camera.category === 'cine' && camera.maxFps && (
-                        <Chip label={`${camera.maxFps}fps`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#3a3a4a' }} />
-                      )}
-                    </Box>
-                    {camera.category === 'cine' && camera.codec && (
-                      <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 0.5, fontSize: 9 }}>
-                        {camera.codec}
-                      </Typography>
-                    )}
-                  </Box>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
-                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleFavorite(camera.id); }}>
-                      {favorites.has(camera.id) ? <StarIcon sx={{ color: '#ffd700', fontSize: 18 }} /> : <StarBorderIcon sx={{ color: '#666', fontSize: 18 }} />}
-                    </IconButton>
+                    <Typography variant="caption" sx={{ color: '#888', display: 'block', fontSize: 9 }}>
+                      {camera.sensor} · {camera.megapixels}MP
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#666', display: 'block', fontSize: 9 }}>
+                      {camera.category === 'cine' ? camera.recording : `DR ${camera.dynamicRange}EV`}
+                    </Typography>
                     <Button
                       size="small"
                       variant="contained"
-                      startIcon={<AddIcon sx={{ fontSize: 14 }} />}
-                      onClick={(e) => addCamera(camera, e)}
-                      aria-label={`Legg til ${camera.name}`}
+                      startIcon={<AddIcon sx={{ fontSize: 12 }} />}
+                      onClick={(e) => { e.stopPropagation(); selectCamera(camera); }}
                       sx={{
-                        minWidth: isTablet ? 80 : 70,
-                        minHeight: isTablet ? 36 : 28,
+                        mt: 1,
+                        width: '100%',
+                        minHeight: 32,
                         fontSize: 10,
                         bgcolor: '#00a8ff',
-                        '&:hover': { bgcolor: '#0090dd' },
                         textTransform: 'none',
+                        '&:hover': { bgcolor: '#0090dd' },
                       }}
                     >
-                      Legg til
+                      Velg
                     </Button>
-                  </Box>
-                </Box>
+                  </CardContent>
+                </Card>
               ))}
-            </Stack>
+            </Box>
           </>
         )}
 
         {activeTab === 1 && (
           <>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Søk linser..."
-              value={lensSearch}
-              onChange={(e) => setLensSearch(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: '#666' }} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                mb: 2,
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: '#252525',
-                  '& fieldset': { borderColor: '#333' },
-                },
-                '& .MuiInputBase-input': { color: '#fff' },
-              }}
-            />
-
-            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 2 }}>
-              {(['all', 'prime', 'zoom', 'macro', 'tele', 'probe'] as LensType[]).map(type => (
-                <Chip
-                  key={type}
-                  label={type === 'all' ? 'Alle' : type === 'prime' ? 'Prime' : type === 'zoom' ? 'Zoom' : type === 'macro' ? 'Makro' : type === 'tele' ? 'Tele' : 'Probe'}
-                  size="small"
-                  onClick={() => setLensFilter(type)}
+            <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block' }}>
+              Type
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+              {LENS_TYPE_CATEGORIES.map(cat => (
+                <Button
+                  key={cat.key}
+                  variant={lensTypeFilter === cat.key ? 'contained' : 'outlined'}
+                  onClick={() => setLensTypeFilter(cat.key)}
                   sx={{
-                    bgcolor: lensFilter === type ? '#00a8ff' : '#333',
-                    color: lensFilter === type ? '#fff' : '#aaa',
-                    fontSize: 11,
-                    '&:hover': { bgcolor: lensFilter === type ? '#00a8ff' : '#444' },
+                    ...buttonStyle,
+                    bgcolor: lensTypeFilter === cat.key ? '#00a8ff' : 'transparent',
+                    borderColor: lensTypeFilter === cat.key ? '#00a8ff' : '#444',
+                    color: lensTypeFilter === cat.key ? '#fff' : '#aaa',
+                    boxShadow: lensTypeFilter === cat.key ? '0 4px 12px rgba(0,168,255,0.3)' : 'none',
+                    '&:hover': {
+                      bgcolor: lensTypeFilter === cat.key ? '#0090dd' : '#333',
+                      borderColor: lensTypeFilter === cat.key ? '#0090dd' : '#555',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 6px 16px rgba(0,0,0,0.4)',
+                    },
                   }}
-                />
+                >
+                  {cat.label}
+                </Button>
               ))}
             </Box>
 
-            <Stack spacing={1}>
+            <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block' }}>
+              Merke
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+              {LENS_BRANDS.map(brand => (
+                <Button
+                  key={brand.key}
+                  variant={lensBrandFilter === brand.key ? 'contained' : 'outlined'}
+                  onClick={() => setLensBrandFilter(brand.key)}
+                  sx={{
+                    ...buttonStyle,
+                    bgcolor: lensBrandFilter === brand.key ? '#00a8ff' : 'transparent',
+                    borderColor: lensBrandFilter === brand.key ? '#00a8ff' : '#444',
+                    color: lensBrandFilter === brand.key ? '#fff' : '#aaa',
+                    boxShadow: lensBrandFilter === brand.key ? '0 4px 12px rgba(0,168,255,0.3)' : 'none',
+                    '&:hover': {
+                      bgcolor: lensBrandFilter === brand.key ? '#0090dd' : '#333',
+                      borderColor: lensBrandFilter === brand.key ? '#0090dd' : '#555',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 6px 16px rgba(0,0,0,0.4)',
+                    },
+                  }}
+                >
+                  {brand.label}
+                </Button>
+              ))}
+            </Box>
+
+            <Divider sx={{ my: 1.5, borderColor: '#333' }} />
+
+            <Box sx={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
+              gap: 1.5,
+            }}>
               {filteredLenses.map(lens => (
-                <Box
+                <Card
                   key={lens.id}
                   onClick={() => selectLens(lens)}
                   sx={{
-                    p: 1.5,
                     bgcolor: selectedLens === lens.id ? '#00a8ff22' : '#252525',
-                    border: selectedLens === lens.id ? '1px solid #00a8ff' : '1px solid #333',
-                    borderRadius: 1,
+                    border: selectedLens === lens.id ? '2px solid #00a8ff' : '1px solid #333',
+                    borderRadius: 2,
                     cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1.5,
-                    '&:hover': { bgcolor: '#2a2a2a' },
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: '#2a2a2a',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                    },
                   }}
                 >
-                  {lens.image ? (
-                    <Box
-                      component="img"
-                      src={lens.image}
-                      alt={lens.name}
-                      sx={{ width: 48, height: 48, borderRadius: 1, objectFit: 'cover', bgcolor: '#333' }}
-                    />
-                  ) : (
-                    <Box sx={{ width: 48, height: 48, borderRadius: 1, bgcolor: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <CameraIcon sx={{ color: '#666' }} />
-                    </Box>
-                  )}
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>{lens.name}</Typography>
-                    <Typography variant="caption" sx={{ color: '#888', display: 'block' }}>
-                      {lens.focalLength} · {lens.aperture}-{lens.minAperture}
+                  <CardMedia
+                    component="img"
+                    height="100"
+                    image={lens.image || '/images/gear/placeholder_lens.png'}
+                    alt={lens.name}
+                    sx={{ 
+                      objectFit: 'contain', 
+                      bgcolor: '#1a1a1a',
+                      p: 1,
+                    }}
+                  />
+                  <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: '#fff', 
+                        fontWeight: 600, 
+                        fontSize: 11, 
+                        lineHeight: 1.2,
+                        mb: 0.5,
+                      }}
+                    >
+                      {lens.name}
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
-                      <Chip label={lens.type === 'macro' ? 'Makro' : lens.type.charAt(0).toUpperCase() + lens.type.slice(1)} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#333' }} />
-                      {lens.weight && <Chip label={`${lens.weight}g`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#333' }} />}
-                      {lens.minFocusDistance && <Chip label={`Min ${(lens.minFocusDistance * 100).toFixed(0)}cm`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#2a3a4a' }} />}
-                      {lens.filterSize && <Chip label={`ø${lens.filterSize}mm`} size="small" sx={{ height: 16, fontSize: 8, bgcolor: '#3a3a4a' }} />}
-                    </Box>
-                  </Box>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
-                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleFavorite(lens.id); }}>
-                      {favorites.has(lens.id) ? <StarIcon sx={{ color: '#ffd700', fontSize: 18 }} /> : <StarBorderIcon sx={{ color: '#666', fontSize: 18 }} />}
-                    </IconButton>
+                    <Typography variant="caption" sx={{ color: '#888', display: 'block', fontSize: 9 }}>
+                      {lens.focalLength} · {lens.aperture}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#666', display: 'block', fontSize: 9 }}>
+                      {lens.weight}g · ø{lens.filterSize}mm
+                    </Typography>
                     <Button
                       size="small"
                       variant="contained"
-                      startIcon={<AddIcon sx={{ fontSize: 14 }} />}
-                      onClick={(e) => addLens(lens, e)}
-                      aria-label={`Legg til ${lens.name}`}
+                      startIcon={<AddIcon sx={{ fontSize: 12 }} />}
+                      onClick={(e) => { e.stopPropagation(); selectLens(lens); }}
                       sx={{
-                        minWidth: isTablet ? 80 : 70,
-                        minHeight: isTablet ? 36 : 28,
+                        mt: 1,
+                        width: '100%',
+                        minHeight: 32,
                         fontSize: 10,
                         bgcolor: '#00a8ff',
-                        '&:hover': { bgcolor: '#0090dd' },
                         textTransform: 'none',
+                        '&:hover': { bgcolor: '#0090dd' },
                       }}
                     >
-                      Legg til
+                      Velg
                     </Button>
-                  </Box>
-                </Box>
+                  </CardContent>
+                </Card>
               ))}
-            </Stack>
+            </Box>
           </>
         )}
       </Box>
     </Box>
   );
 }
+
+export default CameraGearPanel;
