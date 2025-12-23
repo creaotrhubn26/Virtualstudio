@@ -47,12 +47,25 @@ const createCharacterSVG = (type: 'female' | 'male' | 'couple', color = '#666') 
   return `data:image/svg+xml,${encodeURIComponent(svgs[type])}`;
 };
 
+interface CategoryInfo {
+  key: string;
+  label: string;
+}
+
+const CATEGORIES: CategoryInfo[] = [
+  { key: 'all', label: 'Alle' },
+  { key: 'bryllup', label: 'Bryllup' },
+  { key: 'portrett', label: 'Portrett' },
+  { key: 'mote', label: 'Mote' },
+  { key: 'næringsliv', label: 'Næringsliv' },
+];
+
 const CHARACTER_MODELS: CharacterModel[] = [
   {
     id: 'bride_01',
     name: 'Klassisk Brud',
     gender: 'female',
-    category: 'wedding',
+    category: 'bryllup' as any,
     modelUrl: '/models/characters/bride_01.glb',
     thumbnail: createCharacterSVG('female', '#f5f5f5'),
     description: 'Elegant bryllupsbrud med hvit kjole',
@@ -62,7 +75,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     id: 'groom_01',
     name: 'Klassisk Brudgom',
     gender: 'male',
-    category: 'wedding',
+    category: 'bryllup' as any,
     modelUrl: '/models/characters/groom_01.glb',
     thumbnail: createCharacterSVG('male', '#1a1a1a'),
     description: 'Profesjonell brudgom i svart smoking',
@@ -72,7 +85,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     id: 'portrait_f_01',
     name: 'Portrett Kvinne',
     gender: 'female',
-    category: 'portrait',
+    category: 'portrett' as any,
     modelUrl: '/models/characters/portrait_f_01.glb',
     thumbnail: createCharacterSVG('female', '#e8b4a0'),
     description: 'Naturlig portrettmodell - kvinne',
@@ -82,7 +95,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     id: 'portrait_m_01',
     name: 'Portrett Mann',
     gender: 'male',
-    category: 'portrait',
+    category: 'portrett' as any,
     modelUrl: '/models/characters/portrait_m_01.glb',
     thumbnail: createCharacterSVG('male', '#c9a082'),
     description: 'Naturlig portrettmodell - mann',
@@ -90,9 +103,9 @@ const CHARACTER_MODELS: CharacterModel[] = [
   },
   {
     id: 'fashion_f_01',
-    name: 'Mote Kvinne',
+    name: 'Motemodell Kvinne',
     gender: 'female',
-    category: 'fashion',
+    category: 'mote' as any,
     modelUrl: '/models/characters/fashion_f_01.glb',
     thumbnail: createCharacterSVG('female', '#ff6b9d'),
     description: 'High fashion modell - kvinne',
@@ -100,12 +113,12 @@ const CHARACTER_MODELS: CharacterModel[] = [
   },
   {
     id: 'business_m_01',
-    name: 'Business Mann',
+    name: 'Forretningsmann',
     gender: 'male',
-    category: 'business',
+    category: 'næringsliv' as any,
     modelUrl: '/models/characters/business_m_01.glb',
     thumbnail: createCharacterSVG('male', '#1a365d'),
-    description: 'Profesjonell business modell - mann',
+    description: 'Profesjonell næringslivsmodell - mann',
     poses: 20,
   },
 ];
@@ -120,9 +133,12 @@ const createPoseSVG = (pose: string, color = '#666') => {
 };
 
 const POSE_LIBRARY: Pose[] = [
-  { id: 'stand_neutral', name: 'Noytral', category: 'standing', thumbnail: createPoseSVG('stand', '#666'), description: 'Avslappet staende pose' },
+  { id: 'stand_neutral', name: 'Nøytral', category: 'standing', thumbnail: createPoseSVG('stand', '#666'), description: 'Avslappet stående pose' },
   { id: 'stand_confident', name: 'Selvsikker', category: 'standing', thumbnail: createPoseSVG('confident', '#666'), description: 'Kraftig selvsikker pose' },
-  { id: 'sit_chair', name: 'Sittende', category: 'sitting', thumbnail: createPoseSVG('sit', '#666'), description: 'Sittende pa stol' },
+  { id: 'sit_chair', name: 'Sittende', category: 'sitting', thumbnail: createPoseSVG('sit', '#666'), description: 'Sittende på stol' },
+  { id: 'stand_relaxed', name: 'Avslappet', category: 'standing', thumbnail: createPoseSVG('stand', '#888'), description: 'Naturlig avslappet stående' },
+  { id: 'stand_formal', name: 'Formell', category: 'standing', thumbnail: createPoseSVG('confident', '#555'), description: 'Formell stående positur' },
+  { id: 'sit_casual', name: 'Uformell sittende', category: 'sitting', thumbnail: createPoseSVG('sit', '#888'), description: 'Avslappet sittende pose' },
 ];
 
 interface CharacterModelLoaderProps {
@@ -145,8 +161,6 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
   const [selectedPose, setSelectedPose] = useState<Pose | null>(null);
   const [skinTone, setSkinTone] = useState('#FFDAB9');
   const [height, setHeight] = useState(1.0);
-
-  const categories = ['all', 'wedding', 'portrait', 'fashion', 'business'];
 
   const filteredModels =
     selectedCategory === 'all'
@@ -229,77 +243,116 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
 
       {activeTab === 0 && (
         <>
-          <Box sx={{ mb: 2, display: 'flex', gap: shouldUseTabletMode ? 1 : 0.5, flexWrap: 'wrap' }}>
-            {categories.map((cat) => (
+          <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {CATEGORIES.map((cat) => (
               <Button
-                key={cat}
-                variant={selectedCategory === cat ? 'contained' : 'outlined'}
-                size={shouldUseTabletMode ? 'medium' : 'small'}
-                onClick={() => setSelectedCategory(cat)}
+                key={cat.key}
+                variant={selectedCategory === cat.key ? 'contained' : 'outlined'}
+                size="medium"
+                onClick={() => setSelectedCategory(cat.key)}
                 sx={{ 
-                  fontSize: shouldUseTabletMode ? 13 : 11, 
-                  py: shouldUseTabletMode ? 1 : 0.5, 
-                  px: shouldUseTabletMode ? 2 : 1,
-                  minHeight: 44,
+                  fontSize: 13, 
+                  py: 1.5, 
+                  px: 2.5,
+                  minHeight: 48,
+                  minWidth: 90,
+                  borderRadius: 2,
+                  fontWeight: selectedCategory === cat.key ? 700 : 500,
+                  bgcolor: selectedCategory === cat.key ? '#3b82f6' : 'transparent',
+                  borderColor: selectedCategory === cat.key ? '#3b82f6' : '#555',
+                  color: selectedCategory === cat.key ? '#fff' : '#ccc',
+                  boxShadow: selectedCategory === cat.key ? '0 4px 12px rgba(59, 130, 246, 0.4)' : 'none',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: selectedCategory === cat.key ? '#2563eb' : 'rgba(59, 130, 246, 0.15)',
+                    borderColor: '#3b82f6',
+                    transform: 'translateY(-1px)',
+                  },
+                  '&:active': {
+                    transform: 'translateY(0)',
+                  },
                 }}
               >
-                {cat === 'all' ? 'Alle' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                {cat.label}
               </Button>
             ))}
           </Box>
 
           <Divider sx={{ my: 1.5, borderColor: '#333' }} />
 
-          <Box sx={{ maxHeight: shouldUseTabletMode ? 400 : 300, overflowY: 'auto', mb: 2 }}>
+          <Box sx={{ 
+            maxHeight: filteredModels.length > 6 ? 400 : 'none', 
+            overflowY: filteredModels.length > 6 ? 'auto' : 'visible', 
+            mb: 2 
+          }}>
             <Box sx={{ 
               display: 'grid', 
-              gridTemplateColumns: shouldUseTabletMode 
-                ? 'repeat(auto-fill, minmax(150px, 1fr))' 
-                : 'repeat(3, 1fr)', 
-              gap: shouldUseTabletMode ? 2 : 1,
+              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
+              gap: 1.5,
             }}>
               {filteredModels.map((model) => (
                 <Card
                   key={model.id}
                   sx={{
                     cursor: 'pointer',
-                    border: selectedModel?.id === model.id ? '2px solid #3b82f6' : '1px solid #333',
-                    backgroundColor: '#1a1a1a',
-                    '&:hover': { borderColor: '#3b82f6' },
+                    border: selectedModel?.id === model.id ? '2px solid #3b82f6' : '1px solid #444',
+                    backgroundColor: '#1e1e1e',
+                    borderRadius: 2,
+                    transition: 'all 0.2s ease',
+                    '&:hover': { 
+                      borderColor: '#3b82f6',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+                    },
                   }}
                 >
                   <CardMedia
                     component="img"
-                    height={shouldUseTabletMode ? 120 : 100}
+                    height={100}
                     image={model.thumbnail}
                     alt={model.name}
-                    sx={{ backgroundColor: '#2a2a2a', objectFit: 'contain', p: 1 }}
-                    onClick={() => !shouldUseTabletMode && loadCharacter(model)}
+                    sx={{ backgroundColor: '#2a2a2a', objectFit: 'contain', p: 1.5 }}
+                    onClick={() => loadCharacter(model)}
                   />
-                  <CardContent sx={{ p: shouldUseTabletMode ? 1.5 : 1, '&:last-child': { pb: shouldUseTabletMode ? 1.5 : 1 } }}>
-                    <Typography variant="caption" noWrap sx={{ color: '#fff', fontSize: shouldUseTabletMode ? 13 : 11 }}>
+                  <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                    <Typography variant="body2" noWrap sx={{ color: '#fff', fontSize: 13, fontWeight: 600, mb: 0.5 }}>
                       {model.name}
                     </Typography>
-                    <Typography variant="caption" display="block" sx={{ color: '#888', fontSize: shouldUseTabletMode ? 12 : 10 }}>
+                    <Typography variant="caption" display="block" sx={{ color: '#888', fontSize: 11, mb: 1 }}>
                       {model.poses} poser
                     </Typography>
                     <Button
-                      size="small"
-                      startIcon={<Add sx={{ fontSize: shouldUseTabletMode ? 18 : 14 }} />}
+                      size="medium"
+                      startIcon={<Add sx={{ fontSize: 18 }} />}
                       onClick={() => loadCharacter(model)}
+                      disabled={loading && selectedModel?.id === model.id}
                       aria-label={`Legg til ${model.name}`}
                       sx={{ 
-                        mt: 0.5, 
                         width: '100%', 
-                        fontSize: shouldUseTabletMode ? 12 : 10,
-                        py: shouldUseTabletMode ? 1 : 0.5,
-                        minHeight: 44,
-                        bgcolor: '#3b82f622',
-                        color: '#3b82f6',
-                        '&:hover': { bgcolor: '#3b82f644' },
+                        fontSize: 12,
+                        fontWeight: 600,
+                        py: 1.25,
+                        minHeight: 48,
+                        borderRadius: 1.5,
+                        bgcolor: selectedModel?.id === model.id ? '#22c55e' : '#3b82f6',
+                        color: '#fff',
+                        boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
+                        transition: 'all 0.2s ease',
+                        '&:hover': { 
+                          bgcolor: selectedModel?.id === model.id ? '#16a34a' : '#2563eb',
+                          transform: 'translateY(-1px)',
+                          boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
+                        },
+                        '&:active': {
+                          transform: 'translateY(0)',
+                        },
+                        '&:disabled': {
+                          bgcolor: '#666',
+                          color: '#aaa',
+                        },
                       }}
                     >
-                      Legg til
+                      {selectedModel?.id === model.id ? 'Aktiv' : 'Legg til'}
                     </Button>
                   </CardContent>
                 </Card>
@@ -309,15 +362,31 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
 
           {selectedModel && (
             <Button
-              variant="outlined"
-              color="error"
-              startIcon={<Delete />}
+              variant="contained"
+              startIcon={<Delete sx={{ fontSize: 20 }} />}
               onClick={removeCharacter}
               fullWidth
-              size={shouldUseTabletMode ? 'medium' : 'small'}
-              sx={{ minHeight: 44 }}
+              size="large"
+              sx={{ 
+                minHeight: 52,
+                fontSize: 14,
+                fontWeight: 600,
+                borderRadius: 2,
+                bgcolor: '#dc2626',
+                color: '#fff',
+                boxShadow: '0 2px 8px rgba(220, 38, 38, 0.3)',
+                transition: 'all 0.2s ease',
+                '&:hover': { 
+                  bgcolor: '#b91c1c',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.4)',
+                },
+                '&:active': {
+                  transform: 'translateY(0)',
+                },
+              }}
             >
-              Fjern Karakter
+              Fjern karakter
             </Button>
           )}
         </>
