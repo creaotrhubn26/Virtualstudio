@@ -3,6 +3,7 @@ import { create } from 'zustand';
 export type FocusMode = 'single' | 'zone' | 'wide' | 'tracking';
 export type SafeAreaMode = 'none' | 'action' | 'title' | 'both';
 export type CompositionGuide = 'none' | 'thirds' | 'golden' | 'spiral' | 'diagonal' | 'center' | 'triangle' | 'symmetry';
+export type HelperGuide = 'none' | 'colortemp' | 'exposure' | 'height' | 'glasses' | 'classphoto' | 'safety';
 
 export interface FocusPoint {
   id: number;
@@ -15,6 +16,7 @@ interface FocusState {
   mode: FocusMode;
   safeAreaMode: SafeAreaMode;
   compositionGuide: CompositionGuide;
+  helperGuide: HelperGuide;
   showGrid: boolean;
   showOverlay: boolean;
   activePointId: number;
@@ -28,6 +30,8 @@ interface FocusState {
   setSafeAreaMode: (mode: SafeAreaMode) => void;
   setCompositionGuide: (guide: CompositionGuide) => void;
   cycleCompositionGuide: () => void;
+  setHelperGuide: (guide: HelperGuide) => void;
+  cycleHelperGuide: () => void;
   toggleGrid: () => void;
   toggleOverlay: () => void;
   setActivePoint: (id: number) => void;
@@ -39,11 +43,13 @@ interface FocusState {
 }
 
 const compositionGuides: CompositionGuide[] = ['none', 'thirds', 'golden', 'spiral', 'diagonal', 'center', 'triangle', 'symmetry'];
+const helperGuides: HelperGuide[] = ['none', 'colortemp', 'exposure', 'height', 'glasses', 'classphoto', 'safety'];
 
 export const useFocusStore = create<FocusState>((set, get) => ({
   mode: 'zone',
   safeAreaMode: 'none',
   compositionGuide: 'none',
+  helperGuide: 'none',
   showGrid: false,
   showOverlay: true,
   activePointId: 4,
@@ -70,6 +76,12 @@ export const useFocusStore = create<FocusState>((set, get) => ({
     const currentIndex = compositionGuides.indexOf(state.compositionGuide);
     const nextGuide = compositionGuides[(currentIndex + 1) % compositionGuides.length];
     return { compositionGuide: nextGuide };
+  }),
+  setHelperGuide: (guide) => set({ helperGuide: guide }),
+  cycleHelperGuide: () => set((state) => {
+    const currentIndex = helperGuides.indexOf(state.helperGuide);
+    const nextGuide = helperGuides[(currentIndex + 1) % helperGuides.length];
+    return { helperGuide: nextGuide };
   }),
   toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
   toggleOverlay: () => set((state) => ({ showOverlay: !state.showOverlay })),

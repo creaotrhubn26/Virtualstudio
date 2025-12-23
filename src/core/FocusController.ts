@@ -1,4 +1,4 @@
-import { useFocusStore, FocusMode, SafeAreaMode, CompositionGuide } from '../state/store';
+import { useFocusStore, FocusMode, SafeAreaMode, CompositionGuide, HelperGuide } from '../state/store';
 
 export class FocusController {
   private viewportElement: HTMLElement | null = null;
@@ -71,6 +71,11 @@ export class FocusController {
     if (gridToggleBtn) {
       gridToggleBtn.addEventListener('click', this.handleGridToggle);
     }
+
+    const helperGuideBtn = document.querySelector('.vf-btn.helper-guide');
+    if (helperGuideBtn) {
+      helperGuideBtn.addEventListener('click', this.handleHelperGuideChange.bind(this));
+    }
   }
 
   private subscribeToStore() {
@@ -92,6 +97,9 @@ export class FocusController {
       }
       if (state.compositionGuide !== prevState.compositionGuide) {
         this.updateCompositionGuide(state.compositionGuide);
+      }
+      if (state.helperGuide !== prevState.helperGuide) {
+        this.updateHelperGuide(state.helperGuide);
       }
       if (state.focusDistance !== prevState.focusDistance) {
         this.updateFocusDistanceDisplay(state.focusDistance, state.hitObjectName);
@@ -189,6 +197,10 @@ export class FocusController {
 
   private handleCompositionChange() {
     useFocusStore.getState().cycleCompositionGuide();
+  }
+
+  private handleHelperGuideChange() {
+    useFocusStore.getState().cycleHelperGuide();
   }
 
   private handleOverlayToggle() {
@@ -375,6 +387,254 @@ export class FocusController {
           <line x1="0" y1="0" x2="100%" y2="100%" stroke="${color}" stroke-width="1"/>
           <line x1="100%" y1="0" x2="0" y2="100%" stroke="${color}" stroke-width="1"/>
         </svg>`;
+      default:
+        return '';
+    }
+  }
+
+  private updateHelperGuide(guide: HelperGuide) {
+    const overlay = document.getElementById('helperGuideOverlay');
+    const btn = document.querySelector('.vf-btn.helper-guide');
+    
+    if (overlay) {
+      overlay.setAttribute('data-guide', guide);
+      overlay.innerHTML = this.getHelperGuideHTML(guide);
+    }
+
+    if (btn) {
+      btn.classList.toggle('active', guide !== 'none');
+      btn.setAttribute('title', this.getHelperGuideLabel(guide));
+    }
+  }
+
+  private getHelperGuideLabel(guide: HelperGuide): string {
+    const labels: Record<HelperGuide, string> = {
+      none: 'Hjelpeguider',
+      colortemp: 'Fargetemperatur',
+      exposure: 'Eksponeringsoner',
+      height: 'Høydereferanser',
+      glasses: 'Brillerefleksjoner',
+      classphoto: 'Klassefoto',
+      safety: 'Sikkerhetsoner'
+    };
+    return labels[guide];
+  }
+
+  private getHelperGuideHTML(guide: HelperGuide): string {
+    switch (guide) {
+      case 'colortemp':
+        return `
+          <div class="helper-guide-panel bottom-left">
+            <h4>Fargetemperatur (K)</h4>
+            <div class="color-temp-scale">
+              <div class="color-temp-bar">
+                <div class="color-temp-marker" style="left: 55%"></div>
+              </div>
+              <div class="color-temp-labels">
+                <span>1800K</span>
+                <span>5500K</span>
+                <span>10000K</span>
+              </div>
+              <div style="margin-top: 8px; font-size: 10px; color: #888;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                  <span style="color: #ff9329;">Stearinlys</span>
+                  <span>1800K</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                  <span style="color: #ffb46b;">Gloedelampe</span>
+                  <span>2700K</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                  <span style="color: #ffffff;">Dagslys</span>
+                  <span>5500K</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="color: #cce0ff;">Skygge</span>
+                  <span>7500K</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      case 'exposure':
+        return `
+          <div class="helper-guide-panel bottom-left">
+            <h4>Eksponeringsoner</h4>
+            <div class="exposure-zones">
+              <div class="exposure-zone">
+                <div class="exposure-zone-box" style="background: #000;"></div>
+                <span class="exposure-zone-label">Zone 0 - Ren sort</span>
+                <span class="exposure-zone-ev">-5 EV</span>
+              </div>
+              <div class="exposure-zone">
+                <div class="exposure-zone-box" style="background: #333;"></div>
+                <span class="exposure-zone-label">Zone II - Skyggdetalj</span>
+                <span class="exposure-zone-ev">-3 EV</span>
+              </div>
+              <div class="exposure-zone">
+                <div class="exposure-zone-box" style="background: #808080;"></div>
+                <span class="exposure-zone-label">Zone V - 18% graa</span>
+                <span class="exposure-zone-ev">0 EV</span>
+              </div>
+              <div class="exposure-zone">
+                <div class="exposure-zone-box" style="background: #999;"></div>
+                <span class="exposure-zone-label">Zone VI - Hudtone</span>
+                <span class="exposure-zone-ev">+1 EV</span>
+              </div>
+              <div class="exposure-zone">
+                <div class="exposure-zone-box" style="background: #ccc;"></div>
+                <span class="exposure-zone-label">Zone VIII - Hoylys</span>
+                <span class="exposure-zone-ev">+3 EV</span>
+              </div>
+              <div class="exposure-zone">
+                <div class="exposure-zone-box" style="background: #fff;"></div>
+                <span class="exposure-zone-label">Zone X - Ren hvit</span>
+                <span class="exposure-zone-ev">+5 EV</span>
+              </div>
+            </div>
+          </div>
+        `;
+      case 'height':
+        return `
+          <div class="height-markers">
+            <div class="height-marker" style="bottom: 0%; color: #88ccff;">
+              <div class="height-line"></div>
+              <span class="height-label">Barn 6 aar - 110cm</span>
+            </div>
+            <div class="height-marker" style="bottom: 9%; color: #ffcc00;">
+              <div class="height-line"></div>
+              <span class="height-label">Sittende - 120cm</span>
+            </div>
+            <div class="height-marker" style="bottom: 36%; color: #88ff88;">
+              <div class="height-line"></div>
+              <span class="height-label">Tenaring - 150cm</span>
+            </div>
+            <div class="height-marker" style="bottom: 55%; color: #00ff88;">
+              <div class="height-line"></div>
+              <span class="height-label">Gjennomsnitt - 170cm</span>
+            </div>
+            <div class="height-marker" style="bottom: 68%; color: #ff8888;">
+              <div class="height-line"></div>
+              <span class="height-label">Hoey - 185cm</span>
+            </div>
+          </div>
+          <div class="helper-guide-panel bottom-right">
+            <h4>Kamerahoeyder</h4>
+            <div style="font-size: 10px; color: #888;">
+              <div style="margin-bottom: 4px;"><span style="color: #ff6600;">Lav vinkel</span> - 50cm</div>
+              <div style="margin-bottom: 4px;"><span style="color: #ffcc00;">Oeyehoyde sit</span> - 120cm</div>
+              <div style="margin-bottom: 4px;"><span style="color: #00ff88;">Oeyehoyde staa</span> - 160cm</div>
+              <div><span style="color: #8888ff;">Hoey vinkel</span> - 200cm</div>
+            </div>
+          </div>
+        `;
+      case 'glasses':
+        return `
+          <div class="helper-guide-panel bottom-left">
+            <h4>Unngaa Brillerefleksjoner</h4>
+            <div class="glasses-tips">
+              <div class="glasses-tip">
+                <div class="glasses-tip-icon">1</div>
+                <div class="glasses-tip-text">Hev hovedlyset over oeyehoyde for aa unngaa direkte refleksjon</div>
+              </div>
+              <div class="glasses-tip">
+                <div class="glasses-tip-icon">2</div>
+                <div class="glasses-tip-text">Be modellen vippe haken lett ned for aa endre refleksjonsvinkelen</div>
+              </div>
+              <div class="glasses-tip">
+                <div class="glasses-tip-icon">3</div>
+                <div class="glasses-tip-text">Flytt lyset 45 grader til siden av kameraaksen</div>
+              </div>
+              <div class="glasses-tip">
+                <div class="glasses-tip-icon">4</div>
+                <div class="glasses-tip-text">Bruk store, myke lyskilder for aa minimere skarpe refleksjoner</div>
+              </div>
+            </div>
+          </div>
+          <svg width="100%" height="100%">
+            <defs>
+              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="rgba(255,200,0,0.7)" />
+              </marker>
+            </defs>
+            <line x1="30%" y1="25%" x2="50%" y2="40%" stroke="rgba(255,200,0,0.5)" stroke-width="2" stroke-dasharray="8,4" marker-end="url(#arrowhead)"/>
+            <text x="25%" y="22%" fill="rgba(255,200,0,0.8)" font-size="11">Hovedlys</text>
+            <ellipse cx="50%" cy="42%" rx="8%" ry="4%" fill="none" stroke="rgba(0,255,136,0.4)" stroke-width="1" stroke-dasharray="4,4"/>
+            <text x="52%" y="38%" fill="rgba(0,255,136,0.6)" font-size="10">Trygg sone</text>
+          </svg>
+        `;
+      case 'classphoto':
+        return `
+          <div class="helper-guide-panel bottom-left">
+            <h4>Klassefoto Guide</h4>
+            <div class="classphoto-guides">
+              <div class="classphoto-row">
+                <div class="classphoto-icon" style="background: rgba(0,255,136,0.2); color: #00ff88;">H</div>
+                <span>Hodejustering - Hold hodene i linje per rad</span>
+              </div>
+              <div class="classphoto-row">
+                <div class="classphoto-icon" style="background: rgba(68,136,255,0.2); color: #4488ff;">S</div>
+                <span>Avstand - 40-60cm mellom personer</span>
+              </div>
+              <div class="classphoto-row">
+                <div class="classphoto-icon" style="background: rgba(255,255,0,0.2); color: #ffff00;">K</div>
+                <span>Kamera FOV - Sjekk kantbeskjaering</span>
+              </div>
+              <div class="classphoto-row">
+                <div class="classphoto-icon" style="background: rgba(255,68,68,0.2); color: #ff4444;">!</div>
+                <span>Kantadvarsel - Unngaa avkutting</span>
+              </div>
+            </div>
+          </div>
+          <svg width="100%" height="100%">
+            <line x1="50%" y1="0" x2="50%" y2="100%" stroke="rgba(255,255,255,0.3)" stroke-width="1" stroke-dasharray="8,4"/>
+            <line x1="0" y1="30%" x2="100%" y2="30%" stroke="rgba(0,255,136,0.4)" stroke-width="1" stroke-dasharray="4,4"/>
+            <line x1="0" y1="55%" x2="100%" y2="55%" stroke="rgba(0,255,136,0.4)" stroke-width="1" stroke-dasharray="4,4"/>
+            <line x1="0" y1="80%" x2="100%" y2="80%" stroke="rgba(0,255,136,0.4)" stroke-width="1" stroke-dasharray="4,4"/>
+            <text x="52%" y="28%" fill="rgba(0,255,136,0.6)" font-size="10">Rad 1 - Hoeyde</text>
+            <text x="52%" y="53%" fill="rgba(0,255,136,0.6)" font-size="10">Rad 2 - Hoeyde</text>
+            <text x="52%" y="78%" fill="rgba(0,255,136,0.6)" font-size="10">Rad 3 - Hoeyde</text>
+            <rect x="2%" y="2%" width="96%" height="96%" fill="none" stroke="rgba(255,68,68,0.3)" stroke-width="2" stroke-dasharray="8,4"/>
+          </svg>
+        `;
+      case 'safety':
+        return `
+          <div class="helper-guide-panel bottom-left">
+            <h4>Sikkerhetsoner</h4>
+            <div class="safety-zones">
+              <div class="safety-zone-item">
+                <div class="safety-zone-color" style="color: #ff4444; background: rgba(255,68,68,0.2);"></div>
+                <span>Varmt lys varsling (>500W)</span>
+              </div>
+              <div class="safety-zone-item">
+                <div class="safety-zone-color" style="color: #ff8800; background: rgba(255,136,0,0.2);"></div>
+                <span>C-stativ klarering (1.0m)</span>
+              </div>
+              <div class="safety-zone-item">
+                <div class="safety-zone-color" style="color: #ffcc00; background: rgba(255,204,0,0.2);"></div>
+                <span>Lysstativ klarering (0.6m)</span>
+              </div>
+              <div class="safety-zone-item">
+                <div class="safety-zone-color" style="color: #88ff88; background: rgba(136,255,136,0.2);"></div>
+                <span>Bevegelsessone (trygt)</span>
+              </div>
+            </div>
+            <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
+              <div style="font-size: 10px; color: #888;">
+                <div style="margin-bottom: 4px;">Kabelruter vises paa gulvet</div>
+                <div>Hold 1m klaring rundt bommer</div>
+              </div>
+            </div>
+          </div>
+          <svg width="100%" height="100%">
+            <circle cx="25%" cy="70%" r="8%" fill="none" stroke="rgba(255,136,0,0.5)" stroke-width="2" stroke-dasharray="6,4"/>
+            <text x="25%" y="70%" fill="rgba(255,136,0,0.8)" font-size="10" text-anchor="middle" dominant-baseline="middle">C</text>
+            <circle cx="75%" cy="65%" r="6%" fill="none" stroke="rgba(255,204,0,0.5)" stroke-width="2" stroke-dasharray="6,4"/>
+            <text x="75%" y="65%" fill="rgba(255,204,0,0.8)" font-size="10" text-anchor="middle" dominant-baseline="middle">L</text>
+            <circle cx="50%" cy="50%" r="15%" fill="rgba(136,255,136,0.1)" stroke="rgba(136,255,136,0.4)" stroke-width="1"/>
+            <text x="50%" y="50%" fill="rgba(136,255,136,0.8)" font-size="11" text-anchor="middle" dominant-baseline="middle">Bevegelsessone</text>
+          </svg>
+        `;
       default:
         return '';
     }

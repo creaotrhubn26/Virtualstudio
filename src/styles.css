@@ -2161,6 +2161,258 @@ html, body {
   height: 100%;
 }
 
+.helper-guide-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.helper-guide-overlay[data-guide="none"] {
+  display: none;
+}
+
+.helper-guide-panel {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.85);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 11px;
+  color: #fff;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.helper-guide-panel.bottom-left {
+  bottom: 60px;
+  left: 16px;
+  max-width: 220px;
+}
+
+.helper-guide-panel.bottom-right {
+  bottom: 60px;
+  right: 60px;
+  max-width: 200px;
+}
+
+.helper-guide-panel h4 {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #00ff88;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.helper-guide-panel h4::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+  border-radius: 2px;
+}
+
+.color-temp-scale {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.color-temp-bar {
+  height: 16px;
+  border-radius: 4px;
+  background: linear-gradient(to right, 
+    #ff9329 0%, 
+    #ffb46b 15%, 
+    #ffc89c 25%, 
+    #ffdfc7 35%, 
+    #fff4e5 45%, 
+    #ffffff 55%, 
+    #e6f0ff 65%, 
+    #cce0ff 80%, 
+    #99c2ff 100%
+  );
+  position: relative;
+}
+
+.color-temp-marker {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 24px;
+  background: #fff;
+  box-shadow: 0 0 4px rgba(0,0,0,0.5);
+  transform: translateX(-50%);
+}
+
+.color-temp-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #888;
+}
+
+.exposure-zones {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.exposure-zone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.exposure-zone-box {
+  width: 20px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.exposure-zone-label {
+  flex: 1;
+  font-size: 9px;
+}
+
+.exposure-zone-ev {
+  font-size: 9px;
+  color: #888;
+  font-family: monospace;
+}
+
+.height-markers {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  height: 60%;
+}
+
+.height-marker {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.height-line {
+  width: 40px;
+  height: 1px;
+  background: currentColor;
+}
+
+.height-label {
+  font-size: 9px;
+  padding: 2px 6px;
+  background: rgba(0,0,0,0.7);
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.glasses-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.glasses-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 4px;
+}
+
+.glasses-tip-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,255,136,0.2);
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+.glasses-tip-text {
+  flex: 1;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.classphoto-guides {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.classphoto-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.classphoto-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.safety-zones {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.safety-zone-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.safety-zone-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+}
+
+.viewfinder-controls .helper-guide .icon {
+  width: 14px;
+  height: 14px;
+  position: relative;
+}
+
+.viewfinder-controls .helper-guide .icon::before {
+  content: '?';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
 .single-focus-point {
   position: absolute;
   width: 40px;
