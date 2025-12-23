@@ -2348,6 +2348,26 @@ html, body {
   background-position: center;
 }
 
+.viewfinder-controls .overlay-toggle .icon {
+  width: 14px;
+  height: 10px;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+  position: relative;
+}
+
+.viewfinder-controls .overlay-toggle .icon::before {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: currentColor;
+  border-radius: 1px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
 .viewfinder-controls .focus-mode .icon {
   border: 2px solid currentColor;
   border-radius: 2px;

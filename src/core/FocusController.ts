@@ -50,10 +50,14 @@ export class FocusController {
   }
 
   private setupControlButtons() {
+    const overlayToggleBtn = document.querySelector('.vf-btn.overlay-toggle');
     const focusModeBtn = document.querySelector('.vf-btn.focus-mode');
     const safeAreaBtn = document.querySelector('.vf-btn.safe-area');
     const gridToggleBtn = document.querySelector('.vf-btn.grid-toggle');
 
+    if (overlayToggleBtn) {
+      overlayToggleBtn.addEventListener('click', this.handleOverlayToggle.bind(this));
+    }
     if (focusModeBtn) {
       focusModeBtn.addEventListener('click', this.handleModeChange);
     }
@@ -67,6 +71,9 @@ export class FocusController {
 
   private subscribeToStore() {
     this.unsubscribe = useFocusStore.subscribe((state, prevState) => {
+      if (state.showOverlay !== prevState.showOverlay) {
+        this.updateOverlayVisibility(state.showOverlay);
+      }
       if (state.mode !== prevState.mode) {
         this.updateModeDisplay(state.mode);
       }
@@ -171,6 +178,27 @@ export class FocusController {
 
   private handleGridToggle() {
     useFocusStore.getState().toggleGrid();
+  }
+
+  private handleOverlayToggle() {
+    useFocusStore.getState().toggleOverlay();
+  }
+
+  private updateOverlayVisibility(show: boolean) {
+    const overlay = document.getElementById('viewfinderOverlay');
+    const overlayBtn = document.querySelector('.vf-btn.overlay-toggle');
+    
+    if (overlay) {
+      const children = overlay.querySelectorAll('.viewfinder-focus-grid, .single-focus-point, .viewfinder-center-crosshair, .safe-area-overlay, .third-grid-overlay, .viewfinder-mode-indicator, .viewfinder-info');
+      children.forEach(child => {
+        (child as HTMLElement).style.opacity = show ? '1' : '0';
+        (child as HTMLElement).style.pointerEvents = show ? 'auto' : 'none';
+      });
+    }
+    
+    if (overlayBtn) {
+      overlayBtn.classList.toggle('active', show);
+    }
   }
 
   private updateModeDisplay(mode: FocusMode) {

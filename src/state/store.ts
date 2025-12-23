@@ -14,6 +14,7 @@ interface FocusState {
   mode: FocusMode;
   safeAreaMode: SafeAreaMode;
   showGrid: boolean;
+  showOverlay: boolean;
   activePointId: number;
   singlePoint: { x: number; y: number };
   zonePoints: FocusPoint[];
@@ -24,6 +25,7 @@ interface FocusState {
   setMode: (mode: FocusMode) => void;
   setSafeAreaMode: (mode: SafeAreaMode) => void;
   toggleGrid: () => void;
+  toggleOverlay: () => void;
   setActivePoint: (id: number) => void;
   updateSinglePoint: (x: number, y: number) => void;
   updateZonePoint: (id: number, x: number, y: number) => void;
@@ -36,6 +38,7 @@ export const useFocusStore = create<FocusState>((set, get) => ({
   mode: 'zone',
   safeAreaMode: 'none',
   showGrid: false,
+  showOverlay: true,
   activePointId: 4,
   singlePoint: { x: 0.5, y: 0.5 },
   zonePoints: [
@@ -56,6 +59,7 @@ export const useFocusStore = create<FocusState>((set, get) => ({
   setMode: (mode) => set({ mode }),
   setSafeAreaMode: (mode) => set({ safeAreaMode: mode }),
   toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
+  toggleOverlay: () => set((state) => ({ showOverlay: !state.showOverlay })),
   
   setActivePoint: (id) => set((state) => ({
     activePointId: id,
