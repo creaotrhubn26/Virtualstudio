@@ -1,5 +1,92 @@
 import { create } from 'zustand';
 
+export type FocusMode = 'single' | 'zone' | 'wide' | 'tracking';
+export type SafeAreaMode = 'none' | 'action' | 'title' | 'both';
+
+export interface FocusPoint {
+  id: number;
+  x: number;
+  y: number;
+  active: boolean;
+}
+
+interface FocusState {
+  mode: FocusMode;
+  safeAreaMode: SafeAreaMode;
+  showGrid: boolean;
+  activePointId: number;
+  singlePoint: { x: number; y: number };
+  zonePoints: FocusPoint[];
+  focusDistance: number;
+  hitObjectName: string | null;
+  isDragging: boolean;
+  
+  setMode: (mode: FocusMode) => void;
+  setSafeAreaMode: (mode: SafeAreaMode) => void;
+  toggleGrid: () => void;
+  setActivePoint: (id: number) => void;
+  updateSinglePoint: (x: number, y: number) => void;
+  updateZonePoint: (id: number, x: number, y: number) => void;
+  setFocusDistance: (distance: number, objectName?: string | null) => void;
+  setDragging: (isDragging: boolean) => void;
+  getActivePointPosition: () => { x: number; y: number };
+}
+
+export const useFocusStore = create<FocusState>((set, get) => ({
+  mode: 'zone',
+  safeAreaMode: 'none',
+  showGrid: false,
+  activePointId: 4,
+  singlePoint: { x: 0.5, y: 0.5 },
+  zonePoints: [
+    { id: 0, x: 0.25, y: 0.25, active: false },
+    { id: 1, x: 0.5, y: 0.25, active: false },
+    { id: 2, x: 0.75, y: 0.25, active: false },
+    { id: 3, x: 0.25, y: 0.5, active: false },
+    { id: 4, x: 0.5, y: 0.5, active: true },
+    { id: 5, x: 0.75, y: 0.5, active: false },
+    { id: 6, x: 0.25, y: 0.75, active: false },
+    { id: 7, x: 0.5, y: 0.75, active: false },
+    { id: 8, x: 0.75, y: 0.75, active: false },
+  ],
+  focusDistance: 2.0,
+  hitObjectName: null,
+  isDragging: false,
+
+  setMode: (mode) => set({ mode }),
+  setSafeAreaMode: (mode) => set({ safeAreaMode: mode }),
+  toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
+  
+  setActivePoint: (id) => set((state) => ({
+    activePointId: id,
+    zonePoints: state.zonePoints.map(p => ({ ...p, active: p.id === id }))
+  })),
+  
+  updateSinglePoint: (x, y) => set({ singlePoint: { x, y } }),
+  
+  updateZonePoint: (id, x, y) => set((state) => ({
+    zonePoints: state.zonePoints.map(p => 
+      p.id === id ? { ...p, x, y } : p
+    )
+  })),
+  
+  setFocusDistance: (distance, objectName = null) => set({ 
+    focusDistance: distance, 
+    hitObjectName: objectName 
+  }),
+  
+  setDragging: (isDragging) => set({ isDragging }),
+  
+  getActivePointPosition: () => {
+    const state = get();
+    if (state.mode === 'single') {
+      return state.singlePoint;
+    }
+    const activePoint = state.zonePoints.find(p => p.id === state.activePointId);
+    return activePoint ? { x: activePoint.x, y: activePoint.y } : { x: 0.5, y: 0.5 };
+  }
+}));
+
 export interface NodeTransform {
   position: [number, number, number];
   rotation: [number, number, number];

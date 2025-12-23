@@ -193,10 +193,18 @@
         <div class="viewport-3d">
           <canvas id="renderCanvas" tabindex="0" aria-label="3D scene visning - bruk mus for aa navigere"></canvas>
           <div id="viewfinderOverlay" class="viewfinder-overlay-hud">
+            <div id="safeAreaOverlay" class="safe-area-overlay mode-none"></div>
+            <div id="thirdGridOverlay" class="third-grid-overlay" style="display: none;">
+              <div class="grid-line horizontal" style="top: 33.33%"></div>
+              <div class="grid-line horizontal" style="top: 66.66%"></div>
+              <div class="grid-line vertical" style="left: 33.33%"></div>
+              <div class="grid-line vertical" style="left: 66.66%"></div>
+            </div>
             <div class="viewfinder-center-crosshair">
               <div class="crosshair-h"></div>
               <div class="crosshair-v"></div>
             </div>
+            <div id="singleFocusPoint" class="single-focus-point" style="display: none;"></div>
             <div class="viewfinder-focus-grid zone-mode" id="focusGrid">
               <div class="focus-point" data-point="0"></div>
               <div class="focus-point" data-point="1"></div>
@@ -212,6 +220,9 @@
               <span class="mode-icon video"></span>
               <span class="mode-label">VIDEO</span>
               <span class="mode-ratio">16:9</span>
+            </div>
+            <div class="viewfinder-info" id="focusInfo">
+              <span class="focus-distance" id="focusDistanceDisplay">2.00m</span>
             </div>
             <div class="viewfinder-controls" id="viewfinderControls">
               <button class="vf-btn focus-mode active" data-mode="zone" title="Sone fokus">

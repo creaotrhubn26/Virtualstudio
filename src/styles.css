@@ -2079,32 +2079,155 @@ html, body {
   left: 0;
 }
 
-.viewfinder-focus-grid {
+.safe-area-overlay {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: grid;
-  gap: 20px;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
-.viewfinder-focus-grid.zone-mode {
-  grid-template-columns: repeat(3, 1fr);
-  width: 180px;
-  height: 120px;
+.safe-area-overlay.mode-none {
+  display: none;
+}
+
+.safe-area-overlay.mode-action::before,
+.safe-area-overlay.mode-both::before {
+  content: '';
+  position: absolute;
+  top: 5%;
+  left: 5%;
+  right: 5%;
+  bottom: 5%;
+  border: 1px dashed rgba(255, 200, 0, 0.5);
+}
+
+.safe-area-overlay.mode-title::after,
+.safe-area-overlay.mode-both::after {
+  content: '';
+  position: absolute;
+  top: 10%;
+  left: 10%;
+  right: 10%;
+  bottom: 10%;
+  border: 1px dashed rgba(0, 200, 255, 0.5);
+}
+
+.third-grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.third-grid-overlay .grid-line {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.third-grid-overlay .grid-line.horizontal {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.third-grid-overlay .grid-line.vertical {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.single-focus-point {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border: 2px solid #00a8ff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  left: 50%;
+  top: 50%;
+  pointer-events: auto;
+  cursor: move;
+  background: rgba(0, 168, 255, 0.1);
+  box-shadow: 0 0 12px rgba(0, 168, 255, 0.4);
+  transition: box-shadow 0.15s ease;
+}
+
+.single-focus-point:hover {
+  box-shadow: 0 0 16px rgba(0, 168, 255, 0.6);
+}
+
+.single-focus-point.dragging {
+  box-shadow: 0 0 20px rgba(0, 168, 255, 0.8);
+}
+
+.single-focus-point::before,
+.single-focus-point::after {
+  content: '';
+  position: absolute;
+  background: #00a8ff;
+}
+
+.single-focus-point::before {
+  width: 20px;
+  height: 2px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.single-focus-point::after {
+  width: 2px;
+  height: 20px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.viewfinder-focus-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.viewfinder-focus-grid.zone-mode,
+.viewfinder-focus-grid.wide-mode {
+  display: block;
+}
+
+.viewfinder-focus-grid.single-mode,
+.viewfinder-focus-grid.tracking-mode {
+  display: none;
 }
 
 .viewfinder-focus-grid .focus-point {
-  width: 16px;
-  height: 16px;
+  position: absolute;
+  width: 20px;
+  height: 20px;
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.05);
-  transition: all 0.15s ease;
+  transition: all 0.15s ease, left 0s, top 0s;
   pointer-events: auto;
-  cursor: pointer;
-  place-self: center;
+  cursor: move;
+  transform: translate(-50%, -50%);
 }
+
+.viewfinder-focus-grid .focus-point[data-point="0"] { left: 25%; top: 25%; }
+.viewfinder-focus-grid .focus-point[data-point="1"] { left: 50%; top: 25%; }
+.viewfinder-focus-grid .focus-point[data-point="2"] { left: 75%; top: 25%; }
+.viewfinder-focus-grid .focus-point[data-point="3"] { left: 25%; top: 50%; }
+.viewfinder-focus-grid .focus-point[data-point="4"] { left: 50%; top: 50%; }
+.viewfinder-focus-grid .focus-point[data-point="5"] { left: 75%; top: 50%; }
+.viewfinder-focus-grid .focus-point[data-point="6"] { left: 25%; top: 75%; }
+.viewfinder-focus-grid .focus-point[data-point="7"] { left: 50%; top: 75%; }
+.viewfinder-focus-grid .focus-point[data-point="8"] { left: 75%; top: 75%; }
 
 .viewfinder-focus-grid .focus-point:hover {
   border-color: rgba(255, 255, 255, 0.7);
@@ -2115,6 +2238,11 @@ html, body {
   border-color: #00a8ff;
   background: rgba(0, 168, 255, 0.2);
   box-shadow: 0 0 8px rgba(0, 168, 255, 0.5);
+}
+
+.viewfinder-focus-grid .focus-point.dragging {
+  box-shadow: 0 0 12px rgba(0, 168, 255, 0.8);
+  z-index: 10;
 }
 
 .viewfinder-mode-indicator {
@@ -2155,6 +2283,27 @@ html, body {
 .viewfinder-mode-indicator .mode-ratio {
   font-size: 10px;
   color: rgba(255, 255, 255, 0.5);
+}
+
+.viewfinder-info {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  pointer-events: auto;
+}
+
+.viewfinder-info .focus-distance {
+  font-size: 12px;
+  font-weight: 500;
+  color: #00a8ff;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .viewfinder-controls {

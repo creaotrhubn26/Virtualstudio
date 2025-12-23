@@ -3,7 +3,8 @@ import '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp } from './App';
-import { useAppStore } from './state/store';
+import { useAppStore, useFocusStore } from './state/store';
+import { focusController } from './core/FocusController';
 import { virtualActorService } from './core/services/virtualActorService';
 import { propRenderingService } from './core/services/propRenderingService';
 import { getPropById } from './core/data/propDefinitions';
@@ -208,6 +209,7 @@ class VirtualStudio {
     this.setupUI();
     this.setup2DViews();
     this.setupAssetEventListeners();
+    this.setupFocusEventListeners();
 
     this.engine.runRenderLoop(() => {
       this.scene.render();
@@ -776,6 +778,72 @@ class VirtualStudio {
         lumens
       });
     }) as EventListener);
+  }
+
+  private setupFocusEventListeners(): void {
+    window.addEventListener('focus:dragend', ((e: CustomEvent) => {
+      const { x, y } = e.detail;
+      this.calculateFocusDistance(x, y);
+    }) as EventListener);
+
+    window.addEventListener('focus:drag', ((e: CustomEvent) => {
+      const { x, y } = e.detail;
+      this.calculateFocusDistance(x, y);
+    }) as EventListener);
+
+    useFocusStore.subscribe((state, prevState) => {
+      if (state.mode !== prevState.mode || state.activePointId !== prevState.activePointId) {
+        const pos = state.getActivePointPosition();
+        this.calculateFocusDistance(pos.x, pos.y);
+      }
+    });
+
+    const pos = useFocusStore.getState().getActivePointPosition();
+    this.calculateFocusDistance(pos.x, pos.y);
+  }
+
+  private calculateFocusDistance(normalizedX: number, normalizedY: number): void {
+    if (!this.camera || !this.scene) return;
+
+    const canvas = this.engine.getRenderingCanvas();
+    if (!canvas) return;
+
+    const screenX = normalizedX * canvas.width;
+    const screenY = normalizedY * canvas.height;
+
+    const ray = this.scene.createPickingRay(screenX, screenY, BABYLON.Matrix.Identity(), this.camera);
+    const pickResult = this.scene.pickWithRay(ray, (mesh) => {
+      return mesh.isPickable && mesh.isVisible && !mesh.name.startsWith('gizmo') && mesh.name !== 'ground';
+    });
+
+    let distance: number;
+    let objectName: string | null = null;
+
+    if (pickResult?.hit && pickResult.pickedMesh) {
+      distance = pickResult.distance;
+      objectName = pickResult.pickedMesh.name;
+    } else {
+      const focusPlaneDistance = 3.0;
+      const direction = ray.direction.normalize();
+      const cameraPos = this.camera.position;
+      const focusPlaneY = 0;
+      const t = (focusPlaneY - cameraPos.y) / direction.y;
+      
+      if (t > 0) {
+        distance = t;
+      } else {
+        distance = focusPlaneDistance;
+      }
+    }
+
+    useFocusStore.getState().setFocusDistance(distance, objectName);
+    this.updateCameraFocus(distance);
+  }
+
+  private updateCameraFocus(distance: number): void {
+    if (!this.camera) return;
+    
+    (this.camera as BABYLON.ArcRotateCamera).focalLength = distance * 1000;
   }
 
   private updateActorMesh(params: { height: number; weight: number; skinTone?: string }): void {
@@ -2246,6 +2314,8 @@ window.addEventListener('DOMContentLoaded', () => {
   const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement;
   if (canvas) {
     const studio = new VirtualStudio(canvas);
+    
+    focusController.init();
     
     const hierarchyToggle = document.getElementById('hierarchyToggle');
     const hierarchyContent = document.getElementById('hierarchyContent');
