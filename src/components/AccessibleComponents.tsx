@@ -127,9 +127,9 @@ export const AccessibleButton = forwardRef<HTMLButtonElement, AccessibleButtonPr
         {children}
         {loading && <VisuallyHidden>Loading...</VisuallyHidden>}
         {ariaDescription && (
-          <VisuallyHidden id={`${props.id}-description`}>{ariaDescription}</VisuallyHidden>
+          <VisuallyHidden>{ariaDescription}</VisuallyHidden>
         )}
-        {shortcutHint && settings.showKeyboardHints && (
+        {shortcutHint && (
           <Typography
             component="span"
             variant="caption"
@@ -194,7 +194,7 @@ export const AccessibleIconButton = forwardRef<HTMLButtonElement, AccessibleIcon
 // AccessibleSlider
 // ============================================================================
 
-interface AccessibleSliderProps extends Omit<SliderProps, 'onChange, '> {
+interface AccessibleSliderProps extends Omit<SliderProps, 'onChange'> {
   /** Accessible label */
   label: string;
   /** Value format for announcements */
@@ -299,14 +299,18 @@ export function AccessibleSlider({
         sx={{
           '& .MuiSlider-thumb': {
             width: Math.max(24, settings.minimumTargetSize / 2),
-            height: Math.max(24, settings.minimumTargetSize / 2)'&:focus-visible': {
+            height: Math.max(24, settings.minimumTargetSize / 2),
+            '&:focus-visible': {
               boxShadow: `0 0 0 4px rgba(33, 150, 243, 0.4)`,
             },
-          }, '& .MuiSlider-track': {
+          },
+          '& .MuiSlider-track': {
             height: 8,
-          }, '& .MuiSlider-rail': {
+          },
+          '& .MuiSlider-rail': {
             height: 8,
-          }}}
+          },
+        }}
         {...props}
       />
       {stepAnnouncement && (
@@ -497,15 +501,15 @@ export function AccessibleDialog({
   ...props
 }: AccessibleDialogProps) {
   const { announce } = useAccessibility();
-  const dialogId = `dialog-${title.toLowerCase().replace(/\s+/g, '-,')}`;
+  const dialogId = `dialog-${title.toLowerCase().replace(/\s+/g, '-')}`;
   
   // Focus trap
-  useFocusTrap(dialogId, open, initialFocus || `#${dialogId}-close`);
+  const containerRef = useFocusTrap(open);
 
   // Announce when opened
   useEffect(() => {
     if (open) {
-      announce(`${title} dialog opened`'assertive');
+      announce(`${title} dialog opened`, 'assertive');
     }
   }, [open, title, announce]);
 
@@ -687,12 +691,15 @@ export function AccessibleDraggable({
       sx={{
         position: 'relative',
         cursor: enableDrag ? 'grab' : 'default',
-        outline: isMoving ? `3px solid ${settings.focusOutlineColor}` : 'none',
+        outline: isMoving ? `3px solid #2196f3` : 'none',
         outlineOffset: '2px',
-        transition: settings.reducedMotion ? 'none' : 'all 0.2s',
-        transform: isMoving ? `translateY(${(tempIndex - index) * 48}px)` : 'none','&: focus-visible': FOCUS_STYLES, '&:active': {
+        transition: settings.reduceMotion ? 'none' : 'all 0.2s',
+        transform: isMoving ? `translateY(${(tempIndex - index) * 48}px)` : 'none',
+        '&:focus-visible': FOCUS_STYLES,
+        '&:active': {
           cursor: 'grabbing',
-        }}}
+        },
+      }}
     >
       {/* Move handle for keyboard users */}
       <Box
@@ -704,9 +711,11 @@ export function AccessibleDraggable({
           display: 'flex',
           flexDirection: 'column',
           gap: 0.5,
-          opacity: 0, '&:focus-within, &:hover': {
+          opacity: 0,
+          '&:focus-within, &:hover': {
             opacity: 1,
-          }}}
+          },
+        }}
       >
         <AccessibleIconButton
           aria-label={`Move ${itemLabel} up, `}
@@ -898,7 +907,10 @@ export function AccessibleList<T>({
           }}
           sx={{
             minHeight: settings.minimumTargetSize,
-            bgcolor: selectedIndex === index ? 'action.selected' : 'transparent', '&:hover': { bgcolor: 'action.hover' }, '&:focus-visible': FOCUS_STYLES}}
+            bgcolor: selectedIndex === index ? 'action.selected' : 'transparent',
+            '&:hover': { bgcolor: 'action.hover' },
+            '&:focus-visible': FOCUS_STYLES,
+          }}
         >
           {renderItem(item, index, selectedIndex === index)}
         </ListItem>
@@ -926,7 +938,7 @@ export function AccessibleTooltip({
   showOnFocus = true,
   descriptionId,
 }: AccessibleTooltipProps) {
-  const { isReducedMotion } = useAccessibility();
+  const { settings } = useAccessibility();
   const [open, setOpen] = useState(false);
 
   return (
@@ -938,18 +950,20 @@ export function AccessibleTooltip({
         onClose={() => setOpen(false)}
         TransitionComponent={Fade}
         TransitionProps={{
-          timeout: isReducedMotion ? 0 : 200}}
+          timeout: settings.reduceMotion ? 0 : 200,
+        }}
         arrow
         enterDelay={200}
         leaveDelay={0}
       >
         {React.cloneElement(children, {
           onFocus: showOnFocus ? () => setOpen(true) : undefined,
-          onBlur: showOnFocus ? () => setOpen(false) : undefined'aria-describedby': descriptionId,
-        })}
+          onBlur: showOnFocus ? () => setOpen(false) : undefined,
+          'aria-describedby': descriptionId,
+        } as React.HTMLAttributes<HTMLElement>)}
       </Tooltip>
       {descriptionId && (
-        <VisuallyHidden id={descriptionId}>{title}</VisuallyHidden>
+        <VisuallyHidden>{title}</VisuallyHidden>
       )}
     </>
   );
