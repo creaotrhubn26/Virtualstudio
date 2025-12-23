@@ -88,7 +88,8 @@ const CAMERA_BODIES: CameraBody[] = [
     sensor: 'APS-C', sensorSize: '23.5×15.6mm', megapixels: 26.1, 
     baseISO: 160, maxISO: 12800, dynamicRange: 12.8, colorDepth: 23.8,
     maxShutter: '1/8000', flashSync: '1/250', ibis: 7, burstFps: 40,
-    category: 'foto'
+    category: 'foto',
+    image: '/images/gear/fujifilm_x-h2s_camera_body.png'
   },
   { 
     id: 'hasselblad-x2d', name: 'Hasselblad X2D 100C', brand: 'Hasselblad', 
@@ -103,21 +104,24 @@ const CAMERA_BODIES: CameraBody[] = [
     sensor: 'Medium Format', sensorSize: '53.4×40mm', megapixels: 150, 
     baseISO: 50, maxISO: 12800, dynamicRange: 15.3, colorDepth: 26.4,
     maxShutter: '1/4000', flashSync: '1/1600',
-    category: 'foto'
+    category: 'foto',
+    image: '/images/gear/phase_one_iq4_digital_back.png'
   },
   { 
     id: 'sony-a1', name: 'Sony A1', brand: 'Sony', 
     sensor: 'Full Frame', sensorSize: '35.9×24mm', megapixels: 50.1, 
     baseISO: 100, maxISO: 32000, dynamicRange: 15.0, colorDepth: 25.6,
     maxShutter: '1/8000', flashSync: '1/400', ibis: 5.5, burstFps: 30,
-    category: 'foto'
+    category: 'foto',
+    image: '/images/gear/sony_a1_flagship_camera.png'
   },
   { 
     id: 'leica-sl3', name: 'Leica SL3', brand: 'Leica', 
     sensor: 'Full Frame', sensorSize: '36×24mm', megapixels: 60, 
     baseISO: 100, maxISO: 100000, dynamicRange: 15.0, colorDepth: 25.5,
     maxShutter: '1/8000', flashSync: '1/250', ibis: 5,
-    category: 'foto'
+    category: 'foto',
+    image: '/images/gear/leica_sl3_mirrorless_camera.png'
   },
   { 
     id: 'arri-alexa35', name: 'ARRI ALEXA 35', brand: 'ARRI', 
@@ -125,7 +129,8 @@ const CAMERA_BODIES: CameraBody[] = [
     baseISO: 160, maxISO: 6400, dynamicRange: 17.0, colorDepth: 26.0,
     maxShutter: '1/8000', flashSync: '-', maxFps: 120,
     codec: 'ARRIRAW, ProRes 4444 XQ', recording: '4.6K',
-    category: 'cine'
+    category: 'cine',
+    image: '/images/gear/arri_alexa_35_cinema_camera.png'
   },
   { 
     id: 'arri-alexamini', name: 'ARRI ALEXA Mini LF', brand: 'ARRI', 
@@ -133,7 +138,8 @@ const CAMERA_BODIES: CameraBody[] = [
     baseISO: 800, maxISO: 3200, dynamicRange: 14.5, colorDepth: 25.8,
     maxShutter: '1/8000', flashSync: '-', maxFps: 90,
     codec: 'ARRIRAW, ProRes 4444 XQ', recording: '4.5K',
-    category: 'cine'
+    category: 'cine',
+    image: '/images/gear/arri_alexa_mini_lf_camera.png'
   },
   { 
     id: 'red-v-raptor', name: 'RED V-RAPTOR 8K VV', brand: 'RED', 
@@ -141,7 +147,8 @@ const CAMERA_BODIES: CameraBody[] = [
     baseISO: 800, maxISO: 6400, dynamicRange: 17.0, colorDepth: 26.0,
     maxShutter: '1/8000', flashSync: '-', maxFps: 150,
     codec: 'REDCODE RAW 16-bit', recording: '8K',
-    category: 'cine'
+    category: 'cine',
+    image: '/images/gear/red_v-raptor_8k_cube_camera.png'
   },
   { 
     id: 'red-komodo', name: 'RED KOMODO 6K', brand: 'RED', 
@@ -149,7 +156,8 @@ const CAMERA_BODIES: CameraBody[] = [
     baseISO: 800, maxISO: 3200, dynamicRange: 16.0, colorDepth: 25.5,
     maxShutter: '1/8000', flashSync: '-', maxFps: 40,
     codec: 'REDCODE RAW, ProRes 422 HQ', recording: '6K',
-    category: 'cine'
+    category: 'cine',
+    image: '/images/gear/red_komodo_6k_compact_cube.png'
   },
   { 
     id: 'blackmagic-ursa', name: 'Blackmagic URSA Mini Pro 12K', brand: 'Blackmagic', 
@@ -157,7 +165,8 @@ const CAMERA_BODIES: CameraBody[] = [
     baseISO: 800, maxISO: 3200, dynamicRange: 14.0, colorDepth: 25.0,
     maxShutter: '1/8000', flashSync: '-', maxFps: 60,
     codec: 'Blackmagic RAW 12-bit', recording: '12K',
-    category: 'cine'
+    category: 'cine',
+    image: '/images/gear/blackmagic_ursa_mini_pro_12k.png'
   },
   { 
     id: 'sony-venice2', name: 'Sony VENICE 2 8K', brand: 'Sony', 
@@ -165,7 +174,8 @@ const CAMERA_BODIES: CameraBody[] = [
     baseISO: 800, maxISO: 3200, dynamicRange: 16.0, colorDepth: 25.8,
     maxShutter: '1/8000', flashSync: '-', maxFps: 60,
     codec: 'X-OCN RAW, ProRes 4444', recording: '8.6K',
-    category: 'cine'
+    category: 'cine',
+    image: '/images/gear/sony_venice_2_cinema_camera.png'
   },
   { 
     id: 'canon-c70', name: 'Canon EOS C70', brand: 'Canon', 
@@ -173,7 +183,8 @@ const CAMERA_BODIES: CameraBody[] = [
     baseISO: 800, maxISO: 102400, dynamicRange: 16.0, colorDepth: 25.5,
     maxShutter: '1/8000', flashSync: '-', maxFps: 120,
     codec: 'Cinema RAW Light, XF-AVC', recording: '4K DCI',
-    category: 'cine'
+    category: 'cine',
+    image: '/images/gear/canon_eos_c70_cinema_camera.png'
   },
   { 
     id: 'canon-c80', name: 'Canon EOS C80', brand: 'Canon', 
@@ -181,7 +192,8 @@ const CAMERA_BODIES: CameraBody[] = [
     baseISO: 800, maxISO: 12800, dynamicRange: 16.0, colorDepth: 25.5,
     maxShutter: '1/8000', flashSync: '-', maxFps: 120,
     codec: 'Cinema RAW Light, XF-AVC, ProRes RAW', recording: '6K',
-    category: 'cine'
+    category: 'cine',
+    image: '/images/gear/canon_eos_c80_cinema_camera.png'
   },
   { 
     id: 'canon-c50', name: 'Canon EOS C50', brand: 'Canon', 
@@ -189,7 +201,8 @@ const CAMERA_BODIES: CameraBody[] = [
     baseISO: 800, maxISO: 6400, dynamicRange: 15.0, colorDepth: 25.0,
     maxShutter: '1/8000', flashSync: '-', maxFps: 120,
     codec: 'Cinema RAW Light, XF-AVC, XF-HEVC', recording: '7K',
-    category: 'cine'
+    category: 'cine',
+    image: '/images/gear/canon_c50_compact_cinema_camera.png'
   },
   { 
     id: 'sony-fx6', name: 'Sony FX6', brand: 'Sony', 
@@ -197,7 +210,8 @@ const CAMERA_BODIES: CameraBody[] = [
     baseISO: 800, maxISO: 12800, dynamicRange: 15.0, colorDepth: 25.2,
     maxShutter: '1/8000', flashSync: '-', maxFps: 120,
     codec: 'XAVC-I, XAVC-HS 10-bit', recording: '4K',
-    category: 'cine'
+    category: 'cine',
+    image: '/images/gear/sony_fx6_compact_cinema_camera.png'
   },
   { 
     id: 'panasonic-s1h', name: 'Panasonic S1H', brand: 'Panasonic', 
@@ -205,26 +219,27 @@ const CAMERA_BODIES: CameraBody[] = [
     baseISO: 640, maxISO: 51200, dynamicRange: 14.0, colorDepth: 24.8,
     maxShutter: '1/8000', flashSync: '1/250', maxFps: 180,
     codec: 'V-Log, ProRes RAW', recording: '6K',
-    category: 'cine'
+    category: 'cine',
+    image: '/images/gear/panasonic_s1h_hybrid_cinema_camera.png'
   },
 ];
 
 const LENSES: Lens[] = [
-  { id: 'sony-24-70', name: 'Sony 24-70mm f/2.8 GM II', brand: 'Sony', focalLength: '24-70mm', aperture: 'f/2.8', minAperture: 'f/22', type: 'zoom', minFocusDistance: 0.21, weight: 695, filterSize: 82, opticalElements: 20 },
+  { id: 'sony-24-70', name: 'Sony 24-70mm f/2.8 GM II', brand: 'Sony', focalLength: '24-70mm', aperture: 'f/2.8', minAperture: 'f/22', type: 'zoom', minFocusDistance: 0.21, weight: 695, filterSize: 82, opticalElements: 20, image: '/images/gear/sony_24-70mm_gm_ii_lens.png' },
   { id: 'sony-85', name: 'Sony 85mm f/1.4 GM', brand: 'Sony', focalLength: '85mm', aperture: 'f/1.4', minAperture: 'f/16', type: 'prime', minFocusDistance: 0.80, weight: 820, filterSize: 77, opticalElements: 11, image: '/images/gear/sony_85mm_gm_lens.png' },
-  { id: 'sony-50', name: 'Sony 50mm f/1.2 GM', brand: 'Sony', focalLength: '50mm', aperture: 'f/1.2', minAperture: 'f/16', type: 'prime', minFocusDistance: 0.40, weight: 778, filterSize: 72, opticalElements: 14 },
-  { id: 'sony-90-macro', name: 'Sony 90mm f/2.8 Macro G OSS', brand: 'Sony', focalLength: '90mm', aperture: 'f/2.8', minAperture: 'f/22', type: 'macro', minFocusDistance: 0.28, weight: 602, filterSize: 62, opticalElements: 15 },
-  { id: 'canon-rf85', name: 'Canon RF 85mm f/1.2L USM', brand: 'Canon', focalLength: '85mm', aperture: 'f/1.2', minAperture: 'f/16', type: 'prime', minFocusDistance: 0.85, weight: 1195, filterSize: 82, opticalElements: 13 },
-  { id: 'canon-rf100-macro', name: 'Canon RF 100mm f/2.8L Macro IS', brand: 'Canon', focalLength: '100mm', aperture: 'f/2.8', minAperture: 'f/32', type: 'macro', minFocusDistance: 0.26, weight: 685, filterSize: 67, opticalElements: 17 },
+  { id: 'sony-50', name: 'Sony 50mm f/1.2 GM', brand: 'Sony', focalLength: '50mm', aperture: 'f/1.2', minAperture: 'f/16', type: 'prime', minFocusDistance: 0.40, weight: 778, filterSize: 72, opticalElements: 14, image: '/images/gear/sony_50mm_gm_lens.png' },
+  { id: 'sony-90-macro', name: 'Sony 90mm f/2.8 Macro G OSS', brand: 'Sony', focalLength: '90mm', aperture: 'f/2.8', minAperture: 'f/22', type: 'macro', minFocusDistance: 0.28, weight: 602, filterSize: 62, opticalElements: 15, image: '/images/gear/sony_90mm_macro_lens.png' },
+  { id: 'canon-rf85', name: 'Canon RF 85mm f/1.2L USM', brand: 'Canon', focalLength: '85mm', aperture: 'f/1.2', minAperture: 'f/16', type: 'prime', minFocusDistance: 0.85, weight: 1195, filterSize: 82, opticalElements: 13, image: '/images/gear/canon_rf_85mm_lens.png' },
+  { id: 'canon-rf100-macro', name: 'Canon RF 100mm f/2.8L Macro IS', brand: 'Canon', focalLength: '100mm', aperture: 'f/2.8', minAperture: 'f/32', type: 'macro', minFocusDistance: 0.26, weight: 685, filterSize: 67, opticalElements: 17, image: '/images/gear/canon_rf_100mm_macro_l_lens.png' },
   { id: 'canon-rf70-200', name: 'Canon RF 70-200mm f/2.8L IS', brand: 'Canon', focalLength: '70-200mm', aperture: 'f/2.8', minAperture: 'f/32', type: 'tele', minFocusDistance: 0.70, weight: 1070, filterSize: 77, opticalElements: 17, image: '/images/gear/canon_rf_70-200mm_lens.png' },
-  { id: 'nikon-z50', name: 'Nikon Z 50mm f/1.2 S', brand: 'Nikon', focalLength: '50mm', aperture: 'f/1.2', minAperture: 'f/16', type: 'prime', minFocusDistance: 0.45, weight: 1090, filterSize: 82, opticalElements: 17 },
-  { id: 'nikon-z105-macro', name: 'Nikon Z MC 105mm f/2.8 VR S', brand: 'Nikon', focalLength: '105mm', aperture: 'f/2.8', minAperture: 'f/32', type: 'macro', minFocusDistance: 0.29, weight: 630, filterSize: 62, opticalElements: 16 },
+  { id: 'nikon-z50', name: 'Nikon Z 50mm f/1.2 S', brand: 'Nikon', focalLength: '50mm', aperture: 'f/1.2', minAperture: 'f/16', type: 'prime', minFocusDistance: 0.45, weight: 1090, filterSize: 82, opticalElements: 17, image: '/images/gear/nikon_z_50mm_lens.png' },
+  { id: 'nikon-z105-macro', name: 'Nikon Z MC 105mm f/2.8 VR S', brand: 'Nikon', focalLength: '105mm', aperture: 'f/2.8', minAperture: 'f/32', type: 'macro', minFocusDistance: 0.29, weight: 630, filterSize: 62, opticalElements: 16, image: '/images/gear/nikon_z_mc_105mm_macro_lens.png' },
   { id: 'sigma-art35', name: 'Sigma 35mm f/1.4 DG DN Art', brand: 'Sigma', focalLength: '35mm', aperture: 'f/1.4', minAperture: 'f/16', type: 'prime', minFocusDistance: 0.30, weight: 645, filterSize: 67, opticalElements: 15, image: '/images/gear/sigma_35mm_art_lens.png' },
-  { id: 'sigma-105-macro', name: 'Sigma 105mm f/2.8 DG DN Macro Art', brand: 'Sigma', focalLength: '105mm', aperture: 'f/2.8', minAperture: 'f/22', type: 'macro', minFocusDistance: 0.295, weight: 715, filterSize: 62, opticalElements: 17 },
-  { id: 'zeiss-otus85', name: 'Zeiss Otus 85mm f/1.4 APO', brand: 'Zeiss', focalLength: '85mm', aperture: 'f/1.4', minAperture: 'f/16', type: 'prime', minFocusDistance: 0.80, weight: 1140, filterSize: 86, opticalElements: 11 },
+  { id: 'sigma-105-macro', name: 'Sigma 105mm f/2.8 DG DN Macro Art', brand: 'Sigma', focalLength: '105mm', aperture: 'f/2.8', minAperture: 'f/22', type: 'macro', minFocusDistance: 0.295, weight: 715, filterSize: 62, opticalElements: 17, image: '/images/gear/sigma_105mm_macro_lens.png' },
+  { id: 'zeiss-otus85', name: 'Zeiss Otus 85mm f/1.4 APO', brand: 'Zeiss', focalLength: '85mm', aperture: 'f/1.4', minAperture: 'f/16', type: 'prime', minFocusDistance: 0.80, weight: 1140, filterSize: 86, opticalElements: 11, image: '/images/gear/zeiss_otus_85mm_lens.png' },
   { id: 'laowa-probe', name: 'Laowa 24mm f/14 2x Macro Probe', brand: 'Laowa', focalLength: '24mm', aperture: 'f/14', minAperture: 'f/40', type: 'probe', minFocusDistance: 0.02, weight: 474, opticalElements: 27, image: '/images/gear/laowa_probe_macro_lens.png' },
-  { id: 'laowa-probe-cine', name: 'Laowa 24mm T14 2x Periprobe', brand: 'Laowa', focalLength: '24mm', aperture: 'T/14', minAperture: 'T/40', type: 'probe', minFocusDistance: 0.02, weight: 770, opticalElements: 28 },
-  { id: 'innovision-probe', name: 'Innovision Probe II Plus', brand: 'Innovision', focalLength: '9.8mm', aperture: 'f/5.6', minAperture: 'f/22', type: 'probe', minFocusDistance: 0.01, weight: 1200 },
+  { id: 'laowa-probe-cine', name: 'Laowa 24mm T14 2x Periprobe', brand: 'Laowa', focalLength: '24mm', aperture: 'T/14', minAperture: 'T/40', type: 'probe', minFocusDistance: 0.02, weight: 770, opticalElements: 28, image: '/images/gear/laowa_periprobe_cine_macro_lens.png' },
+  { id: 'innovision-probe', name: 'Innovision Probe II Plus', brand: 'Innovision', focalLength: '9.8mm', aperture: 'f/5.6', minAperture: 'f/22', type: 'probe', minFocusDistance: 0.01, weight: 1200, image: '/images/gear/innovision_probe_ii_plus_lens.png' },
 ];
 
 type LensType = 'all' | 'prime' | 'zoom' | 'macro' | 'tele' | 'probe';

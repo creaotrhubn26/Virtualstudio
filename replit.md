@@ -46,6 +46,10 @@ The application employs a hybrid architecture, combining Vanilla TypeScript with
 - **typescript**: Provides static type checking for improved code quality and maintainability.
 
 ## Recent Changes
+- 2025-12-23: Added thumbnail images to all cameras and lenses in CameraGearPanel
+  - 19 cameras (8 foto + 11 cine) now have unique product images
+  - 15 lenses now have unique product images
+  - All images stored in public/images/gear/
 - 2025-12-22: Verified and updated all camera and lens specifications
   - All 11 cine cameras with accurate specs (sensor size, dynamic range, ISO, fps, codec)
   - All 15 lenses with verified specs (weight, filter size, min focus distance, optical elements)
