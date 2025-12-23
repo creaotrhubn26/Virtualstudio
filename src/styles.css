@@ -1065,71 +1065,85 @@ html, body {
 }
 
 .actor-sidebar {
-  width: 120px;
-  background: rgba(0, 0, 0, 0.2);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 12px 8px;
+  width: 160px;
+  background: linear-gradient(180deg, rgba(30, 30, 35, 0.95) 0%, rgba(20, 20, 25, 0.95) 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.3);
 }
 
 .actor-search {
   width: 100%;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.15);
   color: var(--text-primary);
-  padding: 8px 10px;
-  font-size: 11px;
-  margin-bottom: 8px;
-  border-radius: 6px;
-  transition: border-color 0.2s ease;
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  min-height: 52px;
+  box-sizing: border-box;
 }
 
 .actor-search:focus {
   border-color: var(--accent-cyan);
   outline: none;
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 3px rgba(46, 232, 255, 0.15);
 }
 
 .actor-search::placeholder {
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 400;
 }
 
 .actor-categories {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
 }
 
 .actor-category {
-  padding: 14px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
+  padding: 16px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 10px;
   transition: all 0.2s ease;
-  min-height: 48px;
+  min-height: 56px;
   display: flex;
   align-items: center;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid transparent;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .actor-category:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .actor-category:active {
-  transform: scale(0.97);
-  background: rgba(255, 255, 255, 0.15);
+  transform: scale(0.97) translateY(0);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .actor-category.active {
-  background: rgba(46, 232, 255, 0.2);
-  color: var(--accent-cyan);
-  font-weight: 600;
+  background: linear-gradient(135deg, rgba(46, 232, 255, 0.25) 0%, rgba(46, 200, 255, 0.15) 100%);
+  color: #2ee8ff;
+  font-weight: 700;
+  border-color: rgba(46, 232, 255, 0.5);
+  box-shadow: 0 4px 16px rgba(46, 232, 255, 0.2);
 }
 
 .panel-content-area {
