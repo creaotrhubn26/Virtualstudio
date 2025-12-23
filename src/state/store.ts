@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 export type FocusMode = 'single' | 'zone' | 'wide' | 'tracking';
 export type SafeAreaMode = 'none' | 'action' | 'title' | 'both';
+export type CompositionGuide = 'none' | 'thirds' | 'golden' | 'spiral' | 'diagonal' | 'center' | 'triangle' | 'symmetry';
 
 export interface FocusPoint {
   id: number;
@@ -13,6 +14,7 @@ export interface FocusPoint {
 interface FocusState {
   mode: FocusMode;
   safeAreaMode: SafeAreaMode;
+  compositionGuide: CompositionGuide;
   showGrid: boolean;
   showOverlay: boolean;
   activePointId: number;
@@ -24,6 +26,8 @@ interface FocusState {
   
   setMode: (mode: FocusMode) => void;
   setSafeAreaMode: (mode: SafeAreaMode) => void;
+  setCompositionGuide: (guide: CompositionGuide) => void;
+  cycleCompositionGuide: () => void;
   toggleGrid: () => void;
   toggleOverlay: () => void;
   setActivePoint: (id: number) => void;
@@ -34,9 +38,12 @@ interface FocusState {
   getActivePointPosition: () => { x: number; y: number };
 }
 
+const compositionGuides: CompositionGuide[] = ['none', 'thirds', 'golden', 'spiral', 'diagonal', 'center', 'triangle', 'symmetry'];
+
 export const useFocusStore = create<FocusState>((set, get) => ({
   mode: 'zone',
   safeAreaMode: 'none',
+  compositionGuide: 'none',
   showGrid: false,
   showOverlay: true,
   activePointId: 4,
@@ -58,6 +65,12 @@ export const useFocusStore = create<FocusState>((set, get) => ({
 
   setMode: (mode) => set({ mode }),
   setSafeAreaMode: (mode) => set({ safeAreaMode: mode }),
+  setCompositionGuide: (guide) => set({ compositionGuide: guide }),
+  cycleCompositionGuide: () => set((state) => {
+    const currentIndex = compositionGuides.indexOf(state.compositionGuide);
+    const nextGuide = compositionGuides[(currentIndex + 1) % compositionGuides.length];
+    return { compositionGuide: nextGuide };
+  }),
   toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
   toggleOverlay: () => set((state) => ({ showOverlay: !state.showOverlay })),
   

@@ -1,4 +1,4 @@
-import { useFocusStore, FocusMode, SafeAreaMode } from '../state/store';
+import { useFocusStore, FocusMode, SafeAreaMode, CompositionGuide } from '../state/store';
 
 export class FocusController {
   private viewportElement: HTMLElement | null = null;
@@ -52,6 +52,7 @@ export class FocusController {
   private setupControlButtons() {
     const overlayToggleBtn = document.querySelector('.vf-btn.overlay-toggle');
     const focusModeBtn = document.querySelector('.vf-btn.focus-mode');
+    const compositionBtn = document.querySelector('.vf-btn.composition-guide');
     const safeAreaBtn = document.querySelector('.vf-btn.safe-area');
     const gridToggleBtn = document.querySelector('.vf-btn.grid-toggle');
 
@@ -60,6 +61,9 @@ export class FocusController {
     }
     if (focusModeBtn) {
       focusModeBtn.addEventListener('click', this.handleModeChange);
+    }
+    if (compositionBtn) {
+      compositionBtn.addEventListener('click', this.handleCompositionChange.bind(this));
     }
     if (safeAreaBtn) {
       safeAreaBtn.addEventListener('click', this.handleSafeAreaChange);
@@ -85,6 +89,9 @@ export class FocusController {
       }
       if (state.showGrid !== prevState.showGrid) {
         this.updateGridDisplay(state.showGrid);
+      }
+      if (state.compositionGuide !== prevState.compositionGuide) {
+        this.updateCompositionGuide(state.compositionGuide);
       }
       if (state.focusDistance !== prevState.focusDistance) {
         this.updateFocusDistanceDisplay(state.focusDistance, state.hitObjectName);
@@ -180,6 +187,10 @@ export class FocusController {
     useFocusStore.getState().toggleGrid();
   }
 
+  private handleCompositionChange() {
+    useFocusStore.getState().cycleCompositionGuide();
+  }
+
   private handleOverlayToggle() {
     useFocusStore.getState().toggleOverlay();
   }
@@ -266,6 +277,106 @@ export class FocusController {
 
     if (gridBtn) {
       gridBtn.classList.toggle('active', show);
+    }
+  }
+
+  private updateCompositionGuide(guide: CompositionGuide) {
+    const overlay = document.getElementById('compositionOverlay');
+    const btn = document.querySelector('.vf-btn.composition-guide');
+    
+    if (overlay) {
+      overlay.setAttribute('data-guide', guide);
+      overlay.innerHTML = this.getCompositionSVG(guide);
+    }
+
+    if (btn) {
+      btn.classList.toggle('active', guide !== 'none');
+      btn.setAttribute('title', this.getGuideLabel(guide));
+    }
+  }
+
+  private getGuideLabel(guide: CompositionGuide): string {
+    const labels: Record<CompositionGuide, string> = {
+      none: 'Komposisjonsguide',
+      thirds: 'Tredjedelsregelen',
+      golden: 'Gyllent snitt',
+      spiral: 'Fibonacci-spiral',
+      diagonal: 'Diagonaler',
+      center: 'Senter-kryss',
+      triangle: 'Gyldne trekanter',
+      symmetry: 'Dynamisk symmetri'
+    };
+    return labels[guide];
+  }
+
+  private getCompositionSVG(guide: CompositionGuide): string {
+    const color = 'rgba(0, 255, 136, 0.5)';
+    const phi = 1.618;
+    const pos1 = (1 / (1 + phi)) * 100;
+    const pos2 = (phi / (1 + phi)) * 100;
+
+    switch (guide) {
+      case 'thirds':
+        return `<svg width="100%" height="100%">
+          <line x1="33.33%" y1="0" x2="33.33%" y2="100%" stroke="${color}" stroke-width="1"/>
+          <line x1="66.67%" y1="0" x2="66.67%" y2="100%" stroke="${color}" stroke-width="1"/>
+          <line x1="0" y1="33.33%" x2="100%" y2="33.33%" stroke="${color}" stroke-width="1"/>
+          <line x1="0" y1="66.67%" x2="100%" y2="66.67%" stroke="${color}" stroke-width="1"/>
+          <circle cx="33.33%" cy="33.33%" r="4" fill="${color}"/>
+          <circle cx="66.67%" cy="33.33%" r="4" fill="${color}"/>
+          <circle cx="33.33%" cy="66.67%" r="4" fill="${color}"/>
+          <circle cx="66.67%" cy="66.67%" r="4" fill="${color}"/>
+        </svg>`;
+      case 'golden':
+        return `<svg width="100%" height="100%">
+          <line x1="${pos1}%" y1="0" x2="${pos1}%" y2="100%" stroke="${color}" stroke-width="1"/>
+          <line x1="${pos2}%" y1="0" x2="${pos2}%" y2="100%" stroke="${color}" stroke-width="1"/>
+          <line x1="0" y1="${pos1}%" x2="100%" y2="${pos1}%" stroke="${color}" stroke-width="1"/>
+          <line x1="0" y1="${pos2}%" x2="100%" y2="${pos2}%" stroke="${color}" stroke-width="1"/>
+          <circle cx="${pos1}%" cy="${pos1}%" r="4" fill="${color}"/>
+          <circle cx="${pos2}%" cy="${pos1}%" r="4" fill="${color}"/>
+          <circle cx="${pos1}%" cy="${pos2}%" r="4" fill="${color}"/>
+          <circle cx="${pos2}%" cy="${pos2}%" r="4" fill="${color}"/>
+        </svg>`;
+      case 'spiral':
+        return `<svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <rect x="0" y="0" width="61.8" height="100" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.5"/>
+          <rect x="61.8" y="0" width="38.2" height="61.8" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.5"/>
+          <rect x="61.8" y="61.8" width="23.6" height="38.2" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.5"/>
+          <path d="M 100 100 Q 100 61.8, 61.8 61.8 Q 38.2 61.8, 38.2 38.2 Q 38.2 23.6, 52.8 23.6 Q 61.8 23.6, 61.8 32.6 Q 61.8 38.2, 56.2 38.2" fill="none" stroke="${color}" stroke-width="1.5"/>
+        </svg>`;
+      case 'diagonal':
+        return `<svg width="100%" height="100%">
+          <line x1="0" y1="0" x2="100%" y2="100%" stroke="${color}" stroke-width="1"/>
+          <line x1="100%" y1="0" x2="0" y2="100%" stroke="${color}" stroke-width="1"/>
+          <line x1="0" y1="0" x2="50%" y2="100%" stroke="${color}" stroke-width="0.5" stroke-dasharray="4,4" opacity="0.6"/>
+          <line x1="50%" y1="0" x2="100%" y2="100%" stroke="${color}" stroke-width="0.5" stroke-dasharray="4,4" opacity="0.6"/>
+        </svg>`;
+      case 'center':
+        return `<svg width="100%" height="100%">
+          <line x1="50%" y1="0" x2="50%" y2="100%" stroke="${color}" stroke-width="1" stroke-dasharray="8,4"/>
+          <line x1="0" y1="50%" x2="100%" y2="50%" stroke="${color}" stroke-width="1" stroke-dasharray="8,4"/>
+          <circle cx="50%" cy="50%" r="8" fill="none" stroke="${color}" stroke-width="2"/>
+          <circle cx="50%" cy="50%" r="2" fill="${color}"/>
+        </svg>`;
+      case 'triangle':
+        return `<svg width="100%" height="100%">
+          <line x1="0" y1="100%" x2="100%" y2="0" stroke="${color}" stroke-width="1.5"/>
+          <line x1="0" y1="0" x2="50%" y2="50%" stroke="${color}" stroke-width="1" opacity="0.8"/>
+          <line x1="100%" y1="100%" x2="50%" y2="50%" stroke="${color}" stroke-width="1" opacity="0.8"/>
+          <circle cx="50%" cy="50%" r="4" fill="${color}"/>
+        </svg>`;
+      case 'symmetry':
+        return `<svg width="100%" height="100%">
+          <line x1="0" y1="0" x2="70.7%" y2="100%" stroke="${color}" stroke-width="1" opacity="0.7"/>
+          <line x1="29.3%" y1="0" x2="100%" y2="100%" stroke="${color}" stroke-width="1" opacity="0.7"/>
+          <line x1="0" y1="0" x2="100%" y2="70.7%" stroke="${color}" stroke-width="1" opacity="0.7"/>
+          <line x1="0" y1="29.3%" x2="100%" y2="100%" stroke="${color}" stroke-width="1" opacity="0.7"/>
+          <line x1="0" y1="0" x2="100%" y2="100%" stroke="${color}" stroke-width="1"/>
+          <line x1="100%" y1="0" x2="0" y2="100%" stroke="${color}" stroke-width="1"/>
+        </svg>`;
+      default:
+        return '';
     }
   }
 

@@ -2140,6 +2140,27 @@ html, body {
   width: 1px;
 }
 
+.composition-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.composition-overlay[data-guide="none"] {
+  display: none;
+}
+
+.composition-overlay svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .single-focus-point {
   position: absolute;
   width: 40px;
@@ -2366,6 +2387,32 @@ html, body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+}
+
+.viewfinder-controls .composition-guide .icon {
+  width: 14px;
+  height: 14px;
+  position: relative;
+}
+
+.viewfinder-controls .composition-guide .icon::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+}
+
+.viewfinder-controls .composition-guide .icon::after {
+  content: '';
+  position: absolute;
+  width: 1px;
+  height: 100%;
+  background: currentColor;
+  left: 33%;
+  top: 0;
+  box-shadow: 5px 0 0 currentColor;
 }
 
 .viewfinder-controls .focus-mode .icon {
