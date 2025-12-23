@@ -218,8 +218,18 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
         <Typography variant="subtitle1" fontWeight={600}>Karakterer</Typography>
         <Chip
           label={`${CHARACTER_MODELS.length} modeller`}
-          size="small"
-          sx={{ ml: 'auto', bgcolor: '#3b82f6', color: '#fff' }}
+          size="medium"
+          sx={{ 
+            ml: 'auto', 
+            bgcolor: '#3b82f6', 
+            color: '#fff',
+            fontSize: 14,
+            fontWeight: 700,
+            px: 1.5,
+            height: 32,
+            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.4)',
+            border: '2px solid rgba(255, 255, 255, 0.2)',
+          }}
         />
       </Box>
 
