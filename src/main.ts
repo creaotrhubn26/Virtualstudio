@@ -2986,7 +2986,66 @@ window.addEventListener('DOMContentLoaded', () => {
         updateCameraDisplay();
       });
       
-      console.log('Camera controls initialized with hold-to-move, speed control, and camera settings');
+      // Drag functionality for camera controls panel
+      const panelHeader = document.getElementById('cameraControlsHeader');
+      let isDragging = false;
+      let dragOffsetX = 0;
+      let dragOffsetY = 0;
+      
+      const startDrag = (clientX: number, clientY: number) => {
+        if (!cameraControlsPanel) return;
+        isDragging = true;
+        const rect = cameraControlsPanel.getBoundingClientRect();
+        dragOffsetX = clientX - rect.left;
+        dragOffsetY = clientY - rect.top;
+        cameraControlsPanel.style.transition = 'none';
+        cameraControlsPanel.style.right = 'auto';
+        if (panelHeader) panelHeader.style.cursor = 'grabbing';
+      };
+      
+      const doDrag = (clientX: number, clientY: number) => {
+        if (!isDragging || !cameraControlsPanel) return;
+        const viewport = document.getElementById('main-viewport');
+        if (!viewport) return;
+        const viewportRect = viewport.getBoundingClientRect();
+        
+        let newX = clientX - dragOffsetX - viewportRect.left;
+        let newY = clientY - dragOffsetY - viewportRect.top;
+        
+        // Constrain to viewport
+        const panelRect = cameraControlsPanel.getBoundingClientRect();
+        newX = Math.max(0, Math.min(newX, viewportRect.width - panelRect.width));
+        newY = Math.max(0, Math.min(newY, viewportRect.height - panelRect.height));
+        
+        cameraControlsPanel.style.left = newX + 'px';
+        cameraControlsPanel.style.top = newY + 'px';
+      };
+      
+      const endDrag = () => {
+        isDragging = false;
+        if (cameraControlsPanel) {
+          cameraControlsPanel.style.transition = 'opacity 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease';
+        }
+        if (panelHeader) panelHeader.style.cursor = 'grab';
+      };
+      
+      panelHeader?.addEventListener('pointerdown', (e) => {
+        if ((e.target as HTMLElement).tagName === 'BUTTON') return;
+        e.preventDefault();
+        startDrag(e.clientX, e.clientY);
+      });
+      
+      document.addEventListener('pointermove', (e) => {
+        if (isDragging) {
+          e.preventDefault();
+          doDrag(e.clientX, e.clientY);
+        }
+      });
+      
+      document.addEventListener('pointerup', endDrag);
+      document.addEventListener('pointercancel', endDrag);
+      
+      console.log('Camera controls initialized with drag, hold-to-move, speed control, and camera settings');
     }
     
     // Mount Accessible 3D Controls with camera connection (hidden, kept for accessibility)
