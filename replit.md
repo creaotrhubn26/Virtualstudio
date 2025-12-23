@@ -46,6 +46,14 @@ The application employs a hybrid architecture, combining Vanilla TypeScript with
 - **typescript**: Provides static type checking for improved code quality and maintainability.
 
 ## Recent Changes
+- 2025-12-23: Added unique thumbnail images for all 17 lights in LightsBrowser
+  - Godox AD200 Pro (pocket flash), AD400 Pro (battery strobe), AD600 Pro (monolight)
+  - Profoto B10 (compact cylindrical), B10 Plus (larger), D2 1000 (studio monolight)
+  - Aputure LS 120d II (compact), 300d II (two-piece), 600d Pro (cinema), 60x (focusable spotlight)
+  - Nanlite Forza 60 (compact), 300 II (system), 500 II (system)
+  - Elinchrom ELC Pro HD 500, 1000 (studio strobes)
+  - Broncolor Siros 400 S, 800 S (premium studio strobes)
+  - All images based on manufacturer specifications and product research
 - 2025-12-23: Added thumbnail images to all cameras and lenses in CameraGearPanel
   - 19 cameras (8 foto + 11 cine) now have unique product images
   - 15 lenses now have unique product images
