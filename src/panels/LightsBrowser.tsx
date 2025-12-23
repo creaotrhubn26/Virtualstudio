@@ -75,12 +75,12 @@ const LIGHT_CATEGORIES: CategoryInfo[] = [
 
 const LIGHT_BRANDS: CategoryInfo[] = [
   { key: 'all', label: 'Alle merker' },
-  { key: 'Godox', label: 'Godox', logo: '/images/gear/godox_logo.png' },
-  { key: 'Profoto', label: 'Profoto', logo: '/images/gear/profoto_logo.png' },
-  { key: 'Aputure', label: 'Aputure', logo: '/images/gear/aputure_logo.png' },
-  { key: 'Nanlite', label: 'Nanlite', logo: '/images/gear/nanlite_logo.png' },
-  { key: 'Elinchrom', label: 'Elinchrom', logo: '/images/gear/elinchrom_logo.png' },
-  { key: 'Broncolor', label: 'Broncolor', logo: '/images/gear/broncolor_logo.png' },
+  { key: 'Godox', label: 'Godox' },
+  { key: 'Profoto', label: 'Profoto' },
+  { key: 'Aputure', label: 'Aputure' },
+  { key: 'Nanlite', label: 'Nanlite' },
+  { key: 'Elinchrom', label: 'Elinchrom' },
+  { key: 'Broncolor', label: 'Broncolor' },
 ];
 
 interface ModifierSpec {
@@ -379,21 +379,7 @@ export function LightsBrowser() {
                   },
                 }}
               >
-                {brand.logo ? (
-                  <Box
-                    component="img"
-                    src={brand.logo}
-                    alt={brand.label}
-                    sx={{ 
-                      height: 20, 
-                      maxWidth: 80,
-                      objectFit: 'contain',
-                      filter: selectedBrandCategory === brand.key ? 'brightness(0) invert(1)' : 'brightness(0.9)',
-                    }}
-                  />
-                ) : (
-                  brand.label
-                )}
+                {brand.label}
               </Button>
             ))}
           </Box>
