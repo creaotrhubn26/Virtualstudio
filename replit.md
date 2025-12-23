@@ -46,6 +46,16 @@ The application employs a hybrid architecture, combining Vanilla TypeScript with
 - **typescript**: Provides static type checking for improved code quality and maintainability.
 
 ## Recent Changes
+- 2025-12-23: Implemented WCAG 2.2 AccessibilityProvider system
+  - Created src/providers/AccessibilityProvider.tsx with comprehensive accessibility hooks
+  - useAccessibility hook for settings, announce function, keyboard shortcuts
+  - useFocusTrap hook for modal/dialog focus management
+  - useAnnounce hook for screen reader announcements (polite/assertive)
+  - VisuallyHidden component for screen-reader-only content
+  - OS preference detection for reduce-motion and high-contrast modes
+  - Keyboard shortcut registry with modifier key support
+  - Default 56px minimum touch target size for touch-friendliness
+  - Accessible3DControlsApp component integrated in App.tsx for 3D viewport accessibility
 - 2025-12-23: Implemented professional NotesPanel solution
   - Popup panel accessible via "Notater" button in bottom bar
   - 5 categories: Generelt, Lys, Kamera, Modell, Oppsett (color-coded)
