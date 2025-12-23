@@ -376,11 +376,7 @@ export function LightsBrowser() {
           <Divider sx={{ my: 1.5, borderColor: '#333' }} />
 
           {/* Lights grid */}
-          <Box sx={{ 
-            maxHeight: filteredLights.length > 6 ? 400 : 'none', 
-            overflowY: filteredLights.length > 6 ? 'auto' : 'visible', 
-            mb: 2 
-          }}>
+          <Box sx={{ mb: 2 }}>
             <Box sx={{ 
               display: 'grid', 
               gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
@@ -496,11 +492,7 @@ export function LightsBrowser() {
           <Divider sx={{ my: 1.5, borderColor: '#333' }} />
 
           {/* Modifiers grid */}
-          <Box sx={{ 
-            maxHeight: filteredModifiers.length > 6 ? 400 : 'none', 
-            overflowY: filteredModifiers.length > 6 ? 'auto' : 'visible', 
-            mb: 2 
-          }}>
+          <Box sx={{ mb: 2 }}>
             <Box sx={{ 
               display: 'grid', 
               gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
