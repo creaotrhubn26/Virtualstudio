@@ -11,6 +11,8 @@ import { EquipmentPanel } from './panels/EquipmentPanel';
 import { NotesPanel } from './components/NotesPanel';
 import { AccessibilityProvider } from './providers/AccessibilityProvider';
 import { Accessible3DControls } from './components/Accessible3DControls';
+import { CinematographyPatternsPanel } from './components/CinematographyPatternsPanel';
+import { CinematographyPattern } from './core/services/cinematographyPatternsService';
 
 const darkTheme = createTheme({
   palette: {
@@ -135,6 +137,69 @@ export const NotesPanelApp: React.FC = () => {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <NotesPanel onClose={() => setIsOpen(false)} />
+    </ThemeProvider>
+  );
+};
+
+export const CinematographyPatternsApp: React.FC = () => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener('openCinematographyPatterns', handleOpen);
+    return () => window.removeEventListener('openCinematographyPatterns', handleOpen);
+  }, []);
+
+  const handleApplyPattern = (pattern: CinematographyPattern) => {
+    window.dispatchEvent(new CustomEvent('applyCinematographyPattern', { detail: pattern }));
+    setIsOpen(false);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.7)',
+        backdropFilter: 'blur(4px)',
+        zIndex: 10000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 20
+      }} onClick={() => setIsOpen(false)}>
+        <div style={{
+          background: '#1c2128',
+          borderRadius: 16,
+          maxWidth: 600,
+          maxHeight: '80vh',
+          overflow: 'auto',
+          padding: 20,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+          border: '2px solid rgba(255,170,0,0.3)'
+        }} onClick={e => e.stopPropagation()}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h2 style={{ margin: 0, color: '#ffaa00', fontSize: 18 }}>🎬 Hollywood Lysmønstre</h2>
+            <button onClick={() => setIsOpen(false)} style={{
+              background: 'rgba(255,255,255,0.1)',
+              border: 'none',
+              borderRadius: 8,
+              width: 36,
+              height: 36,
+              color: '#fff',
+              fontSize: 20,
+              cursor: 'pointer'
+            }}>&times;</button>
+          </div>
+          <CinematographyPatternsPanel onApplyPattern={handleApplyPattern} />
+        </div>
+      </div>
     </ThemeProvider>
   );
 };

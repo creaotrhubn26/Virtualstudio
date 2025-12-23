@@ -2,7 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, NotesPanelApp, Accessible3DControlsApp } from './App';
+import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, NotesPanelApp, CinematographyPatternsApp, Accessible3DControlsApp } from './App';
 import { useAppStore, useFocusStore, SceneNode } from './state/store';
 import { focusController } from './core/FocusController';
 import { virtualActorService } from './core/services/virtualActorService';
@@ -2675,6 +2675,13 @@ window.addEventListener('DOMContentLoaded', () => {
       notesRoot.render(React.createElement(NotesPanelApp, {}));
     }
     
+    // Mount Cinematography Patterns App
+    const cinematographyRoot = document.getElementById('cinematographyPatternsRoot');
+    if (cinematographyRoot) {
+      const cineRoot = createRoot(cinematographyRoot);
+      cineRoot.render(React.createElement(CinematographyPatternsApp, {}));
+    }
+    
     // Setup Camera Controls (Touch-friendly overlay)
     const cameraControlBtn = document.getElementById('cameraControlBtn');
     const cameraControlsPanel = document.getElementById('cameraControlsPanel');
@@ -3092,6 +3099,13 @@ window.addEventListener('DOMContentLoaded', () => {
       // Slider handlers
       document.getElementById('intensitySlider')?.addEventListener('input', updateLightDisplay);
       document.getElementById('softnessSlider')?.addEventListener('input', updateLightDisplay);
+      
+      // Open Light Patterns panel
+      document.getElementById('openLightPatternsBtn')?.addEventListener('click', () => {
+        // Dispatch custom event to open cinematography patterns panel
+        window.dispatchEvent(new CustomEvent('openCinematographyPatterns'));
+        console.log('Opening cinematography patterns panel');
+      });
       
       // Drag functionality for camera controls panel
       const panelHeader = document.getElementById('cameraControlsHeader');

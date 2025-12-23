@@ -152,7 +152,7 @@ export function CinematographyPatternsPanel({ onApplyPattern }: CinematographyPa
       <Box sx={{ maxHeight: 600, overflowY: 'auto' }}>
         <Grid container spacing={2}>
           {filteredPatterns.map((pattern) => (
-            <Grid item xs={12} key={pattern.id}>
+            <Grid size={12} key={pattern.id}>
               <Card variant="outlined" sx={{ bgcolor: 'white' }}>
                 <CardContent sx={{ pb: 1 }}>
                   <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
