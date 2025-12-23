@@ -2699,56 +2699,118 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     
     if (cameraControlsPanel) {
+      // Speed multiplier state
+      let speedMultiplier = 1;
+      const baseOrbitStep = 0.02;
+      const baseZoomStep = 0.1;
+      const basePanStep = 0.05;
+      const updateInterval = 30; // ms between updates when holding
       
-      // Camera control handlers
-      const orbitStep = 0.1;
-      const zoomStep = 0.5;
-      const panStep = 0.3;
+      // Active interval for continuous movement
+      let activeInterval: number | null = null;
       
-      // Orbit controls
-      document.getElementById('orbitLeft')?.addEventListener('click', () => {
-        const camera = studio.getCamera();
-        if (camera) camera.alpha -= orbitStep;
-      });
-      document.getElementById('orbitRight')?.addEventListener('click', () => {
-        const camera = studio.getCamera();
-        if (camera) camera.alpha += orbitStep;
-      });
-      document.getElementById('orbitUp')?.addEventListener('click', () => {
-        const camera = studio.getCamera();
-        if (camera) camera.beta = Math.max(0.1, camera.beta - orbitStep);
-      });
-      document.getElementById('orbitDown')?.addEventListener('click', () => {
-        const camera = studio.getCamera();
-        if (camera) camera.beta = Math.min(Math.PI - 0.1, camera.beta + orbitStep);
-      });
-      
-      // Zoom controls
-      document.getElementById('zoomIn')?.addEventListener('click', () => {
-        const camera = studio.getCamera();
-        if (camera) camera.radius = Math.max(1, camera.radius - zoomStep);
-      });
-      document.getElementById('zoomOut')?.addEventListener('click', () => {
-        const camera = studio.getCamera();
-        if (camera) camera.radius = Math.min(20, camera.radius + zoomStep);
+      // Speed button handlers
+      const speedButtons = document.querySelectorAll('.speed-btn');
+      speedButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          speedButtons.forEach(b => {
+            (b as HTMLElement).style.background = 'rgba(255,255,255,0.1)';
+            (b as HTMLElement).style.borderColor = 'rgba(255,255,255,0.2)';
+            b.classList.remove('active');
+          });
+          (btn as HTMLElement).style.background = 'rgba(0,212,255,0.3)';
+          (btn as HTMLElement).style.borderColor = '#00d4ff';
+          btn.classList.add('active');
+          speedMultiplier = parseFloat((btn as HTMLElement).dataset.speed || '1');
+        });
       });
       
-      // Pan controls
-      document.getElementById('panLeft')?.addEventListener('click', () => {
-        const target = studio.getCameraTarget();
-        studio.setCameraTarget(new BABYLON.Vector3(target.x - panStep, target.y, target.z));
-      });
-      document.getElementById('panRight')?.addEventListener('click', () => {
-        const target = studio.getCameraTarget();
-        studio.setCameraTarget(new BABYLON.Vector3(target.x + panStep, target.y, target.z));
-      });
-      document.getElementById('panUp')?.addEventListener('click', () => {
-        const target = studio.getCameraTarget();
-        studio.setCameraTarget(new BABYLON.Vector3(target.x, target.y + panStep, target.z));
-      });
-      document.getElementById('panDown')?.addEventListener('click', () => {
-        const target = studio.getCameraTarget();
-        studio.setCameraTarget(new BABYLON.Vector3(target.x, target.y - panStep, target.z));
+      // Camera action functions
+      const cameraActions: { [key: string]: () => void } = {
+        orbitUp: () => {
+          const camera = studio.getCamera();
+          if (camera) camera.beta = Math.max(0.1, camera.beta - baseOrbitStep * speedMultiplier);
+        },
+        orbitDown: () => {
+          const camera = studio.getCamera();
+          if (camera) camera.beta = Math.min(Math.PI - 0.1, camera.beta + baseOrbitStep * speedMultiplier);
+        },
+        orbitLeft: () => {
+          const camera = studio.getCamera();
+          if (camera) camera.alpha -= baseOrbitStep * speedMultiplier;
+        },
+        orbitRight: () => {
+          const camera = studio.getCamera();
+          if (camera) camera.alpha += baseOrbitStep * speedMultiplier;
+        },
+        zoomIn: () => {
+          const camera = studio.getCamera();
+          if (camera) camera.radius = Math.max(1, camera.radius - baseZoomStep * speedMultiplier);
+        },
+        zoomOut: () => {
+          const camera = studio.getCamera();
+          if (camera) camera.radius = Math.min(30, camera.radius + baseZoomStep * speedMultiplier);
+        },
+        panUp: () => {
+          const target = studio.getCameraTarget();
+          studio.setCameraTarget(new BABYLON.Vector3(target.x, target.y + basePanStep * speedMultiplier, target.z));
+        },
+        panDown: () => {
+          const target = studio.getCameraTarget();
+          studio.setCameraTarget(new BABYLON.Vector3(target.x, target.y - basePanStep * speedMultiplier, target.z));
+        },
+        panLeft: () => {
+          const target = studio.getCameraTarget();
+          studio.setCameraTarget(new BABYLON.Vector3(target.x - basePanStep * speedMultiplier, target.y, target.z));
+        },
+        panRight: () => {
+          const target = studio.getCameraTarget();
+          studio.setCameraTarget(new BABYLON.Vector3(target.x + basePanStep * speedMultiplier, target.y, target.z));
+        }
+      };
+      
+      // Start continuous movement
+      const startAction = (action: string, btn: HTMLElement) => {
+        if (activeInterval) return;
+        btn.style.background = 'rgba(0,212,255,0.4)';
+        btn.style.borderColor = '#00d4ff';
+        cameraActions[action]?.();
+        activeInterval = window.setInterval(() => {
+          cameraActions[action]?.();
+        }, updateInterval);
+      };
+      
+      // Stop continuous movement
+      const stopAction = (btn: HTMLElement) => {
+        if (activeInterval) {
+          clearInterval(activeInterval);
+          activeInterval = null;
+        }
+        btn.style.background = 'rgba(255,255,255,0.1)';
+        btn.style.borderColor = 'rgba(255,255,255,0.2)';
+      };
+      
+      // Bind control buttons with hold-to-move
+      const controlButtons = document.querySelectorAll('.cam-ctrl-btn');
+      controlButtons.forEach(btn => {
+        const action = (btn as HTMLElement).dataset.action;
+        if (!action) return;
+        
+        // Mouse events
+        btn.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          startAction(action, btn as HTMLElement);
+        });
+        btn.addEventListener('mouseup', () => stopAction(btn as HTMLElement));
+        btn.addEventListener('mouseleave', () => stopAction(btn as HTMLElement));
+        
+        // Touch events
+        btn.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          startAction(action, btn as HTMLElement);
+        }, { passive: false });
+        btn.addEventListener('touchend', () => stopAction(btn as HTMLElement));
+        btn.addEventListener('touchcancel', () => stopAction(btn as HTMLElement));
       });
       
       // Reset camera
@@ -2756,7 +2818,7 @@ window.addEventListener('DOMContentLoaded', () => {
         studio.resetCamera();
       });
       
-      console.log('Camera controls initialized');
+      console.log('Camera controls initialized with hold-to-move and speed control');
     }
     
     // Mount Accessible 3D Controls with camera connection (hidden, kept for accessibility)
