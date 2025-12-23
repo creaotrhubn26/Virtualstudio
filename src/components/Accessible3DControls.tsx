@@ -41,7 +41,7 @@ import {
   Height,
   Refresh,
 } from '@mui/icons-material';
-import { useAccessibility, VisuallyHidden } from '../../providers/AccessibilityProvider';
+import { useAccessibility, VisuallyHidden } from '../providers/AccessibilityProvider';
 
 // ============================================================================
 // Types

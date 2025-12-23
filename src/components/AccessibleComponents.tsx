@@ -57,7 +57,7 @@ import {
   KeyboardArrowLeft,
   KeyboardArrowRight,
 } from '@mui/icons-material';
-import { useAccessibility, useFocusTrap, useAnnounce, VisuallyHidden } from '../../providers/AccessibilityProvider';
+import { useAccessibility, useFocusTrap, useAnnounce, VisuallyHidden } from '../providers/AccessibilityProvider';
 
 // ============================================================================
 // Constants
