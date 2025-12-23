@@ -46,6 +46,16 @@ The application employs a hybrid architecture, combining Vanilla TypeScript with
 - **typescript**: Provides static type checking for improved code quality and maintainability.
 
 ## Recent Changes
+- 2025-12-23: Made viewfinder focus points interactive and draggable
+  - Focus points can be moved anywhere in the viewport
+  - Focus distance calculated via Babylon.js ray picking
+  - Real-time focus distance display (in meters) at bottom center
+  - Focus store (Zustand) manages mode, active point, and positions
+  - FocusController handles drag events with pointer capture
+  - Four focus modes: single, zone, wide, tracking
+  - Safe area overlays (action safe, title safe) toggle
+  - Third-grid overlay for composition
+  - Camera/lens integration for DOF updates
 - 2025-12-23: Implemented professional viewfinder overlay HUD
   - 3x3 focus point grid (zone mode) with center point activation
   - Center crosshair for precise framing
