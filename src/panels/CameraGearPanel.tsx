@@ -10,11 +10,13 @@ import {
   useMediaQuery,
   Tabs,
   Tab,
+  InputBase,
 } from '@mui/material';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import CameraIcon from '@mui/icons-material/Camera';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 
 interface CameraBody {
@@ -284,6 +286,8 @@ export function CameraGearPanel() {
   const [cameraBrandFilter, setCameraBrandFilter] = useState('all');
   const [lensTypeFilter, setLensTypeFilter] = useState('all');
   const [lensBrandFilter, setLensBrandFilter] = useState('all');
+  const [cameraSearch, setCameraSearch] = useState('');
+  const [lensSearch, setLensSearch] = useState('');
   const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
   const [selectedLens, setSelectedLens] = useState<string | null>(null);
   const isTouchDevice = useMediaQuery('(pointer: coarse)');
@@ -310,17 +314,25 @@ export function CameraGearPanel() {
     return CAMERA_BODIES.filter(c => {
       const matchesType = cameraTypeFilter === 'all' || c.category === cameraTypeFilter;
       const matchesBrand = cameraBrandFilter === 'all' || c.brand === cameraBrandFilter;
-      return matchesType && matchesBrand;
+      const matchesSearch = cameraSearch === '' ||
+        c.name.toLowerCase().includes(cameraSearch.toLowerCase()) ||
+        c.brand.toLowerCase().includes(cameraSearch.toLowerCase()) ||
+        c.sensor.toLowerCase().includes(cameraSearch.toLowerCase());
+      return matchesType && matchesBrand && matchesSearch;
     });
-  }, [cameraTypeFilter, cameraBrandFilter]);
+  }, [cameraTypeFilter, cameraBrandFilter, cameraSearch]);
 
   const filteredLenses = useMemo(() => {
     return LENSES.filter(l => {
       const matchesType = lensTypeFilter === 'all' || l.type === lensTypeFilter;
       const matchesBrand = lensBrandFilter === 'all' || l.brand === lensBrandFilter;
-      return matchesType && matchesBrand;
+      const matchesSearch = lensSearch === '' ||
+        l.name.toLowerCase().includes(lensSearch.toLowerCase()) ||
+        l.brand.toLowerCase().includes(lensSearch.toLowerCase()) ||
+        l.focalLength.toLowerCase().includes(lensSearch.toLowerCase());
+      return matchesType && matchesBrand && matchesSearch;
     });
-  }, [lensTypeFilter, lensBrandFilter]);
+  }, [lensTypeFilter, lensBrandFilter, lensSearch]);
 
   const buttonStyle = {
     minHeight: 56,
@@ -381,7 +393,7 @@ export function CameraGearPanel() {
             <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block' }}>
               Type
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2, alignItems: 'center' }}>
               {CAMERA_TYPE_CATEGORIES.map(cat => (
                 <Button
                   key={cat.key}
@@ -405,6 +417,33 @@ export function CameraGearPanel() {
                   {cat.label}
                 </Button>
               ))}
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                bgcolor: '#2a2a2a', 
+                borderRadius: '10px', 
+                px: 2, 
+                py: 0.5,
+                minHeight: 56,
+                border: '2px solid #444',
+                flex: 1,
+                minWidth: 140,
+                maxWidth: 220,
+              }}>
+                <SearchIcon sx={{ color: '#888', fontSize: 22, mr: 1 }} />
+                <InputBase
+                  placeholder="Søk kamera..."
+                  value={cameraSearch}
+                  onChange={(e) => setCameraSearch(e.target.value)}
+                  sx={{
+                    color: '#fff',
+                    fontSize: 15,
+                    fontWeight: 500,
+                    flex: 1,
+                    '& input::placeholder': { color: '#666', opacity: 1 },
+                  }}
+                />
+              </Box>
             </Box>
 
             <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block' }}>
@@ -518,7 +557,7 @@ export function CameraGearPanel() {
             <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block' }}>
               Type
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2, alignItems: 'center' }}>
               {LENS_TYPE_CATEGORIES.map(cat => (
                 <Button
                   key={cat.key}
@@ -541,6 +580,33 @@ export function CameraGearPanel() {
                   {cat.label}
                 </Button>
               ))}
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                bgcolor: '#2a2a2a', 
+                borderRadius: '10px', 
+                px: 2, 
+                py: 0.5,
+                minHeight: 56,
+                border: '2px solid #444',
+                flex: 1,
+                minWidth: 140,
+                maxWidth: 220,
+              }}>
+                <SearchIcon sx={{ color: '#888', fontSize: 22, mr: 1 }} />
+                <InputBase
+                  placeholder="Søk objektiv..."
+                  value={lensSearch}
+                  onChange={(e) => setLensSearch(e.target.value)}
+                  sx={{
+                    color: '#fff',
+                    fontSize: 15,
+                    fontWeight: 500,
+                    flex: 1,
+                    '& input::placeholder': { color: '#666', opacity: 1 },
+                  }}
+                />
+              </Box>
             </Box>
 
             <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block' }}>
