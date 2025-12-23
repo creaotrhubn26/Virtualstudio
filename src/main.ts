@@ -2986,6 +2986,113 @@ window.addEventListener('DOMContentLoaded', () => {
         updateCameraDisplay();
       });
       
+      // Tab switching
+      const tabCamera = document.getElementById('tabCamera');
+      const tabLight = document.getElementById('tabLight');
+      const cameraTabContent = document.getElementById('cameraTabContent');
+      const lightTabContent = document.getElementById('lightTabContent');
+      
+      const switchToTab = (tab: 'camera' | 'light') => {
+        if (tab === 'camera') {
+          if (tabCamera) {
+            tabCamera.style.background = 'rgba(0,212,255,0.15)';
+            tabCamera.style.borderBottom = '2px solid #00d4ff';
+            tabCamera.style.color = '#00d4ff';
+          }
+          if (tabLight) {
+            tabLight.style.background = 'transparent';
+            tabLight.style.borderBottom = '2px solid transparent';
+            tabLight.style.color = 'rgba(255,255,255,0.6)';
+          }
+          if (cameraTabContent) cameraTabContent.style.display = 'flex';
+          if (lightTabContent) lightTabContent.style.display = 'none';
+        } else {
+          if (tabLight) {
+            tabLight.style.background = 'rgba(255,170,0,0.15)';
+            tabLight.style.borderBottom = '2px solid #ffaa00';
+            tabLight.style.color = '#ffaa00';
+          }
+          if (tabCamera) {
+            tabCamera.style.background = 'transparent';
+            tabCamera.style.borderBottom = '2px solid transparent';
+            tabCamera.style.color = 'rgba(255,255,255,0.6)';
+          }
+          if (cameraTabContent) cameraTabContent.style.display = 'none';
+          if (lightTabContent) lightTabContent.style.display = 'flex';
+        }
+      };
+      
+      tabCamera?.addEventListener('click', () => switchToTab('camera'));
+      tabLight?.addEventListener('click', () => switchToTab('light'));
+      
+      // Light controls state
+      let lightPower = 100;
+      let lightTemp = 5600;
+      let lightBeam = 45;
+      const powerSteps = [10, 25, 50, 75, 100];
+      const tempSteps = [2700, 3200, 4000, 5000, 5600, 6500, 7500];
+      const beamSteps = [15, 30, 45, 60, 90, 120];
+      let powerIndex = 4;
+      let tempIndex = 4;
+      let beamIndex = 2;
+      
+      const updateLightDisplay = () => {
+        const powerEl = document.getElementById('powerValue');
+        const tempEl = document.getElementById('tempValue');
+        const beamEl = document.getElementById('beamValue');
+        const intensityEl = document.getElementById('intensityValue');
+        const softnessEl = document.getElementById('softnessValue');
+        const intensitySlider = document.getElementById('intensitySlider') as HTMLInputElement;
+        const softnessSlider = document.getElementById('softnessSlider') as HTMLInputElement;
+        
+        if (powerEl) powerEl.textContent = powerSteps[powerIndex] + '%';
+        if (tempEl) tempEl.textContent = tempSteps[tempIndex] + 'K';
+        if (beamEl) beamEl.textContent = beamSteps[beamIndex] + '°';
+        if (intensityEl && intensitySlider) intensityEl.textContent = intensitySlider.value + '%';
+        if (softnessEl && softnessSlider) softnessEl.textContent = softnessSlider.value + '%';
+      };
+      
+      // Light setting handlers
+      const addLightHandler = (btnId: string, handler: () => void) => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+          btn.addEventListener('pointerup', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handler();
+          });
+        }
+      };
+      
+      addLightHandler('powerUp', () => {
+        powerIndex = Math.min(powerSteps.length - 1, powerIndex + 1);
+        updateLightDisplay();
+      });
+      addLightHandler('powerDown', () => {
+        powerIndex = Math.max(0, powerIndex - 1);
+        updateLightDisplay();
+      });
+      addLightHandler('tempUp', () => {
+        tempIndex = Math.min(tempSteps.length - 1, tempIndex + 1);
+        updateLightDisplay();
+      });
+      addLightHandler('tempDown', () => {
+        tempIndex = Math.max(0, tempIndex - 1);
+        updateLightDisplay();
+      });
+      addLightHandler('beamUp', () => {
+        beamIndex = Math.min(beamSteps.length - 1, beamIndex + 1);
+        updateLightDisplay();
+      });
+      addLightHandler('beamDown', () => {
+        beamIndex = Math.max(0, beamIndex - 1);
+        updateLightDisplay();
+      });
+      
+      // Slider handlers
+      document.getElementById('intensitySlider')?.addEventListener('input', updateLightDisplay);
+      document.getElementById('softnessSlider')?.addEventListener('input', updateLightDisplay);
+      
       // Drag functionality for camera controls panel
       const panelHeader = document.getElementById('cameraControlsHeader');
       let isDragging = false;
