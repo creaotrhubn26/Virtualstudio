@@ -69,7 +69,206 @@ interface LightPattern {
   usageCount: number;
   ratingAverage: number;
   ratingCount: number;
+  thumbnailUrl?: string;
 }
+
+const LOCAL_PATTERNS: LightPattern[] = [
+  {
+    id: 'rembrandt',
+    name: 'Rembrandt',
+    slug: 'rembrandt',
+    category: 'portrait',
+    description: 'Klassisk portrettlys med trekant under øyet på skyggesiden',
+    lookDescription: 'Dramatisk, kunstnerisk look med dype skygger',
+    whenToUse: 'Portrett, karakterfoto, kunstneriske bilder',
+    difficultyLevel: 'intermediate',
+    lightSetup: [{ type: 'key', angle: 45, height: 1.5, power: 80 }],
+    setupInstructions: ['Plasser hovedlys 45° til siden', 'Hev lyset over øyenivå', 'Se etter trekant under øyet'],
+    recommendedModifiers: ['Softbox', 'Beauty Dish'],
+    recommendedHdris: [],
+    recommendedBackgrounds: ['Mørk grå', 'Sort'],
+    subjectOrientation: 'front',
+    subjectDistance: 2,
+    shadowRules: 'Triangle shadow under eye',
+    isFeatured: true,
+    isBeginnerFriendly: false,
+    usageCount: 1250,
+    ratingAverage: 4.8,
+    ratingCount: 156
+  },
+  {
+    id: 'butterfly',
+    name: 'Butterfly / Paramount',
+    slug: 'butterfly',
+    category: 'beauty',
+    description: 'Lys rett forfra ovenfra, skaper sommerfuglskygge under nesen',
+    lookDescription: 'Glamorøs, flatterende look for skjønnhetsfoto',
+    whenToUse: 'Beauty, fashion, glamour',
+    difficultyLevel: 'beginner',
+    lightSetup: [{ type: 'key', angle: 0, height: 2, power: 80 }],
+    setupInstructions: ['Plasser lys rett over kamera', 'Senk til sommerfuglskygge vises under nesen'],
+    recommendedModifiers: ['Beauty Dish', 'Paraply'],
+    recommendedHdris: [],
+    recommendedBackgrounds: ['Hvit', 'Lys grå'],
+    subjectOrientation: 'front',
+    subjectDistance: 1.5,
+    shadowRules: 'Butterfly shadow under nose',
+    isFeatured: true,
+    isBeginnerFriendly: true,
+    usageCount: 980,
+    ratingAverage: 4.6,
+    ratingCount: 89
+  },
+  {
+    id: 'split',
+    name: 'Split Lighting',
+    slug: 'split',
+    category: 'dramatic',
+    description: 'Lys fra 90° til siden, halverer ansiktet i lys og skygge',
+    lookDescription: 'Svært dramatisk, mystisk look',
+    whenToUse: 'Dramatiske portretter, film noir, karakterbilder',
+    difficultyLevel: 'beginner',
+    lightSetup: [{ type: 'key', angle: 90, height: 1.5, power: 100 }],
+    setupInstructions: ['Plasser lys 90° til siden', 'Juster høyde til øyenivå'],
+    recommendedModifiers: ['Fresnel', 'Barn doors'],
+    recommendedHdris: [],
+    recommendedBackgrounds: ['Sort'],
+    subjectOrientation: 'front',
+    subjectDistance: 2,
+    shadowRules: 'Half face in shadow',
+    isFeatured: false,
+    isBeginnerFriendly: true,
+    usageCount: 567,
+    ratingAverage: 4.4,
+    ratingCount: 45
+  },
+  {
+    id: 'loop',
+    name: 'Loop Lighting',
+    slug: 'loop',
+    category: 'portrait',
+    description: 'Lys 30-45° til siden, skaper løkkeformet skygge fra nesen',
+    lookDescription: 'Naturlig, flatterende for de fleste ansikter',
+    whenToUse: 'Allsidig portrettlys, bedriftsportretter',
+    difficultyLevel: 'beginner',
+    lightSetup: [{ type: 'key', angle: 30, height: 1.5, power: 70 }],
+    setupInstructions: ['Plasser lys 30-45° til siden', 'Hev litt over øyenivå', 'Se etter løkkeskygge fra nesen'],
+    recommendedModifiers: ['Softbox', 'Paraply'],
+    recommendedHdris: [],
+    recommendedBackgrounds: ['Grå', 'Hvit'],
+    subjectOrientation: 'front',
+    subjectDistance: 2,
+    shadowRules: 'Small loop shadow from nose',
+    isFeatured: true,
+    isBeginnerFriendly: true,
+    usageCount: 1100,
+    ratingAverage: 4.7,
+    ratingCount: 134
+  },
+  {
+    id: 'clamshell',
+    name: 'Clamshell',
+    slug: 'clamshell',
+    category: 'beauty',
+    description: 'To lys ovenfra og nedenfra, minimerer skygger',
+    lookDescription: 'Skyggeløs, jevn belysning for beauty',
+    whenToUse: 'Beauty, makeup, hudpleie',
+    difficultyLevel: 'intermediate',
+    lightSetup: [
+      { type: 'key', angle: 0, height: 2, power: 80 },
+      { type: 'fill', angle: 0, height: -0.5, power: 40 }
+    ],
+    setupInstructions: ['Plasser hovedlys over kamera', 'Legg til reflektor eller fill under', 'Balancer lysstyrke'],
+    recommendedModifiers: ['Beauty Dish', 'Softbox', 'Reflektor'],
+    recommendedHdris: [],
+    recommendedBackgrounds: ['Hvit'],
+    subjectOrientation: 'front',
+    subjectDistance: 1.5,
+    shadowRules: 'Minimal shadows',
+    isFeatured: false,
+    isBeginnerFriendly: false,
+    usageCount: 445,
+    ratingAverage: 4.5,
+    ratingCount: 67
+  },
+  {
+    id: 'three-point',
+    name: 'Three-Point Lighting',
+    slug: 'three-point',
+    category: 'interview',
+    description: 'Klassisk oppsett med key, fill og rim/back light',
+    lookDescription: 'Profesjonell, balansert belysning',
+    whenToUse: 'Intervju, video, bedriftsportretter',
+    difficultyLevel: 'intermediate',
+    lightSetup: [
+      { type: 'key', angle: 45, height: 1.5, power: 100 },
+      { type: 'fill', angle: -30, height: 1.2, power: 50 },
+      { type: 'rim', angle: 135, height: 1.8, power: 70 }
+    ],
+    setupInstructions: ['Plasser hovedlys 45° til siden', 'Legg til fill på motsatt side', 'Plasser rim light bak motiv'],
+    recommendedModifiers: ['Softbox', 'Reflektor', 'Strip softbox'],
+    recommendedHdris: [],
+    recommendedBackgrounds: ['Grå', 'Grønn skjerm'],
+    subjectOrientation: 'front',
+    subjectDistance: 2.5,
+    shadowRules: 'Balanced shadows with rim separation',
+    isFeatured: true,
+    isBeginnerFriendly: false,
+    usageCount: 2340,
+    ratingAverage: 4.9,
+    ratingCount: 289
+  },
+  {
+    id: 'high-key',
+    name: 'High-Key',
+    slug: 'high-key',
+    category: 'commercial',
+    description: 'Lyst, skyggeløst oppsett med jevn belysning',
+    lookDescription: 'Rent, lyst, optimistisk',
+    whenToUse: 'Reklame, produktfoto, mote',
+    difficultyLevel: 'advanced',
+    lightSetup: [
+      { type: 'key', angle: 0, height: 1.5, power: 80 },
+      { type: 'fill', angle: -45, height: 1.2, power: 60 },
+      { type: 'background', angle: 180, height: 1, power: 100 }
+    ],
+    setupInstructions: ['Bruk hvit bakgrunn', 'Lys opp bakgrunn separat', 'Balancer frontlys for flat belysning'],
+    recommendedModifiers: ['Store softboxer', 'Reflektorer'],
+    recommendedHdris: [],
+    recommendedBackgrounds: ['Hvit'],
+    subjectOrientation: 'front',
+    subjectDistance: 3,
+    shadowRules: 'Minimal to no shadows',
+    isFeatured: false,
+    isBeginnerFriendly: false,
+    usageCount: 678,
+    ratingAverage: 4.3,
+    ratingCount: 56
+  },
+  {
+    id: 'low-key',
+    name: 'Low-Key',
+    slug: 'low-key',
+    category: 'dramatic',
+    description: 'Mørkt oppsett med høy kontrast og dype skygger',
+    lookDescription: 'Dramatisk, mystisk, kunstnerisk',
+    whenToUse: 'Kunstportretter, film noir, stemningsbilder',
+    difficultyLevel: 'intermediate',
+    lightSetup: [{ type: 'key', angle: 60, height: 1.5, power: 100 }],
+    setupInstructions: ['Bruk mørk bakgrunn', 'Én hard lyskilde fra siden', 'Ingen fill light'],
+    recommendedModifiers: ['Snoot', 'Grid', 'Barn doors'],
+    recommendedHdris: [],
+    recommendedBackgrounds: ['Sort'],
+    subjectOrientation: 'front',
+    subjectDistance: 2,
+    shadowRules: 'Deep, defined shadows',
+    isFeatured: true,
+    isBeginnerFriendly: false,
+    usageCount: 890,
+    ratingAverage: 4.6,
+    ratingCount: 112
+  }
+];
 
 interface LightPatternLibraryProps {
   open: boolean;
@@ -113,7 +312,8 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
       );
       setPatterns(response.patterns);
     } catch (error) {
-      console.error('Error fetching light patterns: ', error);
+      console.error('Using local patterns (API not available)');
+      setPatterns(LOCAL_PATTERNS);
     } finally {
       setLoading(false);
     }
@@ -129,7 +329,8 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
       );
       setCustomPatterns(response.patterns);
     } catch (error) {
-      console.error('Error fetching custom patterns:', error);
+      console.error('Using empty custom patterns (API not available)');
+      setCustomPatterns([]);
     } finally {
       setLoading(false);
     }
@@ -196,7 +397,7 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Lightbulb color="primary" />
-              <Typography variant="h6">Light Pattern Library</Typography>
+              <Typography variant="h6">Lysmønster Bibliotek</Typography>
             </Box>
             <IconButton onClick={onClose} size="small">
               <Close />
@@ -208,28 +409,28 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
           <Stack spacing={3}>
             {/* Tabs: Professional / Community / My Patterns */}
             <Tabs value={tabValue} onChange={(_, value) => setTabValue(value)} variant="fullWidth">
-              <Tab label="Professional Patterns" />
-              <Tab label="Community Patterns" />
-              <Tab label="My Patterns" />
+              <Tab label="Profesjonelle Mønstre" />
+              <Tab label="Fellesskap Mønstre" />
+              <Tab label="Mine Mønstre" />
             </Tabs>
 
             {/* Header Info */}
             <Alert severity="info" icon={<Info />}>
               <Typography variant="body2">
-                {tabValue === 0 && 'Apply professional lighting patterns with one click. Each pattern includes setup instructions and recommendations.'}
-                {tabValue === 1 && 'Browse patterns created by the community. Discover unique lighting setups shared by other creators.'}
-                {tabValue === 2 && 'Your custom lighting patterns. Create new patterns from the publishing dialog.'}
+                {tabValue === 0 && 'Bruk profesjonelle lysmønstre med ett klikk. Hvert mønster inkluderer oppsettinstruksjoner og anbefalinger.'}
+                {tabValue === 1 && 'Bla gjennom mønstre laget av fellesskapet. Oppdag unike lysoppsett delt av andre skapere.'}
+                {tabValue === 2 && 'Dine egne lysmønstre. Lag nye mønstre fra publiseringsdialogen.'}
               </Typography>
             </Alert>
 
             {/* Search and Filters */}
             <Box>
               <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     fullWidth
                     size="small"
-                    placeholder="Search patterns..."
+                    placeholder="Søk mønstre..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     InputProps={{
@@ -240,16 +441,16 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
                       )}}
                   />
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <Tabs
                     value={difficultyFilter}
                     onChange={(_, value) => setDifficultyFilter(value)}
                     variant="scrollable"
                   >
-                    <Tab label="All" value="all" />
-                    <Tab label="Beginner" value="beginner" />
-                    <Tab label="Intermediate" value="intermediate" />
-                    <Tab label="Advanced" value="advanced" />
+                    <Tab label="Alle" value="all" />
+                    <Tab label="Nybegynner" value="beginner" />
+                    <Tab label="Middels" value="intermediate" />
+                    <Tab label="Avansert" value="advanced" />
                   </Tabs>
                 </Grid>
               </Grid>
@@ -266,7 +467,7 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
             {!loading && (
               <Grid container spacing={2}>
                 {filteredPatterns.map((pattern) => (
-                  <Grid item xs={12} sm={6} md={4} key={pattern.id}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={pattern.id}>
                     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                       {/* Thumbnail Image */}
                       {pattern.thumbnailUrl && (

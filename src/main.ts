@@ -2,7 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, NotesPanelApp, CinematographyPatternsApp, Accessible3DControlsApp } from './App';
+import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, Accessible3DControlsApp } from './App';
 import { useAppStore, useFocusStore, SceneNode } from './state/store';
 import { focusController } from './core/FocusController';
 import { virtualActorService } from './core/services/virtualActorService';
@@ -2682,6 +2682,13 @@ window.addEventListener('DOMContentLoaded', () => {
       cineRoot.render(React.createElement(CinematographyPatternsApp, {}));
     }
     
+    // Mount Light Pattern Library App
+    const lightPatternRoot = document.getElementById('lightPatternLibraryRoot');
+    if (lightPatternRoot) {
+      const lpRoot = createRoot(lightPatternRoot);
+      lpRoot.render(React.createElement(LightPatternLibraryApp, {}));
+    }
+    
     // Setup Camera Controls (Touch-friendly overlay)
     const cameraControlBtn = document.getElementById('cameraControlBtn');
     const cameraControlsPanel = document.getElementById('cameraControlsPanel');
@@ -3100,11 +3107,16 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('intensitySlider')?.addEventListener('input', updateLightDisplay);
       document.getElementById('softnessSlider')?.addEventListener('input', updateLightDisplay);
       
-      // Open Light Patterns panel
+      // Open Light Patterns panel (Hollywood)
       document.getElementById('openLightPatternsBtn')?.addEventListener('click', () => {
-        // Dispatch custom event to open cinematography patterns panel
         window.dispatchEvent(new CustomEvent('openCinematographyPatterns'));
-        console.log('Opening cinematography patterns panel');
+        console.log('Opening Hollywood cinematography patterns panel');
+      });
+      
+      // Open Photo Light Patterns panel
+      document.getElementById('openPhotoLightPatternsBtn')?.addEventListener('click', () => {
+        window.dispatchEvent(new CustomEvent('openLightPatternLibrary'));
+        console.log('Opening photo light pattern library');
       });
       
       // Drag functionality for camera controls panel

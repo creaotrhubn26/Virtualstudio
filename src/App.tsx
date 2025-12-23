@@ -13,6 +13,7 @@ import { AccessibilityProvider } from './providers/AccessibilityProvider';
 import { Accessible3DControls } from './components/Accessible3DControls';
 import { CinematographyPatternsPanel } from './components/CinematographyPatternsPanel';
 import { CinematographyPattern } from './core/services/cinematographyPatternsService';
+import { LightPatternLibrary } from './panels/LightPatternLibrary';
 
 const darkTheme = createTheme({
   palette: {
@@ -200,6 +201,32 @@ export const CinematographyPatternsApp: React.FC = () => {
           <CinematographyPatternsPanel onApplyPattern={handleApplyPattern} />
         </div>
       </div>
+    </ThemeProvider>
+  );
+};
+
+export const LightPatternLibraryApp: React.FC = () => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener('openLightPatternLibrary', handleOpen);
+    return () => window.removeEventListener('openLightPatternLibrary', handleOpen);
+  }, []);
+
+  const handleApplyPattern = async (pattern: any) => {
+    window.dispatchEvent(new CustomEvent('applyLightPattern', { detail: pattern }));
+    setIsOpen(false);
+  };
+
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <LightPatternLibrary
+        open={isOpen}
+        onClose={() => setIsOpen(false)}
+        onApplyPattern={handleApplyPattern}
+      />
     </ThemeProvider>
   );
 };
