@@ -2092,26 +2092,201 @@ html, body {
   display: none;
 }
 
-.safe-area-overlay.mode-action::before,
-.safe-area-overlay.mode-both::before {
-  content: '';
+.safe-area-svg {
   position: absolute;
-  top: 5%;
-  left: 5%;
-  right: 5%;
-  bottom: 5%;
-  border: 1px dashed rgba(255, 200, 0, 0.5);
+  top: 0;
+  left: 0;
+  pointer-events: none;
 }
 
-.safe-area-overlay.mode-title::after,
-.safe-area-overlay.mode-both::after {
-  content: '';
+/* Safe Area Feedback Panel */
+.safe-area-feedback-panel {
   position: absolute;
-  top: 10%;
-  left: 10%;
-  right: 10%;
-  bottom: 10%;
-  border: 1px dashed rgba(0, 200, 255, 0.5);
+  bottom: 90px;
+  right: 24px;
+  width: 320px;
+  background: linear-gradient(135deg, rgba(15, 25, 40, 0.97) 0%, rgba(8, 15, 30, 0.99) 100%);
+  border-radius: 16px;
+  padding: 20px;
+  backdrop-filter: blur(16px);
+  border: 2px solid rgba(255, 200, 0, 0.35);
+  box-shadow: 
+    0 12px 48px rgba(0, 0, 0, 0.6), 
+    0 0 40px rgba(255, 200, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: safeAreaPanelAppear 0.35s ease-out;
+  pointer-events: auto;
+}
+
+@keyframes safeAreaPanelAppear {
+  from {
+    opacity: 0;
+    transform: translateX(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.safe-area-feedback-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 200, 0, 0.2);
+}
+
+.safe-area-feedback-header h4 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #ffc800;
+  text-shadow: 0 0 16px rgba(255, 200, 0, 0.6);
+}
+
+.safe-area-score-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 2px solid;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  animation: badgeGlow 2s ease-in-out infinite;
+}
+
+.safe-area-description {
+  margin: 0 0 16px 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.5;
+}
+
+.safe-area-zones-status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.zone-status-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.zone-status-item.safe {
+  border-color: rgba(0, 255, 136, 0.2);
+}
+
+.zone-status-item.warning {
+  border-color: rgba(255, 68, 68, 0.3);
+  background: rgba(255, 68, 68, 0.08);
+}
+
+.zone-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px currentColor;
+  animation: indicatorPulse 2s ease-in-out infinite;
+}
+
+@keyframes indicatorPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.8; }
+}
+
+.zone-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.zone-status {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.zone-status-item.safe .zone-status {
+  color: #00ff88;
+}
+
+.zone-status-item.warning .zone-status {
+  color: #ff4444;
+}
+
+.safe-area-object-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 200, 0, 0.08);
+  border-radius: 10px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(255, 200, 0, 0.15);
+}
+
+.safe-area-object-info .object-icon {
+  font-size: 16px;
+}
+
+.safe-area-object-info .object-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.safe-area-message {
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  border-left: 4px solid;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.safe-area-info {
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+}
+
+.safe-area-info .info-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.safe-area-info ul {
+  margin: 0;
+  padding: 0 0 0 16px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.7;
+}
+
+.safe-area-info li {
+  margin-bottom: 4px;
+}
+
+.safe-area-info li:last-child {
+  margin-bottom: 0;
 }
 
 .third-grid-overlay {

@@ -314,11 +314,173 @@ export class FocusController {
       safeAreaOverlay.classList.remove('mode-none', 'mode-action', 'mode-title', 'mode-both');
       safeAreaOverlay.classList.add(`mode-${mode}`);
       safeAreaOverlay.style.display = mode === 'none' ? 'none' : 'block';
+      safeAreaOverlay.innerHTML = mode !== 'none' ? this.getSafeAreaSVG(mode) + this.getSafeAreaFeedbackHTML(mode) : '';
     }
 
     if (safeAreaBtn) {
       safeAreaBtn.classList.toggle('active', mode !== 'none');
     }
+  }
+
+  private getSafeAreaSVG(mode: SafeAreaMode): string {
+    const actionColor = 'rgba(255, 200, 0, 0.7)';
+    const titleColor = 'rgba(0, 200, 255, 0.7)';
+    
+    const glowFilter = `
+      <defs>
+        <filter id="safeGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+    `;
+
+    let svg = `<svg width="100%" height="100%" class="safe-area-svg">${glowFilter}`;
+    
+    if (mode === 'action' || mode === 'both') {
+      svg += `
+        <rect x="5%" y="5%" width="90%" height="90%" fill="none" stroke="${actionColor}" stroke-width="2" stroke-dasharray="12,6" filter="url(#safeGlow)"/>
+        <text x="5.5%" y="4%" fill="${actionColor}" font-size="11" opacity="0.9">ACTION SAFE (90%)</text>
+        <circle cx="5%" cy="5%" r="4" fill="${actionColor}" filter="url(#safeGlow)"/>
+        <circle cx="95%" cy="5%" r="4" fill="${actionColor}" filter="url(#safeGlow)"/>
+        <circle cx="5%" cy="95%" r="4" fill="${actionColor}" filter="url(#safeGlow)"/>
+        <circle cx="95%" cy="95%" r="4" fill="${actionColor}" filter="url(#safeGlow)"/>
+      `;
+    }
+    
+    if (mode === 'title' || mode === 'both') {
+      svg += `
+        <rect x="10%" y="10%" width="80%" height="80%" fill="none" stroke="${titleColor}" stroke-width="2" stroke-dasharray="8,4" filter="url(#safeGlow)"/>
+        <text x="10.5%" y="9%" fill="${titleColor}" font-size="11" opacity="0.9">TITLE SAFE (80%)</text>
+        <circle cx="10%" cy="10%" r="4" fill="${titleColor}" filter="url(#safeGlow)"/>
+        <circle cx="90%" cy="10%" r="4" fill="${titleColor}" filter="url(#safeGlow)"/>
+        <circle cx="10%" cy="90%" r="4" fill="${titleColor}" filter="url(#safeGlow)"/>
+        <circle cx="90%" cy="90%" r="4" fill="${titleColor}" filter="url(#safeGlow)"/>
+      `;
+    }
+    
+    svg += '</svg>';
+    return svg;
+  }
+
+  private calculateSafeAreaScore(mode: SafeAreaMode): { actionSafe: boolean; titleSafe: boolean; level: string; color: string; message: string; objectName: string | null } {
+    const scene = useAppStore.getState().scene;
+    const models = scene.filter(n => n.type === 'model');
+    
+    if (models.length === 0) {
+      return { 
+        actionSafe: true,
+        titleSafe: true,
+        level: 'Ingen objekt', 
+        color: '#666666', 
+        message: 'Legg til en modell for å sjekke sikkerhetssoner',
+        objectName: null
+      };
+    }
+
+    const model = models[0];
+    const pos = model.transform.position;
+    
+    // Convert 3D position to approximate 2D viewport position
+    const viewportX = 0.5 + (pos[0] / 10);
+    const viewportY = 0.5 - (pos[1] / 6);
+    
+    // Check if within action safe (5% margins = 0.05 to 0.95)
+    const actionSafe = viewportX >= 0.05 && viewportX <= 0.95 && viewportY >= 0.05 && viewportY <= 0.95;
+    
+    // Check if within title safe (10% margins = 0.10 to 0.90)
+    const titleSafe = viewportX >= 0.10 && viewportX <= 0.90 && viewportY >= 0.10 && viewportY <= 0.90;
+
+    let level: string;
+    let color: string;
+    let message: string;
+
+    if (titleSafe) {
+      level = 'Perfekt';
+      color = '#00ff88';
+      message = 'Objektet er trygt innenfor tittel-sonen. Ingen risiko for beskjæring.';
+    } else if (actionSafe) {
+      level = 'Godt nok';
+      color = '#ffcc00';
+      message = 'Objektet er innenfor action-sonen, men nær kanten. Tekst kan bli kuttet.';
+    } else {
+      level = 'Advarsel';
+      color = '#ff4444';
+      message = 'Objektet kan bli beskåret på enkelte skjermer! Flytt nærmere sentrum.';
+    }
+
+    return { actionSafe, titleSafe, level, color, message, objectName: model.name };
+  }
+
+  private getSafeAreaFeedbackHTML(mode: SafeAreaMode): string {
+    const feedback = this.calculateSafeAreaScore(mode);
+    
+    const modeLabels: Record<SafeAreaMode, string> = {
+      none: '',
+      action: 'Action Safe (90%)',
+      title: 'Title Safe (80%)',
+      both: 'Begge soner'
+    };
+
+    const modeDescriptions: Record<SafeAreaMode, string> = {
+      none: '',
+      action: 'Innhold innenfor denne sonen vil være synlig på de fleste TV-er og monitorer.',
+      title: 'Tekst og viktige elementer bør plasseres innenfor denne sonen for å unngå beskjæring.',
+      both: 'Vis både action- og tittel-soner for maksimal trygghet.'
+    };
+
+    return `
+      <div class="safe-area-feedback-panel">
+        <div class="safe-area-feedback-header">
+          <h4>${modeLabels[mode]}</h4>
+          <div class="safe-area-score-badge" style="background: ${feedback.color}20; border-color: ${feedback.color}; color: ${feedback.color};">
+            ${feedback.level}
+          </div>
+        </div>
+        
+        <p class="safe-area-description">${modeDescriptions[mode]}</p>
+        
+        <div class="safe-area-zones-status">
+          ${mode === 'action' || mode === 'both' ? `
+            <div class="zone-status-item ${feedback.actionSafe ? 'safe' : 'warning'}">
+              <span class="zone-indicator" style="background: ${feedback.actionSafe ? '#00ff88' : '#ff4444'};"></span>
+              <span class="zone-label">Action Safe (90%)</span>
+              <span class="zone-status">${feedback.actionSafe ? '✓ OK' : '✗ Utenfor'}</span>
+            </div>
+          ` : ''}
+          ${mode === 'title' || mode === 'both' ? `
+            <div class="zone-status-item ${feedback.titleSafe ? 'safe' : 'warning'}">
+              <span class="zone-indicator" style="background: ${feedback.titleSafe ? '#00ff88' : '#ff4444'};"></span>
+              <span class="zone-label">Title Safe (80%)</span>
+              <span class="zone-status">${feedback.titleSafe ? '✓ OK' : '✗ Utenfor'}</span>
+            </div>
+          ` : ''}
+        </div>
+        
+        ${feedback.objectName ? `
+          <div class="safe-area-object-info">
+            <span class="object-icon">📍</span>
+            <span class="object-name">${feedback.objectName}</span>
+          </div>
+        ` : ''}
+        
+        <div class="safe-area-message" style="border-left-color: ${feedback.color};">
+          ${feedback.message}
+        </div>
+        
+        <div class="safe-area-info">
+          <div class="info-header">Bruksområder:</div>
+          <ul>
+            <li><span style="color: #ffc800;">Action Safe</span> - Viktig handling og bevegelse</li>
+            <li><span style="color: #00c8ff;">Title Safe</span> - Tekst, logoer og grafikk</li>
+            <li>Eldre TV-er kan kutte opptil 10% av bildet</li>
+          </ul>
+        </div>
+      </div>
+    `;
   }
 
   private updateGridDisplay(show: boolean) {
