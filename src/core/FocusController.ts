@@ -411,11 +411,11 @@ export class FocusController {
     const labels: Record<HelperGuide, string> = {
       none: 'Hjelpeguider',
       colortemp: 'Fargetemperatur',
-      exposure: 'Eksponeringsoner',
+      exposure: 'Eksponeringssoner',
       height: 'Høydereferanser',
       glasses: 'Brillerefleksjoner',
       classphoto: 'Klassefoto',
-      safety: 'Sikkerhetsoner'
+      safety: 'Sikkerhetssoner'
     };
     return labels[guide];
   }
@@ -441,7 +441,7 @@ export class FocusController {
                   <span>1800K</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                  <span style="color: #ffb46b;">Gloedelampe</span>
+                  <span style="color: #ffb46b;">Glødelampe</span>
                   <span>2700K</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
@@ -459,36 +459,36 @@ export class FocusController {
       case 'exposure':
         return `
           <div class="helper-guide-panel bottom-left">
-            <h4>Eksponeringsoner</h4>
+            <h4>Eksponeringssoner</h4>
             <div class="exposure-zones">
               <div class="exposure-zone">
                 <div class="exposure-zone-box" style="background: #000;"></div>
-                <span class="exposure-zone-label">Zone 0 - Ren sort</span>
+                <span class="exposure-zone-label">Sone 0 - Ren sort</span>
                 <span class="exposure-zone-ev">-5 EV</span>
               </div>
               <div class="exposure-zone">
                 <div class="exposure-zone-box" style="background: #333;"></div>
-                <span class="exposure-zone-label">Zone II - Skyggdetalj</span>
+                <span class="exposure-zone-label">Sone II - Skyggedetalj</span>
                 <span class="exposure-zone-ev">-3 EV</span>
               </div>
               <div class="exposure-zone">
                 <div class="exposure-zone-box" style="background: #808080;"></div>
-                <span class="exposure-zone-label">Zone V - 18% graa</span>
+                <span class="exposure-zone-label">Sone V - 18% grå</span>
                 <span class="exposure-zone-ev">0 EV</span>
               </div>
               <div class="exposure-zone">
                 <div class="exposure-zone-box" style="background: #999;"></div>
-                <span class="exposure-zone-label">Zone VI - Hudtone</span>
+                <span class="exposure-zone-label">Sone VI - Hudtone</span>
                 <span class="exposure-zone-ev">+1 EV</span>
               </div>
               <div class="exposure-zone">
                 <div class="exposure-zone-box" style="background: #ccc;"></div>
-                <span class="exposure-zone-label">Zone VIII - Hoylys</span>
+                <span class="exposure-zone-label">Sone VIII - Høylys</span>
                 <span class="exposure-zone-ev">+3 EV</span>
               </div>
               <div class="exposure-zone">
                 <div class="exposure-zone-box" style="background: #fff;"></div>
-                <span class="exposure-zone-label">Zone X - Ren hvit</span>
+                <span class="exposure-zone-label">Sone X - Ren hvit</span>
                 <span class="exposure-zone-ev">+5 EV</span>
               </div>
             </div>
@@ -499,7 +499,7 @@ export class FocusController {
           <div class="height-markers">
             <div class="height-marker" style="bottom: 0%; color: #88ccff;">
               <div class="height-line"></div>
-              <span class="height-label">Barn 6 aar - 110cm</span>
+              <span class="height-label">Barn 6 år - 110cm</span>
             </div>
             <div class="height-marker" style="bottom: 9%; color: #ffcc00;">
               <div class="height-line"></div>
@@ -507,7 +507,7 @@ export class FocusController {
             </div>
             <div class="height-marker" style="bottom: 36%; color: #88ff88;">
               <div class="height-line"></div>
-              <span class="height-label">Tenaring - 150cm</span>
+              <span class="height-label">Tenåring - 150cm</span>
             </div>
             <div class="height-marker" style="bottom: 55%; color: #00ff88;">
               <div class="height-line"></div>
@@ -515,31 +515,31 @@ export class FocusController {
             </div>
             <div class="height-marker" style="bottom: 68%; color: #ff8888;">
               <div class="height-line"></div>
-              <span class="height-label">Hoey - 185cm</span>
+              <span class="height-label">Høy - 185cm</span>
             </div>
           </div>
           <div class="helper-guide-panel bottom-right">
-            <h4>Kamerahoeyder</h4>
+            <h4>Kamerahøyder</h4>
             <div style="font-size: 10px; color: #888;">
               <div style="margin-bottom: 4px;"><span style="color: #ff6600;">Lav vinkel</span> - 50cm</div>
-              <div style="margin-bottom: 4px;"><span style="color: #ffcc00;">Oeyehoyde sit</span> - 120cm</div>
-              <div style="margin-bottom: 4px;"><span style="color: #00ff88;">Oeyehoyde staa</span> - 160cm</div>
-              <div><span style="color: #8888ff;">Hoey vinkel</span> - 200cm</div>
+              <div style="margin-bottom: 4px;"><span style="color: #ffcc00;">Øyehøyde sit</span> - 120cm</div>
+              <div style="margin-bottom: 4px;"><span style="color: #00ff88;">Øyehøyde stå</span> - 160cm</div>
+              <div><span style="color: #8888ff;">Høy vinkel</span> - 200cm</div>
             </div>
           </div>
         `;
       case 'glasses':
         return `
           <div class="helper-guide-panel bottom-left">
-            <h4>Unngaa Brillerefleksjoner</h4>
+            <h4>Unngå Brillerefleksjoner</h4>
             <div class="glasses-tips">
               <div class="glasses-tip">
                 <div class="glasses-tip-icon">1</div>
-                <div class="glasses-tip-text">Hev hovedlyset over oeyehoyde for aa unngaa direkte refleksjon</div>
+                <div class="glasses-tip-text">Hev hovedlyset over øyehøyde for å unngå direkte refleksjon</div>
               </div>
               <div class="glasses-tip">
                 <div class="glasses-tip-icon">2</div>
-                <div class="glasses-tip-text">Be modellen vippe haken lett ned for aa endre refleksjonsvinkelen</div>
+                <div class="glasses-tip-text">Be modellen vippe haken lett ned for å endre refleksjonsvinkelen</div>
               </div>
               <div class="glasses-tip">
                 <div class="glasses-tip-icon">3</div>
@@ -547,7 +547,7 @@ export class FocusController {
               </div>
               <div class="glasses-tip">
                 <div class="glasses-tip-icon">4</div>
-                <div class="glasses-tip-text">Bruk store, myke lyskilder for aa minimere skarpe refleksjoner</div>
+                <div class="glasses-tip-text">Bruk store, myke lyskilder for å minimere skarpe refleksjoner</div>
               </div>
             </div>
           </div>
@@ -578,11 +578,11 @@ export class FocusController {
               </div>
               <div class="classphoto-row">
                 <div class="classphoto-icon" style="background: rgba(255,255,0,0.2); color: #ffff00;">K</div>
-                <span>Kamera FOV - Sjekk kantbeskjaering</span>
+                <span>Kamera FOV - Sjekk kantbeskjæring</span>
               </div>
               <div class="classphoto-row">
                 <div class="classphoto-icon" style="background: rgba(255,68,68,0.2); color: #ff4444;">!</div>
-                <span>Kantadvarsel - Unngaa avkutting</span>
+                <span>Kantadvarsel - Unngå avkutting</span>
               </div>
             </div>
           </div>
@@ -591,16 +591,16 @@ export class FocusController {
             <line x1="0" y1="30%" x2="100%" y2="30%" stroke="rgba(0,255,136,0.4)" stroke-width="1" stroke-dasharray="4,4"/>
             <line x1="0" y1="55%" x2="100%" y2="55%" stroke="rgba(0,255,136,0.4)" stroke-width="1" stroke-dasharray="4,4"/>
             <line x1="0" y1="80%" x2="100%" y2="80%" stroke="rgba(0,255,136,0.4)" stroke-width="1" stroke-dasharray="4,4"/>
-            <text x="52%" y="28%" fill="rgba(0,255,136,0.6)" font-size="10">Rad 1 - Hoeyde</text>
-            <text x="52%" y="53%" fill="rgba(0,255,136,0.6)" font-size="10">Rad 2 - Hoeyde</text>
-            <text x="52%" y="78%" fill="rgba(0,255,136,0.6)" font-size="10">Rad 3 - Hoeyde</text>
+            <text x="52%" y="28%" fill="rgba(0,255,136,0.6)" font-size="10">Rad 1 - Høyde</text>
+            <text x="52%" y="53%" fill="rgba(0,255,136,0.6)" font-size="10">Rad 2 - Høyde</text>
+            <text x="52%" y="78%" fill="rgba(0,255,136,0.6)" font-size="10">Rad 3 - Høyde</text>
             <rect x="2%" y="2%" width="96%" height="96%" fill="none" stroke="rgba(255,68,68,0.3)" stroke-width="2" stroke-dasharray="8,4"/>
           </svg>
         `;
       case 'safety':
         return `
           <div class="helper-guide-panel bottom-left">
-            <h4>Sikkerhetsoner</h4>
+            <h4>Sikkerhetssoner</h4>
             <div class="safety-zones">
               <div class="safety-zone-item">
                 <div class="safety-zone-color" style="color: #ff4444; background: rgba(255,68,68,0.2);"></div>
@@ -621,7 +621,7 @@ export class FocusController {
             </div>
             <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
               <div style="font-size: 10px; color: #888;">
-                <div style="margin-bottom: 4px;">Kabelruter vises paa gulvet</div>
+                <div style="margin-bottom: 4px;">Kabelruter vises på gulvet</div>
                 <div>Hold 1m klaring rundt bommer</div>
               </div>
             </div>
