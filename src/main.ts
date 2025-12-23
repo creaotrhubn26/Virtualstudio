@@ -2,7 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, Accessible3DControlsApp } from './App';
+import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp } from './App';
 import { useAppStore, useFocusStore, SceneNode } from './state/store';
 import { focusController } from './core/FocusController';
 import { virtualActorService } from './core/services/virtualActorService';
@@ -2689,6 +2689,13 @@ window.addEventListener('DOMContentLoaded', () => {
       lpRoot.render(React.createElement(LightPatternLibraryApp, {}));
     }
     
+    // Mount Avatar Generator App
+    const avatarGenRoot = document.getElementById('avatarGeneratorRoot');
+    if (avatarGenRoot) {
+      const avRoot = createRoot(avatarGenRoot);
+      avRoot.render(React.createElement(AvatarGeneratorApp, {}));
+    }
+    
     // Setup Camera Controls (Touch-friendly overlay)
     const cameraControlBtn = document.getElementById('cameraControlBtn');
     const cameraControlsPanel = document.getElementById('cameraControlsPanel');
@@ -3117,6 +3124,24 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('openPhotoLightPatternsBtn')?.addEventListener('click', () => {
         window.dispatchEvent(new CustomEvent('openLightPatternLibrary'));
         console.log('Opening photo light pattern library');
+      });
+      
+      // Open Avatar Generator panel
+      document.getElementById('openAvatarGeneratorBtn')?.addEventListener('click', () => {
+        window.dispatchEvent(new CustomEvent('openAvatarGenerator'));
+        console.log('Opening avatar generator panel');
+      });
+      
+      // Handle avatar generation completed
+      window.addEventListener('avatarGenerated', (event: Event) => {
+        const customEvent = event as CustomEvent;
+        const { glbUrl, metadata } = customEvent.detail;
+        console.log('Avatar generated:', glbUrl, metadata);
+        
+        // Load the avatar GLB into the scene
+        if (window.virtualStudio) {
+          window.virtualStudio.loadAvatarModel(glbUrl);
+        }
       });
       
       // Drag functionality for camera controls panel

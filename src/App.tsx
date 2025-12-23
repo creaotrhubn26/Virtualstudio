@@ -14,6 +14,7 @@ import { Accessible3DControls } from './components/Accessible3DControls';
 import { CinematographyPatternsPanel } from './components/CinematographyPatternsPanel';
 import { CinematographyPattern } from './core/services/cinematographyPatternsService';
 import { LightPatternLibrary } from './panels/LightPatternLibrary';
+import { AvatarGeneratorPanel } from './panels/AvatarGeneratorPanel';
 
 const darkTheme = createTheme({
   palette: {
@@ -226,6 +227,31 @@ export const LightPatternLibraryApp: React.FC = () => {
         open={isOpen}
         onClose={() => setIsOpen(false)}
         onApplyPattern={handleApplyPattern}
+      />
+    </ThemeProvider>
+  );
+};
+
+export const AvatarGeneratorApp: React.FC = () => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener('openAvatarGenerator', handleOpen);
+    return () => window.removeEventListener('openAvatarGenerator', handleOpen);
+  }, []);
+
+  const handleAvatarGenerated = (glbUrl: string, metadata: any) => {
+    window.dispatchEvent(new CustomEvent('avatarGenerated', { detail: { glbUrl, metadata } }));
+  };
+
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <AvatarGeneratorPanel
+        open={isOpen}
+        onClose={() => setIsOpen(false)}
+        onAvatarGenerated={handleAvatarGenerated}
       />
     </ThemeProvider>
   );
