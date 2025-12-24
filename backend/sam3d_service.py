@@ -30,6 +30,9 @@ def get_r2_client():
     """Get S3-compatible client for Cloudflare R2."""
     access_key = os.environ.get('R2_ACCESS_KEY_ID', '').strip()
     secret_key = os.environ.get('R2_SECRET_ACCESS_KEY', '').strip()
+    # R2 Access Key IDs must be exactly 32 characters
+    if len(access_key) > 32:
+        access_key = access_key[:32]
     return boto3.client(
         's3',
         endpoint_url=R2_ENDPOINT,
