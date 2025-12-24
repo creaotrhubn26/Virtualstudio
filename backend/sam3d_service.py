@@ -8,7 +8,8 @@ Downloads models from Cloudflare R2 if not found locally.
 import os
 import sys
 import asyncio
-import httpx
+import boto3
+from botocore.config import Config
 from pathlib import Path
 from typing import Dict, Any, Optional
 import numpy as np
@@ -17,30 +18,39 @@ SAM3D_REPO_PATH = Path(__file__).parent / "sam3d_repo"
 if str(SAM3D_REPO_PATH) not in sys.path:
     sys.path.insert(0, str(SAM3D_REPO_PATH))
 
-R2_BUCKET_URL = "https://bbda9f467577de94fefbc4f2954db032.r2.cloudflarestorage.com/ml-models"
+R2_ENDPOINT = "https://bbda9f467577de94fefbc4f2954db032.r2.cloudflarestorage.com"
+R2_BUCKET_NAME = "ml-models"
 
 MODEL_FILES = {
     "model.ckpt": "Sam-3D/sam-3d-body-dinov3/model.ckpt",
     "mhr_model.pt": "Sam-3D/sam-3d-body-dinov3/assets/mhr_model.pt",
 }
 
+def get_r2_client():
+    """Get S3-compatible client for Cloudflare R2."""
+    return boto3.client(
+        's3',
+        endpoint_url=R2_ENDPOINT,
+        aws_access_key_id=os.environ.get('R2_ACCESS_KEY_ID'),
+        aws_secret_access_key=os.environ.get('R2_SECRET_ACCESS_KEY'),
+        config=Config(signature_version='s3v4'),
+        region_name='auto'
+    )
+
 async def download_from_r2(r2_path: str, local_path: Path) -> bool:
-    """Download a file from Cloudflare R2 bucket."""
-    url = f"{R2_BUCKET_URL}/{r2_path}"
+    """Download a file from Cloudflare R2 bucket using S3-compatible API."""
     local_path.parent.mkdir(parents=True, exist_ok=True)
     
     print(f"Downloading {r2_path} from R2...")
     try:
-        async with httpx.AsyncClient(timeout=300.0) as client:
-            response = await client.get(url)
-            if response.status_code == 200:
-                with open(local_path, 'wb') as f:
-                    f.write(response.content)
-                print(f"Downloaded {r2_path} to {local_path}")
-                return True
-            else:
-                print(f"Failed to download {r2_path}: HTTP {response.status_code}")
-                return False
+        def do_download():
+            client = get_r2_client()
+            client.download_file(R2_BUCKET_NAME, r2_path, str(local_path))
+        
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, do_download)
+        print(f"Downloaded {r2_path} to {local_path}")
+        return True
     except Exception as e:
         print(f"Error downloading {r2_path}: {e}")
         return False
