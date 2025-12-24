@@ -28,7 +28,7 @@ MODEL_FILES = {
 
 def get_r2_client():
     """Get S3-compatible client for Cloudflare R2."""
-    access_key = os.environ.get('R2_ACCESS_KEY_ID', '').strip()
+    access_key = os.environ.get('R2_ACCESS_KEY_ID', '').strip()[:32]
     secret_key = os.environ.get('R2_SECRET_ACCESS_KEY', '').strip()
     return boto3.client(
         's3',
