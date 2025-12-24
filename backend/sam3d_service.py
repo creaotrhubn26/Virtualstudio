@@ -65,7 +65,7 @@ class SAM3DService:
         self._check_model_availability()
     
     def _check_model_availability(self):
-        """Check if model files exist without loading them."""
+        """Initialize model paths - models will always be downloaded from R2."""
         try:
             import torch
             self.device = torch.device("cpu")
@@ -74,13 +74,8 @@ class SAM3DService:
             self.models_dir = Path(__file__).parent / "models"
             self.model_path = self.models_dir / "sam-3d-body-dinov3" / "model.ckpt"
             self.mhr_path = self.models_dir / "sam-3d-body-dinov3" / "assets" / "mhr_model.pt"
-            
-            if self.model_path.exists() and self.mhr_path.exists():
-                print(f"SAM 3D Body model files found (will load on first request)")
-                self.model_files_available = True
-            else:
-                print(f"SAM 3D Body model not found locally - will download from R2 on first request")
-                self.model_files_available = False
+            self.model_files_available = False
+            print(f"SAM 3D Body models will be downloaded from Cloudflare R2 on first request")
         except ImportError as e:
             print(f"PyTorch not available: {e}")
             self.model_files_available = False
