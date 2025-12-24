@@ -2,11 +2,13 @@
 SAM 3D Body Service
 Handles loading the Meta SAM 3D Body model and generating 3D avatars from images.
 Supports CPU-only inference mode for Replit compatibility.
+Downloads models from Cloudflare R2 if not found locally.
 """
 
 import os
 import sys
 import asyncio
+import httpx
 from pathlib import Path
 from typing import Dict, Any, Optional
 import numpy as np
@@ -14,6 +16,34 @@ import numpy as np
 SAM3D_REPO_PATH = Path(__file__).parent / "sam3d_repo"
 if str(SAM3D_REPO_PATH) not in sys.path:
     sys.path.insert(0, str(SAM3D_REPO_PATH))
+
+R2_BUCKET_URL = "https://bbda9f467577de94fefbc4f2954db032.r2.cloudflarestorage.com/ml-models"
+
+MODEL_FILES = {
+    "model.ckpt": "sam-3d-body-dinov3/model.ckpt",
+    "mhr_model.pt": "sam-3d-body-dinov3/assets/mhr_model.pt",
+}
+
+async def download_from_r2(r2_path: str, local_path: Path) -> bool:
+    """Download a file from Cloudflare R2 bucket."""
+    url = f"{R2_BUCKET_URL}/{r2_path}"
+    local_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    print(f"Downloading {r2_path} from R2...")
+    try:
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            response = await client.get(url)
+            if response.status_code == 200:
+                with open(local_path, 'wb') as f:
+                    f.write(response.content)
+                print(f"Downloaded {r2_path} to {local_path}")
+                return True
+            else:
+                print(f"Failed to download {r2_path}: HTTP {response.status_code}")
+                return False
+    except Exception as e:
+        print(f"Error downloading {r2_path}: {e}")
+        return False
 
 class SAM3DService:
     """
@@ -41,22 +71,44 @@ class SAM3DService:
             self.device = torch.device("cpu")
             print(f"PyTorch available. Using device: {self.device}")
             
-            model_path = Path(__file__).parent / "models" / "sam-3d-body-dinov3" / "model.ckpt"
-            mhr_path = Path(__file__).parent / "models" / "sam-3d-body-dinov3" / "assets" / "mhr_model.pt"
+            self.models_dir = Path(__file__).parent / "models"
+            self.model_path = self.models_dir / "sam-3d-body-dinov3" / "model.ckpt"
+            self.mhr_path = self.models_dir / "sam-3d-body-dinov3" / "assets" / "mhr_model.pt"
             
-            if model_path.exists() and mhr_path.exists():
+            if self.model_path.exists() and self.mhr_path.exists():
                 print(f"SAM 3D Body model files found (will load on first request)")
-                self.model_path = str(model_path)
-                self.mhr_path = str(mhr_path)
                 self.model_files_available = True
             else:
-                print(f"SAM 3D Body model not found at: {model_path}")
+                print(f"SAM 3D Body model not found locally - will download from R2 on first request")
                 self.model_files_available = False
-                self.use_placeholder = True
         except ImportError as e:
             print(f"PyTorch not available: {e}")
             self.model_files_available = False
             self.use_placeholder = True
+    
+    async def _download_models_from_r2(self):
+        """Download model files from Cloudflare R2 if not present locally."""
+        if self.model_path.exists() and self.mhr_path.exists():
+            return True
+        
+        print("Downloading SAM 3D models from Cloudflare R2...")
+        
+        success = True
+        if not self.model_path.exists():
+            result = await download_from_r2(MODEL_FILES["model.ckpt"], self.model_path)
+            success = success and result
+        
+        if not self.mhr_path.exists():
+            result = await download_from_r2(MODEL_FILES["mhr_model.pt"], self.mhr_path)
+            success = success and result
+        
+        if success:
+            self.model_files_available = True
+            print("All SAM 3D models downloaded successfully from R2")
+        else:
+            print("Some models failed to download from R2")
+        
+        return success
     
     async def ensure_model_loaded(self):
         """Lazy load the model on first request (thread-safe)."""
@@ -68,8 +120,12 @@ class SAM3DService:
                 return
             
             if not self.model_files_available:
-                self.use_placeholder = True
-                return
+                print("Models not found locally, attempting to download from R2...")
+                downloaded = await self._download_models_from_r2()
+                if not downloaded:
+                    print("Could not download models from R2, using placeholder")
+                    self.use_placeholder = True
+                    return
             
             self.model_loading = True
             print("Loading SAM 3D Body model on first request...")
@@ -100,23 +156,18 @@ class SAM3DService:
             self.device = torch.device("cpu")
             print(f"PyTorch loaded. Using device: {self.device}")
             
-            model_path = Path(__file__).parent / "models" / "sam-3d-body-dinov3" / "model.ckpt"
-            mhr_path = Path(__file__).parent / "models" / "sam-3d-body-dinov3" / "assets" / "mhr_model.pt"
-            
-            if model_path.exists() and mhr_path.exists():
-                print(f"SAM 3D Body model found at: {model_path}")
-                print(f"MHR model found at: {mhr_path}")
-                self.model_path = str(model_path)
-                self.mhr_path = str(mhr_path)
+            if self.model_path.exists() and self.mhr_path.exists():
+                print(f"SAM 3D Body model found at: {self.model_path}")
+                print(f"MHR model found at: {self.mhr_path}")
                 
                 try:
                     from sam_3d_body import load_sam_3d_body, SAM3DBodyEstimator
                     
                     print("Loading SAM 3D Body model (this may take a minute on CPU)...")
                     self.model, self.model_cfg = load_sam_3d_body(
-                        checkpoint_path=self.model_path,
+                        checkpoint_path=str(self.model_path),
                         device="cpu",
-                        mhr_path=self.mhr_path
+                        mhr_path=str(self.mhr_path)
                     )
                     
                     self.estimator = SAM3DBodyEstimator(
@@ -140,7 +191,7 @@ class SAM3DService:
                     self.use_placeholder = True
                     print("Model files available but inference failed. Using placeholder.")
             else:
-                print(f"SAM 3D Body model not found. Expected at: {model_path}")
+                print(f"SAM 3D Body model not found. Expected at: {self.model_path}")
                 self.use_placeholder = True
             
             try:
