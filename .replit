@@ -69,5 +69,3 @@ packages = ["cmake"]
 [userenv]
 
 [userenv.shared]
-CLOUDFLARE_API_TOKEN = "90Jh9PGc8ch4vdpIcWKZuqB48_rMXMsEgaMHDDa-"
-R2_ACCESS_KEY_ID = "ad28e515acb7fad97d8762f5d676be0fd932c"
