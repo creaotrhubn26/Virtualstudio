@@ -65,3 +65,8 @@ externalPort = 3002
 [nix]
 channel = "stable-25_05"
 packages = ["cmake"]
+
+[userenv]
+
+[userenv.shared]
+CLOUDFLARE_API_TOKEN = "90Jh9PGc8ch4vdpIcWKZuqB48_rMXMsEgaMHDDa-"
