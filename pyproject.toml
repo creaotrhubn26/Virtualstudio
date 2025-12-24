@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
+    "boto3>=1.42.16",
     "braceexpand>=0.1.7",
     "dlib>=20.0.0",
     "gdown>=5.2.0",

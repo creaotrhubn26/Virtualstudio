@@ -20,8 +20,8 @@ if str(SAM3D_REPO_PATH) not in sys.path:
 R2_BUCKET_URL = "https://bbda9f467577de94fefbc4f2954db032.r2.cloudflarestorage.com/ml-models"
 
 MODEL_FILES = {
-    "model.ckpt": "sam-3d-body-dinov3/model.ckpt",
-    "mhr_model.pt": "sam-3d-body-dinov3/assets/mhr_model.pt",
+    "model.ckpt": "Sam-3D/sam-3d-body-dinov3/model.ckpt",
+    "mhr_model.pt": "Sam-3D/sam-3d-body-dinov3/assets/mhr_model.pt",
 }
 
 async def download_from_r2(r2_path: str, local_path: Path) -> bool:
