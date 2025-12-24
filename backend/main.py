@@ -59,6 +59,40 @@ async def health_check():
         }
     return {"status": "healthy", "model_loaded": False}
 
+@app.get("/api/test-r2")
+async def test_r2_connection():
+    """Test R2 connection and list Sam-3D models."""
+    import boto3
+    from botocore.config import Config
+    
+    access_key = os.environ.get('R2_ACCESS_KEY_ID', '').strip()
+    secret_key = os.environ.get('R2_SECRET_ACCESS_KEY', '').strip()
+    
+    try:
+        client = boto3.client(
+            's3',
+            endpoint_url="https://bbda9f467577de94fefbc4f2954db032.r2.cloudflarestorage.com",
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            config=Config(signature_version='s3v4'),
+            region_name='auto'
+        )
+        
+        response = client.list_objects_v2(Bucket="ml-models", Prefix='Sam-3D/', MaxKeys=10)
+        objects = [{"key": obj['Key'], "size": obj['Size']} for obj in response.get('Contents', [])]
+        
+        return {
+            "success": True,
+            "access_key_preview": f"{access_key[:8]}... ({len(access_key)} chars)",
+            "objects": objects
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "access_key_preview": f"{access_key[:8]}... ({len(access_key)} chars)",
+            "error": str(e)
+        }
+
 @app.post("/api/generate-avatar")
 async def generate_avatar(file: UploadFile = File(...)):
     """
