@@ -58,10 +58,6 @@ externalPort = 3000
 localPort = 8000
 externalPort = 8000
 
-[[ports]]
-localPort = 8976
-externalPort = 3002
-
 [nix]
 channel = "stable-25_05"
 packages = ["cmake"]
@@ -69,3 +65,5 @@ packages = ["cmake"]
 [userenv]
 
 [userenv.shared]
+R2_ACCESS_KEY_ID = "647f2f192ee0016ef6d92e6e8ea06a3c"
+R2_SECRET_ACCESS_KEY = "973ac302c29fbba7d17bf088dfdce634de4a85a04e5ec8cacc8fa9050155f23a"
