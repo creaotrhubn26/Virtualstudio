@@ -28,11 +28,13 @@ MODEL_FILES = {
 
 def get_r2_client():
     """Get S3-compatible client for Cloudflare R2."""
+    access_key = os.environ.get('R2_ACCESS_KEY_ID', '').strip()
+    secret_key = os.environ.get('R2_SECRET_ACCESS_KEY', '').strip()
     return boto3.client(
         's3',
         endpoint_url=R2_ENDPOINT,
-        aws_access_key_id=os.environ.get('R2_ACCESS_KEY_ID'),
-        aws_secret_access_key=os.environ.get('R2_SECRET_ACCESS_KEY'),
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
         config=Config(signature_version='s3v4'),
         region_name='auto'
     )
