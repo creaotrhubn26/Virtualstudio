@@ -45,12 +45,21 @@ import {
   Tune,
   WbSunny,
 } from '@mui/icons-material';
-import { useAppStore } from '../../state/store';
+import { useAppStore } from '../state/store';
 import {
-  ALL_BACKDROPS,
-  BACKDROPS_BY_CATEGORY,
+  BACKDROP_DATABASE,
+  BACKDROP_CATEGORIES,
   BackdropCategory,
-} from '../../core/data/backdropDefinitions';
+  BackdropSpec,
+  getBackdropsByCategory,
+} from '../data/backdropDefinitions';
+
+const ALL_BACKDROPS = BACKDROP_DATABASE;
+const BACKDROPS_BY_CATEGORY: Record<BackdropCategory, BackdropSpec[]> = {
+  bakgrunn: getBackdropsByCategory('bakgrunn'),
+  diffuser: getBackdropsByCategory('diffuser'),
+  reflektor: getBackdropsByCategory('reflektor'),
+};
 
 export const BackdropsPanel: React.FC = () => {
   // #region agent log

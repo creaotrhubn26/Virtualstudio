@@ -18,6 +18,7 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
+import CameraRollIcon from '@mui/icons-material/CameraRoll';
 
 interface CameraBody {
   id: string;
@@ -353,6 +354,52 @@ export function CameraGearPanel() {
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#1a1a1a' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 1.5,
+        background: 'linear-gradient(135deg, rgba(52,152,219,0.15) 0%, rgba(41,128,185,0.15) 100%)',
+        borderRadius: '14px',
+        px: 2.5,
+        py: 1.5,
+        mx: 2,
+        mt: 2,
+        mb: 1,
+        border: '1px solid rgba(255,255,255,0.1)',
+      }}>
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 42,
+          height: 42,
+          borderRadius: '10px',
+          background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
+          boxShadow: '0 4px 12px rgba(52,152,219,0.4)',
+        }}>
+          <CameraRollIcon sx={{ fontSize: 24, color: '#fff' }} />
+        </Box>
+        <Box>
+          <Typography sx={{ 
+            fontWeight: 800, 
+            fontSize: 20,
+            background: 'linear-gradient(90deg, #85c1e9 0%, #5dade2 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: '-0.3px',
+          }}>
+            Kamerautstyr
+          </Typography>
+          <Typography sx={{ 
+            fontSize: 12, 
+            color: '#888',
+            fontWeight: 500,
+          }}>
+            Kameraer og objektiver
+          </Typography>
+        </Box>
+      </Box>
       <Tabs 
         value={activeTab} 
         onChange={(_, v) => setActiveTab(v)}

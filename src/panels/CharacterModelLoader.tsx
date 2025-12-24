@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   Box,
   Paper,
@@ -11,10 +11,11 @@ import {
   Tab,
   Slider,
   Chip,
-  Divider,
+  TextField,
+  InputAdornment,
   useMediaQuery,
 } from '@mui/material';
-import { Person, Delete, Refresh, Add } from '@mui/icons-material';
+import { Person, Delete, Refresh, Add, Search, Male, Female, ChildCare, Face, BusinessCenter, Checkroom, Accessibility } from '@mui/icons-material';
 import { logger } from '../core/services/logger';
 
 const log = logger.module('CharacterLoader');
@@ -47,79 +48,87 @@ const createCharacterSVG = (type: 'female' | 'male' | 'couple', color = '#666') 
   return `data:image/svg+xml,${encodeURIComponent(svgs[type])}`;
 };
 
-interface CategoryInfo {
-  key: string;
-  label: string;
-}
-
-const CATEGORIES: CategoryInfo[] = [
-  { key: 'all', label: 'Alle' },
-  { key: 'bryllup', label: 'Bryllup' },
-  { key: 'portrett', label: 'Portrett' },
-  { key: 'mote', label: 'Mote' },
-  { key: 'næringsliv', label: 'Næringsliv' },
-];
 
 const CHARACTER_MODELS: CharacterModel[] = [
   {
-    id: 'bride_01',
-    name: 'Klassisk Brud',
-    gender: 'female',
-    category: 'bryllup' as any,
-    modelUrl: '/models/characters/bride_01.glb',
-    thumbnail: createCharacterSVG('female', '#f5f5f5'),
-    description: 'Elegant bryllupsbrud med hvit kjole',
-    poses: 15,
+    id: 'sam3d_child',
+    name: 'Barn',
+    gender: 'neutral',
+    category: 'portrett' as any,
+    modelUrl: '/models/avatars/avatar_child.glb',
+    thumbnail: '/images/models/child.png',
+    description: 'SAM 3D Body - Barn 8 år',
+    poses: 1,
   },
   {
-    id: 'groom_01',
-    name: 'Klassisk Brudgom',
-    gender: 'male',
-    category: 'bryllup' as any,
-    modelUrl: '/models/characters/groom_01.glb',
-    thumbnail: createCharacterSVG('male', '#1a1a1a'),
-    description: 'Profesjonell brudgom i svart smoking',
-    poses: 15,
-  },
-  {
-    id: 'portrait_f_01',
-    name: 'Portrett Kvinne',
+    id: 'sam3d_teenager',
+    name: 'Tenåring',
     gender: 'female',
     category: 'portrett' as any,
-    modelUrl: '/models/characters/portrait_f_01.glb',
-    thumbnail: createCharacterSVG('female', '#e8b4a0'),
-    description: 'Naturlig portrettmodell - kvinne',
-    poses: 25,
+    modelUrl: '/models/avatars/avatar_teenager.glb',
+    thumbnail: '/images/models/teenager.png',
+    description: 'SAM 3D Body - Tenåring 14 år',
+    poses: 1,
   },
   {
-    id: 'portrait_m_01',
-    name: 'Portrett Mann',
+    id: 'sam3d_woman',
+    name: 'Voksen Kvinne',
+    gender: 'female',
+    category: 'portrett' as any,
+    modelUrl: '/models/avatars/avatar_woman.glb',
+    thumbnail: '/images/models/woman.png',
+    description: 'SAM 3D Body - Profesjonell kvinne',
+    poses: 1,
+  },
+  {
+    id: 'sam3d_man',
+    name: 'Voksen Mann',
     gender: 'male',
     category: 'portrett' as any,
-    modelUrl: '/models/characters/portrait_m_01.glb',
-    thumbnail: createCharacterSVG('male', '#c9a082'),
-    description: 'Naturlig portrettmodell - mann',
-    poses: 25,
+    modelUrl: '/models/avatars/avatar_man.glb',
+    thumbnail: '/images/models/man.png',
+    description: 'SAM 3D Body - Casual mann',
+    poses: 1,
   },
   {
-    id: 'fashion_f_01',
-    name: 'Motemodell Kvinne',
+    id: 'sam3d_elderly',
+    name: 'Eldre Kvinne',
+    gender: 'female',
+    category: 'portrett' as any,
+    modelUrl: '/models/avatars/avatar_elderly.glb',
+    thumbnail: '/images/models/elderly.png',
+    description: 'SAM 3D Body - Bestemor 70+',
+    poses: 1,
+  },
+  {
+    id: 'sam3d_athlete',
+    name: 'Atlet',
+    gender: 'male',
+    category: 'mote' as any,
+    modelUrl: '/models/avatars/avatar_athlete.glb',
+    thumbnail: '/images/models/athlete.png',
+    description: 'SAM 3D Body - Atletisk mann',
+    poses: 1,
+  },
+  {
+    id: 'sam3d_pregnant',
+    name: 'Gravid',
+    gender: 'female',
+    category: 'portrett' as any,
+    modelUrl: '/models/avatars/avatar_pregnant.glb',
+    thumbnail: '/images/models/pregnant.png',
+    description: 'SAM 3D Body - Gravid kvinne',
+    poses: 1,
+  },
+  {
+    id: 'sam3d_dancer',
+    name: 'Balettdanser',
     gender: 'female',
     category: 'mote' as any,
-    modelUrl: '/models/characters/fashion_f_01.glb',
-    thumbnail: createCharacterSVG('female', '#ff6b9d'),
-    description: 'High fashion modell - kvinne',
-    poses: 30,
-  },
-  {
-    id: 'business_m_01',
-    name: 'Forretningsmann',
-    gender: 'male',
-    category: 'næringsliv' as any,
-    modelUrl: '/models/characters/business_m_01.glb',
-    thumbnail: createCharacterSVG('male', '#1a365d'),
-    description: 'Profesjonell næringslivsmodell - mann',
-    poses: 20,
+    modelUrl: '/models/avatars/avatar_dancer.glb',
+    thumbnail: '/images/models/dancer.png',
+    description: 'SAM 3D Body - Grasiøs danser',
+    poses: 1,
   },
 ];
 
@@ -154,18 +163,26 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
   const isTouchDevice = useMediaQuery('(pointer: coarse)');
   const shouldUseTabletMode = isTablet || isTouchDevice;
 
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedModel, setSelectedModel] = useState<CharacterModel | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [selectedPose, setSelectedPose] = useState<Pose | null>(null);
   const [skinTone, setSkinTone] = useState('#FFDAB9');
   const [height, setHeight] = useState(1.0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female' | 'neutral'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'portrett' | 'mote' | 'bryllup' | 'naringsliv'>('all');
 
-  const filteredModels =
-    selectedCategory === 'all'
-      ? CHARACTER_MODELS
-      : CHARACTER_MODELS.filter((model) => model.category === selectedCategory);
+  const filteredModels = useMemo(() => {
+    return CHARACTER_MODELS.filter((model) => {
+      const matchesSearch = searchQuery === '' || 
+        model.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        model.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesGender = genderFilter === 'all' || model.gender === genderFilter;
+      const matchesCategory = categoryFilter === 'all' || (model.category as string) === categoryFilter;
+      return matchesSearch && matchesGender && matchesCategory;
+    });
+  }, [searchQuery, genderFilter, categoryFilter]);
 
   const loadCharacter = useCallback(async (model: CharacterModel) => {
     setLoading(true);
@@ -213,21 +230,61 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
 
   return (
     <Paper elevation={0} sx={{ p: 2, backgroundColor: 'transparent', color: '#fff' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-        <Person sx={{ color: '#3b82f6' }} />
-        <Typography variant="subtitle1" fontWeight={600}>Karakterer</Typography>
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 1.5,
+        background: 'linear-gradient(135deg, rgba(155,89,182,0.15) 0%, rgba(142,68,173,0.15) 100%)',
+        borderRadius: '14px',
+        px: 2.5,
+        py: 1.5,
+        mb: 2,
+        border: '1px solid rgba(255,255,255,0.1)',
+      }}>
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 42,
+          height: 42,
+          borderRadius: '10px',
+          background: 'linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%)',
+          boxShadow: '0 4px 12px rgba(155,89,182,0.4)',
+        }}>
+          <Accessibility sx={{ fontSize: 24, color: '#fff' }} />
+        </Box>
+        <Box>
+          <Typography sx={{ 
+            fontWeight: 800, 
+            fontSize: 20,
+            background: 'linear-gradient(90deg, #d4a5e8 0%, #bb8fce 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: '-0.3px',
+          }}>
+            Modeller
+          </Typography>
+          <Typography sx={{ 
+            fontSize: 12, 
+            color: '#888',
+            fontWeight: 500,
+          }}>
+            SAM 3D Body karakterer og poser
+          </Typography>
+        </Box>
         <Chip
-          label={`${CHARACTER_MODELS.length} modeller`}
+          label={`${filteredModels.length}/${CHARACTER_MODELS.length}`}
           size="medium"
           sx={{ 
             ml: 'auto', 
-            bgcolor: '#3b82f6', 
+            bgcolor: '#9b59b6', 
             color: '#fff',
             fontSize: 14,
             fontWeight: 700,
             px: 1.5,
             height: 32,
-            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.4)',
+            boxShadow: '0 2px 8px rgba(155,89,182,0.4)',
             border: '2px solid rgba(255, 255, 255, 0.2)',
           }}
         />
@@ -253,42 +310,163 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
 
       {activeTab === 0 && (
         <>
-          <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            {CATEGORIES.map((cat) => (
-              <Button
-                key={cat.key}
-                variant={selectedCategory === cat.key ? 'contained' : 'outlined'}
-                size="medium"
-                onClick={() => setSelectedCategory(cat.key)}
-                sx={{ 
-                  fontSize: 13, 
-                  py: 1.5, 
-                  px: 2.5,
-                  minHeight: 48,
-                  minWidth: 90,
-                  borderRadius: 2,
-                  fontWeight: selectedCategory === cat.key ? 700 : 500,
-                  bgcolor: selectedCategory === cat.key ? '#3b82f6' : 'transparent',
-                  borderColor: selectedCategory === cat.key ? '#3b82f6' : '#555',
-                  color: selectedCategory === cat.key ? '#fff' : '#ccc',
-                  boxShadow: selectedCategory === cat.key ? '0 4px 12px rgba(59, 130, 246, 0.4)' : 'none',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    bgcolor: selectedCategory === cat.key ? '#2563eb' : 'rgba(59, 130, 246, 0.15)',
-                    borderColor: '#3b82f6',
-                    transform: 'translateY(-1px)',
-                  },
-                  '&:active': {
-                    transform: 'translateY(0)',
-                  },
+          <TextField
+            size="small"
+            placeholder="Søk modeller..."
+            fullWidth
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search sx={{ color: '#888', fontSize: 20 }} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              mb: 2,
+              '& .MuiInputBase-root': {
+                bgcolor: '#2a2a2a',
+                color: '#fff',
+                borderRadius: 2,
+                minHeight: 48,
+                fontSize: 14,
+                '& fieldset': { borderColor: '#444' },
+                '&:hover fieldset': { borderColor: '#666' },
+                '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
+              },
+              '& input': { color: '#fff' },
+              '& input::placeholder': { color: '#888' },
+            }}
+          />
+
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block', fontSize: 12 }}>Kjønn</Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
+              <Chip
+                icon={<Person sx={{ fontSize: 18 }} />}
+                label="Alle"
+                onClick={() => setGenderFilter('all')}
+                sx={{
+                  minHeight: 40,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  bgcolor: genderFilter === 'all' ? '#3b82f6' : '#2a2a2a',
+                  color: '#fff',
+                  border: genderFilter === 'all' ? '2px solid #3b82f6' : '1px solid #444',
+                  '&:hover': { bgcolor: genderFilter === 'all' ? '#2563eb' : '#333' },
                 }}
-              >
-                {cat.label}
-              </Button>
-            ))}
+              />
+              <Chip
+                icon={<Male sx={{ fontSize: 18 }} />}
+                label="Mann"
+                onClick={() => setGenderFilter('male')}
+                sx={{
+                  minHeight: 40,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  bgcolor: genderFilter === 'male' ? '#3b82f6' : '#2a2a2a',
+                  color: '#fff',
+                  border: genderFilter === 'male' ? '2px solid #3b82f6' : '1px solid #444',
+                  '&:hover': { bgcolor: genderFilter === 'male' ? '#2563eb' : '#333' },
+                }}
+              />
+              <Chip
+                icon={<Female sx={{ fontSize: 18 }} />}
+                label="Kvinne"
+                onClick={() => setGenderFilter('female')}
+                sx={{
+                  minHeight: 40,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  bgcolor: genderFilter === 'female' ? '#3b82f6' : '#2a2a2a',
+                  color: '#fff',
+                  border: genderFilter === 'female' ? '2px solid #3b82f6' : '1px solid #444',
+                  '&:hover': { bgcolor: genderFilter === 'female' ? '#2563eb' : '#333' },
+                }}
+              />
+              <Chip
+                icon={<ChildCare sx={{ fontSize: 18 }} />}
+                label="Barn"
+                onClick={() => setGenderFilter('neutral')}
+                sx={{
+                  minHeight: 40,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  bgcolor: genderFilter === 'neutral' ? '#3b82f6' : '#2a2a2a',
+                  color: '#fff',
+                  border: genderFilter === 'neutral' ? '2px solid #3b82f6' : '1px solid #444',
+                  '&:hover': { bgcolor: genderFilter === 'neutral' ? '#2563eb' : '#333' },
+                }}
+              />
+            </Box>
+
+            <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block', fontSize: 12 }}>Kategori</Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Chip
+                label="Alle"
+                onClick={() => setCategoryFilter('all')}
+                sx={{
+                  minHeight: 40,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  bgcolor: categoryFilter === 'all' ? '#22c55e' : '#2a2a2a',
+                  color: '#fff',
+                  border: categoryFilter === 'all' ? '2px solid #22c55e' : '1px solid #444',
+                  '&:hover': { bgcolor: categoryFilter === 'all' ? '#16a34a' : '#333' },
+                }}
+              />
+              <Chip
+                icon={<Face sx={{ fontSize: 18 }} />}
+                label="Portrett"
+                onClick={() => setCategoryFilter('portrett')}
+                sx={{
+                  minHeight: 40,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  bgcolor: categoryFilter === 'portrett' ? '#22c55e' : '#2a2a2a',
+                  color: '#fff',
+                  border: categoryFilter === 'portrett' ? '2px solid #22c55e' : '1px solid #444',
+                  '&:hover': { bgcolor: categoryFilter === 'portrett' ? '#16a34a' : '#333' },
+                }}
+              />
+              <Chip
+                icon={<Checkroom sx={{ fontSize: 18 }} />}
+                label="Mote"
+                onClick={() => setCategoryFilter('mote')}
+                sx={{
+                  minHeight: 40,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  bgcolor: categoryFilter === 'mote' ? '#22c55e' : '#2a2a2a',
+                  color: '#fff',
+                  border: categoryFilter === 'mote' ? '2px solid #22c55e' : '1px solid #444',
+                  '&:hover': { bgcolor: categoryFilter === 'mote' ? '#16a34a' : '#333' },
+                }}
+              />
+            </Box>
           </Box>
 
-          <Divider sx={{ my: 1.5, borderColor: '#333' }} />
+          <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block', fontSize: 12 }}>
+            Viser {filteredModels.length} av {CHARACTER_MODELS.length} modeller
+          </Typography>
+
+          {filteredModels.length === 0 && (
+            <Box sx={{ 
+              textAlign: 'center', 
+              py: 4, 
+              color: '#888',
+              bgcolor: '#1a1a1a',
+              borderRadius: 2,
+              border: '1px dashed #444',
+              mb: 2,
+            }}>
+              <Typography variant="body2" sx={{ mb: 1 }}>Ingen modeller funnet</Typography>
+              <Typography variant="caption" sx={{ color: '#666' }}>
+                Prøv å endre søk eller filtre
+              </Typography>
+            </Box>
+          )}
 
           <Box sx={{ 
             maxHeight: filteredModels.length > 6 ? 400 : 'none', 
@@ -328,9 +506,30 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
                     <Typography variant="body2" noWrap sx={{ color: '#fff', fontSize: 13, fontWeight: 600, mb: 0.5 }}>
                       {model.name}
                     </Typography>
-                    <Typography variant="caption" display="block" sx={{ color: '#888', fontSize: 11, mb: 1 }}>
-                      {model.poses} poser
-                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 0.5, mb: 1, flexWrap: 'wrap' }}>
+                      <Chip
+                        size="small"
+                        label={model.gender === 'male' ? 'Mann' : model.gender === 'female' ? 'Kvinne' : 'Barn'}
+                        sx={{
+                          height: 20,
+                          fontSize: 10,
+                          bgcolor: model.gender === 'male' ? '#3b82f622' : model.gender === 'female' ? '#ec489922' : '#8b5cf622',
+                          color: model.gender === 'male' ? '#60a5fa' : model.gender === 'female' ? '#f472b6' : '#a78bfa',
+                          border: '1px solid currentColor',
+                        }}
+                      />
+                      <Chip
+                        size="small"
+                        label={(model.category as string).charAt(0).toUpperCase() + (model.category as string).slice(1)}
+                        sx={{
+                          height: 20,
+                          fontSize: 10,
+                          bgcolor: '#22c55e22',
+                          color: '#4ade80',
+                          border: '1px solid currentColor',
+                        }}
+                      />
+                    </Box>
                     <Button
                       size="medium"
                       startIcon={<Add sx={{ fontSize: 18 }} />}

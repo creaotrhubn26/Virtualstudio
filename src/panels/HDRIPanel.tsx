@@ -17,6 +17,7 @@ import {
   CloudQueue,
   NightsStay,
   Landscape,
+  Public,
   CheckCircle,
   Add as AddIcon,
   Search as SearchIcon,
@@ -176,9 +177,51 @@ export function HDRIPanel() {
 
   return (
     <Box sx={{ p: 2, height: '100%', overflow: 'auto', bgcolor: '#1a1a1a' }}>
-      <Typography variant="subtitle2" sx={{ color: '#00a8ff', mb: 2, fontWeight: 600, fontSize: 16 }}>
-        HDRI Miljø
-      </Typography>
+      {/* Header */}
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 1.5,
+        background: 'linear-gradient(135deg, rgba(230,126,34,0.15) 0%, rgba(211,84,0,0.15) 100%)',
+        borderRadius: '14px',
+        px: 2.5,
+        py: 1.5,
+        mb: 2,
+        border: '1px solid rgba(255,255,255,0.1)',
+      }}>
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 42,
+          height: 42,
+          borderRadius: '10px',
+          background: 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)',
+          boxShadow: '0 4px 12px rgba(230,126,34,0.4)',
+        }}>
+          <Public sx={{ fontSize: 24, color: '#fff' }} />
+        </Box>
+        <Box>
+          <Typography sx={{ 
+            fontWeight: 800, 
+            fontSize: 20,
+            background: 'linear-gradient(90deg, #f5b041 0%, #eb984e 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: '-0.3px',
+          }}>
+            HDRI Miljø
+          </Typography>
+          <Typography sx={{ 
+            fontSize: 12, 
+            color: '#888',
+            fontWeight: 500,
+          }}>
+            Høyoppløselige miljøbakgrunner
+          </Typography>
+        </Box>
+      </Box>
 
       <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
         {CATEGORIES.map(cat => (

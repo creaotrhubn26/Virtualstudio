@@ -19,6 +19,11 @@ import {
   Alert,
   Stack,
   Chip,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import {
   Close,
@@ -26,6 +31,7 @@ import {
   Person,
   CheckCircle,
   Error as ErrorIcon,
+  Save,
 } from '@mui/icons-material';
 
 interface AvatarGeneratorPanelProps {
@@ -35,6 +41,16 @@ interface AvatarGeneratorPanelProps {
 }
 
 type GenerationStatus = 'idle' | 'uploading' | 'processing' | 'success' | 'error';
+
+const AVATAR_CATEGORIES = [
+  { id: 'voksen', label: 'Voksen' },
+  { id: 'ungdom', label: 'Ungdom' },
+  { id: 'barn', label: 'Barn' },
+  { id: 'eldre', label: 'Eldre' },
+  { id: 'atlet', label: 'Atlet' },
+  { id: 'modell', label: 'Modell' },
+  { id: 'annet', label: 'Annet' },
+];
 
 export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
   open,
@@ -47,6 +63,16 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
   const [progress, setProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [generatedMetadata, setGeneratedMetadata] = useState<any>(null);
+  const [avatarName, setAvatarName] = useState<string>('');
+  const [avatarCategory, setAvatarCategory] = useState<string>('voksen');
+  const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
+  const [faceAnalysis, setFaceAnalysis] = useState<{
+    gender?: string;
+    gender_confidence?: number;
+    age_range?: string;
+    age_confidence?: number;
+    category?: string;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,6 +110,7 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
     setStatus('uploading');
     setProgress(10);
     setErrorMessage(null);
+    setFaceAnalysis(null);
 
     try {
       const formData = new FormData();
@@ -92,7 +119,7 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
       setStatus('processing');
       setProgress(30);
 
-      const response = await fetch('/api/generate-avatar', {
+      const response = await fetch('/api/generate-avatar-with-analysis', {
         method: 'POST',
         body: formData,
       });
@@ -108,12 +135,37 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
       setProgress(100);
       setStatus('success');
       setGeneratedMetadata(result.metadata);
+      setGeneratedUrl(result.glb_url);
 
-      onAvatarGenerated(result.glb_url, result.metadata);
+      if (result.face_analysis) {
+        setFaceAnalysis(result.face_analysis);
+        if (result.face_analysis.category) {
+          setAvatarCategory(result.face_analysis.category);
+        }
+        const genderLabel = result.face_analysis.gender === 'Mann' ? 'Mann' : 'Kvinne';
+        const categoryLabel = result.face_analysis.category === 'barn' ? 'Barn' : 
+                             result.face_analysis.category === 'ungdom' ? 'Ungdom' : 'Voksen';
+        if (!avatarName) {
+          setAvatarName(`${genderLabel} (${categoryLabel})`);
+        }
+      } else if (!avatarName) {
+        setAvatarName(`Avatar ${new Date().toLocaleDateString('nb-NO')}`);
+      }
 
     } catch (error: any) {
       setStatus('error');
       setErrorMessage(error.message || 'En feil oppstod under generering');
+    }
+  };
+
+  const handleAddToScene = () => {
+    if (generatedUrl) {
+      onAvatarGenerated(generatedUrl, {
+        ...generatedMetadata,
+        name: avatarName,
+        category: avatarCategory,
+      });
+      onClose();
     }
   };
 
@@ -124,6 +176,9 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
     setProgress(0);
     setErrorMessage(null);
     setGeneratedMetadata(null);
+    setGeneratedUrl(null);
+    setAvatarName('');
+    setFaceAnalysis(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -131,14 +186,21 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
+      <DialogTitle sx={{ p: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Person sx={{ color: '#00d4ff' }} />
-            <Typography variant="h6">Avatar Generator</Typography>
+            <Person sx={{ color: '#00d4ff', fontSize: 28 }} />
+            <Typography variant="h6" sx={{ fontSize: '1.1rem' }}>Avatar Generator</Typography>
             <Chip label="SAM 3D" size="small" color="primary" variant="outlined" />
           </Box>
-          <IconButton onClick={onClose} size="small">
+          <IconButton 
+            onClick={onClose} 
+            sx={{ 
+              minWidth: 48, 
+              minHeight: 48,
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }
+            }}
+          >
             <Close />
           </IconButton>
         </Box>
@@ -152,6 +214,23 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
               Avataren kan brukes som modell i lysoppsettet ditt.
             </Typography>
           </Alert>
+
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ width: '100%', mb: 0.5 }}>
+              Tidligere genererte avatarer:
+            </Typography>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => {
+                onAvatarGenerated('/api/avatar/fda04469-af36-46ec-a5c1-7ae7257ca77d.glb', { name: 'Mimi', category: 'voksen' });
+                onClose();
+              }}
+              sx={{ minHeight: 40 }}
+            >
+              Last Mimi
+            </Button>
+          </Box>
 
           <input
             type="file"
@@ -239,18 +318,100 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
           )}
 
           {status === 'success' && generatedMetadata && (
-            <Alert severity="success" icon={<CheckCircle />}>
-              <Typography variant="body2">
-                Avatar generert! {generatedMetadata.type === 'placeholder' 
-                  ? 'Placeholder-mannequin opprettet.' 
-                  : `${generatedMetadata.vertices} vertices, ${generatedMetadata.faces} faces.`}
-              </Typography>
-              {generatedMetadata.note && (
-                <Typography variant="caption" display="block" sx={{ mt: 0.5, opacity: 0.7 }}>
-                  {generatedMetadata.note}
+            <>
+              <Alert severity="success" icon={<CheckCircle />}>
+                <Typography variant="body2">
+                  Avatar generert! {generatedMetadata.type === 'placeholder' 
+                    ? 'Placeholder-mannequin opprettet.' 
+                    : `${generatedMetadata.vertices} vertices, ${generatedMetadata.faces} faces.`}
                 </Typography>
+              </Alert>
+
+              {faceAnalysis && (
+                <Box sx={{ 
+                  p: 2, 
+                  bgcolor: 'rgba(0,212,255,0.1)', 
+                  borderRadius: 2, 
+                  border: '1px solid rgba(0,212,255,0.3)' 
+                }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, color: '#00d4ff' }}>
+                    Automatisk gjenkjenning
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    <Chip 
+                      label={`Kjønn: ${faceAnalysis.gender}`}
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      sx={{ minHeight: 32 }}
+                    />
+                    <Chip 
+                      label={`Alder: ${faceAnalysis.age_range} år`}
+                      size="small"
+                      color="secondary"
+                      variant="outlined"
+                      sx={{ minHeight: 32 }}
+                    />
+                    <Chip 
+                      label={`Kategori: ${faceAnalysis.category === 'barn' ? 'Barn' : 
+                             faceAnalysis.category === 'ungdom' ? 'Ungdom' : 'Voksen'}`}
+                      size="small"
+                      color="success"
+                      variant="outlined"
+                      sx={{ minHeight: 32 }}
+                    />
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                    Konfidens: kjønn {Math.round((faceAnalysis.gender_confidence || 0) * 100)}%, 
+                    alder {Math.round((faceAnalysis.age_confidence || 0) * 100)}%
+                  </Typography>
+                </Box>
               )}
-            </Alert>
+              
+              <TextField
+                fullWidth
+                label="Navn på avatar"
+                value={avatarName}
+                onChange={(e) => setAvatarName(e.target.value)}
+                placeholder="F.eks. Kunde A, Modell 1"
+                sx={{ 
+                  '& .MuiOutlinedInput-root': { 
+                    bgcolor: 'rgba(0,0,0,0.2)',
+                    minHeight: 48,
+                  },
+                  '& .MuiInputBase-input': {
+                    fontSize: '1rem',
+                    py: 1.5,
+                  }
+                }}
+              />
+              
+              <FormControl fullWidth>
+                <InputLabel>Kategori</InputLabel>
+                <Select
+                  value={avatarCategory}
+                  label="Kategori"
+                  onChange={(e) => setAvatarCategory(e.target.value)}
+                  sx={{ 
+                    bgcolor: 'rgba(0,0,0,0.2)',
+                    minHeight: 48,
+                    '& .MuiSelect-select': {
+                      py: 1.5,
+                    }
+                  }}
+                >
+                  {AVATAR_CATEGORIES.map((cat) => (
+                    <MenuItem 
+                      key={cat.id} 
+                      value={cat.id}
+                      sx={{ minHeight: 44, fontSize: '1rem' }}
+                    >
+                      {cat.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </>
           )}
 
           {errorMessage && (
@@ -261,19 +422,46 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
         </Stack>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2, gap: 1 }}>
+      <DialogActions sx={{ p: 2, gap: 1.5 }}>
         {status === 'success' ? (
           <>
-            <Button onClick={handleReset} color="inherit">
+            <Button 
+              onClick={handleReset} 
+              color="inherit"
+              sx={{ 
+                minHeight: 48, 
+                px: 3,
+                fontSize: '0.95rem'
+              }}
+            >
               Ny Avatar
             </Button>
-            <Button onClick={onClose} variant="contained" color="primary">
-              Lukk
+            <Button
+              onClick={handleAddToScene}
+              variant="contained"
+              color="primary"
+              startIcon={<Save />}
+              disabled={!avatarName.trim()}
+              sx={{ 
+                minHeight: 48, 
+                px: 3,
+                fontSize: '0.95rem'
+              }}
+            >
+              Legg til i scene
             </Button>
           </>
         ) : (
           <>
-            <Button onClick={onClose} color="inherit">
+            <Button 
+              onClick={onClose} 
+              color="inherit"
+              sx={{ 
+                minHeight: 48, 
+                px: 3,
+                fontSize: '0.95rem'
+              }}
+            >
               Avbryt
             </Button>
             <Button
@@ -282,6 +470,11 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
               color="primary"
               disabled={!selectedFile || status === 'uploading' || status === 'processing'}
               startIcon={<Person />}
+              sx={{ 
+                minHeight: 48, 
+                px: 3,
+                fontSize: '0.95rem'
+              }}
             >
               Generer Avatar
             </Button>

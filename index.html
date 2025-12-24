@@ -160,7 +160,7 @@
               <span class="hierarchy-arrow" aria-hidden="true">▸</span>
               <div class="header-icon bg-icon" aria-hidden="true"></div>
               <span>Bakgrunner</span>
-              <span class="group-count" aria-label="1 element">1</span>
+              <span class="group-count" aria-label="2 elementer">2</span>
             </div>
             <ul class="hierarchy-items" id="backgroundsGroup" role="group" style="display: none;">
               <li class="hierarchy-item" data-id="studio-bg" role="treeitem" tabindex="0" aria-selected="false">
@@ -170,6 +170,19 @@
                   <span class="item-type">Seamless</span>
                 </div>
                 <div class="item-actions" role="group" aria-label="Handlinger">
+                  <input type="color" class="color-picker" id="wallColorPicker" value="#2a2a2a" title="Velg farge" aria-label="Velg veggfarge" style="width:24px;height:24px;border:none;background:none;cursor:pointer;padding:0;">
+                  <button class="action-icon visibility-btn active" title="Synlig" aria-label="Veksle synlighet" aria-pressed="true"></button>
+                  <button class="action-icon lock-btn" title="Laas" aria-label="Veksle laas" aria-pressed="false"></button>
+                </div>
+              </li>
+              <li class="hierarchy-item" data-id="studio-floor" role="treeitem" tabindex="0" aria-selected="false">
+                <div class="item-thumbnail bg-thumb" aria-hidden="true" style="background:linear-gradient(135deg,#3a3a3a,#1a1a1a);"></div>
+                <div class="item-info">
+                  <span class="item-name">Gulv</span>
+                  <span class="item-type">Studio</span>
+                </div>
+                <div class="item-actions" role="group" aria-label="Handlinger">
+                  <input type="color" class="color-picker" id="floorColorPicker" value="#1a1a1a" title="Velg farge" aria-label="Velg gulvfarge" style="width:24px;height:24px;border:none;background:none;cursor:pointer;padding:0;">
                   <button class="action-icon visibility-btn active" title="Synlig" aria-label="Veksle synlighet" aria-pressed="true"></button>
                   <button class="action-icon lock-btn" title="Laas" aria-label="Veksle laas" aria-pressed="false"></button>
                 </div>
@@ -926,6 +939,7 @@
     <div class="actor-bottom-panel" id="actorBottomPanel">
       <div class="panel-resize-handle" id="panelResizeHandle" aria-label="Dra for a endre panelstorrelse"></div>
       <div class="actor-panel-tabs" role="tablist" aria-label="Studio Library faner">
+        <button class="actor-tab" data-tab="scener" role="tab" aria-selected="false"><div class="tab-icon scene-icon"></div> Scener</button>
         <button class="actor-tab" data-tab="timeline" role="tab" aria-selected="false"><div class="tab-icon timeline-icon"></div> Tidslinje</button>
         <button class="actor-tab active" data-tab="models" role="tab" aria-selected="true"><div class="tab-icon model-icon"></div> Modeller</button>
         <button class="actor-tab" data-tab="lights" role="tab" aria-selected="false"><div class="tab-icon light-icon"></div> Lys</button>
@@ -943,7 +957,7 @@
         </div>
       </div>
       <div class="actor-panel-body">
-        <div class="actor-sidebar">
+        <div class="actor-sidebar" style="display: none;">
           <input type="text" class="actor-search" placeholder="Søk...">
           <div class="actor-categories" id="panelCategories">
             <div class="actor-category" data-category="all">Alle</div>
@@ -959,6 +973,10 @@
               <button id="openAvatarGeneratorBtn" style="width:100%;min-height:56px;border-radius:12px;background:linear-gradient(135deg, rgba(0,212,255,0.3), rgba(138,43,226,0.3));border:2px solid rgba(0,212,255,0.5);color:#fff;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;">
                 🧑 Generer 3D-Avatar fra Bilde (SAM 3D)
               </button>
+              <div id="generatedAvatarsSection" style="display:none;">
+                <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:8px;font-weight:600;">Mine Avatarer</div>
+                <div id="generatedAvatarsList" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+              </div>
             </div>
             <div id="characterLoaderRoot"></div>
           </div>
@@ -976,6 +994,9 @@
           </div>
           <div class="tab-content" data-content="hdri">
             <div id="hdriPanelRoot"></div>
+          </div>
+          <div class="tab-content" data-content="scener">
+            <div id="scenerPanelRoot"></div>
           </div>
           <div class="tab-content" data-content="timeline">
             <div id="keyframeTimelineRoot"></div>

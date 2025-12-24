@@ -2,12 +2,19 @@ import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp } from './App';
+import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp } from './App';
 import { useAppStore, useFocusStore, SceneNode } from './state/store';
 import { focusController } from './core/FocusController';
 import { virtualActorService } from './core/services/virtualActorService';
 import { propRenderingService } from './core/services/propRenderingService';
 import { getPropById } from './core/data/propDefinitions';
+import { ScenarioPreset } from './data/scenarioPresets';
+
+declare global {
+  interface Window {
+    virtualStudio: VirtualStudio | undefined;
+  }
+}
 
 // Early initialization of Studio Library button - runs immediately
 (function initStudioLibraryButton() {
@@ -142,6 +149,7 @@ class VirtualStudio {
   private selectedRotAxes: Set<string> = new Set(['x', 'y', 'z']);
   private gridMesh: BABYLON.Mesh | null = null;
   private gizmoManager: BABYLON.GizmoManager | null = null;
+  private wallsVisible: boolean = true;
   private topViewCanvas: HTMLCanvasElement | null = null;
   private topViewCtx: CanvasRenderingContext2D | null = null;
   private histogramCanvas: HTMLCanvasElement | null = null;
@@ -262,6 +270,53 @@ class VirtualStudio {
     this.camera.fov = 0.8;
   }
 
+  public toggleWalls(visible?: boolean): boolean {
+    this.wallsVisible = visible !== undefined ? visible : !this.wallsVisible;
+    
+    const walls = ['backWall', 'leftWall', 'rightWall'];
+    walls.forEach(name => {
+      const wall = this.scene.getMeshByName(name);
+      if (wall) {
+        wall.isVisible = this.wallsVisible;
+      }
+    });
+    
+    return this.wallsVisible;
+  }
+
+  private floorVisible = true;
+
+  public toggleFloor(visible?: boolean): boolean {
+    this.floorVisible = visible !== undefined ? visible : !this.floorVisible;
+    
+    const ground = this.scene.getMeshByName('ground');
+    const grid = this.scene.getMeshByName('grid');
+    
+    if (ground) ground.isVisible = this.floorVisible;
+    if (grid) grid.isVisible = this.floorVisible;
+    
+    return this.floorVisible;
+  }
+
+  public setWallColor(hexColor: string): void {
+    const color = BABYLON.Color3.FromHexString(hexColor);
+    const walls = ['backWall', 'leftWall', 'rightWall'];
+    walls.forEach(name => {
+      const wall = this.scene.getMeshByName(name);
+      if (wall && wall.material) {
+        (wall.material as BABYLON.StandardMaterial).diffuseColor = color;
+      }
+    });
+  }
+
+  public setFloorColor(hexColor: string): void {
+    const color = BABYLON.Color3.FromHexString(hexColor);
+    const ground = this.scene.getMeshByName('ground');
+    if (ground && ground.material) {
+      (ground.material as BABYLON.StandardMaterial).diffuseColor = color;
+    }
+  }
+
   private setupStudio(): void {
     const hemi = new BABYLON.HemisphericLight('ambient', new BABYLON.Vector3(0, 1, 0), this.scene);
     hemi.intensity = 0.3;
@@ -285,28 +340,23 @@ class VirtualStudio {
     const wallMat = new BABYLON.StandardMaterial('wallMat', this.scene);
     wallMat.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.18);
     wallMat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
+    wallMat.backFaceCulling = false;
 
-    const backWall = BABYLON.MeshBuilder.CreatePlane('backWall', { width: 20, height: 8 }, this.scene);
+    const backWall = BABYLON.MeshBuilder.CreatePlane('backWall', { width: 20, height: 8, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, this.scene);
     backWall.position.set(0, 4, -10);
     backWall.material = wallMat;
 
-    const leftWall = BABYLON.MeshBuilder.CreatePlane('leftWall', { width: 20, height: 8 }, this.scene);
+    const leftWall = BABYLON.MeshBuilder.CreatePlane('leftWall', { width: 20, height: 8, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, this.scene);
     leftWall.position.set(-10, 4, 0);
     leftWall.rotation.y = Math.PI / 2;
     leftWall.material = wallMat;
 
-    const rightWall = BABYLON.MeshBuilder.CreatePlane('rightWall', { width: 20, height: 8 }, this.scene);
+    const rightWall = BABYLON.MeshBuilder.CreatePlane('rightWall', { width: 20, height: 8, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, this.scene);
     rightWall.position.set(10, 4, 0);
     rightWall.rotation.y = -Math.PI / 2;
     rightWall.material = wallMat;
 
-    const model = BABYLON.MeshBuilder.CreateCapsule('mannequin', { height: 1.75, radius: 0.22 }, this.scene);
-    model.position.set(0, 0.875, 0);
-    const modelMat = new BABYLON.StandardMaterial('modelMat', this.scene);
-    modelMat.diffuseColor = new BABYLON.Color3(0.6, 0.55, 0.5);
-    modelMat.specularColor = new BABYLON.Color3(0.15, 0.15, 0.15);
-    model.material = modelMat;
-
+    // Default light for the scene (no mannequin - use Studio Library to add avatars)
     this.addLight('godox-ad600', new BABYLON.Vector3(-3, 5, 3));
   }
 
@@ -930,6 +980,442 @@ class VirtualStudio {
         lumens
       });
     }) as EventListener);
+
+    window.addEventListener('applyScenarioPreset', ((e: CustomEvent) => {
+      const preset = e.detail;
+      console.log('Applying scenario preset:', preset.id, preset.title);
+      this.applyScenarioPreset(preset);
+    }) as EventListener);
+
+    window.addEventListener('showRecommendedAssets', ((e: CustomEvent) => {
+      const preset = e.detail;
+      console.log('Showing recommended assets for:', preset.id);
+    }) as EventListener);
+
+    window.addEventListener('getSceneConfig', (() => {
+      const config = this.getCurrentSceneConfig();
+      window.dispatchEvent(new CustomEvent('sceneConfigResponse', { detail: config }));
+    }) as EventListener);
+
+    window.addEventListener('ch-apply-animation-preset', ((e: CustomEvent) => {
+      const preset = e.detail;
+      console.log('Applying animation preset:', preset.name, preset.category);
+      this.applyAnimationPreset(preset);
+    }) as EventListener);
+
+    window.addEventListener('ch-apply-animation-combo', ((e: CustomEvent) => {
+      const comboData = e.detail;
+      console.log('Applying animation combo:', comboData.items.length, 'items,', comboData.mode);
+      this.applyAnimationCombo(comboData);
+    }) as EventListener);
+
+    window.addEventListener('ch-toggle-walls', ((e: CustomEvent) => {
+      const visible = e.detail?.visible;
+      const isVisible = this.toggleWalls(visible);
+      window.dispatchEvent(new CustomEvent('ch-walls-visibility-changed', { detail: { visible: isVisible } }));
+    }) as EventListener);
+
+    window.addEventListener('ch-toggle-floor', ((e: CustomEvent) => {
+      const visible = e.detail?.visible;
+      const isVisible = this.toggleFloor(visible);
+      window.dispatchEvent(new CustomEvent('ch-floor-visibility-changed', { detail: { visible: isVisible } }));
+    }) as EventListener);
+
+    window.addEventListener('ch-set-wall-color', ((e: CustomEvent) => {
+      const color = e.detail?.color;
+      if (color) this.setWallColor(color);
+    }) as EventListener);
+
+    window.addEventListener('ch-set-floor-color', ((e: CustomEvent) => {
+      const color = e.detail?.color;
+      if (color) this.setFloorColor(color);
+    }) as EventListener);
+  }
+
+  private defaultCameraPosition = {
+    alpha: -Math.PI / 2,
+    beta: Math.PI / 3,
+    radius: 12,
+    target: new BABYLON.Vector3(0, 1.5, 0)
+  };
+
+  private resetCameraToDefault(): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.camera) {
+        resolve();
+        return;
+      }
+
+      const fps = 30;
+      const resetDuration = 0.5;
+      const resetFrames = resetDuration * fps;
+
+      const alphaAnim = new BABYLON.Animation('resetAlpha', 'alpha', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+      alphaAnim.setKeys([
+        { frame: 0, value: this.camera.alpha },
+        { frame: resetFrames, value: this.defaultCameraPosition.alpha }
+      ]);
+
+      const betaAnim = new BABYLON.Animation('resetBeta', 'beta', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+      betaAnim.setKeys([
+        { frame: 0, value: this.camera.beta },
+        { frame: resetFrames, value: this.defaultCameraPosition.beta }
+      ]);
+
+      const radiusAnim = new BABYLON.Animation('resetRadius', 'radius', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+      radiusAnim.setKeys([
+        { frame: 0, value: this.camera.radius },
+        { frame: resetFrames, value: this.defaultCameraPosition.radius }
+      ]);
+
+      const easing = new BABYLON.QuadraticEase();
+      easing.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEOUT);
+      alphaAnim.setEasingFunction(easing);
+      betaAnim.setEasingFunction(easing);
+      radiusAnim.setEasingFunction(easing);
+
+      this.camera.animations = [alphaAnim, betaAnim, radiusAnim];
+      this.camera.setTarget(this.defaultCameraPosition.target);
+
+      this.scene.beginAnimation(this.camera, 0, resetFrames, false, 1, () => {
+        console.log('Camera reset to default position');
+        resolve();
+      });
+    });
+  }
+
+  private applyAnimationPreset(preset: { id: string; name: string; category: string; duration: number; easing: string; keyframes: number; autoResetCamera?: boolean }): void {
+    const fps = 30;
+    const totalFrames = preset.duration * fps;
+    const shouldResetCamera = preset.autoResetCamera !== false;
+    
+    const easingFunction = this.getEasingFunction(preset.easing);
+    
+    if (preset.category === 'kamera') {
+      if (shouldResetCamera) {
+        this.resetCameraToDefault().then(() => {
+          this.animateCamera(preset.id, totalFrames, fps, easingFunction);
+        });
+      } else {
+        this.animateCamera(preset.id, totalFrames, fps, easingFunction);
+      }
+    } else if (preset.category === 'lys') {
+      this.animateLights(preset.id, totalFrames, fps, easingFunction);
+    } else if (preset.category === 'overgang' || preset.category === 'effekt') {
+      this.animateEffect(preset.id, totalFrames, fps, easingFunction);
+    }
+    
+    console.log(`Animation "${preset.name}" started - ${preset.duration}s @ ${fps}fps`);
+  }
+
+  private async applyAnimationCombo(comboData: { 
+    items: Array<{ id: string; name: string; category: string; duration: number; easing: string; keyframes: number; speedMultiplier?: number }>;
+    mode: 'parallel' | 'sequential';
+    totalDuration: number;
+    autoResetCamera?: boolean;
+  }): Promise<void> {
+    const { items, mode, autoResetCamera = true } = comboData;
+    const fps = 30;
+
+    const hasCameraAnimation = items.some(item => item.category === 'kamera');
+    if (hasCameraAnimation && autoResetCamera) {
+      await this.resetCameraToDefault();
+    }
+
+    if (mode === 'parallel') {
+      items.forEach(preset => {
+        const totalFrames = preset.duration * fps;
+        const easingFunction = this.getEasingFunction(preset.easing);
+        
+        if (preset.category === 'kamera') {
+          this.animateCamera(preset.id, totalFrames, fps, easingFunction);
+        } else if (preset.category === 'lys') {
+          this.animateLights(preset.id, totalFrames, fps, easingFunction);
+        } else if (preset.category === 'overgang' || preset.category === 'effekt') {
+          this.animateEffect(preset.id, totalFrames, fps, easingFunction);
+        }
+      });
+      console.log(`Combo (parallel) started - ${items.length} animations`);
+    } else {
+      let delay = 0;
+      for (const preset of items) {
+        await new Promise<void>(resolve => {
+          setTimeout(() => {
+            const totalFrames = preset.duration * fps;
+            const easingFunction = this.getEasingFunction(preset.easing);
+            
+            if (preset.category === 'kamera') {
+              this.animateCamera(preset.id, totalFrames, fps, easingFunction);
+            } else if (preset.category === 'lys') {
+              this.animateLights(preset.id, totalFrames, fps, easingFunction);
+            } else if (preset.category === 'overgang' || preset.category === 'effekt') {
+              this.animateEffect(preset.id, totalFrames, fps, easingFunction);
+            }
+            
+            setTimeout(resolve, preset.duration * 1000);
+          }, delay);
+        });
+        delay = 0;
+      }
+      console.log(`Combo (sequential) completed - ${items.length} animations`);
+    }
+  }
+
+  private getEasingFunction(easing: string): BABYLON.EasingFunction | undefined {
+    switch (easing) {
+      case 'easeIn':
+        const easeIn = new BABYLON.QuadraticEase();
+        easeIn.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEIN);
+        return easeIn;
+      case 'easeOut':
+        const easeOut = new BABYLON.QuadraticEase();
+        easeOut.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEOUT);
+        return easeOut;
+      case 'easeInOut':
+        const easeInOut = new BABYLON.QuadraticEase();
+        easeInOut.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEINOUT);
+        return easeInOut;
+      case 'sine':
+        const sine = new BABYLON.SineEase();
+        sine.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEINOUT);
+        return sine;
+      default:
+        return undefined;
+    }
+  }
+
+  private animateCamera(presetId: string, totalFrames: number, fps: number, easing?: BABYLON.EasingFunction): void {
+    if (!this.camera) return;
+    
+    const startRadius = this.camera.radius;
+    const startAlpha = this.camera.alpha;
+    const startBeta = this.camera.beta;
+    
+    let animation: BABYLON.Animation;
+    let keys: { frame: number; value: number }[] = [];
+    
+    switch (presetId) {
+      case 'dolly_in':
+        animation = new BABYLON.Animation('dollyIn', 'radius', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+        keys = [
+          { frame: 0, value: startRadius },
+          { frame: totalFrames, value: Math.max(startRadius * 0.5, 2) }
+        ];
+        break;
+        
+      case 'dolly_out':
+        animation = new BABYLON.Animation('dollyOut', 'radius', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+        keys = [
+          { frame: 0, value: startRadius },
+          { frame: totalFrames, value: startRadius * 2 }
+        ];
+        break;
+        
+      case 'orbit_360':
+        animation = new BABYLON.Animation('orbit', 'alpha', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+        keys = [
+          { frame: 0, value: startAlpha },
+          { frame: totalFrames * 0.25, value: startAlpha + Math.PI * 0.5 },
+          { frame: totalFrames * 0.5, value: startAlpha + Math.PI },
+          { frame: totalFrames * 0.75, value: startAlpha + Math.PI * 1.5 },
+          { frame: totalFrames, value: startAlpha + Math.PI * 2 }
+        ];
+        break;
+        
+      case 'crane_up':
+        animation = new BABYLON.Animation('craneUp', 'beta', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+        keys = [
+          { frame: 0, value: startBeta },
+          { frame: totalFrames, value: Math.max(startBeta - 0.5, 0.3) }
+        ];
+        break;
+        
+      case 'slow_pan':
+        animation = new BABYLON.Animation('slowPan', 'alpha', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+        keys = [
+          { frame: 0, value: startAlpha },
+          { frame: totalFrames, value: startAlpha + Math.PI * 0.5 }
+        ];
+        break;
+        
+      case 'focus_pull':
+        animation = new BABYLON.Animation('focusPull', 'radius', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+        keys = [
+          { frame: 0, value: startRadius },
+          { frame: totalFrames * 0.5, value: startRadius * 0.8 },
+          { frame: totalFrames, value: startRadius }
+        ];
+        break;
+        
+      default:
+        return;
+    }
+    
+    animation.setKeys(keys);
+    if (easing) animation.setEasingFunction(easing);
+    
+    this.camera.animations = [animation];
+    this.scene.beginAnimation(this.camera, 0, totalFrames, false, 1, () => {
+      console.log(`Camera animation "${presetId}" completed`);
+    });
+  }
+
+  private animateLights(presetId: string, totalFrames: number, fps: number, easing?: BABYLON.EasingFunction): void {
+    if (this.lights.size === 0) {
+      console.log('No lights in scene to animate');
+      return;
+    }
+    
+    this.lights.forEach((lightData) => {
+      const light = lightData.light;
+      const startIntensity = light.intensity;
+      
+      let animation: BABYLON.Animation;
+      let keys: { frame: number; value: number }[] = [];
+      
+      switch (presetId) {
+        case 'light_fade_in':
+          animation = new BABYLON.Animation('fadeIn', 'intensity', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+          keys = [
+            { frame: 0, value: 0 },
+            { frame: totalFrames, value: startIntensity }
+          ];
+          break;
+          
+        case 'light_fade_out':
+          animation = new BABYLON.Animation('fadeOut', 'intensity', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+          keys = [
+            { frame: 0, value: startIntensity },
+            { frame: totalFrames, value: 0 }
+          ];
+          break;
+          
+        case 'dramatic_reveal':
+          animation = new BABYLON.Animation('dramaticReveal', 'intensity', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+          keys = [
+            { frame: 0, value: 0 },
+            { frame: totalFrames * 0.3, value: startIntensity * 0.2 },
+            { frame: totalFrames * 0.6, value: startIntensity * 0.5 },
+            { frame: totalFrames, value: startIntensity }
+          ];
+          break;
+          
+        case 'breathing_light':
+          animation = new BABYLON.Animation('breathing', 'intensity', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+          keys = [
+            { frame: 0, value: startIntensity },
+            { frame: totalFrames * 0.5, value: startIntensity * 0.6 },
+            { frame: totalFrames, value: startIntensity }
+          ];
+          break;
+          
+        case 'color_shift':
+          return;
+          
+        default:
+          return;
+      }
+      
+      animation.setKeys(keys);
+      if (easing) animation.setEasingFunction(easing);
+      
+      light.animations = [animation];
+      this.scene.beginAnimation(light, 0, totalFrames, presetId === 'breathing_light', 1);
+    });
+    
+    console.log(`Light animation "${presetId}" applied to ${this.lights.size} lights`);
+  }
+
+  private animateEffect(presetId: string, totalFrames: number, fps: number, easing?: BABYLON.EasingFunction): void {
+    switch (presetId) {
+      case 'strobe_effect':
+        this.lights.forEach((lightData) => {
+          const light = lightData.light;
+          const startIntensity = light.intensity;
+          
+          const animation = new BABYLON.Animation('strobe', 'intensity', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+          const keys: { frame: number; value: number }[] = [];
+          
+          for (let i = 0; i <= 8; i++) {
+            keys.push({ frame: (totalFrames / 8) * i, value: i % 2 === 0 ? startIntensity : 0 });
+          }
+          
+          animation.setKeys(keys);
+          light.animations = [animation];
+          this.scene.beginAnimation(light, 0, totalFrames, false, 1);
+        });
+        break;
+        
+      case 'smooth_transition':
+      case 'quick_cut':
+        const fadeAnimation = new BABYLON.Animation('fade', 'intensity', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+        this.lights.forEach((lightData) => {
+          const light = lightData.light;
+          const startIntensity = light.intensity;
+          
+          const keys = [
+            { frame: 0, value: startIntensity },
+            { frame: totalFrames * 0.5, value: 0 },
+            { frame: totalFrames, value: startIntensity }
+          ];
+          
+          fadeAnimation.setKeys(keys);
+          if (easing) fadeAnimation.setEasingFunction(easing);
+          
+          light.animations = [fadeAnimation];
+          this.scene.beginAnimation(light, 0, totalFrames, false, 1);
+        });
+        break;
+    }
+  }
+
+  getCurrentSceneConfig(): ScenarioPreset['sceneConfig'] {
+    const lightsArray: ScenarioPreset['sceneConfig']['lights'] = [];
+    
+    this.lights.forEach((lightData) => {
+      const pos = lightData.mesh.position;
+      const rot = lightData.mesh.rotation;
+      lightsArray.push({
+        type: lightData.type || 'key-light',
+        position: [pos.x, pos.y, pos.z] as [number, number, number],
+        rotation: [
+          (rot.x * 180) / Math.PI,
+          (rot.y * 180) / Math.PI,
+          (rot.z * 180) / Math.PI
+        ] as [number, number, number],
+        intensity: lightData.light.intensity,
+        cct: lightData.cct || 5600,
+        modifier: lightData.modifier
+      });
+    });
+
+    const camera = this.camera;
+    const cameraPos = camera.position;
+    const cameraTarget = camera.target;
+    
+    const focalLength = this.cameraSettings?.focalLength || 50;
+    
+    let backdropColor = '#808080';
+    const backWall = this.scene.getMeshByName('backWall');
+    if (backWall && backWall.material) {
+      const mat = backWall.material as BABYLON.StandardMaterial;
+      if (mat.diffuseColor) {
+        backdropColor = mat.diffuseColor.toHexString();
+      }
+    }
+
+    return {
+      lights: lightsArray,
+      backdrop: {
+        type: 'seamless',
+        color: backdropColor
+      },
+      camera: {
+        position: [cameraPos.x, cameraPos.y, cameraPos.z] as [number, number, number],
+        target: [cameraTarget.x, cameraTarget.y, cameraTarget.z] as [number, number, number],
+        focalLength: focalLength
+      }
+    };
   }
 
   private setupFocusEventListeners(): void {
@@ -1111,6 +1597,16 @@ class VirtualStudio {
   private characterMesh: BABYLON.AbstractMesh | null = null;
   private characterModelId: string | null = null;
 
+  // Public method to load avatar from API URL
+  public async loadAvatarModel(glbUrl: string, metadata?: { name?: string; category?: string }): Promise<void> {
+    console.log('Loading avatar from API:', glbUrl, metadata);
+    const avatarName = metadata?.name || `Avatar_${Date.now()}`;
+    const skinTone = '#FFDAB9';
+    // loadCharacterModel handles adding to store
+    await this.loadCharacterModel(glbUrl, avatarName, skinTone, 1.0);
+    console.log('Avatar loaded and added to Studio Library:', avatarName);
+  }
+
   private async loadCharacterModel(modelUrl: string, name: string, skinTone: string, height: number): Promise<void> {
     this.removeCharacterModel();
     
@@ -1120,11 +1616,142 @@ class VirtualStudio {
       const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
       this.characterMesh = result.meshes[0];
       this.characterMesh.name = name;
+      
+      // Calculate bounding box to properly scale and position the model
+      const boundingInfo = this.characterMesh.getHierarchyBoundingVectors(true);
+      const modelHeight = boundingInfo.max.y - boundingInfo.min.y;
+      const modelWidth = boundingInfo.max.x - boundingInfo.min.x;
+      const modelDepth = boundingInfo.max.z - boundingInfo.min.z;
+      
+      console.log(`Model dimensions: H=${modelHeight.toFixed(3)}, W=${modelWidth.toFixed(3)}, D=${modelDepth.toFixed(3)}`);
+      
+      // Target human height (1.7m default, can be adjusted by height parameter)
+      const targetHeight = 1.7 * (height || 1.0);
+      
+      // Scale model to target height if it's too small or too large
+      if (modelHeight > 0.001) {
+        const scale = targetHeight / modelHeight;
+        this.characterMesh.scaling = new BABYLON.Vector3(scale, scale, scale);
+        console.log(`Scaling model by ${scale.toFixed(3)} to reach ${targetHeight}m height`);
+      }
+      
+      // Fix rotation - SAM 3D Body models may be exported upside down or facing wrong direction
+      // Rotate 180 degrees around X axis to flip right-side up
+      this.characterMesh.rotation = new BABYLON.Vector3(Math.PI, 0, 0);
+      
+      // Recalculate bounds after scaling and rotation
+      const finalBounds = this.characterMesh.getHierarchyBoundingVectors(true);
+      const scaleFactor = this.characterMesh.scaling.y;
+      
+      // Position so feet are on the ground (y=0)
+      // After rotating 180 on X, the min/max are swapped
+      const groundOffset = Math.abs(finalBounds.min.y) * scaleFactor;
+      meshPosition = new BABYLON.Vector3(0, groundOffset, 0);
+      
       this.characterMesh.position = meshPosition;
       
-      console.log(`Loaded character: ${name}`);
+      // Apply clothing effect - different colors for skin, shirt, and pants
+      const skinColor = BABYLON.Color3.FromHexString(skinTone || '#FFDAB9');
+      const shirtColor = new BABYLON.Color3(0.2, 0.4, 0.7); // Blue shirt
+      const pantsColor = new BABYLON.Color3(0.2, 0.2, 0.25); // Dark gray pants
+      
+      // Use original local bounds (before rotation/scaling)
+      const localMinY = boundingInfo.min.y;
+      const localMaxY = boundingInfo.max.y;
+      
+      console.log(`Shader bounds: localMinY=${localMinY.toFixed(3)}, localMaxY=${localMaxY.toFixed(3)}`);
+      
+      // Create shader material for clothing effect based on LOCAL Y position
+      const clothingShader = new BABYLON.ShaderMaterial(`${name}_clothing_shader`, this.scene, {
+        vertexSource: `
+          precision highp float;
+          attribute vec3 position;
+          attribute vec3 normal;
+          uniform mat4 worldViewProjection;
+          uniform mat4 world;
+          varying vec3 vPosition;
+          varying vec3 vNormalW;
+          void main() {
+            vPosition = position; // Pass local position
+            vNormalW = normalize(mat3(world) * normal);
+            gl_Position = worldViewProjection * vec4(position, 1.0);
+          }
+        `,
+        fragmentSource: `
+          precision highp float;
+          varying vec3 vPosition;
+          varying vec3 vNormalW;
+          uniform vec3 skinColor;
+          uniform vec3 shirtColor;
+          uniform vec3 pantsColor;
+          uniform float modelMinY;
+          uniform float modelMaxY;
+          uniform vec3 lightDirection;
+          void main() {
+            float modelHeight = modelMaxY - modelMinY;
+            // normalizedY: 0 at feet (minY), 1 at head (maxY)
+            float normalizedY = (vPosition.y - modelMinY) / modelHeight;
+            
+            vec3 baseColor;
+            // Head/neck area (above 82%) = skin
+            // Torso (38% to 82%) = shirt  
+            // Legs (below 38%) = pants
+            float xDist = abs(vPosition.x);
+            
+            if (normalizedY > 0.82) {
+              baseColor = skinColor; // Head
+            } else if (normalizedY > 0.38) {
+              // Torso area - check if arms (far from center X)
+              if (xDist > 0.15 && normalizedY > 0.55) {
+                baseColor = skinColor; // Arms
+              } else {
+                baseColor = shirtColor; // Shirt
+              }
+            } else {
+              baseColor = pantsColor; // Pants
+            }
+            
+            // Simple lighting
+            float light = max(dot(normalize(vNormalW), normalize(lightDirection)), 0.0);
+            float ambient = 0.5;
+            vec3 finalColor = baseColor * (ambient + light * 0.5);
+            
+            // Add emissive for visibility
+            finalColor += baseColor * 0.25;
+            
+            gl_FragColor = vec4(finalColor, 1.0);
+          }
+        `
+      }, {
+        attributes: ["position", "normal"],
+        uniforms: ["worldViewProjection", "world", "skinColor", "shirtColor", "pantsColor", "modelMinY", "modelMaxY", "lightDirection"]
+      });
+      
+      clothingShader.backFaceCulling = false;
+      clothingShader.setColor3("skinColor", skinColor);
+      clothingShader.setColor3("shirtColor", shirtColor);
+      clothingShader.setColor3("pantsColor", pantsColor);
+      clothingShader.setFloat("modelMinY", localMinY);
+      clothingShader.setFloat("modelMaxY", localMaxY);
+      clothingShader.setVector3("lightDirection", new BABYLON.Vector3(0.5, 1, 0.3));
+      
+      // Get all meshes including root
+      const allMeshes = this.characterMesh.getChildMeshes(true);
+      allMeshes.push(this.characterMesh);
+      
+      let meshCount = 0;
+      allMeshes.forEach(mesh => {
+        if (mesh instanceof BABYLON.Mesh) {
+          mesh.material = clothingShader;
+          meshCount++;
+        }
+      });
+      
+      console.log(`Applied clothing shader (skin, shirt, pants) to ${meshCount} mesh(es)`);
+      
+      console.log(`Loaded character: ${name} at position (${meshPosition.x}, ${meshPosition.y}, ${meshPosition.z})`);
     } catch (error) {
-      console.warn(`Character model not found: ${modelUrl}, creating placeholder`);
+      console.warn(`Character model not found: ${modelUrl}, creating placeholder`, error);
       const capsule = BABYLON.MeshBuilder.CreateCapsule(name, { height: 1.75, radius: 0.22 }, this.scene);
       meshPosition = new BABYLON.Vector3(0, 0.875, 0);
       capsule.position = meshPosition;
@@ -1158,7 +1785,15 @@ class VirtualStudio {
     
     // Update DOM hierarchy
     if ((window as any).addToHierarchy) {
+      console.log('Calling addToHierarchy for:', name);
       (window as any).addToHierarchy(modelId, name, 'model');
+    } else {
+      console.warn('addToHierarchy not available yet');
+    }
+    
+    // Add to Studio Library (Mine Avatarer section)
+    if ((window as any).addToStudioLibrary) {
+      (window as any).addToStudioLibrary(modelId, name, modelUrl);
     }
     
     // Attach gizmo for interaction
@@ -1802,6 +2437,181 @@ class VirtualStudio {
     this.selectLight(id);
     this.updateSceneList();
     this.updateLightMeterReading();
+  }
+
+  addLightWithSpecsAndRotation(
+    nodeId: string,
+    name: string,
+    type: string,
+    position: BABYLON.Vector3,
+    rotation: BABYLON.Vector3,
+    specs: { power: number; powerUnit: string; cct?: number; cri?: number; lux1m?: number; beamAngle?: number; guideNumber?: number; lumens?: number }
+  ): void {
+    const id = nodeId || `light_${this.lightCounter++}`;
+    const cct = specs.cct || 5600;
+    const color = this.cctToColor(cct);
+    
+    const lightSpecs: LightSpecs = {
+      power: specs.power,
+      powerUnit: specs.powerUnit as 'Ws' | 'W',
+      cri: specs.cri,
+      lux1m: specs.lux1m,
+      beamAngle: specs.beamAngle,
+      guideNumber: specs.guideNumber,
+      lumens: specs.lumens
+    };
+    
+    const intensity = this.calculateLightIntensity(lightSpecs);
+    const beamAngle = this.calculateBeamAngle(lightSpecs);
+
+    const direction = new BABYLON.Vector3(0, -1, 0);
+    const rotationMatrix = BABYLON.Matrix.RotationYawPitchRoll(rotation.y, rotation.x, rotation.z);
+    const rotatedDirection = BABYLON.Vector3.TransformNormal(direction, rotationMatrix);
+
+    let light: BABYLON.Light;
+    let mesh: BABYLON.Mesh;
+
+    if (type === 'led' || type === 'continuous') {
+      light = new BABYLON.SpotLight(
+        id, position.clone(),
+        rotatedDirection.normalize(),
+        beamAngle, 2,
+        this.scene
+      );
+      light.intensity = intensity;
+      light.diffuse = color;
+
+      mesh = BABYLON.MeshBuilder.CreateCylinder(`mesh_${id}`, { 
+        height: 0.4, diameterTop: 0.15, diameterBottom: 0.3 
+      }, this.scene);
+      mesh.rotation.x = Math.PI + rotation.x;
+      mesh.rotation.y = rotation.y;
+      mesh.rotation.z = rotation.z;
+    } else {
+      light = new BABYLON.SpotLight(
+        id, position.clone(),
+        rotatedDirection.normalize(),
+        beamAngle, 2,
+        this.scene
+      );
+      light.intensity = intensity;
+      light.diffuse = color;
+
+      mesh = BABYLON.MeshBuilder.CreateCylinder(`mesh_${id}`, { 
+        height: 0.5, diameterTop: 0.12, diameterBottom: 0.35 
+      }, this.scene);
+      mesh.rotation.x = Math.PI + rotation.x;
+      mesh.rotation.y = rotation.y;
+      mesh.rotation.z = rotation.z;
+    }
+
+    mesh.position = position.clone();
+    const mat = new BABYLON.StandardMaterial(`mat_${id}`, this.scene);
+    mat.emissiveColor = color;
+    mat.disableLighting = true;
+    mesh.material = mat;
+
+    this.scene.onBeforeRenderObservable.add(() => {
+      if (light instanceof BABYLON.SpotLight || light instanceof BABYLON.PointLight) {
+        light.position = mesh.position.clone();
+      }
+    });
+
+    const lightData: LightData = {
+      light,
+      mesh,
+      type,
+      name,
+      cct,
+      modifier: 'Ingen',
+      specs: lightSpecs,
+      intensity: intensity
+    };
+
+    this.lights.set(id, lightData);
+    this.gizmoManager?.attachableMeshes?.push(mesh);
+    this.updateSceneList();
+    this.updateLightMeterReading();
+  }
+
+  applyScenarioPreset(preset: ScenarioPreset): void {
+    console.log('Applying scenario preset:', preset.navn);
+    
+    this.lights.forEach((lightData, id) => {
+      lightData.light.dispose();
+      lightData.mesh.dispose();
+    });
+    this.lights.clear();
+    this.lightCounter = 0;
+    
+    preset.sceneConfig.lights.forEach((lightConfig, index) => {
+      const position = new BABYLON.Vector3(
+        lightConfig.position[0],
+        lightConfig.position[1],
+        lightConfig.position[2]
+      );
+      
+      const rotationDeg = lightConfig.rotation || [0, 0, 0];
+      const rotationRad = new BABYLON.Vector3(
+        (rotationDeg[0] * Math.PI) / 180,
+        (rotationDeg[1] * Math.PI) / 180,
+        (rotationDeg[2] * Math.PI) / 180
+      );
+      
+      const cct = lightConfig.cct || 5600;
+      const intensity = lightConfig.intensity || 1.0;
+      const type = lightConfig.type.includes('soft') || lightConfig.type.includes('fill') ? 'led' : 'strobe';
+      
+      const specs = {
+        power: intensity * 600,
+        powerUnit: 'Ws' as const,
+        cct: cct,
+        cri: 95,
+        lux1m: intensity * 10000,
+        beamAngle: 45
+      };
+      
+      const id = `preset_light_${index}`;
+      const name = `${preset.navn} - Lys ${index + 1}`;
+      
+      this.addLightWithSpecsAndRotation(id, name, type, position, rotationRad, specs);
+    });
+    
+    if (preset.sceneConfig.camera) {
+      const camConfig = preset.sceneConfig.camera;
+      const position = new BABYLON.Vector3(
+        camConfig.position[0],
+        camConfig.position[1],
+        camConfig.position[2]
+      );
+      const target = new BABYLON.Vector3(
+        camConfig.target[0],
+        camConfig.target[1],
+        camConfig.target[2]
+      );
+      
+      this.camera.position = position;
+      this.camera.setTarget(target);
+      
+      if (camConfig.focalLength) {
+        const fov = 2 * Math.atan(18 / camConfig.focalLength);
+        this.camera.fov = fov;
+      }
+    }
+    
+    if (preset.sceneConfig.backdrop?.color) {
+      const color = BABYLON.Color3.FromHexString(preset.sceneConfig.backdrop.color);
+      const backWall = this.scene.getMeshByName('backWall');
+      if (backWall && backWall.material) {
+        const mat = backWall.material as BABYLON.StandardMaterial;
+        mat.diffuseColor = color;
+        mat.emissiveColor = color.scale(0.1);
+      }
+    }
+    
+    this.updateSceneList();
+    this.updateLightMeterReading();
+    console.log(`Scenario "${preset.navn}" applied with ${preset.sceneConfig.lights.length} lights`);
   }
 
   addLight(type: string, position: BABYLON.Vector3): void {
@@ -2506,6 +3316,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement;
   if (canvas) {
     const studio = new VirtualStudio(canvas);
+    window.virtualStudio = studio;
     
     focusController.init();
     
@@ -2620,6 +3431,56 @@ window.addEventListener('DOMContentLoaded', () => {
       });
     }
     
+    // Hook up visibility toggle for Studio Bakgrunn (walls)
+    const studioBgItem = document.querySelector('.hierarchy-item[data-id="studio-bg"]');
+    if (studioBgItem) {
+      const visibilityBtn = studioBgItem.querySelector('.visibility-btn');
+      if (visibilityBtn) {
+        visibilityBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isActive = visibilityBtn.classList.toggle('active');
+          visibilityBtn.setAttribute('aria-pressed', String(isActive));
+          visibilityBtn.setAttribute('title', isActive ? 'Synlig' : 'Skjult');
+          window.dispatchEvent(new CustomEvent('ch-toggle-walls', { detail: { visible: isActive } }));
+        });
+      }
+      
+      // Wall color picker
+      const wallColorPicker = document.getElementById('wallColorPicker') as HTMLInputElement;
+      if (wallColorPicker) {
+        wallColorPicker.addEventListener('input', (e) => {
+          e.stopPropagation();
+          const color = (e.target as HTMLInputElement).value;
+          window.dispatchEvent(new CustomEvent('ch-set-wall-color', { detail: { color } }));
+        });
+      }
+    }
+    
+    // Hook up visibility toggle for Gulv (floor)
+    const studioFloorItem = document.querySelector('.hierarchy-item[data-id="studio-floor"]');
+    if (studioFloorItem) {
+      const visibilityBtn = studioFloorItem.querySelector('.visibility-btn');
+      if (visibilityBtn) {
+        visibilityBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isActive = visibilityBtn.classList.toggle('active');
+          visibilityBtn.setAttribute('aria-pressed', String(isActive));
+          visibilityBtn.setAttribute('title', isActive ? 'Synlig' : 'Skjult');
+          window.dispatchEvent(new CustomEvent('ch-toggle-floor', { detail: { visible: isActive } }));
+        });
+      }
+      
+      // Floor color picker
+      const floorColorPicker = document.getElementById('floorColorPicker') as HTMLInputElement;
+      if (floorColorPicker) {
+        floorColorPicker.addEventListener('input', (e) => {
+          e.stopPropagation();
+          const color = (e.target as HTMLInputElement).value;
+          window.dispatchEvent(new CustomEvent('ch-set-floor-color', { detail: { color } }));
+        });
+      }
+    }
+    
     const actorPanelRoot = document.getElementById('actorPanelRoot');
     const actorBottomPanel = document.getElementById('actorBottomPanel');
     const actorPanelTrigger = document.getElementById('actorPanelTrigger');
@@ -2630,7 +3491,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const keyframeTimelineRoot = document.getElementById('keyframeTimelineRoot');
     if (keyframeTimelineRoot) {
       const timelineRoot = createRoot(keyframeTimelineRoot);
-      timelineRoot.render(React.createElement(TimelineApp, {}));
+      timelineRoot.render(React.createElement(TidslinjeLibraryPanelApp, {}));
     }
     
     const assetLibraryRoot = document.getElementById('assetLibraryRoot');
@@ -2667,6 +3528,12 @@ window.addEventListener('DOMContentLoaded', () => {
     if (equipmentPanelRoot) {
       const equipRoot = createRoot(equipmentPanelRoot);
       equipRoot.render(React.createElement(EquipmentPanelApp, {}));
+    }
+    
+    const scenerPanelRoot = document.getElementById('scenerPanelRoot');
+    if (scenerPanelRoot) {
+      const scenerRoot = createRoot(scenerPanelRoot);
+      scenerRoot.render(React.createElement(ScenerPanelApp, {}));
     }
     
     const notesPanelRoot = document.getElementById('notesPanelRoot');
@@ -3136,11 +4003,22 @@ window.addEventListener('DOMContentLoaded', () => {
       window.addEventListener('avatarGenerated', (event: Event) => {
         const customEvent = event as CustomEvent;
         const { glbUrl, metadata } = customEvent.detail;
-        console.log('Avatar generated:', glbUrl, metadata);
+        console.log('Avatar generated event received:', glbUrl, metadata);
+        console.log('window.virtualStudio exists:', !!window.virtualStudio);
         
-        // Load the avatar GLB into the scene
+        // Load the avatar GLB into the scene with name and category
         if (window.virtualStudio) {
-          window.virtualStudio.loadAvatarModel(glbUrl);
+          console.log('Calling loadAvatarModel...');
+          window.virtualStudio.loadAvatarModel(glbUrl, {
+            name: metadata?.name,
+            category: metadata?.category
+          }).then(() => {
+            console.log('Avatar loaded successfully!');
+          }).catch((err: any) => {
+            console.error('Failed to load avatar:', err);
+          });
+        } else {
+          console.error('window.virtualStudio is not available!');
         }
       });
       
@@ -3501,6 +4379,16 @@ window.addEventListener('DOMContentLoaded', () => {
         const group = document.getElementById(groupId);
         const countEl = document.getElementById(countId);
         
+        // Auto-expand the group when adding items
+        if (group) {
+          group.style.display = 'block';
+          const header = group.previousElementSibling;
+          if (header && header.classList.contains('hierarchy-header')) {
+            header.setAttribute('aria-expanded', 'true');
+            header.classList.add('expanded');
+          }
+        }
+        
         if (group) {
           const emptyMsg = group.querySelector('.hierarchy-empty');
           if (emptyMsg) emptyMsg.remove();
@@ -3586,6 +4474,45 @@ window.addEventListener('DOMContentLoaded', () => {
       
       // Expose addToHierarchy globally for use by character loader
       (window as any).addToHierarchy = addToHierarchy;
+      
+      // Function to add avatar to Studio Library "Mine Avatarer" section
+      const addToStudioLibrary = (id: string, name: string, _modelUrl: string) => {
+        const section = document.getElementById('generatedAvatarsSection');
+        const list = document.getElementById('generatedAvatarsList');
+        if (!section || !list) return;
+        
+        section.style.display = 'block';
+        
+        // Create avatar card matching the gallery style
+        const card = document.createElement('div');
+        card.className = 'actor-model-card';
+        card.setAttribute('data-id', id);
+        card.innerHTML = `
+          <div class="model-portrait" style="background:linear-gradient(135deg, rgba(0,212,255,0.3), rgba(138,43,226,0.3));">
+            <span style="font-size:32px;line-height:110px;">🧑</span>
+          </div>
+          <div class="model-name">${name}</div>
+          <div style="position:absolute;top:4px;left:4px;background:rgba(0,212,255,0.8);color:#fff;font-size:9px;padding:2px 4px;border-radius:3px;">I scene</div>
+        `;
+        
+        // Click to select/focus the avatar in scene
+        card.addEventListener('click', () => {
+          // Select in hierarchy
+          const hierarchyItem = document.querySelector(`.hierarchy-item[data-id="${id}"]`) as HTMLElement;
+          if (hierarchyItem) {
+            hierarchyItem.click();
+          }
+          // Focus camera on the model
+          useAppStore.getState().selectNode(id);
+          console.log('Selected avatar in scene:', name);
+        });
+        
+        list.appendChild(card);
+        console.log('Added avatar to Studio Library:', name);
+      };
+      
+      // Expose addToStudioLibrary globally
+      (window as any).addToStudioLibrary = addToStudioLibrary;
       
       const showObjectProperties = (name: string, type: 'model' | 'light' | 'equipment', position = [0, 0, 0], rotation = [0, 0, 0]) => {
         const noSelection = document.getElementById('noSelection');

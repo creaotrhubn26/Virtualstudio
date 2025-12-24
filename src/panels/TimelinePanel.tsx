@@ -37,12 +37,12 @@ import {
   ContentCopy,
   ContentPaste,
   SelectAll,
+  Timeline as TimelineIcon,
 } from '@mui/icons-material';
 import { useAnimationStore } from '../../state/animationStore';
 import type { AnimationTrack, Keyframe, EasingFunction } from '../../state/animationStore';
 import { useTabletSupport } from '../../providers/TabletSupportProvider';
 import { TouchIconButton, TouchPinchZoom, TouchContextMenu, TouchDraggable } from '../components/TabletAwarePanels';
-import { useAccessibility, VisuallyHidden } from '../../providers/AccessibilityProvider';
 import { useAccessibility, useAnnounce } from '../../providers/AccessibilityProvider';
 import { AccessibleIconButton, AccessibleSlider, VisuallyHidden } from '../components/AccessibleComponents';
 
@@ -505,6 +505,63 @@ export const TimelinePanel: React.FC = () => {
           {isPlaying ? 'Playing' : 'Paused'}, Frame {currentTime} of {totalFrames}, {tracks.length} tracks
         </div>
       </VisuallyHidden>
+      {/* Timeline Header */}
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 1.5,
+        background: 'linear-gradient(135deg, rgba(231,76,60,0.15) 0%, rgba(192,57,43,0.15) 100%)',
+        borderRadius: '0',
+        px: 2.5,
+        py: 1,
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
+      }}>
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 36,
+          height: 36,
+          borderRadius: '8px',
+          background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
+          boxShadow: '0 4px 12px rgba(231,76,60,0.4)',
+        }}>
+          <TimelineIcon sx={{ fontSize: 20, color: '#fff' }} />
+        </Box>
+        <Box>
+          <Typography sx={{ 
+            fontWeight: 800, 
+            fontSize: 16,
+            background: 'linear-gradient(90deg, #f1948a 0%, #e74c3c 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: '-0.3px',
+          }}>
+            Tidslinje
+          </Typography>
+          <Typography sx={{ 
+            fontSize: 11, 
+            color: '#888',
+            fontWeight: 500,
+          }}>
+            Animasjon og keyframes
+          </Typography>
+        </Box>
+        <Chip
+          label={`${tracks.length} spor`}
+          size="small"
+          sx={{ 
+            ml: 'auto', 
+            bgcolor: '#e74c3c', 
+            color: '#fff',
+            fontSize: 11,
+            fontWeight: 700,
+            height: 24,
+            boxShadow: '0 2px 8px rgba(231,76,60,0.4)',
+          }}
+        />
+      </Box>
       {/* Playback Controls */}
       <Box
         sx={{

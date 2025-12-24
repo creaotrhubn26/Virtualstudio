@@ -60,3 +60,4 @@ externalPort = 8000
 
 [nix]
 channel = "stable-25_05"
+packages = ["cmake"]

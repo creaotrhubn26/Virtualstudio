@@ -15,6 +15,9 @@ import { CinematographyPatternsPanel } from './components/CinematographyPatterns
 import { CinematographyPattern } from './core/services/cinematographyPatternsService';
 import { LightPatternLibrary } from './panels/LightPatternLibrary';
 import { AvatarGeneratorPanel } from './panels/AvatarGeneratorPanel';
+import { ScenerPanel } from './panels/ScenerPanel';
+import { ScenarioPreset } from './data/scenarioPresets';
+import { TidslinjeLibraryPanel } from './panels/TidslinjeLibraryPanel';
 
 const darkTheme = createTheme({
   palette: {
@@ -120,6 +123,49 @@ export const EquipmentPanelApp: React.FC = () => {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <EquipmentPanel />
+    </ThemeProvider>
+  );
+};
+
+export const ScenerPanelApp: React.FC = () => {
+  const handleApplyPreset = (preset: ScenarioPreset) => {
+    window.dispatchEvent(new CustomEvent('applyScenarioPreset', { detail: preset }));
+  };
+
+  const handleShowRecommended = (preset: ScenarioPreset) => {
+    window.dispatchEvent(new CustomEvent('showRecommendedAssets', { detail: preset }));
+  };
+
+  const getCurrentSceneConfig = () => {
+    const event = new CustomEvent('getSceneConfig', { detail: { callback: null } });
+    let config: ScenarioPreset['sceneConfig'] | null = null;
+    const handler = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      config = customEvent.detail;
+    };
+    window.addEventListener('sceneConfigResponse', handler, { once: true });
+    window.dispatchEvent(event);
+    window.removeEventListener('sceneConfigResponse', handler);
+    return config;
+  };
+
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <ScenerPanel 
+        onApplyPreset={handleApplyPreset} 
+        onShowRecommended={handleShowRecommended}
+        getCurrentSceneConfig={getCurrentSceneConfig}
+      />
+    </ThemeProvider>
+  );
+};
+
+export const TidslinjeLibraryPanelApp: React.FC = () => {
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <TidslinjeLibraryPanel />
     </ThemeProvider>
   );
 };

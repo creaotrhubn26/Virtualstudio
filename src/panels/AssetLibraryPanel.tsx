@@ -19,6 +19,7 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import PlaceIcon from '@mui/icons-material/Place';
 import AddIcon from '@mui/icons-material/Add';
+import FolderIcon from '@mui/icons-material/Folder';
 import { assetLibraryService, type AssetLibraryItem } from '../core/services/assetLibrary';
 import { logger } from '../core/services/logger';
 
@@ -389,9 +390,51 @@ export default function AssetLibraryPanel() {
 
   return (
     <Box sx={{ p: 2, height: '100%', overflow: 'auto', bgcolor: '#1a1a1a' }}>
-      <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: '#fff', fontSize: 16 }}>
-        Ressursbibliotek
-      </Typography>
+      {/* Header */}
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 1.5,
+        background: 'linear-gradient(135deg, rgba(52,152,219,0.15) 0%, rgba(41,128,185,0.15) 100%)',
+        borderRadius: '14px',
+        px: 2.5,
+        py: 1.5,
+        mb: 2,
+        border: '1px solid rgba(255,255,255,0.1)',
+      }}>
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 42,
+          height: 42,
+          borderRadius: '10px',
+          background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
+          boxShadow: '0 4px 12px rgba(52,152,219,0.4)',
+        }}>
+          <FolderIcon sx={{ fontSize: 24, color: '#fff' }} />
+        </Box>
+        <Box>
+          <Typography sx={{ 
+            fontWeight: 800, 
+            fontSize: 20,
+            background: 'linear-gradient(90deg, #85c1e9 0%, #5dade2 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: '-0.3px',
+          }}>
+            Eiendeler
+          </Typography>
+          <Typography sx={{ 
+            fontSize: 12, 
+            color: '#888',
+            fontWeight: 500,
+          }}>
+            3D-modeller og tilbehør
+          </Typography>
+        </Box>
+      </Box>
 
       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
         {CATEGORIES.map(cat => (

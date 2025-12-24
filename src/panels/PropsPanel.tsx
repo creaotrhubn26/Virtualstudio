@@ -167,14 +167,51 @@ export const PropsPanel: React.FC = () => {
 
   return (
     <Paper elevation={3} sx={{ p: 2, backgroundColor: '#1e1e1e', color: '#fff' }}>
-      <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Category />
-        Props Library
-      </Typography>
-
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Add furniture, objects, and decorations to your scene with automatic LOD and GPU instancing.
-      </Typography>
+      {/* Header */}
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 1.5,
+        background: 'linear-gradient(135deg, rgba(155,89,182,0.15) 0%, rgba(142,68,173,0.15) 100%)',
+        borderRadius: '14px',
+        px: 2.5,
+        py: 1.5,
+        mb: 2,
+        border: '1px solid rgba(255,255,255,0.1)',
+      }}>
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 42,
+          height: 42,
+          borderRadius: '10px',
+          background: 'linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%)',
+          boxShadow: '0 4px 12px rgba(155,89,182,0.4)',
+        }}>
+          <Category sx={{ fontSize: 24, color: '#fff' }} />
+        </Box>
+        <Box>
+          <Typography sx={{ 
+            fontWeight: 800, 
+            fontSize: 20,
+            background: 'linear-gradient(90deg, #d4a5e8 0%, #bb8fce 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: '-0.3px',
+          }}>
+            Rekvisitter
+          </Typography>
+          <Typography sx={{ 
+            fontSize: 12, 
+            color: '#888',
+            fontWeight: 500,
+          }}>
+            Møbler, objekter og dekorasjoner
+          </Typography>
+        </Box>
+      </Box>
 
       {/* Category Tabs */}
       <Tabs

@@ -1,26 +1,86 @@
 """
 SAM 3D Body Service
 Handles loading the Meta SAM 3D Body model and generating 3D avatars from images.
-Supports both Hugging Face model loading and local model files.
+Supports CPU-only inference mode for Replit compatibility.
 """
 
 import os
+import sys
 import asyncio
 from pathlib import Path
 from typing import Dict, Any, Optional
 import numpy as np
 
+SAM3D_REPO_PATH = Path(__file__).parent / "sam3d_repo"
+if str(SAM3D_REPO_PATH) not in sys.path:
+    sys.path.insert(0, str(SAM3D_REPO_PATH))
+
 class SAM3DService:
     """
     Service for generating 3D body meshes from images using Meta SAM 3D Body.
     Falls back to a placeholder mesh if the full model isn't available.
+    Uses lazy loading to avoid blocking server startup.
     """
     
     def __init__(self):
         self.model = None
+        self.model_cfg = None
+        self.estimator = None
         self.model_loaded = False
+        self.model_loading = False
         self.use_placeholder = True
-        self._initialize()
+        self.device = None
+        self._load_lock = asyncio.Lock()
+        # Don't load model at startup - use lazy loading
+        self._check_model_availability()
+    
+    def _check_model_availability(self):
+        """Check if model files exist without loading them."""
+        try:
+            import torch
+            self.device = torch.device("cpu")
+            print(f"PyTorch available. Using device: {self.device}")
+            
+            model_path = Path(__file__).parent / "models" / "sam-3d-body-dinov3" / "model.ckpt"
+            mhr_path = Path(__file__).parent / "models" / "sam-3d-body-dinov3" / "assets" / "mhr_model.pt"
+            
+            if model_path.exists() and mhr_path.exists():
+                print(f"SAM 3D Body model files found (will load on first request)")
+                self.model_path = str(model_path)
+                self.mhr_path = str(mhr_path)
+                self.model_files_available = True
+            else:
+                print(f"SAM 3D Body model not found at: {model_path}")
+                self.model_files_available = False
+                self.use_placeholder = True
+        except ImportError as e:
+            print(f"PyTorch not available: {e}")
+            self.model_files_available = False
+            self.use_placeholder = True
+    
+    async def ensure_model_loaded(self):
+        """Lazy load the model on first request (thread-safe)."""
+        if self.model_loaded:
+            return
+        
+        async with self._load_lock:
+            if self.model_loaded:
+                return
+            
+            if not self.model_files_available:
+                self.use_placeholder = True
+                return
+            
+            self.model_loading = True
+            print("Loading SAM 3D Body model on first request...")
+            
+            try:
+                await asyncio.get_event_loop().run_in_executor(None, self._try_load_model)
+            except Exception as e:
+                print(f"Failed to load model: {e}")
+                self.use_placeholder = True
+            finally:
+                self.model_loading = False
     
     def _initialize(self):
         """Initialize the service and attempt to load the model."""
@@ -28,23 +88,60 @@ class SAM3DService:
             self._try_load_model()
         except Exception as e:
             print(f"Could not load SAM 3D Body model: {e}")
+            import traceback
+            traceback.print_exc()
             print("Using placeholder mesh generator instead")
             self.use_placeholder = True
     
     def _try_load_model(self):
-        """Attempt to load the SAM 3D Body model from Hugging Face."""
+        """Attempt to load the SAM 3D Body model from local files."""
         try:
             import torch
             self.device = torch.device("cpu")
             print(f"PyTorch loaded. Using device: {self.device}")
             
-            hf_token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_TOKEN")
+            model_path = Path(__file__).parent / "models" / "sam-3d-body-dinov3" / "model.ckpt"
+            mhr_path = Path(__file__).parent / "models" / "sam-3d-body-dinov3" / "assets" / "mhr_model.pt"
             
-            if not hf_token:
-                print("No Hugging Face token found. Set HF_TOKEN to download SAM 3D Body model.")
-                print("Using enhanced placeholder mesh generator with SMPL-X style body.")
+            if model_path.exists() and mhr_path.exists():
+                print(f"SAM 3D Body model found at: {model_path}")
+                print(f"MHR model found at: {mhr_path}")
+                self.model_path = str(model_path)
+                self.mhr_path = str(mhr_path)
+                
+                try:
+                    from sam_3d_body import load_sam_3d_body, SAM3DBodyEstimator
+                    
+                    print("Loading SAM 3D Body model (this may take a minute on CPU)...")
+                    self.model, self.model_cfg = load_sam_3d_body(
+                        checkpoint_path=self.model_path,
+                        device="cpu",
+                        mhr_path=self.mhr_path
+                    )
+                    
+                    self.estimator = SAM3DBodyEstimator(
+                        sam_3d_body_model=self.model,
+                        model_cfg=self.model_cfg,
+                        human_detector=None,
+                        human_segmentor=None,
+                        fov_estimator=None,
+                    )
+                    
+                    self.faces = self.estimator.faces
+                    self.model_loaded = True
+                    self.use_placeholder = False
+                    print("SAM 3D Body model loaded successfully!")
+                    
+                except Exception as e:
+                    print(f"Failed to load SAM 3D Body model: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    self.model_loaded = True
+                    self.use_placeholder = True
+                    print("Model files available but inference failed. Using placeholder.")
+            else:
+                print(f"SAM 3D Body model not found. Expected at: {model_path}")
                 self.use_placeholder = True
-                return
             
             try:
                 import smplx
@@ -55,7 +152,6 @@ class SAM3DService:
                 self.smplx_available = False
             
             print("Using CPU inference mode (no CUDA required).")
-            self.use_placeholder = True
             
         except ImportError as e:
             print(f"Missing dependencies for SAM 3D Body: {e}")
@@ -63,7 +159,7 @@ class SAM3DService:
     
     def is_model_loaded(self) -> bool:
         """Check if the SAM 3D Body model is loaded."""
-        return self.model_loaded
+        return self.model_loaded and not self.use_placeholder
     
     async def generate_avatar(self, input_path: str, output_path: str) -> Dict[str, Any]:
         """
@@ -77,12 +173,17 @@ class SAM3DService:
             Dictionary with success status and metadata
         """
         try:
+            # Lazy load model on first request
+            await self.ensure_model_loaded()
+            
             if self.use_placeholder:
                 return await self._generate_placeholder_avatar(input_path, output_path)
             else:
                 return await self._generate_sam3d_avatar(input_path, output_path)
                 
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return {"success": False, "error": str(e)}
     
     async def _generate_placeholder_avatar(self, input_path: str, output_path: str) -> Dict[str, Any]:
@@ -145,13 +246,74 @@ class SAM3DService:
                 "vertices": len(avatar.vertices),
                 "faces": len(avatar.faces),
                 "height": 1.75,
-                "note": "Placeholder mannequin. Set HF_TOKEN for real SAM 3D Body generation."
+                "note": "Placeholder mannequin. Full SAM 3D Body inference requires additional setup."
             }
         }
     
     async def _generate_sam3d_avatar(self, input_path: str, output_path: str) -> Dict[str, Any]:
         """
         Generate avatar using the actual SAM 3D Body model.
-        Requires PyTorch and GPU.
+        Runs on CPU for Replit compatibility.
         """
-        return {"success": False, "error": "SAM 3D Body model not loaded. Use placeholder instead."}
+        import torch
+        import cv2
+        import trimesh
+        
+        def run_inference():
+            print(f"Running SAM 3D Body inference on: {input_path}")
+            
+            img = cv2.imread(input_path)
+            if img is None:
+                raise ValueError(f"Could not read image: {input_path}")
+            
+            height, width = img.shape[:2]
+            print(f"Image size: {width}x{height}")
+            
+            with torch.no_grad():
+                outputs = self.estimator.process_one_image(
+                    input_path,
+                    bbox_thr=0.5,
+                    use_mask=False,
+                )
+            
+            if not outputs:
+                print("No humans detected in image, using full image as bbox")
+                bbox = np.array([[0, 0, width, height]])
+                outputs = self.estimator.process_one_image(
+                    input_path,
+                    bboxes=bbox,
+                    bbox_thr=0.1,
+                    use_mask=False,
+                )
+            
+            if not outputs:
+                raise ValueError("Could not detect any humans in the image")
+            
+            return outputs[0]
+        
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, run_inference)
+        
+        vertices = result["pred_vertices"]
+        faces = self.faces
+        
+        mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+        
+        mesh.visual = trimesh.visual.ColorVisuals(
+            mesh=mesh,
+            face_colors=np.array([[200, 160, 130, 255]] * len(mesh.faces))
+        )
+        
+        mesh.export(output_path, file_type='glb')
+        
+        return {
+            "success": True,
+            "metadata": {
+                "type": "sam3d_body",
+                "vertices": len(mesh.vertices),
+                "faces": len(mesh.faces),
+                "shape_params": result.get("shape_params", []).tolist() if hasattr(result.get("shape_params", []), "tolist") else [],
+                "focal_length": float(result.get("focal_length", 0)),
+                "note": "Generated using Meta SAM 3D Body model"
+            }
+        }
