@@ -141,12 +141,23 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            p: 2,
+            flexWrap: { xs: 'wrap', sm: 'nowrap' },
+            gap: { xs: 1, sm: 2 },
+            p: { xs: 1.5, sm: 2, md: 2, lg: 2.5, xl: 3 },
             borderBottom: '1px solid rgba(255,255,255,0.1)',
             bgcolor: '#1c2128',
           }}
         >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, maxWidth: 600, mx: 3 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: { xs: 1, sm: 2 }, 
+          flex: 1, 
+          maxWidth: { xs: '100%', sm: 400, md: 500, lg: 600, xl: 700 }, 
+          mx: { xs: 0, sm: 2, md: 3 },
+          order: { xs: 2, sm: 1 },
+          width: { xs: '100%', sm: 'auto' },
+        }}>
             <TextField
             placeholder="Søk produkter..."
             value={searchQuery}
@@ -164,22 +175,31 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
               '& .MuiOutlinedInput-root': {
                 color: '#fff',
                 bgcolor: 'rgba(255,255,255,0.05)',
-                fontSize: '16px',
-                minHeight: '48px',
+                fontSize: { xs: '14px', sm: '15px', md: '16px', lg: '16px', xl: '17px' },
+                minHeight: { xs: '44px', sm: '46px', md: '48px', lg: '52px', xl: '56px' },
+                borderRadius: { xs: '8px', md: '10px', xl: '12px' },
                 '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                 '&:hover fieldset': { borderColor: '#00d4ff' },
               },
             }}
           />
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: { xs: 0.5, sm: 1 },
+          order: { xs: 1, sm: 2 },
+          ml: { xs: 'auto', sm: 0 },
+        }}>
           <Chip
             label={`${installedCount} installert`}
             size="small"
             sx={{
               bgcolor: 'rgba(16,185,129,0.2)',
               color: '#10b981',
-              fontSize: '12px',
+              fontSize: { xs: '10px', sm: '11px', md: '12px', xl: '13px' },
+              height: { xs: '28px', sm: '30px', md: '32px' },
+              display: { xs: 'none', sm: 'flex' },
             }}
           />
           {updateCount > 0 && (
@@ -189,7 +209,9 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
               sx={{
                 bgcolor: 'rgba(255,184,0,0.2)',
                 color: '#ffb800',
-                fontSize: '12px',
+                fontSize: { xs: '10px', sm: '11px', md: '12px', xl: '13px' },
+                height: { xs: '28px', sm: '30px', md: '32px' },
+                display: { xs: 'none', md: 'flex' },
               }}
             />
           )}
@@ -197,8 +219,8 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
             onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
             sx={{ 
               color: 'rgba(255,255,255,0.7)',
-              minWidth: '48px',
-              minHeight: '48px',
+              minWidth: { xs: '44px', sm: '46px', md: '48px', xl: '52px' },
+              minHeight: { xs: '44px', sm: '46px', md: '48px', xl: '52px' },
               touchAction: 'manipulation',
             }}
           >
@@ -209,17 +231,29 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
       )}
 
       {/* Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: '#1c2128' }}>
+      <Box sx={{ 
+        borderBottom: 1, 
+        borderColor: 'divider', 
+        bgcolor: '#1c2128',
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        '&::-webkit-scrollbar': { display: 'none' },
+        scrollbarWidth: 'none',
+      }}>
         <Tabs
           value={selectedCategory}
           onChange={(_, value) => handleCategoryChange(value)}
+          variant="scrollable"
+          scrollButtons="auto"
           sx={{
+            minHeight: { xs: '48px', sm: '52px', md: '56px', xl: '64px' },
             '& .MuiTab-root': {
               color: 'rgba(255,255,255,0.7)',
               textTransform: 'none',
-              fontSize: '16px',
-              minHeight: '56px',
-              padding: '12px 16px',
+              fontSize: { xs: '12px', sm: '13px', md: '14px', lg: '15px', xl: '16px' },
+              minHeight: { xs: '44px', sm: '48px', md: '52px', lg: '56px', xl: '64px' },
+              minWidth: { xs: '80px', sm: 'auto' },
+              padding: { xs: '8px 12px', sm: '10px 14px', md: '12px 16px', xl: '14px 20px' },
               touchAction: 'manipulation',
               '&.Mui-selected': {
                 color: '#00d4ff',
@@ -227,7 +261,11 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
             },
             '& .MuiTabs-indicator': {
               backgroundColor: '#00d4ff',
-              height: '3px',
+              height: { xs: '2px', md: '3px' },
+            },
+            '& .MuiTabs-scrollButtons': {
+              color: 'rgba(255,255,255,0.7)',
+              '&.Mui-disabled': { opacity: 0.3 },
             },
           }}
         >
@@ -314,7 +352,12 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
       )}
 
       {/* Content */}
-      <Box sx={{ flex: 1, overflow: 'auto', p: 2, minHeight: 0 }}>
+      <Box sx={{ 
+        flex: 1, 
+        overflow: 'auto', 
+        p: { xs: 1.5, sm: 2, md: 2, lg: 2.5, xl: 3 }, 
+        minHeight: 0 
+      }}>
         {products.length === 0 ? (
           <Box
             sx={{
@@ -322,28 +365,28 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              py: 8,
+              py: { xs: 4, sm: 6, md: 8 },
               color: 'rgba(255,255,255,0.5)',
             }}
           >
-            <SearchIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
-            <Typography variant="h6" sx={{ mb: 1 }}>
+            <SearchIcon sx={{ fontSize: { xs: 48, sm: 56, md: 64 }, mb: 2, opacity: 0.5 }} />
+            <Typography variant="h6" sx={{ mb: 1, fontSize: { xs: '16px', sm: '18px', md: '20px' } }}>
               Ingen produkter funnet
             </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.7 }}>
+            <Typography variant="body2" sx={{ opacity: 0.7, fontSize: { xs: '13px', sm: '14px' } }}>
               {searchQuery ? 'Prøv et annet søkeord' : 'Ingen produkter i denne kategorien'}
             </Typography>
           </Box>
         ) : (
-          <Grid container spacing={2}>
+          <Grid container spacing={{ xs: 1.5, sm: 2, md: 2, lg: 2.5, xl: 3 }}>
             {products.map((product) => (
               <Grid
                 item
                 xs={12}
-                sm={viewMode === 'grid' ? 12 : 12}
+                sm={viewMode === 'grid' ? 6 : 12}
                 md={viewMode === 'grid' ? 6 : 12}
-                lg={viewMode === 'grid' ? 6 : 12}
-                xl={viewMode === 'grid' ? 4 : 12}
+                lg={viewMode === 'grid' ? 4 : 12}
+                xl={viewMode === 'grid' ? 3 : 12}
                 key={product.id}
               >
                 <MarketplaceProductCard
