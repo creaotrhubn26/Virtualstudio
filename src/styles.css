@@ -2030,7 +2030,7 @@ html, body {
     min-height: 46px;
     padding: 6px 16px;
     gap: 8px;
-    top: 48px;
+    top: 56px;
   }
 }
 
@@ -8231,9 +8231,9 @@ html, body {
 /* 6-tier responsive: 1080p (1280-1919px) */
 @media (min-width: 1280px) and (max-width: 1919px) {
   .viewport-2d {
-    height: 320px;
-    min-height: 280px;
-    max-height: 400px;
+    height: 260px;
+    min-height: 220px;
+    max-height: 320px;
   }
 }
 
