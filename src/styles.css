@@ -11291,8 +11291,8 @@ html, body {
   border: 0;
 }
 
-.toggle-slider {
-  position: relative;
+.overlay-toggle-switch .toggle-slider {
+  position: relative !important;
   width: 52px;
   height: 28px;
   background: rgba(255, 255, 255, 0.15);
@@ -11300,9 +11300,14 @@ html, body {
   border-radius: 14px;
   transition: all 0.3s;
   flex-shrink: 0;
+  inset: unset !important;
+  top: unset !important;
+  left: unset !important;
+  right: unset !important;
+  bottom: unset !important;
 }
 
-.toggle-slider::after {
+.overlay-toggle-switch .toggle-slider::after {
   content: '';
   position: absolute;
   top: 3px;
@@ -11333,7 +11338,7 @@ html, body {
   background: #00d4ff;
 }
 
-.toggle-label {
+.overlay-toggle-switch .toggle-label {
   font-size: 14px;
   color: #e0e0e0;
 }
