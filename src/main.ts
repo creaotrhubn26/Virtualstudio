@@ -15370,10 +15370,14 @@ window.addEventListener('DOMContentLoaded', () => {
     // Bind camera button
     cameraControlBtn?.addEventListener('click', toggleCameraControls);
 
-    if (cameraControlsClose) {
-      cameraControlsClose.addEventListener('click', () => {
-        if (cameraControlsPanel) cameraControlsPanel.style.display = 'none';
-        cameraControlBtn?.classList.remove('active');
+    // Use event delegation for close button (more reliable)
+    if (cameraControlsPanel) {
+      cameraControlsPanel.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('#cameraControlsClose')) {
+          cameraControlsPanel.style.display = 'none';
+          cameraControlBtn?.classList.remove('active');
+        }
       });
     }
     
