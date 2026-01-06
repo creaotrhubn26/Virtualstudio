@@ -11107,25 +11107,9 @@ html, body {
   background: rgba(0, 212, 255, 0.7);
 }
 
-/* Ensure Rutenett section stays at bottom - use multiple selectors for specificity */
-#overlayPanelContent .overlay-section-rutenett,
-.overlay-settings-content .overlay-section-rutenett,
-.overlay-section-rutenett,
-.overlay-section:has(#overlayGridToggle) {
-  order: 999 !important;
-  margin-top: auto !important;
-}
-
-/* Force all other sections to have lower order */
-.overlay-settings-content > .overlay-section:not(.overlay-section-rutenett):not(:has(#overlayGridToggle)) {
-  order: 1 !important;
-}
-
-/* Additional rule to ensure it's at the bottom - remove align-self that might cause issues */
+/* Rutenett section - flows naturally in scrollable content */
 .overlay-section-rutenett {
-  order: 999 !important;
-  margin-top: auto !important;
-  align-self: stretch !important;
+  /* No special positioning - scrolls with other content */
 }
 
 /* Section styling */
