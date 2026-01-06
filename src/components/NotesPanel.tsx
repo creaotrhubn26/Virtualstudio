@@ -164,14 +164,14 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
     });
   };
 
-  // Responsive button style for desktop and iPad
+  // 6-tier responsive button style
   const buttonStyle = {
-    minHeight: { xs: 48, sm: 52, md: 56 },
-    fontSize: { xs: 14, sm: 15, md: 16 },
+    minHeight: { xs: 44, sm: 46, md: 48, lg: 52, xl: 56 },
+    fontSize: { xs: 13, sm: 14, md: 14, lg: 15, xl: 16 },
     fontWeight: 600,
     textTransform: 'none' as const,
-    borderRadius: '12px',
-    padding: { xs: '10px 18px', sm: '12px 20px', md: '12px 24px' },
+    borderRadius: { xs: '10px', md: '12px', xl: '14px' },
+    padding: { xs: '10px 16px', sm: '10px 18px', md: '12px 20px', lg: '12px 22px', xl: '14px 26px' },
     transition: 'all 0.2s ease',
     WebkitTapHighlightColor: 'transparent',
     touchAction: 'manipulation',
@@ -200,18 +200,20 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
         id="notesPanel"
         sx={{
           position: 'fixed',
-          bottom: { xs: 70, sm: 80, md: 100 },
+          bottom: { xs: 65, sm: 75, md: 85, lg: 95, xl: 110 },
           left: '50%',
-          // Responsive width: mobile -> tablet -> desktop
+          // 6-tier responsive width
           width: {
-            xs: 'calc(100vw - 32px)',
-            sm: 'min(700px, 90vw)',
-            md: 'min(800px, 85vw)',
+            xs: 'calc(100vw - 24px)',
+            sm: 'min(600px, 92vw)',
+            md: 'min(700px, 88vw)',
+            lg: 'min(800px, 85vw)',
+            xl: 'min(900px, 80vw)',
           },
-          maxHeight: { xs: '70vh', sm: '65vh', md: '60vh' },
+          maxHeight: { xs: '72vh', sm: '68vh', md: '65vh', lg: '62vh', xl: '58vh' },
           bgcolor: '#1e1e1e',
-          border: '2px solid #333',
-          borderRadius: { xs: 2, sm: 3 },
+          border: { xs: '1px solid #333', md: '2px solid #333' },
+          borderRadius: { xs: '14px', sm: '16px', md: '18px', xl: '20px' },
           zIndex: zIndex,
           display: 'flex',
           flexDirection: 'column',
@@ -262,14 +264,20 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          p: 3,
+          p: { xs: 1.5, sm: 2, md: 2.5, lg: 3, xl: 3.5 },
           borderBottom: '1px solid #333',
           bgcolor: '#252525',
+          gap: { xs: 1, sm: 1.5 },
+          flexWrap: { xs: 'wrap', sm: 'nowrap' },
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <NotesIcon sx={{ color: '#fbbf24', fontSize: 28 }} />
-          <Typography sx={{ color: '#fff', fontWeight: 600, fontSize: 18 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
+          <NotesIcon sx={{ color: '#fbbf24', fontSize: { xs: 22, sm: 24, md: 26, lg: 28, xl: 32 } }} />
+          <Typography sx={{ 
+            color: '#fff', 
+            fontWeight: 600, 
+            fontSize: { xs: 15, sm: 16, md: 17, lg: 18, xl: 20 } 
+          }}>
             Notater
           </Typography>
           <Chip
@@ -279,17 +287,17 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
               bgcolor: '#fbbf24',
               color: '#000',
               fontWeight: 700,
-              fontSize: 13,
-              height: 28,
-              px: 1,
+              fontSize: { xs: 11, sm: 12, md: 13, xl: 14 },
+              height: { xs: 24, sm: 26, md: 28, xl: 32 },
+              px: { xs: 0.75, sm: 1 },
             }}
           />
         </Box>
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
+        <Box sx={{ display: 'flex', gap: { xs: 1, sm: 1.5 } }}>
           {!isEditing && (
             <Button
               variant="contained"
-              startIcon={<AddIcon sx={{ fontSize: 20 }} />}
+              startIcon={<AddIcon sx={{ fontSize: { xs: 18, sm: 19, md: 20, xl: 22 } }} />}
               onClick={handleCreate}
               sx={{
                 ...buttonStyle,
@@ -306,8 +314,8 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
               onClick={onClose}
               sx={{
                 color: '#888',
-                minWidth: 48,
-                minHeight: 48,
+                minWidth: { xs: 44, sm: 46, md: 48, xl: 52 },
+                minHeight: { xs: 44, sm: 46, md: 48, xl: 52 },
                 '&:hover': { color: '#fff', bgcolor: '#333' },
                 touchAction: 'manipulation',
               }}
@@ -318,9 +326,9 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
         </Box>
       </Box>
 
-      <Box sx={{ flex: 1, overflow: 'auto', p: { xs: 2, sm: 3 } }}>
+      <Box sx={{ flex: 1, overflow: 'auto', p: { xs: 1.5, sm: 2, md: 2.5, lg: 3, xl: 3.5 } }}>
         {isEditing ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 2, sm: 3 } }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1.5, sm: 2, md: 2.5, lg: 3 } }}>
             <TextField
               fullWidth
               placeholder="Tittel..."
@@ -330,25 +338,26 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
                 '& .MuiOutlinedInput-root': {
                   bgcolor: '#2a2a2a',
                   color: '#fff',
-                  fontSize: { xs: 16, sm: 18 },
+                  fontSize: { xs: 15, sm: 16, md: 17, lg: 18, xl: 19 },
                   fontWeight: 600,
-                  minHeight: { xs: 52, sm: 56 },
+                  minHeight: { xs: 48, sm: 50, md: 52, lg: 56, xl: 60 },
+                  borderRadius: { xs: '10px', md: '12px', xl: '14px' },
                   '& fieldset': { borderColor: '#444', borderWidth: 2 },
                   '&:hover fieldset': { borderColor: '#555' },
                   '&.Mui-focused fieldset': { borderColor: '#fbbf24', borderWidth: 2 },
                 },
                 '& input': {
-                  padding: { xs: '14px 12px', sm: '16px 14px' },
+                  padding: { xs: '12px 12px', sm: '14px 14px', md: '16px 16px' },
                 },
-                '& input::placeholder': { color: '#666', fontSize: { xs: 16, sm: 18 } },
+                '& input::placeholder': { color: '#666', fontSize: { xs: 15, sm: 16, md: 17, lg: 18 } },
               }}
             />
 
-            {/* Category buttons - responsive grid for iPad */}
+            {/* Category buttons - 6-tier responsive */}
             <Box
               sx={{
                 display: 'flex',
-                gap: { xs: 1, sm: 1.5 },
+                gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5 },
                 flexWrap: 'wrap',
               }}
             >
@@ -359,15 +368,15 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
                   <Button
                     key={cat}
                     variant={category === cat ? 'contained' : 'outlined'}
-                    startIcon={<Icon sx={{ fontSize: { xs: 18, sm: 20 } }} />}
+                    startIcon={<Icon sx={{ fontSize: { xs: 16, sm: 18, md: 19, lg: 20, xl: 22 } }} />}
                     onClick={() => setCategory(cat)}
                     sx={{
-                      minHeight: { xs: 48, sm: 52 },
-                      fontSize: { xs: 14, sm: 15 },
+                      minHeight: { xs: 44, sm: 46, md: 48, lg: 52, xl: 56 },
+                      fontSize: { xs: 12, sm: 13, md: 14, lg: 15, xl: 16 },
                       fontWeight: 600,
                       textTransform: 'none',
-                      borderRadius: '10px',
-                      padding: { xs: '10px 16px', sm: '12px 20px' },
+                      borderRadius: { xs: '8px', md: '10px', xl: '12px' },
+                      padding: { xs: '8px 12px', sm: '10px 14px', md: '10px 16px', lg: '12px 18px', xl: '12px 20px' },
                       bgcolor: category === cat ? config.color : 'transparent',
                       borderColor: category === cat ? config.color : '#444',
                       borderWidth: 2,
@@ -390,16 +399,16 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
               })}
             </Box>
 
-            {/* Rich text editor with responsive height */}
+            {/* Rich text editor with 6-tier responsive height */}
             <RichTextEditor
               value={content}
               onChange={setContent}
               placeholder="Skriv notatet ditt her..."
-              minHeight={{ xs: 150, sm: 200, md: 250 }}
+              minHeight={{ xs: 120, sm: 150, md: 180, lg: 220, xl: 260 }}
               accentColor="#fbbf24"
             />
 
-            <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'flex-end' }}>
+            <Box sx={{ display: 'flex', gap: { xs: 1, sm: 1.5 }, justifyContent: 'flex-end' }}>
               <Button
                 variant="outlined"
                 onClick={handleCancel}
@@ -415,7 +424,7 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
               </Button>
               <Button
                 variant="contained"
-                startIcon={<SaveIcon sx={{ fontSize: 20 }} />}
+                startIcon={<SaveIcon sx={{ fontSize: { xs: 18, sm: 19, md: 20, xl: 22 } }} />}
                 onClick={handleSave}
                 disabled={!title.trim()}
                 sx={{
@@ -437,15 +446,15 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              py: 8,
+              py: { xs: 4, sm: 5, md: 6, lg: 7, xl: 8 },
               color: '#666',
             }}
           >
-            <NotesIcon sx={{ fontSize: 64, mb: 3, opacity: 0.5 }} />
-            <Typography sx={{ fontSize: 18, fontWeight: 500 }}>
+            <NotesIcon sx={{ fontSize: { xs: 48, sm: 52, md: 56, lg: 60, xl: 64 }, mb: { xs: 2, sm: 2.5, md: 3 }, opacity: 0.5 }} />
+            <Typography sx={{ fontSize: { xs: 15, sm: 16, md: 17, lg: 18, xl: 20 }, fontWeight: 500 }}>
               Ingen notater ennå
             </Typography>
-            <Typography sx={{ fontSize: 14, color: '#555', mt: 1 }}>
+            <Typography sx={{ fontSize: { xs: 12, sm: 13, md: 14, xl: 15 }, color: '#555', mt: 1 }}>
               Klikk "Ny notat" for å begynne
             </Typography>
           </Box>
