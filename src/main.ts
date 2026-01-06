@@ -12212,15 +12212,20 @@ class VirtualStudio {
     }
   }
   
-  // Set ambient light ground color intensity (0-1)
+  // Set ambient light ground color intensity (0-100%)
   public setAmbientLightGroundIntensity(percent: number): void {
     this.ambientLightGroundIntensity = percent / 100;
     if (this.ambientLight) {
       const groundFactor = this.ambientLightGroundIntensity;
+      // Ground color reflects light bouncing from floor - use warmer tones
+      // Scale from 0 (no ground reflection) to full diffuse match at 100%
+      const baseR = 0.4;
+      const baseG = 0.35;
+      const baseB = 0.3;
       this.ambientLight.groundColor = new BABYLON.Color3(
-        0.15 * groundFactor,
-        0.15 * groundFactor,
-        0.18 * groundFactor
+        baseR * groundFactor * this.ambientLight.intensity,
+        baseG * groundFactor * this.ambientLight.intensity,
+        baseB * groundFactor * this.ambientLight.intensity
       );
     }
   }

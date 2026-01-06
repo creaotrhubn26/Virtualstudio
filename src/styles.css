@@ -8652,13 +8652,48 @@ html, body {
   cursor: pointer;
 }
 
-/* Ambient Toggle Switch Styles */
+/* Ambient Toggle Switch Styles - Using sibling selectors */
+#ambientToggleSwitch:checked ~ #ambientToggleTrack {
+  background: linear-gradient(90deg, #4CAF50, #66BB6A) !important;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+#ambientToggleSwitch:not(:checked) ~ #ambientToggleTrack {
+  background: rgba(100, 100, 100, 0.4) !important;
+  box-shadow: none;
+}
+
+#ambientToggleSwitch:checked ~ #ambientToggleThumb {
+  left: 24px !important;
+}
+
+#ambientToggleSwitch:not(:checked) ~ #ambientToggleThumb {
+  left: 2px !important;
+}
+
 #ambientToggleTrack {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 #ambientToggleThumb {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Auto-ambient toggle using sibling selectors */
+#autoAmbientCheckbox:checked ~ span:first-of-type {
+  background: #4CAF50 !important;
+}
+
+#autoAmbientCheckbox:not(:checked) ~ span:first-of-type {
+  background: rgba(100, 100, 100, 0.4) !important;
+}
+
+#autoAmbientCheckbox:checked ~ span:last-of-type {
+  left: 18px !important;
+}
+
+#autoAmbientCheckbox:not(:checked) ~ span:last-of-type {
+  left: 2px !important;
 }
 
 /* Ambient Status Badge */
