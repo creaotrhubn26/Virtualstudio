@@ -13923,16 +13923,8 @@ class VirtualStudio {
           <div class="project-type-content" data-content="new">
             <div class="project-type-options">
               <button class="project-type-option" data-type="casting">
-                <div class="project-type-icon casting">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="9" cy="7" r="3"/>
-                    <path d="M3 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
-                    <rect x="15" y="3" width="6" height="8" rx="1" fill="rgba(206,147,216,0.3)"/>
-                    <line x1="17" y1="5" x2="19" y2="5"/>
-                    <line x1="17" y1="7" x2="19" y2="7"/>
-                    <line x1="17" y1="9" x2="19" y2="9"/>
-                    <path d="M18 4.5l0.5 1 1 0.5-1 0.5L18 7.5l-0.5-1 1-0.5-1-0.5L18 4.5z" fill="currentColor"/>
-                  </svg>
+                <div class="project-type-icon casting" style="background: transparent; padding: 0;">
+                  <img src="/casting-planner-logo.png" alt="Casting Planner" style="width: 56px; height: 56px; object-fit: contain; border-radius: 12px;">
                 </div>
                 <div class="project-type-info">
                   <h3>Casting Planner</h3>
