@@ -10799,15 +10799,15 @@ html, body {
 .overlay-settings-panel {
   position: fixed;
   /* Initial position will be set by JavaScript above button */
-  width: 460px;
+  width: 400px;
   max-width: calc(100vw - 32px);
   z-index: 9999;
-  background: rgba(15, 20, 28, 0.95);
+  background: rgba(15, 20, 28, 0.97);
   border: 2px solid rgba(0, 212, 255, 0.25);
-  border-radius: 16px;
+  border-radius: 14px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   overflow: hidden;
-  max-height: min(70vh, 600px);
+  max-height: min(55vh, 450px);
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(16px);
@@ -10827,7 +10827,7 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 16px;
+  padding: 10px 14px;
   background: rgba(0, 212, 255, 0.1);
   border-bottom: 1px solid rgba(0, 212, 255, 0.2);
   cursor: grab;
@@ -10860,7 +10860,7 @@ html, body {
 
 .overlay-settings-title {
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: #00d4ff;
 }
@@ -10924,10 +10924,10 @@ html, body {
 
 /* Content area */
 .overlay-settings-content {
-  padding: 16px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
@@ -10961,7 +10961,7 @@ html, body {
 .overlay-section {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
   /* Ensure sections stay in content area, not header */
   position: relative;
@@ -10970,12 +10970,12 @@ html, body {
 .overlay-section-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: 8px;
+  padding: 10px 12px;
   background: rgba(0, 212, 255, 0.08);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   color: #00d4ff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -11398,41 +11398,51 @@ html, body {
    ============================================ */
 @media (min-width: 1280px) and (max-width: 1919px) {
   .overlay-settings-panel {
-    width: 480px;
-    bottom: 100px;
-    max-height: min(68vh, 600px);
+    width: 420px;
+    bottom: 90px;
+    max-height: min(55vh, 480px);
   }
 
   .overlay-settings-header {
-    padding: 14px 18px;
+    padding: 10px 14px;
   }
 
   .overlay-settings-title {
-    font-size: 16px;
-  }
-
-  .overlay-settings-content {
-    padding: 16px;
-    gap: 12px;
-  }
-
-  .overlay-section-header {
-    padding: 14px 16px;
-    font-size: 15px;
-  }
-
-  .overlay-section-content {
-    padding: 16px;
-  }
-
-  .overlay-checkbox {
-    padding: 12px 14px;
     font-size: 14px;
   }
 
+  .overlay-settings-content {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .overlay-section {
+    border-radius: 10px;
+  }
+
+  .overlay-section-header {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .overlay-section-content {
+    padding: 12px;
+  }
+
+  .overlay-checkbox {
+    padding: 8px 10px;
+    font-size: 12px;
+    min-height: 36px;
+  }
+
   .overlay-radio {
-    padding: 12px 16px;
-    font-size: 15px;
+    padding: 8px 12px;
+    font-size: 13px;
+    min-height: 36px;
+  }
+
+  .overlay-checkbox-grid {
+    gap: 6px;
   }
 
   /* Hover effects for mouse users */
