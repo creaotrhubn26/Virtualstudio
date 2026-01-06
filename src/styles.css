@@ -8231,9 +8231,9 @@ html, body {
 /* 6-tier responsive: 1080p (1280-1919px) */
 @media (min-width: 1280px) and (max-width: 1919px) {
   .viewport-2d {
-    height: 260px;
-    min-height: 220px;
-    max-height: 320px;
+    height: 200px;
+    min-height: 160px;
+    max-height: 240px;
   }
 }
 
