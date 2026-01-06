@@ -5816,6 +5816,53 @@ html, body {
   top: 120px !important;
   right: 20px !important;
   left: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* Scrollable wrapper for panel content */
+#cameraControlsScrollable {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+}
+
+/* Tab content containers */
+#cameraTabContent,
+#lightTabContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  min-height: 0;
+}
+
+/* Light tab when visible (JavaScript sets display:flex) */
+#lightTabContent[style*="display: flex"],
+#lightTabContent[style*="display:flex"] {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Custom scrollbar for camera controls panel */
+#cameraControlsScrollable::-webkit-scrollbar {
+  width: 8px;
+}
+
+#cameraControlsScrollable::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+#cameraControlsScrollable::-webkit-scrollbar-thumb {
+  background: rgba(0, 212, 255, 0.3);
+  border-radius: 4px;
+}
+
+#cameraControlsScrollable::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 212, 255, 0.5);
 }
 
 
@@ -8002,11 +8049,28 @@ html, body {
 /* hiDPI Laptop (2560-3599px) - MacBook Pro 16" */
 @media (min-width: 2560px) and (max-width: 3599px) {
   #cameraControlsPanel {
-    width: 480px !important;
-    max-height: 60vh !important;
+    width: 460px !important;
+    max-height: 65vh !important;
     border-radius: 14px;
-    top: 100px !important;
+    top: 90px !important;
     right: 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+  
+  #cameraControlsScrollable {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    max-height: calc(65vh - 100px);
+  }
+  
+  #cameraTabContent,
+  #lightTabContent {
+    padding: 12px;
+    gap: 12px;
   }
   
   .cam-setting-btn {
@@ -8058,6 +8122,18 @@ html, body {
     width: 18px;
     height: 18px;
     font-size: 10px;
+  }
+  
+  /* Compact grid layouts for Light tab */
+  #lightTabContent > div[style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  
+  /* Compact light position grid */
+  #lightTabContent .light-ctrl-btn {
+    min-width: 40px;
+    min-height: 40px;
   }
 }
 
