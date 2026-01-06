@@ -10954,6 +10954,7 @@ html, body {
   border-radius: 14px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   overflow: hidden;
+  height: min(55vh, 450px);
   max-height: min(55vh, 450px);
   display: flex;
   flex-direction: column;
@@ -11660,10 +11661,12 @@ html, body {
   .overlay-settings-panel {
     width: 340px;
     bottom: 90px;
+    height: min(55vh, 420px);
     max-height: min(55vh, 420px);
     border-radius: 12px;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
   .overlay-settings-header {
@@ -11680,12 +11683,11 @@ html, body {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    overflow-y: auto !important;
+    overflow-y: scroll !important;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     flex: 1 1 auto;
     min-height: 0;
-    max-height: calc(55vh - 60px);
   }
 
   .overlay-section {
