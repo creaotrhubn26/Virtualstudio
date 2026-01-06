@@ -7781,6 +7781,339 @@ html, body {
   border-color: rgba(255, 68, 68, 0.5);
 }
 
+/* ============================================
+   CAMERA CONTROLS PANEL - 7-tier Responsive
+   ============================================ */
+
+/* Base cam-setting-btn styles */
+.cam-setting-btn {
+  width: 52px;
+  height: 52px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cam-setting-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(0, 212, 255, 0.5);
+}
+
+.cam-setting-btn:active {
+  transform: scale(0.95);
+  background: rgba(0, 212, 255, 0.3);
+}
+
+/* ctrl-tab styles */
+.ctrl-tab {
+  flex: 1;
+  padding: 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.2s ease;
+}
+
+.ctrl-tab:hover {
+  background: rgba(0, 212, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.ctrl-tab.active {
+  background: rgba(0, 212, 255, 0.15);
+  border-bottom: 2px solid #00d4ff;
+  color: #00d4ff;
+}
+
+/* Mobile (< 600px) */
+@media (max-width: 599px) {
+  #cameraControlsPanel {
+    width: calc(100vw - 20px) !important;
+    max-width: 100% !important;
+    right: 10px !important;
+    left: 10px !important;
+    top: auto !important;
+    bottom: 80px !important;
+    max-height: 60vh !important;
+  }
+  
+  .cam-setting-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+  
+  .ctrl-tab {
+    padding: 12px 8px;
+    font-size: 13px;
+    min-height: 48px;
+    gap: 6px;
+  }
+  
+  .camera-angle-btn {
+    min-height: 48px;
+    font-size: 12px;
+    padding: 10px 6px;
+  }
+  
+  .camera-preset-btn {
+    min-height: 48px;
+    font-size: 11px;
+  }
+  
+  .camera-presets-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Tablet (600-959px) */
+@media (min-width: 600px) and (max-width: 959px) {
+  #cameraControlsPanel {
+    width: 480px !important;
+    max-height: 65vh !important;
+  }
+  
+  .cam-setting-btn {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+  
+  .ctrl-tab {
+    padding: 14px 12px;
+    font-size: 14px;
+    min-height: 52px;
+  }
+  
+  .camera-presets-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+/* 720p (960-1279px) */
+@media (min-width: 960px) and (max-width: 1279px) {
+  #cameraControlsPanel {
+    width: 500px !important;
+    max-height: 70vh !important;
+  }
+  
+  .cam-setting-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+  
+  .ctrl-tab {
+    padding: 14px;
+    font-size: 14px;
+    min-height: 50px;
+  }
+}
+
+/* 1080p (1280-1919px) */
+@media (min-width: 1280px) and (max-width: 1919px) {
+  #cameraControlsPanel {
+    width: 520px !important;
+    max-height: 70vh !important;
+  }
+  
+  .cam-setting-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+    border-radius: 8px;
+  }
+  
+  .ctrl-tab {
+    padding: 12px 14px;
+    font-size: 14px;
+    min-height: 48px;
+  }
+  
+  .camera-angle-btn {
+    min-height: 48px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+  
+  .camera-preset-btn {
+    min-height: 48px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+}
+
+/* 2K (1920-2559px) */
+@media (min-width: 1920px) and (max-width: 2559px) {
+  #cameraControlsPanel {
+    width: 580px !important;
+    max-height: 75vh !important;
+    border-radius: 18px;
+  }
+  
+  .cam-setting-btn {
+    width: 56px;
+    height: 56px;
+    font-size: 24px;
+    border-radius: 12px;
+  }
+  
+  .ctrl-tab {
+    padding: 18px;
+    font-size: 16px;
+    min-height: 60px;
+  }
+  
+  .camera-angle-btn {
+    min-height: 56px;
+    font-size: 15px;
+    border-radius: 10px;
+  }
+  
+  .camera-preset-btn {
+    min-height: 56px;
+    font-size: 14px;
+    border-radius: 10px;
+  }
+}
+
+/* hiDPI Laptop (2560-3599px) - MacBook Pro 16" */
+@media (min-width: 2560px) and (max-width: 3599px) {
+  #cameraControlsPanel {
+    width: 480px !important;
+    max-height: 60vh !important;
+    border-radius: 14px;
+    top: 100px !important;
+    right: 16px !important;
+  }
+  
+  .cam-setting-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+    border-radius: 8px;
+    border-width: 1.5px;
+  }
+  
+  .ctrl-tab {
+    padding: 10px 12px;
+    font-size: 13px;
+    min-height: 44px;
+    gap: 8px;
+  }
+  
+  .camera-angle-btn {
+    min-height: 44px;
+    font-size: 12px;
+    border-radius: 8px;
+    padding: 10px 8px;
+    border-width: 1.5px;
+  }
+  
+  .camera-preset-btn {
+    min-height: 44px;
+    font-size: 11px;
+    border-radius: 8px;
+    border-width: 1.5px;
+  }
+  
+  .camera-presets-section {
+    margin-top: 12px;
+    padding-top: 12px;
+    gap: 8px;
+  }
+  
+  .camera-presets-label {
+    font-size: 12px;
+  }
+  
+  .camera-presets-hint {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+  
+  .camera-info-btn {
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+  }
+}
+
+/* 4K Desktop (3600px+) */
+@media (min-width: 3600px) {
+  #cameraControlsPanel {
+    width: 640px !important;
+    max-height: 70vh !important;
+    border-radius: 20px;
+    border-width: 3px;
+  }
+  
+  .cam-setting-btn {
+    width: 64px;
+    height: 64px;
+    font-size: 28px;
+    border-radius: 14px;
+    border-width: 3px;
+  }
+  
+  .ctrl-tab {
+    padding: 20px;
+    font-size: 18px;
+    min-height: 68px;
+  }
+  
+  .camera-angle-btn {
+    min-height: 64px;
+    font-size: 16px;
+    border-radius: 12px;
+    border-width: 3px;
+  }
+  
+  .camera-preset-btn {
+    min-height: 64px;
+    font-size: 15px;
+    border-radius: 12px;
+    border-width: 3px;
+  }
+  
+  .camera-presets-label {
+    font-size: 16px;
+  }
+  
+  .camera-presets-hint {
+    font-size: 14px;
+    padding: 10px 14px;
+  }
+  
+  .camera-info-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+  }
+}
+
 .viewfinder-info {
   position: absolute;
   bottom: 12px;
