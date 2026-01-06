@@ -11076,13 +11076,35 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  overflow-y: auto !important;
+  overflow-y: scroll;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
+  /* Cross-browser scroll support */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 212, 255, 0.5) rgba(255, 255, 255, 0.1);
+}
+
+/* Webkit scrollbar styling for Chrome/Safari */
+.overlay-settings-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.overlay-settings-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.overlay-settings-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 212, 255, 0.5);
+  border-radius: 4px;
+}
+
+.overlay-settings-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 212, 255, 0.7);
 }
 
 /* Ensure Rutenett section stays at bottom - use multiple selectors for specificity */
