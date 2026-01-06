@@ -2303,6 +2303,56 @@ html, body {
   outline-offset: -2px;
 }
 
+/* 6-tier responsive panel-header: Mobile */
+@media (max-width: 599px) {
+  .panel-header {
+    padding: 10px;
+    gap: 6px;
+    min-height: 44px;
+  }
+}
+
+/* 6-tier responsive panel-header: Tablet */
+@media (min-width: 600px) and (max-width: 959px) {
+  .panel-header {
+    padding: 10px 12px;
+    gap: 8px;
+    min-height: 44px;
+  }
+}
+
+/* 6-tier responsive panel-header: 720p */
+@media (min-width: 960px) and (max-width: 1279px) {
+  .panel-header {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+}
+
+/* 6-tier responsive panel-header: 1080p */
+@media (min-width: 1280px) and (max-width: 1919px) {
+  .panel-header {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+}
+
+/* 6-tier responsive panel-header: 2K */
+@media (min-width: 1920px) and (max-width: 2559px) {
+  .panel-header {
+    padding: 14px 16px;
+    gap: 10px;
+  }
+}
+
+/* 6-tier responsive panel-header: 4K */
+@media (min-width: 2560px) {
+  .panel-header {
+    padding: 18px 20px;
+    gap: 12px;
+  }
+}
+
 .collapse-arrow {
   font-size: 10px;
   color: var(--text-secondary);
@@ -2355,6 +2405,32 @@ html, body {
     height: 32px;
     font-size: 14px;
     border-radius: 6px;
+  }
+}
+
+/* 6-tier responsive hierarchy-action-btn: 720p */
+@media (min-width: 960px) and (max-width: 1279px) {
+  .hierarchy-actions {
+    gap: 4px;
+  }
+  .hierarchy-action-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+    border-radius: 5px;
+  }
+}
+
+/* 6-tier responsive hierarchy-action-btn: 1080p */
+@media (min-width: 1280px) and (max-width: 1919px) {
+  .hierarchy-actions {
+    gap: 4px;
+  }
+  .hierarchy-action-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+    border-radius: 4px;
   }
 }
 
@@ -4746,6 +4822,26 @@ html, body {
     height: 32px;
     background-size: 18px 18px;
     border-radius: 6px;
+  }
+}
+
+/* 6-tier responsive header-icon: 720p */
+@media (min-width: 960px) and (max-width: 1279px) {
+  .header-icon {
+    width: 30px;
+    height: 30px;
+    background-size: 18px 18px;
+    border-radius: 6px;
+  }
+}
+
+/* 6-tier responsive header-icon: 1080p */
+@media (min-width: 1280px) and (max-width: 1919px) {
+  .header-icon {
+    width: 28px;
+    height: 28px;
+    background-size: 16px 16px;
+    border-radius: 5px;
   }
 }
 
