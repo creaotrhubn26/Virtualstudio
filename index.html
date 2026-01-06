@@ -427,7 +427,21 @@
                 <div style="display:flex;gap:3px;"><div style="width:4px;height:4px;background:#00d4ff;border-radius:50%;"></div><div style="width:4px;height:4px;background:#00d4ff;border-radius:50%;"></div></div>
                 <div style="display:flex;gap:3px;"><div style="width:4px;height:4px;background:#00d4ff;border-radius:50%;"></div><div style="width:4px;height:4px;background:#00d4ff;border-radius:50%;"></div></div>
               </div>
-              <div style="width:24px;height:24px;background-image:url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%2300d4ff\'%3E%3Cpath d=\'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z\'/%3E%3C/svg%3E');background-size:24px 24px;background-repeat:no-repeat;background-position:center;flex-shrink:0;"></div>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                <!-- Camera body -->
+                <rect x="1" y="11" width="10" height="7" rx="1.5"/>
+                <!-- Camera lens triangle -->
+                <path d="M11 13.5 L15 11 L15 17 L11 14.5" fill="#00d4ff" stroke="none"/>
+                <!-- Softbox light -->
+                <rect x="17" y="5" width="6" height="7" rx="1"/>
+                <!-- Light rays -->
+                <line x1="20" y1="12" x2="20" y2="15"/>
+                <line x1="17.5" y1="13" x2="16" y2="15.5"/>
+                <line x1="22.5" y1="13" x2="24" y2="15.5"/>
+                <!-- Light stand -->
+                <line x1="20" y1="15" x2="20" y2="19"/>
+                <line x1="18" y1="19" x2="22" y2="19"/>
+              </svg>
               <span style="font-size:16px;font-weight:600;color:#00d4ff;pointer-events:none;">Kamera & Lys-kontroll</span>
             </div>
             <button id="cameraControlsClose" aria-label="Lukk" style="width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">&times;</button>
@@ -1843,9 +1857,21 @@
               Overlays
             </button>
             <!-- Camera Controls Button -->
-            <button class="action-btn camera-control-btn" id="cameraControlBtn" title="Kamerakontroller">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+            <button class="action-btn camera-control-btn" id="cameraControlBtn" title="Kamera & Lys-kontroll">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <!-- Camera body -->
+                <rect x="1" y="11" width="10" height="7" rx="1.5"/>
+                <!-- Camera lens triangle -->
+                <path d="M11 13.5 L15 11 L15 17 L11 14.5" fill="currentColor" stroke="none"/>
+                <!-- Softbox light -->
+                <rect x="17" y="5" width="6" height="7" rx="1"/>
+                <!-- Light rays -->
+                <line x1="20" y1="12" x2="20" y2="15"/>
+                <line x1="17.5" y1="13" x2="16" y2="15.5"/>
+                <line x1="22.5" y1="13" x2="24" y2="15.5"/>
+                <!-- Light stand -->
+                <line x1="20" y1="15" x2="20" y2="19"/>
+                <line x1="18" y1="19" x2="22" y2="19"/>
               </svg>
               Kamera & Lys
             </button>
