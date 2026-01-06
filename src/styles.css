@@ -617,8 +617,19 @@ html, body {
   }
 }
 
-/* 6-tier responsive top-bar: 4K (2560px+) */
-@media (min-width: 2560px) {
+/* 7-tier responsive top-bar: hiDPI Laptop (2560-3599px) - MacBook Pro 16" etc */
+@media (min-width: 2560px) and (max-width: 3599px) {
+  .top-bar {
+    height: auto;
+    min-height: 48px;
+    max-height: 56px;
+    padding: 0 18px;
+    gap: 12px;
+  }
+}
+
+/* 7-tier responsive top-bar: 4K Desktop (3600px+) */
+@media (min-width: 3600px) {
   .top-bar {
     height: auto;
     min-height: 88px;
@@ -893,8 +904,15 @@ html, body {
   }
 }
 
-/* 6-tier responsive logo: 4K */
-@media (min-width: 2560px) {
+/* 7-tier responsive logo: hiDPI Laptop (2560-3599px) */
+@media (min-width: 2560px) and (max-width: 3599px) {
+  .logo-image {
+    height: 32px;
+  }
+}
+
+/* 7-tier responsive logo: 4K Desktop (3600px+) */
+@media (min-width: 3600px) {
   .logo-image {
     height: 56px;
   }
@@ -2045,8 +2063,19 @@ html, body {
   }
 }
 
-/* 6-tier responsive secondary-menu-bar: 4K */
-@media (min-width: 2560px) {
+/* 7-tier responsive secondary-menu-bar: hiDPI Laptop (2560-3599px) */
+@media (min-width: 2560px) and (max-width: 3599px) {
+  .secondary-menu-bar {
+    height: 46px;
+    min-height: 46px;
+    padding: 6px 18px;
+    gap: 8px;
+    top: 56px;
+  }
+}
+
+/* 7-tier responsive secondary-menu-bar: 4K Desktop (3600px+) */
+@media (min-width: 3600px) {
   .secondary-menu-bar {
     height: 80px;
     min-height: 80px;
@@ -2163,8 +2192,23 @@ html, body {
   }
 }
 
-/* 6-tier responsive menu-item: 4K */
-@media (min-width: 2560px) {
+/* 7-tier responsive menu-item: hiDPI Laptop (2560-3599px) */
+@media (min-width: 2560px) and (max-width: 3599px) {
+  .secondary-menu-bar .menu-item {
+    padding: 6px 14px;
+    min-height: 34px;
+    font-size: 12px;
+    gap: 6px;
+    border-radius: 8px;
+  }
+  .secondary-menu-bar .menu-item .menu-icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* 7-tier responsive menu-item: 4K Desktop (3600px+) */
+@media (min-width: 3600px) {
   .secondary-menu-bar .menu-item {
     padding: 18px 28px;
     min-height: 56px;
@@ -2345,8 +2389,16 @@ html, body {
   }
 }
 
-/* 6-tier responsive panel-header: 4K */
-@media (min-width: 2560px) {
+/* 7-tier responsive panel-header: hiDPI Laptop (2560-3599px) */
+@media (min-width: 2560px) and (max-width: 3599px) {
+  .panel-header {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+}
+
+/* 7-tier responsive panel-header: 4K Desktop (3600px+) */
+@media (min-width: 3600px) {
   .panel-header {
     padding: 18px 20px;
     gap: 12px;
@@ -2447,8 +2499,21 @@ html, body {
   }
 }
 
-/* 6-tier responsive hierarchy-action-btn: 4K */
-@media (min-width: 2560px) {
+/* 7-tier responsive hierarchy-action-btn: hiDPI Laptop (2560-3599px) */
+@media (min-width: 2560px) and (max-width: 3599px) {
+  .hierarchy-actions {
+    gap: 4px;
+  }
+  .hierarchy-action-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+    border-radius: 4px;
+  }
+}
+
+/* 7-tier responsive hierarchy-action-btn: 4K Desktop (3600px+) */
+@media (min-width: 3600px) {
   .hierarchy-actions {
     gap: 8px;
   }
@@ -4855,8 +4920,18 @@ html, body {
   }
 }
 
-/* 6-tier responsive header-icon: 4K */
-@media (min-width: 2560px) {
+/* 7-tier responsive header-icon: hiDPI Laptop (2560-3599px) */
+@media (min-width: 2560px) and (max-width: 3599px) {
+  .header-icon {
+    width: 28px;
+    height: 28px;
+    background-size: 16px 16px;
+    border-radius: 5px;
+  }
+}
+
+/* 7-tier responsive header-icon: 4K Desktop (3600px+) */
+@media (min-width: 3600px) {
   .header-icon {
     width: 52px;
     height: 52px;
@@ -8246,8 +8321,17 @@ html, body {
   }
 }
 
-/* 6-tier responsive: 4K (2560px+) */
-@media (min-width: 2560px) {
+/* 7-tier responsive: hiDPI Laptop (2560-3599px) */
+@media (min-width: 2560px) and (max-width: 3599px) {
+  .viewport-2d {
+    height: 180px;
+    min-height: 150px;
+    max-height: 220px;
+  }
+}
+
+/* 7-tier responsive: 4K Desktop (3600px+) */
+@media (min-width: 3600px) {
   .viewport-2d {
     height: 600px;
     min-height: 500px;
