@@ -11653,9 +11653,72 @@ html, body {
 }
 
 /* ============================================
-   RESPONSIVE: 4K Desktop (2560px+)
+   RESPONSIVE: hiDPI Laptop (2560-3599px) - MacBook Pro 16" etc
    ============================================ */
-@media (min-width: 2560px) {
+@media (min-width: 2560px) and (max-width: 3599px) {
+  .overlay-settings-panel {
+    width: 340px;
+    bottom: 90px;
+    max-height: min(55vh, 420px);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .overlay-settings-header {
+    padding: 10px 14px;
+    flex-shrink: 0;
+  }
+
+  .overlay-settings-title {
+    font-size: 13px;
+  }
+
+  .overlay-settings-content {
+    padding: 12px;
+    gap: 8px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    max-height: calc(55vh - 60px);
+  }
+
+  .overlay-section {
+    border-radius: 8px;
+  }
+
+  .overlay-section-header {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .overlay-section-content {
+    padding: 10px;
+  }
+
+  .overlay-checkbox {
+    padding: 8px 10px;
+    font-size: 12px;
+    min-height: 36px;
+    border-radius: 6px;
+  }
+
+  .overlay-radio {
+    padding: 8px 12px;
+    font-size: 12px;
+    min-height: 36px;
+    border-radius: 6px;
+  }
+
+  .overlay-toggle-switch:hover .toggle-slider {
+    box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.15);
+  }
+}
+
+/* ============================================
+   RESPONSIVE: 4K Desktop (3600px+)
+   ============================================ */
+@media (min-width: 3600px) {
   .overlay-settings-panel {
     width: 560px;
     bottom: 120px;
