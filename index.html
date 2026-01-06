@@ -1107,7 +1107,7 @@
              role="dialog"
              aria-modal="false"
              aria-labelledby="overlayPanelTitle"
-             style="display:none;">
+             style="display:none;height:420px;max-height:420px;">
           <div id="overlayPanelHeader" class="overlay-settings-header">
             <div class="overlay-settings-title-group">
               <div class="drag-handle" aria-hidden="true" title="Dra for å flytte">
@@ -1128,7 +1128,7 @@
               </svg>
             </button>
           </div>
-          <div id="overlayPanelContent" class="overlay-settings-content">
+          <div id="overlayPanelContent" class="overlay-settings-content" style="overflow-y:auto;flex:1;min-height:0;">
             <!-- Fokus Section -->
             <div class="overlay-section">
               <div class="overlay-section-header">
