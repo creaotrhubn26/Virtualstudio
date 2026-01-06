@@ -16009,29 +16009,16 @@ window.addEventListener('DOMContentLoaded', () => {
           }
           (header as HTMLElement).dataset.hasListener = 'true';
           
-          const arrow = header.querySelector('.collapse-arrow') as HTMLElement;
-          const content = header.nextElementSibling as HTMLElement;
-          
-          if (arrow && content) {
-            header.addEventListener('click', (e) => {
-              // Don't collapse if clicking on a button or input inside
-              const target = e.target as HTMLElement;
-              if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.closest('button') || target.closest('input') || target.closest('select')) {
-                return;
-              }
-              
-              const isCollapsed = content.style.display === 'none';
-              if (isCollapsed) {
-                content.style.display = 'block';
-                arrow.textContent = '▾';
-                arrow.style.transform = 'rotate(0deg)';
-              } else {
-                content.style.display = 'none';
-                arrow.textContent = '▸';
-                arrow.style.transform = 'rotate(-90deg)';
-              }
-            });
-          }
+          header.addEventListener('click', (e) => {
+            // Don't collapse if clicking on a button or input inside
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.closest('button') || target.closest('input') || target.closest('select')) {
+              return;
+            }
+            
+            // Toggle collapsed class on header (CSS handles content visibility)
+            header.classList.toggle('collapsed');
+          });
         });
       };
       

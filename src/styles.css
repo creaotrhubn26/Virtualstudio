@@ -5831,25 +5831,26 @@ html, body {
 
 /* ========== CAMERA & LIGHT TAB SCROLLING ========== */
 
-/* Camera tab - scrollable with flex layout */
-#cameraControlsPanel #cameraTabContent {
-  display: flex !important;
-  flex-direction: column !important;
+/* Camera tab - scrollable with flex layout (when visible via JS) */
+#cameraControlsPanel #cameraTabContent[style*="display: flex"],
+#cameraControlsPanel #cameraTabContent[style*="display:flex"] {
+  flex-direction: column;
   gap: 16px;
   padding: 16px;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+  overflow-y: auto;
+  overflow-x: hidden;
   flex: 1 1 auto;
   min-height: 0;
 }
 
-/* Light tab - scrollable with flex layout */
-#cameraControlsPanel #lightTabContent {
-  flex-direction: column !important;
+/* Light tab - scrollable with flex layout (when visible via JS) */
+#cameraControlsPanel #lightTabContent[style*="display: flex"],
+#cameraControlsPanel #lightTabContent[style*="display:flex"] {
+  flex-direction: column;
   gap: 14px;
   padding: 14px;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+  overflow-y: auto;
+  overflow-x: hidden;
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -5860,6 +5861,19 @@ html, body {
   flex-shrink: 0;
   max-width: 100%;
   box-sizing: border-box;
+}
+
+/* Collapsed section styling */
+.light-section-header.collapsed + .light-section-content {
+  display: none !important;
+}
+
+.light-section-header.collapsed .collapse-arrow {
+  transform: rotate(-90deg);
+}
+
+.light-section-header:not(.collapsed) .collapse-arrow {
+  transform: rotate(0deg);
 }
 
 /* Custom scrollbar for camera tab */
