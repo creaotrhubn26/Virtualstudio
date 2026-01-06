@@ -13279,6 +13279,285 @@ html, body {
 }
 
 /* ============================================
+   PROJECT TYPE SELECTOR DIALOG
+   ============================================ */
+
+.project-type-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: none;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(25, 32, 45, 0.98) 0%, rgba(15, 20, 28, 0.99) 100%);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  padding: 0;
+  max-width: 600px;
+  width: 90vw;
+  max-height: 80vh;
+  overflow: hidden;
+  z-index: 10002;
+}
+
+.project-type-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+}
+
+.project-type-dialog-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.project-type-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.project-type-dialog-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.dialog-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.dialog-close-btn:hover {
+  background: rgba(255, 100, 100, 0.15);
+  color: #ff6b6b;
+}
+
+.project-type-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 16px 24px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.project-type-tab {
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.2s ease;
+}
+
+.project-type-tab:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.project-type-tab.active {
+  color: #00d4ff;
+  border-bottom-color: #00d4ff;
+}
+
+.project-type-content {
+  padding: 24px;
+  overflow-y: auto;
+  max-height: 50vh;
+}
+
+.project-type-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.project-type-option {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.project-type-option:hover {
+  background: rgba(0, 212, 255, 0.05);
+  border-color: rgba(0, 212, 255, 0.3);
+  transform: translateX(4px);
+}
+
+.project-type-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.project-type-icon.casting {
+  background: linear-gradient(135deg, rgba(156, 39, 176, 0.3), rgba(156, 39, 176, 0.1));
+  color: #ce93d8;
+}
+
+.project-type-icon.studio {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(0, 212, 255, 0.1));
+  color: #00d4ff;
+}
+
+.project-type-info {
+  flex: 1;
+}
+
+.project-type-info h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.project-type-info p {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.4;
+}
+
+.project-type-arrow {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.3);
+  transition: all 0.2s ease;
+}
+
+.project-type-option:hover .project-type-arrow {
+  color: #00d4ff;
+  transform: translateX(4px);
+}
+
+/* Draft and Recent Projects Lists */
+.project-drafts-list,
+.project-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.project-drafts-empty,
+.project-recent-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: rgba(255, 255, 255, 0.3);
+  text-align: center;
+}
+
+.project-drafts-empty svg,
+.project-recent-empty svg {
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.project-draft-item,
+.project-recent-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.project-draft-item:hover,
+.project-recent-item:hover {
+  background: rgba(0, 212, 255, 0.05);
+  border-color: rgba(0, 212, 255, 0.2);
+}
+
+.project-draft-icon,
+.project-recent-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(156, 39, 176, 0.15);
+  color: #ce93d8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.project-recent-icon.active {
+  background: rgba(76, 175, 80, 0.15);
+  color: #81c784;
+}
+
+.project-draft-info,
+.project-recent-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.project-draft-name,
+.project-recent-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-draft-date,
+.project-recent-date {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.project-recent-meta {
+  display: block;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 2px;
+}
+
+.project-draft-type {
+  font-size: 11px;
+  font-weight: 500;
+  color: #ce93d8;
+  background: rgba(156, 39, 176, 0.15);
+  padding: 4px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ============================================
    RECORDING ARC - OVERLAY ON 3D SCENE
    ============================================ */
 

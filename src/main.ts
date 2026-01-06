@@ -2134,9 +2134,14 @@ class VirtualStudio {
       window.dispatchEvent(new CustomEvent('ch-import-group'));
     });
 
-    // Edit title button
+    // Edit title button - Opens project type selector
     document.getElementById('editTitleBtn')?.addEventListener('click', () => {
-      window.dispatchEvent(new CustomEvent('ch-edit-title'));
+      this.showProjectTypeSelector();
+    });
+    
+    // Project name click - Opens project type selector
+    document.getElementById('projectName')?.addEventListener('click', () => {
+      this.showProjectTypeSelector();
     });
     
     // Monitor dialog buttons
@@ -13887,7 +13892,340 @@ class VirtualStudio {
 
   private recordingArcVisible: boolean = false;
   private selectedRecordingCamera: string = 'main';
+  private currentProjectId: string | null = null;
+  private currentProjectType: 'casting' | 'studio' | null = null;
   
+  private showProjectTypeSelector(): void {
+    let dialog = document.getElementById('projectTypeDialog') as HTMLDialogElement;
+    
+    if (!dialog) {
+      dialog = document.createElement('dialog');
+      dialog.id = 'projectTypeDialog';
+      dialog.className = 'project-type-dialog';
+      dialog.innerHTML = `
+        <div class="project-type-dialog-content">
+          <div class="project-type-dialog-header">
+            <h2>Prosjekttype</h2>
+            <button class="dialog-close-btn" id="projectTypeDialogClose">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          
+          <div class="project-type-tabs">
+            <button class="project-type-tab active" data-tab="new">Nytt prosjekt</button>
+            <button class="project-type-tab" data-tab="drafts">Utkast</button>
+            <button class="project-type-tab" data-tab="recent">Siste prosjekter</button>
+          </div>
+          
+          <div class="project-type-content" data-content="new">
+            <div class="project-type-options">
+              <button class="project-type-option" data-type="casting">
+                <div class="project-type-icon casting">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                </div>
+                <div class="project-type-info">
+                  <h3>Casting Planner</h3>
+                  <p>Film- og TV-produksjon med roller, skuespillere, lokasjoner og tidsplaner</p>
+                </div>
+                <div class="project-type-arrow">→</div>
+              </button>
+              
+              <button class="project-type-option" data-type="studio">
+                <div class="project-type-icon studio">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 7l-7 5 7 5V7z"/>
+                    <rect x="1" y="5" width="15" height="14" rx="2"/>
+                    <circle cx="8" cy="12" r="2"/>
+                  </svg>
+                </div>
+                <div class="project-type-info">
+                  <h3>Virtual Studio</h3>
+                  <p>3D lyssetting og fotostudio-simulering med profesjonelle verktøy</p>
+                </div>
+                <div class="project-type-arrow">→</div>
+              </button>
+            </div>
+          </div>
+          
+          <div class="project-type-content" data-content="drafts" style="display:none;">
+            <div class="project-drafts-list" id="projectDraftsList">
+              <div class="project-drafts-empty">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
+                <p>Ingen utkast funnet</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="project-type-content" data-content="recent" style="display:none;">
+            <div class="project-recent-list" id="projectRecentList">
+              <div class="project-recent-empty">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <p>Ingen nylige prosjekter</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(dialog);
+      
+      this.setupProjectTypeDialogEvents(dialog);
+    }
+    
+    // Load drafts and recent projects
+    this.loadProjectDrafts();
+    this.loadRecentProjects();
+    
+    dialog.showModal();
+  }
+  
+  private setupProjectTypeDialogEvents(dialog: HTMLDialogElement): void {
+    const closeBtn = dialog.querySelector('#projectTypeDialogClose');
+    const tabs = dialog.querySelectorAll('.project-type-tab');
+    const typeOptions = dialog.querySelectorAll('.project-type-option');
+    
+    closeBtn?.addEventListener('click', () => dialog.close());
+    
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) dialog.close();
+    });
+    
+    // Tab switching
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        const tabName = tab.getAttribute('data-tab');
+        dialog.querySelectorAll('.project-type-content').forEach(content => {
+          (content as HTMLElement).style.display = 
+            content.getAttribute('data-content') === tabName ? 'block' : 'none';
+        });
+      });
+    });
+    
+    // Project type selection
+    typeOptions.forEach(option => {
+      option.addEventListener('click', () => {
+        const type = option.getAttribute('data-type');
+        dialog.close();
+        
+        if (type === 'casting') {
+          // Open Casting Planner with new project
+          window.dispatchEvent(new CustomEvent('toggle-plugin-casting-planner-panel'));
+          window.dispatchEvent(new CustomEvent('casting-new-project'));
+          this.currentProjectType = 'casting';
+        } else if (type === 'studio') {
+          // Create new Virtual Studio project
+          this.createNewStudioProject();
+          this.currentProjectType = 'studio';
+        }
+      });
+    });
+  }
+  
+  private async loadProjectDrafts(): Promise<void> {
+    const listEl = document.getElementById('projectDraftsList');
+    if (!listEl) return;
+    
+    try {
+      const response = await fetch('/api/casting/projects');
+      const projects = await response.json();
+      
+      const drafts = projects.filter((p: any) => p.status === 'draft' || !p.status);
+      
+      if (drafts.length === 0) {
+        listEl.innerHTML = `
+          <div class="project-drafts-empty">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <p>Ingen utkast funnet</p>
+          </div>
+        `;
+        return;
+      }
+      
+      listEl.innerHTML = drafts.map((project: any) => `
+        <button class="project-draft-item" data-project-id="${project.id}" data-project-type="casting">
+          <div class="project-draft-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+            </svg>
+          </div>
+          <div class="project-draft-info">
+            <span class="project-draft-name">${project.name || 'Uten navn'}</span>
+            <span class="project-draft-date">${new Date(project.updatedAt || project.createdAt).toLocaleDateString('nb-NO')}</span>
+          </div>
+          <div class="project-draft-type">Casting</div>
+        </button>
+      `).join('');
+      
+      // Add click handlers for drafts
+      listEl.querySelectorAll('.project-draft-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const projectId = item.getAttribute('data-project-id');
+          const projectType = item.getAttribute('data-project-type');
+          
+          if (projectId) {
+            this.openProject(projectId, projectType as 'casting' | 'studio');
+            (document.getElementById('projectTypeDialog') as HTMLDialogElement)?.close();
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Failed to load project drafts:', error);
+    }
+  }
+  
+  private async loadRecentProjects(): Promise<void> {
+    const listEl = document.getElementById('projectRecentList');
+    if (!listEl) return;
+    
+    try {
+      const response = await fetch('/api/casting/projects');
+      const projects = await response.json();
+      
+      // Sort by updatedAt, most recent first
+      const recent = projects
+        .sort((a: any, b: any) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
+        .slice(0, 10);
+      
+      if (recent.length === 0) {
+        listEl.innerHTML = `
+          <div class="project-recent-empty">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <p>Ingen nylige prosjekter</p>
+          </div>
+        `;
+        return;
+      }
+      
+      listEl.innerHTML = recent.map((project: any) => `
+        <button class="project-recent-item" data-project-id="${project.id}" data-project-type="casting">
+          <div class="project-recent-icon ${project.status === 'active' ? 'active' : ''}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+            </svg>
+          </div>
+          <div class="project-recent-info">
+            <span class="project-recent-name">${project.name || 'Uten navn'}</span>
+            <span class="project-recent-meta">${project.roles?.length || 0} roller • ${project.candidates?.length || 0} kandidater</span>
+          </div>
+          <span class="project-recent-date">${new Date(project.updatedAt || project.createdAt).toLocaleDateString('nb-NO')}</span>
+        </button>
+      `).join('');
+      
+      // Add click handlers for recent projects
+      listEl.querySelectorAll('.project-recent-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const projectId = item.getAttribute('data-project-id');
+          const projectType = item.getAttribute('data-project-type');
+          
+          if (projectId) {
+            this.openProject(projectId, projectType as 'casting' | 'studio');
+            (document.getElementById('projectTypeDialog') as HTMLDialogElement)?.close();
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Failed to load recent projects:', error);
+    }
+  }
+  
+  private openProject(projectId: string, type: 'casting' | 'studio'): void {
+    this.currentProjectId = projectId;
+    this.currentProjectType = type;
+    
+    if (type === 'casting') {
+      // Open Casting Planner and load project
+      window.dispatchEvent(new CustomEvent('toggle-plugin-casting-planner-panel'));
+      window.dispatchEvent(new CustomEvent('casting-load-project', { detail: { projectId } }));
+    } else {
+      // Load Virtual Studio project
+      this.loadStudioProject(projectId);
+    }
+    
+    // Update project name in header
+    this.updateProjectNameDisplay(projectId);
+  }
+  
+  private async updateProjectNameDisplay(projectId: string): Promise<void> {
+    try {
+      const response = await fetch(`/api/casting/projects/${projectId}`);
+      if (response.ok) {
+        const project = await response.json();
+        const nameInput = document.getElementById('projectName') as HTMLInputElement;
+        if (nameInput && project.name) {
+          nameInput.value = project.name;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update project name:', error);
+    }
+  }
+  
+  private createNewStudioProject(): void {
+    const projectId = `studio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    this.currentProjectId = projectId;
+    
+    // Reset project name
+    const nameInput = document.getElementById('projectName') as HTMLInputElement;
+    if (nameInput) {
+      nameInput.value = 'NYTT PROSJEKT';
+    }
+    
+    // Clear scene and reset
+    this.clearStudio();
+    
+    this.showNotification('Nytt Virtual Studio prosjekt opprettet', 'success');
+  }
+  
+  private loadStudioProject(projectId: string): void {
+    // For now, just set the project ID
+    // Future: Load saved scene state from backend
+    this.currentProjectId = projectId;
+    this.showNotification('Laster prosjekt...', 'info');
+  }
+  
+  private clearStudio(): void {
+    // Clear all lights and objects
+    this.lights.forEach((_, id) => this.removeLight(id));
+    
+    // Reset camera
+    this.camera.alpha = Math.PI / 4;
+    this.camera.beta = Math.PI / 3;
+    this.camera.radius = 15;
+    this.camera.target = BABYLON.Vector3.Zero();
+  }
+  
+  public getCurrentProjectId(): string | null {
+    return this.currentProjectId;
+  }
+  
+  public getCurrentProjectType(): 'casting' | 'studio' | null {
+    return this.currentProjectType;
+  }
+
   private showRecordingDialog(): void {
     // Check if arc already exists
     let arc = document.getElementById('recordingArc');
