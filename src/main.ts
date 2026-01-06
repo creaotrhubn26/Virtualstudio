@@ -17227,6 +17227,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const updateLightSelectionList = () => {
         const listEl = document.getElementById('lightSelectionList');
         const countEl = document.getElementById('sceneLightCount');
+        const scrollIndicator = document.getElementById('scrollIndicator');
         if (!listEl) return;
         
         // Update light count indicator
@@ -17239,6 +17240,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         if (lightCount === 0) {
           listEl.innerHTML = '<div style="padding:10px;text-align:center;color:rgba(255,255,255,0.4);font-size:13px;">Ingen lys i scenen</div>';
+          if (scrollIndicator) scrollIndicator.style.display = 'none';
           return;
         }
 
@@ -17289,6 +17291,23 @@ window.addEventListener('DOMContentLoaded', () => {
           });
           listEl.appendChild(item);
         });
+        
+        // Show/hide scroll indicator based on scrollable content
+        setTimeout(() => {
+          if (scrollIndicator) {
+            const isScrollable = listEl.scrollHeight > listEl.clientHeight;
+            const isAtBottom = listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 5;
+            scrollIndicator.style.display = isScrollable && !isAtBottom ? 'block' : 'none';
+          }
+        }, 10);
+        
+        // Update scroll indicator on scroll
+        listEl.onscroll = () => {
+          if (scrollIndicator) {
+            const isAtBottom = listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 5;
+            scrollIndicator.style.display = isAtBottom ? 'none' : 'block';
+          }
+        };
       };
 
       // Update light settings panel from selected light
