@@ -1996,11 +1996,35 @@ class VirtualStudio {
     });
 
     // User menu button
-    document.getElementById('userMenuBtn')?.addEventListener('click', () => {
-      const menu = document.getElementById('userMenu');
-      if (menu) {
-        const isVisible = menu.style.display !== 'none';
-        menu.style.display = isVisible ? 'none' : 'block';
+    const userMenuBtn = document.getElementById('userMenuBtn');
+    const userMenu = document.getElementById('userMenu');
+    
+    userMenuBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (userMenu) {
+        const isVisible = userMenu.style.display !== 'none';
+        userMenu.style.display = isVisible ? 'none' : 'block';
+        userMenuBtn.setAttribute('aria-expanded', String(!isVisible));
+      }
+    });
+    
+    // Close user menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (userMenu && userMenu.style.display !== 'none') {
+        const target = e.target as HTMLElement;
+        if (!userMenu.contains(target) && target !== userMenuBtn && !userMenuBtn?.contains(target)) {
+          userMenu.style.display = 'none';
+          userMenuBtn?.setAttribute('aria-expanded', 'false');
+        }
+      }
+    });
+    
+    // Close user menu on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && userMenu && userMenu.style.display !== 'none') {
+        userMenu.style.display = 'none';
+        userMenuBtn?.setAttribute('aria-expanded', 'false');
+        userMenuBtn?.focus();
       }
     });
 

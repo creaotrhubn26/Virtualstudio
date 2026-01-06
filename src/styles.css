@@ -13268,6 +13268,174 @@ html, body {
 }
 
 /* ============================================
+   USER MENU - PREMIUM STYLING
+   ============================================ */
+
+/* User Icon Button */
+.user-icon {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,180,220,0.1)) !important;
+  border: 2px solid rgba(0,212,255,0.3) !important;
+  color: #00d4ff !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative !important;
+}
+
+.user-icon:hover {
+  background: linear-gradient(135deg, rgba(0,212,255,0.25), rgba(0,180,220,0.2)) !important;
+  border-color: rgba(0,212,255,0.5) !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 4px 16px rgba(0,212,255,0.25) !important;
+}
+
+.user-icon:active {
+  transform: scale(0.98) !important;
+}
+
+.user-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* User Menu Dropdown */
+.user-menu-dropdown {
+  position: absolute !important;
+  top: calc(100% + 8px) !important;
+  right: 0 !important;
+  width: 280px !important;
+  background: linear-gradient(135deg, rgba(20,25,35,0.98) 0%, rgba(15,20,28,0.99) 100%) !important;
+  border: 1px solid rgba(0,212,255,0.25) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,212,255,0.1) inset !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  z-index: 10100 !important;
+  overflow: hidden !important;
+  animation: userMenuOpen 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+@keyframes userMenuOpen {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* User Menu Header */
+.user-menu-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  padding: 18px !important;
+  background: linear-gradient(135deg, rgba(0,212,255,0.08) 0%, rgba(0,180,220,0.04) 100%) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+.user-avatar {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(0,180,220,0.15)) !important;
+  border: 2px solid rgba(0,212,255,0.4) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #00d4ff !important;
+  flex-shrink: 0 !important;
+}
+
+.user-info {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.user-name {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+}
+
+.user-email {
+  font-size: 12px !important;
+  color: rgba(255,255,255,0.5) !important;
+}
+
+/* User Menu Divider */
+.user-menu-divider {
+  height: 1px !important;
+  background: rgba(255,255,255,0.08) !important;
+  margin: 8px 0 !important;
+}
+
+/* User Menu Items */
+.user-menu-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: 100% !important;
+  padding: 12px 18px !important;
+  background: transparent !important;
+  border: none !important;
+  color: rgba(255,255,255,0.85) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  text-align: left !important;
+}
+
+.user-menu-item:hover {
+  background: rgba(0,212,255,0.1) !important;
+  color: #00d4ff !important;
+}
+
+.user-menu-item:hover svg {
+  color: #00d4ff !important;
+  stroke: #00d4ff !important;
+}
+
+.user-menu-item svg {
+  flex-shrink: 0 !important;
+  color: rgba(255,255,255,0.6) !important;
+  transition: all 0.15s ease !important;
+}
+
+.user-menu-item.logout {
+  color: rgba(255,100,100,0.85) !important;
+}
+
+.user-menu-item.logout:hover {
+  background: rgba(255,60,60,0.1) !important;
+  color: #ff6b6b !important;
+}
+
+.user-menu-item.logout svg {
+  color: rgba(255,100,100,0.7) !important;
+  stroke: rgba(255,100,100,0.7) !important;
+}
+
+.user-menu-item.logout:hover svg {
+  color: #ff6b6b !important;
+  stroke: #ff6b6b !important;
+}
+
+/* Top Right container - ensure proper positioning */
+.top-right {
+  position: relative !important;
+}
+
+/* ============================================
    MODAL HIERARCHY - Z-INDEX FIX
    Ensures dialogs appear above Scene Composer
    ============================================ */
