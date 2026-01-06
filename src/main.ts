@@ -16520,42 +16520,98 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       });
       
-      // Ambient light slider handler
+      // Ambient light slider handler with precise calculations
       document.getElementById('ambientLightSlider')?.addEventListener('input', (e) => {
         const value = parseInt((e.target as HTMLInputElement).value);
         const valueEl = document.getElementById('ambientLightValue');
         if (valueEl) valueEl.textContent = `${value}%`;
         studio.setAmbientLightIntensity(value);
+        
+        // Update slider fill indicator
+        const slider = e.target as HTMLInputElement;
+        const percent = (value / 100) * 100;
+        slider.style.setProperty('--slider-percent', `${percent}%`);
       });
       
-      // Auto-ambient checkbox handler
+      // Auto-ambient checkbox handler with visual toggle update
       document.getElementById('autoAmbientCheckbox')?.addEventListener('change', (e) => {
         const isChecked = (e.target as HTMLInputElement).checked;
         studio.setAutoAmbient(isChecked);
+        
+        // Update toggle visual state
+        const parent = (e.target as HTMLElement).parentElement;
+        if (parent) {
+          const track = parent.querySelector('span:first-of-type') as HTMLElement;
+          const thumb = parent.querySelector('span:last-of-type') as HTMLElement;
+          if (track && thumb) {
+            track.style.background = isChecked ? '#4CAF50' : 'rgba(255,255,255,0.2)';
+            thumb.style.left = isChecked ? '18px' : '2px';
+          }
+        }
       });
       
-      // Ambient light toggle handler
+      // Ambient light toggle handler with visual state update
       document.getElementById('ambientToggleSwitch')?.addEventListener('change', (e) => {
         const isChecked = (e.target as HTMLInputElement).checked;
-        const statusEl = document.getElementById('ambientToggleStatus');
-        if (statusEl) statusEl.textContent = isChecked ? 'PÅ' : 'AV';
         studio.setAmbientLightEnabled(isChecked);
+        
+        // Update toggle visual state
+        const track = document.getElementById('ambientToggleTrack');
+        const thumb = document.getElementById('ambientToggleThumb');
+        const badge = document.getElementById('ambientStatusBadge');
+        
+        if (track) {
+          track.style.background = isChecked 
+            ? 'linear-gradient(90deg,#4CAF50,#66BB6A)' 
+            : 'rgba(255,255,255,0.2)';
+          track.style.boxShadow = isChecked 
+            ? '0 2px 8px rgba(76,175,80,0.3)' 
+            : 'none';
+        }
+        if (thumb) {
+          thumb.style.left = isChecked ? '24px' : '2px';
+        }
+        if (badge) {
+          badge.textContent = isChecked ? 'AKTIV' : 'INAKTIV';
+          badge.style.background = isChecked ? 'rgba(76,175,80,0.2)' : 'rgba(255,100,100,0.2)';
+          badge.style.color = isChecked ? '#4CAF50' : '#ff6464';
+          badge.style.borderColor = isChecked ? 'rgba(76,175,80,0.4)' : 'rgba(255,100,100,0.4)';
+        }
       });
       
-      // Ambient light temperature slider handler
+      // Ambient light temperature slider with precise Kelvin calculations
       document.getElementById('ambientTempSlider')?.addEventListener('input', (e) => {
         const value = parseInt((e.target as HTMLInputElement).value);
         const valueEl = document.getElementById('ambientTempValue');
-        if (valueEl) valueEl.textContent = `${value}K`;
+        
+        // Format temperature value with proper precision
+        if (valueEl) {
+          if (value >= 10000) {
+            valueEl.textContent = `${(value / 1000).toFixed(1)}kK`;
+          } else {
+            valueEl.textContent = `${value}K`;
+          }
+        }
+        
         studio.setAmbientLightTemperature(value);
+        
+        // Update slider position indicator
+        const slider = e.target as HTMLInputElement;
+        const percent = ((value - 2700) / (10000 - 2700)) * 100;
+        slider.style.setProperty('--slider-percent', `${percent}%`);
       });
       
-      // Ambient light ground intensity slider handler
+      // Ambient light ground intensity slider with precise calculations
       document.getElementById('ambientGroundSlider')?.addEventListener('input', (e) => {
         const value = parseInt((e.target as HTMLInputElement).value);
         const valueEl = document.getElementById('ambientGroundValue');
         if (valueEl) valueEl.textContent = `${value}%`;
         studio.setAmbientLightGroundIntensity(value);
+        
+        // Update slider fill indicator
+        const slider = e.target as HTMLInputElement;
+        const percent = (value / 100) * 100;
+        slider.style.setProperty('--slider-percent', `${percent}%`);
       });
       
       // Ambient preset buttons

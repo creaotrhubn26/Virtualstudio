@@ -8581,16 +8581,89 @@ html, body {
   gap: 4px;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ambient-preset-btn:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.2);
+  transform: translateY(-2px);
+  filter: brightness(1.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .ambient-preset-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.95) translateY(0);
+}
+
+.ambient-preset-btn.active {
+  box-shadow: 0 0 0 2px currentColor, 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Ambient Light Custom Sliders */
+#ambientLightSlider,
+#ambientTempSlider,
+#ambientGroundSlider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+#ambientLightSlider::-webkit-slider-thumb,
+#ambientTempSlider::-webkit-slider-thumb,
+#ambientGroundSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffffff 0%, #e8e8e8 100%);
+  border: 2px solid rgba(100, 180, 255, 0.6);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(100, 180, 255, 0.2);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+#ambientLightSlider::-webkit-slider-thumb:hover,
+#ambientTempSlider::-webkit-slider-thumb:hover,
+#ambientGroundSlider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 0 4px rgba(100, 180, 255, 0.3);
+}
+
+#ambientLightSlider::-webkit-slider-thumb:active,
+#ambientTempSlider::-webkit-slider-thumb:active,
+#ambientGroundSlider::-webkit-slider-thumb:active {
+  transform: scale(1.1);
+  background: linear-gradient(135deg, #64b4ff 0%, #4a9be0 100%);
+}
+
+#ambientLightSlider::-moz-range-thumb,
+#ambientTempSlider::-moz-range-thumb,
+#ambientGroundSlider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffffff 0%, #e8e8e8 100%);
+  border: 2px solid rgba(100, 180, 255, 0.6);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+/* Ambient Toggle Switch Styles */
+#ambientToggleTrack {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#ambientToggleThumb {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Ambient Status Badge */
+#ambientStatusBadge {
+  transition: all 0.3s ease;
 }
 
 /* Light type select dropdown */
@@ -8683,6 +8756,19 @@ html, body {
   
   #lightTabContent > div {
     grid-template-columns: 1fr !important;
+  }
+  
+  /* Ambient Light Panel - Mobile Responsive */
+  #ambientLightSlider::-webkit-slider-thumb,
+  #ambientTempSlider::-webkit-slider-thumb,
+  #ambientGroundSlider::-webkit-slider-thumb {
+    width: 24px;
+    height: 24px;
+  }
+  
+  #ambientStatusBadge {
+    font-size: 9px;
+    padding: 2px 6px;
   }
 }
 
@@ -8813,6 +8899,29 @@ html, body {
   #lightTabContent input[type="checkbox"] {
     width: 36px;
     height: 18px;
+  }
+  
+  /* Ambient Light Panel - hiDPI Responsive */
+  #ambientLightSlider::-webkit-slider-thumb,
+  #ambientTempSlider::-webkit-slider-thumb,
+  #ambientGroundSlider::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+  }
+  
+  #ambientStatusBadge {
+    font-size: 9px;
+    padding: 2px 8px;
+  }
+  
+  #ambientToggleTrack {
+    width: 42px !important;
+    height: 22px !important;
+  }
+  
+  #ambientToggleThumb {
+    width: 18px !important;
+    height: 18px !important;
   }
 }
 
