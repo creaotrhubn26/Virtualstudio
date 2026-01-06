@@ -34,6 +34,9 @@ self.addEventListener('fetch', (event) => {
   
   const url = new URL(event.request.url);
   
+  // Skip non-http(s) schemes like chrome-extension://
+  if (!url.protocol.startsWith('http')) return;
+  
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(event.request)
