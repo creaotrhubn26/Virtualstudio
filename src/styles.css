@@ -8381,6 +8381,341 @@ html, body {
   }
 }
 
+/* ============================================
+   LIGHT TAB - Additional Elements
+   ============================================ */
+
+/* Light setting buttons (+/- for power, temp, beam) */
+.light-setting-btn {
+  width: 52px;
+  height: 52px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 10px;
+  background: rgba(255, 170, 0, 0.15);
+  border: 2px solid rgba(255, 170, 0, 0.3);
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.light-setting-btn:hover {
+  background: rgba(255, 170, 0, 0.3);
+  border-color: rgba(255, 170, 0, 0.6);
+}
+
+.light-setting-btn:active {
+  transform: scale(0.95);
+  background: rgba(255, 170, 0, 0.4);
+}
+
+/* Ambient preset buttons */
+.ambient-preset-btn {
+  flex: 1;
+  min-width: 60px;
+  min-height: 44px;
+  padding: 8px 4px;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.15s ease;
+}
+
+.ambient-preset-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.2);
+}
+
+.ambient-preset-btn:active {
+  transform: scale(0.95);
+}
+
+/* Light type select dropdown */
+#lightTypeSelect {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(30, 30, 30, 0.9);
+  border: 1px solid rgba(255, 170, 0, 0.3);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+#lightTypeSelect:focus {
+  outline: 2px solid rgba(255, 170, 0, 0.5);
+  outline-offset: 2px;
+}
+
+/* Add new light button */
+#addNewLightBtn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  background: rgba(255, 170, 0, 0.2);
+  border: 1px solid rgba(255, 170, 0, 0.4);
+  color: #ffaa00;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  min-height: 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.15s ease;
+}
+
+#addNewLightBtn:hover {
+  background: rgba(255, 170, 0, 0.35);
+  border-color: rgba(255, 170, 0, 0.7);
+}
+
+#addNewLightBtn:active {
+  transform: scale(0.95);
+}
+
+/* Light section containers */
+.light-section-container {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 170, 0, 0.2);
+}
+
+/* Light section content */
+.light-section-content {
+  display: block;
+}
+
+/* Mobile Light Tab - Additional */
+@media (max-width: 599px) {
+  .light-setting-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+    border-radius: 8px;
+  }
+  
+  .ambient-preset-btn {
+    min-width: 50px;
+    min-height: 40px;
+    font-size: 10px;
+    padding: 6px 2px;
+  }
+  
+  #lightTypeSelect {
+    font-size: 12px;
+    padding: 8px;
+  }
+  
+  #addNewLightBtn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  
+  #lightTabContent > div {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Tablet Light Tab - Additional */
+@media (min-width: 600px) and (max-width: 959px) {
+  .light-setting-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+  
+  .ambient-preset-btn {
+    min-height: 42px;
+    font-size: 11px;
+  }
+}
+
+/* 1080p Light Tab - Additional */
+@media (min-width: 1280px) and (max-width: 1919px) {
+  .light-setting-btn {
+    width: 46px;
+    height: 46px;
+    font-size: 18px;
+    border-radius: 8px;
+  }
+  
+  .ambient-preset-btn {
+    min-height: 40px;
+    font-size: 11px;
+    border-radius: 6px;
+  }
+  
+  #lightTypeSelect {
+    font-size: 12px;
+    min-height: 40px;
+  }
+  
+  #addNewLightBtn {
+    font-size: 12px;
+    min-height: 40px;
+  }
+}
+
+/* 2K Light Tab - Additional */
+@media (min-width: 1920px) and (max-width: 2559px) {
+  .light-setting-btn {
+    width: 54px;
+    height: 54px;
+    font-size: 22px;
+    border-radius: 10px;
+  }
+  
+  .ambient-preset-btn {
+    min-height: 48px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+  
+  #lightTypeSelect {
+    font-size: 14px;
+    min-height: 48px;
+  }
+  
+  #addNewLightBtn {
+    font-size: 14px;
+    min-height: 48px;
+    padding: 12px 24px;
+  }
+}
+
+/* hiDPI Laptop Light Tab - Additional (MacBook Pro 16") */
+@media (min-width: 2560px) and (max-width: 3599px) {
+  .light-setting-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+    border-radius: 6px;
+    border-width: 1.5px;
+  }
+  
+  .ambient-preset-btn {
+    min-width: 50px;
+    min-height: 36px;
+    font-size: 10px;
+    padding: 6px 3px;
+    border-radius: 5px;
+  }
+  
+  .ambient-preset-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+  
+  #lightTypeSelect {
+    font-size: 11px;
+    padding: 8px;
+    min-height: 36px;
+    border-radius: 6px;
+  }
+  
+  #addNewLightBtn {
+    font-size: 11px;
+    padding: 8px 14px;
+    min-height: 36px;
+    border-radius: 6px;
+  }
+  
+  #lightSettingsSection {
+    padding: 12px;
+  }
+  
+  #lightSettingsSection span[style*="font-size:13px"] {
+    font-size: 11px !important;
+  }
+  
+  #lightSettingsSection span[style*="font-size:17px"] {
+    font-size: 14px !important;
+  }
+  
+  #lightTabContent > div[style*="grid-template-columns"] {
+    gap: 10px;
+  }
+  
+  #lightTabContent input[type="range"] {
+    height: 6px;
+  }
+  
+  #lightTabContent input[type="checkbox"] {
+    width: 36px;
+    height: 18px;
+  }
+}
+
+/* 4K Light Tab - Additional */
+@media (min-width: 3600px) {
+  .light-setting-btn {
+    width: 60px;
+    height: 60px;
+    font-size: 26px;
+    border-radius: 12px;
+    border-width: 3px;
+  }
+  
+  .ambient-preset-btn {
+    min-width: 80px;
+    min-height: 56px;
+    font-size: 14px;
+    padding: 10px 6px;
+    border-radius: 10px;
+  }
+  
+  .ambient-preset-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  #lightTypeSelect {
+    font-size: 16px;
+    padding: 14px;
+    min-height: 56px;
+    border-radius: 10px;
+  }
+  
+  #addNewLightBtn {
+    font-size: 16px;
+    padding: 14px 28px;
+    min-height: 56px;
+    border-radius: 10px;
+  }
+  
+  #lightSettingsSection {
+    padding: 20px;
+  }
+  
+  #lightTabContent input[type="range"] {
+    height: 12px;
+  }
+  
+  #lightTabContent input[type="checkbox"] {
+    width: 52px;
+    height: 26px;
+  }
+}
+
 .viewfinder-info {
   position: absolute;
   bottom: 12px;
