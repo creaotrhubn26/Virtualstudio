@@ -5831,6 +5831,24 @@ html, body {
 
 /* ========== CAMERA & LIGHT TAB SCROLLING ========== */
 
+/* Make header and tab bar sticky within scrollable area */
+#cameraControlsScrollable #cameraControlsHeader {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(15, 20, 28, 0.98) !important;
+  backdrop-filter: blur(16px);
+}
+
+/* Tab bar - sticky below header */
+#cameraControlsScrollable #cameraControlsHeader + div {
+  position: sticky;
+  top: 72px;
+  z-index: 9;
+  background: rgba(15, 20, 28, 0.98) !important;
+  backdrop-filter: blur(16px);
+}
+
 /* Camera tab - scrollable with flex layout */
 #cameraControlsPanel #cameraTabContent {
   flex-direction: column;
