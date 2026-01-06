@@ -16055,158 +16055,40 @@ window.addEventListener('DOMContentLoaded', () => {
       // Collapse/expand functionality for light tab sections
       // Make it available globally so it can be called from other places
       (window as any).setupLightSectionCollapse = () => {
-        // #region agent log
-        fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16021',message:'setupLightSectionCollapse called',data:{lightTabContentExists:!!document.getElementById('lightTabContent')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-        // Find all light section headers - including those in light-presets-section and light-patterns-section
-        // Use a more inclusive selector that finds all headers within lightTabContent or in the specific section classes
         const lightTabContent = document.getElementById('lightTabContent');
-        let lightSectionHeadersArray: Element[];
-        if (lightTabContent) {
-          // Query within lightTabContent first
-          const headersInTab = Array.from(lightTabContent.querySelectorAll('.light-section-header'));
-          // Also query for headers in sections that might be outside but should be included
-          const headersInPresets = Array.from(document.querySelectorAll('.light-presets-section .light-section-header'));
-          const headersInPatterns = Array.from(document.querySelectorAll('.light-patterns-section .light-section-header'));
-          // Combine all (using a Set to avoid duplicates based on element identity)
-          const allHeaders = new Set([...headersInTab, ...headersInPresets, ...headersInPatterns]);
-          lightSectionHeadersArray = Array.from(allHeaders);
-        } else {
-          lightSectionHeadersArray = Array.from(document.querySelectorAll('.light-section-header'));
-        }
-        const lightSectionHeaders = lightSectionHeadersArray;
-        // #region agent log
-        const headerClasses = Array.from(lightSectionHeaders).map((h, i) => ({index:i, classes:Array.from((h as HTMLElement).classList), hasCollapsed:(h as HTMLElement).classList.contains('collapsed'), innerHTML:(h as HTMLElement).innerHTML.substring(0,50), textContent:(h as HTMLElement).textContent?.trim().substring(0,30)}));
-        fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16023',message:'Found light section headers',data:{headerCount:lightSectionHeaders.length,headerClasses},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-        lightSectionHeaders.forEach((header, index) => {
+        const lightSectionHeaders = lightTabContent 
+          ? Array.from(lightTabContent.querySelectorAll('.light-section-header'))
+          : Array.from(document.querySelectorAll('.light-section-header'));
+        
+        lightSectionHeaders.forEach((header) => {
           // Skip if already has event listener
-          if ((header as HTMLElement).dataset.hasListener === 'true') {
-            // #region agent log
-            fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16026',message:'Header already has listener, skipping',data:{index,hasCollapsedClass:header.classList.contains('collapsed')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
-            return;
-          }
+          if ((header as HTMLElement).dataset.hasListener === 'true') return;
           (header as HTMLElement).dataset.hasListener = 'true';
           
-          // Find content element - try nextElementSibling first, then querySelector
+          // Find content element
           let content = header.nextElementSibling as HTMLElement;
           if (!content || !content.classList.contains('light-section-content')) {
-            // If nextElementSibling isn't the content, try finding it in parent
             const parent = header.parentElement;
             if (parent) {
               const foundContent = parent.querySelector('.light-section-content');
               if (foundContent) content = foundContent as HTMLElement;
             }
           }
-          
-          // #region agent log
-          const headerText = (header as HTMLElement).textContent?.trim().substring(0, 30) || '';
-          const contentClass = content?.className || '';
-          const contentTag = content?.tagName || '';
-          fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16028',message:'Finding content element',data:{index,headerText,contentFound:!!content,contentClass,contentTag,nextSiblingTag:header.nextElementSibling?.tagName},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
-          const initialDisplay = content?.style.display || (content ? window.getComputedStyle(content).display : '');
-          // Check both classList and className attribute to catch cases where class might be in HTML but not in classList
-          const hasCollapsedClass = header.classList.contains('collapsed') || (header as HTMLElement).className.includes('collapsed');
-          const classNameAttr = (header as HTMLElement).className;
-          
-          // Also check if content has display:none inline style (which indicates it should be collapsed)
-          // Check HTML attribute directly first, then style object, then computed style
-          const contentStyleAttr = content?.getAttribute('style') || '';
-          const contentHasDisplayNoneInAttr = contentStyleAttr.includes('display:none') || contentStyleAttr.includes('display: none');
-          const contentInlineDisplay = content?.style.display || '';
-          const contentComputedDisplay = content ? window.getComputedStyle(content).display : '';
-          const contentHasDisplayNone = content && (contentHasDisplayNoneInAttr || contentInlineDisplay === 'none' || contentComputedDisplay === 'none');
-          const shouldBeCollapsed = hasCollapsedClass || contentHasDisplayNone;
-          
-          // #region agent log
-          fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16029',message:'Setting up collapse for header',data:{index,hasCollapsedClass,classNameAttr,contentExists:!!content,initialDisplay,contentStyleAttr:contentStyleAttr.substring(0,50),contentHasDisplayNoneInAttr,contentInlineStyle:contentInlineDisplay,contentComputedDisplay,contentHasDisplayNone,shouldBeCollapsed,headerText:(header as HTMLElement).textContent?.trim().substring(0,30)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
-          
-          // Store original display value for restoration
-          if (content && !content.getAttribute('data-original-display')) {
-            const originalDisplay = content.style.display || window.getComputedStyle(content).display;
-            content.setAttribute('data-original-display', originalDisplay === 'none' ? 'block' : originalDisplay);
-          }
-          
-          // Set initial collapsed state if class exists or content is already hidden - use !important via inline style to override any existing styles
-          if (shouldBeCollapsed && content) {
-            // Ensure header has collapsed class
-            if (!header.classList.contains('collapsed')) {
-              header.classList.add('collapsed');
-            }
-            content.style.setProperty('display', 'none', 'important');
-            content.style.setProperty('visibility', 'hidden', 'important');
-            content.style.setProperty('height', '0', 'important');
-            content.style.setProperty('overflow', 'hidden', 'important');
-            content.style.setProperty('padding', '0', 'important');
-            content.style.setProperty('margin', '0', 'important');
-            // #region agent log
-            fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16033',message:'Set initial collapsed state',data:{index,displayAfter:'none',computedDisplay:window.getComputedStyle(content).display,shouldBeCollapsed,hasCollapsedClass,contentHasDisplayNone},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
-          } else if (content && !hasCollapsedClass && !contentHasDisplayNone) {
-            // Ensure non-collapsed sections are visible (remove any conflicting inline styles)
-            if (content.style.display === 'none' || content.style.getPropertyValue('display') === 'none') {
-              content.style.removeProperty('display');
-              content.style.removeProperty('visibility');
-              content.style.removeProperty('height');
-              content.style.removeProperty('overflow');
-              content.style.removeProperty('padding');
-              content.style.removeProperty('margin');
-              // Restore to original display
-              const originalDisplay = content.getAttribute('data-original-display') || 'block';
-              content.style.display = originalDisplay;
-            }
-          }
+          if (!content) return;
           
           header.addEventListener('click', (e) => {
-            // #region agent log
-            fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16038',message:'Header clicked',data:{index,targetTag:(e.target as HTMLElement)?.tagName,hasCollapsedBefore:header.classList.contains('collapsed')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
             e.preventDefault();
             e.stopPropagation();
             
-            // Don't collapse if clicking on a button or input inside (but not the header itself)
-            const target = e.target as HTMLElement;
-            const isInteractive = target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'SELECT';
-            const isInsideInteractive = target.closest('button:not(.light-section-header)') || target.closest('input') || target.closest('select');
-            if (isInteractive && !target.classList.contains('light-section-header') || isInsideInteractive) {
-              // #region agent log
-              fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16044',message:'Click ignored - interactive element',data:{index,isInteractive,isInsideInteractive},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-              // #endregion
-              return;
-            }
-            
-            // Toggle collapsed class on header (CSS handles content visibility)
+            // Toggle collapsed class on header
             header.classList.toggle('collapsed');
-            const hasCollapsedAfter = header.classList.contains('collapsed') || (header as HTMLElement).className.includes('collapsed');
+            const isCollapsed = header.classList.contains('collapsed');
             
-            // Force reflow to ensure CSS updates - use !important to override inline styles
-            if (content && content.classList.contains('light-section-content')) {
-              if (hasCollapsedAfter) {
-                content.style.setProperty('display', 'none', 'important');
-                content.style.setProperty('visibility', 'hidden', 'important');
-                content.style.setProperty('height', '0', 'important');
-                content.style.setProperty('overflow', 'hidden', 'important');
-                content.style.setProperty('padding', '0', 'important');
-                content.style.setProperty('margin', '0', 'important');
-              } else {
-                // Remove important styles and restore to block
-                content.style.removeProperty('display');
-                content.style.removeProperty('visibility');
-                content.style.removeProperty('height');
-                content.style.removeProperty('overflow');
-                content.style.removeProperty('padding');
-                content.style.removeProperty('margin');
-                // Set to block if it was originally block
-                if (content.getAttribute('data-original-display') === 'block' || !content.getAttribute('data-original-display')) {
-                  content.style.display = 'block';
-                }
-              }
-              // #region agent log
-              fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16054',message:'Toggled collapse state',data:{index,hasCollapsedAfter,contentDisplayAfter:content.style.display,computedDisplay:window.getComputedStyle(content).display},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-              // #endregion
+            // Toggle content visibility
+            if (isCollapsed) {
+              content.style.display = 'none';
+            } else {
+              content.style.display = 'block';
             }
           });
         });
