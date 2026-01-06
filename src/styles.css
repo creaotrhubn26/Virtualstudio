@@ -12104,11 +12104,296 @@ html, body {
   min-height: 112px;
   max-width: 100%;
   max-height: 100%;
+  transition: all 0.2s ease;
 }
 
 .monitor-viewport::-webkit-resizer {
   background: rgba(0,212,255,0.3);
   border-radius: 0 0 12px 0;
+}
+
+/* ============================================
+   MONITOR PANEL - OPTIMIZED STYLES
+   ============================================ */
+
+#monitorPanel {
+  background: linear-gradient(135deg, rgba(15,20,28,0.98) 0%, rgba(10,15,22,0.99) 100%) !important;
+  border: 1px solid rgba(0,212,255,0.25) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,212,255,0.1) inset !important;
+}
+
+#monitorHeader {
+  background: linear-gradient(90deg, rgba(0,212,255,0.12) 0%, rgba(0,180,220,0.08) 50%, rgba(0,212,255,0.05) 100%) !important;
+  border-bottom: 1px solid rgba(0,212,255,0.2) !important;
+  padding: 12px 16px !important;
+}
+
+/* Monitor Header Title */
+#monitorHeader .drag-handle {
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+#monitorHeader:hover .drag-handle {
+  opacity: 0.7;
+}
+
+/* Monitor Layout Buttons - Premium Design */
+.monitor-layout-btn {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 10px !important;
+  background: rgba(30,35,45,0.8) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  color: rgba(255,255,255,0.7) !important;
+  font-size: 18px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.monitor-layout-btn:hover {
+  background: rgba(0,212,255,0.2) !important;
+  border-color: rgba(0,212,255,0.5) !important;
+  color: #00d4ff !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(0,212,255,0.2) !important;
+}
+
+.monitor-layout-btn.active {
+  background: linear-gradient(135deg, rgba(0,212,255,0.3), rgba(0,180,220,0.2)) !important;
+  border-color: rgba(0,212,255,0.6) !important;
+  color: #00d4ff !important;
+  box-shadow: 0 2px 8px rgba(0,212,255,0.25), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+/* Monitor Toggle Buttons */
+#monitorToggleInfo,
+#monitorToggleSafeArea,
+#monitorToggleTimecode {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 10px !important;
+  background: rgba(30,35,45,0.8) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  color: rgba(255,255,255,0.6) !important;
+  transition: all 0.2s ease !important;
+}
+
+#monitorToggleInfo:hover,
+#monitorToggleSafeArea:hover,
+#monitorToggleTimecode:hover {
+  background: rgba(255,255,255,0.15) !important;
+  border-color: rgba(255,255,255,0.3) !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+}
+
+#monitorToggleInfo.active,
+#monitorToggleSafeArea.active,
+#monitorToggleTimecode.active {
+  background: rgba(0,212,255,0.25) !important;
+  border-color: rgba(0,212,255,0.5) !important;
+  color: #00d4ff !important;
+}
+
+/* Monitor Close Button */
+#monitorClose {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  background: rgba(255,60,60,0.1) !important;
+  border: 1px solid rgba(255,60,60,0.2) !important;
+  color: rgba(255,255,255,0.7) !important;
+  font-size: 24px !important;
+  transition: all 0.2s ease !important;
+}
+
+#monitorClose:hover {
+  background: rgba(255,60,60,0.3) !important;
+  border-color: rgba(255,60,60,0.5) !important;
+  color: #fff !important;
+  transform: scale(1.05) !important;
+}
+
+/* Monitor Content Area */
+#monitorContent {
+  padding: 16px !important;
+  gap: 12px !important;
+  background: rgba(0,0,0,0.2);
+}
+
+/* Monitor Viewport Cards */
+.monitor-viewport {
+  background: linear-gradient(135deg, rgba(20,25,35,0.95) 0%, rgba(15,20,30,0.98) 100%) !important;
+  border: 2px solid rgba(255,255,255,0.12) !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
+}
+
+.monitor-viewport:hover {
+  border-color: rgba(0,212,255,0.4) !important;
+  box-shadow: 0 6px 24px rgba(0,212,255,0.15) !important;
+  transform: scale(1.01) !important;
+}
+
+.monitor-viewport.selected {
+  border-color: rgba(0,212,255,0.7) !important;
+  box-shadow: 0 0 0 3px rgba(0,212,255,0.2), 0 6px 24px rgba(0,212,255,0.2) !important;
+}
+
+/* Monitor Labels */
+.monitor-label {
+  background: linear-gradient(135deg, rgba(0,0,0,0.85), rgba(20,20,20,0.9)) !important;
+  padding: 8px 14px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+}
+
+/* Monitor Active Indicator */
+.monitor-active-indicator {
+  background: linear-gradient(135deg, rgba(0,212,255,0.9), rgba(0,180,220,0.85)) !important;
+  padding: 5px 12px !important;
+  border-radius: 6px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  box-shadow: 0 2px 8px rgba(0,212,255,0.4) !important;
+}
+
+/* Monitor Action Buttons (Fullscreen, Screenshot) */
+.monitor-fullscreen-btn,
+.monitor-screenshot-btn {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 8px !important;
+  background: rgba(0,0,0,0.75) !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  backdrop-filter: blur(8px) !important;
+  transition: all 0.2s ease !important;
+}
+
+.monitor-viewport:hover .monitor-fullscreen-btn,
+.monitor-viewport:hover .monitor-screenshot-btn {
+  opacity: 1 !important;
+}
+
+.monitor-fullscreen-btn:hover,
+.monitor-screenshot-btn:hover {
+  background: rgba(0,212,255,0.3) !important;
+  border-color: rgba(0,212,255,0.5) !important;
+  transform: scale(1.1) !important;
+}
+
+/* Monitor Camera Info */
+.monitor-camera-info {
+  background: rgba(0,0,0,0.8) !important;
+  padding: 6px 10px !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  font-family: 'SF Mono', 'Monaco', monospace !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+}
+
+/* Monitor Timecode */
+.monitor-timecode {
+  background: rgba(0,0,0,0.85) !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  font-family: 'SF Mono', 'Monaco', monospace !important;
+  letter-spacing: 1px !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: #00d4ff !important;
+}
+
+/* Monitor Safe Area Overlay */
+.monitor-safe-area-overlay .safe-area-action {
+  border: 2px dashed rgba(255,200,0,0.6) !important;
+  border-radius: 4px !important;
+}
+
+.monitor-safe-area-overlay .safe-area-title {
+  border: 2px dashed rgba(0,255,100,0.6) !important;
+  border-radius: 4px !important;
+}
+
+/* Monitor No Signal - Enhanced */
+.monitor-no-signal {
+  background: linear-gradient(135deg, rgba(15,15,20,0.98), rgba(10,10,15,0.99)) !important;
+}
+
+.monitor-no-signal > div:nth-child(2) {
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: rgba(255,80,80,0.9) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 3px !important;
+}
+
+/* Monitor Responsive Design */
+@media (max-width: 959px) {
+  #monitorPanel {
+    width: 95% !important;
+    max-width: none !important;
+    border-radius: 16px !important;
+  }
+  
+  #monitorHeader {
+    padding: 10px 12px !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+  
+  #monitorLayoutSelector {
+    margin-left: 0 !important;
+    order: 3 !important;
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  
+  #monitorContent {
+    padding: 12px !important;
+    gap: 10px !important;
+  }
+  
+  .monitor-viewport {
+    min-width: 150px !important;
+  }
+}
+
+@media (min-width: 1920px) {
+  #monitorPanel {
+    max-width: 1600px !important;
+  }
+  
+  .monitor-viewport {
+    min-width: 320px !important;
+  }
+}
+
+@media (min-width: 2560px) {
+  #monitorPanel {
+    max-width: 2000px !important;
+  }
+  
+  .monitor-label {
+    font-size: 16px !important;
+    padding: 10px 16px !important;
+  }
+  
+  .monitor-timecode {
+    font-size: 15px !important;
+  }
 }
 
 /* Scene Composer panel - same genie animation from bottom */
