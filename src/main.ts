@@ -16033,6 +16033,11 @@ window.addEventListener('DOMContentLoaded', () => {
           }
           if (cameraTabContent) cameraTabContent.style.display = 'none';
           if (lightTabContent) lightTabContent.style.display = 'flex';
+          // Ensure light sections are visible (remove any inline display:none)
+          const lightPresetsSection = document.querySelector('.light-presets-section') as HTMLElement;
+          const lightPatternsSection = document.querySelector('.light-patterns-section') as HTMLElement;
+          if (lightPresetsSection) lightPresetsSection.style.removeProperty('display');
+          if (lightPatternsSection) lightPatternsSection.style.removeProperty('display');
           // Increase panel width and remove height restriction when light tab is active
           if (cameraControlsPanel) {
             cameraControlsPanel.style.width = lightTabWidth;
@@ -16218,34 +16223,8 @@ window.addEventListener('DOMContentLoaded', () => {
         setTimeout(setupLightSectionCollapse, 50);
       });
       
-      // Initialize: If camera tab is active by default, ensure light sections are hidden
-      // Check if camera tab is active (has 'active' class or has the active styling)
-      const isCameraTabActive = tabCamera && (
-        tabCamera.classList.contains('active') || 
-        window.getComputedStyle(tabCamera).background.includes('rgba(0,212,255') ||
-        cameraTabContent?.style.display !== 'none'
-      );
-      if (isCameraTabActive) {
-        // #region agent log
-        fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16278',message:'Initializing: Camera tab is active by default, hiding light sections',data:{tabCameraHasActiveClass:tabCamera?.classList.contains('active'),cameraTabContentDisplay:cameraTabContent?.style.display,lightTabContentDisplay:lightTabContent?.style.display},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-        // Ensure light sections are hidden
-        if (lightTabContent) {
-          lightTabContent.style.display = 'none';
-          const lightSections = document.querySelectorAll('.light-section-content, .light-presets-section, .light-patterns-section');
-          lightSections.forEach((section) => {
-            (section as HTMLElement).style.setProperty('display', 'none', 'important');
-          });
-          const lightPresetsSection = document.querySelector('.light-presets-section');
-          const lightPatternsSection = document.querySelector('.light-patterns-section');
-          if (lightPresetsSection) {
-            (lightPresetsSection as HTMLElement).style.setProperty('display', 'none', 'important');
-          }
-          if (lightPatternsSection) {
-            (lightPatternsSection as HTMLElement).style.setProperty('display', 'none', 'important');
-          }
-        }
-      }
+      // Initialize: Light sections are now inside #lightTabContent and will be hidden automatically
+      // when lightTabContent has display:none (set in HTML)
       
       // Also setup on initial load if light tab is already active
       if (lightTabContent && lightTabContent.style.display !== 'none') {
