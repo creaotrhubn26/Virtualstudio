@@ -15370,11 +15370,25 @@ window.addEventListener('DOMContentLoaded', () => {
     // Bind camera button
     cameraControlBtn?.addEventListener('click', toggleCameraControls);
 
-    // Use event delegation for close button (more reliable)
+    // Direct click handler for close button (most reliable)
+    if (cameraControlsClose) {
+      cameraControlsClose.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (cameraControlsPanel) {
+          cameraControlsPanel.style.display = 'none';
+        }
+        cameraControlBtn?.classList.remove('active');
+      });
+    }
+
+    // Also use event delegation as fallback for close button
     if (cameraControlsPanel) {
       cameraControlsPanel.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
-        if (target.closest('#cameraControlsClose')) {
+        if (target.closest('#cameraControlsClose') || target.id === 'cameraControlsClose') {
+          e.preventDefault();
+          e.stopPropagation();
           cameraControlsPanel.style.display = 'none';
           cameraControlBtn?.classList.remove('active');
         }
@@ -16014,14 +16028,29 @@ window.addEventListener('DOMContentLoaded', () => {
           (header as HTMLElement).dataset.hasListener = 'true';
           
           header.addEventListener('click', (e) => {
-            // Don't collapse if clicking on a button or input inside
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Don't collapse if clicking on a button or input inside (but not the header itself)
             const target = e.target as HTMLElement;
-            if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.closest('button') || target.closest('input') || target.closest('select')) {
+            const isInteractive = target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'SELECT';
+            const isInsideInteractive = target.closest('button:not(.light-section-header)') || target.closest('input') || target.closest('select');
+            if (isInteractive && !target.classList.contains('light-section-header') || isInsideInteractive) {
               return;
             }
             
             // Toggle collapsed class on header (CSS handles content visibility)
             header.classList.toggle('collapsed');
+            
+            // Force reflow to ensure CSS updates
+            const content = header.nextElementSibling as HTMLElement;
+            if (content && content.classList.contains('light-section-content')) {
+              if (header.classList.contains('collapsed')) {
+                content.style.display = 'none';
+              } else {
+                content.style.display = '';
+              }
+            }
           });
         });
       };

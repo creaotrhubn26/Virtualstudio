@@ -5831,9 +5831,8 @@ html, body {
 
 /* ========== CAMERA & LIGHT TAB SCROLLING ========== */
 
-/* Camera tab - scrollable with flex layout (when visible via JS) */
-#cameraControlsPanel #cameraTabContent[style*="display: flex"],
-#cameraControlsPanel #cameraTabContent[style*="display:flex"] {
+/* Camera tab - scrollable with flex layout */
+#cameraControlsPanel #cameraTabContent {
   flex-direction: column;
   gap: 16px;
   padding: 16px;
@@ -5843,9 +5842,8 @@ html, body {
   min-height: 0;
 }
 
-/* Light tab - scrollable with flex layout (when visible via JS) */
-#cameraControlsPanel #lightTabContent[style*="display: flex"],
-#cameraControlsPanel #lightTabContent[style*="display:flex"] {
+/* Light tab - scrollable with flex layout */
+#cameraControlsPanel #lightTabContent {
   flex-direction: column;
   gap: 14px;
   padding: 14px;
@@ -5863,15 +5861,24 @@ html, body {
   box-sizing: border-box;
 }
 
-/* Collapsed section styling */
-.light-section-header.collapsed + .light-section-content {
+/* Collapsed section styling - with high specificity */
+#lightTabContent .light-section-header.collapsed + .light-section-content,
+.light-presets-section .light-section-header.collapsed + .light-section-content,
+.light-patterns-section .light-section-header.collapsed + .light-section-content {
   display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
+#lightTabContent .light-section-header.collapsed .collapse-arrow,
 .light-section-header.collapsed .collapse-arrow {
   transform: rotate(-90deg);
 }
 
+#lightTabContent .light-section-header:not(.collapsed) .collapse-arrow,
 .light-section-header:not(.collapsed) .collapse-arrow {
   transform: rotate(0deg);
 }
