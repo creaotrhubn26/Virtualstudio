@@ -12621,6 +12621,292 @@ html, body {
   font-family: 'SF Mono', 'Monaco', monospace;
 }
 
+/* Scene Composer Tabs - Premium Design */
+#sceneComposerRoot .MuiTabs-root {
+  background: linear-gradient(135deg, rgba(20,25,35,0.95) 0%, rgba(15,20,30,0.98) 100%);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+#sceneComposerRoot .MuiTabs-indicator {
+  background: linear-gradient(90deg, #00d4ff, #00b8e6) !important;
+  height: 3px !important;
+  border-radius: 3px !important;
+}
+
+#sceneComposerRoot .MuiTab-root {
+  color: rgba(255,255,255,0.6) !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  text-transform: none !important;
+  min-height: 48px !important;
+  padding: 12px 20px !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+#sceneComposerRoot .MuiTab-root:hover {
+  color: rgba(255,255,255,0.9) !important;
+  background: rgba(0,212,255,0.08) !important;
+}
+
+#sceneComposerRoot .MuiTab-root.Mui-selected {
+  color: #00d4ff !important;
+  background: rgba(0,212,255,0.12) !important;
+}
+
+/* Scene Composer Cards - Enhanced */
+#sceneComposerRoot .MuiCard-root {
+  background: linear-gradient(135deg, rgba(25,30,40,0.9) 0%, rgba(20,25,35,0.95) 100%) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 12px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  overflow: hidden;
+}
+
+#sceneComposerRoot .MuiCard-root:hover {
+  border-color: rgba(0,212,255,0.4) !important;
+  transform: translateY(-4px) !important;
+  box-shadow: 0 8px 24px rgba(0,212,255,0.15) !important;
+}
+
+#sceneComposerRoot .MuiCardContent-root {
+  padding: 14px !important;
+}
+
+#sceneComposerRoot .MuiCardMedia-root {
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Scene Composer Chips */
+#sceneComposerRoot .MuiChip-root {
+  font-weight: 600 !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+}
+
+#sceneComposerRoot .MuiChip-root:hover {
+  transform: scale(1.05) !important;
+}
+
+/* Scene Composer TextField */
+#sceneComposerRoot .MuiTextField-root .MuiOutlinedInput-root {
+  background: rgba(15,20,28,0.8) !important;
+  border-radius: 10px !important;
+}
+
+#sceneComposerRoot .MuiTextField-root .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255,255,255,0.15) !important;
+}
+
+#sceneComposerRoot .MuiTextField-root .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(0,212,255,0.4) !important;
+}
+
+#sceneComposerRoot .MuiTextField-root .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #00d4ff !important;
+  box-shadow: 0 0 0 3px rgba(0,212,255,0.15) !important;
+}
+
+/* Scene Composer Select */
+#sceneComposerRoot .MuiSelect-root {
+  background: rgba(15,20,28,0.8) !important;
+  border-radius: 10px !important;
+}
+
+#sceneComposerRoot .MuiFormControl-root .MuiInputLabel-root {
+  color: rgba(255,255,255,0.5) !important;
+}
+
+#sceneComposerRoot .MuiFormControl-root .MuiInputLabel-root.Mui-focused {
+  color: #00d4ff !important;
+}
+
+/* Scene Composer Buttons - Enhanced */
+#sceneComposerRoot .MuiButton-root {
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  min-height: 44px !important;
+}
+
+#sceneComposerRoot .MuiButton-contained {
+  background: linear-gradient(135deg, #00d4ff, #00b8e6) !important;
+  color: #000 !important;
+  box-shadow: 0 4px 12px rgba(0,212,255,0.3) !important;
+}
+
+#sceneComposerRoot .MuiButton-contained:hover {
+  background: linear-gradient(135deg, #33e0ff, #00c8f0) !important;
+  box-shadow: 0 6px 16px rgba(0,212,255,0.4) !important;
+  transform: translateY(-2px) !important;
+}
+
+#sceneComposerRoot .MuiButton-outlined {
+  border-color: rgba(255,255,255,0.25) !important;
+  color: rgba(255,255,255,0.85) !important;
+}
+
+#sceneComposerRoot .MuiButton-outlined:hover {
+  background: rgba(0,212,255,0.1) !important;
+  border-color: rgba(0,212,255,0.5) !important;
+  color: #00d4ff !important;
+}
+
+/* Scene Composer IconButtons */
+#sceneComposerRoot .MuiIconButton-root {
+  transition: all 0.2s ease !important;
+  border-radius: 10px !important;
+}
+
+#sceneComposerRoot .MuiIconButton-root:hover {
+  background: rgba(0,212,255,0.15) !important;
+  color: #00d4ff !important;
+  transform: scale(1.1) !important;
+}
+
+/* Scene Composer Checkbox */
+#sceneComposerRoot .MuiCheckbox-root {
+  color: rgba(255,255,255,0.5) !important;
+  transition: all 0.2s ease !important;
+}
+
+#sceneComposerRoot .MuiCheckbox-root.Mui-checked {
+  color: #00d4ff !important;
+}
+
+#sceneComposerRoot .MuiCheckbox-root:hover {
+  background: rgba(0,212,255,0.1) !important;
+}
+
+/* Scene Composer Switch */
+#sceneComposerRoot .MuiSwitch-root .MuiSwitch-track {
+  background: rgba(255,255,255,0.2) !important;
+  border-radius: 12px !important;
+}
+
+#sceneComposerRoot .MuiSwitch-root .Mui-checked + .MuiSwitch-track {
+  background: rgba(0,212,255,0.5) !important;
+}
+
+#sceneComposerRoot .MuiSwitch-root .MuiSwitch-thumb {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+}
+
+#sceneComposerRoot .MuiSwitch-root .Mui-checked .MuiSwitch-thumb {
+  background: #00d4ff !important;
+}
+
+/* Scene Composer Divider */
+#sceneComposerRoot .MuiDivider-root {
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+/* Scene Composer List */
+#sceneComposerRoot .MuiList-root {
+  padding: 8px !important;
+}
+
+#sceneComposerRoot .MuiListItem-root {
+  border-radius: 10px !important;
+  margin-bottom: 4px !important;
+  transition: all 0.2s ease !important;
+}
+
+#sceneComposerRoot .MuiListItem-root:hover {
+  background: rgba(0,212,255,0.08) !important;
+}
+
+#sceneComposerRoot .MuiListItemText-primary {
+  color: rgba(255,255,255,0.9) !important;
+  font-weight: 500 !important;
+}
+
+#sceneComposerRoot .MuiListItemText-secondary {
+  color: rgba(255,255,255,0.5) !important;
+}
+
+/* Scene Composer Progress Bar */
+#sceneComposerRoot .MuiLinearProgress-root {
+  background: rgba(255,255,255,0.1) !important;
+  border-radius: 4px !important;
+  height: 6px !important;
+}
+
+#sceneComposerRoot .MuiLinearProgress-bar {
+  background: linear-gradient(90deg, #00d4ff, #00b8e6) !important;
+  border-radius: 4px !important;
+}
+
+/* Scene Composer Grid */
+#sceneComposerRoot .MuiGrid-container {
+  margin-top: 0 !important;
+}
+
+/* Scene Composer Menu */
+#sceneComposerRoot .MuiMenu-paper {
+  background: linear-gradient(135deg, rgba(20,25,35,0.98) 0%, rgba(15,20,28,0.99) 100%) !important;
+  border: 1px solid rgba(0,212,255,0.2) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+  backdrop-filter: blur(16px) !important;
+}
+
+#sceneComposerRoot .MuiMenuItem-root {
+  color: rgba(255,255,255,0.85) !important;
+  padding: 10px 16px !important;
+  border-radius: 8px !important;
+  margin: 2px 6px !important;
+  transition: all 0.15s ease !important;
+}
+
+#sceneComposerRoot .MuiMenuItem-root:hover {
+  background: rgba(0,212,255,0.15) !important;
+  color: #00d4ff !important;
+}
+
+/* Scene Composer Popover */
+#sceneComposerRoot .MuiPopover-paper {
+  background: linear-gradient(135deg, rgba(20,25,35,0.98) 0%, rgba(15,20,28,0.99) 100%) !important;
+  border: 1px solid rgba(0,212,255,0.25) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5) !important;
+  backdrop-filter: blur(16px) !important;
+}
+
+/* Scene Composer Badge */
+#sceneComposerRoot .MuiBadge-badge {
+  background: linear-gradient(135deg, #00d4ff, #00b8e6) !important;
+  color: #000 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(0,212,255,0.4) !important;
+}
+
+/* Scene Composer Tooltip styling */
+#sceneComposerRoot .MuiTooltip-tooltip {
+  background: rgba(0,0,0,0.9) !important;
+  border: 1px solid rgba(0,212,255,0.3) !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  padding: 8px 12px !important;
+}
+
+/* Scene Composer Empty State */
+#sceneComposerRoot .empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: rgba(255,255,255,0.5);
+}
+
+#sceneComposerRoot .empty-state svg {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.4;
+}
+
 /* Scene Composer Responsive */
 @media (max-width: 959px) {
   #sceneComposerPanel {
@@ -12635,6 +12921,16 @@ html, body {
   
   #sceneComposerContent {
     padding: 14px !important;
+  }
+  
+  #sceneComposerRoot .MuiTabs-root {
+    overflow-x: auto;
+  }
+  
+  #sceneComposerRoot .MuiTab-root {
+    min-width: auto !important;
+    padding: 10px 14px !important;
+    font-size: 12px !important;
   }
 }
 
@@ -12652,6 +12948,383 @@ html, body {
   #sceneComposerHeader span {
     font-size: 18px !important;
   }
+  
+  #sceneComposerRoot .MuiTab-root {
+    font-size: 15px !important;
+    padding: 14px 24px !important;
+  }
+}
+
+/* ============================================
+   ANIMATION COMPOSER PANEL - OPTIMIZED STYLES
+   ============================================ */
+
+#animationComposerPanel {
+  background: linear-gradient(135deg, rgba(26,26,46,0.98) 0%, rgba(20,20,38,0.99) 100%) !important;
+  border: 1px solid rgba(156,39,176,0.35) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(156,39,176,0.15) inset !important;
+}
+
+#animationComposerHeader {
+  background: linear-gradient(90deg, rgba(156,39,176,0.15) 0%, rgba(103,58,183,0.12) 50%, rgba(156,39,176,0.08) 100%) !important;
+  border-bottom: 1px solid rgba(156,39,176,0.25) !important;
+  padding: 14px 18px !important;
+}
+
+#animationComposerHeader .drag-handle {
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+#animationComposerHeader:hover .drag-handle {
+  opacity: 0.7;
+}
+
+#animationComposerClose {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  background: rgba(255,60,60,0.1) !important;
+  border: 1px solid rgba(255,60,60,0.2) !important;
+  color: rgba(255,255,255,0.7) !important;
+  font-size: 24px !important;
+  transition: all 0.2s ease !important;
+}
+
+#animationComposerClose:hover {
+  background: rgba(255,60,60,0.3) !important;
+  border-color: rgba(255,60,60,0.5) !important;
+  color: #fff !important;
+  transform: scale(1.05) !important;
+}
+
+#animationComposerContent {
+  padding: 0 !important;
+  background: rgba(0,0,0,0.15);
+}
+
+/* Animation Composer Tabs */
+#animationComposerRoot .MuiTabs-root {
+  background: linear-gradient(135deg, rgba(30,30,50,0.95) 0%, rgba(25,25,45,0.98) 100%);
+  border-radius: 12px;
+  padding: 4px;
+  margin: 16px;
+  margin-bottom: 0;
+  border: 1px solid rgba(156,39,176,0.15);
+}
+
+#animationComposerRoot .MuiTabs-indicator {
+  background: linear-gradient(90deg, #ce93d8, #9c27b0) !important;
+  height: 3px !important;
+  border-radius: 3px !important;
+}
+
+#animationComposerRoot .MuiTab-root {
+  color: rgba(255,255,255,0.6) !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  text-transform: none !important;
+  min-height: 48px !important;
+  padding: 12px 20px !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+#animationComposerRoot .MuiTab-root:hover {
+  color: rgba(255,255,255,0.9) !important;
+  background: rgba(156,39,176,0.1) !important;
+}
+
+#animationComposerRoot .MuiTab-root.Mui-selected {
+  color: #ce93d8 !important;
+  background: rgba(156,39,176,0.15) !important;
+}
+
+/* Animation Composer Buttons */
+#animationComposerRoot .MuiButton-root {
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  min-height: 44px !important;
+}
+
+#animationComposerRoot .MuiButton-contained {
+  background: linear-gradient(135deg, #ce93d8, #9c27b0) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(156,39,176,0.3) !important;
+}
+
+#animationComposerRoot .MuiButton-contained:hover {
+  background: linear-gradient(135deg, #e1bee7, #ab47bc) !important;
+  box-shadow: 0 6px 16px rgba(156,39,176,0.4) !important;
+  transform: translateY(-2px) !important;
+}
+
+#animationComposerRoot .MuiButton-outlined {
+  border-color: rgba(206,147,216,0.4) !important;
+  color: #ce93d8 !important;
+}
+
+#animationComposerRoot .MuiButton-outlined:hover {
+  background: rgba(156,39,176,0.15) !important;
+  border-color: rgba(206,147,216,0.6) !important;
+}
+
+/* Animation Composer IconButtons */
+#animationComposerRoot .MuiIconButton-root {
+  transition: all 0.2s ease !important;
+  border-radius: 10px !important;
+}
+
+#animationComposerRoot .MuiIconButton-root:hover {
+  background: rgba(156,39,176,0.2) !important;
+  color: #ce93d8 !important;
+  transform: scale(1.1) !important;
+}
+
+/* Animation Composer Cards */
+#animationComposerRoot .MuiCard-root {
+  background: linear-gradient(135deg, rgba(35,35,55,0.9) 0%, rgba(30,30,50,0.95) 100%) !important;
+  border: 1px solid rgba(156,39,176,0.15) !important;
+  border-radius: 12px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+#animationComposerRoot .MuiCard-root:hover {
+  border-color: rgba(156,39,176,0.4) !important;
+  transform: translateY(-4px) !important;
+  box-shadow: 0 8px 24px rgba(156,39,176,0.2) !important;
+}
+
+/* Animation Composer Slider */
+#animationComposerRoot .MuiSlider-root {
+  color: #9c27b0 !important;
+}
+
+#animationComposerRoot .MuiSlider-thumb {
+  background: linear-gradient(135deg, #ce93d8, #9c27b0) !important;
+  box-shadow: 0 2px 8px rgba(156,39,176,0.4) !important;
+}
+
+#animationComposerRoot .MuiSlider-track {
+  background: linear-gradient(90deg, #ce93d8, #9c27b0) !important;
+}
+
+#animationComposerRoot .MuiSlider-rail {
+  background: rgba(156,39,176,0.2) !important;
+}
+
+/* Animation Composer TextField */
+#animationComposerRoot .MuiTextField-root .MuiOutlinedInput-root {
+  background: rgba(20,20,35,0.8) !important;
+  border-radius: 10px !important;
+}
+
+#animationComposerRoot .MuiTextField-root .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(156,39,176,0.2) !important;
+}
+
+#animationComposerRoot .MuiTextField-root .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(156,39,176,0.4) !important;
+}
+
+#animationComposerRoot .MuiTextField-root .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #9c27b0 !important;
+  box-shadow: 0 0 0 3px rgba(156,39,176,0.15) !important;
+}
+
+/* Animation Composer Checkbox/Switch */
+#animationComposerRoot .MuiCheckbox-root.Mui-checked {
+  color: #ce93d8 !important;
+}
+
+#animationComposerRoot .MuiSwitch-root .Mui-checked + .MuiSwitch-track {
+  background: rgba(156,39,176,0.5) !important;
+}
+
+#animationComposerRoot .MuiSwitch-root .Mui-checked .MuiSwitch-thumb {
+  background: #ce93d8 !important;
+}
+
+/* Animation Composer List */
+#animationComposerRoot .MuiListItem-root:hover {
+  background: rgba(156,39,176,0.1) !important;
+}
+
+#animationComposerRoot .MuiListItemText-primary {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+/* Animation Composer Progress */
+#animationComposerRoot .MuiLinearProgress-bar {
+  background: linear-gradient(90deg, #ce93d8, #9c27b0) !important;
+}
+
+/* Animation Composer Chips */
+#animationComposerRoot .MuiChip-root {
+  font-weight: 600 !important;
+  border-radius: 6px !important;
+}
+
+/* Animation Composer Menu */
+#animationComposerRoot .MuiMenu-paper {
+  background: linear-gradient(135deg, rgba(30,30,50,0.98) 0%, rgba(25,25,45,0.99) 100%) !important;
+  border: 1px solid rgba(156,39,176,0.25) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+}
+
+#animationComposerRoot .MuiMenuItem-root:hover {
+  background: rgba(156,39,176,0.2) !important;
+  color: #ce93d8 !important;
+}
+
+/* Animation Composer Timeline */
+#animationComposerRoot .timeline-track {
+  background: linear-gradient(135deg, rgba(35,35,55,0.9), rgba(30,30,50,0.95));
+  border: 1px solid rgba(156,39,176,0.15);
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+#animationComposerRoot .timeline-keyframe {
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(135deg, #ce93d8, #9c27b0);
+  border-radius: 3px;
+  transform: rotate(45deg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(156,39,176,0.4);
+}
+
+#animationComposerRoot .timeline-keyframe:hover {
+  transform: rotate(45deg) scale(1.2);
+  box-shadow: 0 4px 12px rgba(156,39,176,0.6);
+}
+
+#animationComposerRoot .timeline-keyframe.selected {
+  background: linear-gradient(135deg, #e1bee7, #ab47bc);
+  box-shadow: 0 0 0 3px rgba(156,39,176,0.3), 0 4px 12px rgba(156,39,176,0.5);
+}
+
+#animationComposerRoot .timeline-playhead {
+  width: 2px;
+  background: linear-gradient(180deg, #ce93d8, #9c27b0);
+  box-shadow: 0 0 8px rgba(156,39,176,0.6);
+}
+
+#animationComposerRoot .timeline-ruler {
+  background: rgba(156,39,176,0.08);
+  border-bottom: 1px solid rgba(156,39,176,0.2);
+}
+
+/* Animation Composer Responsive */
+@media (max-width: 959px) {
+  #animationComposerPanel {
+    width: 95% !important;
+    max-width: none !important;
+    border-radius: 16px !important;
+  }
+  
+  #animationComposerHeader {
+    padding: 12px 14px !important;
+  }
+  
+  #animationComposerRoot .MuiTabs-root {
+    margin: 12px !important;
+    overflow-x: auto;
+  }
+  
+  #animationComposerRoot .MuiTab-root {
+    min-width: auto !important;
+    padding: 10px 14px !important;
+    font-size: 12px !important;
+  }
+}
+
+@media (min-width: 1920px) {
+  #animationComposerPanel {
+    width: 1200px !important;
+  }
+}
+
+@media (min-width: 2560px) {
+  #animationComposerPanel {
+    width: 1400px !important;
+  }
+  
+  #animationComposerHeader span {
+    font-size: 18px !important;
+  }
+  
+  #animationComposerRoot .MuiTab-root {
+    font-size: 15px !important;
+    padding: 14px 24px !important;
+  }
+}
+
+/* ============================================
+   MODAL HIERARCHY - Z-INDEX FIX
+   Ensures dialogs appear above Scene Composer
+   ============================================ */
+
+/* MUI Dialog backdrop and container - must be above Scene Composer (z-index: 9999) */
+.MuiDialog-root,
+.MuiModal-root {
+  z-index: 10001 !important;
+}
+
+.MuiBackdrop-root {
+  z-index: 10000 !important;
+}
+
+/* MUI Dialog paper styling for consistent look */
+.MuiDialog-paper {
+  background: linear-gradient(135deg, rgba(20,25,35,0.98) 0%, rgba(15,20,28,0.99) 100%) !important;
+  border: 1px solid rgba(0,212,255,0.3) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 16px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,212,255,0.15) inset !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+}
+
+.MuiDialogTitle-root {
+  background: linear-gradient(90deg, rgba(0,212,255,0.12) 0%, rgba(0,180,220,0.06) 100%) !important;
+  border-bottom: 1px solid rgba(0,212,255,0.2) !important;
+  color: #00d4ff !important;
+  font-weight: 700 !important;
+  padding: 16px 20px !important;
+}
+
+.MuiDialogContent-root {
+  padding: 20px !important;
+  color: rgba(255,255,255,0.9) !important;
+}
+
+.MuiDialogActions-root {
+  padding: 12px 20px 16px !important;
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+  gap: 10px !important;
+}
+
+/* Snackbar/Notifications also above dialogs */
+.MuiSnackbar-root {
+  z-index: 10010 !important;
+}
+
+/* Popper and Menu above dialogs */
+.MuiPopper-root,
+.MuiMenu-root {
+  z-index: 10005 !important;
+}
+
+/* Tooltip highest priority */
+.MuiTooltip-popper {
+  z-index: 10020 !important;
 }
 
 /* Top panels (like Monitor) - animate from top */
