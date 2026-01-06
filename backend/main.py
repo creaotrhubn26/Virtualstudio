@@ -61,6 +61,24 @@ except ImportError as e:
     print(f"Warning: Tutorials service not available: {e}")
     TUTORIALS_SERVICE_AVAILABLE = False
 
+# Virtual Studio service imports
+try:
+    from virtual_studio_service import (
+        init_virtual_studio_tables,
+        save_scene, get_scenes, get_scene, delete_scene,
+        save_preset, get_presets, delete_preset,
+        save_light_group, get_light_groups, delete_light_group,
+        save_user_asset, get_user_assets, delete_user_asset,
+        save_scene_version, get_scene_versions, delete_scene_version,
+        save_note, get_notes, delete_note,
+        save_camera_preset, get_camera_presets, delete_camera_preset,
+        save_export_template, get_export_templates, delete_export_template
+    )
+    VIRTUAL_STUDIO_SERVICE_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Virtual Studio service not available: {e}")
+    VIRTUAL_STUDIO_SERVICE_AVAILABLE = False
+
 app = FastAPI(
     title="Virtual Studio Avatar API",
     description="Generate 3D avatars from images using Meta SAM 3D Body",
@@ -125,6 +143,14 @@ async def startup_event():
             print("Tutorials table initialized")
         except Exception as e:
             print(f"Warning: Could not initialize tutorials table: {e}")
+    
+    # Initialize Virtual Studio tables
+    if VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        try:
+            init_virtual_studio_tables()
+            print("Virtual Studio tables initialized")
+        except Exception as e:
+            print(f"Warning: Could not initialize Virtual Studio tables: {e}")
 
 @app.get("/")
 async def root():
@@ -964,6 +990,313 @@ async def activate_tutorial(tutorial_id: str, request: Request):
             return JSONResponse({"success": True, "message": "Tutorial activated"})
         else:
             raise HTTPException(status_code=404, detail="Tutorial not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# Virtual Studio API Endpoints
+# ============================================================================
+
+@app.get("/api/studio/scenes")
+async def api_get_scenes(user_id: Optional[str] = None, is_template: Optional[bool] = None):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        scenes = get_scenes(user_id, is_template)
+        return JSONResponse({"success": True, "scenes": scenes})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/studio/scenes/{scene_id}")
+async def api_get_scene(scene_id: str):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        scene = get_scene(scene_id)
+        if scene:
+            return JSONResponse({"success": True, "scene": scene})
+        raise HTTPException(status_code=404, detail="Scene not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/studio/scenes")
+async def api_save_scene(request: Request):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        data = await request.json()
+        user_id = data.pop('userId', None)
+        scene = save_scene(data, user_id)
+        return JSONResponse({"success": True, "scene": scene})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/studio/scenes/{scene_id}")
+async def api_delete_scene(scene_id: str):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        success = delete_scene(scene_id)
+        if success:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Scene not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/studio/presets")
+async def api_get_presets(user_id: Optional[str] = None, type: Optional[str] = None):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        presets = get_presets(user_id, type)
+        return JSONResponse({"success": True, "presets": presets})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/studio/presets")
+async def api_save_preset(request: Request):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        data = await request.json()
+        user_id = data.pop('userId', None)
+        preset = save_preset(data, user_id)
+        return JSONResponse({"success": True, "preset": preset})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/studio/presets/{preset_id}")
+async def api_delete_preset(preset_id: str):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        success = delete_preset(preset_id)
+        if success:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Preset not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/studio/light-groups")
+async def api_get_light_groups(user_id: Optional[str] = None, scene_id: Optional[str] = None):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        groups = get_light_groups(user_id, scene_id)
+        return JSONResponse({"success": True, "lightGroups": groups})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/studio/light-groups")
+async def api_save_light_group(request: Request):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        data = await request.json()
+        user_id = data.pop('userId', None)
+        group = save_light_group(data, user_id)
+        return JSONResponse({"success": True, "lightGroup": group})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/studio/light-groups/{group_id}")
+async def api_delete_light_group(group_id: str):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        success = delete_light_group(group_id)
+        if success:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Light group not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/studio/assets")
+async def api_get_user_assets(user_id: Optional[str] = None, type: Optional[str] = None):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        assets = get_user_assets(user_id, type)
+        return JSONResponse({"success": True, "assets": assets})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/studio/assets")
+async def api_save_user_asset(request: Request):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        data = await request.json()
+        user_id = data.pop('userId', None)
+        asset = save_user_asset(data, user_id)
+        return JSONResponse({"success": True, "asset": asset})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/studio/assets/{asset_id}")
+async def api_delete_user_asset(asset_id: str):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        success = delete_user_asset(asset_id)
+        if success:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Asset not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/studio/scenes/{scene_id}/versions")
+async def api_get_scene_versions(scene_id: str):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        versions = get_scene_versions(scene_id)
+        return JSONResponse({"success": True, "versions": versions})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/studio/scenes/{scene_id}/versions")
+async def api_save_scene_version(scene_id: str, request: Request):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        data = await request.json()
+        data['sceneId'] = scene_id
+        version = save_scene_version(data)
+        return JSONResponse({"success": True, "version": version})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/studio/versions/{version_id}")
+async def api_delete_scene_version(version_id: str):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        success = delete_scene_version(version_id)
+        if success:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Version not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/studio/notes")
+async def api_get_notes(user_id: Optional[str] = None, project_id: Optional[str] = None):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        notes = get_notes(user_id, project_id)
+        return JSONResponse({"success": True, "notes": notes})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/studio/notes")
+async def api_save_note(request: Request):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        data = await request.json()
+        user_id = data.pop('userId', None)
+        note = save_note(data, user_id)
+        return JSONResponse({"success": True, "note": note})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/studio/notes/{note_id}")
+async def api_delete_note(note_id: str):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        success = delete_note(note_id)
+        if success:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Note not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/studio/camera-presets")
+async def api_get_camera_presets(user_id: Optional[str] = None):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        presets = get_camera_presets(user_id)
+        return JSONResponse({"success": True, "cameraPresets": presets})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/studio/camera-presets")
+async def api_save_camera_preset(request: Request):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        data = await request.json()
+        user_id = data.pop('userId', None)
+        preset = save_camera_preset(data, user_id)
+        return JSONResponse({"success": True, "cameraPreset": preset})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/studio/camera-presets/{preset_id}")
+async def api_delete_camera_preset(preset_id: str):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        success = delete_camera_preset(preset_id)
+        if success:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Camera preset not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/studio/export-templates")
+async def api_get_export_templates(user_id: Optional[str] = None, type: Optional[str] = None):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        templates = get_export_templates(user_id, type)
+        return JSONResponse({"success": True, "exportTemplates": templates})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/studio/export-templates")
+async def api_save_export_template(request: Request):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        data = await request.json()
+        user_id = data.pop('userId', None)
+        template = save_export_template(data, user_id)
+        return JSONResponse({"success": True, "exportTemplate": template})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/studio/export-templates/{template_id}")
+async def api_delete_export_template(template_id: str):
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        success = delete_export_template(template_id)
+        if success:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Export template not found")
     except HTTPException:
         raise
     except Exception as e:
