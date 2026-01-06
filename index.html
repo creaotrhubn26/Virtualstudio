@@ -1070,23 +1070,47 @@
                 </div>
               </div>
               <!-- Beam Visualization -->
-              <div style="background:rgba(76,175,80,0.1);border-radius:8px;padding:12px;margin-bottom:14px;border:1px solid rgba(76,175,80,0.3);">
-                <label style="font-size:13px;color:#81c784;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
-                  <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+              <div style="background:linear-gradient(135deg, rgba(20,35,25,0.95) 0%, rgba(15,30,20,0.98) 100%);border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid rgba(129,199,132,0.3);box-shadow:0 4px 16px rgba(0,0,0,0.2);">
+                <label style="font-size:13px;color:#81c784;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:1px;">
+                  <svg style="width:18px;height:18px;fill:currentColor;filter:drop-shadow(0 0 4px rgba(129,199,132,0.5));" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                   Visualisering
                 </label>
-                <div style="display:flex;flex-direction:column;gap:8px;">
-                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                    <input type="checkbox" id="showBeamViz" checked style="width:16px;height:16px;accent-color:#81c784;cursor:pointer;">
-                    <span style="font-size:12px;color:rgba(255,255,255,0.7);">Vis lysstråle</span>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                  <label class="viz-checkbox-label" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:10px 12px;background:rgba(129,199,132,0.08);border-radius:8px;border:1px solid rgba(129,199,132,0.15);transition:all 0.2s ease;">
+                    <div class="viz-checkbox-wrapper" style="position:relative;width:22px;height:22px;flex-shrink:0;">
+                      <input type="checkbox" id="showBeamViz" checked class="viz-checkbox" style="opacity:0;width:22px;height:22px;position:absolute;cursor:pointer;z-index:1;margin:0;">
+                      <div class="viz-checkbox-box" style="position:absolute;top:0;left:0;width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#4CAF50,#66BB6A);border:2px solid #81c784;display:flex;align-items:center;justify-content:center;transition:all 0.2s ease;box-shadow:0 2px 6px rgba(76,175,80,0.3);">
+                        <svg class="viz-check-icon" style="width:14px;height:14px;fill:#fff;" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                      </div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:2px;">
+                      <span style="font-size:13px;color:rgba(255,255,255,0.9);font-weight:600;">Vis lysstråle</span>
+                      <span style="font-size:10px;color:rgba(255,255,255,0.4);">Viser lyskjegle i scenen</span>
+                    </div>
                   </label>
-                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                    <input type="checkbox" id="showLightHelper" style="width:16px;height:16px;accent-color:#81c784;cursor:pointer;">
-                    <span style="font-size:12px;color:rgba(255,255,255,0.7);">Vis lysretning</span>
+                  <label class="viz-checkbox-label" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:10px 12px;background:rgba(129,199,132,0.08);border-radius:8px;border:1px solid rgba(129,199,132,0.15);transition:all 0.2s ease;">
+                    <div class="viz-checkbox-wrapper" style="position:relative;width:22px;height:22px;flex-shrink:0;">
+                      <input type="checkbox" id="showLightHelper" class="viz-checkbox" style="opacity:0;width:22px;height:22px;position:absolute;cursor:pointer;z-index:1;margin:0;">
+                      <div class="viz-checkbox-box" style="position:absolute;top:0;left:0;width:22px;height:22px;border-radius:6px;background:rgba(100,100,100,0.3);border:2px solid rgba(129,199,132,0.4);display:flex;align-items:center;justify-content:center;transition:all 0.2s ease;">
+                        <svg class="viz-check-icon" style="width:14px;height:14px;fill:#fff;opacity:0;" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                      </div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:2px;">
+                      <span style="font-size:13px;color:rgba(255,255,255,0.9);font-weight:600;">Vis lysretning</span>
+                      <span style="font-size:10px;color:rgba(255,255,255,0.4);">Viser retningsindikator</span>
+                    </div>
                   </label>
-                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                    <input type="checkbox" id="showShadowFrustum" style="width:16px;height:16px;accent-color:#81c784;cursor:pointer;">
-                    <span style="font-size:12px;color:rgba(255,255,255,0.7);">Vis skygge-frustum</span>
+                  <label class="viz-checkbox-label" style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:10px 12px;background:rgba(129,199,132,0.08);border-radius:8px;border:1px solid rgba(129,199,132,0.15);transition:all 0.2s ease;">
+                    <div class="viz-checkbox-wrapper" style="position:relative;width:22px;height:22px;flex-shrink:0;">
+                      <input type="checkbox" id="showShadowFrustum" class="viz-checkbox" style="opacity:0;width:22px;height:22px;position:absolute;cursor:pointer;z-index:1;margin:0;">
+                      <div class="viz-checkbox-box" style="position:absolute;top:0;left:0;width:22px;height:22px;border-radius:6px;background:rgba(100,100,100,0.3);border:2px solid rgba(129,199,132,0.4);display:flex;align-items:center;justify-content:center;transition:all 0.2s ease;">
+                        <svg class="viz-check-icon" style="width:14px;height:14px;fill:#fff;opacity:0;" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                      </div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:2px;">
+                      <span style="font-size:13px;color:rgba(255,255,255,0.9);font-weight:600;">Vis skygge-frustum</span>
+                      <span style="font-size:10px;color:rgba(255,255,255,0.4);">Viser skyggeområdet</span>
+                    </div>
                   </label>
                 </div>
               </div>

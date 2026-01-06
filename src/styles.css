@@ -8584,6 +8584,32 @@ html, body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
 }
 
+/* Visualization Checkbox Styles */
+.viz-checkbox-label:hover {
+  background: rgba(129, 199, 132, 0.15) !important;
+  border-color: rgba(129, 199, 132, 0.3) !important;
+}
+
+.viz-checkbox:checked ~ .viz-checkbox-box {
+  background: linear-gradient(135deg, #4CAF50, #66BB6A) !important;
+  border-color: #81c784 !important;
+  box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3) !important;
+}
+
+.viz-checkbox:checked ~ .viz-checkbox-box .viz-check-icon {
+  opacity: 1 !important;
+}
+
+.viz-checkbox:not(:checked) ~ .viz-checkbox-box {
+  background: rgba(100, 100, 100, 0.3) !important;
+  border-color: rgba(129, 199, 132, 0.4) !important;
+  box-shadow: none !important;
+}
+
+.viz-checkbox:not(:checked) ~ .viz-checkbox-box .viz-check-icon {
+  opacity: 0 !important;
+}
+
 /* Ambient preset buttons */
 .ambient-preset-btn {
   flex: 1;
