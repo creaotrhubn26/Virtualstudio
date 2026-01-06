@@ -819,21 +819,47 @@
                 </div>
               </div>
               <!-- Light Position Controls -->
-              <div style="background:rgba(255,170,0,0.15);border-radius:12px;padding:12px;border:2px solid rgba(255,170,0,0.4);">
-                <div class="light-section-header" style="font-size:14px;color:#ffaa00;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;user-select:none;">
-                  <span class="collapse-arrow" style="font-size:16px;transition:transform 0.2s;">▾</span>
-                  <span>📍 Lysposisjon</span>
+              <div style="background:linear-gradient(135deg, rgba(40,30,20,0.95) 0%, rgba(30,25,15,0.98) 100%);border-radius:16px;padding:16px;border:1px solid rgba(255,170,0,0.3);box-shadow:0 4px 20px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.05);">
+                <div class="light-section-header" style="font-size:13px;color:#ffaa00;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:700;user-select:none;">
+                  <span class="collapse-arrow" style="font-size:14px;transition:transform 0.2s;">▾</span>
+                  <svg style="width:18px;height:18px;fill:#ffaa00;filter:drop-shadow(0 0 4px rgba(255,170,0,0.5));" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                  <span>Lysposisjon</span>
                 </div>
                 <div class="light-section-content" style="display:block;">
-                  <div style="display:grid;grid-template-columns:repeat(3,50px);grid-template-rows:repeat(3,50px);gap:4px;justify-content:center;margin-bottom:10px;">
-                    <button id="lightUp" class="light-ctrl-btn" data-action="lightUp" style="grid-area:1/2;min-width:50px;min-height:50px;border-radius:10px;background:rgba(255,170,0,0.25);border:2px solid rgba(255,170,0,0.5);color:#fff;font-size:20px;font-weight:bold;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">↑</button>
-                    <button id="lightLeft" class="light-ctrl-btn" data-action="lightLeft" style="grid-area:2/1;min-width:50px;min-height:50px;border-radius:10px;background:rgba(255,170,0,0.25);border:2px solid rgba(255,170,0,0.5);color:#fff;font-size:20px;font-weight:bold;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">←</button>
-                    <button id="lightRight" class="light-ctrl-btn" data-action="lightRight" style="grid-area:2/3;min-width:50px;min-height:50px;border-radius:10px;background:rgba(255,170,0,0.25);border:2px solid rgba(255,170,0,0.5);color:#fff;font-size:20px;font-weight:bold;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">→</button>
-                    <button id="lightDown" class="light-ctrl-btn" data-action="lightDown" style="grid-area:3/2;min-width:50px;min-height:50px;border-radius:10px;background:rgba(255,170,0,0.25);border:2px solid rgba(255,170,0,0.5);color:#fff;font-size:20px;font-weight:bold;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">↓</button>
+                  <!-- D-pad style controls -->
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:12px;">
+                    <!-- Up button -->
+                    <button id="lightUp" class="light-pos-btn" data-action="lightUp" style="width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,rgba(255,170,0,0.2) 0%,rgba(255,140,0,0.1) 100%);border:2px solid rgba(255,170,0,0.4);color:#ffaa00;font-size:24px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;transition:all 0.15s ease;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
+                      <svg style="width:24px;height:24px;fill:currentColor;" viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+                    </button>
+                    <!-- Left, Center indicator, Right -->
+                    <div style="display:flex;gap:6px;align-items:center;">
+                      <button id="lightLeft" class="light-pos-btn" data-action="lightLeft" style="width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,rgba(255,170,0,0.2) 0%,rgba(255,140,0,0.1) 100%);border:2px solid rgba(255,170,0,0.4);color:#ffaa00;font-size:24px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;transition:all 0.15s ease;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
+                        <svg style="width:24px;height:24px;fill:currentColor;" viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z"/></svg>
+                      </button>
+                      <!-- Center position indicator -->
+                      <div style="width:56px;height:56px;border-radius:12px;background:rgba(255,170,0,0.08);border:2px dashed rgba(255,170,0,0.25);display:flex;align-items:center;justify-content:center;">
+                        <div style="width:12px;height:12px;border-radius:50%;background:rgba(255,170,0,0.6);box-shadow:0 0 8px rgba(255,170,0,0.4);"></div>
+                      </div>
+                      <button id="lightRight" class="light-pos-btn" data-action="lightRight" style="width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,rgba(255,170,0,0.2) 0%,rgba(255,140,0,0.1) 100%);border:2px solid rgba(255,170,0,0.4);color:#ffaa00;font-size:24px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;transition:all 0.15s ease;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
+                        <svg style="width:24px;height:24px;fill:currentColor;" viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+                      </button>
+                    </div>
+                    <!-- Down button -->
+                    <button id="lightDown" class="light-pos-btn" data-action="lightDown" style="width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,rgba(255,170,0,0.2) 0%,rgba(255,140,0,0.1) 100%);border:2px solid rgba(255,170,0,0.4);color:#ffaa00;font-size:24px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;transition:all 0.15s ease;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
+                      <svg style="width:24px;height:24px;fill:currentColor;" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+                    </button>
                   </div>
-                  <div style="display:flex;gap:8px;justify-content:center;">
-                    <button id="lightHeightUp" class="light-ctrl-btn" style="flex:1;min-height:44px;border-radius:10px;background:rgba(255,170,0,0.25);border:2px solid rgba(255,170,0,0.5);color:#fff;font-size:20px;font-weight:bold;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">▲ Høyere</button>
-                    <button id="lightHeightDown" class="light-ctrl-btn" style="flex:1;min-height:44px;border-radius:10px;background:rgba(255,170,0,0.25);border:2px solid rgba(255,170,0,0.5);color:#fff;font-size:20px;font-weight:bold;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">▼ Lavere</button>
+                  <!-- Height controls with labels -->
+                  <div style="display:flex;gap:8px;">
+                    <button id="lightHeightUp" class="light-pos-btn" style="flex:1;min-height:48px;border-radius:10px;background:linear-gradient(135deg,rgba(255,170,0,0.15) 0%,rgba(255,140,0,0.08) 100%);border:2px solid rgba(255,170,0,0.35);color:#ffaa00;font-size:13px;font-weight:600;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.15s ease;box-shadow:0 2px 6px rgba(0,0,0,0.15);">
+                      <svg style="width:18px;height:18px;fill:currentColor;" viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+                      Høyere
+                    </button>
+                    <button id="lightHeightDown" class="light-pos-btn" style="flex:1;min-height:48px;border-radius:10px;background:linear-gradient(135deg,rgba(255,170,0,0.15) 0%,rgba(255,140,0,0.08) 100%);border:2px solid rgba(255,170,0,0.35);color:#ffaa00;font-size:13px;font-weight:600;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.15s ease;box-shadow:0 2px 6px rgba(0,0,0,0.15);">
+                      <svg style="width:18px;height:18px;fill:currentColor;" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+                      Lavere
+                    </button>
                   </div>
                 </div>
               </div>

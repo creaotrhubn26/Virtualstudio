@@ -8566,6 +8566,24 @@ html, body {
   background: rgba(255, 170, 0, 0.4);
 }
 
+/* Light Position Buttons - Premium Design */
+.light-pos-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.light-pos-btn:hover {
+  background: linear-gradient(135deg, rgba(255,170,0,0.35) 0%, rgba(255,140,0,0.2) 100%) !important;
+  border-color: rgba(255, 170, 0, 0.6) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 170, 0, 0.25) !important;
+}
+
+.light-pos-btn:active {
+  transform: scale(0.95) translateY(0);
+  background: linear-gradient(135deg, rgba(255,170,0,0.5) 0%, rgba(255,140,0,0.3) 100%) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
 /* Ambient preset buttons */
 .ambient-preset-btn {
   flex: 1;
