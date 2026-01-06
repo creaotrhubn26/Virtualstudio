@@ -12346,8 +12346,8 @@ class VirtualStudio {
             }
             const cameraControlsScrollable = document.getElementById('cameraControlsScrollable') as HTMLElement;
             if (cameraControlsScrollable) {
-              cameraControlsScrollable.style.maxHeight = 'none';
-              cameraControlsScrollable.style.overflowY = 'visible';
+              cameraControlsScrollable.style.maxHeight = 'calc(100vh - 280px)';
+              cameraControlsScrollable.style.overflowY = 'auto';
             }
           }
         });
@@ -16045,9 +16045,9 @@ window.addEventListener('DOMContentLoaded', () => {
             cameraControlsPanel.style.maxHeight = 'none';
           }
           if (cameraControlsScrollable) {
-            // Remove max-height restriction to show all content without scrolling
-            cameraControlsScrollable.style.maxHeight = 'none';
-            cameraControlsScrollable.style.overflowY = 'visible';
+            // Keep scrolling behavior but increase max-height for light tab
+            cameraControlsScrollable.style.maxHeight = 'calc(100vh - 280px)';
+            cameraControlsScrollable.style.overflowY = 'auto';
           }
         }
       };
@@ -16125,8 +16125,8 @@ window.addEventListener('DOMContentLoaded', () => {
           // Ensure height restriction is removed when light tab is active
           cameraControlsPanel.style.maxHeight = 'none';
           if (cameraControlsScrollable) {
-            cameraControlsScrollable.style.maxHeight = 'none';
-            cameraControlsScrollable.style.overflowY = 'visible';
+            cameraControlsScrollable.style.maxHeight = 'calc(100vh - 280px)';
+            cameraControlsScrollable.style.overflowY = 'auto';
           }
         }
       });
