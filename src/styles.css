@@ -12396,6 +12396,10 @@ html, body {
   }
 }
 
+/* ============================================
+   SCENE COMPOSER PANEL - OPTIMIZED STYLES
+   ============================================ */
+
 /* Scene Composer panel - same genie animation from bottom */
 #sceneComposerPanel.panel-genie-open {
   animation: monitorGenieOpen 0.4s cubic-bezier(0, 0, 0.2, 1) forwards;
@@ -12405,6 +12409,249 @@ html, body {
 #sceneComposerPanel.panel-genie-close {
   animation: monitorGenieClose 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
   transform-origin: bottom center;
+}
+
+#sceneComposerPanel {
+  background: linear-gradient(135deg, rgba(15,20,28,0.98) 0%, rgba(10,15,22,0.99) 100%) !important;
+  border: 1px solid rgba(0,212,255,0.25) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,212,255,0.1) inset !important;
+}
+
+#sceneComposerHeader {
+  background: linear-gradient(90deg, rgba(0,212,255,0.12) 0%, rgba(0,180,220,0.08) 50%, rgba(0,212,255,0.05) 100%) !important;
+  border-bottom: 1px solid rgba(0,212,255,0.2) !important;
+  padding: 14px 18px !important;
+}
+
+#sceneComposerHeader .drag-handle {
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+#sceneComposerHeader:hover .drag-handle {
+  opacity: 0.7;
+}
+
+#sceneComposerClose {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  background: rgba(255,60,60,0.1) !important;
+  border: 1px solid rgba(255,60,60,0.2) !important;
+  color: rgba(255,255,255,0.7) !important;
+  font-size: 24px !important;
+  transition: all 0.2s ease !important;
+}
+
+#sceneComposerClose:hover {
+  background: rgba(255,60,60,0.3) !important;
+  border-color: rgba(255,60,60,0.5) !important;
+  color: #fff !important;
+  transform: scale(1.05) !important;
+}
+
+#sceneComposerContent {
+  padding: 20px !important;
+  background: rgba(0,0,0,0.15);
+}
+
+/* Scene Composer Sections */
+#sceneComposerRoot .composer-section {
+  background: linear-gradient(135deg, rgba(25,30,40,0.9) 0%, rgba(20,25,35,0.95) 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+}
+
+#sceneComposerRoot .composer-section:hover {
+  border-color: rgba(0,212,255,0.3);
+  box-shadow: 0 4px 16px rgba(0,212,255,0.1);
+}
+
+#sceneComposerRoot .composer-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #00d4ff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#sceneComposerRoot .composer-section-title svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+  filter: drop-shadow(0 0 4px rgba(0,212,255,0.4));
+}
+
+/* Scene Composer Cards */
+#sceneComposerRoot .composer-card {
+  background: rgba(30,35,45,0.8);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 12px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+#sceneComposerRoot .composer-card:hover {
+  background: rgba(0,212,255,0.1);
+  border-color: rgba(0,212,255,0.3);
+  transform: translateY(-2px);
+}
+
+#sceneComposerRoot .composer-card.selected {
+  background: rgba(0,212,255,0.15);
+  border-color: rgba(0,212,255,0.5);
+  box-shadow: 0 0 0 2px rgba(0,212,255,0.2);
+}
+
+/* Scene Composer Buttons */
+#sceneComposerRoot .composer-btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(0,180,220,0.15));
+  border: 1px solid rgba(0,212,255,0.4);
+  color: #00d4ff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#sceneComposerRoot .composer-btn:hover {
+  background: linear-gradient(135deg, rgba(0,212,255,0.35), rgba(0,180,220,0.25));
+  border-color: rgba(0,212,255,0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,212,255,0.2);
+}
+
+#sceneComposerRoot .composer-btn:active {
+  transform: scale(0.98);
+}
+
+#sceneComposerRoot .composer-btn.primary {
+  background: linear-gradient(135deg, #00d4ff, #00b8e6);
+  color: #000;
+  border-color: transparent;
+}
+
+#sceneComposerRoot .composer-btn.primary:hover {
+  background: linear-gradient(135deg, #33e0ff, #00c8f0);
+  box-shadow: 0 4px 16px rgba(0,212,255,0.4);
+}
+
+/* Scene Composer Inputs */
+#sceneComposerRoot input[type="text"],
+#sceneComposerRoot input[type="number"],
+#sceneComposerRoot select {
+  background: rgba(20,25,35,0.9);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #fff;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+#sceneComposerRoot input[type="text"]:focus,
+#sceneComposerRoot input[type="number"]:focus,
+#sceneComposerRoot select:focus {
+  border-color: rgba(0,212,255,0.5);
+  box-shadow: 0 0 0 3px rgba(0,212,255,0.15);
+  outline: none;
+}
+
+#sceneComposerRoot input[type="range"] {
+  accent-color: #00d4ff;
+}
+
+/* Scene Composer Grid */
+#sceneComposerRoot .composer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+/* Scene Composer Thumbnail */
+#sceneComposerRoot .composer-thumbnail {
+  aspect-ratio: 16/9;
+  background: rgba(0,0,0,0.4);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  border: 2px solid rgba(255,255,255,0.1);
+  transition: all 0.2s ease;
+}
+
+#sceneComposerRoot .composer-thumbnail:hover {
+  border-color: rgba(0,212,255,0.4);
+}
+
+#sceneComposerRoot .composer-thumbnail img,
+#sceneComposerRoot .composer-thumbnail canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Scene Composer Labels */
+#sceneComposerRoot .composer-label {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+#sceneComposerRoot .composer-value {
+  font-size: 14px;
+  color: #00d4ff;
+  font-weight: 700;
+  font-family: 'SF Mono', 'Monaco', monospace;
+}
+
+/* Scene Composer Responsive */
+@media (max-width: 959px) {
+  #sceneComposerPanel {
+    width: 95% !important;
+    max-width: none !important;
+    border-radius: 16px !important;
+  }
+  
+  #sceneComposerHeader {
+    padding: 12px 14px !important;
+  }
+  
+  #sceneComposerContent {
+    padding: 14px !important;
+  }
+}
+
+@media (min-width: 1920px) {
+  #sceneComposerPanel {
+    width: 1000px !important;
+  }
+}
+
+@media (min-width: 2560px) {
+  #sceneComposerPanel {
+    width: 1200px !important;
+  }
+  
+  #sceneComposerHeader span {
+    font-size: 18px !important;
+  }
 }
 
 /* Top panels (like Monitor) - animate from top */
