@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import {
   Box,
   Typography,
@@ -17,21 +17,14 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
   Chip,
   Divider,
-  Card,
-  CardContent,
-  CardActions,
   Grid,
-  Switch,
-  FormControlLabel,
   Tooltip,
   Collapse,
   Alert,
   useMediaQuery,
   useTheme,
-  Drawer,
   SwipeableDrawer,
 } from '@mui/material';
 import {
@@ -96,34 +89,42 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
   onPreviewTutorial,
 }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+  const isMobile = useMediaQuery('(max-width:599px)');
+  const isTablet = useMediaQuery('(min-width:600px) and (max-width:959px)');
   const is720p = useMediaQuery('(min-width:960px) and (max-width:1279px)');
   const is1080p = useMediaQuery('(min-width:1280px) and (max-width:1919px)');
   const is2K = useMediaQuery('(min-width:1920px) and (max-width:2559px)');
-  const is4K = useMediaQuery('(min-width:2560px)');
+  const isHiDPI = useMediaQuery('(min-width:2560px) and (max-width:3599px)');
+  const is4K = useMediaQuery('(min-width:3600px)');
   const showMobileMenu = useMediaQuery('(max-width:959px)');
 
-  const getResponsiveValue = <T,>(mobile: T, tablet: T, hd720: T, hd1080: T, qhd2k: T, uhd4k: T): T => {
+  const getResponsiveValue = useCallback(<T,>(mobile: T, tablet: T, hd720: T, hd1080: T, qhd2k: T, hiDPI: T, uhd4k: T): T => {
     if (isMobile) return mobile;
     if (isTablet) return tablet;
     if (is720p) return hd720;
     if (is1080p) return hd1080;
     if (is2K) return qhd2k;
+    if (isHiDPI) return hiDPI;
     return uhd4k;
-  };
+  }, [isMobile, isTablet, is720p, is1080p, is2K, isHiDPI, is4K]);
 
-  const buttonMinHeight = getResponsiveValue(44, 44, 40, 42, 48, 56);
-  const iconButtonSize = getResponsiveValue(44, 44, 36, 40, 48, 56);
-  const fontSize = {
-    title: getResponsiveValue('1rem', '1.1rem', '1.15rem', '1.25rem', '1.5rem', '1.75rem'),
-    body: getResponsiveValue('0.875rem', '0.9rem', '0.95rem', '1rem', '1.1rem', '1.25rem'),
-    caption: getResponsiveValue('0.7rem', '0.75rem', '0.8rem', '0.85rem', '0.95rem', '1.1rem'),
-    button: getResponsiveValue('0.75rem', '0.8rem', '0.85rem', '0.9rem', '1rem', '1.15rem'),
-  };
-  const spacing = getResponsiveValue(1.5, 2, 2, 2.5, 3, 4);
-  const sidebarWidth = getResponsiveValue(280, 300, 280, 320, 380, 450);
-  const chipHeight = getResponsiveValue(24, 26, 26, 28, 32, 38);
+  const responsiveTokens = useMemo(() => ({
+    buttonMinHeight: getResponsiveValue(44, 44, 40, 42, 48, 52, 58),
+    iconButtonSize: getResponsiveValue(44, 44, 36, 40, 48, 52, 58),
+    fontSize: {
+      title: getResponsiveValue('1rem', '1.1rem', '1.15rem', '1.25rem', '1.5rem', '1.65rem', '1.85rem'),
+      body: getResponsiveValue('0.875rem', '0.9rem', '0.95rem', '1rem', '1.1rem', '1.2rem', '1.35rem'),
+      caption: getResponsiveValue('0.7rem', '0.75rem', '0.8rem', '0.85rem', '0.95rem', '1.05rem', '1.15rem'),
+      button: getResponsiveValue('0.75rem', '0.8rem', '0.85rem', '0.9rem', '1rem', '1.1rem', '1.2rem'),
+    },
+    spacing: getResponsiveValue(1.5, 2, 2, 2.5, 3, 3.5, 4),
+    sidebarWidth: getResponsiveValue(280, 300, 280, 320, 380, 420, 480),
+    chipHeight: getResponsiveValue(24, 26, 26, 28, 32, 36, 40),
+    iconSize: getResponsiveValue(18, 20, 20, 22, 26, 28, 32),
+    logoSize: getResponsiveValue(32, 36, 36, 40, 48, 52, 58),
+  }), [getResponsiveValue]);
+
+  const { buttonMinHeight, iconButtonSize, fontSize, spacing, sidebarWidth, chipHeight, iconSize, logoSize } = responsiveTokens;
 
   const [tutorials, setTutorials] = useState<Tutorial[]>([]);
   const [selectedTutorial, setSelectedTutorial] = useState<Tutorial | null>(null);
@@ -159,11 +160,16 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
     }
   }, [open]);
 
-  const loadTutorials = () => {
+  const loadTutorials = useCallback(() => {
     setTutorials(tutorialService.getAllTutorials());
-  };
+  }, []);
 
-  const handleCreateTutorial = () => {
+  const showSaveMessage = useCallback((message: string) => {
+    setSaveMessage(message);
+    setTimeout(() => setSaveMessage(null), 3000);
+  }, []);
+
+  const handleCreateTutorial = useCallback(() => {
     if (!tutorialForm.name.trim()) return;
 
     const newTutorial = tutorialService.createTutorial({
@@ -179,18 +185,18 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
     setIsCreatingTutorial(false);
     setTutorialForm({ name: '', description: '', category: 'casting-planner' });
     showSaveMessage('Veiledning opprettet');
-  };
+  }, [tutorialForm, showSaveMessage]);
 
-  const handleUpdateTutorial = (updates: Partial<Tutorial>) => {
+  const handleUpdateTutorial = useCallback((updates: Partial<Tutorial>) => {
     if (!selectedTutorial) return;
 
     tutorialService.updateTutorial(selectedTutorial.id, updates);
     loadTutorials();
     setSelectedTutorial(tutorialService.getTutorialById(selectedTutorial.id) || null);
     showSaveMessage('Veiledning oppdatert');
-  };
+  }, [selectedTutorial, loadTutorials, showSaveMessage]);
 
-  const handleDeleteTutorial = (id: string) => {
+  const handleDeleteTutorial = useCallback((id: string) => {
     if (!window.confirm('Er du sikker på at du vil slette denne veiledningen?')) return;
 
     tutorialService.deleteTutorial(id);
@@ -199,24 +205,38 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
       setSelectedTutorial(null);
     }
     showSaveMessage('Veiledning slettet');
-  };
+  }, [selectedTutorial, loadTutorials, showSaveMessage]);
 
-  const handleDuplicateTutorial = (id: string) => {
+  const handleDuplicateTutorial = useCallback((id: string) => {
     const duplicate = tutorialService.duplicateTutorial(id);
     if (duplicate) {
       loadTutorials();
       setSelectedTutorial(duplicate);
       showSaveMessage('Veiledning duplisert');
     }
-  };
+  }, [loadTutorials, showSaveMessage]);
 
-  const handleSetActive = (id: string, category: Tutorial['category']) => {
+  const handleSetActive = useCallback((id: string, category: Tutorial['category']) => {
     tutorialService.setActiveTutorial(id, category);
     loadTutorials();
     showSaveMessage('Aktiv veiledning endret');
-  };
+  }, [loadTutorials, showSaveMessage]);
 
-  const handleCreateStep = () => {
+  const resetStepForm = useCallback(() => {
+    setStepForm({
+      title: '',
+      description: '',
+      panel: -1,
+      targetSelector: '',
+      action: undefined,
+      actionDescription: '',
+      tips: [],
+      duration: 5000,
+    });
+    setNewTip('');
+  }, []);
+
+  const handleCreateStep = useCallback(() => {
     if (!selectedTutorial || !stepForm.title?.trim()) return;
 
     tutorialService.addStep(selectedTutorial.id, {
@@ -235,9 +255,9 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
     setIsCreatingStep(false);
     resetStepForm();
     showSaveMessage('Steg opprettet');
-  };
+  }, [selectedTutorial, stepForm, loadTutorials, resetStepForm, showSaveMessage]);
 
-  const handleUpdateStep = () => {
+  const handleUpdateStep = useCallback(() => {
     if (!selectedTutorial || !editingStep) return;
 
     tutorialService.updateStep(selectedTutorial.id, editingStep.id, stepForm);
@@ -246,9 +266,9 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
     setEditingStep(null);
     resetStepForm();
     showSaveMessage('Steg oppdatert');
-  };
+  }, [selectedTutorial, editingStep, stepForm, loadTutorials, resetStepForm, showSaveMessage]);
 
-  const handleDeleteStep = (stepId: string) => {
+  const handleDeleteStep = useCallback((stepId: string) => {
     if (!selectedTutorial) return;
     if (!window.confirm('Er du sikker på at du vil slette dette steget?')) return;
 
@@ -256,32 +276,18 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
     loadTutorials();
     setSelectedTutorial(tutorialService.getTutorialById(selectedTutorial.id) || null);
     showSaveMessage('Steg slettet');
-  };
+  }, [selectedTutorial, loadTutorials, showSaveMessage]);
 
-  const handleMoveStep = (fromIndex: number, direction: 'up' | 'down') => {
+  const handleMoveStep = useCallback((fromIndex: number, direction: 'up' | 'down') => {
     if (!selectedTutorial) return;
     const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
 
     tutorialService.reorderSteps(selectedTutorial.id, fromIndex, toIndex);
     loadTutorials();
     setSelectedTutorial(tutorialService.getTutorialById(selectedTutorial.id) || null);
-  };
+  }, [selectedTutorial, loadTutorials]);
 
-  const resetStepForm = () => {
-    setStepForm({
-      title: '',
-      description: '',
-      panel: -1,
-      targetSelector: '',
-      action: undefined,
-      actionDescription: '',
-      tips: [],
-      duration: 5000,
-    });
-    setNewTip('');
-  };
-
-  const startEditingStep = (step: TutorialStep) => {
+  const startEditingStep = useCallback((step: TutorialStep) => {
     setEditingStep(step);
     setStepForm({
       title: step.title,
@@ -293,25 +299,25 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
       tips: step.tips || [],
       duration: step.duration || 5000,
     });
-  };
+  }, []);
 
-  const addTip = () => {
+  const addTip = useCallback(() => {
     if (!newTip.trim()) return;
     setStepForm(prev => ({
       ...prev,
       tips: [...(prev.tips || []), newTip.trim()],
     }));
     setNewTip('');
-  };
+  }, [newTip]);
 
-  const removeTip = (index: number) => {
+  const removeTip = useCallback((index: number) => {
     setStepForm(prev => ({
       ...prev,
       tips: prev.tips?.filter((_, i) => i !== index) || [],
     }));
-  };
+  }, []);
 
-  const toggleStepExpanded = (stepId: string) => {
+  const toggleStepExpanded = useCallback((stepId: string) => {
     setExpandedSteps(prev => {
       const newSet = new Set(prev);
       if (newSet.has(stepId)) {
@@ -321,12 +327,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
       }
       return newSet;
     });
-  };
-
-  const showSaveMessage = (message: string) => {
-    setSaveMessage(message);
-    setTimeout(() => setSaveMessage(null), 3000);
-  };
+  }, []);
 
   if (!open) return null;
 
@@ -375,7 +376,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                     {tutorial.name}
                   </Typography>
                   {tutorial.isActive && (
-                    <ActiveIcon sx={{ fontSize: getResponsiveValue(14, 16, 16, 18, 20, 24), color: '#4caf50' }} />
+                    <ActiveIcon sx={{ fontSize: iconSize - 4, color: '#4caf50' }} />
                   )}
                 </Box>
               }
@@ -406,6 +407,8 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
       maxWidth="lg"
       fullWidth
       fullScreen={isMobile}
+      container={document.body}
+      sx={{ zIndex: 100010 }}
       PaperProps={{
         sx: {
           bgcolor: '#1a1a2e',
@@ -433,13 +436,13 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
             }}
             aria-label="Åpne meny"
           >
-            <MenuIcon sx={{ fontSize: getResponsiveValue(22, 24, 24, 26, 28, 32) }} />
+            <MenuIcon sx={{ fontSize: iconSize + 4 }} />
           </IconButton>
         )}
         <Box
           sx={{
-            width: getResponsiveValue(32, 36, 36, 40, 48, 56),
-            height: getResponsiveValue(32, 36, 36, 40, 48, 56),
+            width: logoSize,
+            height: logoSize,
             borderRadius: 1,
             overflow: 'hidden',
             flexShrink: 0,
@@ -470,7 +473,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
             minHeight: iconButtonSize,
           }}
         >
-          <CloseIcon sx={{ fontSize: getResponsiveValue(22, 24, 24, 26, 28, 32) }} />
+          <CloseIcon sx={{ fontSize: iconSize + 4 }} />
         </IconButton>
       </DialogTitle>
 
@@ -694,7 +697,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                       }}
                       onClick={() => toggleStepExpanded(step.id)}
                     >
-                      <DragIcon sx={{ color: 'rgba(255,255,255,0.3)', mr: 1, fontSize: getResponsiveValue(20, 22, 22, 24, 28, 32) }} />
+                      <DragIcon sx={{ color: 'rgba(255,255,255,0.3)', mr: 1, fontSize: iconSize + 2 }} />
                       <Chip
                         label={index + 1}
                         size="small"
@@ -717,26 +720,26 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                           disabled={index === 0}
                           sx={{ color: 'rgba(255,255,255,0.5)', minWidth: iconButtonSize, minHeight: iconButtonSize }}
                         >
-                          <MoveUpIcon sx={{ fontSize: getResponsiveValue(18, 20, 20, 22, 26, 30) }} />
+                          <MoveUpIcon sx={{ fontSize: iconSize }} />
                         </IconButton>
                         <IconButton
                           onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleMoveStep(index, 'down'); }}
                           disabled={index === selectedTutorial.steps.length - 1}
                           sx={{ color: 'rgba(255,255,255,0.5)', minWidth: iconButtonSize, minHeight: iconButtonSize }}
                         >
-                          <MoveDownIcon sx={{ fontSize: getResponsiveValue(18, 20, 20, 22, 26, 30) }} />
+                          <MoveDownIcon sx={{ fontSize: iconSize }} />
                         </IconButton>
                         <IconButton
                           onClick={(e: React.MouseEvent) => { e.stopPropagation(); startEditingStep(step); }}
                           sx={{ color: '#00d4ff', minWidth: iconButtonSize, minHeight: iconButtonSize }}
                         >
-                          <EditIcon sx={{ fontSize: getResponsiveValue(18, 20, 20, 22, 26, 30) }} />
+                          <EditIcon sx={{ fontSize: iconSize }} />
                         </IconButton>
                         <IconButton
                           onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleDeleteStep(step.id); }}
                           sx={{ color: '#f44336', minWidth: iconButtonSize, minHeight: iconButtonSize }}
                         >
-                          <DeleteIcon sx={{ fontSize: getResponsiveValue(18, 20, 20, 22, 26, 30) }} />
+                          <DeleteIcon sx={{ fontSize: iconSize }} />
                         </IconButton>
                       </Box>
                       {expandedSteps.has(step.id) ? <CollapseIcon /> : <ExpandIcon />}
@@ -777,7 +780,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
             </>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.5 }}>
-              <TutorialIcon sx={{ fontSize: getResponsiveValue(48, 56, 56, 64, 80, 96), mb: 2 }} />
+              <TutorialIcon sx={{ fontSize: iconSize * 3, mb: 2 }} />
               <Typography sx={{ fontSize: fontSize.title }}>Velg en veiledning</Typography>
               <Typography sx={{ fontSize: fontSize.body }}>eller opprett en ny for å begynne</Typography>
             </Box>
@@ -791,6 +794,8 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
         maxWidth="sm"
         fullWidth
         fullScreen={isMobile}
+        container={document.body}
+        sx={{ zIndex: 100011 }}
         PaperProps={{ sx: { bgcolor: '#1a1a2e', color: '#fff' } }}
       >
         <DialogTitle sx={{ fontSize: fontSize.title, p: spacing }}>Ny veiledning</DialogTitle>
@@ -873,6 +878,8 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
         maxWidth="md"
         fullWidth
         fullScreen={isMobile}
+        container={document.body}
+        sx={{ zIndex: 100011 }}
         PaperProps={{ sx: { bgcolor: '#1a1a2e', color: '#fff' } }}
       >
         <DialogTitle sx={{ fontSize: fontSize.title, p: spacing }}>{editingStep ? 'Rediger steg' : 'Nytt steg'}</DialogTitle>

@@ -44,6 +44,23 @@ except ImportError as e:
     print(f"Warning: Auth service not available: {e}")
     AUTH_SERVICE_AVAILABLE = False
 
+# Tutorials service imports
+try:
+    from tutorials_service import (
+        init_tutorials_table,
+        create_tutorial as db_create_tutorial,
+        get_all_tutorials as db_get_all_tutorials,
+        get_tutorial as db_get_tutorial,
+        update_tutorial as db_update_tutorial,
+        delete_tutorial as db_delete_tutorial,
+        set_active_tutorial as db_set_active_tutorial,
+        get_active_tutorial as db_get_active_tutorial
+    )
+    TUTORIALS_SERVICE_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Tutorials service not available: {e}")
+    TUTORIALS_SERVICE_AVAILABLE = False
+
 app = FastAPI(
     title="Virtual Studio Avatar API",
     description="Generate 3D avatars from images using Meta SAM 3D Body",
@@ -100,6 +117,14 @@ async def startup_event():
             print("Admin users table initialized")
         except Exception as e:
             print(f"Warning: Could not initialize admin table: {e}")
+    
+    # Initialize tutorials table
+    if TUTORIALS_SERVICE_AVAILABLE:
+        try:
+            init_tutorials_table()
+            print("Tutorials table initialized")
+        except Exception as e:
+            print(f"Warning: Could not initialize tutorials table: {e}")
 
 @app.get("/")
 async def root():
@@ -822,6 +847,123 @@ async def delete_casting_project(project_id: str):
             return JSONResponse({"success": True, "message": "Project deleted"})
         else:
             raise HTTPException(status_code=404, detail="Project not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# Tutorials API Endpoints
+# ============================================================================
+
+@app.get("/api/tutorials")
+async def get_tutorials(category: Optional[str] = None):
+    """Get all tutorials, optionally filtered by category"""
+    if not TUTORIALS_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Tutorials service not available")
+    
+    try:
+        tutorials = db_get_all_tutorials(category)
+        return JSONResponse({"success": True, "tutorials": tutorials})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/tutorials/active/{category}")
+async def get_active_tutorial(category: str):
+    """Get the active tutorial for a category"""
+    if not TUTORIALS_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Tutorials service not available")
+    
+    try:
+        tutorial = db_get_active_tutorial(category)
+        if tutorial:
+            return JSONResponse({"success": True, "tutorial": tutorial})
+        else:
+            return JSONResponse({"success": True, "tutorial": None})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/tutorials/{tutorial_id}")
+async def get_tutorial(tutorial_id: str):
+    """Get a single tutorial by ID"""
+    if not TUTORIALS_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Tutorials service not available")
+    
+    try:
+        tutorial = db_get_tutorial(tutorial_id)
+        if tutorial:
+            return JSONResponse({"success": True, "tutorial": tutorial})
+        else:
+            raise HTTPException(status_code=404, detail="Tutorial not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/tutorials")
+async def create_tutorial(request: Request):
+    """Create a new tutorial (admin only)"""
+    if not TUTORIALS_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Tutorials service not available")
+    
+    try:
+        data = await request.json()
+        created_by = data.pop('createdBy', None)
+        tutorial = db_create_tutorial(data, created_by)
+        return JSONResponse({"success": True, "tutorial": tutorial})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/tutorials/{tutorial_id}")
+async def update_tutorial(tutorial_id: str, request: Request):
+    """Update a tutorial (admin only)"""
+    if not TUTORIALS_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Tutorials service not available")
+    
+    try:
+        data = await request.json()
+        tutorial = db_update_tutorial(tutorial_id, data)
+        if tutorial:
+            return JSONResponse({"success": True, "tutorial": tutorial})
+        else:
+            raise HTTPException(status_code=404, detail="Tutorial not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/tutorials/{tutorial_id}")
+async def delete_tutorial(tutorial_id: str):
+    """Delete a tutorial (admin only)"""
+    if not TUTORIALS_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Tutorials service not available")
+    
+    try:
+        success = db_delete_tutorial(tutorial_id)
+        if success:
+            return JSONResponse({"success": True, "message": "Tutorial deleted"})
+        else:
+            raise HTTPException(status_code=404, detail="Tutorial not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/tutorials/{tutorial_id}/activate")
+async def activate_tutorial(tutorial_id: str, request: Request):
+    """Set a tutorial as active for its category (admin only)"""
+    if not TUTORIALS_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Tutorials service not available")
+    
+    try:
+        data = await request.json()
+        category = data.get('category', 'casting-planner')
+        success = db_set_active_tutorial(tutorial_id, category)
+        if success:
+            return JSONResponse({"success": True, "message": "Tutorial activated"})
+        else:
+            raise HTTPException(status_code=404, detail="Tutorial not found")
     except HTTPException:
         raise
     except Exception as e:
