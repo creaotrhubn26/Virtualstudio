@@ -13963,8 +13963,150 @@ html, body {
   }
 }
 
-/* Responsive - Mobile (smaller than 768px) */
-@media (max-width: 767px) {
+/* ========== 6-TIER RESPONSIVE HELP DIALOG ========== */
+
+/* Help Dialog Mobile (<600px) */
+@media (max-width: 599px) {
+  .help-main-layout {
+    flex-direction: column;
+  }
+
+  .help-sidebar {
+    width: 100%;
+    min-width: unset;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 6px 0;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+
+  .help-nav-section {
+    margin-bottom: 2px;
+  }
+
+  .help-nav-header {
+    padding: 8px 12px;
+    font-size: 12px;
+    min-height: 44px;
+    gap: 8px;
+  }
+
+  .help-nav-items {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 6px 12px;
+    gap: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .help-nav-link {
+    padding: 8px 12px;
+    min-height: 44px;
+    font-size: 11px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .help-content-area {
+    padding: 12px;
+  }
+
+  .help-section-title-row h2 {
+    font-size: 18px;
+  }
+
+  .help-intro {
+    font-size: 13px;
+  }
+
+  .help-card-header {
+    padding: 12px 14px;
+  }
+
+  .help-card-header .card-title {
+    font-size: 14px;
+  }
+
+  .help-card-body {
+    padding: 12px 14px;
+  }
+
+  .help-video-placeholder {
+    flex-direction: column;
+  }
+
+  .video-thumbnail {
+    width: 100%;
+    height: 140px;
+  }
+
+  .help-panel-header {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .help-header-left {
+    gap: 8px;
+  }
+
+  .help-header-title {
+    font-size: 14px;
+  }
+
+  .help-header-center {
+    order: 3;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .help-search-input {
+    padding: 10px 12px 10px 36px;
+    font-size: 14px;
+    min-height: 44px;
+  }
+
+  .help-edit-btn {
+    padding: 10px;
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .help-edit-btn .btn-label {
+    display: none;
+  }
+
+  .help-fullscreen-btn,
+  .help-close-btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 10px;
+  }
+
+  .help-feature-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .help-feature-item {
+    padding: 14px;
+    min-height: 60px;
+  }
+
+  .help-feature-item strong {
+    font-size: 14px;
+  }
+
+  .help-feature-item span {
+    font-size: 12px;
+  }
+}
+
+/* Help Dialog Tablet (600-959px) */
+@media (min-width: 600px) and (max-width: 959px) {
   .help-main-layout {
     flex-direction: column;
   }
@@ -13975,38 +14117,126 @@ html, body {
     border-right: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding: 8px 0;
+    max-height: 140px;
+  }
+
+  .help-nav-header {
+    padding: 10px 16px;
+    font-size: 13px;
+    min-height: 48px;
   }
 
   .help-nav-items {
     display: flex;
     flex-wrap: wrap;
     padding: 8px 16px;
+    gap: 8px;
   }
 
   .help-nav-link {
-    padding: 8px 12px;
+    padding: 10px 14px;
+    min-height: 48px;
+    font-size: 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
   }
 
-  .help-video-placeholder {
-    flex-direction: column;
+  .help-content-area {
+    padding: 16px 20px;
   }
 
-  .video-thumbnail {
-    width: 100%;
-    height: 160px;
+  .help-section-title-row h2 {
+    font-size: 20px;
+  }
+
+  .help-card-header {
+    padding: 14px 18px;
+  }
+
+  .help-card-body {
+    padding: 14px 18px;
   }
 
   .help-panel-header {
-    flex-wrap: wrap;
+    padding: 12px 18px;
     gap: 12px;
   }
 
-  .help-header-center {
-    order: 3;
-    max-width: 100%;
-    width: 100%;
+  .help-header-title {
+    font-size: 15px;
+  }
+
+  .help-search-input {
+    padding: 10px 14px 10px 38px;
+    font-size: 14px;
+    min-height: 48px;
+  }
+
+  .help-edit-btn {
+    padding: 10px 14px;
+    min-height: 48px;
+  }
+
+  .help-fullscreen-btn,
+  .help-close-btn {
+    min-height: 48px;
+    min-width: 48px;
+    padding: 12px;
+  }
+
+  .help-feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .help-feature-item {
+    padding: 14px;
   }
 }
+
+/* Help Dialog 720p (960-1279px) */
+@media (min-width: 960px) and (max-width: 1279px) {
+  .help-sidebar {
+    width: 200px;
+    min-width: 200px;
+  }
+
+  .help-nav-header {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .help-nav-link {
+    padding: 8px 14px 8px 44px;
+    font-size: 12px;
+  }
+
+  .help-content-area {
+    padding: 18px 22px;
+  }
+
+  .help-card-header {
+    padding: 14px 18px;
+  }
+
+  .help-card-body {
+    padding: 16px 18px;
+  }
+
+  .help-panel-header {
+    padding: 12px 18px;
+  }
+
+  .help-header-title {
+    font-size: 15px;
+  }
+
+  .help-header-center {
+    max-width: 320px;
+  }
+}
+
+/* ========== END 6-TIER HELP DIALOG ========== */
 
 /* SVG Icon styles for help panel */
 .edit-icon-svg {
