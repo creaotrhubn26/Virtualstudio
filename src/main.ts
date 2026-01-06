@@ -1527,6 +1527,24 @@ class VirtualStudio {
       });
     }
 
+    // Ensure content area is scrollable
+    const overlayContent = document.getElementById('overlayPanelContent');
+    if (overlayContent) {
+      // Force scroll styles via JavaScript
+      overlayContent.style.overflowY = 'scroll';
+      overlayContent.style.maxHeight = '360px';
+      overlayContent.style.height = '360px';
+      overlayContent.style.display = 'block';
+      
+      // Add wheel event listener to ensure scroll works
+      overlayContent.addEventListener('wheel', (e) => {
+        e.stopPropagation();
+        overlayContent.scrollTop += e.deltaY;
+      }, { passive: true });
+      
+      console.log('[Overlay] Scroll enabled on content area');
+    }
+
     // Setup overlay toggle checkboxes
     this.setupOverlayToggles();
   }
