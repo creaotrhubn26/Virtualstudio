@@ -123,6 +123,27 @@ interface LightSpecs {
   colorTemp?: number;
 }
 
+// Undo/Redo action types
+type UndoActionType = 
+  | 'light-add' 
+  | 'light-remove' 
+  | 'light-move' 
+  | 'light-rotate' 
+  | 'light-property'
+  | 'camera-change'
+  | 'selection-change';
+
+interface UndoAction {
+  type: UndoActionType;
+  timestamp: number;
+  description: string;
+  data: {
+    lightId?: string;
+    previousState?: any;
+    newState?: any;
+  };
+}
+
 interface LightData {
   light: BABYLON.Light;
   mesh: BABYLON.Mesh;
@@ -189,6 +210,12 @@ class VirtualStudio {
   private gridMesh: BABYLON.Mesh | null = null;
   private gizmoManager: BABYLON.GizmoManager | null = null;
   private wallsVisible: boolean = true;
+  
+  // Undo/Redo system
+  private undoStack: UndoAction[] = [];
+  private redoStack: UndoAction[] = [];
+  private maxUndoSteps: number = 50;
+  private isUndoRedoAction: boolean = false;
   
   // Ambient light control
   private ambientLight: BABYLON.HemisphericLight | null = null;
@@ -1033,10 +1060,36 @@ class VirtualStudio {
   private setupScopeControls(): void {
     // Right panel scope controls
     const scopeModeSelect = document.getElementById('scopeModeSelect') as HTMLSelectElement;
+    const scopeModeSelectDropdown = document.getElementById('scopeModeSelectDropdown') as HTMLSelectElement;
+
+    // Sync both selects
+    const setScopeMode = (mode: typeof this.currentScopeMode) => {
+      this.currentScopeMode = mode;
+      // Update button text
+      const scopeToggleBtn = document.getElementById('scopeToggleBtn');
+      const btnText = scopeToggleBtn?.querySelector('.toolbar-btn-text');
+      if (btnText) {
+        const modeLabels: Record<string, string> = {
+          'histogram': 'Histogram',
+          'waveform': 'Waveform',
+          'vectorscope': 'Vectorscope',
+          'skin': 'Hudtone',
+          'zebra': 'Zebra',
+          'falsecolor': 'False Color'
+        };
+        btnText.textContent = modeLabels[mode] || 'Histogram';
+      }
+      // Sync both selects
+      if (scopeModeSelect) scopeModeSelect.value = mode;
+      if (scopeModeSelectDropdown) scopeModeSelectDropdown.value = mode;
+    };
 
     scopeModeSelect?.addEventListener('change', () => {
-      const mode = scopeModeSelect.value as typeof this.currentScopeMode;
-      this.currentScopeMode = mode;
+      setScopeMode(scopeModeSelect.value as typeof this.currentScopeMode);
+    });
+    
+    scopeModeSelectDropdown?.addEventListener('change', () => {
+      setScopeMode(scopeModeSelectDropdown.value as typeof this.currentScopeMode);
     });
   }
 
@@ -1709,19 +1762,55 @@ class VirtualStudio {
 
     // Undo/Redo buttons
     document.getElementById('undoBtn')?.addEventListener('click', () => {
-      console.log('Undo action');
-      window.dispatchEvent(new CustomEvent('ch-undo'));
+      this.performUndo();
     });
 
     document.getElementById('redoBtn')?.addEventListener('click', () => {
-      console.log('Redo action');
-      window.dispatchEvent(new CustomEvent('ch-redo'));
+      this.performRedo();
+    });
+    
+    // Keyboard shortcuts for undo/redo
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'z' && !e.shiftKey) {
+          e.preventDefault();
+          this.performUndo();
+        } else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+          e.preventDefault();
+          this.performRedo();
+        }
+      }
     });
 
-    // Play button
-    document.getElementById('playBtn')?.addEventListener('click', () => {
-      console.log('Play preview');
-      window.dispatchEvent(new CustomEvent('ch-play-preview'));
+    // Play button - Toggle recording/preview mode
+    const playBtn = document.getElementById('playBtn');
+    playBtn?.addEventListener('click', () => {
+      if (this.isRecording) {
+        this.stopRecording();
+        playBtn.classList.remove('recording');
+        playBtn.innerHTML = '<span aria-hidden="true">▶</span>';
+        playBtn.title = 'Spill av / Ta opp (Space)';
+      } else {
+        // Open recording dialog or start recording directly
+        this.showRecordingDialog();
+      }
+    });
+    
+    // Space bar to toggle recording
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        const target = e.target as HTMLElement;
+        // Don't trigger if typing in an input
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+          return;
+        }
+        e.preventDefault();
+        if (this.isRecording) {
+          this.stopRecording();
+        } else {
+          this.showRecordingDialog();
+        }
+      }
     });
 
     // Monitor button - opens monitor panel
@@ -8809,17 +8898,25 @@ class VirtualStudio {
     lum: new Array(256).fill(0)
   };
   private highlightClipping: number = 0;
+  private shadowClipping: number = 0;
   private histogramFrameCount: number = 0;
+  private lastHistogramUpdate: number = 0;
+  private histogramUpdateInterval: number = 100; // ms between updates
+  private pixelReadBuffer: Uint8Array | null = null;
+  private isReadingPixels: boolean = false;
 
   private updateHistogram(): void {
     if (!this.histogramCtx || !this.histogramCanvas) return;
 
-    // Only update histogram every 10 frames for performance
-    this.histogramFrameCount++;
-    if (this.histogramFrameCount % 10 === 0) {
+    const now = performance.now();
+    
+    // Throttle histogram calculation for performance (every 100ms)
+    if (now - this.lastHistogramUpdate >= this.histogramUpdateInterval && !this.isReadingPixels) {
+      this.lastHistogramUpdate = now;
       this.calculateHistogramFromScene();
     }
 
+    // Always draw current mode (uses cached data)
     switch (this.currentScopeMode) {
       case 'histogram':
         this.drawHistogram();
@@ -8845,60 +8942,96 @@ class VirtualStudio {
   }
 
   private calculateHistogramFromScene(): void {
-    // Read pixels from the render canvas
+    if (this.isReadingPixels) return;
+    this.isReadingPixels = true;
+    
     const width = this.engine.getRenderWidth();
     const height = this.engine.getRenderHeight();
     
-    // Sample every Nth pixel for performance (sample ~10000 pixels)
-    const sampleStep = Math.max(1, Math.floor(Math.sqrt((width * height) / 10000)));
+    // Adaptive sampling: more pixels for smaller resolutions, fewer for larger
+    const targetSamples = 15000;
+    const sampleStep = Math.max(1, Math.floor(Math.sqrt((width * height) / targetSamples)));
     
-    // Reset histogram bins
-    this.histogramData.r.fill(0);
-    this.histogramData.g.fill(0);
-    this.histogramData.b.fill(0);
-    this.histogramData.lum.fill(0);
-    
-    let totalPixels = 0;
-    let clippedPixels = 0;
-
     // Read pixels from engine
     this.engine.readPixels(0, 0, width, height).then((pixels) => {
-      if (!pixels) return;
+      if (!pixels) {
+        this.isReadingPixels = false;
+        return;
+      }
+      
+      // Reset histogram bins using typed arrays for performance
+      const rHist = new Uint32Array(256);
+      const gHist = new Uint32Array(256);
+      const bHist = new Uint32Array(256);
+      const lumHist = new Uint32Array(256);
       
       const data = new Uint8Array(pixels.buffer);
+      let totalPixels = 0;
+      let highlightClipped = 0;
+      let shadowClipped = 0;
       
+      // Optimized sampling with staggered pattern for better coverage
       for (let y = 0; y < height; y += sampleStep) {
-        for (let x = 0; x < width; x += sampleStep) {
+        const rowOffset = (y % 2) * Math.floor(sampleStep / 2); // Stagger odd rows
+        for (let x = rowOffset; x < width; x += sampleStep) {
           const idx = (y * width + x) * 4;
           const r = data[idx];
           const g = data[idx + 1];
           const b = data[idx + 2];
           
-          // Calculate luminance (Rec. 709)
+          // Calculate luminance (Rec. 709 standard)
           const lum = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
           
-          this.histogramData.r[r]++;
-          this.histogramData.g[g]++;
-          this.histogramData.b[b]++;
-          this.histogramData.lum[lum]++;
+          rHist[r]++;
+          gHist[g]++;
+          bHist[b]++;
+          lumHist[lum]++;
           
           totalPixels++;
           
-          // Check for highlight clipping (values near 255)
+          // Highlight clipping detection (any channel >= 250)
           if (r >= 250 || g >= 250 || b >= 250) {
-            clippedPixels++;
+            highlightClipped++;
+          }
+          
+          // Shadow clipping detection (all channels <= 5)
+          if (r <= 5 && g <= 5 && b <= 5) {
+            shadowClipped++;
           }
         }
       }
       
-      // Calculate highlight clipping percentage
-      this.highlightClipping = totalPixels > 0 ? (clippedPixels / totalPixels) * 100 : 0;
+      // Copy to class histogram data
+      for (let i = 0; i < 256; i++) {
+        this.histogramData.r[i] = rHist[i];
+        this.histogramData.g[i] = gHist[i];
+        this.histogramData.b[i] = bHist[i];
+        this.histogramData.lum[i] = lumHist[i];
+      }
       
-      // Update highlight display
+      // Calculate clipping percentages
+      this.highlightClipping = totalPixels > 0 ? (highlightClipped / totalPixels) * 100 : 0;
+      this.shadowClipping = totalPixels > 0 ? (shadowClipped / totalPixels) * 100 : 0;
+      
+      // Update UI displays
       const highlightEl = document.getElementById('highlightPercent');
       if (highlightEl) {
-        highlightEl.textContent = `Høylys ${this.highlightClipping.toFixed(1)}%`;
+        const status = this.highlightClipping > 3 ? '⚠️' : this.highlightClipping > 1 ? '!' : '';
+        highlightEl.textContent = `${status} Høylys ${this.highlightClipping.toFixed(1)}%`;
+        highlightEl.style.color = this.highlightClipping > 3 ? '#ff6b6b' : 
+                                   this.highlightClipping > 1 ? '#ffaa00' : '#00d4ff';
       }
+      
+      const shadowEl = document.getElementById('shadowPercent');
+      if (shadowEl) {
+        const status = this.shadowClipping > 5 ? '⚠️' : '';
+        shadowEl.textContent = `${status} Skygge ${this.shadowClipping.toFixed(1)}%`;
+        shadowEl.style.color = this.shadowClipping > 5 ? '#ff6b6b' : '#00d4ff';
+      }
+      
+      this.isReadingPixels = false;
+    }).catch(() => {
+      this.isReadingPixels = false;
     });
   }
 
@@ -8907,42 +9040,65 @@ class VirtualStudio {
     const w = this.histogramCanvas!.width;
     const h = this.histogramCanvas!.height;
 
-    // Clear with dark background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+    // Clear with dark gradient background
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, 'rgba(10, 15, 20, 0.98)');
+    bgGrad.addColorStop(1, 'rgba(5, 8, 12, 0.98)');
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // Find max value for normalization
+    // Draw subtle grid lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 4; i++) {
+      const y = (i / 4) * h;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+    
+    // Draw zone indicators (shadows, midtones, highlights)
+    ctx.fillStyle = 'rgba(0, 100, 200, 0.08)';
+    ctx.fillRect(0, 0, w * 0.25, h);
+    ctx.fillStyle = 'rgba(0, 200, 100, 0.05)';
+    ctx.fillRect(w * 0.25, 0, w * 0.5, h);
+    ctx.fillStyle = 'rgba(255, 200, 0, 0.08)';
+    ctx.fillRect(w * 0.75, 0, w * 0.25, h);
+
+    // Find max value for normalization (ignore extreme edges)
     const maxVal = Math.max(
-      ...this.histogramData.lum.slice(5, 250), // Ignore extreme ends
+      ...this.histogramData.lum.slice(3, 252),
       1
     );
 
-    // Draw luminance histogram
     const binWidth = w / 256;
     
-    // Draw gradient fill
-    const gradient = ctx.createLinearGradient(0, h, w, 0);
-    gradient.addColorStop(0, 'rgba(0, 80, 120, 0.7)');
-    gradient.addColorStop(0.5, 'rgba(0, 150, 200, 0.8)');
-    gradient.addColorStop(1, 'rgba(100, 200, 255, 0.6)');
+    // Draw luminance histogram with gradient fill
+    const lumGrad = ctx.createLinearGradient(0, h, 0, 0);
+    lumGrad.addColorStop(0, 'rgba(0, 80, 140, 0.9)');
+    lumGrad.addColorStop(0.4, 'rgba(0, 160, 220, 0.85)');
+    lumGrad.addColorStop(0.8, 'rgba(80, 200, 255, 0.75)');
+    lumGrad.addColorStop(1, 'rgba(150, 230, 255, 0.6)');
     
-    ctx.fillStyle = gradient;
+    ctx.fillStyle = lumGrad;
     ctx.beginPath();
     ctx.moveTo(0, h);
     
+    // Smoothed curve using moving average
     for (let i = 0; i < 256; i++) {
-      const x = i * binWidth;
-      const barHeight = (this.histogramData.lum[i] / maxVal) * (h - 4);
-      const y = h - Math.min(barHeight, h - 2);
+      const x = i * binWidth + binWidth / 2;
+      // 3-point moving average for smoother curve
+      const avg = i === 0 ? this.histogramData.lum[0] :
+                  i === 255 ? this.histogramData.lum[255] :
+                  (this.histogramData.lum[i-1] + this.histogramData.lum[i] * 2 + this.histogramData.lum[i+1]) / 4;
+      const barHeight = (avg / maxVal) * (h - 6);
+      const y = h - Math.min(barHeight, h - 4);
       
       if (i === 0) {
         ctx.lineTo(x, y);
       } else {
-        // Smooth curve
-        const prevX = (i - 1) * binWidth;
-        const prevY = h - Math.min((this.histogramData.lum[i - 1] / maxVal) * (h - 4), h - 2);
-        const cpX = (prevX + x) / 2;
-        ctx.quadraticCurveTo(prevX, prevY, cpX, (prevY + y) / 2);
+        ctx.lineTo(x, y);
       }
     }
     
@@ -8950,15 +9106,40 @@ class VirtualStudio {
     ctx.closePath();
     ctx.fill();
 
-    // Draw thin RGB lines on top
-    this.drawChannelLine(ctx, this.histogramData.r, maxVal, 'rgba(255, 80, 80, 0.5)', w, h);
-    this.drawChannelLine(ctx, this.histogramData.g, maxVal, 'rgba(80, 255, 80, 0.5)', w, h);
-    this.drawChannelLine(ctx, this.histogramData.b, maxVal, 'rgba(80, 80, 255, 0.5)', w, h);
+    // Draw RGB channel lines with better visibility
+    this.drawChannelLine(ctx, this.histogramData.r, maxVal, 'rgba(255, 90, 90, 0.65)', w, h);
+    this.drawChannelLine(ctx, this.histogramData.g, maxVal, 'rgba(90, 255, 90, 0.55)', w, h);
+    this.drawChannelLine(ctx, this.histogramData.b, maxVal, 'rgba(90, 130, 255, 0.65)', w, h);
 
-    // Draw highlight clipping warning if > 1%
+    // Draw shadow clipping warning zone
+    if (this.shadowClipping > 2) {
+      const shadowGrad = ctx.createLinearGradient(0, 0, 25, 0);
+      shadowGrad.addColorStop(0, 'rgba(80, 80, 255, 0.4)');
+      shadowGrad.addColorStop(1, 'rgba(80, 80, 255, 0)');
+      ctx.fillStyle = shadowGrad;
+      ctx.fillRect(0, 0, 25, h);
+    }
+
+    // Draw highlight clipping warning zone
     if (this.highlightClipping > 1) {
-      ctx.fillStyle = 'rgba(255, 100, 100, 0.3)';
-      ctx.fillRect(w - 20, 0, 20, h);
+      const hlGrad = ctx.createLinearGradient(w - 25, 0, w, 0);
+      hlGrad.addColorStop(0, 'rgba(255, 100, 100, 0)');
+      hlGrad.addColorStop(1, 'rgba(255, 100, 100, 0.5)');
+      ctx.fillStyle = hlGrad;
+      ctx.fillRect(w - 25, 0, 25, h);
+    }
+    
+    // Draw clipping indicators text
+    ctx.font = '9px monospace';
+    if (this.shadowClipping > 2) {
+      ctx.fillStyle = '#6688ff';
+      ctx.fillText(`${this.shadowClipping.toFixed(0)}%`, 3, 12);
+    }
+    if (this.highlightClipping > 1) {
+      ctx.fillStyle = '#ff6666';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${this.highlightClipping.toFixed(0)}%`, w - 3, 12);
+      ctx.textAlign = 'left';
     }
   }
 
@@ -8988,34 +9169,83 @@ class VirtualStudio {
     const w = this.histogramCanvas!.width;
     const h = this.histogramCanvas!.height;
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+    // Dark background with subtle gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, 'rgba(8, 12, 16, 0.98)');
+    bgGrad.addColorStop(1, 'rgba(4, 6, 10, 0.98)');
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // Draw grid lines
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    // Draw IRE scale labels and grid lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1;
-    for (let y = 0; y <= 100; y += 25) {
-      const py = h - (y / 100) * h;
+    ctx.font = '8px monospace';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    
+    const ireValues = [0, 25, 50, 75, 100];
+    ireValues.forEach(ire => {
+      const py = h - (ire / 100) * h;
       ctx.beginPath();
-      ctx.moveTo(0, py);
+      ctx.moveTo(20, py);
       ctx.lineTo(w, py);
       ctx.stroke();
-    }
+      ctx.fillText(`${ire}`, 2, py + 3);
+    });
+    
+    // Draw warning zones
+    // Superwhite zone (>100 IRE)
+    ctx.fillStyle = 'rgba(255, 50, 50, 0.15)';
+    ctx.fillRect(20, 0, w - 20, h * 0.05);
+    // Below black zone (<0 IRE)
+    ctx.fillStyle = 'rgba(50, 50, 255, 0.15)';
+    ctx.fillRect(20, h * 0.95, w - 20, h * 0.05);
 
-    // Draw waveform based on luminance distribution
-    const maxVal = Math.max(...this.histogramData.lum.slice(5, 250), 1);
+    // Draw waveform trace - plot luminance at each horizontal position
+    const maxVal = Math.max(...this.histogramData.lum.slice(2, 253), 1);
+    const colWidth = (w - 20) / 256;
     
     for (let i = 0; i < 256; i++) {
-      const x = (i / 256) * w;
-      const intensity = this.histogramData.lum[i] / maxVal;
+      const x = 20 + i * colWidth;
+      const count = this.histogramData.lum[i];
       
-      if (intensity > 0.01) {
-        const lumY = h - (i / 255) * h;
-        const alpha = Math.min(intensity * 2, 1);
-        ctx.fillStyle = `rgba(0, 255, 150, ${alpha * 0.5})`;
-        ctx.fillRect(x, lumY - 1, w / 256 + 1, 3);
+      if (count > 0) {
+        // Map bin index (0-255) to IRE (0-100)
+        const ire = (i / 255) * 100;
+        const y = h - (ire / 100) * h;
+        
+        // Intensity based on count
+        const intensity = Math.min(count / maxVal, 1);
+        const alpha = 0.3 + intensity * 0.6;
+        
+        // Color based on IRE level
+        let color: string;
+        if (ire > 95) {
+          color = `rgba(255, 100, 100, ${alpha})`; // Overexposed - red
+        } else if (ire < 5) {
+          color = `rgba(100, 100, 255, ${alpha})`; // Underexposed - blue
+        } else {
+          color = `rgba(0, 255, 160, ${alpha})`; // Normal - green
+        }
+        
+        ctx.fillStyle = color;
+        const dotSize = 2 + intensity * 2;
+        ctx.fillRect(x, y - dotSize/2, colWidth + 0.5, dotSize);
       }
     }
+    
+    // Draw 70 IRE reference line (typical skin tone target)
+    ctx.strokeStyle = 'rgba(255, 200, 150, 0.4)';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    const skinY = h - (70 / 100) * h;
+    ctx.moveTo(20, skinY);
+    ctx.lineTo(w, skinY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    ctx.fillStyle = 'rgba(255, 200, 150, 0.5)';
+    ctx.font = '8px monospace';
+    ctx.fillText('Hud', w - 22, skinY - 2);
   }
 
   private drawVectorscope(): void {
@@ -9024,22 +9254,26 @@ class VirtualStudio {
     const h = this.histogramCanvas!.height;
     const cx = w / 2;
     const cy = h / 2;
-    const radius = Math.min(w, h) / 2 - 4;
+    const radius = Math.min(w, h) / 2 - 8;
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+    // Dark background
+    const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 1.2);
+    bgGrad.addColorStop(0, 'rgba(12, 16, 20, 0.98)');
+    bgGrad.addColorStop(1, 'rgba(4, 6, 10, 0.98)');
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // Draw circular grid
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    // Draw graticule rings
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
     ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius * 0.5, 0, Math.PI * 2);
-    ctx.stroke();
+    [0.25, 0.5, 0.75, 1.0].forEach(scale => {
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius * scale, 0, Math.PI * 2);
+      ctx.stroke();
+    });
 
     // Draw crosshairs
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
     ctx.beginPath();
     ctx.moveTo(cx - radius, cy);
     ctx.lineTo(cx + radius, cy);
@@ -9047,29 +9281,99 @@ class VirtualStudio {
     ctx.lineTo(cx, cy + radius);
     ctx.stroke();
 
-    // Draw color targets (skin tone line, etc)
-    ctx.strokeStyle = 'rgba(255, 200, 150, 0.4)';
+    // Draw color target boxes (SMPTE color bar positions)
+    const colorTargets = [
+      { name: 'R', angle: 103, color: 'rgba(255, 0, 0, 0.4)' },
+      { name: 'Mg', angle: 61, color: 'rgba(255, 0, 255, 0.4)' },
+      { name: 'B', angle: -13, color: 'rgba(0, 0, 255, 0.4)' },
+      { name: 'Cy', angle: -77, color: 'rgba(0, 255, 255, 0.4)' },
+      { name: 'G', angle: -167, color: 'rgba(0, 255, 0, 0.4)' },
+      { name: 'Yl', angle: 167, color: 'rgba(255, 255, 0, 0.4)' }
+    ];
+    
+    colorTargets.forEach(target => {
+      const rad = (target.angle * Math.PI) / 180;
+      const tx = cx + Math.cos(rad) * radius * 0.75;
+      const ty = cy - Math.sin(rad) * radius * 0.75;
+      ctx.fillStyle = target.color;
+      ctx.fillRect(tx - 6, ty - 6, 12, 12);
+      ctx.strokeStyle = target.color.replace('0.4', '0.8');
+      ctx.strokeRect(tx - 6, ty - 6, 12, 12);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.font = '7px monospace';
+      ctx.fillText(target.name, tx - 4, ty + 2);
+    });
+
+    // Draw skin tone line (I-line)
+    ctx.strokeStyle = 'rgba(255, 200, 150, 0.5)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([]);
     ctx.beginPath();
+    const skinAngle = (123 * Math.PI) / 180; // Skin tone angle
     ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + radius * 0.7, cy - radius * 0.4);
+    ctx.lineTo(cx + Math.cos(skinAngle) * radius * 0.9, cy - Math.sin(skinAngle) * radius * 0.9);
     ctx.stroke();
+    
+    ctx.fillStyle = 'rgba(255, 200, 150, 0.6)';
+    ctx.font = '8px monospace';
+    ctx.fillText('I', cx + Math.cos(skinAngle) * radius * 0.95, cy - Math.sin(skinAngle) * radius * 0.95);
 
-    // Plot color distribution
-    const maxR = Math.max(...this.histogramData.r, 1);
-    const maxG = Math.max(...this.histogramData.g, 1);
-    const maxB = Math.max(...this.histogramData.b, 1);
+    // Plot color distribution based on RGB histogram data
+    // Convert RGB values to YUV-like coordinates
+    const maxCount = Math.max(
+      ...this.histogramData.r.slice(5, 250),
+      ...this.histogramData.g.slice(5, 250),
+      ...this.histogramData.b.slice(5, 250),
+      1
+    );
 
-    for (let i = 0; i < 256; i++) {
-      const rVal = this.histogramData.r[i] / maxR;
-      const gVal = this.histogramData.g[i] / maxG;
-      const bVal = this.histogramData.b[i] / maxB;
+    for (let i = 5; i < 250; i++) {
+      const rCount = this.histogramData.r[i];
+      const gCount = this.histogramData.g[i];
+      const bCount = this.histogramData.b[i];
       
-      if (rVal > 0.05 || gVal > 0.05 || bVal > 0.05) {
-        const u = (rVal - gVal) * radius * 0.5;
-        const v = (bVal - (rVal + gVal) / 2) * radius * 0.5;
-        const alpha = Math.max(rVal, gVal, bVal) * 0.8;
-        ctx.fillStyle = `rgba(100, 200, 255, ${alpha})`;
-        ctx.fillRect(cx + u - 1, cy + v - 1, 2, 2);
+      // Plot based on relative channel strengths
+      if (rCount > maxCount * 0.02 || gCount > maxCount * 0.02 || bCount > maxCount * 0.02) {
+        // Calculate chrominance from normalized values
+        const rNorm = i / 255;
+        const gNorm = i / 255;
+        const bNorm = i / 255;
+        
+        // Approximate Cb/Cr (simplified YCbCr)
+        const intensity = Math.max(rCount, gCount, bCount) / maxCount;
+        
+        // Plot R channel contribution
+        if (rCount > maxCount * 0.02) {
+          const cb = 0.5 - rNorm * 0.169 - 0.331 * 0.5 + 0.5 * rNorm;
+          const cr = 0.5 + rNorm * 0.5 - 0.419 * 0.5 - 0.081 * 0.5;
+          const u = (cb - 0.5) * 2 * radius * 0.8;
+          const v = (cr - 0.5) * 2 * radius * 0.8;
+          const alpha = Math.min(rCount / maxCount * 1.5, 0.9);
+          ctx.fillStyle = `rgba(255, 100, 100, ${alpha})`;
+          ctx.fillRect(cx + u - 1, cy - v - 1, 2, 2);
+        }
+        
+        // Plot G channel contribution
+        if (gCount > maxCount * 0.02) {
+          const cb = 0.5 - 0.169 * 0.5 - gNorm * 0.331 + 0.5 * 0.5;
+          const cr = 0.5 + 0.5 * 0.5 - gNorm * 0.419 - 0.081 * 0.5;
+          const u = (cb - 0.5) * 2 * radius * 0.8;
+          const v = (cr - 0.5) * 2 * radius * 0.8;
+          const alpha = Math.min(gCount / maxCount * 1.5, 0.9);
+          ctx.fillStyle = `rgba(100, 255, 100, ${alpha})`;
+          ctx.fillRect(cx + u - 1, cy - v - 1, 2, 2);
+        }
+        
+        // Plot B channel contribution
+        if (bCount > maxCount * 0.02) {
+          const cb = 0.5 - 0.169 * 0.5 - 0.331 * 0.5 + bNorm * 0.5;
+          const cr = 0.5 + 0.5 * 0.5 - 0.419 * 0.5 - bNorm * 0.081;
+          const u = (cb - 0.5) * 2 * radius * 0.8;
+          const v = (cr - 0.5) * 2 * radius * 0.8;
+          const alpha = Math.min(bCount / maxCount * 1.5, 0.9);
+          ctx.fillStyle = `rgba(100, 150, 255, ${alpha})`;
+          ctx.fillRect(cx + u - 1, cy - v - 1, 2, 2);
+        }
       }
     }
   }
@@ -9502,6 +9806,260 @@ class VirtualStudio {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
       ctx.fillText(c.range, w * 0.6, y + barHeight / 2 + 3);
     });
+  }
+
+  // ============================================
+  // UNDO/REDO SYSTEM
+  // ============================================
+  
+  private getLightState(lightId: string): any {
+    const data = this.lights.get(lightId);
+    if (!data) return null;
+    
+    return {
+      position: data.mesh.position.clone(),
+      rotation: data.mesh.rotation.clone(),
+      intensity: data.light.intensity,
+      baseIntensity: data.baseIntensity,
+      powerMultiplier: data.powerMultiplier,
+      cct: data.cct,
+      enabled: data.enabled !== false,
+      name: data.name
+    };
+  }
+  
+  private restoreLightState(lightId: string, state: any): void {
+    const data = this.lights.get(lightId);
+    if (!data || !state) return;
+    
+    // Restore position
+    data.mesh.position.copyFrom(state.position);
+    if (data.light instanceof BABYLON.SpotLight || data.light instanceof BABYLON.DirectionalLight) {
+      data.light.position = data.mesh.position.clone();
+    }
+    
+    // Restore rotation
+    data.mesh.rotation.copyFrom(state.rotation);
+    
+    // Restore intensity
+    data.light.intensity = state.intensity;
+    data.baseIntensity = state.baseIntensity;
+    data.powerMultiplier = state.powerMultiplier;
+    
+    // Restore other properties
+    data.cct = state.cct;
+    data.enabled = state.enabled;
+    data.name = state.name;
+    
+    // Update UI if this light is selected
+    if (this.selectedLightId === lightId) {
+      this.updateSelectedLightProperties();
+    }
+  }
+  
+  public pushUndoAction(type: UndoActionType, description: string, lightId?: string, previousState?: any, newState?: any): void {
+    if (this.isUndoRedoAction) return; // Don't record undo/redo actions
+    
+    const action: UndoAction = {
+      type,
+      timestamp: Date.now(),
+      description,
+      data: {
+        lightId,
+        previousState,
+        newState
+      }
+    };
+    
+    this.undoStack.push(action);
+    
+    // Limit stack size
+    if (this.undoStack.length > this.maxUndoSteps) {
+      this.undoStack.shift();
+    }
+    
+    // Clear redo stack on new action
+    this.redoStack = [];
+    
+    // Update button states
+    this.updateUndoRedoButtons();
+  }
+  
+  private performUndo(): void {
+    if (this.undoStack.length === 0) {
+      this.showNotification('Ingen handlinger å angre', 'info');
+      return;
+    }
+    
+    const action = this.undoStack.pop()!;
+    this.isUndoRedoAction = true;
+    
+    try {
+      switch (action.type) {
+        case 'light-move':
+        case 'light-rotate':
+        case 'light-property':
+          if (action.data.lightId && action.data.previousState) {
+            this.restoreLightState(action.data.lightId, action.data.previousState);
+          }
+          break;
+          
+        case 'light-add':
+          // Remove the light that was added
+          if (action.data.lightId) {
+            this.removeLight(action.data.lightId);
+          }
+          break;
+          
+        case 'light-remove':
+          // Re-add the light that was removed (complex - would need to store full light data)
+          // For now, show message
+          this.showNotification('Kan ikke gjenopprette slettet lys', 'warning');
+          break;
+          
+        case 'camera-change':
+          if (action.data.previousState) {
+            this.camera.alpha = action.data.previousState.alpha;
+            this.camera.beta = action.data.previousState.beta;
+            this.camera.radius = action.data.previousState.radius;
+            this.camera.target = action.data.previousState.target.clone();
+          }
+          break;
+          
+        case 'selection-change':
+          if (action.data.previousState?.lightId) {
+            this.selectLight(action.data.previousState.lightId);
+          } else {
+            this.deselectLight();
+          }
+          break;
+      }
+      
+      // Push to redo stack
+      this.redoStack.push(action);
+      this.showNotification(`Angret: ${action.description}`, 'success');
+      
+    } catch (error) {
+      console.error('Undo failed:', error);
+      this.showNotification('Kunne ikke angre handling', 'error');
+    }
+    
+    this.isUndoRedoAction = false;
+    this.updateUndoRedoButtons();
+  }
+  
+  private performRedo(): void {
+    if (this.redoStack.length === 0) {
+      this.showNotification('Ingen handlinger å gjøre om', 'info');
+      return;
+    }
+    
+    const action = this.redoStack.pop()!;
+    this.isUndoRedoAction = true;
+    
+    try {
+      switch (action.type) {
+        case 'light-move':
+        case 'light-rotate':
+        case 'light-property':
+          if (action.data.lightId && action.data.newState) {
+            this.restoreLightState(action.data.lightId, action.data.newState);
+          }
+          break;
+          
+        case 'light-add':
+          // Would need to re-add the light - complex
+          this.showNotification('Kan ikke gjenta lyslegging', 'warning');
+          break;
+          
+        case 'light-remove':
+          // Remove the light again
+          if (action.data.lightId) {
+            this.removeLight(action.data.lightId);
+          }
+          break;
+          
+        case 'camera-change':
+          if (action.data.newState) {
+            this.camera.alpha = action.data.newState.alpha;
+            this.camera.beta = action.data.newState.beta;
+            this.camera.radius = action.data.newState.radius;
+            this.camera.target = action.data.newState.target.clone();
+          }
+          break;
+          
+        case 'selection-change':
+          if (action.data.newState?.lightId) {
+            this.selectLight(action.data.newState.lightId);
+          } else {
+            this.deselectLight();
+          }
+          break;
+      }
+      
+      // Push back to undo stack
+      this.undoStack.push(action);
+      this.showNotification(`Gjort om: ${action.description}`, 'success');
+      
+    } catch (error) {
+      console.error('Redo failed:', error);
+      this.showNotification('Kunne ikke gjøre om handling', 'error');
+    }
+    
+    this.isUndoRedoAction = false;
+    this.updateUndoRedoButtons();
+  }
+  
+  private updateUndoRedoButtons(): void {
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    
+    if (undoBtn) {
+      undoBtn.classList.toggle('disabled', this.undoStack.length === 0);
+      undoBtn.setAttribute('aria-disabled', String(this.undoStack.length === 0));
+      const lastUndo = this.undoStack[this.undoStack.length - 1];
+      undoBtn.title = lastUndo ? `Angre: ${lastUndo.description} (Ctrl+Z)` : 'Angre (Ctrl+Z)';
+    }
+    
+    if (redoBtn) {
+      redoBtn.classList.toggle('disabled', this.redoStack.length === 0);
+      redoBtn.setAttribute('aria-disabled', String(this.redoStack.length === 0));
+      const lastRedo = this.redoStack[this.redoStack.length - 1];
+      redoBtn.title = lastRedo ? `Gjør om: ${lastRedo.description} (Ctrl+Y)` : 'Gjør om (Ctrl+Y)';
+    }
+  }
+  
+  private showNotification(message: string, type: 'success' | 'error' | 'warning' | 'info'): void {
+    // Dispatch event for notification system
+    window.dispatchEvent(new CustomEvent('show-notification', {
+      detail: { message, type }
+    }));
+  }
+  
+  private removeLight(lightId: string): void {
+    const data = this.lights.get(lightId);
+    if (!data) return;
+    
+    // Dispose light and mesh
+    data.light.dispose();
+    data.mesh.dispose();
+    if (data.modelingLight) data.modelingLight.dispose();
+    if (data.shadowGenerator) data.shadowGenerator.dispose();
+    if (data.beamVisualization) data.beamVisualization.dispose();
+    
+    this.lights.delete(lightId);
+    
+    if (this.selectedLightId === lightId) {
+      this.deselectLight();
+    }
+    
+    // Update hierarchy
+    window.dispatchEvent(new CustomEvent('ch-light-removed', { detail: { lightId } }));
+  }
+  
+  private deselectLight(): void {
+    this.selectedLightId = null;
+    window.dispatchEvent(new CustomEvent('ch-light-deselected'));
   }
 
   private readPixelsFromRenderTarget(
@@ -13325,6 +13883,222 @@ class VirtualStudio {
       elapsed: this.isRecording ? Math.floor((Date.now() - this.recordingStartTime) / 1000) : 0,
       camera: this.activeRecordingCamera
     };
+  }
+
+  private recordingArcVisible: boolean = false;
+  private selectedRecordingCamera: string = 'main';
+  
+  private showRecordingDialog(): void {
+    // Check if arc already exists
+    let arc = document.getElementById('recordingArc');
+    
+    if (!arc) {
+      // Create the recording arc overlay
+      arc = document.createElement('div');
+      arc.id = 'recordingArc';
+      arc.className = 'recording-arc';
+      arc.innerHTML = `
+        <div class="recording-arc-content">
+          <div class="recording-arc-header">
+            <div class="recording-arc-title">
+              <div class="rec-indicator"></div>
+              <span>Opptak</span>
+            </div>
+            <div class="recording-arc-timer" id="arcRecordTimer">00:00:00</div>
+          </div>
+          
+          <div class="recording-arc-cameras">
+            <button class="arc-camera-btn active" data-camera="main" title="Hovedkamera">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 7l-7 5 7 5V7z"/>
+                <rect x="1" y="5" width="15" height="14" rx="2"/>
+              </svg>
+            </button>
+            <button class="arc-camera-btn" data-camera="camA" title="Kamera A" disabled>A</button>
+            <button class="arc-camera-btn" data-camera="camB" title="Kamera B" disabled>B</button>
+            <button class="arc-camera-btn" data-camera="camC" title="Kamera C" disabled>C</button>
+            <button class="arc-camera-btn" data-camera="camD" title="Kamera D" disabled>D</button>
+            <button class="arc-camera-btn" data-camera="all" title="Alle kameraer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"/>
+                <rect x="14" y="3" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/>
+              </svg>
+            </button>
+          </div>
+          
+          <div class="recording-arc-controls">
+            <button class="arc-record-btn" id="arcRecordBtn" title="Start opptak">
+              <div class="arc-record-icon"></div>
+            </button>
+            <button class="arc-close-btn" id="arcCloseBtn" title="Lukk">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      `;
+      
+      // Insert into viewport-container
+      const viewport = document.querySelector('.viewport-container') || document.querySelector('.main-viewport') || document.getElementById('renderCanvas')?.parentElement;
+      if (viewport) {
+        viewport.appendChild(arc);
+      } else {
+        document.body.appendChild(arc);
+      }
+      
+      // Setup arc event listeners
+      this.setupRecordingArcEvents(arc);
+    }
+    
+    // Update camera button states based on saved presets
+    this.updateRecordingArcCameras(arc);
+    
+    // Toggle visibility
+    if (this.recordingArcVisible) {
+      arc.classList.remove('visible');
+      this.recordingArcVisible = false;
+    } else {
+      arc.classList.add('visible');
+      this.recordingArcVisible = true;
+    }
+  }
+  
+  private setupRecordingArcEvents(arc: HTMLElement): void {
+    const closeBtn = arc.querySelector('#arcCloseBtn');
+    const recordBtn = arc.querySelector('#arcRecordBtn');
+    const cameraBtns = arc.querySelectorAll('.arc-camera-btn');
+    
+    // Close handler
+    closeBtn?.addEventListener('click', () => {
+      arc.classList.remove('visible');
+      this.recordingArcVisible = false;
+    });
+    
+    // Camera selection
+    cameraBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if ((btn as HTMLButtonElement).disabled) return;
+        cameraBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.selectedRecordingCamera = btn.getAttribute('data-camera') || 'main';
+        
+        // If a specific camera is selected, switch view to it
+        if (this.selectedRecordingCamera !== 'main' && this.selectedRecordingCamera !== 'all') {
+          this.loadCameraPreset(this.selectedRecordingCamera);
+        }
+      });
+    });
+    
+    // Record button - toggle recording
+    recordBtn?.addEventListener('click', () => {
+      if (this.isRecording) {
+        this.stopRecording();
+        recordBtn.classList.remove('recording');
+        arc.classList.remove('is-recording');
+        
+        // Reset play button
+        const playBtn = document.getElementById('playBtn');
+        if (playBtn) {
+          playBtn.classList.remove('recording');
+          playBtn.innerHTML = '<span aria-hidden="true">▶</span>';
+        }
+      } else {
+        // Start recording
+        recordBtn.classList.add('recording');
+        arc.classList.add('is-recording');
+        
+        // Update play button
+        const playBtn = document.getElementById('playBtn');
+        if (playBtn) {
+          playBtn.classList.add('recording');
+          playBtn.innerHTML = '<span aria-hidden="true">⏹</span>';
+        }
+        
+        // Start recording with selected camera
+        if (this.selectedRecordingCamera === 'all') {
+          this.startMultiCameraRecording();
+        } else if (this.selectedRecordingCamera === 'main') {
+          this.startRecording();
+        } else {
+          this.startRecording(this.selectedRecordingCamera);
+        }
+        
+        // Start updating arc timer
+        this.startArcRecordingTimer();
+      }
+    });
+  }
+  
+  private updateRecordingArcCameras(arc: HTMLElement): void {
+    const cameraBtns = arc.querySelectorAll('.arc-camera-btn[data-camera^="cam"]');
+    
+    cameraBtns.forEach(btn => {
+      const cameraId = btn.getAttribute('data-camera');
+      if (cameraId && this.cameraPresets.has(cameraId)) {
+        (btn as HTMLButtonElement).disabled = false;
+        btn.classList.add('available');
+      } else {
+        (btn as HTMLButtonElement).disabled = true;
+        btn.classList.remove('available');
+      }
+    });
+  }
+  
+  private arcTimerInterval: number | null = null;
+  
+  private startArcRecordingTimer(): void {
+    const timerEl = document.getElementById('arcRecordTimer');
+    
+    this.arcTimerInterval = window.setInterval(() => {
+      if (!this.isRecording) {
+        this.stopArcRecordingTimer();
+        return;
+      }
+      
+      const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+      const hours = Math.floor(elapsed / 3600).toString().padStart(2, '0');
+      const minutes = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
+      const seconds = (elapsed % 60).toString().padStart(2, '0');
+      
+      if (timerEl) timerEl.textContent = `${hours}:${minutes}:${seconds}`;
+    }, 1000);
+  }
+  
+  private stopArcRecordingTimer(): void {
+    if (this.arcTimerInterval) {
+      clearInterval(this.arcTimerInterval);
+      this.arcTimerInterval = null;
+    }
+    
+    const timerEl = document.getElementById('arcRecordTimer');
+    if (timerEl) timerEl.textContent = '00:00:00';
+    
+    // Reset arc UI
+    const arc = document.getElementById('recordingArc');
+    const recordBtn = arc?.querySelector('#arcRecordBtn');
+    if (recordBtn) recordBtn.classList.remove('recording');
+    if (arc) arc.classList.remove('is-recording');
+  }
+  
+  private async startMultiCameraRecording(): Promise<void> {
+    // Record from all saved camera presets simultaneously
+    const savedPresets = Array.from(this.cameraPresets.keys());
+    
+    if (savedPresets.length === 0) {
+      // Just record main view
+      this.startRecording();
+      return;
+    }
+    
+    // Start recording from main camera
+    this.startRecording();
+    
+    // Show notification about multi-camera recording
+    this.showNotification(`Tar opp fra ${savedPresets.length + 1} kameraer`, 'info');
   }
 
   private centerCameraOnObject(mesh: BABYLON.Mesh): void {

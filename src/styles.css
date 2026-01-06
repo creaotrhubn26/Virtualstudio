@@ -1311,6 +1311,17 @@ html, body {
   position: relative;
 }
 
+.tool-btn.disabled,
+.tool-btn[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.tool-btn:active:not(.disabled) {
+  transform: scale(0.95);
+}
+
 /* Desktop large screens */
 @media (min-width: 1400px) {
   .tool-btn {
@@ -13264,6 +13275,258 @@ html, body {
   #animationComposerRoot .MuiTab-root {
     font-size: 15px !important;
     padding: 14px 24px !important;
+  }
+}
+
+/* ============================================
+   RECORDING ARC - OVERLAY ON 3D SCENE
+   ============================================ */
+
+.recording-arc {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  z-index: 9998;
+  pointer-events: none;
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.recording-arc.visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.recording-arc-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 24px;
+  background: linear-gradient(180deg, rgba(15, 20, 28, 0.95) 0%, rgba(10, 14, 20, 0.98) 100%);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  border-top: none;
+  border-radius: 0 0 24px 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 68, 68, 0.1) inset;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.recording-arc.is-recording .recording-arc-content {
+  border-color: rgba(255, 68, 68, 0.6);
+  box-shadow: 0 8px 32px rgba(255, 68, 68, 0.2), 0 0 0 1px rgba(255, 68, 68, 0.2) inset;
+}
+
+.recording-arc-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 80px;
+}
+
+.recording-arc-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.rec-indicator {
+  width: 8px;
+  height: 8px;
+  background: #666;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.recording-arc.is-recording .rec-indicator {
+  background: #ff4444;
+  box-shadow: 0 0 8px #ff4444;
+  animation: recPulse 1s ease-in-out infinite;
+}
+
+@keyframes recPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.9); }
+}
+
+.recording-arc-timer {
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 1px;
+}
+
+.recording-arc.is-recording .recording-arc-timer {
+  color: #ff4444;
+}
+
+.recording-arc-cameras {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.arc-camera-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.arc-camera-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.arc-camera-btn.available {
+  border-color: rgba(0, 212, 255, 0.3);
+  color: rgba(0, 212, 255, 0.7);
+}
+
+.arc-camera-btn:hover:not(:disabled) {
+  background: rgba(0, 212, 255, 0.15);
+  border-color: rgba(0, 212, 255, 0.5);
+  color: #00d4ff;
+}
+
+.arc-camera-btn.active {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(0, 180, 220, 0.2));
+  border-color: #00d4ff;
+  color: #00d4ff;
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.3);
+}
+
+.arc-camera-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.recording-arc-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.arc-record-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 68, 68, 0.5);
+  background: rgba(255, 68, 68, 0.1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.arc-record-btn:hover {
+  border-color: #ff4444;
+  background: rgba(255, 68, 68, 0.2);
+  transform: scale(1.05);
+}
+
+.arc-record-icon {
+  width: 20px;
+  height: 20px;
+  background: #ff4444;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.arc-record-btn.recording .arc-record-icon {
+  border-radius: 4px;
+  width: 16px;
+  height: 16px;
+}
+
+.arc-record-btn.recording {
+  border-color: #ff4444;
+  background: rgba(255, 68, 68, 0.25);
+  animation: recordingBorder 2s ease-in-out infinite;
+}
+
+@keyframes recordingBorder {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(255, 68, 68, 0); }
+}
+
+.arc-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.arc-close-btn:hover {
+  background: rgba(255, 100, 100, 0.15);
+  border-color: rgba(255, 100, 100, 0.5);
+  color: #ff6b6b;
+}
+
+/* Play button recording state */
+.play-btn.recording {
+  background: linear-gradient(135deg, rgba(255, 68, 68, 0.3), rgba(200, 50, 50, 0.2)) !important;
+  border-color: #ff4444 !important;
+  color: #ff4444 !important;
+  animation: playRecording 1.5s ease-in-out infinite !important;
+}
+
+@keyframes playRecording {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 12px 4px rgba(255, 68, 68, 0.2); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .recording-arc-content {
+    padding: 10px 16px;
+    gap: 12px;
+  }
+  
+  .recording-arc-timer {
+    font-size: 14px;
+  }
+  
+  .arc-camera-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+  
+  .arc-record-btn {
+    width: 42px;
+    height: 42px;
+  }
+  
+  .arc-record-icon {
+    width: 16px;
+    height: 16px;
   }
 }
 
