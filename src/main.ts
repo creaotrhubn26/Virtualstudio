@@ -1530,19 +1530,30 @@ class VirtualStudio {
     // Ensure content area is scrollable
     const overlayContent = document.getElementById('overlayPanelContent');
     if (overlayContent) {
-      // Force scroll styles via JavaScript
-      overlayContent.style.overflowY = 'scroll';
-      overlayContent.style.maxHeight = '360px';
-      overlayContent.style.height = '360px';
-      overlayContent.style.display = 'block';
+      // Force scroll styles via JavaScript with setAttribute for priority
+      overlayContent.setAttribute('style', 'overflow-y: scroll !important; max-height: 320px !important; height: 320px !important; display: block !important; -webkit-overflow-scrolling: touch;');
       
       // Add wheel event listener to ensure scroll works
-      overlayContent.addEventListener('wheel', (e) => {
+      overlayContent.addEventListener('wheel', (e: WheelEvent) => {
         e.stopPropagation();
-        overlayContent.scrollTop += e.deltaY;
+        const scrollAmount = e.deltaY;
+        overlayContent.scrollTop += scrollAmount;
       }, { passive: true });
       
-      console.log('[Overlay] Scroll enabled on content area');
+      // Also handle touch scroll for trackpad
+      let touchStartY = 0;
+      overlayContent.addEventListener('touchstart', (e: TouchEvent) => {
+        touchStartY = e.touches[0].clientY;
+      }, { passive: true });
+      
+      overlayContent.addEventListener('touchmove', (e: TouchEvent) => {
+        const touchY = e.touches[0].clientY;
+        const deltaY = touchStartY - touchY;
+        overlayContent.scrollTop += deltaY;
+        touchStartY = touchY;
+      }, { passive: true });
+      
+      console.log('[Overlay] Scroll enabled on content area, height:', overlayContent.style.height);
     }
 
     // Setup overlay toggle checkboxes
