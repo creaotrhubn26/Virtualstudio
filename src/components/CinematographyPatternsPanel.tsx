@@ -19,6 +19,7 @@ import {
   Card,
   CardContent,
   CardActions,
+  CardMedia,
   Divider,
   Tooltip,
   Grid,
@@ -105,59 +106,97 @@ export function CinematographyPatternsPanel({ onApplyPattern }: CinematographyPa
   };
 
   return (
-    <Paper elevation={0} sx={{ p: 2, bgcolor: '#f9f9f9', border: '1px solid #e0e0e0' }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
-        🎬 Cinematography Patterns ({filteredPatterns.length})
-      </Typography>
+    <Paper elevation={0} sx={{ p: 2, bgcolor: '#1c2128', border: 'none' }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#fff' }}>
+          {filteredPatterns.length} lysmønstre tilgjengelig
+        </Typography>
+      </Stack>
 
       {/* Filters */}
       <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
         <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Category</InputLabel>
+          <InputLabel sx={{ color: '#888' }}>Kategori</InputLabel>
           <Select
             value={selectedCategory}
-            label="Category"
+            label="Kategori"
             onChange={(e) => setSelectedCategory(e.target.value)}
+            sx={{ 
+              bgcolor: 'rgba(255,255,255,0.05)', 
+              color: '#fff',
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' }
+            }}
           >
-            <MenuItem value="all">All Categories</MenuItem>
-            <MenuItem value="portrait">Portrait</MenuItem>
-            <MenuItem value="dramatic">Dramatic</MenuItem>
-            <MenuItem value="commercial">Commercial</MenuItem>
+            <MenuItem value="all">Alle kategorier</MenuItem>
+            <MenuItem value="portrait">Portrett</MenuItem>
+            <MenuItem value="dramatic">Dramatisk</MenuItem>
+            <MenuItem value="commercial">Kommersiell</MenuItem>
             <MenuItem value="film-noir">Film Noir</MenuItem>
             <MenuItem value="beauty">Beauty</MenuItem>
-            <MenuItem value="interview">Interview</MenuItem>
-            <MenuItem value="product">Product</MenuItem>
+            <MenuItem value="interview">Intervju</MenuItem>
+            <MenuItem value="product">Produkt</MenuItem>
           </Select>
         </FormControl>
 
         <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Difficulty</InputLabel>
+          <InputLabel sx={{ color: '#888' }}>Vanskelighetsgrad</InputLabel>
           <Select
             value={selectedDifficulty}
-            label="Difficulty"
+            label="Vanskelighetsgrad"
             onChange={(e) => setSelectedDifficulty(e.target.value)}
+            sx={{ 
+              bgcolor: 'rgba(255,255,255,0.05)', 
+              color: '#fff',
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' }
+            }}
           >
-            <MenuItem value="all">All Levels</MenuItem>
-            <MenuItem value="beginner">Beginner</MenuItem>
-            <MenuItem value="intermediate">Intermediate</MenuItem>
-            <MenuItem value="advanced">Advanced</MenuItem>
-            <MenuItem value="expert">Expert</MenuItem>
+            <MenuItem value="all">Alle nivåer</MenuItem>
+            <MenuItem value="beginner">Nybegynner</MenuItem>
+            <MenuItem value="intermediate">Middels</MenuItem>
+            <MenuItem value="advanced">Avansert</MenuItem>
+            <MenuItem value="expert">Ekspert</MenuItem>
           </Select>
         </FormControl>
       </Stack>
 
-      <Divider sx={{ my: 2 }} />
+      <Divider sx={{ my: 2, borderColor: 'rgba(255,255,255,0.1)' }} />
 
       {/* Patterns Grid */}
-      <Box sx={{ maxHeight: 600, overflowY: 'auto' }}>
+      <Box sx={{ maxHeight: 500, overflowY: 'auto', pr: 1 }}>
         <Grid container spacing={2}>
           {filteredPatterns.map((pattern) => (
-            <Grid size={12} key={pattern.id}>
-              <Card variant="outlined" sx={{ bgcolor: 'white' }}>
+            <Grid size={{ xs: 12, md: 6 }} key={pattern.id}>
+              <Card 
+                variant="outlined" 
+                sx={{ 
+                  bgcolor: 'rgba(255,255,255,0.05)', 
+                  borderColor: 'rgba(255,255,255,0.1)',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: 'rgba(255,255,255,0.08)',
+                    borderColor: 'rgba(255,170,0,0.3)',
+                    transform: 'translateY(-2px)'
+                  }
+                }}
+              >
+                {pattern.thumbnail && (
+                  <CardMedia
+                    component="img"
+                    height="120"
+                    image={pattern.thumbnail}
+                    alt={pattern.name}
+                    sx={{
+                      objectFit: 'cover',
+                      borderBottom: '1px solid rgba(255,255,255,0.1)'
+                    }}
+                  />
+                )}
                 <CardContent sx={{ pb: 1 }}>
                   <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                    {getCategoryIcon(pattern.category)}
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, flex: 1 }}>
+                    <Box sx={{ color: '#ffaa00' }}>
+                      {getCategoryIcon(pattern.category)}
+                    </Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, flex: 1, color: '#fff' }}>
                       {pattern.name}
                     </Typography>
                     <Chip
@@ -167,53 +206,63 @@ export function CinematographyPatternsPanel({ onApplyPattern }: CinematographyPa
                         height: 20,
                         fontSize: 10,
                         bgcolor: getDifficultyColor(pattern.difficulty),
-                        color: 'white'}}
+                        color: 'white'
+                      }}
                     />
                   </Stack>
 
-                  <Typography variant="caption" sx={{ display: 'block', mb: 1, color: '#666' }}>
+                  <Typography variant="caption" sx={{ display: 'block', mb: 1.5, color: '#aaa', lineHeight: 1.4 }}>
                     {pattern.description}
                   </Typography>
 
-                  <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap', gap: 0.5 }}>
+                  <Stack direction="row" spacing={0.5} sx={{ mb: 1.5, flexWrap: 'wrap', gap: 0.5 }}>
                     <Chip
                       label={`${pattern.keyToFillRatio}:1 ratio`}
                       size="small"
-                      sx={{ height: 18, fontSize: 9 }}
+                      sx={{ height: 20, fontSize: 9, bgcolor: 'rgba(255,255,255,0.1)', color: '#ccc' }}
                     />
                     <Chip
                       label={pattern.mood}
                       size="small"
                       sx={{
-                        height: 18,
+                        height: 20,
                         fontSize: 9,
-                        bgcolor: getMoodColor(pattern.mood)}}
+                        bgcolor: getMoodColor(pattern.mood),
+                        color: '#333'
+                      }}
                     />
                     <Chip
-                      label={`${pattern.lights.length} lights`}
+                      icon={<LightIcon sx={{ fontSize: 12 }} />}
+                      label={`${pattern.lights.length} lys`}
                       size="small"
-                      sx={{ height: 18, fontSize: 9 }}
+                      sx={{ height: 20, fontSize: 9, bgcolor: 'rgba(255,170,0,0.2)', color: '#ffaa00' }}
                     />
                   </Stack>
 
-                  <Typography variant="caption" sx={{ display: 'block', fontSize: 9, color: '#999', fontStyle: 'italic' }}>
-                    Used in: {pattern.usedIn.slice(0, 2).join('')}
-                  </Typography>
-
-                  <Typography variant="caption" sx={{ display: 'block', fontSize: 8, color: '#999', mt: 0.5 }}>
-                    📚 {pattern.reference}
+                  <Typography variant="caption" sx={{ display: 'block', fontSize: 10, color: '#777', fontStyle: 'italic' }}>
+                    Brukt i: {pattern.usedIn.slice(0, 2).join(', ')}
                   </Typography>
                 </CardContent>
 
-                <CardActions sx={{ pt: 0, px: 2, pb: 1 }}>
+                <CardActions sx={{ pt: 0, px: 2, pb: 1.5 }}>
                   <Button
                     size="small"
                     variant="contained"
                     startIcon={<ApplyIcon />}
                     onClick={() => onApplyPattern(pattern)}
-                    sx={{ textTransform: 'none', fontSize: 11 }}
+                    fullWidth
+                    sx={{ 
+                      textTransform: 'none', 
+                      fontSize: 12,
+                      bgcolor: '#ffaa00',
+                      color: '#000',
+                      fontWeight: 600,
+                      '&:hover': {
+                        bgcolor: '#ffbb33'
+                      }
+                    }}
                   >
-                    Apply Pattern
+                    Bruk dette mønsteret
                   </Button>
                 </CardActions>
               </Card>
@@ -223,12 +272,12 @@ export function CinematographyPatternsPanel({ onApplyPattern }: CinematographyPa
       </Box>
 
       {/* Summary */}
-      <Box sx={{ mt: 2, p: 1.5, bgcolor: '#e3f2fd', borderRadius: 1 }}>
-        <Typography variant="caption" sx={{ color: '#1976d2', display: 'block', fontWeight: 600}}>
-          📚 Research-Validated Patterns
+      <Box sx={{ mt: 2, p: 1.5, bgcolor: 'rgba(255,170,0,0.1)', borderRadius: 1, border: '1px solid rgba(255,170,0,0.2)' }}>
+        <Typography variant="caption" sx={{ color: '#ffaa00', display: 'block', fontWeight: 600 }}>
+          Forskningsbaserte lysmønstre
         </Typography>
-        <Typography variant="caption" sx={{ color: '#1976d2', display: 'block', fontSize: 9 }}>
-          All patterns based on ASC standards"Film Lighting" by Malkiewicz, and"Painting with Light" by Alton
+        <Typography variant="caption" sx={{ color: '#aaa', display: 'block', fontSize: 10, mt: 0.5 }}>
+          Alle mønstre basert på ASC-standarder, "Film Lighting" av Malkiewicz, og "Painting with Light" av Alton
         </Typography>
       </Box>
     </Paper>

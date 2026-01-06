@@ -13,6 +13,7 @@ import {
   InputBase,
   Divider,
   useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import StarIcon from '@mui/icons-material/Star';
@@ -21,21 +22,30 @@ import PlaceIcon from '@mui/icons-material/Place';
 import AddIcon from '@mui/icons-material/Add';
 import FolderIcon from '@mui/icons-material/Folder';
 import { assetLibraryService, type AssetLibraryItem } from '../core/services/assetLibrary';
+import { environmentService } from '../core/services/environmentService';
 import { logger } from '../core/services/logger';
+import { ASSET_CATEGORY_ICONS, getAssetCategoryIcon, type IconDefinition } from '../core/config/iconDefinitions';
 
 const log = logger.module('AssetLibraryPanel');
 
-const CATEGORIES: { key: string; label: string; icon: string }[] = [
-  { key: 'all', label: 'Alle', icon: '📦' },
-  { key: 'accessory', label: 'Tilbehør', icon: '🔧' },
-  { key: 'prop', label: 'Rekvisitter', icon: '🎭' },
-  { key: 'furniture', label: 'Møbler', icon: '🪑' },
+const CATEGORIES: { key: string; label: string; icon: IconDefinition }[] = [
+  { key: 'all', label: 'Alle', icon: ASSET_CATEGORY_ICONS.all },
+  { key: 'accessory', label: 'Tilbehør', icon: ASSET_CATEGORY_ICONS.accessory },
+  { key: 'prop', label: 'Rekvisitter', icon: ASSET_CATEGORY_ICONS.prop },
+  { key: 'furniture', label: 'Møbler', icon: ASSET_CATEGORY_ICONS.furniture },
+  { key: 'modern_studio', label: 'Moderne Studio', icon: ASSET_CATEGORY_ICONS.modern_studio },
+  { key: 'wall', label: 'Vegger', icon: ASSET_CATEGORY_ICONS.wall },
+  { key: 'floor', label: 'Gulv', icon: ASSET_CATEGORY_ICONS.floor },
 ];
 
-const CATEGORY_ICONS: Record<string, string> = {
-  accessory: '🔧',
-  prop: '🎭',
-  furniture: '🪑',
+const CATEGORY_ICONS: Record<string, IconDefinition> = {
+  accessory: ASSET_CATEGORY_ICONS.accessory,
+  prop: ASSET_CATEGORY_ICONS.prop,
+  furniture: ASSET_CATEGORY_ICONS.furniture,
+  modern_studio: ASSET_CATEGORY_ICONS.modern_studio,
+  wall: ASSET_CATEGORY_ICONS.wall,
+  floor: ASSET_CATEGORY_ICONS.floor,
+  all: ASSET_CATEGORY_ICONS.all,
 };
 
 interface AssetCardProps {
@@ -48,21 +58,38 @@ interface AssetCardProps {
 
 function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually, isTablet = false }: AssetCardProps) {
   const handleAddToScene = () => {
-    const event = new CustomEvent('ch-add-asset', {
-      detail: {
-        asset: {
-          id: asset.id,
-          title: asset.name,
-          type: 'model',
-          thumbUrl: asset.thumbnail_url || '/library/generic.png',
-          data: {
-            modelUrl: asset.model_url,
-            metadata: asset.metadata,
+    // Handle wall and floor assets specially
+    if (asset.category === 'wall') {
+      // Extract material ID from asset ID (format: "wall-{materialId}")
+      const materialId = asset.id.replace(/^wall-/, '');
+      const wallId = asset.metadata?.wallId || 'backWall'; // Default to backWall
+      
+      // Use environmentService to set wall material
+      environmentService.setWallMaterial(wallId, materialId);
+    } else if (asset.category === 'floor') {
+      // Extract material ID from asset ID (format: "floor-{materialId}")
+      const materialId = asset.id.replace(/^floor-/, '');
+      
+      // Use environmentService to set floor material
+      environmentService.setFloorMaterial(materialId);
+    } else {
+      // Regular assets
+      const event = new CustomEvent('ch-add-asset', {
+        detail: {
+          asset: {
+            id: asset.id,
+            title: asset.name,
+            type: 'model',
+            thumbUrl: asset.thumbnail_url || '/library/generic.png',
+            data: {
+              modelUrl: asset.model_url,
+              metadata: asset.metadata,
+            },
           },
         },
-      },
-    });
-    window.dispatchEvent(event);
+      });
+      window.dispatchEvent(event);
+    }
     assetLibraryService.trackUsage(asset.id);
   };
 
@@ -109,7 +136,7 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually, isTab
         '&:hover': {
           transform: 'translateY(-2px)',
           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
-          borderColor: '#8b5cf6',
+          borderColor: '#3498db',
         },
         transition: 'all 0.2s ease',
       }}
@@ -117,19 +144,20 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually, isTab
       <Box
         sx={{
           width: '100%',
-          height: 90,
+          height: isTablet ? 140 : 90,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#2a2a2a',
-          fontSize: 40,
+          backgroundColor: getAssetCategoryIcon(asset.category).backgroundColor,
+          backgroundImage: `url("${getAssetCategoryIcon(asset.category).svg}")`,
+          backgroundSize: isTablet ? '80px 80px' : '60px 60px',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center',
         }}
-      >
-        {CATEGORY_ICONS[asset.category] || '📦'}
-      </Box>
+      />
 
       <IconButton
-        size="small"
+        size={isTablet ? 'medium' : 'small'}
         onClick={(e) => {
           e.stopPropagation();
           onToggleFavorite(asset.id);
@@ -137,23 +165,27 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually, isTab
         aria-label={isFavorite ? 'Fjern fra favoritter' : 'Legg til favoritter'}
         sx={{
           position: 'absolute',
-          top: 4,
-          right: 4,
-          bgcolor: 'rgba(0,0,0,0.5)',
-          '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
-          minWidth: 44,
-          minHeight: 44,
-          padding: 1,
+          top: isTablet ? 8 : 4,
+          right: isTablet ? 8 : 4,
+          bgcolor: 'rgba(0,0,0,0.7)',
+          '&:hover': { bgcolor: 'rgba(0,0,0,0.9)' },
+          minWidth: isTablet ? 52 : 44,
+          minHeight: isTablet ? 52 : 44,
+          padding: isTablet ? 1.5 : 1,
+          transition: 'all 0.2s ease',
+          '&:active': {
+            transform: 'scale(0.9)'
+          }
         }}
       >
         {isFavorite ? (
-          <StarIcon sx={{ fontSize: 20, color: '#FCD34D' }} />
+          <StarIcon sx={{ fontSize: isTablet ? 24 : 20, color: '#FCD34D' }} />
         ) : (
-          <StarBorderIcon sx={{ fontSize: 20, color: '#888' }} />
+          <StarBorderIcon sx={{ fontSize: isTablet ? 24 : 20, color: '#888' }} />
         )}
       </IconButton>
 
-      <Box sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+      <Box sx={{ p: isTablet ? 2 : 1.5, '&:last-child': { pb: isTablet ? 2 : 1.5 } }}>
         <Typography
           variant="body2"
           sx={{
@@ -162,31 +194,46 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually, isTab
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            fontSize: 12,
+            fontSize: isTablet ? '1rem' : 12,
             fontWeight: 600,
             color: '#fff',
-            mb: 1,
+            mb: isTablet ? 1.5 : 1,
+            lineHeight: 1.4,
           }}
         >
           {asset.name}
         </Typography>
 
         <Button
-          size="medium"
+          size={isTablet ? 'large' : 'medium'}
           variant="contained"
           fullWidth
-          startIcon={<AddIcon sx={{ fontSize: 16 }} />}
+          startIcon={<AddIcon sx={{ fontSize: isTablet ? 20 : 16 }} />}
           onClick={(e) => { e.stopPropagation(); handleAddToScene(); }}
           aria-label={`Legg til ${asset.name}`}
           sx={{
-            minHeight: 44,
-            fontSize: 12,
+            minHeight: isTablet ? 52 : 44,
+            fontSize: isTablet ? '1rem' : 12,
             fontWeight: 600,
-            borderRadius: '8px',
-            bgcolor: '#8b5cf6',
+            borderRadius: '10px',
+            bgcolor: '#3498db',
             color: '#fff',
             textTransform: 'none',
-            '&:hover': { bgcolor: '#7c3aed' },
+            transition: 'all 0.2s ease',
+            '&:hover': { 
+              bgcolor: '#2980b9',
+              transform: 'translateY(-1px)',
+              boxShadow: '0 4px 12px rgba(52,152,219,0.4)'
+            },
+            '&:active': {
+              transform: 'scale(0.97)'
+            },
+            '@media (hover: none) and (pointer: coarse)': {
+              '&:active': {
+                transform: 'scale(0.95)',
+                bgcolor: '#2980b9'
+              }
+            }
           }}
         >
           Legg til
@@ -194,25 +241,37 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually, isTab
 
         {onPlaceManually && (
           <Button
-            size="small"
+            size={isTablet ? 'medium' : 'small'}
             variant="outlined"
             fullWidth
-            startIcon={<PlaceIcon sx={{ fontSize: 14 }} />}
+            startIcon={<PlaceIcon sx={{ fontSize: isTablet ? 18 : 14 }} />}
             onClick={handlePlaceManually}
             aria-label={`Plasser ${asset.name} manuelt`}
             sx={{
-              mt: 1,
-              minHeight: 36,
-              fontSize: 11,
+              mt: isTablet ? 1.5 : 1,
+              minHeight: isTablet ? 48 : 36,
+              fontSize: isTablet ? '0.9375rem' : 11,
               fontWeight: 500,
-              borderRadius: '6px',
+              borderRadius: '8px',
               borderColor: '#F59E0B',
+              borderWidth: 2,
               color: '#F59E0B',
               textTransform: 'none',
+              transition: 'all 0.2s ease',
               '&:hover': { 
                 bgcolor: '#F59E0B22',
                 borderColor: '#F59E0B',
+                transform: 'translateY(-1px)',
               },
+              '&:active': {
+                transform: 'scale(0.97)'
+              },
+              '@media (hover: none) and (pointer: coarse)': {
+                '&:active': {
+                  transform: 'scale(0.95)',
+                  bgcolor: '#F59E0B33'
+                }
+              }
             }}
           >
             Plasser
@@ -300,7 +359,11 @@ function ManualPlacementDialog({ open, asset, onClose, onPlace }: ManualPlacemen
 }
 
 export default function AssetLibraryPanel() {
+  const theme = useTheme();
   const isTouchDevice = useMediaQuery('(pointer: coarse)');
+  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1024px)');
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isIPadFriendly = isTablet || isTouchDevice;
 
   const [category, setCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
@@ -319,9 +382,15 @@ export default function AssetLibraryPanel() {
         search: search || undefined,
         limit: 100,
       });
-      const filteredData = data.filter(a => 
+      let filteredData = data.filter(a => 
         a.category !== 'light' && a.category !== 'light_shaper'
       );
+      
+      // Filtrer på kategori hvis ikke 'all'
+      if (category !== 'all') {
+        filteredData = filteredData.filter(a => a.category === category);
+      }
+      
       setAssets(filteredData);
     } catch (error) {
       log.error('Failed to load assets:', error);
@@ -352,106 +421,161 @@ export default function AssetLibraryPanel() {
   const handlePlaceAsset = (position: [number, number, number]) => {
     if (!selectedAsset) return;
 
-    const event = new CustomEvent('ch-add-asset-at', {
-      detail: {
-        asset: {
-          id: selectedAsset.id,
-          title: selectedAsset.name,
-          type: 'model',
-          thumbUrl: selectedAsset.thumbnail_url || '/library/generic.png',
-          data: {
-            modelUrl: selectedAsset.model_url,
-            metadata: selectedAsset.metadata,
+    // Handle wall and floor assets specially
+    if (selectedAsset.category === 'wall') {
+      // Extract material ID from asset ID (format: "wall-{materialId}")
+      const materialId = selectedAsset.id.replace(/^wall-/, '');
+      const wallId = selectedAsset.metadata?.wallId || 'backWall'; // Default to backWall
+      
+      // Use environmentService to set wall material
+      environmentService.setWallMaterial(wallId, materialId);
+    } else if (selectedAsset.category === 'floor') {
+      // Extract material ID from asset ID (format: "floor-{materialId}")
+      const materialId = selectedAsset.id.replace(/^floor-/, '');
+      
+      // Use environmentService to set floor material
+      environmentService.setFloorMaterial(materialId);
+    } else {
+      // Regular assets
+      const event = new CustomEvent('ch-add-asset-at', {
+        detail: {
+          asset: {
+            id: selectedAsset.id,
+            title: selectedAsset.name,
+            type: 'model',
+            thumbUrl: selectedAsset.thumbnail_url || '/library/generic.png',
+            data: {
+              modelUrl: selectedAsset.model_url,
+              metadata: selectedAsset.metadata,
+            },
           },
+          position,
         },
-        position,
-      },
-    });
-    window.dispatchEvent(event);
+      });
+      window.dispatchEvent(event);
+    }
+    
     assetLibraryService.trackUsage(selectedAsset.id);
   };
 
   const buttonStyle = {
-    minHeight: 56,
-    minWidth: 100,
-    fontSize: 15,
+    minHeight: isIPadFriendly ? 56 : 48,
+    minWidth: isIPadFriendly ? 120 : 100,
+    fontSize: isIPadFriendly ? '1rem' : 15,
     fontWeight: 600,
     textTransform: 'none' as const,
-    borderRadius: '10px',
+    borderRadius: '12px',
     borderWidth: 2,
     transition: 'all 0.2s ease',
     WebkitTapHighlightColor: 'transparent',
     boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+    padding: isIPadFriendly ? '14px 20px' : '12px 16px',
     '&:active': {
       transform: 'scale(0.97)',
       boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
     },
+    '@media (hover: none) and (pointer: coarse)': {
+      '&:active': {
+        transform: 'scale(0.95)',
+      }
+    }
   };
 
+  const padding = isIPadFriendly ? 3 : 2;
+  const spacing = isIPadFriendly ? 2 : 1.5;
+  const headerIconSize = isIPadFriendly ? 52 : 42;
+  const headerFontSize = isIPadFriendly ? '1.5rem' : 20;
+  const subHeaderFontSize = isIPadFriendly ? '0.9375rem' : 12;
+  const searchHeight = isIPadFriendly ? 56 : 48;
+  const searchFontSize = isIPadFriendly ? '1rem' : 15;
+  const gridMinWidth = isIPadFriendly ? 180 : 140;
+  const gridGap = isIPadFriendly ? 2 : 1.5;
+
   return (
-    <Box sx={{ p: 2, height: '100%', overflow: 'auto', bgcolor: '#1a1a1a' }}>
+    <Box sx={{ p: padding, height: '100%', overflow: 'auto', bgcolor: '#1a1a1a' }}>
       {/* Header */}
       <Box sx={{ 
         display: 'flex', 
         alignItems: 'center', 
-        gap: 1.5,
+        gap: spacing,
         background: 'linear-gradient(135deg, rgba(52,152,219,0.15) 0%, rgba(41,128,185,0.15) 100%)',
-        borderRadius: '14px',
-        px: 2.5,
-        py: 1.5,
-        mb: 2,
+        borderRadius: '16px',
+        px: isIPadFriendly ? 3 : 2.5,
+        py: isIPadFriendly ? 2 : 1.5,
+        mb: spacing,
         border: '1px solid rgba(255,255,255,0.1)',
       }}>
         <Box sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          width: 42,
-          height: 42,
-          borderRadius: '10px',
+          width: headerIconSize,
+          height: headerIconSize,
+          borderRadius: '12px',
           background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
           boxShadow: '0 4px 12px rgba(52,152,219,0.4)',
         }}>
-          <FolderIcon sx={{ fontSize: 24, color: '#fff' }} />
+          <FolderIcon sx={{ fontSize: isIPadFriendly ? 28 : 24, color: '#fff' }} />
         </Box>
         <Box>
           <Typography sx={{ 
             fontWeight: 800, 
-            fontSize: 20,
+            fontSize: headerFontSize,
             background: 'linear-gradient(90deg, #85c1e9 0%, #5dade2 100%)',
             backgroundClip: 'text',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             letterSpacing: '-0.3px',
+            lineHeight: 1.3,
           }}>
             Eiendeler
           </Typography>
           <Typography sx={{ 
-            fontSize: 12, 
+            fontSize: subHeaderFontSize, 
             color: '#888',
             fontWeight: 500,
+            lineHeight: 1.4,
           }}>
             3D-modeller og tilbehør
           </Typography>
         </Box>
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        gap: spacing, 
+        flexWrap: 'wrap', 
+        alignItems: 'center', 
+        mb: spacing 
+      }}>
         {CATEGORIES.map(cat => (
           <Button
             key={cat.key}
             variant={category === cat.key ? 'contained' : 'outlined'}
             onClick={() => setCategory(cat.key)}
-            startIcon={<span style={{ fontSize: 18 }}>{cat.icon}</span>}
+            startIcon={
+              <Box
+                sx={{
+                  width: isIPadFriendly ? 22 : 18,
+                  height: isIPadFriendly ? 22 : 18,
+                  backgroundColor: cat.icon.backgroundColor,
+                  backgroundImage: `url("${cat.icon.svg}")`,
+                  backgroundSize: 'contain',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'center',
+                  borderRadius: '4px',
+                }}
+              />
+            }
             sx={{
               ...buttonStyle,
-              bgcolor: category === cat.key ? '#8b5cf6' : 'transparent',
-              borderColor: category === cat.key ? '#8b5cf6' : '#444',
+              bgcolor: category === cat.key ? '#3498db' : 'transparent',
+              borderColor: category === cat.key ? '#3498db' : '#444',
               color: category === cat.key ? '#fff' : '#aaa',
-              boxShadow: category === cat.key ? '0 4px 12px rgba(139, 92, 246, 0.3)' : '0 2px 6px rgba(0,0,0,0.2)',
+              boxShadow: category === cat.key ? '0 4px 12px rgba(52,152,219,0.3)' : '0 2px 6px rgba(0,0,0,0.2)',
               '&:hover': {
-                bgcolor: category === cat.key ? '#7c3aed' : '#333',
-                borderColor: category === cat.key ? '#7c3aed' : '#555',
+                bgcolor: category === cat.key ? '#2980b9' : '#333',
+                borderColor: category === cat.key ? '#2980b9' : '#555',
                 transform: 'translateY(-2px)',
                 boxShadow: '0 6px 16px rgba(0,0,0,0.4)',
               },
@@ -464,26 +588,33 @@ export default function AssetLibraryPanel() {
           display: 'flex', 
           alignItems: 'center', 
           bgcolor: '#2a2a2a', 
-          borderRadius: '10px', 
-          px: 2, 
-          py: 0.5,
-          minHeight: 56,
+          borderRadius: '12px', 
+          px: isIPadFriendly ? 2.5 : 2, 
+          py: isIPadFriendly ? 1 : 0.5,
+          minHeight: searchHeight,
           border: '2px solid #444',
           flex: 1,
-          minWidth: 140,
-          maxWidth: 220,
+          minWidth: isIPadFriendly ? 180 : 140,
+          maxWidth: isIPadFriendly ? 280 : 220,
         }}>
-          <SearchIcon sx={{ color: '#888', fontSize: 22, mr: 1 }} />
+          <SearchIcon sx={{ color: '#888', fontSize: isIPadFriendly ? 26 : 22, mr: 1.5 }} />
           <InputBase
             placeholder="Søk..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             sx={{
               color: '#fff',
-              fontSize: 15,
+              fontSize: searchFontSize,
               fontWeight: 500,
               flex: 1,
-              '& input::placeholder': { color: '#666', opacity: 1 },
+              '& input': {
+                padding: isIPadFriendly ? '12px 8px' : '8px 4px',
+              },
+              '& input::placeholder': { 
+                color: '#666', 
+                opacity: 1,
+                fontSize: searchFontSize,
+              },
             }}
           />
         </Box>
@@ -493,7 +624,7 @@ export default function AssetLibraryPanel() {
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <CircularProgress size={40} sx={{ color: '#8b5cf6' }} />
+          <CircularProgress size={40} sx={{ color: '#3498db' }} />
         </Box>
       ) : assets.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 4, color: '#888' }}>
@@ -503,9 +634,13 @@ export default function AssetLibraryPanel() {
       ) : (
         <Box sx={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-          gap: 1.5,
-          pb: 2,
+          gridTemplateColumns: isMobile 
+            ? 'repeat(auto-fill, minmax(140px, 1fr))' 
+            : isTablet 
+              ? 'repeat(auto-fill, minmax(180px, 1fr))'
+              : 'repeat(auto-fill, minmax(140px, 1fr))',
+          gap: gridGap,
+          pb: spacing,
         }}>
           {assets.map((asset) => (
             <AssetCard
@@ -514,7 +649,7 @@ export default function AssetLibraryPanel() {
               isFavorite={favorites.includes(asset.id)}
               onToggleFavorite={handleToggleFavorite}
               onPlaceManually={handlePlaceManually}
-              isTablet={isTouchDevice}
+              isTablet={isIPadFriendly}
             />
           ))}
         </Box>

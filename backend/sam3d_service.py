@@ -13,6 +13,12 @@ from botocore.config import Config
 from pathlib import Path
 from typing import Dict, Any, Optional
 import numpy as np
+from PIL import Image
+
+# Import texture extraction service
+from texture_extraction_service import texture_extraction_service
+# Import DECA service for face enhancement
+from deca_service import deca_service
 
 SAM3D_REPO_PATH = Path(__file__).parent / "sam3d_repo"
 if str(SAM3D_REPO_PATH) not in sys.path:
@@ -24,12 +30,16 @@ R2_BUCKET_NAME = "ml-models"
 MODEL_FILES = {
     "model.ckpt": "Sam-3D/sam-3d-body-dinov3/model.ckpt",
     "mhr_model.pt": "Sam-3D/sam-3d-body-dinov3/assets/mhr_model.pt",
+    "model_config.yaml": "Sam-3D/sam-3d-body-dinov3/model_config.yaml",
 }
 
 def get_r2_client():
     """Get S3-compatible client for Cloudflare R2."""
-    access_key = os.environ.get('R2_ACCESS_KEY_ID', '').strip()[:32]
-    secret_key = os.environ.get('R2_SECRET_ACCESS_KEY', '').strip()
+    # Try CLOUDFLARE_R2_* first, fallback to R2_* for backward compatibility
+    access_key = os.environ.get('CLOUDFLARE_R2_ACCESS_KEY_ID') or os.environ.get('R2_ACCESS_KEY_ID', '')
+    access_key = access_key.strip()[:32]
+    secret_key = os.environ.get('CLOUDFLARE_R2_SECRET_ACCESS_KEY') or os.environ.get('R2_SECRET_ACCESS_KEY', '')
+    secret_key = secret_key.strip()
     return boto3.client(
         's3',
         endpoint_url=R2_ENDPOINT,
@@ -86,6 +96,7 @@ class SAM3DService:
             self.models_dir = Path(__file__).parent / "models"
             self.model_path = self.models_dir / "sam-3d-body-dinov3" / "model.ckpt"
             self.mhr_path = self.models_dir / "sam-3d-body-dinov3" / "assets" / "mhr_model.pt"
+            self.config_path = self.models_dir / "sam-3d-body-dinov3" / "model_config.yaml"
             self.model_files_available = False
             print(f"SAM 3D Body models will be downloaded from Cloudflare R2 on first request")
         except ImportError as e:
@@ -95,7 +106,7 @@ class SAM3DService:
     
     async def _download_models_from_r2(self):
         """Download model files from Cloudflare R2 if not present locally."""
-        if self.model_path.exists() and self.mhr_path.exists():
+        if self.model_path.exists() and self.mhr_path.exists() and self.config_path.exists():
             return True
         
         print("Downloading SAM 3D models from Cloudflare R2...")
@@ -107,6 +118,10 @@ class SAM3DService:
         
         if not self.mhr_path.exists():
             result = await download_from_r2(MODEL_FILES["mhr_model.pt"], self.mhr_path)
+            success = success and result
+        
+        if not self.config_path.exists():
+            result = await download_from_r2(MODEL_FILES["model_config.yaml"], self.config_path)
             success = success and result
         
         if success:
@@ -163,9 +178,10 @@ class SAM3DService:
             self.device = torch.device("cpu")
             print(f"PyTorch loaded. Using device: {self.device}")
             
-            if self.model_path.exists() and self.mhr_path.exists():
+            if self.model_path.exists() and self.mhr_path.exists() and self.config_path.exists():
                 print(f"SAM 3D Body model found at: {self.model_path}")
                 print(f"MHR model found at: {self.mhr_path}")
+                print(f"Config found at: {self.config_path}")
                 
                 try:
                     from sam_3d_body import load_sam_3d_body, SAM3DBodyEstimator
@@ -219,13 +235,14 @@ class SAM3DService:
         """Check if the SAM 3D Body model is loaded."""
         return self.model_loaded and not self.use_placeholder
     
-    async def generate_avatar(self, input_path: str, output_path: str) -> Dict[str, Any]:
+    async def generate_avatar(self, input_path: str, output_path: str, with_texture: bool = True) -> Dict[str, Any]:
         """
         Generate a 3D avatar from an image.
         
         Args:
             input_path: Path to the input image
             output_path: Path to save the output GLB file
+            with_texture: Whether to generate texture from input image (default: True)
             
         Returns:
             Dictionary with success status and metadata
@@ -237,7 +254,7 @@ class SAM3DService:
             if self.use_placeholder:
                 return await self._generate_placeholder_avatar(input_path, output_path)
             else:
-                return await self._generate_sam3d_avatar(input_path, output_path)
+                return await self._generate_sam3d_avatar(input_path, output_path, with_texture)
                 
         except Exception as e:
             import traceback
@@ -308,10 +325,11 @@ class SAM3DService:
             }
         }
     
-    async def _generate_sam3d_avatar(self, input_path: str, output_path: str) -> Dict[str, Any]:
+    async def _generate_sam3d_avatar(self, input_path: str, output_path: str, with_texture: bool = True) -> Dict[str, Any]:
         """
         Generate avatar using the actual SAM 3D Body model.
         Runs on CPU for Replit compatibility.
+        Optionally extracts and applies texture from input image.
         """
         import torch
         import cv2
@@ -347,31 +365,146 @@ class SAM3DService:
             if not outputs:
                 raise ValueError("Could not detect any humans in the image")
             
-            return outputs[0]
+            return outputs[0], width, height
         
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(None, run_inference)
+        result, img_width, img_height = await loop.run_in_executor(None, run_inference)
         
         vertices = result["pred_vertices"]
         faces = self.faces
         
+        # Extract camera parameters
+        cam_t = result.get("pred_cam_t", np.array([0, 0, 0]))
+        if isinstance(cam_t, torch.Tensor):
+            cam_t = cam_t.cpu().numpy()
+        if len(cam_t.shape) > 1:
+            cam_t = cam_t[0]  # Take first batch element
+        
+        focal_length = result.get("focal_length", 1000.0)
+        if isinstance(focal_length, torch.Tensor):
+            focal_length = focal_length.cpu().numpy()
+        if isinstance(focal_length, np.ndarray) and len(focal_length.shape) > 0:
+            focal_length = float(focal_length[0])
+        else:
+            focal_length = float(focal_length)
+        
+        # Get bbox if available for better projection
+        bbox = result.get("bbox", None)
+        if bbox is not None and isinstance(bbox, torch.Tensor):
+            bbox = bbox.cpu().numpy()
+        
+        # Create mesh
         mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
         
-        mesh.visual = trimesh.visual.ColorVisuals(
-            mesh=mesh,
-            face_colors=np.array([[200, 160, 130, 255]] * len(mesh.faces))
-        )
+        # Apply texture if requested
+        if with_texture:
+            try:
+                print("Extracting texture from input image...")
+                
+                # Get face landmarks if available (can be enhanced with FaceXFormer later)
+                face_landmarks = None
+                
+                # Try to enhance face with DECA if available
+                deca_enhanced_face = None
+                if deca_service.is_enabled():
+                    try:
+                        import cv2
+                        print("Attempting to enhance face with DECA...")
+                        # Extract face region data
+                        input_img = cv2.imread(input_path)
+                        if input_img is not None:
+                            face_region_data = deca_service.extract_face_region(
+                                input_img,
+                                vertices,
+                                face_landmarks
+                            )
+                            # Enhance face texture with DECA
+                            deca_enhanced_face = await deca_service.enhance_face_texture(
+                                input_path,
+                                face_region_data,
+                                face_landmarks
+                            )
+                            if deca_enhanced_face is not None:
+                                print("DECA face enhancement applied")
+                    except Exception as e:
+                        print(f"DECA enhancement failed (continuing without it): {e}")
+                
+                # Extract texture
+                texture_result = texture_extraction_service.extract_texture(
+                    input_image_path=input_path,
+                    vertices=vertices,
+                    faces=faces,
+                    cam_t=cam_t,
+                    focal_length=focal_length,
+                    face_landmarks=face_landmarks,
+                    texture_size=2048,
+                    bbox=bbox,
+                    deca_enhanced_face=deca_enhanced_face
+                )
+                
+                texture_atlas = texture_result["texture_atlas"]
+                uv_coords = texture_result["uv_coords"]
+                face_uvs = texture_result["face_uvs"]
+                
+                # Save texture atlas to a file that trimesh can reference
+                texture_path = str(Path(output_path).parent / f"{Path(output_path).stem}_texture.png")
+                texture_extraction_service.save_texture_atlas(texture_atlas, texture_path)
+                
+                # Apply texture to mesh using trimesh
+                # Load texture image for material
+                texture_image = Image.open(texture_path)
+                
+                # Create PBR material with texture
+                material = trimesh.visual.material.PBRMaterial(
+                    baseColorTexture=texture_image,
+                    metallicFactor=0.0,
+                    roughnessFactor=0.8
+                )
+                
+                # Create texture visual with UV coordinates
+                # Note: trimesh will handle texture packing when exporting to GLB
+                mesh.visual = trimesh.visual.TextureVisuals(
+                    uv=uv_coords,
+                    material=material
+                )
+                
+                print(f"Texture extracted and applied. Atlas saved to {texture_path}")
+                texture_applied = True
+            except Exception as e:
+                print(f"Texture extraction failed: {e}")
+                import traceback
+                traceback.print_exc()
+                # Fallback to solid color
+                mesh.visual = trimesh.visual.ColorVisuals(
+                    mesh=mesh,
+                    face_colors=np.array([[200, 160, 130, 255]] * len(mesh.faces))
+                )
+                texture_applied = False
+        else:
+            mesh.visual = trimesh.visual.ColorVisuals(
+                mesh=mesh,
+                face_colors=np.array([[200, 160, 130, 255]] * len(mesh.faces))
+            )
+            texture_applied = False
         
+        # Export mesh
         mesh.export(output_path, file_type='glb')
+        
+        metadata = {
+            "type": "sam3d_body",
+            "vertices": len(mesh.vertices),
+            "faces": len(mesh.faces),
+            "shape_params": result.get("shape_params", []).tolist() if hasattr(result.get("shape_params", []), "tolist") else [],
+            "focal_length": float(focal_length),
+            "cam_t": cam_t.tolist() if isinstance(cam_t, np.ndarray) else list(cam_t),
+            "texture_applied": texture_applied,
+            "note": "Generated using Meta SAM 3D Body model" + (" with texture" if texture_applied else "")
+        }
         
         return {
             "success": True,
-            "metadata": {
-                "type": "sam3d_body",
-                "vertices": len(mesh.vertices),
-                "faces": len(mesh.faces),
-                "shape_params": result.get("shape_params", []).tolist() if hasattr(result.get("shape_params", []), "tolist") else [],
-                "focal_length": float(result.get("focal_length", 0)),
-                "note": "Generated using Meta SAM 3D Body model"
-            }
+            "metadata": metadata
         }
+
+# Global singleton instance
+sam3d_service = SAM3DService()

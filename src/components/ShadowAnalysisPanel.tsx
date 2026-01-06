@@ -69,7 +69,7 @@ export function ShadowAnalysisPanel({
           // Fallback to basic analysis
           const segmentation = await sam2Service.segmentImageFromUrl(
             imageUrl,
-            undefined'auto', 'small'
+            undefined, 'auto', 'small'
           );
           detectedShadows = segmentation.masks.map(mask => ({
             bbox: mask.bbox,

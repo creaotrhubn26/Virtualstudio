@@ -782,7 +782,12 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
    */
   const getModifierModelPath = (modifier: string): string | null => {
     const modifierModelPaths: Record<string, string> = {
-      'softbox':'/models/modifiers/softbox/softbox.glb','beautydish':'/models/modifiers/beauty-dish/beauty-dish.glb','octabox':'/models/modifiers/octabox/octabox.glb','stripbox':'/models/modifiers/stripbox/stripbox.glb','reflector':'/models/modifiers/reflector/reflector.glb','standard' : '/models/modifiers/standard-reflector/standard-reflector.glb',
+      'softbox': '/api/models/softbox.glb', // Rodin-generated softbox from backend/rodin_models/
+      'beautydish':'/models/modifiers/beauty-dish/beauty-dish.glb',
+      'octabox':'/models/modifiers/octabox/octabox.glb',
+      'stripbox':'/models/modifiers/stripbox/stripbox.glb',
+      'reflector':'/models/modifiers/reflector/reflector.glb',
+      'standard' : '/models/modifiers/standard-reflector/standard-reflector.glb',
     };
     return modifierModelPaths[modifier] || null;
   };

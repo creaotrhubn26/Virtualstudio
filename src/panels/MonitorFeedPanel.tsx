@@ -63,10 +63,11 @@ import {
   HighQuality,
   Movie,
 } from '@mui/icons-material';
-import { useNodes } from '../../state/store';
-import { monitorFeedService, MonitorLayout } from '../../core/services/monitorFeedService';
-import { multiCameraRecordingService, CameraRecording, RECORDING_QUALITY } from '../../core/services/multiCameraRecordingService';
-import { logger } from '../../core/services/logger';
+import { useNodes, SceneNode } from '../state/store';
+import { monitorFeedService, MonitorLayout } from '../core/services/monitorFeedService';
+import { multiCameraRecordingService, CameraRecording, RECORDING_QUALITY } from '../core/services/multiCameraRecordingService';
+import { monitorRecordingManager, RecordingResult } from '../core/services/monitorRecordingManager';
+import { logger } from '../core/services/logger';
 
 const log = logger.module('MonitorFeedPanel, ');
 
@@ -80,6 +81,22 @@ interface MonitorInstance {
   position: [number, number, number];
   layout: MonitorLayout;
   isActive: boolean;
+}
+
+interface CameraPresetData {
+  focalLength?: number;
+  distance?: number;
+  height?: number;
+  fov?: number;
+}
+
+interface CameraSettings {
+  aperture: number;
+  shutter: string;
+  iso: number;
+  focalLength: number;
+  nd: number;
+  whiteBalance: number;
 }
 
 // ============================================================================
@@ -164,11 +181,100 @@ export const MonitorFeedPanel: React.FC = () => {
   const [recordingCameras, setRecordingCameras] = useState<Set<string>>(new Set());
   const [recordingQuality, setRecordingQuality] = useState<keyof typeof RECORDING_QUALITY>('high');
   const [recordingElapsed, setRecordingElapsed] = useState(0);
-  const [completedRecordings, setCompletedRecordings] = useState<CameraRecording[]>([]);
+  const [completedRecordings, setCompletedRecordings] = useState<RecordingResult[]>([]);
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
   
+  // Monitor presets state (camA, camB, camC, camD, camE)
+  const [activePresets, setActivePresets] = useState<Set<string>>(new Set());
+  const [presetData, setPresetData] = useState<Map<string, CameraPresetData>>(new Map());
+  const [cameraSettings, setCameraSettings] = useState<CameraSettings>({
+    aperture: 2.8,
+    shutter: '1/125',
+    iso: 100,
+    focalLength: 35,
+    nd: 0,
+    whiteBalance: 5600
+  });
+  
   // Get camera nodes
-  const cameraNodes = nodes.filter(n => n.type === 'camera,' || n.camera);
+  const cameraNodes = nodes.filter(n => n.type === 'camera' || n.camera);
+  
+  // Available monitor presets
+  const MONITOR_PRESETS = ['camA', 'camB', 'camC', 'camD', 'camE'];
+  
+  // Listen for camera preset changes from main.ts
+  useEffect(() => {
+    const handlePresetChange = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const detail = customEvent.detail;
+      if (!detail || typeof detail.presetId !== 'string') return;
+      
+      const { presetId, hasPreset, preset } = detail;
+      setActivePresets(prev => {
+        const newSet = new Set(prev);
+        if (hasPreset) {
+          newSet.add(presetId);
+        } else {
+          newSet.delete(presetId);
+        }
+        return newSet;
+      });
+      
+      if (hasPreset && preset) {
+        setPresetData(prev => {
+          const newMap = new Map(prev);
+          newMap.set(presetId, {
+            focalLength: preset.focalLength,
+            distance: preset.distance,
+            height: preset.height,
+            fov: preset.fov
+          });
+          return newMap;
+        });
+      } else {
+        setPresetData(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(presetId);
+          return newMap;
+        });
+      }
+    };
+    
+    const handleCameraSettingsChange = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const settings = customEvent.detail;
+      if (!settings) return;
+      
+      setCameraSettings({
+        aperture: settings.aperture ?? 2.8,
+        shutter: settings.shutter ?? '1/125',
+        iso: settings.iso ?? 100,
+        focalLength: settings.focalLength ?? 35,
+        nd: settings.nd ?? 0,
+        whiteBalance: settings.whiteBalance ?? 5600
+      });
+    };
+    
+    window.addEventListener('camera-preset-changed', handlePresetChange);
+    window.addEventListener('camera-settings-changed', handleCameraSettingsChange);
+    
+    // Check for existing presets on mount
+    MONITOR_PRESETS.forEach(presetId => {
+      const canvas = document.querySelector(`.monitor-canvas[data-preset="${presetId}"]`) as HTMLCanvasElement;
+      const noSignal = document.querySelector(`.monitor-no-signal[data-preset="${presetId}"]`) as HTMLElement;
+      if (canvas && noSignal && noSignal.style.display === 'none') {
+        setActivePresets(prev => new Set(prev).add(presetId));
+      }
+    });
+    
+    // Request initial camera settings from the scene
+    window.dispatchEvent(new CustomEvent('request-camera-settings'));
+    
+    return () => {
+      window.removeEventListener('camera-preset-changed', handlePresetChange);
+      window.removeEventListener('camera-settings-changed', handleCameraSettingsChange);
+    };
+  }, []);
   
   // Initialize renderer and recording service
   useEffect(() => {
@@ -182,9 +288,6 @@ export const MonitorFeedPanel: React.FC = () => {
         transform: node.transform,
         camera: node.camera,
       });
-      
-      // Register with recording service (need Three.js camera)
-      // This will be connected when scene is available
     });
     
     // Set first camera as active
@@ -196,6 +299,8 @@ export const MonitorFeedPanel: React.FC = () => {
   
   // Subscribe to recording state changes
   useEffect(() => {
+    let lastCompletedCount = 0;
+    
     const unsubscribe = multiCameraRecordingService.subscribe((state) => {
       setIsRecordingAll(state.isRecording);
       setRecordingElapsed(state.elapsedTime);
@@ -205,6 +310,16 @@ export const MonitorFeedPanel: React.FC = () => {
         if (rec.isRecording) recording.add(id);
       });
       setRecordingCameras(recording);
+      
+      // Check for newly completed recordings using immutable state
+      const currentCount = state.completedRecordings?.length ?? 0;
+      if (currentCount > lastCompletedCount) {
+        setCompletedRecordings([...state.completedRecordings]);
+        if (currentCount > lastCompletedCount) {
+          setShowDownloadDialog(true);
+        }
+        lastCompletedCount = currentCount;
+      }
     });
     
     return () => unsubscribe();
@@ -253,60 +368,30 @@ export const MonitorFeedPanel: React.FC = () => {
     }
   };
   
-  const handleToggleRecording = async (cameraId: string) => {
-    const result = await multiCameraRecordingService.toggleRecording(cameraId);
-    
-    // If result is a CameraRecording (stop), add to completed
-    if (typeof result === 'object' && result.blob) {
-      setCompletedRecordings(prev => [...prev, result]);
-    }
-    
-    // Also toggle the visual indicator
-    const renderer = monitorFeedService.getRenderer();
-    if (renderer) {
-      renderer.toggleRecording(cameraId);
-    }
+  const handleTogglePresetRecording = async (presetId: string) => {
+    await multiCameraRecordingService.toggleRecording(presetId);
+    log.info('Toggled recording for preset:', presetId);
   };
   
   const handleStartAllRecording = async () => {
     multiCameraRecordingService.setQuality(recordingQuality);
     await multiCameraRecordingService.startAllCameras();
-    
-    // Update visual indicators
-    const renderer = monitorFeedService.getRenderer();
-    if (renderer) {
-      cameraNodes.forEach(node => {
-        renderer.toggleRecording(node.id);
-      });
-    }
-    
-    log.info('Started recording all cameras');
+    log.info('Started recording for all active cameras');
   };
   
   const handleStopAllRecording = async () => {
-    const recordings = await multiCameraRecordingService.stopAllCameras();
-    setCompletedRecordings(prev => [...prev, ...recordings]);
+    await multiCameraRecordingService.stopAllCameras();
     setShowDownloadDialog(true);
-    
-    // Update visual indicators
-    const renderer = monitorFeedService.getRenderer();
-    if (renderer) {
-      cameraNodes.forEach(node => {
-        const state = renderer as any;
-        // Reset recording state
-      });
-    }
-    
-    log.info('Stopped recording all cameras, got', recordings.length'files');
+    log.info('Stopped recording all cameras');
   };
   
-  const handleDownloadRecording = (recording: CameraRecording) => {
-    multiCameraRecordingService.downloadRecording(recording);
+  const handleDownloadRecording = (recording: RecordingResult) => {
+    monitorRecordingManager.downloadRecording(recording);
   };
   
   const handleDownloadAll = () => {
     completedRecordings.forEach(rec => {
-      if (rec.blob) multiCameraRecordingService.downloadRecording(rec);
+      if (rec.blob) monitorRecordingManager.downloadRecording(rec);
     });
   };
   
@@ -385,24 +470,91 @@ export const MonitorFeedPanel: React.FC = () => {
           </ToggleButtonGroup>
         </Box>
         
-        {/* Camera Feeds */}
+        {/* Monitor Presets - for recording */}
         <Box>
           <Typography variant="subtitle2" gutterBottom>
-            Camera Feeds ({cameraNodes.length})
+            Monitor Kameraer ({activePresets.size})
           </Typography>
-          <Stack spacing={1}>
-            {cameraNodes.map(node => (
-              <CameraFeedCard
-                key={node.id}
-                cameraId={node.id}
-                cameraName={node.name || `Camera ${node.id.substring(0, 8)}`}
-                isLive={activeCameraId === node.id}
-                isRecording={false}
-                onSetLive={() => handleSetLive(node.id)}
-                onToggleRecording={() => handleToggleRecording(node.id)}
-              />
-            ))}
-          </Stack>
+          {activePresets.size === 0 ? (
+            <Alert severity="info" sx={{ py: 0.5 }}>
+              Ingen kameraer lagret. Bruk "Kamera & Lys" panelet for å lagre kameraposisjoner.
+            </Alert>
+          ) : (
+            <Stack spacing={1}>
+              {Array.from(activePresets).map(presetId => {
+                const preset = presetData.get(presetId);
+                const focalLen = preset?.focalLength ?? cameraSettings.focalLength;
+                const distance = preset?.distance ?? 3.0;
+                const height = preset?.height ?? 1.6;
+                
+                return (
+                  <Card 
+                    key={presetId}
+                    sx={{ 
+                      border: recordingCameras.has(presetId) ? '2px solid #ef4444' : '1px solid #333',
+                      bgcolor: recordingCameras.has(presetId) ? 'rgba(239, 68, 68, 0.1)' : 'background.paper'
+                    }}
+                  >
+                    <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <Videocam sx={{ color: recordingCameras.has(presetId) ? '#ef4444' : 'text.secondary' }} />
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="body2" fontWeight={recordingCameras.has(presetId) ? 600 : 400}>
+                            Kamera {presetId.replace('cam', '').toUpperCase()}
+                          </Typography>
+                          {showCameraInfo && (
+                            <Typography 
+                              variant="caption" 
+                              sx={{ 
+                                color: 'text.secondary',
+                                fontFamily: 'monospace',
+                                fontSize: '0.65rem',
+                                display: 'block',
+                                mt: 0.5
+                              }}
+                            >
+                              {focalLen}mm | f/{cameraSettings.aperture} | {cameraSettings.shutter} | ISO {cameraSettings.iso}
+                            </Typography>
+                          )}
+                          {showCameraInfo && (
+                            <Typography 
+                              variant="caption" 
+                              sx={{ 
+                                color: 'text.secondary',
+                                fontFamily: 'monospace',
+                                fontSize: '0.6rem',
+                                display: 'block'
+                              }}
+                            >
+                              Avstand: {distance.toFixed(1)}m | Høyde: {height.toFixed(2)}m | WB: {cameraSettings.whiteBalance}K
+                            </Typography>
+                          )}
+                        </Box>
+                        {recordingCameras.has(presetId) && (
+                          <Chip 
+                            label="REC" 
+                            size="small" 
+                            sx={{ bgcolor: '#dc2626', color: 'white' }}
+                            icon={<FiberManualRecord sx={{ fontSize: 12, color: 'white' }} />}
+                          />
+                        )}
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleTogglePresetRecording(presetId)}
+                          sx={{ 
+                            color: recordingCameras.has(presetId) ? '#ef4444' : 'text.secondary',
+                            '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.1)' }
+                          }}
+                        >
+                          {recordingCameras.has(presetId) ? <Stop /> : <RadioButtonChecked />}
+                        </IconButton>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </Stack>
+          )}
         </Box>
         
         <Divider />
@@ -602,15 +754,15 @@ export const MonitorFeedPanel: React.FC = () => {
               </Stack>
               <Stack spacing={1}>
                 {completedRecordings.slice(-5).map((rec, idx) => (
-                  <Card key={`${rec.cameraId}-${idx}`} sx={{ bgcolor: 'action.hover' }}>
+                  <Card key={`${rec.presetId}-${idx}`} sx={{ bgcolor: 'action.hover' }}>
                     <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
                       <Stack direction="row" alignItems="center" justifyContent="space-between">
                         <Stack>
                           <Typography variant="body2" fontWeight={500}>
-                            {rec.cameraName}
+                            Kamera {rec.presetId.replace('cam', '').toUpperCase()}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {rec.duration.toFixed(1)}s | {rec.blob ? (rec.blob.size / 1024 / 1024).toFixed(1) : 0} MB
+                            {rec.duration}s | {rec.blob ? (rec.blob.size / 1024 / 1024).toFixed(1) : 0} MB
                           </Typography>
                         </Stack>
                         <IconButton size="small" onClick={() => handleDownloadRecording(rec)}>
@@ -629,7 +781,7 @@ export const MonitorFeedPanel: React.FC = () => {
         <Divider />
         <Box>
           <Typography variant="subtitle2" gutterBottom>
-            Quick Actions
+            Hurtighandlinger
           </Typography>
           <Stack direction="row" spacing={1}>
             <Button
@@ -641,20 +793,21 @@ export const MonitorFeedPanel: React.FC = () => {
                 renderer?.cycleCamera();
               }}
             >
-              Next Camera
+              Neste Kamera
             </Button>
             <Button
               variant="outlined"
               size="small"
               startIcon={<FiberManualRecord sx={{ color:'#ef4444' }} />}
               onClick={() => {
-                if (activeCameraId) {
-                  handleToggleRecording(activeCameraId);
+                const firstPreset = Array.from(activePresets)[0];
+                if (firstPreset) {
+                  handleTogglePresetRecording(firstPreset);
                 }
               }}
-              disabled={isRecordingAll}
+              disabled={activePresets.size === 0}
             >
-              Toggle REC
+              Start/Stopp REC
             </Button>
           </Stack>
         </Box>
@@ -674,13 +827,13 @@ export const MonitorFeedPanel: React.FC = () => {
           </Typography>
           <List>
             {completedRecordings.map((rec, idx) => (
-              <ListItem key={`${rec.cameraId}-${idx}`}>
+              <ListItem key={`${rec.presetId}-${idx}`}>
                 <ListItemIcon>
                   <Videocam />
                 </ListItemIcon>
                 <ListItemText
-                  primary={rec.cameraName}
-                  secondary={`${rec.duration.toFixed(1)} seconds | ${rec.blob ? (rec.blob.size / 1024 / 1024).toFixed(1) : 0} MB`}
+                  primary={`Kamera ${rec.presetId.replace('cam', '').toUpperCase()}`}
+                  secondary={`${rec.duration} sekunder | ${rec.blob ? (rec.blob.size / 1024 / 1024).toFixed(1) : 0} MB`}
                 />
                 <ListItemSecondaryAction>
                   <IconButton edge="end" onClick={() => handleDownloadRecording(rec)}>

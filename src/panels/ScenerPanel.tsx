@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Box, Typography, Button, Card, CardContent, CardMedia, Stack, Chip, InputBase, Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton, Tabs, Tab, Slider } from '@mui/material';
-import { Palette, Person, BusinessCenter, Favorite, Movie, Star, Lightbulb, CameraAlt, Search as SearchIcon, School, Add, Folder, Edit, Delete, Close, Save, Build, PhotoCamera, Wallpaper, Tune, Landscape, Videocam, FlashOn } from '@mui/icons-material';
+import { Box, Typography, Button, Card, CardContent, CardMedia, Stack, Chip, InputBase, Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton, Tabs, Tab, Slider, useMediaQuery, useTheme } from '@mui/material';
+import { Palette, Person, BusinessCenter, Favorite, Movie, Star, Lightbulb, CameraAlt, Search as SearchIcon, School, Add, Folder, Edit, Delete, Close, Save, Build, PhotoCamera, Wallpaper, Tune, Landscape, Videocam, FlashOn, ShowChart, CameraEnhance } from '@mui/icons-material';
 import { scenarioPresets, ScenarioPreset } from '../data/scenarioPresets';
 import { customPresetService, CustomPreset } from '../services/customPresetService';
 import { CAMERA_BODIES, LENSES, CameraBody, Lens, getLensFocalLength } from '../data/cameraGear';
@@ -58,24 +58,36 @@ const difficultyColors: Record<string, string> = {
   expert: '#9c27b0',
 };
 
+export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowRecommended, getCurrentSceneConfig }) => {
+  const theme = useTheme();
+  const isTouchDevice = useMediaQuery('(pointer: coarse)');
+  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1024px)');
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isIPadFriendly = isTablet || isTouchDevice;
+
 const buttonStyle = {
-  minHeight: 56,
-  minWidth: 110,
-  fontSize: 15,
+    minHeight: isIPadFriendly ? 56 : 48,
+    minWidth: isIPadFriendly ? 120 : 110,
+    fontSize: isIPadFriendly ? '1rem' : 15,
   fontWeight: 600,
   textTransform: 'none' as const,
-  borderRadius: '10px',
+    borderRadius: '12px',
   borderWidth: 2,
   transition: 'all 0.2s ease',
   WebkitTapHighlightColor: 'transparent',
   boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+    padding: isIPadFriendly ? '14px 20px' : '12px 16px',
   '&:active': {
     transform: 'scale(0.97)',
     boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
   },
+    '@media (hover: none) and (pointer: coarse)': {
+      '&:active': {
+        transform: 'scale(0.95)',
+      }
+    }
 };
 
-export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowRecommended, getCurrentSceneConfig }) => {
   const [activeKategori, setActiveKategori] = useState<string>('alle');
   const [search, setSearch] = useState<string>('');
   const [customPresets, setCustomPresets] = useState<CustomPreset[]>([]);
@@ -693,8 +705,10 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
         PaperProps={{
           sx: {
             bgcolor: '#1e1e1e',
-            borderRadius: '16px',
+            borderRadius: isIPadFriendly ? '20px' : '16px',
             border: '2px solid #333',
+            maxHeight: isIPadFriendly ? '90vh' : '85vh',
+            m: isIPadFriendly ? 2 : 1,
           }
         }}
       >
@@ -704,53 +718,97 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
           alignItems: 'center', 
           justifyContent: 'space-between',
           borderBottom: '1px solid #333',
+          px: isIPadFriendly ? 3 : 2.5,
+          py: isIPadFriendly ? 2.5 : 2,
         }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Add sx={{ color: '#ff5722' }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: isIPadFriendly ? 2 : 1.5 }}>
+            <Add sx={{ color: '#ff5722', fontSize: isIPadFriendly ? 28 : 24 }} />
+            <Typography sx={{ fontSize: isIPadFriendly ? '1.5rem' : '1.25rem', fontWeight: 700 }}>
             Nytt oppsett
+            </Typography>
           </Box>
-          <IconButton onClick={() => setShowSetupTypeDialog(false)} sx={{ color: '#888' }}>
-            <Close />
+          <IconButton 
+            onClick={() => setShowSetupTypeDialog(false)} 
+            sx={{ 
+              color: '#fff',
+              minWidth: isIPadFriendly ? 48 : 40,
+              minHeight: isIPadFriendly ? 48 : 40,
+              '&:focus-visible': {
+                outline: '3px solid #2196f3',
+                outlineOffset: '2px',
+              },
+            }}
+            aria-label="Lukk dialog"
+          >
+            <Close sx={{ fontSize: isIPadFriendly ? 28 : 24 }} />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          <Typography sx={{ color: '#aaa', mb: 3, fontSize: 15 }}>
+        <DialogContent sx={{ pt: isIPadFriendly ? 4 : 3, px: isIPadFriendly ? 3 : 2.5, pb: isIPadFriendly ? 3 : 2 }}>
+          <Typography sx={{ 
+            color: '#fff', 
+            mb: isIPadFriendly ? 4 : 3, 
+            fontSize: isIPadFriendly ? '1.125rem' : '0.9375rem',
+            lineHeight: 1.6,
+            fontWeight: 500,
+          }}>
             Hva slags oppsett vil du lage?
           </Typography>
-          <Stack spacing={2}>
+          <Stack spacing={isIPadFriendly ? 3 : 2}>
             <Button
               variant="outlined"
               onClick={() => handleSelectSetupType('foto')}
               sx={{
-                p: 3,
-                borderRadius: '12px',
+                p: isIPadFriendly ? 4 : 3,
+                minHeight: isIPadFriendly ? 120 : 100,
+                borderRadius: '16px',
                 borderColor: '#2196f3',
-                borderWidth: 2,
+                borderWidth: 3,
                 textAlign: 'left',
                 justifyContent: 'flex-start',
-                gap: 2,
+                gap: isIPadFriendly ? 3 : 2,
+                bgcolor: '#2a2a2a',
                 '&:hover': {
-                  borderColor: '#2196f3',
-                  bgcolor: 'rgba(33,150,243,0.1)',
+                  borderColor: '#42a5f5',
+                  bgcolor: 'rgba(33,150,243,0.15)',
+                  transform: 'translateY(-2px)',
                 },
+                '&:focus-visible': {
+                  outline: '3px solid #2196f3',
+                  outlineOffset: '4px',
+                },
+                '&:active': {
+                  transform: 'translateY(0)',
+                },
+                transition: 'all 0.2s ease',
               }}
             >
               <Box sx={{
-                width: 56,
-                height: 56,
-                borderRadius: '12px',
-                bgcolor: 'rgba(33,150,243,0.15)',
+                width: isIPadFriendly ? 72 : 56,
+                height: isIPadFriendly ? 72 : 56,
+                borderRadius: '16px',
+                bgcolor: 'rgba(33,150,243,0.2)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexShrink: 0,
               }}>
-                <PhotoCamera sx={{ fontSize: 28, color: '#2196f3' }} />
+                <PhotoCamera sx={{ fontSize: isIPadFriendly ? 36 : 28, color: '#2196f3' }} />
               </Box>
-              <Box>
-                <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: 16 }}>
+              <Box sx={{ flex: 1 }}>
+                <Typography sx={{ 
+                  color: '#fff', 
+                  fontWeight: 700, 
+                  fontSize: isIPadFriendly ? '1.25rem' : '1rem',
+                  mb: 1,
+                  lineHeight: 1.3,
+                }}>
                   Foto-oppsett
                 </Typography>
-                <Typography sx={{ color: '#888', fontSize: 13 }}>
+                <Typography sx={{ 
+                  color: '#ccc', 
+                  fontSize: isIPadFriendly ? '1rem' : '0.875rem',
+                  lineHeight: 1.5,
+                }}>
                   For stillbilder med fotokameraer (Sony A7, Canon R5, Nikon Z8, etc.)
                 </Typography>
               </Box>
@@ -760,35 +818,57 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
               variant="outlined"
               onClick={() => handleSelectSetupType('video')}
               sx={{
-                p: 3,
-                borderRadius: '12px',
+                p: isIPadFriendly ? 4 : 3,
+                minHeight: isIPadFriendly ? 120 : 100,
+                borderRadius: '16px',
                 borderColor: '#e91e63',
-                borderWidth: 2,
+                borderWidth: 3,
                 textAlign: 'left',
                 justifyContent: 'flex-start',
-                gap: 2,
+                gap: isIPadFriendly ? 3 : 2,
+                bgcolor: '#2a2a2a',
                 '&:hover': {
-                  borderColor: '#e91e63',
-                  bgcolor: 'rgba(233,30,99,0.1)',
+                  borderColor: '#f06292',
+                  bgcolor: 'rgba(233,30,99,0.15)',
+                  transform: 'translateY(-2px)',
                 },
+                '&:focus-visible': {
+                  outline: '3px solid #e91e63',
+                  outlineOffset: '4px',
+                },
+                '&:active': {
+                  transform: 'translateY(0)',
+                },
+                transition: 'all 0.2s ease',
               }}
             >
               <Box sx={{
-                width: 56,
-                height: 56,
-                borderRadius: '12px',
-                bgcolor: 'rgba(233,30,99,0.15)',
+                width: isIPadFriendly ? 72 : 56,
+                height: isIPadFriendly ? 72 : 56,
+                borderRadius: '16px',
+                bgcolor: 'rgba(233,30,99,0.2)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexShrink: 0,
               }}>
-                <Videocam sx={{ fontSize: 28, color: '#e91e63' }} />
+                <Videocam sx={{ fontSize: isIPadFriendly ? 36 : 28, color: '#e91e63' }} />
               </Box>
-              <Box>
-                <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: 16 }}>
+              <Box sx={{ flex: 1 }}>
+                <Typography sx={{ 
+                  color: '#fff', 
+                  fontWeight: 700, 
+                  fontSize: isIPadFriendly ? '1.25rem' : '1rem',
+                  mb: 1,
+                  lineHeight: 1.3,
+                }}>
                   Video-oppsett
                 </Typography>
-                <Typography sx={{ color: '#888', fontSize: 13 }}>
+                <Typography sx={{ 
+                  color: '#ccc', 
+                  fontSize: isIPadFriendly ? '1rem' : '0.875rem',
+                  lineHeight: 1.5,
+                }}>
                   For film og video med cine-kameraer (ARRI, RED, Blackmagic, etc.)
                 </Typography>
               </Box>
@@ -805,8 +885,10 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
         PaperProps={{
           sx: {
             bgcolor: '#1e1e1e',
-            borderRadius: '16px',
+            borderRadius: isIPadFriendly ? '20px' : '16px',
             border: '2px solid #333',
+            maxHeight: isIPadFriendly ? '90vh' : '85vh',
+            m: isIPadFriendly ? 2 : 1,
           }
         }}
       >
@@ -816,50 +898,88 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
           alignItems: 'center', 
           justifyContent: 'space-between',
           borderBottom: '1px solid #333',
+          px: isIPadFriendly ? 3 : 2.5,
+          py: isIPadFriendly ? 2.5 : 2,
         }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Add sx={{ color: '#ff5722' }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: isIPadFriendly ? 2 : 1.5 }}>
+            <Add sx={{ color: '#ff5722', fontSize: isIPadFriendly ? 28 : 24 }} />
+            <Typography sx={{ fontSize: isIPadFriendly ? '1.5rem' : '1.25rem', fontWeight: 700 }}>
             Velg oppsettmetode
+            </Typography>
           </Box>
-          <IconButton onClick={() => setShowModeSelection(false)} sx={{ color: '#888' }}>
-            <Close />
+          <IconButton 
+            onClick={() => setShowModeSelection(false)} 
+            sx={{ 
+              color: '#fff',
+              minWidth: isIPadFriendly ? 48 : 40,
+              minHeight: isIPadFriendly ? 48 : 40,
+              '&:focus-visible': {
+                outline: '3px solid #2196f3',
+                outlineOffset: '2px',
+              },
+            }}
+            aria-label="Lukk dialog"
+          >
+            <Close sx={{ fontSize: isIPadFriendly ? 28 : 24 }} />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          <Stack spacing={2}>
+        <DialogContent sx={{ pt: isIPadFriendly ? 4 : 3, px: isIPadFriendly ? 3 : 2.5, pb: isIPadFriendly ? 3 : 2 }}>
+          <Stack spacing={isIPadFriendly ? 3 : 2}>
             <Button
               variant="outlined"
               onClick={() => handleSelectMode('current')}
               sx={{
-                p: 3,
-                borderRadius: '12px',
+                p: isIPadFriendly ? 4 : 3,
+                minHeight: isIPadFriendly ? 120 : 100,
+                borderRadius: '16px',
                 borderColor: '#4caf50',
-                borderWidth: 2,
+                borderWidth: 3,
                 textAlign: 'left',
                 justifyContent: 'flex-start',
-                gap: 2,
+                gap: isIPadFriendly ? 3 : 2,
+                bgcolor: '#2a2a2a',
                 '&:hover': {
-                  borderColor: '#4caf50',
-                  bgcolor: 'rgba(76,175,80,0.1)',
+                  borderColor: '#66bb6a',
+                  bgcolor: 'rgba(76,175,80,0.15)',
+                  transform: 'translateY(-2px)',
                 },
+                '&:focus-visible': {
+                  outline: '3px solid #4caf50',
+                  outlineOffset: '4px',
+                },
+                '&:active': {
+                  transform: 'translateY(0)',
+                },
+                transition: 'all 0.2s ease',
               }}
             >
               <Box sx={{
-                width: 56,
-                height: 56,
-                borderRadius: '12px',
-                bgcolor: 'rgba(76,175,80,0.15)',
+                width: isIPadFriendly ? 72 : 56,
+                height: isIPadFriendly ? 72 : 56,
+                borderRadius: '16px',
+                bgcolor: 'rgba(76,175,80,0.2)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexShrink: 0,
               }}>
-                <Save sx={{ fontSize: 28, color: '#4caf50' }} />
+                <Save sx={{ fontSize: isIPadFriendly ? 36 : 28, color: '#4caf50' }} />
               </Box>
-              <Box>
-                <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: 16 }}>
+              <Box sx={{ flex: 1 }}>
+                <Typography sx={{ 
+                  color: '#fff', 
+                  fontWeight: 700, 
+                  fontSize: isIPadFriendly ? '1.25rem' : '1rem',
+                  mb: 1,
+                  lineHeight: 1.3,
+                }}>
                   Lagre nåværende scene
                 </Typography>
-                <Typography sx={{ color: '#888', fontSize: 13 }}>
+                <Typography sx={{ 
+                  color: '#ccc', 
+                  fontSize: isIPadFriendly ? '1rem' : '0.875rem',
+                  lineHeight: 1.5,
+                }}>
                   Lagrer lys, kamera og bakgrunn fra det du ser i 3D-visningen
                 </Typography>
               </Box>
@@ -869,35 +989,57 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
               variant="outlined"
               onClick={() => handleSelectMode('custom')}
               sx={{
-                p: 3,
-                borderRadius: '12px',
+                p: isIPadFriendly ? 4 : 3,
+                minHeight: isIPadFriendly ? 120 : 100,
+                borderRadius: '16px',
                 borderColor: '#2196f3',
-                borderWidth: 2,
+                borderWidth: 3,
                 textAlign: 'left',
                 justifyContent: 'flex-start',
-                gap: 2,
+                gap: isIPadFriendly ? 3 : 2,
+                bgcolor: '#2a2a2a',
                 '&:hover': {
-                  borderColor: '#2196f3',
-                  bgcolor: 'rgba(33,150,243,0.1)',
+                  borderColor: '#42a5f5',
+                  bgcolor: 'rgba(33,150,243,0.15)',
+                  transform: 'translateY(-2px)',
                 },
+                '&:focus-visible': {
+                  outline: '3px solid #2196f3',
+                  outlineOffset: '4px',
+                },
+                '&:active': {
+                  transform: 'translateY(0)',
+                },
+                transition: 'all 0.2s ease',
               }}
             >
               <Box sx={{
-                width: 56,
-                height: 56,
-                borderRadius: '12px',
-                bgcolor: 'rgba(33,150,243,0.15)',
+                width: isIPadFriendly ? 72 : 56,
+                height: isIPadFriendly ? 72 : 56,
+                borderRadius: '16px',
+                bgcolor: 'rgba(33,150,243,0.2)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexShrink: 0,
               }}>
-                <Build sx={{ fontSize: 28, color: '#2196f3' }} />
+                <Build sx={{ fontSize: isIPadFriendly ? 36 : 28, color: '#2196f3' }} />
               </Box>
-              <Box>
-                <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: 16 }}>
+              <Box sx={{ flex: 1 }}>
+                <Typography sx={{ 
+                  color: '#fff', 
+                  fontWeight: 700, 
+                  fontSize: isIPadFriendly ? '1.25rem' : '1rem',
+                  mb: 1,
+                  lineHeight: 1.3,
+                }}>
                   Bygg eget oppsett
                 </Typography>
-                <Typography sx={{ color: '#888', fontSize: 13 }}>
+                <Typography sx={{ 
+                  color: '#ccc', 
+                  fontSize: isIPadFriendly ? '1rem' : '0.875rem',
+                  lineHeight: 1.5,
+                }}>
                   Velg kamera, linse, bakgrunnsfarge og lystemperatur manuelt
                 </Typography>
               </Box>
@@ -909,13 +1051,15 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
       <Dialog 
         open={showCreateDialog} 
         onClose={() => setShowCreateDialog(false)}
-        maxWidth={createMode === 'custom' && !editingPreset ? 'md' : 'sm'}
+        maxWidth={createMode === 'custom' && !editingPreset ? 'lg' : 'sm'}
         fullWidth
         PaperProps={{
           sx: {
             bgcolor: '#1e1e1e',
-            borderRadius: '16px',
+            borderRadius: isIPadFriendly ? '20px' : '16px',
             border: '2px solid #333',
+            maxHeight: isIPadFriendly ? '90vh' : '85vh',
+            m: isIPadFriendly ? 2 : 1,
           }
         }}
       >
@@ -925,36 +1069,97 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
           alignItems: 'center', 
           justifyContent: 'space-between',
           borderBottom: '1px solid #333',
+          px: isIPadFriendly ? 3 : 2.5,
+          py: isIPadFriendly ? 2.5 : 2,
         }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            {editingPreset ? <Edit sx={{ color: '#ff5722' }} /> : 
-             createMode === 'current' ? <Save sx={{ color: '#4caf50' }} /> : 
-             <Build sx={{ color: '#2196f3' }} />}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: isIPadFriendly ? 2 : 1.5 }}>
+            {editingPreset ? <Edit sx={{ color: '#ff5722', fontSize: isIPadFriendly ? 28 : 24 }} /> : 
+             createMode === 'current' ? <Save sx={{ color: '#4caf50', fontSize: isIPadFriendly ? 28 : 24 }} /> : 
+             <Build sx={{ color: '#2196f3', fontSize: isIPadFriendly ? 28 : 24 }} />}
+            <Typography sx={{ fontSize: isIPadFriendly ? '1.5rem' : '1.25rem', fontWeight: 700 }}>
             {editingPreset ? 'Rediger oppsett' : 
              createMode === 'current' ? 'Lagre nåværende scene' : 
              'Bygg eget oppsett'}
+            </Typography>
           </Box>
-          <IconButton onClick={() => setShowCreateDialog(false)} sx={{ color: '#888' }}>
-            <Close />
+          <IconButton 
+            onClick={() => setShowCreateDialog(false)} 
+            sx={{ 
+              color: '#fff',
+              minWidth: isIPadFriendly ? 48 : 40,
+              minHeight: isIPadFriendly ? 48 : 40,
+              '&:focus-visible': {
+                outline: '3px solid #2196f3',
+                outlineOffset: '2px',
+              },
+            }}
+            aria-label="Lukk dialog"
+          >
+            <Close sx={{ fontSize: isIPadFriendly ? 28 : 24 }} />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
+        <DialogContent sx={{ 
+          pt: isIPadFriendly ? 4 : 3, 
+          px: isIPadFriendly ? 3 : 2.5, 
+          pb: isIPadFriendly ? 3 : 2,
+          '&.MuiDialogContent-root': {
+            overflowY: 'auto',
+          },
+        }}>
           <TextField
             fullWidth
             label="Navn"
             value={presetName}
             onChange={(e) => setPresetName(e.target.value)}
+            required
             sx={{ 
-              mb: 3,
+              mb: isIPadFriendly ? 4 : 3,
               '& .MuiOutlinedInput-root': {
                 bgcolor: '#2a2a2a',
                 color: '#fff',
-                '& fieldset': { borderColor: '#444' },
-                '&:hover fieldset': { borderColor: '#666' },
-                '&.Mui-focused fieldset': { borderColor: '#ff5722' },
+                minHeight: isIPadFriendly ? 96 : 56,
+                fontSize: isIPadFriendly ? '2rem' : '1rem',
+                borderRadius: '12px',
+                '& fieldset': { 
+                  borderColor: '#666',
+                  borderWidth: 3,
+                },
+                '&:hover fieldset': { 
+                  borderColor: '#888',
+                  borderWidth: 3,
+                },
+                '&.Mui-focused fieldset': { 
+                  borderColor: '#ff5722',
+                  borderWidth: 4,
+                },
+                '&.Mui-error fieldset': {
+                  borderColor: '#f44336',
+                  borderWidth: 4,
+                },
               },
-              '& .MuiInputLabel-root': { color: '#888' },
-              '& .MuiInputLabel-root.Mui-focused': { color: '#ff5722' },
+              '& .MuiInputLabel-root': { 
+                color: '#ddd',
+                fontSize: isIPadFriendly ? '2rem' : '1rem',
+                fontWeight: 500,
+                '&.Mui-focused': {
+                  color: '#ff5722',
+                  fontWeight: 600,
+                },
+              },
+              '& .MuiInputBase-input': {
+                padding: isIPadFriendly ? '28px 26px' : '16px 14px',
+                fontSize: isIPadFriendly ? '2rem' : '1rem',
+                lineHeight: 1.5,
+                '&::placeholder': {
+                  color: '#999',
+                  opacity: 1,
+                  fontSize: isIPadFriendly ? '1.5rem' : '0.9375rem',
+                },
+              },
+              '& .MuiFormHelperText-root': {
+                fontSize: isIPadFriendly ? '1.5rem' : '0.875rem',
+                marginTop: isIPadFriendly ? 1.5 : 0.5,
+              },
             }}
           />
           <TextField
@@ -963,18 +1168,51 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
             value={presetDescription}
             onChange={(e) => setPresetDescription(e.target.value)}
             multiline
-            rows={2}
+            rows={isIPadFriendly ? 4 : 3}
             sx={{ 
-              mb: 3,
+              mb: isIPadFriendly ? 4 : 3,
               '& .MuiOutlinedInput-root': {
                 bgcolor: '#2a2a2a',
                 color: '#fff',
-                '& fieldset': { borderColor: '#444' },
-                '&:hover fieldset': { borderColor: '#666' },
-                '&.Mui-focused fieldset': { borderColor: '#ff5722' },
+                fontSize: isIPadFriendly ? '2rem' : '1rem',
+                borderRadius: '12px',
+                minHeight: isIPadFriendly ? 200 : 90,
+                '& fieldset': { 
+                  borderColor: '#666',
+                  borderWidth: 3,
+                },
+                '&:hover fieldset': { 
+                  borderColor: '#888',
+                  borderWidth: 3,
+                },
+                '&.Mui-focused fieldset': { 
+                  borderColor: '#ff5722',
+                  borderWidth: 4,
+                },
               },
-              '& .MuiInputLabel-root': { color: '#888' },
-              '& .MuiInputLabel-root.Mui-focused': { color: '#ff5722' },
+              '& .MuiInputLabel-root': { 
+                color: '#ddd',
+                fontSize: isIPadFriendly ? '2rem' : '1rem',
+                fontWeight: 500,
+                '&.Mui-focused': {
+                  color: '#ff5722',
+                  fontWeight: 600,
+                },
+              },
+              '& .MuiInputBase-input': {
+                padding: isIPadFriendly ? '28px 26px' : '16px 14px',
+                fontSize: isIPadFriendly ? '2rem' : '1rem',
+                lineHeight: 1.6,
+                '&::placeholder': {
+                  color: '#999',
+                  opacity: 1,
+                  fontSize: isIPadFriendly ? '1.5rem' : '0.9375rem',
+                },
+              },
+              '& .MuiFormHelperText-root': {
+                fontSize: isIPadFriendly ? '1.5rem' : '0.875rem',
+                marginTop: isIPadFriendly ? 1.5 : 0.5,
+              },
             }}
           />
           <TextField
@@ -983,17 +1221,52 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
             value={presetTags}
             onChange={(e) => setPresetTags(e.target.value)}
             placeholder="portrett, dramatisk, 2-lys"
+            helperText="Separer flere tagger med komma"
             sx={{ 
-              mb: 3,
+              mb: isIPadFriendly ? 4 : 3,
               '& .MuiOutlinedInput-root': {
                 bgcolor: '#2a2a2a',
                 color: '#fff',
-                '& fieldset': { borderColor: '#444' },
-                '&:hover fieldset': { borderColor: '#666' },
-                '&.Mui-focused fieldset': { borderColor: '#ff5722' },
+                minHeight: isIPadFriendly ? 64 : 56,
+                fontSize: isIPadFriendly ? '1.125rem' : '1rem',
+                borderRadius: '12px',
+                '& fieldset': { 
+                  borderColor: '#666',
+                  borderWidth: 3,
+                },
+                '&:hover fieldset': { 
+                  borderColor: '#888',
+                  borderWidth: 3,
+                },
+                '&.Mui-focused fieldset': { 
+                  borderColor: '#ff5722',
+                  borderWidth: 4,
+                },
               },
-              '& .MuiInputLabel-root': { color: '#888' },
-              '& .MuiInputLabel-root.Mui-focused': { color: '#ff5722' },
+              '& .MuiInputLabel-root': { 
+                color: '#ddd',
+                fontSize: isIPadFriendly ? '1.125rem' : '1rem',
+                fontWeight: 500,
+                '&.Mui-focused': {
+                  color: '#ff5722',
+                  fontWeight: 600,
+                },
+              },
+              '& .MuiInputBase-input': {
+                padding: isIPadFriendly ? '20px 18px' : '16px 14px',
+                fontSize: isIPadFriendly ? '1.125rem' : '1rem',
+                lineHeight: 1.5,
+                '&::placeholder': {
+                  color: '#999',
+                  opacity: 1,
+                  fontSize: isIPadFriendly ? '1rem' : '0.9375rem',
+                },
+              },
+              '& .MuiFormHelperText-root': {
+                fontSize: isIPadFriendly ? '1rem' : '0.875rem',
+                marginTop: isIPadFriendly ? 1 : 0.5,
+                color: '#aaa',
+              },
             }}
           />
           
@@ -1021,54 +1294,112 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
               <Tabs
                 value={customBuildTab}
                 onChange={(_, v) => setCustomBuildTab(v)}
+                variant={isIPadFriendly ? 'fullWidth' : 'standard'}
                 sx={{
-                  mb: 3,
+                  mb: isIPadFriendly ? 5 : 4,
+                  borderBottom: '2px solid #333',
                   '& .MuiTab-root': { 
-                    color: '#888', 
-                    minHeight: 56,
-                    fontSize: 14,
+                    color: '#ccc', 
+                    minHeight: isIPadFriendly ? 80 : 64,
+                    fontSize: isIPadFriendly ? '1.25rem' : '1rem',
                     fontWeight: 600,
+                    textTransform: 'none',
+                    padding: isIPadFriendly ? '20px 24px' : '16px 20px',
+                    gap: isIPadFriendly ? 1.5 : 1,
+                    '&:hover': {
+                      color: '#fff',
+                      bgcolor: 'rgba(255,255,255,0.05)',
                   },
-                  '& .Mui-selected': { color: '#2196f3' },
-                  '& .MuiTabs-indicator': { bgcolor: '#2196f3' },
+                    '&:focus-visible': {
+                      outline: '4px solid #2196f3',
+                      outlineOffset: '3px',
+                      borderRadius: '8px',
+                    },
+                    '&.Mui-selected': {
+                      color: '#2196f3',
+                      fontWeight: 700,
+                    },
+                  },
+                  '& .MuiTabs-indicator': { 
+                    bgcolor: '#2196f3',
+                    height: isIPadFriendly ? 5 : 4,
+                  },
                 }}
               >
-                <Tab icon={<CameraAlt />} label="Kamera" iconPosition="start" />
-                <Tab icon={<Tune />} label="Linse" iconPosition="start" />
-                <Tab icon={<FlashOn />} label="Lys" iconPosition="start" />
-                <Tab icon={<Wallpaper />} label="Bakgrunn" iconPosition="start" />
+                <Tab 
+                  icon={<CameraAlt sx={{ fontSize: isIPadFriendly ? 32 : 24 }} />} 
+                  label="Kamera" 
+                  iconPosition="start" 
+                />
+                <Tab 
+                  icon={<CameraEnhance sx={{ fontSize: isIPadFriendly ? 32 : 24 }} />} 
+                  label="Linse" 
+                  iconPosition="start" 
+                />
+                <Tab 
+                  icon={<FlashOn sx={{ fontSize: isIPadFriendly ? 32 : 24 }} />} 
+                  label="Lys" 
+                  iconPosition="start" 
+                />
+                <Tab 
+                  icon={<Wallpaper sx={{ fontSize: isIPadFriendly ? 32 : 24 }} />} 
+                  label="Bakgrunn" 
+                  iconPosition="start" 
+                />
               </Tabs>
 
               {customBuildTab === 0 && (
                 <Box>
                   {setupType === 'video' && (
                     <Box sx={{ mb: 3 }}>
-                      <Typography sx={{ color: '#fff', fontWeight: 600, mb: 2 }}>
+                  <Typography sx={{ 
+                    color: '#fff', 
+                    fontWeight: 600, 
+                    mb: isIPadFriendly ? 3 : 2,
+                    fontSize: isIPadFriendly ? '1.125rem' : '1rem',
+                  }}>
                         Hvor mange kameraer?
                       </Typography>
-                      <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  <Stack direction="row" spacing={isIPadFriendly ? 2 : 1.5} sx={{ flexWrap: 'wrap', gap: isIPadFriendly ? 2 : 1 }}>
                         {[1, 2, 3, 4].map((count) => (
                           <Button
                             key={count}
                             onClick={() => setCameraCount(count)}
                             sx={{
-                              minWidth: 80,
-                              minHeight: 80,
+                          minWidth: isIPadFriendly ? 100 : 80,
+                          minHeight: isIPadFriendly ? 100 : 80,
                               flexDirection: 'column',
-                              borderRadius: '12px',
-                              border: cameraCount === count ? '3px solid #2196f3' : '2px solid #444',
-                              bgcolor: cameraCount === count ? 'rgba(33,150,243,0.15)' : '#2a2a2a',
+                          borderRadius: '16px',
+                          border: cameraCount === count ? '3px solid #2196f3' : '2px solid #555',
+                          bgcolor: cameraCount === count ? 'rgba(33,150,243,0.2)' : '#2a2a2a',
+                          gap: 0.5,
                               '&:hover': {
-                                borderColor: '#2196f3',
-                                bgcolor: 'rgba(33,150,243,0.1)',
+                            borderColor: '#42a5f5',
+                            bgcolor: 'rgba(33,150,243,0.15)',
+                            transform: 'translateY(-2px)',
                               },
-                            }}
+                          '&:focus-visible': {
+                            outline: '3px solid #2196f3',
+                            outlineOffset: '4px',
+                          },
+                          '&:active': {
+                            transform: 'translateY(0)',
+                          },
+                          transition: 'all 0.2s ease',
+                        }}
                           >
-                            <Videocam sx={{ fontSize: 28, color: cameraCount === count ? '#2196f3' : '#888' }} />
-                            <Typography sx={{ color: cameraCount === count ? '#2196f3' : '#fff', fontWeight: 700, fontSize: 18 }}>
+                        <Videocam sx={{ fontSize: isIPadFriendly ? 32 : 28, color: cameraCount === count ? '#2196f3' : '#aaa' }} />
+                        <Typography sx={{ 
+                          color: cameraCount === count ? '#2196f3' : '#fff', 
+                          fontWeight: 700, 
+                          fontSize: isIPadFriendly ? 22 : 18,
+                        }}>
                               {count}
                             </Typography>
-                            <Typography sx={{ color: '#888', fontSize: 10 }}>
+                        <Typography sx={{ 
+                          color: '#ccc', 
+                          fontSize: isIPadFriendly ? 12 : 10,
+                        }}>
                               {count === 1 ? 'kamera' : 'kameraer'}
                             </Typography>
                           </Button>
@@ -1077,34 +1408,51 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                     </Box>
                   )}
                   
-                  <Typography sx={{ color: '#fff', fontWeight: 600, mb: 2 }}>
+                  <Typography sx={{ 
+                    color: '#fff', 
+                    fontWeight: 600, 
+                    mb: isIPadFriendly ? 3 : 2,
+                    fontSize: isIPadFriendly ? '1.125rem' : '1rem',
+                  }}>
                     Velg kamera ({setupType === 'foto' ? 'Fotokameraer' : 'Cine-kameraer'})
                   </Typography>
                   <Box sx={{ 
-                    maxHeight: 300, 
+                    maxHeight: isIPadFriendly ? 500 : 400, 
                     overflow: 'auto',
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-                    gap: 1.5,
+                    gridTemplateColumns: isIPadFriendly 
+                      ? 'repeat(auto-fill, minmax(200px, 1fr))' 
+                      : 'repeat(auto-fill, minmax(180px, 1fr))',
+                    gap: isIPadFriendly ? 2.5 : 2,
                   }}>
                     {filteredCameras.map((cam) => (
                       <Button
                         key={cam.id}
                         onClick={() => setSelectedCameraId(cam.id)}
                         sx={{
-                          p: 1.5,
-                          minHeight: 80,
+                          p: isIPadFriendly ? 2.5 : 2,
+                          minHeight: isIPadFriendly ? 140 : 100,
                           flexDirection: 'column',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          borderRadius: '12px',
-                          border: selectedCameraId === cam.id ? '3px solid #2196f3' : '2px solid #444',
-                          bgcolor: selectedCameraId === cam.id ? 'rgba(33,150,243,0.15)' : '#2a2a2a',
+                          borderRadius: '16px',
+                          border: selectedCameraId === cam.id ? '3px solid #2196f3' : '2px solid #555',
+                          bgcolor: selectedCameraId === cam.id ? 'rgba(33,150,243,0.2)' : '#2a2a2a',
                           textTransform: 'none',
+                          gap: isIPadFriendly ? 1.5 : 1,
                           '&:hover': {
-                            borderColor: '#2196f3',
-                            bgcolor: 'rgba(33,150,243,0.1)',
+                            borderColor: '#42a5f5',
+                            bgcolor: 'rgba(33,150,243,0.15)',
+                            transform: 'translateY(-2px)',
                           },
+                          '&:focus-visible': {
+                            outline: '3px solid #2196f3',
+                            outlineOffset: '4px',
+                          },
+                          '&:active': {
+                            transform: 'translateY(0)',
+                          },
+                          transition: 'all 0.2s ease',
                         }}
                       >
                         {cam.image && (
@@ -1112,25 +1460,55 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                             component="img"
                             src={cam.image}
                             alt={cam.name}
-                            sx={{ width: 48, height: 48, objectFit: 'contain', mb: 0.5 }}
+                            sx={{ 
+                              width: isIPadFriendly ? 72 : 56, 
+                              height: isIPadFriendly ? 72 : 56, 
+                              objectFit: 'contain', 
+                              mb: isIPadFriendly ? 1 : 0.5,
+                            }}
                             onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.style.display = 'none'; }}
                           />
                         )}
-                        <Typography sx={{ color: '#fff', fontSize: 12, fontWeight: 600, textAlign: 'center' }}>
+                        <Typography sx={{ 
+                          color: '#fff', 
+                          fontSize: isIPadFriendly ? '1rem' : '0.875rem', 
+                          fontWeight: 600, 
+                          textAlign: 'center',
+                          lineHeight: 1.3,
+                        }}>
                           {cam.name}
                         </Typography>
-                        <Typography sx={{ color: '#888', fontSize: 10 }}>
+                        <Typography sx={{ 
+                          color: '#ccc', 
+                          fontSize: isIPadFriendly ? '0.875rem' : '0.75rem',
+                          lineHeight: 1.4,
+                        }}>
                           {cam.megapixels}MP • {cam.sensor}
                         </Typography>
                       </Button>
                     ))}
                   </Box>
                   {selectedCamera && (
-                    <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(33,150,243,0.1)', borderRadius: '8px' }}>
-                      <Typography sx={{ color: '#2196f3', fontWeight: 600, fontSize: 14 }}>
+                    <Box sx={{ 
+                      mt: isIPadFriendly ? 4 : 3, 
+                      p: isIPadFriendly ? 3 : 2.5, 
+                      bgcolor: 'rgba(33,150,243,0.15)', 
+                      borderRadius: '16px',
+                      border: '3px solid rgba(33,150,243,0.4)',
+                    }}>
+                      <Typography sx={{ 
+                        color: '#2196f3', 
+                        fontWeight: 700, 
+                        fontSize: isIPadFriendly ? '1.125rem' : '1rem',
+                        mb: isIPadFriendly ? 1 : 0.5,
+                      }}>
                         Valgt: {selectedCamera.name} {setupType === 'video' && cameraCount > 1 ? `(${cameraCount} stk)` : ''}
                       </Typography>
-                      <Typography sx={{ color: '#888', fontSize: 12 }}>
+                      <Typography sx={{ 
+                        color: '#ccc', 
+                        fontSize: isIPadFriendly ? '1rem' : '0.875rem',
+                        lineHeight: 1.5,
+                      }}>
                         {selectedCamera.sensor} • {selectedCamera.megapixels}MP • ISO {selectedCamera.baseISO}-{selectedCamera.maxISO}
                       </Typography>
                     </Box>
@@ -1140,34 +1518,51 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
 
               {customBuildTab === 1 && (
                 <Box>
-                  <Typography sx={{ color: '#fff', fontWeight: 600, mb: 2 }}>
+                  <Typography sx={{ 
+                    color: '#fff', 
+                    fontWeight: 600, 
+                    mb: isIPadFriendly ? 3 : 2,
+                    fontSize: isIPadFriendly ? '1.125rem' : '1rem',
+                  }}>
                     Velg objektiv
                   </Typography>
                   <Box sx={{ 
-                    maxHeight: 300, 
+                    maxHeight: isIPadFriendly ? 500 : 400, 
                     overflow: 'auto',
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-                    gap: 1.5,
+                    gridTemplateColumns: isIPadFriendly 
+                      ? 'repeat(auto-fill, minmax(200px, 1fr))' 
+                      : 'repeat(auto-fill, minmax(180px, 1fr))',
+                    gap: isIPadFriendly ? 2.5 : 2,
                   }}>
                     {LENSES.map((lens) => (
                       <Button
                         key={lens.id}
                         onClick={() => setSelectedLensId(lens.id)}
                         sx={{
-                          p: 1.5,
-                          minHeight: 80,
+                          p: isIPadFriendly ? 2.5 : 2,
+                          minHeight: isIPadFriendly ? 140 : 100,
                           flexDirection: 'column',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          borderRadius: '12px',
-                          border: selectedLensId === lens.id ? '3px solid #2196f3' : '2px solid #444',
-                          bgcolor: selectedLensId === lens.id ? 'rgba(33,150,243,0.15)' : '#2a2a2a',
+                          borderRadius: '16px',
+                          border: selectedLensId === lens.id ? '3px solid #2196f3' : '2px solid #555',
+                          bgcolor: selectedLensId === lens.id ? 'rgba(33,150,243,0.2)' : '#2a2a2a',
                           textTransform: 'none',
+                          gap: isIPadFriendly ? 1.5 : 1,
                           '&:hover': {
-                            borderColor: '#2196f3',
-                            bgcolor: 'rgba(33,150,243,0.1)',
+                            borderColor: '#42a5f5',
+                            bgcolor: 'rgba(33,150,243,0.15)',
+                            transform: 'translateY(-2px)',
                           },
+                          '&:focus-visible': {
+                            outline: '3px solid #2196f3',
+                            outlineOffset: '4px',
+                          },
+                          '&:active': {
+                            transform: 'translateY(0)',
+                          },
+                          transition: 'all 0.2s ease',
                         }}
                       >
                         {lens.image && (
@@ -1175,25 +1570,55 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                             component="img"
                             src={lens.image}
                             alt={lens.name}
-                            sx={{ width: 48, height: 48, objectFit: 'contain', mb: 0.5 }}
+                            sx={{ 
+                              width: isIPadFriendly ? 72 : 56, 
+                              height: isIPadFriendly ? 72 : 56, 
+                              objectFit: 'contain', 
+                              mb: isIPadFriendly ? 1 : 0.5,
+                            }}
                             onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.style.display = 'none'; }}
                           />
                         )}
-                        <Typography sx={{ color: '#fff', fontSize: 12, fontWeight: 600, textAlign: 'center' }}>
+                        <Typography sx={{ 
+                          color: '#fff', 
+                          fontSize: isIPadFriendly ? '1rem' : '0.875rem', 
+                          fontWeight: 600, 
+                          textAlign: 'center',
+                          lineHeight: 1.3,
+                        }}>
                           {lens.name}
                         </Typography>
-                        <Typography sx={{ color: '#888', fontSize: 10 }}>
+                        <Typography sx={{ 
+                          color: '#ccc', 
+                          fontSize: isIPadFriendly ? '0.875rem' : '0.75rem',
+                          lineHeight: 1.4,
+                        }}>
                           {lens.focalLength} • {lens.aperture}
                         </Typography>
                       </Button>
                     ))}
                   </Box>
                   {selectedLens && (
-                    <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(33,150,243,0.1)', borderRadius: '8px' }}>
-                      <Typography sx={{ color: '#2196f3', fontWeight: 600, fontSize: 14 }}>
+                    <Box sx={{ 
+                      mt: isIPadFriendly ? 4 : 3, 
+                      p: isIPadFriendly ? 3 : 2.5, 
+                      bgcolor: 'rgba(33,150,243,0.15)', 
+                      borderRadius: '16px',
+                      border: '3px solid rgba(33,150,243,0.4)',
+                    }}>
+                      <Typography sx={{ 
+                        color: '#2196f3', 
+                        fontWeight: 700, 
+                        fontSize: isIPadFriendly ? '1.125rem' : '1rem',
+                        mb: isIPadFriendly ? 1 : 0.5,
+                      }}>
                         Valgt: {selectedLens.name}
                       </Typography>
-                      <Typography sx={{ color: '#888', fontSize: 12 }}>
+                      <Typography sx={{ 
+                        color: '#ccc', 
+                        fontSize: isIPadFriendly ? '1rem' : '0.875rem',
+                        lineHeight: 1.5,
+                      }}>
                         {selectedLens.focalLength} • {selectedLens.aperture} • {selectedLens.type}
                       </Typography>
                     </Box>
@@ -1203,10 +1628,15 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
 
               {customBuildTab === 2 && (
                 <Box>
-                  <Typography sx={{ color: '#fff', fontWeight: 600, mb: 2 }}>
+                  <Typography sx={{ 
+                    color: '#fff', 
+                    fontWeight: 600, 
+                    mb: isIPadFriendly ? 3 : 2,
+                    fontSize: isIPadFriendly ? '1.125rem' : '1rem',
+                  }}>
                     Hvor mange lys/blits ønsker du å sette opp?
                   </Typography>
-                  <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  <Stack direction="row" spacing={isIPadFriendly ? 2 : 1.5} sx={{ flexWrap: 'wrap', gap: isIPadFriendly ? 2 : 1 }}>
                     {[1, 2, 3, 4, 5, 6].map((count) => (
                       <Button
                         key={count}
@@ -1237,34 +1667,56 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                           });
                         }}
                         sx={{
-                          minWidth: 80,
-                          minHeight: 80,
+                          minWidth: isIPadFriendly ? 100 : 80,
+                          minHeight: isIPadFriendly ? 100 : 80,
                           flexDirection: 'column',
-                          borderRadius: '12px',
-                          border: lightCount === count ? '3px solid #2196f3' : '2px solid #444',
-                          bgcolor: lightCount === count ? 'rgba(33,150,243,0.15)' : '#2a2a2a',
+                          borderRadius: '16px',
+                          border: lightCount === count ? '3px solid #2196f3' : '2px solid #555',
+                          bgcolor: lightCount === count ? 'rgba(33,150,243,0.2)' : '#2a2a2a',
+                          gap: 0.5,
                           '&:hover': {
-                            borderColor: '#2196f3',
-                            bgcolor: 'rgba(33,150,243,0.1)',
+                            borderColor: '#42a5f5',
+                            bgcolor: 'rgba(33,150,243,0.15)',
+                            transform: 'translateY(-2px)',
                           },
+                          '&:focus-visible': {
+                            outline: '3px solid #2196f3',
+                            outlineOffset: '4px',
+                          },
+                          '&:active': {
+                            transform: 'translateY(0)',
+                          },
+                          transition: 'all 0.2s ease',
                         }}
                       >
-                        <FlashOn sx={{ fontSize: 28, color: lightCount === count ? '#2196f3' : '#888' }} />
-                        <Typography sx={{ color: lightCount === count ? '#2196f3' : '#fff', fontWeight: 700, fontSize: 18 }}>
+                        <FlashOn sx={{ fontSize: isIPadFriendly ? 32 : 28, color: lightCount === count ? '#2196f3' : '#aaa' }} />
+                        <Typography sx={{ 
+                          color: lightCount === count ? '#2196f3' : '#fff', 
+                          fontWeight: 700, 
+                          fontSize: isIPadFriendly ? 22 : 18,
+                        }}>
                           {count}
                         </Typography>
-                        <Typography sx={{ color: '#888', fontSize: 10 }}>
+                        <Typography sx={{ 
+                          color: '#ccc', 
+                          fontSize: isIPadFriendly ? 12 : 10,
+                        }}>
                           lys
                         </Typography>
                       </Button>
                     ))}
                   </Stack>
                   
-                  <Box sx={{ mt: 3 }}>
-                    <Typography sx={{ color: '#fff', fontWeight: 600, mb: 2 }}>
+                  <Box sx={{ mt: isIPadFriendly ? 4 : 3 }}>
+                    <Typography sx={{ 
+                      color: '#fff', 
+                      fontWeight: 600, 
+                      mb: isIPadFriendly ? 3 : 2,
+                      fontSize: isIPadFriendly ? '1.125rem' : '1rem',
+                    }}>
                       Konfigurer lys ({lightCount} stk)
                     </Typography>
-                    <Stack spacing={1.5}>
+                    <Stack spacing={isIPadFriendly ? 3 : 2}>
                       {Array.from({ length: lightCount }).map((_, idx) => {
                         const lightType = LIGHT_TYPES.find(t => t.id === (selectedLightTypes[idx] || 'key')) || LIGHT_TYPES[0];
                         const fixture = LIGHT_DATABASE.find(f => f.id === selectedFixtures[idx]);
@@ -1272,35 +1724,63 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                           <Box 
                             key={idx} 
                             sx={{ 
-                              p: 2, 
+                              p: isIPadFriendly ? 3 : 2, 
                               bgcolor: '#1e1e1e', 
                               borderRadius: '16px',
-                              border: `2px solid ${lightType.color}40`,
+                              border: `3px solid ${lightType.color}60`,
                               display: 'flex',
-                              gap: 2,
+                              gap: isIPadFriendly ? 3 : 2,
                               alignItems: 'stretch',
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                borderColor: `${lightType.color}80`,
+                                transform: 'translateY(-2px)',
+                              },
                             }}
                           >
                             <Box sx={{ 
-                              width: 60, 
+                              width: isIPadFriendly ? 100 : 80, 
+                              minWidth: isIPadFriendly ? 100 : 80,
                               display: 'flex', 
                               flexDirection: 'column',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              bgcolor: `${lightType.color}20`,
-                              borderRadius: '12px',
-                              p: 1,
+                              bgcolor: `${lightType.color}25`,
+                              borderRadius: '16px',
+                              p: isIPadFriendly ? 2 : 1.5,
+                              border: `2px solid ${lightType.color}40`,
                             }}>
-                              <Typography sx={{ fontSize: 28 }}>{lightType.icon}</Typography>
-                              <Typography sx={{ color: lightType.color, fontSize: 10, fontWeight: 700, textAlign: 'center' }}>
+                              <Typography sx={{ fontSize: isIPadFriendly ? 48 : 36 }}>{lightType.icon}</Typography>
+                              <Typography sx={{ 
+                                color: lightType.color, 
+                                fontSize: isIPadFriendly ? '0.875rem' : '0.75rem', 
+                                fontWeight: 700, 
+                                textAlign: 'center',
+                                mt: isIPadFriendly ? 1 : 0.5,
+                                lineHeight: 1.2,
+                              }}>
                                 LYS {idx + 1}
                               </Typography>
                             </Box>
                             
-                            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: isIPadFriendly ? 2.5 : 1.5 }}>
                               <Box>
-                                <Typography sx={{ color: '#888', fontSize: 10, mb: 0.5 }}>Lysrolle</Typography>
-                                <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                                <Typography sx={{ 
+                                  color: '#fff', 
+                                  fontSize: isIPadFriendly ? '1rem' : '0.875rem', 
+                                  mb: isIPadFriendly ? 1.5 : 1,
+                                  fontWeight: 600,
+                                }}>
+                                  Lysrolle
+                                </Typography>
+                                <Stack 
+                                  direction="row" 
+                                  spacing={isIPadFriendly ? 1.5 : 1} 
+                                  sx={{ 
+                                    flexWrap: 'wrap', 
+                                    gap: isIPadFriendly ? 1.5 : 1,
+                                  }}
+                                >
                                   {LIGHT_TYPES.map((type) => (
                                     <Chip
                                       key={type.id}
@@ -1315,15 +1795,27 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                                         });
                                       }}
                                       sx={{
-                                        height: 28,
-                                        fontSize: 11,
+                                        height: isIPadFriendly ? 44 : 36,
+                                        fontSize: isIPadFriendly ? '1rem' : '0.875rem',
                                         fontWeight: 600,
+                                        minWidth: isIPadFriendly ? 100 : 80,
+                                        minHeight: isIPadFriendly ? 44 : 36,
                                         bgcolor: (selectedLightTypes[idx] || 'key') === type.id ? type.color : '#333',
-                                        color: (selectedLightTypes[idx] || 'key') === type.id ? '#000' : '#888',
-                                        border: 'none',
+                                        color: (selectedLightTypes[idx] || 'key') === type.id ? '#000' : '#ccc',
+                                        border: (selectedLightTypes[idx] || 'key') === type.id ? `2px solid ${type.color}` : '2px solid #555',
                                         '&:hover': { 
                                           bgcolor: (selectedLightTypes[idx] || 'key') === type.id ? type.color : '#444',
+                                          borderColor: (selectedLightTypes[idx] || 'key') === type.id ? type.color : '#666',
+                                          transform: 'translateY(-1px)',
                                         },
+                                        '&:focus-visible': {
+                                          outline: '3px solid #2196f3',
+                                          outlineOffset: '3px',
+                                        },
+                                        '&:active': {
+                                          transform: 'translateY(0)',
+                                        },
+                                        transition: 'all 0.2s ease',
                                       }}
                                     />
                                   ))}
@@ -1331,7 +1823,14 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                               </Box>
                               
                               <Box>
-                                <Typography sx={{ color: '#888', fontSize: 10, mb: 0.5 }}>Lyskilde</Typography>
+                                <Typography sx={{ 
+                                  color: '#fff', 
+                                  fontSize: isIPadFriendly ? '1rem' : '0.875rem', 
+                                  mb: isIPadFriendly ? 1.5 : 1,
+                                  fontWeight: 600,
+                                }}>
+                                  Lyskilde
+                                </Typography>
                                 <Button
                                   variant="outlined"
                                   onClick={() => setLightPickerOpen(idx)}
@@ -1339,26 +1838,62 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                                     width: '100%',
                                     justifyContent: 'flex-start',
                                     textTransform: 'none',
-                                    borderColor: '#444',
-                                    borderRadius: '8px',
-                                    minHeight: 44,
-                                    px: 2,
-                                    color: fixture ? '#fff' : '#666',
-                                    bgcolor: fixture ? 'rgba(33,150,243,0.1)' : 'transparent',
+                                    borderColor: fixture ? '#2196f3' : '#555',
+                                    borderWidth: 3,
+                                    borderRadius: '16px',
+                                    minHeight: isIPadFriendly ? 64 : 56,
+                                    px: isIPadFriendly ? 3 : 2.5,
+                                    py: isIPadFriendly ? 2 : 1.5,
+                                    color: fixture ? '#fff' : '#ccc',
+                                    bgcolor: fixture ? 'rgba(33,150,243,0.2)' : '#2a2a2a',
+                                    fontSize: isIPadFriendly ? '1rem' : '0.9375rem',
+                                    gap: isIPadFriendly ? 1.5 : 1,
                                     '&:hover': {
-                                      borderColor: '#2196f3',
-                                      bgcolor: 'rgba(33,150,243,0.15)',
+                                      borderColor: '#42a5f5',
+                                      bgcolor: fixture ? 'rgba(33,150,243,0.25)' : 'rgba(33,150,243,0.15)',
+                                      transform: 'translateY(-2px)',
                                     },
+                                    '&:focus-visible': {
+                                      outline: '3px solid #2196f3',
+                                      outlineOffset: '4px',
+                                    },
+                                    '&:active': {
+                                      transform: 'translateY(0)',
+                                    },
+                                    transition: 'all 0.2s ease',
                                   }}
                                 >
-                                  <FlashOn sx={{ mr: 1, fontSize: 18, color: fixture ? '#2196f3' : '#555' }} />
+                                  <FlashOn sx={{ 
+                                    fontSize: isIPadFriendly ? 28 : 22, 
+                                    color: fixture ? '#2196f3' : '#888',
+                                  }} />
                                   {fixture ? (
-                                    <Box sx={{ textAlign: 'left' }}>
-                                      <Typography sx={{ fontSize: 12, fontWeight: 600 }}>{getLightDisplayName(fixture)}</Typography>
-                                      <Typography sx={{ fontSize: 10, color: '#888' }}>{getLightPowerDisplay(fixture)} • {fixture.type === 'strobe' ? 'Blits' : 'LED'}</Typography>
+                                    <Box sx={{ textAlign: 'left', flex: 1 }}>
+                                      <Typography sx={{ 
+                                        fontSize: isIPadFriendly ? '1rem' : '0.875rem', 
+                                        fontWeight: 600,
+                                        lineHeight: 1.3,
+                                        mb: 0.5,
+                                      }}>
+                                        {getLightDisplayName(fixture)}
+                                      </Typography>
+                                      <Typography sx={{ 
+                                        fontSize: isIPadFriendly ? '0.875rem' : '0.75rem', 
+                                        color: '#ccc',
+                                        lineHeight: 1.4,
+                                      }}>
+                                        {getLightPowerDisplay(fixture)} • {fixture.type === 'strobe' ? 'Blits' : 'LED'}
+                                      </Typography>
                                     </Box>
                                   ) : (
-                                    <Typography sx={{ fontSize: 12 }}>Velg lyskilde...</Typography>
+                                    <Typography sx={{ 
+                                      fontSize: isIPadFriendly ? '1rem' : '0.875rem',
+                                      color: '#aaa',
+                                      flex: 1,
+                                      textAlign: 'left',
+                                    }}>
+                                      Velg lyskilde...
+                                    </Typography>
                                   )}
                                 </Button>
                               </Box>
@@ -1374,13 +1909,38 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                     onClose={() => setLightPickerOpen(null)}
                     maxWidth="sm"
                     fullWidth
-                    PaperProps={{ sx: { bgcolor: '#1a1a1a', borderRadius: '16px' } }}
+                    PaperProps={{ 
+                      sx: { 
+                        bgcolor: '#1a1a1a', 
+                        borderRadius: isIPadFriendly ? '20px' : '16px',
+                        maxHeight: isIPadFriendly ? '90vh' : '85vh',
+                        m: isIPadFriendly ? 2 : 1,
+                      } 
+                    }}
                   >
-                    <DialogTitle sx={{ color: '#fff', borderBottom: '1px solid #333' }}>
+                    <DialogTitle sx={{ 
+                      color: '#fff', 
+                      borderBottom: '1px solid #333',
+                      px: isIPadFriendly ? 3 : 2.5,
+                      py: isIPadFriendly ? 2.5 : 2,
+                      fontSize: isIPadFriendly ? '1.25rem' : '1.125rem',
+                    }}>
                       Velg lyskilde for Lys {(lightPickerOpen ?? 0) + 1}
                     </DialogTitle>
-                    <DialogContent sx={{ p: 2, mt: 1 }}>
-                      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 1.5 }}>
+                    <DialogContent sx={{ 
+                      p: isIPadFriendly ? 3 : 2, 
+                      mt: isIPadFriendly ? 2 : 1,
+                      '&.MuiDialogContent-root': {
+                        overflowY: 'auto',
+                      },
+                    }}>
+                      <Box sx={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: isIPadFriendly 
+                          ? 'repeat(auto-fill, minmax(160px, 1fr))' 
+                          : 'repeat(auto-fill, minmax(140px, 1fr))', 
+                        gap: isIPadFriendly ? 2 : 1.5,
+                      }}>
                         {LIGHT_DATABASE.map((fix) => (
                           <Button
                             key={fix.id}
@@ -1396,13 +1956,28 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                               }
                             }}
                             sx={{
-                              p: 1,
+                              p: isIPadFriendly ? 2 : 1,
+                              minHeight: isIPadFriendly ? 120 : 100,
                               flexDirection: 'column',
                               alignItems: 'center',
                               textTransform: 'none',
-                              borderRadius: '12px',
-                              border: selectedFixtures[lightPickerOpen ?? 0] === fix.id ? '2px solid #2196f3' : '1px solid #444',
-                              bgcolor: selectedFixtures[lightPickerOpen ?? 0] === fix.id ? 'rgba(33,150,243,0.15)' : '#2a2a2a',
+                              borderRadius: '16px',
+                              border: selectedFixtures[lightPickerOpen ?? 0] === fix.id ? '3px solid #2196f3' : '2px solid #555',
+                              bgcolor: selectedFixtures[lightPickerOpen ?? 0] === fix.id ? 'rgba(33,150,243,0.2)' : '#2a2a2a',
+                              gap: 1,
+                              '&:hover': {
+                                borderColor: '#42a5f5',
+                                bgcolor: 'rgba(33,150,243,0.15)',
+                                transform: 'translateY(-2px)',
+                              },
+                              '&:focus-visible': {
+                                outline: '3px solid #2196f3',
+                                outlineOffset: '4px',
+                              },
+                              '&:active': {
+                                transform: 'translateY(0)',
+                              },
+                              transition: 'all 0.2s ease',
                               '&:hover': {
                                 borderColor: '#2196f3',
                                 bgcolor: 'rgba(33,150,243,0.1)',
@@ -1411,15 +1986,16 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                           >
                             <Box
                               sx={{
-                                width: 80,
-                                height: 80,
-                                borderRadius: '8px',
+                                width: isIPadFriendly ? 100 : 80,
+                                height: isIPadFriendly ? 100 : 80,
+                                borderRadius: '12px',
                                 bgcolor: '#222',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                mb: 1,
+                                mb: isIPadFriendly ? 1.5 : 1,
                                 overflow: 'hidden',
+                                border: '2px solid #333',
                               }}
                             >
                               {fix.thumbnail ? (
@@ -1438,31 +2014,65 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                                   }}
                                 />
                               ) : (
-                                <FlashOn sx={{ color: fix.type === 'strobe' ? '#ffc107' : '#4fc3f7', fontSize: 40 }} />
+                                <FlashOn sx={{ 
+                                  color: fix.type === 'strobe' ? '#ffc107' : '#4fc3f7', 
+                                  fontSize: isIPadFriendly ? 48 : 40,
+                                }} />
                               )}
                             </Box>
-                            <Typography sx={{ color: '#fff', fontSize: 11, fontWeight: 600, textAlign: 'center', lineHeight: 1.2 }}>
+                            <Typography sx={{ 
+                              color: '#fff', 
+                              fontSize: isIPadFriendly ? '0.875rem' : '0.6875rem', 
+                              fontWeight: 600, 
+                              textAlign: 'center', 
+                              lineHeight: 1.3,
+                            }}>
                               {getLightDisplayName(fix)}
                             </Typography>
-                            <Typography sx={{ color: '#888', fontSize: 10, textAlign: 'center' }}>
+                            <Typography sx={{ 
+                              color: '#ccc', 
+                              fontSize: isIPadFriendly ? '0.75rem' : '0.625rem', 
+                              textAlign: 'center',
+                              lineHeight: 1.4,
+                            }}>
                               {getLightPowerDisplay(fix)} • {fix.type === 'strobe' ? 'Blits' : 'LED'}
                             </Typography>
                           </Button>
                         ))}
                       </Box>
                     </DialogContent>
-                    <DialogActions sx={{ p: 2, borderTop: '1px solid #333' }}>
-                      <Button onClick={() => setLightPickerOpen(null)} sx={{ color: '#888' }}>
+                    <DialogActions sx={{ 
+                      p: isIPadFriendly ? 3 : 2, 
+                      borderTop: '1px solid #333',
+                    }}>
+                      <Button 
+                        onClick={() => setLightPickerOpen(null)} 
+                        sx={{ 
+                          color: '#fff',
+                          minWidth: isIPadFriendly ? 120 : 100,
+                          minHeight: isIPadFriendly ? 48 : 40,
+                          fontSize: isIPadFriendly ? '1rem' : '0.9375rem',
+                          '&:focus-visible': {
+                            outline: '3px solid #2196f3',
+                            outlineOffset: '4px',
+                          },
+                        }}
+                      >
                         Avbryt
                       </Button>
                     </DialogActions>
                   </Dialog>
                   
-                  <Box sx={{ mt: 3 }}>
-                    <Typography sx={{ color: '#aaa', fontSize: 13, mb: 2 }}>
+                  <Box sx={{ mt: isIPadFriendly ? 4 : 3 }}>
+                    <Typography sx={{ 
+                      color: '#fff', 
+                      fontSize: isIPadFriendly ? '1rem' : '0.8125rem', 
+                      mb: isIPadFriendly ? 3 : 2,
+                      fontWeight: 500,
+                    }}>
                       Fargetemperatur (Kelvin) for lysene:
                     </Typography>
-                    <Box sx={{ px: 2 }}>
+                    <Box sx={{ px: isIPadFriendly ? 3 : 2 }}>
                       <Slider
                         value={customCCT}
                         onChange={(_, v) => setCustomCCT(v as number)}
@@ -1477,43 +2087,127 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                         valueLabelFormat={(v) => `${v}K`}
                         sx={{
                           background: 'linear-gradient(90deg, #ff9800 0%, #fff 50%, #90caf9 100%)',
-                          height: 8,
+                          height: isIPadFriendly ? 12 : 8,
                           '& .MuiSlider-track': { display: 'none' },
                           '& .MuiSlider-rail': { opacity: 0 },
-                          '& .MuiSlider-thumb': { bgcolor: '#fff', border: '3px solid #333' },
-                          '& .MuiSlider-markLabel': { color: '#888', fontSize: 11 },
-                          '& .MuiSlider-valueLabel': { bgcolor: '#2196f3', color: '#fff', fontWeight: 700 },
+                          '& .MuiSlider-thumb': { 
+                            bgcolor: '#fff', 
+                            border: '3px solid #333',
+                            width: isIPadFriendly ? 24 : 20,
+                            height: isIPadFriendly ? 24 : 20,
+                            '&:focus-visible': {
+                              outline: '3px solid #2196f3',
+                              outlineOffset: '4px',
+                            },
+                          },
+                          '& .MuiSlider-markLabel': { 
+                            color: '#ccc', 
+                            fontSize: isIPadFriendly ? '0.875rem' : '0.6875rem',
+                          },
+                          '& .MuiSlider-valueLabel': { 
+                            bgcolor: '#2196f3', 
+                            color: '#fff', 
+                            fontWeight: 700,
+                            fontSize: isIPadFriendly ? '0.875rem' : '0.75rem',
+                          },
                         }}
                       />
                     </Box>
                   </Box>
                   
-                  <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(33,150,243,0.1)', borderRadius: '12px' }}>
-                    <Typography sx={{ color: '#2196f3', fontWeight: 600, fontSize: 14, mb: 1 }}>
+                  <Box sx={{ 
+                    mt: isIPadFriendly ? 4 : 3, 
+                    p: isIPadFriendly ? 3 : 2.5, 
+                    bgcolor: 'rgba(33,150,243,0.15)', 
+                    borderRadius: '16px',
+                    border: '3px solid rgba(33,150,243,0.4)',
+                  }}>
+                    <Typography sx={{ 
+                      color: '#2196f3', 
+                      fontWeight: 700, 
+                      fontSize: isIPadFriendly ? '1.125rem' : '1rem', 
+                      mb: isIPadFriendly ? 2 : 1.5,
+                    }}>
                       Oppsummering: {lightCount} lys • {customCCT}K
                     </Typography>
+                    <Stack spacing={isIPadFriendly ? 1.5 : 1}>
                     {Array.from({ length: lightCount }).map((_, idx) => {
                       const lt = LIGHT_TYPES.find(t => t.id === (selectedLightTypes[idx] || 'key'));
                       const fix = LIGHT_DATABASE.find(f => f.id === selectedFixtures[idx]);
                       return (
-                        <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                          <Typography sx={{ fontSize: 12 }}>{lt?.icon}</Typography>
-                          <Typography sx={{ color: '#aaa', fontSize: 11 }}>
-                            {lt?.label}: {fix ? getLightDisplayName(fix) : 'Ikke valgt'}
+                          <Box 
+                            key={idx} 
+                            sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: isIPadFriendly ? 2 : 1.5, 
+                              p: isIPadFriendly ? 1.5 : 1,
+                              bgcolor: 'rgba(255,255,255,0.05)',
+                              borderRadius: '12px',
+                            }}
+                          >
+                            <Typography sx={{ 
+                              fontSize: isIPadFriendly ? 24 : 18,
+                            }}>
+                              {lt?.icon}
+                            </Typography>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography sx={{ 
+                                color: '#fff', 
+                                fontSize: isIPadFriendly ? '1rem' : '0.875rem',
+                                fontWeight: 600,
+                                lineHeight: 1.3,
+                                mb: 0.25,
+                              }}>
+                                {lt?.label}
+                              </Typography>
+                              <Typography sx={{ 
+                                color: '#ccc', 
+                                fontSize: isIPadFriendly ? '0.875rem' : '0.75rem',
+                                lineHeight: 1.4,
+                              }}>
+                                {fix ? getLightDisplayName(fix) : 'Ikke valgt'}
                           </Typography>
+                            </Box>
                         </Box>
                       );
                     })}
-                    <Typography sx={{ color: '#666', fontSize: 10, mt: 1 }}>
+                    </Stack>
+                    <Box sx={{ 
+                      mt: isIPadFriendly ? 2 : 1.5,
+                      pt: isIPadFriendly ? 2 : 1.5,
+                      borderTop: '2px solid rgba(33,150,243,0.3)',
+                    }}>
+                      <Typography sx={{ 
+                        color: '#2196f3', 
+                        fontSize: isIPadFriendly ? '0.9375rem' : '0.8125rem', 
+                        fontWeight: 600,
+                        lineHeight: 1.5,
+                      }}>
                       CCT: {customCCT}K ({customCCT <= 3200 ? 'Varm tungsten' : customCCT <= 4500 ? 'Nøytral' : customCCT <= 5600 ? 'Dagslys' : 'Kald'})
                     </Typography>
+                    </Box>
                   </Box>
                 </Box>
               )}
 
               {customBuildTab === 3 && (
                 <Box>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 1.5 }}>
+                  <Typography sx={{ 
+                    color: '#fff', 
+                    fontWeight: 600, 
+                    mb: isIPadFriendly ? 3 : 2,
+                    fontSize: isIPadFriendly ? '1.125rem' : '1rem',
+                  }}>
+                    Velg bakgrunn
+                  </Typography>
+                  <Box sx={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: isIPadFriendly 
+                      ? 'repeat(auto-fill, minmax(160px, 1fr))' 
+                      : 'repeat(auto-fill, minmax(140px, 1fr))', 
+                    gap: isIPadFriendly ? 4 : 3,
+                  }}>
                     {BACKDROP_DATABASE.map((backdrop) => (
                       <Box
                         key={backdrop.id}
@@ -1526,20 +2220,44 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                           flexDirection: 'column',
                           alignItems: 'center',
                           cursor: 'pointer',
+                          height: '100%',
+                          gap: isIPadFriendly ? 1 : 0.5,
+                          '&:focus-visible': {
+                            outline: '3px solid #2196f3',
+                            outlineOffset: '4px',
+                            borderRadius: '12px',
+                          },
+                        }}
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedBackdropId(backdrop.id);
+                            if (backdrop.color) setCustomBackdropColor(backdrop.color);
+                          }
                         }}
                       >
                         <Box
                           sx={{
-                            width: 80,
-                            height: 80,
-                            borderRadius: '8px',
+                            width: '100%',
+                            aspectRatio: '4/3',
+                            borderRadius: '16px',
                             bgcolor: '#2a2a2a',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             overflow: 'hidden',
-                            border: selectedBackdropId === backdrop.id ? '2px solid #4caf50' : '1px solid #444',
-                            mb: 0.5,
+                            border: selectedBackdropId === backdrop.id ? '4px solid #4caf50' : '3px solid #666',
+                            flexShrink: 0,
+                            transition: 'all 0.2s ease',
+                            boxShadow: selectedBackdropId === backdrop.id 
+                              ? '0 4px 16px rgba(76,175,80,0.4)' 
+                              : '0 2px 8px rgba(0,0,0,0.3)',
+                            '&:hover': {
+                              borderColor: '#4caf50',
+                              transform: 'translateY(-2px)',
+                              boxShadow: '0 6px 20px rgba(76,175,80,0.5)',
+                            },
                           }}
                         >
                           <Box
@@ -1560,14 +2278,36 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                             }}
                           />
                         </Box>
-                        <Typography sx={{ color: '#fff', fontSize: 11, fontWeight: 500, textAlign: 'center', lineHeight: 1.2 }}>
+                        <Box sx={{ 
+                          flex: 1, 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          justifyContent: 'flex-start',
+                          width: '100%',
+                          minHeight: isIPadFriendly ? 60 : 50,
+                        }}>
+                          <Typography sx={{ 
+                            color: '#fff', 
+                            fontSize: isIPadFriendly ? '1.125rem' : '1rem', 
+                            fontWeight: 600, 
+                            textAlign: 'center', 
+                            lineHeight: 1.4,
+                            mb: backdrop.size ? (isIPadFriendly ? 0.75 : 0.5) : (isIPadFriendly ? 1.5 : 1),
+                          }}>
                           {backdrop.name}
                         </Typography>
                         {backdrop.size && (
-                          <Typography sx={{ color: '#888', fontSize: 9, textAlign: 'center' }}>
+                            <Typography sx={{ 
+                              color: '#ccc', 
+                              fontSize: isIPadFriendly ? '1rem' : '0.875rem', 
+                              textAlign: 'center',
+                              lineHeight: 1.4,
+                              mb: isIPadFriendly ? 1.5 : 1,
+                            }}>
                             {backdrop.size}
                           </Typography>
                         )}
+                        </Box>
                         <Button
                           size="small"
                           onClick={(e) => {
@@ -1576,19 +2316,37 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                             if (backdrop.color) setCustomBackdropColor(backdrop.color);
                           }}
                           sx={{
-                            mt: 0.5,
+                            mt: isIPadFriendly ? 1.5 : 1,
                             bgcolor: selectedBackdropId === backdrop.id ? '#2196f3' : '#4caf50',
                             color: '#fff',
-                            fontSize: 10,
-                            fontWeight: 600,
-                            px: 1.5,
-                            py: 0.3,
-                            minWidth: 70,
-                            borderRadius: '6px',
+                            fontSize: isIPadFriendly ? '1.25rem' : '1.125rem',
+                            fontWeight: 700,
+                            px: isIPadFriendly ? 4 : 3,
+                            py: isIPadFriendly ? 1.75 : 1.25,
+                            minWidth: isIPadFriendly ? 180 : 140,
+                            minHeight: isIPadFriendly ? 60 : 52,
+                            borderRadius: '12px',
                             textTransform: 'none',
+                            border: selectedBackdropId === backdrop.id ? '3px solid #fff' : '2px solid rgba(255,255,255,0.3)',
+                            boxShadow: selectedBackdropId === backdrop.id 
+                              ? '0 4px 12px rgba(33,150,243,0.5)' 
+                              : '0 2px 8px rgba(76,175,80,0.4)',
                             '&:hover': {
-                              bgcolor: selectedBackdropId === backdrop.id ? '#1976d2' : '#43a047',
+                              bgcolor: selectedBackdropId === backdrop.id ? '#42a5f5' : '#66bb6a',
+                              transform: 'translateY(-2px)',
+                              boxShadow: selectedBackdropId === backdrop.id 
+                                ? '0 6px 16px rgba(33,150,243,0.6)' 
+                                : '0 4px 12px rgba(76,175,80,0.5)',
                             },
+                            '&:focus-visible': {
+                              outline: '3px solid #fff',
+                              outlineOffset: '3px',
+                              boxShadow: '0 0 0 6px rgba(33,150,243,0.3)',
+                            },
+                            '&:active': {
+                              transform: 'translateY(0)',
+                            },
+                            transition: 'all 0.2s ease',
                           }}
                         >
                           {selectedBackdropId === backdrop.id ? '✓ Valgt' : '+ Legg til'}
@@ -1597,15 +2355,26 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                     ))}
                   </Box>
                   
-                  <Box sx={{ mt: 3, p: 2, bgcolor: 'rgba(33,150,243,0.1)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: 2 }}>
+                  {selectedBackdropId && (
+                    <Box sx={{ 
+                      mt: isIPadFriendly ? 4 : 3, 
+                      p: isIPadFriendly ? 3 : 2.5, 
+                      bgcolor: 'rgba(33,150,243,0.15)', 
+                      borderRadius: '16px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: isIPadFriendly ? 3 : 2,
+                      border: '3px solid rgba(33,150,243,0.4)',
+                    }}>
                     <Box 
                       sx={{ 
-                        width: 48, 
-                        height: 48, 
+                          width: isIPadFriendly ? 96 : 72, 
+                          height: isIPadFriendly ? 96 : 72, 
+                          borderRadius: '16px',
                         bgcolor: '#2a2a2a', 
-                        borderRadius: '8px', 
-                        border: '2px solid #444',
                         overflow: 'hidden',
+                          flexShrink: 0,
+                          border: '3px solid #555',
                       }}
                     >
                       {selectedBackdropId && (
@@ -1619,20 +2388,36 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
                         />
                       )}
                     </Box>
-                    <Box>
-                      <Typography sx={{ color: '#2196f3', fontWeight: 600, fontSize: 14 }}>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography sx={{ 
+                          color: '#2196f3', 
+                          fontWeight: 700, 
+                          fontSize: isIPadFriendly ? '1.125rem' : '1rem',
+                          mb: isIPadFriendly ? 1 : 0.5,
+                        }}>
                         Valgt bakgrunn
                       </Typography>
-                      <Typography sx={{ color: '#aaa', fontSize: 12 }}>
+                        <Typography sx={{ 
+                          color: '#fff', 
+                          fontSize: isIPadFriendly ? '1rem' : '0.875rem',
+                          fontWeight: 600,
+                          lineHeight: 1.4,
+                          mb: isIPadFriendly ? 0.5 : 0.25,
+                        }}>
                         {selectedBackdropId ? BACKDROP_DATABASE.find(b => b.id === selectedBackdropId)?.name : 'Ingen valgt'}
                       </Typography>
                       {selectedBackdropId && BACKDROP_DATABASE.find(b => b.id === selectedBackdropId)?.size && (
-                        <Typography sx={{ color: '#666', fontSize: 10 }}>
+                          <Typography sx={{ 
+                            color: '#ccc', 
+                            fontSize: isIPadFriendly ? '0.875rem' : '0.75rem',
+                            lineHeight: 1.4,
+                          }}>
                           {BACKDROP_DATABASE.find(b => b.id === selectedBackdropId)?.size}
                         </Typography>
                       )}
                     </Box>
                   </Box>
+                  )}
                 </Box>
               )}
             </Box>
@@ -1652,10 +2437,26 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 3, borderTop: '1px solid #333' }}>
+        <DialogActions sx={{ 
+          p: isIPadFriendly ? 4 : 3, 
+          borderTop: '1px solid #333',
+          gap: isIPadFriendly ? 2 : 1.5,
+        }}>
           <Button 
             onClick={() => setShowCreateDialog(false)}
-            sx={{ ...buttonStyle, minWidth: 100, color: '#888', borderColor: '#444' }}
+            sx={{ 
+              ...buttonStyle, 
+              minWidth: isIPadFriendly ? 140 : 100, 
+              minHeight: isIPadFriendly ? 56 : 48,
+              color: '#fff', 
+              borderColor: '#555',
+              borderWidth: 2,
+              fontSize: isIPadFriendly ? '1rem' : '0.9375rem',
+              '&:focus-visible': {
+                outline: '3px solid #2196f3',
+                outlineOffset: '4px',
+              },
+            }}
             variant="outlined"
           >
             Avbryt
@@ -1665,13 +2466,28 @@ export const ScenerPanel: React.FC<ScenerPanelProps> = ({ onApplyPreset, onShowR
             disabled={!presetName.trim()}
             sx={{
               ...buttonStyle,
-              minWidth: 140,
+              minWidth: isIPadFriendly ? 180 : 140,
+              minHeight: isIPadFriendly ? 56 : 48,
               bgcolor: editingPreset ? '#ff5722' : createMode === 'current' ? '#4caf50' : '#2196f3',
               color: '#fff',
+              fontSize: isIPadFriendly ? '1rem' : '0.9375rem',
               '&:hover': { 
                 bgcolor: editingPreset ? '#ff7043' : createMode === 'current' ? '#66bb6a' : '#42a5f5',
+                transform: 'translateY(-2px)',
               },
-              '&:disabled': { bgcolor: '#333', color: '#666' },
+              '&:focus-visible': {
+                outline: '3px solid #fff',
+                outlineOffset: '4px',
+              },
+              '&:active': {
+                transform: 'translateY(0)',
+              },
+              '&:disabled': { 
+                bgcolor: '#333', 
+                color: '#666',
+                opacity: 0.5,
+              },
+              transition: 'all 0.2s ease',
             }}
             variant="contained"
           >

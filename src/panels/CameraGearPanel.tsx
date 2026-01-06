@@ -8,6 +8,7 @@ import {
   CardContent,
   Divider,
   useMediaQuery,
+  useTheme,
   Tabs,
   Tab,
   InputBase,
@@ -282,6 +283,12 @@ const LENS_BRANDS: CategoryInfo[] = [
 ];
 
 export function CameraGearPanel() {
+  const theme = useTheme();
+  const isTouchDevice = useMediaQuery('(pointer: coarse)');
+  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1024px)');
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isIPadFriendly = isTablet || isTouchDevice;
+
   const [activeTab, setActiveTab] = useState(0);
   const [cameraTypeFilter, setCameraTypeFilter] = useState('all');
   const [cameraBrandFilter, setCameraBrandFilter] = useState('all');
@@ -291,7 +298,6 @@ export function CameraGearPanel() {
   const [lensSearch, setLensSearch] = useState('');
   const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
   const [selectedLens, setSelectedLens] = useState<string | null>(null);
-  const isTouchDevice = useMediaQuery('(pointer: coarse)');
 
   const selectCamera = (camera: CameraBody) => {
     setSelectedCamera(camera.id);

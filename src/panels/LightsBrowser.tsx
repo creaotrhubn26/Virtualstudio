@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -13,6 +13,7 @@ import {
   Paper,
   useMediaQuery,
   InputBase,
+  Stack,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -23,6 +24,7 @@ import {
 } from '@mui/icons-material';
 import { useAppStore } from '../state/store';
 import { LIGHT_DATABASE, LightSpec } from '../data/lightFixtures';
+import { AtmosphereSettings } from '../core/models/sceneComposer';
 export type { LightSpec };
 export { LIGHT_DATABASE };
 
@@ -113,6 +115,7 @@ export function LightsBrowser() {
   const [selectedModifierCategory, setSelectedModifierCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [modifierSearchQuery, setModifierSearchQuery] = useState('');
+  const [activeAtmosphere, setActiveAtmosphere] = useState<AtmosphereSettings | null>(null);
 
   const filteredLights = useMemo(() => {
     return LIGHT_DATABASE.filter((light) => {
@@ -135,35 +138,35 @@ export function LightsBrowser() {
     });
   }, [selectedModifierCategory, modifierSearchQuery]);
 
-  const handleAddToScene = (light: LightSpec) => {
-    const nodeId = `light-${light.id}-${Date.now()}`;
-    
-    addNode({
-      id: nodeId,
-      type: 'light',
-      name: `${light.brand} ${light.model}`,
-      transform: {
-        position: [0, 2, 2],
-        rotation: [0, 0, 0],
-        scale: [1, 1, 1],
-      },
-      visible: true,
-      userData: {
-        brand: light.brand,
-        model: light.model,
-        lightType: light.type,
-        power: light.power,
-        powerUnit: light.powerUnit,
-        cct: light.cct,
-        cri: light.cri,
-        tlci: light.tlci,
-        lux1m: light.lux1m,
-        beamAngle: light.beamAngle,
-        guideNumber: light.guideNumber,
-        lumens: light.lumens,
-      },
-    });
+  // Listen to atmosphere changes
+  useEffect(() => {
+    const handleAtmosphere = (e: CustomEvent) => setActiveAtmosphere(e.detail);
+    window.addEventListener('ch-atmosphere-changed', handleAtmosphere as EventListener);
+    return () => window.removeEventListener('ch-atmosphere-changed', handleAtmosphere as EventListener);
+  }, []);
 
+  // Get recommended lights based on environment
+  const getRecommendedLights = useMemo(() => {
+    if (!activeAtmosphere) return [];
+    
+    // For Lovecraft environments: recommend low-intensity, warm-colored lights
+    if (activeAtmosphere.fogEnabled && activeAtmosphere.fogColor && activeAtmosphere.fogColor.includes('0a')) {
+      return LIGHT_DATABASE.filter(light => 
+        light.cct < 4000 || // Warm color
+        light.power < 200 || // Low power
+        light.type === 'led-panel' // Continuous light for atmosphere
+      ).slice(0, 3);
+    }
+    
+    return [];
+  }, [activeAtmosphere]);
+
+  const handleAddToScene = (light: LightSpec) => {
+    // Don't add a node to the store - let addLight in main.ts handle everything
+    // This ensures the light and 3D model are properly connected
+    const nodeId = `light-${light.id}-${Date.now()}`;
+
+    // Dispatch event to add light - main.ts will create both the light and 3D model
     window.dispatchEvent(new CustomEvent('ch-add-light', {
       detail: {
         id: nodeId,
@@ -239,6 +242,29 @@ export function LightsBrowser() {
   return (
     <Paper elevation={0} sx={{ p: 2, backgroundColor: 'transparent', color: '#fff' }}>
       {/* Header */}
+      {/* Atmosphere recommendations */}
+      {activeAtmosphere && getRecommendedLights.length > 0 && (
+        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
+          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
+            🌫️ Miljø-tilpassede anbefalinger
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+            Basert på aktivt miljø anbefaler vi disse lysene:
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            {getRecommendedLights.map(light => (
+              <Chip 
+                key={light.id}
+                label={`${light.brand} ${light.model}`}
+                size="small"
+                onClick={() => handleAddToScene(light)}
+                sx={{ cursor: 'pointer' }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
+
       <Box sx={{ 
         display: 'flex', 
         alignItems: 'center', 
@@ -246,7 +272,30 @@ export function LightsBrowser() {
         gap: 1.5,
         mb: 2,
       }}>
-        <Box sx={{ 
+        {/* Atmosphere recommendations */}
+      {activeAtmosphere && getRecommendedLights.length > 0 && (
+        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
+          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
+            🌫️ Miljø-tilpassede anbefalinger
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+            Basert på aktivt miljø anbefaler vi disse lysene:
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            {getRecommendedLights.map(light => (
+              <Chip 
+                key={light.id}
+                label={`${light.brand} ${light.model}`}
+                size="small"
+                onClick={() => handleAddToScene(light)}
+                sx={{ cursor: 'pointer' }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      <Box sx={{ 
           display: 'flex', 
           alignItems: 'center', 
           gap: 1.5,
@@ -289,7 +338,30 @@ export function LightsBrowser() {
             </Typography>
           </Box>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        {/* Atmosphere recommendations */}
+      {activeAtmosphere && getRecommendedLights.length > 0 && (
+        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
+          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
+            🌫️ Miljø-tilpassede anbefalinger
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+            Basert på aktivt miljø anbefaler vi disse lysene:
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            {getRecommendedLights.map(light => (
+              <Chip 
+                key={light.id}
+                label={`${light.brand} ${light.model}`}
+                size="small"
+                onClick={() => handleAddToScene(light)}
+                sx={{ cursor: 'pointer' }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      <Box sx={{ display: 'flex', gap: 1 }}>
           <Chip
             label={`${LIGHT_DATABASE.length} lys`}
             size="medium"
@@ -391,7 +463,30 @@ export function LightsBrowser() {
       {activeTab === 'lights' && (
         <>
           {/* Type category buttons with search */}
-          <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Atmosphere recommendations */}
+      {activeAtmosphere && getRecommendedLights.length > 0 && (
+        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
+          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
+            🌫️ Miljø-tilpassede anbefalinger
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+            Basert på aktivt miljø anbefaler vi disse lysene:
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            {getRecommendedLights.map(light => (
+              <Chip 
+                key={light.id}
+                label={`${light.brand} ${light.model}`}
+                size="small"
+                onClick={() => handleAddToScene(light)}
+                sx={{ cursor: 'pointer' }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
             {LIGHT_CATEGORIES.map((cat) => (
               <Button
                 key={cat.key}
@@ -430,7 +525,30 @@ export function LightsBrowser() {
                 {cat.label}
               </Button>
             ))}
-            <Box sx={{ 
+            {/* Atmosphere recommendations */}
+      {activeAtmosphere && getRecommendedLights.length > 0 && (
+        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
+          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
+            🌫️ Miljø-tilpassede anbefalinger
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+            Basert på aktivt miljø anbefaler vi disse lysene:
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            {getRecommendedLights.map(light => (
+              <Chip 
+                key={light.id}
+                label={`${light.brand} ${light.model}`}
+                size="small"
+                onClick={() => handleAddToScene(light)}
+                sx={{ cursor: 'pointer' }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      <Box sx={{ 
               display: 'flex', 
               alignItems: 'center', 
               bgcolor: '#2a2a2a', 
@@ -463,7 +581,30 @@ export function LightsBrowser() {
           <Typography variant="body2" sx={{ color: '#aaa', mb: 1.5, display: 'block', fontSize: 14, fontWeight: 600 }}>
             Merke
           </Typography>
-          <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          {/* Atmosphere recommendations */}
+      {activeAtmosphere && getRecommendedLights.length > 0 && (
+        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
+          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
+            🌫️ Miljø-tilpassede anbefalinger
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+            Basert på aktivt miljø anbefaler vi disse lysene:
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            {getRecommendedLights.map(light => (
+              <Chip 
+                key={light.id}
+                label={`${light.brand} ${light.model}`}
+                size="small"
+                onClick={() => handleAddToScene(light)}
+                sx={{ cursor: 'pointer' }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             {LIGHT_BRANDS.map((brand) => (
               <Button
                 key={brand.key}
@@ -506,8 +647,54 @@ export function LightsBrowser() {
           <Divider sx={{ my: 1.5, borderColor: '#333' }} />
 
           {/* Lights grid */}
-          <Box sx={{ mb: 2 }}>
-            <Box sx={{ 
+          {/* Atmosphere recommendations */}
+      {activeAtmosphere && getRecommendedLights.length > 0 && (
+        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
+          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
+            🌫️ Miljø-tilpassede anbefalinger
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+            Basert på aktivt miljø anbefaler vi disse lysene:
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            {getRecommendedLights.map(light => (
+              <Chip 
+                key={light.id}
+                label={`${light.brand} ${light.model}`}
+                size="small"
+                onClick={() => handleAddToScene(light)}
+                sx={{ cursor: 'pointer' }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      <Box sx={{ mb: 2 }}>
+            {/* Atmosphere recommendations */}
+      {activeAtmosphere && getRecommendedLights.length > 0 && (
+        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
+          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
+            🌫️ Miljø-tilpassede anbefalinger
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+            Basert på aktivt miljø anbefaler vi disse lysene:
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            {getRecommendedLights.map(light => (
+              <Chip 
+                key={light.id}
+                label={`${light.brand} ${light.model}`}
+                size="small"
+                onClick={() => handleAddToScene(light)}
+                sx={{ cursor: 'pointer' }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      <Box sx={{ 
               display: 'grid', 
               gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
               gap: 1.5,
@@ -584,7 +771,30 @@ export function LightsBrowser() {
       {activeTab === 'modifiers' && (
         <>
           {/* Modifier type category buttons with search */}
-          <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Atmosphere recommendations */}
+      {activeAtmosphere && getRecommendedLights.length > 0 && (
+        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
+          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
+            🌫️ Miljø-tilpassede anbefalinger
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+            Basert på aktivt miljø anbefaler vi disse lysene:
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            {getRecommendedLights.map(light => (
+              <Chip 
+                key={light.id}
+                label={`${light.brand} ${light.model}`}
+                size="small"
+                onClick={() => handleAddToScene(light)}
+                sx={{ cursor: 'pointer' }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
             {MODIFIER_CATEGORIES.map((cat) => (
               <Button
                 key={cat.key}
@@ -622,7 +832,30 @@ export function LightsBrowser() {
                 {cat.label}
               </Button>
             ))}
-            <Box sx={{ 
+            {/* Atmosphere recommendations */}
+      {activeAtmosphere && getRecommendedLights.length > 0 && (
+        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
+          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
+            🌫️ Miljø-tilpassede anbefalinger
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+            Basert på aktivt miljø anbefaler vi disse lysene:
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            {getRecommendedLights.map(light => (
+              <Chip 
+                key={light.id}
+                label={`${light.brand} ${light.model}`}
+                size="small"
+                onClick={() => handleAddToScene(light)}
+                sx={{ cursor: 'pointer' }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      <Box sx={{ 
               display: 'flex', 
               alignItems: 'center', 
               bgcolor: '#2a2a2a', 
@@ -654,8 +887,54 @@ export function LightsBrowser() {
           <Divider sx={{ my: 1.5, borderColor: '#333' }} />
 
           {/* Modifiers grid */}
-          <Box sx={{ mb: 2 }}>
-            <Box sx={{ 
+          {/* Atmosphere recommendations */}
+      {activeAtmosphere && getRecommendedLights.length > 0 && (
+        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
+          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
+            🌫️ Miljø-tilpassede anbefalinger
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+            Basert på aktivt miljø anbefaler vi disse lysene:
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            {getRecommendedLights.map(light => (
+              <Chip 
+                key={light.id}
+                label={`${light.brand} ${light.model}`}
+                size="small"
+                onClick={() => handleAddToScene(light)}
+                sx={{ cursor: 'pointer' }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      <Box sx={{ mb: 2 }}>
+            {/* Atmosphere recommendations */}
+      {activeAtmosphere && getRecommendedLights.length > 0 && (
+        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
+          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
+            🌫️ Miljø-tilpassede anbefalinger
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+            Basert på aktivt miljø anbefaler vi disse lysene:
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            {getRecommendedLights.map(light => (
+              <Chip 
+                key={light.id}
+                label={`${light.brand} ${light.model}`}
+                size="small"
+                onClick={() => handleAddToScene(light)}
+                sx={{ cursor: 'pointer' }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      <Box sx={{ 
               display: 'grid', 
               gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
               gap: 1.5,

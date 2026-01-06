@@ -3,19 +3,39 @@ import { AppBar, Toolbar, IconButton, Stack, Tooltip, Box, Typography, TextField
 import SkipPreviousIcon from '@mui/icons-material/SkipPrevious';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
-import { useActions, useNodes } from '@/state/selectors';
-import { colors, spacing } from '@/styles/designTokens';
-import { EnhancedTextField } from '@/ui/components/EnhancedTextField';
+
+// Design tokens
+const colors = {
+  background: { primary: '#1a1a1a', secondary: '#2a2a2a', elevated: '#333333', panel: '#252525', card: '#2d2d2d' },
+  text: { primary: '#ffffff', secondary: '#888888' },
+  accent: { primary: '#4a9eff' },
+  border: '#444444',
+  error: '#ff5252',
+};
+const spacing = { xs: 4, sm: 8, md: 16 };
+
+// Mock store hook
+const useStore = <T,>(selector: (state: { nodes: { type: string; id: string; camera?: Record<string, number> }[]; addNode: () => void; updateNode: (id: string, updates: Record<string, unknown>) => void }) => T): T => {
+  const mockState = {
+    nodes: [] as { type: string; id: string; camera?: Record<string, number> }[],
+    addNode: () => {},
+    updateNode: (_id: string, _updates: Record<string, unknown>) => {},
+  };
+  return selector(mockState);
+};
 
 export default function Topbar() {
-  const { addNode, updateNode } = useActions();
-  const nodes = useNodes();
+  const { nodes, addNode, updateNode } = useStore((state) => ({
+    nodes: state.nodes,
+    addNode: state.addNode,
+    updateNode: state.updateNode,
+  }));
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
 
   // Find the first camera node - use ref to track ID and prevent unnecessary re-finds
   const cameraNodeRef = React.useRef<string | undefined>();
   const cameraNode = React.useMemo(() => {
-    const cam = nodes.find((n) => n.type === 'camera');
+    const cam = nodes.find((n: { type: string; id: string }) => n.type === 'camera');
     if (cam?.id !== cameraNodeRef.current) {
       cameraNodeRef.current = cam?.id;
     }
@@ -189,10 +209,10 @@ export default function Topbar() {
           
           {/* Camera Settings */}
           <Stack direction="row" spacing={1} alignItems="center">
-            <EnhancedTextField
+            <TextField
               size="small"
               value={focalLength}
-              onChange={(e) => {
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 const val = parseFloat(e.target.value) || 50;
                 if (val !== focalLength) {
                   handleCameraChange('focalLength', val);
@@ -200,18 +220,18 @@ export default function Topbar() {
               }}
               sx={{
                 width: 50,
-                '& .MuiInputBase-root': { 
-                  height: 28, 
+                '& .MuiInputBase-root': {
+                  height: 28,
                   fontSize: 12
                 },
                 '& input': { py: 0.5, px: 1 }
               }}
               inputProps={{ min: 14, max: 200, step: 1 }}
             />
-            <EnhancedTextField
+            <TextField
               size="small"
               value={aperture}
-              onChange={(e) => {
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 const val = parseFloat(e.target.value) || 2.8;
                 if (val !== aperture) {
                   handleCameraChange('aperture', val);
@@ -219,18 +239,18 @@ export default function Topbar() {
               }}
               sx={{
                 width: 50,
-                '& .MuiInputBase-root': { 
-                  height: 28, 
+                '& .MuiInputBase-root': {
+                  height: 28,
                   fontSize: 12
                 },
                 '& input': { py: 0.5, px: 1 }
               }}
               inputProps={{ min: 1.4, max: 22, step: 0.1 }}
             />
-            <EnhancedTextField
+            <TextField
               size="small"
               value={`1/${Math.round(1/shutter)}`}
-              onChange={(e) => {
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 const val = parseFloat(e.target.value) || 125;
                 if (val !== 1/shutter) {
                   handleCameraChange('shutter', 1/val);
@@ -238,17 +258,17 @@ export default function Topbar() {
               }}
               sx={{
                 width: 60,
-                '& .MuiInputBase-root': { 
-                  height: 28, 
+                '& .MuiInputBase-root': {
+                  height: 28,
                   fontSize: 12
                 },
                 '& input': { py: 0.5, px: 1 }
               }}
             />
-            <EnhancedTextField
+            <TextField
               size="small"
               value={iso}
-              onChange={(e) => {
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 const val = parseInt(e.target.value) || 100;
                 if (val !== iso) {
                   handleCameraChange('iso', val);
@@ -256,21 +276,21 @@ export default function Topbar() {
               }}
               sx={{
                 width: 50,
-                '& .MuiInputBase-root': { 
-                  height: 28, 
+                '& .MuiInputBase-root': {
+                  height: 28,
                   fontSize: 12
                 },
                 '& input': { py: 0.5, px: 1 }
               }}
               inputProps={{ min: 100, max: 25600, step: 100 }}
             />
-            <EnhancedTextField
+            <TextField
               size="small"
               defaultValue="Cam A S"
               sx={{
                 width: 80,
-                '& .MuiInputBase-root': { 
-                  height: 28, 
+                '& .MuiInputBase-root': {
+                  height: 28,
                   fontSize: 12
                 },
                 '& input': { py: 0.5, px: 1 }
@@ -285,7 +305,7 @@ export default function Topbar() {
             sx={{
               ml: 'auto',
               textTransform: 'none',
-              borderColor: colors.border.default,
+              borderColor: colors.border,
               color: colors.text.primary,
               transition: 'all 0.2s ease',
               '&:hover': {

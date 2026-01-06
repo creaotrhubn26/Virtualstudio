@@ -585,7 +585,7 @@ export function EquipmentHierarchyPanel({
             const stats = equipmentGroupingService.getStatistics();
             log.debug('Grouping Statistics: ', stats);
             alert(`Total: ${stats.totalNodes} items in ${stats.totalGroups} groups\n` +
-              , `Grouped: ${stats.groupedNodes}, Linked: ${stats.linkedNodes}, Orphaned: ${stats.orphanedNodes}`);
+              `Grouped: ${stats.groupedNodes}, Linked: ${stats.linkedNodes}, Orphaned: ${stats.orphanedNodes}`);
             setAdvancedMenuAnchor(null);
           }}>
             <ListItemIcon><Visibility fontSize="small" /></ListItemIcon>

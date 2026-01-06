@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { logger } from '../../core/services/logger';
+import { useLoadingStore } from '../../state/loadingStore';
+import * as BABYLON from '@babylonjs/core';
 
-const log = logger.module('HDRILoader, ');
+const log = logger.module('HDRILoader');
 import {
   Box,
   Paper,
@@ -48,18 +50,17 @@ import {
   StarHalf,
 } from '@mui/icons-material';
 import LinearProgress from '@mui/material/LinearProgress';
-import * as THREE from 'three';
 import { useVirtualStudio } from '../../../VirtualStudioContext';
-import { getThreeScene } from '../../core/services/viewports';
 import { hdriCacheService, preCacheManager, PRE_CACHE_HDRIS, PreCacheProgress } from '../../core/services/hdriCacheService';
 
-// Dynamic import for RGBELoader
-let RGBELoader: unknown = null;
-try {
-  RGBELoader = require('three/examples/jsm/loaders/RGBELoader').RGBELoader;
-} catch {
-  log.warn('RGBELoader not available, ');
-}
+// Helper to get Babylon.js scene from window.virtualStudio
+const getBabylonScene = (): BABYLON.Scene | null => {
+  const studio = (window as any).virtualStudio;
+  if (studio && studio.scene) {
+    return studio.scene;
+  }
+  return null;
+};
 
 interface HDRIPreset {
   id: string;
@@ -72,6 +73,17 @@ interface HDRIPreset {
   sunPosition?: { x: number; y: number; z: number };
   sunIntensity?: number;
   description: string;
+  isProgrammatic?: boolean; // Flag for programmatiske miljøer
+  studioElements?: Array<{
+    type: string;
+    position: [number, number, number];
+    options?: Record<string, unknown>;
+  }>;
+  environmentSettings?: {
+    clearColor: [number, number, number, number];
+    ambientIntensity: number;
+    groundColor: [number, number, number];
+  };
 }
 
 // 50+ HDRI Presets (using public HDRI sources - Poly Haven, all CC0 licensed)
@@ -829,6 +841,36 @@ const HDRI_PRESETS: HDRIPreset[] = [
     rotation: 0,
     description: 'Standard classroom interior (BlenderKit)',
   },
+  // ============================================================================
+  // MODERNE VIRTUAL STUDIO (Programmatisk)
+  // ============================================================================
+  {
+    id: 'modern-virtual-studio',
+    name: 'Moderne Virtual Studio',
+    category: 'studio',
+    url: '', // Ingen HDRI-fil, kun programmatisk miljø
+    thumbnail: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 200 120\'%3E%3Crect fill=\'%23f0f0f0\' width=\'200\' height=\'120\'/%3E%3Crect fill=\'%2300cc33\' x=\'120\' y=\'20\' width=\'60\' height=\'80\'/%3E%3Crect fill=\'%23ffffff\' x=\'20\' y=\'60\' width=\'80\' height=\'40\' rx=\'5\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' fill=\'%23333\' font-size=\'14\'%3EModerne Studio%3C/text%3E%3C/svg%3E',
+    intensity: 1.2,
+    rotation: 0,
+    description: 'Komplett moderne virtual studio med grønn skjerm, buet desk, lysstriper og geometriske elementer',
+    isProgrammatic: true,
+    studioElements: [
+      { type: 'modern-studio-desk', position: [-4, 0, 0] },
+      { type: 'green-screen', position: [5, 2, -3] },
+      { type: 'light-strip', position: [-6, 0.35, -1], options: { length: 1.5, intensity: 0.5 } },
+      { type: 'light-strip', position: [-4, 0.35, 0], options: { length: 1.5, intensity: 0.5 } },
+      { type: 'light-strip', position: [-2, 0.35, 0.5], options: { length: 1.5, intensity: 0.5 } },
+      { type: 'geometric-cube', position: [-10, 1, -8], options: { size: 1 } },
+      { type: 'geometric-cube', position: [-8, 1.5, -7], options: { size: 1.2 } },
+      { type: 'geometric-cube', position: [8, 0.8, -9], options: { size: 0.8 } },
+      { type: 'geometric-cube', position: [10, 1.2, -8], options: { size: 1.1 } },
+    ],
+    environmentSettings: {
+      clearColor: [0.95, 0.95, 0.97, 1],
+      ambientIntensity: 1.2,
+      groundColor: [0.95, 0.95, 0.97],
+    },
+  },
   {
     id: 'blenderkit_green_step_school',
     name: 'School Exterior',
@@ -843,14 +885,14 @@ const HDRI_PRESETS: HDRIPreset[] = [
 
 export const HDRIEnvironmentLoader: React.FC = () => {
   const { addToast } = useVirtualStudio();
-  const [scene, setScene] = useState<THREE.Scene | null>(null);
+  const [scene, setScene] = useState<BABYLON.Scene | null>(null);
 
-  // Connect to the Three.js scene from the viewport
+  // Connect to the Babylon.js scene from window.virtualStudio
   useEffect(() => {
     const checkScene = () => {
-      const threeScene = getThreeScene();
-      if (threeScene) {
-        setScene(threeScene);
+      const babylonScene = getBabylonScene();
+      if (babylonScene) {
+        setScene(babylonScene);
         return true;
       }
       return false;
@@ -1043,41 +1085,118 @@ export const HDRIEnvironmentLoader: React.FC = () => {
       ? HDRI_PRESETS
       : HDRI_PRESETS.filter((hdri) => hdri.category === selectedCategory);
 
+  // Load programmatic environment (moderne studio)
+  const loadProgrammaticEnvironment = async (preset: HDRIPreset) => {
+    try {
+      const programmaticPreset = preset as any;
+      
+      // Sett miljø-innstillinger
+      if (programmaticPreset.environmentSettings) {
+        const settings = programmaticPreset.environmentSettings;
+        window.dispatchEvent(new CustomEvent('ch-set-studio-environment', {
+          detail: {
+            clearColor: settings.clearColor,
+            ambientIntensity: settings.ambientIntensity,
+            groundColor: settings.groundColor,
+          }
+        }));
+      }
+      
+      // Last inn alle studio-elementer
+      if (programmaticPreset.studioElements) {
+        // Vent litt for å sikre at miljø-innstillingene er satt først
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        programmaticPreset.studioElements.forEach((element: any) => {
+          const assetId = `modern-${element.type}`;
+          const assetName = element.type === 'modern-studio-desk' ? 'Buet Desk' :
+                          element.type === 'green-screen' ? 'Grønn Skjerm' :
+                          element.type === 'light-strip' ? 'Lysstripe' :
+                          element.type === 'geometric-cube' ? 'Geometrisk Kube' : element.type;
+          
+          window.dispatchEvent(new CustomEvent('ch-add-asset', {
+            detail: {
+              asset: {
+                id: assetId,
+                title: assetName,
+                type: 'model',
+                data: {
+                  metadata: {
+                    type: element.type,
+                    ...(element.options || {}),
+                  }
+                }
+              },
+              position: element.position,
+            }
+          }));
+        });
+      }
+      
+      addToast({
+        message: `Moderne Virtual Studio lastet inn`,
+        type: 'success',
+        duration: 2500,
+      });
+    } catch (error) {
+      log.error('Failed to load programmatic environment:', error);
+      addToast({
+        message: `Kunne ikke laste moderne studio`,
+        type: 'error',
+        duration: 3000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Load HDRI environment with caching
   const loadHDRI = async (preset: HDRIPreset) => {
     if (!scene) return;
+
+    const { startLoading, updateProgress, stopLoading } = useLoadingStore.getState();
+    startLoading('loading-hdri', `Laster HDRI: ${preset.name}...`, 0);
 
     setLoading(true);
     setSelectedHDRI(preset);
     setIntensity(preset.intensity);
     setRotation(preset.rotation);
 
+    // Sjekk om det er et programmatisk miljø
+    if (preset.isProgrammatic) {
+      return loadProgrammaticEnvironment(preset);
+    }
+
     try {
       let hdriUrl = preset.url;
       let hdriSource: 'polyhaven' | 'blenderkit' | 'custom' = 'polyhaven';
       let fromCache = false;
-      
+
+      updateProgress(10, 'Sjekker cache...');
+
       // Handle BlenderKit URLs
       if (preset.url.startsWith('blenderkit://')) {
         hdriSource = 'blenderkit';
-        const assetId = preset.url.replace('blenderkit://', ', ');
-        
+        const assetId = preset.url.replace('blenderkit://', '');
+
         // Fetch download URL from BlenderKit API
         try {
+          updateProgress(20, 'Henter BlenderKit URL...');
           const response = await fetch(`https://www.blenderkit.com/api/v1/assets/${assetId}/download/`, {
             method: 'GET',
             headers: {
-              'Authorization':'Bearer 814e329085f612e96211d2156f993ef6a86f3cf6','Content-Type' : 'application/json',
+              'Authorization': 'Bearer 814e329085f612e96211d2156f993ef6a86f3cf6',
+              'Content-Type': 'application/json',
             },
           });
-          
+
           if (!response.ok) {
             throw new Error(`BlenderKit API error: ${response.status}`);
           }
-          
+
           const data = await response.json();
           hdriUrl = data.url || data.download_url;
-          
+
           if (!hdriUrl) {
             throw new Error('No download URL in BlenderKit response');
           }
@@ -1093,103 +1212,193 @@ export const HDRIEnvironmentLoader: React.FC = () => {
           hdriSource = 'polyhaven';
         }
       }
-      
-      const loader = new RGBELoader();
-      let texture: THREE.DataTexture;
-      
+
       // Check cache first
       const cachedData = await hdriCacheService.get(preset.id);
-      
+      let textureUrl: string;
+
       if (cachedData) {
         // Load from cache
         fromCache = true;
+        updateProgress(50, 'Laster fra cache...');
         const blob = new Blob([cachedData], { type: 'application/octet-stream' });
-        const cacheUrl = URL.createObjectURL(blob);
-        
-        try {
-          texture = await loader.loadAsync(cacheUrl);
-        } finally {
-          URL.revokeObjectURL(cacheUrl);
-        }
+        textureUrl = URL.createObjectURL(blob);
       } else {
         // Fetch from network
+        updateProgress(30, 'Laster ned HDRI...');
         const response = await fetch(hdriUrl);
         if (!response.ok) {
           throw new Error(`Failed to fetch HDRI: ${response.status}`);
         }
-        
+
+        updateProgress(50, 'Behandler data...');
         const arrayBuffer = await response.arrayBuffer();
-        
+
         // Cache the downloaded HDRI
+        updateProgress(60, 'Lagrer i cache...');
         await hdriCacheService.set(preset.id, hdriUrl, arrayBuffer, hdriSource);
         await updateCacheStats();
-        
-        // Load from the fetched data
+
+        // Create blob URL for Babylon.js
+        updateProgress(70, 'Konverterer tekstur...');
         const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
-        const blobUrl = URL.createObjectURL(blob);
-        
-        try {
-          texture = await loader.loadAsync(blobUrl);
-        } finally {
-          URL.revokeObjectURL(blobUrl);
+        textureUrl = URL.createObjectURL(blob);
+      }
+
+      updateProgress(85, 'Bruker miljø...');
+
+      // Safety timeout to prevent stuck loading
+      let loadingComplete = false;
+      const safetyTimeout = setTimeout(() => {
+        if (!loadingComplete) {
+          log.warn('HDRI loading timeout - forcing completion');
+          URL.revokeObjectURL(textureUrl);
+          setLoading(false);
+          stopLoading();
+          addToast({
+            message: `HDRI lasting timed out: ${preset.name}`,
+            type: 'warning',
+            duration: 3000,
+          });
         }
-      }
+      }, 30000); // 30 second timeout for HDRI loading
 
-      texture.mapping = THREE.EquirectangularReflectionMapping;
+      const completeLoading = (success: boolean, fromFallback = false) => {
+        if (loadingComplete) return;
+        loadingComplete = true;
+        clearTimeout(safetyTimeout);
 
-      if (showBackground) {
-        scene.background = texture;
-      }
-      scene.environment = texture;
+        updateProgress(100, 'Ferdig!');
+        if (success) {
+          addToast({
+            message: `HDRI lastet: ${preset.name}${fromCache ? ' (cached)' : ''}${fromFallback ? ' (fallback)' : ''}`,
+            type: 'success',
+            duration: 2500,
+          });
+          window.dispatchEvent(new CustomEvent('vs-load-hdri', {
+            detail: { id: preset.id, name: preset.name, intensity, rotation }
+          }));
+        }
 
-      // Apply intensity
-      if (scene.environment) {
-        scene.environment.intensity = intensity;
-      }
+        setLoading(false);
+        setTimeout(() => stopLoading(), 300);
+      };
 
-      // Add sun light if enabled and preset has sun position
-      if (enableSun && preset.sunPosition) {
-        addSunLight(preset.sunPosition, preset.sunIntensity || 1.5);
-      }
+      // Load HDR texture using Babylon.js HDRCubeTexture
+      const hdrTexture = new BABYLON.HDRCubeTexture(
+        textureUrl,
+        scene,
+        512, // resolution
+        false, // noMipmap
+        true, // generateHarmonics
+        false, // gammaSpace
+        false, // reserved
+        () => {
+          // On load success
+          updateProgress(95, 'Anvender miljøtekstur...');
 
-      addToast({
-        message: `HDRI, loaded: ${preset.name}${fromCache ? ' (cached)' : ','}`,
-        type: 'success',
-        duration: 2500,
-      });
+          scene.environmentTexture = hdrTexture;
+          scene.environmentIntensity = intensity;
+
+          if (showBackground) {
+            scene.createDefaultSkybox(hdrTexture, true, 1000, 0.3, false);
+          }
+
+          if (rotation !== 0) {
+            hdrTexture.rotationY = rotation * Math.PI / 180;
+          }
+
+          if (enableSun && preset.sunPosition) {
+            addSunLight(preset.sunPosition, preset.sunIntensity || 1.5);
+          }
+
+          URL.revokeObjectURL(textureUrl);
+          completeLoading(true);
+        },
+        (errorMessage) => {
+          // On load error - try as equirectangular texture instead
+          log.warn('HDRCubeTexture failed, trying EquiRectangularCubeTexture:', errorMessage);
+
+          try {
+            const equiTexture = new BABYLON.EquiRectangularCubeTexture(
+              textureUrl,
+              scene,
+              512
+            );
+
+            equiTexture.onLoadObservable.addOnce(() => {
+              scene.environmentTexture = equiTexture;
+              scene.environmentIntensity = intensity;
+
+              if (showBackground) {
+                scene.createDefaultSkybox(equiTexture, true, 1000, 0.3, false);
+              }
+
+              if (rotation !== 0) {
+                equiTexture.rotationY = rotation * Math.PI / 180;
+              }
+
+              if (enableSun && preset.sunPosition) {
+                addSunLight(preset.sunPosition, preset.sunIntensity || 1.5);
+              }
+
+              URL.revokeObjectURL(textureUrl);
+              completeLoading(true, true);
+            });
+          } catch (fallbackError) {
+            log.error('Fallback texture loading failed:', fallbackError);
+            URL.revokeObjectURL(textureUrl);
+            completeLoading(false);
+          }
+        }
+      );
+
     } catch (error) {
       log.error('Failed to load HDRI:', error);
       addToast({
-        message: `Failed to load HDRI: ${preset.name}`,
+        message: `Kunne ikke laste HDRI: ${preset.name}`,
         type: 'error',
         duration: 3000,
       });
-    } finally {
       setLoading(false);
+      setTimeout(() => stopLoading(), 300);
     }
   };
 
   // Add directional sun light - syncs with store for undo/redo support
-  const addSunLight = (position: { x: number; y: number; z: number }, intensity: number) => {
+  const addSunLight = (position: { x: number; y: number; z: number }, lightIntensity: number) => {
     if (!scene) return;
 
-    // Remove existing sun light from Three.js scene
-    const existingSun = scene.getObjectByName('sun_light');
+    // Remove existing sun light from Babylon.js scene
+    const existingSun = scene.getLightByName('sun_light');
     if (existingSun) {
-      scene.remove(existingSun);
+      existingSun.dispose();
     }
 
-    // Create sun light
-    const sunLight = new THREE.DirectionalLight(0xffffff, intensity);
-    sunLight.name = 'sun_light';
-    sunLight.position.set(position.x, position.y, position.z);
-    sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 2048;
-    sunLight.shadow.mapSize.height = 2048;
-    sunLight.shadow.camera.near = 0.5;
-    sunLight.shadow.camera.far = 50;
+    // Create directional sun light using Babylon.js
+    const sunLight = new BABYLON.DirectionalLight(
+      'sun_light',
+      new BABYLON.Vector3(-position.x, -position.y, -position.z).normalize(),
+      scene
+    );
+    sunLight.intensity = lightIntensity;
+    sunLight.diffuse = new BABYLON.Color3(1, 0.98, 0.92); // Warm sunlight
+    sunLight.specular = new BABYLON.Color3(1, 1, 1);
 
-    scene.add(sunLight);
+    // Position the light
+    sunLight.position = new BABYLON.Vector3(position.x * 10, position.y * 10, position.z * 10);
+
+    // Enable shadows
+    const shadowGenerator = new BABYLON.ShadowGenerator(2048, sunLight);
+    shadowGenerator.useBlurExponentialShadowMap = true;
+    shadowGenerator.blurKernel = 32;
+
+    // Add all meshes to shadow casters
+    scene.meshes.forEach(mesh => {
+      if (mesh.name !== 'ground' && mesh.name !== 'skybox') {
+        shadowGenerator.addShadowCaster(mesh);
+      }
+    });
 
     // Sync to store for state management (undo/redo, serialization)
     // Dispatch custom event so VirtualStudio can update its state
@@ -1197,7 +1406,7 @@ export const HDRIEnvironmentLoader: React.FC = () => {
       new CustomEvent('vs-sun-light-update', {
         detail: {
           position: [position.x, position.y, position.z],
-          intensity,
+          intensity: lightIntensity,
           enabled: enableSun,
         },
       })
@@ -1457,7 +1666,7 @@ export const HDRIEnvironmentLoader: React.FC = () => {
                         backgroundColor: '#ff6b35',
                         color: '#fff',
                         fontSize: '0.6rem',
-                        height: 18'& .MuiChip-label': { px: 0.5 }}}
+                        height: 18, '& .MuiChip-label': { px: 0.5 }}}
                     />
                   )}
                   <CardMedia 

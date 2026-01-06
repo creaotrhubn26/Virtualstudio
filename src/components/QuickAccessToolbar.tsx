@@ -112,7 +112,7 @@ interface ToolButtonProps {
 }
 
 function ToolButton({ icon, label, shortcut, onClick, active, disabled, badge }: ToolButtonProps) {
-  const content = (
+  const button = (
     <IconButton
       onClick={onClick}
       disabled={disabled}
@@ -131,6 +131,8 @@ function ToolButton({ icon, label, shortcut, onClick, active, disabled, badge }:
       )}
     </IconButton>
   );
+
+  const content = disabled ? <span>{button}</span> : button;
 
   return (
     <Tooltip
@@ -428,7 +430,7 @@ export function MiniToolbar({
   onTransformModeChange,
   onDelete,
   onDuplicate,
-}: Pick<QuickAccessToolbarProps'transformMode' | 'onTransformModeChange' | 'onDelete' | 'onDuplicate'>) {
+}: Pick<QuickAccessToolbarProps, 'transformMode' | 'onTransformModeChange' | 'onDelete' | 'onDuplicate'>) {
   const selection = useSelection('mini-toolbar');
 
   return (

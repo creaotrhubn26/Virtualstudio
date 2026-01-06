@@ -1,0 +1,26 @@
+#!/bin/bash
+# psql wrapper script - redirects to Python wrapper
+
+# Default connection string (can be overridden)
+CONN_STRING="${DATABASE_URL:-}"
+
+# If connection string is provided as first argument, use it
+if [ -n "$1" ] && [[ "$1" == postgresql://* ]]; then
+    CONN_STRING="$1"
+    shift
+fi
+
+# Run the Python wrapper
+python3 "$(dirname "$0")/psql_wrapper.py" "$CONN_STRING" "$@"
+
+
+
+
+
+
+
+
+
+
+
+

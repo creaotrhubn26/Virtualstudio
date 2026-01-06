@@ -190,9 +190,9 @@ const StyledCard = styled(Card, {
   ...($hasApproval && {
     animation: `${approvalPulse} 0.6s ease-out`,
   }),
-  
+
   // Hover effect
-  , '&:hover': {
+  '&:hover': {
     transform: 'translateY(-4px)',
     boxShadow: '0 12px 24px rgba(0,0,0,0.3)',
     borderColor: 'rgba(255,255,255,0.2)',

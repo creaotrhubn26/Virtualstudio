@@ -58,7 +58,7 @@ export const AdminPatternModeration: React.FC = () => {
     setLoading(true);
     try {
       const response = await apiRequest(
-        , '/api/virtual-studio/custom-patterns/admin/pending'
+        '/api/virtual-studio/custom-patterns/admin/pending'
       ) as { success: boolean; patterns: Pattern[] };
 
       if (response.success) {

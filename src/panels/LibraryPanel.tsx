@@ -1,7 +1,10 @@
 import * as React from 'react';
-import { Box, Tabs, Tab, Stack, TextField, InputAdornment, Grid, Typography, Button, Tooltip } from '@mui/material';
+import { Box, Stack, TextField, InputAdornment, Grid, Typography, Button, Tooltip, useMediaQuery, useTheme } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import ViewInArIcon from '@mui/icons-material/ViewInAr';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import AccessibilityNewIcon from '@mui/icons-material/AccessibilityNew';
 import {
   listMergedLibrary,
   searchMergedLibrary,
@@ -9,8 +12,8 @@ import {
   type LibraryAsset,
 } from '@/core/services/library';
 import { saveUserAsset } from '@/core/services/userLibrary';
-// Static import for Hyper3D script
-import { scanAndAddAllModels } from '../../scripts/scanAndAddHyper3DModels';
+import Rodin3DGeneratorDialog from '@/components/Rodin3DGeneratorDialog';
+import { scanAndAddAllModels } from '@/scripts/scanAndAddHyper3DModels';
 
 function useLibrary(type: AssetType) {
   const [q, setQ] = React.useState('');
@@ -28,7 +31,7 @@ function useLibrary(type: AssetType) {
   return { q, setQ, items, refresh };
 }
 
-function Card({ a }: { a: LibraryAsset }) {
+function Card({ a, isTablet = false }: { a: LibraryAsset; isTablet?: boolean }) {
   const [open, setOpen] = React.useState(false);
   const isUser = a.id.startsWith('user_,');
   const onMenu = (e: React.MouseEvent) => {
@@ -43,6 +46,15 @@ function Card({ a }: { a: LibraryAsset }) {
   const onDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('application/json', JSON.stringify({ asset: a }));
   };
+  
+  // iPad-friendly sizes
+  const cardHeight = isTablet ? 180 : 120;
+  const menuButtonSize = isTablet ? 44 : 20;
+  const menuButtonFontSize = isTablet ? 20 : 12;
+  const titleFontSize = isTablet ? '1rem' : 12;
+  const typeFontSize = isTablet ? '0.875rem' : 10;
+  const padding = isTablet ? 1.5 : 1;
+  
   return (
     <Box
       onDoubleClick={onDoubleClick}
@@ -50,45 +62,65 @@ function Card({ a }: { a: LibraryAsset }) {
       onDragStart={onDragStart}
       sx={{
         cursor: 'pointer',
-        border: '1px solid #2a2a2a',
-        borderRadius: 1.5,
+        border: '2px solid #2a2a2a',
+        borderRadius: 2,
         overflow: 'hidden',
         bgcolor: '#2a2a2a',
         transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        position: 'relative',
         '&:hover': {
           borderColor: '#6a6a6a',
           bgcolor: '#3a3a3a',
-          transform: 'translateY(-3px) scale(1.02)',
+          transform: isTablet ? 'translateY(-2px) scale(1.01)' : 'translateY(-3px) scale(1.02)',
           boxShadow: '0 6px 16px rgba(0,0,0,0.5)',
           zIndex: 1
         },
         '&:active': {
-          transform: 'translateY(-1px) scale(0.98)',
+          transform: 'translateY(0) scale(0.99)',
           boxShadow: '0 3px 8px rgba(0,0,0,0.4)'
+        },
+        // Better touch feedback for iPad
+        '@media (hover: none) and (pointer: coarse)': {
+          '&:active': {
+            transform: 'scale(0.97)',
+            bgcolor: '#4a4a4a',
+          }
         }
       }}
     >
       <img
         src={a.thumbUrl || '/library/generic.png'}
         alt={a.title}
-        style={{ width: '100%', height: 120, objectFit: 'cover', display: 'block' }}
+        style={{ width: '100%', height: cardHeight, objectFit: 'cover', display: 'block' }}
       />
       {isUser ? (
         <Box
           onClick={onMenu}
           sx={{
             position: 'absolute',
-            right: 6,
-            top: 6,
-            width: 20,
-            height: 20,
+            right: isTablet ? 8 : 6,
+            top: isTablet ? 8 : 6,
+            width: menuButtonSize,
+            height: menuButtonSize,
+            minWidth: menuButtonSize,
+            minHeight: menuButtonSize,
             borderRadius: '50%',
-            bgcolor: 'rgba(0,0,0,0.5)',
+            bgcolor: 'rgba(0,0,0,0.7)',
             color: '#fff',
             display: 'grid',
             placeItems: 'center',
-            fontSize: 12,
-            cursor: 'pointer'}}
+            fontSize: menuButtonFontSize,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              bgcolor: 'rgba(0,0,0,0.9)',
+              transform: 'scale(1.1)'
+            },
+            '&:active': {
+              transform: 'scale(0.95)',
+              bgcolor: 'rgba(0,0,0,1)'
+            }
+          }}
         >
           ⋯
         </Box>
@@ -97,12 +129,15 @@ function Card({ a }: { a: LibraryAsset }) {
         <Box
           sx={{
             position: 'absolute',
-            right: 6,
-            top: 30,
+            right: isTablet ? 8 : 6,
+            top: isTablet ? 56 : 30,
             bgcolor: '#fff',
-            border: '1px solid #e2e8f0',
-            borderRadius: 1,
-            overflow: 'hidden'}}
+            border: '2px solid #e2e8f0',
+            borderRadius: 2,
+            overflow: 'hidden',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            zIndex: 10
+          }}
         >
           <Box
             component="button"
@@ -113,14 +148,25 @@ function Card({ a }: { a: LibraryAsset }) {
               );
               setOpen(false);
             }}
-            style={{
+            sx={{
               display: 'block',
-              padding: 6,
-              width: 120,
+              padding: isTablet ? 2 : 1.5,
+              minHeight: isTablet ? 52 : 40,
+              width: isTablet ? 160 : 120,
               background: '#fff',
               border: 0,
               textAlign: 'left',
-              cursor: 'pointer'}}
+              cursor: 'pointer',
+              fontSize: isTablet ? '1rem' : '0.875rem',
+              fontWeight: 500,
+              transition: 'background 0.2s ease',
+              '&:hover': {
+                background: '#f5f5f5'
+              },
+              '&:active': {
+                background: '#e5e5e5'
+              }
+            }}
           >
             Rename
           </Box>
@@ -132,25 +178,36 @@ function Card({ a }: { a: LibraryAsset }) {
               );
               setOpen(false);
             }}
-            style={{
+            sx={{
               display: 'block',
-              padding: 6,
-              width: 120,
+              padding: isTablet ? 2 : 1.5,
+              minHeight: isTablet ? 52 : 40,
+              width: isTablet ? 160 : 120,
               background: '#fff',
               border: 0,
               textAlign: 'left',
               cursor: 'pointer',
-              color: '#ef4444'}}
+              color: '#ef4444',
+              fontSize: isTablet ? '1rem' : '0.875rem',
+              fontWeight: 500,
+              transition: 'background 0.2s ease',
+              '&:hover': {
+                background: '#fee2e2'
+              },
+              '&:active': {
+                background: '#fecaca'
+              }
+            }}
           >
             Delete
           </Box>
         </Box>
       ) : null}
-      <Box sx={{ p: 1, bgcolor: '#2a2a2a' }}>
-        <Typography fontWeight={600} variant="body2" sx={{ color: '#ffffff', fontSize: 12 }}>
+      <Box sx={{ p: padding, bgcolor: '#2a2a2a' }}>
+        <Typography fontWeight={600} variant="body2" sx={{ color: '#ffffff', fontSize: titleFontSize, lineHeight: 1.4 }}>
           {a.title}
         </Typography>
-        <Typography variant="caption" sx={{ color: '#888888', fontSize: 10 }}>
+        <Typography variant="caption" sx={{ color: '#888888', fontSize: typeFontSize, lineHeight: 1.5 }}>
           {a.type}
         </Typography>
       </Box>
@@ -159,9 +216,29 @@ function Card({ a }: { a: LibraryAsset }) {
 }
 
 export default function LibraryPanel() {
-  const [tab, setTab] = React.useState<AssetType>('light');
+  const theme = useTheme();
+  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1024px)');
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTouch = useMediaQuery('(pointer: coarse)');
+  
+  // Use tablet/mobile detection for iPad-friendly sizing
+  const isIPadFriendly = isTablet || isTouch;
+  
+  const [tab, setTab] = React.useState<AssetType>('model');
   const { q, setQ, items, refresh } = useLibrary(tab);
   const [scanning, setScanning] = React.useState(false);
+  const [generateDialogOpen, setGenerateDialogOpen] = React.useState(false);
+  
+  // Responsive values for iPad
+  const buttonHeight = isIPadFriendly ? 52 : 32;
+  const buttonFontSize = isIPadFriendly ? '1rem' : 11;
+  const tabHeight = isIPadFriendly ? 56 : 48;
+  const tabFontSize = isIPadFriendly ? '1rem' : 12;
+  const inputHeight = isIPadFriendly ? 52 : 40;
+  const inputFontSize = isIPadFriendly ? '1rem' : 14;
+  const padding = isIPadFriendly ? 2 : 1;
+  const spacing = isIPadFriendly ? 2 : 1;
+  const gridColumns = isMobile ? 2 : (isTablet ? 3 : 2);
 
   const fileRef = React.useRef<HTMLInputElement | null>(null);
   const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,10 +246,8 @@ export default function LibraryPanel() {
     if (!f) return;
     const reader = new FileReader();
     reader.onload = async () => {
-      const id = 'user_' + Math.random().toString(36).slice(2, 8);
-        const title = f.name.replace(/\.[^/.]+$/, '');
+      const title = f.name.replace(/\.[^/.]+$/, '');
       await saveUserAsset({
-        id,
         type: tab,
         title,
         thumbDataUrl: typeof reader.result === 'string' ? reader.result : undefined,
@@ -197,23 +272,133 @@ export default function LibraryPanel() {
     }
   };
 
+  const handleModelGenerated = async (modelUrl: string, modelName: string, category?: string) => {
+    await saveUserAsset({
+      type: 'model',
+      title: modelName,
+      data: { 
+        modelUrl: modelUrl,
+        category: category || 'misc',
+      },
+    });
+    await refresh();
+  };
+
+  const headerIconSize = isIPadFriendly ? 52 : 42;
+  const headerFontSize = isIPadFriendly ? '1.5rem' : 20;
+  const subHeaderFontSize = isIPadFriendly ? '0.9375rem' : 12;
+
   return (
-    <Box sx={{ p: 1, bgcolor: '#1a1a1a' }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-        <Typography fontWeight={600} fontSize={14} color="#ffffff">Studio Library</Typography>
-        <Stack direction="row" spacing={0.5}>
+    <Box sx={{ p: padding, bgcolor: '#1a1a1a', minHeight: '100%' }}>
+      {/* Header */}
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: spacing,
+        background: 'linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(124,58,237,0.15) 100%)',
+        borderRadius: '16px',
+        px: isIPadFriendly ? 3 : 2.5,
+        py: isIPadFriendly ? 2 : 1.5,
+        mb: spacing,
+        border: '1px solid rgba(255,255,255,0.1)',
+      }}>
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: headerIconSize,
+          height: headerIconSize,
+          borderRadius: '12px',
+          background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+          boxShadow: '0 4px 12px rgba(139,92,246,0.4)',
+          position: 'relative',
+        }}>
+          <AccessibilityNewIcon sx={{ fontSize: isIPadFriendly ? 28 : 24, color: '#fff' }} />
+        </Box>
+        <Box>
+          <Typography sx={{ 
+            fontWeight: 800, 
+            fontSize: headerFontSize,
+            background: 'linear-gradient(90deg, #a78bfa 0%, #8b5cf6 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: '-0.3px',
+            lineHeight: 1.3,
+          }}>
+            Modeller
+          </Typography>
+          <Typography sx={{ 
+            fontSize: subHeaderFontSize, 
+            color: '#888',
+            fontWeight: 500,
+            lineHeight: 1.4,
+          }}>
+            3D-modeller og ressurser
+          </Typography>
+        </Box>
+      </Box>
+
+      <Stack 
+        direction={isMobile ? 'column' : 'row'} 
+        justifyContent="space-between" 
+        alignItems={isMobile ? 'stretch' : 'center'} 
+        spacing={isMobile ? 1.5 : 0}
+        sx={{ mb: spacing }}
+      >
+        <Stack 
+          direction={isMobile ? 'column' : 'row'} 
+          spacing={spacing}
+          sx={{ width: isMobile ? '100%' : 'auto' }}
+        >
+          <Tooltip title="Generer ny 3D-modell med AI">
+            <Button
+              size={isIPadFriendly ? 'medium' : 'small'}
+              variant="contained"
+              startIcon={<ViewInArIcon fontSize={isIPadFriendly ? 'medium' : 'small'} />}
+              onClick={() => setGenerateDialogOpen(true)}
+              sx={{
+                textTransform: 'none',
+                fontSize: buttonFontSize,
+                minHeight: buttonHeight,
+                bgcolor: '#8b5cf6',
+                color: '#ffffff',
+                px: isIPadFriendly ? 3 : 2,
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  bgcolor: '#7c3aed',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 2px 8px rgba(139,92,246,0.4)'
+                },
+                '&:active': {
+                  transform: 'translateY(0) scale(0.98)'
+                },
+                '@media (hover: none) and (pointer: coarse)': {
+                  '&:active': {
+                    transform: 'scale(0.95)',
+                    bgcolor: '#6d28d9'
+                  }
+                }
+              }}
+            >
+              Generer 3D
+            </Button>
+          </Tooltip>
           <Tooltip title="Scan and add Hyper3D models to library">
             <Button
-              size="small"
+              size={isIPadFriendly ? 'medium' : 'small'}
               variant="outlined"
-              startIcon={<AutoAwesomeIcon fontSize="small" />}
+              startIcon={<AutoAwesomeIcon fontSize={isIPadFriendly ? 'medium' : 'small'} />}
               onClick={scanForHyper3DModels}
               disabled={scanning}
               sx={{
                 textTransform: 'none',
-                fontSize: 11,
+                fontSize: buttonFontSize,
+                minHeight: buttonHeight,
                 borderColor: '#3a3a3a',
+                borderWidth: 2,
                 color: '#ffffff',
+                px: isIPadFriendly ? 3 : 2,
                 transition: 'all 0.2s ease',
                 '&:hover': {
                   borderColor: '#5a5a5a',
@@ -222,10 +407,16 @@ export default function LibraryPanel() {
                   boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
                 },
                 '&:active': {
-                  transform: 'translateY(0)'
+                  transform: 'translateY(0) scale(0.98)'
                 },
                 '&:disabled': {
                   opacity: 0.5
+                },
+                '@media (hover: none) and (pointer: coarse)': {
+                  '&:active': {
+                    transform: 'scale(0.95)',
+                    bgcolor: '#333333'
+                  }
                 }
               }}
             >
@@ -240,15 +431,18 @@ export default function LibraryPanel() {
             style={{ display: 'none' }}
           />
           <Button
-            size="small"
+            size={isIPadFriendly ? 'medium' : 'small'}
             variant="outlined"
             onClick={() => fileRef.current?.click()}
             sx={{
               textTransform: 'none',
-              fontSize: 11,
+              fontSize: buttonFontSize,
+              minHeight: buttonHeight,
               borderColor: '#3a3a3a',
+              borderWidth: 2,
               color: '#ffffff',
               bgcolor: '#2a2a2a',
+              px: isIPadFriendly ? 3 : 2,
               transition: 'all 0.2s ease',
               '&:hover': {
                 borderColor: '#5a5a5a',
@@ -257,7 +451,13 @@ export default function LibraryPanel() {
                 boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
               },
               '&:active': {
-                transform: 'translateY(0)'
+                transform: 'translateY(0) scale(0.98)'
+              },
+              '@media (hover: none) and (pointer: coarse)': {
+                '&:active': {
+                  transform: 'scale(0.95)',
+                  bgcolor: '#3a3a3a'
+                }
               }
             }}
           >
@@ -265,32 +465,8 @@ export default function LibraryPanel() {
           </Button>
         </Stack>
       </Stack>
-      <Tabs 
-        value={tab} 
-        onChange={(_, v) => setTab(v)} 
-        variant="fullWidth" 
-        sx={{ 
-          mb: 1,
-          '& .MuiTab-root': {
-            color: '#888888',
-            textTransform: 'none',
-            fontSize: 12,
-            fontWeight: 600,
-            '&.Mui-selected': {
-              color: '#ffffff',
-            },
-          },
-          '& .MuiTabs-indicator': {
-            bgcolor: '#ffffff',
-          },
-        }}
-      >
-        <Tab value="light" label="Lights" />
-        <Tab value="model" label="Models" />
-        <Tab value="prop" label="Props" />
-      </Tabs>
       <TextField
-        size="small"
+        size={isIPadFriendly ? 'medium' : 'small'}
         placeholder={`Search ${tab}s…`}
         fullWidth
         value={q}
@@ -298,29 +474,50 @@ export default function LibraryPanel() {
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <SearchIcon fontSize="small" sx={{ color: '#888888' }} />
+              <SearchIcon fontSize={isIPadFriendly ? 'medium' : 'small'} sx={{ color: '#888888' }} />
             </InputAdornment>
           )}}
         sx={{ 
-          mb: 1,
+          mb: spacing,
           '& .MuiInputBase-root': {
             bgcolor: '#2a2a2a',
             color: '#ffffff',
-            '& fieldset': { borderColor: '#3a3a3a' },
+            minHeight: inputHeight,
+            fontSize: inputFontSize,
+            '& fieldset': { 
+              borderColor: '#3a3a3a',
+              borderWidth: 2
+            },
             '&:hover fieldset': { borderColor: '#4a4a4a' },
-            '&.Mui-focused fieldset': { borderColor: '#ffffff' }
+            '&.Mui-focused fieldset': { 
+              borderColor: '#ffffff',
+              borderWidth: 2
+            }
           },
-          '& input': { color: '#ffffff' },
-          '& input::placeholder': { color: '#666666' }
+          '& input': { 
+            color: '#ffffff',
+            fontSize: inputFontSize,
+            padding: isIPadFriendly ? '14px 16px' : '10px 14px'
+          },
+          '& input::placeholder': { 
+            color: '#666666',
+            fontSize: inputFontSize
+          }
         }}
       />
-      <Grid container spacing={1}>
+      <Grid container spacing={spacing}>
         {items.map((a) => (
-          <Grid item xs={6} key={a.id}>
-            <Card a={a} />
+          <Grid item xs={12 / gridColumns} key={a.id}>
+            <Card a={a} isTablet={isIPadFriendly} />
           </Grid>
         ))}
       </Grid>
+
+      <Rodin3DGeneratorDialog
+        open={generateDialogOpen}
+        onClose={() => setGenerateDialogOpen(false)}
+        onGenerated={handleModelGenerated}
+      />
     </Box>
   );
 }

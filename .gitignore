@@ -3,3 +3,56 @@ dist/
 .vite/
 *.log
 .DS_Store
+
+# ML Modeller og store binærfiler
+backend/models/
+backend/rodin_models/
+backend/humaniflow/model_files/
+backend/downloads/
+backend/test_images/
+backend/outputs/
+
+# Store assets
+attached_assets/
+*.pth
+*.tar
+*.tar.gz
+*.zip
+*.7z
+
+# Cache
+.cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Build artifacts
+build/
+.next/
+*.egg-info/
+*.so
+*.dylib
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+.DS_Store

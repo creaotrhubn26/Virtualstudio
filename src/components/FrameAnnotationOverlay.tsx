@@ -88,7 +88,7 @@ interface FrameAnnotationOverlayProps {
   frameId: string;
   imageUrl: string;
   annotations: FrameAnnotation[];
-  onAddAnnotation: (annotation: Omit<FrameAnnotation, 'id' | , 'createdAt, '>) => void;
+  onAddAnnotation: (annotation: Omit<FrameAnnotation, 'id' | 'createdAt'>) => void;
   onUpdateAnnotation: (id: string, updates: Partial<FrameAnnotation>) => void;
   onDeleteAnnotation: (id: string) => void;
   placementMode: AnnotationType | null;
@@ -177,9 +177,9 @@ const AnnotationMarker = styled(Box, {
     ...(isSelected && {
       filter: 'drop-shadow(0 0 8px rgba(33, 150, 243, 0.8))',
     }),
-    
+
     // Hover effect
-    , '&:hover': {
+    '&:hover': {
       transform: 'translate(-50%, -50%) translateY(-4px) scale(1.1)',
       filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.3))',
       zIndex: 1,

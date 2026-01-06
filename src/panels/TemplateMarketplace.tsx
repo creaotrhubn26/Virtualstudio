@@ -19,8 +19,8 @@ import {
   Button,
 } from '@mui/material';
 import { Download, Share, Star } from '@mui/icons-material';
-import { projectSharingService, SharedProject } from '../../core/services/projectSharing';
-import { logger } from '../../core/services/logger';
+import { projectSharingService, SharedProject } from '../core/services/projectSharing';
+import { logger } from '../core/services/logger';
 
 const log = logger.module('TemplateMarketplace');
 
@@ -34,13 +34,13 @@ export const TemplateMarketplace: React.FC = () => {
   
   const loadProjects = async () => {
     setLoading(true);
-    const sharedProjects = await projectSharingService.getSharedProjects();
+    const sharedProjects = await projectSharingService.getTemplates();
     setProjects(sharedProjects);
     setLoading(false);
   };
-  
+
   const handleDownload = async (projectId: string) => {
-    const project = await projectSharingService.downloadProject(projectId);
+    const project = await projectSharingService.downloadTemplate(projectId);
     if (project) {
       log.info('Project downloaded:', project);
     }
@@ -79,7 +79,7 @@ export const TemplateMarketplace: React.FC = () => {
       ) : (
         <Grid container spacing={2}>
           {projects.map((project) => (
-            <Grid item xs={12} sm={6} md={4} key={project.id}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={project.id}>
               <Card
                 sx={{
                   bgcolor: '#2a2a2a',
@@ -109,9 +109,9 @@ export const TemplateMarketplace: React.FC = () => {
                     </Typography>
                   )}
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Rating value={project.rating} readOnly size="small" />
+                    <Rating value={project.likes / 10} readOnly size="small" />
                     <Typography variant="caption" sx={{ color: '#888888' }}>
-                      ({project.downloadCount} downloads)
+                      ({project.downloads} downloads)
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>

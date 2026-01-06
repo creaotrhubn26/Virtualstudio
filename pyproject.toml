@@ -7,8 +7,15 @@ dependencies = [
     "boto3>=1.42.16",
     "braceexpand>=0.1.7",
     "dlib>=20.0.0",
+    "fastapi>=0.127.0",
     "gdown>=5.2.0",
     "httpx>=0.28.1",
+    "openai>=2.14.0",
+    "opencv-python-headless>=4.12.0.88",
+    "psycopg2-binary>=2.9.11",
+    "replicate>=1.0.7",
+    "sentencepiece>=0.2.1",
+    "uvicorn>=0.40.0",
 ]
 
 [[tool.uv.index]]

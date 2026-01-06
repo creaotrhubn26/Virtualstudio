@@ -605,7 +605,7 @@ export function AccessibleDraggable({
   const startMove = () => {
     setIsMoving(true);
     setTempIndex(index);
-    announce(`Moving ${itemLabel}. ${moveInstructions}`'assertive');
+    announce(`Moving ${itemLabel}. ${moveInstructions}`, 'assertive');
   };
 
   // Confirm move

@@ -99,7 +99,7 @@ function catmullRomSpline(
     return result;
   }
 
-  const curve = new THREE.CatmullRomCurve3(points, false'centripetal', 0.5);
+  const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.5);
   return curve.getPoints(segments);
 }
 

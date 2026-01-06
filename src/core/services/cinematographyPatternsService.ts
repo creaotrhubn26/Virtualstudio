@@ -17,6 +17,7 @@ export interface CinematographyPattern {
   lights: LightSetup[];
   usedIn: string[];
   reference: string;
+  thumbnail?: string;
 }
 
 const patterns: CinematographyPattern[] = [
@@ -33,7 +34,8 @@ const patterns: CinematographyPattern[] = [
       { type: 'fill', position: { x: 2, y: 1.5, z: 1 }, intensity: 25, colorTemp: 5600, modifier: 'reflector' }
     ],
     usedIn: ['The Godfather', 'Girl with a Pearl Earring'],
-    reference: 'Light Science & Magic, Ch. 9'
+    reference: 'Light Science & Magic, Ch. 9',
+    thumbnail: '/pattern-thumbnails/rembrandt_lighting_pattern_diagram.png'
   },
   {
     id: 'butterfly',
@@ -48,7 +50,8 @@ const patterns: CinematographyPattern[] = [
       { type: 'fill', position: { x: 0, y: 0.5, z: 2 }, intensity: 50, colorTemp: 5600, modifier: 'reflector' }
     ],
     usedIn: ['Marlene Dietrich films', 'Vogue covers'],
-    reference: 'Hollywood Lighting, Paramount era'
+    reference: 'Hollywood Lighting, Paramount era',
+    thumbnail: '/pattern-thumbnails/butterfly_lighting_pattern_diagram.png'
   },
   {
     id: 'split',
@@ -62,7 +65,8 @@ const patterns: CinematographyPattern[] = [
       { type: 'key', position: { x: -3, y: 1.5, z: 0 }, intensity: 100, colorTemp: 5600, modifier: 'barn doors' }
     ],
     usedIn: ['The Dark Knight', 'Breaking Bad'],
-    reference: 'Cinematography Theory and Practice'
+    reference: 'Cinematography Theory and Practice',
+    thumbnail: '/pattern-thumbnails/split_lighting_pattern_diagram.png'
   },
   {
     id: 'loop',
@@ -77,7 +81,8 @@ const patterns: CinematographyPattern[] = [
       { type: 'fill', position: { x: 1.5, y: 1.5, z: 1.5 }, intensity: 33, colorTemp: 5600 }
     ],
     usedIn: ['Corporate headshots', 'Magazine portraits'],
-    reference: 'Portrait Photography Guide'
+    reference: 'Portrait Photography Guide',
+    thumbnail: '/pattern-thumbnails/loop_lighting_pattern_diagram.png'
   },
   {
     id: 'broad',
@@ -92,7 +97,8 @@ const patterns: CinematographyPattern[] = [
       { type: 'fill', position: { x: -1, y: 1, z: 2 }, intensity: 33, colorTemp: 5600 }
     ],
     usedIn: ['Character portraits', 'Environmental portraits'],
-    reference: 'Light Science & Magic'
+    reference: 'Light Science & Magic',
+    thumbnail: '/pattern-thumbnails/broad_lighting_pattern_diagram.png'
   },
   {
     id: 'short',
@@ -107,7 +113,8 @@ const patterns: CinematographyPattern[] = [
       { type: 'fill', position: { x: 1, y: 1, z: 2 }, intensity: 25, colorTemp: 5600 }
     ],
     usedIn: ['Fashion portraits', 'Fine art photography'],
-    reference: 'Dramatic Portraits Guide'
+    reference: 'Dramatic Portraits Guide',
+    thumbnail: '/pattern-thumbnails/short_lighting_pattern_diagram.png'
   },
   {
     id: 'clamshell',
@@ -122,7 +129,8 @@ const patterns: CinematographyPattern[] = [
       { type: 'fill', position: { x: 0, y: 0.3, z: 1.5 }, intensity: 70, colorTemp: 5600, modifier: 'reflector' }
     ],
     usedIn: ['Beauty campaigns', 'Cosmetics advertising'],
-    reference: 'Beauty Photography Masterclass'
+    reference: 'Beauty Photography Masterclass',
+    thumbnail: '/pattern-thumbnails/clamshell_lighting_pattern_diagram.png'
   },
   {
     id: 'three-point',
@@ -138,7 +146,8 @@ const patterns: CinematographyPattern[] = [
       { type: 'back', position: { x: 0, y: 2.5, z: -2 }, intensity: 70, colorTemp: 5600 }
     ],
     usedIn: ['Interviews', 'Corporate videos', 'News broadcasts'],
-    reference: 'Film Lighting 101'
+    reference: 'Film Lighting 101',
+    thumbnail: '/pattern-thumbnails/three-point_lighting_diagram.png'
   },
   {
     id: 'high-key',
@@ -155,7 +164,8 @@ const patterns: CinematographyPattern[] = [
       { type: 'background', position: { x: 0, y: 2, z: -3 }, intensity: 100, colorTemp: 5600 }
     ],
     usedIn: ['Product photography', 'Medical imaging', 'Comedy films'],
-    reference: 'Commercial Photography Techniques'
+    reference: 'Commercial Photography Techniques',
+    thumbnail: '/pattern-thumbnails/high-key_lighting_diagram.png'
   },
   {
     id: 'low-key',
@@ -169,7 +179,8 @@ const patterns: CinematographyPattern[] = [
       { type: 'key', position: { x: -2.5, y: 2, z: 0 }, intensity: 100, colorTemp: 5600, modifier: 'grid' }
     ],
     usedIn: ['Film noir', 'Thriller films', 'Sin City'],
-    reference: 'Film Noir Cinematography'
+    reference: 'Film Noir Cinematography',
+    thumbnail: '/pattern-thumbnails/film_noir_lighting_diagram.png'
   },
   {
     id: 'chiaroscuro',
@@ -213,7 +224,8 @@ const patterns: CinematographyPattern[] = [
       { type: 'fill', position: { x: 0, y: 1, z: 2 }, intensity: 30, colorTemp: 5600 }
     ],
     usedIn: ['Music performances', 'Sports photography', 'Dramatic portraits'],
-    reference: 'Backlight Mastery'
+    reference: 'Backlight Mastery',
+    thumbnail: '/pattern-thumbnails/rim_lighting_pattern_diagram.png'
   },
   {
     id: 'horror',

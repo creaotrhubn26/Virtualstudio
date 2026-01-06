@@ -94,7 +94,8 @@ const LOCAL_PATTERNS: LightPattern[] = [
     isBeginnerFriendly: false,
     usageCount: 1250,
     ratingAverage: 4.8,
-    ratingCount: 156
+    ratingCount: 156,
+    thumbnailUrl: '/pattern-thumbnails/rembrandt_lighting_pattern_diagram.png'
   },
   {
     id: 'butterfly',
@@ -117,7 +118,8 @@ const LOCAL_PATTERNS: LightPattern[] = [
     isBeginnerFriendly: true,
     usageCount: 980,
     ratingAverage: 4.6,
-    ratingCount: 89
+    ratingCount: 89,
+    thumbnailUrl: '/pattern-thumbnails/butterfly_lighting_pattern_diagram.png'
   },
   {
     id: 'split',
@@ -140,7 +142,8 @@ const LOCAL_PATTERNS: LightPattern[] = [
     isBeginnerFriendly: true,
     usageCount: 567,
     ratingAverage: 4.4,
-    ratingCount: 45
+    ratingCount: 45,
+    thumbnailUrl: '/pattern-thumbnails/split_lighting_pattern_diagram.png'
   },
   {
     id: 'loop',
@@ -163,7 +166,8 @@ const LOCAL_PATTERNS: LightPattern[] = [
     isBeginnerFriendly: true,
     usageCount: 1100,
     ratingAverage: 4.7,
-    ratingCount: 134
+    ratingCount: 134,
+    thumbnailUrl: '/pattern-thumbnails/loop_lighting_pattern_diagram.png'
   },
   {
     id: 'clamshell',
@@ -189,7 +193,8 @@ const LOCAL_PATTERNS: LightPattern[] = [
     isBeginnerFriendly: false,
     usageCount: 445,
     ratingAverage: 4.5,
-    ratingCount: 67
+    ratingCount: 67,
+    thumbnailUrl: '/pattern-thumbnails/clamshell_lighting_pattern_diagram.png'
   },
   {
     id: 'three-point',
@@ -216,7 +221,8 @@ const LOCAL_PATTERNS: LightPattern[] = [
     isBeginnerFriendly: false,
     usageCount: 2340,
     ratingAverage: 4.9,
-    ratingCount: 289
+    ratingCount: 289,
+    thumbnailUrl: '/pattern-thumbnails/three-point_lighting_diagram.png'
   },
   {
     id: 'high-key',
@@ -243,7 +249,8 @@ const LOCAL_PATTERNS: LightPattern[] = [
     isBeginnerFriendly: false,
     usageCount: 678,
     ratingAverage: 4.3,
-    ratingCount: 56
+    ratingCount: 56,
+    thumbnailUrl: '/pattern-thumbnails/high-key_lighting_diagram.png'
   },
   {
     id: 'low-key',
@@ -266,7 +273,8 @@ const LOCAL_PATTERNS: LightPattern[] = [
     isBeginnerFriendly: false,
     usageCount: 890,
     ratingAverage: 4.6,
-    ratingCount: 112
+    ratingCount: 112,
+    thumbnailUrl: '/pattern-thumbnails/film_noir_lighting_diagram.png'
   }
 ];
 
@@ -392,30 +400,69 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
   return (
     <>
       {/* Main Library Dialog */}
-      <Dialog open={open && !showDetails} onClose={onClose} maxWidth="lg" fullWidth>
-        <DialogTitle>
+      <Dialog 
+        open={open && !showDetails} 
+        onClose={onClose} 
+        maxWidth="lg" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: '#1c2128',
+            borderRadius: 3,
+            border: '2px solid rgba(0,212,255,0.3)',
+            maxHeight: '90vh'
+          }
+        }}
+      >
+        <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Lightbulb color="primary" />
-              <Typography variant="h6">Lysmønster Bibliotek</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Lightbulb sx={{ color: '#00d4ff', fontSize: 28 }} />
+              <Box>
+                <Typography variant="h6" sx={{ color: '#00d4ff', fontWeight: 600 }}>
+                  Fotomønstre Bibliotek
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#999' }}>
+                  Profesjonelle lysoppsett for portrett og studio
+                </Typography>
+              </Box>
             </Box>
-            <IconButton onClick={onClose} size="small">
+            <IconButton onClick={onClose} size="small" sx={{ color: '#999' }}>
               <Close />
             </IconButton>
           </Box>
         </DialogTitle>
 
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ bgcolor: '#1c2128', borderColor: 'rgba(255,255,255,0.1)' }}>
           <Stack spacing={3}>
             {/* Tabs: Professional / Community / My Patterns */}
-            <Tabs value={tabValue} onChange={(_, value) => setTabValue(value)} variant="fullWidth">
+            <Tabs 
+              value={tabValue} 
+              onChange={(_, value) => setTabValue(value)} 
+              variant="fullWidth"
+              sx={{
+                bgcolor: 'rgba(255,255,255,0.05)',
+                borderRadius: 2,
+                '& .MuiTab-root': { color: '#888' },
+                '& .Mui-selected': { color: '#00d4ff' },
+                '& .MuiTabs-indicator': { bgcolor: '#00d4ff' }
+              }}
+            >
               <Tab label="Profesjonelle Mønstre" />
               <Tab label="Fellesskap Mønstre" />
               <Tab label="Mine Mønstre" />
             </Tabs>
 
             {/* Header Info */}
-            <Alert severity="info" icon={<Info />}>
+            <Alert 
+              severity="info" 
+              icon={<Info sx={{ color: '#00d4ff' }} />}
+              sx={{ 
+                bgcolor: 'rgba(0,212,255,0.1)', 
+                border: '1px solid rgba(0,212,255,0.2)',
+                '& .MuiAlert-message': { color: '#ccc' }
+              }}
+            >
               <Typography variant="body2">
                 {tabValue === 0 && 'Bruk profesjonelle lysmønstre med ett klikk. Hvert mønster inkluderer oppsettinstruksjoner og anbefalinger.'}
                 {tabValue === 1 && 'Bla gjennom mønstre laget av fellesskapet. Oppdag unike lysoppsett delt av andre skapere.'}
@@ -425,7 +472,7 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
 
             {/* Search and Filters */}
             <Box>
-              <Grid container spacing={2}>
+              <Grid container spacing={2} alignItems="center">
                 <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     fullWidth
@@ -436,9 +483,19 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
-                          <Search />
+                          <Search sx={{ color: '#666' }} />
                         </InputAdornment>
-                      )}}
+                      )
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'rgba(255,255,255,0.05)',
+                        '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                        '&:hover fieldset': { borderColor: 'rgba(0,212,255,0.3)' },
+                        '&.Mui-focused fieldset': { borderColor: '#00d4ff' }
+                      },
+                      '& .MuiInputBase-input': { color: '#fff' }
+                    }}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
@@ -446,6 +503,11 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
                     value={difficultyFilter}
                     onChange={(_, value) => setDifficultyFilter(value)}
                     variant="scrollable"
+                    sx={{
+                      '& .MuiTab-root': { color: '#888', minWidth: 80 },
+                      '& .Mui-selected': { color: '#00d4ff' },
+                      '& .MuiTabs-indicator': { bgcolor: '#00d4ff' }
+                    }}
                   >
                     <Tab label="Alle" value="all" />
                     <Tab label="Nybegynner" value="beginner" />
@@ -468,7 +530,19 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
               <Grid container spacing={2}>
                 {filteredPatterns.map((pattern) => (
                   <Grid size={{ xs: 12, sm: 6, md: 4 }} key={pattern.id}>
-                    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <Card sx={{ 
+                      height: '100%', 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      bgcolor: 'rgba(255,255,255,0.05)',
+                      borderColor: 'rgba(255,255,255,0.1)',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        bgcolor: 'rgba(255,255,255,0.08)',
+                        borderColor: 'rgba(0,212,255,0.3)',
+                        transform: 'translateY(-2px)'
+                      }
+                    }}>
                       {/* Thumbnail Image */}
                       {pattern.thumbnailUrl && (
                         <Box
@@ -514,25 +588,25 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
                         {/* Badges */}
                         <Stack direction="row" spacing={0.5} sx={{ mb: 1 }} flexWrap="wrap">
                           {pattern.isFeatured && (
-                            <Chip label="Featured" size="small" color="primary" icon={<Star />} />
+                            <Chip label="Anbefalt" size="small" color="primary" icon={<Star />} />
                           )}
                           {pattern.isBeginnerFriendly && (
-                            <Chip label="Beginner Friendly" size="small" color="success" />
+                            <Chip label="Nybegynnervennlig" size="small" color="success" />
                           )}
                         </Stack>
 
                         {/* Name */}
-                        <Typography variant="h6" gutterBottom>
+                        <Typography variant="h6" gutterBottom sx={{ color: '#fff' }}>
                           {pattern.name}
                         </Typography>
 
                         {/* Look Description */}
-                        <Typography variant="body2" color="primary" gutterBottom fontWeight="bold">
+                        <Typography variant="body2" sx={{ color: '#00d4ff', mb: 1 }} fontWeight="bold">
                           {pattern.lookDescription}
                         </Typography>
 
                         {/* Description */}
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        <Typography variant="body2" sx={{ color: '#aaa', mb: 2 }}>
                           {pattern.description.length > 100
                             ? `${pattern.description.substring(0, 100)}...`
                             : pattern.description}
@@ -540,10 +614,10 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
 
                         {/* When to Use */}
                         <Box sx={{ mb: 2 }}>
-                          <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                            Best for:
+                          <Typography variant="caption" sx={{ color: '#888' }} display="block" gutterBottom>
+                            Beste for:
                           </Typography>
-                          <Typography variant="body2">
+                          <Typography variant="body2" sx={{ color: '#ccc' }}>
                             {pattern.whenToUse}
                           </Typography>
                         </Box>
@@ -553,12 +627,13 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
                           label={pattern.difficultyLevel}
                           size="small"
                           color={getDifficultyColor(pattern.difficultyLevel) as any}
+                          sx={{ textTransform: 'capitalize' }}
                         />
 
                         {/* Stats */}
                         {pattern.usageCount > 0 && (
-                          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                            Used {pattern.usageCount} times
+                          <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 1 }}>
+                            Brukt {pattern.usageCount} ganger
                           </Typography>
                         )}
                       </CardContent>
@@ -568,8 +643,9 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
                           size="small"
                           startIcon={<Visibility />}
                           onClick={() => handleViewDetails(pattern)}
+                          sx={{ color: '#888' }}
                         >
-                          Details
+                          Detaljer
                         </Button>
                         <Button
                           variant="contained"
@@ -577,8 +653,14 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
                           startIcon={applying === pattern.id ? <CircularProgress size={16} /> : <PlayArrow />}
                           onClick={() => handleApply(pattern)}
                           disabled={applying === pattern.id}
+                          sx={{
+                            bgcolor: '#00d4ff',
+                            color: '#000',
+                            fontWeight: 600,
+                            '&:hover': { bgcolor: '#33ddff' }
+                          }}
                         >
-                          {applying === pattern.id ? 'Applying...' : 'Apply'}
+                          {applying === pattern.id ? 'Bruker...' : 'Bruk'}
                         </Button>
                       </CardActions>
                     </Card>
@@ -589,15 +671,24 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
 
             {/* Empty State */}
             {!loading && filteredPatterns.length === 0 && (
-              <Alert severity="info">
-                No lighting patterns found matching your filters.
+              <Alert 
+                severity="info"
+                sx={{ 
+                  bgcolor: 'rgba(0,212,255,0.1)', 
+                  border: '1px solid rgba(0,212,255,0.2)',
+                  '& .MuiAlert-message': { color: '#ccc' }
+                }}
+              >
+                Ingen lysmønstre funnet med disse filtrene.
               </Alert>
             )}
           </Stack>
         </DialogContent>
 
-        <DialogActions>
-          <Button onClick={onClose}>Close</Button>
+        <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2 }}>
+          <Button onClick={onClose} variant="outlined" sx={{ borderColor: '#555', color: '#999' }}>
+            Lukk
+          </Button>
         </DialogActions>
       </Dialog>
 

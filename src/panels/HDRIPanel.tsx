@@ -10,6 +10,7 @@ import {
   InputBase,
   Divider,
   useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   WbSunny,
@@ -22,6 +23,7 @@ import {
   Add as AddIcon,
   Search as SearchIcon,
 } from '@mui/icons-material';
+import { useLoadingStore } from '../state/loadingStore';
 
 interface HDRIPreset {
   id: string;
@@ -106,13 +108,18 @@ const CATEGORIES: CategoryInfo[] = [
 ];
 
 export function HDRIPanel() {
+  const theme = useTheme();
+  const isTouchDevice = useMediaQuery('(pointer: coarse)');
+  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1024px)');
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isIPadFriendly = isTablet || isTouchDevice;
+
   const [selectedHDRI, setSelectedHDRI] = useState<string | null>(null);
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
   const [intensity, setIntensity] = useState(1.0);
   const [rotation, setRotation] = useState(0);
   const [showBackground, setShowBackground] = useState(true);
-  const isTouchDevice = useMediaQuery('(pointer: coarse)');
 
   const filteredPresets = useMemo(() => {
     return HDRI_PRESETS.filter(hdri => {
@@ -125,6 +132,9 @@ export function HDRIPanel() {
   }, [category, search]);
 
   const handleSelectHDRI = (hdri: HDRIPreset) => {
+    const { startLoading, updateProgress, stopLoading } = useLoadingStore.getState();
+    startLoading('loading-hdri', `Laster HDRI: ${hdri.name}...`, -1);
+
     setSelectedHDRI(hdri.id);
     setIntensity(hdri.intensity);
     setRotation(hdri.rotation);
@@ -136,8 +146,12 @@ export function HDRIPanel() {
         intensity: hdri.intensity,
         rotation: hdri.rotation,
         showBackground,
+        preset: hdri,
       }
     }));
+
+    // Stop loading after a short delay (the actual HDRI loader will handle its own state)
+    setTimeout(() => stopLoading(), 500);
   };
 
   const handleAddHDRI = (hdri: HDRIPreset, e: React.MouseEvent) => {
@@ -159,71 +173,95 @@ export function HDRIPanel() {
   };
 
   const buttonStyle = {
-    minHeight: 56,
-    minWidth: 100,
-    fontSize: 15,
+    minHeight: isIPadFriendly ? 56 : 48,
+    minWidth: isIPadFriendly ? 120 : 100,
+    fontSize: isIPadFriendly ? '1rem' : 15,
     fontWeight: 600,
     textTransform: 'none' as const,
-    borderRadius: '10px',
+    borderRadius: '12px',
     borderWidth: 2,
     transition: 'all 0.2s ease',
     WebkitTapHighlightColor: 'transparent',
     boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+    padding: isIPadFriendly ? '14px 20px' : '12px 16px',
     '&:active': {
       transform: 'scale(0.97)',
       boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
     },
+    '@media (hover: none) and (pointer: coarse)': {
+      '&:active': {
+        transform: 'scale(0.95)',
+      }
+    }
   };
 
+  const padding = isIPadFriendly ? 3 : 2;
+  const spacing = isIPadFriendly ? 2 : 1.5;
+  const headerIconSize = isIPadFriendly ? 52 : 42;
+  const headerFontSize = isIPadFriendly ? '1.5rem' : 20;
+  const subHeaderFontSize = isIPadFriendly ? '0.9375rem' : 12;
+  const searchHeight = isIPadFriendly ? 56 : 48;
+  const searchFontSize = isIPadFriendly ? '1rem' : 15;
+  const gridMinWidth = isIPadFriendly ? 180 : 140;
+  const gridGap = isIPadFriendly ? 2 : 1.5;
+
   return (
-    <Box sx={{ p: 2, height: '100%', overflow: 'auto', bgcolor: '#1a1a1a' }}>
+    <Box sx={{ p: padding, height: '100%', overflow: 'auto', bgcolor: '#1a1a1a' }}>
       {/* Header */}
       <Box sx={{ 
         display: 'flex', 
         alignItems: 'center', 
-        gap: 1.5,
+        gap: spacing,
         background: 'linear-gradient(135deg, rgba(230,126,34,0.15) 0%, rgba(211,84,0,0.15) 100%)',
-        borderRadius: '14px',
-        px: 2.5,
-        py: 1.5,
-        mb: 2,
+        borderRadius: '16px',
+        px: isIPadFriendly ? 3 : 2.5,
+        py: isIPadFriendly ? 2 : 1.5,
+        mb: spacing,
         border: '1px solid rgba(255,255,255,0.1)',
       }}>
         <Box sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          width: 42,
-          height: 42,
-          borderRadius: '10px',
+          width: headerIconSize,
+          height: headerIconSize,
+          borderRadius: '12px',
           background: 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)',
           boxShadow: '0 4px 12px rgba(230,126,34,0.4)',
         }}>
-          <Public sx={{ fontSize: 24, color: '#fff' }} />
+          <Public sx={{ fontSize: isIPadFriendly ? 28 : 24, color: '#fff' }} />
         </Box>
         <Box>
           <Typography sx={{ 
             fontWeight: 800, 
-            fontSize: 20,
+            fontSize: headerFontSize,
             background: 'linear-gradient(90deg, #f5b041 0%, #eb984e 100%)',
             backgroundClip: 'text',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             letterSpacing: '-0.3px',
+            lineHeight: 1.3,
           }}>
             HDRI Miljø
           </Typography>
           <Typography sx={{ 
-            fontSize: 12, 
+            fontSize: subHeaderFontSize, 
             color: '#888',
             fontWeight: 500,
+            lineHeight: 1.4,
           }}>
             Høyoppløselige miljøbakgrunner
           </Typography>
         </Box>
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        gap: spacing, 
+        mb: spacing, 
+        flexWrap: 'wrap', 
+        alignItems: 'center' 
+      }}>
         {CATEGORIES.map(cat => (
           <Button
             key={cat.id}
@@ -232,13 +270,13 @@ export function HDRIPanel() {
             onClick={() => setCategory(cat.id)}
             sx={{
               ...buttonStyle,
-              bgcolor: category === cat.id ? '#00a8ff' : 'transparent',
-              borderColor: category === cat.id ? '#00a8ff' : '#444',
+              bgcolor: category === cat.id ? '#e67e22' : 'transparent',
+              borderColor: category === cat.id ? '#e67e22' : '#444',
               color: category === cat.id ? '#fff' : '#aaa',
-              boxShadow: category === cat.id ? '0 4px 12px rgba(0,168,255,0.3)' : '0 2px 6px rgba(0,0,0,0.2)',
+              boxShadow: category === cat.id ? '0 4px 12px rgba(230,126,34,0.3)' : '0 2px 6px rgba(0,0,0,0.2)',
               '&:hover': {
-                bgcolor: category === cat.id ? '#0090dd' : '#333',
-                borderColor: category === cat.id ? '#0090dd' : '#555',
+                bgcolor: category === cat.id ? '#d35400' : '#333',
+                borderColor: category === cat.id ? '#d35400' : '#555',
                 transform: 'translateY(-2px)',
                 boxShadow: '0 6px 16px rgba(0,0,0,0.4)',
               },
@@ -260,29 +298,40 @@ export function HDRIPanel() {
           minWidth: 140,
           maxWidth: 220,
         }}>
-          <SearchIcon sx={{ color: '#888', fontSize: 22, mr: 1 }} />
+          <SearchIcon sx={{ color: '#888', fontSize: isIPadFriendly ? 26 : 22, mr: 1.5 }} />
           <InputBase
             placeholder="Søk HDRI..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             sx={{
               color: '#fff',
-              fontSize: 15,
+              fontSize: searchFontSize,
               fontWeight: 500,
               flex: 1,
-              '& input::placeholder': { color: '#666', opacity: 1 },
+              '& input': {
+                padding: isIPadFriendly ? '12px 8px' : '8px 4px',
+              },
+              '& input::placeholder': { 
+                color: '#666', 
+                opacity: 1,
+                fontSize: searchFontSize,
+              },
             }}
           />
         </Box>
       </Box>
 
-      <Divider sx={{ my: 2, borderColor: '#333' }} />
+      <Divider sx={{ my: spacing, borderColor: '#333' }} />
 
       <Box sx={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
-        gap: 1.5,
-        mb: 2,
+        gridTemplateColumns: isMobile 
+          ? 'repeat(auto-fill, minmax(140px, 1fr))' 
+          : isTablet 
+            ? 'repeat(auto-fill, minmax(180px, 1fr))'
+            : 'repeat(auto-fill, minmax(140px, 1fr))', 
+        gap: gridGap,
+        mb: spacing,
       }}>
         {filteredPresets.map((hdri) => (
           <Card 
@@ -291,14 +340,14 @@ export function HDRIPanel() {
             sx={{ 
               bgcolor: '#252525', 
               cursor: 'pointer',
-              border: selectedHDRI === hdri.id ? '2px solid #00a8ff' : '2px solid #333',
+              border: selectedHDRI === hdri.id ? '2px solid #e67e22' : '2px solid #333',
               borderRadius: 2,
               transition: 'all 0.2s ease',
               '&:hover': { 
                 bgcolor: '#303030',
                 transform: 'translateY(-2px)',
                 boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
-                borderColor: '#00a8ff',
+                borderColor: '#e67e22',
               },
               position: 'relative',
             }}
@@ -309,7 +358,7 @@ export function HDRIPanel() {
                   position: 'absolute', 
                   top: 6, 
                   right: 6, 
-                  color: '#00a8ff',
+                  color: '#e67e22',
                   fontSize: 22,
                   bgcolor: '#1a1a1a',
                   borderRadius: '50%',
@@ -345,9 +394,9 @@ export function HDRIPanel() {
                   minHeight: 44,
                   fontSize: 12,
                   fontWeight: 600,
-                  bgcolor: '#00a8ff',
+                  bgcolor: '#e67e22',
                   borderRadius: '8px',
-                  '&:hover': { bgcolor: '#0090dd' },
+                  '&:hover': { bgcolor: '#d35400' },
                   textTransform: 'none',
                 }}
               >
@@ -375,7 +424,7 @@ export function HDRIPanel() {
               min={0}
               max={3}
               step={0.1}
-              sx={{ color: '#00a8ff' }}
+              sx={{ color: '#e67e22' }}
             />
           </Box>
 
@@ -390,7 +439,7 @@ export function HDRIPanel() {
               min={0}
               max={360}
               step={15}
-              sx={{ color: '#00a8ff' }}
+              sx={{ color: '#e67e22' }}
             />
           </Box>
 
@@ -405,12 +454,12 @@ export function HDRIPanel() {
               fontWeight: 600,
               borderRadius: '10px',
               borderWidth: 2,
-              borderColor: showBackground ? '#00a8ff' : '#444',
-              color: showBackground ? '#00a8ff' : '#888',
+              borderColor: showBackground ? '#e67e22' : '#444',
+              color: showBackground ? '#e67e22' : '#888',
               textTransform: 'none',
               '&:hover': {
-                borderColor: '#00a8ff',
-                bgcolor: 'rgba(0, 168, 255, 0.1)',
+                borderColor: '#e67e22',
+                bgcolor: 'rgba(230, 126, 34, 0.1)',
               },
             }}
           >

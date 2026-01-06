@@ -70,6 +70,7 @@ import {
   Share,
   Comment,
   History,
+  AutoAwesome,
 } from '@mui/icons-material';
 
 import {
@@ -88,9 +89,10 @@ import {
   getShotTypeColor,
   calculateTotalDuration,
   formatDuration,
-} from '../../state/storyboardStore';
-import { storyboardSyncService, SyncStatus } from '../../core/services/storyboardSyncService';
-import { storyboardCaptureService } from '../../core/storyboard/StoryboardCaptureService';
+} from '../state/storyboardStore';
+import { storyboardSyncService, SyncStatus } from '../core/services/storyboardSyncService';
+import { storyboardCaptureService } from '../core/storyboard/StoryboardCaptureService';
+import { storyboardAIGenerationService } from '../core/services/storyboardAIGenerationService';
 import { FrameEditorPanel } from './FrameEditorPanel';
 import { StoryboardTimeline } from '../components/StoryboardTimeline';
 import { AnimaticPlayerDialog } from '../components/AnimaticPlayer';
@@ -99,9 +101,9 @@ import { StoryboardSharingDialog } from '../components/StoryboardSharingDialog';
 import { StoryboardCommentsPanel } from '../components/StoryboardCommentsPanel';
 import { StoryboardVersionHistory } from '../components/StoryboardVersionHistory';
 import { FrameContextMenu, QuickAnnotationType } from '../components/FrameContextMenu';
-import { quickAnnotationService } from '../../core/storyboard/QuickAnnotationService';
-import { useAccessibility, VisuallyHidden } from '../../providers/AccessibilityProvider';
-import { useVirtualStudio } from '../../../VirtualStudioContext';
+import { quickAnnotationService } from '../core/storyboard/QuickAnnotationService';
+import { useAccessibility, VisuallyHidden } from '../providers/AccessibilityProvider';
+import { useVirtualStudio } from '../../VirtualStudioContext';
 
 // =============================================================================
 // Sub-Components
@@ -344,7 +346,7 @@ export const StoryboardPanel: React.FC = () => {
     });
 
     // Initial sync on mount
-    storyboardSyncService.fetchAll().catch(err => log.error(, 'Failed to fetch storyboards: ', err));
+    storyboardSyncService.fetchAll().catch(err => log.error('Failed to fetch storyboards: ', err));
 
     return unsubscribe;
   }, []);
@@ -362,6 +364,9 @@ export const StoryboardPanel: React.FC = () => {
   const [sharingDialogOpen, setSharingDialogOpen] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [aiGenerateDialogOpen, setAiGenerateDialogOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
   
   // Context menu state
   const [contextMenuPosition, setContextMenuPosition] = useState<{ top: number; left: number } | null>(null);
@@ -447,7 +452,7 @@ export const StoryboardPanel: React.FC = () => {
   }, [currentStoryboard, addFrame, setCapturing, settings.defaultDuration, announce, addToast]);
 
   // Create placeholder frame (for testing without 3D scene)
-  const createPlaceholderFrame = (): Omit<StoryboardFrame, 'id' | 'index' | 'createdAt' | , 'updatedAt, '> => {
+  const createPlaceholderFrame = (): Omit<StoryboardFrame, 'id' | 'index' | 'createdAt' | 'updatedAt'> => {
     const frameNumber = (currentStoryboard?.frames.length || 0) + 1;
     const shotType = settings.defaultShotType;
     return {
@@ -693,6 +698,24 @@ export const StoryboardPanel: React.FC = () => {
           borderColor: 'divider'}}
       >
         <Stack direction="row" spacing={1} alignItems="center">
+          {/* AI Generate Button */}
+          <Button
+            variant="outlined"
+            startIcon={aiGenerating ? <CircularProgress size={16} color="inherit" /> : <AutoAwesome />}
+            onClick={() => setAiGenerateDialogOpen(true)}
+            disabled={!currentStoryboard || aiGenerating}
+            sx={{
+              borderColor: 'primary.main',
+              color: 'primary.main',
+              '&:hover': {
+                borderColor: 'primary.light',
+                bgcolor: 'rgba(0,212,255,0.1)',
+              },
+            }}
+          >
+            {aiGenerating ? 'Generating...' : 'Generate with AI'}
+          </Button>
+
           {/* Capture Button */}
           <Button
             variant="contained"
@@ -1183,6 +1206,75 @@ export const StoryboardPanel: React.FC = () => {
         />
       )}
 
+      {/* AI Generate Dialog */}
+      <Dialog
+        open={aiGenerateDialogOpen}
+        onClose={() => !aiGenerating && setAiGenerateDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { bgcolor: '#1a1a2e' }
+        }}
+      >
+        <DialogTitle sx={{ color: '#fff', borderBottom: 1, borderColor: 'divider' }}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <AutoAwesome sx={{ color: 'primary.main' }} />
+            <Typography variant="h6">Generate Frame with AI</Typography>
+          </Stack>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Stack spacing={2}>
+            <TextField
+              label="Frame Description"
+              placeholder="e.g., A close-up shot of a character looking worried, dramatic lighting"
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              multiline
+              rows={4}
+              fullWidth
+              disabled={aiGenerating}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: '#0f0f1a',
+                  color: '#fff',
+                  '& fieldset': {
+                    borderColor: 'rgba(255,255,255,0.1)',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: 'rgba(255,255,255,0.7)',
+                },
+              }}
+              helperText="Describe the frame you want to generate. The AI will create a storyboard image based on your description."
+            />
+            <Alert severity="info" sx={{ bgcolor: 'rgba(0,212,255,0.1)', borderColor: 'rgba(0,212,255,0.3)' }}>
+              The AI will generate a high-quality storyboard frame using FLUX. This may take 10-30 seconds.
+            </Alert>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+          <Button
+            onClick={() => {
+              setAiGenerateDialogOpen(false);
+              setAiPrompt('');
+            }}
+            disabled={aiGenerating}
+            sx={{ color: 'text.secondary' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleAIGenerate}
+            disabled={!aiPrompt.trim() || aiGenerating}
+            startIcon={aiGenerating ? <CircularProgress size={16} color="inherit" /> : <AutoAwesome />}
+            sx={{ fontWeight: 600 }}
+          >
+            {aiGenerating ? 'Generating...' : 'Generate Frame'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Frame Context Menu */}
       <FrameContextMenu
         anchorPosition={contextMenuPosition}
@@ -1196,4 +1288,3 @@ export const StoryboardPanel: React.FC = () => {
 };
 
 export default StoryboardPanel;
-

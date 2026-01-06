@@ -16,11 +16,11 @@ import {
   Typography,
   Button,
   Chip,
-  Grid,
   CircularProgress,
   Alert,
   Stack,
   Tooltip,
+  Grid,
 } from '@mui/material';
 import {
   TrendingUp,
@@ -103,9 +103,9 @@ export const VirtualStudioRecommendations: React.FC<VirtualStudioRecommendations
         </Typography>
       </Box>
 
-      <Grid container spacing={2}>
-        {displayRecommendations.map((recommendation, index) => (
-          <Grid item xs={12} sm={6} md={4} key={index}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
+        {displayRecommendations.map((recommendation: VirtualStudioRecommendation, index: number) => (
+          <Box key={index}>
             <Card
               sx={{
                 height: '100%',
@@ -159,7 +159,7 @@ export const VirtualStudioRecommendations: React.FC<VirtualStudioRecommendations
 
                 {recommendation.tags && recommendation.tags.length > 0 && (
                   <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                    {recommendation.tags.slice(0, 3).map((tag, tagIndex) => (
+                    {recommendation.tags.slice(0, 3).map((tag: string, tagIndex: number) => (
                       <Chip
                         key={tagIndex}
                         label={tag}
@@ -181,9 +181,9 @@ export const VirtualStudioRecommendations: React.FC<VirtualStudioRecommendations
                 </Button>
               </CardActions>
             </Card>
-          </Grid>
+          </Box>
         ))}
-      </Grid>
+      </Box>
     </Box>
   );
 };

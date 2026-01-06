@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Casting Planner Data</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0d1117;
+            color: #fff;
+        }
+        .container {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 30px;
+        }
+        h1 {
+            color: #58a6ff;
+            margin-top: 0;
+        }
+        .button {
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .button:hover {
+            background: #2ea043;
+        }
+        .button-secondary {
+            background: #30363d;
+        }
+        .button-secondary:hover {
+            background: #484f58;
+        }
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            background: #0d1117;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin: 15px 0;
+        }
+        .info {
+            background: #1c2128;
+            border-left: 4px solid #58a6ff;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #1c2128;
+            border-left: 4px solid #238636;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .error {
+            background: #1c2128;
+            border-left: 4px solid #da3633;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📦 Export Casting Planner Data</h1>
+        
+        <div class="info">
+            <strong>Instruksjoner:</strong>
+            <ol>
+                <li>Åpne denne siden i samme nettleser hvor du har Casting Planner-data</li>
+                <li>Klikk "Eksporter localStorage Data" nedenfor</li>
+                <li>Kopier JSON-dataen fra tekstfeltet</li>
+                <li>Lagre den som en fil (f.eks. casting_projects_backup.json)</li>
+                <li>Bruk migrasjonsscriptet: <code>python3 migrate_casting_to_db.py casting_projects_backup.json</code></li>
+            </ol>
+        </div>
+
+        <button class="button" onclick="exportData()">📥 Eksporter localStorage Data</button>
+        <button class="button button-secondary" onclick="clearData()">🗑️ Tøm tekstfelt</button>
+        <button class="button button-secondary" onclick="downloadData()">💾 Last ned som fil</button>
+
+        <div id="status"></div>
+
+        <textarea id="output" placeholder="Eksportert data vil vises her..."></textarea>
+
+        <div class="info">
+            <strong>Tips:</strong>
+            <ul>
+                <li>Hvis du ikke har noen data, vil tekstfeltet vise en tom array: <code>[]</code></li>
+                <li>Lagre filen med filnavn uten mellomrom (f.eks. <code>casting_backup.json</code>)</li>
+                <li>Filen må være gyldig JSON for at migrasjonen skal fungere</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'virtualStudio_castingProjects';
+
+        function exportData() {
+            try {
+                const data = localStorage.getItem(STORAGE_KEY);
+                
+                if (!data) {
+                    showStatus('Ingen data funnet i localStorage. Enten har du ingen prosjekter, eller dataene er lagret med en annen nøkkel.', 'info');
+                    document.getElementById('output').value = '[]';
+                    return;
+                }
+
+                // Parse to validate JSON
+                const parsed = JSON.parse(data);
+                
+                // Pretty print
+                const formatted = JSON.stringify(parsed, null, 2);
+                document.getElementById('output').value = formatted;
+                
+                const count = Array.isArray(parsed) ? parsed.length : 1;
+                showStatus(`✓ Eksportert ${count} prosjekt(er) fra localStorage`, 'success');
+            } catch (error) {
+                showStatus(`✗ Feil ved eksport: ${error.message}`, 'error');
+                document.getElementById('output').value = `Error: ${error.message}`;
+            }
+        }
+
+        function clearData() {
+            document.getElementById('output').value = '';
+            document.getElementById('status').innerHTML = '';
+        }
+
+        function downloadData() {
+            const data = document.getElementById('output').value;
+            
+            if (!data || data.trim() === '') {
+                showStatus('Ingen data å laste ned. Eksporter data først.', 'error');
+                return;
+            }
+
+            try {
+                // Validate JSON
+                JSON.parse(data);
+                
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'casting_projects_backup.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showStatus('✓ Fil lastet ned: casting_projects_backup.json', 'success');
+            } catch (error) {
+                showStatus(`✗ Ugyldig JSON: ${error.message}`, 'error');
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = type;
+            statusDiv.innerHTML = message;
+        }
+
+        // Auto-export on load if there's data
+        window.addEventListener('load', () => {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                setTimeout(exportData, 500);
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

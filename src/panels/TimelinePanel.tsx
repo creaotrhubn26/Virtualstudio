@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { logger } from '../../core/services/logger';
+import { logger } from '../core/services/logger';
 
 const log = logger.module('TimelinePanel, ');
 import {
@@ -39,14 +39,18 @@ import {
   SelectAll,
   Timeline as TimelineIcon,
 } from '@mui/icons-material';
-import { useAnimationStore } from '../../state/animationStore';
-import type { AnimationTrack, Keyframe, EasingFunction } from '../../state/animationStore';
-import { useTabletSupport } from '../../providers/TabletSupportProvider';
-import { TouchIconButton, TouchPinchZoom, TouchContextMenu, TouchDraggable } from '../components/TabletAwarePanels';
-import { useAccessibility, useAnnounce } from '../../providers/AccessibilityProvider';
-import { AccessibleIconButton, AccessibleSlider, VisuallyHidden } from '../components/AccessibleComponents';
+import { useAnimationStore } from '../state/animationStore';
+import type { AnimationTrack, Keyframe, EasingFunction } from '../state/animationStore';
+import { useTabletSupport } from '../providers/TabletSupportProvider';
+import { TouchIconButton, TouchPinchZoom, TouchContextMenu, TouchDraggable } from './components/TabletAwarePanels';
+import { useAccessibility, useAnnounce, VisuallyHidden } from '../providers/AccessibilityProvider';
+import { AccessibleIconButton, AccessibleSlider } from '../components/AccessibleComponents';
 
-interface TimelineKeyframe extends Keyframe {
+interface TimelineKeyframe {
+  id: string;
+  time: number;
+  value: number | number[] | Record<string, number>;
+  easing: EasingFunction;
   x: number; // Pixel position on timeline
 }
 
@@ -58,19 +62,19 @@ const KEYFRAME_SIZE = 12;
 export const TimelinePanel: React.FC = () => {
   const {
     tracks,
-    currentTime,
-    duration,
+    currentFrame: currentTime,
+    totalFrames: duration,
     fps,
     isPlaying,
-    loop: isLooping,
+    isLooping,
     isRecording,
     play,
     pause,
     stop,
-    setCurrentTime,
+    setCurrentFrame: setCurrentTime,
     toggleLoop,
-    setFPS,
-    setDuration,
+    setFps: setFPS,
+    setTotalFrames: setDuration,
     addKeyframe,
     removeKeyframe,
     updateKeyframe,
@@ -81,11 +85,8 @@ export const TimelinePanel: React.FC = () => {
   const isTouch = shouldUseTouch();
 
   // Accessibility
-  const { announce, settings: a11ySettings } = useAccessibility();
-
-  // Accessibility
-  const { announce } = useAnnounce();
-  const { settings: a11ySettings, prefersKeyboard } = useAccessibility();
+  const announce = useAnnounce();
+  const { settings: a11ySettings } = useAccessibility();
 
   const [zoom, setZoom] = useState(1); // Pixels per frame
   const [scrollLeft, setScrollLeft] = useState(0);
@@ -95,6 +96,7 @@ export const TimelinePanel: React.FC = () => {
   const [dragStartTime, setDragStartTime] = useState(0);
   const [keyframeMenuAnchor, setKeyframeMenuAnchor] = useState<{ x: number; y: number } | null>(null);
   const [menuKeyframe, setMenuKeyframe] = useState<Keyframe | null>(null);
+  const [menuTrackId, setMenuTrackId] = useState<string | null>(null);
 
   // Touch gesture state
   const lastTouchDistance = useRef<number | null>(null);
@@ -199,7 +201,7 @@ export const TimelinePanel: React.FC = () => {
     const newTime = Math.max(0, Math.min(totalFrames, dragStartTime + deltaFrames));
 
     for (const track of tracks) {
-      const keyframe = track.keyframes.find((kf) => kf.id === selectedKeyframe);
+      const keyframe = track.keyframes.find((kf: Keyframe) => kf.id === selectedKeyframe);
       if (keyframe) {
         updateKeyframe(selectedKeyframe, { ...keyframe, time: newTime });
         break;
@@ -227,7 +229,7 @@ export const TimelinePanel: React.FC = () => {
 
     // Find and update the keyframe
     for (const track of tracks) {
-      const keyframe = track.keyframes.find((kf) => kf.id === selectedKeyframe);
+      const keyframe = track.keyframes.find((kf: Keyframe) => kf.id === selectedKeyframe);
       if (keyframe) {
         updateKeyframe(selectedKeyframe, { ...keyframe, time: newTime });
         break;
@@ -293,10 +295,10 @@ export const TimelinePanel: React.FC = () => {
 
   useEffect(() => {
     if (isDraggingKeyframe && !isTouch) {
-      window.addEventListener('mousemove, ', handleMouseMove);
+      window.addEventListener('mousemove', handleMouseMove as EventListener);
       window.addEventListener('mouseup', handleMouseUp);
       return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mousemove', handleMouseMove as EventListener);
         window.removeEventListener('mouseup', handleMouseUp);
       };
     }
@@ -360,7 +362,7 @@ export const TimelinePanel: React.FC = () => {
 
   // Render track with keyframes
   const renderTrack = (track: AnimationTrack, index: number) => {
-    const keyframesWithPositions: TimelineKeyframe[] = track.keyframes.map((kf) => ({
+    const keyframesWithPositions: TimelineKeyframe[] = track.keyframes.map((kf: Keyframe) => ({
       ...kf,
       x: frameToPixel(kf.time),
     }));
@@ -388,7 +390,7 @@ export const TimelinePanel: React.FC = () => {
             zIndex: 2}}
         >
           <Typography variant="body2" noWrap sx={{ fontSize: isTouch ? '0.75rem' : '0.875rem' }}>
-            {track.nodeId} • {track.property}
+            {track.targetId} • {track.property}
           </Typography>
           <Typography variant="caption" color="text.secondary">
             {track.keyframes.length} keyframes
@@ -402,9 +404,9 @@ export const TimelinePanel: React.FC = () => {
             flex: 1,
             height: '100%'}}
         >
-          {keyframesWithPositions.map((kf) => {
+          {keyframesWithPositions.map((kf: TimelineKeyframe) => {
             // Long press timer for touch devices
-            let longPressTimer: NodeJS.Timeout | null = null;
+            let longPressTimer: ReturnType<typeof setTimeout> | null = null;
             let touchStartPos: { x: number; y: number } | null = null;
 
             const handleTouchStartKeyframe = (e: React.TouchEvent) => {
@@ -731,7 +733,7 @@ export const TimelinePanel: React.FC = () => {
               </Typography>
             </Box>
           ) : (
-            tracks.map((track, index) => renderTrack(track, index))
+            tracks.map((track: AnimationTrack, index: number) => renderTrack(track, index))
           )}
         </Box>
 
@@ -761,7 +763,7 @@ export const TimelinePanel: React.FC = () => {
         anchorPosition={keyframeMenuAnchor ? { top: keyframeMenuAnchor.y, left: keyframeMenuAnchor.x } : undefined}
         PaperProps={{
           sx: {
-            minWidth: isTouch ? 200 : 160'& .MuiMenuItem-root': {
+            minWidth: isTouch ? 200 : 160, '& .MuiMenuItem-root': {
               minHeight: isTouch ? 48 : 40,
             },
           }}}
@@ -780,11 +782,12 @@ export const TimelinePanel: React.FC = () => {
         </MenuItem>
         <MenuItem
           onClick={() => {
-            if (selectedKeyframe) {
-              removeKeyframe(selectedKeyframe);
+            if (selectedKeyframe && menuTrackId) {
+              removeKeyframe(menuTrackId, selectedKeyframe);
             }
             setKeyframeMenuAnchor(null);
             setMenuKeyframe(null);
+            setMenuTrackId(null);
             setSelectedKeyframe(null);
           }}
         >

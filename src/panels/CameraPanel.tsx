@@ -6,18 +6,20 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { logger } from '../../core/services/logger';
+import { logger } from '../core/services/logger';
 
 const log = logger.module('CameraPanel');
-import { Box, Stack, Tabs, Tab } from '@mui/material';
-import { CameraControls, CameraSettings } from '../controls/CameraControls';
-import { LensSelector, LensSettings } from '../controls/LensSelector';
-import { useAppStore } from '@/state/store';
-import { getActiveCameraId } from '@/core/services/viewports';
+import { Box, Stack, Tabs, Tab, Alert, Typography } from '@mui/material';
+import { CameraControls, CameraSettings } from './controls/CameraControls';
+import { LensSelector, LensSettings } from './controls/LensSelector';
+import { useAppStore } from '../state/store';
+import { getActiveCameraId } from '../core/services/viewports';
+import { AtmosphereSettings } from '../core/models/sceneComposer';
 
 export function CameraPanel() {
   const { scene, updateNode } = useAppStore();
   const [activeTab, setActiveTab] = useState(0);
+  const [atmosphereActive, setAtmosphereActive] = useState(false);
 
   // Find active camera node
   const activeCameraId = getActiveCameraId();
@@ -75,6 +77,29 @@ export function CameraPanel() {
       });
     }
   }, [cameraNode]);
+
+  // Listen to atmosphere changes
+  useEffect(() => {
+    const handleAtmosphereChange = (e: CustomEvent) => {
+      const settings = e.detail as AtmosphereSettings;
+      setAtmosphereActive(settings.fogEnabled || (settings.ambientIntensity !== undefined && settings.ambientIntensity < 0.5));
+    };
+    
+    window.addEventListener('ch-atmosphere-changed', handleAtmosphereChange as EventListener);
+    
+    // Check initial atmosphere state
+    const studio = (window as any).virtualStudio;
+    if (studio?.scene) {
+      const hasFog = studio.scene.fogMode !== 0;
+      const ambientIntensity = studio.scene.ambientColor ? 
+        (studio.scene.ambientColor.r + studio.scene.ambientColor.g + studio.scene.ambientColor.b) / 3 : 0.5;
+      setAtmosphereActive(hasFog || ambientIntensity < 0.5);
+    }
+    
+    return () => {
+      window.removeEventListener('ch-atmosphere-changed', handleAtmosphereChange as EventListener);
+    };
+  }, []);
 
   // Handle camera settings change
   const handleCameraSettingsChange = (newSettings: CameraSettings) => {
@@ -188,6 +213,15 @@ export function CameraPanel() {
         <Tab label="Camera" />
         <Tab label="Lens" />
       </Tabs>
+
+      {/* Atmosphere warning */}
+      {atmosphereActive && (
+        <Alert severity="info" sx={{ m: 2, mb: 2 }}>
+          <Typography variant="body2">
+            🌫️ Atmosfære aktiv - Eksponering påvirkes av tåke/ambient
+          </Typography>
+        </Alert>
+      )}
 
       <Box sx={{ pt: 2 }}>
         {activeTab === 0 && (

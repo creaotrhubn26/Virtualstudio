@@ -1,4 +1,4 @@
-import { Scene, SceneLoader, Mesh, MeshBuilder, StandardMaterial, Color3, Vector3, AbstractMesh } from '@babylonjs/core';
+import { Scene, SceneLoader, Mesh, MeshBuilder, StandardMaterial, PBRMaterial, Material, Color3, Vector3, AbstractMesh } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import { PropDefinition } from '../data/propDefinitions';
 import { logger } from './logger';
@@ -47,13 +47,49 @@ class PropRenderingService {
         mesh = result.meshes[0];
         mesh.name = prop.id;
 
+        // Apply proper PBR shading to all meshes
         result.meshes.forEach((m) => {
           if (m instanceof Mesh) {
             m.receiveShadows = receiveShadow;
           }
+          
+          // Fix material shading
+          if (m.material) {
+            (m.material as Material).wireframe = false;
+            
+            if (m.material instanceof PBRMaterial) {
+              m.material.unlit = false;
+              m.material.transparencyMode = Material.MATERIAL_OPAQUE;
+              m.material.alpha = 1.0;
+              m.material.backFaceCulling = true;
+              if (m.material.metallic === undefined || m.material.metallic === null) {
+                m.material.metallic = 0.3;
+              }
+              if (m.material.roughness === undefined || m.material.roughness === null) {
+                m.material.roughness = 0.5;
+              }
+              if (!m.material.albedoColor || 
+                  (m.material.albedoColor.r < 0.05 && m.material.albedoColor.g < 0.05 && m.material.albedoColor.b < 0.05)) {
+                m.material.albedoColor = new Color3(0.3, 0.3, 0.3);
+              }
+            } else if (m.material instanceof StandardMaterial) {
+              m.material.disableLighting = false;
+              m.material.backFaceCulling = true;
+            }
+          } else if (this.scene) {
+            // No material - create PBR
+            const pbrMat = new PBRMaterial(`pbrMat_${m.name}`, this.scene);
+            pbrMat.albedoColor = new Color3(0.3, 0.3, 0.3);
+            pbrMat.metallic = 0.3;
+            pbrMat.roughness = 0.5;
+            pbrMat.alpha = 1.0;
+            pbrMat.transparencyMode = Material.MATERIAL_OPAQUE;
+            pbrMat.backFaceCulling = true;
+            m.material = pbrMat;
+          }
         });
 
-        log.info(`Loaded prop model: ${prop.name}`);
+        log.info(`Loaded prop model with PBR shading: ${prop.name}`);
       } catch (error) {
         log.warn(`Failed to load prop model: ${prop.modelUrl}, creating placeholder`);
         mesh = this.createPlaceholderProp(prop);

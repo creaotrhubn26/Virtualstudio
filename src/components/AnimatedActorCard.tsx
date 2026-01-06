@@ -74,7 +74,11 @@ export const AnimatedActorCard: React.FC<AnimatedActorCardProps> = ({ actor, onA
     const heightScale = 0.8 + (height * 0.4);
     
     return {
-      '--shoulder-width': `${shoulderWidth}px`'--hip-width': `${hipWidth}px`'--chest-size': `${chestSize}px`'--waist-size': `${waistSize}px`'--height-scale': heightScale,
+      '--shoulder-width': `${shoulderWidth}px`,
+      '--hip-width': `${hipWidth}px`,
+      '--chest-size': `${chestSize}px`,
+      '--waist-size': `${waistSize}px`,
+      '--height-scale': heightScale,
     } as React.CSSProperties;
   }, [actor.parameters]);
 

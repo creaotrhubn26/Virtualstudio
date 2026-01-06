@@ -1,7 +1,11 @@
 fastapi>=0.100.0
 uvicorn>=0.20.0
 python-multipart>=0.0.6
+httpx>=0.24.0
 huggingface-hub>=0.16.0
+diffusers>=0.21.0  # For FLUX and other diffusion models
+transformers>=4.30.0  # For FLUX text encoders
+accelerate>=0.20.0  # For FLUX model loading
 trimesh>=4.0.0
 numpy>=1.24.0
 scipy>=1.10.0
@@ -9,3 +13,13 @@ torch>=2.0.0
 torchvision>=0.15.0
 pillow>=9.0.0
 smplx>=0.1.28
+# DECA dependencies
+scikit-image>=0.15.0
+pyyaml>=5.1.0
+face-alignment>=1.3.0  # Note: May require system libGL.so.1 (usually OK for CPU inference)
+yacs>=0.1.8
+kornia>=0.4.0
+ninja>=1.10.0
+fvcore>=0.1.5
+pytorch3d>=0.7.0  # Required for CPU-only DECA inference (avoids OpenGL requirements)
+# Note: chumpy is listed in DECA requirements but not actually used in the codebase

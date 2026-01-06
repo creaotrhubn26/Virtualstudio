@@ -323,7 +323,7 @@ export const LightSetupRecommendationDialog: React.FC<LightSetupRecommendationDi
                         color: 'white',
                         fontSize: '0.65rem',
                         height: 22,
-                        mb: 1'& .MuiChip-icon': { color: 'white', fontSize: 12 }}}
+                        mb: 1, '& .MuiChip-icon': { color: 'white', fontSize: 12 }}}
                     />
 
                     {/* Description */}

@@ -29,7 +29,6 @@ import {
   Alert,
   Chip,
   Divider,
-  Grid,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -48,6 +47,7 @@ import {
   Switch,
   FormControlLabel,
   Stack,
+  Grid,
 } from '@mui/material';
 import {
   Download,
@@ -358,7 +358,7 @@ export function VideoExportPanel({
   const handleExportFrame = useCallback(() => {
     const result = videoExportService.exportFrame(
       currentDimensions.width,
-      currentDimensions.height'png'
+      currentDimensions.height, 'png'
     );
 
     if (result.success && result.url && result.filename) {
@@ -410,9 +410,9 @@ export function VideoExportPanel({
             </FormControl>
 
             {/* Preset cards */}
-            <Grid container spacing={1}>
-              {filteredPresets.map((preset) => (
-                <Grid item xs={6} key={preset.id}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+              {filteredPresets.map((preset: ExportPreset) => (
+                <Box key={preset.id}>
                   <Card
                     sx={{
                       cursor: 'pointer',
@@ -439,7 +439,7 @@ export function VideoExportPanel({
                         </Typography>
                         {selectedPreset?.id === preset.id && (
                           <Box sx={{ mt: 1 }}>
-                            {preset.tips.map((tip, i) => (
+                            {preset.tips.map((tip: string, i: number) => (
                               <Typography key={i} variant="caption" display="block" color="primary.light" sx={{ fontSize: 9 }}>
                                 • {tip}
                               </Typography>
@@ -449,9 +449,9 @@ export function VideoExportPanel({
                       </CardContent>
                     </CardActionArea>
                   </Card>
-                </Grid>
+                </Box>
               ))}
-            </Grid>
+            </Box>
 
             {/* Export with preset */}
             {selectedPreset && (
@@ -482,14 +482,14 @@ export function VideoExportPanel({
           Format & Resolution
         </Typography>
         
-        <Grid container spacing={2}>
-          <Grid item xs={6}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+          <Box>
             <FormControl fullWidth size="small">
               <InputLabel>Format</InputLabel>
               <Select
                 value={format}
                 label="Format"
-                onChange={(e) => setFormat(e.target.value as 'webm, ' | 'mp4')}
+                onChange={(e) => setFormat(e.target.value as 'webm' | 'mp4')}
                 disabled={isExporting}
               >
                 <MenuItem value="webm">WebM (VP9)</MenuItem>
@@ -501,9 +501,9 @@ export function VideoExportPanel({
                 *MP4 may fall back to WebM
               </Typography>
             )}
-          </Grid>
-          
-          <Grid item xs={6}>
+          </Box>
+
+          <Box>
             <FormControl fullWidth size="small">
               <InputLabel>Resolution</InputLabel>
               <Select
@@ -515,7 +515,7 @@ export function VideoExportPanel({
                 }}
                 disabled={isExporting}
               >
-                {Object.entries(RESOLUTION_PRESETS).map(([key, dims]) => (
+                {(Object.entries(RESOLUTION_PRESETS) as [string, { width: number; height: number }][]).map(([key, dims]) => (
                   <MenuItem key={key} value={key}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <ResolutionIcon preset={key as ResolutionPreset} />
@@ -525,12 +525,12 @@ export function VideoExportPanel({
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
 
         {/* Quality & FPS */}
-        <Grid container spacing={2} sx={{ mt: 1 }}>
-          <Grid item xs={6}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1 }}>
+          <Box>
             <FormControl fullWidth size="small">
               <InputLabel>Quality</InputLabel>
               <Select
@@ -539,7 +539,7 @@ export function VideoExportPanel({
                 onChange={(e) => setQuality(e.target.value as QualityPreset)}
                 disabled={isExporting}
               >
-                {Object.entries(QUALITY_PRESETS).map(([key, info]) => (
+                {(Object.entries(QUALITY_PRESETS) as [string, { description: string; bitrate: number }][]).map(([key, info]) => (
                   <MenuItem key={key} value={key}>
                     <Box>
                       <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
@@ -553,9 +553,9 @@ export function VideoExportPanel({
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-          
-          <Grid item xs={6}>
+          </Box>
+
+          <Box>
             <FormControl fullWidth size="small">
               <InputLabel>Frame Rate</InputLabel>
               <Select
@@ -564,15 +564,15 @@ export function VideoExportPanel({
                 onChange={(e) => setFps(e.target.value as number)}
                 disabled={isExporting}
               >
-                {FPS_PRESETS.map((f) => (
+                {FPS_PRESETS.map((f: number) => (
                   <MenuItem key={f} value={f}>
                     {f} fps
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
 
         {/* Estimated info */}
         <Box sx={{ mt: 2, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -682,13 +682,13 @@ export function VideoExportPanel({
                     </Box>
                     <LinearProgress
                       variant="determinate"
-                      value={uploadProgress.percentage}
+                      value={uploadProgress.percentage ?? 0}
                       sx={{ height: 8, borderRadius: 4, mb: 1 }}
                     />
                     <Typography variant="caption" color="text.secondary">
                       {uploadProgress.status === 'complete'
                         ? 'Upload complete!'
-                        : `${uploadProgress.percentage.toFixed(1)}% • ${videoExportService.formatFileSize(uploadProgress.bytesUploaded)} / ${videoExportService.formatFileSize(uploadProgress.totalBytes)}`}
+                        : `${(uploadProgress.percentage ?? 0).toFixed(1)}% • ${videoExportService.formatFileSize(uploadProgress.bytesUploaded ?? 0)} / ${videoExportService.formatFileSize(uploadProgress.totalBytes ?? 0)}`}
                     </Typography>
                   </Paper>
                 )}
@@ -720,7 +720,7 @@ export function VideoExportPanel({
                         borderRadius: 1,
                         mb: 0.5,
                         cursor: 'pointer', '&:hover': { backgroundColor: '#2a2a3a' }}}
-                      onClick={() => window.open(folder.webViewLink'_blank')}
+                      onClick={() => window.open(folder.webViewLink, '_blank')}
                     >
                       <ListItemIcon>
                         <FolderOpen />
@@ -744,25 +744,25 @@ export function VideoExportPanel({
               {progress.status === 'encoding' && <CircularProgress size={16} color="secondary" />}
               {progress.status === 'complete' && <Check color="success" />}
               {progress.status === 'error' && <Error color="error" />}
-              {progress.status.charAt(0).toUpperCase() + progress.status.slice(1)}...
+              {(progress.status ?? 'processing').charAt(0).toUpperCase() + (progress.status ?? 'processing').slice(1)}...
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {progress.percentage.toFixed(1)}%
+              {(progress.percentage ?? 0).toFixed(1)}%
             </Typography>
           </Box>
-          
+
           <LinearProgress
             variant="determinate"
-            value={progress.percentage}
+            value={progress.percentage ?? 0}
             sx={{ height: 8, borderRadius: 4, mb: 1 }}
           />
-          
+
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
             <Typography variant="caption" color="text.secondary">
               Frame {progress.currentFrame} / {progress.totalFrames}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              ETA: {videoExportService.formatDuration(progress.estimatedTimeRemaining)}
+              ETA: {videoExportService.formatDuration(progress.estimatedTimeRemaining ?? 0)}
             </Typography>
           </Box>
         </Paper>

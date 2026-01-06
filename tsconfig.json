@@ -21,5 +21,17 @@
       "@assets/*": ["attached_assets/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "src/AreaLightPanel.tsx",
+    "src/CameraRig.tsx",
+    "src/Gizmos.tsx",
+    "src/Guides.tsx",
+    "src/Lights.tsx",
+    "src/PoseLibraryPanel.tsx",
+    "src/ResearchOptimizationPanel.tsx",
+    "src/RenderingSettingsPanel.tsx",
+    "src/Rulers.tsx",
+    "src/SceneNodes.tsx"
+  ]
 }

@@ -8,6 +8,7 @@ import {
   Divider,
   InputBase,
   useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
@@ -50,9 +51,14 @@ const CATEGORIES: CategoryInfo[] = [
 ];
 
 export function EquipmentPanel() {
+  const theme = useTheme();
+  const isTouchDevice = useMediaQuery('(pointer: coarse)');
+  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1024px)');
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isIPadFriendly = isTablet || isTouchDevice;
+
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<CategoryFilter>('all');
-  const isTouchDevice = useMediaQuery('(pointer: coarse)');
 
   const filteredEquipment = useMemo(() => {
     return EQUIPMENT_ITEMS.filter(item => {
@@ -71,71 +77,95 @@ export function EquipmentPanel() {
   };
 
   const buttonStyle = {
-    minHeight: 56,
-    minWidth: 110,
-    fontSize: 15,
+    minHeight: isIPadFriendly ? 56 : 48,
+    minWidth: isIPadFriendly ? 120 : 110,
+    fontSize: isIPadFriendly ? '1rem' : 15,
     fontWeight: 600,
     textTransform: 'none' as const,
-    borderRadius: '10px',
+    borderRadius: '12px',
     borderWidth: 2,
     transition: 'all 0.2s ease',
     WebkitTapHighlightColor: 'transparent',
     boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+    padding: isIPadFriendly ? '14px 20px' : '12px 16px',
     '&:active': {
       transform: 'scale(0.97)',
       boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
     },
+    '@media (hover: none) and (pointer: coarse)': {
+      '&:active': {
+        transform: 'scale(0.95)',
+      }
+    }
   };
 
+  const padding = isIPadFriendly ? 3 : 2;
+  const spacing = isIPadFriendly ? 2 : 1.5;
+  const headerIconSize = isIPadFriendly ? 52 : 42;
+  const headerFontSize = isIPadFriendly ? '1.5rem' : 20;
+  const subHeaderFontSize = isIPadFriendly ? '0.9375rem' : 12;
+  const searchHeight = isIPadFriendly ? 56 : 48;
+  const searchFontSize = isIPadFriendly ? '1rem' : 15;
+  const gridMinWidth = isIPadFriendly ? 180 : 140;
+  const gridGap = isIPadFriendly ? 2 : 1.5;
+
   return (
-    <Box sx={{ p: 2, height: '100%', overflow: 'auto', bgcolor: '#1a1a1a' }}>
+    <Box sx={{ p: padding, height: '100%', overflow: 'auto', bgcolor: '#1a1a1a' }}>
       {/* Header */}
       <Box sx={{ 
         display: 'flex', 
         alignItems: 'center', 
-        gap: 1.5,
+        gap: spacing,
         background: 'linear-gradient(135deg, rgba(26,188,156,0.15) 0%, rgba(22,160,133,0.15) 100%)',
-        borderRadius: '14px',
-        px: 2.5,
-        py: 1.5,
-        mb: 2,
+        borderRadius: '16px',
+        px: isIPadFriendly ? 3 : 2.5,
+        py: isIPadFriendly ? 2 : 1.5,
+        mb: spacing,
         border: '1px solid rgba(255,255,255,0.1)',
       }}>
         <Box sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          width: 42,
-          height: 42,
-          borderRadius: '10px',
+          width: headerIconSize,
+          height: headerIconSize,
+          borderRadius: '12px',
           background: 'linear-gradient(135deg, #1abc9c 0%, #16a085 100%)',
           boxShadow: '0 4px 12px rgba(26,188,156,0.4)',
         }}>
-          <TuneIcon sx={{ fontSize: 24, color: '#fff' }} />
+          <TuneIcon sx={{ fontSize: isIPadFriendly ? 28 : 24, color: '#fff' }} />
         </Box>
         <Box>
           <Typography sx={{ 
             fontWeight: 800, 
-            fontSize: 20,
+            fontSize: headerFontSize,
             background: 'linear-gradient(90deg, #76d7c4 0%, #48c9b0 100%)',
             backgroundClip: 'text',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             letterSpacing: '-0.3px',
+            lineHeight: 1.3,
           }}>
             Studio-utstyr
           </Typography>
           <Typography sx={{ 
-            fontSize: 12, 
+            fontSize: subHeaderFontSize, 
             color: '#888',
             fontWeight: 500,
+            lineHeight: 1.4,
           }}>
             Bakgrunner, diffusere og reflektorer
           </Typography>
         </Box>
       </Box>
       
-      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        gap: spacing, 
+        flexWrap: 'wrap', 
+        alignItems: 'center', 
+        mb: spacing 
+      }}>
         {CATEGORIES.map(cat => (
           <Button
             key={cat.key}
@@ -162,26 +192,33 @@ export function EquipmentPanel() {
           display: 'flex', 
           alignItems: 'center', 
           bgcolor: '#2a2a2a', 
-          borderRadius: '10px', 
-          px: 2, 
-          py: 0.5,
-          minHeight: 56,
+          borderRadius: '12px', 
+          px: isIPadFriendly ? 2.5 : 2, 
+          py: isIPadFriendly ? 1 : 0.5,
+          minHeight: searchHeight,
           border: '2px solid #444',
           flex: 1,
-          minWidth: 140,
-          maxWidth: 220,
+          minWidth: isIPadFriendly ? 180 : 140,
+          maxWidth: isIPadFriendly ? 280 : 220,
         }}>
-          <SearchIcon sx={{ color: '#888', fontSize: 22, mr: 1 }} />
+          <SearchIcon sx={{ color: '#888', fontSize: isIPadFriendly ? 26 : 22, mr: 1.5 }} />
           <InputBase
             placeholder="Søk..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             sx={{
               color: '#fff',
-              fontSize: 15,
+              fontSize: searchFontSize,
               fontWeight: 500,
               flex: 1,
-              '& input::placeholder': { color: '#666', opacity: 1 },
+              '& input': {
+                padding: isIPadFriendly ? '12px 8px' : '8px 4px',
+              },
+              '& input::placeholder': { 
+                color: '#666', 
+                opacity: 1,
+                fontSize: searchFontSize,
+              },
             }}
           />
         </Box>
@@ -191,8 +228,12 @@ export function EquipmentPanel() {
 
       <Box sx={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-        gap: 1.5,
+        gridTemplateColumns: isMobile 
+          ? 'repeat(auto-fill, minmax(140px, 1fr))' 
+          : isTablet 
+            ? 'repeat(auto-fill, minmax(180px, 1fr))'
+            : 'repeat(auto-fill, minmax(140px, 1fr))',
+        gap: gridGap,
       }}>
         {filteredEquipment.map(item => (
           <Card

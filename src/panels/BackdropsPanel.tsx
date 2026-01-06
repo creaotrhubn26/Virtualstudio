@@ -2,7 +2,7 @@
  * Backdrops Panel
  * 
  * UI for selecting and configuring backdrops/environments in the scene.
- * Integrates with backdropRenderingService for environment maps and ambient lighting.
+ * Dispatches events to VirtualStudio (Babylon.js) for backdrop loading.
  * 
  * Features:
  * - Category selection (studio, outdoor, indoor, abstract, green-screen, skybox, cyclorama)
@@ -68,10 +68,10 @@ export const BackdropsPanel: React.FC = () => {
   }, []);
   // #endregion
   const { addNode, removeNode } = useAppStore();
-  const nodes = useAppStore((s) => s.scene.nodes);
+  const nodes = useAppStore((s) => s.scene);
 
   // UI State
-  const [activeCategory, setActiveCategory] = useState<BackdropCategory>('studio');
+  const [activeCategory, setActiveCategory] = useState<BackdropCategory>('bakgrunn');
   const [selectedBackdrop, setSelectedBackdrop] = useState<string | null>(null);
   
   // Options State
@@ -96,7 +96,7 @@ export const BackdropsPanel: React.FC = () => {
     fetch('http://127.0.0.1:7242/ingest/0bda4408-a4ac-499d-af8d-1291b9fac2d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BackdropsPanel.tsx:80',message:'Finding backdrop',data:{nodesType:typeof nodes,nodesIsArray:Array.isArray(nodes),nodesLength:nodes?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
     // #endregion
     if (!nodes || !Array.isArray(nodes)) return undefined;
-    return nodes.find(node => node.type === 'backdrop');
+    return nodes.find(node => node.type === 'background');
   }, [nodes]);
 
   const handleSetBackdrop = () => {
@@ -114,7 +114,7 @@ export const BackdropsPanel: React.FC = () => {
     const backdropId = `backdrop-${Date.now()}`;
     addNode({
       id: backdropId,
-      type: 'backdrop',
+      type: 'background',
       name: `${backdrop.name} (${backdrop.category})`,
       transform: {
         position: [0, 0, 0],
@@ -132,6 +132,18 @@ export const BackdropsPanel: React.FC = () => {
       },
     });
 
+    // Dispatch event to VirtualStudio (Babylon.js) to load the backdrop
+    window.dispatchEvent(new CustomEvent('ch-load-backdrop', {
+      detail: {
+        backdropId: selectedBackdrop,
+        category: backdrop.category,
+        scale,
+        applyEnvironmentMap,
+        applyAmbientLight,
+        receiveShadow,
+      }
+    }));
+
     log.debug('Backdrop set: ', {
       id: backdropId,
       backdrop: backdrop.name,
@@ -143,6 +155,8 @@ export const BackdropsPanel: React.FC = () => {
   const handleRemoveBackdrop = () => {
     if (currentBackdrop) {
       removeNode(currentBackdrop.id);
+      // Dispatch event to VirtualStudio to remove the backdrop
+      window.dispatchEvent(new CustomEvent('ch-remove-backdrop'));
       log.debug('Backdrop removed');
     }
   };
@@ -172,13 +186,9 @@ export const BackdropsPanel: React.FC = () => {
         scrollButtons="auto"
         sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
       >
-        <Tab value="studio" label="Studio" />
-        <Tab value="outdoor" label="Outdoor" />
-        <Tab value="indoor" label="Indoor" />
-        <Tab value="abstract" label="Abstract" />
-        <Tab value="green-screen" label="Green Screen" />
-        <Tab value="skybox" label="Skybox" />
-        <Tab value="cyclorama" label="Cyclorama" />
+        {BACKDROP_CATEGORIES.map(cat => (
+          <Tab key={cat.key} value={cat.key} label={cat.label} />
+        ))}
       </Tabs>
 
       {/* Backdrops Grid */}
@@ -190,7 +200,7 @@ export const BackdropsPanel: React.FC = () => {
         ) : (
           <Grid container spacing={2}>
             {backdropItems.map((backdrop) => (
-              <Grid item xs={12} sm={6} key={backdrop.id}>
+              <Grid size={{ xs: 12, sm: 6 }} key={backdrop.id}>
                 <Card
                   sx={{
                     backgroundColor: selectedBackdrop === backdrop.id ? '#333' : '#2a2a2a', '&:hover': { backgroundColor: '#333' },
@@ -206,11 +216,8 @@ export const BackdropsPanel: React.FC = () => {
                       {backdrop.description}
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                      <Chip label={backdrop.style} size="small" />
-                      <Chip label={backdrop.lighting} size="small" />
-                      <Chip label={backdrop.size} size="small" />
-                      {backdrop.hasEnvironmentMap && <Chip label="HDR" size="small" color="success" />}
-                      {backdrop.supportsLOD && <Chip label="LOD" size="small" color="success" />}
+                      {backdrop.size && <Chip label={backdrop.size} size="small" />}
+                      <Chip label={backdrop.category} size="small" />
                     </Box>
                   </CardContent>
                 </Card>

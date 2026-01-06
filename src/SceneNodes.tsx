@@ -8,7 +8,6 @@ import { SceneNode } from '../../core/models/scene';
 // Lazy load mesh components
 const ClothingMesh = React.lazy(() => import('../../ui/components/ClothingMesh').then(m => ({ default: m.ClothingMesh })));
 const HairMesh = React.lazy(() => import('../../ui/components/HairMesh').then(m => ({ default: m.HairMesh })));
-const BackdropMeshFull = React.lazy(() => import('../../ui/components/BackdropMesh').then(m => ({ default: m.BackdropMesh })));
 
 /**
  * SceneNodes Component - Renders model, backdrop, prop, clothing, and hair nodes
@@ -556,16 +555,9 @@ export default function SceneNodes() {
                 onSelect={handleSelect}
               />
             );
-          case 'backdrop':
-            // Use full BackdropMesh implementation that needs THREE.Scene
-            return (
-              <Suspense key={node.id} fallback={null}>
-                <BackdropMeshFull
-                  node={node}
-                  scene={threeScene}
-                />
-              </Suspense>
-            );
+          case 'background':
+            // Backgrounds are handled by Babylon.js VirtualStudio, not React Three Fiber
+            return null;
           case 'prop':
             return (
               <PropMesh
@@ -611,4 +603,4 @@ export default function SceneNodes() {
   );
 }
 
-export { ModelMesh, BackdropMesh, PropMesh, ModelPlaceholder };
+export { ModelMesh, PropMesh, ModelPlaceholder };

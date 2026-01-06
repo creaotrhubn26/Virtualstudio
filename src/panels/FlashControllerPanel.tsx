@@ -1535,7 +1535,7 @@ export function FlashControllerPanel() {
                       startIcon={<FlashIcon />}
                       fullWidth
                       sx={{
-                        bgcolor: accentColor'&:hover': { bgcolor: accentColor, filter: 'brightness(1.2)' }, '&:active': { 
+                        bgcolor: accentColor, '&:hover': { bgcolor: accentColor, filter: 'brightness(1.2)' }, '&:active': {
                           transform: 'scale(0.98)',
                           boxShadow: `0 0 20px ${accentColor}`,
                         }}}

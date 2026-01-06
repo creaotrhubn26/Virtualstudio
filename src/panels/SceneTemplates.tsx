@@ -14,12 +14,21 @@ import {
   Chip,
   Divider,
 } from '@mui/material';
-import { ViewInAr, Portrait, Inventory2, Checkroom, FavoriteBorder } from '@mui/icons-material';
+import { ViewInAr, Portrait, Inventory2, Checkroom, FavoriteBorder, Nightlight } from '@mui/icons-material';
+
+interface AtmosphereSettings {
+  fogEnabled: boolean;
+  fogDensity: number;
+  fogColor: string;
+  clearColor: string;
+  ambientColor: string;
+  ambientIntensity: number;
+}
 
 interface SceneTemplate {
   id: string;
   name: string;
-  category: 'portrait' | 'product' | 'fashion' | 'wedding';
+  category: 'portrait' | 'product' | 'fashion' | 'wedding' | 'lovecraft';
   thumbnail: string;
   description: string;
   lights: Array<{
@@ -34,6 +43,12 @@ interface SceneTemplate {
     iso: number;
   };
   hdri?: string;
+  // Environment (NEW)
+  environment?: {
+    walls?: Array<{ assetId: string; position: [number, number, number] }>;
+    floors?: Array<{ assetId: string }>;
+    atmosphere?: AtmosphereSettings;
+  };
 }
 
 // SVG data URI generator for lighting diagram thumbnails
@@ -313,13 +328,77 @@ const SCENE_TEMPLATES: SceneTemplate[] = [
     ],
     camera: { focalLength: 85, aperture: 1.8, iso: 800 },
   },
+  
+  // ============================================
+  // LOVECRAFT TEMPLATES
+  // ============================================
+  {
+    id: 'lovecraft_temple',
+    name: 'Temple of the Old Ones',
+    category: 'lovecraft',
+    thumbnail: createLightingDiagramSVG('dramatic'),
+    description: 'Eldritch temple with ancient atmosphere',
+    lights: [
+      { type: 'eldritch-glow', power: 100, position: [0, 3, -10], angle: 90 },
+      { type: 'rim', power: 50, position: [-5, 2, -5], angle: 45 },
+      { type: 'rim', power: 50, position: [5, 2, -5], angle: 45 },
+    ],
+    camera: { focalLength: 24, aperture: 2.8, iso: 800 },
+    environment: {
+      walls: [
+        { assetId: 'wall-lovecraft-ruins', position: [0, 4, -10] },
+        { assetId: 'wall-lovecraft-ruins', position: [-10, 4, 0] },
+        { assetId: 'wall-lovecraft-ruins', position: [10, 4, 0] },
+      ],
+      floors: [
+        { assetId: 'floor-lovecraft-temple' },
+      ],
+      atmosphere: {
+        fogEnabled: true,
+        fogDensity: 0.08,
+        fogColor: '#0a150a',
+        clearColor: '#020502',
+        ambientColor: '#051a05',
+        ambientIntensity: 0.2,
+      },
+    },
+  },
+  {
+    id: 'lovecraft_library',
+    name: 'Forbidden Library',
+    category: 'lovecraft',
+    thumbnail: createLightingDiagramSVG('dramatic'),
+    description: 'Ancient library with occult atmosphere',
+    lights: [
+      { type: 'candle', power: 30, position: [2, 1.5, 0], angle: 360 },
+      { type: 'candle', power: 30, position: [-2, 1.5, 0], angle: 360 },
+      { type: 'moonlight', power: 80, position: [0, 5, -8], angle: 120 },
+    ],
+    camera: { focalLength: 35, aperture: 1.8, iso: 1600 },
+    environment: {
+      walls: [
+        { assetId: 'wall-bookshelf-ancient', position: [0, 4, -10] },
+      ],
+      floors: [
+        { assetId: 'floor-wooden-dusty' },
+      ],
+      atmosphere: {
+        fogEnabled: true,
+        fogDensity: 0.04,
+        fogColor: '#1a1510',
+        clearColor: '#0a0805',
+        ambientColor: '#2a2015',
+        ambientIntensity: 0.15,
+      },
+    },
+  },
 ];
 
 export const SceneTemplates: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTemplate, setSelectedTemplate] = useState<SceneTemplate | null>(null);
 
-  const categories = ['all','portrait','product','fashion','wedding'];
+  const categories = ['all','portrait','product','fashion','wedding','lovecraft'];
 
   const filteredTemplates =
     selectedCategory === 'all'
@@ -333,6 +412,7 @@ export const SceneTemplates: React.FC = () => {
       lights: template.lights.length,
       camera: `${template.camera.focalLength}mm f/${template.camera.aperture}`,
       hdri: template.hdri || 'none',
+      environment: template.environment ? 'yes' : 'no',
     });
     if (template.hdri) {
       // HDRI logged above
@@ -343,6 +423,37 @@ export const SceneTemplates: React.FC = () => {
     // template.lights.forEach(light => addLightNode(light);
     // setCameraSettings(template.camera);
     // if (template.hdri) loadHDRI(template.hdri);
+    
+    // Load environment if present
+    if (template.environment) {
+      const environmentService = (window as any).environmentService;
+      
+      // Clear and load walls
+      template.environment.walls?.forEach(wall => {
+        window.dispatchEvent(new CustomEvent('ch-add-asset', {
+          detail: {
+            asset: { id: wall.assetId, category: 'wall' },
+            position: wall.position,
+          }
+        }));
+      });
+      
+      // Load floors
+      template.environment.floors?.forEach(floor => {
+        window.dispatchEvent(new CustomEvent('ch-add-asset', {
+          detail: {
+            asset: { id: floor.assetId, category: 'floor' },
+          }
+        }));
+      });
+      
+      // Set atmosphere
+      if (template.environment.atmosphere) {
+        window.dispatchEvent(new CustomEvent('ch-apply-atmosphere', {
+          detail: template.environment.atmosphere
+        }));
+      }
+    }
   };
 
   return (
@@ -378,6 +489,8 @@ export const SceneTemplates: React.FC = () => {
                   <Checkroom />
                 ) : cat === 'wedding' ? (
                   <FavoriteBorder />
+                ) : cat === 'lovecraft' ? (
+                  <Nightlight />
                 ) : null
               }
               onClick={() => setSelectedCategory(cat)}

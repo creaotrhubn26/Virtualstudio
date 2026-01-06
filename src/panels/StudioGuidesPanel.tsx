@@ -194,7 +194,7 @@ export const StudioGuidesPanel: React.FC<StudioGuidesPanelProps> = ({
               { id: 'small_group', label: 'Small Group', icon: <Groups /> },
               { id: 'class_photo', label: 'Class Photo', icon: <School /> },
             ].map((preset) => (
-              <Grid item xs={6} key={preset.id}>
+              <Grid size={6} key={preset.id}>
                 <Button
                   variant={settings.shootType === preset.id ? 'contained' : 'outlined'}
                   fullWidth
@@ -225,7 +225,7 @@ export const StudioGuidesPanel: React.FC<StudioGuidesPanelProps> = ({
               control={
                 <Switch
                   checked={settings.showGridOverlay}
-                  onChange={(e) => updateSetting('showGridOverlay,', e.target.checked)}
+                  onChange={(e) => updateSetting('showGridOverlay', e.target.checked)}
                   size="small"
                 />
               }
@@ -492,19 +492,19 @@ export const StudioGuidesPanel: React.FC<StudioGuidesPanelProps> = ({
             Current Setup Summary
           </Typography>
           <Grid container spacing={1}>
-            <Grid item xs={6}>
+            <Grid size={6}>
               <Typography variant="caption" color="text.secondary">Subject to BG</Typography>
               <Typography variant="body2" fontWeight={600}>{settings.backgroundDistance.toFixed(1)}m</Typography>
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={6}>
               <Typography variant="caption" color="text.secondary">Key Light</Typography>
               <Typography variant="body2" fontWeight={600}>{settings.keyLightDistance.toFixed(1)}m @ {settings.keyLightAngle}</Typography>
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={6}>
               <Typography variant="caption" color="text.secondary">Fill/Reflector</Typography>
               <Typography variant="body2" fontWeight={600}>{settings.fillDistance.toFixed(1)}m</Typography>
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={6}>
               <Typography variant="caption" color="text.secondary">Camera</Typography>
               <Typography variant="body2" fontWeight={600}>{settings.cameraDistance.toFixed(1)}m</Typography>
             </Grid>

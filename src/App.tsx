@@ -1,14 +1,34 @@
 import React from 'react';
-import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import { 
+  ThemeProvider, 
+  createTheme, 
+  CssBaseline, 
+  Slide,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Box,
+  Typography,
+  Button,
+  IconButton
+} from '@mui/material';
+import { Close as CloseIcon, Movie as MovieIcon, CameraAlt as CameraIcon } from '@mui/icons-material';
+import { ToastProvider } from './components/ToastStack';
 import { VirtualActorPanel } from './panels/VirtualActorPanel';
 import { KeyframeTimeline } from './panels/KeyframeTimeline';
 import AssetLibraryPanel from './panels/AssetLibraryPanel';
+import LibraryPanel from './panels/LibraryPanel';
 import { CharacterModelLoader } from './panels/CharacterModelLoader';
 import { LightsBrowser } from './panels/LightsBrowser';
 import { CameraGearPanel } from './panels/CameraGearPanel';
 import { HDRIPanel } from './panels/HDRIPanel';
 import { EquipmentPanel } from './panels/EquipmentPanel';
 import { NotesPanel } from './components/NotesPanel';
+import { SceneComposerPanel } from './components/SceneComposerPanel';
+import { MarketplacePanel } from './components/MarketplacePanel';
+import { CastingPlannerPanel } from './components/CastingPlannerPanel';
+import { AIAssistantPanel } from './components/AIAssistantPanel';
 import { AccessibilityProvider } from './providers/AccessibilityProvider';
 import { Accessible3DControls } from './components/Accessible3DControls';
 import { CinematographyPatternsPanel } from './components/CinematographyPatternsPanel';
@@ -18,6 +38,14 @@ import { AvatarGeneratorPanel } from './panels/AvatarGeneratorPanel';
 import { ScenerPanel } from './panels/ScenerPanel';
 import { ScenarioPreset } from './data/scenarioPresets';
 import { TidslinjeLibraryPanel } from './panels/TidslinjeLibraryPanel';
+import { AnimationComposerPanel } from './panels/AnimationComposerPanel';
+import CourseCreatorSidebar from './components/CourseCreatorSidebar';
+import { SoundBrowser } from './components/SoundBrowser';
+import { EnvironmentBrowser } from './components/EnvironmentBrowser';
+import { AcademyProvider } from './contexts/AcademyContext';
+import { DemoModeProvider } from './contexts/DemoModeContext';
+import { EnhancedMasterIntegrationProvider } from './integration/EnhancedMasterIntegrationProvider';
+import PanelCreator from './components/PanelCreator';
 
 const darkTheme = createTheme({
   palette: {
@@ -55,7 +83,9 @@ export const App: React.FC<AppProps> = ({ onActorGenerated }) => {
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <VirtualActorPanel onActorGenerated={onActorGenerated} />
+      <ToastProvider>
+        <VirtualActorPanel onActorGenerated={onActorGenerated} />
+      </ToastProvider>
     </ThemeProvider>
   );
 };
@@ -170,37 +200,467 @@ export const TidslinjeLibraryPanelApp: React.FC = () => {
   );
 };
 
-export const NotesPanelApp: React.FC = () => {
+export const LibraryPanelApp: React.FC = () => {
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <LibraryPanel />
+    </ThemeProvider>
+  );
+};
+
+export const MarketplacePanelApp: React.FC = () => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
 
   React.useEffect(() => {
-    const handleToggle = () => setIsOpen(prev => !prev);
-    window.addEventListener('toggle-notes-panel', handleToggle);
-    return () => window.removeEventListener('toggle-notes-panel', handleToggle);
-  }, []);
+    const handleToggle = () => {
+      console.log('MarketplacePanelApp: toggle event received, current isOpen:', isOpen);
+      setIsOpen(prev => {
+        const newState = !prev;
+        console.log('MarketplacePanelApp: setting isOpen from', prev, 'to', newState);
+        
+        // Toggle panel visibility
+        const panel = document.getElementById('marketplacePanel');
+        if (panel) {
+          if (newState) {
+            // Close other panels when opening Marketplace
+            const studioLibraryPanel = document.getElementById('actorBottomPanel');
+            const castingPlannerPanel = document.getElementById('castingPlannerPanel');
+            
+            if (studioLibraryPanel && studioLibraryPanel.classList.contains('open')) {
+              const trigger = document.getElementById('actorPanelTrigger');
+              if (trigger) {
+                studioLibraryPanel.classList.remove('open');
+                trigger.classList.remove('active');
+                trigger.setAttribute('aria-expanded', 'false');
+                const arrow = trigger.querySelector('.library-arrow');
+                if (arrow) arrow.textContent = '+';
+                const actorTab = document.getElementById('actorTab');
+                if (actorTab) actorTab.classList.remove('panel-open');
+              }
+            }
+            if (castingPlannerPanel && castingPlannerPanel.classList.contains('open')) {
+              window.dispatchEvent(new CustomEvent('toggle-plugin-casting-planner-panel'));
+            }
+            
+            panel.style.display = 'flex';
+            panel.classList.add('open');
+          } else {
+            panel.style.display = 'none';
+            panel.classList.remove('open');
+            panel.classList.remove('fullscreen');
+            setIsFullscreen(false);
+          }
+        }
+        
+        // Update button state
+        const trigger = document.getElementById('marketplaceTrigger');
+        const quickBtn = document.getElementById('marketplaceQuickBtn');
+        if (trigger) {
+          if (newState) {
+            trigger.classList.add('active');
+            trigger.setAttribute('aria-expanded', 'true');
+            const arrow = trigger.querySelector('.library-arrow');
+            if (arrow) arrow.textContent = '−';
+          } else {
+            trigger.classList.remove('active');
+            trigger.setAttribute('aria-expanded', 'false');
+            const arrow = trigger.querySelector('.library-arrow');
+            if (arrow) arrow.textContent = '+';
+          }
+        }
+        if (quickBtn) {
+          if (newState) {
+            quickBtn.classList.add('active');
+          } else {
+            quickBtn.classList.remove('active');
+          }
+        }
+        
+        return newState;
+      });
+    };
+    
+    const handleFullscreenToggle = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setIsFullscreen(customEvent.detail);
+    };
+    
+    window.addEventListener('toggle-marketplace-panel', handleToggle);
+    window.addEventListener('marketplace-toggle-fullscreen', handleFullscreenToggle);
+    console.log('MarketplacePanelApp: Event listener registered');
+    return () => {
+      window.removeEventListener('toggle-marketplace-panel', handleToggle);
+      window.removeEventListener('marketplace-toggle-fullscreen', handleFullscreenToggle);
+    };
+  }, [isOpen]);
+
+  // Update button state when closing via onClose
+  const handleClose = () => {
+    setIsOpen(false);
+    setIsFullscreen(false);
+    const panel = document.getElementById('marketplacePanel');
+    if (panel) {
+      panel.style.display = 'none';
+      panel.classList.remove('open');
+      panel.classList.remove('fullscreen');
+    }
+    const trigger = document.getElementById('marketplaceTrigger');
+    const quickBtn = document.getElementById('marketplaceQuickBtn');
+    if (trigger) {
+      trigger.classList.remove('active');
+      trigger.setAttribute('aria-expanded', 'false');
+      const arrow = trigger.querySelector('.library-arrow');
+      if (arrow) arrow.textContent = '+';
+    }
+    if (quickBtn) {
+      quickBtn.classList.remove('active');
+    }
+  };
+
+  const handleToggleFullscreen = () => {
+    const panel = document.getElementById('marketplacePanel');
+    if (panel) {
+      const newFullscreen = !isFullscreen;
+      setIsFullscreen(newFullscreen);
+      if (newFullscreen) {
+        panel.classList.add('fullscreen');
+        panel.style.position = 'fixed';
+        panel.style.top = '0';
+        panel.style.left = '0';
+        panel.style.right = '0';
+        panel.style.bottom = '0';
+        panel.style.zIndex = '99999';
+      } else {
+        panel.classList.remove('fullscreen');
+        panel.style.position = '';
+        panel.style.top = '';
+        panel.style.left = '';
+        panel.style.right = '';
+        panel.style.bottom = '';
+        panel.style.zIndex = '';
+      }
+    }
+  };
+
+  console.log('MarketplacePanelApp: render, isOpen =', isOpen);
+  
+  if (!isOpen) return null;
+
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <ToastProvider>
+        <MarketplacePanel onClose={handleClose} isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} />
+      </ToastProvider>
+    </ThemeProvider>
+  );
+};
+
+export const AIAssistantApp: React.FC = () => {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleToggle = () => {
+      console.log('AIAssistantApp: toggle event received, current isOpen:', isOpen);
+      setIsOpen(prev => {
+        const newState = !prev;
+        console.log('AIAssistantApp: setting isOpen from', prev, 'to', newState);
+
+        // Toggle panel visibility
+        const panel = document.getElementById('aiAssistantPanel');
+        if (panel) {
+          if (newState) {
+            // Close other panels when opening AI Assistant
+            const studioLibraryPanel = document.getElementById('actorBottomPanel');
+            const marketplacePanel = document.getElementById('marketplacePanel');
+            const castingPlannerPanel = document.getElementById('castingPlannerPanel');
+
+            if (studioLibraryPanel && studioLibraryPanel.classList.contains('open')) {
+              const trigger = document.getElementById('actorPanelTrigger');
+              if (trigger) {
+                studioLibraryPanel.classList.remove('open');
+                trigger.classList.remove('active');
+                trigger.setAttribute('aria-expanded', 'false');
+                const arrow = trigger.querySelector('.library-arrow');
+                if (arrow) arrow.textContent = '+';
+              }
+            }
+            if (marketplacePanel && marketplacePanel.classList.contains('open')) {
+              window.dispatchEvent(new CustomEvent('toggle-marketplace-panel'));
+            }
+            if (castingPlannerPanel && castingPlannerPanel.classList.contains('open')) {
+              window.dispatchEvent(new CustomEvent('toggle-plugin-casting-planner-panel'));
+            }
+            
+            // Close help panel if open
+            const helpPanel = document.getElementById('helpPanel');
+            if (helpPanel && helpPanel.classList.contains('open')) {
+              window.dispatchEvent(new CustomEvent('toggle-help-panel'));
+            }
+            
+            // Close CourseCreatorSidebar if open
+            window.dispatchEvent(new CustomEvent('close-course-creator-sidebar'));
+            
+            panel.style.display = 'flex';
+            panel.classList.add('open');
+            
+            // Check if any panel was at max height and set new panel to max height if so
+            const checkMaxHeight = (window as any).checkIfAnyPanelIsMaxHeight;
+            const setMaxHeight = (window as any).setPanelToMaxHeight;
+            if (checkMaxHeight && setMaxHeight && checkMaxHeight('marketplacePanel')) {
+              setMaxHeight('marketplacePanel', 'marketplacePanelHeight');
+            }
+          } else {
+            panel.style.display = 'none';
+            panel.classList.remove('open');
+            panel.classList.remove('fullscreen');
+            setIsFullscreen(false);
+          }
+        }
+
+        // Update button state
+        const trigger = document.getElementById('tool-trigger-plugin-ai-assistant');
+        if (trigger) {
+          if (newState) {
+            trigger.classList.add('active');
+            trigger.setAttribute('aria-expanded', 'true');
+            const arrow = trigger.querySelector('.library-arrow');
+            if (arrow) arrow.textContent = '−';
+          } else {
+            trigger.classList.remove('active');
+            trigger.setAttribute('aria-expanded', 'false');
+            const arrow = trigger.querySelector('.library-arrow');
+            if (arrow) arrow.textContent = '+';
+          }
+        }
+
+        return newState;
+      });
+    };
+
+    const handleFullscreen = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setIsFullscreen(customEvent.detail);
+    };
+
+    window.addEventListener('toggle-ai-assistant-panel', handleToggle);
+    window.addEventListener('ai-assistant-toggle-fullscreen', handleFullscreen);
+    console.log('AIAssistantApp: Event listeners registered');
+
+    return () => {
+      window.removeEventListener('toggle-ai-assistant-panel', handleToggle);
+      window.removeEventListener('ai-assistant-toggle-fullscreen', handleFullscreen);
+    };
+  }, [isOpen]);
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setIsFullscreen(false);
+    const panel = document.getElementById('aiAssistantPanel');
+    if (panel) {
+      panel.style.display = 'none';
+      panel.classList.remove('open');
+      panel.classList.remove('fullscreen');
+    }
+    const trigger = document.getElementById('tool-trigger-plugin-ai-assistant');
+    if (trigger) {
+      trigger.classList.remove('active');
+      trigger.setAttribute('aria-expanded', 'false');
+      const arrow = trigger.querySelector('.library-arrow');
+      if (arrow) arrow.textContent = '+';
+    }
+  };
+
+  console.log('AIAssistantApp: render, isOpen =', isOpen);
 
   if (!isOpen) return null;
 
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <NotesPanel onClose={() => setIsOpen(false)} />
+      <AIAssistantPanel
+        onClose={handleClose}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={() => {
+          const panel = document.getElementById('aiAssistantPanel');
+          if (panel) {
+            const newState = !panel.classList.contains('fullscreen');
+            setIsFullscreen(newState);
+            if (newState) {
+              panel.classList.add('fullscreen');
+            } else {
+              panel.classList.remove('fullscreen');
+            }
+            window.dispatchEvent(new CustomEvent('ai-assistant-toggle-fullscreen', { detail: newState }));
+          }
+        }}
+      />
     </ThemeProvider>
   );
 };
 
-export const CinematographyPatternsApp: React.FC = () => {
+export const CastingPlannerApp: React.FC = () => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
 
   React.useEffect(() => {
-    const handleOpen = () => setIsOpen(true);
-    window.addEventListener('openCinematographyPatterns', handleOpen);
-    return () => window.removeEventListener('openCinematographyPatterns', handleOpen);
-  }, []);
+    const handleToggle = () => {
+      setIsOpen(prev => {
+        const newState = !prev;
+        
+        // Toggle panel visibility
+        const panel = document.getElementById('castingPlannerPanel');
+        if (panel) {
+          if (newState) {
+            // Close other panels when opening Casting Planner
+            const studioLibraryPanel = document.getElementById('actorBottomPanel');
+            const marketplacePanel = document.getElementById('marketplacePanel');
+            const aiAssistantPanel = document.getElementById('aiAssistantPanel');
 
-  const handleApplyPattern = (pattern: CinematographyPattern) => {
-    window.dispatchEvent(new CustomEvent('applyCinematographyPattern', { detail: pattern }));
+            if (studioLibraryPanel && studioLibraryPanel.classList.contains('open')) {
+              const trigger = document.getElementById('actorPanelTrigger');
+              if (trigger) {
+                studioLibraryPanel.classList.remove('open');
+                trigger.classList.remove('active');
+                trigger.setAttribute('aria-expanded', 'false');
+                const arrow = trigger.querySelector('.library-arrow');
+                if (arrow) arrow.textContent = '+';
+                const actorTab = document.getElementById('actorTab');
+                if (actorTab) actorTab.classList.remove('panel-open');
+              }
+            }
+            if (marketplacePanel && marketplacePanel.classList.contains('open')) {
+              window.dispatchEvent(new CustomEvent('toggle-marketplace-panel'));
+            }
+            if (aiAssistantPanel && aiAssistantPanel.classList.contains('open')) {
+              window.dispatchEvent(new CustomEvent('toggle-ai-assistant-panel'));
+            }
+
+            // Close help panel if open
+            const helpPanel = document.getElementById('helpPanel');
+            if (helpPanel && helpPanel.classList.contains('open')) {
+              window.dispatchEvent(new CustomEvent('toggle-help-panel'));
+            }
+
+            // Close CourseCreatorSidebar if open
+            window.dispatchEvent(new CustomEvent('close-course-creator-sidebar'));
+
+            panel.style.display = 'flex';
+            panel.classList.add('open');
+            
+            // Check if any panel was at max height and set new panel to max height if so
+            const checkMaxHeight = (window as any).checkIfAnyPanelIsMaxHeight;
+            const setMaxHeight = (window as any).setPanelToMaxHeight;
+            if (checkMaxHeight && setMaxHeight && checkMaxHeight('aiAssistantPanel')) {
+              setMaxHeight('aiAssistantPanel', 'aiAssistantPanelHeight');
+            }
+          } else {
+            panel.style.display = 'none';
+            panel.classList.remove('open');
+            panel.classList.remove('fullscreen');
+            setIsFullscreen(false);
+          }
+        }
+        
+        // Update button state - find the Casting Planner button
+        const button = document.getElementById('tool-trigger-plugin-casting-planner');
+        const quickBtn = document.getElementById('castingPlannerQuickBtn');
+        if (button) {
+          if (newState) {
+            button.classList.add('active');
+            button.setAttribute('aria-expanded', 'true');
+            const arrow = button.querySelector('.library-arrow');
+            if (arrow) arrow.textContent = '−';
+          } else {
+            button.classList.remove('active');
+            button.setAttribute('aria-expanded', 'false');
+            const arrow = button.querySelector('.library-arrow');
+            if (arrow) arrow.textContent = '+';
+          }
+        }
+        if (quickBtn) {
+          if (newState) {
+            quickBtn.classList.add('active');
+          } else {
+            quickBtn.classList.remove('active');
+          }
+        }
+        
+        return newState;
+      });
+    };
+    
+    const handleFullscreenToggle = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setIsFullscreen(customEvent.detail);
+    };
+    
+    window.addEventListener('toggle-plugin-casting-planner-panel', handleToggle);
+    window.addEventListener('casting-planner-toggle-fullscreen', handleFullscreenToggle);
+    return () => {
+      window.removeEventListener('toggle-plugin-casting-planner-panel', handleToggle);
+      window.removeEventListener('casting-planner-toggle-fullscreen', handleFullscreenToggle);
+    };
+  }, [isOpen]);
+
+  // Update button state when closing via onClose
+  const handleClose = () => {
     setIsOpen(false);
+    setIsFullscreen(false);
+    const panel = document.getElementById('castingPlannerPanel');
+    if (panel) {
+      panel.style.display = 'none';
+      panel.classList.remove('open');
+      panel.classList.remove('fullscreen');
+    }
+    const button = document.getElementById('tool-trigger-plugin-casting-planner');
+    const quickBtn = document.getElementById('castingPlannerQuickBtn');
+    if (button) {
+      button.classList.remove('active');
+      button.setAttribute('aria-expanded', 'false');
+      const arrow = button.querySelector('.library-arrow');
+      if (arrow) arrow.textContent = '+';
+    }
+    if (quickBtn) {
+      quickBtn.classList.remove('active');
+    }
+  };
+
+  const handleToggleFullscreen = () => {
+    const panel = document.getElementById('castingPlannerPanel');
+    if (panel) {
+      const newFullscreen = !isFullscreen;
+      setIsFullscreen(newFullscreen);
+      
+      // Match Marketplace fullscreen behavior exactly
+      if (newFullscreen) {
+        panel.classList.add('fullscreen');
+        panel.style.position = 'fixed';
+        panel.style.top = '0';
+        panel.style.left = '0';
+        panel.style.right = '0';
+        panel.style.bottom = '0';
+        panel.style.zIndex = '99999';
+        panel.style.borderRadius = '0';
+        panel.style.height = ''; // Let CSS handle height
+      } else {
+        panel.classList.remove('fullscreen');
+        panel.style.position = '';
+        panel.style.top = '';
+        panel.style.left = '';
+        panel.style.right = '';
+        panel.style.bottom = '';
+        panel.style.zIndex = '';
+        panel.style.borderRadius = '';
+        panel.style.height = '';
+      }
+      
+      // Dispatch event to sync with main.ts listeners
+      window.dispatchEvent(new CustomEvent('casting-planner-toggle-fullscreen', { detail: newFullscreen }));
+    }
   };
 
   if (!isOpen) return null;
@@ -208,46 +668,144 @@ export const CinematographyPatternsApp: React.FC = () => {
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0,0,0,0.7)',
-        backdropFilter: 'blur(4px)',
-        zIndex: 10000,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 20
-      }} onClick={() => setIsOpen(false)}>
-        <div style={{
-          background: '#1c2128',
-          borderRadius: 16,
-          maxWidth: 600,
-          maxHeight: '80vh',
-          overflow: 'auto',
-          padding: 20,
-          boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-          border: '2px solid rgba(255,170,0,0.3)'
-        }} onClick={e => e.stopPropagation()}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h2 style={{ margin: 0, color: '#ffaa00', fontSize: 18 }}>🎬 Hollywood Lysmønstre</h2>
-            <button onClick={() => setIsOpen(false)} style={{
-              background: 'rgba(255,255,255,0.1)',
-              border: 'none',
-              borderRadius: 8,
-              width: 36,
-              height: 36,
-              color: '#fff',
-              fontSize: 20,
-              cursor: 'pointer'
-            }}>&times;</button>
-          </div>
+      <ToastProvider>
+        <CastingPlannerPanel onClose={handleClose} isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} />
+      </ToastProvider>
+    </ThemeProvider>
+  );
+};
+
+export const SceneComposerPanelApp: React.FC = () => {
+  const handleSaveScene = async (scene: any) => {
+    // The scene object passed here is a placeholder - we'll get the actual scene from VirtualStudio
+    window.dispatchEvent(new CustomEvent('save-scene', { detail: scene }));
+  };
+
+  const handleLoadScene = (scene: any) => {
+    window.dispatchEvent(new CustomEvent('load-scene', { detail: scene }));
+  };
+
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <SceneComposerPanel onSaveScene={handleSaveScene} onLoadScene={handleLoadScene} />
+    </ThemeProvider>
+  );
+};
+
+export const NotesPanelApp: React.FC = () => {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [isClosing, setIsClosing] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleToggle = () => {
+      if (isOpen && !isClosing) {
+        setIsClosing(true);
+        setTimeout(() => {
+          setIsOpen(false);
+          setIsClosing(false);
+        }, 350);
+      } else if (!isOpen) {
+        setIsOpen(true);
+      }
+    };
+    window.addEventListener('toggle-notes-panel', handleToggle);
+    return () => window.removeEventListener('toggle-notes-panel', handleToggle);
+  }, [isOpen, isClosing]);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsOpen(false);
+      setIsClosing(false);
+    }, 350);
+  };
+
+  const showPanel = isOpen || isClosing;
+
+  if (!showPanel) return null;
+
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <NotesPanel onClose={handleClose} isClosing={isClosing} />
+    </ThemeProvider>
+  );
+};
+
+export const CinematographyPatternsApp: React.FC = () => {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [applyingId, setApplyingId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener('openCinematographyPatterns', handleOpen);
+    return () => window.removeEventListener('openCinematographyPatterns', handleOpen);
+  }, []);
+
+  const handleApplyPattern = async (pattern: CinematographyPattern) => {
+    setApplyingId(pattern.id);
+    await new Promise(resolve => setTimeout(resolve, 300));
+    window.dispatchEvent(new CustomEvent('applyLightPattern', { detail: pattern }));
+    setApplyingId(null);
+    setIsOpen(false);
+  };
+
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <Dialog
+        open={isOpen}
+        onClose={() => setIsOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: '#1c2128',
+            borderRadius: 3,
+            border: '2px solid rgba(255,170,0,0.3)',
+            maxHeight: '85vh'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
+          pb: 2
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <MovieIcon sx={{ color: '#ffaa00', fontSize: 28 }} />
+            <Box>
+              <Typography variant="h6" sx={{ color: '#ffaa00', fontWeight: 600 }}>
+                Hollywood Lysmønstre
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#999' }}>
+                Profesjonelle lysmønstre fra film og fotografi
+              </Typography>
+            </Box>
+          </Box>
+          <IconButton onClick={() => setIsOpen(false)} sx={{ color: '#999' }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
           <CinematographyPatternsPanel onApplyPattern={handleApplyPattern} />
-        </div>
-      </div>
+        </DialogContent>
+        <DialogActions sx={{ 
+          borderTop: '1px solid rgba(255,255,255,0.1)', 
+          p: 2,
+          justifyContent: 'space-between'
+        }}>
+          <Typography variant="caption" sx={{ color: '#666' }}>
+            Klikk "Apply Pattern" for å bruke et lysmønster
+          </Typography>
+          <Button onClick={() => setIsOpen(false)} variant="outlined" sx={{ borderColor: '#555', color: '#999' }}>
+            Lukk
+          </Button>
+        </DialogActions>
+      </Dialog>
     </ThemeProvider>
   );
 };
@@ -282,10 +840,18 @@ export const AvatarGeneratorApp: React.FC = () => {
   const [isOpen, setIsOpen] = React.useState(false);
 
   React.useEffect(() => {
-    const handleOpen = () => setIsOpen(true);
+    const handleOpen = () => {
+      console.log('AvatarGeneratorApp: Received openAvatarGenerator event');
+      setIsOpen(true);
+    };
     window.addEventListener('openAvatarGenerator', handleOpen);
+    console.log('AvatarGeneratorApp: Event listener registered');
     return () => window.removeEventListener('openAvatarGenerator', handleOpen);
   }, []);
+
+  React.useEffect(() => {
+    console.log('AvatarGeneratorApp: isOpen changed to', isOpen);
+  }, [isOpen]);
 
   const handleAvatarGenerated = (glbUrl: string, metadata: any) => {
     window.dispatchEvent(new CustomEvent('avatarGenerated', { detail: { glbUrl, metadata } }));
@@ -300,6 +866,298 @@ export const AvatarGeneratorApp: React.FC = () => {
         onAvatarGenerated={handleAvatarGenerated}
       />
     </ThemeProvider>
+  );
+};
+
+// Sound Browser App
+export const SoundBrowserApp: React.FC = () => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    const handleClose = () => setIsOpen(false);
+    window.addEventListener('openSoundBrowser', handleOpen);
+    window.addEventListener('closeSoundBrowser', handleClose);
+    return () => {
+      window.removeEventListener('openSoundBrowser', handleOpen);
+      window.removeEventListener('closeSoundBrowser', handleClose);
+    };
+  }, []);
+
+  if (!isOpen) return null;
+
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <SoundBrowser />
+    </ThemeProvider>
+  );
+};
+
+// Environment Browser App
+export const EnvironmentBrowserApp: React.FC = () => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    const handleClose = () => setIsOpen(false);
+    window.addEventListener('openEnvironmentBrowser', handleOpen);
+    window.addEventListener('closeEnvironmentBrowser', handleClose);
+    return () => {
+      window.removeEventListener('openEnvironmentBrowser', handleOpen);
+      window.removeEventListener('closeEnvironmentBrowser', handleClose);
+    };
+  }, []);
+
+  if (!isOpen) return null;
+
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <EnvironmentBrowser />
+    </ThemeProvider>
+  );
+};
+
+// Animation Composer Panel App
+export const AnimationComposerApp: React.FC = () => {
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <ToastProvider>
+        <AnimationComposerPanel />
+      </ToastProvider>
+    </ThemeProvider>
+  );
+};
+
+// Course Creator Sidebar App - for video editing
+export const CourseCreatorSidebarApp: React.FC = () => {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState(0);
+  const [currentVideo, setCurrentVideo] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    console.log('CourseCreatorSidebarApp: Setting up edit-video listener');
+    
+    const handleEditVideo = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const videoData = customEvent.detail;
+      
+      console.log('CourseCreatorSidebarApp: Received edit-video event', videoData);
+      
+      if (!videoData) {
+        console.warn('CourseCreatorSidebarApp: No video data in event');
+        return;
+      }
+      
+      // Stop event propagation to prevent other handlers from running
+      if (e.stopImmediatePropagation) {
+        e.stopImmediatePropagation();
+      }
+      
+      // Ensure help panel is open (since sidebar is inside help panel)
+      const helpPanel = document.getElementById('helpPanel');
+      if (helpPanel && !helpPanel.classList.contains('open')) {
+        console.log('CourseCreatorSidebarApp: Opening help panel first');
+        window.dispatchEvent(new CustomEvent('toggle-help-panel'));
+        
+        // Wait for help panel to open, then open sidebar
+        setTimeout(() => {
+          setCurrentVideo(videoData);
+          setIsOpen(true);
+          setActiveTab(0); // Switch to video details tab
+          console.log('CourseCreatorSidebarApp: Sidebar opened with data:', videoData);
+        }, 600);
+      } else {
+        // Help panel is already open, open sidebar immediately (but with small delay to ensure DOM is ready)
+        setTimeout(() => {
+          setCurrentVideo(videoData);
+          setIsOpen(true);
+          setActiveTab(0); // Switch to video details tab
+          console.log('CourseCreatorSidebarApp: Sidebar opened with data:', videoData);
+        }, 100);
+      }
+    };
+
+    // Close sidebar when other panels open
+    const handlePanelToggle = () => {
+      setIsOpen((prevIsOpen) => {
+        if (prevIsOpen) {
+          console.log('CourseCreatorSidebarApp: Closing sidebar because another panel opened');
+          setCurrentVideo(null);
+          return false;
+        }
+        return prevIsOpen;
+      });
+    };
+
+    // Close sidebar when explicitly requested
+    const handleCloseSidebar = () => {
+      setIsOpen((prevIsOpen) => {
+        if (prevIsOpen) {
+          console.log('CourseCreatorSidebarApp: Closing sidebar via close event');
+          setCurrentVideo(null);
+          return false;
+        }
+        return prevIsOpen;
+      });
+    };
+
+    // Close sidebar when help panel closes (since sidebar is inside help panel)
+    const handleHelpPanelClose = () => {
+      const helpPanel = document.getElementById('helpPanel');
+      if (helpPanel && !helpPanel.classList.contains('open')) {
+        setIsOpen((prevIsOpen) => {
+          if (prevIsOpen) {
+            console.log('CourseCreatorSidebarApp: Closing sidebar because help panel closed');
+            setCurrentVideo(null);
+            return false;
+          }
+          return prevIsOpen;
+        });
+      }
+    };
+
+    // Use capture phase to handle event before other listeners
+    window.addEventListener('edit-video', handleEditVideo, true);
+    
+    // Listen for panel toggle events (but NOT toggle-help-panel, since sidebar is inside help panel)
+    window.addEventListener('toggle-marketplace-panel', handlePanelToggle);
+    window.addEventListener('toggle-ai-assistant-panel', handlePanelToggle);
+    window.addEventListener('toggle-plugin-casting-planner-panel', handlePanelToggle);
+    window.addEventListener('close-course-creator-sidebar', handleCloseSidebar);
+    
+    // Check help panel state periodically (since it doesn't dispatch events)
+    const checkHelpPanelInterval = setInterval(() => {
+      handleHelpPanelClose();
+    }, 100);
+    
+    console.log('CourseCreatorSidebarApp: Event listeners registered');
+    
+    return () => {
+      window.removeEventListener('edit-video', handleEditVideo, true);
+      window.removeEventListener('toggle-marketplace-panel', handlePanelToggle);
+      window.removeEventListener('toggle-ai-assistant-panel', handlePanelToggle);
+      window.removeEventListener('toggle-plugin-casting-planner-panel', handlePanelToggle);
+      window.removeEventListener('close-course-creator-sidebar', handleCloseSidebar);
+      clearInterval(checkHelpPanelInterval);
+      console.log('CourseCreatorSidebarApp: Event listeners removed');
+    };
+  }, []);
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setCurrentVideo(null);
+  };
+
+  const handleCourseUpdate = (updatedCourse: any) => {
+    if (!currentVideo) return;
+    
+    // Update the video in the DOM
+    const placeholder = document.querySelector(
+      `.help-video-placeholder[data-video-id="${currentVideo.videoId}"], .help-video-player-container[data-video-id="${currentVideo.videoId}"]`
+    ) as HTMLElement;
+    
+    if (placeholder) {
+      // Update data attributes
+      if (updatedCourse.videoUrl) {
+        placeholder.setAttribute('data-video-url', updatedCourse.videoUrl);
+      }
+      if (updatedCourse.thumbnailUrl) {
+        placeholder.setAttribute('data-thumbnail-url', updatedCourse.thumbnailUrl);
+      }
+      
+      // If it's still a placeholder (not mounted), update HTML
+      if (placeholder.classList.contains('help-video-placeholder')) {
+        const titleEl = placeholder.querySelector('.video-info h4');
+        const descEl = placeholder.querySelector('.video-info p');
+        const durationEl = placeholder.querySelector('.video-duration');
+        
+        if (titleEl) titleEl.textContent = updatedCourse.title || currentVideo.title;
+        if (descEl) descEl.textContent = updatedCourse.description || currentVideo.description;
+        if (durationEl) durationEl.textContent = updatedCourse.duration || currentVideo.duration;
+      } else {
+        // Remount with new data
+        placeholder.setAttribute('data-video-url', updatedCourse.videoUrl || '');
+        placeholder.setAttribute('data-thumbnail-url', updatedCourse.thumbnailUrl || '');
+        placeholder.classList.add('help-video-placeholder');
+        placeholder.classList.remove('help-video-player-container');
+        placeholder.innerHTML = `
+          <div class="video-thumbnail">
+            <div class="video-gradient-overlay"></div>
+            <span class="video-play-icon">▶</span>
+            <span class="video-duration">${updatedCourse.duration || currentVideo.duration}</span>
+          </div>
+          <div class="video-info">
+            <h4>${updatedCourse.title || currentVideo.title}</h4>
+            <p>${updatedCourse.description || currentVideo.description}</p>
+            <span class="video-status">${updatedCourse.videoUrl ? 'Klikk for å spille av' : 'Video kommer snart'}</span>
+          </div>
+        `;
+        
+        // Remount video player
+        setTimeout(() => {
+          const { mountHelpVideoPlayers } = require('./components/HelpVideoPlayer');
+          mountHelpVideoPlayers();
+        }, 0);
+      }
+      
+      // Update current video state
+      setCurrentVideo({ ...currentVideo, ...updatedCourse });
+    }
+  };
+
+  // Always render the component (even when closed) so event listeners stay active
+  // But only render CourseCreatorSidebar when open
+  return (
+    <React.Fragment>
+      {isOpen && (
+        <ThemeProvider theme={darkTheme}>
+          <CssBaseline />
+          <DemoModeProvider>
+            <AcademyProvider>
+              <EnhancedMasterIntegrationProvider>
+                <CourseCreatorSidebar
+                  open={isOpen}
+                  onClose={handleClose}
+                  course={currentVideo ? {
+                    id: currentVideo.videoId,
+                    title: currentVideo.title,
+                    description: currentVideo.description,
+                    status: 'draft',
+                    videoUrl: currentVideo.videoUrl,
+                    thumbnailUrl: currentVideo.thumbnailUrl,
+                    duration: currentVideo.duration,
+                  } : {
+                    id: 'new-video',
+                    title: 'Ny video',
+                    description: '',
+                    status: 'draft',
+                  }}
+                  onCourseUpdate={handleCourseUpdate}
+                  onPublish={() => {}}
+                  onSaveDraft={handleCourseUpdate}
+                  onPreview={() => {}}
+                  onShare={() => {}}
+                  onExport={() => {}}
+                  onImport={() => {}}
+                  onDelete={() => {}}
+                  onVersionRestore={() => {}}
+                  onVersionCreate={() => {}}
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
+                  modules={[]}
+                  lessons={[]}
+                  resources={[]}
+                  lowerThirds={[]}
+                />
+              </EnhancedMasterIntegrationProvider>
+            </AcademyProvider>
+          </DemoModeProvider>
+        </ThemeProvider>
+      )}
+    </React.Fragment>
   );
 };
 

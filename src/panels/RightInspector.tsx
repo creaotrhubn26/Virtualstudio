@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { Box, Divider, Grid, Slider, Stack, TextField, Typography, Button, Tooltip, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { Box, Divider, Grid, Slider, Stack, TextField, Typography, Button, Tooltip, Select, MenuItem, FormControl, InputLabel, IconButton } from '@mui/material';
+import { Delete } from '@mui/icons-material';
 import { useActions, useScene } from '@/state/selectors';
 import { colors, spacing, shadows } from '@/styles/designTokens';
 import { NumberInput } from '@/ui/components/NumberInput';
@@ -27,9 +28,38 @@ export default function RightInspector() {
     <Box sx={{ p: spacing.md, bgcolor: colors.background.panel, color: colors.text.primary, height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Selection Panel */}
       <Box sx={{ mb: 3 }}>
-        <Typography fontWeight={600} fontSize={14} color={colors.text.primary} gutterBottom>
-          Selection
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Typography fontWeight={600} fontSize={14} color={colors.text.primary}>
+            Selection
+          </Typography>
+          <Tooltip title="Delete Object">
+            <IconButton
+              size="small"
+              onClick={() => {
+                if (confirm(`Are you sure you want to delete "${node.name || node.type}"?`)) {
+                  deleteNode(node.id);
+                  // Also remove from 3D scene if it's a mesh
+                  const mesh = window.studio?.scene?.getMeshByName(node.id);
+                  if (mesh) {
+                    mesh.dispose();
+                  }
+                  // Dispatch event for cleanup
+                  window.dispatchEvent(new CustomEvent('ch-scene-node-removed', {
+                    detail: { nodeId: node.id }
+                  }));
+                }
+              }}
+              sx={{
+                color: colors.error || '#f44336',
+                '&:hover': {
+                  bgcolor: 'rgba(244, 67, 54, 0.1)'
+                }
+              }}
+            >
+              <Delete fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
         <Typography variant="caption" color={colors.text.disabled} fontSize={11} sx={{ display: 'block', mb: 2 }}>
           {node.name || `${node.type} (${node.id.slice(0, 8)})`}
         </Typography>

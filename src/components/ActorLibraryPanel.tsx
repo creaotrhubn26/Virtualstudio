@@ -68,7 +68,8 @@ const CATEGORY_ICONS: Record<string, React.ReactElement> = {
   commercial: <Business />,
   fitness: <FitnessCenter />,
   child: <ChildCare />,
-  elder: <Elderly />'film-character': <TheaterComedy />,
+  elder: <Elderly />,
+  'film-character': <TheaterComedy />,
 };
 
 export const ActorLibraryPanel: React.FC = () => {
@@ -188,6 +189,9 @@ export const ActorLibraryPanel: React.FC = () => {
       });
       material.transparent = true;
       material.opacity = 1;
+      if (geometry && material) {
+        geometry.material = material;
+      }
 
       // Get entrance animation for this character's genre
       const entranceAnimation = getEntranceAnimation(actor.metadata?.genre);
@@ -228,6 +232,11 @@ export const ActorLibraryPanel: React.FC = () => {
           },
         },
       });
+
+      const studio = (window as any).virtualStudio as { addActorToScene?: (id: string) => void } | undefined;
+      if (studio?.addActorToScene) {
+        studio.addActorToScene(nodeId);
+      }
 
       // Dispatch event to trigger entrance animation in 3D viewport
       window.dispatchEvent(new CustomEvent('vs-actor-entrance', {
@@ -425,18 +434,37 @@ export const ActorLibraryPanel: React.FC = () => {
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Tooltip title="Refresh">
-            <IconButton onClick={loadCachedActors} size="small" disabled={loading}>
-              <Refresh />
-            </IconButton>
+            {loading ? (
+              <span>
+                <IconButton onClick={loadCachedActors} size="small" disabled>
+                  <Refresh />
+                </IconButton>
+              </span>
+            ) : (
+              <IconButton onClick={loadCachedActors} size="small">
+                <Refresh />
+              </IconButton>
+            )}
           </Tooltip>
           <Tooltip title="Clear All">
-            <IconButton 
-              onClick={() => setConfirmDialog('clear')} 
-              size="small"
-              disabled={cachedActors.length === 0}
-            >
-              <Delete />
-            </IconButton>
+            {cachedActors.length === 0 ? (
+              <span>
+                <IconButton 
+                  onClick={() => setConfirmDialog('clear')} 
+                  size="small"
+                  disabled
+                >
+                  <Delete />
+                </IconButton>
+              </span>
+            ) : (
+              <IconButton 
+                onClick={() => setConfirmDialog('clear')} 
+                size="small"
+              >
+                <Delete />
+              </IconButton>
+            )}
           </Tooltip>
         </Box>
       </Box>
@@ -708,4 +736,3 @@ export const ActorLibraryPanel: React.FC = () => {
 };
 
 export default ActorLibraryPanel;
-

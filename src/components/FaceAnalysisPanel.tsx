@@ -530,7 +530,7 @@ export function FaceAnalysisPanel() {
 
     try {
       // Convert captured image to File
-      const imageFile = dataURLtoFile(capturedImage'scene-capture.png');
+      const imageFile = dataURLtoFile(capturedImage, 'scene-capture.png');
       
       // Use 'all' if selected, otherwise use first selected task
       const task = selectedTasks.has('all') ? 'all' : Array.from(selectedTasks)[0];
@@ -554,7 +554,7 @@ export function FaceAnalysisPanel() {
       }
       
       // Using 'trained' model (latest fine-tuned version)
-      const result = await faceXFormerService.analyzeFace(imageFile, task'trained');
+      const result = await faceXFormerService.analyzeFace(imageFile, task, 'trained');
       
       // Enhance result with SAM 2 mask if available
       if (sam2FaceMask && result.results) {
@@ -970,7 +970,7 @@ export function FaceAnalysisPanel() {
                 <Button
                   size="small"
                   startIcon={<DownloadIcon />}
-                  onClick={() => handleDownload(results.results.face'face.png')}
+                  onClick={() => handleDownload(results.results.face, 'face.png')}
                   sx={{ mt: 1 }}
                 >
                   Download
@@ -1001,7 +1001,7 @@ export function FaceAnalysisPanel() {
                   startIcon={<DownloadIcon />}
                   onClick={() =>
                     handleDownload(
-                      results.results.parsing_visualization || results.results.parsing'parsing.png'
+                      results.results.parsing_visualization || results.results.parsing, 'parsing.png'
                     )
                   }
                   sx={{ mt: 1 }}
@@ -1036,7 +1036,7 @@ export function FaceAnalysisPanel() {
                   startIcon={<DownloadIcon />}
                   onClick={() =>
                     handleDownload(
-                      results.results.landmarks_visualization || results.results.face'landmarks.png'
+                      results.results.landmarks_visualization || results.results.face, 'landmarks.png'
                     )
                   }
                   sx={{ mt: 1 }}
@@ -1084,7 +1084,7 @@ export function FaceAnalysisPanel() {
                   startIcon={<DownloadIcon />}
                   onClick={() =>
                     handleDownload(
-                      results.results.headpose_visualization || results.results.face'headpose.png')
+                      results.results.headpose_visualization || results.results.face, 'headpose.png')
                   }
                   sx={{ mt: 1 }}
                 >

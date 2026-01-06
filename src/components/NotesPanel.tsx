@@ -24,6 +24,7 @@ import {
   Person as PersonIcon,
   Settings as SettingsIcon,
 } from '@mui/icons-material';
+import { RichTextEditor } from './RichTextEditor';
 
 interface Note {
   id: string;
@@ -44,13 +45,40 @@ const CATEGORY_CONFIG = {
 
 const STORAGE_KEY = 'virtualstudio_notes';
 
-export function NotesPanel({ onClose }: { onClose?: () => void }) {
+interface NotesPanelProps {
+  onClose?: () => void;
+  isClosing?: boolean;
+}
+
+export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState<Note['category']>('general');
+  const [zIndex, setZIndex] = useState(10000);
+
+  // Bring panel to front on mount
+  useEffect(() => {
+    const bringToFront = (window as any).bringPanelToFront;
+    if (bringToFront) {
+      bringToFront('notesPanel');
+    }
+  }, []);
+
+  // Listen for z-index updates from other panels
+  useEffect(() => {
+    const handleBringToFront = (e: CustomEvent<{ panelId: string; zIndex: number }>) => {
+      if (e.detail.panelId === 'notesPanel') {
+        setZIndex(e.detail.zIndex);
+      }
+    };
+    window.addEventListener('panel-bring-to-front', handleBringToFront as EventListener);
+    return () => {
+      window.removeEventListener('panel-bring-to-front', handleBringToFront as EventListener);
+    };
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -136,14 +164,17 @@ export function NotesPanel({ onClose }: { onClose?: () => void }) {
     });
   };
 
+  // Responsive button style for desktop and iPad
   const buttonStyle = {
-    minHeight: 48,
-    fontSize: 14,
+    minHeight: { xs: 48, sm: 52, md: 56 },
+    fontSize: { xs: 14, sm: 15, md: 16 },
     fontWeight: 600,
     textTransform: 'none' as const,
-    borderRadius: '10px',
+    borderRadius: '12px',
+    padding: { xs: '10px 18px', sm: '12px 20px', md: '12px 24px' },
     transition: 'all 0.2s ease',
     WebkitTapHighlightColor: 'transparent',
+    touchAction: 'manipulation',
     '&:active': {
       transform: 'scale(0.97)',
     },
@@ -152,37 +183,93 @@ export function NotesPanel({ onClose }: { onClose?: () => void }) {
   const isEditing = isCreating || editingNote;
 
   return (
-    <Box
-      sx={{
-        position: 'fixed',
-        bottom: 80,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: 'min(600px, 90vw)',
-        maxHeight: '60vh',
-        bgcolor: '#1e1e1e',
-        border: '2px solid #333',
-        borderRadius: 3,
-        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-        zIndex: 1000,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
-    >
+    <>
+      {/* Backdrop dimming */}
+      <Box
+        sx={{
+          position: 'fixed',
+          inset: 0,
+          bgcolor: 'rgba(0,0,0,0.3)',
+          zIndex: zIndex - 1,
+          opacity: isClosing ? 0 : 1,
+          transition: 'opacity 0.35s ease',
+          pointerEvents: 'none',
+        }}
+      />
+      <Box
+        id="notesPanel"
+        sx={{
+          position: 'fixed',
+          bottom: { xs: 70, sm: 80, md: 100 },
+          left: '50%',
+          // Responsive width: mobile -> tablet -> desktop
+          width: {
+            xs: 'calc(100vw - 32px)',
+            sm: 'min(700px, 90vw)',
+            md: 'min(800px, 85vw)',
+          },
+          maxHeight: { xs: '70vh', sm: '65vh', md: '60vh' },
+          bgcolor: '#1e1e1e',
+          border: '2px solid #333',
+          borderRadius: { xs: 2, sm: 3 },
+          zIndex: zIndex,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          transformOrigin: 'bottom center',
+          // macOS Genie-style animation
+          '@keyframes genieOpen': {
+            '0%': {
+              opacity: 0,
+              transform: 'translateX(-50%) scaleY(0.1) scaleX(0.5)',
+              boxShadow: '0 0 0 rgba(0,0,0,0)',
+            },
+            '50%': {
+              opacity: 1,
+              transform: 'translateX(-50%) scaleY(0.6) scaleX(0.9)',
+            },
+            '80%': {
+              transform: 'translateX(-50%) scaleY(1.02) scaleX(1.01)',
+            },
+            '100%': {
+              opacity: 1,
+              transform: 'translateX(-50%) scaleY(1) scaleX(1)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            },
+          },
+          '@keyframes genieClose': {
+            '0%': {
+              opacity: 1,
+              transform: 'translateX(-50%) scaleY(1) scaleX(1)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            },
+            '30%': {
+              transform: 'translateX(-50%) scaleY(0.8) scaleX(0.95)',
+            },
+            '100%': {
+              opacity: 0,
+              transform: 'translateX(-50%) scaleY(0.1) scaleX(0.5)',
+              boxShadow: '0 0 0 rgba(0,0,0,0)',
+            },
+          },
+          animation: isClosing
+            ? 'genieClose 0.3s cubic-bezier(0.4, 0, 1, 1) forwards'
+            : 'genieOpen 0.4s cubic-bezier(0, 0, 0.2, 1) forwards',
+        }}
+      >
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          p: 2,
+          p: 3,
           borderBottom: '1px solid #333',
           bgcolor: '#252525',
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <NotesIcon sx={{ color: '#fbbf24', fontSize: 24 }} />
-          <Typography sx={{ color: '#fff', fontWeight: 600, fontSize: 16 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <NotesIcon sx={{ color: '#fbbf24', fontSize: 28 }} />
+          <Typography sx={{ color: '#fff', fontWeight: 600, fontSize: 18 }}>
             Notater
           </Typography>
           <Chip
@@ -192,16 +279,17 @@ export function NotesPanel({ onClose }: { onClose?: () => void }) {
               bgcolor: '#fbbf24',
               color: '#000',
               fontWeight: 700,
-              fontSize: 12,
-              height: 24,
+              fontSize: 13,
+              height: 28,
+              px: 1,
             }}
           />
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
           {!isEditing && (
             <Button
               variant="contained"
-              startIcon={<AddIcon />}
+              startIcon={<AddIcon sx={{ fontSize: 20 }} />}
               onClick={handleCreate}
               sx={{
                 ...buttonStyle,
@@ -218,18 +306,21 @@ export function NotesPanel({ onClose }: { onClose?: () => void }) {
               onClick={onClose}
               sx={{
                 color: '#888',
+                minWidth: 48,
+                minHeight: 48,
                 '&:hover': { color: '#fff', bgcolor: '#333' },
+                touchAction: 'manipulation',
               }}
             >
-              <CloseIcon />
+              <CloseIcon sx={{ fontSize: 24 }} />
             </IconButton>
           )}
         </Box>
       </Box>
 
-      <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+      <Box sx={{ flex: 1, overflow: 'auto', p: { xs: 2, sm: 3 } }}>
         {isEditing ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 2, sm: 3 } }}>
             <TextField
               fullWidth
               placeholder="Tittel..."
@@ -239,17 +330,28 @@ export function NotesPanel({ onClose }: { onClose?: () => void }) {
                 '& .MuiOutlinedInput-root': {
                   bgcolor: '#2a2a2a',
                   color: '#fff',
-                  fontSize: 16,
+                  fontSize: { xs: 16, sm: 18 },
                   fontWeight: 600,
-                  '& fieldset': { borderColor: '#444' },
+                  minHeight: { xs: 52, sm: 56 },
+                  '& fieldset': { borderColor: '#444', borderWidth: 2 },
                   '&:hover fieldset': { borderColor: '#555' },
-                  '&.Mui-focused fieldset': { borderColor: '#fbbf24' },
+                  '&.Mui-focused fieldset': { borderColor: '#fbbf24', borderWidth: 2 },
                 },
-                '& input::placeholder': { color: '#666' },
+                '& input': {
+                  padding: { xs: '14px 12px', sm: '16px 14px' },
+                },
+                '& input::placeholder': { color: '#666', fontSize: { xs: 16, sm: 18 } },
               }}
             />
 
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {/* Category buttons - responsive grid for iPad */}
+            <Box
+              sx={{
+                display: 'flex',
+                gap: { xs: 1, sm: 1.5 },
+                flexWrap: 'wrap',
+              }}
+            >
               {(Object.keys(CATEGORY_CONFIG) as Note['category'][]).map((cat) => {
                 const config = CATEGORY_CONFIG[cat];
                 const Icon = config.icon;
@@ -257,20 +359,28 @@ export function NotesPanel({ onClose }: { onClose?: () => void }) {
                   <Button
                     key={cat}
                     variant={category === cat ? 'contained' : 'outlined'}
-                    startIcon={<Icon sx={{ fontSize: 18 }} />}
+                    startIcon={<Icon sx={{ fontSize: { xs: 18, sm: 20 } }} />}
                     onClick={() => setCategory(cat)}
                     sx={{
-                      minHeight: 44,
-                      fontSize: 13,
+                      minHeight: { xs: 48, sm: 52 },
+                      fontSize: { xs: 14, sm: 15 },
                       fontWeight: 600,
                       textTransform: 'none',
-                      borderRadius: '8px',
+                      borderRadius: '10px',
+                      padding: { xs: '10px 16px', sm: '12px 20px' },
                       bgcolor: category === cat ? config.color : 'transparent',
                       borderColor: category === cat ? config.color : '#444',
+                      borderWidth: 2,
                       color: category === cat ? (cat === 'lighting' ? '#000' : '#fff') : '#aaa',
+                      touchAction: 'manipulation',
+                      WebkitTapHighlightColor: 'transparent',
+                      transition: 'all 0.15s ease',
                       '&:hover': {
                         bgcolor: category === cat ? config.color : '#333',
                         borderColor: config.color,
+                      },
+                      '&:active': {
+                        transform: 'scale(0.97)',
                       },
                     }}
                   >
@@ -280,33 +390,23 @@ export function NotesPanel({ onClose }: { onClose?: () => void }) {
               })}
             </Box>
 
-            <TextField
-              fullWidth
-              multiline
-              rows={6}
-              placeholder="Skriv notatet ditt her..."
+            {/* Rich text editor with responsive height */}
+            <RichTextEditor
               value={content}
-              onChange={(e) => setContent(e.target.value)}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: '#2a2a2a',
-                  color: '#fff',
-                  fontSize: 14,
-                  '& fieldset': { borderColor: '#444' },
-                  '&:hover fieldset': { borderColor: '#555' },
-                  '&.Mui-focused fieldset': { borderColor: '#fbbf24' },
-                },
-                '& textarea::placeholder': { color: '#666' },
-              }}
+              onChange={setContent}
+              placeholder="Skriv notatet ditt her..."
+              minHeight={{ xs: 150, sm: 200, md: 250 }}
+              accentColor="#fbbf24"
             />
 
-            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+            <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'flex-end' }}>
               <Button
                 variant="outlined"
                 onClick={handleCancel}
                 sx={{
                   ...buttonStyle,
                   borderColor: '#444',
+                  borderWidth: 2,
                   color: '#aaa',
                   '&:hover': { borderColor: '#666', bgcolor: '#333' },
                 }}
@@ -315,7 +415,7 @@ export function NotesPanel({ onClose }: { onClose?: () => void }) {
               </Button>
               <Button
                 variant="contained"
-                startIcon={<SaveIcon />}
+                startIcon={<SaveIcon sx={{ fontSize: 20 }} />}
                 onClick={handleSave}
                 disabled={!title.trim()}
                 sx={{
@@ -337,15 +437,15 @@ export function NotesPanel({ onClose }: { onClose?: () => void }) {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              py: 6,
+              py: 8,
               color: '#666',
             }}
           >
-            <NotesIcon sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
-            <Typography sx={{ fontSize: 14 }}>
+            <NotesIcon sx={{ fontSize: 64, mb: 3, opacity: 0.5 }} />
+            <Typography sx={{ fontSize: 18, fontWeight: 500 }}>
               Ingen notater ennå
             </Typography>
-            <Typography sx={{ fontSize: 12, color: '#555', mt: 0.5 }}>
+            <Typography sx={{ fontSize: 14, color: '#555', mt: 1 }}>
               Klikk "Ny notat" for å begynne
             </Typography>
           </Box>
@@ -359,20 +459,23 @@ export function NotesPanel({ onClose }: { onClose?: () => void }) {
                   {index > 0 && <Divider sx={{ borderColor: '#333' }} />}
                   <ListItem
                     sx={{
-                      px: 2,
-                      py: 1.5,
+                      px: 3,
+                      py: 2.5,
                       borderRadius: 2,
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
+                      minHeight: 72,
+                      touchAction: 'manipulation',
                       '&:hover': { bgcolor: '#2a2a2a' },
+                      '&:active': { bgcolor: '#333' },
                     }}
                     onClick={() => handleEdit(note)}
                   >
-                    <Icon sx={{ color: config.color, fontSize: 20, mr: 2 }} />
+                    <Icon sx={{ color: config.color, fontSize: 24, mr: 2.5 }} />
                     <ListItemText
                       primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography sx={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Typography sx={{ color: '#fff', fontWeight: 600, fontSize: 16 }}>
                             {note.title}
                           </Typography>
                           <Chip
@@ -381,8 +484,9 @@ export function NotesPanel({ onClose }: { onClose?: () => void }) {
                             sx={{
                               bgcolor: `${config.color}20`,
                               color: config.color,
-                              fontSize: 10,
-                              height: 20,
+                              fontSize: 12,
+                              height: 24,
+                              px: 1,
                             }}
                           />
                         </Box>
@@ -393,18 +497,19 @@ export function NotesPanel({ onClose }: { onClose?: () => void }) {
                             <Typography
                               sx={{
                                 color: '#888',
-                                fontSize: 12,
+                                fontSize: 14,
                                 mt: 0.5,
                                 display: '-webkit-box',
                                 WebkitLineClamp: 2,
                                 WebkitBoxOrient: 'vertical',
                                 overflow: 'hidden',
+                                lineHeight: 1.5,
                               }}
                             >
                               {note.content}
                             </Typography>
                           )}
-                          <Typography sx={{ color: '#555', fontSize: 10, mt: 0.5 }}>
+                          <Typography sx={{ color: '#555', fontSize: 12, mt: 0.5 }}>
                             {formatDate(note.timestamp)}
                           </Typography>
                         </Box>
@@ -412,31 +517,35 @@ export function NotesPanel({ onClose }: { onClose?: () => void }) {
                     />
                     <ListItemSecondaryAction>
                       <IconButton
-                        size="small"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleEdit(note);
                         }}
                         sx={{
                           color: '#666',
-                          mr: 0.5,
+                          mr: 1,
+                          minWidth: 48,
+                          minHeight: 48,
+                          touchAction: 'manipulation',
                           '&:hover': { color: '#fbbf24', bgcolor: '#333' },
                         }}
                       >
-                        <EditIcon fontSize="small" />
+                        <EditIcon sx={{ fontSize: 22 }} />
                       </IconButton>
                       <IconButton
-                        size="small"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDelete(note.id);
                         }}
                         sx={{
                           color: '#666',
+                          minWidth: 48,
+                          minHeight: 48,
+                          touchAction: 'manipulation',
                           '&:hover': { color: '#ef4444', bgcolor: '#333' },
                         }}
                       >
-                        <DeleteIcon fontSize="small" />
+                        <DeleteIcon sx={{ fontSize: 22 }} />
                       </IconButton>
                     </ListItemSecondaryAction>
                   </ListItem>
@@ -447,6 +556,7 @@ export function NotesPanel({ onClose }: { onClose?: () => void }) {
         )}
       </Box>
     </Box>
+    </>
   );
 }
 

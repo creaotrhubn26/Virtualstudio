@@ -3,7 +3,7 @@ import { create } from 'zustand';
 export type FocusMode = 'single' | 'zone' | 'wide' | 'tracking';
 export type SafeAreaMode = 'none' | 'action' | 'title' | 'both';
 export type CompositionGuide = 'none' | 'thirds' | 'golden' | 'spiral' | 'diagonal' | 'center' | 'triangle' | 'symmetry';
-export type HelperGuide = 'none' | 'colortemp' | 'exposure' | 'height' | 'glasses' | 'classphoto' | 'safety';
+export type HelperGuide = 'none' | 'colortemp' | 'exposure' | 'height' | 'glasses' | 'classphoto' | 'safety' | 'lighting';
 
 export interface FocusPoint {
   id: number;
@@ -33,7 +33,9 @@ interface FocusState {
   setHelperGuide: (guide: HelperGuide) => void;
   cycleHelperGuide: () => void;
   toggleGrid: () => void;
+  setShowGrid: (show: boolean) => void;
   toggleOverlay: () => void;
+  setShowOverlay: (show: boolean) => void;
   setActivePoint: (id: number) => void;
   updateSinglePoint: (x: number, y: number) => void;
   updateZonePoint: (id: number, x: number, y: number) => void;
@@ -43,7 +45,7 @@ interface FocusState {
 }
 
 const compositionGuides: CompositionGuide[] = ['none', 'thirds', 'golden', 'spiral', 'diagonal', 'center', 'triangle', 'symmetry'];
-const helperGuides: HelperGuide[] = ['none', 'colortemp', 'exposure', 'height', 'glasses', 'classphoto', 'safety'];
+const helperGuides: HelperGuide[] = ['none', 'colortemp', 'exposure', 'height', 'glasses', 'classphoto', 'safety', 'lighting'];
 
 export const useFocusStore = create<FocusState>((set, get) => ({
   mode: 'zone',
@@ -84,7 +86,9 @@ export const useFocusStore = create<FocusState>((set, get) => ({
     return { helperGuide: nextGuide };
   }),
   toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
+  setShowGrid: (show) => set({ showGrid: show }),
   toggleOverlay: () => set((state) => ({ showOverlay: !state.showOverlay })),
+  setShowOverlay: (show) => set({ showOverlay: show }),
   
   setActivePoint: (id) => set((state) => ({
     activePointId: id,
@@ -122,6 +126,14 @@ export interface NodeTransform {
   scale: [number, number, number];
 }
 
+export interface CameraSettings {
+  aperture?: number;
+  iso?: number;
+  shutter?: number;
+  focalLength?: number;
+  sensor?: [number, number];
+}
+
 export interface SceneNode {
   id: string;
   type: 'light' | 'model' | 'camera' | 'accessory' | 'background' | 'modifier';
@@ -130,6 +142,7 @@ export interface SceneNode {
   visible: boolean;
   locked?: boolean;
   userData?: Record<string, unknown>;
+  camera?: CameraSettings;
 }
 
 export interface ActorParams {
@@ -192,3 +205,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     actorParams: { ...state.actorParams, ...params }
   })),
 }));
+
+export const useNodes = () => useAppStore((state) => state.scene);
+export const useScene = () => {
+  const scene = useAppStore((state) => state.scene);
+  const selectedNodeId = useAppStore((state) => state.selectedNodeId);
+  return {
+    nodes: scene,
+    selection: selectedNodeId ? [selectedNodeId] : [],
+  };
+};

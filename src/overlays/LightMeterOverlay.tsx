@@ -105,9 +105,9 @@ function HistogramDisplay({ canvas }: { canvas: HTMLCanvasElement | null }) {
         histCtx.fill();
       };
 
-      drawChannel(histogram.r'rgb(255, 0, 0)');
-      drawChannel(histogram.g'rgb(0, 255, 0)');
-      drawChannel(histogram.b'rgb(0, 255, 255)');
+      drawChannel(histogram.r, 'rgb(255, 0, 0)');
+      drawChannel(histogram.g, 'rgb(0, 255, 0)');
+      drawChannel(histogram.b, 'rgb(0, 255, 255)');
 
       // Draw luminance (white outline)
       histCtx.beginPath();

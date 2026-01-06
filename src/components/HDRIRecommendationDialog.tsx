@@ -220,7 +220,7 @@ export const HDRIRecommendationDialog: React.FC<HDRIRecommendationDialogProps> =
                         bgcolor: CATEGORY_COLORS[hdri.category] || '#666',
                         color: 'white',
                         fontSize: '0.7rem',
-                        height: 24'& .MuiChip-icon': { color: 'white', fontSize: 14 }}}
+                        height: 24, '& .MuiChip-icon': { color: 'white', fontSize: 14 }}}
                     />
 
                     {/* Selected Checkmark */}

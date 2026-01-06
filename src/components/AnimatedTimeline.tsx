@@ -189,7 +189,8 @@ const FrameThumbnail = styled(Box, {
   
   ...($isExiting && {
     animation: `${frameExit} 0.3s ${animationEasings.easeIn} forwards`,
-  })'&:hover': {
+  }),
+  '&:hover': {
     transform: 'scale(1.1)',
     zIndex: 1,
     boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
@@ -250,11 +251,13 @@ const Playhead = styled(Box, {
   
   ...($isPlaying && {
     animation: `${playheadGlow} 1s ease-in-out infinite`,
-  })'&:active': {
+  }),
+  '&:active': {
     cursor: 'grabbing',
     transform: 'translateX(-50%) scale(1.2)',
-  }, '&::after': {
-    content: ', ""',
+  },
+  '&::after': {
+    content: '""',
     position: 'absolute',
     top: '100%',
     left: '50%',

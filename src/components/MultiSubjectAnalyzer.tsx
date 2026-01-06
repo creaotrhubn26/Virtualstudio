@@ -86,7 +86,7 @@ export function MultiSubjectAnalyzer({
         // Detect all subjects using SAM 2
         const segmentation = await sam2Service.segmentImageFromUrl(
           imageUrl,
-          undefined'auto', 'small'
+          undefined, 'auto', 'small'
         );
 
         // Process subjects
