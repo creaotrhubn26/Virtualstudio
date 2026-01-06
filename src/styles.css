@@ -5829,27 +5829,56 @@ html, body {
   overflow-x: hidden;
 }
 
-/* Camera tab - keep original behavior (DO NOT CHANGE) */
-#cameraTabContent {
-  display: flex;
-  flex-direction: column;
+/* ========== CAMERA & LIGHT TAB SCROLLING ========== */
+
+/* Camera tab - scrollable with flex layout */
+#cameraControlsPanel #cameraTabContent {
+  display: flex !important;
+  flex-direction: column !important;
   gap: 16px;
   padding: 16px;
-}
-
-/* ========== LIGHT TAB ONLY - Scrolling and containment fixes ========== */
-#cameraControlsPanel #lightTabContent {
   overflow-y: auto !important;
   overflow-x: hidden !important;
-  max-height: calc(65vh - 80px) !important;
-  min-height: 0 !important;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
-/* Light tab sections - ensure they stay contained */
+/* Light tab - scrollable with flex layout */
+#cameraControlsPanel #lightTabContent {
+  flex-direction: column !important;
+  gap: 14px;
+  padding: 14px;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Both tabs - ensure child elements stay contained */
+#cameraControlsPanel #cameraTabContent > div,
 #cameraControlsPanel #lightTabContent > div {
   flex-shrink: 0;
   max-width: 100%;
   box-sizing: border-box;
+}
+
+/* Custom scrollbar for camera tab */
+#cameraControlsPanel #cameraTabContent::-webkit-scrollbar {
+  width: 6px;
+}
+
+#cameraControlsPanel #cameraTabContent::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+#cameraControlsPanel #cameraTabContent::-webkit-scrollbar-thumb {
+  background: rgba(0, 212, 255, 0.4);
+  border-radius: 3px;
+}
+
+#cameraControlsPanel #cameraTabContent::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 212, 255, 0.6);
 }
 
 /* Custom scrollbar for light tab */
