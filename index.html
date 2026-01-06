@@ -418,8 +418,8 @@
               <p class="camera-info-dialog-text" id="cameraInfoDialogText"></p>
             </div>
           </div>
-          <div id="cameraControlsScrollable" style="overflow-y:auto;max-height:calc(100vh - 180px);overflow-x:visible;position:relative;">
-          <div id="cameraControlsHeader" style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:rgba(0,212,255,0.1);border-bottom:1px solid rgba(0,212,255,0.2);cursor:grab;user-select:none;touch-action:none;">
+          <!-- Header - outside scrollable area -->
+          <div id="cameraControlsHeader" style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:rgba(0,212,255,0.1);border-bottom:1px solid rgba(0,212,255,0.2);cursor:grab;user-select:none;touch-action:none;flex-shrink:0;">
             <div style="display:flex;align-items:center;gap:10px;">
               <!-- Drag handle indicator -->
               <div class="drag-handle" style="display:flex;flex-direction:column;gap:3px;padding:4px 6px;margin-right:4px;" title="Dra for å flytte">
@@ -432,11 +432,13 @@
             </div>
             <button id="cameraControlsClose" aria-label="Lukk" style="width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">&times;</button>
           </div>
-          <!-- Tab Bar -->
-          <div style="display:flex;border-bottom:1px solid rgba(255,255,255,0.1);">
+          <!-- Tab Bar - outside scrollable area -->
+          <div id="cameraTabBar" style="display:flex;border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;">
             <button id="tabCamera" class="ctrl-tab active" style="flex:1;padding:16px;background:rgba(0,212,255,0.15);border:none;border-bottom:2px solid #00d4ff;color:#00d4ff;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;"><div class="tab-icon camera-icon"></div> Kamera</button>
             <button id="tabLight" class="ctrl-tab" style="flex:1;padding:16px;background:transparent;border:none;border-bottom:2px solid transparent;color:rgba(255,255,255,0.6);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;"><div class="tab-icon light-icon"></div> Lys</button>
           </div>
+          <!-- Scrollable content area -->
+          <div id="cameraControlsScrollable" style="overflow-y:auto;max-height:calc(100vh - 310px);overflow-x:visible;position:relative;flex:1;">
           <!-- Camera Tab Content -->
           <div id="cameraTabContent" style="padding:16px;display:flex;flex-direction:column;gap:20px;">
             <!-- Camera Settings Section -->
