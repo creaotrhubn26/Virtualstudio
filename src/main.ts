@@ -1428,11 +1428,6 @@ class VirtualStudio {
   }
 
   private setupModalListeners(): void {
-    document.getElementById('importModelBtn')?.addEventListener('click', () => {
-      const modal = document.getElementById('modelModal');
-      if (modal) modal.style.display = 'flex';
-    });
-
     document.getElementById('closeModal')?.addEventListener('click', () => {
       const modal = document.getElementById('modelModal');
       if (modal) modal.style.display = 'none';
