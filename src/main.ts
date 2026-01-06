@@ -15357,13 +15357,22 @@ window.addEventListener('DOMContentLoaded', () => {
     const toggleCameraControls = () => {
       if (!cameraControlsPanel) return;
       const isVisible = cameraControlsPanel.style.display !== 'none';
+      // #region agent log
+      fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:15357',message:'toggleCameraControls called',data:{isVisible,currentDisplay:cameraControlsPanel.style.display},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
 
       if (isVisible) {
         cameraControlsPanel.style.display = 'none';
         cameraControlBtn?.classList.remove('active');
+        // #region agent log
+        fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:15362',message:'Panel hidden via toggle',data:{displayAfter:cameraControlsPanel.style.display},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
       } else {
         cameraControlsPanel.style.display = 'block';
         cameraControlBtn?.classList.add('active');
+        // #region agent log
+        fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:15366',message:'Panel shown via toggle',data:{displayAfter:cameraControlsPanel.style.display},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
       }
     };
 
@@ -15372,27 +15381,46 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Direct click handler for close button (most reliable)
     if (cameraControlsClose) {
+      // #region agent log
+      fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:15374',message:'Close button found, attaching handler',data:{buttonExists:!!cameraControlsClose,panelExists:!!cameraControlsPanel},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       cameraControlsClose.addEventListener('click', (e) => {
+        // #region agent log
+        fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:15376',message:'Close button clicked',data:{targetId:(e.target as HTMLElement)?.id,currentTargetId:(e.currentTarget as HTMLElement)?.id,panelDisplayBefore:cameraControlsPanel?.style.display},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation(); // Prevent any other handlers from running
         if (cameraControlsPanel) {
-          cameraControlsPanel.style.display = 'none';
+          // Use setProperty with important to ensure it takes precedence
+          cameraControlsPanel.style.setProperty('display', 'none', 'important');
+          // #region agent log
+          fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:15380',message:'Panel hidden after close click',data:{panelDisplayAfter:cameraControlsPanel.style.display,computedDisplay:window.getComputedStyle(cameraControlsPanel).display},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
         }
         cameraControlBtn?.classList.remove('active');
+        return false; // Additional safeguard
       });
+    } else {
+      // #region agent log
+      fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:15374',message:'Close button NOT found',data:{buttonExists:false},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
     }
 
-    // Also use event delegation as fallback for close button
+    // Also use event delegation as fallback for close button (with lower priority)
     if (cameraControlsPanel) {
       cameraControlsPanel.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
         if (target.closest('#cameraControlsClose') || target.id === 'cameraControlsClose') {
-          e.preventDefault();
-          e.stopPropagation();
-          cameraControlsPanel.style.display = 'none';
-          cameraControlBtn?.classList.remove('active');
+          // Only handle if direct handler didn't already process it
+          if (cameraControlsPanel.style.display !== 'none') {
+            e.preventDefault();
+            e.stopPropagation();
+            cameraControlsPanel.style.setProperty('display', 'none', 'important');
+            cameraControlBtn?.classList.remove('active');
+          }
         }
-      });
+      }, { capture: false }); // Use bubbling phase, not capture
     }
     
     if (cameraControlsPanel) {
@@ -15961,6 +15989,9 @@ window.addEventListener('DOMContentLoaded', () => {
       const lightTabContent = document.getElementById('lightTabContent');
       
       const switchToTab = (tab: 'camera' | 'light') => {
+        // #region agent log
+        fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:15963',message:'switchToTab called',data:{tab,cameraTabContentExists:!!cameraTabContent,lightTabContentExists:!!lightTabContent},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         const cameraControlsPanel = document.getElementById('cameraControlsPanel') as HTMLElement;
         const cameraControlsScrollable = document.getElementById('cameraControlsScrollable') as HTMLElement;
         const screenWidth = window.innerWidth;
@@ -16019,15 +16050,115 @@ window.addEventListener('DOMContentLoaded', () => {
       // Collapse/expand functionality for light tab sections
       // Make it available globally so it can be called from other places
       (window as any).setupLightSectionCollapse = () => {
-        const lightSectionHeaders = document.querySelectorAll('#lightTabContent .light-section-header');
-        lightSectionHeaders.forEach(header => {
+        // #region agent log
+        fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16021',message:'setupLightSectionCollapse called',data:{lightTabContentExists:!!document.getElementById('lightTabContent')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+        // Find all light section headers - including those in light-presets-section and light-patterns-section
+        // Use a more inclusive selector that finds all headers within lightTabContent or in the specific section classes
+        const lightTabContent = document.getElementById('lightTabContent');
+        let lightSectionHeadersArray: Element[];
+        if (lightTabContent) {
+          // Query within lightTabContent first
+          const headersInTab = Array.from(lightTabContent.querySelectorAll('.light-section-header'));
+          // Also query for headers in sections that might be outside but should be included
+          const headersInPresets = Array.from(document.querySelectorAll('.light-presets-section .light-section-header'));
+          const headersInPatterns = Array.from(document.querySelectorAll('.light-patterns-section .light-section-header'));
+          // Combine all (using a Set to avoid duplicates based on element identity)
+          const allHeaders = new Set([...headersInTab, ...headersInPresets, ...headersInPatterns]);
+          lightSectionHeadersArray = Array.from(allHeaders);
+        } else {
+          lightSectionHeadersArray = Array.from(document.querySelectorAll('.light-section-header'));
+        }
+        const lightSectionHeaders = lightSectionHeadersArray;
+        // #region agent log
+        const headerClasses = Array.from(lightSectionHeaders).map((h, i) => ({index:i, classes:Array.from((h as HTMLElement).classList), hasCollapsed:(h as HTMLElement).classList.contains('collapsed'), innerHTML:(h as HTMLElement).innerHTML.substring(0,50), textContent:(h as HTMLElement).textContent?.trim().substring(0,30)}));
+        fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16023',message:'Found light section headers',data:{headerCount:lightSectionHeaders.length,headerClasses},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+        lightSectionHeaders.forEach((header, index) => {
           // Skip if already has event listener
           if ((header as HTMLElement).dataset.hasListener === 'true') {
+            // #region agent log
+            fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16026',message:'Header already has listener, skipping',data:{index,hasCollapsedClass:header.classList.contains('collapsed')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
             return;
           }
           (header as HTMLElement).dataset.hasListener = 'true';
           
+          // Find content element - try nextElementSibling first, then querySelector
+          let content = header.nextElementSibling as HTMLElement;
+          if (!content || !content.classList.contains('light-section-content')) {
+            // If nextElementSibling isn't the content, try finding it in parent
+            const parent = header.parentElement;
+            if (parent) {
+              const foundContent = parent.querySelector('.light-section-content');
+              if (foundContent) content = foundContent as HTMLElement;
+            }
+          }
+          
+          // #region agent log
+          const headerText = (header as HTMLElement).textContent?.trim().substring(0, 30) || '';
+          const contentClass = content?.className || '';
+          const contentTag = content?.tagName || '';
+          fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16028',message:'Finding content element',data:{index,headerText,contentFound:!!content,contentClass,contentTag,nextSiblingTag:header.nextElementSibling?.tagName},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
+          const initialDisplay = content?.style.display || (content ? window.getComputedStyle(content).display : '');
+          // Check both classList and className attribute to catch cases where class might be in HTML but not in classList
+          const hasCollapsedClass = header.classList.contains('collapsed') || (header as HTMLElement).className.includes('collapsed');
+          const classNameAttr = (header as HTMLElement).className;
+          
+          // Also check if content has display:none inline style (which indicates it should be collapsed)
+          // Check HTML attribute directly first, then style object, then computed style
+          const contentStyleAttr = content?.getAttribute('style') || '';
+          const contentHasDisplayNoneInAttr = contentStyleAttr.includes('display:none') || contentStyleAttr.includes('display: none');
+          const contentInlineDisplay = content?.style.display || '';
+          const contentComputedDisplay = content ? window.getComputedStyle(content).display : '';
+          const contentHasDisplayNone = content && (contentHasDisplayNoneInAttr || contentInlineDisplay === 'none' || contentComputedDisplay === 'none');
+          const shouldBeCollapsed = hasCollapsedClass || contentHasDisplayNone;
+          
+          // #region agent log
+          fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16029',message:'Setting up collapse for header',data:{index,hasCollapsedClass,classNameAttr,contentExists:!!content,initialDisplay,contentStyleAttr:contentStyleAttr.substring(0,50),contentHasDisplayNoneInAttr,contentInlineStyle:contentInlineDisplay,contentComputedDisplay,contentHasDisplayNone,shouldBeCollapsed,headerText:(header as HTMLElement).textContent?.trim().substring(0,30)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
+          
+          // Store original display value for restoration
+          if (content && !content.getAttribute('data-original-display')) {
+            const originalDisplay = content.style.display || window.getComputedStyle(content).display;
+            content.setAttribute('data-original-display', originalDisplay === 'none' ? 'block' : originalDisplay);
+          }
+          
+          // Set initial collapsed state if class exists or content is already hidden - use !important via inline style to override any existing styles
+          if (shouldBeCollapsed && content) {
+            // Ensure header has collapsed class
+            if (!header.classList.contains('collapsed')) {
+              header.classList.add('collapsed');
+            }
+            content.style.setProperty('display', 'none', 'important');
+            content.style.setProperty('visibility', 'hidden', 'important');
+            content.style.setProperty('height', '0', 'important');
+            content.style.setProperty('overflow', 'hidden', 'important');
+            content.style.setProperty('padding', '0', 'important');
+            content.style.setProperty('margin', '0', 'important');
+            // #region agent log
+            fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16033',message:'Set initial collapsed state',data:{index,displayAfter:'none',computedDisplay:window.getComputedStyle(content).display,shouldBeCollapsed,hasCollapsedClass,contentHasDisplayNone},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
+          } else if (content && !hasCollapsedClass && !contentHasDisplayNone) {
+            // Ensure non-collapsed sections are visible (remove any conflicting inline styles)
+            if (content.style.display === 'none' || content.style.getPropertyValue('display') === 'none') {
+              content.style.removeProperty('display');
+              content.style.removeProperty('visibility');
+              content.style.removeProperty('height');
+              content.style.removeProperty('overflow');
+              content.style.removeProperty('padding');
+              content.style.removeProperty('margin');
+              // Restore to original display
+              const originalDisplay = content.getAttribute('data-original-display') || 'block';
+              content.style.display = originalDisplay;
+            }
+          }
+          
           header.addEventListener('click', (e) => {
+            // #region agent log
+            fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16038',message:'Header clicked',data:{index,targetTag:(e.target as HTMLElement)?.tagName,hasCollapsedBefore:header.classList.contains('collapsed')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
             e.preventDefault();
             e.stopPropagation();
             
@@ -16036,20 +16167,41 @@ window.addEventListener('DOMContentLoaded', () => {
             const isInteractive = target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'SELECT';
             const isInsideInteractive = target.closest('button:not(.light-section-header)') || target.closest('input') || target.closest('select');
             if (isInteractive && !target.classList.contains('light-section-header') || isInsideInteractive) {
+              // #region agent log
+              fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16044',message:'Click ignored - interactive element',data:{index,isInteractive,isInsideInteractive},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+              // #endregion
               return;
             }
             
             // Toggle collapsed class on header (CSS handles content visibility)
             header.classList.toggle('collapsed');
+            const hasCollapsedAfter = header.classList.contains('collapsed') || (header as HTMLElement).className.includes('collapsed');
             
-            // Force reflow to ensure CSS updates
-            const content = header.nextElementSibling as HTMLElement;
+            // Force reflow to ensure CSS updates - use !important to override inline styles
             if (content && content.classList.contains('light-section-content')) {
-              if (header.classList.contains('collapsed')) {
-                content.style.display = 'none';
+              if (hasCollapsedAfter) {
+                content.style.setProperty('display', 'none', 'important');
+                content.style.setProperty('visibility', 'hidden', 'important');
+                content.style.setProperty('height', '0', 'important');
+                content.style.setProperty('overflow', 'hidden', 'important');
+                content.style.setProperty('padding', '0', 'important');
+                content.style.setProperty('margin', '0', 'important');
               } else {
-                content.style.display = '';
+                // Remove important styles and restore to block
+                content.style.removeProperty('display');
+                content.style.removeProperty('visibility');
+                content.style.removeProperty('height');
+                content.style.removeProperty('overflow');
+                content.style.removeProperty('padding');
+                content.style.removeProperty('margin');
+                // Set to block if it was originally block
+                if (content.getAttribute('data-original-display') === 'block' || !content.getAttribute('data-original-display')) {
+                  content.style.display = 'block';
+                }
               }
+              // #region agent log
+              fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16054',message:'Toggled collapse state',data:{index,hasCollapsedAfter,contentDisplayAfter:content.style.display,computedDisplay:window.getComputedStyle(content).display},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+              // #endregion
             }
           });
         });
@@ -16065,6 +16217,35 @@ window.addEventListener('DOMContentLoaded', () => {
         // Setup collapse functionality when light tab is shown
         setTimeout(setupLightSectionCollapse, 50);
       });
+      
+      // Initialize: If camera tab is active by default, ensure light sections are hidden
+      // Check if camera tab is active (has 'active' class or has the active styling)
+      const isCameraTabActive = tabCamera && (
+        tabCamera.classList.contains('active') || 
+        window.getComputedStyle(tabCamera).background.includes('rgba(0,212,255') ||
+        cameraTabContent?.style.display !== 'none'
+      );
+      if (isCameraTabActive) {
+        // #region agent log
+        fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:16278',message:'Initializing: Camera tab is active by default, hiding light sections',data:{tabCameraHasActiveClass:tabCamera?.classList.contains('active'),cameraTabContentDisplay:cameraTabContent?.style.display,lightTabContentDisplay:lightTabContent?.style.display},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        // Ensure light sections are hidden
+        if (lightTabContent) {
+          lightTabContent.style.display = 'none';
+          const lightSections = document.querySelectorAll('.light-section-content, .light-presets-section, .light-patterns-section');
+          lightSections.forEach((section) => {
+            (section as HTMLElement).style.setProperty('display', 'none', 'important');
+          });
+          const lightPresetsSection = document.querySelector('.light-presets-section');
+          const lightPatternsSection = document.querySelector('.light-patterns-section');
+          if (lightPresetsSection) {
+            (lightPresetsSection as HTMLElement).style.setProperty('display', 'none', 'important');
+          }
+          if (lightPatternsSection) {
+            (lightPatternsSection as HTMLElement).style.setProperty('display', 'none', 'important');
+          }
+        }
+      }
       
       // Also setup on initial load if light tab is already active
       if (lightTabContent && lightTabContent.style.display !== 'none') {
