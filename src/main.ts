@@ -17226,9 +17226,18 @@ window.addEventListener('DOMContentLoaded', () => {
       // Update light selection list
       const updateLightSelectionList = () => {
         const listEl = document.getElementById('lightSelectionList');
+        const countEl = document.getElementById('sceneLightCount');
         if (!listEl) return;
+        
+        // Update light count indicator
+        const lightCount = studio.lights.size;
+        if (countEl) {
+          countEl.textContent = `(${lightCount})`;
+          countEl.style.background = lightCount > 0 ? 'rgba(76,175,80,0.3)' : 'rgba(255,170,0,0.3)';
+          countEl.style.color = lightCount > 0 ? '#4CAF50' : '#ffaa00';
+        }
 
-        if (studio.lights.size === 0) {
+        if (lightCount === 0) {
           listEl.innerHTML = '<div style="padding:10px;text-align:center;color:rgba(255,255,255,0.4);font-size:13px;">Ingen lys i scenen</div>';
           return;
         }
