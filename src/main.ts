@@ -1640,6 +1640,9 @@ class VirtualStudio {
       }
     });
     
+    // Collapsible sections
+    this.initHUDCollapsibleSections();
+    
     // Rotation joystick
     this.initJoystickControl();
     
@@ -1654,6 +1657,28 @@ class VirtualStudio {
     
     // Focus target system
     this.initFocusTargetControls();
+  }
+  
+  /**
+   * Initialize collapsible HUD sections
+   */
+  private initHUDCollapsibleSections(): void {
+    const collapsibleSections = [
+      { headerId: 'positionSectionHeader', sectionClass: 'position' },
+      { headerId: 'focusSectionHeader', sectionClass: 'focus' }
+    ];
+    
+    collapsibleSections.forEach(({ headerId }) => {
+      const header = document.getElementById(headerId);
+      if (header) {
+        header.addEventListener('click', () => {
+          const section = header.closest('.hud-section-collapsible');
+          if (section) {
+            section.classList.toggle('collapsed');
+          }
+        });
+      }
+    });
   }
   
   // Joystick sensitivity modes

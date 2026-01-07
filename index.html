@@ -1747,50 +1747,66 @@
               </div>
             </div>
             
-            <!-- Position Controls -->
-            <div class="hud-section">
-              <div class="hud-section-title">POSISJON</div>
-              <div class="position-controls">
-                <div class="dpad-container" id="positionDpad">
-                  <button class="dpad-btn dpad-up" data-dir="up" title="Flytt fremover">▲</button>
-                  <button class="dpad-btn dpad-left" data-dir="left" title="Flytt venstre">◀</button>
-                  <button class="dpad-btn dpad-center" title="Tilbakestill">●</button>
-                  <button class="dpad-btn dpad-right" data-dir="right" title="Flytt høyre">▶</button>
-                  <button class="dpad-btn dpad-down" data-dir="down" title="Flytt bakover">▼</button>
-                </div>
-                <div class="position-values">
-                  <div class="pos-value"><span>X:</span> <span id="hudPosX">0.00</span></div>
-                  <div class="pos-value"><span>Z:</span> <span id="hudPosZ">0.00</span></div>
+            <!-- Position Controls - Collapsible -->
+            <div class="hud-section hud-section-collapsible">
+              <div class="hud-section-header" id="positionSectionHeader">
+                <span class="hud-collapse-arrow">▾</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#10b981;">
+                  <circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 7 8 11.7z"/>
+                </svg>
+                <span class="hud-section-title">POSISJON</span>
+              </div>
+              <div class="hud-section-content" id="positionSectionContent">
+                <div class="position-controls">
+                  <div class="dpad-container" id="positionDpad">
+                    <button class="dpad-btn dpad-up" data-dir="up" title="Flytt fremover">▲</button>
+                    <button class="dpad-btn dpad-left" data-dir="left" title="Flytt venstre">◀</button>
+                    <button class="dpad-btn dpad-center" title="Tilbakestill">●</button>
+                    <button class="dpad-btn dpad-right" data-dir="right" title="Flytt høyre">▶</button>
+                    <button class="dpad-btn dpad-down" data-dir="down" title="Flytt bakover">▼</button>
+                  </div>
+                  <div class="position-values">
+                    <div class="pos-value"><span>X:</span> <span id="hudPosX">0.00</span></div>
+                    <div class="pos-value"><span>Z:</span> <span id="hudPosZ">0.00</span></div>
+                  </div>
                 </div>
               </div>
             </div>
             
-            <!-- Focus Target Selection -->
-            <div class="hud-section">
-              <div class="hud-section-title">FOKUS MÅL</div>
-              <div class="focus-target-controls">
-                <div class="focus-mode-toggle" id="focusModeToggle">
-                  <button class="focus-mode-btn active" data-mode="human" title="Mennesker - sikter mot ansikt">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="8" r="4"/>
-                      <path d="M20 21a8 8 0 1 0-16 0"/>
-                    </svg>
-                    <span>Mennesker</span>
-                  </button>
-                  <button class="focus-mode-btn" data-mode="product" title="Produkter - sikter mot senter">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="3" y="3" width="18" height="18" rx="2"/>
-                      <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                    <span>Produkter</span>
-                  </button>
-                </div>
-                <div class="focus-target-info">
-                  <span class="focus-label">Aktivt mål:</span>
-                  <span class="focus-name" id="focusTargetName">Ingen valgt</span>
-                </div>
-                <div class="focus-objects-list" id="focusObjectsList">
-                  <!-- Populated dynamically -->
+            <!-- Focus Target Selection - Collapsible -->
+            <div class="hud-section hud-section-collapsible">
+              <div class="hud-section-header" id="focusSectionHeader">
+                <span class="hud-collapse-arrow">▾</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#f59e0b;">
+                  <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+                </svg>
+                <span class="hud-section-title">FOKUS MÅL</span>
+              </div>
+              <div class="hud-section-content" id="focusSectionContent">
+                <div class="focus-target-controls">
+                  <div class="focus-mode-toggle" id="focusModeToggle">
+                    <button class="focus-mode-btn active" data-mode="human" title="Mennesker - sikter mot ansikt">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="8" r="4"/>
+                        <path d="M20 21a8 8 0 1 0-16 0"/>
+                      </svg>
+                      <span>Mennesker</span>
+                    </button>
+                    <button class="focus-mode-btn" data-mode="product" title="Produkter - sikter mot senter">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                      <span>Produkter</span>
+                    </button>
+                  </div>
+                  <div class="focus-target-info">
+                    <span class="focus-label">Aktivt mål:</span>
+                    <span class="focus-name" id="focusTargetName">Ingen valgt</span>
+                  </div>
+                  <div class="focus-objects-list" id="focusObjectsList">
+                    <!-- Populated dynamically -->
+                  </div>
                 </div>
               </div>
             </div>
