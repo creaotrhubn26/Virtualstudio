@@ -12102,11 +12102,11 @@ class VirtualStudio {
       }
     }
     
-    // Create glowing disc inside the light head to show light is ON
+    // Create glowing disc inside the light head reflector to show light is ON
     try {
       const glowDisc = BABYLON.MeshBuilder.CreateDisc(
         `glow_${id}`,
-        { radius: 0.35, tessellation: 32 },
+        { radius: 0.25, tessellation: 32 },
         this.scene
       );
       
@@ -12127,10 +12127,12 @@ class VirtualStudio {
       // Parent to lightMesh so it follows
       glowDisc.parent = lightMesh;
       
-      // Position disc at the front of the light head
-      // Offset slightly forward in the light direction
-      glowDisc.position = new BABYLON.Vector3(0, 1.2, 0.3); // Adjusted for typical light head position
-      glowDisc.rotation.x = Math.PI / 2; // Face forward
+      // Position disc inside the reflector bowl
+      // The reflector bowl is the large dish - disc needs to be inside it
+      // Adjust position based on model geometry
+      glowDisc.position = new BABYLON.Vector3(0, 1.55, -0.3);
+      // Rotate disc to face outward from reflector bowl
+      glowDisc.rotation.x = -Math.PI / 2.5; // Tilt to match reflector angle
       
       glowDisc.isPickable = false;
       
