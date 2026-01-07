@@ -1130,12 +1130,14 @@ class VirtualStudio {
     arrowDown.material = heightSliderMat;
     arrowDown.parent = heightSlider;
     
-    // Add stand pole visualization
+    // Add stand pole visualization - use unit height (1m) for easy scaling
     const standPole = BABYLON.MeshBuilder.CreateCylinder('standPole', {
-      height: lightPos.y,
+      height: 1.0, // Unit height for easy scaling
       diameter: 0.04,
       tessellation: 8
     }, this.scene);
+    // Scale and position to match current light height
+    standPole.scaling.y = lightPos.y;
     standPole.position = new BABYLON.Vector3(0, -lightPos.y / 2, 0);
     const poleMat = new BABYLON.StandardMaterial('poleMat', this.scene);
     poleMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.3);
@@ -1161,10 +1163,10 @@ class VirtualStudio {
         lightData.mesh.position.y = newY;
         lightData.light.position.y = newY;
         
-        // Update stand pole height
+        // Update stand pole - use absolute scaling since we used unit height
         const pole = heightSlider.getChildMeshes().find(m => m.name === 'standPole');
         if (pole) {
-          (pole as BABYLON.Mesh).scaling.y = newY / lightPos.y;
+          (pole as BABYLON.Mesh).scaling.y = newY;
           pole.position.y = -newY / 2;
         }
         
@@ -1261,6 +1263,36 @@ class VirtualStudio {
   }
   
   /**
+   * Helper to dispose a mesh with all its behaviors and children
+   */
+  private disposeMeshWithBehaviors(mesh: BABYLON.Mesh | null): void {
+    if (!mesh) return;
+    
+    // Remove all behaviors first to prevent observer leaks
+    const behaviors = mesh.behaviors.slice(); // Copy array
+    for (const behavior of behaviors) {
+      mesh.removeBehavior(behavior);
+    }
+    
+    // Dispose child meshes explicitly
+    const children = mesh.getChildMeshes(false);
+    for (const child of children) {
+      if (child.material) {
+        child.material.dispose();
+      }
+      child.dispose();
+    }
+    
+    // Dispose material
+    if (mesh.material) {
+      mesh.material.dispose();
+    }
+    
+    // Dispose the mesh itself
+    mesh.dispose();
+  }
+  
+  /**
    * Dispose all studio gizmo meshes
    */
   private disposeStudioGizmos(): void {
@@ -1277,25 +1309,26 @@ class VirtualStudio {
       }
     }
     
-    if (this.studioGizmoMeshes.baseRing) {
-      this.studioGizmoMeshes.baseRing.dispose(false, true);
-      this.studioGizmoMeshes.baseRing = null;
-    }
-    if (this.studioGizmoMeshes.heightSlider) {
-      this.studioGizmoMeshes.heightSlider.dispose(false, true);
-      this.studioGizmoMeshes.heightSlider = null;
-    }
-    if (this.studioGizmoMeshes.yokeRing) {
-      this.studioGizmoMeshes.yokeRing.dispose(false, true);
-      this.studioGizmoMeshes.yokeRing = null;
-    }
+    // Dispose meshes with all behaviors and children
+    this.disposeMeshWithBehaviors(this.studioGizmoMeshes.baseRing);
+    this.studioGizmoMeshes.baseRing = null;
+    
+    this.disposeMeshWithBehaviors(this.studioGizmoMeshes.heightSlider);
+    this.studioGizmoMeshes.heightSlider = null;
+    
+    this.disposeMeshWithBehaviors(this.studioGizmoMeshes.yokeRing);
+    this.studioGizmoMeshes.yokeRing = null;
+    
+    // Dispose labels with dynamic textures
     if (this.studioGizmoMeshes.heightLabel) {
-      // Dispose dynamic texture if attached
       const mat = this.studioGizmoMeshes.heightLabel.material as BABYLON.StandardMaterial;
       if (mat?.diffuseTexture) {
         mat.diffuseTexture.dispose();
       }
-      this.studioGizmoMeshes.heightLabel.dispose(false, true);
+      if (mat?.emissiveTexture && mat.emissiveTexture !== mat.diffuseTexture) {
+        mat.emissiveTexture.dispose();
+      }
+      this.disposeMeshWithBehaviors(this.studioGizmoMeshes.heightLabel);
       this.studioGizmoMeshes.heightLabel = null;
     }
     if (this.studioGizmoMeshes.angleLabel) {
@@ -1303,10 +1336,31 @@ class VirtualStudio {
       if (mat?.diffuseTexture) {
         mat.diffuseTexture.dispose();
       }
-      this.studioGizmoMeshes.angleLabel.dispose(false, true);
+      if (mat?.emissiveTexture && mat.emissiveTexture !== mat.diffuseTexture) {
+        mat.emissiveTexture.dispose();
+      }
+      this.disposeMeshWithBehaviors(this.studioGizmoMeshes.angleLabel);
       this.studioGizmoMeshes.angleLabel = null;
     }
+    
     this.studioGizmoActive = false;
+  }
+  
+  /**
+   * Draw rounded rectangle (cross-browser compatible)
+   */
+  private drawRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
   }
   
   /**
@@ -1343,15 +1397,15 @@ class VirtualStudio {
       const ctx = texture.getContext();
       ctx.clearRect(0, 0, 256, 64);
       
-      // Draw background
+      // Draw background using cross-browser compatible rounded rect
       ctx.fillStyle = 'rgba(30, 30, 35, 0.9)';
-      ctx.roundRect(4, 4, 248, 56, 8);
+      this.drawRoundedRect(ctx, 4, 4, 248, 56, 8);
       ctx.fill();
       
       // Draw border
       ctx.strokeStyle = '#4DD966'; // Green matching height slider
       ctx.lineWidth = 2;
-      ctx.roundRect(4, 4, 248, 56, 8);
+      this.drawRoundedRect(ctx, 4, 4, 248, 56, 8);
       ctx.stroke();
       
       // Draw text
@@ -1413,15 +1467,15 @@ class VirtualStudio {
       const ctx = texture.getContext();
       ctx.clearRect(0, 0, 320, 64);
       
-      // Draw background
+      // Draw background using cross-browser compatible rounded rect
       ctx.fillStyle = 'rgba(30, 30, 35, 0.9)';
-      ctx.roundRect(4, 4, 312, 56, 8);
+      this.drawRoundedRect(ctx, 4, 4, 312, 56, 8);
       ctx.fill();
       
       // Draw border
       ctx.strokeStyle = '#4DCCFF'; // Cyan matching yoke ring
       ctx.lineWidth = 2;
-      ctx.roundRect(4, 4, 312, 56, 8);
+      this.drawRoundedRect(ctx, 4, 4, 312, 56, 8);
       ctx.stroke();
       
       // Draw text
@@ -1460,18 +1514,21 @@ class VirtualStudio {
     const lightData = this.lights.get(lightId);
     if (!lightData) return;
     
-    // Increment drag count
-    this.lightPOVDragCount++;
-    
-    // If already in POV mode for this light, just increment and return
+    // If already in POV mode for same light, just increment drag count
     if (this.lightPOVActive && this.lightPOVLightId === lightId) {
+      this.lightPOVDragCount++;
       return;
     }
     
-    // If already active for a different light, don't switch (wait for current to finish)
+    // If already active for a different light, restore first then activate new
     if (this.lightPOVActive && this.lightPOVLightId !== lightId) {
-      return;
+      // Force restore previous camera state
+      this.lightPOVDragCount = 0;
+      this.forceDeactivateLightPOV();
     }
+    
+    // First activation - set drag count to 1
+    this.lightPOVDragCount = 1;
     
     // Save current camera state only on first activation
     if (!this.savedCameraState) {
@@ -1644,6 +1701,34 @@ class VirtualStudio {
       this.savedCameraState.target,
       BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
     );
+    
+    this.lightPOVActive = false;
+    this.lightPOVLightId = null;
+    this.savedCameraState = null;
+    
+    window.dispatchEvent(new CustomEvent('vs-pov-mode-changed', { 
+      detail: { active: false } 
+    }));
+  }
+  
+  /**
+   * Force deactivate POV mode immediately (used when switching lights)
+   */
+  private forceDeactivateLightPOV(): void {
+    if (!this.savedCameraState) {
+      this.lightPOVActive = false;
+      this.lightPOVLightId = null;
+      return;
+    }
+    
+    // Stop any existing animations
+    this.scene.stopAnimation(this.camera);
+    
+    // Instantly restore camera (no animation)
+    this.camera.alpha = this.savedCameraState.alpha;
+    this.camera.beta = this.savedCameraState.beta;
+    this.camera.radius = this.savedCameraState.radius;
+    this.camera.target = this.savedCameraState.target.clone();
     
     this.lightPOVActive = false;
     this.lightPOVLightId = null;
