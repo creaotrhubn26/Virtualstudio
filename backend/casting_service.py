@@ -9,6 +9,18 @@ from psycopg2.extras import RealDictCursor, Json
 from typing import Optional, List, Dict, Any
 import json
 from datetime import datetime, date
+from decimal import Decimal
+
+def convert_decimal(obj):
+    """Recursively convert Decimal values to float in a dict or list"""
+    if isinstance(obj, dict):
+        return {k: convert_decimal(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_decimal(item) for item in obj]
+    elif isinstance(obj, Decimal):
+        return float(obj)
+    else:
+        return obj
 
 # Database connection string from environment or default
 DATABASE_URL_RAW = os.getenv(
@@ -84,7 +96,7 @@ def get_projects() -> List[Dict[str, Any]]:
                 
                 # Remove the data field
                 project.pop('data', None)
-                projects.append(project)
+                projects.append(convert_decimal(project))
             
             return projects
     except Exception as e:
@@ -257,7 +269,7 @@ def get_project(project_id: str) -> Optional[Dict[str, Any]]:
             # Remove the data field
             project.pop('data', None)
             
-            return project
+            return convert_decimal(project)
     except Exception as e:
         print(f"Error getting project: {e}")
         import traceback
