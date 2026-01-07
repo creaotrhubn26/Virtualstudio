@@ -2158,7 +2158,14 @@ async def save_role_to_pool(request: Request):
 async def get_audition_pool():
     conn = None
     try:
-        conn = get_db_connection()
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+        
+        database_url = os.environ.get("DATABASE_URL")
+        if not database_url:
+            return JSONResponse({"success": True, "auditions": []})
+        
+        conn = psycopg2.connect(database_url)
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
                 SELECT id, title, description, audition_type, duration_minutes, location,
@@ -2194,10 +2201,17 @@ async def get_audition_pool():
 async def save_to_audition_pool(request: Request):
     conn = None
     try:
+        import psycopg2
+        from psycopg2.extras import Json
+        
         body = await request.json()
         audition_id = body.get('id') or f"pool_audition_{uuid.uuid4().hex[:12]}"
         
-        conn = get_db_connection()
+        database_url = os.environ.get("DATABASE_URL")
+        if not database_url:
+            return JSONResponse({"success": False, "error": "Database not configured"}, status_code=500)
+        
+        conn = psycopg2.connect(database_url)
         with conn.cursor() as cur:
             cur.execute("SELECT id FROM casting_audition_pool WHERE id = %s", (audition_id,))
             exists = cur.fetchone() is not None
@@ -2249,7 +2263,13 @@ async def save_to_audition_pool(request: Request):
 async def delete_from_audition_pool(audition_id: str):
     conn = None
     try:
-        conn = get_db_connection()
+        import psycopg2
+        
+        database_url = os.environ.get("DATABASE_URL")
+        if not database_url:
+            return JSONResponse({"success": False, "error": "Database not configured"}, status_code=500)
+        
+        conn = psycopg2.connect(database_url)
         with conn.cursor() as cur:
             cur.execute("DELETE FROM casting_audition_pool WHERE id = %s", (audition_id,))
             deleted = cur.rowcount > 0
@@ -2268,6 +2288,9 @@ async def delete_from_audition_pool(audition_id: str):
 async def import_audition_to_project(request: Request):
     conn = None
     try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor, Json
+        
         body = await request.json()
         pool_audition_id = body.get('poolAuditionId')
         target_project_id = body.get('targetProjectId')
@@ -2275,7 +2298,11 @@ async def import_audition_to_project(request: Request):
         if not pool_audition_id or not target_project_id:
             return JSONResponse({"success": False, "error": "Missing required fields"}, status_code=400)
         
-        conn = get_db_connection()
+        database_url = os.environ.get("DATABASE_URL")
+        if not database_url:
+            return JSONResponse({"success": False, "error": "Database not configured"}, status_code=500)
+        
+        conn = psycopg2.connect(database_url)
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("SELECT * FROM casting_audition_pool WHERE id = %s", (pool_audition_id,))
             pool_audition = cur.fetchone()
@@ -2316,13 +2343,20 @@ async def import_audition_to_project(request: Request):
 async def save_schedule_to_pool(request: Request):
     conn = None
     try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor, Json
+        
         body = await request.json()
         schedule_id = body.get('scheduleId')
         
         if not schedule_id:
             return JSONResponse({"success": False, "error": "Missing scheduleId"}, status_code=400)
         
-        conn = get_db_connection()
+        database_url = os.environ.get("DATABASE_URL")
+        if not database_url:
+            return JSONResponse({"success": False, "error": "Database not configured"}, status_code=500)
+        
+        conn = psycopg2.connect(database_url)
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("SELECT * FROM casting_schedules WHERE id = %s", (schedule_id,))
             source_schedule = cur.fetchone()
