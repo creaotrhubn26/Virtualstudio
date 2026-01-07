@@ -12162,8 +12162,8 @@ class VirtualStudio {
         shadowGenerator.usePercentageCloserFiltering = true;
         shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
         
-        // Shadow quality settings
-        shadowGenerator.setDarkness(0.5); // Realistic shadow darkness
+        // Shadow quality settings - softer, more subtle shadows
+        shadowGenerator.setDarkness(0.35); // More subtle shadows
         shadowGenerator.bias = 0.00005;
         shadowGenerator.normalBias = 0.02;
         
