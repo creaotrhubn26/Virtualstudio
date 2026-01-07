@@ -1532,6 +1532,7 @@ class VirtualStudio {
   private hudInitialized: boolean = false;
   private hudJoystickStartPan: number = 0;
   private hudJoystickStartTilt: number = 0;
+  private hudJoystickStartDir: BABYLON.Vector3 = new BABYLON.Vector3(0, 0, 1);
   
   // Focus Target System
   private focusMode: 'human' | 'product' = 'human';
@@ -1695,8 +1696,11 @@ class VirtualStudio {
       this.hudJoystickDragging = true;
       knob.style.transition = 'none';
       
-      // Store starting angles when drag begins
-      const dir = lightData.light.direction;
+      // Store the actual light direction when drag begins (not recalculated)
+      this.hudJoystickStartDir = lightData.light.direction.clone().normalize();
+      
+      // Also store angles for display
+      const dir = this.hudJoystickStartDir;
       this.hudJoystickStartTilt = Math.asin(Math.max(-1, Math.min(1, -dir.y)));
       this.hudJoystickStartPan = Math.atan2(dir.x, dir.z);
     };
@@ -1756,12 +1760,8 @@ class VirtualStudio {
       const yawQuat = BABYLON.Quaternion.RotationAxis(BABYLON.Vector3.Up(), deltaPan);
       const pitchQuat = BABYLON.Quaternion.RotationAxis(BABYLON.Vector3.Right(), deltaTilt);
       
-      // Get the mesh's initial forward direction (from when drag started)
-      const startDir = new BABYLON.Vector3(
-        Math.sin(this.hudJoystickStartPan) * Math.cos(this.hudJoystickStartTilt),
-        -Math.sin(this.hudJoystickStartTilt),
-        Math.cos(this.hudJoystickStartPan) * Math.cos(this.hudJoystickStartTilt)
-      ).normalize();
+      // Use the actual stored direction from handleStart (not recalculated from angles)
+      const startDir = this.hudJoystickStartDir;
       
       // Apply yaw first, then pitch (order matters for intuitive control)
       const combinedQuat = yawQuat.multiply(pitchQuat);
@@ -1810,11 +1810,12 @@ class VirtualStudio {
       knob.style.left = '50%';
       knob.style.top = '50%';
       
-      // Update start angles to current position for next drag
+      // Update start direction to current position for next drag
       if (this.hudLightId) {
         const lightData = this.lights.get(this.hudLightId);
         if (lightData && lightData.light instanceof BABYLON.SpotLight) {
-          const dir = lightData.light.direction;
+          this.hudJoystickStartDir = lightData.light.direction.clone().normalize();
+          const dir = this.hudJoystickStartDir;
           this.hudJoystickStartTilt = Math.asin(Math.max(-1, Math.min(1, -dir.y)));
           this.hudJoystickStartPan = Math.atan2(dir.x, dir.z);
         }
