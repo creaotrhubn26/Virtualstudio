@@ -1763,18 +1763,26 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
         </TabPanel>
 
         <TabPanel value={activeTab} index={2}>
-          <CandidateManagementPanel
-            projectId={currentProject?.id || ''}
-            candidates={candidates}
-            roles={roles}
-            onCandidatesChange={loadProjects}
-            onEditCandidate={(candidate) => {
-              setSelectedCandidate(candidate);
-              setCandidateDialogOpen(true);
-            }}
-            onCreateCandidate={handleCreateCandidate}
-            profession={profession}
-          />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <CandidateManagementPanel
+              projectId={currentProject?.id || ''}
+              candidates={candidates}
+              roles={roles}
+              onCandidatesChange={loadProjects}
+              onEditCandidate={(candidate) => {
+                setSelectedCandidate(candidate);
+                setCandidateDialogOpen(true);
+              }}
+              onCreateCandidate={handleCreateCandidate}
+              profession={profession}
+            />
+            {currentProject && (
+              <>
+                <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
+                <OffersContractsPanel projectId={currentProject.id} />
+              </>
+            )}
+          </Box>
         </TabPanel>
 
         <TabPanel value={activeTab} index={3}>
@@ -1882,14 +1890,18 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               </Typography>
             </Box>
           ) : (
-            <ProductionDayView
-              projectId={currentProject.id}
-              onUpdate={async () => {
-                const updated = await castingService.getProject(currentProject.id);
-                if (updated) setCurrentProject(updated);
-              }}
-              profession={profession}
-            />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <ProductionCalendarPanel projectId={currentProject.id} />
+              <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
+              <ProductionDayView
+                projectId={currentProject.id}
+                onUpdate={async () => {
+                  const updated = await castingService.getProject(currentProject.id);
+                  if (updated) setCurrentProject(updated);
+                }}
+                profession={profession}
+              />
+            </Box>
           )}
         </TabPanel>
 
