@@ -54,9 +54,13 @@ import {
   InterpreterMode as InterpreterModeIcon,
   TheaterComedy as TheaterComedyIcon,
   Note as NoteIcon,
+  Inventory as InventoryIcon,
+  FileDownload as DownloadIcon,
 } from '@mui/icons-material';
 import { Schedule, Role, Candidate } from '../core/models/casting';
 import { castingService } from '../services/castingService';
+import { auditionPoolService, PoolAudition } from '../services/auditionPoolService';
+import { useToast } from './ToastStack';
 
 // WCAG 2.2 - 2.5.5 Target Size: minimum 44x44px touch targets
 const TOUCH_TARGET_SIZE = 44;
@@ -119,6 +123,11 @@ export function AuditionSchedulePanel({
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [undoSnackbarOpen, setUndoSnackbarOpen] = useState(false);
   const [lastDeleted, setLastDeleted] = useState<Schedule | null>(null);
+  const [poolMode, setPoolMode] = useState<'project' | 'pool'>('project');
+  const [poolAuditions, setPoolAuditions] = useState<PoolAudition[]>([]);
+  const [poolLoading, setPoolLoading] = useState(false);
+
+  const { showSuccess, showError } = useToast();
   
   const containerPadding = isMobile ? 2 : isTablet ? 3 : 4;
 
@@ -519,6 +528,68 @@ export function AuditionSchedulePanel({
     onSchedulesChange();
   };
 
+  const loadPoolAuditions = async () => {
+    setPoolLoading(true);
+    try {
+      const auditions = await auditionPoolService.getPoolAuditions();
+      setPoolAuditions(auditions);
+    } catch (error) {
+      console.error('Error loading pool auditions:', error);
+    } finally {
+      setPoolLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPoolAuditions();
+  }, []);
+
+  const handleSaveToPool = async (schedule: Schedule) => {
+    try {
+      const poolId = await auditionPoolService.saveScheduleToPool(schedule.id);
+      if (poolId) {
+        showSuccess('Audition lagret til pool', 3000);
+        loadPoolAuditions();
+      } else {
+        showError('Kunne ikke lagre til pool', 3000);
+      }
+    } catch (error) {
+      console.error('Error saving to pool:', error);
+      showError('En feil oppstod', 3000);
+    }
+  };
+
+  const handleImportFromPool = async (poolAudition: PoolAudition) => {
+    try {
+      const newId = await auditionPoolService.importToProject(poolAudition.id, projectId);
+      if (newId) {
+        showSuccess(`${poolAudition.title} importert til prosjektet`, 3000);
+        onSchedulesChange();
+        setPoolMode('project');
+      } else {
+        showError('Kunne ikke importere audition', 3000);
+      }
+    } catch (error) {
+      console.error('Error importing from pool:', error);
+      showError('En feil oppstod', 3000);
+    }
+  };
+
+  const handleDeleteFromPool = async (poolAuditionId: string) => {
+    try {
+      const success = await auditionPoolService.deleteFromPool(poolAuditionId);
+      if (success) {
+        showSuccess('Audition fjernet fra pool', 3000);
+        loadPoolAuditions();
+      } else {
+        showError('Kunne ikke slette fra pool', 3000);
+      }
+    } catch (error) {
+      console.error('Error deleting from pool:', error);
+      showError('En feil oppstod', 3000);
+    }
+  };
+
   const handleExportCSV = () => {
     try {
       const project = castingService.getProject(projectId);
@@ -828,6 +899,50 @@ export function AuditionSchedulePanel({
         </Box>
       </Box>
 
+      {/* Pool Mode Toggle */}
+      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+        <Button
+          variant={poolMode === 'project' ? 'contained' : 'outlined'}
+          onClick={() => setPoolMode('project')}
+          startIcon={<CalendarIcon />}
+          sx={{
+            bgcolor: poolMode === 'project' ? '#ffb800' : 'transparent',
+            color: poolMode === 'project' ? '#000' : 'rgba(255,255,255,0.7)',
+            borderColor: poolMode === 'project' ? '#ffb800' : 'rgba(255,255,255,0.2)',
+            minHeight: TOUCH_TARGET_SIZE,
+            '&:hover': { bgcolor: poolMode === 'project' ? '#e6a600' : 'rgba(255,255,255,0.05)' },
+            ...focusVisibleStyles,
+          }}
+        >
+          Prosjekt
+          <Chip
+            label={schedules.length}
+            size="small"
+            sx={{ ml: 1, bgcolor: 'rgba(255,255,255,0.2)', color: 'inherit', height: 20, fontSize: '0.7rem' }}
+          />
+        </Button>
+        <Button
+          variant={poolMode === 'pool' ? 'contained' : 'outlined'}
+          onClick={() => { setPoolMode('pool'); loadPoolAuditions(); }}
+          startIcon={<InventoryIcon />}
+          sx={{
+            bgcolor: poolMode === 'pool' ? '#9c27b0' : 'transparent',
+            color: poolMode === 'pool' ? '#fff' : 'rgba(255,255,255,0.7)',
+            borderColor: poolMode === 'pool' ? '#9c27b0' : 'rgba(255,255,255,0.2)',
+            minHeight: TOUCH_TARGET_SIZE,
+            '&:hover': { bgcolor: poolMode === 'pool' ? '#7b1fa2' : 'rgba(255,255,255,0.05)' },
+            ...focusVisibleStyles,
+          }}
+        >
+          Pool
+          <Chip
+            label={poolAuditions.length}
+            size="small"
+            sx={{ ml: 1, bgcolor: 'rgba(255,255,255,0.2)', color: 'inherit', height: 20, fontSize: '0.7rem' }}
+          />
+        </Button>
+      </Box>
+
       {/* Statistics Panel */}
       <Collapse in={showStats}>
         <Box
@@ -870,6 +985,9 @@ export function AuditionSchedulePanel({
         </Box>
       </Collapse>
 
+      {/* Project View - only shown when in project mode */}
+      {poolMode === 'project' && (
+      <>
       {/* Search and Filter Controls */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 1, sm: 2 }, alignItems: { xs: 'stretch', sm: 'center' } }}>
@@ -1721,6 +1839,151 @@ export function AuditionSchedulePanel({
             );
           })}
         </Grid>
+      )}
+      </>
+      )}
+
+      {/* Pool View - shows pool auditions when in pool mode */}
+      {poolMode === 'pool' && (
+        <Box>
+          {poolAuditions.length === 0 ? (
+            <Box
+              role="status"
+              sx={{
+                textAlign: 'center',
+                py: { xs: 4, sm: 8 },
+                px: 4,
+                bgcolor: 'rgba(156, 39, 176, 0.03)',
+                borderRadius: 3,
+                border: '2px dashed rgba(156, 39, 176, 0.2)',
+              }}
+            >
+              <Box
+                sx={{
+                  width: { xs: 60, sm: 80 },
+                  height: { xs: 60, sm: 80 },
+                  borderRadius: '50%',
+                  bgcolor: 'rgba(156, 39, 176, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto',
+                  mb: { xs: 2, sm: 3 },
+                }}
+              >
+                <InventoryIcon sx={{ fontSize: { xs: 30, sm: 40 }, color: '#9c27b0' }} />
+              </Box>
+              <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>
+                Audition-pool er tom
+              </Typography>
+              <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.6)', mb: 3, maxWidth: 400, mx: 'auto' }}>
+                Lagre audition-maler fra prosjekter til poolen for gjenbruk i fremtidige produksjoner.
+              </Typography>
+            </Box>
+          ) : (
+            <Grid container spacing={{ xs: 1, sm: 2 }}>
+              {poolAuditions.map((poolAudition) => (
+                <Grid item xs={12} sm={6} md={4} lg={3} key={poolAudition.id}>
+                  <Card
+                    sx={{
+                      bgcolor: 'rgba(156, 39, 176, 0.08)',
+                      border: '1px solid rgba(156, 39, 176, 0.3)',
+                      borderRadius: 2,
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        borderColor: '#9c27b0',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 12px rgba(156, 39, 176, 0.2)',
+                      },
+                    }}
+                  >
+                    <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, fontSize: { xs: '1rem', sm: '1.1rem' } }}>
+                          {poolAudition.title}
+                        </Typography>
+                        <Chip
+                          icon={<InventoryIcon sx={{ fontSize: 14 }} />}
+                          label="Pool"
+                          size="small"
+                          sx={{
+                            bgcolor: 'rgba(156, 39, 176, 0.2)',
+                            color: '#ce93d8',
+                            fontSize: '0.7rem',
+                            height: 24,
+                          }}
+                        />
+                      </Box>
+                      {poolAudition.description && (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: 'rgba(255,255,255,0.6)',
+                            mb: 1.5,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {poolAudition.description}
+                        </Typography>
+                      )}
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
+                        {poolAudition.durationMinutes && (
+                          <Chip
+                            icon={<ScheduleIcon sx={{ fontSize: 14 }} />}
+                            label={`${poolAudition.durationMinutes} min`}
+                            size="small"
+                            sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', fontSize: '0.7rem' }}
+                          />
+                        )}
+                        {poolAudition.location && (
+                          <Chip
+                            icon={<LocationIcon sx={{ fontSize: 14 }} />}
+                            label={poolAudition.location}
+                            size="small"
+                            sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', fontSize: '0.7rem' }}
+                          />
+                        )}
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          startIcon={<DownloadIcon />}
+                          onClick={() => handleImportFromPool(poolAudition)}
+                          sx={{
+                            bgcolor: '#9c27b0',
+                            color: '#fff',
+                            flex: 1,
+                            minHeight: TOUCH_TARGET_SIZE,
+                            '&:hover': { bgcolor: '#7b1fa2' },
+                          }}
+                        >
+                          Importer
+                        </Button>
+                        <Tooltip title="Slett fra pool">
+                          <IconButton
+                            onClick={() => handleDeleteFromPool(poolAudition.id)}
+                            sx={{
+                              minWidth: TOUCH_TARGET_SIZE,
+                              minHeight: TOUCH_TARGET_SIZE,
+                              color: '#ff4444',
+                              '&:hover': { bgcolor: 'rgba(255,68,68,0.1)' },
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </Box>
       )}
 
       {/* Undo Snackbar */}

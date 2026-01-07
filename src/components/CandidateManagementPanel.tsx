@@ -66,6 +66,8 @@ import {
   FlashOn as FlashIcon,
   Upload as UploadIcon,
   FileCopy as CopyToProjectIcon,
+  Inventory as InventoryIcon,
+  FileDownload as DownloadIcon,
 } from '@mui/icons-material';
 import { candidatePoolService } from '../services/candidatePoolService';
 import { GLB3DPreview, PERSONALITY_TRAITS } from './GLB3DPreview';
@@ -254,6 +256,9 @@ export function CandidateManagementPanel({
   const [addingToScene, setAddingToScene] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [candidatesToPreview, setCandidatesToPreview] = useState<Candidate[]>([]);
+  const [poolMode, setPoolMode] = useState<'project' | 'pool'>('project');
+  const [poolCandidates, setPoolCandidates] = useState<import('../services/candidatePoolService').PoolCandidate[]>([]);
+  const [poolLoading, setPoolLoading] = useState(false);
 
   const containerPadding = { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 3 };
 
@@ -529,11 +534,59 @@ export function CandidateManagementPanel({
       const poolId = await candidatePoolService.saveCandidateToPool(candidate.id);
       if (poolId) {
         showSuccess(`${candidate.name} lagret til kandidatpool`, 3000);
+        loadPoolCandidates();
       } else {
         showError('Kunne ikke lagre til pool', 3000);
       }
     } catch (error) {
       console.error('Error saving to pool:', error);
+      showError('En feil oppstod', 3000);
+    }
+  };
+
+  const loadPoolCandidates = async () => {
+    setPoolLoading(true);
+    try {
+      const candidates = await candidatePoolService.getPoolCandidates();
+      setPoolCandidates(candidates);
+    } catch (error) {
+      console.error('Error loading pool candidates:', error);
+    } finally {
+      setPoolLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPoolCandidates();
+  }, []);
+
+  const handleImportFromPool = async (poolCandidate: import('../services/candidatePoolService').PoolCandidate) => {
+    try {
+      const newId = await candidatePoolService.importToProject(poolCandidate.id, projectId);
+      if (newId) {
+        showSuccess(`${poolCandidate.name} importert til prosjektet`, 3000);
+        onCandidatesChange();
+        setPoolMode('project');
+      } else {
+        showError('Kunne ikke importere kandidat', 3000);
+      }
+    } catch (error) {
+      console.error('Error importing from pool:', error);
+      showError('En feil oppstod', 3000);
+    }
+  };
+
+  const handleDeleteFromPool = async (poolCandidateId: string) => {
+    try {
+      const success = await candidatePoolService.deleteFromPool(poolCandidateId);
+      if (success) {
+        showSuccess('Kandidat fjernet fra pool', 3000);
+        loadPoolCandidates();
+      } else {
+        showError('Kunne ikke slette fra pool', 3000);
+      }
+    } catch (error) {
+      console.error('Error deleting from pool:', error);
       showError('En feil oppstod', 3000);
     }
   };
@@ -1140,6 +1193,50 @@ export function CandidateManagementPanel({
             </Button>
           </Tooltip>
         </Box>
+      </Box>
+
+      {/* Pool Mode Toggle */}
+      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+        <Button
+          variant={poolMode === 'project' ? 'contained' : 'outlined'}
+          onClick={() => setPoolMode('project')}
+          startIcon={<RecentActorsIcon />}
+          sx={{
+            bgcolor: poolMode === 'project' ? '#10b981' : 'transparent',
+            color: poolMode === 'project' ? '#fff' : 'rgba(255,255,255,0.7)',
+            borderColor: poolMode === 'project' ? '#10b981' : 'rgba(255,255,255,0.2)',
+            minHeight: TOUCH_TARGET_SIZE,
+            '&:hover': { bgcolor: poolMode === 'project' ? '#059669' : 'rgba(255,255,255,0.05)' },
+            ...focusVisibleStyles,
+          }}
+        >
+          Prosjekt
+          <Chip
+            label={candidates.length}
+            size="small"
+            sx={{ ml: 1, bgcolor: 'rgba(255,255,255,0.2)', color: 'inherit', height: 20, fontSize: '0.7rem' }}
+          />
+        </Button>
+        <Button
+          variant={poolMode === 'pool' ? 'contained' : 'outlined'}
+          onClick={() => { setPoolMode('pool'); loadPoolCandidates(); }}
+          startIcon={<InventoryIcon />}
+          sx={{
+            bgcolor: poolMode === 'pool' ? '#9c27b0' : 'transparent',
+            color: poolMode === 'pool' ? '#fff' : 'rgba(255,255,255,0.7)',
+            borderColor: poolMode === 'pool' ? '#9c27b0' : 'rgba(255,255,255,0.2)',
+            minHeight: TOUCH_TARGET_SIZE,
+            '&:hover': { bgcolor: poolMode === 'pool' ? '#7b1fa2' : 'rgba(255,255,255,0.05)' },
+            ...focusVisibleStyles,
+          }}
+        >
+          Pool
+          <Chip
+            label={poolCandidates.length}
+            size="small"
+            sx={{ ml: 1, bgcolor: 'rgba(255,255,255,0.2)', color: 'inherit', height: 20, fontSize: '0.7rem' }}
+          />
+        </Button>
       </Box>
 
       {/* Statistics Panel */}
@@ -1990,6 +2087,164 @@ export function CandidateManagementPanel({
             );
           })}
         </Grid>
+      )}
+
+      {/* Pool View - shows pool candidates when in pool mode */}
+      {poolMode === 'pool' && (
+        <Box>
+          {poolCandidates.length === 0 ? (
+            <Box
+              role="status"
+              sx={{
+                textAlign: 'center',
+                py: { xs: 4, sm: 8 },
+                px: 4,
+                bgcolor: 'rgba(156, 39, 176, 0.03)',
+                borderRadius: 3,
+                border: '2px dashed rgba(156, 39, 176, 0.2)',
+              }}
+            >
+              <Box
+                sx={{
+                  width: { xs: 60, sm: 80 },
+                  height: { xs: 60, sm: 80 },
+                  borderRadius: '50%',
+                  bgcolor: 'rgba(156, 39, 176, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto',
+                  mb: { xs: 2, sm: 3 },
+                }}
+              >
+                <InventoryIcon sx={{ fontSize: { xs: 30, sm: 40 }, color: '#9c27b0' }} />
+              </Box>
+              <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>
+                Kandidatpool er tom
+              </Typography>
+              <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.6)', mb: 3, maxWidth: 400, mx: 'auto' }}>
+                Lagre kandidater fra prosjekter til poolen for gjenbruk i fremtidige produksjoner.
+              </Typography>
+            </Box>
+          ) : (
+            <Grid container spacing={{ xs: 1, sm: 2 }}>
+              {poolCandidates.map((poolCandidate) => (
+                <Grid item xs={12} sm={6} md={4} lg={3} key={poolCandidate.id}>
+                  <Card
+                    sx={{
+                      bgcolor: 'rgba(156, 39, 176, 0.08)',
+                      border: '1px solid rgba(156, 39, 176, 0.3)',
+                      borderRadius: 2,
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        borderColor: '#9c27b0',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 12px rgba(156, 39, 176, 0.2)',
+                      },
+                    }}
+                  >
+                    <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Avatar
+                            src={poolCandidate.photos?.[0]}
+                            sx={{
+                              width: 48,
+                              height: 48,
+                              bgcolor: 'rgba(156, 39, 176, 0.2)',
+                              border: '2px solid rgba(156, 39, 176, 0.4)',
+                            }}
+                          >
+                            <PersonIcon sx={{ color: '#ce93d8' }} />
+                          </Avatar>
+                          <Box>
+                            <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, fontSize: { xs: '1rem', sm: '1.1rem' } }}>
+                              {poolCandidate.name}
+                            </Typography>
+                            {poolCandidate.contactInfo?.email && (
+                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <EmailIcon sx={{ fontSize: 12 }} />
+                                {poolCandidate.contactInfo.email}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+                        <Chip
+                          icon={<InventoryIcon sx={{ fontSize: 14 }} />}
+                          label="Pool"
+                          size="small"
+                          sx={{
+                            bgcolor: 'rgba(156, 39, 176, 0.2)',
+                            color: '#ce93d8',
+                            fontSize: '0.7rem',
+                            height: 24,
+                          }}
+                        />
+                      </Box>
+                      {poolCandidate.notes && (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: 'rgba(255,255,255,0.6)',
+                            mb: 1.5,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {poolCandidate.notes}
+                        </Typography>
+                      )}
+                      {poolCandidate.tags && poolCandidate.tags.length > 0 && (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
+                          {poolCandidate.tags.slice(0, 3).map((tag) => (
+                            <Chip
+                              key={tag}
+                              label={tag}
+                              size="small"
+                              sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', fontSize: '0.7rem' }}
+                            />
+                          ))}
+                        </Box>
+                      )}
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          startIcon={<DownloadIcon />}
+                          onClick={() => handleImportFromPool(poolCandidate)}
+                          sx={{
+                            bgcolor: '#9c27b0',
+                            color: '#fff',
+                            flex: 1,
+                            minHeight: TOUCH_TARGET_SIZE,
+                            '&:hover': { bgcolor: '#7b1fa2' },
+                          }}
+                        >
+                          Importer
+                        </Button>
+                        <Tooltip title="Slett fra pool">
+                          <IconButton
+                            onClick={() => handleDeleteFromPool(poolCandidate.id)}
+                            sx={{
+                              minWidth: TOUCH_TARGET_SIZE,
+                              minHeight: TOUCH_TARGET_SIZE,
+                              color: '#ff4444',
+                              '&:hover': { bgcolor: 'rgba(255,68,68,0.1)' },
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </Box>
       )}
 
       {/* Undo Delete Snackbar */}
