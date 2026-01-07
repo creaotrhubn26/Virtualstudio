@@ -2473,19 +2473,21 @@ class VirtualStudio {
     mesh.rotationQuaternion = null;
     mesh.rotation = BABYLON.Vector3.Zero();
     
-    // Use Babylon's FromLookDirectionLH - it creates rotation where:
-    // The mesh's local -Z axis points in the specified direction
+    // The beauty dish model has light head pointing in +Z direction (not -Z)
+    // So we need to invert the direction for FromLookDirectionLH
+    const invertedDir = dir.negate();
+    
     let up = BABYLON.Vector3.Up();
     
     // Handle near-vertical directions
-    const dotUp = Math.abs(BABYLON.Vector3.Dot(dir, up));
+    const dotUp = Math.abs(BABYLON.Vector3.Dot(invertedDir, up));
     if (dotUp > 0.99) {
-      up = new BABYLON.Vector3(0, 0, dir.y > 0 ? -1 : 1);
+      up = new BABYLON.Vector3(0, 0, invertedDir.y > 0 ? -1 : 1);
     }
     
-    // Create quaternion that makes the mesh look in the direction
-    // FromLookDirectionLH: forward = direction the mesh should face, up = up vector
-    mesh.rotationQuaternion = BABYLON.Quaternion.FromLookDirectionLH(dir, up);
+    // Create quaternion that makes the mesh look in the opposite direction
+    // This effectively makes the light head point toward the target
+    mesh.rotationQuaternion = BABYLON.Quaternion.FromLookDirectionLH(invertedDir, up);
   }
   
   /**
