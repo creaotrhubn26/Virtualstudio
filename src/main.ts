@@ -395,6 +395,14 @@ class VirtualStudio {
     this.scene = new BABYLON.Scene(this.engine);
     this.scene.clearColor = new BABYLON.Color4(0.08, 0.09, 0.11, 1);
     
+    // Create environment texture for PBR materials to render correctly
+    // PBR materials need an environment for reflections and proper lighting
+    this.scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData(
+      'https://assets.babylonjs.com/environments/environmentSpecular.env',
+      this.scene
+    );
+    this.scene.environmentIntensity = 0.6; // Subtle environment lighting
+    
     // Scene optimizations - only override non-defaults that improve performance
     // autoClear and autoClearDepthAndStencil already default to true
     // useRightHandedSystem defaults to false (standard Babylon left-handed)
