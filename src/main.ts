@@ -206,6 +206,7 @@ class VirtualStudio {
   public selectedLightId: string | null = null;
   private lightCounter = 0;
   private selectedPosAxes: Set<string> = new Set(['x', 'y', 'z']);
+  private glowLayer: BABYLON.GlowLayer | null = null;
   private selectedRotAxes: Set<string> = new Set(['x', 'y', 'z']);
   private gridMesh: BABYLON.Mesh | null = null;
   private gizmoManager: BABYLON.GizmoManager | null = null;
@@ -12102,8 +12103,75 @@ class VirtualStudio {
       }
     }
     
-    // Skip glow disc for now - will add proper implementation later
-    // The light fixture mesh itself shows the reflector bowl
+    // Create a small glowing bulb sphere inside the reflector using proper parenting
+    // Based on research: use small sphere parented to topmost mesh, with GlowLayer
+    try {
+      // Find the topmost child mesh (reflector/head) by finding highest Y position
+      const childMeshes = lightMesh.getChildMeshes(true);
+      let reflectorMesh: BABYLON.AbstractMesh | null = null;
+      let maxY = -Infinity;
+      
+      // Force compute world matrix first
+      lightMesh.computeWorldMatrix(true);
+      
+      for (const child of childMeshes) {
+        if (child instanceof BABYLON.Mesh) {
+          child.computeWorldMatrix(true);
+          const worldPos = child.getAbsolutePosition();
+          if (worldPos.y > maxY) {
+            maxY = worldPos.y;
+            reflectorMesh = child;
+          }
+        }
+      }
+      
+      if (!reflectorMesh) {
+        reflectorMesh = lightMesh;
+      }
+      
+      // Create a small sphere as the "light bulb" inside the reflector
+      const bulbSphere = BABYLON.MeshBuilder.CreateSphere(
+        `bulb_${id}`,
+        { diameter: 0.15, segments: 16 },
+        this.scene
+      );
+      
+      // Create emissive material for the bulb
+      const bulbMat = new BABYLON.PBRMaterial(`bulbMat_${id}`, this.scene);
+      bulbMat.emissiveColor = color.clone();
+      bulbMat.emissiveIntensity = Math.min(4.0, 1.5 + intensity);
+      bulbMat.albedoColor = new BABYLON.Color3(0.9, 0.9, 0.9);
+      bulbMat.metallic = 0;
+      bulbMat.roughness = 1;
+      bulbSphere.material = bulbMat;
+      
+      // Parent to reflector mesh so it follows rotations automatically
+      bulbSphere.parent = reflectorMesh;
+      
+      // Position at local origin of reflector (center of the mesh)
+      bulbSphere.position = BABYLON.Vector3.Zero();
+      
+      bulbSphere.isPickable = false;
+      
+      // Add to GlowLayer if available, otherwise create one
+      if (!this.glowLayer) {
+        this.glowLayer = new BABYLON.GlowLayer("studioGlow", this.scene, {
+          mainTextureFixedSize: 512,
+          blurKernelSize: 32
+        });
+        this.glowLayer.intensity = 0.6;
+      }
+      
+      // Add only this bulb to glow
+      this.glowLayer.addIncludedOnlyMesh(bulbSphere as BABYLON.Mesh);
+      
+      // Store reference for later updates
+      (lightMesh as any)._glowBulb = bulbSphere;
+      
+      console.log(`Light bulb created for ${id}, parented to: ${reflectorMesh.name}`);
+    } catch (e) {
+      console.warn('Could not create light bulb:', e);
+    }
     
     // Update immediately
     updateLightPosition();
