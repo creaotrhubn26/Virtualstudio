@@ -10537,10 +10537,53 @@ class VirtualStudio {
 
   private getLightModelUrl(type: string): string | null {
     // Map light types to their 3D model URLs
+    // Uses available GLB models, with 300D_Light as default for LED panels
+    // and Profoto_B10 for strobes, softbox for modifiers
     const modelMap: Record<string, string> = {
+      // Aputure LED lights - use 300D model
       'aputure-300d': '/api/models/300D_Light.glb',
+      'aputure-120d': '/api/models/300D_Light.glb',
+      'aputure-600d': '/api/models/300D_Light.glb',
+      'aputure-300x': '/api/models/300D_Light.glb',
+      'aputure-nova': '/api/models/300D_Light.glb',
+      
+      // Godox strobes - use Profoto B10 model (similar form factor)
+      'godox-ad200': '/api/models/Profoto_B10.glb',
+      'godox-ad200pro': '/api/models/Profoto_B10.glb',
+      'godox-ad400pro': '/api/models/Profoto_B10.glb',
+      'godox-ad600': '/api/models/Profoto_B10.glb',
+      'godox-ad600pro': '/api/models/Profoto_B10.glb',
+      
+      // Profoto strobes
+      'profoto-b10': '/api/models/Profoto_B10.glb',
+      'profoto-b10plus': '/api/models/Profoto_B10.glb',
+      'profoto-b1x': '/api/models/Profoto_B10.glb',
+      'profoto-d2': '/api/models/Profoto_B10.glb',
+      'profoto-a1': '/api/models/Profoto_B10.glb',
+      
+      // Softbox modifiers
+      'softbox': '/api/models/softbox.glb',
+      'softbox-rect': '/api/models/softbox.glb',
+      'softbox-octa': '/api/models/softbox.glb',
+      'profoto-softbox': '/api/models/profoto_softbox.glb',
+      
+      // Generic/default mappings
+      'led-panel': '/api/models/300D_Light.glb',
+      'strobe': '/api/models/Profoto_B10.glb',
     };
-    return modelMap[type] || null;
+    
+    // Return mapped model or fall back to 300D for any unrecognized LED/continuous lights
+    if (modelMap[type]) {
+      return modelMap[type];
+    }
+    
+    // Fallback: LEDs/continuous use 300D, strobes use Profoto
+    if (type.includes('strobe') || type.includes('flash')) {
+      return '/api/models/Profoto_B10.glb';
+    }
+    
+    // Default to 300D for any light type
+    return '/api/models/300D_Light.glb';
   }
   
   /**
