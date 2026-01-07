@@ -1509,21 +1509,17 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
                       borderColor: 'rgba(255,255,255,0.2)',
                       borderWidth: 2,
                     },
-                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'rgba(139,92,246,0.5)',
-                  },
-                  '&:focus-visible': {
-                    outline: '3px solid #8b5cf6',
-                    outlineOffset: '2px',
-                  },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#8b5cf6',
-                      borderWidth: 3, // WCAG: thicker focus indicator
-                      boxShadow: '0 0 0 2px rgba(139,92,246,0.3)', // WCAG: additional focus indicator
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'rgba(139,92,246,0.5)',
                     },
                     '&:focus-visible': {
                       outline: '3px solid #8b5cf6',
                       outlineOffset: '2px',
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#8b5cf6',
+                      borderWidth: 3,
+                      boxShadow: '0 0 0 2px rgba(139,92,246,0.3)',
                     },
                     '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.7)', fontSize: isLandscape ? 36 : 32 },
                     '& .MuiSelect-select': {
@@ -1580,21 +1576,17 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
                       borderColor: 'rgba(255,255,255,0.2)',
                       borderWidth: 2,
                     },
-                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'rgba(139,92,246,0.5)',
-                  },
-                  '&:focus-visible': {
-                    outline: '3px solid #8b5cf6',
-                    outlineOffset: '2px',
-                  },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#8b5cf6',
-                      borderWidth: 3, // WCAG: thicker focus indicator
-                      boxShadow: '0 0 0 2px rgba(139,92,246,0.3)', // WCAG: additional focus indicator
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'rgba(139,92,246,0.5)',
                     },
                     '&:focus-visible': {
                       outline: '3px solid #8b5cf6',
                       outlineOffset: '2px',
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#8b5cf6',
+                      borderWidth: 3,
+                      boxShadow: '0 0 0 2px rgba(139,92,246,0.3)',
                     },
                     '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.7)', fontSize: isLandscape ? 36 : 32 },
                     '& .MuiSelect-select': {

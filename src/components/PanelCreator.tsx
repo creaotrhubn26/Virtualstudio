@@ -1073,9 +1073,6 @@ const PanelCreatorContent: React.FC = () => {
         maxWidth={isDesktop ? 'lg' : isTablet ? 'md' : 'sm'}
         fullWidth
         container={() => document.body}
-        sx={{
-          zIndex: 10000,
-        }}
         PaperProps={{
           sx: {
             bgcolor: '#1c2128',
@@ -1092,13 +1089,11 @@ const PanelCreatorContent: React.FC = () => {
             boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
             willChange: 'transform, opacity',
             transformOrigin: 'center center',
-            // iPad landscape optimization
             '@media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape)': {
               maxWidth: '90vw',
               maxHeight: '85vh',
               m: 2,
             },
-            // Desktop optimization
             '@media (min-width: 1400px)': {
               maxWidth: '1200px',
             },

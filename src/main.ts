@@ -10041,27 +10041,6 @@ class VirtualStudio {
     }));
   }
   
-  private removeLight(lightId: string): void {
-    const data = this.lights.get(lightId);
-    if (!data) return;
-    
-    // Dispose light and mesh
-    data.light.dispose();
-    data.mesh.dispose();
-    if (data.modelingLight) data.modelingLight.dispose();
-    if (data.shadowGenerator) data.shadowGenerator.dispose();
-    if (data.beamVisualization) data.beamVisualization.dispose();
-    
-    this.lights.delete(lightId);
-    
-    if (this.selectedLightId === lightId) {
-      this.deselectLight();
-    }
-    
-    // Update hierarchy
-    window.dispatchEvent(new CustomEvent('ch-light-removed', { detail: { lightId } }));
-  }
-  
   private deselectLight(): void {
     this.selectedLightId = null;
     window.dispatchEvent(new CustomEvent('ch-light-deselected'));

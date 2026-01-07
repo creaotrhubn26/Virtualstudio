@@ -1978,10 +1978,6 @@ const buttonStyle = {
                                 transform: 'translateY(0)',
                               },
                               transition: 'all 0.2s ease',
-                              '&:hover': {
-                                borderColor: '#2196f3',
-                                bgcolor: 'rgba(33,150,243,0.1)',
-                              },
                             }}
                           >
                             <Box
