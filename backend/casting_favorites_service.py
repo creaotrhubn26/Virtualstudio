@@ -124,6 +124,49 @@ def init_casting_favorites_tables():
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS casting_candidate_pool (
+                    id VARCHAR(100) PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    contact_info JSONB DEFAULT '{}',
+                    photos JSONB DEFAULT '[]',
+                    videos JSONB DEFAULT '[]',
+                    model_url TEXT,
+                    personality TEXT,
+                    notes TEXT,
+                    tags JSONB DEFAULT '[]',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS casting_role_pool (
+                    id VARCHAR(100) PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    role_type VARCHAR(100),
+                    requirements JSONB DEFAULT '{}',
+                    tags JSONB DEFAULT '[]',
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS casting_audition_pool (
+                    id VARCHAR(100) PRIMARY KEY,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    audition_type VARCHAR(100),
+                    duration_minutes INTEGER DEFAULT 30,
+                    location TEXT,
+                    requirements JSONB DEFAULT '{}',
+                    tags JSONB DEFAULT '[]',
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_casting_favorites_project ON casting_favorites(project_id)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_casting_favorites_type ON casting_favorites(favorite_type)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_casting_candidates_project ON casting_candidates(project_id)")
@@ -132,6 +175,8 @@ def init_casting_favorites_tables():
             cur.execute("CREATE INDEX IF NOT EXISTS idx_casting_locations_project ON casting_locations(project_id)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_casting_props_project ON casting_props(project_id)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_casting_schedules_project ON casting_schedules(project_id)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_casting_role_pool_name ON casting_role_pool(name)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_casting_audition_pool_title ON casting_audition_pool(title)")
             conn.commit()
             print("Casting Planner tables initialized")
     finally:
