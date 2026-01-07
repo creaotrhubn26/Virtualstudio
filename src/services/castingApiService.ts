@@ -758,6 +758,122 @@ export const equipmentConflictsApi = {
   },
 };
 
+export interface EquipmentTemplateItem {
+  id: string;
+  template_id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  brand?: string;
+  model?: string;
+  quantity: number;
+  is_required: boolean;
+  external_url?: string;
+  estimated_price?: number;
+  notes?: string;
+  sort_order: number;
+  created_at?: string;
+}
+
+export interface EquipmentTemplate {
+  id: string;
+  project_id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  use_case?: string;
+  is_default: boolean;
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+  items?: EquipmentTemplateItem[];
+  item_count?: number;
+}
+
+export interface VendorLink {
+  id: string;
+  category: string;
+  subcategory?: string;
+  vendor_name: string;
+  product_name: string;
+  product_url: string;
+  affiliate_url?: string;
+  price?: number;
+  image_url?: string;
+  description?: string;
+  is_recommended: boolean;
+  sort_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const equipmentTemplatesApi = {
+  getAll: async (projectId: string): Promise<EquipmentTemplate[]> => {
+    const result = await apiRequest<{ templates: EquipmentTemplate[] }>(`/projects/${projectId}/equipment-templates`);
+    return result.templates;
+  },
+  
+  get: async (templateId: string): Promise<EquipmentTemplate> => {
+    const result = await apiRequest<{ template: EquipmentTemplate }>(`/equipment-templates/${templateId}`);
+    return result.template;
+  },
+  
+  create: async (projectId: string, template: Partial<EquipmentTemplate>): Promise<EquipmentTemplate> => {
+    const result = await apiRequest<{ template: EquipmentTemplate }>(`/projects/${projectId}/equipment-templates`, {
+      method: 'POST',
+      body: JSON.stringify(template),
+    });
+    return result.template;
+  },
+  
+  update: async (templateId: string, template: Partial<EquipmentTemplate>): Promise<EquipmentTemplate> => {
+    const result = await apiRequest<{ template: EquipmentTemplate }>(`/equipment-templates/${templateId}`, {
+      method: 'PUT',
+      body: JSON.stringify(template),
+    });
+    return result.template;
+  },
+  
+  delete: async (templateId: string): Promise<boolean> => {
+    await apiRequest(`/equipment-templates/${templateId}`, { method: 'DELETE' });
+    return true;
+  },
+  
+  apply: async (templateId: string, projectId: string): Promise<{ equipment: Equipment[]; count: number }> => {
+    const result = await apiRequest<{ equipment: Equipment[]; count: number }>(`/equipment-templates/${templateId}/apply`, {
+      method: 'POST',
+      body: JSON.stringify({ project_id: projectId }),
+    });
+    return result;
+  },
+};
+
+export const vendorLinksApi = {
+  getAll: async (category?: string): Promise<VendorLink[]> => {
+    const url = category ? `/vendor-links?category=${encodeURIComponent(category)}` : '/vendor-links';
+    const result = await apiRequest<{ links: VendorLink[] }>(url);
+    return result.links;
+  },
+  
+  getCategories: async (): Promise<{ category: string; count: number }[]> => {
+    const result = await apiRequest<{ categories: { category: string; count: number }[] }>('/vendor-links/categories');
+    return result.categories;
+  },
+  
+  create: async (link: Partial<VendorLink>): Promise<VendorLink> => {
+    const result = await apiRequest<{ link: VendorLink }>('/vendor-links', {
+      method: 'POST',
+      body: JSON.stringify(link),
+    });
+    return result.link;
+  },
+  
+  delete: async (linkId: string): Promise<boolean> => {
+    await apiRequest(`/vendor-links/${linkId}`, { method: 'DELETE' });
+    return true;
+  },
+};
+
 export const castingApi = {
   favorites: favoritesApi,
   projects: projectsApi,
@@ -778,6 +894,8 @@ export const castingApi = {
   equipmentBookings: equipmentBookingsApi,
   equipmentAvailability: equipmentAvailabilityApi,
   equipmentConflicts: equipmentConflictsApi,
+  equipmentTemplates: equipmentTemplatesApi,
+  vendorLinks: vendorLinksApi,
 };
 
 export default castingApi;
