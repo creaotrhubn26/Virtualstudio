@@ -1092,6 +1092,15 @@ class VirtualStudio {
     // Deselect all lights so user starts fresh
     this.selectedLightId = null;
     this.gizmoManager?.attachToMesh(null);
+    
+    // Hide all beam visualizations since no light is selected
+    for (const [, lightData] of this.lights) {
+      if (lightData.beamVisualization) {
+        lightData.beamVisualization.isVisible = false;
+      }
+      // Also remove any highlight
+      this.removeLightHighlight(lightData.mesh);
+    }
   }
 
   private addWallLogos(): void {
