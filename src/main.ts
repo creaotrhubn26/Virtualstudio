@@ -12428,8 +12428,8 @@ class VirtualStudio {
       // Use stored localForwardAxis from the mesh, or default to forward direction
       const storedForwardAxis = (lightMesh as any)._localForwardAxis as BABYLON.Vector3 | undefined;
       const forwardDir = storedForwardAxis ? storedForwardAxis.clone() : new BABYLON.Vector3(0, 0, -1);
-      const bulbOffset = forwardDir.scale(0.55);
-      bulbSphere.position = new BABYLON.Vector3(0, 1.5, 0).add(bulbOffset);
+      const bulbOffset = forwardDir.scale(0.4); // Moved back (was 0.55)
+      bulbSphere.position = new BABYLON.Vector3(0, 1.35, 0).add(bulbOffset); // Lowered Y (was 1.5)
       
       // Add to GlowLayer with improved settings
       if (!this.glowLayer) {
