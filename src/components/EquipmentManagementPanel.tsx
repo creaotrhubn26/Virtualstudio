@@ -54,6 +54,12 @@ import {
   Schedule as ScheduleIcon,
   Block as BlockIcon,
   Refresh as RefreshIcon,
+  ContentCopy as CopyIcon,
+  Bookmark as BookmarkIcon,
+  ShoppingCart as ShoppingCartIcon,
+  OpenInNew as OpenInNewIcon,
+  PlaylistAdd as PlaylistAddIcon,
+  Star as StarIcon,
 } from '@mui/icons-material';
 import { 
   Equipment, 
@@ -66,6 +72,11 @@ import {
   locationsApi,
   CastingCrew,
   CastingLocation,
+  equipmentTemplatesApi,
+  vendorLinksApi,
+  EquipmentTemplate,
+  EquipmentTemplateItem,
+  VendorLink,
 } from '../services/castingApiService';
 import { useToast } from './ToastStack';
 
@@ -179,9 +190,26 @@ export function EquipmentManagementPanel({ projectId, onUpdate }: EquipmentManag
   const [bookings, setBookings] = useState<EquipmentBooking[]>([]);
   const [availability, setAvailability] = useState<EquipmentAvailability[]>([]);
 
+  const [templates, setTemplates] = useState<EquipmentTemplate[]>([]);
+  const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
+  const [templateFormOpen, setTemplateFormOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<EquipmentTemplate | null>(null);
+  const [templateFormData, setTemplateFormData] = useState({
+    name: '',
+    description: '',
+    category: '',
+    use_case: '',
+    items: [] as Partial<EquipmentTemplateItem>[],
+  });
+  const [shopDialogOpen, setShopDialogOpen] = useState(false);
+  const [vendorLinks, setVendorLinks] = useState<VendorLink[]>([]);
+  const [vendorCategories, setVendorCategories] = useState<{ category: string; count: number }[]>([]);
+  const [selectedVendorCategory, setSelectedVendorCategory] = useState<string>('all');
+
   useEffect(() => {
     loadEquipment();
     loadCrewAndLocations();
+    loadTemplates();
   }, [projectId]);
 
   const loadEquipment = async () => {
@@ -210,6 +238,99 @@ export function EquipmentManagementPanel({ projectId, onUpdate }: EquipmentManag
     } catch (error) {
       console.error('Error loading crew/locations:', error);
     }
+  };
+
+  const loadTemplates = async () => {
+    if (!projectId) return;
+    try {
+      const data = await equipmentTemplatesApi.getAll(projectId);
+      setTemplates(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error loading templates:', error);
+    }
+  };
+
+  const loadVendorLinks = async () => {
+    try {
+      const [links, categories] = await Promise.all([
+        vendorLinksApi.getAll(selectedVendorCategory === 'all' ? undefined : selectedVendorCategory),
+        vendorLinksApi.getCategories(),
+      ]);
+      setVendorLinks(Array.isArray(links) ? links : []);
+      setVendorCategories(Array.isArray(categories) ? categories : []);
+    } catch (error) {
+      console.error('Error loading vendor links:', error);
+    }
+  };
+
+  const handleApplyTemplate = async (templateId: string) => {
+    try {
+      const result = await equipmentTemplatesApi.apply(templateId, projectId);
+      showSuccess(`${result.count} utstyr opprettet fra mal`);
+      loadEquipment();
+      setTemplatesDialogOpen(false);
+      onUpdate?.();
+    } catch (error) {
+      console.error('Error applying template:', error);
+      showError('Kunne ikke anvende mal');
+    }
+  };
+
+  const handleSaveTemplate = async () => {
+    try {
+      if (editingTemplate) {
+        await equipmentTemplatesApi.update(editingTemplate.id, templateFormData);
+        showSuccess('Mal oppdatert');
+      } else {
+        await equipmentTemplatesApi.create(projectId, templateFormData);
+        showSuccess('Mal opprettet');
+      }
+      loadTemplates();
+      setTemplateFormOpen(false);
+      setEditingTemplate(null);
+      setTemplateFormData({ name: '', description: '', category: '', use_case: '', items: [] });
+    } catch (error) {
+      console.error('Error saving template:', error);
+      showError('Kunne ikke lagre mal');
+    }
+  };
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    try {
+      await equipmentTemplatesApi.delete(templateId);
+      showSuccess('Mal slettet');
+      loadTemplates();
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      showError('Kunne ikke slette mal');
+    }
+  };
+
+  const handleCreateTemplateFromEquipment = async () => {
+    const items = equipment.map((eq, idx) => ({
+      name: eq.name,
+      description: eq.description,
+      category: eq.category,
+      brand: eq.brand,
+      model: eq.model,
+      quantity: eq.quantity,
+      is_required: true,
+      sort_order: idx,
+    }));
+    setTemplateFormData({
+      name: 'Min utstyrsmal',
+      description: 'Opprettet fra eksisterende utstyr',
+      category: 'Produksjon',
+      use_case: 'Film/Foto',
+      items,
+    });
+    setEditingTemplate(null);
+    setTemplateFormOpen(true);
+  };
+
+  const handleOpenShopDialog = () => {
+    loadVendorLinks();
+    setShopDialogOpen(true);
   };
 
   const handleOpenDialog = (eq?: Equipment) => {
@@ -464,6 +585,38 @@ export function EquipmentManagementPanel({ projectId, onUpdate }: EquipmentManag
           >
             Nytt utstyr
           </Button>
+          <Tooltip title="Utstyrs-maler">
+            <Button
+              variant="outlined"
+              startIcon={<BookmarkIcon />}
+              onClick={() => setTemplatesDialogOpen(true)}
+              sx={{
+                borderColor: '#4caf50',
+                color: '#4caf50',
+                minHeight: TOUCH_TARGET_SIZE,
+                '&:hover': { borderColor: '#66bb6a', bgcolor: 'rgba(76,175,80,0.1)' },
+                ...focusVisibleStyles,
+              }}
+            >
+              Maler
+            </Button>
+          </Tooltip>
+          <Tooltip title="Kjøp utstyr via foto.no">
+            <Button
+              variant="outlined"
+              startIcon={<ShoppingCartIcon />}
+              onClick={handleOpenShopDialog}
+              sx={{
+                borderColor: '#2196f3',
+                color: '#2196f3',
+                minHeight: TOUCH_TARGET_SIZE,
+                '&:hover': { borderColor: '#42a5f5', bgcolor: 'rgba(33,150,243,0.1)' },
+                ...focusVisibleStyles,
+              }}
+            >
+              Kjøp
+            </Button>
+          </Tooltip>
         </Box>
       </Box>
 
@@ -760,7 +913,35 @@ export function EquipmentManagementPanel({ projectId, onUpdate }: EquipmentManag
         <Box sx={{ textAlign: 'center', py: 6, color: 'rgba(255,255,255,0.5)' }}>
           <BuildIcon sx={{ fontSize: 64, mb: 2, opacity: 0.3 }} />
           <Typography variant="h6">Ingen utstyr funnet</Typography>
-          <Typography variant="body2">Legg til utstyr for å komme i gang</Typography>
+          <Typography variant="body2" sx={{ mb: 3 }}>Bygg opp lageret ditt med maler eller kjøp nytt</Typography>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
+            {templates.length > 0 && (
+              <Button
+                variant="outlined"
+                startIcon={<PlaylistAddIcon />}
+                onClick={() => setTemplatesDialogOpen(true)}
+                sx={{ borderColor: '#4caf50', color: '#4caf50' }}
+              >
+                Bruk mal ({templates.length})
+              </Button>
+            )}
+            <Button
+              variant="outlined"
+              startIcon={<ShoppingCartIcon />}
+              onClick={handleOpenShopDialog}
+              sx={{ borderColor: '#2196f3', color: '#2196f3' }}
+            >
+              Kjøp via foto.no
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenDialog()}
+              sx={{ bgcolor: '#ff9800', color: '#000' }}
+            >
+              Legg til manuelt
+            </Button>
+          </Stack>
         </Box>
       )}
 
@@ -1124,6 +1305,288 @@ export function EquipmentManagementPanel({ projectId, onUpdate }: EquipmentManag
         <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2 }}>
           <Button
             onClick={() => setBookingsDialogOpen(false)}
+            sx={{ color: 'rgba(255,255,255,0.6)', minHeight: TOUCH_TARGET_SIZE }}
+          >
+            Lukk
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={templatesDialogOpen}
+        onClose={() => setTemplatesDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        TransitionComponent={Grow}
+        PaperProps={{ sx: { bgcolor: '#1c2128', color: '#fff', borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <BookmarkIcon sx={{ color: '#4caf50' }} />
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>Utstyrs-maler</Typography>
+          </Box>
+          <IconButton onClick={() => setTemplatesDialogOpen(false)} sx={focusVisibleStyles}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          {templates.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4, color: 'rgba(255,255,255,0.5)' }}>
+              <BookmarkIcon sx={{ fontSize: 48, mb: 2, opacity: 0.3 }} />
+              <Typography variant="h6" sx={{ mb: 1 }}>Ingen maler ennå</Typography>
+              <Typography variant="body2" sx={{ mb: 3 }}>
+                Opprett en mal fra eksisterende utstyr eller start fra bunnen
+              </Typography>
+              {equipment.length > 0 && (
+                <Button
+                  variant="outlined"
+                  startIcon={<CopyIcon />}
+                  onClick={handleCreateTemplateFromEquipment}
+                  sx={{ borderColor: '#4caf50', color: '#4caf50' }}
+                >
+                  Lag mal fra nåværende utstyr
+                </Button>
+              )}
+            </Box>
+          ) : (
+            <Stack spacing={2}>
+              {templates.map(template => (
+                <Card key={template.id} sx={{ bgcolor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                      <Box>
+                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>
+                          {template.name}
+                          {template.is_default && (
+                            <StarIcon sx={{ color: '#ff9800', fontSize: 18, ml: 1, verticalAlign: 'middle' }} />
+                          )}
+                        </Typography>
+                        {template.description && (
+                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                            {template.description}
+                          </Typography>
+                        )}
+                      </Box>
+                      <Chip 
+                        label={`${template.item_count || 0} elementer`} 
+                        size="small" 
+                        sx={{ bgcolor: 'rgba(76,175,80,0.2)', color: '#4caf50' }} 
+                      />
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                      {template.category && (
+                        <Chip label={template.category} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: '#fff' }} />
+                      )}
+                      {template.use_case && (
+                        <Chip label={template.use_case} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: '#fff' }} />
+                      )}
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<PlaylistAddIcon />}
+                        onClick={() => handleApplyTemplate(template.id)}
+                        sx={{ bgcolor: '#4caf50', color: '#fff', '&:hover': { bgcolor: '#66bb6a' } }}
+                      >
+                        Bruk mal
+                      </Button>
+                      <IconButton 
+                        size="small" 
+                        onClick={() => handleDeleteTemplate(template.id)}
+                        sx={{ color: '#f44336' }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Box>
+                  </CardContent>
+                </Card>
+              ))}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2, justifyContent: 'space-between' }}>
+          {equipment.length > 0 && (
+            <Button
+              startIcon={<CopyIcon />}
+              onClick={handleCreateTemplateFromEquipment}
+              sx={{ color: '#4caf50' }}
+            >
+              Lag mal fra utstyr
+            </Button>
+          )}
+          <Button
+            onClick={() => setTemplatesDialogOpen(false)}
+            sx={{ color: 'rgba(255,255,255,0.6)', minHeight: TOUCH_TARGET_SIZE }}
+          >
+            Lukk
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={shopDialogOpen}
+        onClose={() => setShopDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        TransitionComponent={Grow}
+        PaperProps={{ sx: { bgcolor: '#1c2128', color: '#fff', borderRadius: 2 } }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <ShoppingCartIcon sx={{ color: '#2196f3' }} />
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>Kjøp utstyr via foto.no</Typography>
+          </Box>
+          <IconButton onClick={() => setShopDialogOpen(false)} sx={focusVisibleStyles}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Box sx={{ 
+            textAlign: 'center', 
+            py: 4,
+            background: 'linear-gradient(135deg, rgba(33,150,243,0.1) 0%, rgba(33,150,243,0.05) 100%)',
+            borderRadius: 2,
+            border: '1px solid rgba(33,150,243,0.2)',
+          }}>
+            <ShoppingCartIcon sx={{ fontSize: 64, color: '#2196f3', mb: 2, opacity: 0.7 }} />
+            <Typography variant="h5" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
+              Bygg nytt lager via foto.no
+            </Typography>
+            <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.7)', mb: 3, maxWidth: 500, mx: 'auto' }}>
+              Norges ledende leverandør av foto- og videoutstyr. 
+              Finn alt du trenger for profesjonell produksjon.
+            </Typography>
+            <Stack spacing={2} sx={{ maxWidth: 400, mx: 'auto' }}>
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<OpenInNewIcon />}
+                onClick={() => window.open('https://www.foto.no/foto/kamera', '_blank')}
+                sx={{ 
+                  bgcolor: '#2196f3', 
+                  color: '#fff', 
+                  py: 1.5,
+                  '&:hover': { bgcolor: '#1976d2' } 
+                }}
+              >
+                Kameraer
+              </Button>
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<OpenInNewIcon />}
+                onClick={() => window.open('https://www.foto.no/foto/foto-tilbehor/belysning', '_blank')}
+                sx={{ 
+                  bgcolor: '#2196f3', 
+                  color: '#fff', 
+                  py: 1.5,
+                  '&:hover': { bgcolor: '#1976d2' } 
+                }}
+              >
+                Lys og belysning
+              </Button>
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<OpenInNewIcon />}
+                onClick={() => window.open('https://www.foto.no/video', '_blank')}
+                sx={{ 
+                  bgcolor: '#2196f3', 
+                  color: '#fff', 
+                  py: 1.5,
+                  '&:hover': { bgcolor: '#1976d2' } 
+                }}
+              >
+                Videoutstyr
+              </Button>
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<OpenInNewIcon />}
+                onClick={() => window.open('https://www.foto.no/lyd', '_blank')}
+                sx={{ 
+                  bgcolor: '#2196f3', 
+                  color: '#fff', 
+                  py: 1.5,
+                  '&:hover': { bgcolor: '#1976d2' } 
+                }}
+              >
+                Lydopptak
+              </Button>
+              <Button
+                variant="outlined"
+                size="large"
+                startIcon={<OpenInNewIcon />}
+                onClick={() => window.open('https://www.foto.no', '_blank')}
+                sx={{ 
+                  borderColor: '#2196f3', 
+                  color: '#2196f3', 
+                  py: 1.5,
+                  '&:hover': { borderColor: '#1976d2', bgcolor: 'rgba(33,150,243,0.1)' } 
+                }}
+              >
+                Alle kategorier
+              </Button>
+            </Stack>
+          </Box>
+          
+          {vendorLinks.length > 0 && (
+            <Box sx={{ mt: 4 }}>
+              <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 2 }}>
+                Anbefalte produkter
+              </Typography>
+              <Grid container spacing={2}>
+                {vendorLinks.filter(l => l.is_recommended).map(link => (
+                  <Grid item xs={12} sm={6} md={4} key={link.id}>
+                    <Card 
+                      sx={{ 
+                        bgcolor: 'rgba(255,255,255,0.05)', 
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: 'rgba(255,255,255,0.08)' }
+                      }}
+                      onClick={() => window.open(link.affiliate_url || link.product_url, '_blank')}
+                    >
+                      <CardContent>
+                        <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 600 }}>
+                          {link.product_name}
+                        </Typography>
+                        {link.description && (
+                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mt: 1 }}>
+                            {link.description}
+                          </Typography>
+                        )}
+                        {link.price && (
+                          <Typography variant="h6" sx={{ color: '#4caf50', mt: 1, fontWeight: 700 }}>
+                            kr {link.price.toLocaleString('nb-NO')},-
+                          </Typography>
+                        )}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                          <Chip label={link.category} size="small" sx={{ bgcolor: 'rgba(33,150,243,0.2)', color: '#2196f3' }} />
+                          <OpenInNewIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.5)' }} />
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2 }}>
+          <Button
+            onClick={() => setShopDialogOpen(false)}
             sx={{ color: 'rgba(255,255,255,0.6)', minHeight: TOUCH_TARGET_SIZE }}
           >
             Lukk
