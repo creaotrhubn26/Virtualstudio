@@ -2168,50 +2168,40 @@ class VirtualStudio {
           );
         }
         
-        // Calculate direction from light position to target
-        const resetDir = targetPos.subtract(resetPos).normalize();
+        // Studio light stand height (typical tripod stand is about 2-2.5m)
+        const standHeight = 2.2; // Fixed stand height in meters
         
-        // Calculate mesh position so stand is on floor but light head is at resetPos.y
-        // Get mesh bounding info to find light head offset from origin
-        lightData.mesh.refreshBoundingInfo(true);
-        const bounds = lightData.mesh.getBoundingInfo().boundingBox;
-        const meshHeight = bounds.maximumWorld.y - bounds.minimumWorld.y;
-        
-        // Estimate light head is at top of mesh (typically ~90% up for studio lights)
-        // Position mesh so bottom is on floor (y=0) and use tilt to aim at target
-        const standBaseY = 0; // Stand feet on floor
-        const lightHeadHeight = meshHeight * 0.85; // Light head is near top
-        
-        // Set mesh position: X/Z from resetPos, Y so stand is on floor
+        // Position mesh at X/Z from resetPos, with stand on floor
         const meshPos = new BABYLON.Vector3(
           resetPos.x,
-          standBaseY,
+          0, // Stand feet on floor
           resetPos.z
         );
         
-        // Calculate actual light position (where the light emits from)
-        const actualLightPos = new BABYLON.Vector3(
+        // Light head position is at top of stand
+        const lightHeadPos = new BABYLON.Vector3(
           resetPos.x,
-          standBaseY + lightHeadHeight,
+          standHeight,
           resetPos.z
         );
         
-        // Recalculate direction from actual light position to target
-        const actualDir = targetPos.subtract(actualLightPos).normalize();
+        // Calculate direction from light head to target
+        const direction = targetPos.subtract(lightHeadPos).normalize();
         
-        // Apply positions
+        // Apply mesh position (stand on floor)
         lightData.mesh.position = meshPos;
-        if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.PointLight) {
-          lightData.light.position = actualLightPos;
-        }
         
-        // Apply direction
+        // Apply light position and direction
         if (lightData.light instanceof BABYLON.SpotLight) {
-          lightData.light.direction = actualDir.clone();
+          lightData.light.position = lightHeadPos;
+          lightData.light.direction = direction;
+        } else if (lightData.light instanceof BABYLON.PointLight) {
+          lightData.light.position = lightHeadPos;
         }
         
-        // Calculate proper mesh rotation from direction
-        this.setMeshRotationFromDirection(lightData.mesh, actualDir);
+        // Reset mesh rotation first, then apply new rotation
+        lightData.mesh.rotationQuaternion = BABYLON.Quaternion.Identity();
+        this.setMeshRotationFromDirection(lightData.mesh, direction);
         
         // Recreate gizmos at new position
         this.createStudioGizmos(this.hudLightId);
