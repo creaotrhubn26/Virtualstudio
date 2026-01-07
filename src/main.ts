@@ -1748,26 +1748,50 @@ class VirtualStudio {
       // Get current sensitivity based on mode
       const sensitivity = this.joystickSensitivities[this.joystickSensitivityMode];
       
-      // Calculate new rotation using curved response
-      let newPan = this.hudJoystickStartPan + curvedOffsetX * sensitivity;
-      let newTilt = this.hudJoystickStartTilt - curvedOffsetY * sensitivity; // Inverted Y
+      // Calculate delta rotation from joystick input
+      const deltaPan = curvedOffsetX * sensitivity;
+      const deltaTilt = -curvedOffsetY * sensitivity; // Inverted Y
       
-      // Clamp tilt to avoid gimbal lock and unrealistic angles
-      newTilt = Math.max(-maxTiltRange, Math.min(maxTiltRange, newTilt));
+      // Build rotation quaternions for yaw (pan around Y) and pitch (tilt around X)
+      const yawQuat = BABYLON.Quaternion.RotationAxis(BABYLON.Vector3.Up(), deltaPan);
+      const pitchQuat = BABYLON.Quaternion.RotationAxis(BABYLON.Vector3.Right(), deltaTilt);
       
-      // Calculate new direction vector from spherical coordinates
-      const cosTilt = Math.cos(newTilt);
-      const newDir = new BABYLON.Vector3(
-        Math.sin(newPan) * cosTilt,
-        -Math.sin(newTilt),
-        Math.cos(newPan) * cosTilt
+      // Get the mesh's initial forward direction (from when drag started)
+      const startDir = new BABYLON.Vector3(
+        Math.sin(this.hudJoystickStartPan) * Math.cos(this.hudJoystickStartTilt),
+        -Math.sin(this.hudJoystickStartTilt),
+        Math.cos(this.hudJoystickStartPan) * Math.cos(this.hudJoystickStartTilt)
       ).normalize();
       
-      // Apply to light
-      lightData.light.direction = newDir;
+      // Apply yaw first, then pitch (order matters for intuitive control)
+      const combinedQuat = yawQuat.multiply(pitchQuat);
+      const newDir = startDir.clone();
+      newDir.rotateByQuaternionToRef(combinedQuat, newDir);
+      newDir.normalize();
       
-      // Update mesh rotation to match light direction using model's actual forward axis
+      // Clamp vertical angle to avoid gimbal lock
+      const currentTilt = Math.asin(Math.max(-1, Math.min(1, -newDir.y)));
+      if (Math.abs(currentTilt) > maxTiltRange) {
+        // Recalculate with clamped tilt
+        const clampedTilt = Math.sign(currentTilt) * maxTiltRange;
+        const currentPan = Math.atan2(newDir.x, newDir.z);
+        const cosTilt = Math.cos(clampedTilt);
+        newDir.set(
+          Math.sin(currentPan) * cosTilt,
+          -Math.sin(clampedTilt),
+          Math.cos(currentPan) * cosTilt
+        ).normalize();
+      }
+      
+      // Apply to light
+      lightData.light.direction.copyFrom(newDir);
+      
+      // Update mesh rotation to match light direction
       this.alignMeshToDirection(lightData.mesh, newDir);
+      
+      // Calculate current pan/tilt for display
+      const newPan = Math.atan2(newDir.x, newDir.z);
+      const newTilt = Math.asin(Math.max(-1, Math.min(1, -newDir.y)));
       
       // Update beam visualization
       this.updateBeamVisualization(this.hudLightId);
