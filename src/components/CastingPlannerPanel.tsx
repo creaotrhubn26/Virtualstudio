@@ -135,7 +135,6 @@ import { CastingShotListPanel } from './CastingShotListPanel';
 import { CastingSharingDialog } from './CastingSharingDialog';
 import { RoleManagementPanel } from './RoleManagementPanel';
 import { CandidateManagementPanel } from './CandidateManagementPanel';
-import { CandidatePoolPanel } from './CandidatePoolPanel';
 import { DashboardPanel } from './DashboardPanel';
 import { AuditionSchedulePanel } from './AuditionSchedulePanel';
 import { SharingPanel } from './SharingPanel';
@@ -176,24 +175,24 @@ function TabPanel({ children, value, index }: TabPanelProps) {
     'tabpanel-oversikt',
     'tabpanel-roller',
     'tabpanel-kandidater',
+    'tabpanel-auditions',
     'tabpanel-team',
     'tabpanel-lokasjoner',
     'tabpanel-rekvisitter',
     'tabpanel-produksjonsplan',
     'tabpanel-shot-lists',
-    'tabpanel-logistikk',
     'tabpanel-deling',
   ];
   const tabLabels = [
     'Oversikt',
     'Roller',
     'Kandidater',
+    'Auditions',
     'Team',
     'Steder',
     'Utstyr',
     'Produksjonsplan',
     'Shot Lists',
-    'Logistikk',
     'Deling',
   ];
   
@@ -469,21 +468,21 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
   // Tab colors and icons matching quick navigation design (will be adapted based on profession)
   const professionConfig = getProfessionConfig();
   const tabConfig = [
-    { color: professionConfig?.color || '#8b5cf6', icon: DashboardIcon }, // Oversikt (includes Kanban)
-    { color: '#f48fb1', icon: TheaterComedyIcon }, // Roller - TheaterComedy for casting roles
-    { color: professionConfig?.color || '#10b981', icon: RecentActorsIcon }, // Kandidater - matches CandidateManagementPanel header
-    { color: '#a78bfa', icon: PersonIcon }, // Kandidatpool - global pool
-    { color: '#00d4ff', icon: GroupsIcon }, // Team - GroupsIcon (3 people) matches CrewManagementPanel header
-    { color: '#4caf50', icon: LocationIcon }, // Steder
-    { color: '#ff9800', icon: PropIcon }, // Utstyr (using Inventory2Icon like prop panel header)
-    { color: '#9c27b0', icon: CalendarIcon }, // Kalender
-    { color: professionConfig?.color || '#e91e63', icon: ShotListIcon }, // Shot-list (custom icon: person with camera and list)
-    { color: '#ffb800', icon: InterpreterModeIcon }, // Auditions - person with microphone for casting auditions
-    { color: '#06b6d4', icon: ShareIcon }, // Deling - cyan/teal
+    { color: professionConfig?.color || '#8b5cf6', icon: DashboardIcon }, // 0: Oversikt (includes Kanban)
+    { color: '#f48fb1', icon: TheaterComedyIcon }, // 1: Roller - TheaterComedy for casting roles
+    { color: professionConfig?.color || '#10b981', icon: RecentActorsIcon }, // 2: Kandidater - matches CandidateManagementPanel header
+    { color: '#ffb800', icon: InterpreterModeIcon }, // 3: Auditions - person with microphone (moved next to Kandidater)
+    { color: '#00d4ff', icon: GroupsIcon }, // 4: Team - GroupsIcon (3 people) matches CrewManagementPanel header
+    { color: '#4caf50', icon: LocationIcon }, // 5: Steder
+    { color: '#ff9800', icon: PropIcon }, // 6: Utstyr (using Inventory2Icon like prop panel header)
+    { color: '#9c27b0', icon: CalendarIcon }, // 7: Kalender
+    { color: professionConfig?.color || '#e91e63', icon: ShotListIcon }, // 8: Shot-list (custom icon: person with camera and list)
+    { color: '#06b6d4', icon: ShareIcon }, // 9: Deling - cyan/teal
   ];
 
   // Quick navigation links for SpeedDial - matching tabConfig icons and colors
   // SpeedDial with direction="up" displays items from first to last (nearest to farthest from FAB)
+  // Tab order: 0-Oversikt, 1-Roller, 2-Kandidater, 3-Auditions, 4-Team, 5-Steder, 6-Utstyr, 7-Kalender, 8-Shot-list, 9-Deling
   const quickNavigationLinks = useMemo(() => [
     { 
       title: 'Nytt prosjekt', 
@@ -1633,39 +1632,36 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               'Oversikt',
               'Roller',
               'Kandidater',
-              'Pool',
+              'Auditions',
               'Team',
               'Steder',
               'Utstyr',
               'Kalender',
               profession ? getTerm('shotList') : 'Shot-list',
-              'Auditions',
               'Deling',
             ];
             const tabIds = [
               'tab-oversikt',
               'tab-roller',
               'tab-kandidater',
-              'tab-kandidatpool',
+              'tab-auditions',
               'tab-team',
               'tab-lokasjoner',
               'tab-rekvisitter',
               'tab-produksjonsplan',
               'tab-shot-lists',
-              'tab-logistikk',
               'tab-deling',
             ];
             const tabPanelIds = [
               'tabpanel-oversikt',
               'tabpanel-roller',
               'tabpanel-kandidater',
-              'tabpanel-kandidatpool',
+              'tabpanel-auditions',
               'tabpanel-team',
               'tabpanel-lokasjoner',
               'tabpanel-rekvisitter',
               'tabpanel-produksjonsplan',
               'tabpanel-shot-lists',
-              'tabpanel-logistikk',
               'tabpanel-deling',
             ];
             
@@ -1780,10 +1776,20 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
         </TabPanel>
 
         <TabPanel value={activeTab} index={3}>
-          <CandidatePoolPanel
-            projects={projects}
-            currentProjectId={currentProject?.id}
-            onImport={() => loadProjects()}
+          <AuditionSchedulePanel
+            projectId={currentProject?.id || ''}
+            schedules={schedules}
+            candidates={candidates}
+            roles={roles}
+            availableScenes={availableScenes}
+            onSchedulesChange={loadProjects}
+            onEditSchedule={(schedule) => {
+              setSelectedSchedule(schedule);
+              setScheduleDialogOpen(true);
+            }}
+            onCreateSchedule={handleCreateSchedule}
+            onNavigateToTab={setActiveTab}
+            profession={profession}
           />
         </TabPanel>
 
@@ -1911,24 +1917,6 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
         </TabPanel>
 
         <TabPanel value={activeTab} index={9}>
-          <AuditionSchedulePanel
-            projectId={currentProject?.id || ''}
-            schedules={schedules}
-            candidates={candidates}
-            roles={roles}
-            availableScenes={availableScenes}
-            onSchedulesChange={loadProjects}
-            onEditSchedule={(schedule) => {
-              setSelectedSchedule(schedule);
-              setScheduleDialogOpen(true);
-            }}
-            onCreateSchedule={handleCreateSchedule}
-            onNavigateToTab={setActiveTab}
-            profession={profession}
-          />
-        </TabPanel>
-
-        <TabPanel value={activeTab} index={10}>
           {!permissions.canApprove && currentProject ? (
             <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
               <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
