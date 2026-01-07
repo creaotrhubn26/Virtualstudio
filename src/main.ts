@@ -1615,12 +1615,6 @@ class VirtualStudio {
       if (tiltEl) tiltEl.textContent = `${tiltAngle.toFixed(0)}°`;
       if (panEl) panEl.textContent = `${panAngle.toFixed(0)}°`;
       
-      // Also update joystick angle display
-      const joystickPanEl = document.getElementById('joystickPanAngle');
-      const joystickTiltEl = document.getElementById('joystickTiltAngle');
-      if (joystickPanEl) joystickPanEl.textContent = `${panAngle.toFixed(0)}°`;
-      if (joystickTiltEl) joystickTiltEl.textContent = `${tiltAngle.toFixed(0)}°`;
-      
       // Store current angles for joystick reference
       this.hudJoystickStartPan = panAngle * (Math.PI / 180);
       this.hudJoystickStartTilt = tiltAngle * (Math.PI / 180);
@@ -1829,7 +1823,7 @@ class VirtualStudio {
    * Initialize joystick sensitivity controls and micro-jog buttons
    */
   private initJoystickSensitivityControls(joystickContainer: HTMLElement): void {
-    // Create sensitivity mode selector
+    // Create sensitivity mode selector (only F/N/R buttons - Tilt/Pan display is in HTML)
     const sensitivitySelector = document.createElement('div');
     sensitivitySelector.className = 'joystick-sensitivity-selector';
     sensitivitySelector.innerHTML = `
@@ -1837,10 +1831,6 @@ class VirtualStudio {
         <button class="sensitivity-btn" data-mode="fine" title="Fin (5°)">F</button>
         <button class="sensitivity-btn active" data-mode="normal" title="Normal (15°)">N</button>
         <button class="sensitivity-btn" data-mode="rapid" title="Rask (45°)">R</button>
-      </div>
-      <div class="joystick-angle-display">
-        <span class="angle-label">Pan:</span> <span id="joystickPanAngle">0°</span>
-        <span class="angle-label">Tilt:</span> <span id="joystickTiltAngle">0°</span>
       </div>
     `;
     
@@ -1934,8 +1924,9 @@ class VirtualStudio {
    * Update pan/tilt angle display in HUD
    */
   private updateJoystickAngleDisplay(pan: number, tilt: number): void {
-    const panEl = document.getElementById('joystickPanAngle');
-    const tiltEl = document.getElementById('joystickTiltAngle');
+    // Update the existing HUD elements
+    const panEl = document.getElementById('hudPanValue');
+    const tiltEl = document.getElementById('hudTiltValue');
     
     if (panEl) panEl.textContent = `${Math.round(pan * 180 / Math.PI)}°`;
     if (tiltEl) tiltEl.textContent = `${Math.round(tilt * 180 / Math.PI)}°`;
