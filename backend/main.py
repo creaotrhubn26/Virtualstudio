@@ -1529,12 +1529,13 @@ async def api_get_consents(project_id: str, candidate_id: str):
 
 @app.post("/api/casting/consents")
 async def api_save_consent(request: Request):
-    """Create or update a consent"""
+    """Create or update a consent (upsert)"""
     try:
         from casting_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
         import json
+        import uuid
     except ImportError:
         return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
     
@@ -1552,28 +1553,45 @@ async def api_save_consent(request: Request):
         conn = get_db_connection()
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             if consent_id:
-                # Update existing
-                cur.execute("""
-                    UPDATE casting_consents 
-                    SET type = %s, title = %s, description = %s, signed = %s,
-                        date = %s, document = %s, notes = %s, 
-                        signature_data = %s, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = %s
-                    RETURNING id
-                """, (
-                    consent_type,
-                    body.get('title'),
-                    body.get('description'),
-                    body.get('signed', False),
-                    body.get('date'),
-                    body.get('document'),
-                    body.get('notes'),
-                    json.dumps(body.get('signatureData')) if body.get('signatureData') else None,
-                    consent_id
-                ))
+                cur.execute("SELECT id FROM casting_consents WHERE id = %s", (consent_id,))
+                exists = cur.fetchone() is not None
+                
+                if exists:
+                    cur.execute("""
+                        UPDATE casting_consents 
+                        SET type = %s, title = %s, description = %s, signed = %s,
+                            date = %s, document = %s, notes = %s, 
+                            signature_data = %s, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = %s
+                        RETURNING id
+                    """, (
+                        consent_type,
+                        body.get('title'),
+                        body.get('description'),
+                        body.get('signed', False),
+                        body.get('date'),
+                        body.get('document'),
+                        body.get('notes'),
+                        json.dumps(body.get('signatureData')) if body.get('signatureData') else None,
+                        consent_id
+                    ))
+                else:
+                    cur.execute("""
+                        INSERT INTO casting_consents 
+                        (id, project_id, candidate_id, type, title, description, signed, notes, created_at, updated_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        RETURNING id
+                    """, (
+                        consent_id,
+                        project_id,
+                        candidate_id,
+                        consent_type,
+                        body.get('title'),
+                        body.get('description'),
+                        body.get('signed', False),
+                        body.get('notes')
+                    ))
             else:
-                # Create new
-                import uuid
                 consent_id = f"consent-{uuid.uuid4().hex[:12]}"
                 cur.execute("""
                     INSERT INTO casting_consents 

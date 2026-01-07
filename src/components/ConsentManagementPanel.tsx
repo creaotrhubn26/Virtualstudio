@@ -146,26 +146,26 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
   };
 
   const handleSave = async () => {
-    const consent: Consent = editingConsent
-      ? {
-          ...editingConsent,
-          ...formData,
-          updatedAt: new Date().toISOString(),
-        } as Consent
-      : {
-          id: `consent-${Date.now()}`,
-          candidateId,
-          projectId,
-          type: formData.type || 'photo_release',
-          signed: formData.signed || false,
-          date: formData.signed ? new Date().toISOString() : undefined,
-          document: formData.document,
-          notes: formData.notes,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
+    if (editingConsent) {
+      const consent: Consent = {
+        ...editingConsent,
+        ...formData,
+        updatedAt: new Date().toISOString(),
+      } as Consent;
+      await consentService.updateConsent(projectId, candidateId, consent);
+    } else {
+      const newConsent = await consentService.createConsent(
+        projectId,
+        candidateId,
+        formData.type || 'photo_release',
+        formData.title
+      );
+      if (newConsent && formData.notes) {
+        newConsent.notes = formData.notes;
+        await consentService.updateConsent(projectId, candidateId, newConsent);
+      }
+    }
 
-    await consentService.updateConsent(projectId, candidateId, consent);
     const loadedConsents = await consentService.getConsents(projectId, candidateId);
     setConsents(Array.isArray(loadedConsents) ? loadedConsents : []);
     handleCloseDialog();
