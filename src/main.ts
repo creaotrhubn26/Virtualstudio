@@ -10596,7 +10596,7 @@ class VirtualStudio {
   
   /**
    * Setup materials for a cloned light mesh
-   * Adds glow effect to show light is ON
+   * Dark metal fixture - glow is added as separate disc mesh
    */
   private setupClonedLightMaterials(mesh: BABYLON.Mesh, color: BABYLON.Color3, intensity: number): void {
     if (mesh.material) {
@@ -10607,37 +10607,21 @@ class VirtualStudio {
       if (clonedMat) {
         clonedMat.alpha = 1.0;
         
-        // Check if this is a main mesh (should glow)
-        const meshName = mesh.name.toLowerCase();
-        const isMainMesh = meshName.includes('model') || meshName.includes('light') || 
-                           meshName.includes('mesh_light') || mesh.getTotalVertices() > 1000;
-        
         if (clonedMat instanceof BABYLON.PBRMaterial) {
           clonedMat.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
           clonedMat.emissiveTexture = null;
           clonedMat.albedoTexture = null;
-          
-          if (isMainMesh) {
-            // Light diffuser - white with glow
-            clonedMat.albedoColor = new BABYLON.Color3(0.95, 0.95, 0.95);
-            clonedMat.metallic = 0.0;
-            clonedMat.roughness = 0.7;
-            const emissiveIntensity = Math.min(2.0, 0.5 + intensity / 2);
-            clonedMat.emissiveColor = color.scale(emissiveIntensity);
-          } else {
-            // Stand - dark metal
-            clonedMat.albedoColor = new BABYLON.Color3(0.12, 0.12, 0.14);
-            clonedMat.metallic = 0.8;
-            clonedMat.roughness = 0.25;
-            clonedMat.emissiveColor = new BABYLON.Color3(0, 0, 0);
-          }
+          // Dark metal fixture - no glow on body
+          clonedMat.albedoColor = new BABYLON.Color3(0.15, 0.15, 0.18);
+          clonedMat.metallic = 0.7;
+          clonedMat.roughness = 0.3;
+          clonedMat.emissiveColor = new BABYLON.Color3(0, 0, 0);
         } else if (clonedMat instanceof BABYLON.StandardMaterial) {
           clonedMat.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
           clonedMat.emissiveTexture = null;
           clonedMat.diffuseTexture = null;
-          const emissiveIntensity = Math.min(2.0, 0.5 + intensity / 2);
-          clonedMat.emissiveColor = color.scale(emissiveIntensity);
-          clonedMat.diffuseColor = new BABYLON.Color3(0.95, 0.95, 0.95);
+          clonedMat.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.18);
+          clonedMat.emissiveColor = new BABYLON.Color3(0, 0, 0);
         }
         
         mesh.material = clonedMat;
@@ -11662,45 +11646,25 @@ class VirtualStudio {
               this.scene.addMesh(m);
             }
             
-            // Fix Rodin-generated models and add light glow effect
+            // Fix Rodin-generated models - make fixture dark metal (no glow on body)
+            // Light glow will be added as a separate mesh
             if (m.material) {
               m.material.alpha = 1.0;
               if (m.material instanceof BABYLON.PBRMaterial) {
                 m.material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
-                
-                // Remove white emissive texture from Rodin models
                 m.material.emissiveTexture = null;
                 m.material.albedoTexture = null;
-                
-                // Check if this is the main light mesh (usually named "model" or has geometry)
-                // The main mesh should glow to show light is on
-                const meshName = m.name.toLowerCase();
-                const isMainMesh = meshName.includes('model') || meshName.includes('light') || 
-                                   meshName.includes('mesh_light') || m.getTotalVertices() > 1000;
-                
-                if (isMainMesh) {
-                  // Light fixture body - bright white diffuser with strong glow
-                  m.material.albedoColor = new BABYLON.Color3(0.95, 0.95, 0.95); // White diffuser
-                  m.material.metallic = 0.0;
-                  m.material.roughness = 0.7; // Matte diffuser surface
-                  // Strong emissive glow to show light is ON
-                  const emissiveIntensity = Math.min(2.0, 0.5 + intensity / 2);
-                  m.material.emissiveColor = color.scale(emissiveIntensity);
-                } else {
-                  // Stand/tripod - dark metal
-                  m.material.albedoColor = new BABYLON.Color3(0.12, 0.12, 0.14);
-                  m.material.metallic = 0.8;
-                  m.material.roughness = 0.25;
-                  m.material.emissiveColor = new BABYLON.Color3(0, 0, 0);
-                }
+                // Dark metal fixture body - no glow
+                m.material.albedoColor = new BABYLON.Color3(0.15, 0.15, 0.18);
+                m.material.metallic = 0.7;
+                m.material.roughness = 0.3;
+                m.material.emissiveColor = new BABYLON.Color3(0, 0, 0);
               } else if (m.material instanceof BABYLON.StandardMaterial) {
                 m.material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
                 m.material.emissiveTexture = null;
                 m.material.diffuseTexture = null;
-                // Add glow for standard materials too
-                const emissiveIntensity = Math.min(2.0, 0.5 + intensity / 2);
-                m.material.emissiveColor = color.scale(emissiveIntensity);
-                m.material.diffuseColor = new BABYLON.Color3(0.95, 0.95, 0.95);
+                m.material.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.18);
+                m.material.emissiveColor = new BABYLON.Color3(0, 0, 0);
               }
             }
             
@@ -12136,6 +12100,46 @@ class VirtualStudio {
       } catch (e) {
         console.warn('Could not create beam visualization:', e);
       }
+    }
+    
+    // Create glowing disc inside the light head to show light is ON
+    try {
+      const glowDisc = BABYLON.MeshBuilder.CreateDisc(
+        `glow_${id}`,
+        { radius: 0.35, tessellation: 32 },
+        this.scene
+      );
+      
+      // Create emissive material for the glow
+      const glowMat = new BABYLON.StandardMaterial(`glowMat_${id}`, this.scene);
+      const emissiveIntensity = Math.min(3.0, 1.0 + intensity);
+      glowMat.emissiveColor = new BABYLON.Color3(
+        Math.min(1.0, color.r * emissiveIntensity),
+        Math.min(1.0, color.g * emissiveIntensity),
+        Math.min(1.0, color.b * emissiveIntensity)
+      );
+      glowMat.diffuseColor = color;
+      glowMat.specularColor = new BABYLON.Color3(0, 0, 0);
+      glowMat.disableLighting = true;
+      glowMat.backFaceCulling = false;
+      glowDisc.material = glowMat;
+      
+      // Parent to lightMesh so it follows
+      glowDisc.parent = lightMesh;
+      
+      // Position disc at the front of the light head
+      // Offset slightly forward in the light direction
+      glowDisc.position = new BABYLON.Vector3(0, 1.2, 0.3); // Adjusted for typical light head position
+      glowDisc.rotation.x = Math.PI / 2; // Face forward
+      
+      glowDisc.isPickable = false;
+      
+      // Store reference for later updates
+      (lightMesh as any)._glowDisc = glowDisc;
+      
+      console.log(`Light glow disc created for ${id}`);
+    } catch (e) {
+      console.warn('Could not create light glow disc:', e);
     }
     
     // Update immediately
