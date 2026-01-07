@@ -1777,20 +1777,8 @@ class VirtualStudio {
       // Apply to light
       lightData.light.direction = newDir;
       
-      // Update mesh rotation to match light direction
-      if (lightData.mesh.rotationQuaternion) {
-        const forward = newDir.clone();
-        const up = BABYLON.Vector3.Up();
-        const right = BABYLON.Vector3.Cross(up, forward).normalize();
-        const correctedUp = BABYLON.Vector3.Cross(forward, right).normalize();
-        
-        const rotMatrix = BABYLON.Matrix.Identity();
-        rotMatrix.setRowFromFloats(0, right.x, right.y, right.z, 0);
-        rotMatrix.setRowFromFloats(1, correctedUp.x, correctedUp.y, correctedUp.z, 0);
-        rotMatrix.setRowFromFloats(2, forward.x, forward.y, forward.z, 0);
-        
-        lightData.mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(rotMatrix);
-      }
+      // Update mesh rotation to match light direction using model's actual forward axis
+      this.alignMeshToDirection(lightData.mesh, newDir);
       
       // Update beam visualization
       this.updateBeamVisualization(this.hudLightId);
@@ -1936,6 +1924,79 @@ class VirtualStudio {
     this.hudJoystickStartTilt = tilt;
   }
   
+  /**
+   * Align mesh rotation to target direction, accounting for model's rest-pose forward axis
+   * This is the professional solution: lookAt quaternion * restCorrection
+   */
+  private alignMeshToDirection(mesh: BABYLON.AbstractMesh, targetDirection: BABYLON.Vector3): void {
+    if (!mesh.rotationQuaternion) {
+      mesh.rotationQuaternion = BABYLON.Quaternion.Identity();
+    }
+    
+    // Get the model's local forward axis (stored during import)
+    // Beauty dish models have aperture along -Z in rest pose
+    const localForward = ((mesh as any)._localForwardAxis as BABYLON.Vector3) || new BABYLON.Vector3(0, 0, -1);
+    
+    // Calculate the look-at quaternion (world-space rotation to face target direction)
+    const forward = targetDirection.normalize();
+    const up = BABYLON.Vector3.Up();
+    
+    // Handle edge case when forward is parallel to up
+    let right: BABYLON.Vector3;
+    if (Math.abs(BABYLON.Vector3.Dot(forward, up)) > 0.999) {
+      right = BABYLON.Vector3.Right();
+    } else {
+      right = BABYLON.Vector3.Cross(up, forward).normalize();
+    }
+    const correctedUp = BABYLON.Vector3.Cross(forward, right).normalize();
+    
+    // Build world rotation matrix for target direction (Babylon uses +Z as forward)
+    const worldRotMatrix = BABYLON.Matrix.Identity();
+    worldRotMatrix.setRowFromFloats(0, right.x, right.y, right.z, 0);
+    worldRotMatrix.setRowFromFloats(1, correctedUp.x, correctedUp.y, correctedUp.z, 0);
+    worldRotMatrix.setRowFromFloats(2, forward.x, forward.y, forward.z, 0);
+    const lookAtQuat = BABYLON.Quaternion.FromRotationMatrix(worldRotMatrix);
+    
+    // Calculate rest correction: rotation needed to align local forward to Babylon's +Z
+    // This compensates for the model's baked orientation
+    const babylonForward = new BABYLON.Vector3(0, 0, 1);
+    const restCorrection = this.quaternionFromUnitVectors(localForward, babylonForward);
+    
+    // Final rotation = lookAt * restCorrection
+    // This makes the model's aperture (-Z) point toward targetDirection
+    mesh.rotationQuaternion = lookAtQuat.multiply(restCorrection);
+  }
+  
+  /**
+   * Calculate quaternion that rotates vector 'from' to vector 'to'
+   * Based on "Quaternion Calculus and Fast Animation" by Ken Shoemake
+   */
+  private quaternionFromUnitVectors(from: BABYLON.Vector3, to: BABYLON.Vector3): BABYLON.Quaternion {
+    const dot = BABYLON.Vector3.Dot(from, to);
+    
+    // Handle parallel vectors
+    if (dot > 0.9999) {
+      return BABYLON.Quaternion.Identity();
+    }
+    
+    // Handle anti-parallel vectors
+    if (dot < -0.9999) {
+      // Find orthogonal axis
+      let axis = BABYLON.Vector3.Cross(BABYLON.Vector3.Right(), from);
+      if (axis.length() < 0.001) {
+        axis = BABYLON.Vector3.Cross(BABYLON.Vector3.Up(), from);
+      }
+      axis.normalize();
+      return BABYLON.Quaternion.RotationAxis(axis, Math.PI);
+    }
+    
+    // General case
+    const cross = BABYLON.Vector3.Cross(from, to);
+    const w = Math.sqrt(from.lengthSquared() * to.lengthSquared()) + dot;
+    
+    return new BABYLON.Quaternion(cross.x, cross.y, cross.z, w).normalize();
+  }
+
   /**
    * Update pan/tilt angle display in HUD
    */
@@ -2157,8 +2218,8 @@ class VirtualStudio {
           lightData.light.direction = direction;
         }
         
-        // Apply rotation to mesh (keep position unchanged)
-        this.setMeshRotationFromDirection(lightData.mesh, direction);
+        // Apply rotation to mesh using professional alignment (keeps position unchanged)
+        this.alignMeshToDirection(lightData.mesh, direction);
         
         // Update visuals
         this.updateBeamVisualization(this.hudLightId);
