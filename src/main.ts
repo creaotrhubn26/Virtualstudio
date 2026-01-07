@@ -1717,38 +1717,27 @@ class VirtualStudio {
       let offsetX = (pos.x - centerX) / maxOffset;
       let offsetY = (pos.y - centerY) / maxOffset;
       
-      // Calculate radial distance (magnitude)
-      let magnitude = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
-      
       // Clamp to circular constraint (prevents square corners)
+      const magnitude = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
       if (magnitude > 1) {
         offsetX /= magnitude;
         offsetY /= magnitude;
-        magnitude = 1;
       }
       
-      // === PROFESSIONAL SCALED RADIAL DEAD ZONE ===
-      // Industry standard: ignore input within dead zone, then scale remaining range to 0-1
-      let processedMagnitude = 0;
-      if (magnitude > this.joystickDeadZone) {
-        // Map from [deadzone, 1] to [0, 1] - smooth transition
-        processedMagnitude = (magnitude - this.joystickDeadZone) / (1 - this.joystickDeadZone);
-      }
+      // === AXIAL DEAD ZONE WITH SMOOTH TRANSITION ===
+      // Process each axis independently for better pan/tilt control
+      const applyAxisDeadzone = (value: number): number => {
+        const absVal = Math.abs(value);
+        if (absVal < this.joystickDeadZone) return 0;
+        // Scale from [deadzone, 1] to [0, 1]
+        const scaled = (absVal - this.joystickDeadZone) / (1 - this.joystickDeadZone);
+        // Apply gentle response curve per axis
+        const curved = Math.pow(scaled, this.joystickResponseCurve);
+        return Math.sign(value) * curved;
+      };
       
-      // === PROFESSIONAL RESPONSE CURVE (Exponential/Gamma) ===
-      // Provides precision at low deflections, speed at high deflections
-      // Used by AAA games like Apex Legends, Call of Duty, Fortnite
-      const curvedMagnitude = Math.pow(processedMagnitude, this.joystickResponseCurve);
-      
-      // Apply curved magnitude to direction
-      let curvedOffsetX = 0;
-      let curvedOffsetY = 0;
-      if (magnitude > 0) {
-        const dirX = offsetX / magnitude;
-        const dirY = offsetY / magnitude;
-        curvedOffsetX = dirX * curvedMagnitude;
-        curvedOffsetY = dirY * curvedMagnitude;
-      }
+      const curvedOffsetX = applyAxisDeadzone(offsetX);
+      const curvedOffsetY = applyAxisDeadzone(offsetY);
       
       // Update knob visual position (30% of container size)
       const knobCenterX = 50 + offsetX * 30;
