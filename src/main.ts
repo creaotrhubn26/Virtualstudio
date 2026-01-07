@@ -318,7 +318,10 @@ class VirtualStudio {
   constructor(canvas: HTMLCanvasElement) {
     this.engine = new BABYLON.Engine(canvas, true, { 
       preserveDrawingBuffer: true,
-      stencil: true
+      stencil: true,
+      powerPreference: 'high-performance',
+      doNotHandleContextLost: false,
+      adaptToDeviceRatio: true
     });
     
     // Handle WebGL context loss - critical for RTT stability
@@ -382,6 +385,12 @@ class VirtualStudio {
     
     this.scene = new BABYLON.Scene(this.engine);
     this.scene.clearColor = new BABYLON.Color4(0.08, 0.09, 0.11, 1);
+    
+    // Scene optimizations for better performance
+    this.scene.autoClear = true; // Keep enabled to prevent ghosting artifacts
+    this.scene.autoClearDepthAndStencil = true;
+    this.scene.blockMaterialDirtyMechanism = false; // Allow material updates
+    this.scene.useRightHandedSystem = false; // Standard left-handed (Babylon default)
 
     this.camera = new BABYLON.ArcRotateCamera(
       'mainCamera',
@@ -398,6 +407,12 @@ class VirtualStudio {
     this.camera.minZ = 0.5;
     this.camera.maxZ = 200;
     this.camera.fov = (this.cameraSettings.focalLength / 50) * 0.8;
+    
+    // Smooth camera movement to reduce visual artifacts during motion
+    this.camera.inertia = 0.9; // Higher inertia = smoother movement
+    this.camera.panningSensibility = 50; // Lower = smoother panning
+    this.camera.angularSensibilityX = 500; // Smoother horizontal rotation
+    this.camera.angularSensibilityY = 500; // Smoother vertical rotation
 
     // Add FXAA anti-aliasing to reduce jagged edges
     const fxaa = new BABYLON.FxaaPostProcess('fxaa', 1.0, this.camera);
@@ -11682,9 +11697,12 @@ class VirtualStudio {
         shadowGenerator = new BABYLON.ShadowGenerator(2048, light);
         shadowGenerator.useBlurExponentialShadowMap = true;
         shadowGenerator.blurKernel = 48;
+        shadowGenerator.blurScale = 2; // Better shadow edge quality
         shadowGenerator.setDarkness(0.6); // Darker shadows for more realism
         shadowGenerator.bias = 0.00001;
         shadowGenerator.normalBias = 0.01;
+        shadowGenerator.useContactHardeningShadow = false; // Performance optimization
+        shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_MEDIUM; // Balance quality/performance
         
         // Add all meshes in the scene as shadow casters (except ground and light meshes)
         this.scene.meshes.forEach(mesh => {
