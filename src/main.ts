@@ -1649,9 +1649,17 @@ class VirtualStudio {
     this.initFocusTargetControls();
   }
   
+  // Joystick sensitivity modes
+  private joystickSensitivityMode: 'fine' | 'normal' | 'rapid' = 'normal';
+  private readonly joystickSensitivities = {
+    fine: Math.PI / 36,   // 5° per full deflection - ultra precise
+    normal: Math.PI / 12, // 15° per full deflection - balanced
+    rapid: Math.PI / 4    // 45° per full deflection - fast positioning
+  };
+  
   /**
    * Initialize the rotation joystick control
-   * Uses absolute positioning for smooth, predictable rotation
+   * Professional multi-mode joystick with adaptive response curve
    */
   private initJoystickControl(): void {
     const joystick = document.getElementById('rotationJoystick');
@@ -1662,8 +1670,10 @@ class VirtualStudio {
     if (!joystickBg) return;
     
     const maxOffset = 40; // Maximum knob offset from center in pixels
-    const maxPanRange = Math.PI; // ±180° pan range at full joystick deflection
     const maxTiltRange = Math.PI / 2 - 0.1; // ±~85° tilt range
+    
+    // Add sensitivity mode indicator and controls
+    this.initJoystickSensitivityControls(joystick);
     
     const handleStart = (e: MouseEvent | TouchEvent) => {
       e.preventDefault();
@@ -1705,19 +1715,23 @@ class VirtualStudio {
         offsetY /= distance;
       }
       
+      // Apply cubic response curve for precision near center, faster at edges
+      // sign * |value|^2 gives smooth acceleration
+      const curvedOffsetX = Math.sign(offsetX) * Math.pow(Math.abs(offsetX), 2);
+      const curvedOffsetY = Math.sign(offsetY) * Math.pow(Math.abs(offsetY), 2);
+      
       // Update knob visual position (30% of container size)
       const knobCenterX = 50 + offsetX * 30;
       const knobCenterY = 50 + offsetY * 30;
       knob.style.left = `${knobCenterX}%`;
       knob.style.top = `${knobCenterY}%`;
       
-      // Calculate new rotation from start position + joystick offset
-      // Reduced sensitivity for more precise control: full deflection = ±15° change
-      const panSensitivity = Math.PI / 12; // 15° per full deflection
-      const tiltSensitivity = Math.PI / 12; // 15° per full deflection
+      // Get current sensitivity based on mode
+      const sensitivity = this.joystickSensitivities[this.joystickSensitivityMode];
       
-      let newPan = this.hudJoystickStartPan + offsetX * panSensitivity;
-      let newTilt = this.hudJoystickStartTilt - offsetY * tiltSensitivity; // Inverted Y
+      // Calculate new rotation using curved response
+      let newPan = this.hudJoystickStartPan + curvedOffsetX * sensitivity;
+      let newTilt = this.hudJoystickStartTilt - curvedOffsetY * sensitivity; // Inverted Y
       
       // Clamp tilt to avoid gimbal lock and unrealistic angles
       newTilt = Math.max(-maxTiltRange, Math.min(maxTiltRange, newTilt));
@@ -1735,7 +1749,6 @@ class VirtualStudio {
       
       // Update mesh rotation to match light direction
       if (lightData.mesh.rotationQuaternion) {
-        // Create rotation that aligns -Z axis with light direction
         const forward = newDir.clone();
         const up = BABYLON.Vector3.Up();
         const right = BABYLON.Vector3.Cross(up, forward).normalize();
@@ -1752,8 +1765,9 @@ class VirtualStudio {
       // Update beam visualization
       this.updateBeamVisualization(this.hudLightId);
       
-      // Update HUD values display
+      // Update HUD values display with pan/tilt angles
       this.updateHUDValues(lightData);
+      this.updateJoystickAngleDisplay(newPan, newTilt);
     };
     
     const handleEnd = () => {
@@ -1785,6 +1799,150 @@ class VirtualStudio {
     knob.addEventListener('touchstart', handleStart as any, { passive: false });
     document.addEventListener('touchmove', handleMove as any, { passive: false });
     document.addEventListener('touchend', handleEnd);
+    
+    // Keyboard shortcut for sensitivity toggle (hold Shift for fine, Ctrl for rapid)
+    document.addEventListener('keydown', (e) => {
+      if (!this.hudJoystickDragging) return;
+      if (e.shiftKey) this.setJoystickSensitivity('fine');
+      else if (e.ctrlKey) this.setJoystickSensitivity('rapid');
+    });
+    
+    document.addEventListener('keyup', (e) => {
+      if (!e.shiftKey && !e.ctrlKey) {
+        this.setJoystickSensitivity('normal');
+      }
+    });
+  }
+  
+  /**
+   * Initialize joystick sensitivity controls and micro-jog buttons
+   */
+  private initJoystickSensitivityControls(joystickContainer: HTMLElement): void {
+    // Create sensitivity mode selector
+    const sensitivitySelector = document.createElement('div');
+    sensitivitySelector.className = 'joystick-sensitivity-selector';
+    sensitivitySelector.innerHTML = `
+      <div class="sensitivity-modes">
+        <button class="sensitivity-btn" data-mode="fine" title="Fin (5°)">F</button>
+        <button class="sensitivity-btn active" data-mode="normal" title="Normal (15°)">N</button>
+        <button class="sensitivity-btn" data-mode="rapid" title="Rask (45°)">R</button>
+      </div>
+      <div class="joystick-angle-display">
+        <span class="angle-label">Pan:</span> <span id="joystickPanAngle">0°</span>
+        <span class="angle-label">Tilt:</span> <span id="joystickTiltAngle">0°</span>
+      </div>
+      <div class="micro-jog-controls">
+        <button class="micro-jog-btn" data-axis="pan" data-dir="-1" title="Pan -0.5°">◀</button>
+        <button class="micro-jog-btn" data-axis="tilt" data-dir="1" title="Tilt +0.5°">▲</button>
+        <button class="micro-jog-btn" data-axis="tilt" data-dir="-1" title="Tilt -0.5°">▼</button>
+        <button class="micro-jog-btn" data-axis="pan" data-dir="1" title="Pan +0.5°">▶</button>
+      </div>
+    `;
+    
+    joystickContainer.appendChild(sensitivitySelector);
+    
+    // Sensitivity mode buttons
+    sensitivitySelector.querySelectorAll('.sensitivity-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const mode = (e.target as HTMLElement).dataset.mode as 'fine' | 'normal' | 'rapid';
+        this.setJoystickSensitivity(mode);
+        sensitivitySelector.querySelectorAll('.sensitivity-btn').forEach(b => b.classList.remove('active'));
+        (e.target as HTMLElement).classList.add('active');
+      });
+    });
+    
+    // Micro-jog buttons for ±0.5° precise adjustments
+    sensitivitySelector.querySelectorAll('.micro-jog-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const axis = (e.target as HTMLElement).dataset.axis;
+        const dir = parseInt((e.target as HTMLElement).dataset.dir || '0');
+        this.microJogLight(axis as 'pan' | 'tilt', dir * 0.5);
+      });
+    });
+  }
+  
+  /**
+   * Set joystick sensitivity mode
+   */
+  private setJoystickSensitivity(mode: 'fine' | 'normal' | 'rapid'): void {
+    this.joystickSensitivityMode = mode;
+    
+    // Update UI indicator
+    const modeLabels = { fine: 'FIN', normal: 'NORMAL', rapid: 'RASK' };
+    const indicator = document.querySelector('.sensitivity-modes');
+    if (indicator) {
+      indicator.querySelectorAll('.sensitivity-btn').forEach(btn => {
+        btn.classList.toggle('active', (btn as HTMLElement).dataset.mode === mode);
+      });
+    }
+  }
+  
+  /**
+   * Micro-jog light rotation by precise degrees
+   */
+  private microJogLight(axis: 'pan' | 'tilt', degrees: number): void {
+    if (!this.hudLightId) return;
+    const lightData = this.lights.get(this.hudLightId);
+    if (!lightData || !(lightData.light instanceof BABYLON.SpotLight)) return;
+    
+    const radians = degrees * (Math.PI / 180);
+    const dir = lightData.light.direction;
+    
+    // Get current angles
+    let tilt = Math.asin(Math.max(-1, Math.min(1, -dir.y)));
+    let pan = Math.atan2(dir.x, dir.z);
+    
+    // Apply micro-adjustment
+    if (axis === 'pan') {
+      pan += radians;
+    } else {
+      tilt += radians;
+      tilt = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, tilt));
+    }
+    
+    // Calculate new direction
+    const cosTilt = Math.cos(tilt);
+    const newDir = new BABYLON.Vector3(
+      Math.sin(pan) * cosTilt,
+      -Math.sin(tilt),
+      Math.cos(pan) * cosTilt
+    ).normalize();
+    
+    lightData.light.direction = newDir;
+    
+    // Update mesh rotation
+    if (lightData.mesh.rotationQuaternion) {
+      const forward = newDir.clone();
+      const up = BABYLON.Vector3.Up();
+      const right = BABYLON.Vector3.Cross(up, forward).normalize();
+      const correctedUp = BABYLON.Vector3.Cross(forward, right).normalize();
+      
+      const rotMatrix = BABYLON.Matrix.Identity();
+      rotMatrix.setRowFromFloats(0, right.x, right.y, right.z, 0);
+      rotMatrix.setRowFromFloats(1, correctedUp.x, correctedUp.y, correctedUp.z, 0);
+      rotMatrix.setRowFromFloats(2, forward.x, forward.y, forward.z, 0);
+      
+      lightData.mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(rotMatrix);
+    }
+    
+    this.updateBeamVisualization(this.hudLightId);
+    this.updateHUDValues(lightData);
+    this.updateJoystickAngleDisplay(pan, tilt);
+    
+    // Update start angles for next joystick drag
+    this.hudJoystickStartPan = pan;
+    this.hudJoystickStartTilt = tilt;
+  }
+  
+  /**
+   * Update pan/tilt angle display in HUD
+   */
+  private updateJoystickAngleDisplay(pan: number, tilt: number): void {
+    const panEl = document.getElementById('joystickPanAngle');
+    const tiltEl = document.getElementById('joystickTiltAngle');
+    
+    if (panEl) panEl.textContent = `${Math.round(pan * 180 / Math.PI)}°`;
+    if (tiltEl) tiltEl.textContent = `${Math.round(tilt * 180 / Math.PI)}°`;
   }
   
   /**
