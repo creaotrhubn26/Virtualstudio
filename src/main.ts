@@ -13145,28 +13145,8 @@ class VirtualStudio {
   
   private updateLightVisualState(data: LightData, enabled: boolean): void {
     // Update emissive material based on enabled state
-    if (data.mesh.material) {
-      const mat = data.mesh.material as BABYLON.StandardMaterial | BABYLON.PBRMaterial;
-      if (mat.emissiveColor) {
-        if (enabled) {
-          // Restore original emissive color with improved formula
-          const cct = data.cct;
-          const color = this.cctToColor(cct);
-          const intensity = data.intensity;
-          // Improved formula: minimum 0.3 for visibility, scales up to 2.5 for strong lights
-          const emissiveIntensity = Math.min(2.5, 0.3 + intensity / 3);
-          const emissiveColor = new BABYLON.Color3(
-            Math.min(2.5, color.r * emissiveIntensity),
-            Math.min(2.5, color.g * emissiveIntensity),
-            Math.min(2.5, color.b * emissiveIntensity)
-          );
-          mat.emissiveColor = emissiveColor;
-        } else {
-          // Dim the emissive when light is off
-          mat.emissiveColor = mat.emissiveColor.scale(0.1);
-        }
-      }
-    }
+    // Note: We don't modify the fixture mesh emissive here - it should stay dark (it's the fixture body)
+    // Only the glowBulb should emit light
     
     // Update beam visualization visibility
     if (data.beamVisualization) {
