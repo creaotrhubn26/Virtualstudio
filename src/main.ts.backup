@@ -265,14 +265,8 @@ class VirtualStudio {
   // Track last known renderList length per preset (for change detection)
   private monitorLastRenderListLength: Map<string, number> = new Map();
   
-  // Cache for loaded 3D light models to enable cloning (faster than re-loading)
-  // Structure: { masterMesh, allMeshes, materialTemplates }
-  private lightModelCache: Map<string, {
-    masterMesh: BABYLON.Mesh;
-    allMeshes: BABYLON.AbstractMesh[];
-    localForwardAxis: BABYLON.Vector3;
-    initialWorldForward: BABYLON.Vector3;
-  }> = new Map();
+  // Cache for loaded 3D light models to enable instancing
+  private lightModelCache: Map<string, BABYLON.Mesh> = new Map();
   
   public cameraSettings: CameraSettings & { whiteBalance?: number } = {
     aperture: 2.8,
@@ -10543,42 +10537,6 @@ class VirtualStudio {
     return modelMap[type] || null;
   }
   
-  /**
-   * Setup materials for a cloned light mesh with the correct color/intensity
-   * Used by mesh instancing to avoid re-creating complex materials
-   */
-  private setupClonedLightMaterials(mesh: BABYLON.Mesh, color: BABYLON.Color3, intensity: number): void {
-    const meshName = mesh.name || 'unnamed';
-    const isLightHead = meshName.toLowerCase().includes('model') || 
-                        meshName.toLowerCase().includes('light') || 
-                        meshName.toLowerCase().includes('head') ||
-                        meshName.toLowerCase().includes('lamp') ||
-                        meshName.toLowerCase().includes('softbox') ||
-                        meshName.toLowerCase().includes('diffuser');
-    
-    // Create fresh PBR material for cloned mesh
-    const pbrMat = new BABYLON.PBRMaterial(`pbrMat_cloned_${meshName}_${Date.now()}`, this.scene);
-    if (isLightHead) {
-      pbrMat.albedoColor = new BABYLON.Color3(0.95, 0.95, 0.95);
-      pbrMat.metallic = 0.0;
-      pbrMat.roughness = 0.3;
-      pbrMat.emissiveColor = color.scale(0.2);
-    } else {
-      pbrMat.albedoColor = new BABYLON.Color3(0.08, 0.08, 0.1);
-      pbrMat.metallic = 0.7;
-      pbrMat.roughness = 0.35;
-    }
-    pbrMat.alpha = 1.0;
-    pbrMat.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
-    pbrMat.backFaceCulling = true;
-    
-    // Dispose old material if exists
-    if (mesh.material) {
-      mesh.material.dispose();
-    }
-    mesh.material = pbrMat;
-  }
-  
   private createDefaultLightMesh(id: string, type: string, beamAngle: number): BABYLON.Mesh {
     if (type.includes('softbox') || type.includes('umbrella')) {
       const mesh = BABYLON.MeshBuilder.CreateBox(`mesh_${id}`, { width: 1.5, height: 0.3, depth: 1.2 }, this.scene);
@@ -11152,89 +11110,7 @@ class VirtualStudio {
     let loadedFromModel = false;
     
     if (modelUrl) {
-      // Check if we have a cached version of this light type
-      const cachedModel = this.lightModelCache.get(type);
-      
-      if (cachedModel) {
-        // CLONE from cache - much faster than re-loading GLB
-        console.log(`[Mesh Instancing] Cloning cached model for ${type} (avoiding GLB reload)`);
-        
-        try {
-          // Clone the master mesh hierarchy
-          const clonedMesh = cachedModel.masterMesh.clone(`mesh_${id}`, null, true);
-          if (!clonedMesh) {
-            throw new Error('Clone returned null');
-          }
-          
-          lightMesh = clonedMesh;
-          lightMesh.position = position.clone();
-          
-          // Copy forward axis data
-          (lightMesh as any)._localForwardAxis = cachedModel.localForwardAxis.clone();
-          (lightMesh as any)._initialWorldForward = cachedModel.initialWorldForward.clone();
-          
-          // Initialize rotationQuaternion for gizmo support
-          if (!lightMesh.rotationQuaternion) {
-            lightMesh.rotationQuaternion = BABYLON.Quaternion.Identity();
-          }
-          
-          // Position on ground
-          try {
-            lightMesh.computeWorldMatrix(true);
-            const localBounds = lightMesh.getHierarchyBoundingVectors(false);
-            const bottomY = localBounds.min.y;
-            if (isFinite(bottomY) && bottomY !== Number.MAX_VALUE) {
-              lightMesh.position.y = position.y - bottomY + 0.001;
-            }
-          } catch (e) {
-            lightMesh.position.y = 0.5;
-          }
-          
-          // Make visible and pickable
-          lightMesh.isPickable = true;
-          lightMesh.isVisible = true;
-          lightMesh.setEnabled(true);
-          lightMesh.alwaysSelectAsActiveMesh = true;
-          
-          // Setup materials for cloned mesh with this light's color
-          this.setupClonedLightMaterials(lightMesh, color, intensity);
-          
-          // Add to shadow casters
-          lightMesh.receiveShadows = true;
-          this.lights.forEach(lightData => {
-            if (lightData.shadowGenerator) {
-              lightData.shadowGenerator.addShadowCaster(lightMesh);
-            }
-          });
-          
-          // Also setup child meshes
-          const children = lightMesh.getChildMeshes(true);
-          children.forEach(child => {
-            child.isPickable = true;
-            child.isVisible = true;
-            child.setEnabled(true);
-            child.receiveShadows = true;
-            this.lights.forEach(lightData => {
-              if (lightData.shadowGenerator) {
-                lightData.shadowGenerator.addShadowCaster(child);
-              }
-            });
-            // Setup materials for children
-            if (child instanceof BABYLON.Mesh) {
-              this.setupClonedLightMaterials(child, color, intensity);
-            }
-          });
-          
-          loadedFromModel = true;
-          console.log(`[Mesh Instancing] Clone successful for ${type}: ${lightMesh.name}`);
-        } catch (cloneError) {
-          console.warn(`[Mesh Instancing] Clone failed for ${type}, falling back to reload:`, cloneError);
-          // Fall through to normal loading
-        }
-      }
-      
-      // Load 3D model if not cloned from cache
-      if (!loadedFromModel) {
+      // Load 3D model for this light
       try {
         console.log(`Loading light 3D model from: ${modelUrl} for light type: ${type}`);
         const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
@@ -11729,19 +11605,6 @@ class VirtualStudio {
           } catch (e) {
             console.warn('Could not get bounding info:', e);
           }
-          
-          // CACHE the loaded model for future cloning
-          const localForward = ((lightMesh as any)._localForwardAxis as BABYLON.Vector3) || new BABYLON.Vector3(0, 0, -1);
-          const initialForward = ((lightMesh as any)._initialWorldForward as BABYLON.Vector3) || new BABYLON.Vector3(0, -0.3, -1).normalize();
-          
-          this.lightModelCache.set(type, {
-            masterMesh: lightMesh,
-            allMeshes: result.meshes,
-            localForwardAxis: localForward.clone(),
-            initialWorldForward: initialForward.clone()
-          });
-          console.log(`[Mesh Instancing] Cached model for ${type} - future lights will clone instead of reload`);
-          
         } else {
           throw new Error('No meshes found in model');
         }
@@ -11756,7 +11619,6 @@ class VirtualStudio {
         lightMesh = this.createDefaultLightMesh(id, type, beamAngle);
         loadedFromModel = false;
       }
-      } // Close the if (!loadedFromModel) block
     } else {
       // Create default procedural mesh
       lightMesh = this.createDefaultLightMesh(id, type, beamAngle);
