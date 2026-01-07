@@ -135,6 +135,7 @@ import { CastingShotListPanel } from './CastingShotListPanel';
 import { CastingSharingDialog } from './CastingSharingDialog';
 import { RoleManagementPanel } from './RoleManagementPanel';
 import { CandidateManagementPanel } from './CandidateManagementPanel';
+import { CandidatePoolPanel } from './CandidatePoolPanel';
 import { DashboardPanel } from './DashboardPanel';
 import { AuditionSchedulePanel } from './AuditionSchedulePanel';
 import { SharingPanel } from './SharingPanel';
@@ -471,6 +472,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
     { color: professionConfig?.color || '#8b5cf6', icon: DashboardIcon }, // Oversikt (includes Kanban)
     { color: '#f48fb1', icon: TheaterComedyIcon }, // Roller - TheaterComedy for casting roles
     { color: professionConfig?.color || '#10b981', icon: RecentActorsIcon }, // Kandidater - matches CandidateManagementPanel header
+    { color: '#a78bfa', icon: PersonIcon }, // Kandidatpool - global pool
     { color: '#00d4ff', icon: GroupsIcon }, // Team - GroupsIcon (3 people) matches CrewManagementPanel header
     { color: '#4caf50', icon: LocationIcon }, // Steder
     { color: '#ff9800', icon: PropIcon }, // Utstyr (using Inventory2Icon like prop panel header)
@@ -495,41 +497,41 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
     { 
       title: 'Team', 
       description: 'Administrer crew og teammedlemmer', 
-      color: tabConfig[3].color, // #00d4ff
-      icon: tabConfig[3].icon, // GroupsIcon
-      tabIndex: 3,
+      color: tabConfig[4].color, // #00d4ff
+      icon: tabConfig[4].icon, // GroupsIcon
+      tabIndex: 4,
       badge: currentProject?.crew?.length || 0,
     },
     { 
       title: 'Steder', 
       description: 'Administrer lokasjoner og steder', 
-      color: tabConfig[4].color, // #4caf50
-      icon: tabConfig[4].icon, // LocationIcon
-      tabIndex: 4,
+      color: tabConfig[5].color, // #4caf50
+      icon: tabConfig[5].icon, // LocationIcon
+      tabIndex: 5,
       badge: currentProject?.locations?.length || 0,
     },
     { 
       title: 'Utstyr', 
       description: 'Administrer rekvisitter og utstyr', 
-      color: tabConfig[5].color, // #ff9800
-      icon: tabConfig[5].icon, // PropIcon
-      tabIndex: 5,
+      color: tabConfig[6].color, // #ff9800
+      icon: tabConfig[6].icon, // PropIcon
+      tabIndex: 6,
       badge: currentProject?.props?.length || 0,
     },
     { 
       title: 'Kalender', 
       description: 'Produksjonsplan og timeplan', 
-      color: tabConfig[6].color, // #9c27b0
-      icon: tabConfig[6].icon, // CalendarIcon
-      tabIndex: 6,
+      color: tabConfig[7].color, // #9c27b0
+      icon: tabConfig[7].icon, // CalendarIcon
+      tabIndex: 7,
       badge: currentProject?.productionDays?.length || 0,
     },
     { 
       title: profession ? (PROFESSION_CONFIG[profession]?.terminology.shotList || 'Shot-list') : 'Shot-list', 
       description: profession === 'photographer' ? 'Fotolister og komposisjoner' : 'Videolister og scener', 
-      color: tabConfig[7].color, // professionConfig?.color || '#e91e63'
-      icon: tabConfig[7].icon, // ShotListIcon
-      tabIndex: 7,
+      color: tabConfig[8].color, // professionConfig?.color || '#e91e63'
+      icon: tabConfig[8].icon, // ShotListIcon
+      tabIndex: 8,
       badge: currentProject?.shotLists?.length || 0,
     },
   ], [profession, professionConfig, tabConfig, currentProject]);
@@ -1631,6 +1633,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               'Oversikt',
               'Roller',
               'Kandidater',
+              'Pool',
               'Team',
               'Steder',
               'Utstyr',
@@ -1643,6 +1646,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               'tab-oversikt',
               'tab-roller',
               'tab-kandidater',
+              'tab-kandidatpool',
               'tab-team',
               'tab-lokasjoner',
               'tab-rekvisitter',
@@ -1655,6 +1659,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               'tabpanel-oversikt',
               'tabpanel-roller',
               'tabpanel-kandidater',
+              'tabpanel-kandidatpool',
               'tabpanel-team',
               'tabpanel-lokasjoner',
               'tabpanel-rekvisitter',
@@ -1775,6 +1780,14 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
         </TabPanel>
 
         <TabPanel value={activeTab} index={3}>
+          <CandidatePoolPanel
+            projects={projects}
+            currentProjectId={currentProject?.id}
+            onImport={() => loadProjects()}
+          />
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={4}>
           {!currentProject ? (
             <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
               <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
@@ -1799,7 +1812,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           )}
         </TabPanel>
 
-        <TabPanel value={activeTab} index={4}>
+        <TabPanel value={activeTab} index={5}>
           {!currentProject ? (
             <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
               <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
@@ -1823,7 +1836,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           )}
         </TabPanel>
 
-        <TabPanel value={activeTab} index={5}>
+        <TabPanel value={activeTab} index={6}>
           {!currentProject ? (
             <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
               <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
@@ -1847,7 +1860,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           )}
         </TabPanel>
 
-        <TabPanel value={activeTab} index={6}>
+        <TabPanel value={activeTab} index={7}>
           {!currentProject ? (
             <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
               <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
@@ -1872,7 +1885,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           )}
         </TabPanel>
 
-        <TabPanel value={activeTab} index={7}>
+        <TabPanel value={activeTab} index={8}>
           {!currentProject ? (
             <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
               <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
@@ -1897,7 +1910,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           )}
         </TabPanel>
 
-        <TabPanel value={activeTab} index={8}>
+        <TabPanel value={activeTab} index={9}>
           <AuditionSchedulePanel
             projectId={currentProject?.id || ''}
             schedules={schedules}
@@ -1915,7 +1928,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           />
         </TabPanel>
 
-        <TabPanel value={activeTab} index={9}>
+        <TabPanel value={activeTab} index={10}>
           {!permissions.canApprove && currentProject ? (
             <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
               <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>

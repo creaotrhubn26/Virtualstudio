@@ -64,7 +64,10 @@ import {
   WbSunny as SunnyIcon,
   Tungsten as TungstenIcon,
   FlashOn as FlashIcon,
+  Upload as UploadIcon,
+  FileCopy as CopyToProjectIcon,
 } from '@mui/icons-material';
+import { candidatePoolService } from '../services/candidatePoolService';
 import { GLB3DPreview, PERSONALITY_TRAITS } from './GLB3DPreview';
 
 interface LightingPreset {
@@ -519,6 +522,20 @@ export function CandidateManagementPanel({
     };
     castingService.saveCandidate(projectId, newCandidate);
     onCandidatesChange();
+  };
+
+  const handleSaveToPool = async (candidate: Candidate) => {
+    try {
+      const poolId = await candidatePoolService.saveCandidateToPool(candidate.id);
+      if (poolId) {
+        showSuccess(`${candidate.name} lagret til kandidatpool`, 3000);
+      } else {
+        showError('Kunne ikke lagre til pool', 3000);
+      }
+    } catch (error) {
+      console.error('Error saving to pool:', error);
+      showError('En feil oppstod', 3000);
+    }
   };
 
   const handleExportCSV = () => {
@@ -1486,6 +1503,11 @@ export function CandidateManagementPanel({
                   </TableCell>
                   <TableCell align="right" sx={{ py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                      <Tooltip title="Lagre til pool">
+                        <IconButton onClick={() => handleSaveToPool(candidate)} sx={{ color: '#8b5cf6', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
+                          <UploadIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Dupliser">
                         <IconButton onClick={() => handleDuplicate(candidate)} sx={{ color: 'rgba(255,255,255,0.5)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
                           <DuplicateIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />
@@ -1904,6 +1926,20 @@ export function CandidateManagementPanel({
                         {expandedCards.has(candidate.id) ? 'Skjul detaljer' : 'Vis detaljer'}
                       </Button>
                       <Box sx={{ display: 'flex', gap: { xs: 0.5, sm: 1, md: 0.75, lg: 1, xl: 1.25 } }}>
+                        <Tooltip title="Lagre til pool">
+                          <IconButton
+                            onClick={() => handleSaveToPool(candidate)}
+                            sx={{
+                              minWidth: TOUCH_TARGET_SIZE,
+                              minHeight: TOUCH_TARGET_SIZE,
+                              color: '#8b5cf6',
+                              '&:hover': { bgcolor: 'rgba(139,92,246,0.1)' },
+                              ...focusVisibleStyles,
+                            }}
+                          >
+                            <UploadIcon sx={{ fontSize: { xs: 20, sm: 22, md: 21, lg: 24, xl: 28 } }} />
+                          </IconButton>
+                        </Tooltip>
                         <Tooltip title="Dupliser">
                           <IconButton
                             onClick={() => handleDuplicate(candidate)}

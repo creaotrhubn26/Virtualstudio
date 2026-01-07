@@ -1645,6 +1645,317 @@ async def api_delete_consent(consent_id: str):
             conn.close()
 
 
+# ==================== CANDIDATE POOL API ====================
+
+@app.get("/api/casting/candidate-pool")
+async def api_get_candidate_pool():
+    """Get all candidates from the global pool"""
+    try:
+        from casting_service import get_db_connection
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+    except ImportError:
+        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT id, name, contact_info, photos, videos, model_url, 
+                       personality, notes, tags, created_at, updated_at
+                FROM casting_candidate_pool
+                ORDER BY name ASC
+            """)
+            rows = cur.fetchall()
+            
+            candidates = []
+            for row in rows:
+                candidates.append({
+                    'id': row['id'],
+                    'name': row['name'],
+                    'contactInfo': row['contact_info'] or {},
+                    'photos': row['photos'] or [],
+                    'videos': row['videos'] or [],
+                    'modelUrl': row['model_url'],
+                    'personality': row['personality'],
+                    'notes': row['notes'],
+                    'tags': row['tags'] or [],
+                    'createdAt': row['created_at'].isoformat() if row['created_at'] else None,
+                    'updatedAt': row['updated_at'].isoformat() if row['updated_at'] else None,
+                })
+            
+            return JSONResponse({"success": True, "candidates": candidates})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.post("/api/casting/candidate-pool")
+async def api_save_to_candidate_pool(request: Request):
+    """Save a candidate to the global pool"""
+    try:
+        from casting_service import get_db_connection
+        import psycopg2
+        from psycopg2.extras import RealDictCursor, Json
+        import uuid
+    except ImportError:
+        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
+    
+    body = await request.json()
+    candidate_id = body.get('id') or f"pool-{uuid.uuid4().hex[:12]}"
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT id FROM casting_candidate_pool WHERE id = %s", (candidate_id,))
+            exists = cur.fetchone() is not None
+            
+            if exists:
+                cur.execute("""
+                    UPDATE casting_candidate_pool 
+                    SET name = %s, contact_info = %s, photos = %s, videos = %s,
+                        model_url = %s, personality = %s, notes = %s, tags = %s,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                """, (
+                    body.get('name'),
+                    Json(body.get('contactInfo', {})),
+                    Json(body.get('photos', [])),
+                    Json(body.get('videos', [])),
+                    body.get('modelUrl'),
+                    body.get('personality'),
+                    body.get('notes'),
+                    Json(body.get('tags', [])),
+                    candidate_id
+                ))
+            else:
+                cur.execute("""
+                    INSERT INTO casting_candidate_pool 
+                    (id, name, contact_info, photos, videos, model_url, personality, notes, tags)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    candidate_id,
+                    body.get('name'),
+                    Json(body.get('contactInfo', {})),
+                    Json(body.get('photos', [])),
+                    Json(body.get('videos', [])),
+                    body.get('modelUrl'),
+                    body.get('personality'),
+                    body.get('notes'),
+                    Json(body.get('tags', []))
+                ))
+            
+            conn.commit()
+            return JSONResponse({"success": True, "candidateId": candidate_id})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.delete("/api/casting/candidate-pool/{candidate_id}")
+async def api_delete_from_candidate_pool(candidate_id: str):
+    """Delete a candidate from the global pool"""
+    try:
+        from casting_service import get_db_connection
+        import psycopg2
+    except ImportError:
+        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM casting_candidate_pool WHERE id = %s", (candidate_id,))
+            deleted = cur.rowcount > 0
+            conn.commit()
+            
+            if deleted:
+                return JSONResponse({"success": True})
+            return JSONResponse({"success": False, "error": "Candidate not found"}, status_code=404)
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.post("/api/casting/candidate-pool/import-to-project")
+async def api_import_candidate_to_project(request: Request):
+    """Import a candidate from the pool to a specific project"""
+    try:
+        from casting_service import get_db_connection
+        import psycopg2
+        from psycopg2.extras import RealDictCursor, Json
+        import uuid
+    except ImportError:
+        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
+    
+    body = await request.json()
+    pool_candidate_id = body.get('poolCandidateId')
+    target_project_id = body.get('targetProjectId')
+    
+    if not pool_candidate_id or not target_project_id:
+        return JSONResponse({"success": False, "error": "Missing required fields"}, status_code=400)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM casting_candidate_pool WHERE id = %s", (pool_candidate_id,))
+            pool_candidate = cur.fetchone()
+            
+            if not pool_candidate:
+                return JSONResponse({"success": False, "error": "Pool candidate not found"}, status_code=404)
+            
+            new_id = f"candidate-{uuid.uuid4().hex[:12]}"
+            cur.execute("""
+                INSERT INTO casting_candidates 
+                (id, project_id, name, contact_info, photos, videos, model_url, 
+                 personality, audition_notes, status, assigned_roles, emergency_contact)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                new_id,
+                target_project_id,
+                pool_candidate['name'],
+                pool_candidate['contact_info'],
+                pool_candidate['photos'],
+                pool_candidate['videos'],
+                pool_candidate['model_url'],
+                pool_candidate['personality'],
+                pool_candidate['notes'] or '',
+                'pending',
+                Json([]),
+                Json({})
+            ))
+            
+            conn.commit()
+            return JSONResponse({"success": True, "candidateId": new_id})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.post("/api/casting/candidates/copy-to-project")
+async def api_copy_candidate_to_project(request: Request):
+    """Copy a candidate from one project to another"""
+    try:
+        from casting_service import get_db_connection
+        import psycopg2
+        from psycopg2.extras import RealDictCursor, Json
+        import uuid
+    except ImportError:
+        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
+    
+    body = await request.json()
+    candidate_id = body.get('candidateId')
+    target_project_id = body.get('targetProjectId')
+    
+    if not candidate_id or not target_project_id:
+        return JSONResponse({"success": False, "error": "Missing required fields"}, status_code=400)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM casting_candidates WHERE id = %s", (candidate_id,))
+            source_candidate = cur.fetchone()
+            
+            if not source_candidate:
+                return JSONResponse({"success": False, "error": "Candidate not found"}, status_code=404)
+            
+            new_id = f"candidate-{uuid.uuid4().hex[:12]}"
+            cur.execute("""
+                INSERT INTO casting_candidates 
+                (id, project_id, name, contact_info, photos, videos, model_url, 
+                 personality, audition_notes, status, assigned_roles, emergency_contact)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                new_id,
+                target_project_id,
+                source_candidate['name'],
+                source_candidate['contact_info'],
+                source_candidate['photos'],
+                source_candidate['videos'],
+                source_candidate['model_url'],
+                source_candidate['personality'],
+                source_candidate['audition_notes'] or '',
+                'pending',
+                Json([]),
+                source_candidate['emergency_contact']
+            ))
+            
+            conn.commit()
+            return JSONResponse({"success": True, "candidateId": new_id})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.post("/api/casting/candidates/save-to-pool")
+async def api_save_candidate_to_pool(request: Request):
+    """Save a project candidate to the global pool"""
+    try:
+        from casting_service import get_db_connection
+        import psycopg2
+        from psycopg2.extras import RealDictCursor, Json
+        import uuid
+    except ImportError:
+        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
+    
+    body = await request.json()
+    candidate_id = body.get('candidateId')
+    
+    if not candidate_id:
+        return JSONResponse({"success": False, "error": "Missing candidateId"}, status_code=400)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM casting_candidates WHERE id = %s", (candidate_id,))
+            source_candidate = cur.fetchone()
+            
+            if not source_candidate:
+                return JSONResponse({"success": False, "error": "Candidate not found"}, status_code=404)
+            
+            pool_id = f"pool-{uuid.uuid4().hex[:12]}"
+            cur.execute("""
+                INSERT INTO casting_candidate_pool 
+                (id, name, contact_info, photos, videos, model_url, personality, notes, tags)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                pool_id,
+                source_candidate['name'],
+                source_candidate['contact_info'],
+                source_candidate['photos'],
+                source_candidate['videos'],
+                source_candidate['model_url'],
+                source_candidate['personality'],
+                source_candidate['audition_notes'],
+                Json([])
+            ))
+            
+            conn.commit()
+            return JSONResponse({"success": True, "poolCandidateId": pool_id})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
 @app.get("/api/casting/projects/{project_id}/roles")
 async def api_get_roles(project_id: str):
     if not CASTING_SERVICE_AVAILABLE:
