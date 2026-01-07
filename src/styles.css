@@ -32,6 +32,226 @@
   --tab-padding: 10px 16px;
   --tab-font-size: 12px;
   --touch-target-min: 44px;
+
+  /* 7-Tier HUD Responsive Tokens (Default: Tier 4 - Small Desktop 1024-1439px) */
+  --hud-tier: 4;
+  --hud-panel-width: 280px;
+  --hud-panel-padding: 16px;
+  --hud-gap: 12px;
+  --hud-font-base: 11px;
+  --hud-font-label: 9px;
+  --hud-font-value: 14px;
+  --joystick-container-size: 140px;
+  --joystick-bg-size: 110px;
+  --joystick-ring-size: 75px;
+  --joystick-knob-size: 32px;
+  --joystick-label-font: 8px;
+  --dpad-btn-size: 36px;
+  --dpad-gap: 4px;
+  --slider-height: 6px;
+  --slider-thumb-size: 14px;
+  --hud-btn-height: 28px;
+  --hud-btn-font: 10px;
+  --hud-section-padding: 14px;
+  --hud-border-radius: 12px;
+  --hud-bottom-offset: 20px;
+  --hud-right-offset: 20px;
+}
+
+/* Tier 1: Portrait Mobile (≤480px) */
+@media (max-width: 480px) {
+  :root {
+    --hud-tier: 1;
+    --hud-panel-width: 100%;
+    --hud-panel-padding: 12px;
+    --hud-gap: 8px;
+    --hud-font-base: 10px;
+    --hud-font-label: 8px;
+    --hud-font-value: 12px;
+    --joystick-container-size: 100px;
+    --joystick-bg-size: 80px;
+    --joystick-ring-size: 55px;
+    --joystick-knob-size: 28px;
+    --joystick-label-font: 7px;
+    --dpad-btn-size: 32px;
+    --dpad-gap: 3px;
+    --slider-height: 5px;
+    --slider-thumb-size: 12px;
+    --hud-btn-height: 32px;
+    --hud-btn-font: 9px;
+    --hud-section-padding: 10px;
+    --hud-border-radius: 10px;
+    --hud-bottom-offset: 12px;
+    --hud-right-offset: 8px;
+  }
+}
+
+/* Tier 2: Landscape Mobile/Mini Tablets (481-768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  :root {
+    --hud-tier: 2;
+    --hud-panel-width: 240px;
+    --hud-panel-padding: 12px;
+    --hud-gap: 10px;
+    --hud-font-base: 10px;
+    --hud-font-label: 8px;
+    --hud-font-value: 13px;
+    --joystick-container-size: 110px;
+    --joystick-bg-size: 90px;
+    --joystick-ring-size: 62px;
+    --joystick-knob-size: 28px;
+    --joystick-label-font: 7px;
+    --dpad-btn-size: 34px;
+    --dpad-gap: 3px;
+    --slider-height: 5px;
+    --slider-thumb-size: 12px;
+    --hud-btn-height: 30px;
+    --hud-btn-font: 9px;
+    --hud-section-padding: 12px;
+    --hud-border-radius: 10px;
+    --hud-bottom-offset: 14px;
+    --hud-right-offset: 12px;
+  }
+}
+
+/* Tier 3: Tablets (769-1023px) */
+@media (min-width: 769px) and (max-width: 1023px) {
+  :root {
+    --hud-tier: 3;
+    --hud-panel-width: 260px;
+    --hud-panel-padding: 14px;
+    --hud-gap: 10px;
+    --hud-font-base: 10px;
+    --hud-font-label: 8px;
+    --hud-font-value: 13px;
+    --joystick-container-size: 120px;
+    --joystick-bg-size: 100px;
+    --joystick-ring-size: 68px;
+    --joystick-knob-size: 30px;
+    --joystick-label-font: 8px;
+    --dpad-btn-size: 34px;
+    --dpad-gap: 4px;
+    --slider-height: 6px;
+    --slider-thumb-size: 13px;
+    --hud-btn-height: 28px;
+    --hud-btn-font: 10px;
+    --hud-section-padding: 12px;
+    --hud-border-radius: 12px;
+    --hud-bottom-offset: 16px;
+    --hud-right-offset: 16px;
+  }
+}
+
+/* Tier 4: Small Desktop/Laptops (1024-1439px) - DEFAULT */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  :root {
+    --hud-tier: 4;
+    --hud-panel-width: 280px;
+    --hud-panel-padding: 16px;
+    --hud-gap: 12px;
+    --hud-font-base: 11px;
+    --hud-font-label: 9px;
+    --hud-font-value: 14px;
+    --joystick-container-size: 140px;
+    --joystick-bg-size: 110px;
+    --joystick-ring-size: 75px;
+    --joystick-knob-size: 32px;
+    --joystick-label-font: 8px;
+    --dpad-btn-size: 36px;
+    --dpad-gap: 4px;
+    --slider-height: 6px;
+    --slider-thumb-size: 14px;
+    --hud-btn-height: 28px;
+    --hud-btn-font: 10px;
+    --hud-section-padding: 14px;
+    --hud-border-radius: 12px;
+    --hud-bottom-offset: 20px;
+    --hud-right-offset: 20px;
+  }
+}
+
+/* Tier 5: 1080p Desktop (1440-1919px) */
+@media (min-width: 1440px) and (max-width: 1919px) {
+  :root {
+    --hud-tier: 5;
+    --hud-panel-width: 300px;
+    --hud-panel-padding: 18px;
+    --hud-gap: 14px;
+    --hud-font-base: 11px;
+    --hud-font-label: 9px;
+    --hud-font-value: 15px;
+    --joystick-container-size: 150px;
+    --joystick-bg-size: 120px;
+    --joystick-ring-size: 82px;
+    --joystick-knob-size: 36px;
+    --joystick-label-font: 9px;
+    --dpad-btn-size: 38px;
+    --dpad-gap: 5px;
+    --slider-height: 7px;
+    --slider-thumb-size: 15px;
+    --hud-btn-height: 30px;
+    --hud-btn-font: 11px;
+    --hud-section-padding: 16px;
+    --hud-border-radius: 14px;
+    --hud-bottom-offset: 24px;
+    --hud-right-offset: 24px;
+  }
+}
+
+/* Tier 6: 2K/Ultrawide (1920-2559px) */
+@media (min-width: 1920px) and (max-width: 2559px) {
+  :root {
+    --hud-tier: 6;
+    --hud-panel-width: 320px;
+    --hud-panel-padding: 20px;
+    --hud-gap: 16px;
+    --hud-font-base: 12px;
+    --hud-font-label: 10px;
+    --hud-font-value: 16px;
+    --joystick-container-size: 160px;
+    --joystick-bg-size: 128px;
+    --joystick-ring-size: 88px;
+    --joystick-knob-size: 38px;
+    --joystick-label-font: 9px;
+    --dpad-btn-size: 40px;
+    --dpad-gap: 6px;
+    --slider-height: 8px;
+    --slider-thumb-size: 16px;
+    --hud-btn-height: 32px;
+    --hud-btn-font: 11px;
+    --hud-section-padding: 18px;
+    --hud-border-radius: 16px;
+    --hud-bottom-offset: 28px;
+    --hud-right-offset: 28px;
+  }
+}
+
+/* Tier 7: HiDPI/MacBook Pro 16"/5K (≥2560px) */
+@media (min-width: 2560px) {
+  :root {
+    --hud-tier: 7;
+    --hud-panel-width: 360px;
+    --hud-panel-padding: 24px;
+    --hud-gap: 18px;
+    --hud-font-base: 13px;
+    --hud-font-label: 11px;
+    --hud-font-value: 18px;
+    --joystick-container-size: 180px;
+    --joystick-bg-size: 144px;
+    --joystick-ring-size: 100px;
+    --joystick-knob-size: 44px;
+    --joystick-label-font: 10px;
+    --dpad-btn-size: 44px;
+    --dpad-gap: 6px;
+    --slider-height: 10px;
+    --slider-thumb-size: 18px;
+    --hud-btn-height: 36px;
+    --hud-btn-font: 12px;
+    --hud-section-padding: 20px;
+    --hud-border-radius: 18px;
+    --hud-bottom-offset: 32px;
+    --hud-right-offset: 32px;
+  }
 }
 
 /* WCAG 2.2 Skip Link */
@@ -20152,11 +20372,11 @@ html, body {
 
 .light-control-hud {
   position: absolute;
-  bottom: 20px;
-  right: 20px;
-  width: 280px;
+  bottom: var(--hud-bottom-offset);
+  right: var(--hud-right-offset);
+  width: var(--hud-panel-width);
   background: linear-gradient(135deg, rgba(10, 15, 25, 0.95) 0%, rgba(5, 10, 20, 0.98) 100%);
-  border-radius: 16px;
+  border-radius: var(--hud-border-radius);
   padding: 0;
   border: 2px solid rgba(0, 212, 255, 0.4);
   box-shadow: 
@@ -20225,7 +20445,7 @@ html, body {
 }
 
 .hud-section {
-  padding: 16px;
+  padding: var(--hud-section-padding);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -20234,27 +20454,27 @@ html, body {
 }
 
 .hud-section-title {
-  font-size: 10px;
+  font-size: var(--hud-font-label);
   font-weight: 700;
   color: rgba(255, 255, 255, 0.4);
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  margin-bottom: 12px;
+  margin-bottom: var(--hud-gap);
 }
 
-/* Joystick Container */
+/* Joystick Container - 7-Tier Responsive */
 .joystick-container {
   position: relative;
-  width: 160px;
-  height: 220px;
+  width: var(--joystick-container-size);
+  height: calc(var(--joystick-container-size) + 60px);
   margin: 0 auto;
-  padding-bottom: 80px;
+  padding-bottom: 60px;
 }
 
 .joystick-bg {
   position: absolute;
-  width: 120px;
-  height: 120px;
+  width: var(--joystick-bg-size);
+  height: var(--joystick-bg-size);
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -20288,8 +20508,8 @@ html, body {
 
 .joystick-ring {
   position: absolute;
-  width: 80px;
-  height: 80px;
+  width: var(--joystick-ring-size);
+  height: var(--joystick-ring-size);
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -20299,8 +20519,8 @@ html, body {
 
 .joystick-knob {
   position: absolute;
-  width: 36px;
-  height: 36px;
+  width: var(--joystick-knob-size);
+  height: var(--joystick-knob-size);
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -20312,6 +20532,8 @@ html, body {
     inset 0 2px 4px rgba(255, 255, 255, 0.3);
   cursor: grab;
   transition: box-shadow 0.2s;
+  min-width: 28px;
+  min-height: 28px;
 }
 
 .joystick-knob:active {
@@ -20321,22 +20543,22 @@ html, body {
     inset 0 2px 4px rgba(255, 255, 255, 0.3);
 }
 
-/* Joystick Sensitivity Controls */
+/* Joystick Sensitivity Controls - 7-Tier Responsive */
 .joystick-sensitivity-selector {
   position: absolute;
-  bottom: -80px;
+  bottom: -60px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  width: 160px;
+  gap: var(--hud-gap);
+  width: var(--joystick-container-size);
 }
 
 .sensitivity-modes {
   display: flex;
-  gap: 4px;
+  gap: var(--dpad-gap);
   background: rgba(0, 20, 35, 0.8);
   border-radius: 6px;
   padding: 3px;
@@ -20344,16 +20566,18 @@ html, body {
 }
 
 .sensitivity-btn {
-  width: 28px;
-  height: 24px;
+  width: var(--hud-btn-height);
+  height: calc(var(--hud-btn-height) - 4px);
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.5);
-  font-size: 10px;
+  font-size: var(--hud-btn-font);
   font-weight: 700;
   cursor: pointer;
   border-radius: 4px;
   transition: all 0.15s;
+  min-width: 24px;
+  min-height: 20px;
 }
 
 .sensitivity-btn:hover {
@@ -20402,7 +20626,7 @@ html, body {
 
 .joystick-label {
   position: absolute;
-  font-size: 8px;
+  font-size: var(--joystick-label-font);
   font-weight: 600;
   color: rgba(255, 255, 255, 0.35);
   text-transform: uppercase;
@@ -20417,8 +20641,8 @@ html, body {
 .rotation-values {
   display: flex;
   justify-content: center;
-  gap: 32px;
-  margin-top: 16px;
+  gap: calc(var(--hud-gap) * 2);
+  margin-top: var(--hud-gap);
 }
 
 .rotation-value {
@@ -20429,37 +20653,37 @@ html, body {
 }
 
 .rotation-value .value-label {
-  font-size: 9px;
+  font-size: var(--hud-font-label);
   color: rgba(255, 255, 255, 0.4);
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
 .rotation-value .value-number {
-  font-size: 16px;
+  font-size: var(--hud-font-value);
   font-weight: 700;
   color: #00d4ff;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
-/* Height Slider */
+/* Height Slider - 7-Tier Responsive */
 .height-control {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--hud-gap);
 }
 
 .height-slider-container {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--hud-gap);
   flex: 1;
 }
 
 .height-slider-track {
   position: relative;
   width: 100%;
-  height: 8px;
+  height: var(--slider-height);
   background: rgba(0, 20, 35, 0.8);
   border-radius: 4px;
   border: 1px solid rgba(0, 212, 255, 0.2);
@@ -20479,8 +20703,8 @@ html, body {
 
 .height-slider-thumb {
   position: absolute;
-  width: 18px;
-  height: 18px;
+  width: var(--slider-thumb-size);
+  height: var(--slider-thumb-size);
   left: 30%;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -20490,6 +20714,8 @@ html, body {
   box-shadow: 0 2px 8px rgba(0, 212, 255, 0.4);
   cursor: grab;
   transition: box-shadow 0.2s, transform 0.1s;
+  min-width: 12px;
+  min-height: 12px;
 }
 
 .height-slider-thumb:hover {
@@ -20505,13 +20731,13 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 8px;
+  font-size: var(--joystick-label-font);
   color: rgba(255, 255, 255, 0.3);
   min-width: 24px;
 }
 
 .height-value {
-  font-size: 18px;
+  font-size: var(--hud-font-value);
   font-weight: 700;
   color: #10b981;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
@@ -20519,34 +20745,36 @@ html, body {
   text-align: right;
 }
 
-/* Position D-Pad */
+/* Position D-Pad - 7-Tier Responsive */
 .position-controls {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--hud-gap);
 }
 
 .dpad-container {
   display: grid;
-  grid-template-columns: repeat(3, 32px);
-  grid-template-rows: repeat(3, 32px);
-  gap: 4px;
+  grid-template-columns: repeat(3, var(--dpad-btn-size));
+  grid-template-rows: repeat(3, var(--dpad-btn-size));
+  gap: var(--dpad-gap);
 }
 
 .dpad-btn {
-  width: 32px;
-  height: 32px;
+  width: var(--dpad-btn-size);
+  height: var(--dpad-btn-size);
   border: none;
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.6);
   border-radius: 6px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--hud-font-base);
   transition: all 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 28px;
+  min-height: 28px;
 }
 
 .dpad-btn:hover {
@@ -20569,13 +20797,13 @@ html, body {
 .position-values {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--hud-gap);
 }
 
 .pos-value {
   display: flex;
-  gap: 8px;
-  font-size: 13px;
+  gap: var(--hud-gap);
+  font-size: var(--hud-font-value);
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
@@ -20604,13 +20832,14 @@ html, body {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px 12px;
+  padding: calc(var(--hud-section-padding) * 0.6) var(--hud-section-padding);
   border: none;
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.7);
-  border-radius: 8px;
+  border-radius: calc(var(--hud-border-radius) * 0.5);
+  font-size: var(--hud-btn-font);
+  min-height: var(--hud-btn-height);
   cursor: pointer;
-  font-size: 11px;
   font-weight: 600;
   transition: all 0.2s;
 }
@@ -20624,11 +20853,11 @@ html, body {
   transform: scale(0.98);
 }
 
-/* Focus Target Controls */
+/* Focus Target Controls - 7-Tier Responsive */
 .focus-target-controls {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--hud-gap);
 }
 
 .focus-mode-toggle {
@@ -20786,37 +21015,4 @@ html, body {
 .hud-action-btn.primary:hover {
   background: rgba(0, 212, 255, 0.35);
   box-shadow: 0 0 16px rgba(0, 212, 255, 0.3);
-}
-
-/* Responsive adjustments */
-@media (max-width: 1200px) {
-  .light-control-hud {
-    width: 260px;
-    bottom: 16px;
-    right: 16px;
-  }
-  
-  .joystick-container {
-    width: 120px;
-    height: 120px;
-  }
-  
-  .joystick-bg {
-    width: 100px;
-    height: 100px;
-  }
-  
-  .joystick-ring {
-    width: 70px;
-    height: 70px;
-  }
-  
-  .joystick-knob {
-    width: 30px;
-    height: 30px;
-  }
-  
-  .focus-mode-btn {
-    padding: 8px 6px;
-  }
 }
