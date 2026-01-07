@@ -2171,19 +2171,47 @@ class VirtualStudio {
         // Calculate direction from light position to target
         const resetDir = targetPos.subtract(resetPos).normalize();
         
-        // Apply reset position
-        lightData.mesh.position = resetPos.clone();
+        // Calculate mesh position so stand is on floor but light head is at resetPos.y
+        // Get mesh bounding info to find light head offset from origin
+        lightData.mesh.refreshBoundingInfo(true);
+        const bounds = lightData.mesh.getBoundingInfo().boundingBox;
+        const meshHeight = bounds.maximumWorld.y - bounds.minimumWorld.y;
+        
+        // Estimate light head is at top of mesh (typically ~90% up for studio lights)
+        // Position mesh so bottom is on floor (y=0) and use tilt to aim at target
+        const standBaseY = 0; // Stand feet on floor
+        const lightHeadHeight = meshHeight * 0.85; // Light head is near top
+        
+        // Set mesh position: X/Z from resetPos, Y so stand is on floor
+        const meshPos = new BABYLON.Vector3(
+          resetPos.x,
+          standBaseY,
+          resetPos.z
+        );
+        
+        // Calculate actual light position (where the light emits from)
+        const actualLightPos = new BABYLON.Vector3(
+          resetPos.x,
+          standBaseY + lightHeadHeight,
+          resetPos.z
+        );
+        
+        // Recalculate direction from actual light position to target
+        const actualDir = targetPos.subtract(actualLightPos).normalize();
+        
+        // Apply positions
+        lightData.mesh.position = meshPos;
         if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.PointLight) {
-          lightData.light.position = resetPos.clone();
+          lightData.light.position = actualLightPos;
         }
         
-        // Apply reset direction and rotation
+        // Apply direction
         if (lightData.light instanceof BABYLON.SpotLight) {
-          lightData.light.direction = resetDir.clone();
+          lightData.light.direction = actualDir.clone();
         }
         
         // Calculate proper mesh rotation from direction
-        this.setMeshRotationFromDirection(lightData.mesh, resetDir);
+        this.setMeshRotationFromDirection(lightData.mesh, actualDir);
         
         // Recreate gizmos at new position
         this.createStudioGizmos(this.hudLightId);
