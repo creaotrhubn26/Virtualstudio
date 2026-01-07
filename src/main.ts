@@ -322,6 +322,40 @@ class VirtualStudio {
     ['camE', null]
   ]);
 
+  // Studio Gizmo System - Realistic light manipulation controls
+  private studioGizmoActive: boolean = false;
+  private studioGizmoMeshes: {
+    baseRing: BABYLON.Mesh | null;        // Floor ring for horizontal movement
+    heightSlider: BABYLON.Mesh | null;    // Vertical slider for height
+    yokeRing: BABYLON.Mesh | null;        // Arc for tilt/pan
+    heightLabel: BABYLON.Mesh | null;     // Height indicator text
+    angleLabel: BABYLON.Mesh | null;      // Angle indicator text
+  } = {
+    baseRing: null,
+    heightSlider: null,
+    yokeRing: null,
+    heightLabel: null,
+    angleLabel: null
+  };
+  private studioGizmoDragging: 'base' | 'height' | 'yoke' | null = null;
+  private studioGizmoDragStart: BABYLON.Vector3 | null = null;
+  private studioGizmoOriginalPos: BABYLON.Vector3 | null = null;
+  private studioGizmoOriginalHeight: number = 0;
+  private studioGizmoGridSnap: boolean = true;
+  private studioGizmoGridSize: number = 0.5; // 50cm grid
+  
+  // Light POV (Point of View) mode
+  private lightPOVActive: boolean = false;
+  private lightPOVCamera: BABYLON.FreeCamera | null = null;
+  private lightPOVLightId: string | null = null; // Track which light is in POV mode
+  private lightPOVDragCount: number = 0; // Track concurrent drags
+  private savedCameraState: {
+    alpha: number;
+    beta: number;
+    radius: number;
+    target: BABYLON.Vector3;
+  } | null = null;
+
   // Video recording state
   private isRecording: boolean = false;
   private mediaRecorder: MediaRecorder | null = null;
@@ -973,6 +1007,677 @@ class VirtualStudio {
     return this.renderingPipeline;
   }
 
+  // ===== STUDIO GIZMO SYSTEM =====
+  
+  /**
+   * Create and show studio gizmos for the selected light
+   * Provides realistic light stand controls instead of abstract XYZ arrows
+   */
+  private createStudioGizmos(lightId: string): void {
+    const lightData = this.lights.get(lightId);
+    if (!lightData) return;
+    
+    // Clean up existing studio gizmos
+    this.disposeStudioGizmos();
+    
+    const lightPos = lightData.mesh.position.clone();
+    const studioAmber = new BABYLON.Color3(1.0, 0.67, 0.0);
+    const studioGreen = new BABYLON.Color3(0.3, 0.85, 0.4);
+    const studioCyan = new BABYLON.Color3(0.3, 0.8, 1.0);
+    
+    // 1. BASE RING - Floor ring for horizontal movement (Stativgrep)
+    const baseRing = BABYLON.MeshBuilder.CreateTorus('studioGizmo_baseRing', {
+      diameter: 1.8,
+      thickness: 0.08,
+      tessellation: 48
+    }, this.scene);
+    baseRing.position = new BABYLON.Vector3(lightPos.x, 0.02, lightPos.z);
+    baseRing.rotation.x = 0; // Flat on ground
+    
+    const baseRingMat = new BABYLON.StandardMaterial('baseRingMat', this.scene);
+    baseRingMat.emissiveColor = studioAmber;
+    baseRingMat.diffuseColor = studioAmber;
+    baseRingMat.alpha = 0.8;
+    baseRingMat.disableLighting = true;
+    baseRing.material = baseRingMat;
+    baseRing.isPickable = true;
+    baseRing.renderingGroupId = 1;
+    
+    // Add grid markers on base ring
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const marker = BABYLON.MeshBuilder.CreateBox(`baseMarker_${i}`, { width: 0.12, height: 0.03, depth: 0.04 }, this.scene);
+      marker.position = new BABYLON.Vector3(
+        lightPos.x + Math.cos(angle) * 0.9,
+        0.03,
+        lightPos.z + Math.sin(angle) * 0.9
+      );
+      marker.rotation.y = angle;
+      marker.material = baseRingMat;
+      marker.parent = baseRing;
+    }
+    
+    // Add drag behavior for base ring
+    const baseDragBehavior = new BABYLON.PointerDragBehavior({ dragPlaneNormal: new BABYLON.Vector3(0, 1, 0) });
+    baseDragBehavior.useObjectOrientationForDragging = false;
+    baseDragBehavior.onDragStartObservable.add(() => {
+      this.studioGizmoDragging = 'base';
+      this.studioGizmoDragStart = lightData.mesh.position.clone();
+      // Activate POV mode when starting to drag
+      this.activateLightPOV(lightId);
+    });
+    baseDragBehavior.onDragObservable.add((event) => {
+      if (this.studioGizmoDragging === 'base') {
+        let newX = baseRing.position.x;
+        let newZ = baseRing.position.z;
+        
+        // Apply grid snapping if enabled
+        if (this.studioGizmoGridSnap) {
+          newX = Math.round(newX / this.studioGizmoGridSize) * this.studioGizmoGridSize;
+          newZ = Math.round(newZ / this.studioGizmoGridSize) * this.studioGizmoGridSize;
+        }
+        
+        // Update light position (keep Y)
+        lightData.mesh.position.x = newX;
+        lightData.mesh.position.z = newZ;
+        lightData.light.position.x = newX;
+        lightData.light.position.z = newZ;
+        
+        // Update height slider position
+        if (this.studioGizmoMeshes.heightSlider) {
+          this.studioGizmoMeshes.heightSlider.position.x = newX;
+          this.studioGizmoMeshes.heightSlider.position.z = newZ;
+        }
+        
+        // Update POV camera position
+        this.updateLightPOVCamera(lightId);
+      }
+    });
+    baseDragBehavior.onDragEndObservable.add(() => {
+      this.studioGizmoDragging = null;
+      // Deactivate POV mode when done dragging
+      this.deactivateLightPOV();
+    });
+    baseRing.addBehavior(baseDragBehavior);
+    
+    this.studioGizmoMeshes.baseRing = baseRing;
+    
+    // 2. HEIGHT SLIDER - Vertical slider along light stand (Teleskopmast)
+    const heightSlider = BABYLON.MeshBuilder.CreateCylinder('studioGizmo_heightSlider', {
+      height: 0.3,
+      diameter: 0.15,
+      tessellation: 16
+    }, this.scene);
+    heightSlider.position = new BABYLON.Vector3(lightPos.x, lightPos.y, lightPos.z);
+    
+    const heightSliderMat = new BABYLON.StandardMaterial('heightSliderMat', this.scene);
+    heightSliderMat.emissiveColor = studioGreen;
+    heightSliderMat.diffuseColor = studioGreen;
+    heightSliderMat.alpha = 0.9;
+    heightSliderMat.disableLighting = true;
+    heightSlider.material = heightSliderMat;
+    heightSlider.isPickable = true;
+    heightSlider.renderingGroupId = 1;
+    
+    // Add up/down arrows on height slider
+    const arrowUp = BABYLON.MeshBuilder.CreateCylinder('arrowUp', { height: 0.15, diameterTop: 0, diameterBottom: 0.1 }, this.scene);
+    arrowUp.position.y = 0.22;
+    arrowUp.material = heightSliderMat;
+    arrowUp.parent = heightSlider;
+    
+    const arrowDown = BABYLON.MeshBuilder.CreateCylinder('arrowDown', { height: 0.15, diameterTop: 0.1, diameterBottom: 0 }, this.scene);
+    arrowDown.position.y = -0.22;
+    arrowDown.material = heightSliderMat;
+    arrowDown.parent = heightSlider;
+    
+    // Add stand pole visualization
+    const standPole = BABYLON.MeshBuilder.CreateCylinder('standPole', {
+      height: lightPos.y,
+      diameter: 0.04,
+      tessellation: 8
+    }, this.scene);
+    standPole.position = new BABYLON.Vector3(0, -lightPos.y / 2, 0);
+    const poleMat = new BABYLON.StandardMaterial('poleMat', this.scene);
+    poleMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+    poleMat.alpha = 0.5;
+    standPole.material = poleMat;
+    standPole.parent = heightSlider;
+    standPole.isPickable = false;
+    
+    // Add drag behavior for height slider (vertical only)
+    const heightDragBehavior = new BABYLON.PointerDragBehavior({ dragAxis: new BABYLON.Vector3(0, 1, 0) });
+    heightDragBehavior.onDragStartObservable.add(() => {
+      this.studioGizmoDragging = 'height';
+      this.studioGizmoOriginalHeight = lightData.mesh.position.y;
+      this.activateLightPOV(lightId);
+    });
+    heightDragBehavior.onDragObservable.add(() => {
+      if (this.studioGizmoDragging === 'height') {
+        // Clamp height between 0.5m and 6m
+        const newY = Math.max(0.5, Math.min(6.0, heightSlider.position.y));
+        heightSlider.position.y = newY;
+        
+        // Update light position
+        lightData.mesh.position.y = newY;
+        lightData.light.position.y = newY;
+        
+        // Update stand pole height
+        const pole = heightSlider.getChildMeshes().find(m => m.name === 'standPole');
+        if (pole) {
+          (pole as BABYLON.Mesh).scaling.y = newY / lightPos.y;
+          pole.position.y = -newY / 2;
+        }
+        
+        // Show height label
+        this.updateHeightLabel(newY);
+        this.updateLightPOVCamera(lightId);
+      }
+    });
+    heightDragBehavior.onDragEndObservable.add(() => {
+      this.studioGizmoDragging = null;
+      this.hideHeightLabel();
+      this.deactivateLightPOV();
+    });
+    heightSlider.addBehavior(heightDragBehavior);
+    
+    this.studioGizmoMeshes.heightSlider = heightSlider;
+    
+    // 3. YOKE RING - Arc for tilt/pan control (Lampehode Yoke)
+    const yokeRing = BABYLON.MeshBuilder.CreateTorus('studioGizmo_yokeRing', {
+      diameter: 0.8,
+      thickness: 0.05,
+      tessellation: 32,
+      sideOrientation: BABYLON.Mesh.DOUBLESIDE
+    }, this.scene);
+    yokeRing.position = lightData.mesh.position.clone();
+    yokeRing.rotation.x = Math.PI / 2; // Vertical orientation
+    
+    const yokeRingMat = new BABYLON.StandardMaterial('yokeRingMat', this.scene);
+    yokeRingMat.emissiveColor = studioCyan;
+    yokeRingMat.diffuseColor = studioCyan;
+    yokeRingMat.alpha = 0.8;
+    yokeRingMat.disableLighting = true;
+    yokeRing.material = yokeRingMat;
+    yokeRing.isPickable = true;
+    yokeRing.renderingGroupId = 1;
+    
+    // Add rotation drag behavior for yoke
+    const yokeDragBehavior = new BABYLON.PointerDragBehavior({ dragPlaneNormal: new BABYLON.Vector3(0, 0, 1) });
+    yokeDragBehavior.onDragStartObservable.add(() => {
+      this.studioGizmoDragging = 'yoke';
+      this.activateLightPOV(lightId);
+    });
+    yokeDragBehavior.onDragObservable.add((event) => {
+      if (this.studioGizmoDragging === 'yoke' && lightData.light instanceof BABYLON.SpotLight) {
+        // Calculate rotation from drag delta
+        const sensitivity = 0.01;
+        const deltaX = event.delta.x * sensitivity;
+        const deltaY = event.delta.y * sensitivity;
+        
+        // Get current direction and modify
+        const currentDir = lightData.light.direction.clone();
+        
+        // Rotate around Y axis (pan)
+        const yRotation = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Y, deltaX);
+        currentDir.rotateByQuaternionToRef(yRotation, currentDir);
+        
+        // Rotate around X axis (tilt)
+        const xRotation = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.X, deltaY);
+        currentDir.rotateByQuaternionToRef(xRotation, currentDir);
+        
+        lightData.light.direction = currentDir.normalize();
+        
+        // Update mesh rotation to match
+        if (lightData.mesh.rotationQuaternion) {
+          const lookAt = lightData.mesh.position.add(currentDir.scale(5));
+          lightData.mesh.lookAt(lookAt);
+        }
+        
+        // Show angle in degrees
+        const tiltDeg = Math.round(Math.asin(-currentDir.y) * 180 / Math.PI);
+        const panDeg = Math.round(Math.atan2(currentDir.x, -currentDir.z) * 180 / Math.PI);
+        this.updateAngleLabel(tiltDeg, panDeg);
+        this.updateLightPOVCamera(lightId);
+      }
+    });
+    yokeDragBehavior.onDragEndObservable.add(() => {
+      this.studioGizmoDragging = null;
+      this.hideAngleLabel();
+      this.deactivateLightPOV();
+    });
+    yokeRing.addBehavior(yokeDragBehavior);
+    
+    this.studioGizmoMeshes.yokeRing = yokeRing;
+    this.studioGizmoActive = true;
+    
+    // Add to glow layer for visibility
+    if (this.glowLayer) {
+      this.glowLayer.addIncludedOnlyMesh(baseRing);
+      this.glowLayer.addIncludedOnlyMesh(heightSlider);
+      this.glowLayer.addIncludedOnlyMesh(yokeRing);
+    }
+    
+    console.log('Studio gizmos created for light:', lightId);
+  }
+  
+  /**
+   * Dispose all studio gizmo meshes
+   */
+  private disposeStudioGizmos(): void {
+    // Remove from glow layer first to prevent memory leaks
+    if (this.glowLayer) {
+      if (this.studioGizmoMeshes.baseRing) {
+        this.glowLayer.removeIncludedOnlyMesh(this.studioGizmoMeshes.baseRing);
+      }
+      if (this.studioGizmoMeshes.heightSlider) {
+        this.glowLayer.removeIncludedOnlyMesh(this.studioGizmoMeshes.heightSlider);
+      }
+      if (this.studioGizmoMeshes.yokeRing) {
+        this.glowLayer.removeIncludedOnlyMesh(this.studioGizmoMeshes.yokeRing);
+      }
+    }
+    
+    if (this.studioGizmoMeshes.baseRing) {
+      this.studioGizmoMeshes.baseRing.dispose(false, true);
+      this.studioGizmoMeshes.baseRing = null;
+    }
+    if (this.studioGizmoMeshes.heightSlider) {
+      this.studioGizmoMeshes.heightSlider.dispose(false, true);
+      this.studioGizmoMeshes.heightSlider = null;
+    }
+    if (this.studioGizmoMeshes.yokeRing) {
+      this.studioGizmoMeshes.yokeRing.dispose(false, true);
+      this.studioGizmoMeshes.yokeRing = null;
+    }
+    if (this.studioGizmoMeshes.heightLabel) {
+      // Dispose dynamic texture if attached
+      const mat = this.studioGizmoMeshes.heightLabel.material as BABYLON.StandardMaterial;
+      if (mat?.diffuseTexture) {
+        mat.diffuseTexture.dispose();
+      }
+      this.studioGizmoMeshes.heightLabel.dispose(false, true);
+      this.studioGizmoMeshes.heightLabel = null;
+    }
+    if (this.studioGizmoMeshes.angleLabel) {
+      const mat = this.studioGizmoMeshes.angleLabel.material as BABYLON.StandardMaterial;
+      if (mat?.diffuseTexture) {
+        mat.diffuseTexture.dispose();
+      }
+      this.studioGizmoMeshes.angleLabel.dispose(false, true);
+      this.studioGizmoMeshes.angleLabel = null;
+    }
+    this.studioGizmoActive = false;
+  }
+  
+  /**
+   * Update height label during drag with actual text rendering
+   */
+  private updateHeightLabel(height: number): void {
+    const heightCm = Math.round(height * 100);
+    const labelText = `${heightCm} cm`;
+    
+    // Create label plane with dynamic texture for text rendering
+    if (!this.studioGizmoMeshes.heightLabel) {
+      const labelPlane = BABYLON.MeshBuilder.CreatePlane('heightLabel', { width: 0.5, height: 0.15 }, this.scene);
+      labelPlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+      labelPlane.renderingGroupId = 2;
+      
+      // Create dynamic texture for text
+      const dynamicTexture = new BABYLON.DynamicTexture('heightLabelTexture', { width: 256, height: 64 }, this.scene, true);
+      
+      const labelMat = new BABYLON.StandardMaterial('heightLabelMat', this.scene);
+      labelMat.diffuseTexture = dynamicTexture;
+      labelMat.emissiveTexture = dynamicTexture;
+      labelMat.opacityTexture = dynamicTexture;
+      labelMat.disableLighting = true;
+      labelMat.backFaceCulling = false;
+      labelPlane.material = labelMat;
+      
+      this.studioGizmoMeshes.heightLabel = labelPlane;
+    }
+    
+    // Update text on dynamic texture
+    const mat = this.studioGizmoMeshes.heightLabel.material as BABYLON.StandardMaterial;
+    const texture = mat.diffuseTexture as BABYLON.DynamicTexture;
+    if (texture) {
+      const ctx = texture.getContext();
+      ctx.clearRect(0, 0, 256, 64);
+      
+      // Draw background
+      ctx.fillStyle = 'rgba(30, 30, 35, 0.9)';
+      ctx.roundRect(4, 4, 248, 56, 8);
+      ctx.fill();
+      
+      // Draw border
+      ctx.strokeStyle = '#4DD966'; // Green matching height slider
+      ctx.lineWidth = 2;
+      ctx.roundRect(4, 4, 248, 56, 8);
+      ctx.stroke();
+      
+      // Draw text
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 28px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(labelText, 128, 32);
+      
+      texture.update();
+    }
+    
+    const slider = this.studioGizmoMeshes.heightSlider;
+    if (slider && this.studioGizmoMeshes.heightLabel) {
+      this.studioGizmoMeshes.heightLabel.position = slider.position.add(new BABYLON.Vector3(0.5, 0.2, 0));
+      this.studioGizmoMeshes.heightLabel.isVisible = true;
+    }
+  }
+  
+  /**
+   * Hide height label
+   */
+  private hideHeightLabel(): void {
+    if (this.studioGizmoMeshes.heightLabel) {
+      this.studioGizmoMeshes.heightLabel.isVisible = false;
+    }
+  }
+  
+  /**
+   * Update angle label during yoke drag with actual text rendering
+   */
+  private updateAngleLabel(tilt: number, pan: number): void {
+    const labelText = `Tilt: ${tilt}° Pan: ${pan}°`;
+    
+    // Create label plane with dynamic texture for text rendering
+    if (!this.studioGizmoMeshes.angleLabel) {
+      const labelPlane = BABYLON.MeshBuilder.CreatePlane('angleLabel', { width: 0.7, height: 0.15 }, this.scene);
+      labelPlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+      labelPlane.renderingGroupId = 2;
+      
+      // Create dynamic texture for text
+      const dynamicTexture = new BABYLON.DynamicTexture('angleLabelTexture', { width: 320, height: 64 }, this.scene, true);
+      
+      const labelMat = new BABYLON.StandardMaterial('angleLabelMat', this.scene);
+      labelMat.diffuseTexture = dynamicTexture;
+      labelMat.emissiveTexture = dynamicTexture;
+      labelMat.opacityTexture = dynamicTexture;
+      labelMat.disableLighting = true;
+      labelMat.backFaceCulling = false;
+      labelPlane.material = labelMat;
+      
+      this.studioGizmoMeshes.angleLabel = labelPlane;
+    }
+    
+    // Update text on dynamic texture
+    const mat = this.studioGizmoMeshes.angleLabel.material as BABYLON.StandardMaterial;
+    const texture = mat.diffuseTexture as BABYLON.DynamicTexture;
+    if (texture) {
+      const ctx = texture.getContext();
+      ctx.clearRect(0, 0, 320, 64);
+      
+      // Draw background
+      ctx.fillStyle = 'rgba(30, 30, 35, 0.9)';
+      ctx.roundRect(4, 4, 312, 56, 8);
+      ctx.fill();
+      
+      // Draw border
+      ctx.strokeStyle = '#4DCCFF'; // Cyan matching yoke ring
+      ctx.lineWidth = 2;
+      ctx.roundRect(4, 4, 312, 56, 8);
+      ctx.stroke();
+      
+      // Draw text
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 22px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(labelText, 160, 32);
+      
+      texture.update();
+    }
+    
+    const yoke = this.studioGizmoMeshes.yokeRing;
+    if (yoke && this.studioGizmoMeshes.angleLabel) {
+      this.studioGizmoMeshes.angleLabel.position = yoke.position.add(new BABYLON.Vector3(0.6, 0.4, 0));
+      this.studioGizmoMeshes.angleLabel.isVisible = true;
+    }
+  }
+  
+  /**
+   * Hide angle label
+   */
+  private hideAngleLabel(): void {
+    if (this.studioGizmoMeshes.angleLabel) {
+      this.studioGizmoMeshes.angleLabel.isVisible = false;
+    }
+  }
+  
+  // ===== LIGHT POV (POINT OF VIEW) MODE =====
+  
+  /**
+   * Activate POV mode - view scene from light's perspective
+   * Uses drag counting to handle overlapping drags safely
+   */
+  private activateLightPOV(lightId: string): void {
+    const lightData = this.lights.get(lightId);
+    if (!lightData) return;
+    
+    // Increment drag count
+    this.lightPOVDragCount++;
+    
+    // If already in POV mode for this light, just increment and return
+    if (this.lightPOVActive && this.lightPOVLightId === lightId) {
+      return;
+    }
+    
+    // If already active for a different light, don't switch (wait for current to finish)
+    if (this.lightPOVActive && this.lightPOVLightId !== lightId) {
+      return;
+    }
+    
+    // Save current camera state only on first activation
+    if (!this.savedCameraState) {
+      this.savedCameraState = {
+        alpha: this.camera.alpha,
+        beta: this.camera.beta,
+        radius: this.camera.radius,
+        target: this.camera.target.clone()
+      };
+    }
+    
+    this.lightPOVLightId = lightId;
+    
+    // Smoothly transition to light's POV
+    const lightPos = lightData.light.position.clone();
+    let lightDir: BABYLON.Vector3;
+    
+    if (lightData.light instanceof BABYLON.SpotLight) {
+      lightDir = lightData.light.direction.clone();
+    } else {
+      lightDir = new BABYLON.Vector3(0, -1, 0); // Default down
+    }
+    
+    // Calculate camera position slightly behind the light
+    const povOffset = lightDir.scale(-0.5);
+    const povPos = lightPos.add(povOffset);
+    const povTarget = lightPos.add(lightDir.scale(5));
+    
+    // Stop any existing animations before starting new ones
+    this.scene.stopAnimation(this.camera);
+    
+    // Animate camera to POV position
+    BABYLON.Animation.CreateAndStartAnimation(
+      'povAlpha',
+      this.camera,
+      'alpha',
+      30,
+      15,
+      this.camera.alpha,
+      Math.atan2(povPos.x - povTarget.x, povPos.z - povTarget.z) + Math.PI,
+      BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
+    
+    BABYLON.Animation.CreateAndStartAnimation(
+      'povBeta',
+      this.camera,
+      'beta',
+      30,
+      15,
+      this.camera.beta,
+      Math.acos((povPos.y - povTarget.y) / povPos.subtract(povTarget).length()),
+      BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
+    
+    BABYLON.Animation.CreateAndStartAnimation(
+      'povRadius',
+      this.camera,
+      'radius',
+      30,
+      15,
+      this.camera.radius,
+      3,
+      BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
+    
+    BABYLON.Animation.CreateAndStartAnimation(
+      'povTarget',
+      this.camera,
+      'target',
+      30,
+      15,
+      this.camera.target,
+      povTarget,
+      BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
+    
+    this.lightPOVActive = true;
+    
+    // Show POV indicator in UI
+    window.dispatchEvent(new CustomEvent('vs-pov-mode-changed', { 
+      detail: { active: true, lightId } 
+    }));
+  }
+  
+  /**
+   * Update POV camera position when light moves
+   */
+  private updateLightPOVCamera(lightId: string): void {
+    if (!this.lightPOVActive) return;
+    
+    const lightData = this.lights.get(lightId);
+    if (!lightData) return;
+    
+    const lightPos = lightData.light.position.clone();
+    let lightDir: BABYLON.Vector3;
+    
+    if (lightData.light instanceof BABYLON.SpotLight) {
+      lightDir = lightData.light.direction.clone();
+    } else {
+      lightDir = new BABYLON.Vector3(0, -1, 0);
+    }
+    
+    const povTarget = lightPos.add(lightDir.scale(5));
+    this.camera.target = povTarget;
+  }
+  
+  /**
+   * Deactivate POV mode - return to saved camera position
+   * Only restores when all concurrent drags have finished
+   */
+  private deactivateLightPOV(): void {
+    // Decrement drag count
+    this.lightPOVDragCount = Math.max(0, this.lightPOVDragCount - 1);
+    
+    // Only restore camera if all drags are complete
+    if (this.lightPOVDragCount > 0) {
+      return; // Still have active drags
+    }
+    
+    if (!this.lightPOVActive || !this.savedCameraState) {
+      // Clear state even if no animation needed
+      this.lightPOVLightId = null;
+      return;
+    }
+    
+    // Stop any existing animations before starting new ones
+    this.scene.stopAnimation(this.camera);
+    
+    // Animate back to saved camera position
+    BABYLON.Animation.CreateAndStartAnimation(
+      'povAlphaBack',
+      this.camera,
+      'alpha',
+      30,
+      20,
+      this.camera.alpha,
+      this.savedCameraState.alpha,
+      BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
+    
+    BABYLON.Animation.CreateAndStartAnimation(
+      'povBetaBack',
+      this.camera,
+      'beta',
+      30,
+      20,
+      this.camera.beta,
+      this.savedCameraState.beta,
+      BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
+    
+    BABYLON.Animation.CreateAndStartAnimation(
+      'povRadiusBack',
+      this.camera,
+      'radius',
+      30,
+      20,
+      this.camera.radius,
+      this.savedCameraState.radius,
+      BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
+    
+    BABYLON.Animation.CreateAndStartAnimation(
+      'povTargetBack',
+      this.camera,
+      'target',
+      30,
+      20,
+      this.camera.target,
+      this.savedCameraState.target,
+      BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
+    
+    this.lightPOVActive = false;
+    this.lightPOVLightId = null;
+    this.savedCameraState = null;
+    
+    window.dispatchEvent(new CustomEvent('vs-pov-mode-changed', { 
+      detail: { active: false } 
+    }));
+  }
+  
+  /**
+   * Toggle studio gizmo mode (vs standard Babylon gizmos)
+   */
+  public toggleStudioGizmoMode(enabled: boolean): void {
+    if (enabled && this.selectedLightId) {
+      // Hide standard gizmos
+      if (this.gizmoManager) {
+        this.gizmoManager.attachToMesh(null);
+      }
+      // Show studio gizmos
+      this.createStudioGizmos(this.selectedLightId);
+    } else {
+      // Hide studio gizmos
+      this.disposeStudioGizmos();
+      // Show standard gizmos if light is selected
+      if (this.selectedLightId && this.gizmoManager) {
+        const lightData = this.lights.get(this.selectedLightId);
+        if (lightData) {
+          this.gizmoManager.attachToMesh(lightData.mesh);
+        }
+      }
+    }
+  }
+
   private setupStudio(): void {
     // Create ambient hemispheric light and store reference for control
     this.ambientLight = new BABYLON.HemisphericLight('ambient', new BABYLON.Vector3(0, 1, 0), this.scene);
@@ -1174,7 +1879,8 @@ class VirtualStudio {
     this.selectedLightId = null;
     this.gizmoManager?.attachToMesh(null);
     
-    // Hide all beam visualizations since no light is selected
+    // Hide all beam visualizations and studio gizmos since no light is selected
+    this.disposeStudioGizmos();
     for (const [, lightData] of this.lights) {
       if (lightData.beamVisualization) {
         lightData.beamVisualization.isVisible = false;
@@ -13126,6 +13832,9 @@ class VirtualStudio {
       
       // Enable snapping to ground when moving
       this.enableGroundSnapping(data.mesh);
+      
+      // Create studio gizmos for realistic light manipulation
+      this.createStudioGizmos(id);
     }
 
     this.updateSceneList();
@@ -13303,6 +14012,7 @@ class VirtualStudio {
     if (this.selectedLightId === id) {
       this.selectedLightId = null;
       this.gizmoManager?.attachToMesh(null);
+      this.disposeStudioGizmos();
     }
 
     this.updateSceneList();
@@ -13329,9 +14039,10 @@ class VirtualStudio {
     // Clear the map
     this.lights.clear();
     
-    // Clear selection
+    // Clear selection and studio gizmos
     this.selectedLightId = null;
     this.gizmoManager?.attachToMesh(null);
+    this.disposeStudioGizmos();
     
     // Reset light counter for new IDs
     this.lightCounter = 0;
