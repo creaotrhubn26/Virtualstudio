@@ -1082,8 +1082,10 @@ class VirtualStudio {
         // Update light position (keep Y)
         lightData.mesh.position.x = newX;
         lightData.mesh.position.z = newZ;
-        lightData.light.position.x = newX;
-        lightData.light.position.z = newZ;
+        if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.PointLight) {
+          lightData.light.position.x = newX;
+          lightData.light.position.z = newZ;
+        }
         
         // Update height slider position
         if (this.studioGizmoMeshes.heightSlider) {
@@ -1169,7 +1171,9 @@ class VirtualStudio {
         
         // Update light position
         lightData.mesh.position.y = newY;
-        lightData.light.position.y = newY;
+        if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.PointLight) {
+          lightData.light.position.y = newY;
+        }
         
         // Update stand pole - use absolute scaling since we used unit height
         const pole = heightSlider.getChildMeshes().find(m => m.name === 'standPole');
@@ -1555,8 +1559,8 @@ class VirtualStudio {
     
     this.lightPOVLightId = lightId;
     
-    // Smoothly transition to light's POV
-    const lightPos = lightData.light.position.clone();
+    // Smoothly transition to light's POV (use mesh position for consistency)
+    const lightPos = lightData.mesh.position.clone();
     let lightDir: BABYLON.Vector3;
     
     if (lightData.light instanceof BABYLON.SpotLight) {
@@ -1635,7 +1639,8 @@ class VirtualStudio {
     const lightData = this.lights.get(lightId);
     if (!lightData) return;
     
-    const lightPos = lightData.light.position.clone();
+    // Use mesh position for consistency
+    const lightPos = lightData.mesh.position.clone();
     let lightDir: BABYLON.Vector3;
     
     if (lightData.light instanceof BABYLON.SpotLight) {
@@ -13788,123 +13793,8 @@ class VirtualStudio {
         this.gizmoManager.scaleGizmoEnabled = false;
         this.gizmoManager.attachToMesh(null);
         
-        // Helper function to update light direction from mesh rotation
-        const updateLightDirectionFromGizmo = () => {
-          const lightData = this.lights.get(id);
-          if (lightData && lightData.light instanceof BABYLON.SpotLight) {
-            // Use stored local forward axis (from forwardAxis metadata or auto-detection)
-            const localForward = ((lightData.mesh as any)._localForwardAxis as BABYLON.Vector3) 
-              || new BABYLON.Vector3(0, 0, -1);
-            
-            // Force compute world matrix for accurate orientation
-            lightData.mesh.computeWorldMatrix(true);
-            
-            let worldForward: BABYLON.Vector3;
-            
-            // Use quaternion-based rotation (gizmos use rotationQuaternion)
-            if (lightData.mesh.absoluteRotationQuaternion) {
-              const rotationMatrix = new BABYLON.Matrix();
-              BABYLON.Matrix.FromQuaternionToRef(lightData.mesh.absoluteRotationQuaternion, rotationMatrix);
-              worldForward = BABYLON.Vector3.TransformNormal(localForward, rotationMatrix);
-            } else if (lightData.mesh.rotationQuaternion) {
-              const rotationMatrix = new BABYLON.Matrix();
-              BABYLON.Matrix.FromQuaternionToRef(lightData.mesh.rotationQuaternion, rotationMatrix);
-              worldForward = BABYLON.Vector3.TransformNormal(localForward, rotationMatrix);
-            } else {
-              // Fallback to Euler angles
-              const rotationMatrix = BABYLON.Matrix.RotationYawPitchRoll(
-                lightData.mesh.rotation.y,
-                lightData.mesh.rotation.x,
-                lightData.mesh.rotation.z
-              );
-              worldForward = BABYLON.Vector3.TransformNormal(localForward, rotationMatrix);
-            }
-            
-            worldForward.normalize();
-            
-            // Update light direction immediately
-            lightData.light.direction = worldForward.clone();
-            
-            // Clear azimuth/elevation to stay in automatic (mesh-based) mode
-            // This ensures gizmo rotation uses mesh rotation, not spherical coordinates
-            lightData.azimuth = undefined;
-            lightData.elevation = undefined;
-            
-            // Update UI sliders to show current direction (display only, not affecting calculation)
-            const azimuthSliderEl = document.getElementById('azimuthSlider') as HTMLInputElement;
-            const elevationSliderEl = document.getElementById('elevationSlider') as HTMLInputElement;
-            const azimuthValueEl = document.getElementById('azimuthValue');
-            const elevationValueEl = document.getElementById('elevationValue');
-            
-            if (azimuthSliderEl && elevationSliderEl) {
-              // Calculate display values for reference
-              const azimuthRad = Math.atan2(worldForward.x, -worldForward.z);
-              const displayAzimuth = azimuthRad * 180 / Math.PI;
-              
-              const clampedY = Math.max(-1, Math.min(1, worldForward.y));
-              const elevationRad = -Math.asin(clampedY);
-              const displayElevation = elevationRad * 180 / Math.PI;
-              
-              // Reset sliders to 0 to indicate automatic mode
-              azimuthSliderEl.value = '0';
-              elevationSliderEl.value = '0';
-              if (azimuthValueEl) azimuthValueEl.textContent = `Auto`;
-              if (elevationValueEl) elevationValueEl.textContent = `Auto`;
-            }
-          }
-        };
-        
-        // Update light direction during gizmo rotation (real-time feedback)
-        const rotationGizmo = rotGizmo;
-        if (rotationGizmo) {
-          // Update during drag for smooth real-time rotation
-          if (rotationGizmo.onDragObservable) {
-            rotationGizmo.onDragObservable.add(() => {
-              updateLightDirectionFromGizmo();
-            });
-          }
-          // Also update at end of drag for final state
-          if (rotationGizmo.onDragEndObservable) {
-            rotationGizmo.onDragEndObservable.add(() => {
-              updateLightDirectionFromGizmo();
-              this.scene.render();
-            });
-          }
-        }
-        
-        // Also handle position gizmo
-        const positionGizmo = posGizmo;
-        if (positionGizmo) {
-          if (positionGizmo.onDragObservable) {
-            positionGizmo.onDragObservable.add(() => {
-              const lightData = this.lights.get(id);
-              if (lightData) {
-                lightData.light.position = lightData.mesh.position.clone();
-                
-                // Dispatch event for real-time updates during drag
-                window.dispatchEvent(new CustomEvent('ch-light-position-changed', {
-                  detail: { lightId: id }
-                }));
-              }
-            });
-          }
-          if (positionGizmo.onDragEndObservable) {
-            positionGizmo.onDragEndObservable.add(() => {
-              // Dispatch final update when drag ends
-              window.dispatchEvent(new CustomEvent('ch-light-position-changed', {
-                detail: { lightId: id }
-              }));
-              window.dispatchEvent(new CustomEvent('ch-light-updated', {
-                detail: { lightId: id }
-              }));
-              this.scene.render();
-            });
-          }
-        }
-        
-        // Note: Removed onAfterWorldMatrixUpdateObservable to avoid infinite loop
-        // (computeWorldMatrix inside handler triggers the observer again)
-        // The onDragObservable handlers provide sufficient real-time updates
+        // Note: Standard gizmo observers removed - studio gizmos handle all manipulation
+        // Studio gizmos provide their own drag handlers for position/rotation updates
       }
       
       // Show beam visualization for selected light
