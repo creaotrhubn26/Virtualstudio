@@ -1842,12 +1842,6 @@ class VirtualStudio {
         <span class="angle-label">Pan:</span> <span id="joystickPanAngle">0°</span>
         <span class="angle-label">Tilt:</span> <span id="joystickTiltAngle">0°</span>
       </div>
-      <div class="micro-jog-controls">
-        <button class="micro-jog-btn" data-axis="pan" data-dir="-1" title="Pan -0.5°">◀</button>
-        <button class="micro-jog-btn" data-axis="tilt" data-dir="1" title="Tilt +0.5°">▲</button>
-        <button class="micro-jog-btn" data-axis="tilt" data-dir="-1" title="Tilt -0.5°">▼</button>
-        <button class="micro-jog-btn" data-axis="pan" data-dir="1" title="Pan +0.5°">▶</button>
-      </div>
     `;
     
     joystickContainer.appendChild(sensitivitySelector);
@@ -1859,15 +1853,6 @@ class VirtualStudio {
         this.setJoystickSensitivity(mode);
         sensitivitySelector.querySelectorAll('.sensitivity-btn').forEach(b => b.classList.remove('active'));
         (e.target as HTMLElement).classList.add('active');
-      });
-    });
-    
-    // Micro-jog buttons for ±0.5° precise adjustments
-    sensitivitySelector.querySelectorAll('.micro-jog-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const axis = (e.target as HTMLElement).dataset.axis;
-        const dir = parseInt((e.target as HTMLElement).dataset.dir || '0');
-        this.microJogLight(axis as 'pan' | 'tilt', dir * 0.5);
       });
     });
   }
