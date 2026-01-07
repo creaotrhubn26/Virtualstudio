@@ -81,6 +81,8 @@ import {
 } from '@mui/icons-material';
 import { CrewMember, CrewRole } from '../core/models/casting';
 import { castingService } from '../services/castingService';
+import CrewAvailabilityDrawer from './CrewAvailabilityDrawer';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import { useToast } from './ToastStack';
 
 // Sort options

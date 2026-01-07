@@ -42,7 +42,15 @@ import { useSnackbar } from 'notistack';
 import {
   calendarEventsApi,
   CalendarEvent,
+  crewConflictsApi,
+  crewNotificationsApi,
+  CrewConflict,
+  candidatesApi,
+  crewApi,
+  locationsApi,
 } from '../services/castingApiService';
+import WarningIcon from '@mui/icons-material/Warning';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 
 interface Candidate {
   id: string;
@@ -61,9 +69,9 @@ interface Location {
 
 interface ProductionCalendarPanelProps {
   projectId: string;
-  candidates: Candidate[];
-  crew: Crew[];
-  locations: Location[];
+  candidates?: Candidate[];
+  crew?: Crew[];
+  locations?: Location[];
   onEventCreate?: (event: CalendarEvent) => void;
 }
 
@@ -77,9 +85,9 @@ const EVENT_TYPES = [
 
 const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
   projectId,
-  candidates,
-  crew,
-  locations,
+  candidates: propCandidates,
+  crew: propCrew,
+  locations: propLocations,
   onEventCreate,
 }) => {
   const { enqueueSnackbar } = useSnackbar();
@@ -99,9 +107,14 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
   const [selectedCrew, setSelectedCrew] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'week'>('list');
+  const [candidates, setCandidates] = useState<Candidate[]>(propCandidates || []);
+  const [crew, setCrew] = useState<Crew[]>(propCrew || []);
+  const [locations, setLocations] = useState<Location[]>(propLocations || []);
+  const [crewConflicts, setCrewConflicts] = useState<Map<string, CrewConflict[]>>(new Map());
 
   useEffect(() => {
     loadEvents();
+    loadProjectData();
   }, [projectId]);
 
   const loadEvents = async () => {
@@ -115,6 +128,57 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
       enqueueSnackbar('Kunne ikke laste kalenderhendelser', { variant: 'error' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadProjectData = async () => {
+    try {
+      if (!propCandidates?.length) {
+        const candidatesData = await candidatesApi.getAll(projectId);
+        setCandidates(candidatesData.map(c => ({ id: c.id, name: c.name })));
+      }
+      if (!propCrew?.length) {
+        const crewData = await crewApi.getAll(projectId);
+        setCrew(crewData.map(c => ({ id: c.id, name: c.name })));
+      }
+      if (!propLocations?.length) {
+        const locationsData = await locationsApi.getAll(projectId);
+        setLocations(locationsData.map(l => ({ id: l.id, name: l.name })));
+      }
+    } catch (error) {
+      console.error('Failed to load project data:', error);
+    }
+  };
+
+  const checkCrewConflicts = async (crewIds: string[], start: string, end: string) => {
+    const conflicts = new Map<string, CrewConflict[]>();
+    for (const crewId of crewIds) {
+      try {
+        const result = await crewConflictsApi.check(crewId, start.split('T')[0], end.split('T')[0]);
+        if (result.hasConflicts) {
+          conflicts.set(crewId, result.conflicts);
+        }
+      } catch (error) {
+        console.error('Failed to check conflicts for crew:', crewId, error);
+      }
+    }
+    setCrewConflicts(conflicts);
+    return conflicts.size > 0;
+  };
+
+  const sendCrewNotifications = async (crewIds: string[], eventTitle: string, eventId: string) => {
+    for (const crewId of crewIds) {
+      try {
+        await crewNotificationsApi.create(crewId, {
+          project_id: projectId,
+          event_id: eventId,
+          notification_type: 'assignment',
+          title: 'Ny tildeling',
+          message: `Du er tildelt til: ${eventTitle}`,
+        });
+      } catch (error) {
+        console.error('Failed to send notification to crew:', crewId, error);
+      }
     }
   };
 
@@ -157,8 +221,21 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
       return;
     }
 
+    if (selectedCrew.length > 0 && startTime && endTime) {
+      const hasConflicts = await checkCrewConflicts(selectedCrew, startTime, endTime);
+      if (hasConflicts) {
+        const conflictingCrewNames = selectedCrew
+          .filter(id => crewConflicts.has(id))
+          .map(id => crew.find(c => c.id === id)?.name)
+          .filter(Boolean)
+          .join(', ');
+        enqueueSnackbar(`Advarsel: Crew-konflikter funnet for: ${conflictingCrewNames}`, { variant: 'warning' });
+      }
+    }
+
     setSubmitting(true);
     try {
+      let eventId = editingEvent?.id;
       if (editingEvent) {
         await calendarEventsApi.update(editingEvent.id, {
           title,
@@ -173,8 +250,14 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
           notes,
         });
         enqueueSnackbar('Hendelse oppdatert!', { variant: 'success' });
+        
+        const newCrewIds = selectedCrew.filter(id => !editingEvent.crew_ids?.includes(id));
+        if (newCrewIds.length > 0) {
+          await sendCrewNotifications(newCrewIds, title, editingEvent.id);
+          enqueueSnackbar(`Varsler sendt til ${newCrewIds.length} nye crew-medlemmer`, { variant: 'info' });
+        }
       } else {
-        await calendarEventsApi.create({
+        eventId = await calendarEventsApi.create({
           projectId,
           title,
           description,
@@ -188,6 +271,11 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
           notes,
         });
         enqueueSnackbar('Hendelse opprettet!', { variant: 'success' });
+        
+        if (selectedCrew.length > 0 && eventId) {
+          await sendCrewNotifications(selectedCrew, title, eventId);
+          enqueueSnackbar(`Varsler sendt til ${selectedCrew.length} crew-medlemmer`, { variant: 'info' });
+        }
       }
       setDialogOpen(false);
       resetForm();

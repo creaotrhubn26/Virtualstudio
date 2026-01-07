@@ -2844,6 +2844,215 @@ async def api_delete_crew(crew_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/casting/crew/{crew_id}/availability")
+async def api_get_crew_availability(crew_id: str, start_date: str = None, end_date: str = None):
+    """Get availability records for a crew member"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            query = "SELECT * FROM crew_availability WHERE crew_id = %s"
+            params = [crew_id]
+            if start_date and end_date:
+                query += " AND start_date <= %s AND end_date >= %s"
+                params.extend([end_date, start_date])
+            query += " ORDER BY start_date"
+            cur.execute(query, params)
+            availability = cur.fetchall()
+        conn.close()
+        return JSONResponse({"success": True, "availability": [dict(a) for a in availability]})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/crew/{crew_id}/availability")
+async def api_save_crew_availability(crew_id: str, request: Request):
+    """Save availability record for a crew member"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        data = await request.json()
+        import uuid
+        availability_id = data.get('id') or str(uuid.uuid4())
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO crew_availability (id, crew_id, project_id, start_date, end_date, status, is_recurring, recurrence_pattern, notes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO UPDATE SET
+                    start_date = EXCLUDED.start_date,
+                    end_date = EXCLUDED.end_date,
+                    status = EXCLUDED.status,
+                    is_recurring = EXCLUDED.is_recurring,
+                    recurrence_pattern = EXCLUDED.recurrence_pattern,
+                    notes = EXCLUDED.notes,
+                    updated_at = CURRENT_TIMESTAMP
+                RETURNING *
+            """, (
+                availability_id,
+                crew_id,
+                data.get('project_id'),
+                data.get('start_date'),
+                data.get('end_date'),
+                data.get('status', 'available'),
+                data.get('is_recurring', False),
+                data.get('recurrence_pattern'),
+                data.get('notes')
+            ))
+            result = cur.fetchone()
+            conn.commit()
+        conn.close()
+        return JSONResponse({"success": True, "availability": dict(result)})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/casting/crew/{crew_id}/availability/{availability_id}")
+async def api_delete_crew_availability(crew_id: str, availability_id: str):
+    """Delete an availability record"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM crew_availability WHERE id = %s AND crew_id = %s", (availability_id, crew_id))
+            conn.commit()
+            deleted = cur.rowcount > 0
+        conn.close()
+        if deleted:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Availability record not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/crew/{crew_id}/notifications")
+async def api_get_crew_notifications(crew_id: str, status: str = None):
+    """Get notifications for a crew member"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            query = "SELECT * FROM crew_notifications WHERE crew_id = %s"
+            params = [crew_id]
+            if status:
+                query += " AND status = %s"
+                params.append(status)
+            query += " ORDER BY created_at DESC LIMIT 50"
+            cur.execute(query, params)
+            notifications = cur.fetchall()
+        conn.close()
+        return JSONResponse({"success": True, "notifications": [dict(n) for n in notifications]})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/crew/{crew_id}/notifications")
+async def api_create_crew_notification(crew_id: str, request: Request):
+    """Create a notification for a crew member"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        data = await request.json()
+        import uuid
+        import json
+        notification_id = str(uuid.uuid4())
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO crew_notifications (id, crew_id, project_id, event_id, notification_type, channel, title, message, payload, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING *
+            """, (
+                notification_id,
+                crew_id,
+                data.get('project_id'),
+                data.get('event_id'),
+                data.get('notification_type', 'assignment'),
+                data.get('channel', 'in_app'),
+                data.get('title', 'Ny tildeling'),
+                data.get('message'),
+                json.dumps(data.get('payload', {})),
+                'pending'
+            ))
+            result = cur.fetchone()
+            conn.commit()
+        conn.close()
+        return JSONResponse({"success": True, "notification": dict(result)})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/casting/notifications/{notification_id}/read")
+async def api_mark_notification_read(notification_id: str):
+    """Mark a notification as read"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                UPDATE crew_notifications SET status = 'read', read_at = CURRENT_TIMESTAMP
+                WHERE id = %s RETURNING *
+            """, (notification_id,))
+            result = cur.fetchone()
+            conn.commit()
+        conn.close()
+        if result:
+            return JSONResponse({"success": True, "notification": dict(result)})
+        raise HTTPException(status_code=404, detail="Notification not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/crew/{crew_id}/conflicts")
+async def api_check_crew_conflicts(crew_id: str, start_date: str, end_date: str):
+    """Check for scheduling conflicts for a crew member"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        import json
+        conn = get_db_connection()
+        conflicts = []
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT * FROM casting_calendar_events 
+                WHERE crew_ids::jsonb @> %s::jsonb
+                AND start_time::date <= %s AND (end_time::date >= %s OR end_time IS NULL)
+                ORDER BY start_time
+            """, (json.dumps([crew_id]), end_date, start_date))
+            events = cur.fetchall()
+            
+            cur.execute("""
+                SELECT * FROM crew_availability 
+                WHERE crew_id = %s AND status = 'unavailable'
+                AND start_date <= %s AND end_date >= %s
+            """, (crew_id, end_date, start_date))
+            unavailable = cur.fetchall()
+        conn.close()
+        
+        for event in events:
+            conflicts.append({
+                "type": "event",
+                "id": event['id'],
+                "title": event['title'],
+                "start_time": str(event['start_time']),
+                "end_time": str(event['end_time']) if event['end_time'] else None
+            })
+        
+        for block in unavailable:
+            conflicts.append({
+                "type": "unavailable",
+                "id": block['id'],
+                "start_date": str(block['start_date']),
+                "end_date": str(block['end_date']),
+                "notes": block['notes']
+            })
+        
+        return JSONResponse({"success": True, "conflicts": conflicts, "has_conflicts": len(conflicts) > 0})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/casting/projects/{project_id}/locations")
 async def api_get_locations(project_id: str):
     if not CASTING_SERVICE_AVAILABLE:

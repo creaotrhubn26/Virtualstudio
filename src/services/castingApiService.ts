@@ -470,6 +470,120 @@ export const calendarEventsApi = {
   },
 };
 
+export interface CrewAvailability {
+  id: string;
+  crew_id: string;
+  project_id?: string;
+  start_date: string;
+  end_date: string;
+  status: 'available' | 'unavailable' | 'tentative';
+  is_recurring?: boolean;
+  recurrence_pattern?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CrewNotification {
+  id: string;
+  crew_id: string;
+  project_id?: string;
+  event_id?: string;
+  notification_type: string;
+  channel: 'in_app' | 'email' | 'push';
+  title: string;
+  message?: string;
+  payload?: Record<string, unknown>;
+  status: 'pending' | 'sent' | 'read';
+  read_at?: string;
+  sent_at?: string;
+  created_at?: string;
+}
+
+export interface CrewConflict {
+  type: 'event' | 'unavailable';
+  id: string;
+  title?: string;
+  start_time?: string;
+  end_time?: string;
+  start_date?: string;
+  end_date?: string;
+  notes?: string;
+}
+
+export const crewAvailabilityApi = {
+  getAll: async (crewId: string, startDate?: string, endDate?: string): Promise<CrewAvailability[]> => {
+    let url = `/crew/${crewId}/availability`;
+    if (startDate && endDate) {
+      url += `?start_date=${startDate}&end_date=${endDate}`;
+    }
+    const result = await apiRequest<{ availability: CrewAvailability[] }>(url);
+    return result.availability;
+  },
+  
+  create: async (crewId: string, availability: {
+    start_date: string;
+    end_date: string;
+    status?: string;
+    is_recurring?: boolean;
+    recurrence_pattern?: string;
+    notes?: string;
+    project_id?: string;
+  }): Promise<CrewAvailability> => {
+    const result = await apiRequest<{ availability: CrewAvailability }>(`/crew/${crewId}/availability`, {
+      method: 'POST',
+      body: JSON.stringify(availability),
+    });
+    return result.availability;
+  },
+  
+  delete: async (crewId: string, availabilityId: string): Promise<boolean> => {
+    await apiRequest(`/crew/${crewId}/availability/${availabilityId}`, { method: 'DELETE' });
+    return true;
+  },
+};
+
+export const crewNotificationsApi = {
+  getAll: async (crewId: string, status?: string): Promise<CrewNotification[]> => {
+    let url = `/crew/${crewId}/notifications`;
+    if (status) url += `?status=${status}`;
+    const result = await apiRequest<{ notifications: CrewNotification[] }>(url);
+    return result.notifications;
+  },
+  
+  create: async (crewId: string, notification: {
+    project_id?: string;
+    event_id?: string;
+    notification_type?: string;
+    channel?: string;
+    title: string;
+    message?: string;
+    payload?: Record<string, unknown>;
+  }): Promise<CrewNotification> => {
+    const result = await apiRequest<{ notification: CrewNotification }>(`/crew/${crewId}/notifications`, {
+      method: 'POST',
+      body: JSON.stringify(notification),
+    });
+    return result.notification;
+  },
+  
+  markAsRead: async (notificationId: string): Promise<CrewNotification> => {
+    const result = await apiRequest<{ notification: CrewNotification }>(`/notifications/${notificationId}/read`, {
+      method: 'PUT',
+    });
+    return result.notification;
+  },
+};
+
+export const crewConflictsApi = {
+  check: async (crewId: string, startDate: string, endDate: string): Promise<{ conflicts: CrewConflict[]; hasConflicts: boolean }> => {
+    const result = await apiRequest<{ conflicts: CrewConflict[]; has_conflicts: boolean }>(
+      `/crew/${crewId}/conflicts?start_date=${startDate}&end_date=${endDate}`
+    );
+    return { conflicts: result.conflicts, hasConflicts: result.has_conflicts };
+  },
+};
+
 export const castingApi = {
   favorites: favoritesApi,
   projects: projectsApi,
@@ -483,6 +597,9 @@ export const castingApi = {
   offers: offersApi,
   contracts: contractsApi,
   calendarEvents: calendarEventsApi,
+  crewAvailability: crewAvailabilityApi,
+  crewNotifications: crewNotificationsApi,
+  crewConflicts: crewConflictsApi,
 };
 
 export default castingApi;
