@@ -209,21 +209,21 @@ SplitSheetPortalView (Hovedkomponent)
 
 - Legg til `Contract` interface:
   ```typescript
-        interface Contract {
-          id?: string;
-          project_id?: string;
-          split_sheet_id?: string;
-          title: string;
-          content: string;
-          parties: ContractParty[];
-          obligations: ContractObligation[];
-          payment_terms: PaymentTerm[];
-          legal_references: string[]; // IDs fra LegalReferences
-          applied_suggestions: string[]; // IDs fra LegalSuggestions
-          status: 'draft' | 'pending_signatures' | 'signed' | 'archived';
-          created_at?: string;
-          updated_at?: string;
-        }
+          interface Contract {
+            id?: string;
+            project_id?: string;
+            split_sheet_id?: string;
+            title: string;
+            content: string;
+            parties: ContractParty[];
+            obligations: ContractObligation[];
+            payment_terms: PaymentTerm[];
+            legal_references: string[]; // IDs fra LegalReferences
+            applied_suggestions: string[]; // IDs fra LegalSuggestions
+            status: 'draft' | 'pending_signatures' | 'signed' | 'archived';
+            created_at?: string;
+            updated_at?: string;
+          }
   ```
 
 
@@ -283,4 +283,3 @@ Alle komponenter skal støtte:
 - ContractEditingInterface skal være en standalone komponent som kan åpnes i en dialog
 - Juridiske forslag skal både auto-applies og tillate manuell valg
 - Alt skal følge Casting Planner design og ikoner
-- **VIKTIG**: LegalReferences skal være integrert med Lovdata API (ikke AI-generert) - bruk `/api/norwegian-laws` endpoint

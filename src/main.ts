@@ -12102,11 +12102,11 @@ class VirtualStudio {
       }
     }
     
-    // Create glowing disc inside the light head reflector to show light is ON
+    // Create glowing disc at SpotLight position - updates dynamically with light
     try {
       const glowDisc = BABYLON.MeshBuilder.CreateDisc(
         `glow_${id}`,
-        { radius: 0.42, tessellation: 32 },
+        { radius: 0.4, tessellation: 32 },
         this.scene
       );
       
@@ -12124,21 +12124,32 @@ class VirtualStudio {
       glowMat.backFaceCulling = false;
       glowDisc.material = glowMat;
       
-      // Parent to lightMesh so it follows
-      glowDisc.parent = lightMesh;
-      
-      // Position disc inside the reflector bowl - at the center of reflector opening
-      // The reflector is tilted at roughly 45 degrees, disc should be inside it
-      glowDisc.position = new BABYLON.Vector3(0, 1.65, 0.25);
-      // Rotate disc to align with reflector opening (facing same direction as light)
-      glowDisc.rotation.x = Math.PI / 4; // 45 degree tilt to match reflector angle
-      
+      // Don't parent - position directly at SpotLight position
       glowDisc.isPickable = false;
       
       // Store reference for later updates
       (lightMesh as any)._glowDisc = glowDisc;
+      (lightMesh as any)._spotLight = spotLight;
       
-      console.log(`Light glow disc created for ${id}`);
+      // Update glow disc position/orientation to match SpotLight
+      const updateGlowDisc = () => {
+        if (glowDisc && !glowDisc.isDisposed() && spotLight) {
+          // Position at SpotLight position
+          glowDisc.position.copyFrom(spotLight.position);
+          
+          // Orient disc to face the light direction
+          const target = spotLight.position.add(spotLight.direction);
+          glowDisc.lookAt(target);
+        }
+      };
+      
+      // Initial update
+      updateGlowDisc();
+      
+      // Update on each frame to follow light
+      this.scene.onBeforeRenderObservable.add(updateGlowDisc);
+      
+      console.log(`Light glow disc created for ${id} at SpotLight position`);
     } catch (e) {
       console.warn('Could not create light glow disc:', e);
     }

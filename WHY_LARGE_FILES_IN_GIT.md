@@ -125,3 +125,4 @@ git push --force --all
 
 Store filer er fortsatt i historikken, men garbage er ryddet. For å fjerne store filer fra historikken, må du kjøre `optimize_git.sh` (men dette omskriver historikken!).
 
+
