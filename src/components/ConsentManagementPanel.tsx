@@ -20,6 +20,9 @@ import {
   Grid,
   Checkbox,
   FormControlLabel,
+  Alert,
+  CircularProgress,
+  Tooltip,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -29,8 +32,13 @@ import {
   Cancel as CancelIcon,
   Description as DescriptionIcon,
   Save as SaveIcon,
+  Send as SendIcon,
+  ContentCopy as CopyIcon,
+  Link as LinkIcon,
+  Schedule as ScheduleIcon,
+  Visibility as ViewedIcon,
 } from '@mui/icons-material';
-import { Consent, ConsentType, Candidate } from '../core/models/casting';
+import { Consent, ConsentType, Candidate, ConsentInvitationStatus } from '../core/models/casting';
 import { consentService } from '../services/consentService';
 import { castingService } from '../services/castingService';
 
@@ -56,6 +64,14 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
     signed: false,
     notes: '',
   });
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [invitingConsent, setInvitingConsent] = useState<Consent | null>(null);
+  const [invitePin, setInvitePin] = useState('');
+  const [invitePassword, setInvitePassword] = useState('');
+  const [inviteExpiresDays, setInviteExpiresDays] = useState(30);
+  const [generatedAccessCode, setGeneratedAccessCode] = useState('');
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Load consents and candidate when projectId or candidateId changes
   useEffect(() => {
@@ -186,6 +202,82 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
     }
   };
 
+  const handleOpenInviteDialog = (consent: Consent) => {
+    setInvitingConsent(consent);
+    setInvitePin('');
+    setInvitePassword('');
+    setInviteExpiresDays(30);
+    setGeneratedAccessCode(consent.accessCode || '');
+    setInviteDialogOpen(true);
+  };
+
+  const handleCloseInviteDialog = () => {
+    setInviteDialogOpen(false);
+    setInvitingConsent(null);
+    setGeneratedAccessCode('');
+    setCopySuccess(false);
+  };
+
+  const handleGenerateAccessCode = async () => {
+    if (!invitingConsent) return;
+    
+    setGeneratingCode(true);
+    try {
+      const response = await fetch('/api/consent/generate-access-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          consentId: invitingConsent.id,
+          pin: invitePin || null,
+          password: invitePassword || null,
+          expiresDays: inviteExpiresDays,
+        }),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setGeneratedAccessCode(data.accessCode);
+        const [loadedConsents] = await Promise.all([
+          consentService.getConsents(projectId, candidateId),
+        ]);
+        setConsents(Array.isArray(loadedConsents) ? loadedConsents : []);
+      }
+    } catch (error) {
+      console.error('Error generating access code:', error);
+    } finally {
+      setGeneratingCode(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    const portalUrl = `${window.location.origin}/consent-portal?consent_code=${generatedAccessCode}`;
+    navigator.clipboard.writeText(portalUrl);
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 2000);
+  };
+
+  const getInvitationStatusLabel = (status?: ConsentInvitationStatus): string => {
+    const labels: Record<ConsentInvitationStatus, string> = {
+      'not_sent': 'Ikke sendt',
+      'sent': 'Sendt',
+      'viewed': 'Sett',
+      'signed': 'Signert',
+      'declined': 'Avslått',
+    };
+    return status ? labels[status] || status : 'Ikke sendt';
+  };
+
+  const getInvitationStatusColor = (status?: ConsentInvitationStatus): string => {
+    const colors: Record<ConsentInvitationStatus, string> = {
+      'not_sent': 'rgba(255,255,255,0.3)',
+      'sent': '#ffb800',
+      'viewed': '#00d4ff',
+      'signed': '#10b981',
+      'declined': '#ff4444',
+    };
+    return status ? colors[status] || 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.3)';
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       {candidate && (
@@ -287,14 +379,26 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
                     </Box>
                     <Box>
                       {!consent.signed && (
-                        <IconButton
-                          size="small"
-                          onClick={() => handleSign(consent.id)}
-                          sx={{ color: '#10b981' }}
-                          title="Merk som signert"
-                        >
-                          <CheckCircleIcon fontSize="small" />
-                        </IconButton>
+                        <>
+                          <Tooltip title="Send signeringsinvitasjon">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenInviteDialog(consent)}
+                              sx={{ color: '#9c27b0' }}
+                            >
+                              <SendIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Merk som signert">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleSign(consent.id)}
+                              sx={{ color: '#10b981' }}
+                            >
+                              <CheckCircleIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </>
                       )}
                       <IconButton
                         size="small"
@@ -312,6 +416,28 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
                       </IconButton>
                     </Box>
                   </Box>
+
+                  {consent.invitationStatus && consent.invitationStatus !== 'not_sent' && (
+                    <Chip
+                      icon={consent.invitationStatus === 'viewed' ? <ViewedIcon sx={{ fontSize: 14 }} /> : <ScheduleIcon sx={{ fontSize: 14 }} />}
+                      label={getInvitationStatusLabel(consent.invitationStatus)}
+                      size="small"
+                      sx={{
+                        bgcolor: getInvitationStatusColor(consent.invitationStatus),
+                        color: '#000',
+                        fontWeight: 500,
+                        fontSize: '10px',
+                        height: 20,
+                        mb: 1,
+                      }}
+                    />
+                  )}
+
+                  {consent.accessCode && !consent.signed && (
+                    <Typography variant="caption" sx={{ color: '#9c27b0', display: 'block', mb: 1 }}>
+                      Kode: {consent.accessCode}
+                    </Typography>
+                  )}
 
                   {consent.date && (
                     <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block', mb: 1 }}>
@@ -450,6 +576,170 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
           >
             Lagre
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Invite Dialog */}
+      <Dialog
+        open={inviteDialogOpen}
+        onClose={handleCloseInviteDialog}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: '#1c2128',
+            color: '#fff',
+            border: '1px solid rgba(156, 39, 176, 0.3)',
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <SendIcon sx={{ color: '#9c27b0' }} />
+            <span>Send signeringsinvitasjon</span>
+          </Stack>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          {invitingConsent && (
+            <Stack spacing={3}>
+              <Alert 
+                severity="info" 
+                sx={{ 
+                  bgcolor: 'rgba(156, 39, 176, 0.1)', 
+                  color: '#ce93d8',
+                  '& .MuiAlert-icon': { color: '#ce93d8' },
+                }}
+              >
+                Generer en unik tilgangskode som kandidaten kan bruke for å signere {getTypeLabel(invitingConsent.type)} digitalt.
+              </Alert>
+
+              <TextField
+                label="PIN-kode (valgfritt)"
+                value={invitePin}
+                onChange={(e) => setInvitePin(e.target.value)}
+                placeholder="F.eks. 1234"
+                helperText="Ekstra sikkerhet - kandidaten må oppgi PIN"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    color: '#fff',
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                    '&:hover fieldset': { borderColor: '#ce93d8' },
+                  },
+                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                  '& .MuiFormHelperText-root': { color: 'rgba(255,255,255,0.5)' },
+                }}
+              />
+
+              <TextField
+                label="Passord (valgfritt)"
+                value={invitePassword}
+                onChange={(e) => setInvitePassword(e.target.value)}
+                type="password"
+                helperText="Ekstra sikkerhet - kandidaten må oppgi passord"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    color: '#fff',
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                    '&:hover fieldset': { borderColor: '#ce93d8' },
+                  },
+                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                  '& .MuiFormHelperText-root': { color: 'rgba(255,255,255,0.5)' },
+                }}
+              />
+
+              <FormControl fullWidth>
+                <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Utløper etter</InputLabel>
+                <Select
+                  value={inviteExpiresDays}
+                  onChange={(e) => setInviteExpiresDays(Number(e.target.value))}
+                  label="Utløper etter"
+                  sx={{
+                    color: '#fff',
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#ce93d8' },
+                  }}
+                >
+                  <MenuItem value={7}>7 dager</MenuItem>
+                  <MenuItem value={14}>14 dager</MenuItem>
+                  <MenuItem value={30}>30 dager</MenuItem>
+                  <MenuItem value={60}>60 dager</MenuItem>
+                  <MenuItem value={90}>90 dager</MenuItem>
+                </Select>
+              </FormControl>
+
+              {generatedAccessCode && (
+                <Box sx={{ 
+                  p: 3, 
+                  bgcolor: 'rgba(156, 39, 176, 0.15)', 
+                  borderRadius: 2,
+                  border: '1px solid rgba(156, 39, 176, 0.3)',
+                }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Tilgangskode:
+                  </Typography>
+                  <Typography 
+                    variant="h4" 
+                    sx={{ 
+                      fontFamily: 'monospace', 
+                      fontWeight: 700, 
+                      color: '#ce93d8',
+                      letterSpacing: '0.1em',
+                      mb: 2,
+                    }}
+                  >
+                    {generatedAccessCode}
+                  </Typography>
+                  
+                  <Stack direction="row" spacing={2}>
+                    <Button
+                      variant="outlined"
+                      startIcon={copySuccess ? <CheckCircleIcon /> : <CopyIcon />}
+                      onClick={handleCopyLink}
+                      sx={{ 
+                        color: copySuccess ? '#10b981' : '#ce93d8', 
+                        borderColor: copySuccess ? '#10b981' : '#ce93d8',
+                      }}
+                    >
+                      {copySuccess ? 'Kopiert!' : 'Kopier lenke'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      startIcon={<LinkIcon />}
+                      onClick={() => {
+                        const url = `${window.location.origin}/consent-portal?consent_code=${generatedAccessCode}`;
+                        window.open(url, '_blank');
+                      }}
+                      sx={{ color: '#ce93d8', borderColor: '#ce93d8' }}
+                    >
+                      Åpne portal
+                    </Button>
+                  </Stack>
+                </Box>
+              )}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2 }}>
+          <Button 
+            onClick={handleCloseInviteDialog} 
+            sx={{ color: 'rgba(255,255,255,0.7)' }}
+          >
+            Lukk
+          </Button>
+          {!generatedAccessCode && (
+            <Button
+              variant="contained"
+              onClick={handleGenerateAccessCode}
+              disabled={generatingCode}
+              startIcon={generatingCode ? <CircularProgress size={16} /> : <SendIcon />}
+              sx={{
+                bgcolor: '#9c27b0',
+                '&:hover': { bgcolor: '#7b1fa2' },
+              }}
+            >
+              {generatingCode ? 'Genererer...' : 'Generer tilgangskode'}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>
