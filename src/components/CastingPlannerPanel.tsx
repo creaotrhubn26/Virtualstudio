@@ -143,6 +143,7 @@ import { CastingProfessionDialog } from './CastingProfessionDialog';
 import NewProjectCreationModal from './Planning/NewProjectCreationModal';
 import { CastingPlannerTutorial } from './CastingPlannerTutorial';
 import { TutorialEditorPanel } from './TutorialEditorPanel';
+import { ConsentManagementPanel } from './ConsentManagementPanel';
 import { Tutorial } from '../services/tutorialService';
 import { ProfessionOnboardingDialog, useProfessionOnboarding, ProfessionType } from './ProfessionOnboardingDialog';
 import { useAuth } from '../hooks/useAuth';
@@ -2960,64 +2961,16 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                 }}
               />
 
-              {selectedCandidate.id && (
-                <>
-                  <Typography variant="subtitle2" sx={{ 
-                    color: '#00d4ff', 
-                    mt: { xs: 3, sm: 3.5, md: 3.25, lg: 3.5, xl: 4 }, 
-                    mb: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 },
-                    fontSize: { xs: '1rem', sm: '1.0625rem', md: '1.03125rem', lg: '1.09375rem', xl: '1.125rem' },
-                    fontWeight: 600,
-                  }}>
-                    Samtykker
-                  </Typography>
-                  {(() => {
-                    const consents = selectedCandidate?.consent || [];
-                    // Note: getConsentStatus is now async, but we use candidate.consent directly here
-                    const status = {
-                      total: consents.length,
-                      signed: consents.filter(c => c.signed).length,
-                      pending: consents.filter(c => !c.signed).length,
-                      missing: [] as string[],
-                    };
-                    return (
-                      <Box>
-                        <Box sx={{ display: 'flex', gap: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 }, mb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, flexWrap: 'wrap' }}>
-                          <Chip label={`Totalt: ${status.total}`} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, height: { xs: 22, sm: 24, md: 23, lg: 26, xl: 30 } }} />
-                          <Chip label={`Signert: ${status.signed}`} size="small" sx={{ bgcolor: '#10b981', color: '#000', fontWeight: 600, fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, height: { xs: 22, sm: 24, md: 23, lg: 26, xl: 30 } }} />
-                          <Chip label={`Venter: ${status.pending}`} size="small" sx={{ bgcolor: '#ffb800', color: '#000', fontWeight: 600, fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, height: { xs: 22, sm: 24, md: 23, lg: 26, xl: 30 } }} />
-                        </Box>
-                        {consents.length > 0 && (
-                          <Box sx={{ maxHeight: { xs: 150, sm: 180, md: 165, lg: 200, xl: 240 }, overflowY: 'auto' }}>
-                            {consents.map((consent) => (
-                              <Box key={consent.id} sx={{ mb: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, p: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1 }}>
-                                <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600, fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
-                                  {consent.type === 'photo_release' ? 'Foto-samtykke' :
-                                   consent.type === 'video_release' ? 'Video-samtykke' :
-                                   consent.type === 'audio_release' ? 'Lyd-samtykke' :
-                                   consent.type === 'location_release' ? 'Lokasjon-samtykke' :
-                                   consent.type === 'minor_consent' ? 'Mindreårig-samtykke' : 'Annet'}
-                                </Typography>
-                                <Chip
-                                  label={consent.signed ? 'Signert' : 'Ikke signert'}
-                                  size="small"
-                                  sx={{
-                                    mt: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 },
-                                    bgcolor: consent.signed ? '#10b981' : '#ffb800',
-                                    color: '#000',
-                                    fontWeight: 600,
-                                    fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' },
-                                    height: { xs: 22, sm: 24, md: 23, lg: 26, xl: 30 },
-                                  }}
-                                />
-                              </Box>
-                            ))}
-                          </Box>
-                        )}
-                      </Box>
-                    );
-                  })()}
-                </>
+              {selectedCandidate.id && currentProject && (
+                <Box sx={{ mt: { xs: 3, sm: 3.5, md: 3.25, lg: 3.5, xl: 4 } }}>
+                  <ConsentManagementPanel
+                    projectId={currentProject.id}
+                    candidateId={selectedCandidate.id}
+                    onUpdate={() => {
+                      loadProjects();
+                    }}
+                  />
+                </Box>
               )}
             </Box>
           )}
