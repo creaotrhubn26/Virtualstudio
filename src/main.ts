@@ -395,8 +395,12 @@ class VirtualStudio {
     this.camera.lowerRadiusLimit = 3;
     this.camera.upperRadiusLimit = 50;
     this.camera.wheelDeltaPercentage = 0.01;
-    this.camera.minZ = 0.1;
+    this.camera.minZ = 0.5;
+    this.camera.maxZ = 200;
     this.camera.fov = (this.cameraSettings.focalLength / 50) * 0.8;
+
+    // Add FXAA anti-aliasing to reduce jagged edges
+    const fxaa = new BABYLON.FxaaPostProcess('fxaa', 1.0, this.camera);
 
     this.gizmoManager = new BABYLON.GizmoManager(this.scene);
     this.gizmoManager.positionGizmoEnabled = true;
