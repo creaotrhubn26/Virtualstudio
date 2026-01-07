@@ -20553,6 +20553,170 @@ html, body {
   transform: scale(0.98);
 }
 
+/* Focus Target Controls */
+.focus-target-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.focus-mode-toggle {
+  display: flex;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.focus-mode-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.focus-mode-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.focus-mode-btn.active {
+  background: rgba(0, 212, 255, 0.2);
+  color: #00d4ff;
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.3);
+}
+
+.focus-mode-btn svg {
+  opacity: 0.7;
+}
+
+.focus-mode-btn.active svg {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.5));
+}
+
+.focus-target-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.focus-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.focus-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #10b981;
+}
+
+.focus-objects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.focus-objects-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.focus-objects-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+.focus-objects-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 212, 255, 0.3);
+  border-radius: 2px;
+}
+
+.focus-object-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+}
+
+.focus-object-item:hover {
+  background: rgba(0, 212, 255, 0.1);
+  border-color: rgba(0, 212, 255, 0.3);
+}
+
+.focus-object-item.selected {
+  background: rgba(0, 212, 255, 0.15);
+  border-color: rgba(0, 212, 255, 0.5);
+}
+
+.focus-object-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.focus-object-icon.human {
+  color: #f59e0b;
+}
+
+.focus-object-icon.product {
+  color: #8b5cf6;
+}
+
+.focus-object-name {
+  flex: 1;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.focus-object-distance {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.hud-action-btn.primary {
+  background: rgba(0, 212, 255, 0.2);
+  color: #00d4ff;
+  border: 1px solid rgba(0, 212, 255, 0.3);
+}
+
+.hud-action-btn.primary:hover {
+  background: rgba(0, 212, 255, 0.35);
+  box-shadow: 0 0 16px rgba(0, 212, 255, 0.3);
+}
+
 /* Responsive adjustments */
 @media (max-width: 1200px) {
   .light-control-hud {
@@ -20579,5 +20743,9 @@ html, body {
   .joystick-knob {
     width: 30px;
     height: 30px;
+  }
+  
+  .focus-mode-btn {
+    padding: 8px 6px;
   }
 }

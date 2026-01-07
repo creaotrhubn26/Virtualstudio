@@ -1764,6 +1764,36 @@
               </div>
             </div>
             
+            <!-- Focus Target Selection -->
+            <div class="hud-section">
+              <div class="hud-section-title">FOKUS MÅL</div>
+              <div class="focus-target-controls">
+                <div class="focus-mode-toggle" id="focusModeToggle">
+                  <button class="focus-mode-btn active" data-mode="human" title="Mennesker - sikter mot ansikt">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="8" r="4"/>
+                      <path d="M20 21a8 8 0 1 0-16 0"/>
+                    </svg>
+                    <span>Mennesker</span>
+                  </button>
+                  <button class="focus-mode-btn" data-mode="product" title="Produkter - sikter mot senter">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    <span>Produkter</span>
+                  </button>
+                </div>
+                <div class="focus-target-info">
+                  <span class="focus-label">Aktivt mål:</span>
+                  <span class="focus-name" id="focusTargetName">Ingen valgt</span>
+                </div>
+                <div class="focus-objects-list" id="focusObjectsList">
+                  <!-- Populated dynamically -->
+                </div>
+              </div>
+            </div>
+            
             <!-- Quick Actions -->
             <div class="hud-actions">
               <button class="hud-action-btn" id="hudResetLight" title="Tilbakestill lys">
@@ -1773,12 +1803,13 @@
                 </svg>
                 Reset
               </button>
-              <button class="hud-action-btn" id="hudPointAtActor" title="Pek mot modell">
+              <button class="hud-action-btn primary" id="hudPointAtFocus" title="Pek mot valgt fokus">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="8" r="4"/>
-                  <path d="M20 21a8 8 0 1 0-16 0"/>
+                  <circle cx="12" cy="12" r="10"/>
+                  <circle cx="12" cy="12" r="6"/>
+                  <circle cx="12" cy="12" r="2"/>
                 </svg>
-                Pek mot modell
+                Pek mot fokus
               </button>
             </div>
           </div>

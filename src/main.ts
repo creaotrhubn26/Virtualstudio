@@ -1530,6 +1530,14 @@ class VirtualStudio {
   private hudJoystickStartPan: number = 0;
   private hudJoystickStartTilt: number = 0;
   
+  // Focus Target System
+  private focusMode: 'human' | 'product' = 'human';
+  private focusTargetId: string | null = null;
+  private focusTargetMesh: BABYLON.Mesh | null = null;
+  private focusAnchor: BABYLON.Vector3 = new BABYLON.Vector3(0, 1.6, 0);
+  private smoothedFocusAnchor: BABYLON.Vector3 = new BABYLON.Vector3(0, 1.6, 0);
+  private focusSmoothingSpeed: number = 8.0;
+  
   /**
    * Show the game-style HUD for controlling light rotation/position
    */
@@ -1633,6 +1641,9 @@ class VirtualStudio {
     
     // Action buttons
     this.initHUDActionButtons();
+    
+    // Focus target system
+    this.initFocusTargetControls();
   }
   
   /**
@@ -1992,89 +2003,241 @@ class VirtualStudio {
       });
     }
     
-    // Point at actor button - finds nearest actor and points light at them
-    const pointBtn = document.getElementById('hudPointAtActor');
+    // Point at focus button - uses the Focus Target system
+    const pointBtn = document.getElementById('hudPointAtFocus');
     if (pointBtn) {
       pointBtn.addEventListener('click', () => {
-        if (!this.hudLightId) return;
-        const lightData = this.lights.get(this.hudLightId);
-        if (!lightData) return;
-        
-        const lightPos = lightData.mesh.position;
-        let targetPos: BABYLON.Vector3 | null = null;
-        let minDistance = Infinity;
-        
-        // Search casting candidates for nearest actor
-        this.castingCandidates.forEach((candidate) => {
-          if (candidate.mesh && candidate.mesh.isEnabled()) {
-            const boundingInfo = candidate.mesh.getBoundingInfo();
-            const center = boundingInfo.boundingSphere.centerWorld;
-            // Target the upper body (face area) - adjust Y up by ~30% of bounding height
-            const bounds = boundingInfo.boundingBox;
-            const height = bounds.maximumWorld.y - bounds.minimumWorld.y;
-            const faceTarget = new BABYLON.Vector3(center.x, center.y + height * 0.3, center.z);
-            
-            const distance = BABYLON.Vector3.Distance(lightPos, faceTarget);
-            if (distance < minDistance) {
-              minDistance = distance;
-              targetPos = faceTarget;
-            }
-          }
-        });
-        
-        // Also check scene nodes for actors/models
-        if (!targetPos && typeof window !== 'undefined') {
-          const store = (window as any).virtualStudioStore?.getState?.();
-          if (store?.scene) {
-            const actors = store.scene.filter((n: any) => 
-              (n.type === 'actor' || n.type === 'model') && n.visible
-            );
-            for (const actor of actors) {
-              if (actor.position) {
-                // Actors typically have face at about 1.6m height
-                const actorPos = new BABYLON.Vector3(
-                  actor.position.x || 0,
-                  (actor.position.y || 0) + 1.6,
-                  actor.position.z || 0
-                );
-                const distance = BABYLON.Vector3.Distance(lightPos, actorPos);
-                if (distance < minDistance) {
-                  minDistance = distance;
-                  targetPos = actorPos;
-                }
-              }
-            }
-          }
-        }
-        
-        // Fallback to center stage at face height if no actors found
-        if (!targetPos) {
-          targetPos = new BABYLON.Vector3(0, 1.6, 0);
-        }
-        
-        // Calculate direction from light to target
-        const direction = targetPos.subtract(lightPos);
-        
-        // Ensure we have a valid direction (avoid zero-length vector)
-        if (direction.length() < 0.01) {
-          direction.set(0, -1, 0); // Point straight down if too close
-        } else {
-          direction.normalize();
-        }
-        
-        // Apply direction to spotlight
-        if (lightData.light instanceof BABYLON.SpotLight) {
-          lightData.light.direction = direction.clone();
-        }
-        
-        // Update mesh rotation to match direction
-        this.setMeshRotationFromDirection(lightData.mesh, direction);
-        
-        // Update visuals
-        this.updateBeamVisualization(this.hudLightId);
-        this.updateHUDValues(lightData);
+        this.pointLightAtFocusTarget();
       });
     }
+  }
+  
+  /**
+   * Initialize Focus Target controls
+   */
+  private initFocusTargetControls(): void {
+    // Focus mode toggle buttons
+    const modeToggle = document.getElementById('focusModeToggle');
+    if (modeToggle) {
+      const buttons = modeToggle.querySelectorAll('.focus-mode-btn');
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const mode = btn.getAttribute('data-mode') as 'human' | 'product';
+          if (mode) {
+            this.setFocusMode(mode);
+            // Update button states
+            buttons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+          }
+        });
+      });
+    }
+    
+    // Initial population of focus objects
+    this.updateFocusObjectsList();
+  }
+  
+  /**
+   * Set the focus mode (human or product)
+   */
+  private setFocusMode(mode: 'human' | 'product'): void {
+    this.focusMode = mode;
+    // Recalculate focus point for current target
+    if (this.focusTargetMesh) {
+      this.focusAnchor = this.calculateFocusPoint(this.focusTargetMesh, mode);
+    }
+    this.updateFocusObjectsList();
+  }
+  
+  /**
+   * Calculate the best focus point for a mesh based on mode
+   */
+  private calculateFocusPoint(mesh: BABYLON.Mesh, mode: 'human' | 'product'): BABYLON.Vector3 {
+    const boundingInfo = mesh.getBoundingInfo();
+    const bounds = boundingInfo.boundingBox;
+    const center = boundingInfo.boundingSphere.centerWorld.clone();
+    
+    if (mode === 'human') {
+      // For humans: target upper third (face/chest area)
+      const height = bounds.maximumWorld.y - bounds.minimumWorld.y;
+      // Move up 30% from center toward top (equivalent to upper third)
+      return new BABYLON.Vector3(
+        center.x,
+        center.y + height * 0.3,
+        center.z
+      );
+    } else {
+      // For products: target bounding box center
+      return center;
+    }
+  }
+  
+  /**
+   * Set a specific object as the focus target
+   */
+  private setFocusTarget(targetId: string, mesh: BABYLON.Mesh, name: string): void {
+    this.focusTargetId = targetId;
+    this.focusTargetMesh = mesh;
+    this.focusAnchor = this.calculateFocusPoint(mesh, this.focusMode);
+    
+    // Update UI
+    const nameEl = document.getElementById('focusTargetName');
+    if (nameEl) nameEl.textContent = name;
+    
+    // Update list selection
+    this.updateFocusObjectsList();
+  }
+  
+  /**
+   * Update the list of focusable objects in the HUD
+   */
+  private updateFocusObjectsList(): void {
+    const listEl = document.getElementById('focusObjectsList');
+    if (!listEl) return;
+    
+    listEl.innerHTML = '';
+    
+    interface FocusableObject {
+      id: string;
+      name: string;
+      mesh: BABYLON.Mesh;
+      type: 'human' | 'product';
+      distance: number;
+    }
+    
+    const objects: FocusableObject[] = [];
+    const lightPos = this.hudLightId ? this.lights.get(this.hudLightId)?.mesh.position : this.camera.position;
+    
+    // Add casting candidates
+    this.castingCandidates.forEach((candidate, id) => {
+      if (candidate.mesh && candidate.mesh.isEnabled()) {
+        const center = candidate.mesh.getBoundingInfo().boundingSphere.centerWorld;
+        const distance = lightPos ? BABYLON.Vector3.Distance(lightPos, center) : 0;
+        
+        // Detect type based on bounding box proportions
+        const bounds = candidate.mesh.getBoundingInfo().boundingBox;
+        const height = bounds.maximumWorld.y - bounds.minimumWorld.y;
+        const width = Math.max(
+          bounds.maximumWorld.x - bounds.minimumWorld.x,
+          bounds.maximumWorld.z - bounds.minimumWorld.z
+        );
+        const isHuman = height > width * 1.5 && height > 1.0; // Tall and upright = human
+        
+        objects.push({
+          id,
+          name: candidate.name,
+          mesh: candidate.mesh,
+          type: isHuman ? 'human' : 'product',
+          distance
+        });
+      }
+    });
+    
+    // Add scene props
+    const store = (window as any).virtualStudioStore?.getState?.();
+    if (store?.scene) {
+      store.scene.forEach((node: any) => {
+        if ((node.type === 'prop' || node.type === 'model') && node.visible) {
+          // Try to find corresponding mesh
+          const mesh = this.scene.getMeshByName(node.id) as BABYLON.Mesh;
+          if (mesh) {
+            const center = mesh.getBoundingInfo().boundingSphere.centerWorld;
+            const distance = lightPos ? BABYLON.Vector3.Distance(lightPos, center) : 0;
+            
+            objects.push({
+              id: node.id,
+              name: node.name || 'Prop',
+              mesh: mesh,
+              type: 'product',
+              distance
+            });
+          }
+        }
+      });
+    }
+    
+    // Filter by current mode if desired (optional - show all but highlight matching)
+    // Sort by distance
+    objects.sort((a, b) => a.distance - b.distance);
+    
+    // Limit to 5 closest objects
+    const displayObjects = objects.slice(0, 5);
+    
+    if (displayObjects.length === 0) {
+      listEl.innerHTML = '<div class="focus-object-item" style="color: rgba(255,255,255,0.4); justify-content: center;">Ingen objekter i scenen</div>';
+      return;
+    }
+    
+    displayObjects.forEach(obj => {
+      const item = document.createElement('div');
+      item.className = `focus-object-item ${obj.id === this.focusTargetId ? 'selected' : ''}`;
+      item.innerHTML = `
+        <div class="focus-object-icon ${obj.type}">${obj.type === 'human' ? '👤' : '📦'}</div>
+        <span class="focus-object-name">${obj.name}</span>
+        <span class="focus-object-distance">${obj.distance.toFixed(1)}m</span>
+      `;
+      item.addEventListener('click', () => {
+        this.setFocusTarget(obj.id, obj.mesh, obj.name);
+      });
+      listEl.appendChild(item);
+    });
+    
+    // Auto-select first if none selected
+    if (!this.focusTargetId && displayObjects.length > 0) {
+      const first = displayObjects[0];
+      this.setFocusTarget(first.id, first.mesh, first.name);
+    }
+  }
+  
+  /**
+   * Point the selected light at the current focus target
+   */
+  private pointLightAtFocusTarget(): void {
+    if (!this.hudLightId) return;
+    const lightData = this.lights.get(this.hudLightId);
+    if (!lightData) return;
+    
+    // Update focus objects list first
+    this.updateFocusObjectsList();
+    
+    // Get target position
+    let targetPos: BABYLON.Vector3;
+    
+    if (this.focusTargetMesh && this.focusTargetMesh.isEnabled()) {
+      // Use calculated focus anchor based on mode
+      targetPos = this.calculateFocusPoint(this.focusTargetMesh, this.focusMode);
+    } else {
+      // Fallback to center stage
+      targetPos = this.focusMode === 'human' 
+        ? new BABYLON.Vector3(0, 1.6, 0)  // Face height for humans
+        : new BABYLON.Vector3(0, 1.0, 0); // Table height for products
+    }
+    
+    const lightPos = lightData.mesh.position;
+    
+    // Calculate direction from light to target
+    const direction = targetPos.subtract(lightPos);
+    
+    // Ensure we have a valid direction
+    if (direction.length() < 0.01) {
+      direction.set(0, -1, 0);
+    } else {
+      direction.normalize();
+    }
+    
+    // Apply direction to spotlight
+    if (lightData.light instanceof BABYLON.SpotLight) {
+      lightData.light.direction = direction.clone();
+    }
+    
+    // Update mesh rotation
+    this.setMeshRotationFromDirection(lightData.mesh, direction);
+    
+    // Update visuals
+    this.updateBeamVisualization(this.hudLightId);
+    this.updateHUDValues(lightData);
+    
+    console.log(`Light pointed at focus target: mode=${this.focusMode}, target=${targetPos.toString()}`);
   }
   
   /**
