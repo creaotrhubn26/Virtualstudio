@@ -137,6 +137,66 @@ def run_migration():
         cur.execute("CREATE INDEX IF NOT EXISTS idx_equipment_locations_equipment ON casting_equipment_locations(equipment_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_equipment_locations_location ON casting_equipment_locations(location_id)")
         
+        # Equipment Templates (Utstyrs-maler)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS casting_equipment_templates (
+                id VARCHAR(255) PRIMARY KEY,
+                project_id VARCHAR(255) NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                description TEXT,
+                category VARCHAR(100),
+                use_case VARCHAR(255),
+                is_default BOOLEAN DEFAULT FALSE,
+                created_by VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # Equipment Template Items (Mal-elementer)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS casting_equipment_template_items (
+                id VARCHAR(255) PRIMARY KEY,
+                template_id VARCHAR(255) NOT NULL REFERENCES casting_equipment_templates(id) ON DELETE CASCADE,
+                name VARCHAR(255) NOT NULL,
+                description TEXT,
+                category VARCHAR(100),
+                brand VARCHAR(255),
+                model VARCHAR(255),
+                quantity INTEGER DEFAULT 1,
+                is_required BOOLEAN DEFAULT TRUE,
+                external_url TEXT,
+                estimated_price DECIMAL(12, 2),
+                notes TEXT,
+                sort_order INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # Foto.no Product Links (Produktlenker)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS casting_equipment_vendor_links (
+                id VARCHAR(255) PRIMARY KEY,
+                category VARCHAR(100) NOT NULL,
+                subcategory VARCHAR(100),
+                vendor_name VARCHAR(255) DEFAULT 'foto.no',
+                product_name VARCHAR(255) NOT NULL,
+                product_url TEXT NOT NULL,
+                affiliate_url TEXT,
+                price DECIMAL(12, 2),
+                image_url TEXT,
+                description TEXT,
+                is_recommended BOOLEAN DEFAULT FALSE,
+                sort_order INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_equipment_templates_project ON casting_equipment_templates(project_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_equipment_template_items_template ON casting_equipment_template_items(template_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_equipment_vendor_links_category ON casting_equipment_vendor_links(category)")
+        
         conn.commit()
         print("Equipment management tables created successfully")
         return True
