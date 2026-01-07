@@ -774,10 +774,10 @@ class VirtualStudio {
     
     // Subtle bloom for emissive materials (light bulbs, screens)
     this.renderingPipeline.bloomEnabled = true;
-    this.renderingPipeline.bloomThreshold = 0.8;
-    this.renderingPipeline.bloomWeight = 0.3;
+    this.renderingPipeline.bloomThreshold = 0.7;
+    this.renderingPipeline.bloomWeight = 0.35;
     this.renderingPipeline.bloomKernel = 64;
-    this.renderingPipeline.bloomScale = 0.5;
+    this.renderingPipeline.bloomScale = 0.6;
     
     // Depth of Field (disabled by default, enabled via camera settings)
     this.renderingPipeline.depthOfFieldEnabled = false;
@@ -12406,14 +12406,14 @@ class VirtualStudio {
       // Create a small sphere as the "light bulb"
       const bulbSphere = BABYLON.MeshBuilder.CreateSphere(
         `bulb_${id}`,
-        { diameter: 0.12, segments: 16 },
+        { diameter: 0.15, segments: 16 },
         this.scene
       );
       
       // Create emissive material for the bulb
       const bulbMat = new BABYLON.PBRMaterial(`bulbMat_${id}`, this.scene);
       bulbMat.emissiveColor = color.clone();
-      bulbMat.emissiveIntensity = Math.min(5.0, 2.0 + intensity);
+      bulbMat.emissiveIntensity = Math.min(6.0, 2.5 + intensity);
       bulbMat.albedoColor = new BABYLON.Color3(1, 1, 1);
       bulbMat.metallic = 0;
       bulbMat.roughness = 1;
@@ -12428,16 +12428,16 @@ class VirtualStudio {
       // Use stored localForwardAxis from the mesh, or default to forward direction
       const storedForwardAxis = (lightMesh as any)._localForwardAxis as BABYLON.Vector3 | undefined;
       const forwardDir = storedForwardAxis ? storedForwardAxis.clone() : new BABYLON.Vector3(0, 0, -1);
-      const bulbOffset = forwardDir.scale(0.6);
+      const bulbOffset = forwardDir.scale(0.55);
       bulbSphere.position = new BABYLON.Vector3(0, 1.5, 0).add(bulbOffset);
       
-      // Add to GlowLayer
+      // Add to GlowLayer with improved settings
       if (!this.glowLayer) {
         this.glowLayer = new BABYLON.GlowLayer("studioGlow", this.scene, {
           mainTextureFixedSize: 512,
-          blurKernelSize: 48
+          blurKernelSize: 64
         });
-        this.glowLayer.intensity = 0.7;
+        this.glowLayer.intensity = 0.85;
       }
       
       this.glowLayer.addIncludedOnlyMesh(bulbSphere as BABYLON.Mesh);
