@@ -1468,6 +1468,165 @@ async def api_delete_candidate(candidate_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ==================== CONSENT CRUD API ====================
+
+@app.get("/api/casting/projects/{project_id}/candidates/{candidate_id}/consents")
+async def api_get_consents(project_id: str, candidate_id: str):
+    """Get all consents for a candidate"""
+    try:
+        from casting_service import get_db_connection
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+    except ImportError:
+        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT id, project_id, candidate_id, type, title, description,
+                       signed, date, document, notes, access_code, invitation_status,
+                       invitation_sent_at, signature_data, expires_at, template_id,
+                       created_at, updated_at
+                FROM casting_consents
+                WHERE project_id = %s AND candidate_id = %s
+                ORDER BY created_at DESC
+            """, (project_id, candidate_id))
+            rows = cur.fetchall()
+            
+            consents = []
+            for row in rows:
+                consent = {
+                    'id': row['id'],
+                    'projectId': row['project_id'],
+                    'candidateId': row['candidate_id'],
+                    'type': row['type'],
+                    'title': row['title'],
+                    'description': row['description'],
+                    'signed': row['signed'] or row.get('granted', False),
+                    'date': row['date'].isoformat() if row['date'] else None,
+                    'document': row['document'],
+                    'notes': row['notes'],
+                    'accessCode': row['access_code'],
+                    'invitationStatus': row['invitation_status'],
+                    'invitationSentAt': row['invitation_sent_at'].isoformat() if row['invitation_sent_at'] else None,
+                    'signatureData': row['signature_data'],
+                    'expiresAt': row['expires_at'].isoformat() if row['expires_at'] else None,
+                    'createdAt': row['created_at'].isoformat() if row['created_at'] else None,
+                    'updatedAt': row['updated_at'].isoformat() if row['updated_at'] else None,
+                }
+                consents.append(consent)
+            
+            return JSONResponse({"success": True, "consents": consents})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.post("/api/casting/consents")
+async def api_save_consent(request: Request):
+    """Create or update a consent"""
+    try:
+        from casting_service import get_db_connection
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+        import json
+    except ImportError:
+        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
+    
+    body = await request.json()
+    consent_id = body.get('id')
+    project_id = body.get('projectId')
+    candidate_id = body.get('candidateId')
+    consent_type = body.get('type')
+    
+    if not project_id or not candidate_id or not consent_type:
+        return JSONResponse({"success": False, "error": "Missing required fields"}, status_code=400)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            if consent_id:
+                # Update existing
+                cur.execute("""
+                    UPDATE casting_consents 
+                    SET type = %s, title = %s, description = %s, signed = %s,
+                        date = %s, document = %s, notes = %s, 
+                        signature_data = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                    RETURNING id
+                """, (
+                    consent_type,
+                    body.get('title'),
+                    body.get('description'),
+                    body.get('signed', False),
+                    body.get('date'),
+                    body.get('document'),
+                    body.get('notes'),
+                    json.dumps(body.get('signatureData')) if body.get('signatureData') else None,
+                    consent_id
+                ))
+            else:
+                # Create new
+                import uuid
+                consent_id = f"consent-{uuid.uuid4().hex[:12]}"
+                cur.execute("""
+                    INSERT INTO casting_consents 
+                    (id, project_id, candidate_id, type, title, description, signed, notes, created_at, updated_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    RETURNING id
+                """, (
+                    consent_id,
+                    project_id,
+                    candidate_id,
+                    consent_type,
+                    body.get('title'),
+                    body.get('description'),
+                    body.get('signed', False),
+                    body.get('notes')
+                ))
+            
+            conn.commit()
+            return JSONResponse({"success": True, "consentId": consent_id})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.delete("/api/casting/consents/{consent_id}")
+async def api_delete_consent(consent_id: str):
+    """Delete a consent"""
+    try:
+        from casting_service import get_db_connection
+        import psycopg2
+    except ImportError:
+        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM casting_consents WHERE id = %s", (consent_id,))
+            deleted = cur.rowcount > 0
+            conn.commit()
+            
+            if deleted:
+                return JSONResponse({"success": True})
+            return JSONResponse({"success": False, "error": "Consent not found"}, status_code=404)
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
 @app.get("/api/casting/projects/{project_id}/roles")
 async def api_get_roles(project_id: str):
     if not CASTING_SERVICE_AVAILABLE:

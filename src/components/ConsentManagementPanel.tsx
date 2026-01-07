@@ -145,7 +145,7 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const consent: Consent = editingConsent
       ? {
           ...editingConsent,
@@ -155,6 +155,7 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
       : {
           id: `consent-${Date.now()}`,
           candidateId,
+          projectId,
           type: formData.type || 'photo_release',
           signed: formData.signed || false,
           date: formData.signed ? new Date().toISOString() : undefined,
@@ -164,8 +165,9 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
           updatedAt: new Date().toISOString(),
         };
 
-    consentService.updateConsent(projectId, candidateId, consent);
-    setConsents(consentService.getConsents(projectId, candidateId));
+    await consentService.updateConsent(projectId, candidateId, consent);
+    const loadedConsents = await consentService.getConsents(projectId, candidateId);
+    setConsents(Array.isArray(loadedConsents) ? loadedConsents : []);
     handleCloseDialog();
     if (onUpdate) onUpdate();
   };
