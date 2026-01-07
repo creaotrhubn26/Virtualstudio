@@ -145,6 +145,8 @@ import { CastingPlannerTutorial } from './CastingPlannerTutorial';
 import { TutorialEditorPanel } from './TutorialEditorPanel';
 import { ConsentManagementPanel } from './ConsentManagementPanel';
 import { Tutorial } from '../services/tutorialService';
+import OffersContractsPanel from './OffersContractsPanel';
+import ProductionCalendarPanel from './ProductionCalendarPanel';
 import { ProfessionOnboardingDialog, useProfessionOnboarding, ProfessionType } from './ProfessionOnboardingDialog';
 import { useAuth } from '../hooks/useAuth';
 import { ProjectProvider } from '../contexts/ProjectContext';
