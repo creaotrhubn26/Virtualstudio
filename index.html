@@ -1715,13 +1715,14 @@
                 </div>
               </div>
               <div class="rotation-values">
-                <div class="rotation-value">
-                  <span class="value-label">Tilt</span>
-                  <span class="value-number" id="hudTiltValue">0°</span>
+                <div class="sensitivity-modes-static">
+                  <button class="sensitivity-btn" data-mode="fine" title="Fin (5°)">F</button>
+                  <button class="sensitivity-btn active" data-mode="normal" title="Normal (15°)">N</button>
+                  <button class="sensitivity-btn" data-mode="rapid" title="Rask (45°)">R</button>
                 </div>
-                <div class="rotation-value">
-                  <span class="value-label">Pan</span>
-                  <span class="value-number" id="hudPanValue">0°</span>
+                <div class="angle-values-row">
+                  <span class="angle-item">Pan: <span id="hudPanValue">0°</span></span>
+                  <span class="angle-item">Tilt: <span id="hudTiltValue">0°</span></span>
                 </div>
               </div>
             </div>

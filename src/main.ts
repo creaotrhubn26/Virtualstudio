@@ -1820,28 +1820,19 @@ class VirtualStudio {
   }
   
   /**
-   * Initialize joystick sensitivity controls and micro-jog buttons
+   * Initialize joystick sensitivity controls from static HTML
    */
   private initJoystickSensitivityControls(joystickContainer: HTMLElement): void {
-    // Create sensitivity mode selector (only F/N/R buttons - Tilt/Pan display is in HTML)
-    const sensitivitySelector = document.createElement('div');
-    sensitivitySelector.className = 'joystick-sensitivity-selector';
-    sensitivitySelector.innerHTML = `
-      <div class="sensitivity-modes">
-        <button class="sensitivity-btn" data-mode="fine" title="Fin (5°)">F</button>
-        <button class="sensitivity-btn active" data-mode="normal" title="Normal (15°)">N</button>
-        <button class="sensitivity-btn" data-mode="rapid" title="Rask (45°)">R</button>
-      </div>
-    `;
-    
-    joystickContainer.appendChild(sensitivitySelector);
+    // Find the static sensitivity buttons in the HTML
+    const sensitivityContainer = document.querySelector('.sensitivity-modes-static');
+    if (!sensitivityContainer) return;
     
     // Sensitivity mode buttons
-    sensitivitySelector.querySelectorAll('.sensitivity-btn').forEach(btn => {
+    sensitivityContainer.querySelectorAll('.sensitivity-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const mode = (e.target as HTMLElement).dataset.mode as 'fine' | 'normal' | 'rapid';
         this.setJoystickSensitivity(mode);
-        sensitivitySelector.querySelectorAll('.sensitivity-btn').forEach(b => b.classList.remove('active'));
+        sensitivityContainer.querySelectorAll('.sensitivity-btn').forEach(b => b.classList.remove('active'));
         (e.target as HTMLElement).classList.add('active');
       });
     });
