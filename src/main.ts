@@ -1609,10 +1609,21 @@ class VirtualStudio {
       const tiltAngle = Math.asin(clampedY) * (180 / Math.PI);
       const panAngle = Math.atan2(dir.x, dir.z) * (180 / Math.PI);
       
+      // Update main HUD values
       const tiltEl = document.getElementById('hudTiltValue');
       const panEl = document.getElementById('hudPanValue');
       if (tiltEl) tiltEl.textContent = `${tiltAngle.toFixed(0)}°`;
       if (panEl) panEl.textContent = `${panAngle.toFixed(0)}°`;
+      
+      // Also update joystick angle display
+      const joystickPanEl = document.getElementById('joystickPanAngle');
+      const joystickTiltEl = document.getElementById('joystickTiltAngle');
+      if (joystickPanEl) joystickPanEl.textContent = `${panAngle.toFixed(0)}°`;
+      if (joystickTiltEl) joystickTiltEl.textContent = `${tiltAngle.toFixed(0)}°`;
+      
+      // Store current angles for joystick reference
+      this.hudJoystickStartPan = panAngle * (Math.PI / 180);
+      this.hudJoystickStartTilt = tiltAngle * (Math.PI / 180);
     }
   }
   
