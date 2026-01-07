@@ -1,7 +1,7 @@
 {
-  "name": "Virtual Studio - Team Planner",
-  "short_name": "VS Planner",
-  "description": "Profesjonell produksjonsplanlegging og team-samarbeid for foto og video",
+  "name": "Casting Planner",
+  "short_name": "Casting",
+  "description": "Profesjonell produksjonsplanlegging og casting-administrasjon for foto og video",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
@@ -9,10 +9,10 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "/creatorhub-vs-icon-32.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "src": "/casting-planner-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
   "categories": ["productivity", "business"],
