@@ -12106,7 +12106,7 @@ class VirtualStudio {
     try {
       const glowDisc = BABYLON.MeshBuilder.CreateDisc(
         `glow_${id}`,
-        { radius: 0.55, tessellation: 32 },
+        { radius: 0.42, tessellation: 32 },
         this.scene
       );
       
@@ -12127,12 +12127,10 @@ class VirtualStudio {
       // Parent to lightMesh so it follows
       glowDisc.parent = lightMesh;
       
-      // Position disc inside the reflector bowl
-      // The reflector bowl is the large dish - disc needs to be inside it
-      // Adjust position based on model geometry
-      glowDisc.position = new BABYLON.Vector3(0, 1.55, -0.3);
+      // Position disc inside the reflector bowl - centered and pushed back
+      glowDisc.position = new BABYLON.Vector3(0, 1.5, -0.15);
       // Rotate disc to face outward from reflector bowl
-      glowDisc.rotation.x = -Math.PI / 2.5; // Tilt to match reflector angle
+      glowDisc.rotation.x = -Math.PI / 2.5;
       
       glowDisc.isPickable = false;
       
