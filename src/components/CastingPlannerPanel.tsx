@@ -898,6 +898,10 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
   };
 
   const handleCreateRole = () => {
+    if (!currentProject) {
+      toast.showWarning('Du må opprette et prosjekt først');
+      return;
+    }
     const newRole: Role = {
       id: `role-${Date.now()}`,
       name: '',
