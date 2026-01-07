@@ -12711,28 +12711,56 @@ class VirtualStudio {
   }
   
   private addLightHighlight(mesh: BABYLON.Mesh): void {
-    // Store original outline width
+    const highlightColor = new BABYLON.Color3(0.3, 0.7, 1.0); // Cyan highlight
+    const outlineWidth = 0.02;
+    
+    // Apply to main mesh
     if (!(mesh as any)._originalOutlineWidth) {
       (mesh as any)._originalOutlineWidth = mesh.outlineWidth;
-      (mesh as any)._originalOutlineColor = mesh.outlineColor;
+      (mesh as any)._originalOutlineColor = mesh.outlineColor?.clone();
     }
-    
-    // Add outline highlight
     mesh.renderOutline = true;
-    mesh.outlineWidth = 0.02;
-    mesh.outlineColor = new BABYLON.Color3(0.3, 0.7, 1.0); // Cyan highlight
+    mesh.outlineWidth = outlineWidth;
+    mesh.outlineColor = highlightColor;
+    
+    // Apply to all child meshes as well
+    const children = mesh.getChildMeshes(false);
+    children.forEach(child => {
+      if (child instanceof BABYLON.Mesh) {
+        if (!(child as any)._originalOutlineWidth) {
+          (child as any)._originalOutlineWidth = child.outlineWidth;
+          (child as any)._originalOutlineColor = child.outlineColor?.clone();
+        }
+        child.renderOutline = true;
+        child.outlineWidth = outlineWidth;
+        child.outlineColor = highlightColor;
+      }
+    });
   }
   
   private removeLightHighlight(mesh: BABYLON.Mesh): void {
-    // Restore original outline or remove it
+    // Restore original outline or remove it from main mesh
     if ((mesh as any)._originalOutlineWidth !== undefined) {
       mesh.outlineWidth = (mesh as any)._originalOutlineWidth;
       if ((mesh as any)._originalOutlineColor) {
         mesh.outlineColor = (mesh as any)._originalOutlineColor;
-      } else {
-        mesh.renderOutline = false;
       }
     }
+    mesh.renderOutline = false;
+    
+    // Also remove from all child meshes
+    const children = mesh.getChildMeshes(false);
+    children.forEach(child => {
+      if (child instanceof BABYLON.Mesh) {
+        if ((child as any)._originalOutlineWidth !== undefined) {
+          child.outlineWidth = (child as any)._originalOutlineWidth;
+          if ((child as any)._originalOutlineColor) {
+            child.outlineColor = (child as any)._originalOutlineColor;
+          }
+        }
+        child.renderOutline = false;
+      }
+    });
   }
   
   private addActorHighlight(mesh: BABYLON.Mesh): void {
