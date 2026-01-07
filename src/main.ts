@@ -13173,6 +13173,23 @@ class VirtualStudio {
       // Only show beam if light is enabled and selected
       data.beamVisualization.isVisible = enabled && this.selectedLightId === data.mesh.name.replace('mesh_', 'light_');
     }
+    
+    // Update glow bulb visibility - hide when light is off
+    const glowBulb = (data.mesh as any)._glowBulb as BABYLON.Mesh | undefined;
+    if (glowBulb) {
+      glowBulb.setEnabled(enabled);
+      // Also update the bulb material emissive intensity
+      if (glowBulb.material) {
+        const bulbMat = glowBulb.material as BABYLON.PBRMaterial;
+        if (enabled) {
+          const color = this.cctToColor(data.cct);
+          bulbMat.emissiveColor = color.clone();
+          bulbMat.emissiveIntensity = Math.min(6.0, 2.5 + (data.intensity || 1));
+        } else {
+          bulbMat.emissiveIntensity = 0;
+        }
+      }
+    }
   }
 
   public toggleLight(id: string, enabled?: boolean): void {
