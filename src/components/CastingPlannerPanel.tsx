@@ -947,6 +947,10 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
   };
 
   const handleCreateCandidate = () => {
+    if (!currentProject) {
+      toast.showWarning('Du må opprette et prosjekt først');
+      return;
+    }
     const newCandidate: Candidate = {
       id: `candidate-${Date.now()}`,
       name: '',
@@ -996,7 +1000,11 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
   };
 
   const handleCreateSchedule = () => {
-    if (!currentProject || currentProject.candidates.length === 0 || currentProject.roles.length === 0) {
+    if (!currentProject) {
+      toast.showWarning('Du må opprette et prosjekt først');
+      return;
+    }
+    if (currentProject.candidates.length === 0 || currentProject.roles.length === 0) {
       toast.showWarning('Du må ha minst én kandidat og én rolle før du kan opprette timeplan');
       return;
     }
@@ -2243,7 +2251,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           setCandidateDialogOpen(false);
           setSelectedCandidate(null);
         }}
-        maxWidth="lg"
+        maxWidth="md"
         fullWidth
         container={() => document.body}
         TransitionComponent={Grow}
@@ -2277,44 +2285,29 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           borderBottom: '1px solid rgba(255,255,255,0.1)',
           display: 'flex',
           alignItems: 'center',
-          gap: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 },
-          py: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 },
-          px: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 },
+          justifyContent: 'space-between',
+          gap: 2,
+          py: 2,
+          px: 2.5,
         }}>
-          <PersonIcon sx={{ fontSize: { xs: '1.5rem', sm: '1.75rem', md: '1.625rem', lg: '1.875rem', xl: '2rem' }, color: '#00d4ff' }} />
-          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-            <Typography
-              variant="h6"
-              component="div"
-              sx={{
-                fontSize: { xs: '1.125rem', sm: '1.375rem', md: '1.25rem', lg: '1.5rem', xl: '1.75rem' },
-                fontWeight: 600,
-                lineHeight: 1.2,
-                mb: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 },
-              }}
-            >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <PersonIcon sx={{ fontSize: '1.5rem', color: '#00d4ff' }} />
+            <Typography variant="h6" sx={{ fontSize: '1.125rem', fontWeight: 600 }}>
               {selectedCandidate?.id && !selectedCandidate.name ? 'Ny kandidat' : 'Rediger kandidat'}
             </Typography>
-            {selectedCandidate?.name && (
-              <Typography
-                variant="body2"
-                sx={{
-                  color: 'rgba(255,255,255,0.6)',
-                  fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.8125rem', lg: '0.9375rem', xl: '1rem' },
-                  fontWeight: 400,
-                }}
-              >
-                {selectedCandidate.name}
-              </Typography>
-            )}
           </Box>
+          <IconButton
+            onClick={() => {
+              setCandidateDialogOpen(false);
+              setSelectedCandidate(null);
+            }}
+            size="small"
+            sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#fff' } }}
+          >
+            <CloseIcon />
+          </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ 
-          pt: { xs: 3, sm: 3.5, md: 3.25, lg: 3.5, xl: 4 },
-          px: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 },
-          pb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 },
-          overflow: 'visible',
-        }}>
+        <DialogContent sx={{ pt: 3, px: 2.5, pb: 2, overflow: 'visible' }}>
           {selectedCandidate && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 } }}>
               <TextField
@@ -2721,7 +2714,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           setScheduleDialogOpen(false);
           setSelectedSchedule(null);
         }}
-        maxWidth="lg"
+        maxWidth="md"
         fullWidth
         container={() => document.body}
         TransitionComponent={Grow}
@@ -2755,43 +2748,29 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           borderBottom: '1px solid rgba(255,255,255,0.1)',
           display: 'flex',
           alignItems: 'center',
-          gap: isDesktop ? 2 : 1.5,
-          py: isDesktop ? 2.5 : 2,
+          justifyContent: 'space-between',
+          gap: 2,
+          py: 2,
+          px: 2.5,
         }}>
-          <CalendarIcon sx={{ fontSize: isDesktop ? '2rem' : '1.5rem', color: '#00d4ff' }} />
-          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-            <Typography
-              variant="h6"
-              component="div"
-              sx={{
-                fontSize: isDesktop ? '1.75rem' : isTablet ? '1.375rem' : '1.125rem',
-                fontWeight: 600,
-                lineHeight: 1.2,
-                mb: 0.5,
-              }}
-            >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <CalendarIcon sx={{ fontSize: '1.5rem', color: '#00d4ff' }} />
+            <Typography variant="h6" sx={{ fontSize: '1.125rem', fontWeight: 600 }}>
               {selectedSchedule?.id && !selectedSchedule.date ? 'Ny timeplan' : 'Rediger timeplan'}
             </Typography>
-            {selectedSchedule?.date && (
-              <Typography
-                variant="body2"
-                sx={{
-                  color: 'rgba(255,255,255,0.6)',
-                  fontSize: isDesktop ? '1rem' : isTablet ? '0.875rem' : '0.75rem',
-                  fontWeight: 400,
-                }}
-              >
-                {selectedSchedule.date} {selectedSchedule.time && `kl. ${selectedSchedule.time}`}
-              </Typography>
-            )}
           </Box>
+          <IconButton
+            onClick={() => {
+              setScheduleDialogOpen(false);
+              setSelectedSchedule(null);
+            }}
+            size="small"
+            sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#fff' } }}
+          >
+            <CloseIcon />
+          </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ 
-          pt: isDesktop ? 4 : 3,
-          px: isDesktop ? 3 : 2,
-          pb: isDesktop ? 3 : 2,
-          overflow: 'visible',
-        }}>
+        <DialogContent sx={{ pt: 3, px: 2.5, pb: 2, overflow: 'visible' }}>
           {selectedSchedule && currentProject && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: isDesktop ? 3 : 2 }}>
               <FormControl fullWidth>
