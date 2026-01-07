@@ -2518,6 +2518,7 @@ class VirtualStudio {
   /**
    * Set mesh rotation quaternion to look in specified direction
    * Handles edge cases like looking straight up/down
+   * Note: Studio light models typically have their light head pointing in -Z direction
    */
   private setMeshRotationFromDirection(mesh: BABYLON.Mesh, direction: BABYLON.Vector3): void {
     const dir = direction.normalize();
@@ -2531,19 +2532,29 @@ class VirtualStudio {
     }
     
     // Create rotation matrix from direction
-    const right = BABYLON.Vector3.Cross(up, dir).normalize();
-    const correctedUp = BABYLON.Vector3.Cross(dir, right).normalize();
+    // The light model faces -Z, so we align -Z with our target direction
+    const forward = dir.clone();
+    const right = BABYLON.Vector3.Cross(up, forward).normalize();
+    const correctedUp = BABYLON.Vector3.Cross(forward, right).normalize();
     
     const rotMatrix = BABYLON.Matrix.Identity();
     rotMatrix.setRowFromFloats(0, right.x, right.y, right.z, 0);
     rotMatrix.setRowFromFloats(1, correctedUp.x, correctedUp.y, correctedUp.z, 0);
-    rotMatrix.setRowFromFloats(2, dir.x, dir.y, dir.z, 0);
+    rotMatrix.setRowFromFloats(2, forward.x, forward.y, forward.z, 0);
     
     // Ensure mesh uses quaternion
     if (!mesh.rotationQuaternion) {
       mesh.rotationQuaternion = BABYLON.Quaternion.Identity();
     }
-    mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(rotMatrix);
+    
+    // Apply the rotation
+    let rotation = BABYLON.Quaternion.FromRotationMatrix(rotMatrix);
+    
+    // Apply 180° correction around Y axis since light models face opposite direction
+    const yCorrection = BABYLON.Quaternion.RotationAxis(BABYLON.Vector3.Up(), Math.PI);
+    rotation = rotation.multiply(yCorrection);
+    
+    mesh.rotationQuaternion = rotation;
   }
   
   /**
