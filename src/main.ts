@@ -12127,10 +12127,11 @@ class VirtualStudio {
       // Parent to lightMesh so it follows
       glowDisc.parent = lightMesh;
       
-      // Position disc inside the reflector bowl - centered and pushed back
-      glowDisc.position = new BABYLON.Vector3(0, 1.5, -0.15);
-      // Rotate disc to face outward from reflector bowl
-      glowDisc.rotation.x = -Math.PI / 2.5;
+      // Position disc inside the reflector bowl - at the center of reflector opening
+      // The reflector is tilted at roughly 45 degrees, disc should be inside it
+      glowDisc.position = new BABYLON.Vector3(0, 1.65, 0.25);
+      // Rotate disc to align with reflector opening (facing same direction as light)
+      glowDisc.rotation.x = Math.PI / 4; // 45 degree tilt to match reflector angle
       
       glowDisc.isPickable = false;
       
