@@ -1527,6 +1527,8 @@ class VirtualStudio {
   private hudJoystickDragging: boolean = false;
   private hudHeightDragging: boolean = false;
   private hudInitialized: boolean = false;
+  private hudJoystickStartPan: number = 0;
+  private hudJoystickStartTilt: number = 0;
   
   /**
    * Show the game-style HUD for controlling light rotation/position
@@ -1581,15 +1583,19 @@ class VirtualStudio {
     const heightThumb = document.getElementById('heightSliderThumb');
     if (heightVal) heightVal.textContent = `${pos.y.toFixed(1)}m`;
     
-    // Height slider: 0.5m to 6m range
-    const heightPercent = ((pos.y - 0.5) / (6 - 0.5)) * 100;
+    // Height slider: 0.5m to 6m range, clamped
+    const clampedHeight = Math.max(0.5, Math.min(6, pos.y));
+    const heightPercent = ((clampedHeight - 0.5) / (6 - 0.5)) * 100;
     if (heightFill) heightFill.style.width = `${heightPercent}%`;
     if (heightThumb) heightThumb.style.left = `${heightPercent}%`;
     
     // Update rotation values if spotlight
     if (lightData.light instanceof BABYLON.SpotLight) {
-      const dir = lightData.light.direction;
-      const tiltAngle = Math.asin(-dir.y) * (180 / Math.PI);
+      const dir = lightData.light.direction.normalize();
+      
+      // Clamp direction.y to avoid NaN from asin
+      const clampedY = Math.max(-1, Math.min(1, -dir.y));
+      const tiltAngle = Math.asin(clampedY) * (180 / Math.PI);
       const panAngle = Math.atan2(dir.x, dir.z) * (180 / Math.PI);
       
       const tiltEl = document.getElementById('hudTiltValue');
@@ -1631,6 +1637,7 @@ class VirtualStudio {
   
   /**
    * Initialize the rotation joystick control
+   * Uses absolute positioning for smooth, predictable rotation
    */
   private initJoystickControl(): void {
     const joystick = document.getElementById('rotationJoystick');
@@ -1640,16 +1647,25 @@ class VirtualStudio {
     const joystickBg = joystick.querySelector('.joystick-bg') as HTMLElement;
     if (!joystickBg) return;
     
-    let startX = 0, startY = 0;
-    const maxOffset = 40; // Maximum knob offset from center
+    const maxOffset = 40; // Maximum knob offset from center in pixels
+    const maxPanRange = Math.PI; // ±180° pan range at full joystick deflection
+    const maxTiltRange = Math.PI / 2 - 0.1; // ±~85° tilt range
     
     const handleStart = (e: MouseEvent | TouchEvent) => {
       e.preventDefault();
+      e.stopPropagation();
+      
+      if (!this.hudLightId) return;
+      const lightData = this.lights.get(this.hudLightId);
+      if (!lightData || !(lightData.light instanceof BABYLON.SpotLight)) return;
+      
       this.hudJoystickDragging = true;
-      const pos = this.getEventPosition(e);
-      startX = pos.x;
-      startY = pos.y;
       knob.style.transition = 'none';
+      
+      // Store starting angles when drag begins
+      const dir = lightData.light.direction;
+      this.hudJoystickStartTilt = Math.asin(Math.max(-1, Math.min(1, -dir.y)));
+      this.hudJoystickStartPan = Math.atan2(dir.x, dir.z);
     };
     
     const handleMove = (e: MouseEvent | TouchEvent) => {
@@ -1664,57 +1680,65 @@ class VirtualStudio {
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
       
-      // Calculate offset from center
-      let offsetX = pos.x - centerX;
-      let offsetY = pos.y - centerY;
+      // Calculate offset from center (-1 to 1 normalized)
+      let offsetX = (pos.x - centerX) / maxOffset;
+      let offsetY = (pos.y - centerY) / maxOffset;
       
-      // Clamp to max offset (circular constraint)
+      // Clamp to circular constraint
       const distance = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
-      if (distance > maxOffset) {
-        offsetX = (offsetX / distance) * maxOffset;
-        offsetY = (offsetY / distance) * maxOffset;
+      if (distance > 1) {
+        offsetX /= distance;
+        offsetY /= distance;
       }
       
-      // Update knob position
-      const knobCenterX = 50 + (offsetX / maxOffset) * 30;
-      const knobCenterY = 50 + (offsetY / maxOffset) * 30;
+      // Update knob visual position (30% of container size)
+      const knobCenterX = 50 + offsetX * 30;
+      const knobCenterY = 50 + offsetY * 30;
       knob.style.left = `${knobCenterX}%`;
       knob.style.top = `${knobCenterY}%`;
       
-      // Calculate rotation delta (sensitivity)
-      const panDelta = offsetX * 0.02; // Horizontal = pan
-      const tiltDelta = -offsetY * 0.02; // Vertical = tilt (inverted)
+      // Calculate new rotation from start position + joystick offset
+      // Sensitivity: full deflection = ±45° change
+      const panSensitivity = Math.PI / 4; // 45° per full deflection
+      const tiltSensitivity = Math.PI / 4; // 45° per full deflection
       
-      // Get current direction
-      const dir = lightData.light.direction.clone();
+      let newPan = this.hudJoystickStartPan + offsetX * panSensitivity;
+      let newTilt = this.hudJoystickStartTilt - offsetY * tiltSensitivity; // Inverted Y
       
-      // Calculate current angles
-      let tilt = Math.asin(-dir.y);
-      let pan = Math.atan2(dir.x, dir.z);
+      // Clamp tilt to avoid gimbal lock and unrealistic angles
+      newTilt = Math.max(-maxTiltRange, Math.min(maxTiltRange, newTilt));
       
-      // Apply deltas
-      pan += panDelta;
-      tilt = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, tilt + tiltDelta));
-      
-      // Calculate new direction
+      // Calculate new direction vector from spherical coordinates
+      const cosTilt = Math.cos(newTilt);
       const newDir = new BABYLON.Vector3(
-        Math.sin(pan) * Math.cos(tilt),
-        -Math.sin(tilt),
-        Math.cos(pan) * Math.cos(tilt)
-      );
+        Math.sin(newPan) * cosTilt,
+        -Math.sin(newTilt),
+        Math.cos(newPan) * cosTilt
+      ).normalize();
       
-      lightData.light.direction = newDir.normalize();
+      // Apply to light
+      lightData.light.direction = newDir;
       
-      // Update mesh rotation to match
+      // Update mesh rotation to match light direction
       if (lightData.mesh.rotationQuaternion) {
-        const targetQuat = BABYLON.Quaternion.FromLookDirectionLH(newDir, BABYLON.Vector3.Up());
-        lightData.mesh.rotationQuaternion = targetQuat;
+        // Create rotation that aligns -Z axis with light direction
+        const forward = newDir.clone();
+        const up = BABYLON.Vector3.Up();
+        const right = BABYLON.Vector3.Cross(up, forward).normalize();
+        const correctedUp = BABYLON.Vector3.Cross(forward, right).normalize();
+        
+        const rotMatrix = BABYLON.Matrix.Identity();
+        rotMatrix.setRowFromFloats(0, right.x, right.y, right.z, 0);
+        rotMatrix.setRowFromFloats(1, correctedUp.x, correctedUp.y, correctedUp.z, 0);
+        rotMatrix.setRowFromFloats(2, forward.x, forward.y, forward.z, 0);
+        
+        lightData.mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(rotMatrix);
       }
       
       // Update beam visualization
       this.updateBeamVisualization(this.hudLightId);
       
-      // Update HUD values
+      // Update HUD values display
       this.updateHUDValues(lightData);
     };
     
@@ -1723,9 +1747,19 @@ class VirtualStudio {
       this.hudJoystickDragging = false;
       
       // Animate knob back to center
-      knob.style.transition = 'left 0.2s ease, top 0.2s ease';
+      knob.style.transition = 'left 0.2s ease-out, top 0.2s ease-out';
       knob.style.left = '50%';
       knob.style.top = '50%';
+      
+      // Update start angles to current position for next drag
+      if (this.hudLightId) {
+        const lightData = this.lights.get(this.hudLightId);
+        if (lightData && lightData.light instanceof BABYLON.SpotLight) {
+          const dir = lightData.light.direction;
+          this.hudJoystickStartTilt = Math.asin(Math.max(-1, Math.min(1, -dir.y)));
+          this.hudJoystickStartPan = Math.atan2(dir.x, dir.z);
+        }
+      }
     };
     
     // Mouse events
@@ -1734,8 +1768,8 @@ class VirtualStudio {
     document.addEventListener('mouseup', handleEnd);
     
     // Touch events
-    knob.addEventListener('touchstart', handleStart as any);
-    document.addEventListener('touchmove', handleMove as any);
+    knob.addEventListener('touchstart', handleStart as any, { passive: false });
+    document.addEventListener('touchmove', handleMove as any, { passive: false });
     document.addEventListener('touchend', handleEnd);
   }
   
@@ -1901,7 +1935,7 @@ class VirtualStudio {
    * Initialize HUD action buttons
    */
   private initHUDActionButtons(): void {
-    // Reset button
+    // Reset button - smart reset based on light type and studio context
     const resetBtn = document.getElementById('hudResetLight');
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
@@ -1909,20 +1943,47 @@ class VirtualStudio {
         const lightData = this.lights.get(this.hudLightId);
         if (!lightData) return;
         
-        // Reset position
-        lightData.mesh.position = new BABYLON.Vector3(0, 2, 2);
-        if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.PointLight) {
-          lightData.light.position = new BABYLON.Vector3(0, 2, 2);
+        // Calculate smart reset position based on light type
+        const lightType = lightData.type.toLowerCase();
+        let resetPos: BABYLON.Vector3;
+        let resetDir: BABYLON.Vector3;
+        
+        // Different defaults for different light types
+        if (lightType.includes('key') || lightType.includes('hovedlys')) {
+          // Key light: 45° to the side, elevated, pointing at subject
+          resetPos = new BABYLON.Vector3(-1.5, 2.5, 2);
+          resetDir = new BABYLON.Vector3(0.3, -0.4, -0.866).normalize();
+        } else if (lightType.includes('fill') || lightType.includes('fyll')) {
+          // Fill light: opposite side from key, lower power position
+          resetPos = new BABYLON.Vector3(1.5, 2.0, 2);
+          resetDir = new BABYLON.Vector3(-0.3, -0.3, -0.9).normalize();
+        } else if (lightType.includes('back') || lightType.includes('rim') || lightType.includes('kant')) {
+          // Backlight/rim: behind subject, elevated
+          resetPos = new BABYLON.Vector3(0, 3.0, -1.5);
+          resetDir = new BABYLON.Vector3(0, -0.6, 0.8).normalize();
+        } else if (lightType.includes('hair') || lightType.includes('hår')) {
+          // Hair light: above and behind
+          resetPos = new BABYLON.Vector3(0, 3.5, -1);
+          resetDir = new BABYLON.Vector3(0, -0.7, 0.7).normalize();
+        } else {
+          // Default: front-angled position
+          resetPos = new BABYLON.Vector3(0, 2.5, 2.5);
+          resetDir = new BABYLON.Vector3(0, -0.5, -0.866).normalize();
         }
         
-        // Reset rotation (point down and forward)
+        // Apply reset position
+        lightData.mesh.position = resetPos.clone();
+        if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.PointLight) {
+          lightData.light.position = resetPos.clone();
+        }
+        
+        // Apply reset direction and rotation
         if (lightData.light instanceof BABYLON.SpotLight) {
-          lightData.light.direction = new BABYLON.Vector3(0, -0.5, -0.866).normalize();
+          lightData.light.direction = resetDir.clone();
         }
-        if (lightData.mesh.rotationQuaternion) {
-          const dir = new BABYLON.Vector3(0, -0.5, -0.866).normalize();
-          lightData.mesh.rotationQuaternion = BABYLON.Quaternion.FromLookDirectionLH(dir, BABYLON.Vector3.Up());
-        }
+        
+        // Calculate proper mesh rotation from direction
+        this.setMeshRotationFromDirection(lightData.mesh, resetDir);
         
         // Recreate gizmos at new position
         this.createStudioGizmos(this.hudLightId);
@@ -1931,7 +1992,7 @@ class VirtualStudio {
       });
     }
     
-    // Point at actor button
+    // Point at actor button - finds nearest actor and points light at them
     const pointBtn = document.getElementById('hudPointAtActor');
     if (pointBtn) {
       pointBtn.addEventListener('click', () => {
@@ -1939,25 +2000,112 @@ class VirtualStudio {
         const lightData = this.lights.get(this.hudLightId);
         if (!lightData) return;
         
-        // Find nearest actor or default to origin
-        let targetPos = new BABYLON.Vector3(0, 1.6, 0); // Default face height
+        const lightPos = lightData.mesh.position;
+        let targetPos: BABYLON.Vector3 | null = null;
+        let minDistance = Infinity;
         
-        // Point light at target
-        if (lightData.light instanceof BABYLON.SpotLight) {
-          const lightPos = lightData.mesh.position;
-          const direction = targetPos.subtract(lightPos).normalize();
-          lightData.light.direction = direction;
-          
-          // Update mesh rotation
-          if (lightData.mesh.rotationQuaternion) {
-            lightData.mesh.rotationQuaternion = BABYLON.Quaternion.FromLookDirectionLH(direction, BABYLON.Vector3.Up());
+        // Search casting candidates for nearest actor
+        this.castingCandidates.forEach((candidate) => {
+          if (candidate.mesh && candidate.mesh.isEnabled()) {
+            const boundingInfo = candidate.mesh.getBoundingInfo();
+            const center = boundingInfo.boundingSphere.centerWorld;
+            // Target the upper body (face area) - adjust Y up by ~30% of bounding height
+            const bounds = boundingInfo.boundingBox;
+            const height = bounds.maximumWorld.y - bounds.minimumWorld.y;
+            const faceTarget = new BABYLON.Vector3(center.x, center.y + height * 0.3, center.z);
+            
+            const distance = BABYLON.Vector3.Distance(lightPos, faceTarget);
+            if (distance < minDistance) {
+              minDistance = distance;
+              targetPos = faceTarget;
+            }
+          }
+        });
+        
+        // Also check scene nodes for actors/models
+        if (!targetPos && typeof window !== 'undefined') {
+          const store = (window as any).virtualStudioStore?.getState?.();
+          if (store?.scene) {
+            const actors = store.scene.filter((n: any) => 
+              (n.type === 'actor' || n.type === 'model') && n.visible
+            );
+            for (const actor of actors) {
+              if (actor.position) {
+                // Actors typically have face at about 1.6m height
+                const actorPos = new BABYLON.Vector3(
+                  actor.position.x || 0,
+                  (actor.position.y || 0) + 1.6,
+                  actor.position.z || 0
+                );
+                const distance = BABYLON.Vector3.Distance(lightPos, actorPos);
+                if (distance < minDistance) {
+                  minDistance = distance;
+                  targetPos = actorPos;
+                }
+              }
+            }
           }
         }
         
+        // Fallback to center stage at face height if no actors found
+        if (!targetPos) {
+          targetPos = new BABYLON.Vector3(0, 1.6, 0);
+        }
+        
+        // Calculate direction from light to target
+        const direction = targetPos.subtract(lightPos);
+        
+        // Ensure we have a valid direction (avoid zero-length vector)
+        if (direction.length() < 0.01) {
+          direction.set(0, -1, 0); // Point straight down if too close
+        } else {
+          direction.normalize();
+        }
+        
+        // Apply direction to spotlight
+        if (lightData.light instanceof BABYLON.SpotLight) {
+          lightData.light.direction = direction.clone();
+        }
+        
+        // Update mesh rotation to match direction
+        this.setMeshRotationFromDirection(lightData.mesh, direction);
+        
+        // Update visuals
         this.updateBeamVisualization(this.hudLightId);
         this.updateHUDValues(lightData);
       });
     }
+  }
+  
+  /**
+   * Set mesh rotation quaternion to look in specified direction
+   * Handles edge cases like looking straight up/down
+   */
+  private setMeshRotationFromDirection(mesh: BABYLON.Mesh, direction: BABYLON.Vector3): void {
+    const dir = direction.normalize();
+    
+    // Handle edge cases for nearly vertical directions
+    let up = BABYLON.Vector3.Up();
+    const dotUp = Math.abs(BABYLON.Vector3.Dot(dir, up));
+    if (dotUp > 0.99) {
+      // Looking nearly straight up or down, use forward as up vector
+      up = new BABYLON.Vector3(0, 0, 1);
+    }
+    
+    // Create rotation matrix from direction
+    const right = BABYLON.Vector3.Cross(up, dir).normalize();
+    const correctedUp = BABYLON.Vector3.Cross(dir, right).normalize();
+    
+    const rotMatrix = BABYLON.Matrix.Identity();
+    rotMatrix.setRowFromFloats(0, right.x, right.y, right.z, 0);
+    rotMatrix.setRowFromFloats(1, correctedUp.x, correctedUp.y, correctedUp.z, 0);
+    rotMatrix.setRowFromFloats(2, dir.x, dir.y, dir.z, 0);
+    
+    // Ensure mesh uses quaternion
+    if (!mesh.rotationQuaternion) {
+      mesh.rotationQuaternion = BABYLON.Quaternion.Identity();
+    }
+    mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(rotMatrix);
   }
   
   /**
