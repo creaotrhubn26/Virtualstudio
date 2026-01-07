@@ -2358,6 +2358,422 @@ async def save_schedule_to_pool(request: Request):
             conn.close()
 
 
+# ========== Post-Audition Workflow API Endpoints ==========
+
+@app.put("/api/casting/candidates/{candidate_id}/workflow-status")
+async def update_candidate_workflow_status(candidate_id: str, request: Request):
+    """Update candidate workflow status"""
+    conn = None
+    try:
+        body = await request.json()
+        workflow_status = body.get('workflowStatus')
+        
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE casting_candidates 
+                SET workflow_status = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (workflow_status, candidate_id))
+            conn.commit()
+            return JSONResponse({"success": True})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+@app.put("/api/casting/candidates/{candidate_id}/audition-result")
+async def update_candidate_audition_result(candidate_id: str, request: Request):
+    """Update candidate audition rating and notes"""
+    conn = None
+    try:
+        body = await request.json()
+        
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE casting_candidates 
+                SET audition_rating = %s, 
+                    audition_notes = %s,
+                    audition_date = %s,
+                    workflow_status = CASE WHEN workflow_status = 'pending' THEN 'auditioned' ELSE workflow_status END,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (
+                body.get('rating'),
+                body.get('notes'),
+                body.get('auditionDate'),
+                candidate_id
+            ))
+            conn.commit()
+            return JSONResponse({"success": True})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+# ========== Offers API Endpoints ==========
+
+@app.get("/api/casting/projects/{project_id}/offers")
+async def get_project_offers(project_id: str):
+    """Get all offers for a project"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT o.*, c.name as candidate_name, r.name as role_name
+                FROM casting_offers o
+                LEFT JOIN casting_candidates c ON o.candidate_id = c.id
+                LEFT JOIN casting_roles r ON o.role_id = r.id
+                WHERE o.project_id = %s
+                ORDER BY o.created_at DESC
+            """, (project_id,))
+            rows = cur.fetchall()
+            offers = []
+            for row in rows:
+                offer = dict(row)
+                for key in ['offer_date', 'response_deadline', 'response_date', 'created_at', 'updated_at']:
+                    if offer.get(key):
+                        offer[key] = offer[key].isoformat()
+                offers.append(offer)
+            return JSONResponse({"success": True, "offers": offers})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+@app.post("/api/casting/offers")
+async def create_offer(request: Request):
+    """Create a new offer"""
+    conn = None
+    try:
+        body = await request.json()
+        offer_id = f"offer_{uuid.uuid4().hex[:12]}"
+        
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO casting_offers 
+                (id, project_id, candidate_id, role_id, response_deadline, compensation, terms, notes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                offer_id,
+                body.get('projectId'),
+                body.get('candidateId'),
+                body.get('roleId'),
+                body.get('responseDeadline'),
+                body.get('compensation'),
+                body.get('terms'),
+                body.get('notes')
+            ))
+            
+            # Update candidate workflow status
+            cur.execute("""
+                UPDATE casting_candidates 
+                SET workflow_status = 'offer_sent', offer_sent_date = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (body.get('candidateId'),))
+            
+            conn.commit()
+            return JSONResponse({"success": True, "offerId": offer_id})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+@app.put("/api/casting/offers/{offer_id}/respond")
+async def respond_to_offer(offer_id: str, request: Request):
+    """Record response to offer (accepted/declined)"""
+    conn = None
+    try:
+        body = await request.json()
+        status = body.get('status')  # 'accepted' or 'declined'
+        
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                UPDATE casting_offers 
+                SET status = %s, response_date = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+                RETURNING candidate_id
+            """, (status, offer_id))
+            result = cur.fetchone()
+            
+            if result and status == 'accepted':
+                cur.execute("""
+                    UPDATE casting_candidates 
+                    SET workflow_status = 'confirmed', offer_accepted_date = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                """, (result['candidate_id'],))
+            elif result and status == 'declined':
+                cur.execute("""
+                    UPDATE casting_candidates 
+                    SET workflow_status = 'declined'
+                    WHERE id = %s
+                """, (result['candidate_id'],))
+            
+            conn.commit()
+            return JSONResponse({"success": True})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+# ========== Contracts API Endpoints ==========
+
+@app.get("/api/casting/projects/{project_id}/contracts")
+async def get_project_contracts(project_id: str):
+    """Get all contracts for a project"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT ct.*, c.name as candidate_name, r.name as role_name
+                FROM casting_contracts ct
+                LEFT JOIN casting_candidates c ON ct.candidate_id = c.id
+                LEFT JOIN casting_roles r ON ct.role_id = r.id
+                WHERE ct.project_id = %s
+                ORDER BY ct.created_at DESC
+            """, (project_id,))
+            rows = cur.fetchall()
+            contracts = []
+            for row in rows:
+                contract = dict(row)
+                for key in ['start_date', 'end_date', 'signed_date', 'created_at', 'updated_at']:
+                    if contract.get(key):
+                        contract[key] = contract[key].isoformat() if hasattr(contract[key], 'isoformat') else str(contract[key])
+                contracts.append(contract)
+            return JSONResponse({"success": True, "contracts": contracts})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+@app.post("/api/casting/contracts")
+async def create_contract(request: Request):
+    """Create a new contract"""
+    conn = None
+    try:
+        body = await request.json()
+        contract_id = f"contract_{uuid.uuid4().hex[:12]}"
+        
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO casting_contracts 
+                (id, project_id, candidate_id, offer_id, role_id, contract_type, 
+                 start_date, end_date, compensation, terms)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                contract_id,
+                body.get('projectId'),
+                body.get('candidateId'),
+                body.get('offerId'),
+                body.get('roleId'),
+                body.get('contractType'),
+                body.get('startDate'),
+                body.get('endDate'),
+                body.get('compensation'),
+                body.get('terms')
+            ))
+            
+            # Update candidate contract status
+            cur.execute("""
+                UPDATE casting_candidates 
+                SET contract_status = 'pending'
+                WHERE id = %s
+            """, (body.get('candidateId'),))
+            
+            conn.commit()
+            return JSONResponse({"success": True, "contractId": contract_id})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+@app.put("/api/casting/contracts/{contract_id}/sign")
+async def sign_contract(contract_id: str, request: Request):
+    """Mark contract as signed"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                UPDATE casting_contracts 
+                SET status = 'signed', signed_date = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+                RETURNING candidate_id
+            """, (contract_id,))
+            result = cur.fetchone()
+            
+            if result:
+                cur.execute("""
+                    UPDATE casting_candidates 
+                    SET contract_status = 'signed', contract_signed_date = CURRENT_TIMESTAMP, workflow_status = 'contracted'
+                    WHERE id = %s
+                """, (result['candidate_id'],))
+            
+            conn.commit()
+            return JSONResponse({"success": True})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+# ========== Calendar Events API Endpoints ==========
+
+@app.get("/api/casting/projects/{project_id}/calendar-events")
+async def get_calendar_events(project_id: str):
+    """Get all calendar events for a project"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT * FROM casting_calendar_events
+                WHERE project_id = %s
+                ORDER BY start_time ASC
+            """, (project_id,))
+            rows = cur.fetchall()
+            events = []
+            for row in rows:
+                event = dict(row)
+                for key in ['start_time', 'end_time', 'created_at', 'updated_at']:
+                    if event.get(key):
+                        event[key] = event[key].isoformat()
+                events.append(event)
+            return JSONResponse({"success": True, "events": events})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+@app.post("/api/casting/calendar-events")
+async def create_calendar_event(request: Request):
+    """Create a new calendar event"""
+    conn = None
+    try:
+        body = await request.json()
+        event_id = f"event_{uuid.uuid4().hex[:12]}"
+        
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO casting_calendar_events 
+                (id, project_id, title, description, event_type, start_time, end_time, 
+                 location_id, all_day, candidate_ids, crew_ids, shot_list_ids, notes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                event_id,
+                body.get('projectId'),
+                body.get('title'),
+                body.get('description'),
+                body.get('eventType', 'general'),
+                body.get('startTime'),
+                body.get('endTime'),
+                body.get('locationId'),
+                body.get('allDay', False),
+                Json(body.get('candidateIds', [])),
+                Json(body.get('crewIds', [])),
+                Json(body.get('shotListIds', [])),
+                body.get('notes')
+            ))
+            conn.commit()
+            return JSONResponse({"success": True, "eventId": event_id})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+@app.put("/api/casting/calendar-events/{event_id}")
+async def update_calendar_event(event_id: str, request: Request):
+    """Update a calendar event"""
+    conn = None
+    try:
+        body = await request.json()
+        
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE casting_calendar_events 
+                SET title = %s, description = %s, event_type = %s, start_time = %s, end_time = %s,
+                    location_id = %s, all_day = %s, candidate_ids = %s, crew_ids = %s, 
+                    shot_list_ids = %s, notes = %s, status = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (
+                body.get('title'),
+                body.get('description'),
+                body.get('eventType'),
+                body.get('startTime'),
+                body.get('endTime'),
+                body.get('locationId'),
+                body.get('allDay', False),
+                Json(body.get('candidateIds', [])),
+                Json(body.get('crewIds', [])),
+                Json(body.get('shotListIds', [])),
+                body.get('notes'),
+                body.get('status', 'scheduled'),
+                event_id
+            ))
+            conn.commit()
+            return JSONResponse({"success": True})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+@app.delete("/api/casting/calendar-events/{event_id}")
+async def delete_calendar_event(event_id: str):
+    """Delete a calendar event"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM casting_calendar_events WHERE id = %s", (event_id,))
+            conn.commit()
+            return JSONResponse({"success": True})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+@app.put("/api/casting/candidates/{candidate_id}/shot-assignments")
+async def update_candidate_shot_assignments(candidate_id: str, request: Request):
+    """Assign candidate to shots"""
+    conn = None
+    try:
+        body = await request.json()
+        
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE casting_candidates 
+                SET shot_assignments = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (Json(body.get('shotAssignments', [])), candidate_id))
+            conn.commit()
+            return JSONResponse({"success": True})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
 @app.get("/api/casting/projects/{project_id}/roles")
 async def api_get_roles(project_id: str):
     if not CASTING_SERVICE_AVAILABLE:
