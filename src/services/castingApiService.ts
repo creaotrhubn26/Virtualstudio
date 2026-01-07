@@ -287,6 +287,189 @@ export const schedulesApi = {
   },
 };
 
+export type WorkflowStatus = 'pending' | 'auditioned' | 'selected' | 'offer_sent' | 'confirmed' | 'declined' | 'contracted' | 'production';
+
+export interface CastingOffer {
+  id: string;
+  project_id: string;
+  candidate_id: string;
+  role_id?: string;
+  offer_date?: string;
+  response_deadline?: string;
+  status: 'pending' | 'accepted' | 'declined';
+  compensation?: string;
+  terms?: string;
+  notes?: string;
+  response_date?: string;
+  candidate_name?: string;
+  role_name?: string;
+}
+
+export interface CastingContract {
+  id: string;
+  project_id: string;
+  candidate_id: string;
+  offer_id?: string;
+  role_id?: string;
+  contract_type?: string;
+  start_date?: string;
+  end_date?: string;
+  compensation?: string;
+  terms?: string;
+  signed_date?: string;
+  status: 'draft' | 'pending' | 'signed';
+  document_url?: string;
+  candidate_name?: string;
+  role_name?: string;
+}
+
+export interface CalendarEvent {
+  id: string;
+  project_id: string;
+  title: string;
+  description?: string;
+  event_type: 'audition' | 'fitting' | 'rehearsal' | 'shooting' | 'general';
+  start_time: string;
+  end_time?: string;
+  location_id?: string;
+  all_day?: boolean;
+  candidate_ids?: string[];
+  crew_ids?: string[];
+  shot_list_ids?: string[];
+  notes?: string;
+  status?: string;
+}
+
+export const workflowApi = {
+  updateStatus: async (candidateId: string, workflowStatus: WorkflowStatus): Promise<boolean> => {
+    await apiRequest(`/candidates/${candidateId}/workflow-status`, {
+      method: 'PUT',
+      body: JSON.stringify({ workflowStatus }),
+    });
+    return true;
+  },
+  
+  updateAuditionResult: async (candidateId: string, data: { rating?: number; notes?: string; auditionDate?: string }): Promise<boolean> => {
+    await apiRequest(`/candidates/${candidateId}/audition-result`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return true;
+  },
+  
+  updateShotAssignments: async (candidateId: string, shotAssignments: string[]): Promise<boolean> => {
+    await apiRequest(`/candidates/${candidateId}/shot-assignments`, {
+      method: 'PUT',
+      body: JSON.stringify({ shotAssignments }),
+    });
+    return true;
+  },
+};
+
+export const offersApi = {
+  getAll: async (projectId: string): Promise<CastingOffer[]> => {
+    const result = await apiRequest<{ offers: CastingOffer[] }>(`/projects/${projectId}/offers`);
+    return result.offers;
+  },
+  
+  create: async (offer: {
+    projectId: string;
+    candidateId: string;
+    roleId?: string;
+    responseDeadline?: string;
+    compensation?: string;
+    terms?: string;
+    notes?: string;
+  }): Promise<string> => {
+    const result = await apiRequest<{ offerId: string }>('/offers', {
+      method: 'POST',
+      body: JSON.stringify(offer),
+    });
+    return result.offerId;
+  },
+  
+  respond: async (offerId: string, status: 'accepted' | 'declined'): Promise<boolean> => {
+    await apiRequest(`/offers/${offerId}/respond`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+    return true;
+  },
+};
+
+export const contractsApi = {
+  getAll: async (projectId: string): Promise<CastingContract[]> => {
+    const result = await apiRequest<{ contracts: CastingContract[] }>(`/projects/${projectId}/contracts`);
+    return result.contracts;
+  },
+  
+  create: async (contract: {
+    projectId: string;
+    candidateId: string;
+    offerId?: string;
+    roleId?: string;
+    contractType?: string;
+    startDate?: string;
+    endDate?: string;
+    compensation?: string;
+    terms?: string;
+  }): Promise<string> => {
+    const result = await apiRequest<{ contractId: string }>('/contracts', {
+      method: 'POST',
+      body: JSON.stringify(contract),
+    });
+    return result.contractId;
+  },
+  
+  sign: async (contractId: string): Promise<boolean> => {
+    await apiRequest(`/contracts/${contractId}/sign`, {
+      method: 'PUT',
+    });
+    return true;
+  },
+};
+
+export const calendarEventsApi = {
+  getAll: async (projectId: string): Promise<CalendarEvent[]> => {
+    const result = await apiRequest<{ events: CalendarEvent[] }>(`/projects/${projectId}/calendar-events`);
+    return result.events;
+  },
+  
+  create: async (event: {
+    projectId: string;
+    title: string;
+    description?: string;
+    eventType?: string;
+    startTime: string;
+    endTime?: string;
+    locationId?: string;
+    allDay?: boolean;
+    candidateIds?: string[];
+    crewIds?: string[];
+    shotListIds?: string[];
+    notes?: string;
+  }): Promise<string> => {
+    const result = await apiRequest<{ eventId: string }>('/calendar-events', {
+      method: 'POST',
+      body: JSON.stringify(event),
+    });
+    return result.eventId;
+  },
+  
+  update: async (eventId: string, event: Partial<CalendarEvent>): Promise<boolean> => {
+    await apiRequest(`/calendar-events/${eventId}`, {
+      method: 'PUT',
+      body: JSON.stringify(event),
+    });
+    return true;
+  },
+  
+  delete: async (eventId: string): Promise<boolean> => {
+    await apiRequest(`/calendar-events/${eventId}`, { method: 'DELETE' });
+    return true;
+  },
+};
+
 export const castingApi = {
   favorites: favoritesApi,
   projects: projectsApi,
@@ -296,6 +479,10 @@ export const castingApi = {
   locations: locationsApi,
   props: propsApi,
   schedules: schedulesApi,
+  workflow: workflowApi,
+  offers: offersApi,
+  contracts: contractsApi,
+  calendarEvents: calendarEventsApi,
 };
 
 export default castingApi;
