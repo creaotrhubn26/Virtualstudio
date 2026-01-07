@@ -443,6 +443,9 @@ class VirtualStudio {
     this.gizmoManager.rotationGizmoEnabled = false;
     this.gizmoManager.scaleGizmoEnabled = false;
     this.gizmoManager.attachableMeshes = [];
+    
+    // Professional studio gizmo styling
+    this.customizeGizmoAppearance();
 
     virtualActorService.setScene(this.scene);
     propRenderingService.setScene(this.scene);
@@ -743,6 +746,84 @@ class VirtualStudio {
       this.currentBackdropMesh = null;
       console.log('Backdrop removed');
     }
+  }
+
+  /**
+   * Customize gizmo appearance for professional studio look
+   * Uses studio color scheme (amber/gold) with improved visibility
+   */
+  private customizeGizmoAppearance(): void {
+    if (!this.gizmoManager) return;
+    
+    // Studio color palette
+    const studioAmber = new BABYLON.Color3(1.0, 0.67, 0.0);      // #FFAA00 - primary accent
+    const studioGold = new BABYLON.Color3(1.0, 0.84, 0.0);       // Gold highlight
+    const studioRed = new BABYLON.Color3(0.95, 0.3, 0.3);        // Softer red
+    const studioGreen = new BABYLON.Color3(0.3, 0.85, 0.4);      // Softer green  
+    const studioBlue = new BABYLON.Color3(0.3, 0.6, 1.0);        // Softer blue
+    const hoverWhite = new BABYLON.Color3(1.0, 1.0, 1.0);        // White on hover
+    
+    // Customize position gizmo (arrows)
+    const posGizmo = (this.gizmoManager as any).gizmos?.positionGizmo;
+    if (posGizmo) {
+      // X axis (red) - more muted
+      if (posGizmo.xGizmo) {
+        posGizmo.xGizmo.coloredMaterial.diffuseColor = studioRed;
+        posGizmo.xGizmo.coloredMaterial.emissiveColor = studioRed.scale(0.3);
+        posGizmo.xGizmo.hoverMaterial.diffuseColor = hoverWhite;
+        posGizmo.xGizmo.hoverMaterial.emissiveColor = studioAmber.scale(0.5);
+      }
+      // Y axis (green) - more muted
+      if (posGizmo.yGizmo) {
+        posGizmo.yGizmo.coloredMaterial.diffuseColor = studioGreen;
+        posGizmo.yGizmo.coloredMaterial.emissiveColor = studioGreen.scale(0.3);
+        posGizmo.yGizmo.hoverMaterial.diffuseColor = hoverWhite;
+        posGizmo.yGizmo.hoverMaterial.emissiveColor = studioAmber.scale(0.5);
+      }
+      // Z axis (blue) - more muted
+      if (posGizmo.zGizmo) {
+        posGizmo.zGizmo.coloredMaterial.diffuseColor = studioBlue;
+        posGizmo.zGizmo.coloredMaterial.emissiveColor = studioBlue.scale(0.3);
+        posGizmo.zGizmo.hoverMaterial.diffuseColor = hoverWhite;
+        posGizmo.zGizmo.hoverMaterial.emissiveColor = studioAmber.scale(0.5);
+      }
+      
+      // Make arrows slightly thinner for cleaner look
+      posGizmo.scaleRatio = 0.9;
+    }
+    
+    // Customize rotation gizmo (rings)
+    const rotGizmo = (this.gizmoManager as any).gizmos?.rotationGizmo;
+    if (rotGizmo) {
+      if (rotGizmo.xGizmo) {
+        rotGizmo.xGizmo.coloredMaterial.diffuseColor = studioRed;
+        rotGizmo.xGizmo.coloredMaterial.emissiveColor = studioRed.scale(0.3);
+        rotGizmo.xGizmo.hoverMaterial.diffuseColor = hoverWhite;
+        rotGizmo.xGizmo.hoverMaterial.emissiveColor = studioGold.scale(0.5);
+      }
+      if (rotGizmo.yGizmo) {
+        rotGizmo.yGizmo.coloredMaterial.diffuseColor = studioGreen;
+        rotGizmo.yGizmo.coloredMaterial.emissiveColor = studioGreen.scale(0.3);
+        rotGizmo.yGizmo.hoverMaterial.diffuseColor = hoverWhite;
+        rotGizmo.yGizmo.hoverMaterial.emissiveColor = studioGold.scale(0.5);
+      }
+      if (rotGizmo.zGizmo) {
+        rotGizmo.zGizmo.coloredMaterial.diffuseColor = studioBlue;
+        rotGizmo.zGizmo.coloredMaterial.emissiveColor = studioBlue.scale(0.3);
+        rotGizmo.zGizmo.hoverMaterial.diffuseColor = hoverWhite;
+        rotGizmo.zGizmo.hoverMaterial.emissiveColor = studioGold.scale(0.5);
+      }
+      
+      rotGizmo.scaleRatio = 0.85;
+    }
+    
+    // Set gizmo thickness for better visibility in studio environment
+    this.gizmoManager.gizmos.positionGizmo?.xGizmo?.setCustomMesh;
+    
+    // Ensure gizmos are rendered on top
+    this.gizmoManager.utilityLayer.utilityLayerScene.autoClearDepthAndStencil = false;
+    
+    console.log('Studio gizmo appearance customized');
   }
 
   /**
