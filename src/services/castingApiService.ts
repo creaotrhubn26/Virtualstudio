@@ -584,6 +584,166 @@ export const crewConflictsApi = {
   },
 };
 
+// Equipment/Assets API (Utstyr)
+export interface Equipment {
+  id: string;
+  project_id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  brand?: string;
+  model?: string;
+  serial_number?: string;
+  quantity: number;
+  condition: 'excellent' | 'good' | 'fair' | 'poor' | 'needs_repair';
+  primary_location_id?: string;
+  location_name?: string;
+  notes?: string;
+  image_url?: string;
+  status: 'available' | 'in_use' | 'maintenance' | 'retired';
+  assignees?: Array<{ crew_id: string; role: string }>;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface EquipmentBooking {
+  id: string;
+  equipment_id: string;
+  event_id?: string;
+  project_id: string;
+  booked_by?: string;
+  start_date: string;
+  end_date: string;
+  start_time?: string;
+  end_time?: string;
+  quantity: number;
+  purpose?: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  notes?: string;
+  created_at?: string;
+}
+
+export interface EquipmentAvailability {
+  id: string;
+  equipment_id: string;
+  start_date: string;
+  end_date: string;
+  status: 'unavailable' | 'service' | 'reserved';
+  reason?: string;
+  notes?: string;
+  created_at?: string;
+}
+
+export interface EquipmentConflict {
+  type: 'booking' | 'unavailable' | 'service';
+  id: string;
+  start_date: string;
+  end_date: string;
+  purpose?: string;
+  reason?: string;
+  status?: string;
+}
+
+export const equipmentApi = {
+  getAll: async (projectId: string): Promise<Equipment[]> => {
+    const result = await apiRequest<{ equipment: Equipment[] }>(`/projects/${projectId}/equipment`);
+    return result.equipment;
+  },
+  
+  create: async (equipment: Partial<Equipment>): Promise<Equipment> => {
+    const result = await apiRequest<{ equipment: Equipment }>('/equipment', {
+      method: 'POST',
+      body: JSON.stringify(equipment),
+    });
+    return result.equipment;
+  },
+  
+  update: async (id: string, equipment: Partial<Equipment>): Promise<Equipment> => {
+    const result = await apiRequest<{ equipment: Equipment }>(`/equipment/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(equipment),
+    });
+    return result.equipment;
+  },
+  
+  delete: async (id: string): Promise<boolean> => {
+    await apiRequest(`/equipment/${id}`, { method: 'DELETE' });
+    return true;
+  },
+  
+  assign: async (equipmentId: string, crewId: string, role = 'responsible', notes?: string): Promise<unknown> => {
+    const result = await apiRequest(`/equipment/${equipmentId}/assign`, {
+      method: 'POST',
+      body: JSON.stringify({ crewId, role, notes }),
+    });
+    return result;
+  },
+  
+  unassign: async (equipmentId: string, crewId: string): Promise<boolean> => {
+    await apiRequest(`/equipment/${equipmentId}/assign/${crewId}`, { method: 'DELETE' });
+    return true;
+  },
+  
+  getByLocation: async (locationId: string): Promise<Equipment[]> => {
+    const result = await apiRequest<{ equipment: Equipment[] }>(`/locations/${locationId}/equipment`);
+    return result.equipment;
+  },
+  
+  getByCrew: async (crewId: string): Promise<Equipment[]> => {
+    const result = await apiRequest<{ equipment: Equipment[] }>(`/crew/${crewId}/equipment`);
+    return result.equipment;
+  },
+};
+
+export const equipmentBookingsApi = {
+  getAll: async (equipmentId: string): Promise<EquipmentBooking[]> => {
+    const result = await apiRequest<{ bookings: EquipmentBooking[] }>(`/equipment/${equipmentId}/bookings`);
+    return result.bookings;
+  },
+  
+  create: async (equipmentId: string, booking: Partial<EquipmentBooking>): Promise<EquipmentBooking> => {
+    const result = await apiRequest<{ booking: EquipmentBooking }>(`/equipment/${equipmentId}/bookings`, {
+      method: 'POST',
+      body: JSON.stringify(booking),
+    });
+    return result.booking;
+  },
+  
+  delete: async (bookingId: string): Promise<boolean> => {
+    await apiRequest(`/equipment/bookings/${bookingId}`, { method: 'DELETE' });
+    return true;
+  },
+};
+
+export const equipmentAvailabilityApi = {
+  getAll: async (equipmentId: string): Promise<EquipmentAvailability[]> => {
+    const result = await apiRequest<{ availability: EquipmentAvailability[] }>(`/equipment/${equipmentId}/availability`);
+    return result.availability;
+  },
+  
+  create: async (equipmentId: string, availability: Partial<EquipmentAvailability>): Promise<EquipmentAvailability> => {
+    const result = await apiRequest<{ availability: EquipmentAvailability }>(`/equipment/${equipmentId}/availability`, {
+      method: 'POST',
+      body: JSON.stringify(availability),
+    });
+    return result.availability;
+  },
+  
+  delete: async (availabilityId: string): Promise<boolean> => {
+    await apiRequest(`/equipment/availability/${availabilityId}`, { method: 'DELETE' });
+    return true;
+  },
+};
+
+export const equipmentConflictsApi = {
+  check: async (equipmentId: string, startDate: string, endDate: string): Promise<{ conflicts: EquipmentConflict[]; hasConflicts: boolean }> => {
+    const result = await apiRequest<{ conflicts: EquipmentConflict[]; has_conflicts: boolean }>(
+      `/equipment/${equipmentId}/conflicts?start_date=${startDate}&end_date=${endDate}`
+    );
+    return { conflicts: result.conflicts, hasConflicts: result.has_conflicts };
+  },
+};
+
 export const castingApi = {
   favorites: favoritesApi,
   projects: projectsApi,
@@ -600,6 +760,10 @@ export const castingApi = {
   crewAvailability: crewAvailabilityApi,
   crewNotifications: crewNotificationsApi,
   crewConflicts: crewConflictsApi,
+  equipment: equipmentApi,
+  equipmentBookings: equipmentBookingsApi,
+  equipmentAvailability: equipmentAvailabilityApi,
+  equipmentConflicts: equipmentConflictsApi,
 };
 
 export default castingApi;

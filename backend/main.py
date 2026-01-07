@@ -3123,6 +3123,446 @@ async def api_delete_prop(prop_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ============================================================================
+# Equipment/Assets API Endpoints (Utstyr)
+# ============================================================================
+
+@app.get("/api/casting/projects/{project_id}/equipment")
+async def api_get_equipment(project_id: str):
+    """Get all equipment for a project"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT e.*, 
+                    COALESCE(
+                        (SELECT json_agg(json_build_object('crew_id', a.crew_id, 'role', a.role))
+                         FROM casting_equipment_assignments a WHERE a.equipment_id = e.id), '[]'
+                    ) as assignees,
+                    l.name as location_name
+                FROM casting_equipment e
+                LEFT JOIN casting_locations l ON e.primary_location_id = l.id
+                WHERE e.project_id = %s
+                ORDER BY e.name
+            """, (project_id,))
+            equipment = cur.fetchall()
+        conn.close()
+        return JSONResponse({"success": True, "equipment": [dict(e) for e in equipment]})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/equipment")
+async def api_create_equipment(request: Request):
+    """Create new equipment"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        import uuid
+        data = await request.json()
+        equipment_id = f"equipment_{uuid.uuid4().hex[:12]}"
+        
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO casting_equipment 
+                (id, project_id, name, description, category, brand, model, serial_number, 
+                 quantity, condition, primary_location_id, notes, image_url, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING *
+            """, (
+                equipment_id,
+                data.get('projectId'),
+                data.get('name'),
+                data.get('description'),
+                data.get('category'),
+                data.get('brand'),
+                data.get('model'),
+                data.get('serialNumber'),
+                data.get('quantity', 1),
+                data.get('condition', 'good'),
+                data.get('primaryLocationId'),
+                data.get('notes'),
+                data.get('imageUrl'),
+                data.get('status', 'available')
+            ))
+            equipment = cur.fetchone()
+            conn.commit()
+        conn.close()
+        return JSONResponse({"success": True, "equipment": dict(equipment)})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/casting/equipment/{equipment_id}")
+async def api_update_equipment(equipment_id: str, request: Request):
+    """Update equipment"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        data = await request.json()
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                UPDATE casting_equipment SET
+                    name = COALESCE(%s, name),
+                    description = %s,
+                    category = %s,
+                    brand = %s,
+                    model = %s,
+                    serial_number = %s,
+                    quantity = COALESCE(%s, quantity),
+                    condition = COALESCE(%s, condition),
+                    primary_location_id = %s,
+                    notes = %s,
+                    image_url = %s,
+                    status = COALESCE(%s, status),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s RETURNING *
+            """, (
+                data.get('name'),
+                data.get('description'),
+                data.get('category'),
+                data.get('brand'),
+                data.get('model'),
+                data.get('serialNumber'),
+                data.get('quantity'),
+                data.get('condition'),
+                data.get('primaryLocationId'),
+                data.get('notes'),
+                data.get('imageUrl'),
+                data.get('status'),
+                equipment_id
+            ))
+            equipment = cur.fetchone()
+            conn.commit()
+        conn.close()
+        if equipment:
+            return JSONResponse({"success": True, "equipment": dict(equipment)})
+        raise HTTPException(status_code=404, detail="Equipment not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/casting/equipment/{equipment_id}")
+async def api_delete_equipment(equipment_id: str):
+    """Delete equipment"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM casting_equipment_assignments WHERE equipment_id = %s", (equipment_id,))
+            cur.execute("DELETE FROM casting_equipment_bookings WHERE equipment_id = %s", (equipment_id,))
+            cur.execute("DELETE FROM casting_equipment_availability WHERE equipment_id = %s", (equipment_id,))
+            cur.execute("DELETE FROM casting_equipment WHERE id = %s RETURNING id", (equipment_id,))
+            deleted = cur.fetchone()
+            conn.commit()
+        conn.close()
+        if deleted:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Equipment not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/equipment/{equipment_id}/assign")
+async def api_assign_equipment(equipment_id: str, request: Request):
+    """Assign crew member to equipment"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        import uuid
+        data = await request.json()
+        assignment_id = f"equip_assign_{uuid.uuid4().hex[:12]}"
+        
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO casting_equipment_assignments (id, equipment_id, crew_id, role, notes)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (equipment_id, crew_id) DO UPDATE SET role = EXCLUDED.role, notes = EXCLUDED.notes
+                RETURNING *
+            """, (
+                assignment_id,
+                equipment_id,
+                data.get('crewId'),
+                data.get('role', 'responsible'),
+                data.get('notes')
+            ))
+            assignment = cur.fetchone()
+            conn.commit()
+        conn.close()
+        return JSONResponse({"success": True, "assignment": dict(assignment)})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/casting/equipment/{equipment_id}/assign/{crew_id}")
+async def api_unassign_equipment(equipment_id: str, crew_id: str):
+    """Remove crew member assignment from equipment"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                DELETE FROM casting_equipment_assignments 
+                WHERE equipment_id = %s AND crew_id = %s RETURNING id
+            """, (equipment_id, crew_id))
+            deleted = cur.fetchone()
+            conn.commit()
+        conn.close()
+        if deleted:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/equipment/{equipment_id}/bookings")
+async def api_get_equipment_bookings(equipment_id: str):
+    """Get all bookings for equipment"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT * FROM casting_equipment_bookings 
+                WHERE equipment_id = %s ORDER BY start_date
+            """, (equipment_id,))
+            bookings = cur.fetchall()
+        conn.close()
+        return JSONResponse({"success": True, "bookings": [dict(b) for b in bookings]})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/equipment/{equipment_id}/bookings")
+async def api_create_equipment_booking(equipment_id: str, request: Request):
+    """Create equipment booking"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        import uuid
+        data = await request.json()
+        booking_id = f"equip_book_{uuid.uuid4().hex[:12]}"
+        
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO casting_equipment_bookings 
+                (id, equipment_id, event_id, project_id, booked_by, start_date, end_date, 
+                 start_time, end_time, quantity, purpose, status, notes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING *
+            """, (
+                booking_id,
+                equipment_id,
+                data.get('eventId'),
+                data.get('projectId'),
+                data.get('bookedBy'),
+                data.get('startDate'),
+                data.get('endDate'),
+                data.get('startTime'),
+                data.get('endTime'),
+                data.get('quantity', 1),
+                data.get('purpose'),
+                data.get('status', 'confirmed'),
+                data.get('notes')
+            ))
+            booking = cur.fetchone()
+            conn.commit()
+        conn.close()
+        return JSONResponse({"success": True, "booking": dict(booking)})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/casting/equipment/bookings/{booking_id}")
+async def api_delete_equipment_booking(booking_id: str):
+    """Delete equipment booking"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM casting_equipment_bookings WHERE id = %s RETURNING id", (booking_id,))
+            deleted = cur.fetchone()
+            conn.commit()
+        conn.close()
+        if deleted:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Booking not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/equipment/{equipment_id}/availability")
+async def api_get_equipment_availability(equipment_id: str):
+    """Get availability blocks for equipment"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT * FROM casting_equipment_availability 
+                WHERE equipment_id = %s ORDER BY start_date
+            """, (equipment_id,))
+            availability = cur.fetchall()
+        conn.close()
+        return JSONResponse({"success": True, "availability": [dict(a) for a in availability]})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/equipment/{equipment_id}/availability")
+async def api_create_equipment_availability(equipment_id: str, request: Request):
+    """Create equipment availability block (service, unavailable)"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        import uuid
+        data = await request.json()
+        availability_id = f"equip_avail_{uuid.uuid4().hex[:12]}"
+        
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO casting_equipment_availability 
+                (id, equipment_id, start_date, end_date, status, reason, notes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING *
+            """, (
+                availability_id,
+                equipment_id,
+                data.get('startDate'),
+                data.get('endDate'),
+                data.get('status', 'unavailable'),
+                data.get('reason'),
+                data.get('notes')
+            ))
+            availability = cur.fetchone()
+            conn.commit()
+        conn.close()
+        return JSONResponse({"success": True, "availability": dict(availability)})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/casting/equipment/availability/{availability_id}")
+async def api_delete_equipment_availability(availability_id: str):
+    """Delete equipment availability block"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM casting_equipment_availability WHERE id = %s RETURNING id", (availability_id,))
+            deleted = cur.fetchone()
+            conn.commit()
+        conn.close()
+        if deleted:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Availability block not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/equipment/{equipment_id}/conflicts")
+async def api_check_equipment_conflicts(equipment_id: str, start_date: str, end_date: str):
+    """Check for booking conflicts for equipment"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        conflicts = []
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT * FROM casting_equipment_bookings 
+                WHERE equipment_id = %s AND status != 'cancelled'
+                AND start_date <= %s AND end_date >= %s
+                ORDER BY start_date
+            """, (equipment_id, end_date, start_date))
+            bookings = cur.fetchall()
+            
+            cur.execute("""
+                SELECT * FROM casting_equipment_availability 
+                WHERE equipment_id = %s AND status IN ('unavailable', 'service')
+                AND start_date <= %s AND end_date >= %s
+            """, (equipment_id, end_date, start_date))
+            unavailable = cur.fetchall()
+        conn.close()
+        
+        for booking in bookings:
+            conflicts.append({
+                "type": "booking",
+                "id": booking['id'],
+                "start_date": str(booking['start_date']),
+                "end_date": str(booking['end_date']),
+                "purpose": booking['purpose'],
+                "status": booking['status']
+            })
+        
+        for block in unavailable:
+            conflicts.append({
+                "type": block['status'],
+                "id": block['id'],
+                "start_date": str(block['start_date']),
+                "end_date": str(block['end_date']),
+                "reason": block['reason']
+            })
+        
+        return JSONResponse({
+            "success": True, 
+            "conflicts": conflicts, 
+            "has_conflicts": len(conflicts) > 0
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/locations/{location_id}/equipment")
+async def api_get_equipment_at_location(location_id: str):
+    """Get all equipment stored at a location"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT * FROM casting_equipment 
+                WHERE primary_location_id = %s
+                ORDER BY name
+            """, (location_id,))
+            equipment = cur.fetchall()
+        conn.close()
+        return JSONResponse({"success": True, "equipment": [dict(e) for e in equipment]})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/crew/{crew_id}/equipment")
+async def api_get_crew_equipment(crew_id: str):
+    """Get all equipment assigned to a crew member"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT e.*, a.role as assignment_role
+                FROM casting_equipment e
+                JOIN casting_equipment_assignments a ON e.id = a.equipment_id
+                WHERE a.crew_id = %s
+                ORDER BY e.name
+            """, (crew_id,))
+            equipment = cur.fetchall()
+        conn.close()
+        return JSONResponse({"success": True, "equipment": [dict(e) for e in equipment]})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/casting/projects/{project_id}/schedules")
 async def api_get_schedules(project_id: str):
     if not CASTING_SERVICE_AVAILABLE:
