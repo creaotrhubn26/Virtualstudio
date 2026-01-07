@@ -674,7 +674,7 @@ export const equipmentApi = {
   assign: async (equipmentId: string, crewId: string, role = 'responsible', notes?: string): Promise<unknown> => {
     const result = await apiRequest(`/equipment/${equipmentId}/assign`, {
       method: 'POST',
-      body: JSON.stringify({ crewId, role, notes }),
+      body: JSON.stringify({ crew_id: crewId, role, notes }),
     });
     return result;
   },

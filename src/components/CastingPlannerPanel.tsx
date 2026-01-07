@@ -130,6 +130,7 @@ import { castingAuthService } from '../services/castingAuthService';
 import { CrewManagementPanel } from './CrewManagementPanel';
 import { LocationManagementPanel } from './LocationManagementPanel';
 import { PropManagementPanel } from './PropManagementPanel';
+import { EquipmentManagementPanel } from './EquipmentManagementPanel';
 import { ProductionDayView } from './ProductionDayView';
 import { CastingShotListPanel } from './CastingShotListPanel';
 import { CastingSharingDialog } from './CastingSharingDialog';
@@ -1866,7 +1867,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               </Typography>
             </Box>
           ) : (
-            <PropManagementPanel
+            <EquipmentManagementPanel
               projectId={currentProject.id}
               onUpdate={async () => {
                 const updated = await castingService.getProject(currentProject.id);
