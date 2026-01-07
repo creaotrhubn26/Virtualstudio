@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
 import { useToast } from './ToastStack';
 import {
   Box,
@@ -128,27 +128,29 @@ import { resetMockCastingData } from '../data/mockCastingData';
 import { sceneComposerService } from '../services/sceneComposerService';
 import { consentService } from '../services/consentService';
 import { castingAuthService } from '../services/castingAuthService';
-import { CrewManagementPanel } from './CrewManagementPanel';
-import { LocationManagementPanel } from './LocationManagementPanel';
-import { PropManagementPanel } from './PropManagementPanel';
-import { EquipmentManagementPanel } from './EquipmentManagementPanel';
-import { ProductionDayView } from './ProductionDayView';
-import { CastingShotListPanel } from './CastingShotListPanel';
 import { CastingSharingDialog } from './CastingSharingDialog';
-import { RoleManagementPanel } from './RoleManagementPanel';
-import { CandidateManagementPanel } from './CandidateManagementPanel';
-import { DashboardPanel } from './DashboardPanel';
-import { AuditionSchedulePanel } from './AuditionSchedulePanel';
-import { SharingPanel } from './SharingPanel';
-import { KanbanPanel } from './KanbanPanel';
 import { CastingProfessionDialog } from './CastingProfessionDialog';
 import NewProjectCreationModal from './Planning/NewProjectCreationModal';
-import { CastingPlannerTutorial } from './CastingPlannerTutorial';
-import { TutorialEditorPanel } from './TutorialEditorPanel';
-import { ConsentManagementPanel } from './ConsentManagementPanel';
 import { Tutorial } from '../services/tutorialService';
-import OffersContractsPanel from './OffersContractsPanel';
-import ProductionCalendarPanel from './ProductionCalendarPanel';
+
+// Lazy load heavy panels for better performance
+const CrewManagementPanel = lazy(() => import('./CrewManagementPanel').then(m => ({ default: m.CrewManagementPanel })));
+const LocationManagementPanel = lazy(() => import('./LocationManagementPanel').then(m => ({ default: m.LocationManagementPanel })));
+const PropManagementPanel = lazy(() => import('./PropManagementPanel').then(m => ({ default: m.PropManagementPanel })));
+const EquipmentManagementPanel = lazy(() => import('./EquipmentManagementPanel').then(m => ({ default: m.EquipmentManagementPanel })));
+const ProductionDayView = lazy(() => import('./ProductionDayView').then(m => ({ default: m.ProductionDayView })));
+const CastingShotListPanel = lazy(() => import('./CastingShotListPanel').then(m => ({ default: m.CastingShotListPanel })));
+const RoleManagementPanel = lazy(() => import('./RoleManagementPanel').then(m => ({ default: m.RoleManagementPanel })));
+const CandidateManagementPanel = lazy(() => import('./CandidateManagementPanel').then(m => ({ default: m.CandidateManagementPanel })));
+const DashboardPanel = lazy(() => import('./DashboardPanel').then(m => ({ default: m.DashboardPanel })));
+const AuditionSchedulePanel = lazy(() => import('./AuditionSchedulePanel').then(m => ({ default: m.AuditionSchedulePanel })));
+const SharingPanel = lazy(() => import('./SharingPanel').then(m => ({ default: m.SharingPanel })));
+const KanbanPanel = lazy(() => import('./KanbanPanel').then(m => ({ default: m.KanbanPanel })));
+const CastingPlannerTutorial = lazy(() => import('./CastingPlannerTutorial').then(m => ({ default: m.CastingPlannerTutorial })));
+const TutorialEditorPanel = lazy(() => import('./TutorialEditorPanel').then(m => ({ default: m.TutorialEditorPanel })));
+const ConsentManagementPanel = lazy(() => import('./ConsentManagementPanel').then(m => ({ default: m.ConsentManagementPanel })));
+const OffersContractsPanel = lazy(() => import('./OffersContractsPanel'));
+const ProductionCalendarPanel = lazy(() => import('./ProductionCalendarPanel'));
 import { ProfessionOnboardingDialog, useProfessionOnboarding, ProfessionType } from './ProfessionOnboardingDialog';
 import { useAuth } from '../hooks/useAuth';
 import { ProjectProvider } from '../contexts/ProjectContext';
@@ -169,36 +171,23 @@ interface TabPanelProps {
   value: number;
 }
 
-function TabPanel({ children, value, index }: TabPanelProps) {
+const TAB_IDS = [
+  'tabpanel-oversikt',
+  'tabpanel-roller',
+  'tabpanel-kandidater',
+  'tabpanel-auditions',
+  'tabpanel-team',
+  'tabpanel-lokasjoner',
+  'tabpanel-rekvisitter',
+  'tabpanel-produksjonsplan',
+  'tabpanel-shot-lists',
+  'tabpanel-deling',
+];
+
+const TabPanel = React.memo(function TabPanel({ children, value, index }: TabPanelProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
-  const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
-  
-  const tabIds = [
-    'tabpanel-oversikt',
-    'tabpanel-roller',
-    'tabpanel-kandidater',
-    'tabpanel-auditions',
-    'tabpanel-team',
-    'tabpanel-lokasjoner',
-    'tabpanel-rekvisitter',
-    'tabpanel-produksjonsplan',
-    'tabpanel-shot-lists',
-    'tabpanel-deling',
-  ];
-  const tabLabels = [
-    'Oversikt',
-    'Roller',
-    'Kandidater',
-    'Auditions',
-    'Team',
-    'Steder',
-    'Utstyr',
-    'Produksjonsplan',
-    'Shot Lists',
-    'Deling',
-  ];
   
   if (value !== index) {
     return null;
@@ -206,8 +195,8 @@ function TabPanel({ children, value, index }: TabPanelProps) {
   return (
     <Box 
       role="tabpanel"
-      id={tabIds[index]}
-      aria-labelledby={`tab-${tabIds[index].replace('tabpanel-', '')}`}
+      id={TAB_IDS[index]}
+      aria-labelledby={`tab-${TAB_IDS[index].replace('tabpanel-', '')}`}
       sx={{ 
         flex: 1, 
         overflow: 'auto', 
@@ -215,14 +204,13 @@ function TabPanel({ children, value, index }: TabPanelProps) {
         flexDirection: 'column', 
         minHeight: 0, 
         width: '100%',
-        // Responsive padding: larger on desktop, medium on tablet, small on mobile
         padding: isMobile ? '8px' : isTablet ? '12px' : '16px',
       }}
     >
       {children}
     </Box>
   );
-}
+});
 
 export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFullscreen, isStandalone = false }: CastingPlannerPanelProps) {
   const theme = useTheme();
@@ -471,18 +459,18 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
 
   // Tab colors and icons matching quick navigation design (will be adapted based on profession)
   const professionConfig = getProfessionConfig();
-  const tabConfig = [
-    { color: professionConfig?.color || '#8b5cf6', icon: DashboardIcon }, // 0: Oversikt (includes Kanban)
-    { color: '#f48fb1', icon: TheaterComedyIcon }, // 1: Roller - TheaterComedy for casting roles
-    { color: professionConfig?.color || '#10b981', icon: RecentActorsIcon }, // 2: Kandidater - matches CandidateManagementPanel header
-    { color: '#ffb800', icon: InterpreterModeIcon }, // 3: Auditions - person with microphone (moved next to Kandidater)
-    { color: '#00d4ff', icon: GroupsIcon }, // 4: Team - GroupsIcon (3 people) matches CrewManagementPanel header
-    { color: '#4caf50', icon: LocationIcon }, // 5: Steder
-    { color: '#ff9800', icon: PropIcon }, // 6: Utstyr (using Inventory2Icon like prop panel header)
-    { color: '#9c27b0', icon: CalendarIcon }, // 7: Kalender
-    { color: professionConfig?.color || '#e91e63', icon: ShotListIcon }, // 8: Shot-list (custom icon: person with camera and list)
-    { color: '#06b6d4', icon: ShareIcon }, // 9: Deling - cyan/teal
-  ];
+  const tabConfig = useMemo(() => [
+    { color: professionConfig?.color || '#8b5cf6', icon: DashboardIcon },
+    { color: '#f48fb1', icon: TheaterComedyIcon },
+    { color: professionConfig?.color || '#10b981', icon: RecentActorsIcon },
+    { color: '#ffb800', icon: InterpreterModeIcon },
+    { color: '#00d4ff', icon: GroupsIcon },
+    { color: '#4caf50', icon: LocationIcon },
+    { color: '#ff9800', icon: PropIcon },
+    { color: '#9c27b0', icon: CalendarIcon },
+    { color: professionConfig?.color || '#e91e63', icon: ShotListIcon },
+    { color: '#06b6d4', icon: ShareIcon },
+  ], [professionConfig?.color]);
 
   // Quick navigation links for SpeedDial - matching tabConfig icons and colors
   // SpeedDial with direction="up" displays items from first to last (nearest to farthest from FAB)
@@ -848,12 +836,12 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
     }
   };
 
-  const loadAvailableScenes = () => {
+  const loadAvailableScenes = useCallback(() => {
     const scenes = castingService.getAvailableScenes();
     setAvailableScenes(scenes);
-  };
+  }, []);
 
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     try {
       const loadedProjects = await castingService.getProjects();
       console.log('loadProjects: Loaded projects:', loadedProjects.length);
@@ -896,9 +884,9 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
         setCurrentProject(loadedProjects[0]);
       }
     }
-  };
+  }, [profession]);
 
-  const handleCreateRole = () => {
+  const handleCreateRole = useCallback(() => {
     if (!currentProject) {
       toast.showWarning('Du må opprette et prosjekt først');
       return;
@@ -912,9 +900,9 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
     };
     setSelectedRole(newRole);
     setRoleDialogOpen(true);
-  };
+  }, [currentProject, toast]);
 
-  const handleSaveRole = async () => {
+  const handleSaveRole = useCallback(async () => {
     if (!currentProject || !selectedRole) return;
     
     if (!selectedRole.name.trim()) {
@@ -931,9 +919,9 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
       console.error('Error saving role:', error);
       toast.showError('Feil ved lagring av rolle');
     }
-  };
+  }, [currentProject, selectedRole, toast, loadProjects]);
 
-  const handleDeleteRole = async (roleId: string) => {
+  const handleDeleteRole = useCallback(async (roleId: string) => {
     if (!currentProject) return;
     if (window.confirm('Er du sikker på at du vil slette denne rollen?')) {
       try {
@@ -944,9 +932,9 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
         toast.showError('Feil ved sletting av rolle');
       }
     }
-  };
+  }, [currentProject, toast, loadProjects]);
 
-  const handleCreateCandidate = () => {
+  const handleCreateCandidate = useCallback(() => {
     if (!currentProject) {
       toast.showWarning('Du må opprette et prosjekt først');
       return;
@@ -965,9 +953,9 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
     };
     setSelectedCandidate(newCandidate);
     setCandidateDialogOpen(true);
-  };
+  }, [currentProject, toast]);
 
-  const handleSaveCandidate = async () => {
+  const handleSaveCandidate = useCallback(async () => {
     if (!currentProject || !selectedCandidate) return;
     
     if (!selectedCandidate.name.trim()) {
@@ -984,9 +972,9 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
       console.error('Error saving candidate:', error);
       toast.showError('Feil ved lagring av kandidat');
     }
-  };
+  }, [currentProject, selectedCandidate, toast, loadProjects]);
 
-  const handleDeleteCandidate = async (candidateId: string) => {
+  const handleDeleteCandidate = useCallback(async (candidateId: string) => {
     if (!currentProject) return;
     if (window.confirm('Er du sikker på at du vil slette denne kandidaten?')) {
       try {
@@ -997,9 +985,9 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
         toast.showError('Feil ved sletting av kandidat');
       }
     }
-  };
+  }, [currentProject, toast, loadProjects]);
 
-  const handleCreateSchedule = () => {
+  const handleCreateSchedule = useCallback(() => {
     if (!currentProject) {
       toast.showWarning('Du må opprette et prosjekt først');
       return;
@@ -1020,9 +1008,9 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
     };
     setSelectedSchedule(newSchedule);
     setScheduleDialogOpen(true);
-  };
+  }, [currentProject, toast]);
 
-  const handleSaveSchedule = async () => {
+  const handleSaveSchedule = useCallback(async () => {
     if (!currentProject || !selectedSchedule) return;
 
     try {
@@ -1034,9 +1022,9 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
       console.error('Error saving schedule:', error);
       toast.showError('Feil ved lagring av timeplan');
     }
-  };
+  }, [currentProject, selectedSchedule, toast, loadProjects]);
 
-  const handleDeleteSchedule = async (scheduleId: string) => {
+  const handleDeleteSchedule = useCallback(async (scheduleId: string) => {
     if (!currentProject) return;
     if (window.confirm('Er du sikker på at du vil slette denne timeplanen?')) {
       try {
@@ -1047,44 +1035,37 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
         toast.showError('Feil ved sletting av timeplan');
       }
     }
-  };
+  }, [currentProject, toast, loadProjects]);
 
   // Use data directly from currentProject instead of async service calls
   const roles = currentProject?.roles || [];
   const allCandidates = currentProject?.candidates || [];
   const allSchedules = currentProject?.schedules || [];
   
-  // Debug: Log candidates for Kanban
-  useEffect(() => {
-    if (activeTab === 9 && currentProject) {
-      console.log('Kanban tab active, currentProject:', currentProject.id);
-      console.log('allCandidates:', allCandidates);
-      console.log('Current project candidates:', currentProject.candidates?.length || 0);
-    }
-  }, [activeTab, currentProject, allCandidates]);
-  
-  const candidates = allCandidates.filter(c => {
+  // Memoized filtered candidates
+  const candidates = useMemo(() => allCandidates.filter(c => {
     const matchesSearch = !candidateSearchQuery || 
       c.name.toLowerCase().includes(candidateSearchQuery.toLowerCase()) ||
       c.contactInfo?.email?.toLowerCase().includes(candidateSearchQuery.toLowerCase()) ||
       c.contactInfo?.phone?.includes(candidateSearchQuery);
     const matchesStatus = candidateStatusFilter === 'all' || c.status === candidateStatusFilter;
     return matchesSearch && matchesStatus;
-  });
+  }), [allCandidates, candidateSearchQuery, candidateStatusFilter]);
   
-  const schedules = allSchedules.filter(s => {
+  // Memoized filtered schedules
+  const schedules = useMemo(() => allSchedules.filter(s => {
     const matchesDate = !scheduleDateFilter || s.date === scheduleDateFilter;
     const matchesCandidate = scheduleCandidateFilter === 'all' || s.candidateId === scheduleCandidateFilter;
     const matchesRole = scheduleRoleFilter === 'all' || s.roleId === scheduleRoleFilter;
     return matchesDate && matchesCandidate && matchesRole;
-  });
+  }), [allSchedules, scheduleDateFilter, scheduleCandidateFilter, scheduleRoleFilter]);
 
-  const stats = {
+  const stats = useMemo(() => ({
     totalRoles: roles.length,
     openRoles: roles.filter(r => r.status === 'open' || r.status === 'casting').length,
     totalCandidates: candidates.length,
     upcomingSchedules: schedules.filter(s => s.status === 'scheduled' && new Date(s.date) >= new Date()).length,
-  };
+  }), [roles, candidates, schedules]);
 
   return (
     <>
@@ -1734,6 +1715,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
 
       {/* Content */}
       <Box sx={{ flex: 1, overflow: 'hidden', bgcolor: '#0d1117', display: 'flex', flexDirection: 'column', minHeight: 0, width: '100%' }}>
+        <Suspense fallback={<Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,0.5)' }}>Laster...</Box>}>
         <TabPanel value={activeTab} index={0}>
           <DashboardPanel
             project={currentProject}
@@ -1958,6 +1940,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
             />
           )}
         </TabPanel>
+        </Suspense>
       </Box>
 
 
@@ -2693,11 +2676,9 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               bgcolor: '#00d4ff',
               color: '#000',
               fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-              px: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 },
+              px: { xs: 2, sm: 2.5, md: 2.25, lg: 3, xl: 4 },
               py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 },
               minHeight: TOUCH_TARGET_SIZE,
-              px: isDesktop ? 4 : 3,
-              py: isDesktop ? 1.5 : 1,
               fontWeight: 600,
               '&:hover': { bgcolor: '#00b8e6' },
             }}
@@ -3777,24 +3758,28 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
         onLoginSuccess={(user) => setAdminUser(user)}
       />
 
-      <CastingPlannerTutorial
-        open={showTutorial || previewTutorial !== null}
-        onClose={() => {
-          setShowTutorial(false);
-          setPreviewTutorial(null);
-        }}
-        onNavigateToTab={(tabIndex) => setActiveTab(tabIndex)}
-        customTutorial={previewTutorial || undefined}
-      />
+      <Suspense fallback={null}>
+        <CastingPlannerTutorial
+          open={showTutorial || previewTutorial !== null}
+          onClose={() => {
+            setShowTutorial(false);
+            setPreviewTutorial(null);
+          }}
+          onNavigateToTab={(tabIndex) => setActiveTab(tabIndex)}
+          customTutorial={previewTutorial || undefined}
+        />
+      </Suspense>
 
-      <TutorialEditorPanel
-        open={showTutorialEditor}
-        onClose={() => setShowTutorialEditor(false)}
-        onPreviewTutorial={(tutorial) => {
-          setShowTutorialEditor(false);
-          setPreviewTutorial(tutorial);
-        }}
-      />
+      <Suspense fallback={null}>
+        <TutorialEditorPanel
+          open={showTutorialEditor}
+          onClose={() => setShowTutorialEditor(false)}
+          onPreviewTutorial={(tutorial) => {
+            setShowTutorialEditor(false);
+            setPreviewTutorial(tutorial);
+          }}
+        />
+      </Suspense>
 
       {onboardingProfession && (
         <ProfessionOnboardingDialog
