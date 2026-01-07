@@ -79,6 +79,25 @@ except ImportError as e:
     print(f"Warning: Virtual Studio service not available: {e}")
     VIRTUAL_STUDIO_SERVICE_AVAILABLE = False
 
+# Casting Planner service imports
+try:
+    from casting_favorites_service import (
+        init_casting_favorites_tables,
+        get_favorites, add_favorite, remove_favorite, set_favorites,
+        save_project as save_casting_project, get_projects as get_casting_projects,
+        get_project as get_casting_project, delete_project as delete_casting_project,
+        save_candidate, get_candidates, delete_candidate,
+        save_role, get_roles, delete_role,
+        save_crew_member, get_crew, delete_crew_member,
+        save_location, get_locations, delete_location,
+        save_prop, get_props, delete_prop,
+        save_schedule, get_schedules, delete_schedule
+    )
+    CASTING_SERVICE_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Casting service not available: {e}")
+    CASTING_SERVICE_AVAILABLE = False
+
 app = FastAPI(
     title="Virtual Studio Avatar API",
     description="Generate 3D avatars from images using Meta SAM 3D Body",
@@ -151,6 +170,14 @@ async def startup_event():
             print("Virtual Studio tables initialized")
         except Exception as e:
             print(f"Warning: Could not initialize Virtual Studio tables: {e}")
+    
+    # Initialize Casting Planner tables
+    if CASTING_SERVICE_AVAILABLE:
+        try:
+            init_casting_favorites_tables()
+            print("Casting Planner tables initialized")
+        except Exception as e:
+            print(f"Warning: Could not initialize Casting tables: {e}")
 
 @app.get("/")
 async def root():
@@ -1297,6 +1324,320 @@ async def api_delete_export_template(template_id: str):
         if success:
             return JSONResponse({"success": True})
         raise HTTPException(status_code=404, detail="Export template not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# Casting Planner API Endpoints
+# ============================================================================
+
+@app.get("/api/casting/favorites/{project_id}/{favorite_type}")
+async def api_get_favorites(project_id: str, favorite_type: str, user_id: Optional[str] = None):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        favorites = get_favorites(project_id, favorite_type, user_id)
+        return JSONResponse({"success": True, "favorites": favorites})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/favorites/{project_id}/{favorite_type}")
+async def api_set_favorites(project_id: str, favorite_type: str, request: Request):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        data = await request.json()
+        item_ids = data.get('itemIds', data.get('favorites', []))
+        user_id = data.get('userId')
+        set_favorites(project_id, favorite_type, item_ids, user_id)
+        return JSONResponse({"success": True})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/favorites/{project_id}/{favorite_type}/add")
+async def api_add_favorite(project_id: str, favorite_type: str, request: Request):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        data = await request.json()
+        item_id = data.get('itemId')
+        user_id = data.get('userId')
+        add_favorite(project_id, favorite_type, item_id, user_id)
+        return JSONResponse({"success": True})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/favorites/{project_id}/{favorite_type}/remove")
+async def api_remove_favorite(project_id: str, favorite_type: str, request: Request):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        data = await request.json()
+        item_id = data.get('itemId')
+        user_id = data.get('userId')
+        remove_favorite(project_id, favorite_type, item_id, user_id)
+        return JSONResponse({"success": True})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/projects")
+async def api_get_casting_projects(user_id: Optional[str] = None):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        projects = get_casting_projects(user_id)
+        return JSONResponse({"success": True, "projects": projects})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/projects/{project_id}")
+async def api_get_casting_project(project_id: str):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        project = get_casting_project(project_id)
+        if project:
+            return JSONResponse({"success": True, "project": project})
+        raise HTTPException(status_code=404, detail="Project not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/projects")
+async def api_save_casting_project(request: Request):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        data = await request.json()
+        user_id = data.pop('userId', None)
+        project = save_casting_project(data, user_id)
+        return JSONResponse({"success": True, "project": project})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/casting/projects/{project_id}")
+async def api_delete_casting_project(project_id: str):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        success = delete_casting_project(project_id)
+        if success:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Project not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/projects/{project_id}/candidates")
+async def api_get_candidates(project_id: str):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        candidates = get_candidates(project_id)
+        return JSONResponse({"success": True, "candidates": candidates})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/candidates")
+async def api_save_candidate(request: Request):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        data = await request.json()
+        candidate = save_candidate(data)
+        return JSONResponse({"success": True, "candidate": candidate})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/casting/candidates/{candidate_id}")
+async def api_delete_candidate(candidate_id: str):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        success = delete_candidate(candidate_id)
+        if success:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/projects/{project_id}/roles")
+async def api_get_roles(project_id: str):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        roles = get_roles(project_id)
+        return JSONResponse({"success": True, "roles": roles})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/roles")
+async def api_save_role(request: Request):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        data = await request.json()
+        role = save_role(data)
+        return JSONResponse({"success": True, "role": role})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/casting/roles/{role_id}")
+async def api_delete_role(role_id: str):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        success = delete_role(role_id)
+        if success:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Role not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/projects/{project_id}/crew")
+async def api_get_crew(project_id: str):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        crew = get_crew(project_id)
+        return JSONResponse({"success": True, "crew": crew})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/crew")
+async def api_save_crew(request: Request):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        data = await request.json()
+        crew = save_crew_member(data)
+        return JSONResponse({"success": True, "crew": crew})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/casting/crew/{crew_id}")
+async def api_delete_crew(crew_id: str):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        success = delete_crew_member(crew_id)
+        if success:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Crew member not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/projects/{project_id}/locations")
+async def api_get_locations(project_id: str):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        locations = get_locations(project_id)
+        return JSONResponse({"success": True, "locations": locations})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/locations")
+async def api_save_location(request: Request):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        data = await request.json()
+        location = save_location(data)
+        return JSONResponse({"success": True, "location": location})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/casting/locations/{location_id}")
+async def api_delete_location(location_id: str):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        success = delete_location(location_id)
+        if success:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Location not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/projects/{project_id}/props")
+async def api_get_props(project_id: str):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        props = get_props(project_id)
+        return JSONResponse({"success": True, "props": props})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/props")
+async def api_save_prop(request: Request):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        data = await request.json()
+        prop = save_prop(data)
+        return JSONResponse({"success": True, "prop": prop})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/casting/props/{prop_id}")
+async def api_delete_prop(prop_id: str):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        success = delete_prop(prop_id)
+        if success:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Prop not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/projects/{project_id}/schedules")
+async def api_get_schedules(project_id: str):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        schedules = get_schedules(project_id)
+        return JSONResponse({"success": True, "schedules": schedules})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/schedules")
+async def api_save_schedule(request: Request):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        data = await request.json()
+        schedule = save_schedule(data)
+        return JSONResponse({"success": True, "schedule": schedule})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/casting/schedules/{schedule_id}")
+async def api_delete_schedule(schedule_id: str):
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        success = delete_schedule(schedule_id)
+        if success:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Schedule not found")
     except HTTPException:
         raise
     except Exception as e:

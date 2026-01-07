@@ -55,7 +55,17 @@ PostgreSQL database with comprehensive table structure:
 - `studio_camera_presets` - Camera settings presets
 - `studio_export_templates` - PDF/image export templates
 
-**API Endpoints:**
+**Casting Planner Tables (casting_*):**
+- `casting_favorites` - User favorites per project (candidates, roles, crew, etc.)
+- `casting_projects` - Casting projects with metadata
+- `casting_candidates` - Casting candidates with role assignments
+- `casting_roles` - Role definitions for projects
+- `casting_crew` - Crew members with departments
+- `casting_locations` - Filming locations
+- `casting_props` - Props and equipment
+- `casting_schedules` - Audition and production schedules
+
+**Virtual Studio API Endpoints:**
 - `/api/studio/scenes` - Scene CRUD operations
 - `/api/studio/presets` - Preset management
 - `/api/studio/light-groups` - Light group operations
@@ -64,8 +74,19 @@ PostgreSQL database with comprehensive table structure:
 - `/api/studio/camera-presets` - Camera preset operations
 - `/api/studio/export-templates` - Export template management
 
+**Casting Planner API Endpoints:**
+- `/api/casting/projects` - Project CRUD operations
+- `/api/casting/favorites/{project_id}/{type}` - Favorites management
+- `/api/casting/candidates` - Candidate management
+- `/api/casting/roles` - Role management
+- `/api/casting/crew` - Crew management
+- `/api/casting/locations` - Location management
+- `/api/casting/props` - Props management
+- `/api/casting/schedules` - Schedule management
+
 **Frontend Services:**
-- `src/services/virtualStudioApiService.ts` - Typed API client for all Virtual Studio database operations
+- `src/services/virtualStudioApiService.ts` - Typed API client for Virtual Studio
+- `src/services/castingApiService.ts` - Typed API client for Casting Planner
 
 ## External Dependencies
 - **@babylonjs/core, @babylonjs/loaders, @babylonjs/gui**: 3D engine and related components.
