@@ -156,11 +156,43 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Favorites state with localStorage
-  const [favorites, setFavorites] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem(`prop-favorites-${projectId}`);
-    return saved ? new Set(JSON.parse(saved)) : new Set();
-  });
+  // Favorites with database sync
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  
+  // Load favorites from database
+  useEffect(() => {
+    const loadFavorites = async () => {
+      try {
+        const { favoritesApi } = await import('@/services/castingApiService');
+        const dbFavorites = await favoritesApi.get(projectId, 'prop');
+        if (dbFavorites.length > 0) {
+          setFavorites(new Set(dbFavorites));
+          return;
+        }
+      } catch (error) {
+        console.warn('Database unavailable, using localStorage:', error);
+      }
+      const saved = localStorage.getItem(`prop-favorites-${projectId}`);
+      if (saved) setFavorites(new Set(JSON.parse(saved)));
+    };
+    loadFavorites();
+  }, [projectId]);
+  
+  // Save favorites to database
+  useEffect(() => {
+    const saveFavorites = async () => {
+      localStorage.setItem(`prop-favorites-${projectId}`, JSON.stringify([...favorites]));
+      try {
+        const { favoritesApi } = await import('@/services/castingApiService');
+        await favoritesApi.set(projectId, 'prop', [...favorites]);
+      } catch (error) {
+        console.warn('Database save failed:', error);
+      }
+    };
+    if (favorites.size > 0 || localStorage.getItem(`prop-favorites-${projectId}`)) {
+      saveFavorites();
+    }
+  }, [favorites, projectId]);
 
   // Undo delete state
   const [deletedProp, setDeletedProp] = useState<Prop | null>(null);

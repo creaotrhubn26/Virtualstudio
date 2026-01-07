@@ -142,11 +142,27 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
   // Selection state for bulk operations
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Favorites
-  const [favorites, setFavorites] = useState<Set<string>>(() => {
-    const stored = localStorage.getItem(`location-favorites-\${projectId}`);
-    return stored ? new Set(JSON.parse(stored)) : new Set();
-  });
+  // Favorites with database sync
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  
+  // Load favorites from database
+  useEffect(() => {
+    const loadFavorites = async () => {
+      try {
+        const { favoritesApi } = await import('@/services/castingApiService');
+        const dbFavorites = await favoritesApi.get(projectId, 'location');
+        if (dbFavorites.length > 0) {
+          setFavorites(new Set(dbFavorites));
+          return;
+        }
+      } catch (error) {
+        console.warn('Database unavailable, using localStorage:', error);
+      }
+      const stored = localStorage.getItem(`location-favorites-${projectId}`);
+      if (stored) setFavorites(new Set(JSON.parse(stored)));
+    };
+    loadFavorites();
+  }, [projectId]);
 
   // Copy feedback
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -176,9 +192,20 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
   // Responsive padding
   const containerPadding = { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 3 };
 
-  // Save favorites to localStorage
+  // Save favorites to database and localStorage
   useEffect(() => {
-    localStorage.setItem(`location-favorites-\${projectId}`, JSON.stringify([...favorites]));
+    const saveFavorites = async () => {
+      localStorage.setItem(`location-favorites-${projectId}`, JSON.stringify([...favorites]));
+      try {
+        const { favoritesApi } = await import('@/services/castingApiService');
+        await favoritesApi.set(projectId, 'location', [...favorites]);
+      } catch (error) {
+        console.warn('Database save failed:', error);
+      }
+    };
+    if (favorites.size > 0 || localStorage.getItem(`location-favorites-${projectId}`)) {
+      saveFavorites();
+    }
   }, [favorites, projectId]);
 
   const getTypeLabel = (type: Location['type']): string => {

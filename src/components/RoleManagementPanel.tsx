@@ -120,19 +120,43 @@ export function RoleManagementPanel({
   const [undoSnackbarOpen, setUndoSnackbarOpen] = useState(false);
   const [deletedRole, setDeletedRole] = useState<Role | null>(null);
 
-  // Load favorites from localStorage
+  // Load favorites from database (with localStorage fallback)
   useEffect(() => {
-    const saved = localStorage.getItem(`ch-role-favorites-${projectId}`);
-    if (saved) {
+    const loadFavorites = async () => {
       try {
-        setFavorites(new Set(JSON.parse(saved)));
-      } catch { /* ignore */ }
-    }
+        const { favoritesApi } = await import('@/services/castingApiService');
+        const dbFavorites = await favoritesApi.get(projectId, 'role');
+        if (dbFavorites.length > 0) {
+          setFavorites(new Set(dbFavorites));
+          return;
+        }
+      } catch (error) {
+        console.warn('Database unavailable, using localStorage:', error);
+      }
+      const saved = localStorage.getItem(`ch-role-favorites-${projectId}`);
+      if (saved) {
+        try {
+          setFavorites(new Set(JSON.parse(saved)));
+        } catch { /* ignore */ }
+      }
+    };
+    loadFavorites();
   }, [projectId]);
 
-  // Save favorites to localStorage
+  // Save favorites to database and localStorage
   useEffect(() => {
-    localStorage.setItem(`ch-role-favorites-${projectId}`, JSON.stringify([...favorites]));
+    const saveFavorites = async () => {
+      localStorage.setItem(`ch-role-favorites-${projectId}`, JSON.stringify([...favorites]));
+      try {
+        const { favoritesApi } = await import('@/services/castingApiService');
+        await favoritesApi.set(projectId, 'role', [...favorites]);
+      } catch (error) {
+        console.warn('Database save failed:', error);
+      }
+    };
+    if (favorites.size > 0 || localStorage.getItem(`ch-role-favorites-${projectId}`)) {
+      saveFavorites();
+    }
   }, [favorites, projectId]);
 
   // Keyboard shortcuts

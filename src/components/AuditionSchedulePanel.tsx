@@ -122,15 +122,39 @@ export function AuditionSchedulePanel({
   
   const containerPadding = isMobile ? 2 : isTablet ? 3 : 4;
 
-  // Load favorites from localStorage
+  // Load favorites from database (with localStorage fallback)
   useEffect(() => {
-    const saved = localStorage.getItem(`schedule-favorites-${projectId}`);
-    if (saved) setFavorites(new Set(JSON.parse(saved)));
+    const loadFavorites = async () => {
+      try {
+        const { favoritesApi } = await import('@/services/castingApiService');
+        const dbFavorites = await favoritesApi.get(projectId, 'schedule');
+        if (dbFavorites.length > 0) {
+          setFavorites(new Set(dbFavorites));
+          return;
+        }
+      } catch (error) {
+        console.warn('Database unavailable, using localStorage:', error);
+      }
+      const saved = localStorage.getItem(`schedule-favorites-${projectId}`);
+      if (saved) setFavorites(new Set(JSON.parse(saved)));
+    };
+    loadFavorites();
   }, [projectId]);
 
-  // Save favorites to localStorage
+  // Save favorites to database and localStorage
   useEffect(() => {
-    localStorage.setItem(`schedule-favorites-${projectId}`, JSON.stringify([...favorites]));
+    const saveFavorites = async () => {
+      localStorage.setItem(`schedule-favorites-${projectId}`, JSON.stringify([...favorites]));
+      try {
+        const { favoritesApi } = await import('@/services/castingApiService');
+        await favoritesApi.set(projectId, 'schedule', [...favorites]);
+      } catch (error) {
+        console.warn('Database save failed:', error);
+      }
+    };
+    if (favorites.size > 0 || localStorage.getItem(`schedule-favorites-${projectId}`)) {
+      saveFavorites();
+    }
   }, [favorites, projectId]);
 
   // Keyboard shortcuts

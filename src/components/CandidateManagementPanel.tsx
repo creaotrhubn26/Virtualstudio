@@ -254,15 +254,39 @@ export function CandidateManagementPanel({
 
   const containerPadding = { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 3 };
 
-  // Load favorites from localStorage
+  // Load favorites from database (with localStorage fallback)
   useEffect(() => {
-    const saved = localStorage.getItem(`candidate-favorites-${projectId}`);
-    if (saved) setFavorites(new Set(JSON.parse(saved)));
+    const loadFavorites = async () => {
+      try {
+        const { favoritesApi } = await import('@/services/castingApiService');
+        const dbFavorites = await favoritesApi.get(projectId, 'candidate');
+        if (dbFavorites.length > 0) {
+          setFavorites(new Set(dbFavorites));
+          return;
+        }
+      } catch (error) {
+        console.warn('Database unavailable, using localStorage:', error);
+      }
+      const saved = localStorage.getItem(`candidate-favorites-${projectId}`);
+      if (saved) setFavorites(new Set(JSON.parse(saved)));
+    };
+    loadFavorites();
   }, [projectId]);
 
-  // Save favorites to localStorage
+  // Save favorites to database and localStorage
   useEffect(() => {
-    localStorage.setItem(`candidate-favorites-${projectId}`, JSON.stringify([...favorites]));
+    const saveFavorites = async () => {
+      localStorage.setItem(`candidate-favorites-${projectId}`, JSON.stringify([...favorites]));
+      try {
+        const { favoritesApi } = await import('@/services/castingApiService');
+        await favoritesApi.set(projectId, 'candidate', [...favorites]);
+      } catch (error) {
+        console.warn('Database save failed:', error);
+      }
+    };
+    if (favorites.size > 0 || localStorage.getItem(`candidate-favorites-${projectId}`)) {
+      saveFavorites();
+    }
   }, [favorites, projectId]);
 
   // Keyboard shortcuts

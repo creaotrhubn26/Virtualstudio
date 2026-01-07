@@ -190,11 +190,27 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  // New feature states
-  const [favorites, setFavorites] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem(`crew-favorites-${projectId}`);
-    return saved ? new Set(JSON.parse(saved)) : new Set();
-  });
+  // Favorites with database sync
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  
+  // Load favorites from database
+  useEffect(() => {
+    const loadFavorites = async () => {
+      try {
+        const { favoritesApi } = await import('@/services/castingApiService');
+        const dbFavorites = await favoritesApi.get(projectId, 'crew');
+        if (dbFavorites.length > 0) {
+          setFavorites(new Set(dbFavorites));
+          return;
+        }
+      } catch (error) {
+        console.warn('Database unavailable, using localStorage:', error);
+      }
+      const saved = localStorage.getItem(`crew-favorites-${projectId}`);
+      if (saved) setFavorites(new Set(JSON.parse(saved)));
+    };
+    loadFavorites();
+  }, [projectId]);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [deletedCrew, setDeletedCrew] = useState<CrewMember | null>(null);
   const [showUndoSnackbar, setShowUndoSnackbar] = useState(false);
@@ -482,16 +498,27 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
     }
   };
 
-  // Toggle favorite
-  const toggleFavorite = (id: string) => {
+  // Toggle favorite with database sync
+  const toggleFavorite = async (id: string) => {
     const newFavorites = new Set(favorites);
-    if (newFavorites.has(id)) {
-      newFavorites.delete(id);
-    } else {
+    const isAdding = !newFavorites.has(id);
+    if (isAdding) {
       newFavorites.add(id);
+    } else {
+      newFavorites.delete(id);
     }
     setFavorites(newFavorites);
     localStorage.setItem(`crew-favorites-${projectId}`, JSON.stringify([...newFavorites]));
+    try {
+      const { favoritesApi } = await import('@/services/castingApiService');
+      if (isAdding) {
+        await favoritesApi.add(projectId, 'crew', id);
+      } else {
+        await favoritesApi.remove(projectId, 'crew', id);
+      }
+    } catch (error) {
+      console.warn('Database sync failed:', error);
+    }
   };
 
   // Toggle expanded card
