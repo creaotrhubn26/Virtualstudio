@@ -2506,45 +2506,27 @@ class VirtualStudio {
   }
   
   /**
-   * Set mesh rotation quaternion to look in specified direction
-   * Handles edge cases like looking straight up/down
-   * Note: Studio light models typically have their light head pointing in -Z direction
+   * Set mesh rotation to point light head at target position
+   * Uses simple euler rotation for predictable results
    */
   private setMeshRotationFromDirection(mesh: BABYLON.Mesh, direction: BABYLON.Vector3): void {
     const dir = direction.normalize();
     
-    // Handle edge cases for nearly vertical directions
-    let up = BABYLON.Vector3.Up();
-    const dotUp = Math.abs(BABYLON.Vector3.Dot(dir, up));
-    if (dotUp > 0.99) {
-      // Looking nearly straight up or down, use forward as up vector
-      up = new BABYLON.Vector3(0, 0, 1);
-    }
+    // Clear any existing quaternion rotation
+    mesh.rotationQuaternion = null;
     
-    // Create rotation matrix from direction
-    // The light model faces -Z, so we align -Z with our target direction
-    const forward = dir.clone();
-    const right = BABYLON.Vector3.Cross(up, forward).normalize();
-    const correctedUp = BABYLON.Vector3.Cross(forward, right).normalize();
+    // Calculate pan (Y rotation) - horizontal angle to target
+    // atan2(x, z) gives angle from +Z axis
+    const pan = Math.atan2(dir.x, dir.z);
     
-    const rotMatrix = BABYLON.Matrix.Identity();
-    rotMatrix.setRowFromFloats(0, right.x, right.y, right.z, 0);
-    rotMatrix.setRowFromFloats(1, correctedUp.x, correctedUp.y, correctedUp.z, 0);
-    rotMatrix.setRowFromFloats(2, forward.x, forward.y, forward.z, 0);
+    // Calculate tilt (X rotation) - vertical angle
+    // asin(-y) gives downward tilt for negative y direction
+    const horizontalDist = Math.sqrt(dir.x * dir.x + dir.z * dir.z);
+    const tilt = Math.atan2(-dir.y, horizontalDist);
     
-    // Ensure mesh uses quaternion
-    if (!mesh.rotationQuaternion) {
-      mesh.rotationQuaternion = BABYLON.Quaternion.Identity();
-    }
-    
-    // Apply the rotation
-    let rotation = BABYLON.Quaternion.FromRotationMatrix(rotMatrix);
-    
-    // Apply 180° correction around Y axis since light models face opposite direction
-    const yCorrection = BABYLON.Quaternion.RotationAxis(BABYLON.Vector3.Up(), Math.PI);
-    rotation = rotation.multiply(yCorrection);
-    
-    mesh.rotationQuaternion = rotation;
+    // Apply rotations: first pan (Y), then tilt (X)
+    // The light model faces -Z by default, so pan of 0 points away from camera
+    mesh.rotation = new BABYLON.Vector3(tilt, pan, 0);
   }
   
   /**
