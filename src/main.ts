@@ -265,6 +265,9 @@ class VirtualStudio {
   // Track last known renderList length per preset (for change detection)
   private monitorLastRenderListLength: Map<string, number> = new Map();
   
+  // Cache for loaded 3D light models to enable instancing
+  private lightModelCache: Map<string, BABYLON.Mesh> = new Map();
+  
   public cameraSettings: CameraSettings & { whiteBalance?: number } = {
     aperture: 2.8,
     shutter: '1/125',
@@ -386,11 +389,9 @@ class VirtualStudio {
     this.scene = new BABYLON.Scene(this.engine);
     this.scene.clearColor = new BABYLON.Color4(0.08, 0.09, 0.11, 1);
     
-    // Scene optimizations for better performance
-    this.scene.autoClear = true; // Keep enabled to prevent ghosting artifacts
-    this.scene.autoClearDepthAndStencil = true;
-    this.scene.blockMaterialDirtyMechanism = false; // Allow material updates
-    this.scene.useRightHandedSystem = false; // Standard left-handed (Babylon default)
+    // Scene optimizations - only override non-defaults that improve performance
+    // autoClear and autoClearDepthAndStencil already default to true
+    // useRightHandedSystem defaults to false (standard Babylon left-handed)
 
     this.camera = new BABYLON.ArcRotateCamera(
       'mainCamera',
@@ -414,8 +415,10 @@ class VirtualStudio {
     this.camera.angularSensibilityX = 500; // Smoother horizontal rotation
     this.camera.angularSensibilityY = 500; // Smoother vertical rotation
 
-    // Add FXAA anti-aliasing to reduce jagged edges
-    const fxaa = new BABYLON.FxaaPostProcess('fxaa', 1.0, this.camera);
+    // Add FXAA anti-aliasing to reduce jagged edges (with capability detection)
+    if (this.engine.getCaps().postProcesses) {
+      const fxaa = new BABYLON.FxaaPostProcess('fxaa', 1.0, this.camera);
+    }
 
     this.gizmoManager = new BABYLON.GizmoManager(this.scene);
     this.gizmoManager.positionGizmoEnabled = true;
@@ -742,6 +745,7 @@ class VirtualStudio {
     gridMat.wireframe = true;
     gridMat.emissiveColor = new BABYLON.Color3(0.2, 0.25, 0.35);
     gridMat.alpha = 0.5;
+    gridMat.zOffset = -1; // Prevent z-fighting with ground
     this.gridMesh.material = gridMat;
     this.gridMesh.position.y = 0.01;
 
