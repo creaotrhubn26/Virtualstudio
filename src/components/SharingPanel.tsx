@@ -95,8 +95,7 @@ export function SharingPanel({
   // Get shared users from project's userRoles
   const sharedUsers: SharedUser[] = useMemo(() => {
     if (!project?.userRoles || project.userRoles.length === 0) {
-      // Default owner if no userRoles exist
-      return [{ id: 'owner', name: 'Prosjekteier', email: 'eier@prosjekt.no', role: 'admin' as const }];
+      return [];
     }
     
     return project.userRoles.map((userRole: UserRole) => ({
