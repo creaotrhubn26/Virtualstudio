@@ -12106,7 +12106,7 @@ class VirtualStudio {
     try {
       const glowDisc = BABYLON.MeshBuilder.CreateDisc(
         `glow_${id}`,
-        { radius: 0.25, tessellation: 32 },
+        { radius: 0.55, tessellation: 32 },
         this.scene
       );
       
