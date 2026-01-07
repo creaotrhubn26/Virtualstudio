@@ -58,12 +58,17 @@ PostgreSQL database with comprehensive table structure:
 **Casting Planner Tables (casting_*):**
 - `casting_favorites` - User favorites per project (candidates, roles, crew, etc.)
 - `casting_projects` - Casting projects with metadata
-- `casting_candidates` - Casting candidates with role assignments
+- `casting_candidates` - Casting candidates with role assignments and workflow status
 - `casting_roles` - Role definitions for projects
 - `casting_crew` - Crew members with departments
 - `casting_locations` - Filming locations
 - `casting_props` - Props and equipment
 - `casting_schedules` - Audition and production schedules
+- `casting_offers` - Contract offers with status tracking
+- `casting_contracts` - Signed contracts with terms
+- `casting_calendar_events` - Production calendar with crew assignments and conflict detection
+- `casting_crew_availability` - Crew availability periods (available/unavailable/tentative)
+- `casting_crew_notifications` - Notification system for crew members (in_app/email/push)
 
 **Virtual Studio API Endpoints:**
 - `/api/studio/scenes` - Scene CRUD operations
