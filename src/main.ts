@@ -1043,18 +1043,20 @@ class VirtualStudio {
     baseRing.isPickable = true;
     baseRing.renderingGroupId = 1;
     
-    // Add grid markers on base ring
+    // Add grid markers on base ring - use RELATIVE positions since they are children
     for (let i = 0; i < 8; i++) {
       const angle = (i / 8) * Math.PI * 2;
       const marker = BABYLON.MeshBuilder.CreateBox(`baseMarker_${i}`, { width: 0.12, height: 0.03, depth: 0.04 }, this.scene);
+      // Relative position from parent (baseRing center)
       marker.position = new BABYLON.Vector3(
-        lightPos.x + Math.cos(angle) * 0.9,
-        0.03,
-        lightPos.z + Math.sin(angle) * 0.9
+        Math.cos(angle) * 0.9,
+        0.01, // Slightly above ring
+        Math.sin(angle) * 0.9
       );
       marker.rotation.y = angle;
       marker.material = baseRingMat;
       marker.parent = baseRing;
+      marker.isPickable = false;
     }
     
     // Add drag behavior for base ring
@@ -1087,6 +1089,12 @@ class VirtualStudio {
         if (this.studioGizmoMeshes.heightSlider) {
           this.studioGizmoMeshes.heightSlider.position.x = newX;
           this.studioGizmoMeshes.heightSlider.position.z = newZ;
+        }
+        
+        // Update yoke ring position to follow light
+        if (this.studioGizmoMeshes.yokeRing) {
+          this.studioGizmoMeshes.yokeRing.position.x = newX;
+          this.studioGizmoMeshes.yokeRing.position.z = newZ;
         }
         
         // Update POV camera position
@@ -1168,6 +1176,11 @@ class VirtualStudio {
         if (pole) {
           (pole as BABYLON.Mesh).scaling.y = newY;
           pole.position.y = -newY / 2;
+        }
+        
+        // Update yoke ring height to follow light
+        if (this.studioGizmoMeshes.yokeRing) {
+          this.studioGizmoMeshes.yokeRing.position.y = newY;
         }
         
         // Show height label
@@ -13757,36 +13770,23 @@ class VirtualStudio {
       const cctSelect = document.getElementById('cctSelect') as HTMLSelectElement;
       if (cctSelect) cctSelect.value = data.cct.toString();
 
-      // Enable rotation gizmo for lights so users can rotate them freely
+      // Ensure mesh uses rotationQuaternion for proper gizmo handling
+      if (!data.mesh.rotationQuaternion) {
+        data.mesh.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(
+          data.mesh.rotation.x,
+          data.mesh.rotation.y,
+          data.mesh.rotation.z
+        );
+      }
+      
+      // Use studio gizmos by default - they replace standard gizmos for better UX
+      // Standard gizmos are hidden when studio gizmos are active
       if (this.gizmoManager) {
-        // CRITICAL: Clear any existing gizmo observers to prevent multiple handlers
-        // from different light selections interfering with each other
-        const rotGizmo = (this.gizmoManager as any).rotationGizmo;
-        const posGizmo = (this.gizmoManager as any).positionGizmo;
-        if (rotGizmo) {
-          if (rotGizmo.onDragObservable) rotGizmo.onDragObservable.clear();
-          if (rotGizmo.onDragEndObservable) rotGizmo.onDragEndObservable.clear();
-        }
-        if (posGizmo) {
-          if (posGizmo.onDragObservable) posGizmo.onDragObservable.clear();
-          if (posGizmo.onDragEndObservable) posGizmo.onDragEndObservable.clear();
-        }
-        
-        this.gizmoManager.positionGizmoEnabled = true;
-        this.gizmoManager.rotationGizmoEnabled = true; // Enable rotation for lights
+        // Disable standard gizmos - studio gizmos will handle manipulation
+        this.gizmoManager.positionGizmoEnabled = false;
+        this.gizmoManager.rotationGizmoEnabled = false;
         this.gizmoManager.scaleGizmoEnabled = false;
-        
-        // Ensure mesh uses rotationQuaternion for proper gizmo handling
-        // Gizmos manipulate rotationQuaternion, not Euler angles
-        if (!data.mesh.rotationQuaternion) {
-          data.mesh.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(
-            data.mesh.rotation.x,
-            data.mesh.rotation.y,
-            data.mesh.rotation.z
-          );
-        }
-        
-        this.gizmoManager.attachToMesh(data.mesh);
+        this.gizmoManager.attachToMesh(null);
         
         // Helper function to update light direction from mesh rotation
         const updateLightDirectionFromGizmo = () => {
