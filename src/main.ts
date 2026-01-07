@@ -7169,6 +7169,9 @@ class VirtualStudio {
         // Position at center stage
         rootMesh.position = new BABYLON.Vector3(0, 0, 0);
         
+        // Fix orientation - model is upside down, rotate 180° around X
+        rootMesh.rotation = new BABYLON.Vector3(Math.PI, 0, 0);
+        
         // Scale if needed (avatars are usually in correct scale)
         rootMesh.scaling = new BABYLON.Vector3(1, 1, 1);
         
