@@ -46,6 +46,7 @@ import {
   GridView as GridViewIcon,
   ViewList as TableViewIcon,
   FileDownload as ExportIcon,
+  FileDownload as DownloadIcon,
   BarChart as StatsIcon,
   Close as CloseIcon,
   ContentCopy as DuplicateIcon,
@@ -54,11 +55,13 @@ import {
   Person as PersonIcon,
   TheaterComedy as TheaterComedyIcon,
   Assignment as AssignmentIcon,
+  Inventory as InventoryIcon,
 } from '@mui/icons-material';
 import { Role, CastingProject } from '../core/models/casting';
 import { castingService } from '../services/castingService';
 import { castingAuthService } from '../services/castingAuthService';
 import { useToast } from './ToastStack';
+import { rolePoolService, PoolRole } from '../services/rolePoolService';
 
 // WCAG 2.2 - 2.5.5 Target Size: minimum 44x44px
 const TOUCH_TARGET_SIZE = 44;
@@ -119,6 +122,83 @@ export function RoleManagementPanel({
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [undoSnackbarOpen, setUndoSnackbarOpen] = useState(false);
   const [deletedRole, setDeletedRole] = useState<Role | null>(null);
+  
+  // Pool mode state
+  const [poolMode, setPoolMode] = useState<'project' | 'pool'>('project');
+  const [poolRoles, setPoolRoles] = useState<PoolRole[]>([]);
+  const [poolLoading, setPoolLoading] = useState(false);
+
+  // Load pool roles when switching to pool mode
+  useEffect(() => {
+    if (poolMode === 'pool') {
+      loadPoolRoles();
+    }
+  }, [poolMode]);
+
+  const loadPoolRoles = async () => {
+    setPoolLoading(true);
+    try {
+      const roles = await rolePoolService.getPoolRoles();
+      setPoolRoles(roles);
+    } catch (error) {
+      console.error('Error loading pool roles:', error);
+      showError('Kunne ikke laste rollepool');
+    } finally {
+      setPoolLoading(false);
+    }
+  };
+
+  const handleSaveToPool = async (role: Role) => {
+    try {
+      const poolId = await rolePoolService.saveRoleToPool(role.id);
+      if (poolId) {
+        showSuccess(`"${role.name}" lagret til rollepool`);
+        loadPoolRoles();
+      } else {
+        showError('Kunne ikke lagre rolle til pool');
+      }
+    } catch (error) {
+      console.error('Error saving role to pool:', error);
+      showError('Feil ved lagring til pool');
+    }
+  };
+
+  const handleImportFromPool = async (poolRole: PoolRole) => {
+    if (!projectId) {
+      showError('Ingen prosjekt valgt');
+      return;
+    }
+    try {
+      const newRoleId = await rolePoolService.importToProject(poolRole.id, projectId);
+      if (newRoleId) {
+        showSuccess(`"${poolRole.name}" importert til prosjektet`);
+        onRolesChange();
+        setPoolMode('project');
+      } else {
+        showError('Kunne ikke importere rolle');
+      }
+    } catch (error) {
+      console.error('Error importing role from pool:', error);
+      showError('Feil ved import fra pool');
+    }
+  };
+
+  const handleDeleteFromPool = async (poolRole: PoolRole) => {
+    if (window.confirm(`Er du sikker på at du vil fjerne "${poolRole.name}" fra poolen?`)) {
+      try {
+        const success = await rolePoolService.deleteFromPool(poolRole.id);
+        if (success) {
+          setPoolRoles(prev => prev.filter(r => r.id !== poolRole.id));
+          showSuccess('Rolle fjernet fra pool');
+        } else {
+          showError('Kunne ikke fjerne rolle fra pool');
+        }
+      } catch (error) {
+        console.error('Error deleting from pool:', error);
+        showError('Feil ved sletting fra pool');
+      }
+    }
+  };
 
   // Load favorites from database (with localStorage fallback)
   useEffect(() => {
@@ -935,8 +1015,188 @@ export function RoleManagementPanel({
         </Box>
       </Box>
 
-      {/* Statistics Panel - Collapsible */}
-      <Collapse in={showStats}>
+      {/* Pool/Project Toggle */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          mb: 2,
+          p: 1,
+          bgcolor: 'rgba(255,255,255,0.03)',
+          borderRadius: 1,
+          border: '1px solid rgba(255,255,255,0.1)',
+        }}
+      >
+        <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem', mr: 1 }}>
+          Vis:
+        </Typography>
+        <Button
+          variant={poolMode === 'project' ? 'contained' : 'outlined'}
+          size="small"
+          onClick={() => setPoolMode('project')}
+          sx={{
+            minHeight: 36,
+            bgcolor: poolMode === 'project' ? '#f48fb1' : 'transparent',
+            color: poolMode === 'project' ? '#000' : 'rgba(255,255,255,0.7)',
+            borderColor: poolMode === 'project' ? '#f48fb1' : 'rgba(255,255,255,0.3)',
+            '&:hover': {
+              bgcolor: poolMode === 'project' ? '#f06292' : 'rgba(255,255,255,0.1)',
+            },
+          }}
+        >
+          Prosjektroller ({roles.length})
+        </Button>
+        <Button
+          variant={poolMode === 'pool' ? 'contained' : 'outlined'}
+          size="small"
+          onClick={() => setPoolMode('pool')}
+          sx={{
+            minHeight: 36,
+            bgcolor: poolMode === 'pool' ? '#a78bfa' : 'transparent',
+            color: poolMode === 'pool' ? '#000' : 'rgba(255,255,255,0.7)',
+            borderColor: poolMode === 'pool' ? '#a78bfa' : 'rgba(255,255,255,0.3)',
+            '&:hover': {
+              bgcolor: poolMode === 'pool' ? '#8b5cf6' : 'rgba(255,255,255,0.1)',
+            },
+          }}
+        >
+          Rollepool ({poolRoles.length})
+        </Button>
+      </Box>
+
+      {/* Pool View */}
+      {poolMode === 'pool' && (
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 2 }}>
+            Global rollepool - gjenbruk rollebeskrivelser på tvers av prosjekter. Klikk "Importer" for å legge til en rolle i dette prosjektet.
+          </Typography>
+          
+          {poolLoading ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Laster rollepool...</Typography>
+            </Box>
+          ) : poolRoles.length === 0 ? (
+            <Box sx={{ 
+              textAlign: 'center', 
+              py: 6, 
+              bgcolor: 'rgba(255,255,255,0.02)', 
+              borderRadius: 2,
+              border: '1px dashed rgba(255,255,255,0.1)',
+            }}>
+              <TheaterComedyIcon sx={{ fontSize: 48, color: 'rgba(255,255,255,0.2)', mb: 2 }} />
+              <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 1 }}>
+                Ingen roller i poolen ennå
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.3)' }}>
+                Bruk "Lagre til pool" på prosjektroller for å fylle poolen
+              </Typography>
+            </Box>
+          ) : (
+            <Box sx={{ 
+              display: 'grid', 
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' },
+              gap: 2,
+            }}>
+              {poolRoles.map((poolRole) => (
+                <Card 
+                  key={poolRole.id} 
+                  sx={{ 
+                    bgcolor: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 2,
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      bgcolor: 'rgba(255,255,255,0.08)',
+                      borderColor: 'rgba(167,139,250,0.3)',
+                    },
+                  }}
+                >
+                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <TheaterComedyIcon sx={{ color: '#a78bfa', fontSize: 20 }} />
+                      <Typography sx={{ color: '#fff', fontWeight: 600, fontSize: '0.95rem' }}>
+                        {poolRole.name}
+                      </Typography>
+                    </Box>
+                    
+                    {poolRole.roleType && (
+                      <Chip
+                        label={poolRole.roleType}
+                        size="small"
+                        sx={{
+                          height: 20,
+                          fontSize: '0.7rem',
+                          mb: 1,
+                          bgcolor: 'rgba(167,139,250,0.2)',
+                          color: '#a78bfa',
+                        }}
+                      />
+                    )}
+                    
+                    {poolRole.description && (
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: 'rgba(255,255,255,0.5)',
+                          fontSize: '0.8rem',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          mb: 1.5,
+                        }}
+                      >
+                        {poolRole.description}
+                      </Typography>
+                    )}
+                    
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      pt: 1,
+                      borderTop: '1px solid rgba(255,255,255,0.1)',
+                    }}>
+                      <Button
+                        size="small"
+                        onClick={() => handleImportFromPool(poolRole)}
+                        sx={{
+                          color: '#a78bfa',
+                          fontSize: '0.75rem',
+                          minHeight: TOUCH_TARGET_SIZE,
+                          '&:hover': { bgcolor: 'rgba(167,139,250,0.1)' },
+                        }}
+                      >
+                        Importer
+                      </Button>
+                      
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteFromPool(poolRole)}
+                        sx={{
+                          color: 'rgba(255,255,255,0.4)',
+                          minWidth: TOUCH_TARGET_SIZE,
+                          minHeight: TOUCH_TARGET_SIZE,
+                          '&:hover': { 
+                            color: '#ef4444',
+                            bgcolor: 'rgba(239,68,68,0.1)',
+                          },
+                        }}
+                      >
+                        <DeleteIcon sx={{ fontSize: 18 }} />
+                      </IconButton>
+                    </Box>
+                  </CardContent>
+                </Card>
+              ))}
+            </Box>
+          )}
+        </Box>
+      )}
+
+      {/* Statistics Panel - Collapsible (only in project mode) */}
+      <Collapse in={showStats && poolMode === 'project'}>
         <Box
           sx={{
             display: 'grid',
@@ -983,7 +1243,8 @@ export function RoleManagementPanel({
         </Box>
       </Collapse>
 
-      {/* Search and Filter Controls - Responsive */}
+      {/* Search and Filter Controls - Responsive (only in project mode) */}
+      {poolMode === 'project' && (
       <Box
         sx={{
           display: 'flex',
@@ -1101,9 +1362,10 @@ export function RoleManagementPanel({
           )}
         </Box>
       </Box>
+      )}
 
-      {/* Results count */}
-      {(searchQuery || statusFilter !== 'all') && (
+      {/* Results count (only in project mode) */}
+      {poolMode === 'project' && (searchQuery || statusFilter !== 'all') && (
         <Alert
           severity="info"
           sx={{
@@ -1117,8 +1379,9 @@ export function RoleManagementPanel({
         </Alert>
       )}
 
-      {/* Empty state */}
-      {roles.length === 0 ? (
+      {/* Empty state and role list (only in project mode) */}
+      {poolMode === 'project' && (
+        roles.length === 0 ? (
         <Box
           role="status"
           sx={{
@@ -1290,6 +1553,11 @@ export function RoleManagementPanel({
                   </TableCell>
                   <TableCell align="right" sx={{ py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 } }}>
+                      <Tooltip title="Lagre til pool">
+                        <IconButton onClick={() => handleSaveToPool(role)} sx={{ color: '#9c27b0', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
+                          <InventoryIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Dupliser">
                         <IconButton onClick={() => handleDuplicate(role)} sx={{ color: 'rgba(255,255,255,0.5)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
                           <DuplicateIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />
@@ -1707,6 +1975,20 @@ export function RoleManagementPanel({
                         {expandedCards.has(role.id) ? 'Skjul detaljer' : 'Vis detaljer'}
                       </Button>
                       <Box sx={{ display: 'flex', gap: { xs: 0.5, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
+                        <Tooltip title="Lagre til pool">
+                          <IconButton
+                            onClick={() => handleSaveToPool(role)}
+                            sx={{
+                              minWidth: TOUCH_TARGET_SIZE,
+                              minHeight: TOUCH_TARGET_SIZE,
+                              color: '#9c27b0',
+                              '&:hover': { bgcolor: 'rgba(156, 39, 176, 0.1)' },
+                              ...focusVisibleStyles,
+                            }}
+                          >
+                            <InventoryIcon sx={{ fontSize: { xs: 20, sm: 22, md: 21, lg: 24, xl: 28 } }} />
+                          </IconButton>
+                        </Tooltip>
                         <Tooltip title="Dupliser">
                           <IconButton
                             onClick={() => handleDuplicate(role)}
@@ -1757,6 +2039,141 @@ export function RoleManagementPanel({
             );
           })}
         </Grid>
+      )
+      )}
+
+      {/* Pool View - shows pool roles when in pool mode */}
+      {poolMode === 'pool' && (
+        <Box>
+          {poolRoles.length === 0 ? (
+            <Box
+              role="status"
+              sx={{
+                textAlign: 'center',
+                py: { xs: 4, sm: 8 },
+                px: 4,
+                bgcolor: 'rgba(156, 39, 176, 0.03)',
+                borderRadius: 3,
+                border: '2px dashed rgba(156, 39, 176, 0.2)',
+              }}
+            >
+              <Box
+                sx={{
+                  width: { xs: 60, sm: 80 },
+                  height: { xs: 60, sm: 80 },
+                  borderRadius: '50%',
+                  bgcolor: 'rgba(156, 39, 176, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto',
+                  mb: { xs: 2, sm: 3 },
+                }}
+              >
+                <InventoryIcon sx={{ fontSize: { xs: 30, sm: 40 }, color: '#9c27b0' }} />
+              </Box>
+              <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>
+                Rollepool er tom
+              </Typography>
+              <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.6)', mb: 3, maxWidth: 400, mx: 'auto' }}>
+                Lagre roller fra prosjekter til poolen for gjenbruk i fremtidige produksjoner.
+              </Typography>
+            </Box>
+          ) : (
+            <Grid container spacing={{ xs: 1, sm: 2 }}>
+              {poolRoles.map((poolRole) => (
+                <Grid item xs={12} sm={6} md={4} lg={3} key={poolRole.id}>
+                  <Card
+                    sx={{
+                      bgcolor: 'rgba(156, 39, 176, 0.08)',
+                      border: '1px solid rgba(156, 39, 176, 0.3)',
+                      borderRadius: 2,
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        borderColor: '#9c27b0',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 12px rgba(156, 39, 176, 0.2)',
+                      },
+                    }}
+                  >
+                    <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, fontSize: { xs: '1rem', sm: '1.1rem' } }}>
+                          {poolRole.name}
+                        </Typography>
+                        <Chip
+                          icon={<InventoryIcon sx={{ fontSize: 14 }} />}
+                          label="Pool"
+                          size="small"
+                          sx={{
+                            bgcolor: 'rgba(156, 39, 176, 0.2)',
+                            color: '#ce93d8',
+                            fontSize: '0.7rem',
+                            height: 24,
+                          }}
+                        />
+                      </Box>
+                      {poolRole.description && (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: 'rgba(255,255,255,0.6)',
+                            mb: 1.5,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {poolRole.description}
+                        </Typography>
+                      )}
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
+                        {poolRole.roleType && (
+                          <Chip
+                            label={poolRole.roleType}
+                            size="small"
+                            sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', fontSize: '0.7rem' }}
+                          />
+                        )}
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          startIcon={<DownloadIcon />}
+                          onClick={() => handleImportFromPool(poolRole)}
+                          sx={{
+                            bgcolor: '#9c27b0',
+                            color: '#fff',
+                            flex: 1,
+                            minHeight: TOUCH_TARGET_SIZE,
+                            '&:hover': { bgcolor: '#7b1fa2' },
+                          }}
+                        >
+                          Importer
+                        </Button>
+                        <Tooltip title="Slett fra pool">
+                          <IconButton
+                            onClick={() => handleDeleteFromPool(poolRole.id)}
+                            sx={{
+                              minWidth: TOUCH_TARGET_SIZE,
+                              minHeight: TOUCH_TARGET_SIZE,
+                              color: '#ff4444',
+                              '&:hover': { bgcolor: 'rgba(255,68,68,0.1)' },
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </Box>
       )}
 
       {/* Undo Delete Snackbar */}
