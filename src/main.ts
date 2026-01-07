@@ -489,6 +489,9 @@ class VirtualStudio {
     this.setupUI();
     this.setupAssetEventListeners();
     this.setupFocusEventListeners();
+    
+    // Add default mannequin for focus target testing
+    this.addDefaultMannequin();
 
     this.engine.runRenderLoop(() => {
       this.scene.render();
@@ -1955,24 +1958,27 @@ class VirtualStudio {
         if (!lightData) return;
         
         // Calculate smart reset position based on light type
+        // Check both name and type since light role is often in the name
+        const lightName = lightData.name.toLowerCase();
         const lightType = lightData.type.toLowerCase();
+        const lightRole = `${lightName} ${lightType}`;
         let resetPos: BABYLON.Vector3;
         let resetDir: BABYLON.Vector3;
         
-        // Different defaults for different light types
-        if (lightType.includes('key') || lightType.includes('hovedlys')) {
+        // Different defaults for different light types/roles
+        if (lightRole.includes('key') || lightRole.includes('hovedlys') || lightRole.includes('main')) {
           // Key light: 45° to the side, elevated, pointing at subject
           resetPos = new BABYLON.Vector3(-1.5, 2.5, 2);
           resetDir = new BABYLON.Vector3(0.3, -0.4, -0.866).normalize();
-        } else if (lightType.includes('fill') || lightType.includes('fyll')) {
+        } else if (lightRole.includes('fill') || lightRole.includes('fyll')) {
           // Fill light: opposite side from key, lower power position
           resetPos = new BABYLON.Vector3(1.5, 2.0, 2);
           resetDir = new BABYLON.Vector3(-0.3, -0.3, -0.9).normalize();
-        } else if (lightType.includes('back') || lightType.includes('rim') || lightType.includes('kant')) {
+        } else if (lightRole.includes('back') || lightRole.includes('rim') || lightRole.includes('kant')) {
           // Backlight/rim: behind subject, elevated
           resetPos = new BABYLON.Vector3(0, 3.0, -1.5);
           resetDir = new BABYLON.Vector3(0, -0.6, 0.8).normalize();
-        } else if (lightType.includes('hair') || lightType.includes('hår')) {
+        } else if (lightRole.includes('hair') || lightRole.includes('hår')) {
           // Hair light: above and behind
           resetPos = new BABYLON.Vector3(0, 3.5, -1);
           resetDir = new BABYLON.Vector3(0, -0.7, 0.7).normalize();
@@ -2051,25 +2057,79 @@ class VirtualStudio {
   
   /**
    * Calculate the best focus point for a mesh based on mode
+   * Handles parent meshes with children by computing combined bounds
    */
   private calculateFocusPoint(mesh: BABYLON.Mesh, mode: 'human' | 'product'): BABYLON.Vector3 {
-    const boundingInfo = mesh.getBoundingInfo();
-    const bounds = boundingInfo.boundingBox;
-    const center = boundingInfo.boundingSphere.centerWorld.clone();
+    // Get combined bounding info including children
+    const bounds = this.getCombinedBounds(mesh);
+    
+    const centerX = (bounds.min.x + bounds.max.x) / 2;
+    const centerY = (bounds.min.y + bounds.max.y) / 2;
+    const centerZ = (bounds.min.z + bounds.max.z) / 2;
+    const height = bounds.max.y - bounds.min.y;
     
     if (mode === 'human') {
       // For humans: target upper third (face/chest area)
-      const height = bounds.maximumWorld.y - bounds.minimumWorld.y;
-      // Move up 30% from center toward top (equivalent to upper third)
+      // Move up 30% from center toward top
       return new BABYLON.Vector3(
-        center.x,
-        center.y + height * 0.3,
-        center.z
+        centerX,
+        centerY + height * 0.3,
+        centerZ
       );
     } else {
       // For products: target bounding box center
-      return center;
+      return new BABYLON.Vector3(centerX, centerY, centerZ);
     }
+  }
+  
+  /**
+   * Get combined world-space bounds for a mesh including all children
+   */
+  private getCombinedBounds(mesh: BABYLON.Mesh): { min: BABYLON.Vector3; max: BABYLON.Vector3 } {
+    let minX = Infinity, minY = Infinity, minZ = Infinity;
+    let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+    
+    const processNode = (node: BABYLON.AbstractMesh) => {
+      if (node.getBoundingInfo) {
+        const bounds = node.getBoundingInfo().boundingBox;
+        const min = bounds.minimumWorld;
+        const max = bounds.maximumWorld;
+        
+        // Only include valid bounds
+        if (isFinite(min.x) && isFinite(max.x)) {
+          minX = Math.min(minX, min.x);
+          minY = Math.min(minY, min.y);
+          minZ = Math.min(minZ, min.z);
+          maxX = Math.max(maxX, max.x);
+          maxY = Math.max(maxY, max.y);
+          maxZ = Math.max(maxZ, max.z);
+        }
+      }
+    };
+    
+    // Process this mesh
+    processNode(mesh);
+    
+    // Process all descendants
+    mesh.getDescendants(false).forEach(child => {
+      if (child instanceof BABYLON.AbstractMesh) {
+        processNode(child);
+      }
+    });
+    
+    // Fallback if no valid bounds found
+    if (!isFinite(minX)) {
+      const pos = mesh.position;
+      return {
+        min: new BABYLON.Vector3(pos.x - 0.5, pos.y, pos.z - 0.5),
+        max: new BABYLON.Vector3(pos.x + 0.5, pos.y + 1.7, pos.z + 0.5)
+      };
+    }
+    
+    return {
+      min: new BABYLON.Vector3(minX, minY, minZ),
+      max: new BABYLON.Vector3(maxX, maxY, maxZ)
+    };
   }
   
   /**
@@ -2111,17 +2171,21 @@ class VirtualStudio {
     // Add casting candidates
     this.castingCandidates.forEach((candidate, id) => {
       if (candidate.mesh && candidate.mesh.isEnabled()) {
-        const center = candidate.mesh.getBoundingInfo().boundingSphere.centerWorld;
+        // Use combined bounds for parent meshes with children
+        const bounds = this.getCombinedBounds(candidate.mesh);
+        const centerX = (bounds.min.x + bounds.max.x) / 2;
+        const centerY = (bounds.min.y + bounds.max.y) / 2;
+        const centerZ = (bounds.min.z + bounds.max.z) / 2;
+        const center = new BABYLON.Vector3(centerX, centerY, centerZ);
         const distance = lightPos ? BABYLON.Vector3.Distance(lightPos, center) : 0;
         
         // Detect type based on bounding box proportions
-        const bounds = candidate.mesh.getBoundingInfo().boundingBox;
-        const height = bounds.maximumWorld.y - bounds.minimumWorld.y;
+        const height = bounds.max.y - bounds.min.y;
         const width = Math.max(
-          bounds.maximumWorld.x - bounds.minimumWorld.x,
-          bounds.maximumWorld.z - bounds.minimumWorld.z
+          bounds.max.x - bounds.min.x,
+          bounds.max.z - bounds.min.z
         );
-        const isHuman = height > width * 1.5 && height > 1.0; // Tall and upright = human
+        const isHuman = height > width * 1.5 && height > 0.8; // Tall and upright = human
         
         objects.push({
           id,
@@ -7054,6 +7118,58 @@ class VirtualStudio {
     
     this.castingCandidates.set(candidateId, { mesh: capsule, name });
     console.log(`Created placeholder actor for ${name}`);
+  }
+  
+  /**
+   * Add a default mannequin to the scene for focus target testing
+   */
+  private addDefaultMannequin(): void {
+    const mannequinId = 'default_mannequin';
+    
+    // Create a human-shaped mannequin (capsule for body + sphere for head)
+    const bodyHeight = 1.5;
+    const bodyRadius = 0.22;
+    const headRadius = 0.12;
+    
+    // Body capsule
+    const body = BABYLON.MeshBuilder.CreateCapsule(`${mannequinId}_body`, {
+      height: bodyHeight,
+      radius: bodyRadius,
+    }, this.scene);
+    body.position = new BABYLON.Vector3(0, bodyHeight / 2 + 0.1, 0);
+    
+    // Head sphere
+    const head = BABYLON.MeshBuilder.CreateSphere(`${mannequinId}_head`, {
+      diameter: headRadius * 2,
+      segments: 16
+    }, this.scene);
+    head.position = new BABYLON.Vector3(0, bodyHeight + headRadius + 0.1, 0);
+    
+    // Create parent mesh for the mannequin
+    const mannequin = new BABYLON.Mesh(mannequinId, this.scene);
+    body.parent = mannequin;
+    head.parent = mannequin;
+    
+    // Material - neutral gray with slight warmth
+    const material = new BABYLON.StandardMaterial(`${mannequinId}_mat`, this.scene);
+    material.diffuseColor = new BABYLON.Color3(0.55, 0.52, 0.50);
+    material.specularColor = new BABYLON.Color3(0.15, 0.15, 0.15);
+    material.specularPower = 32;
+    body.material = material;
+    head.material = material;
+    
+    // Position mannequin at center stage
+    mannequin.position = new BABYLON.Vector3(0, 0, 0);
+    
+    // Add to casting candidates so Focus Target can detect it
+    this.castingCandidates.set(mannequinId, { mesh: mannequin as BABYLON.Mesh, name: 'Mannequin' });
+    
+    console.log('Default mannequin added to scene for focus target testing');
+    
+    // Update focus objects list after short delay
+    setTimeout(() => {
+      this.updateFocusObjectsList();
+    }, 500);
   }
 
   private async generateAvatarFromCastingPhoto(candidateId: string, candidateName: string, photoUrl: string): Promise<void> {
