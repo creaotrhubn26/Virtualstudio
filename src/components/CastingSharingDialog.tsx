@@ -89,6 +89,46 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
     includeSharedUsers: true,
   });
   const [exportTitle, setExportTitle] = useState('');
+  const [projectName, setProjectName] = useState('');
+  const [exportCounts, setExportCounts] = useState({
+    roles: 0,
+    candidates: 0,
+    schedules: 0,
+    crew: 0,
+    locations: 0,
+    props: 0,
+  });
+  
+  // Load project data and counts when export dialog opens
+  useEffect(() => {
+    const loadExportData = async () => {
+      if (exportDialogOpen && projectId) {
+        try {
+          const [project, roles, candidates, schedules, crew, locations, props] = await Promise.all([
+            castingService.getProject(projectId),
+            castingService.getRoles(projectId),
+            castingService.getCandidates(projectId),
+            castingService.getSchedules(projectId),
+            castingService.getCrew(projectId),
+            castingService.getLocations(projectId),
+            castingService.getProps(projectId),
+          ]);
+          setProjectName(project?.name || 'Prosjekt tittel');
+          setExportCounts({
+            roles: roles.length,
+            candidates: candidates.length,
+            schedules: schedules.length,
+            crew: crew.length,
+            locations: locations.length,
+            props: props.length,
+          });
+        } catch (error) {
+          console.error('Error loading export data:', error);
+        }
+      }
+    };
+    loadExportData();
+  }, [exportDialogOpen, projectId]);
 
   // MenuProps for Select components to ensure proper rendering within Dialog
   // Use container: document.body with higher z-index than Dialog (100000) to fix modal stacking issues
@@ -1262,15 +1302,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
       </DialogActions>
 
       {/* Export Options Dialog */}
-      {exportDialogOpen && (() => {
-        const rolesCount = castingService.getRoles(projectId).length;
-        const candidatesCount = castingService.getCandidates(projectId).length;
-        const schedulesCount = castingService.getSchedules(projectId).length;
-        const crewCount = castingService.getCrew(projectId).length;
-        const locationsCount = castingService.getLocations(projectId).length;
-        const propsCount = castingService.getProps(projectId).length;
-        
-        return (
+      {exportDialogOpen && (
           <Dialog
             open={exportDialogOpen}
             onClose={() => setExportDialogOpen(false)}
@@ -1311,10 +1343,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
               <Stack spacing={3}>
                 <TextField
                   label="Tittel (valgfri)"
-                  placeholder={(() => {
-                    const project = castingService.getProject(projectId);
-                    return project?.name || 'Prosjekt tittel';
-                  })()}
+                  placeholder={projectName || 'Prosjekt tittel'}
                   value={exportTitle}
                   onChange={(e) => setExportTitle(e.target.value)}
                   fullWidth
@@ -1393,7 +1422,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
                     }
                     label={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography sx={{ color: '#fff' }}>Roller ({rolesCount})</Typography>
+                        <Typography sx={{ color: '#fff' }}>Roller ({exportCounts.roles})</Typography>
                       </Box>
                     }
                   />
@@ -1410,7 +1439,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
                     }
                     label={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography sx={{ color: '#fff' }}>Kandidater ({candidatesCount})</Typography>
+                        <Typography sx={{ color: '#fff' }}>Kandidater ({exportCounts.candidates})</Typography>
                       </Box>
                     }
                   />
@@ -1427,7 +1456,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
                     }
                     label={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography sx={{ color: '#fff' }}>Timeplan ({schedulesCount})</Typography>
+                        <Typography sx={{ color: '#fff' }}>Timeplan ({exportCounts.schedules})</Typography>
                       </Box>
                     }
                   />
@@ -1444,7 +1473,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
                     }
                     label={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography sx={{ color: '#fff' }}>Crew ({crewCount})</Typography>
+                        <Typography sx={{ color: '#fff' }}>Crew ({exportCounts.crew})</Typography>
                       </Box>
                     }
                   />
@@ -1461,7 +1490,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
                     }
                     label={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography sx={{ color: '#fff' }}>Lokasjoner ({locationsCount})</Typography>
+                        <Typography sx={{ color: '#fff' }}>Lokasjoner ({exportCounts.locations})</Typography>
                       </Box>
                     }
                   />
@@ -1478,7 +1507,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
                     }
                     label={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography sx={{ color: '#fff' }}>Rekvisitter ({propsCount})</Typography>
+                        <Typography sx={{ color: '#fff' }}>Rekvisitter ({exportCounts.props})</Typography>
                       </Box>
                     }
                   />
@@ -1530,8 +1559,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
               </Button>
             </DialogActions>
           </Dialog>
-        );
-      })()}
+      )}
     </Dialog>
   );
 }
