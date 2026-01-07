@@ -1662,9 +1662,9 @@ class VirtualStudio {
     rapid: Math.PI / 4    // 45° per full deflection - fast positioning
   };
   
-  // Professional joystick settings (industry standard)
-  private readonly joystickDeadZone = 0.08; // 8% dead zone - industry standard for precision
-  private readonly joystickResponseCurve = 2.2; // Exponential curve (like gamma) for precision
+  // Professional joystick settings (balanced for touch/mouse input)
+  private readonly joystickDeadZone = 0.05; // 5% dead zone - smaller for mouse precision
+  private readonly joystickResponseCurve = 1.5; // Gentler curve for better responsiveness
   
   /**
    * Initialize the rotation joystick control
