@@ -593,14 +593,35 @@ export type ConsentType =
   | 'minor_consent' 
   | 'other';
 
+export type ConsentInvitationStatus = 'not_sent' | 'sent' | 'viewed' | 'signed' | 'declined';
+
+export interface ConsentSignatureData {
+  signature: string;
+  signed_by: string;
+  signed_at: string;
+  ip_address?: string;
+  user_agent?: string;
+}
+
 export interface Consent {
   id: string;
   candidateId: string;
+  projectId?: string;
   type: ConsentType;
+  title?: string;
+  description?: string;
   signed: boolean;
-  date?: string; // Date signed (ISO string)
-  document?: string; // URL or base64 of signed document
+  date?: string;
+  document?: string;
   notes?: string;
+  accessCode?: string;
+  pin?: string;
+  password?: string;
+  invitationStatus?: ConsentInvitationStatus;
+  invitationSentAt?: string;
+  signatureData?: ConsentSignatureData;
+  expiresAt?: string;
+  templateId?: string;
   createdAt: string;
   updatedAt: string;
 }
