@@ -1533,6 +1533,7 @@ class VirtualStudio {
   private hudJoystickStartPan: number = 0;
   private hudJoystickStartTilt: number = 0;
   private hudJoystickStartDir: BABYLON.Vector3 = new BABYLON.Vector3(0, 0, 1);
+  private hudJoystickStartPointer: { x: number; y: number } = { x: 0, y: 0 };
   
   // Focus Target System
   private focusMode: 'human' | 'product' = 'human';
@@ -1696,6 +1697,16 @@ class VirtualStudio {
       this.hudJoystickDragging = true;
       knob.style.transition = 'none';
       
+      // Store the pointer position at drag start (to calculate delta, not absolute)
+      const pos = this.getEventPosition(e);
+      const rect = joystickBg.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      this.hudJoystickStartPointer = {
+        x: (pos.x - centerX) / maxOffset,
+        y: (pos.y - centerY) / maxOffset
+      };
+      
       // Store the actual light direction when drag begins (not recalculated)
       this.hudJoystickStartDir = lightData.light.direction.clone().normalize();
       
@@ -1717,9 +1728,14 @@ class VirtualStudio {
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
       
-      // Calculate offset from center (-1 to 1 normalized)
-      let offsetX = (pos.x - centerX) / maxOffset;
-      let offsetY = (pos.y - centerY) / maxOffset;
+      // Calculate current pointer offset from center
+      const currentOffsetX = (pos.x - centerX) / maxOffset;
+      const currentOffsetY = (pos.y - centerY) / maxOffset;
+      
+      // Calculate DELTA from start position (not absolute offset)
+      // This ensures zero movement at drag start
+      let offsetX = currentOffsetX - this.hudJoystickStartPointer.x;
+      let offsetY = currentOffsetY - this.hudJoystickStartPointer.y;
       
       // Clamp to circular constraint (prevents square corners)
       const magnitude = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
@@ -1743,7 +1759,7 @@ class VirtualStudio {
       const curvedOffsetX = applyAxisDeadzone(offsetX);
       const curvedOffsetY = applyAxisDeadzone(offsetY);
       
-      // Update knob visual position (30% of container size)
+      // Update knob visual position based on delta movement (30% of container size)
       const knobCenterX = 50 + offsetX * 30;
       const knobCenterY = 50 + offsetY * 30;
       knob.style.left = `${knobCenterX}%`;
