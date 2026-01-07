@@ -1549,6 +1549,32 @@
         </div>
         <div class="viewport-3d" id="viewport3d">
           <canvas id="renderCanvas" tabindex="0" aria-label="3D scene visning - bruk mus for aa navigere"></canvas>
+          <!-- Render Mode Toggle -->
+          <div id="renderModeToggle" class="render-mode-toggle" style="position:absolute;top:12px;right:12px;z-index:100;display:flex;gap:4px;background:rgba(0,0,0,0.7);border-radius:8px;padding:4px;border:1px solid rgba(255,255,255,0.1);">
+            <button id="workModeBtn" class="render-mode-btn active" title="Work Mode - Interaktiv, høy FPS" style="padding:6px 12px;border:none;background:rgba(0,212,255,0.3);color:#00d4ff;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all 0.2s;">
+              <span style="display:flex;align-items:center;gap:4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/></svg>
+                Work
+              </span>
+            </button>
+            <button id="finalModeBtn" class="render-mode-btn" title="Final Mode - Høy kvalitet, progressiv" style="padding:6px 12px;border:none;background:transparent;color:rgba(255,255,255,0.6);border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all 0.2s;">
+              <span style="display:flex;align-items:center;gap:4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                Final
+              </span>
+            </button>
+          </div>
+          <!-- Render Progress Indicator (Final Mode) -->
+          <div id="renderProgress" class="render-progress" style="position:absolute;bottom:60px;left:50%;transform:translateX(-50%);z-index:100;display:none;background:rgba(0,0,0,0.85);border-radius:12px;padding:12px 20px;border:1px solid rgba(255,255,255,0.15);text-align:center;">
+            <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:6px;">Progressiv Rendering</div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:120px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;">
+                <div id="renderProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg,#00d4ff,#10b981);transition:width 0.3s;"></div>
+              </div>
+              <span id="renderProgressText" style="font-size:12px;color:#00d4ff;font-weight:600;min-width:40px;">0%</span>
+            </div>
+            <button id="cancelFinalRender" style="margin-top:8px;padding:4px 12px;border:none;background:rgba(239,68,68,0.2);color:#ef4444;border-radius:4px;cursor:pointer;font-size:10px;">Avbryt</button>
+          </div>
           <!-- Drop zone overlay for drag & drop -->
           <div id="viewportDropZone" class="viewport-drop-zone">
             <div class="viewport-drop-hint">

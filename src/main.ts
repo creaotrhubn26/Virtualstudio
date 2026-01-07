@@ -207,6 +207,11 @@ class VirtualStudio {
   private lightCounter = 0;
   private selectedPosAxes: Set<string> = new Set(['x', 'y', 'z']);
   private glowLayer: BABYLON.GlowLayer | null = null;
+  private renderingPipeline: BABYLON.DefaultRenderingPipeline | null = null;
+  private ssrPipeline: BABYLON.SSRRenderingPipeline | null = null;
+  private renderMode: 'work' | 'final' = 'work';
+  private finalRenderSamples: number = 0;
+  private finalRenderMaxSamples: number = 128;
   private selectedRotAxes: Set<string> = new Set(['x', 'y', 'z']);
   private gridMesh: BABYLON.Mesh | null = null;
   private gizmoManager: BABYLON.GizmoManager | null = null;
@@ -430,10 +435,8 @@ class VirtualStudio {
     this.camera.angularSensibilityX = 500; // Smoother horizontal rotation
     this.camera.angularSensibilityY = 500; // Smoother vertical rotation
 
-    // Add FXAA anti-aliasing to reduce jagged edges (with capability detection)
-    if (this.engine.getCaps().postProcesses) {
-      const fxaa = new BABYLON.FxaaPostProcess('fxaa', 1.0, this.camera);
-    }
+    // Setup professional rendering pipeline (Work Mode)
+    this.setupRenderingPipeline();
 
     this.gizmoManager = new BABYLON.GizmoManager(this.scene);
     this.gizmoManager.positionGizmoEnabled = true;
@@ -740,6 +743,153 @@ class VirtualStudio {
       this.currentBackdropMesh = null;
       console.log('Backdrop removed');
     }
+  }
+
+  /**
+   * Setup professional rendering pipeline with:
+   * - DefaultRenderingPipeline (ACES tone mapping, DOF, bloom, grain)
+   * - SSR (Screen-Space Reflections) for realistic reflections
+   * - High-quality anti-aliasing
+   */
+  private setupRenderingPipeline(): void {
+    // Create DefaultRenderingPipeline for professional post-processing
+    this.renderingPipeline = new BABYLON.DefaultRenderingPipeline(
+      'defaultPipeline',
+      true, // HDR
+      this.scene,
+      [this.camera]
+    );
+
+    // ACES Tone Mapping for cinematic look
+    this.renderingPipeline.imageProcessing.toneMappingEnabled = true;
+    this.renderingPipeline.imageProcessing.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+    
+    // Exposure and contrast
+    this.renderingPipeline.imageProcessing.exposure = 1.0;
+    this.renderingPipeline.imageProcessing.contrast = 1.1;
+    
+    // Enable high-quality anti-aliasing (FXAA + MSAA)
+    this.renderingPipeline.fxaaEnabled = true;
+    this.renderingPipeline.samples = 4; // MSAA samples
+    
+    // Subtle bloom for emissive materials (light bulbs, screens)
+    this.renderingPipeline.bloomEnabled = true;
+    this.renderingPipeline.bloomThreshold = 0.8;
+    this.renderingPipeline.bloomWeight = 0.3;
+    this.renderingPipeline.bloomKernel = 64;
+    this.renderingPipeline.bloomScale = 0.5;
+    
+    // Depth of Field (disabled by default, enabled via camera settings)
+    this.renderingPipeline.depthOfFieldEnabled = false;
+    this.renderingPipeline.depthOfFieldBlurLevel = BABYLON.DepthOfFieldEffectBlurLevel.Medium;
+    this.renderingPipeline.depthOfField.focalLength = 50;
+    this.renderingPipeline.depthOfField.fStop = 2.8;
+    this.renderingPipeline.depthOfField.focusDistance = 5000; // In mm
+    
+    // Film grain for cinematic look (subtle)
+    this.renderingPipeline.grainEnabled = false;
+    this.renderingPipeline.grain.intensity = 5;
+    this.renderingPipeline.grain.animated = true;
+    
+    // Chromatic aberration (disabled by default)
+    this.renderingPipeline.chromaticAberrationEnabled = false;
+    this.renderingPipeline.chromaticAberration.aberrationAmount = 30;
+    
+    // Sharpen (subtle)
+    this.renderingPipeline.sharpenEnabled = true;
+    this.renderingPipeline.sharpen.edgeAmount = 0.2;
+    
+    // Setup SSR (Screen-Space Reflections) for realistic reflections
+    try {
+      this.ssrPipeline = new BABYLON.SSRRenderingPipeline(
+        'ssrPipeline',
+        this.scene,
+        [this.camera],
+        false, // forceGeometryBuffer
+        BABYLON.Constants.TEXTURETYPE_UNSIGNED_BYTE
+      );
+      
+      // SSR settings for quality/performance balance
+      this.ssrPipeline.strength = 1.0;
+      this.ssrPipeline.reflectionSpecularFalloffExponent = 2;
+      this.ssrPipeline.step = 1;
+      this.ssrPipeline.maxSteps = 64;
+      this.ssrPipeline.maxDistance = 50;
+      this.ssrPipeline.thickness = 0.5;
+      this.ssrPipeline.roughnessFactor = 0.1;
+      this.ssrPipeline.selfCollisionNumSkip = 2;
+      this.ssrPipeline.enableSmoothReflections = true;
+      this.ssrPipeline.blurDispersionStrength = 0.03;
+      this.ssrPipeline.enableAutomaticThicknessComputation = false;
+      
+      console.log('SSR pipeline enabled');
+    } catch (e) {
+      console.warn('SSR not available:', e);
+    }
+    
+    // Dispatch event to notify UI about rendering pipeline
+    window.dispatchEvent(new CustomEvent('vs-rendering-pipeline-ready', {
+      detail: { pipeline: this.renderingPipeline, ssr: this.ssrPipeline }
+    }));
+    
+    console.log('Professional rendering pipeline initialized (Work Mode)');
+  }
+
+  /**
+   * Update DOF settings based on camera aperture and focus distance
+   */
+  public updateDOFSettings(fStop: number, focusDistance: number, enabled: boolean): void {
+    if (!this.renderingPipeline) return;
+    
+    this.renderingPipeline.depthOfFieldEnabled = enabled;
+    if (enabled) {
+      this.renderingPipeline.depthOfField.fStop = fStop;
+      this.renderingPipeline.depthOfField.focusDistance = focusDistance * 1000; // Convert to mm
+      this.renderingPipeline.depthOfField.focalLength = this.cameraSettings.focalLength;
+    }
+  }
+
+  /**
+   * Toggle between Work Mode and Final Mode
+   */
+  public setRenderMode(mode: 'work' | 'final'): void {
+    this.renderMode = mode;
+    
+    if (mode === 'final') {
+      // Final Mode: Higher quality, progressive rendering
+      if (this.renderingPipeline) {
+        this.renderingPipeline.samples = 8;
+        this.renderingPipeline.bloomEnabled = true;
+        this.renderingPipeline.grainEnabled = true;
+      }
+      this.finalRenderSamples = 0;
+      console.log('Switched to Final Mode - Progressive rendering enabled');
+    } else {
+      // Work Mode: Balanced quality/performance
+      if (this.renderingPipeline) {
+        this.renderingPipeline.samples = 4;
+        this.renderingPipeline.grainEnabled = false;
+      }
+      console.log('Switched to Work Mode');
+    }
+    
+    window.dispatchEvent(new CustomEvent('vs-render-mode-changed', {
+      detail: { mode, samples: this.finalRenderSamples }
+    }));
+  }
+
+  /**
+   * Get current render mode
+   */
+  public getRenderMode(): 'work' | 'final' {
+    return this.renderMode;
+  }
+
+  /**
+   * Get rendering pipeline for external access
+   */
+  public getRenderingPipeline(): BABYLON.DefaultRenderingPipeline | null {
+    return this.renderingPipeline;
   }
 
   private setupStudio(): void {
@@ -1090,6 +1240,142 @@ class VirtualStudio {
     this.setupTopViewInteractivity();
     this.setupTimelineListeners();
     this.setupMissingButtonHandlers();
+    this.setupRenderModeToggle();
+  }
+
+  private finalRenderInterval: ReturnType<typeof setInterval> | null = null;
+  
+  /**
+   * Setup render mode toggle (Work Mode / Final Mode)
+   */
+  private setupRenderModeToggle(): void {
+    const workModeBtn = document.getElementById('workModeBtn');
+    const finalModeBtn = document.getElementById('finalModeBtn');
+    const renderProgress = document.getElementById('renderProgress');
+    const renderProgressBar = document.getElementById('renderProgressBar');
+    const renderProgressText = document.getElementById('renderProgressText');
+    const cancelFinalRender = document.getElementById('cancelFinalRender');
+    
+    // Store original progress HTML for reset
+    const originalProgressHTML = renderProgress?.innerHTML || '';
+    
+    const resetProgressUI = () => {
+      if (renderProgress) {
+        renderProgress.innerHTML = originalProgressHTML;
+      }
+      const newProgressBar = document.getElementById('renderProgressBar');
+      const newProgressText = document.getElementById('renderProgressText');
+      if (newProgressBar) newProgressBar.style.width = '0%';
+      if (newProgressText) newProgressText.textContent = '0%';
+    };
+    
+    const stopFinalRender = () => {
+      if (this.finalRenderInterval) {
+        clearInterval(this.finalRenderInterval);
+        this.finalRenderInterval = null;
+      }
+    };
+    
+    const updateModeUI = (mode: 'work' | 'final') => {
+      if (mode === 'work') {
+        stopFinalRender();
+        workModeBtn?.classList.add('active');
+        finalModeBtn?.classList.remove('active');
+        if (workModeBtn) {
+          workModeBtn.style.background = 'rgba(0,212,255,0.3)';
+          workModeBtn.style.color = '#00d4ff';
+        }
+        if (finalModeBtn) {
+          finalModeBtn.style.background = 'transparent';
+          finalModeBtn.style.color = 'rgba(255,255,255,0.6)';
+        }
+        if (renderProgress) renderProgress.style.display = 'none';
+        resetProgressUI();
+      } else {
+        finalModeBtn?.classList.add('active');
+        workModeBtn?.classList.remove('active');
+        if (finalModeBtn) {
+          finalModeBtn.style.background = 'rgba(16,185,129,0.3)';
+          finalModeBtn.style.color = '#10b981';
+        }
+        if (workModeBtn) {
+          workModeBtn.style.background = 'transparent';
+          workModeBtn.style.color = 'rgba(255,255,255,0.6)';
+        }
+        if (renderProgress) renderProgress.style.display = 'block';
+      }
+    };
+    
+    const startFinalRender = () => {
+      stopFinalRender();
+      resetProgressUI();
+      
+      let progress = 0;
+      const progressBar = document.getElementById('renderProgressBar');
+      const progressText = document.getElementById('renderProgressText');
+      
+      this.finalRenderInterval = setInterval(() => {
+        progress += 2;
+        if (progressBar) progressBar.style.width = `${Math.min(progress, 100)}%`;
+        if (progressText) progressText.textContent = `${Math.min(progress, 100)}%`;
+        
+        if (progress >= 100) {
+          stopFinalRender();
+          setTimeout(() => {
+            const rp = document.getElementById('renderProgress');
+            if (rp && this.renderMode === 'final') {
+              rp.innerHTML = `
+                <div style="font-size:11px;color:#10b981;margin-bottom:4px;">Rendering fullført</div>
+                <div style="display:flex;gap:8px;justify-content:center;">
+                  <button id="exportFinalRender" style="padding:6px 16px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;">Eksporter Bilde</button>
+                  <button id="rerunFinalRender" style="padding:6px 12px;border:none;background:rgba(255,255,255,0.1);color:#fff;border-radius:6px;cursor:pointer;font-size:11px;">Kjør igjen</button>
+                </div>
+              `;
+              document.getElementById('exportFinalRender')?.addEventListener('click', () => {
+                this.exportScreenshot();
+              });
+              document.getElementById('rerunFinalRender')?.addEventListener('click', () => {
+                resetProgressUI();
+                startFinalRender();
+              });
+            }
+          }, 500);
+        }
+      }, 100);
+    };
+    
+    workModeBtn?.addEventListener('click', () => {
+      this.setRenderMode('work');
+      updateModeUI('work');
+    });
+    
+    finalModeBtn?.addEventListener('click', () => {
+      this.setRenderMode('final');
+      updateModeUI('final');
+      startFinalRender();
+    });
+    
+    cancelFinalRender?.addEventListener('click', () => {
+      this.setRenderMode('work');
+      updateModeUI('work');
+    });
+    
+    // Listen for render mode changes from code
+    window.addEventListener('vs-render-mode-changed', ((e: CustomEvent) => {
+      updateModeUI(e.detail.mode);
+    }) as EventListener);
+  }
+  
+  /**
+   * Export screenshot of the current viewport
+   */
+  private exportScreenshot(): void {
+    BABYLON.Tools.CreateScreenshot(this.engine, this.camera, { width: 1920, height: 1080 }, (data) => {
+      const link = document.createElement('a');
+      link.download = `virtual-studio-render-${Date.now()}.png`;
+      link.href = data;
+      link.click();
+    });
   }
 
   private currentScopeMode: 'histogram' | 'waveform' | 'vectorscope' | 'skin' | 'zebra' | 'falsecolor' = 'histogram';
@@ -1405,6 +1691,12 @@ class VirtualStudio {
       this.cameraSettings.aperture = aperture;
       if (apertureDisplay) apertureDisplay.textContent = `f/${aperture}`;
       this.updateExposureDisplay();
+      
+      // Update DOF based on aperture (lower f-stop = shallower DOF)
+      // Enable DOF for wide apertures (f/4 or lower)
+      const enableDOF = aperture <= 4.0;
+      const focusDistance = this.camera.radius; // Use camera distance as focus distance
+      this.updateDOFSettings(aperture, focusDistance, enableDOF);
     });
 
     const shutterSlider = document.getElementById('shutterSlider') as HTMLInputElement;
@@ -11865,14 +12157,19 @@ class VirtualStudio {
     if (light instanceof BABYLON.SpotLight || light instanceof BABYLON.PointLight) {
       try {
         shadowGenerator = new BABYLON.ShadowGenerator(2048, light);
-        shadowGenerator.useBlurExponentialShadowMap = true;
-        shadowGenerator.blurKernel = 48;
-        shadowGenerator.blurScale = 2; // Better shadow edge quality
-        shadowGenerator.setDarkness(0.6); // Darker shadows for more realism
-        shadowGenerator.bias = 0.00001;
-        shadowGenerator.normalBias = 0.01;
-        shadowGenerator.useContactHardeningShadow = false; // Performance optimization
-        shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_MEDIUM; // Balance quality/performance
+        
+        // Use PCF (Percentage Closer Filtering) for soft, realistic shadows
+        shadowGenerator.usePercentageCloserFiltering = true;
+        shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
+        
+        // Shadow quality settings
+        shadowGenerator.setDarkness(0.5); // Realistic shadow darkness
+        shadowGenerator.bias = 0.00005;
+        shadowGenerator.normalBias = 0.02;
+        
+        // Enable contact hardening for distance-based shadow softness (more realistic)
+        shadowGenerator.useContactHardeningShadow = true;
+        shadowGenerator.contactHardeningLightSizeUVRatio = 0.05;
         
         // Add all meshes in the scene as shadow casters (except ground and light meshes)
         this.scene.meshes.forEach(mesh => {
@@ -12127,9 +12424,11 @@ class VirtualStudio {
       bulbSphere.parent = lightMesh;
       bulbSphere.isPickable = false;
       
-      // Position bulb at the SpotLight's local position relative to the mesh
-      // The SpotLight position is set based on localForwardAxis, so we use same offset
-      const bulbOffset = localForwardAxis.scale(0.6);
+      // Position bulb at the light source opening (inside reflector)
+      // Use stored localForwardAxis from the mesh, or default to forward direction
+      const storedForwardAxis = (lightMesh as any)._localForwardAxis as BABYLON.Vector3 | undefined;
+      const forwardDir = storedForwardAxis ? storedForwardAxis.clone() : new BABYLON.Vector3(0, 0, -1);
+      const bulbOffset = forwardDir.scale(0.6);
       bulbSphere.position = new BABYLON.Vector3(0, 1.5, 0).add(bulbOffset);
       
       // Add to GlowLayer
