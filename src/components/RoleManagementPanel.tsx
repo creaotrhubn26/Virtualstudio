@@ -1015,7 +1015,7 @@ export function RoleManagementPanel({
         </Box>
       </Box>
 
-      {/* Pool/Project Toggle */}
+      {/* Project/Templates Toggle */}
       <Box
         sx={{
           display: 'flex',
@@ -1061,20 +1061,40 @@ export function RoleManagementPanel({
             },
           }}
         >
-          Rollepool ({poolRoles.length})
+          Maler ({poolRoles.length})
         </Button>
       </Box>
 
-      {/* Pool View */}
+      {/* Templates View */}
       {poolMode === 'pool' && (
         <Box sx={{ mb: 3 }}>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 2 }}>
-            Global rollepool - gjenbruk rollebeskrivelser på tvers av prosjekter. Klikk "Importer" for å legge til en rolle i dette prosjektet.
-          </Typography>
+          {/* Guide Box */}
+          <Box
+            sx={{
+              mb: 3,
+              p: 2,
+              bgcolor: 'rgba(167, 139, 250, 0.08)',
+              borderRadius: 2,
+              border: '1px solid rgba(167, 139, 250, 0.2)',
+            }}
+          >
+            <Typography variant="subtitle1" sx={{ color: '#a78bfa', fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <InventoryIcon sx={{ fontSize: 20 }} />
+              Slik bruker du rollemaler
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+              Maler lar deg lagre rollebeskrivelser for gjenbruk i fremtidige prosjekter.
+            </Typography>
+            <Box component="ul" sx={{ m: 0, pl: 2.5, color: 'rgba(255,255,255,0.6)', '& li': { mb: 0.5, fontSize: '0.875rem' } }}>
+              <li><strong>Lagre som mal:</strong> Klikk på lilla ikon på en prosjektrolle</li>
+              <li><strong>Importer:</strong> Klikk "Importer" for å kopiere malen til prosjektet</li>
+              <li><strong>Slett:</strong> Fjern maler du ikke trenger lenger</li>
+            </Box>
+          </Box>
           
           {poolLoading ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Laster rollepool...</Typography>
+              <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Laster maler...</Typography>
             </Box>
           ) : poolRoles.length === 0 ? (
             <Box sx={{ 
@@ -1086,10 +1106,10 @@ export function RoleManagementPanel({
             }}>
               <TheaterComedyIcon sx={{ fontSize: 48, color: 'rgba(255,255,255,0.2)', mb: 2 }} />
               <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 1 }}>
-                Ingen roller i poolen ennå
+                Ingen rollemaler ennå
               </Typography>
               <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.3)' }}>
-                Bruk "Lagre til pool" på prosjektroller for å fylle poolen
+                Klikk på lilla ikon på prosjektroller for å lagre som mal
               </Typography>
             </Box>
           ) : (

@@ -899,7 +899,7 @@ export function AuditionSchedulePanel({
         </Box>
       </Box>
 
-      {/* Pool Mode Toggle */}
+      {/* Project/Templates Toggle */}
       <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
         <Button
           variant={poolMode === 'project' ? 'contained' : 'outlined'}
@@ -934,7 +934,7 @@ export function AuditionSchedulePanel({
             ...focusVisibleStyles,
           }}
         >
-          Pool
+          Maler
           <Chip
             label={poolAuditions.length}
             size="small"
@@ -1843,10 +1843,38 @@ export function AuditionSchedulePanel({
       </>
       )}
 
-      {/* Pool View - shows pool auditions when in pool mode */}
+      {/* Templates View - shows saved audition templates when in templates mode */}
       {poolMode === 'pool' && (
         <Box>
-          {poolAuditions.length === 0 ? (
+          {/* Guide Box */}
+          <Box
+            sx={{
+              mb: 3,
+              p: 2,
+              bgcolor: 'rgba(156, 39, 176, 0.08)',
+              borderRadius: 2,
+              border: '1px solid rgba(156, 39, 176, 0.2)',
+            }}
+          >
+            <Typography variant="subtitle1" sx={{ color: '#9c27b0', fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <InventoryIcon sx={{ fontSize: 20 }} />
+              Slik bruker du audition-maler
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+              Maler lar deg lagre audition-oppsett for gjenbruk i fremtidige produksjoner.
+            </Typography>
+            <Box component="ul" sx={{ m: 0, pl: 2.5, color: 'rgba(255,255,255,0.6)', '& li': { mb: 0.5, fontSize: '0.875rem' } }}>
+              <li><strong>Lagre som mal:</strong> Klikk på lilla ikon på en prosjekt-audition</li>
+              <li><strong>Importer:</strong> Klikk "Importer" for å kopiere malen til prosjektet</li>
+              <li><strong>Slett:</strong> Fjern maler du ikke trenger lenger</li>
+            </Box>
+          </Box>
+
+          {poolLoading ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Laster maler...</Typography>
+            </Box>
+          ) : poolAuditions.length === 0 ? (
             <Box
               role="status"
               sx={{
@@ -1874,10 +1902,10 @@ export function AuditionSchedulePanel({
                 <InventoryIcon sx={{ fontSize: { xs: 30, sm: 40 }, color: '#9c27b0' }} />
               </Box>
               <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>
-                Audition-pool er tom
+                Ingen audition-maler ennå
               </Typography>
               <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.6)', mb: 3, maxWidth: 400, mx: 'auto' }}>
-                Lagre audition-maler fra prosjekter til poolen for gjenbruk i fremtidige produksjoner.
+                Lagre audition-oppsett som maler for gjenbruk i fremtidige produksjoner.
               </Typography>
             </Box>
           ) : (
@@ -1904,7 +1932,7 @@ export function AuditionSchedulePanel({
                         </Typography>
                         <Chip
                           icon={<InventoryIcon sx={{ fontSize: 14 }} />}
-                          label="Pool"
+                          label="Mal"
                           size="small"
                           sx={{
                             bgcolor: 'rgba(156, 39, 176, 0.2)',
