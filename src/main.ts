@@ -1662,6 +1662,10 @@ class VirtualStudio {
     rapid: Math.PI / 4    // 45° per full deflection - fast positioning
   };
   
+  // Professional joystick settings (industry standard)
+  private readonly joystickDeadZone = 0.08; // 8% dead zone - industry standard for precision
+  private readonly joystickResponseCurve = 2.2; // Exponential curve (like gamma) for precision
+  
   /**
    * Initialize the rotation joystick control
    * Professional multi-mode joystick with adaptive response curve
@@ -1713,17 +1717,38 @@ class VirtualStudio {
       let offsetX = (pos.x - centerX) / maxOffset;
       let offsetY = (pos.y - centerY) / maxOffset;
       
-      // Clamp to circular constraint
-      const distance = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
-      if (distance > 1) {
-        offsetX /= distance;
-        offsetY /= distance;
+      // Calculate radial distance (magnitude)
+      let magnitude = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
+      
+      // Clamp to circular constraint (prevents square corners)
+      if (magnitude > 1) {
+        offsetX /= magnitude;
+        offsetY /= magnitude;
+        magnitude = 1;
       }
       
-      // Apply cubic response curve for precision near center, faster at edges
-      // sign * |value|^2 gives smooth acceleration
-      const curvedOffsetX = Math.sign(offsetX) * Math.pow(Math.abs(offsetX), 2);
-      const curvedOffsetY = Math.sign(offsetY) * Math.pow(Math.abs(offsetY), 2);
+      // === PROFESSIONAL SCALED RADIAL DEAD ZONE ===
+      // Industry standard: ignore input within dead zone, then scale remaining range to 0-1
+      let processedMagnitude = 0;
+      if (magnitude > this.joystickDeadZone) {
+        // Map from [deadzone, 1] to [0, 1] - smooth transition
+        processedMagnitude = (magnitude - this.joystickDeadZone) / (1 - this.joystickDeadZone);
+      }
+      
+      // === PROFESSIONAL RESPONSE CURVE (Exponential/Gamma) ===
+      // Provides precision at low deflections, speed at high deflections
+      // Used by AAA games like Apex Legends, Call of Duty, Fortnite
+      const curvedMagnitude = Math.pow(processedMagnitude, this.joystickResponseCurve);
+      
+      // Apply curved magnitude to direction
+      let curvedOffsetX = 0;
+      let curvedOffsetY = 0;
+      if (magnitude > 0) {
+        const dirX = offsetX / magnitude;
+        const dirY = offsetY / magnitude;
+        curvedOffsetX = dirX * curvedMagnitude;
+        curvedOffsetY = dirY * curvedMagnitude;
+      }
       
       // Update knob visual position (30% of container size)
       const knobCenterX = 50 + offsetX * 30;
@@ -1919,8 +1944,23 @@ class VirtualStudio {
     const panEl = document.getElementById('hudPanValue');
     const tiltEl = document.getElementById('hudTiltValue');
     
-    if (panEl) panEl.textContent = `${Math.round(pan * 180 / Math.PI)}°`;
-    if (tiltEl) tiltEl.textContent = `${Math.round(tilt * 180 / Math.PI)}°`;
+    const panDeg = Math.round(pan * 180 / Math.PI);
+    const tiltDeg = Math.round(tilt * 180 / Math.PI);
+    
+    if (panEl) panEl.textContent = `${panDeg}°`;
+    if (tiltEl) tiltEl.textContent = `${tiltDeg}°`;
+  }
+  
+  /**
+   * Update angle display when light is selected (initial values)
+   */
+  private updateAngleDisplayFromLight(lightData: any): void {
+    if (lightData.light instanceof BABYLON.SpotLight) {
+      const dir = lightData.light.direction;
+      const tilt = Math.asin(Math.max(-1, Math.min(1, -dir.y)));
+      const pan = Math.atan2(dir.x, dir.z);
+      this.updateJoystickAngleDisplay(pan, tilt);
+    }
   }
   
   /**
