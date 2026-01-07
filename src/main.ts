@@ -2107,7 +2107,7 @@ class VirtualStudio {
    * Initialize HUD action buttons
    */
   private initHUDActionButtons(): void {
-    // Reset button - smart reset based on light type and studio context
+    // Reset button - rotates light to point at focus target (keeps current position)
     const resetBtn = document.getElementById('hudResetLight');
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
@@ -2115,98 +2115,38 @@ class VirtualStudio {
         const lightData = this.lights.get(this.hudLightId);
         if (!lightData) return;
         
-        // Calculate smart reset position based on light type
-        // Check both name and type since light role is often in the name
-        const lightName = lightData.name.toLowerCase();
-        const lightType = lightData.type.toLowerCase();
-        const lightRole = `${lightName} ${lightType}`;
-        
-        // Get focus target position to orient lights correctly
+        // Get focus target position
         let targetPos = new BABYLON.Vector3(0, 1.0, 0); // Default target
         if (this.focusTargetMesh && this.focusTargetMesh.isEnabled()) {
           targetPos = this.calculateFocusPoint(this.focusTargetMesh, this.focusMode);
         }
         
-        let resetPos: BABYLON.Vector3;
-        
-        // Different positions for different light types/roles
-        // All lights point toward the focus target
-        if (lightRole.includes('key') || lightRole.includes('hovedlys') || lightRole.includes('main')) {
-          // Key light: 45° to the left, elevated 1m above target
-          resetPos = new BABYLON.Vector3(
-            targetPos.x - 2.0,  // 2m to the left
-            targetPos.y + 1.0,  // 1m above target
-            targetPos.z + 2.5   // 2.5m in front
-          );
-        } else if (lightRole.includes('fill') || lightRole.includes('fyll')) {
-          // Fill light: opposite side from key, same height as target
-          resetPos = new BABYLON.Vector3(
-            targetPos.x + 1.5,  // 1.5m to the right
-            targetPos.y + 0.5,  // 0.5m above target
-            targetPos.z + 2.0   // 2m in front
-          );
-        } else if (lightRole.includes('back') || lightRole.includes('rim') || lightRole.includes('kant')) {
-          // Backlight/rim: behind subject, elevated
-          resetPos = new BABYLON.Vector3(
-            targetPos.x,
-            targetPos.y + 1.5,  // 1.5m above target
-            targetPos.z - 2.0   // 2m behind
-          );
-        } else if (lightRole.includes('hair') || lightRole.includes('hår')) {
-          // Hair light: above and behind
-          resetPos = new BABYLON.Vector3(
-            targetPos.x,
-            targetPos.y + 2.0,  // 2m above target
-            targetPos.z - 1.5   // 1.5m behind
-          );
+        // Keep current position - only reset rotation to point at target
+        // Get current light head position
+        let lightHeadPos: BABYLON.Vector3;
+        if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.PointLight) {
+          lightHeadPos = lightData.light.position.clone();
         } else {
-          // Default: front position, elevated
-          resetPos = new BABYLON.Vector3(
-            targetPos.x,
-            targetPos.y + 1.0,
-            targetPos.z + 3.0
-          );
+          lightHeadPos = lightData.mesh.position.clone();
+          lightHeadPos.y += 2.0; // Estimate light head height
         }
         
-        // Studio light stand height (typical tripod stand is about 2-2.5m)
-        const standHeight = 2.2; // Fixed stand height in meters
-        
-        // Position mesh at X/Z from resetPos, with stand on floor
-        const meshPos = new BABYLON.Vector3(
-          resetPos.x,
-          0, // Stand feet on floor
-          resetPos.z
-        );
-        
-        // Light head position is at top of stand
-        const lightHeadPos = new BABYLON.Vector3(
-          resetPos.x,
-          standHeight,
-          resetPos.z
-        );
-        
-        // Calculate direction from light head to target
+        // Calculate direction from current light position to target
         const direction = targetPos.subtract(lightHeadPos).normalize();
         
-        // Apply mesh position (stand on floor)
-        lightData.mesh.position = meshPos;
-        
-        // Apply light position and direction
+        // Apply direction to light
         if (lightData.light instanceof BABYLON.SpotLight) {
-          lightData.light.position = lightHeadPos;
           lightData.light.direction = direction;
-        } else if (lightData.light instanceof BABYLON.PointLight) {
-          lightData.light.position = lightHeadPos;
         }
         
-        // Reset mesh rotation first, then apply new rotation
-        lightData.mesh.rotationQuaternion = BABYLON.Quaternion.Identity();
+        // Apply rotation to mesh (keep position unchanged)
         this.setMeshRotationFromDirection(lightData.mesh, direction);
         
-        // Recreate gizmos at new position
-        this.createStudioGizmos(this.hudLightId);
+        // Update visuals
         this.updateBeamVisualization(this.hudLightId);
         this.updateHUDValues(lightData);
+        
+        console.log(`Reset light rotation: pointing at ${targetPos.toString()}`);
       });
     }
     
