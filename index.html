@@ -1680,6 +1680,108 @@
             <span class="light-power">20</span>
             <span class="light-total">11/20 m</span>
           </div>
+          
+          <!-- Game-style Light Control HUD -->
+          <div id="lightControlHUD" class="light-control-hud" style="display: none;">
+            <!-- HUD Header -->
+            <div class="hud-header">
+              <div class="hud-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                  <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+                <span id="hudLightName">Lys Kontroll</span>
+              </div>
+              <button class="hud-close-btn" id="hudCloseBtn" title="Lukk (ESC)">×</button>
+            </div>
+            
+            <!-- Rotation Joystick -->
+            <div class="hud-section">
+              <div class="hud-section-title">ROTASJON</div>
+              <div class="joystick-container" id="rotationJoystick">
+                <div class="joystick-bg">
+                  <div class="joystick-axis-h"></div>
+                  <div class="joystick-axis-v"></div>
+                  <div class="joystick-ring"></div>
+                  <div class="joystick-knob" id="rotationKnob"></div>
+                </div>
+                <div class="joystick-labels">
+                  <span class="joystick-label top">TILT OPP</span>
+                  <span class="joystick-label bottom">TILT NED</span>
+                  <span class="joystick-label left">PAN V</span>
+                  <span class="joystick-label right">PAN H</span>
+                </div>
+              </div>
+              <div class="rotation-values">
+                <div class="rotation-value">
+                  <span class="value-label">Tilt</span>
+                  <span class="value-number" id="hudTiltValue">0°</span>
+                </div>
+                <div class="rotation-value">
+                  <span class="value-label">Pan</span>
+                  <span class="value-number" id="hudPanValue">0°</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Height Slider -->
+            <div class="hud-section">
+              <div class="hud-section-title">HØYDE</div>
+              <div class="height-control">
+                <div class="height-slider-container">
+                  <div class="height-slider-track" id="heightSliderTrack">
+                    <div class="height-slider-fill" id="heightSliderFill"></div>
+                    <div class="height-slider-thumb" id="heightSliderThumb"></div>
+                  </div>
+                  <div class="height-markers">
+                    <span>6m</span>
+                    <span>4m</span>
+                    <span>2m</span>
+                    <span>0.5m</span>
+                  </div>
+                </div>
+                <div class="height-value" id="hudHeightValue">2.0m</div>
+              </div>
+            </div>
+            
+            <!-- Position Controls -->
+            <div class="hud-section">
+              <div class="hud-section-title">POSISJON</div>
+              <div class="position-controls">
+                <div class="dpad-container" id="positionDpad">
+                  <button class="dpad-btn dpad-up" data-dir="up" title="Flytt fremover">▲</button>
+                  <button class="dpad-btn dpad-left" data-dir="left" title="Flytt venstre">◀</button>
+                  <button class="dpad-btn dpad-center" title="Tilbakestill">●</button>
+                  <button class="dpad-btn dpad-right" data-dir="right" title="Flytt høyre">▶</button>
+                  <button class="dpad-btn dpad-down" data-dir="down" title="Flytt bakover">▼</button>
+                </div>
+                <div class="position-values">
+                  <div class="pos-value"><span>X:</span> <span id="hudPosX">0.00</span></div>
+                  <div class="pos-value"><span>Z:</span> <span id="hudPosZ">0.00</span></div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="hud-actions">
+              <button class="hud-action-btn" id="hudResetLight" title="Tilbakestill lys">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                </svg>
+                Reset
+              </button>
+              <button class="hud-action-btn" id="hudPointAtActor" title="Pek mot modell">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="8" r="4"/>
+                  <path d="M20 21a8 8 0 1 0-16 0"/>
+                </svg>
+                Pek mot modell
+              </button>
+            </div>
+          </div>
         </div>
         <div class="viewport-2d">
           <div class="view-label">2D Toppvisning</div>

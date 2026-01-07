@@ -1521,6 +1521,455 @@ class VirtualStudio {
     }
   }
   
+  // ===== GAME-STYLE LIGHT CONTROL HUD =====
+  
+  private hudLightId: string | null = null;
+  private hudJoystickDragging: boolean = false;
+  private hudHeightDragging: boolean = false;
+  private hudInitialized: boolean = false;
+  
+  /**
+   * Show the game-style HUD for controlling light rotation/position
+   */
+  private showLightControlHUD(lightId: string, lightData: LightData): void {
+    const hud = document.getElementById('lightControlHUD');
+    if (!hud) return;
+    
+    this.hudLightId = lightId;
+    
+    // Update HUD with light info
+    const nameEl = document.getElementById('hudLightName');
+    if (nameEl) nameEl.textContent = lightData.name;
+    
+    // Update current values
+    this.updateHUDValues(lightData);
+    
+    // Show HUD
+    hud.style.display = 'block';
+    
+    // Initialize event listeners (only once)
+    if (!this.hudInitialized) {
+      this.initHUDEventListeners();
+      this.hudInitialized = true;
+    }
+  }
+  
+  /**
+   * Hide the light control HUD
+   */
+  private hideLightControlHUD(): void {
+    const hud = document.getElementById('lightControlHUD');
+    if (hud) hud.style.display = 'none';
+    this.hudLightId = null;
+  }
+  
+  /**
+   * Update HUD display values from light data
+   */
+  private updateHUDValues(lightData: LightData): void {
+    const pos = lightData.mesh.position;
+    
+    // Update position values
+    const posX = document.getElementById('hudPosX');
+    const posZ = document.getElementById('hudPosZ');
+    if (posX) posX.textContent = pos.x.toFixed(2);
+    if (posZ) posZ.textContent = pos.z.toFixed(2);
+    
+    // Update height
+    const heightVal = document.getElementById('hudHeightValue');
+    const heightFill = document.getElementById('heightSliderFill');
+    const heightThumb = document.getElementById('heightSliderThumb');
+    if (heightVal) heightVal.textContent = `${pos.y.toFixed(1)}m`;
+    
+    // Height slider: 0.5m to 6m range
+    const heightPercent = ((pos.y - 0.5) / (6 - 0.5)) * 100;
+    if (heightFill) heightFill.style.width = `${heightPercent}%`;
+    if (heightThumb) heightThumb.style.left = `${heightPercent}%`;
+    
+    // Update rotation values if spotlight
+    if (lightData.light instanceof BABYLON.SpotLight) {
+      const dir = lightData.light.direction;
+      const tiltAngle = Math.asin(-dir.y) * (180 / Math.PI);
+      const panAngle = Math.atan2(dir.x, dir.z) * (180 / Math.PI);
+      
+      const tiltEl = document.getElementById('hudTiltValue');
+      const panEl = document.getElementById('hudPanValue');
+      if (tiltEl) tiltEl.textContent = `${tiltAngle.toFixed(0)}°`;
+      if (panEl) panEl.textContent = `${panAngle.toFixed(0)}°`;
+    }
+  }
+  
+  /**
+   * Initialize HUD event listeners
+   */
+  private initHUDEventListeners(): void {
+    // Close button
+    const closeBtn = document.getElementById('hudCloseBtn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => this.hideLightControlHUD());
+    }
+    
+    // ESC key to close
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.hudLightId) {
+        this.hideLightControlHUD();
+      }
+    });
+    
+    // Rotation joystick
+    this.initJoystickControl();
+    
+    // Height slider
+    this.initHeightSliderControl();
+    
+    // D-Pad position controls
+    this.initDPadControls();
+    
+    // Action buttons
+    this.initHUDActionButtons();
+  }
+  
+  /**
+   * Initialize the rotation joystick control
+   */
+  private initJoystickControl(): void {
+    const joystick = document.getElementById('rotationJoystick');
+    const knob = document.getElementById('rotationKnob');
+    if (!joystick || !knob) return;
+    
+    const joystickBg = joystick.querySelector('.joystick-bg') as HTMLElement;
+    if (!joystickBg) return;
+    
+    let startX = 0, startY = 0;
+    const maxOffset = 40; // Maximum knob offset from center
+    
+    const handleStart = (e: MouseEvent | TouchEvent) => {
+      e.preventDefault();
+      this.hudJoystickDragging = true;
+      const pos = this.getEventPosition(e);
+      startX = pos.x;
+      startY = pos.y;
+      knob.style.transition = 'none';
+    };
+    
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      if (!this.hudJoystickDragging || !this.hudLightId) return;
+      e.preventDefault();
+      
+      const lightData = this.lights.get(this.hudLightId);
+      if (!lightData || !(lightData.light instanceof BABYLON.SpotLight)) return;
+      
+      const pos = this.getEventPosition(e);
+      const rect = joystickBg.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      
+      // Calculate offset from center
+      let offsetX = pos.x - centerX;
+      let offsetY = pos.y - centerY;
+      
+      // Clamp to max offset (circular constraint)
+      const distance = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
+      if (distance > maxOffset) {
+        offsetX = (offsetX / distance) * maxOffset;
+        offsetY = (offsetY / distance) * maxOffset;
+      }
+      
+      // Update knob position
+      const knobCenterX = 50 + (offsetX / maxOffset) * 30;
+      const knobCenterY = 50 + (offsetY / maxOffset) * 30;
+      knob.style.left = `${knobCenterX}%`;
+      knob.style.top = `${knobCenterY}%`;
+      
+      // Calculate rotation delta (sensitivity)
+      const panDelta = offsetX * 0.02; // Horizontal = pan
+      const tiltDelta = -offsetY * 0.02; // Vertical = tilt (inverted)
+      
+      // Get current direction
+      const dir = lightData.light.direction.clone();
+      
+      // Calculate current angles
+      let tilt = Math.asin(-dir.y);
+      let pan = Math.atan2(dir.x, dir.z);
+      
+      // Apply deltas
+      pan += panDelta;
+      tilt = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, tilt + tiltDelta));
+      
+      // Calculate new direction
+      const newDir = new BABYLON.Vector3(
+        Math.sin(pan) * Math.cos(tilt),
+        -Math.sin(tilt),
+        Math.cos(pan) * Math.cos(tilt)
+      );
+      
+      lightData.light.direction = newDir.normalize();
+      
+      // Update mesh rotation to match
+      if (lightData.mesh.rotationQuaternion) {
+        const targetQuat = BABYLON.Quaternion.FromLookDirectionLH(newDir, BABYLON.Vector3.Up());
+        lightData.mesh.rotationQuaternion = targetQuat;
+      }
+      
+      // Update beam visualization
+      this.updateBeamVisualization(this.hudLightId);
+      
+      // Update HUD values
+      this.updateHUDValues(lightData);
+    };
+    
+    const handleEnd = () => {
+      if (!this.hudJoystickDragging) return;
+      this.hudJoystickDragging = false;
+      
+      // Animate knob back to center
+      knob.style.transition = 'left 0.2s ease, top 0.2s ease';
+      knob.style.left = '50%';
+      knob.style.top = '50%';
+    };
+    
+    // Mouse events
+    knob.addEventListener('mousedown', handleStart);
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleEnd);
+    
+    // Touch events
+    knob.addEventListener('touchstart', handleStart as any);
+    document.addEventListener('touchmove', handleMove as any);
+    document.addEventListener('touchend', handleEnd);
+  }
+  
+  /**
+   * Initialize height slider control
+   */
+  private initHeightSliderControl(): void {
+    const track = document.getElementById('heightSliderTrack');
+    const thumb = document.getElementById('heightSliderThumb');
+    if (!track || !thumb) return;
+    
+    const handleStart = (e: MouseEvent | TouchEvent) => {
+      e.preventDefault();
+      this.hudHeightDragging = true;
+      thumb.style.transition = 'none';
+    };
+    
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      if (!this.hudHeightDragging || !this.hudLightId) return;
+      e.preventDefault();
+      
+      const lightData = this.lights.get(this.hudLightId);
+      if (!lightData) return;
+      
+      const rect = track.getBoundingClientRect();
+      const pos = this.getEventPosition(e);
+      
+      // Calculate percentage (0-100)
+      let percent = ((pos.x - rect.left) / rect.width) * 100;
+      percent = Math.max(0, Math.min(100, percent));
+      
+      // Convert to height (0.5m - 6m)
+      const newHeight = 0.5 + (percent / 100) * (6 - 0.5);
+      
+      // Update light position
+      lightData.mesh.position.y = newHeight;
+      if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.PointLight) {
+        lightData.light.position.y = newHeight;
+      }
+      
+      // Update studio gizmos
+      if (this.studioGizmoMeshes.heightSlider) {
+        this.studioGizmoMeshes.heightSlider.position.y = newHeight;
+      }
+      if (this.studioGizmoMeshes.yokeRing) {
+        this.studioGizmoMeshes.yokeRing.position.y = newHeight;
+      }
+      
+      // Update HUD
+      this.updateHUDValues(lightData);
+    };
+    
+    const handleEnd = () => {
+      this.hudHeightDragging = false;
+      const thumb = document.getElementById('heightSliderThumb');
+      if (thumb) thumb.style.transition = 'box-shadow 0.2s, transform 0.1s';
+    };
+    
+    // Mouse events
+    thumb.addEventListener('mousedown', handleStart);
+    track.addEventListener('mousedown', (e) => {
+      handleStart(e);
+      handleMove(e);
+    });
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleEnd);
+    
+    // Touch events
+    thumb.addEventListener('touchstart', handleStart as any);
+    document.addEventListener('touchmove', handleMove as any);
+    document.addEventListener('touchend', handleEnd);
+  }
+  
+  /**
+   * Initialize D-Pad position controls
+   */
+  private initDPadControls(): void {
+    const dpad = document.getElementById('positionDpad');
+    if (!dpad) return;
+    
+    const moveStep = 0.25; // 25cm per press
+    
+    const moveLight = (direction: string) => {
+      if (!this.hudLightId) return;
+      
+      const lightData = this.lights.get(this.hudLightId);
+      if (!lightData) return;
+      
+      const pos = lightData.mesh.position;
+      
+      switch (direction) {
+        case 'up':
+          pos.z -= moveStep;
+          break;
+        case 'down':
+          pos.z += moveStep;
+          break;
+        case 'left':
+          pos.x -= moveStep;
+          break;
+        case 'right':
+          pos.x += moveStep;
+          break;
+      }
+      
+      // Sync light position
+      if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.PointLight) {
+        lightData.light.position.x = pos.x;
+        lightData.light.position.z = pos.z;
+      }
+      
+      // Update studio gizmos
+      if (this.studioGizmoMeshes.baseRing) {
+        this.studioGizmoMeshes.baseRing.position.x = pos.x;
+        this.studioGizmoMeshes.baseRing.position.z = pos.z;
+      }
+      if (this.studioGizmoMeshes.heightSlider) {
+        this.studioGizmoMeshes.heightSlider.position.x = pos.x;
+        this.studioGizmoMeshes.heightSlider.position.z = pos.z;
+      }
+      if (this.studioGizmoMeshes.yokeRing) {
+        this.studioGizmoMeshes.yokeRing.position.x = pos.x;
+        this.studioGizmoMeshes.yokeRing.position.z = pos.z;
+      }
+      
+      // Update HUD
+      this.updateHUDValues(lightData);
+    };
+    
+    // Add click listeners to D-pad buttons
+    const buttons = dpad.querySelectorAll('.dpad-btn[data-dir]');
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const dir = btn.getAttribute('data-dir');
+        if (dir) moveLight(dir);
+      });
+    });
+    
+    // Center button resets position
+    const centerBtn = dpad.querySelector('.dpad-center');
+    if (centerBtn) {
+      centerBtn.addEventListener('click', () => {
+        if (!this.hudLightId) return;
+        const lightData = this.lights.get(this.hudLightId);
+        if (!lightData) return;
+        
+        lightData.mesh.position.x = 0;
+        lightData.mesh.position.z = 2;
+        
+        if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.PointLight) {
+          lightData.light.position.x = 0;
+          lightData.light.position.z = 2;
+        }
+        
+        // Update gizmos
+        this.createStudioGizmos(this.hudLightId);
+        this.updateHUDValues(lightData);
+      });
+    }
+  }
+  
+  /**
+   * Initialize HUD action buttons
+   */
+  private initHUDActionButtons(): void {
+    // Reset button
+    const resetBtn = document.getElementById('hudResetLight');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        if (!this.hudLightId) return;
+        const lightData = this.lights.get(this.hudLightId);
+        if (!lightData) return;
+        
+        // Reset position
+        lightData.mesh.position = new BABYLON.Vector3(0, 2, 2);
+        if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.PointLight) {
+          lightData.light.position = new BABYLON.Vector3(0, 2, 2);
+        }
+        
+        // Reset rotation (point down and forward)
+        if (lightData.light instanceof BABYLON.SpotLight) {
+          lightData.light.direction = new BABYLON.Vector3(0, -0.5, -0.866).normalize();
+        }
+        if (lightData.mesh.rotationQuaternion) {
+          const dir = new BABYLON.Vector3(0, -0.5, -0.866).normalize();
+          lightData.mesh.rotationQuaternion = BABYLON.Quaternion.FromLookDirectionLH(dir, BABYLON.Vector3.Up());
+        }
+        
+        // Recreate gizmos at new position
+        this.createStudioGizmos(this.hudLightId);
+        this.updateBeamVisualization(this.hudLightId);
+        this.updateHUDValues(lightData);
+      });
+    }
+    
+    // Point at actor button
+    const pointBtn = document.getElementById('hudPointAtActor');
+    if (pointBtn) {
+      pointBtn.addEventListener('click', () => {
+        if (!this.hudLightId) return;
+        const lightData = this.lights.get(this.hudLightId);
+        if (!lightData) return;
+        
+        // Find nearest actor or default to origin
+        let targetPos = new BABYLON.Vector3(0, 1.6, 0); // Default face height
+        
+        // Point light at target
+        if (lightData.light instanceof BABYLON.SpotLight) {
+          const lightPos = lightData.mesh.position;
+          const direction = targetPos.subtract(lightPos).normalize();
+          lightData.light.direction = direction;
+          
+          // Update mesh rotation
+          if (lightData.mesh.rotationQuaternion) {
+            lightData.mesh.rotationQuaternion = BABYLON.Quaternion.FromLookDirectionLH(direction, BABYLON.Vector3.Up());
+          }
+        }
+        
+        this.updateBeamVisualization(this.hudLightId);
+        this.updateHUDValues(lightData);
+      });
+    }
+  }
+  
+  /**
+   * Get event position for both mouse and touch events
+   */
+  private getEventPosition(e: MouseEvent | TouchEvent): { x: number; y: number } {
+    if ('touches' in e && e.touches.length > 0) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    return { x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY };
+  }
+  
   // ===== LIGHT POV (POINT OF VIEW) MODE =====
   
   /**
@@ -13810,6 +14259,9 @@ class VirtualStudio {
       
       // Create studio gizmos for realistic light manipulation
       this.createStudioGizmos(id);
+      
+      // Show game-style HUD for light control
+      this.showLightControlHUD(id, data);
     }
 
     this.updateSceneList();
