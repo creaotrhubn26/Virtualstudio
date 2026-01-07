@@ -1948,610 +1948,285 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
       </Box>
 
 
-      {/* Role Dialog */}
+      {/* Role Dialog - Optimized */}
       <Dialog
         open={!!roleDialogOpen}
-        onClose={() => {
-          setRoleDialogOpen(false);
-          setSelectedRole(null);
-        }}
-        maxWidth="lg"
+        onClose={() => { setRoleDialogOpen(false); setSelectedRole(null); }}
+        maxWidth="md"
         fullWidth
         container={() => document.body}
         TransitionComponent={Grow}
-        TransitionProps={{
-          timeout: { enter: 225, exit: 150 },
-          enter: true,
-          exit: true,
-        }}
-        PaperProps={{
-          sx: {
-            bgcolor: '#1c2128',
-            color: '#fff',
-            width: '100%',
-            maxWidth: '90vw',
-            zIndex: 100000,
-            willChange: 'transform, opacity',
-            transformOrigin: 'center center',
-          },
-        }}
-        sx={{
-          zIndex: 100000,
-          '& .MuiBackdrop-root': {
-            zIndex: 99998,
-            bgcolor: 'rgba(0,0,0,0.8)',
-            willChange: 'opacity',
-          },
-        }}
+        PaperProps={{ sx: { bgcolor: '#1c2128', color: '#fff', borderRadius: 2 } }}
+        sx={{ zIndex: 100000, '& .MuiBackdrop-root': { bgcolor: 'rgba(0,0,0,0.8)' } }}
       >
         <DialogTitle sx={{ 
           color: '#fff', 
           borderBottom: '1px solid rgba(255,255,255,0.1)',
           display: 'flex',
           alignItems: 'center',
-          gap: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 },
-          py: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 },
-          px: { xs: 2, sm: 2.5, md: 2.25, lg: 3, xl: 3.5 },
+          justifyContent: 'space-between',
+          py: 2,
+          px: 3,
         }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-            <Typography 
-              variant="h6" 
-              component="div"
-              sx={{
-                fontSize: { xs: '1.125rem', sm: '1.375rem', md: '1.3rem', lg: '1.5rem', xl: '1.75rem' },
-                fontWeight: 600,
-                lineHeight: 1.2,
-                mb: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 },
-              }}
-            >
-              {selectedRole?.id && !selectedRole.name ? 'Ny rolle' : 'Rediger rolle'}
-            </Typography>
-            {selectedRole?.name && (
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: 'rgba(255,255,255,0.6)',
-                  fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.85rem', lg: '0.95rem', xl: '1rem' },
-                  fontWeight: 400,
-                }}
-              >
-                {selectedRole.name}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <TheaterComedyIcon sx={{ color: '#00d4ff', fontSize: 28 }} />
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                {selectedRole?.id && !selectedRole.name ? 'Ny rolle' : 'Rediger rolle'}
               </Typography>
-            )}
+              {selectedRole?.name && (
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                  {selectedRole.name}
+                </Typography>
+              )}
+            </Box>
           </Box>
+          <IconButton onClick={() => { setRoleDialogOpen(false); setSelectedRole(null); }} sx={{ color: 'rgba(255,255,255,0.6)' }}>
+            <CloseIcon />
+          </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ 
-          pt: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 },
-          px: { xs: 2, sm: 2.5, md: 2.25, lg: 3, xl: 3.5 },
-          pb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 },
-          overflow: 'visible',
-        }}>
+        <DialogContent sx={{ pt: 3, px: 3, pb: 2 }}>
           {selectedRole && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 3, sm: 3.5, md: 3.25, lg: 3.5, xl: 4 } }}>
-              {/* Basic Information Section */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 } }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, mb: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                  <PersonIcon sx={{ color: '#00d4ff', fontSize: { xs: 20, sm: 24, md: 22, lg: 26, xl: 32 } }} />
-                  <Typography variant="subtitle2" sx={{ 
-                    color: '#00d4ff', 
-                    fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-                    fontWeight: 600,
-                    letterSpacing: '0.5px',
-                  }}>
-                    Grunnleggende informasjon
+            <Grid container spacing={3}>
+              {/* Left Column - Basic Info */}
+              <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <PersonIcon sx={{ color: '#00d4ff', fontSize: 20 }} />
+                  <Typography variant="subtitle2" sx={{ color: '#00d4ff', fontWeight: 600 }}>
+                    Grunnleggende
                   </Typography>
                 </Box>
-                <TextField
-                  label="Rollenavn"
-                  value={selectedRole.name}
-                  onChange={(e) => setSelectedRole({ ...selectedRole, name: e.target.value })}
-                  fullWidth
-                  required
-                  sx={textFieldStyles}
-                />
-                
-                <TextField
-                  label="Beskrivelse"
-                  value={selectedRole.description || ''}
-                  onChange={(e) => setSelectedRole({ ...selectedRole, description: e.target.value })}
-                  fullWidth
-                  multiline
-                  rows={3}
-                  sx={textFieldStyles}
-                />
-              </Box>
+                <Stack spacing={2}>
+                  <TextField
+                    label="Rollenavn"
+                    value={selectedRole.name}
+                    onChange={(e) => setSelectedRole({ ...selectedRole, name: e.target.value })}
+                    fullWidth
+                    required
+                    size="small"
+                    sx={textFieldStyles}
+                  />
+                  <TextField
+                    label="Beskrivelse"
+                    value={selectedRole.description || ''}
+                    onChange={(e) => setSelectedRole({ ...selectedRole, description: e.target.value })}
+                    fullWidth
+                    multiline
+                    rows={2}
+                    size="small"
+                    sx={textFieldStyles}
+                  />
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <TextField
+                      label="Min alder"
+                      type="number"
+                      value={selectedRole.requirements.age?.min || ''}
+                      onChange={(e) => setSelectedRole({
+                        ...selectedRole,
+                        requirements: { ...selectedRole.requirements, age: { ...selectedRole.requirements.age, min: e.target.value ? parseInt(e.target.value) : undefined } },
+                      })}
+                      size="small"
+                      sx={{ flex: 1, ...textFieldStyles }}
+                    />
+                    <TextField
+                      label="Maks alder"
+                      type="number"
+                      value={selectedRole.requirements.age?.max || ''}
+                      onChange={(e) => setSelectedRole({
+                        ...selectedRole,
+                        requirements: { ...selectedRole.requirements, age: { ...selectedRole.requirements.age, max: e.target.value ? parseInt(e.target.value) : undefined } },
+                      })}
+                      size="small"
+                      sx={{ flex: 1, ...textFieldStyles }}
+                    />
+                  </Box>
+                  <FormControl fullWidth size="small">
+                    <InputLabel sx={inputLabelStyles}>Kjønn</InputLabel>
+                    <Select
+                      value={selectedRole.requirements.gender?.[0] || ''}
+                      MenuProps={selectMenuProps}
+                      onChange={(e) => setSelectedRole({
+                        ...selectedRole,
+                        requirements: { ...selectedRole.requirements, gender: e.target.value ? [e.target.value as string] : undefined },
+                      })}
+                      sx={{ color: '#fff', '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
+                    >
+                      <MenuItem value="mann">Mann</MenuItem>
+                      <MenuItem value="kvinne">Kvinne</MenuItem>
+                      <MenuItem value="ikke-binær">Ikke-binær</MenuItem>
+                      <MenuItem value="alle">Alle</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <FormControl fullWidth size="small">
+                    <InputLabel sx={inputLabelStyles}>Status</InputLabel>
+                    <Select
+                      value={selectedRole.status}
+                      MenuProps={selectMenuProps}
+                      onChange={(e) => setSelectedRole({ ...selectedRole, status: e.target.value as Role['status'] })}
+                      sx={{ color: '#fff', '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
+                    >
+                      <MenuItem value="draft">Draft</MenuItem>
+                      <MenuItem value="open">Åpen</MenuItem>
+                      <MenuItem value="casting">Casting</MenuItem>
+                      <MenuItem value="filled">Fylt</MenuItem>
+                      <MenuItem value="cancelled">Avlyst</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Stack>
+              </Grid>
 
-              <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', my: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }} />
-              
-              {/* Requirements Section */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 } }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, mb: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                  <AssignmentIcon sx={{ color: '#00d4ff', fontSize: { xs: 20, sm: 24, md: 22, lg: 26, xl: 32 } }} />
-                  <Typography variant="subtitle2" sx={{ 
-                    color: '#00d4ff', 
-                    fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-                    fontWeight: 600,
-                    letterSpacing: '0.5px',
-                  }}>
-                    Krav til kandidat
+              {/* Right Column - Requirements */}
+              <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <AssignmentIcon sx={{ color: '#00d4ff', fontSize: 20 }} />
+                  <Typography variant="subtitle2" sx={{ color: '#00d4ff', fontWeight: 600 }}>
+                    Krav og tilknytninger
                   </Typography>
                 </Box>
-              
-              <Box sx={{ display: 'flex', gap: { xs: 1.5, sm: 2, md: 1.75, lg: 2.5, xl: 3 }, mb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, flexDirection: { xs: 'column', sm: 'row' } }}>
-                <TextField
-                  label="Min alder"
-                  type="number"
-                  value={selectedRole.requirements.age?.min || ''}
-                  onChange={(e) => setSelectedRole({
-                    ...selectedRole,
-                    requirements: {
-                      ...selectedRole.requirements,
-                      age: { ...selectedRole.requirements.age, min: e.target.value ? parseInt(e.target.value) : undefined },
-                    },
-                  })}
-                  sx={{
-                    flex: 1,
-                    ...textFieldStyles,
-                  }}
-                />
-                <TextField
-                  label="Maks alder"
-                  type="number"
-                  value={selectedRole.requirements.age?.max || ''}
-                  onChange={(e) => setSelectedRole({
-                    ...selectedRole,
-                    requirements: {
-                      ...selectedRole.requirements,
-                      age: { ...selectedRole.requirements.age, max: e.target.value ? parseInt(e.target.value) : undefined },
-                    },
-                  })}
-                  sx={{
-                    flex: 1,
-                    ...textFieldStyles,
-                  }}
-                />
-              </Box>
-              
-              <FormControl fullWidth sx={{ mb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 } }}>
-                <InputLabel sx={inputLabelStyles}>Kjønn (valgfri)</InputLabel>
-                <Select
-                  value={selectedRole.requirements.gender?.[0] || ''}
-                  MenuProps={selectMenuProps}
-                  onChange={(e) => setSelectedRole({
-                    ...selectedRole,
-                    requirements: {
-                      ...selectedRole.requirements,
-                      gender: e.target.value ? [e.target.value as string] : undefined,
-                    },
-                  })}
-                  sx={{
-                    color: '#fff',
-                    fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-                    minHeight: { xs: 40, sm: 44, md: 46, lg: 52, xl: 60 },
-                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
-                    '& .MuiSelect-select': {
-                      fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-                      py: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 },
-                    },
-                  }}
-                >
-                  <MenuItem value="mann">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                      <PersonIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 20, xl: 24 } }} />
-                      <span>Mann</span>
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="kvinne">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                      <PersonIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 20, xl: 24 } }} />
-                      <span>Kvinne</span>
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="ikke-binær">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                      <TransgenderIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 20, xl: 24 } }} />
-                      <span>Ikke-binær</span>
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="alle">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                      <PeopleIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 20, xl: 24 } }} />
-                      <span>Alle</span>
-                    </Box>
-                  </MenuItem>
-                </Select>
-              </FormControl>
-              
-              <TextField
-                label="Utseende (kommaseparert)"
-                value={selectedRole.requirements.appearance?.join(', ') || ''}
-                onChange={(e) => setSelectedRole({
-                  ...selectedRole,
-                  requirements: {
-                    ...selectedRole.requirements,
-                    appearance: e.target.value ? e.target.value.split(',').map(s => s.trim()).filter(s => s) : undefined,
-                  },
-                })}
-                fullWidth
-                placeholder="f.eks. høyde, hårfarge, kroppsbygning"
-                sx={{
-                  mb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 },
-                  ...textFieldStyles,
-                }}
-              />
-              
-              <TextField
-                label="Ferdigheter (kommaseparert)"
-                value={selectedRole.requirements.skills?.join(', ') || ''}
-                onChange={(e) => setSelectedRole({
-                  ...selectedRole,
-                  requirements: {
-                    ...selectedRole.requirements,
-                    skills: e.target.value ? e.target.value.split(',').map(s => s.trim()).filter(s => s) : undefined,
-                  },
-                })}
-                fullWidth
-                placeholder="f.eks. skuespill, dans, mimikk"
-                sx={{
-                  mb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 },
-                  ...textFieldStyles,
-                }}
-              />
-              
-              <TextField
-                label="Spesielle behov"
-                value={selectedRole.requirements.specialNeeds?.join(', ') || ''}
-                onChange={(e) => setSelectedRole({
-                  ...selectedRole,
-                  requirements: {
-                    ...selectedRole.requirements,
-                    specialNeeds: e.target.value ? e.target.value.split(',').map(s => s.trim()).filter(s => s) : undefined,
-                  },
-                })}
-                fullWidth
-                placeholder="f.eks. uniform, dialekt, kultur"
-                sx={{
-                  mb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 },
-                  ...textFieldStyles,
-                }}
-              />
-              
-                <FormControl fullWidth>
-                  <InputLabel sx={inputLabelStyles}>Scene Composer Scener</InputLabel>
-                  <Select
-                    multiple
-                    value={selectedRole.sceneIds || []}
-                    MenuProps={selectMenuProps}
+                <Stack spacing={2}>
+                  <TextField
+                    label="Utseende"
+                    value={selectedRole.requirements.appearance?.join(', ') || ''}
                     onChange={(e) => setSelectedRole({
                       ...selectedRole,
-                      sceneIds: e.target.value as string[],
+                      requirements: { ...selectedRole.requirements, appearance: e.target.value ? e.target.value.split(',').map(s => s.trim()).filter(s => s) : undefined },
                     })}
-                    renderValue={(selected) => (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 } }}>
-                        {(selected as string[]).map((sceneId) => {
-                          const scene = availableScenes.find(s => s.id === sceneId);
-                          return (
-                            <Chip
-                              key={sceneId}
-                              label={scene?.name || sceneId}
-                              size="small"
-                              sx={{ bgcolor: 'rgba(0,212,255,0.2)', color: '#00d4ff', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, height: { xs: 22, sm: 24, md: 23, lg: 26, xl: 30 } }}
-                            />
-                          );
-                        })}
-                      </Box>
-                    )}
-                    sx={{
-                      color: '#fff',
-                      fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-                      minHeight: { xs: 40, sm: 44, md: 46, lg: 52, xl: 60 },
-                      '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
-                      '& .MuiSelect-select': {
-                        fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-                        py: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 },
-                      },
-                    }}
-                  >
-                    {availableScenes.map((scene) => (
-                      <MenuItem key={scene.id} value={scene.id}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                          <MovieIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 20, xl: 24 } }} />
-                          <span>{scene.name}</span>
+                    fullWidth
+                    size="small"
+                    placeholder="høyde, hårfarge..."
+                    sx={textFieldStyles}
+                  />
+                  <TextField
+                    label="Ferdigheter"
+                    value={selectedRole.requirements.skills?.join(', ') || ''}
+                    onChange={(e) => setSelectedRole({
+                      ...selectedRole,
+                      requirements: { ...selectedRole.requirements, skills: e.target.value ? e.target.value.split(',').map(s => s.trim()).filter(s => s) : undefined },
+                    })}
+                    fullWidth
+                    size="small"
+                    placeholder="skuespill, dans..."
+                    sx={textFieldStyles}
+                  />
+                  <TextField
+                    label="Spesielle behov"
+                    value={selectedRole.requirements.specialNeeds?.join(', ') || ''}
+                    onChange={(e) => setSelectedRole({
+                      ...selectedRole,
+                      requirements: { ...selectedRole.requirements, specialNeeds: e.target.value ? e.target.value.split(',').map(s => s.trim()).filter(s => s) : undefined },
+                    })}
+                    fullWidth
+                    size="small"
+                    placeholder="uniform, dialekt..."
+                    sx={textFieldStyles}
+                  />
+                  <FormControl fullWidth size="small">
+                    <InputLabel sx={inputLabelStyles}>Scener</InputLabel>
+                    <Select
+                      multiple
+                      value={selectedRole.sceneIds || []}
+                      MenuProps={selectMenuProps}
+                      onChange={(e) => setSelectedRole({ ...selectedRole, sceneIds: e.target.value as string[] })}
+                      renderValue={(selected) => (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {(selected as string[]).map((sceneId) => (
+                            <Chip key={sceneId} label={availableScenes.find(s => s.id === sceneId)?.name || sceneId} size="small" sx={{ bgcolor: 'rgba(0,212,255,0.2)', color: '#00d4ff', height: 22 }} />
+                          ))}
                         </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-
-              <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', my: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }} />
-
-              {/* Production Requirements Section */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 } }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, mb: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                  <WorkIcon sx={{ color: '#00d4ff', fontSize: { xs: 20, sm: 24, md: 22, lg: 26, xl: 32 } }} />
-                  <Typography variant="subtitle2" sx={{ 
-                    color: '#00d4ff', 
-                    fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-                    fontWeight: 600,
-                    letterSpacing: '0.5px',
-                  }}>
-                    Produksjonskrav
-                  </Typography>
-                </Box>
-
-                {currentProject && (
-                  <>
-                    <FormControl fullWidth>
-                      <InputLabel sx={inputLabelStyles}>Crew-krav</InputLabel>
-                      <Select
-                        multiple
-                        value={selectedRole.crewRequirements || []}
-                        MenuProps={selectMenuProps}
-                        onChange={(e) => setSelectedRole({
-                          ...selectedRole,
-                          crewRequirements: e.target.value as string[],
-                        })}
-                        renderValue={(selected) => (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                            {(selected as string[]).map((crewId) => {
-                              const crew = (currentProject?.crew || []).find(c => c.id === crewId);
-                              return (
-                                <Chip
-                                  key={crewId}
-                                  label={crew?.name || crewId}
-                                  size="small"
-                                  sx={{ bgcolor: 'rgba(0,212,255,0.2)', color: '#00d4ff' }}
-                                />
-                              );
-                            })}
-                          </Box>
-                        )}
-                        sx={{
-                          color: '#fff',
-                          fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-                          minHeight: { xs: 40, sm: 44, md: 46, lg: 52, xl: 60 },
-                          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
-                          '& .MuiSelect-select': {
-                            fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-                            py: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 },
-                          },
-                        }}
-                      >
-                        {(currentProject?.crew || []).map((crew) => {
-                          // Get appropriate icon based on crew role
-                          const getCrewRoleIcon = (role: string) => {
-                            const iconSize = { xs: 16, sm: 18, md: 17, lg: 20, xl: 24 };
-                            const roleMap: Record<string, React.ReactElement> = {
-                              director: <MovieIcon sx={{ fontSize: iconSize }} />,
-                              producer: <BusinessIcon sx={{ fontSize: iconSize }} />,
-                              casting_director: <PeopleIcon sx={{ fontSize: iconSize }} />,
-                              production_manager: <SupervisorAccountIcon sx={{ fontSize: iconSize }} />,
-                              camera_operator: <VideocamIcon sx={{ fontSize: iconSize }} />,
-                              camera_assistant: <CameraAltIcon sx={{ fontSize: iconSize }} />,
-                              gaffer: <LightbulbIcon sx={{ fontSize: iconSize }} />,
-                              grip: <BuildIcon sx={{ fontSize: iconSize }} />,
-                              sound_engineer: <GraphicEqIcon sx={{ fontSize: iconSize }} />,
-                              makeup_artist: <FaceIcon sx={{ fontSize: iconSize }} />,
-                              wardrobe: <CheckroomIcon sx={{ fontSize: iconSize }} />,
-                              other: <GroupIcon sx={{ fontSize: iconSize }} />,
-                            };
-                            return roleMap[role] || <GroupIcon sx={{ fontSize: iconSize }} />;
-                          };
-                          return (
-                            <MenuItem key={crew.id} value={crew.id}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                                {getCrewRoleIcon(crew.role)}
-                                <span>{crew.name} ({crew.role})</span>
-                              </Box>
-                            </MenuItem>
-                          );
-                        })}
-                      </Select>
-                    </FormControl>
-                    
-                    <FormControl fullWidth>
-                      <InputLabel sx={inputLabelStyles}>Lokasjonskrav</InputLabel>
-                      <Select
-                        multiple
-                        value={selectedRole.locationRequirements || []}
-                        MenuProps={selectMenuProps}
-                        onChange={(e) => setSelectedRole({
-                          ...selectedRole,
-                          locationRequirements: e.target.value as string[],
-                        })}
-                        renderValue={(selected) => (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 } }}>
-                            {(selected as string[]).map((locationId) => {
-                              const location = (currentProject?.locations || []).find(l => l.id === locationId);
-                              return (
-                                <Chip
-                                  key={locationId}
-                                  label={location?.name || locationId}
-                                  size="small"
-                                  sx={{ bgcolor: 'rgba(0,212,255,0.2)', color: '#00d4ff', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, height: { xs: 22, sm: 24, md: 23, lg: 26, xl: 30 } }}
-                                />
-                              );
-                            })}
-                          </Box>
-                        )}
-                        sx={{
-                          color: '#fff',
-                          fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-                          minHeight: { xs: 40, sm: 44, md: 46, lg: 52, xl: 60 },
-                          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
-                          '& .MuiSelect-select': {
-                            fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-                            py: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 },
-                          },
-                        }}
-                      >
-                        {(currentProject?.locations || []).map((location) => (
-                          <MenuItem key={location.id} value={location.id}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                              <LocationIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 20, xl: 24 } }} />
-                              <span>{location.name}</span>
+                      )}
+                      sx={{ color: '#fff', '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
+                    >
+                      {availableScenes.map((scene) => (
+                        <MenuItem key={scene.id} value={scene.id}>{scene.name}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  {currentProject && (
+                    <>
+                      <FormControl fullWidth size="small">
+                        <InputLabel sx={inputLabelStyles}>Crew</InputLabel>
+                        <Select
+                          multiple
+                          value={selectedRole.crewRequirements || []}
+                          MenuProps={selectMenuProps}
+                          onChange={(e) => setSelectedRole({ ...selectedRole, crewRequirements: e.target.value as string[] })}
+                          renderValue={(selected) => (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                              {(selected as string[]).map((crewId) => (
+                                <Chip key={crewId} label={(currentProject?.crew || []).find(c => c.id === crewId)?.name || crewId} size="small" sx={{ bgcolor: 'rgba(0,212,255,0.2)', color: '#00d4ff', height: 22 }} />
+                              ))}
                             </Box>
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    
-                    <FormControl fullWidth>
-                      <InputLabel sx={inputLabelStyles}>Rekvisittkrav</InputLabel>
-                      <Select
-                        multiple
-                        value={selectedRole.propRequirements || []}
-                        MenuProps={selectMenuProps}
-                        onChange={(e) => setSelectedRole({
-                          ...selectedRole,
-                          propRequirements: e.target.value as string[],
-                        })}
-                        renderValue={(selected) => (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 } }}>
-                            {(selected as string[]).map((propId) => {
-                              const prop = (currentProject?.props || []).find(p => p.id === propId);
-                              return (
-                                <Chip
-                                  key={propId}
-                                  label={prop?.name || propId}
-                                  size="small"
-                                  sx={{ bgcolor: 'rgba(0,212,255,0.2)', color: '#00d4ff', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, height: { xs: 22, sm: 24, md: 23, lg: 26, xl: 30 } }}
-                                />
-                              );
-                            })}
-                          </Box>
-                        )}
-                        sx={{
-                          color: '#fff',
-                          fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-                          minHeight: { xs: 40, sm: 44, md: 46, lg: 52, xl: 60 },
-                          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
-                          '& .MuiSelect-select': {
-                            fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-                            py: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 },
-                          },
-                        }}
-                      >
-                        {(currentProject?.props || []).map((prop) => (
-                          <MenuItem key={prop.id} value={prop.id}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                              <InventoryIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 20, xl: 24 } }} />
-                              <span>{prop.name} ({prop.category})</span>
+                          )}
+                          sx={{ color: '#fff', '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
+                        >
+                          {(currentProject?.crew || []).map((crew) => (
+                            <MenuItem key={crew.id} value={crew.id}>{crew.name}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <FormControl fullWidth size="small">
+                        <InputLabel sx={inputLabelStyles}>Lokasjoner</InputLabel>
+                        <Select
+                          multiple
+                          value={selectedRole.locationRequirements || []}
+                          MenuProps={selectMenuProps}
+                          onChange={(e) => setSelectedRole({ ...selectedRole, locationRequirements: e.target.value as string[] })}
+                          renderValue={(selected) => (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                              {(selected as string[]).map((locId) => (
+                                <Chip key={locId} label={(currentProject?.locations || []).find(l => l.id === locId)?.name || locId} size="small" sx={{ bgcolor: 'rgba(0,212,255,0.2)', color: '#00d4ff', height: 22 }} />
+                              ))}
                             </Box>
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </>
-                )}
-              </Box>
-
-              <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', my: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }} />
-
-              {/* Status Section */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 } }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, mb: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                  <CheckCircleOutlineIcon sx={{ color: '#00d4ff', fontSize: { xs: 20, sm: 24, md: 22, lg: 26, xl: 32 } }} />
-                  <Typography variant="subtitle2" sx={{ 
-                    color: '#00d4ff', 
-                    fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-                    fontWeight: 600,
-                    letterSpacing: '0.5px',
-                  }}>
-                    Status
-                  </Typography>
-                </Box>
-                <FormControl fullWidth>
-                  <InputLabel sx={inputLabelStyles}>Status</InputLabel>
-                  <Select
-                    value={selectedRole.status}
-                    MenuProps={selectMenuProps}
-                    onChange={(e) => setSelectedRole({ ...selectedRole, status: e.target.value as Role['status'] })}
-                    sx={{
-                      color: '#fff',
-                      fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-                      minHeight: { xs: 40, sm: 44, md: 46, lg: 52, xl: 60 },
-                      '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
-                      '& .MuiSelect-select': {
-                        fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-                        py: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 },
-                      },
-                    }}
-                  >
-                    <MenuItem value="draft">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                        <EditIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 20, xl: 24 } }} />
-                        <span>Draft</span>
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value="open">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                        <PeopleIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 20, xl: 24 } }} />
-                        <span>Åpen</span>
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value="casting">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                        <PlayArrowIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 20, xl: 24 } }} />
-                        <span>Casting</span>
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value="filled">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                        <CheckCircleIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 20, xl: 24 } }} />
-                        <span>Fylt</span>
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value="cancelled">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                        <CancelIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 20, xl: 24 } }} />
-                        <span>Avlyst</span>
-                      </Box>
-                    </MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-            </Box>
+                          )}
+                          sx={{ color: '#fff', '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
+                        >
+                          {(currentProject?.locations || []).map((loc) => (
+                            <MenuItem key={loc.id} value={loc.id}>{loc.name}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <FormControl fullWidth size="small">
+                        <InputLabel sx={inputLabelStyles}>Rekvisitter</InputLabel>
+                        <Select
+                          multiple
+                          value={selectedRole.propRequirements || []}
+                          MenuProps={selectMenuProps}
+                          onChange={(e) => setSelectedRole({ ...selectedRole, propRequirements: e.target.value as string[] })}
+                          renderValue={(selected) => (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                              {(selected as string[]).map((propId) => (
+                                <Chip key={propId} label={(currentProject?.props || []).find(p => p.id === propId)?.name || propId} size="small" sx={{ bgcolor: 'rgba(0,212,255,0.2)', color: '#00d4ff', height: 22 }} />
+                              ))}
+                            </Box>
+                          )}
+                          sx={{ color: '#fff', '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
+                        >
+                          {(currentProject?.props || []).map((prop) => (
+                            <MenuItem key={prop.id} value={prop.id}>{prop.name}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </>
+                  )}
+                </Stack>
+              </Grid>
+            </Grid>
           )}
         </DialogContent>
-        <DialogActions sx={{ 
-          borderTop: '1px solid rgba(255,255,255,0.1)', 
-          p: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 },
-          gap: { xs: 1, sm: 1.5, md: 1.375, lg: 1.5, xl: 2 },
-        }}>
+        <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2, gap: 1 }}>
           <Button
-            onClick={() => {
-              setRoleDialogOpen(false);
-              setSelectedRole(null);
-            }}
-            startIcon={<CancelIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />}
-            sx={{ 
-              color: 'rgba(255,255,255,0.6)',
-              fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-              px: { xs: 2, sm: 2.5, md: 2.25, lg: 3, xl: 3.5 },
-              py: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 },
-              minHeight: TOUCH_TARGET_SIZE,
-            }}
+            onClick={() => { setRoleDialogOpen(false); setSelectedRole(null); }}
+            sx={{ color: 'rgba(255,255,255,0.6)', minHeight: TOUCH_TARGET_SIZE }}
           >
             Avbryt
           </Button>
           <Button
             onClick={handleSaveRole}
             variant="contained"
-            startIcon={<SaveIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />}
-            sx={{
-              bgcolor: '#00d4ff',
-              color: '#000',
-              fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
-              px: { xs: 3, sm: 3.5, md: 3.25, lg: 4, xl: 5 },
-              py: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 },
-              fontWeight: 600,
-              minHeight: TOUCH_TARGET_SIZE,
-              '&:hover': { bgcolor: '#00b8e6' },
-            }}
+            startIcon={<SaveIcon />}
+            sx={{ bgcolor: '#00d4ff', color: '#000', fontWeight: 600, minHeight: TOUCH_TARGET_SIZE, '&:hover': { bgcolor: '#00b8e6' } }}
           >
-            Lagre
+            Lagre rolle
           </Button>
         </DialogActions>
       </Dialog>
