@@ -1712,9 +1712,9 @@ class VirtualStudio {
       knob.style.top = `${knobCenterY}%`;
       
       // Calculate new rotation from start position + joystick offset
-      // Sensitivity: full deflection = ±45° change
-      const panSensitivity = Math.PI / 4; // 45° per full deflection
-      const tiltSensitivity = Math.PI / 4; // 45° per full deflection
+      // Reduced sensitivity for more precise control: full deflection = ±15° change
+      const panSensitivity = Math.PI / 12; // 15° per full deflection
+      const tiltSensitivity = Math.PI / 12; // 15° per full deflection
       
       let newPan = this.hudJoystickStartPan + offsetX * panSensitivity;
       let newTilt = this.hudJoystickStartTilt - offsetY * tiltSensitivity; // Inverted Y
