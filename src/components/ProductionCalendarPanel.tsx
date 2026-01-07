@@ -48,6 +48,11 @@ import {
   candidatesApi,
   crewApi,
   locationsApi,
+  equipmentApi,
+  equipmentBookingsApi,
+  equipmentConflictsApi,
+  Equipment,
+  EquipmentConflict,
 } from '../services/castingApiService';
 import WarningIcon from '@mui/icons-material/Warning';
 import NotificationsIcon from '@mui/icons-material/Notifications';
@@ -105,12 +110,15 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
   const [allDay, setAllDay] = useState(false);
   const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
   const [selectedCrew, setSelectedCrew] = useState<string[]>([]);
+  const [selectedEquipment, setSelectedEquipment] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'week'>('list');
   const [candidates, setCandidates] = useState<Candidate[]>(propCandidates || []);
   const [crew, setCrew] = useState<Crew[]>(propCrew || []);
   const [locations, setLocations] = useState<Location[]>(propLocations || []);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [crewConflicts, setCrewConflicts] = useState<Map<string, CrewConflict[]>>(new Map());
+  const [equipmentConflicts, setEquipmentConflicts] = useState<Map<string, EquipmentConflict[]>>(new Map());
 
   useEffect(() => {
     loadEvents();
@@ -145,9 +153,29 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
         const locationsData = await locationsApi.getAll(projectId);
         setLocations(locationsData.map(l => ({ id: l.id, name: l.name })));
       }
+      const equipmentData = await equipmentApi.getAll(projectId);
+      setEquipment(equipmentData);
     } catch (error) {
       console.error('Failed to load project data:', error);
     }
+  };
+
+  const checkEquipmentConflicts = async (equipmentIds: string[], start: string, end: string): Promise<{ hasConflicts: boolean; conflictingIds: string[] }> => {
+    const conflicts = new Map<string, EquipmentConflict[]>();
+    const conflictingIds: string[] = [];
+    for (const equipmentId of equipmentIds) {
+      try {
+        const result = await equipmentConflictsApi.check(equipmentId, start.split('T')[0], end.split('T')[0]);
+        if (result.hasConflicts) {
+          conflicts.set(equipmentId, result.conflicts);
+          conflictingIds.push(equipmentId);
+        }
+      } catch (error) {
+        console.error('Failed to check conflicts for equipment:', equipmentId, error);
+      }
+    }
+    setEquipmentConflicts(conflicts);
+    return { hasConflicts: conflicts.size > 0, conflictingIds };
   };
 
   const checkCrewConflicts = async (crewIds: string[], start: string, end: string) => {
@@ -194,6 +222,7 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
       setAllDay(event.all_day || false);
       setSelectedCandidates(event.candidate_ids || []);
       setSelectedCrew(event.crew_ids || []);
+      setSelectedEquipment(event.equipment_ids || []);
       setNotes(event.notes || '');
     } else {
       resetForm();
@@ -212,7 +241,9 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
     setAllDay(false);
     setSelectedCandidates([]);
     setSelectedCrew([]);
+    setSelectedEquipment([]);
     setNotes('');
+    setEquipmentConflicts(new Map());
   };
 
   const handleSave = async () => {
@@ -233,6 +264,18 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
       }
     }
 
+    if (selectedEquipment.length > 0 && startTime) {
+      const checkEnd = endTime || startTime;
+      const { hasConflicts: hasEquipmentConflicts, conflictingIds } = await checkEquipmentConflicts(selectedEquipment, startTime, checkEnd);
+      if (hasEquipmentConflicts) {
+        const conflictingEquipmentNames = conflictingIds
+          .map(id => equipment.find(e => e.id === id)?.name)
+          .filter(Boolean)
+          .join(', ');
+        enqueueSnackbar(`Advarsel: Utstyrskonflikter funnet for: ${conflictingEquipmentNames}`, { variant: 'warning' });
+      }
+    }
+
     setSubmitting(true);
     try {
       let eventId = editingEvent?.id;
@@ -247,6 +290,7 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
           all_day: allDay,
           candidate_ids: selectedCandidates,
           crew_ids: selectedCrew,
+          equipment_ids: selectedEquipment,
           notes,
         });
         enqueueSnackbar('Hendelse oppdatert!', { variant: 'success' });
@@ -255,6 +299,36 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
         if (newCrewIds.length > 0) {
           await sendCrewNotifications(newCrewIds, title, editingEvent.id);
           enqueueSnackbar(`Varsler sendt til ${newCrewIds.length} nye crew-medlemmer`, { variant: 'info' });
+        }
+
+        try {
+          const existingBookings = await equipmentBookingsApi.getByEvent(editingEvent.id);
+          const removedEquipmentIds = (editingEvent.equipment_ids || []).filter(id => !selectedEquipment.includes(id));
+          const bookingsToDelete = existingBookings.filter(b => removedEquipmentIds.includes(b.equipment_id));
+          for (const booking of bookingsToDelete) {
+            await equipmentBookingsApi.delete(booking.id);
+          }
+          const bookingsToUpdate = existingBookings.filter(b => selectedEquipment.includes(b.equipment_id));
+          for (const booking of bookingsToUpdate) {
+            await equipmentBookingsApi.update(booking.id, {
+              start_date: startTime.split('T')[0],
+              end_date: (endTime || startTime).split('T')[0],
+              purpose: title,
+            });
+          }
+          const existingEquipmentIds = existingBookings.map(b => b.equipment_id);
+          const newEquipmentIds = selectedEquipment.filter(id => !existingEquipmentIds.includes(id));
+          for (const equipmentId of newEquipmentIds) {
+            await equipmentBookingsApi.create(equipmentId, {
+              event_id: editingEvent.id,
+              start_date: startTime.split('T')[0],
+              end_date: (endTime || startTime).split('T')[0],
+              purpose: title,
+              status: 'confirmed',
+            });
+          }
+        } catch (err) {
+          console.error('Failed to sync equipment bookings:', err);
         }
       } else {
         eventId = await calendarEventsApi.create({
@@ -268,6 +342,7 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
           allDay,
           candidateIds: selectedCandidates,
           crewIds: selectedCrew,
+          equipmentIds: selectedEquipment,
           notes,
         });
         enqueueSnackbar('Hendelse opprettet!', { variant: 'success' });
@@ -275,6 +350,23 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
         if (selectedCrew.length > 0 && eventId) {
           await sendCrewNotifications(selectedCrew, title, eventId);
           enqueueSnackbar(`Varsler sendt til ${selectedCrew.length} crew-medlemmer`, { variant: 'info' });
+        }
+
+        if (selectedEquipment.length > 0 && eventId) {
+          for (const equipmentId of selectedEquipment) {
+            try {
+              await equipmentBookingsApi.create(equipmentId, {
+                event_id: eventId,
+                start_date: startTime.split('T')[0],
+                end_date: (endTime || startTime).split('T')[0],
+                purpose: title,
+                status: 'confirmed',
+              });
+            } catch (err) {
+              console.error('Failed to book equipment:', equipmentId, err);
+            }
+          }
+          enqueueSnackbar(`${selectedEquipment.length} utstyr booket`, { variant: 'info' });
         }
       }
       setDialogOpen(false);
@@ -618,6 +710,43 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
                 ))}
               </Select>
             </FormControl>
+
+            <FormControl fullWidth>
+              <InputLabel>Utstyr</InputLabel>
+              <Select
+                multiple
+                value={selectedEquipment}
+                onChange={(e) => setSelectedEquipment(e.target.value as string[])}
+                input={<OutlinedInput label="Utstyr" />}
+                renderValue={(selected) => 
+                  equipment
+                    .filter(e => selected.includes(e.id))
+                    .map(e => e.name)
+                    .join(', ')
+                }
+              >
+                {equipment.map((eq) => (
+                  <MenuItem key={eq.id} value={eq.id}>
+                    <Checkbox checked={selectedEquipment.includes(eq.id)} />
+                    <ListItemText 
+                      primary={eq.name} 
+                      secondary={`${eq.category || ''} ${eq.brand ? `- ${eq.brand}` : ''}`}
+                    />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {equipmentConflicts.size > 0 && (
+              <Alert severity="warning" icon={<WarningIcon />}>
+                <Typography variant="body2" fontWeight="bold">Utstyrskonflikter funnet:</Typography>
+                {Array.from(equipmentConflicts.entries()).map(([equipmentId, conflicts]) => (
+                  <Typography key={equipmentId} variant="body2">
+                    {equipment.find(e => e.id === equipmentId)?.name}: {conflicts.length} konflikt(er)
+                  </Typography>
+                ))}
+              </Alert>
+            )}
 
             <TextField
               label="Beskrivelse"

@@ -3400,6 +3400,78 @@ async def api_delete_equipment_booking(booking_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.put("/api/casting/equipment/bookings/{booking_id}")
+async def api_update_equipment_booking(booking_id: str, request: Request):
+    """Update equipment booking"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        data = await request.json()
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                UPDATE casting_equipment_bookings 
+                SET start_date = COALESCE(%s, start_date),
+                    end_date = COALESCE(%s, end_date),
+                    start_time = COALESCE(%s, start_time),
+                    end_time = COALESCE(%s, end_time),
+                    purpose = COALESCE(%s, purpose),
+                    status = COALESCE(%s, status),
+                    notes = COALESCE(%s, notes),
+                    quantity = COALESCE(%s, quantity),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+                RETURNING *
+            """, (
+                data.get('start_date'),
+                data.get('end_date'),
+                data.get('start_time'),
+                data.get('end_time'),
+                data.get('purpose'),
+                data.get('status'),
+                data.get('notes'),
+                data.get('quantity'),
+                booking_id
+            ))
+            booking = cur.fetchone()
+            conn.commit()
+        conn.close()
+        if booking:
+            return JSONResponse({"success": True, "booking": dict(booking)})
+        raise HTTPException(status_code=404, detail="Booking not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/events/{event_id}/equipment-bookings")
+async def api_get_event_equipment_bookings(event_id: str):
+    """Get all equipment bookings for a calendar event"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT project_id FROM casting_calendar_events WHERE id = %s", (event_id,))
+            event = cur.fetchone()
+            if not event:
+                raise HTTPException(status_code=404, detail="Event not found")
+            
+            cur.execute("""
+                SELECT b.*, e.name as equipment_name 
+                FROM casting_equipment_bookings b
+                LEFT JOIN casting_equipment e ON b.equipment_id = e.id
+                WHERE b.event_id = %s
+                ORDER BY b.created_at
+            """, (event_id,))
+            bookings = cur.fetchall()
+        conn.close()
+        return JSONResponse({"success": True, "bookings": [dict(b) for b in bookings]})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/casting/equipment/{equipment_id}/availability")
 async def api_get_equipment_availability(equipment_id: str):
     """Get availability blocks for equipment"""

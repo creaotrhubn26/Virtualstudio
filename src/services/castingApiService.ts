@@ -335,6 +335,7 @@ export interface CalendarEvent {
   all_day?: boolean;
   candidate_ids?: string[];
   crew_ids?: string[];
+  equipment_ids?: string[];
   shot_list_ids?: string[];
   notes?: string;
   status?: string;
@@ -700,10 +701,23 @@ export const equipmentBookingsApi = {
     const result = await apiRequest<{ bookings: EquipmentBooking[] }>(`/equipment/${equipmentId}/bookings`);
     return result.bookings;
   },
+
+  getByEvent: async (eventId: string): Promise<EquipmentBooking[]> => {
+    const result = await apiRequest<{ bookings: EquipmentBooking[] }>(`/events/${eventId}/equipment-bookings`);
+    return result.bookings;
+  },
   
   create: async (equipmentId: string, booking: Partial<EquipmentBooking>): Promise<EquipmentBooking> => {
     const result = await apiRequest<{ booking: EquipmentBooking }>(`/equipment/${equipmentId}/bookings`, {
       method: 'POST',
+      body: JSON.stringify(booking),
+    });
+    return result.booking;
+  },
+
+  update: async (bookingId: string, booking: Partial<EquipmentBooking>): Promise<EquipmentBooking> => {
+    const result = await apiRequest<{ booking: EquipmentBooking }>(`/equipment/bookings/${bookingId}`, {
+      method: 'PUT',
       body: JSON.stringify(booking),
     });
     return result.booking;
