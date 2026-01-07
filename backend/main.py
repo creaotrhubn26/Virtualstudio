@@ -3595,6 +3595,360 @@ async def api_check_equipment_conflicts(equipment_id: str, start_date: str, end_
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ============ Equipment Templates API ============
+
+@app.get("/api/casting/projects/{project_id}/equipment-templates")
+async def api_get_equipment_templates(project_id: str):
+    """Get all equipment templates for a project"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT t.*, 
+                    (SELECT COUNT(*) FROM casting_equipment_template_items WHERE template_id = t.id) as item_count
+                FROM casting_equipment_templates t
+                WHERE t.project_id = %s
+                ORDER BY t.is_default DESC, t.name
+            """, (project_id,))
+            templates = cur.fetchall()
+        conn.close()
+        return JSONResponse({"success": True, "templates": [dict(t) for t in templates]})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/equipment-templates/{template_id}")
+async def api_get_equipment_template(template_id: str):
+    """Get a single equipment template with items"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM casting_equipment_templates WHERE id = %s", (template_id,))
+            template = cur.fetchone()
+            if not template:
+                raise HTTPException(status_code=404, detail="Template not found")
+            
+            cur.execute("""
+                SELECT * FROM casting_equipment_template_items 
+                WHERE template_id = %s ORDER BY sort_order, name
+            """, (template_id,))
+            items = cur.fetchall()
+        conn.close()
+        result = dict(template)
+        result['items'] = [dict(i) for i in items]
+        return JSONResponse({"success": True, "template": result})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/projects/{project_id}/equipment-templates")
+async def api_create_equipment_template(project_id: str, request: Request):
+    """Create a new equipment template"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        import uuid
+        data = await request.json()
+        template_id = f"equip_tmpl_{uuid.uuid4().hex[:12]}"
+        
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO casting_equipment_templates 
+                (id, project_id, name, description, category, use_case, is_default, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING *
+            """, (
+                template_id,
+                project_id,
+                data.get('name'),
+                data.get('description'),
+                data.get('category'),
+                data.get('use_case'),
+                data.get('is_default', False),
+                data.get('created_by')
+            ))
+            template = cur.fetchone()
+            
+            items = data.get('items', [])
+            created_items = []
+            for idx, item in enumerate(items):
+                item_id = f"equip_tmpl_item_{uuid.uuid4().hex[:12]}"
+                cur.execute("""
+                    INSERT INTO casting_equipment_template_items 
+                    (id, template_id, name, description, category, brand, model, quantity, 
+                     is_required, external_url, estimated_price, notes, sort_order)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING *
+                """, (
+                    item_id,
+                    template_id,
+                    item.get('name'),
+                    item.get('description'),
+                    item.get('category'),
+                    item.get('brand'),
+                    item.get('model'),
+                    item.get('quantity', 1),
+                    item.get('is_required', True),
+                    item.get('external_url'),
+                    item.get('estimated_price'),
+                    item.get('notes'),
+                    idx
+                ))
+                created_items.append(dict(cur.fetchone()))
+            
+            conn.commit()
+        conn.close()
+        result = dict(template)
+        result['items'] = created_items
+        return JSONResponse({"success": True, "template": result})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/casting/equipment-templates/{template_id}")
+async def api_update_equipment_template(template_id: str, request: Request):
+    """Update an equipment template"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        import uuid
+        data = await request.json()
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                UPDATE casting_equipment_templates 
+                SET name = COALESCE(%s, name),
+                    description = COALESCE(%s, description),
+                    category = COALESCE(%s, category),
+                    use_case = COALESCE(%s, use_case),
+                    is_default = COALESCE(%s, is_default),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+                RETURNING *
+            """, (
+                data.get('name'),
+                data.get('description'),
+                data.get('category'),
+                data.get('use_case'),
+                data.get('is_default'),
+                template_id
+            ))
+            template = cur.fetchone()
+            if not template:
+                raise HTTPException(status_code=404, detail="Template not found")
+            
+            if 'items' in data:
+                cur.execute("DELETE FROM casting_equipment_template_items WHERE template_id = %s", (template_id,))
+                created_items = []
+                for idx, item in enumerate(data['items']):
+                    item_id = f"equip_tmpl_item_{uuid.uuid4().hex[:12]}"
+                    cur.execute("""
+                        INSERT INTO casting_equipment_template_items 
+                        (id, template_id, name, description, category, brand, model, quantity, 
+                         is_required, external_url, estimated_price, notes, sort_order)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        RETURNING *
+                    """, (
+                        item_id,
+                        template_id,
+                        item.get('name'),
+                        item.get('description'),
+                        item.get('category'),
+                        item.get('brand'),
+                        item.get('model'),
+                        item.get('quantity', 1),
+                        item.get('is_required', True),
+                        item.get('external_url'),
+                        item.get('estimated_price'),
+                        item.get('notes'),
+                        idx
+                    ))
+                    created_items.append(dict(cur.fetchone()))
+                result = dict(template)
+                result['items'] = created_items
+            else:
+                cur.execute("SELECT * FROM casting_equipment_template_items WHERE template_id = %s ORDER BY sort_order", (template_id,))
+                items = cur.fetchall()
+                result = dict(template)
+                result['items'] = [dict(i) for i in items]
+            
+            conn.commit()
+        conn.close()
+        return JSONResponse({"success": True, "template": result})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/casting/equipment-templates/{template_id}")
+async def api_delete_equipment_template(template_id: str):
+    """Delete an equipment template"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM casting_equipment_templates WHERE id = %s RETURNING id", (template_id,))
+            deleted = cur.fetchone()
+            conn.commit()
+        conn.close()
+        if deleted:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Template not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/equipment-templates/{template_id}/apply")
+async def api_apply_equipment_template(template_id: str, request: Request):
+    """Apply template to create equipment items in project"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        import uuid
+        data = await request.json()
+        project_id = data.get('project_id')
+        
+        conn = get_db_connection()
+        created_equipment = []
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM casting_equipment_template_items WHERE template_id = %s ORDER BY sort_order", (template_id,))
+            items = cur.fetchall()
+            
+            for item in items:
+                equip_id = f"equip_{uuid.uuid4().hex[:12]}"
+                cur.execute("""
+                    INSERT INTO casting_equipment 
+                    (id, project_id, name, description, category, brand, model, quantity, status)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'available')
+                    RETURNING *
+                """, (
+                    equip_id,
+                    project_id,
+                    item['name'],
+                    item.get('description'),
+                    item.get('category'),
+                    item.get('brand'),
+                    item.get('model'),
+                    item.get('quantity', 1)
+                ))
+                created_equipment.append(dict(cur.fetchone()))
+            
+            conn.commit()
+        conn.close()
+        return JSONResponse({"success": True, "equipment": created_equipment, "count": len(created_equipment)})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============ Vendor Links API (foto.no) ============
+
+@app.get("/api/casting/vendor-links")
+async def api_get_vendor_links(category: str = None):
+    """Get vendor product links, optionally filtered by category"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            if category:
+                cur.execute("""
+                    SELECT * FROM casting_equipment_vendor_links 
+                    WHERE category = %s ORDER BY is_recommended DESC, sort_order, product_name
+                """, (category,))
+            else:
+                cur.execute("""
+                    SELECT * FROM casting_equipment_vendor_links 
+                    ORDER BY category, is_recommended DESC, sort_order, product_name
+                """)
+            links = cur.fetchall()
+        conn.close()
+        return JSONResponse({"success": True, "links": [dict(l) for l in links]})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/casting/vendor-links/categories")
+async def api_get_vendor_categories():
+    """Get all vendor link categories with counts"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT category, COUNT(*) as count 
+                FROM casting_equipment_vendor_links 
+                GROUP BY category ORDER BY category
+            """)
+            categories = cur.fetchall()
+        conn.close()
+        return JSONResponse({"success": True, "categories": [dict(c) for c in categories]})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/casting/vendor-links")
+async def api_create_vendor_link(request: Request):
+    """Create a vendor product link"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        import uuid
+        data = await request.json()
+        link_id = f"vendor_link_{uuid.uuid4().hex[:12]}"
+        
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO casting_equipment_vendor_links 
+                (id, category, subcategory, vendor_name, product_name, product_url, affiliate_url, 
+                 price, image_url, description, is_recommended, sort_order)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING *
+            """, (
+                link_id,
+                data.get('category'),
+                data.get('subcategory'),
+                data.get('vendor_name', 'foto.no'),
+                data.get('product_name'),
+                data.get('product_url'),
+                data.get('affiliate_url'),
+                data.get('price'),
+                data.get('image_url'),
+                data.get('description'),
+                data.get('is_recommended', False),
+                data.get('sort_order', 0)
+            ))
+            link = cur.fetchone()
+            conn.commit()
+        conn.close()
+        return JSONResponse({"success": True, "link": dict(link)})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/casting/vendor-links/{link_id}")
+async def api_delete_vendor_link(link_id: str):
+    """Delete a vendor link"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM casting_equipment_vendor_links WHERE id = %s RETURNING id", (link_id,))
+            deleted = cur.fetchone()
+            conn.commit()
+        conn.close()
+        if deleted:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Vendor link not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/casting/locations/{location_id}/equipment")
 async def api_get_equipment_at_location(location_id: str):
     """Get all equipment stored at a location"""
