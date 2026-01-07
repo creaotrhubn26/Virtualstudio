@@ -11,6 +11,7 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Chip,
+  CircularProgress,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -25,6 +26,7 @@ import {
   Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { RichTextEditor } from './RichTextEditor';
+import { noteApi } from '@/services/virtualStudioApiService';
 
 interface Note {
   id: string;
@@ -58,6 +60,8 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
   const [content, setContent] = useState('');
   const [category, setCategory] = useState<Note['category']>('general');
   const [zIndex, setZIndex] = useState(10000);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Bring panel to front on mount
   useEffect(() => {
@@ -80,15 +84,49 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
     };
   }, []);
 
+  // Load notes from database (with localStorage fallback)
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
+    const loadNotes = async () => {
+      setIsLoading(true);
       try {
-        setNotes(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to load notes:', e);
+        const dbNotes = await noteApi.getAll();
+        if (dbNotes.length > 0) {
+          const mappedNotes: Note[] = dbNotes.map(n => ({
+            id: n.id,
+            title: n.title,
+            content: n.content || '',
+            category: (n.category as Note['category']) || 'general',
+            timestamp: n.updated_at ? new Date(n.updated_at).getTime() : Date.now(),
+            sceneId: n.project_id || undefined,
+          }));
+          setNotes(mappedNotes);
+        } else {
+          // Fallback to localStorage
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            try {
+              setNotes(JSON.parse(saved));
+            } catch (e) {
+              console.error('Failed to load notes from localStorage:', e);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load notes from database:', error);
+        // Fallback to localStorage
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          try {
+            setNotes(JSON.parse(saved));
+          } catch (e) {
+            console.error('Failed to load notes from localStorage:', e);
+          }
+        }
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
+    loadNotes();
   }, []);
 
   const saveNotes = useCallback((updatedNotes: Note[]) => {
@@ -112,25 +150,65 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
     setCategory(note.category);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title.trim()) return;
+    setIsSaving(true);
 
-    if (editingNote) {
-      const updated = notes.map(n =>
-        n.id === editingNote.id
-          ? { ...n, title, content, category, timestamp: Date.now() }
-          : n
-      );
-      saveNotes(updated);
-    } else {
-      const newNote: Note = {
-        id: `note_${Date.now()}`,
-        title,
-        content,
-        category,
-        timestamp: Date.now(),
-      };
-      saveNotes([newNote, ...notes]);
+    try {
+      if (editingNote) {
+        // Update existing note in database
+        await noteApi.save({
+          id: editingNote.id,
+          title,
+          content,
+          category,
+        });
+        const updated = notes.map(n =>
+          n.id === editingNote.id
+            ? { ...n, title, content, category, timestamp: Date.now() }
+            : n
+        );
+        saveNotes(updated);
+      } else {
+        // Create new note in database
+        const newId = `note_${Date.now()}`;
+        await noteApi.save({
+          id: newId,
+          title,
+          content,
+          category,
+        });
+        const newNote: Note = {
+          id: newId,
+          title,
+          content,
+          category,
+          timestamp: Date.now(),
+        };
+        saveNotes([newNote, ...notes]);
+      }
+    } catch (error) {
+      console.error('Failed to save note to database:', error);
+      // Still update local state as fallback
+      if (editingNote) {
+        const updated = notes.map(n =>
+          n.id === editingNote.id
+            ? { ...n, title, content, category, timestamp: Date.now() }
+            : n
+        );
+        saveNotes(updated);
+      } else {
+        const newNote: Note = {
+          id: `note_${Date.now()}`,
+          title,
+          content,
+          category,
+          timestamp: Date.now(),
+        };
+        saveNotes([newNote, ...notes]);
+      }
+    } finally {
+      setIsSaving(false);
     }
 
     setIsCreating(false);
@@ -139,7 +217,12 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
     setContent('');
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    try {
+      await noteApi.delete(id);
+    } catch (error) {
+      console.error('Failed to delete note from database:', error);
+    }
     saveNotes(notes.filter(n => n.id !== id));
     if (editingNote?.id === id) {
       setEditingNote(null);

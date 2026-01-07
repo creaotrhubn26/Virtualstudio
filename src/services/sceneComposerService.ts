@@ -1,4 +1,5 @@
 import { SceneComposition, EnvironmentState, WallState, FloorState, AtmosphereSettings, GoboState } from '../core/models/sceneComposer';
+import { sceneApi } from './virtualStudioApiService';
 
 const STORAGE_KEY = 'virtualStudio_sceneCompositions';
 
@@ -7,8 +8,29 @@ const sceneCache = new Map<string, SceneComposition>();
 
 export const sceneComposerService = {
   /**
-   * Get all saved scenes from localStorage
+   * Get all saved scenes from database (with localStorage fallback)
    */
+  async getAllScenesAsync(): Promise<SceneComposition[]> {
+    try {
+      const dbScenes = await sceneApi.getAll();
+      if (dbScenes.length > 0) {
+        const scenes: SceneComposition[] = dbScenes.map(s => ({
+          ...s.scene_data as Partial<SceneComposition>,
+          id: s.id,
+          name: s.name,
+          description: s.description,
+          createdAt: s.created_at,
+          updatedAt: s.updated_at,
+        } as SceneComposition));
+        scenes.forEach(scene => sceneCache.set(scene.id, scene));
+        return scenes;
+      }
+    } catch (error) {
+      console.warn('Database unavailable, falling back to localStorage:', error);
+    }
+    return this.getAllScenes();
+  },
+
   getAllScenes(): SceneComposition[] {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -29,19 +51,40 @@ export const sceneComposerService = {
   },
 
   /**
-   * Save a scene to localStorage (incremental - only save changes)
+   * Save a scene to database and localStorage
    */
+  async saveSceneAsync(scene: SceneComposition, incremental: boolean = true): Promise<void> {
+    const cached = sceneCache.get(scene.id);
+    if (incremental && cached) {
+      const cachedJson = JSON.stringify(cached);
+      const newJson = JSON.stringify(scene);
+      if (cachedJson === newJson) return;
+    }
+
+    const updatedScene = { ...scene, updatedAt: new Date().toISOString() };
+
+    try {
+      await sceneApi.save({
+        id: updatedScene.id,
+        name: updatedScene.name,
+        description: updatedScene.description,
+        scene_data: updatedScene,
+      });
+    } catch (error) {
+      console.warn('Database save failed, using localStorage:', error);
+    }
+
+    this.saveScene(updatedScene, false);
+  },
+
   saveScene(scene: SceneComposition, incremental: boolean = true): void {
     try {
-      // Check cache for existing scene
       const cached = sceneCache.get(scene.id);
 
       if (incremental && cached) {
-        // Only save if scene has changed
         const cachedJson = JSON.stringify(cached);
         const newJson = JSON.stringify(scene);
         if (cachedJson === newJson) {
-          // No changes, skip save
           return;
         }
       }
@@ -52,16 +95,13 @@ export const sceneComposerService = {
       const updatedScene = { ...scene, updatedAt: new Date().toISOString() };
 
       if (existingIndex >= 0) {
-        // Update existing scene
         scenes[existingIndex] = updatedScene;
       } else {
-        // Add new scene
         scenes.push(updatedScene);
       }
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(scenes));
 
-      // Update cache
       sceneCache.set(updatedScene.id, updatedScene);
     } catch (error) {
       console.error('Error saving scene to localStorage:', error);
@@ -70,8 +110,27 @@ export const sceneComposerService = {
   },
 
   /**
-   * Load a scene by ID from localStorage
+   * Load a scene by ID from database or localStorage
    */
+  async loadSceneAsync(id: string): Promise<SceneComposition | null> {
+    try {
+      const dbScene = await sceneApi.get(id);
+      if (dbScene) {
+        return {
+          ...dbScene.scene_data as Partial<SceneComposition>,
+          id: dbScene.id,
+          name: dbScene.name,
+          description: dbScene.description,
+          createdAt: dbScene.created_at,
+          updatedAt: dbScene.updated_at,
+        } as SceneComposition;
+      }
+    } catch (error) {
+      console.warn('Database load failed, using localStorage:', error);
+    }
+    return this.loadScene(id);
+  },
+
   loadScene(id: string): SceneComposition | null {
     try {
       const scenes = this.getAllScenes();
@@ -83,12 +142,22 @@ export const sceneComposerService = {
   },
 
   /**
-   * Delete a scene by ID
+   * Delete a scene by ID from database and localStorage
    */
+  async deleteSceneAsync(id: string): Promise<void> {
+    try {
+      await sceneApi.delete(id);
+    } catch (error) {
+      console.warn('Database delete failed:', error);
+    }
+    this.deleteScene(id);
+  },
+
   deleteScene(id: string): void {
     try {
       const scenes = this.getAllScenes().filter(s => s.id !== id);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(scenes));
+      sceneCache.delete(id);
     } catch (error) {
       console.error('Error deleting scene from localStorage:', error);
       throw error;
