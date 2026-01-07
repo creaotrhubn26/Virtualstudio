@@ -10596,32 +10596,40 @@ class VirtualStudio {
   
   /**
    * Setup materials for a cloned light mesh
-   * Preserves original GLB textures but adds emissive glow based on light color/intensity
+   * Fixes black colors and adds emissive glow based on light color/intensity
    */
   private setupClonedLightMaterials(mesh: BABYLON.Mesh, color: BABYLON.Color3, intensity: number): void {
-    // Preserve existing material from GLB - just add emissive glow
     if (mesh.material) {
-      // Clone the material so each light instance has its own (to avoid shared state issues)
+      // Clone the material so each light instance has its own
       const originalMat = mesh.material;
       const clonedMat = originalMat.clone(`${originalMat.name}_cloned_${Date.now()}`);
       
       if (clonedMat) {
         clonedMat.alpha = 1.0;
         
-        // Add emissive glow based on light color
-        const emissiveIntensity = Math.min(2.5, 0.3 + intensity / 3);
-        const emissiveColor = new BABYLON.Color3(
-          Math.min(2.5, color.r * emissiveIntensity),
-          Math.min(2.5, color.g * emissiveIntensity),
-          Math.min(2.5, color.b * emissiveIntensity)
-        );
+        const emissiveIntensity = Math.min(1.0, 0.1 + intensity / 10);
         
-        if (clonedMat instanceof BABYLON.StandardMaterial) {
-          clonedMat.emissiveColor = emissiveColor;
+        if (clonedMat instanceof BABYLON.PBRMaterial) {
           clonedMat.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
-        } else if (clonedMat instanceof BABYLON.PBRMaterial) {
-          clonedMat.emissiveColor = emissiveColor;
+          // Fix black albedo color (common in Rodin-generated models)
+          if (!clonedMat.albedoColor ||
+              (clonedMat.albedoColor.r < 0.1 &&
+               clonedMat.albedoColor.g < 0.1 &&
+               clonedMat.albedoColor.b < 0.1)) {
+            clonedMat.albedoColor = new BABYLON.Color3(0.15, 0.15, 0.18);
+          }
+          clonedMat.metallic = 0.7;
+          clonedMat.roughness = 0.35;
+          clonedMat.emissiveColor = color.scale(emissiveIntensity);
+        } else if (clonedMat instanceof BABYLON.StandardMaterial) {
           clonedMat.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
+          if (!clonedMat.diffuseColor ||
+              (clonedMat.diffuseColor.r < 0.1 &&
+               clonedMat.diffuseColor.g < 0.1 &&
+               clonedMat.diffuseColor.b < 0.1)) {
+            clonedMat.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.18);
+          }
+          clonedMat.emissiveColor = color.scale(emissiveIntensity);
         }
         
         mesh.material = clonedMat;
@@ -11646,16 +11654,34 @@ class VirtualStudio {
               this.scene.addMesh(m);
             }
             
-            // Preserve original material but ensure it's visible and add emissive glow
+            // Preserve original material but fix black colors and add emissive glow
             if (m.material) {
               m.material.alpha = 1.0;
               if (m.material instanceof BABYLON.PBRMaterial) {
                 m.material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
+                // Fix black albedo color (common in Rodin-generated models)
+                // If albedoColor is black/very dark, set it to a visible gray
+                if (!m.material.albedoColor || 
+                    (m.material.albedoColor.r < 0.1 && 
+                     m.material.albedoColor.g < 0.1 && 
+                     m.material.albedoColor.b < 0.1)) {
+                  m.material.albedoColor = new BABYLON.Color3(0.15, 0.15, 0.18); // Dark gray metal
+                }
+                // Set metallic/roughness for realistic light fixture look
+                m.material.metallic = 0.7;
+                m.material.roughness = 0.35;
                 // Add subtle emissive glow based on light color
                 const emissiveIntensity = Math.min(1.0, 0.1 + intensity / 10);
                 m.material.emissiveColor = color.scale(emissiveIntensity);
               } else if (m.material instanceof BABYLON.StandardMaterial) {
                 m.material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
+                // Fix black diffuse color
+                if (!m.material.diffuseColor ||
+                    (m.material.diffuseColor.r < 0.1 &&
+                     m.material.diffuseColor.g < 0.1 &&
+                     m.material.diffuseColor.b < 0.1)) {
+                  m.material.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.18);
+                }
                 const emissiveIntensity = Math.min(1.0, 0.1 + intensity / 10);
                 m.material.emissiveColor = color.scale(emissiveIntensity);
               }
@@ -11691,15 +11717,30 @@ class VirtualStudio {
                 this.scene.addMesh(child);
               }
               
-              // Preserve original material for children too
+              // Fix black colors for children too
               if (child.material) {
                 child.material.alpha = 1.0;
                 if (child.material instanceof BABYLON.PBRMaterial) {
                   child.material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
+                  // Fix black albedo color
+                  if (!child.material.albedoColor ||
+                      (child.material.albedoColor.r < 0.1 &&
+                       child.material.albedoColor.g < 0.1 &&
+                       child.material.albedoColor.b < 0.1)) {
+                    child.material.albedoColor = new BABYLON.Color3(0.15, 0.15, 0.18);
+                  }
+                  child.material.metallic = 0.7;
+                  child.material.roughness = 0.35;
                   const emissiveIntensity = Math.min(1.0, 0.1 + intensity / 10);
                   child.material.emissiveColor = color.scale(emissiveIntensity);
                 } else if (child.material instanceof BABYLON.StandardMaterial) {
                   child.material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
+                  if (!child.material.diffuseColor ||
+                      (child.material.diffuseColor.r < 0.1 &&
+                       child.material.diffuseColor.g < 0.1 &&
+                       child.material.diffuseColor.b < 0.1)) {
+                    child.material.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.18);
+                  }
                   const emissiveIntensity = Math.min(1.0, 0.1 + intensity / 10);
                   child.material.emissiveColor = color.scale(emissiveIntensity);
                 }
