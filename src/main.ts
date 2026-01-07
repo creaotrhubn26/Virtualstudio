@@ -10596,7 +10596,7 @@ class VirtualStudio {
   
   /**
    * Setup materials for a cloned light mesh
-   * Fixes Rodin-generated models (white emissive texture) and sets proper dark metal look
+   * Adds glow effect to show light is ON
    */
   private setupClonedLightMaterials(mesh: BABYLON.Mesh, color: BABYLON.Color3, intensity: number): void {
     if (mesh.material) {
@@ -10607,22 +10607,37 @@ class VirtualStudio {
       if (clonedMat) {
         clonedMat.alpha = 1.0;
         
+        // Check if this is a main mesh (should glow)
+        const meshName = mesh.name.toLowerCase();
+        const isMainMesh = meshName.includes('model') || meshName.includes('light') || 
+                           meshName.includes('mesh_light') || mesh.getTotalVertices() > 1000;
+        
         if (clonedMat instanceof BABYLON.PBRMaterial) {
           clonedMat.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
-          // Remove white emissive texture from Rodin models
           clonedMat.emissiveTexture = null;
-          clonedMat.emissiveColor = new BABYLON.Color3(0, 0, 0);
-          // Set dark metal albedo
-          clonedMat.albedoColor = new BABYLON.Color3(0.12, 0.12, 0.14);
           clonedMat.albedoTexture = null;
-          clonedMat.metallic = 0.8;
-          clonedMat.roughness = 0.25;
+          
+          if (isMainMesh) {
+            // Light diffuser - white with glow
+            clonedMat.albedoColor = new BABYLON.Color3(0.95, 0.95, 0.95);
+            clonedMat.metallic = 0.0;
+            clonedMat.roughness = 0.7;
+            const emissiveIntensity = Math.min(2.0, 0.5 + intensity / 2);
+            clonedMat.emissiveColor = color.scale(emissiveIntensity);
+          } else {
+            // Stand - dark metal
+            clonedMat.albedoColor = new BABYLON.Color3(0.12, 0.12, 0.14);
+            clonedMat.metallic = 0.8;
+            clonedMat.roughness = 0.25;
+            clonedMat.emissiveColor = new BABYLON.Color3(0, 0, 0);
+          }
         } else if (clonedMat instanceof BABYLON.StandardMaterial) {
           clonedMat.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
           clonedMat.emissiveTexture = null;
-          clonedMat.emissiveColor = new BABYLON.Color3(0, 0, 0);
-          clonedMat.diffuseColor = new BABYLON.Color3(0.12, 0.12, 0.14);
           clonedMat.diffuseTexture = null;
+          const emissiveIntensity = Math.min(2.0, 0.5 + intensity / 2);
+          clonedMat.emissiveColor = color.scale(emissiveIntensity);
+          clonedMat.diffuseColor = new BABYLON.Color3(0.95, 0.95, 0.95);
         }
         
         mesh.material = clonedMat;
@@ -11647,37 +11662,45 @@ class VirtualStudio {
               this.scene.addMesh(m);
             }
             
-            // Fix Rodin-generated models: they use white emissive texture which makes them glow white
-            // We need to remove emissive texture and set proper albedo color
+            // Fix Rodin-generated models and add light glow effect
             if (m.material) {
               m.material.alpha = 1.0;
               if (m.material instanceof BABYLON.PBRMaterial) {
                 m.material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
                 
-                // CRITICAL: Remove emissive texture (Rodin models use white emissive texture)
+                // Remove white emissive texture from Rodin models
                 m.material.emissiveTexture = null;
-                m.material.emissiveColor = new BABYLON.Color3(0, 0, 0); // Reset emissive
+                m.material.albedoTexture = null;
                 
-                // Fix black albedo - set to dark gray metal
-                m.material.albedoColor = new BABYLON.Color3(0.12, 0.12, 0.14);
-                m.material.albedoTexture = null; // Remove any texture
-                
-                // Set metallic/roughness for realistic light fixture look
-                m.material.metallic = 0.8;
-                m.material.roughness = 0.25;
-                
-                // Add subtle emissive glow based on light color (for light head only)
+                // Check if this is the main light mesh (usually named "model" or has geometry)
+                // The main mesh should glow to show light is on
                 const meshName = m.name.toLowerCase();
-                if (meshName.includes('head') || meshName.includes('lamp') || meshName.includes('diffuser')) {
-                  const emissiveIntensity = Math.min(0.5, 0.1 + intensity / 20);
+                const isMainMesh = meshName.includes('model') || meshName.includes('light') || 
+                                   meshName.includes('mesh_light') || m.getTotalVertices() > 1000;
+                
+                if (isMainMesh) {
+                  // Light fixture body - bright white diffuser with strong glow
+                  m.material.albedoColor = new BABYLON.Color3(0.95, 0.95, 0.95); // White diffuser
+                  m.material.metallic = 0.0;
+                  m.material.roughness = 0.7; // Matte diffuser surface
+                  // Strong emissive glow to show light is ON
+                  const emissiveIntensity = Math.min(2.0, 0.5 + intensity / 2);
                   m.material.emissiveColor = color.scale(emissiveIntensity);
+                } else {
+                  // Stand/tripod - dark metal
+                  m.material.albedoColor = new BABYLON.Color3(0.12, 0.12, 0.14);
+                  m.material.metallic = 0.8;
+                  m.material.roughness = 0.25;
+                  m.material.emissiveColor = new BABYLON.Color3(0, 0, 0);
                 }
               } else if (m.material instanceof BABYLON.StandardMaterial) {
                 m.material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
                 m.material.emissiveTexture = null;
-                m.material.emissiveColor = new BABYLON.Color3(0, 0, 0);
-                m.material.diffuseColor = new BABYLON.Color3(0.12, 0.12, 0.14);
                 m.material.diffuseTexture = null;
+                // Add glow for standard materials too
+                const emissiveIntensity = Math.min(2.0, 0.5 + intensity / 2);
+                m.material.emissiveColor = color.scale(emissiveIntensity);
+                m.material.diffuseColor = new BABYLON.Color3(0.95, 0.95, 0.95);
               }
             }
             
