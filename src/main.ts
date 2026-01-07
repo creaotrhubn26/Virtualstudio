@@ -2507,26 +2507,45 @@ class VirtualStudio {
   
   /**
    * Set mesh rotation to point light head at target position
-   * Uses simple euler rotation for predictable results
+   * Uses lookAt calculation with model orientation correction
    */
   private setMeshRotationFromDirection(mesh: BABYLON.Mesh, direction: BABYLON.Vector3): void {
     const dir = direction.normalize();
     
-    // Clear any existing quaternion rotation
+    // Get the light type from the mesh name to look up cached orientation
+    const meshName = mesh.name.toLowerCase();
+    let modelForward = new BABYLON.Vector3(0, 0, -1); // Default: -Z forward
+    
+    // Check if we have cached orientation data for this model type
+    for (const [type, cacheData] of this.lightModelCache.entries()) {
+      if (meshName.includes(type.toLowerCase()) || cacheData.masterMesh.name === mesh.name) {
+        modelForward = cacheData.localForwardAxis.clone();
+        break;
+      }
+    }
+    
+    // Create target position relative to mesh position
+    // We want the light head to point at a position along the direction vector
+    const targetPoint = mesh.position.add(dir.scale(10));
+    
+    // Use Babylon's lookAt functionality
+    // First, reset rotation
     mesh.rotationQuaternion = null;
+    mesh.rotation = BABYLON.Vector3.Zero();
     
-    // Calculate pan (Y rotation) - horizontal angle to target
-    // atan2(x, z) gives angle from +Z axis
-    const pan = Math.atan2(dir.x, dir.z);
+    // Use Babylon's FromLookDirectionLH - it creates rotation where:
+    // The mesh's local -Z axis points in the specified direction
+    let up = BABYLON.Vector3.Up();
     
-    // Calculate tilt (X rotation) - vertical angle
-    // asin(-y) gives downward tilt for negative y direction
-    const horizontalDist = Math.sqrt(dir.x * dir.x + dir.z * dir.z);
-    const tilt = Math.atan2(-dir.y, horizontalDist);
+    // Handle near-vertical directions
+    const dotUp = Math.abs(BABYLON.Vector3.Dot(dir, up));
+    if (dotUp > 0.99) {
+      up = new BABYLON.Vector3(0, 0, dir.y > 0 ? -1 : 1);
+    }
     
-    // Apply rotations: first pan (Y), then tilt (X)
-    // The light model faces -Z by default, so pan of 0 points away from camera
-    mesh.rotation = new BABYLON.Vector3(tilt, pan, 0);
+    // Create quaternion that makes the mesh look in the direction
+    // FromLookDirectionLH: forward = direction the mesh should face, up = up vector
+    mesh.rotationQuaternion = BABYLON.Quaternion.FromLookDirectionLH(dir, up);
   }
   
   /**
