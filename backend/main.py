@@ -2669,9 +2669,12 @@ async def sign_contract(contract_id: str, request: Request):
 @app.get("/api/casting/projects/{project_id}/calendar-events")
 async def get_calendar_events(project_id: str):
     """Get all calendar events for a project"""
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    
     conn = None
     try:
-        conn = get_db_connection()
+        conn = psycopg2.connect(os.environ.get("DATABASE_URL"))
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
                 SELECT * FROM casting_calendar_events
@@ -2696,12 +2699,15 @@ async def get_calendar_events(project_id: str):
 @app.post("/api/casting/calendar-events")
 async def create_calendar_event(request: Request):
     """Create a new calendar event"""
+    import psycopg2
+    from psycopg2.extras import Json
+    
     conn = None
     try:
         body = await request.json()
         event_id = f"event_{uuid.uuid4().hex[:12]}"
         
-        conn = get_db_connection()
+        conn = psycopg2.connect(os.environ.get("DATABASE_URL"))
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO casting_calendar_events 
@@ -2734,11 +2740,14 @@ async def create_calendar_event(request: Request):
 @app.put("/api/casting/calendar-events/{event_id}")
 async def update_calendar_event(event_id: str, request: Request):
     """Update a calendar event"""
+    import psycopg2
+    from psycopg2.extras import Json
+    
     conn = None
     try:
         body = await request.json()
         
-        conn = get_db_connection()
+        conn = psycopg2.connect(os.environ.get("DATABASE_URL"))
         with conn.cursor() as cur:
             cur.execute("""
                 UPDATE casting_calendar_events 
