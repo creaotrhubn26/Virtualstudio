@@ -1956,6 +1956,408 @@ async def api_save_candidate_to_pool(request: Request):
             conn.close()
 
 
+# ========== Role Pool API Endpoints ==========
+
+@app.get("/api/casting/role-pool")
+async def get_role_pool():
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT id, name, description, role_type, requirements, tags, notes, 
+                       created_at, updated_at
+                FROM casting_role_pool
+                ORDER BY name ASC
+            """)
+            rows = cur.fetchall()
+            roles = []
+            for row in rows:
+                role = {
+                    'id': row['id'],
+                    'name': row['name'],
+                    'description': row['description'],
+                    'roleType': row['role_type'],
+                    'requirements': row['requirements'] if row['requirements'] else {},
+                    'tags': row['tags'] if row['tags'] else [],
+                    'notes': row['notes'],
+                    'createdAt': row['created_at'].isoformat() if row['created_at'] else None,
+                    'updatedAt': row['updated_at'].isoformat() if row['updated_at'] else None,
+                }
+                roles.append(role)
+            return JSONResponse({"success": True, "roles": roles})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+@app.post("/api/casting/role-pool")
+async def save_to_role_pool(request: Request):
+    conn = None
+    try:
+        body = await request.json()
+        role_id = body.get('id') or f"pool_role_{uuid.uuid4().hex[:12]}"
+        
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM casting_role_pool WHERE id = %s", (role_id,))
+            exists = cur.fetchone() is not None
+            
+            if exists:
+                cur.execute("""
+                    UPDATE casting_role_pool 
+                    SET name = %s, description = %s, role_type = %s, requirements = %s,
+                        tags = %s, notes = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                """, (
+                    body.get('name'),
+                    body.get('description'),
+                    body.get('roleType'),
+                    Json(body.get('requirements', {})),
+                    Json(body.get('tags', [])),
+                    body.get('notes'),
+                    role_id
+                ))
+            else:
+                cur.execute("""
+                    INSERT INTO casting_role_pool 
+                    (id, name, description, role_type, requirements, tags, notes)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    role_id,
+                    body.get('name'),
+                    body.get('description'),
+                    body.get('roleType'),
+                    Json(body.get('requirements', {})),
+                    Json(body.get('tags', [])),
+                    body.get('notes')
+                ))
+            
+            conn.commit()
+            return JSONResponse({"success": True, "roleId": role_id})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+@app.delete("/api/casting/role-pool/{role_id}")
+async def delete_from_role_pool(role_id: str):
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM casting_role_pool WHERE id = %s", (role_id,))
+            deleted = cur.rowcount > 0
+            conn.commit()
+            
+            if deleted:
+                return JSONResponse({"success": True})
+            return JSONResponse({"success": False, "error": "Role not found"}, status_code=404)
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+@app.post("/api/casting/role-pool/import-to-project")
+async def import_role_to_project(request: Request):
+    conn = None
+    try:
+        body = await request.json()
+        pool_role_id = body.get('poolRoleId')
+        target_project_id = body.get('targetProjectId')
+        
+        if not pool_role_id or not target_project_id:
+            return JSONResponse({"success": False, "error": "Missing required fields"}, status_code=400)
+        
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM casting_role_pool WHERE id = %s", (pool_role_id,))
+            pool_role = cur.fetchone()
+            
+            if not pool_role:
+                return JSONResponse({"success": False, "error": "Pool role not found"}, status_code=404)
+            
+            new_role_id = f"role_{uuid.uuid4().hex[:12]}"
+            role_data = {
+                'roleType': pool_role['role_type'],
+                'requirements': pool_role['requirements'] if pool_role['requirements'] else {},
+                'tags': pool_role['tags'] if pool_role['tags'] else [],
+                'notes': pool_role['notes'],
+                'importedFromPool': pool_role_id,
+            }
+            
+            cur.execute("""
+                INSERT INTO casting_roles (id, project_id, name, description, role_data)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                new_role_id,
+                target_project_id,
+                pool_role['name'],
+                pool_role['description'],
+                Json(role_data)
+            ))
+            
+            conn.commit()
+            return JSONResponse({"success": True, "roleId": new_role_id})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+@app.post("/api/casting/roles/save-to-pool")
+async def save_role_to_pool(request: Request):
+    conn = None
+    try:
+        body = await request.json()
+        role_id = body.get('roleId')
+        
+        if not role_id:
+            return JSONResponse({"success": False, "error": "Missing roleId"}, status_code=400)
+        
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM casting_roles WHERE id = %s", (role_id,))
+            source_role = cur.fetchone()
+            
+            if not source_role:
+                return JSONResponse({"success": False, "error": "Role not found"}, status_code=404)
+            
+            pool_id = f"pool_role_{uuid.uuid4().hex[:12]}"
+            role_data = source_role['role_data'] if source_role['role_data'] else {}
+            
+            cur.execute("""
+                INSERT INTO casting_role_pool 
+                (id, name, description, role_type, requirements, tags, notes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                pool_id,
+                source_role['name'],
+                source_role['description'],
+                role_data.get('roleType'),
+                Json(role_data.get('requirements', {})),
+                Json(role_data.get('tags', [])),
+                role_data.get('notes')
+            ))
+            
+            conn.commit()
+            return JSONResponse({"success": True, "poolRoleId": pool_id})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
+# ========== Audition Pool API Endpoints ==========
+
+@app.get("/api/casting/audition-pool")
+async def get_audition_pool():
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT id, title, description, audition_type, duration_minutes, location,
+                       requirements, tags, notes, created_at, updated_at
+                FROM casting_audition_pool
+                ORDER BY title ASC
+            """)
+            rows = cur.fetchall()
+            auditions = []
+            for row in rows:
+                audition = {
+                    'id': row['id'],
+                    'title': row['title'],
+                    'description': row['description'],
+                    'auditionType': row['audition_type'],
+                    'durationMinutes': row['duration_minutes'],
+                    'location': row['location'],
+                    'requirements': row['requirements'] if row['requirements'] else {},
+                    'tags': row['tags'] if row['tags'] else [],
+                    'notes': row['notes'],
+                    'createdAt': row['created_at'].isoformat() if row['created_at'] else None,
+                    'updatedAt': row['updated_at'].isoformat() if row['updated_at'] else None,
+                }
+                auditions.append(audition)
+            return JSONResponse({"success": True, "auditions": auditions})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+@app.post("/api/casting/audition-pool")
+async def save_to_audition_pool(request: Request):
+    conn = None
+    try:
+        body = await request.json()
+        audition_id = body.get('id') or f"pool_audition_{uuid.uuid4().hex[:12]}"
+        
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM casting_audition_pool WHERE id = %s", (audition_id,))
+            exists = cur.fetchone() is not None
+            
+            if exists:
+                cur.execute("""
+                    UPDATE casting_audition_pool 
+                    SET title = %s, description = %s, audition_type = %s, duration_minutes = %s,
+                        location = %s, requirements = %s, tags = %s, notes = %s, 
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                """, (
+                    body.get('title'),
+                    body.get('description'),
+                    body.get('auditionType'),
+                    body.get('durationMinutes', 30),
+                    body.get('location'),
+                    Json(body.get('requirements', {})),
+                    Json(body.get('tags', [])),
+                    body.get('notes'),
+                    audition_id
+                ))
+            else:
+                cur.execute("""
+                    INSERT INTO casting_audition_pool 
+                    (id, title, description, audition_type, duration_minutes, location, requirements, tags, notes)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    audition_id,
+                    body.get('title'),
+                    body.get('description'),
+                    body.get('auditionType'),
+                    body.get('durationMinutes', 30),
+                    body.get('location'),
+                    Json(body.get('requirements', {})),
+                    Json(body.get('tags', [])),
+                    body.get('notes')
+                ))
+            
+            conn.commit()
+            return JSONResponse({"success": True, "auditionId": audition_id})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+@app.delete("/api/casting/audition-pool/{audition_id}")
+async def delete_from_audition_pool(audition_id: str):
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM casting_audition_pool WHERE id = %s", (audition_id,))
+            deleted = cur.rowcount > 0
+            conn.commit()
+            
+            if deleted:
+                return JSONResponse({"success": True})
+            return JSONResponse({"success": False, "error": "Audition not found"}, status_code=404)
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+@app.post("/api/casting/audition-pool/import-to-project")
+async def import_audition_to_project(request: Request):
+    conn = None
+    try:
+        body = await request.json()
+        pool_audition_id = body.get('poolAuditionId')
+        target_project_id = body.get('targetProjectId')
+        
+        if not pool_audition_id or not target_project_id:
+            return JSONResponse({"success": False, "error": "Missing required fields"}, status_code=400)
+        
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM casting_audition_pool WHERE id = %s", (pool_audition_id,))
+            pool_audition = cur.fetchone()
+            
+            if not pool_audition:
+                return JSONResponse({"success": False, "error": "Pool audition not found"}, status_code=404)
+            
+            new_schedule_id = f"schedule_{uuid.uuid4().hex[:12]}"
+            schedule_data = {
+                'auditionType': pool_audition['audition_type'],
+                'durationMinutes': pool_audition['duration_minutes'],
+                'location': pool_audition['location'],
+                'requirements': pool_audition['requirements'] if pool_audition['requirements'] else {},
+                'tags': pool_audition['tags'] if pool_audition['tags'] else [],
+                'notes': pool_audition['notes'],
+                'importedFromPool': pool_audition_id,
+            }
+            
+            cur.execute("""
+                INSERT INTO casting_schedules (id, project_id, title, schedule_data)
+                VALUES (%s, %s, %s, %s)
+            """, (
+                new_schedule_id,
+                target_project_id,
+                pool_audition['title'],
+                Json(schedule_data)
+            ))
+            
+            conn.commit()
+            return JSONResponse({"success": True, "scheduleId": new_schedule_id})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+@app.post("/api/casting/schedules/save-to-pool")
+async def save_schedule_to_pool(request: Request):
+    conn = None
+    try:
+        body = await request.json()
+        schedule_id = body.get('scheduleId')
+        
+        if not schedule_id:
+            return JSONResponse({"success": False, "error": "Missing scheduleId"}, status_code=400)
+        
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM casting_schedules WHERE id = %s", (schedule_id,))
+            source_schedule = cur.fetchone()
+            
+            if not source_schedule:
+                return JSONResponse({"success": False, "error": "Schedule not found"}, status_code=404)
+            
+            pool_id = f"pool_audition_{uuid.uuid4().hex[:12]}"
+            schedule_data = source_schedule['schedule_data'] if source_schedule['schedule_data'] else {}
+            
+            cur.execute("""
+                INSERT INTO casting_audition_pool 
+                (id, title, description, audition_type, duration_minutes, location, requirements, tags, notes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                pool_id,
+                source_schedule['title'],
+                schedule_data.get('description', ''),
+                schedule_data.get('auditionType'),
+                schedule_data.get('durationMinutes', 30),
+                schedule_data.get('location'),
+                Json(schedule_data.get('requirements', {})),
+                Json(schedule_data.get('tags', [])),
+                schedule_data.get('notes')
+            ))
+            
+            conn.commit()
+            return JSONResponse({"success": True, "poolAuditionId": pool_id})
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
 @app.get("/api/casting/projects/{project_id}/roles")
 async def api_get_roles(project_id: str):
     if not CASTING_SERVICE_AVAILABLE:
