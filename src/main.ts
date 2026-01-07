@@ -12102,57 +12102,8 @@ class VirtualStudio {
       }
     }
     
-    // Create glowing disc at SpotLight position - updates dynamically with light
-    try {
-      const glowDisc = BABYLON.MeshBuilder.CreateDisc(
-        `glow_${id}`,
-        { radius: 0.4, tessellation: 32 },
-        this.scene
-      );
-      
-      // Create emissive material for the glow
-      const glowMat = new BABYLON.StandardMaterial(`glowMat_${id}`, this.scene);
-      const emissiveIntensity = Math.min(3.0, 1.0 + intensity);
-      glowMat.emissiveColor = new BABYLON.Color3(
-        Math.min(1.0, color.r * emissiveIntensity),
-        Math.min(1.0, color.g * emissiveIntensity),
-        Math.min(1.0, color.b * emissiveIntensity)
-      );
-      glowMat.diffuseColor = color;
-      glowMat.specularColor = new BABYLON.Color3(0, 0, 0);
-      glowMat.disableLighting = true;
-      glowMat.backFaceCulling = false;
-      glowDisc.material = glowMat;
-      
-      // Don't parent - position directly at SpotLight position
-      glowDisc.isPickable = false;
-      
-      // Store reference for later updates
-      (lightMesh as any)._glowDisc = glowDisc;
-      (lightMesh as any)._spotLight = spotLight;
-      
-      // Update glow disc position/orientation to match SpotLight
-      const updateGlowDisc = () => {
-        if (glowDisc && !glowDisc.isDisposed() && spotLight) {
-          // Position at SpotLight position
-          glowDisc.position.copyFrom(spotLight.position);
-          
-          // Orient disc to face the light direction
-          const target = spotLight.position.add(spotLight.direction);
-          glowDisc.lookAt(target);
-        }
-      };
-      
-      // Initial update
-      updateGlowDisc();
-      
-      // Update on each frame to follow light
-      this.scene.onBeforeRenderObservable.add(updateGlowDisc);
-      
-      console.log(`Light glow disc created for ${id} at SpotLight position`);
-    } catch (e) {
-      console.warn('Could not create light glow disc:', e);
-    }
+    // Skip glow disc for now - will add proper implementation later
+    // The light fixture mesh itself shows the reflector bowl
     
     // Update immediately
     updateLightPosition();
