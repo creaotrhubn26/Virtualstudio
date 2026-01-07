@@ -10587,36 +10587,38 @@ class VirtualStudio {
   }
   
   /**
-   * Setup materials for a cloned light mesh with the correct color/intensity
-   * Used by mesh instancing to avoid re-creating complex materials
+   * Setup materials for a cloned light mesh
+   * Preserves original GLB textures but adds emissive glow based on light color/intensity
    */
   private setupClonedLightMaterials(mesh: BABYLON.Mesh, color: BABYLON.Color3, intensity: number): void {
-    const meshName = mesh.name || 'unnamed';
-    const isLightHead = meshName.toLowerCase().includes('model') || 
-                        meshName.toLowerCase().includes('light') || 
-                        meshName.toLowerCase().includes('head') ||
-                        meshName.toLowerCase().includes('lamp') ||
-                        meshName.toLowerCase().includes('softbox') ||
-                        meshName.toLowerCase().includes('diffuser');
-    
-    // Create fresh PBR material for cloned mesh (don't dispose old - it may be shared)
-    const pbrMat = new BABYLON.PBRMaterial(`pbrMat_cloned_${meshName}_${Date.now()}`, this.scene);
-    if (isLightHead) {
-      pbrMat.albedoColor = new BABYLON.Color3(0.95, 0.95, 0.95);
-      pbrMat.metallic = 0.0;
-      pbrMat.roughness = 0.3;
-      pbrMat.emissiveColor = color.scale(0.2);
-    } else {
-      pbrMat.albedoColor = new BABYLON.Color3(0.08, 0.08, 0.1);
-      pbrMat.metallic = 0.7;
-      pbrMat.roughness = 0.35;
+    // Preserve existing material from GLB - just add emissive glow
+    if (mesh.material) {
+      // Clone the material so each light instance has its own (to avoid shared state issues)
+      const originalMat = mesh.material;
+      const clonedMat = originalMat.clone(`${originalMat.name}_cloned_${Date.now()}`);
+      
+      if (clonedMat) {
+        clonedMat.alpha = 1.0;
+        
+        // Add emissive glow based on light color
+        const emissiveIntensity = Math.min(2.5, 0.3 + intensity / 3);
+        const emissiveColor = new BABYLON.Color3(
+          Math.min(2.5, color.r * emissiveIntensity),
+          Math.min(2.5, color.g * emissiveIntensity),
+          Math.min(2.5, color.b * emissiveIntensity)
+        );
+        
+        if (clonedMat instanceof BABYLON.StandardMaterial) {
+          clonedMat.emissiveColor = emissiveColor;
+          clonedMat.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
+        } else if (clonedMat instanceof BABYLON.PBRMaterial) {
+          clonedMat.emissiveColor = emissiveColor;
+          clonedMat.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
+        }
+        
+        mesh.material = clonedMat;
+      }
     }
-    pbrMat.alpha = 1.0;
-    pbrMat.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
-    pbrMat.backFaceCulling = true;
-    
-    // Just assign new material (don't dispose old - clones share materials initially)
-    mesh.material = pbrMat;
   }
   
   private createDefaultLightMesh(id: string, type: string, beamAngle: number): BABYLON.Mesh {
@@ -11615,6 +11617,7 @@ class VirtualStudio {
           }
           
           // Make all meshes visible, pickable, and enable shadows
+          // PRESERVE original GLB materials/textures - only add emissive glow
           result.meshes.forEach(m => {
             m.isPickable = true;
             m.isVisible = true;
@@ -11635,41 +11638,20 @@ class VirtualStudio {
               this.scene.addMesh(m);
             }
             
-            // Force-create new PBR material for ALL light model meshes
-            // This completely replaces any original materials to ensure solid shading
-            const meshName = m.name || 'unnamed';
-            const isLightHead = meshName.toLowerCase().includes('model') || 
-                               meshName.toLowerCase().includes('light') || 
-                               meshName.toLowerCase().includes('head') ||
-                               meshName.toLowerCase().includes('lamp') ||
-                               meshName.toLowerCase().includes('softbox') ||
-                               meshName.toLowerCase().includes('diffuser');
-            
-            // ALWAYS create fresh PBR material to replace any problematic original materials
-            const pbrMat = new BABYLON.PBRMaterial(`pbrMat_${meshName}_${Date.now()}`, this.scene);
-            if (isLightHead) {
-              // Light head/diffuser - bright white
-              pbrMat.albedoColor = new BABYLON.Color3(0.95, 0.95, 0.95);
-              pbrMat.metallic = 0.0;
-              pbrMat.roughness = 0.3;
-              // Add slight emissive for light effect
-              pbrMat.emissiveColor = color.scale(0.2);
-            } else {
-              // Stand/tripod - dark metal
-              pbrMat.albedoColor = new BABYLON.Color3(0.08, 0.08, 0.1);
-              pbrMat.metallic = 0.7;
-              pbrMat.roughness = 0.35;
-            }
-            pbrMat.alpha = 1.0;
-            pbrMat.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
-            pbrMat.backFaceCulling = true;
-            
-            // Replace the material
+            // Preserve original material but ensure it's visible and add emissive glow
             if (m.material) {
-              m.material.dispose();
+              m.material.alpha = 1.0;
+              if (m.material instanceof BABYLON.PBRMaterial) {
+                m.material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
+                // Add subtle emissive glow based on light color
+                const emissiveIntensity = Math.min(1.0, 0.1 + intensity / 10);
+                m.material.emissiveColor = color.scale(emissiveIntensity);
+              } else if (m.material instanceof BABYLON.StandardMaterial) {
+                m.material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
+                const emissiveIntensity = Math.min(1.0, 0.1 + intensity / 10);
+                m.material.emissiveColor = color.scale(emissiveIntensity);
+              }
             }
-            m.material = pbrMat;
-            console.log(`Created new PBR material for ${meshName}: isLightHead=${isLightHead}`);
             
             // Check if mesh has geometry
             if (m instanceof BABYLON.Mesh) {
@@ -11681,7 +11663,7 @@ class VirtualStudio {
               }
             }
             
-            // Recursively enable all children
+            // Recursively enable all children and preserve their materials
             const children = m.getChildMeshes(true);
             children.forEach(child => {
               child.isPickable = true;
@@ -11701,35 +11683,19 @@ class VirtualStudio {
                 this.scene.addMesh(child);
               }
               
-              // Force-create new PBR material for ALL child meshes
-              const childName = child.name || 'unnamed';
-              const isChildLightHead = childName.toLowerCase().includes('model') ||
-                                       childName.toLowerCase().includes('light') || 
-                                       childName.toLowerCase().includes('head') ||
-                                       childName.toLowerCase().includes('lamp') ||
-                                       childName.toLowerCase().includes('softbox') ||
-                                       childName.toLowerCase().includes('diffuser');
-              
-              // ALWAYS create fresh PBR material
-              const childPbrMat = new BABYLON.PBRMaterial(`pbrMat_child_${childName}_${Date.now()}`, this.scene);
-              if (isChildLightHead) {
-                childPbrMat.albedoColor = new BABYLON.Color3(0.95, 0.95, 0.95);
-                childPbrMat.metallic = 0.0;
-                childPbrMat.roughness = 0.3;
-                childPbrMat.emissiveColor = color.scale(0.2);
-              } else {
-                childPbrMat.albedoColor = new BABYLON.Color3(0.08, 0.08, 0.1);
-                childPbrMat.metallic = 0.7;
-                childPbrMat.roughness = 0.35;
-              }
-              childPbrMat.alpha = 1.0;
-              childPbrMat.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
-              childPbrMat.backFaceCulling = true;
-              
+              // Preserve original material for children too
               if (child.material) {
-                child.material.dispose();
+                child.material.alpha = 1.0;
+                if (child.material instanceof BABYLON.PBRMaterial) {
+                  child.material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
+                  const emissiveIntensity = Math.min(1.0, 0.1 + intensity / 10);
+                  child.material.emissiveColor = color.scale(emissiveIntensity);
+                } else if (child.material instanceof BABYLON.StandardMaterial) {
+                  child.material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
+                  const emissiveIntensity = Math.min(1.0, 0.1 + intensity / 10);
+                  child.material.emissiveColor = color.scale(emissiveIntensity);
+                }
               }
-              child.material = childPbrMat;
             });
           });
           
