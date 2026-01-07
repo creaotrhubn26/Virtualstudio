@@ -3203,11 +3203,65 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                 }}
               />
               
+              <FormControl fullWidth>
+                <InputLabel sx={inputLabelStyles}>Lokasjon</InputLabel>
+                <Select
+                  value={selectedSchedule.locationId || ''}
+                  MenuProps={selectMenuProps}
+                  onChange={(e) => {
+                    const locationId = e.target.value;
+                    const selectedLocation = currentProject.locations?.find(l => l.id === locationId);
+                    setSelectedSchedule({
+                      ...selectedSchedule,
+                      locationId: locationId || undefined,
+                      location: selectedLocation?.name || '',
+                    });
+                  }}
+                  sx={{
+                    color: '#fff',
+                    fontSize: isDesktop ? '1.25rem' : isTablet ? '1rem' : '0.875rem',
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
+                    '& .MuiSelect-select': {
+                      fontSize: isDesktop ? '1.25rem' : isTablet ? '1rem' : '0.875rem',
+                    },
+                  }}
+                >
+                  <MenuItem value="">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CloseIcon sx={{ fontSize: '1rem' }} />
+                      <span>Ingen lokasjon</span>
+                    </Box>
+                  </MenuItem>
+                  {(currentProject.locations || []).map((loc) => (
+                    <MenuItem key={loc.id} value={loc.id}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LocationIcon sx={{ fontSize: '1rem', color: '#10b981' }} />
+                        <Box>
+                          <Typography sx={{ fontSize: 'inherit' }}>{loc.name}</Typography>
+                          {loc.address && (
+                            <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>
+                              {loc.address}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              {/* Fritekst lokasjon som alternativ */}
               <TextField
-                label="Lokasjon"
-                value={selectedSchedule.location}
-                onChange={(e) => setSelectedSchedule({ ...selectedSchedule, location: e.target.value })}
+                label="Eller skriv inn adresse"
+                value={selectedSchedule.locationId ? '' : selectedSchedule.location}
+                onChange={(e) => setSelectedSchedule({ 
+                  ...selectedSchedule, 
+                  location: e.target.value,
+                  locationId: undefined 
+                })}
                 fullWidth
+                disabled={!!selectedSchedule.locationId}
+                placeholder="Brukes hvis lokasjon ikke er registrert"
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -3217,6 +3271,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                 }}
                 sx={{
                   ...textFieldStyles,
+                  opacity: selectedSchedule.locationId ? 0.5 : 1,
                 }}
               />
               

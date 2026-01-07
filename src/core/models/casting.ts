@@ -46,9 +46,10 @@ export interface Schedule {
   candidateId: string;
   roleId: string;
   sceneId?: string; // Kobling til Scene Composer
+  locationId?: string; // Kobling til Location
   date: string;
   time: string;
-  location: string;
+  location: string; // Fritekst backup eller hentet fra Location
   notes?: string;
   status: 'scheduled' | 'completed' | 'cancelled';
 }
