@@ -184,6 +184,26 @@ export class AutoFocusSystem {
     ];
     
     this.scene.meshes.forEach(mesh => {
+      // Check for synthetic eye markers first (created by addEyeMarkersToModel)
+      if (mesh.metadata?.isEyeMarker === true) {
+        const worldPos = mesh.getAbsolutePosition();
+        const distance = BABYLON.Vector3.Distance(cameraPos, worldPos);
+        const screenPos = this.getScreenPosition(worldPos);
+        
+        detectedEyes.push({
+          id: mesh.name,
+          actorName: mesh.metadata.actorName || 'Actor',
+          eyeSide: mesh.metadata.eyeSide as 'left' | 'right',
+          worldPosition: { x: worldPos.x, y: worldPos.y, z: worldPos.z },
+          distanceFromCamera: distance,
+          screenPosition: screenPos
+        });
+        
+        console.log(`[AutoFocusSystem] Detected synthetic ${mesh.metadata.eyeSide} eye: ${mesh.name} at ${distance.toFixed(2)}m`);
+        return;
+      }
+      
+      // Skip invisible meshes for normal eye detection (but synthetic markers are OK)
       if (!mesh.isEnabled() || !mesh.isVisible) return;
       
       const meshNameLower = mesh.name.toLowerCase();
@@ -588,7 +608,8 @@ export class AutoFocusSystem {
           y: pickResult.pickedPoint.y,
           z: pickResult.pickedPoint.z
         },
-        distanceFromCamera: distance
+        distanceFromCamera: distance,
+        screenPosition: this.getScreenPosition(pickResult.pickedPoint)
       };
       
       // Set focus target
@@ -691,6 +712,115 @@ export class AutoFocusSystem {
     }
     
     return null;
+  }
+  
+  /**
+   * Add synthetic eye marker meshes to a loaded 3D model that doesn't have eye meshes.
+   * These invisible markers allow the AutoFocusSystem to detect and focus on eyes.
+   * Call this after loading a new avatar/character model.
+   */
+  public addEyeMarkersToModel(rootMesh: BABYLON.AbstractMesh, modelName?: string): void {
+    const name = modelName || rootMesh.name || 'avatar';
+    
+    // Check if model already has eye meshes
+    const existingEyes = rootMesh.getChildMeshes().filter(m => 
+      m.name.toLowerCase().includes('eye') && 
+      !m.name.toLowerCase().includes('eyebrow') &&
+      !m.name.toLowerCase().includes('eyelash')
+    );
+    
+    if (existingEyes.length > 0) {
+      console.log(`[AutoFocusSystem] Model ${name} already has ${existingEyes.length} eye meshes`);
+      return;
+    }
+    
+    // Calculate model dimensions
+    const boundingInfo = rootMesh.getHierarchyBoundingVectors(true);
+    const minY = boundingInfo.min.y;
+    const maxY = boundingInfo.max.y;
+    const height = maxY - minY;
+    
+    if (height < 0.3) {
+      console.log(`[AutoFocusSystem] Model ${name} too small for eye markers (height: ${height.toFixed(2)}m)`);
+      return;
+    }
+    
+    // Calculate eye positions based on human proportions
+    // Eyes are typically at ~93-95% of total height from the ground
+    const eyeHeightRatio = 0.93;
+    const eyeY = minY + (height * eyeHeightRatio);
+    
+    // Eye separation is typically 6-7cm (interpupillary distance)
+    const eyeSeparation = height * 0.035; // ~6cm for 1.7m figure
+    
+    // Center X position
+    const centerX = (boundingInfo.min.x + boundingInfo.max.x) / 2;
+    
+    // Z position - front of the model
+    const camZ = this.camera.position.z;
+    const frontZ = Math.abs(boundingInfo.min.z - camZ) < Math.abs(boundingInfo.max.z - camZ) 
+      ? boundingInfo.min.z 
+      : boundingInfo.max.z;
+    const depth = boundingInfo.max.z - boundingInfo.min.z;
+    const eyeZ = frontZ + (frontZ === boundingInfo.min.z ? depth * 0.15 : -depth * 0.15);
+    
+    // Create invisible eye marker spheres
+    const createEyeMarker = (side: 'left' | 'right') => {
+      const xOffset = side === 'left' ? -eyeSeparation : eyeSeparation;
+      const markerName = `${name}_${side}Eye`;
+      
+      // Check if marker already exists
+      const existing = this.scene.getMeshByName(markerName);
+      if (existing) {
+        existing.dispose();
+      }
+      
+      const marker = BABYLON.MeshBuilder.CreateSphere(markerName, { 
+        diameter: 0.02 // 2cm diameter - small but pickable
+      }, this.scene);
+      
+      marker.position = new BABYLON.Vector3(centerX + xOffset, eyeY, eyeZ);
+      marker.isPickable = true;
+      marker.isVisible = false; // Invisible but still pickable for raycasting
+      
+      // Make it a child of the root mesh so it moves with the model
+      marker.parent = rootMesh;
+      
+      // Add metadata for identification
+      marker.metadata = {
+        isEyeMarker: true,
+        eyeSide: side,
+        actorName: name
+      };
+      
+      console.log(`[AutoFocusSystem] Created ${side} eye marker for ${name} at Y=${eyeY.toFixed(2)}`);
+      return marker;
+    };
+    
+    createEyeMarker('left');
+    createEyeMarker('right');
+    
+    // Re-run eye detection to find the new markers
+    setTimeout(() => {
+      this.detectEyes();
+    }, 100);
+  }
+  
+  /**
+   * Remove eye markers from a model
+   */
+  public removeEyeMarkersFromModel(rootMesh: BABYLON.AbstractMesh): void {
+    const markers = rootMesh.getChildMeshes().filter(m => 
+      m.metadata?.isEyeMarker === true
+    );
+    
+    markers.forEach(marker => {
+      marker.dispose();
+    });
+    
+    if (markers.length > 0) {
+      console.log(`[AutoFocusSystem] Removed ${markers.length} eye markers`);
+    }
   }
   
   // Smart fallback: Find the topmost point of any character mesh (approximates head/face position)

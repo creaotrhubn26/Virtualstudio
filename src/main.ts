@@ -7960,6 +7960,13 @@ class VirtualStudio {
       
       this.castingCandidates.set(candidateId, { mesh: rootMesh, name, avatarUrl });
       console.log(`[Casting Avatar] Loaded ${name} with ${result.meshes.length} meshes, shading applied, position: (${position.x.toFixed(1)}, ${position.y.toFixed(1)}, ${position.z.toFixed(1)})`);
+      
+      // Add synthetic eye markers for autofocus
+      setTimeout(() => {
+        if (this.autoFocusSystem) {
+          this.autoFocusSystem.addEyeMarkersToModel(rootMesh, name);
+        }
+      }, 100);
     }).catch(err => {
       console.error(`Failed to load casting avatar for ${name}:`, err);
       this.createPlaceholderActor(candidateId, name, position);
@@ -8058,6 +8065,9 @@ class VirtualStudio {
         
         // Force bounding box recalculation
         rootMesh.refreshBoundingInfo(true);
+        
+        // Add visible eye meshes for the model
+        this.addEyesToMesh(rootMesh, 'Avatar');
         
         // Update focus objects list
         setTimeout(() => {
