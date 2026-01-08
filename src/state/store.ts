@@ -48,7 +48,7 @@ const compositionGuides: CompositionGuide[] = ['none', 'thirds', 'golden', 'spir
 const helperGuides: HelperGuide[] = ['none', 'colortemp', 'exposure', 'height', 'glasses', 'classphoto', 'safety', 'lighting'];
 
 export const useFocusStore = create<FocusState>((set, get) => ({
-  mode: 'zone',
+  mode: 'single',
   safeAreaMode: 'none',
   compositionGuide: 'none',
   helperGuide: 'none',
