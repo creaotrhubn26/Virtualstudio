@@ -47,6 +47,10 @@ export class AutoFocusSystem {
     
     switch (mode) {
       case 'AF-C':
+        // Clear focus lock when entering AF-C - continuous mode should always track
+        useAutoFocusStore.getState().setFocusLocked(false);
+        useAutoFocusStore.getState().setCurrentTarget(null);
+        this.isTransitioningToTarget = false;
         this.startContinuousTracking();
         break;
       case 'AF-S':
@@ -65,9 +69,11 @@ export class AutoFocusSystem {
       clearInterval(this.updateInterval);
     }
     
+    // AF-C mode: Always track continuously, ignoring focusLocked flag
+    // (focusLocked is only relevant for AF-S mode)
     this.updateInterval = window.setInterval(() => {
       const store = useAutoFocusStore.getState();
-      if (store.mode === 'AF-C' && !store.focusLocked) {
+      if (store.mode === 'AF-C') {
         this.detectEyes();
         const nearestEye = store.getNearestEye();
         if (nearestEye) {
@@ -75,6 +81,14 @@ export class AutoFocusSystem {
         }
       }
     }, 100);
+    
+    // Run detection immediately on start
+    this.detectEyes();
+    const store = useAutoFocusStore.getState();
+    const nearestEye = store.getNearestEye();
+    if (nearestEye) {
+      this.setFocusTarget(nearestEye);
+    }
     
     console.log('[AutoFocusSystem] Continuous tracking started');
   }
