@@ -12216,14 +12216,14 @@ class VirtualStudio {
       monitorCamera.minZ = 0.1;
       monitorCamera.maxZ = 1000;
       
-      // CRITICAL: Force camera to recalculate its position from the spherical coordinates
-      monitorCamera.rebuildAnglesAndRadius();
+      // DO NOT call rebuildAnglesAndRadius() - it recalculates angles FROM position, not the other way around
+      // The constructor already set up the camera correctly from the spherical coordinates
       
       // CRITICAL: Detach control so user input doesn't affect monitor camera
       monitorCamera.detachControl();
       this.monitorCameras.set(presetId, monitorCamera);
       cameraJustCreated = true;
-      console.log(`[Monitor] Created camera for ${presetId} with saved perspective - alpha=${preset.alpha.toFixed(2)}, beta=${preset.beta.toFixed(2)}, radius=${preset.radius.toFixed(2)}, pos=${monitorCamera.position.toString()}`);
+      console.log(`[Monitor] Created camera for ${presetId} - alpha=${preset.alpha.toFixed(2)}, beta=${preset.beta.toFixed(2)}, radius=${preset.radius.toFixed(2)}, pos=${monitorCamera.position.toString()}`);
     }
     
     // NOTE: Camera parameters are ONLY set when the camera is created.
@@ -12360,12 +12360,11 @@ class VirtualStudio {
           monitorCamera.minZ = 0.1;
           monitorCamera.maxZ = 1000;
           
-          // CRITICAL: Force camera to recalculate its position from the spherical coordinates
-          monitorCamera.rebuildAnglesAndRadius();
+          // DO NOT call rebuildAnglesAndRadius() - it recalculates angles FROM position
           
           monitorCamera.detachControl();
           this.monitorCameras.set(presetId, monitorCamera);
-          console.log(`[Monitor] Created camera ${presetId} in updateMonitorCanvases - pos=${monitorCamera.position.toString()}`);
+          console.log(`[Monitor] Created camera ${presetId} in updateMonitorCanvases - alpha=${preset.alpha.toFixed(2)}, beta=${preset.beta.toFixed(2)}, pos=${monitorCamera.position.toString()}`);
         }
         
         // CRITICAL: HARD LOCK activeCamera, renderList, and refreshRate at creation
@@ -16018,18 +16017,19 @@ class VirtualStudio {
     if (!monitorCamera) return;
     
     // Update camera parameters to match the saved preset
-    // CRITICAL: Set target PROPERTY directly (not setTarget method) to avoid recalculating alpha/beta/radius
+    // CRITICAL: Set spherical coordinates (alpha/beta/radius) - Babylon will calculate position
+    // DO NOT call rebuildAnglesAndRadius() - that does the OPPOSITE (calculates angles from position)
     monitorCamera.target = preset.target.clone();
     monitorCamera.alpha = preset.alpha;
     monitorCamera.beta = preset.beta;
     monitorCamera.radius = preset.radius;
     monitorCamera.fov = preset.fov;
     
-    // CRITICAL: Force camera to recalculate its position from the new spherical coordinates
-    // Without this, the camera's view matrix might not update correctly
-    monitorCamera.rebuildAnglesAndRadius();
+    // Force the camera to update its internal state by calling getViewMatrix
+    // This triggers position calculation from alpha/beta/radius without overwriting them
+    monitorCamera.getViewMatrix(true); // Force recalculation
     
-    console.log(`[Monitor] ${presetId}: Camera UPDATED to saved perspective - alpha=${preset.alpha.toFixed(2)}, beta=${preset.beta.toFixed(2)}, radius=${preset.radius.toFixed(2)}`);
+    console.log(`[Monitor] ${presetId}: Camera UPDATED - alpha=${monitorCamera.alpha.toFixed(2)}, beta=${monitorCamera.beta.toFixed(2)}, radius=${monitorCamera.radius.toFixed(2)}, pos=${monitorCamera.position.toString()}`);
   }
 
   private createCameraMesh(presetId: string, preset: { position: BABYLON.Vector3; target: BABYLON.Vector3; fov: number; alpha: number; beta: number; radius: number }): void {
