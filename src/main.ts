@@ -12199,6 +12199,7 @@ class VirtualStudio {
     let renderTarget = this.monitorRenderTargets.get(presetId);
     let monitorCamera = this.monitorCameras.get(presetId);
     
+    let cameraJustCreated = false;
     if (!monitorCamera) {
       // Create monitor camera from preset
       // CRITICAL: Pass false to prevent this camera from becoming scene.activeCamera
@@ -12217,19 +12218,20 @@ class VirtualStudio {
       // CRITICAL: Detach control so user input doesn't affect monitor camera
       monitorCamera.detachControl();
       this.monitorCameras.set(presetId, monitorCamera);
-      console.log(`[Monitor] Created camera for ${presetId} during reassign`);
+      cameraJustCreated = true;
+      console.log(`[Monitor] Created camera for ${presetId} with saved perspective - alpha=${preset.alpha.toFixed(2)}, beta=${preset.beta.toFixed(2)}, radius=${preset.radius.toFixed(2)}`);
     }
     
-    // CRITICAL: Always update camera parameters to match preset
-    // This ensures the camera uses the preset's perspective, not the main camera's view
-    // NOTE: Set target PROPERTY directly (not setTarget method) to avoid recalculating alpha/beta/radius
-    // Then set alpha/beta/radius to override any computed values
-    monitorCamera.target = preset.target.clone();
-    monitorCamera.alpha = preset.alpha;
-    monitorCamera.beta = preset.beta;
-    monitorCamera.radius = preset.radius;
-    monitorCamera.fov = preset.fov;
-    console.log(`[Monitor] ${presetId}: Camera updated - alpha=${preset.alpha.toFixed(2)}, beta=${preset.beta.toFixed(2)}, radius=${preset.radius.toFixed(2)}`);
+    // NOTE: Camera parameters are ONLY set when the camera is created.
+    // This function does NOT update existing camera parameters!
+    // To update an existing monitor camera's perspective, call updateMonitorCameraFromPreset() instead.
+    // This ensures the monitor shows the SAVED perspective, not the current preset values
+    // (which may have changed during "piloting" mode).
+    if (cameraJustCreated) {
+      console.log(`[Monitor] ${presetId}: Using initial preset values (camera just created)`);
+    } else {
+      console.log(`[Monitor] ${presetId}: Using existing camera values (alpha=${monitorCamera.alpha.toFixed(2)}, beta=${monitorCamera.beta.toFixed(2)})`);
+    }
     
     if (!renderTarget) {
       // Create RTT for this preset
@@ -12508,20 +12510,15 @@ class VirtualStudio {
         console.log(`[Monitor] ${presetId}: Callbacks registered for existing RTT`);
       }
 
-      // Update monitor camera parameters if preset has changed
-      // CRITICAL: Only update camera PARAMETERS, not the camera object itself
-      // The camera object reference must remain stable for activeCamera to work
+      // CRITICAL: Do NOT continuously update monitorCamera from preset!
+      // MonitorCamera should maintain its SAVED perspective, not follow preset changes.
+      // The monitorCamera is only updated when:
+      // 1. First created (in reassignMonitorRTTSettings or above)
+      // 2. When preset is EXPLICITLY saved via saveCameraPreset()
+      // This ensures the monitor shows the saved perspective, not the live main camera view.
+      
       const monitorCamera = this.monitorCameras.get(presetId);
       if (monitorCamera) {
-        // Update camera parameters to match preset using spherical coords only
-        // CRITICAL: Set target PROPERTY directly (not setTarget method) to avoid recalculating alpha/beta/radius
-        // Then set alpha/beta/radius to override any computed values
-        monitorCamera.target = preset.target.clone();
-        monitorCamera.alpha = preset.alpha;
-        monitorCamera.beta = preset.beta;
-        monitorCamera.radius = preset.radius;
-        monitorCamera.fov = preset.fov;
-        
         // CRITICAL: Ensure activeCamera still points to the same camera object
         // If it doesn't, this indicates the camera was recreated (shouldn't happen)
         if (renderTarget.activeCamera !== monitorCamera) {
@@ -15988,9 +15985,32 @@ class VirtualStudio {
     this.updateCameraPresetUI(presetId, true);
     console.log(`Camera preset ${presetId} saved with focal=${preset.focalLength}mm, distance=${preset.distance}m, height=${preset.height}m`);
     
-    // CRITICAL: Re-assign RTT settings after preset is saved
-    // This ensures monitor camera follows the updated preset position
+    // CRITICAL: Update monitor camera to match the newly saved preset
+    // This is the ONLY place where we update an existing monitor camera's perspective
+    this.updateMonitorCameraFromPreset(presetId, preset);
+    
+    // Re-assign RTT settings (creates RTT if needed, updates renderList)
     this.reassignMonitorRTTSettings(presetId);
+  }
+  
+  /**
+   * Update an existing monitor camera to match the preset's perspective.
+   * This is called ONLY when a preset is explicitly saved (not during navigation).
+   * This ensures monitors show the saved perspective, not the live main camera view.
+   */
+  private updateMonitorCameraFromPreset(presetId: string, preset: { alpha: number; beta: number; radius: number; target: BABYLON.Vector3; fov: number }): void {
+    const monitorCamera = this.monitorCameras.get(presetId);
+    if (!monitorCamera) return;
+    
+    // Update camera parameters to match the saved preset
+    // CRITICAL: Set target PROPERTY directly (not setTarget method) to avoid recalculating alpha/beta/radius
+    monitorCamera.target = preset.target.clone();
+    monitorCamera.alpha = preset.alpha;
+    monitorCamera.beta = preset.beta;
+    monitorCamera.radius = preset.radius;
+    monitorCamera.fov = preset.fov;
+    
+    console.log(`[Monitor] ${presetId}: Camera UPDATED to saved perspective - alpha=${preset.alpha.toFixed(2)}, beta=${preset.beta.toFixed(2)}, radius=${preset.radius.toFixed(2)}`);
   }
 
   private createCameraMesh(presetId: string, preset: { position: BABYLON.Vector3; target: BABYLON.Vector3; fov: number; alpha: number; beta: number; radius: number }): void {
