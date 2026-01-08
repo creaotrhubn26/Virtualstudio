@@ -276,7 +276,7 @@ export class PhysicsBasedDOF {
       ));
       
       // Blur scale for artistic control
-      effect.setFloat('blurScale', 1.5);
+      effect.setFloat('blurScale', 3.0); // Increased for more visible blur
     };
     
     const state = useAutoFocusStore.getState();
