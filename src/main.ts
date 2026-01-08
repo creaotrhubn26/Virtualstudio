@@ -12201,13 +12201,15 @@ class VirtualStudio {
     
     if (!monitorCamera) {
       // Create monitor camera from preset
+      // CRITICAL: Pass false to prevent this camera from becoming scene.activeCamera
       monitorCamera = new BABYLON.ArcRotateCamera(
         `monitor-camera-${presetId}`,
         preset.alpha,
         preset.beta,
         preset.radius,
         preset.target.clone(),
-        this.scene
+        this.scene,
+        false  // setActiveOnSceneIfNoneActive = false
       );
       monitorCamera.fov = preset.fov;
       monitorCamera.minZ = 0.1;
@@ -12338,13 +12340,15 @@ class VirtualStudio {
         // Create or get camera for this preset
         let monitorCamera = this.monitorCameras.get(presetId);
         if (!monitorCamera) {
+          // CRITICAL: Pass false to prevent this camera from becoming scene.activeCamera
           monitorCamera = new BABYLON.ArcRotateCamera(
             `monitor-camera-${presetId}`,
             preset.alpha,
             preset.beta,
             preset.radius,
             preset.target.clone(),
-            this.scene
+            this.scene,
+            false  // setActiveOnSceneIfNoneActive = false
           );
           monitorCamera.fov = preset.fov;
           monitorCamera.minZ = 0.1;
