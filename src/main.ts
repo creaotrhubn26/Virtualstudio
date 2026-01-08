@@ -17545,8 +17545,9 @@ class VirtualStudio {
   }
   
   private updateRecordingArcCameras(arc: HTMLElement): void {
-    console.log('[RecordingArc] updateRecordingArcCameras called');
+    console.log('%c[RecordingArc] updateRecordingArcCameras called', 'background: red; color: white; font-size: 16px;');
     console.log('[RecordingArc] cameraPresets:', Array.from(this.cameraPresets.keys()));
+    console.log('[RecordingArc] Found buttons:', arc.querySelectorAll('.arc-camera-btn[data-camera^="cam"]').length);
     
     const cameraBtns = arc.querySelectorAll('.arc-camera-btn[data-camera^="cam"]');
     const allBtn = arc.querySelector('.arc-camera-btn[data-camera="all"]') as HTMLElement;
