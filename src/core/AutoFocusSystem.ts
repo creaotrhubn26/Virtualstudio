@@ -596,14 +596,23 @@ export class AutoFocusSystem {
     if (highestPoint && highestMesh) {
       const distance = BABYLON.Vector3.Distance(cameraPos, highestPoint);
       
-      // Extract actor name from mesh hierarchy
-      let actorName = 'Actor';
-      if (highestMesh.parent) {
-        actorName = highestMesh.parent.name || highestMesh.name;
-      } else {
-        actorName = highestMesh.name;
+      // Extract actor name from mesh hierarchy, but skip generic parent names
+      const genericNames = ['world', 'scene', 'root', '__root__', 'default', 'Scene', 'World', 'Root'];
+      let actorName = 'Modell';
+      
+      // Try to find a meaningful name from the mesh hierarchy
+      let current: BABYLON.Node | null = highestMesh;
+      while (current) {
+        const name = current.name;
+        if (name && !genericNames.some(g => name.toLowerCase().includes(g.toLowerCase()))) {
+          actorName = name.replace(/^default_/, '').replace(/_/g, ' ').replace(/\d+$/, '').trim();
+          if (actorName) break;
+        }
+        current = current.parent;
       }
-      actorName = actorName.replace(/^default_/, '').replace(/_/g, ' ') || 'Actor';
+      
+      // Fallback to a generic name
+      if (!actorName || actorName === '') actorName = 'Modell';
       
       const detected: DetectedEye = {
         id: `${highestMesh.name}_auto_face`,
