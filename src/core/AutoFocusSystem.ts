@@ -565,11 +565,13 @@ export class AutoFocusSystem {
       if (topY > maxY) {
         maxY = topY;
         highestMesh = mesh;
-        // Estimate eye level: slightly below the top of the head
+        // Estimate eye level: eyes are typically 10-15% from the top of a human figure
         const centerX = (boundingInfo.boundingBox.maximumWorld.x + boundingInfo.boundingBox.minimumWorld.x) / 2;
         const centerZ = (boundingInfo.boundingBox.maximumWorld.z + boundingInfo.boundingBox.minimumWorld.z) / 2;
-        // Eyes are typically 5-10cm below the top of the head
-        highestPoint = new BABYLON.Vector3(centerX, topY - 0.08, centerZ);
+        // For a ~1.7m figure, eyes are about 12cm below the top (at ~93% of height)
+        const height = topY - boundingInfo.boundingBox.minimumWorld.y;
+        const eyeOffset = height * 0.07; // 7% down from top
+        highestPoint = new BABYLON.Vector3(centerX, topY - eyeOffset, centerZ);
       }
     }
     

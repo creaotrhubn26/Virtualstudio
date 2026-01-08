@@ -22,6 +22,13 @@ The application uses a hybrid architecture combining Vanilla TypeScript with Bab
 - **Realistic Lighting System:** Simulates 17 professional lights with accurate specifications and inverse square law.
 - **Equipment Panel:** Library of lights, modifiers, stands, backgrounds, and props with filters and search.
 - **Viewport:** Displays a 3D studio, camera info, histogram, light indicators, 2D top view, focal length controls, and interactive light placement gizmos. Includes professional helper guide overlays and interactive viewfinder focus points.
+- **AutoFocus System (Øye-AF):** Professional autofocus with three modes:
+  - **MF (Manuell):** Full manual focus control
+  - **AF-S (Enkelt):** Single focus that locks on target
+  - **AF-C (Kontinuerlig):** Continuous tracking of subjects
+  - Smart geometry-based face detection for models without separate eye meshes
+  - Eye priority selection (nearest, left, right)
+  - Visual focus frame indicator and smooth focus transitions
 - **Properties Panel:** Allows selection-specific adjustments for lights (position, rotation, CCT, modifier settings, IES, Gobo, Focus) and cameras (Aperture, Shutter, ISO, ND), along with a light meter.
 - **Virtual Actor Panel:** Generates and customizes 3D actors with adjustable parameters, presets, and integration with Meta SAM 3D Body for realistic avatar creation from images.
 - **Asset Loading:** Comprehensive system for loading 3D assets (characters, props, modifiers, accessories, HDRI environments) with drag-and-drop.
