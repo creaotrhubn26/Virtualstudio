@@ -315,6 +315,10 @@ export class AutoFocusSystem {
       this.focusFrameMesh.dispose();
       this.focusFrameMesh = null;
     }
+    if (this.focusFrameAnimation) {
+      this.scene.onBeforeRenderObservable.remove(this.focusFrameAnimation);
+      this.focusFrameAnimation = null;
+    }
   }
   
   private updateEyeIndicatorVisibility(show: boolean): void {
@@ -325,39 +329,69 @@ export class AutoFocusSystem {
     }
   }
   
+  private focusFrameAnimation: BABYLON.Observer<BABYLON.Scene> | null = null;
+  
   private showFocusFrame(eye: DetectedEye): void {
+    // Clean up previous frame and animation
     if (this.focusFrameMesh) {
       this.focusFrameMesh.dispose();
     }
+    if (this.focusFrameAnimation) {
+      this.scene.onBeforeRenderObservable.remove(this.focusFrameAnimation);
+      this.focusFrameAnimation = null;
+    }
+    
+    // Create a larger, more visible focus frame
+    const size = 0.12; // Larger size
+    const corner = 0.04; // Corner length
     
     const lines = BABYLON.MeshBuilder.CreateLineSystem('focusFrame', {
       lines: [
-        [new BABYLON.Vector3(-0.05, 0.05, 0), new BABYLON.Vector3(-0.05, 0.03, 0)],
-        [new BABYLON.Vector3(-0.05, 0.05, 0), new BABYLON.Vector3(-0.03, 0.05, 0)],
-        [new BABYLON.Vector3(0.05, 0.05, 0), new BABYLON.Vector3(0.05, 0.03, 0)],
-        [new BABYLON.Vector3(0.05, 0.05, 0), new BABYLON.Vector3(0.03, 0.05, 0)],
-        [new BABYLON.Vector3(-0.05, -0.05, 0), new BABYLON.Vector3(-0.05, -0.03, 0)],
-        [new BABYLON.Vector3(-0.05, -0.05, 0), new BABYLON.Vector3(-0.03, -0.05, 0)],
-        [new BABYLON.Vector3(0.05, -0.05, 0), new BABYLON.Vector3(0.05, -0.03, 0)],
-        [new BABYLON.Vector3(0.05, -0.05, 0), new BABYLON.Vector3(0.03, -0.05, 0)]
+        // Top-left corner
+        [new BABYLON.Vector3(-size, size, 0), new BABYLON.Vector3(-size, size - corner, 0)],
+        [new BABYLON.Vector3(-size, size, 0), new BABYLON.Vector3(-size + corner, size, 0)],
+        // Top-right corner
+        [new BABYLON.Vector3(size, size, 0), new BABYLON.Vector3(size, size - corner, 0)],
+        [new BABYLON.Vector3(size, size, 0), new BABYLON.Vector3(size - corner, size, 0)],
+        // Bottom-left corner
+        [new BABYLON.Vector3(-size, -size, 0), new BABYLON.Vector3(-size, -size + corner, 0)],
+        [new BABYLON.Vector3(-size, -size, 0), new BABYLON.Vector3(-size + corner, -size, 0)],
+        // Bottom-right corner
+        [new BABYLON.Vector3(size, -size, 0), new BABYLON.Vector3(size, -size + corner, 0)],
+        [new BABYLON.Vector3(size, -size, 0), new BABYLON.Vector3(size - corner, -size, 0)],
+        // Center crosshair (small)
+        [new BABYLON.Vector3(-0.015, 0, 0), new BABYLON.Vector3(0.015, 0, 0)],
+        [new BABYLON.Vector3(0, -0.015, 0), new BABYLON.Vector3(0, 0.015, 0)]
       ]
     }, this.scene);
     
-    lines.color = new BABYLON.Color3(0, 1, 0);
+    lines.color = new BABYLON.Color3(0, 1, 0); // Bright green
     lines.position = new BABYLON.Vector3(eye.worldPosition.x, eye.worldPosition.y, eye.worldPosition.z);
     lines.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
     lines.isPickable = false;
+    lines.renderingGroupId = 3; // Render on top
     
     this.focusFrameMesh = lines as unknown as BABYLON.Mesh;
     
+    // Continuous pulsing animation
     let elapsed = 0;
-    const blinkAnimation = this.scene.onBeforeRenderObservable.add(() => {
-      elapsed += this.scene.getEngine().getDeltaTime();
+    let pulsePhase = 0;
+    this.focusFrameAnimation = this.scene.onBeforeRenderObservable.add(() => {
+      const dt = this.scene.getEngine().getDeltaTime();
+      elapsed += dt;
+      pulsePhase += dt * 0.005; // Slow pulse
+      
+      // Initial rapid blink for 500ms, then slow pulse
       if (elapsed < 500) {
-        lines.visibility = Math.sin(elapsed * 0.02) > 0 ? 1 : 0.5;
+        // Fast blink
+        const blink = Math.sin(elapsed * 0.03) > 0;
+        lines.visibility = blink ? 1 : 0.3;
+        lines.scaling = new BABYLON.Vector3(1 + Math.sin(elapsed * 0.02) * 0.1, 1 + Math.sin(elapsed * 0.02) * 0.1, 1);
       } else {
-        lines.visibility = 1;
-        this.scene.onBeforeRenderObservable.remove(blinkAnimation);
+        // Gentle continuous pulse
+        const pulse = 0.85 + Math.sin(pulsePhase) * 0.15;
+        lines.visibility = pulse;
+        lines.scaling = new BABYLON.Vector3(1 + Math.sin(pulsePhase * 0.5) * 0.05, 1 + Math.sin(pulsePhase * 0.5) * 0.05, 1);
       }
     });
   }
