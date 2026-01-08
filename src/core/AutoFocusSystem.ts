@@ -515,17 +515,37 @@ export class AutoFocusSystem {
   public detectTopOfModelFallback(): DetectedEye | null {
     const cameraPos = this.camera.position;
     
+    // Common avatar/character mesh name patterns
+    const avatarPatterns = ['avatar', 'character', 'actor', 'person', 'human', 'mannequin', 'geometry'];
+    
     // Find meshes that look like character/avatar meshes
     const characterMeshes = this.scene.meshes.filter(mesh => {
       if (!mesh.isEnabled() || !mesh.isVisible) return false;
       if (mesh.name.startsWith('gizmo') || mesh.name.startsWith('__')) return false;
       if (mesh.name === 'ground' || mesh.name === 'backWall' || mesh.name === 'grid') return false;
-      if (mesh.name.includes('light') || mesh.name.includes('Light')) return false;
+      if (mesh.name.includes('Wall') || mesh.name.includes('wall')) return false;
+      if (mesh.name.includes('light') || mesh.name.includes('Light') || mesh.name.includes('bulb')) return false;
+      if (mesh.name === 'logo' || mesh.name.startsWith('logo')) return false;
       
-      // Check if it's a reasonable size for a character (between 0.5m and 3m tall)
+      const meshNameLower = mesh.name.toLowerCase();
+      
+      // Check if it matches known avatar patterns
+      const isAvatarByName = avatarPatterns.some(pattern => meshNameLower.includes(pattern));
+      
+      // Check if it's a reasonable size for a character
       const boundingInfo = mesh.getBoundingInfo();
-      const height = boundingInfo.boundingBox.maximumWorld.y - boundingInfo.boundingBox.minimumWorld.y;
-      return height > 0.5 && height < 3.0;
+      if (!boundingInfo || !boundingInfo.boundingBox) return false;
+      
+      const height = Math.abs(boundingInfo.boundingBox.maximumWorld.y - boundingInfo.boundingBox.minimumWorld.y);
+      const isCharacterSized = height > 0.3 && height < 3.0;
+      
+      // Accept if it matches avatar name OR is character-sized
+      if (isAvatarByName || isCharacterSized) {
+        console.log(`[AutoFocusSystem] Candidate mesh: ${mesh.name}, height=${height.toFixed(2)}m, isAvatar=${isAvatarByName}`);
+        return true;
+      }
+      
+      return false;
     });
     
     if (characterMeshes.length === 0) {
