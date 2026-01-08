@@ -3554,52 +3554,60 @@ class VirtualStudio {
       }
     });
     
-    // Double-tap/double-click to focus
+    // Double-tap/double-click to focus - use POINTERUP with double-click detection
+    let lastClickTime = 0;
     this.scene.onPointerObservable.add((info) => {
-      if (info.type === BABYLON.PointerEventTypes.POINTERDOUBLETAP) {
-        console.log('[VirtualStudio] Double-tap detected');
+      if (info.type === BABYLON.PointerEventTypes.POINTERUP && info.event.button === 0) {
+        const now = Date.now();
+        const timeDiff = now - lastClickTime;
+        lastClickTime = now;
         
-        if (this.autoFocusSystem && info.pickInfo?.pickedPoint) {
-          const pickedMesh = info.pickInfo.pickedMesh;
+        // Check if this is a double-click (within 300ms)
+        if (timeDiff > 50 && timeDiff < 300) {
+          console.log('[VirtualStudio] Double-click detected!');
           
-          // Skip certain meshes
-          if (pickedMesh) {
-            const name = pickedMesh.name.toLowerCase();
-            if (name.includes('ground') || name.includes('wall') || name.includes('grid') || 
-                name.includes('backdrop') || name.startsWith('gizmo') || name.startsWith('__')) {
-              console.log('[VirtualStudio] Skipping focus on:', pickedMesh.name);
-              return;
+          if (this.autoFocusSystem && info.pickInfo?.pickedPoint) {
+            const pickedMesh = info.pickInfo.pickedMesh;
+            
+            // Skip certain meshes
+            if (pickedMesh) {
+              const name = pickedMesh.name.toLowerCase();
+              if (name.includes('ground') || name.includes('wall') || name.includes('grid') || 
+                  name.includes('backdrop') || name.startsWith('gizmo') || name.startsWith('__')) {
+                console.log('[VirtualStudio] Skipping focus on:', pickedMesh.name);
+                return;
+              }
             }
+            
+            const distance = BABYLON.Vector3.Distance(this.camera.position, info.pickInfo.pickedPoint);
+            console.log(`[VirtualStudio] Double-click focus at ${distance.toFixed(2)}m on ${pickedMesh?.name || 'unknown'}`);
+            
+            // Create synthetic focus target
+            const screenPos = BABYLON.Vector3.Project(
+              info.pickInfo.pickedPoint,
+              BABYLON.Matrix.Identity(),
+              this.scene.getTransformMatrix(),
+              this.camera.viewport.toGlobal(this.engine.getRenderWidth(), this.engine.getRenderHeight())
+            );
+            
+            const syntheticTarget = {
+              id: `clickfocus_${Date.now()}`,
+              actorName: pickedMesh?.name || 'ClickFocus',
+              eyeSide: 'left' as const,
+              worldPosition: {
+                x: info.pickInfo.pickedPoint.x,
+                y: info.pickInfo.pickedPoint.y,
+                z: info.pickInfo.pickedPoint.z
+              },
+              screenPosition: {
+                x: screenPos.x,
+                y: screenPos.y
+              },
+              distanceFromCamera: distance
+            };
+            
+            this.autoFocusSystem.setFocusTarget(syntheticTarget);
           }
-          
-          const distance = BABYLON.Vector3.Distance(this.camera.position, info.pickInfo.pickedPoint);
-          console.log(`[VirtualStudio] Double-click focus at ${distance.toFixed(2)}m on ${pickedMesh?.name || 'unknown'}`);
-          
-          // Create synthetic focus target
-          const screenPos = BABYLON.Vector3.Project(
-            info.pickInfo.pickedPoint,
-            BABYLON.Matrix.Identity(),
-            this.scene.getTransformMatrix(),
-            this.camera.viewport.toGlobal(this.engine.getRenderWidth(), this.engine.getRenderHeight())
-          );
-          
-          const syntheticTarget = {
-            id: `clickfocus_${Date.now()}`,
-            actorName: pickedMesh?.name || 'ClickFocus',
-            eyeSide: 'left' as const,
-            worldPosition: {
-              x: info.pickInfo.pickedPoint.x,
-              y: info.pickInfo.pickedPoint.y,
-              z: info.pickInfo.pickedPoint.z
-            },
-            screenPosition: {
-              x: screenPos.x,
-              y: screenPos.y
-            },
-            distanceFromCamera: distance
-          };
-          
-          this.autoFocusSystem.setFocusTarget(syntheticTarget);
         }
       }
     });
