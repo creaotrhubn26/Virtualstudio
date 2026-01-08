@@ -122,7 +122,12 @@ export class FocusPeakingEffect {
       effect.setVector3('peakColor', colorVec);
       effect.setFloat('intensity', state.intensity);
       effect.setFloat('threshold', state.threshold);
-      effect.setFloat('focusDistance', focusState.focusDistance / 100);
+      
+      const minZ = this.camera.minZ || 0.1;
+      const maxZ = this.camera.maxZ || 1000;
+      const focusDistWorld = focusState.focusDistance;
+      const normalizedFocus = (focusDistWorld - minZ) / (maxZ - minZ);
+      effect.setFloat('focusDistance', Math.max(0, Math.min(1, normalizedFocus)));
       
       const studio = (window as any).virtualStudio;
       const aperture = studio?.cameraSettings?.aperture || 2.8;
@@ -154,9 +159,8 @@ export class FocusPeakingEffect {
     
     if (this.postProcess) {
       if (enabled) {
-        const isAttached = this.postProcess.isReusable() ? 
-          this.postProcess.getCamera() !== null : 
-          (this.camera as any)._postProcesses?.includes(this.postProcess);
+        const postProcesses = (this.camera as any)._postProcesses || [];
+        const isAttached = postProcesses.includes(this.postProcess);
         if (!isAttached) {
           this.camera.attachPostProcess(this.postProcess);
         }
