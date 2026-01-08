@@ -975,15 +975,29 @@ class VirtualStudio {
 
   /**
    * Update DOF settings based on camera aperture and focus distance
+   * Uses physically-based DOF calculation for realistic blur
    */
   public updateDOFSettings(fStop: number, focusDistance: number, enabled: boolean): void {
     if (!this.renderingPipeline) return;
     
     this.renderingPipeline.depthOfFieldEnabled = enabled;
     if (enabled) {
+      const focalLengthMM = this.cameraSettings.focalLength || 50;
+      const focusDistMM = focusDistance * 1000; // meters to mm
+      
       this.renderingPipeline.depthOfField.fStop = fStop;
-      this.renderingPipeline.depthOfField.focusDistance = focusDistance * 1000; // Convert to mm
-      this.renderingPipeline.depthOfField.focalLength = this.cameraSettings.focalLength;
+      this.renderingPipeline.depthOfField.focusDistance = focusDistMM;
+      this.renderingPipeline.depthOfField.focalLength = focalLengthMM;
+      
+      // Calculate lens size for proper CoC (Circle of Confusion)
+      // lensSize = focalLength / fStop (aperture diameter in mm)
+      const lensSize = focalLengthMM / fStop;
+      this.renderingPipeline.depthOfField.lensSize = lensSize;
+      
+      // Use higher blur level for more visible effect
+      this.renderingPipeline.depthOfFieldBlurLevel = BABYLON.DepthOfFieldEffectBlurLevel.High;
+      
+      console.log(`[DOF] fStop=${fStop}, focus=${focusDistance.toFixed(2)}m, focal=${focalLengthMM}mm, lensSize=${lensSize.toFixed(1)}mm`);
     }
   }
 
