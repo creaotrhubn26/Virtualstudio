@@ -17202,6 +17202,7 @@ class VirtualStudio {
     arc.id = 'recordingArc';
     arc.className = 'recording-arc';
     arc.innerHTML = `
+      <div class="recording-arc-tab" title="Opptak - hold over for å utvide"></div>
       <div class="recording-arc-content">
         <div class="recording-arc-header">
           <div class="recording-arc-title">
@@ -17262,6 +17263,7 @@ class VirtualStudio {
       arc.id = 'recordingArc';
       arc.className = 'recording-arc';
       arc.innerHTML = `
+        <div class="recording-arc-tab" title="Opptak - hold over for å utvide"></div>
         <div class="recording-arc-content">
           <div class="recording-arc-header">
             <div class="recording-arc-title">
@@ -17306,22 +17308,18 @@ class VirtualStudio {
         </div>
       `;
       
-      // Insert directly into body so it's above all panels and overlays
       document.body.appendChild(arc);
-      
-      // Setup arc event listeners
       this.setupRecordingArcEvents(arc);
     }
     
-    // Update camera button states based on saved presets
     this.updateRecordingArcCameras(arc);
     
-    // Toggle visibility
+    // Toggle expanded state
     if (this.recordingArcVisible) {
-      arc.classList.remove('visible');
+      arc.classList.remove('expanded');
       this.recordingArcVisible = false;
     } else {
-      arc.classList.add('visible');
+      arc.classList.add('expanded');
       this.recordingArcVisible = true;
     }
   }
@@ -17333,7 +17331,7 @@ class VirtualStudio {
     
     // Close handler
     closeBtn?.addEventListener('click', () => {
-      arc.classList.remove('visible');
+      arc.classList.remove('expanded');
       this.recordingArcVisible = false;
     });
     
