@@ -16863,7 +16863,7 @@ class VirtualStudio {
     };
   }
 
-  private addMonitorRecIndicator(cameraId: string): void {
+  private addMonitorRecIndicator = (cameraId: string): void => {
     // Find the monitor viewport for this camera
     const viewport = document.querySelector(`.monitor-viewport[data-preset="${cameraId}"]`) as HTMLElement;
     if (!viewport) {
@@ -16893,7 +16893,7 @@ class VirtualStudio {
     container.appendChild(badge);
   }
   
-  private removeMonitorRecIndicator(cameraId: string): void {
+  private removeMonitorRecIndicator = (cameraId: string): void => {
     // Remove REC badge for this camera
     const badges = document.querySelectorAll(`.monitor-rec-badge[data-camera="${cameraId}"]`);
     badges.forEach(badge => badge.remove());
