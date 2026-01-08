@@ -8063,11 +8063,17 @@ class VirtualStudio {
         
         console.log('Default avatar loaded:', avatarUrl);
         
-        // Force bounding box recalculation
+        // Force bounding box recalculation after rotation
+        rootMesh.computeWorldMatrix(true);
         rootMesh.refreshBoundingInfo(true);
         
-        // Add visible eye meshes for the model
-        this.addEyesToMesh(rootMesh, 'Avatar');
+        // Add invisible eye markers for autofocus (not visible eyes)
+        // The AutoFocusSystem will use these for eye detection
+        setTimeout(() => {
+          if (this.autoFocusSystem) {
+            this.autoFocusSystem.addEyeMarkersToModel(rootMesh, 'Avatar');
+          }
+        }, 100);
         
         // Update focus objects list
         setTimeout(() => {

@@ -722,19 +722,23 @@ export class AutoFocusSystem {
   public addEyeMarkersToModel(rootMesh: BABYLON.AbstractMesh, modelName?: string): void {
     const name = modelName || rootMesh.name || 'avatar';
     
-    // Check if model already has eye meshes
+    // Check if model already has eye meshes or markers
     const existingEyes = rootMesh.getChildMeshes().filter(m => 
-      m.name.toLowerCase().includes('eye') && 
-      !m.name.toLowerCase().includes('eyebrow') &&
-      !m.name.toLowerCase().includes('eyelash')
+      (m.name.toLowerCase().includes('eye') && 
+       !m.name.toLowerCase().includes('eyebrow') &&
+       !m.name.toLowerCase().includes('eyelash')) ||
+      m.metadata?.isEyeMarker === true
     );
     
     if (existingEyes.length > 0) {
-      console.log(`[AutoFocusSystem] Model ${name} already has ${existingEyes.length} eye meshes`);
+      console.log(`[AutoFocusSystem] Model ${name} already has ${existingEyes.length} eye meshes/markers`);
       return;
     }
     
-    // Calculate model dimensions
+    // Ensure world matrix is computed
+    rootMesh.computeWorldMatrix(true);
+    
+    // Calculate model dimensions in WORLD space
     const boundingInfo = rootMesh.getHierarchyBoundingVectors(true);
     const minY = boundingInfo.min.y;
     const maxY = boundingInfo.max.y;
@@ -745,7 +749,7 @@ export class AutoFocusSystem {
       return;
     }
     
-    // Calculate eye positions based on human proportions
+    // Calculate eye positions in WORLD space based on human proportions
     // Eyes are typically at ~93-95% of total height from the ground
     const eyeHeightRatio = 0.93;
     const eyeY = minY + (height * eyeHeightRatio);
@@ -753,16 +757,20 @@ export class AutoFocusSystem {
     // Eye separation is typically 6-7cm (interpupillary distance)
     const eyeSeparation = height * 0.035; // ~6cm for 1.7m figure
     
-    // Center X position
+    // Center X position in world space
     const centerX = (boundingInfo.min.x + boundingInfo.max.x) / 2;
     
-    // Z position - front of the model
+    // Z position - front of the model (closer to camera)
     const camZ = this.camera.position.z;
     const frontZ = Math.abs(boundingInfo.min.z - camZ) < Math.abs(boundingInfo.max.z - camZ) 
       ? boundingInfo.min.z 
       : boundingInfo.max.z;
     const depth = boundingInfo.max.z - boundingInfo.min.z;
     const eyeZ = frontZ + (frontZ === boundingInfo.min.z ? depth * 0.15 : -depth * 0.15);
+    
+    // Get the inverse world matrix to convert world positions to local
+    const worldMatrix = rootMesh.getWorldMatrix();
+    const invWorldMatrix = BABYLON.Matrix.Invert(worldMatrix);
     
     // Create invisible eye marker spheres
     const createEyeMarker = (side: 'left' | 'right') => {
@@ -775,11 +783,18 @@ export class AutoFocusSystem {
         existing.dispose();
       }
       
+      // Calculate world position
+      const worldPos = new BABYLON.Vector3(centerX + xOffset, eyeY, eyeZ);
+      
+      // Convert to local position (relative to parent)
+      const localPos = BABYLON.Vector3.TransformCoordinates(worldPos, invWorldMatrix);
+      
       const marker = BABYLON.MeshBuilder.CreateSphere(markerName, { 
         diameter: 0.02 // 2cm diameter - small but pickable
       }, this.scene);
       
-      marker.position = new BABYLON.Vector3(centerX + xOffset, eyeY, eyeZ);
+      // Set LOCAL position (since it will be parented to rootMesh)
+      marker.position = localPos;
       marker.isPickable = true;
       marker.isVisible = false; // Invisible but still pickable for raycasting
       
@@ -793,7 +808,10 @@ export class AutoFocusSystem {
         actorName: name
       };
       
-      console.log(`[AutoFocusSystem] Created ${side} eye marker for ${name} at Y=${eyeY.toFixed(2)}`);
+      // Verify world position
+      marker.computeWorldMatrix(true);
+      const finalWorldPos = marker.getAbsolutePosition();
+      console.log(`[AutoFocusSystem] Created ${side} eye marker for ${name} at world Y=${finalWorldPos.y.toFixed(2)}`);
       return marker;
     };
     
