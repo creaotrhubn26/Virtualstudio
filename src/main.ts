@@ -12438,8 +12438,55 @@ class VirtualStudio {
         console.log(`[Monitor] RTT ${presetId} setup complete: ${visibleMeshes.length} meshes, camera=${monitorCamera.name}`);
       }
       
-      // Ensure renderTarget is defined
+      // Ensure renderTarget is defined (could be created here or by reassignMonitorRTTSettings)
       if (!renderTarget) continue;
+      
+      // CRITICAL FIX: Register callbacks even if RTT was created by reassignMonitorRTTSettings
+      // This fixes the issue where RTT exists but callbacks were never registered
+      if (!this.monitorCallbacksRegistered.get(presetId)) {
+        const targetRenderTarget = renderTarget; // Capture for closure
+        const targetPresetId = presetId; // Capture for closure
+        
+        // Wait for first render to ensure framebuffer is created
+        const firstRenderTimeout = setTimeout(() => {
+          if (!this.monitorFirstRenderComplete.get(targetPresetId)) {
+            console.error(`[Monitor] ${targetPresetId}: onAfterRenderObservable never fired! RTT not rendering. renderList=${targetRenderTarget.renderList?.length || 0}, inCustomRTTs=${this.scene.customRenderTargets.indexOf(targetRenderTarget) !== -1}`);
+          }
+        }, 5000);
+        
+        targetRenderTarget.onAfterRenderObservable.addOnce(() => {
+          clearTimeout(firstRenderTimeout);
+          this.monitorFirstRenderComplete.set(targetPresetId, true);
+          console.log(`[Monitor] ${targetPresetId}: First render complete, framebuffer ready`);
+        });
+        
+        // Set up ongoing pixel reading after each render
+        const pixelReadCallback = () => {
+          if (!this.monitorFirstRenderComplete.get(targetPresetId)) return;
+          if (this.monitorContextLost) return;
+          
+          const canvas = document.querySelector(`.monitor-canvas[data-preset="${targetPresetId}"]`) as HTMLCanvasElement;
+          if (!canvas) return;
+          
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          if (!ctx) return;
+          
+          const size = targetRenderTarget.getSize();
+          const width = size.width;
+          const height = size.height;
+          
+          if (canvas.width !== width || canvas.height !== height) {
+            canvas.width = width;
+            canvas.height = height;
+          }
+          
+          this.readPixelsFromRenderTarget(targetRenderTarget, ctx, width, height, targetPresetId);
+        };
+        
+        targetRenderTarget.onAfterRenderObservable.add(pixelReadCallback);
+        this.monitorCallbacksRegistered.set(presetId, true);
+        console.log(`[Monitor] ${presetId}: Callbacks registered for existing RTT`);
+      }
 
       // Update monitor camera parameters if preset has changed
       // CRITICAL: Only update camera PARAMETERS, not the camera object itself
