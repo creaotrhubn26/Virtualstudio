@@ -601,18 +601,25 @@ export class AutoFocusSystem {
       let actorName = 'Modell';
       
       // Try to find a meaningful name from the mesh hierarchy
+      const technicalNames = ['geometry', 'mesh', 'primitive', 'node', 'object', 'group'];
       let current: BABYLON.Node | null = highestMesh;
       while (current) {
         const name = current.name;
         if (name && !genericNames.some(g => name.toLowerCase().includes(g.toLowerCase()))) {
-          actorName = name.replace(/^default_/, '').replace(/_/g, ' ').replace(/\d+$/, '').trim();
-          if (actorName) break;
+          const cleanName = name.replace(/^default_/, '').replace(/_/g, ' ').replace(/\d+$/, '').trim();
+          // Skip technical mesh names
+          if (cleanName && !technicalNames.some(t => cleanName.toLowerCase() === t)) {
+            actorName = cleanName;
+            break;
+          }
         }
         current = current.parent;
       }
       
-      // Fallback to a generic name
-      if (!actorName || actorName === '') actorName = 'Modell';
+      // Fallback to a user-friendly name
+      if (!actorName || actorName === '' || technicalNames.includes(actorName.toLowerCase())) {
+        actorName = 'Modell';
+      }
       
       const detected: DetectedEye = {
         id: `${highestMesh.name}_auto_face`,
