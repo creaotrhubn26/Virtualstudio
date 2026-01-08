@@ -12515,6 +12515,45 @@ html, body {
   animation: pulse 1.5s ease-in-out infinite;
 }
 
+/* Monitor REC Badge - shows when recording */
+.monitor-rec-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(255, 0, 0, 0.85);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  z-index: 100;
+  animation: recBadgePulse 1s ease-in-out infinite;
+  box-shadow: 0 2px 8px rgba(255, 0, 0, 0.4);
+}
+
+.monitor-rec-badge .rec-dot {
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-radius: 50%;
+  animation: recDotBlink 0.8s ease-in-out infinite;
+}
+
+@keyframes recBadgePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+@keyframes recDotBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
 /* Monitor No Signal Overlay */
 .monitor-no-signal {
   animation: signalPulse 2s ease-in-out infinite;

@@ -16863,6 +16863,42 @@ class VirtualStudio {
     };
   }
 
+  private addMonitorRecIndicator(cameraId: string): void {
+    // Find the monitor viewport for this camera
+    const viewport = document.querySelector(`.monitor-viewport[data-preset="${cameraId}"]`) as HTMLElement;
+    if (!viewport) {
+      // Try to find by camera ID attribute
+      const canvas = document.querySelector(`.monitor-canvas[data-preset="${cameraId}"]`) as HTMLElement;
+      const parent = canvas?.parentElement;
+      if (parent && !parent.querySelector('.monitor-rec-badge')) {
+        this.createRecBadge(parent, cameraId);
+      }
+      return;
+    }
+    
+    if (viewport.querySelector('.monitor-rec-badge')) return; // Already has indicator
+    
+    this.createRecBadge(viewport, cameraId);
+  }
+  
+  private createRecBadge(container: HTMLElement, cameraId: string): void {
+    const badge = document.createElement('div');
+    badge.className = 'monitor-rec-badge';
+    badge.setAttribute('data-camera', cameraId);
+    badge.innerHTML = `
+      <div class="rec-dot"></div>
+      <span>REC</span>
+    `;
+    container.style.position = 'relative';
+    container.appendChild(badge);
+  }
+  
+  private removeMonitorRecIndicator(cameraId: string): void {
+    // Remove REC badge for this camera
+    const badges = document.querySelectorAll(`.monitor-rec-badge[data-camera="${cameraId}"]`);
+    badges.forEach(badge => badge.remove());
+  }
+
   private recordingArcVisible: boolean = false;
   private selectedRecordingCamera: string = 'main';
   private currentProjectId: string | null = null;
@@ -17483,6 +17519,17 @@ class VirtualStudio {
     this.recordingStartTime = Date.now();
     this.isRecording = true;
     
+    // Dispatch event to show recording indicators on monitors
+    const allCameras = ['main', ...Array.from(this.cameraPresets.keys())];
+    window.dispatchEvent(new CustomEvent('ch-monitor-recording-started', {
+      detail: { cameras: allCameras, isAll: true }
+    }));
+    
+    // Add REC indicator to each monitor viewport
+    allCameras.forEach(camId => {
+      this.addMonitorRecIndicator(camId);
+    });
+    
     // Start recording from main camera
     const mainCanvas = this.engine.getRenderingCanvas();
     if (mainCanvas) {
@@ -17612,6 +17659,17 @@ class VirtualStudio {
     
     this.isMultiCameraRecording = false;
     this.isRecording = false;
+    
+    // Remove REC indicators from monitors
+    const allCameras = ['main', ...Array.from(this.cameraPresets.keys())];
+    allCameras.forEach(camId => {
+      this.removeMonitorRecIndicator(camId);
+    });
+    
+    // Dispatch event to hide recording indicators
+    window.dispatchEvent(new CustomEvent('ch-monitor-recording-stopped', {
+      detail: { cameras: allCameras }
+    }));
     
     // Stop all recorders
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
