@@ -3405,6 +3405,9 @@ class VirtualStudio {
     this.selectedLightId = null;
     this.gizmoManager?.attachToMesh(null);
     
+    // Hide the light control HUD since no light is selected at startup
+    this.hideLightControlHUD();
+    
     // Hide all beam visualizations and studio gizmos since no light is selected
     this.disposeStudioGizmos();
     for (const [, lightData] of this.lights) {
@@ -12892,6 +12895,7 @@ class VirtualStudio {
   
   private deselectLight(): void {
     this.selectedLightId = null;
+    this.hideLightControlHUD();
     window.dispatchEvent(new CustomEvent('ch-light-deselected'));
   }
 
