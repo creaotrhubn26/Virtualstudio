@@ -154,7 +154,10 @@ export class FocusPeakingEffect {
     
     if (this.postProcess) {
       if (enabled) {
-        if (!this.camera.getPostProcessByName('focusPeaking')) {
+        const isAttached = this.postProcess.isReusable() ? 
+          this.postProcess.getCamera() !== null : 
+          (this.camera as any)._postProcesses?.includes(this.postProcess);
+        if (!isAttached) {
           this.camera.attachPostProcess(this.postProcess);
         }
       } else {

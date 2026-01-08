@@ -1400,6 +1400,57 @@
                 </div>
               </div>
             </div>
+            <!-- Focus Peaking Section -->
+            <div class="overlay-section">
+              <div class="overlay-section-header">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M2 12l5-5v3h10V7l5 5-5 5v-3H7v3z"/>
+                </svg>
+                <span>Focus Peaking</span>
+                <span id="focusPeakingIndicator" class="focus-peaking-indicator" style="display: none; color: red; font-size: 10px; padding: 2px 6px; background: rgba(255,0,0,0.2); border-radius: 3px;">PEAK</span>
+              </div>
+              <div class="overlay-section-content">
+                <label class="overlay-toggle-switch">
+                  <input type="checkbox" id="focusPeakingToggle">
+                  <span class="toggle-slider"></span>
+                  <span class="toggle-label">Aktiver Focus Peaking</span>
+                </label>
+                <div class="peaking-controls" style="margin-top: 12px;">
+                  <div class="peaking-control-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="color: rgba(255,255,255,0.7); font-size: 11px;">Farge:</span>
+                    <select id="focusPeakingColor" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px;">
+                      <option value="red">Rød</option>
+                      <option value="green">Grønn</option>
+                      <option value="blue">Blå</option>
+                      <option value="yellow">Gul</option>
+                      <option value="white">Hvit</option>
+                    </select>
+                  </div>
+                  <div class="peaking-control-row" style="margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="color: rgba(255,255,255,0.7); font-size: 11px;">Intensitet:</span>
+                      <span id="focusPeakingIntensityValue" style="color: rgba(255,255,255,0.5); font-size: 10px;">80%</span>
+                    </div>
+                    <input type="range" id="focusPeakingIntensity" min="0" max="1" step="0.05" value="0.8" style="width: 100%; margin-top: 4px;">
+                  </div>
+                  <div class="peaking-control-row" style="margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="color: rgba(255,255,255,0.7); font-size: 11px;">Terskel:</span>
+                      <span id="focusPeakingThresholdValue" style="color: rgba(255,255,255,0.5); font-size: 10px;">30%</span>
+                    </div>
+                    <input type="range" id="focusPeakingThreshold" min="0.1" max="1" step="0.05" value="0.3" style="width: 100%; margin-top: 4px;">
+                  </div>
+                  <label class="overlay-toggle-switch" style="margin-top: 8px;">
+                    <input type="checkbox" id="focusPeakingDepthAware" checked>
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">Dybdebevisst (kun i fokusområde)</span>
+                  </label>
+                  <div style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 10px; color: rgba(255,255,255,0.5);">
+                    Focus Peaking markerer skarpe kanter med farget overlay. Fungerer best med lavere blenderåpning (f/2.8-f/5.6).
+                  </div>
+                </div>
+              </div>
+            </div>
             <!-- Komposisjon Section -->
             <div class="overlay-section">
               <div class="overlay-section-header">

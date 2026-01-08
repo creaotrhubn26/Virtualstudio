@@ -4,8 +4,9 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, MarketplacePanelApp, AIAssistantApp, CastingPlannerApp, SceneComposerPanelApp, AnimationComposerApp } from './App';
 import PanelCreator from './components/PanelCreator';
-import { useAppStore, useFocusStore, useAutoFocusStore, SceneNode } from './state/store';
+import { useAppStore, useFocusStore, useAutoFocusStore, useFocusPeakingStore, SceneNode } from './state/store';
 import { AutoFocusSystem } from './core/AutoFocusSystem';
+import { FocusPeakingEffect } from './core/FocusPeakingEffect';
 import { useLoadingStore } from './state/loadingStore';
 import { LoadingOverlay } from './components/LoadingOverlay';
 import { focusController } from './core/FocusController';
@@ -285,6 +286,7 @@ class VirtualStudio {
   
   // Autofocus system with eye detection
   private autoFocusSystem: AutoFocusSystem | null = null;
+  private focusPeakingEffect: FocusPeakingEffect | null = null;
   
   public cameraSettings: CameraSettings & { whiteBalance?: number } = {
     aperture: 2.8,
@@ -504,7 +506,9 @@ class VirtualStudio {
     
     // Initialize autofocus system with eye detection
     this.autoFocusSystem = new AutoFocusSystem(this.scene, this.camera);
+    this.focusPeakingEffect = new FocusPeakingEffect(this.scene, this.camera);
     this.setupAutoFocusUI();
+    this.setupFocusPeakingUI();
     
     // Add default mannequin for focus target testing
     this.addDefaultMannequin();
@@ -7302,6 +7306,63 @@ class VirtualStudio {
     });
     
     console.log('[AutoFocus UI] Setup complete');
+  }
+
+  private setupFocusPeakingUI(): void {
+    const peakingToggle = document.getElementById('focusPeakingToggle') as HTMLInputElement;
+    if (peakingToggle) {
+      peakingToggle.addEventListener('change', () => {
+        useFocusPeakingStore.getState().setEnabled(peakingToggle.checked);
+      });
+    }
+    
+    const peakingColorSelect = document.getElementById('focusPeakingColor') as HTMLSelectElement;
+    if (peakingColorSelect) {
+      peakingColorSelect.addEventListener('change', () => {
+        useFocusPeakingStore.getState().setColor(peakingColorSelect.value as any);
+      });
+    }
+    
+    const peakingIntensitySlider = document.getElementById('focusPeakingIntensity') as HTMLInputElement;
+    const peakingIntensityValue = document.getElementById('focusPeakingIntensityValue');
+    if (peakingIntensitySlider) {
+      peakingIntensitySlider.addEventListener('input', () => {
+        const val = parseFloat(peakingIntensitySlider.value);
+        useFocusPeakingStore.getState().setIntensity(val);
+        if (peakingIntensityValue) {
+          peakingIntensityValue.textContent = `${Math.round(val * 100)}%`;
+        }
+      });
+    }
+    
+    const peakingThresholdSlider = document.getElementById('focusPeakingThreshold') as HTMLInputElement;
+    const peakingThresholdValue = document.getElementById('focusPeakingThresholdValue');
+    if (peakingThresholdSlider) {
+      peakingThresholdSlider.addEventListener('input', () => {
+        const val = parseFloat(peakingThresholdSlider.value);
+        useFocusPeakingStore.getState().setThreshold(val);
+        if (peakingThresholdValue) {
+          peakingThresholdValue.textContent = `${Math.round(val * 100)}%`;
+        }
+      });
+    }
+    
+    const depthAwareToggle = document.getElementById('focusPeakingDepthAware') as HTMLInputElement;
+    if (depthAwareToggle) {
+      depthAwareToggle.addEventListener('change', () => {
+        useFocusPeakingStore.getState().setDepthAware(depthAwareToggle.checked);
+      });
+    }
+    
+    useFocusPeakingStore.subscribe((state) => {
+      const indicator = document.getElementById('focusPeakingIndicator');
+      if (indicator) {
+        indicator.style.display = state.enabled ? 'flex' : 'none';
+        indicator.style.color = state.color === 'white' ? '#fff' : state.color;
+      }
+    });
+    
+    console.log('[Focus Peaking UI] Setup complete');
   }
 
   private calculateFocusDistance(normalizedX: number, normalizedY: number): void {
