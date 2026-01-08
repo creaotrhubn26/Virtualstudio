@@ -16000,12 +16000,12 @@ class VirtualStudio {
     this.updateCameraPresetUI(presetId, true);
     console.log(`Camera preset ${presetId} saved with focal=${preset.focalLength}mm, distance=${preset.distance}m, height=${preset.height}m`);
     
-    // CRITICAL: Update monitor camera to match the newly saved preset
-    // This is the ONLY place where we update an existing monitor camera's perspective
-    this.updateMonitorCameraFromPreset(presetId, preset);
-    
-    // Re-assign RTT settings (creates RTT if needed, updates renderList)
+    // Re-assign RTT settings FIRST (creates RTT and camera if needed, updates renderList)
     this.reassignMonitorRTTSettings(presetId);
+    
+    // THEN update monitor camera to match the newly saved preset
+    // This must come AFTER reassignMonitorRTTSettings because the camera might not exist yet
+    this.updateMonitorCameraFromPreset(presetId, preset);
   }
   
   /**
