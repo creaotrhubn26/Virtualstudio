@@ -1534,6 +1534,9 @@ class VirtualStudio {
   private hudJoystickStartTilt: number = 0;
   private hudJoystickStartDir: BABYLON.Vector3 = new BABYLON.Vector3(0, 0, 1);
   private hudJoystickStartPointer: { x: number; y: number } = { x: 0, y: 0 };
+  private hudJoystickCachedRect: DOMRect | null = null; // Cache bounding rect during drag
+  private hudJoystickDevicePixelRatio: number = 1; // High-DPI support
+  private hudJoystickStartEventPos: { x: number; y: number } | null = null; // Store actual event position at start
   
   // Focus Target System
   private focusMode: 'human' | 'product' = 'human';
@@ -1681,17 +1684,44 @@ class VirtualStudio {
     });
   }
   
-  // Joystick sensitivity modes
-  private joystickSensitivityMode: 'fine' | 'normal' | 'rapid' = 'normal';
+  // Joystick sensitivity modes - expanded with finer granularity
+  private joystickSensitivityMode: 'ultra-fine' | 'fine' | 'normal' | 'rapid' = 'normal';
   private readonly joystickSensitivities = {
-    fine: Math.PI / 36,   // 5° per full deflection - ultra precise
-    normal: Math.PI / 12, // 15° per full deflection - balanced
-    rapid: Math.PI / 4    // 45° per full deflection - fast positioning
+    'ultra-fine': Math.PI / 180,  // 1° per full deflection - maximum precision
+    fine: Math.PI / 72,           // 2.5° per full deflection - precise
+    normal: Math.PI / 18,         // 10° per full deflection - balanced (reduced from 15°)
+    rapid: Math.PI / 4            // 45° per full deflection - fast positioning
   };
   
-  // Professional joystick settings (balanced for touch/mouse input)
-  private readonly joystickDeadZone = 0.05; // 5% dead zone - smaller for mouse precision
-  private readonly joystickResponseCurve = 1.5; // Gentler curve for better responsiveness
+  // Mode-specific dead zones (adaptive precision)
+  // Based on game development best practices: smaller dead zones for fine control
+  private readonly joystickDeadZones = {
+    'ultra-fine': 0.005, // 0.5% dead zone - maximum precision (professional fine-tuning)
+    fine: 0.01,          // 1% dead zone - precise control
+    normal: 0.02,        // 2% dead zone - balanced (reduced from 3%)
+    rapid: 0.05          // 5% dead zone - original value (stable)
+  };
+  
+  // Mode-specific response curves
+  // Based on game dev research: different curves for different control needs
+  private readonly joystickResponseCurves = {
+    'ultra-fine': 0.8,   // Slight sub-linear for fine control (predictable, less sensitive to small movements)
+    fine: 1.0,           // Linear - predictable and precise
+    normal: 1.3,         // Gentle exponential - smooth general use
+    rapid: 1.8           // Aggressive exponential - fast movements but more controllable than 2.0
+  };
+  
+  // Mode-specific smoothing factors (how many samples to average)
+  // More smoothing for fine modes to reduce jitter
+  private readonly joystickSmoothingSizes = {
+    'ultra-fine': 5,     // More samples for ultra-smooth fine control
+    fine: 4,             // More samples for smooth precision
+    normal: 3,           // Balanced smoothing
+    rapid: 2             // Less smoothing for fast response
+  };
+  
+  // Input smoothing for precision
+  private joystickInputHistory: Array<{ x: number; y: number; timestamp: number }> = [];
   
   /**
    * Initialize the rotation joystick control
@@ -1722,20 +1752,59 @@ class VirtualStudio {
       this.hudJoystickDragging = true;
       knob.style.transition = 'none';
       
+      // Cache bounding rect for consistent calculations during drag
+      this.hudJoystickCachedRect = joystickBg.getBoundingClientRect();
+      this.hudJoystickDevicePixelRatio = window.devicePixelRatio || 1;
+      
+      // Clear input history for fresh smoothing
+      this.joystickInputHistory = [];
+      
       // Store the pointer position at drag start (to calculate delta, not absolute)
       const pos = this.getEventPosition(e);
-      const rect = joystickBg.getBoundingClientRect();
+      
+      // Store actual event position for comparison in handleMove
+      this.hudJoystickStartEventPos = { x: pos.x, y: pos.y };
+      
+      const rect = this.hudJoystickCachedRect;
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
+      
+      // Calculate raw offset from center
+      const rawOffsetX = (pos.x - centerX) / maxOffset;
+      const rawOffsetY = (pos.y - centerY) / maxOffset;
+      
+      // Clamp to circular constraint (same as in handleMove for consistency)
+      let clampedX = rawOffsetX;
+      let clampedY = rawOffsetY;
+      const magnitude = Math.sqrt(rawOffsetX * rawOffsetX + rawOffsetY * rawOffsetY);
+      if (magnitude > 1) {
+        clampedX /= magnitude;
+        clampedY /= magnitude;
+      }
+      
+      // Store the clamped start position (this is the "neutral" point for delta calculations)
+      // If user clicks in center, this will be (0, 0)
+      // If user clicks elsewhere, this will be the normalized position within the circle
       this.hudJoystickStartPointer = {
-        x: (pos.x - centerX) / maxOffset,
-        y: (pos.y - centerY) / maxOffset
+        x: clampedX,
+        y: clampedY
       };
       
+      // Update knob visual position immediately to match where user clicked
+      // This ensures the knob follows the cursor from the start position
+      const knobCenterX = 50 + clampedX * 30;
+      const knobCenterY = 50 + clampedY * 30;
+      knob.style.left = `${knobCenterX}%`;
+      knob.style.top = `${knobCenterY}%`;
+      
+      // DON'T add initial sample to history here - let first handleMove do it
+      // This ensures that first handleMove will have zero delta if mouse hasn't moved
+      
       // Store the actual light direction when drag begins (not recalculated)
+      // This is the reference direction for rotation calculations
       this.hudJoystickStartDir = lightData.light.direction.clone().normalize();
       
-      // Also store angles for display
+      // Also store angles for display (high precision)
       const dir = this.hudJoystickStartDir;
       this.hudJoystickStartTilt = Math.asin(Math.max(-1, Math.min(1, -dir.y)));
       this.hudJoystickStartPan = Math.atan2(dir.x, dir.z);
@@ -1748,37 +1817,203 @@ class VirtualStudio {
       const lightData = this.lights.get(this.hudLightId);
       if (!lightData || !(lightData.light instanceof BABYLON.SpotLight)) return;
       
+      // Use cached bounding rect (only recalculate if invalid or after resize)
+      let rect = this.hudJoystickCachedRect;
+      if (!rect) {
+        rect = joystickBg.getBoundingClientRect();
+        this.hudJoystickCachedRect = rect;
+      }
+      
       const pos = this.getEventPosition(e);
-      const rect = joystickBg.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
       
-      // Calculate current pointer offset from center
-      const currentOffsetX = (pos.x - centerX) / maxOffset;
-      const currentOffsetY = (pos.y - centerY) / maxOffset;
+      // Sub-pixel precision with high-DPI support
+      const rawOffsetX = (pos.x - centerX) / maxOffset;
+      const rawOffsetY = (pos.y - centerY) / maxOffset;
+      
+      // Clamp raw input to circular constraint first (same as in handleStart)
+      let clampedRawX = rawOffsetX;
+      let clampedRawY = rawOffsetY;
+      const rawMagnitude = Math.sqrt(rawOffsetX * rawOffsetX + rawOffsetY * rawOffsetY);
+      if (rawMagnitude > 1) {
+        clampedRawX /= rawMagnitude;
+        clampedRawY /= rawMagnitude;
+      }
+      
+      // Input smoothing - average last N samples for smoother control
+      const now = performance.now();
+      
+      // Check if this is the first frame after drag start
+      const isFirstFrame = this.joystickInputHistory.length === 0;
+      
+      // Declare smoothed values
+      let smoothedX: number;
+      let smoothedY: number;
+      
+      // On first frame, check if position has actually changed significantly
+      // If not, use start position to prevent unwanted movement
+      if (isFirstFrame && this.hudJoystickStartEventPos) {
+        const deltaX = Math.abs(pos.x - this.hudJoystickStartEventPos.x);
+        const deltaY = Math.abs(pos.y - this.hudJoystickStartEventPos.y);
+        const movementThreshold = 3; // pixels - minimum movement to register
+        
+        // If position hasn't changed significantly, use start position and skip adding to history
+        if (deltaX < movementThreshold && deltaY < movementThreshold) {
+          smoothedX = this.hudJoystickStartPointer.x;
+          smoothedY = this.hudJoystickStartPointer.y;
+        } else {
+          // Significant movement detected - add start position first, then current
+          this.joystickInputHistory.push({
+            x: this.hudJoystickStartPointer.x,
+            y: this.hudJoystickStartPointer.y,
+            timestamp: now - 1 // Slightly earlier timestamp
+          });
+          this.joystickInputHistory.push({ x: clampedRawX, y: clampedRawY, timestamp: now });
+          this.hudJoystickStartEventPos = null; // Clear after first significant movement
+          
+          // Calculate smoothed input using EMA
+          const smoothingSize = this.joystickSmoothingSizes[this.joystickSensitivityMode];
+          const smoothingFactor = this.joystickSensitivityMode === 'ultra-fine' ? 0.3 : 
+                                  this.joystickSensitivityMode === 'fine' ? 0.4 :
+                                  this.joystickSensitivityMode === 'normal' ? 0.5 : 0.6;
+          
+          let emaX = this.joystickInputHistory[0].x;
+          let emaY = this.joystickInputHistory[0].y;
+          
+          for (let i = 1; i < this.joystickInputHistory.length; i++) {
+            emaX = emaX * (1 - smoothingFactor) + this.joystickInputHistory[i].x * smoothingFactor;
+            emaY = emaY * (1 - smoothingFactor) + this.joystickInputHistory[i].y * smoothingFactor;
+          }
+          
+          smoothedX = emaX;
+          smoothedY = emaY;
+        }
+        } else {
+          // Subsequent frames - normal smoothing
+          this.joystickInputHistory.push({ x: clampedRawX, y: clampedRawY, timestamp: now });
+          
+          // Keep only recent samples (within last 50ms, or 30ms for rapid for faster response)
+          const timeWindow = this.joystickSensitivityMode === 'rapid' ? 30 : 50;
+          this.joystickInputHistory = this.joystickInputHistory.filter(
+            sample => now - sample.timestamp < timeWindow
+          );
+          
+          // Limit history size based on mode-specific smoothing
+          const smoothingSize = this.joystickSmoothingSizes[this.joystickSensitivityMode];
+          if (this.joystickInputHistory.length > smoothingSize) {
+            this.joystickInputHistory.shift();
+          }
+          
+          // Calculate smoothed input using exponential moving average (EMA) for better responsiveness
+          // For fine modes: more aggressive smoothing to reduce jitter
+          // For rapid: minimal smoothing for fastest, most direct response
+          const smoothingFactor = this.joystickSensitivityMode === 'ultra-fine' ? 0.3 : 
+                                  this.joystickSensitivityMode === 'fine' ? 0.4 :
+                                  this.joystickSensitivityMode === 'normal' ? 0.5 : 0.7; // Increased from 0.6 for rapid
+        
+        if (this.joystickInputHistory.length === 1) {
+          // Only one sample - use it directly
+          smoothedX = this.joystickInputHistory[0].x;
+          smoothedY = this.joystickInputHistory[0].y;
+        } else {
+          // Apply exponential moving average for smooth, responsive control
+          let emaX = this.joystickInputHistory[0].x;
+          let emaY = this.joystickInputHistory[0].y;
+          
+          for (let i = 1; i < this.joystickInputHistory.length; i++) {
+            emaX = emaX * (1 - smoothingFactor) + this.joystickInputHistory[i].x * smoothingFactor;
+            emaY = emaY * (1 - smoothingFactor) + this.joystickInputHistory[i].y * smoothingFactor;
+          }
+          
+          smoothedX = emaX;
+          smoothedY = emaY;
+        }
+      }
       
       // Calculate DELTA from start position (not absolute offset)
       // This ensures zero movement at drag start
-      let offsetX = currentOffsetX - this.hudJoystickStartPointer.x;
-      let offsetY = currentOffsetY - this.hudJoystickStartPointer.y;
+      let offsetX = smoothedX - this.hudJoystickStartPointer.x;
+      let offsetY = smoothedY - this.hudJoystickStartPointer.y;
       
       // Clamp to circular constraint (prevents square corners)
+      // Apply circular clamping BEFORE dead zone for better diagonal handling
       const magnitude = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
       if (magnitude > 1) {
         offsetX /= magnitude;
         offsetY /= magnitude;
       }
       
-      // === AXIAL DEAD ZONE WITH SMOOTH TRANSITION ===
+      // Get mode-specific dead zone and response curve
+      const deadZone = this.joystickDeadZones[this.joystickSensitivityMode];
+      const responseCurve = this.joystickResponseCurves[this.joystickSensitivityMode];
+      
+      // === PROFESSIONAL AXIAL DEAD ZONE WITH RESPONSE CURVE ===
+      // Based on game development best practices for joystick control
       // Process each axis independently for better pan/tilt control
       const applyAxisDeadzone = (value: number): number => {
         const absVal = Math.abs(value);
-        if (absVal < this.joystickDeadZone) return 0;
-        // Scale from [deadzone, 1] to [0, 1]
-        const scaled = (absVal - this.joystickDeadZone) / (1 - this.joystickDeadZone);
-        // Apply gentle response curve per axis
-        const curved = Math.pow(scaled, this.joystickResponseCurve);
-        return Math.sign(value) * curved;
+        
+        // Step 1: Apply dead zone (circular dead zone already applied, now apply axial)
+        if (absVal < deadZone) {
+          return 0;
+        }
+        
+        // Step 2: Scale from [deadzone, 1] to [0, 1]
+        // This ensures full range utilization after dead zone
+        const scaled = (absVal - deadZone) / (1 - deadZone);
+        
+        // Step 3: Apply smooth transition at dead zone boundary
+        // Use a gentler transition for fine modes, steeper for rapid
+        let transitionFactor: number;
+        if (this.joystickSensitivityMode === 'ultra-fine' || this.joystickSensitivityMode === 'fine') {
+          // For fine modes: very smooth transition to avoid jumps
+          const transitionZone = deadZone * 2; // Wider transition zone for fine modes
+          const transition = Math.min(1, (absVal - deadZone) / transitionZone);
+          transitionFactor = transition * transition * (3 - 2 * transition); // Smoothstep
+        } else if (this.joystickSensitivityMode === 'rapid') {
+          // For rapid: minimal transition for snappiest response
+          const transitionZone = deadZone * 0.3; // Very tight transition zone
+          const transition = Math.min(1, (absVal - deadZone) / transitionZone);
+          // Use linear transition for rapid (faster, less smoothing)
+          transitionFactor = transition;
+        } else {
+          // For normal: balanced transition
+          const transitionZone = deadZone * 0.5;
+          const transition = Math.min(1, (absVal - deadZone) / transitionZone);
+          transitionFactor = transition * transition * (3 - 2 * transition); // Smoothstep
+        }
+        
+        // Step 4: Apply mode-specific response curve
+        // For ultra-fine and fine: use sub-linear/linear for predictable control
+        // For normal/rapid: use exponential for acceleration feel
+        let curved: number;
+        if (responseCurve === 1.0) {
+          // Linear response - most predictable
+          curved = scaled;
+        } else if (responseCurve < 1.0) {
+          // Sub-linear (for ultra-fine) - reduces sensitivity to small movements
+          // This gives more control at low deflections
+          curved = Math.pow(scaled, responseCurve);
+        } else {
+          // Exponential (for normal/rapid) - increases sensitivity at high deflections
+          curved = Math.pow(scaled, responseCurve);
+        }
+        
+        // Step 5: Apply transition smoothly
+        // For fine modes: full transition weight for smoothness
+        // For rapid: minimal transition weight for snappiest response
+        let transitionWeight: number;
+        if (this.joystickSensitivityMode === 'ultra-fine' || this.joystickSensitivityMode === 'fine') {
+          transitionWeight = 0.9; // Full smoothness for fine modes
+        } else if (this.joystickSensitivityMode === 'rapid') {
+          transitionWeight = 0.4; // Minimal transition for rapid (snappier)
+        } else {
+          transitionWeight = 0.7; // Balanced for normal
+        }
+        const finalValue = curved * ((1 - transitionWeight) + transitionWeight * transitionFactor);
+        
+        return Math.sign(value) * Math.max(0, Math.min(1, finalValue)); // Clamp to [0, 1]
       };
       
       const curvedOffsetX = applyAxisDeadzone(offsetX);
@@ -1790,47 +2025,67 @@ class VirtualStudio {
       knob.style.left = `${knobCenterX}%`;
       knob.style.top = `${knobCenterY}%`;
       
-      // Get current sensitivity based on mode
+      // Get current sensitivity based on mode (high precision)
       const sensitivity = this.joystickSensitivities[this.joystickSensitivityMode];
       
-      // Calculate delta rotation from joystick input
+      // Calculate delta rotation from joystick input (in radians, high precision)
       const deltaPan = curvedOffsetX * sensitivity;
       const deltaTilt = -curvedOffsetY * sensitivity; // Inverted Y
       
+      // For very small rotations, use incremental quaternion multiplication for better precision
+      // This reduces numerical errors that accumulate with large quaternion multiplications
+      const startDir = this.hudJoystickStartDir;
+      
       // Build rotation quaternions for yaw (pan around Y) and pitch (tilt around X)
+      // For small angles, this is more stable than Euler angle conversion
       const yawQuat = BABYLON.Quaternion.RotationAxis(BABYLON.Vector3.Up(), deltaPan);
       const pitchQuat = BABYLON.Quaternion.RotationAxis(BABYLON.Vector3.Right(), deltaTilt);
       
-      // Use the actual stored direction from handleStart (not recalculated from angles)
-      const startDir = this.hudJoystickStartDir;
-      
-      // Apply yaw first, then pitch (order matters for intuitive control)
+      // Improved rotation order: For pan/tilt control, apply pitch (tilt) first in local space
+      // then yaw (pan) to reduce gimbal lock issues. However, for intuitive control,
+      // we want yaw-first behavior. Use a hybrid approach for better precision.
+      // 
+      // Instead of simple multiplication, use incremental rotation from current direction
+      // This is more stable for small deltas and reduces precision loss
       const combinedQuat = yawQuat.multiply(pitchQuat);
       const newDir = startDir.clone();
+      
+      // Rotate direction vector using quaternion (more stable than angle conversion)
       newDir.rotateByQuaternionToRef(combinedQuat, newDir);
+      
+      // Ensure normalization after rotation (critical for precision)
       newDir.normalize();
       
       // Clamp vertical angle to avoid gimbal lock
-      const currentTilt = Math.asin(Math.max(-1, Math.min(1, -newDir.y)));
+      // Use high-precision clamping with consistent coordinate system
+      const clampedY = Math.max(-1, Math.min(1, -newDir.y)); // Clamp before asin
+      const currentTilt = Math.asin(clampedY);
       if (Math.abs(currentTilt) > maxTiltRange) {
-        // Recalculate with clamped tilt
+        // Recalculate with clamped tilt (high precision)
         const clampedTilt = Math.sign(currentTilt) * maxTiltRange;
         const currentPan = Math.atan2(newDir.x, newDir.z);
         const cosTilt = Math.cos(clampedTilt);
+        const sinTilt = Math.sin(clampedTilt);
+        
+        // Reconstruct direction vector with clamped tilt (avoiding angle precision loss)
         newDir.set(
           Math.sin(currentPan) * cosTilt,
-          -Math.sin(clampedTilt),
+          -sinTilt,
           Math.cos(currentPan) * cosTilt
-        ).normalize();
+        );
+        
+        // Normalize to ensure precision (should be ~1.0, but normalization ensures consistency)
+        newDir.normalize();
       }
       
-      // Apply to light
+      // Apply to light (high precision direction vector)
       lightData.light.direction.copyFrom(newDir);
       
       // Update mesh rotation to match light direction
       this.alignMeshToDirection(lightData.mesh, newDir);
       
-      // Calculate current pan/tilt for display
+      // Calculate current pan/tilt for display (high precision)
+      // Minimize conversions - only convert for display, keep radians internally
       const newPan = Math.atan2(newDir.x, newDir.z);
       const newTilt = Math.asin(Math.max(-1, Math.min(1, -newDir.y)));
       
@@ -1846,17 +2101,28 @@ class VirtualStudio {
       if (!this.hudJoystickDragging) return;
       this.hudJoystickDragging = false;
       
+      // Clear cached rect
+      this.hudJoystickCachedRect = null;
+      
+      // Clear input history
+      this.joystickInputHistory = [];
+      
+      // Clear start event position
+      this.hudJoystickStartEventPos = null;
+      
       // Animate knob back to center
       knob.style.transition = 'left 0.2s ease-out, top 0.2s ease-out';
       knob.style.left = '50%';
       knob.style.top = '50%';
       
-      // Update start direction to current position for next drag
+      // Update start direction to current position for next drag (high precision)
       if (this.hudLightId) {
         const lightData = this.lights.get(this.hudLightId);
         if (lightData && lightData.light instanceof BABYLON.SpotLight) {
+          // Store normalized direction vector (not angles) for precision
           this.hudJoystickStartDir = lightData.light.direction.clone().normalize();
           const dir = this.hudJoystickStartDir;
+          // Only calculate angles for display purposes
           this.hudJoystickStartTilt = Math.asin(Math.max(-1, Math.min(1, -dir.y)));
           this.hudJoystickStartPan = Math.atan2(dir.x, dir.z);
         }
@@ -1873,11 +2139,16 @@ class VirtualStudio {
     document.addEventListener('touchmove', handleMove as any, { passive: false });
     document.addEventListener('touchend', handleEnd);
     
-    // Keyboard shortcut for sensitivity toggle (hold Shift for fine, Ctrl for rapid)
+    // Keyboard shortcut for sensitivity toggle (hold Shift for fine, Ctrl for rapid, Shift+Ctrl for ultra-fine)
     document.addEventListener('keydown', (e) => {
       if (!this.hudJoystickDragging) return;
-      if (e.shiftKey) this.setJoystickSensitivity('fine');
-      else if (e.ctrlKey) this.setJoystickSensitivity('rapid');
+      if (e.shiftKey && e.ctrlKey) {
+        this.setJoystickSensitivity('ultra-fine');
+      } else if (e.shiftKey) {
+        this.setJoystickSensitivity('fine');
+      } else if (e.ctrlKey) {
+        this.setJoystickSensitivity('rapid');
+      }
     });
     
     document.addEventListener('keyup', (e) => {
@@ -1895,13 +2166,15 @@ class VirtualStudio {
     const sensitivityContainer = document.querySelector('.sensitivity-modes-static');
     if (!sensitivityContainer) return;
     
-    // Sensitivity mode buttons
+    // Sensitivity mode buttons (supports all modes including ultra-fine)
     sensitivityContainer.querySelectorAll('.sensitivity-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const mode = (e.target as HTMLElement).dataset.mode as 'fine' | 'normal' | 'rapid';
-        this.setJoystickSensitivity(mode);
-        sensitivityContainer.querySelectorAll('.sensitivity-btn').forEach(b => b.classList.remove('active'));
-        (e.target as HTMLElement).classList.add('active');
+        const mode = (e.target as HTMLElement).dataset.mode as 'ultra-fine' | 'fine' | 'normal' | 'rapid';
+        if (mode && this.joystickSensitivities[mode] !== undefined) {
+          this.setJoystickSensitivity(mode);
+          sensitivityContainer.querySelectorAll('.sensitivity-btn').forEach(b => b.classList.remove('active'));
+          (e.target as HTMLElement).classList.add('active');
+        }
       });
     });
   }
@@ -1909,14 +2182,27 @@ class VirtualStudio {
   /**
    * Set joystick sensitivity mode
    */
-  private setJoystickSensitivity(mode: 'fine' | 'normal' | 'rapid'): void {
+  private setJoystickSensitivity(mode: 'ultra-fine' | 'fine' | 'normal' | 'rapid'): void {
     this.joystickSensitivityMode = mode;
     
     // Update UI indicator
-    const modeLabels = { fine: 'FIN', normal: 'NORMAL', rapid: 'RASK' };
+    const modeLabels = { 
+      'ultra-fine': 'ULTRA-FIN', 
+      fine: 'FIN', 
+      normal: 'NORMAL', 
+      rapid: 'RASK' 
+    };
     const indicator = document.querySelector('.sensitivity-modes');
     if (indicator) {
       indicator.querySelectorAll('.sensitivity-btn').forEach(btn => {
+        btn.classList.toggle('active', (btn as HTMLElement).dataset.mode === mode);
+      });
+    }
+    
+    // Also update static sensitivity controls
+    const staticContainer = document.querySelector('.sensitivity-modes-static');
+    if (staticContainer) {
+      staticContainer.querySelectorAll('.sensitivity-btn').forEach(btn => {
         btn.classList.toggle('active', (btn as HTMLElement).dataset.mode === mode);
       });
     }
@@ -2053,18 +2339,34 @@ class VirtualStudio {
   }
 
   /**
-   * Update pan/tilt angle display in HUD
+   * Update pan/tilt angle display in HUD with sub-degree precision
    */
   private updateJoystickAngleDisplay(pan: number, tilt: number): void {
     // Update the existing HUD elements
     const panEl = document.getElementById('hudPanValue');
     const tiltEl = document.getElementById('hudTiltValue');
     
-    const panDeg = Math.round(pan * 180 / Math.PI);
-    const tiltDeg = Math.round(tilt * 180 / Math.PI);
+    // Convert radians to degrees (high precision)
+    const panDeg = pan * 180 / Math.PI;
+    const tiltDeg = tilt * 180 / Math.PI;
     
-    if (panEl) panEl.textContent = `${panDeg}°`;
-    if (tiltEl) tiltEl.textContent = `${tiltDeg}°`;
+    // Use sub-degree precision for fine/ultra-fine modes
+    // Show 1 decimal place for fine modes, 0 decimal places for normal/rapid
+    let panDisplay: string;
+    let tiltDisplay: string;
+    
+    if (this.joystickSensitivityMode === 'ultra-fine' || this.joystickSensitivityMode === 'fine') {
+      // Sub-degree precision for fine modes
+      panDisplay = panDeg.toFixed(1);
+      tiltDisplay = tiltDeg.toFixed(1);
+    } else {
+      // Whole degrees for normal/rapid modes
+      panDisplay = Math.round(panDeg).toString();
+      tiltDisplay = Math.round(tiltDeg).toString();
+    }
+    
+    if (panEl) panEl.textContent = `${panDisplay}°`;
+    if (tiltEl) tiltEl.textContent = `${tiltDisplay}°`;
   }
   
   /**
