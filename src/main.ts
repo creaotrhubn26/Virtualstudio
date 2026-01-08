@@ -920,12 +920,13 @@ class VirtualStudio {
     // Depth of Field - enabled by default for wide apertures
     const initialAperture = this.cameraSettings.aperture || 2.8;
     const initialFocalLength = this.cameraSettings.focalLength || 50;
+    const blurStrengthFactor = 5.0; // Amplification for visible blur
     this.renderingPipeline.depthOfFieldEnabled = initialAperture <= 5.6;
     this.renderingPipeline.depthOfFieldBlurLevel = BABYLON.DepthOfFieldEffectBlurLevel.High;
     this.renderingPipeline.depthOfField.focalLength = initialFocalLength;
     this.renderingPipeline.depthOfField.fStop = initialAperture;
     this.renderingPipeline.depthOfField.focusDistance = 3000; // 3 meters in mm
-    this.renderingPipeline.depthOfField.lensSize = initialFocalLength / initialAperture;
+    this.renderingPipeline.depthOfField.lensSize = (initialFocalLength / initialAperture) * blurStrengthFactor;
     
     // Film grain for cinematic look (subtle)
     this.renderingPipeline.grainEnabled = false;
@@ -992,15 +993,17 @@ class VirtualStudio {
       this.renderingPipeline.depthOfField.focusDistance = focusDistMM;
       this.renderingPipeline.depthOfField.focalLength = focalLengthMM;
       
-      // Calculate lens size for proper CoC (Circle of Confusion)
-      // lensSize = focalLength / fStop (aperture diameter in mm)
-      const lensSize = focalLengthMM / fStop;
-      this.renderingPipeline.depthOfField.lensSize = lensSize;
+      // Calculate lens size - multiply by blur strength factor for visible effect
+      // Base: lensSize = focalLength / fStop (aperture diameter in mm)
+      // Amplify for artistic effect (real cameras would be ~17mm at f/2.8 50mm)
+      const baseLensSize = focalLengthMM / fStop;
+      const blurStrength = 5.0; // Amplification factor for visible blur
+      this.renderingPipeline.depthOfField.lensSize = baseLensSize * blurStrength;
       
       // Use higher blur level for more visible effect
       this.renderingPipeline.depthOfFieldBlurLevel = BABYLON.DepthOfFieldEffectBlurLevel.High;
       
-      console.log(`[DOF] fStop=${fStop}, focus=${focusDistance.toFixed(2)}m, focal=${focalLengthMM}mm, lensSize=${lensSize.toFixed(1)}mm`);
+      console.log(`[DOF] fStop=${fStop}, focus=${focusDistance.toFixed(2)}m, focal=${focalLengthMM}mm, lensSize=${(baseLensSize * blurStrength).toFixed(1)}mm (x${blurStrength})`);
     }
   }
 
