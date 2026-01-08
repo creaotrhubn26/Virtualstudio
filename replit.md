@@ -35,6 +35,13 @@ The application uses a hybrid architecture combining Vanilla TypeScript with Bab
   - Adjustable intensity and threshold settings
   - Depth-aware mode: Only highlights edges in the DOF focus range
   - Integrates with aperture settings - wider apertures show narrower focus zones
+- **Physics-Based DOF (PhysicsBasedDOF):** Research-grade depth of field rendering based on optical physics:
+  - Accurate Circle of Confusion (CoC) formula: CoC = |A × f × (S - D) / (D × (S - f))|
+  - Full-frame sensor simulation (36mm width, 0.03mm CoC limit)
+  - Two-pass rendering: CoC calculation pass + gather-based blur with 22-sample Poisson disk
+  - Depth-aware weighting prevents background bleeding into foreground
+  - Responds to camera aperture, focal length, and focus distance
+  - Integrated with AutoFocus system for real-time DOF updates
 - **Properties Panel:** Allows selection-specific adjustments for lights (position, rotation, CCT, modifier settings, IES, Gobo, Focus) and cameras (Aperture, Shutter, ISO, ND), along with a light meter.
 - **Virtual Actor Panel:** Generates and customizes 3D actors with adjustable parameters, presets, and integration with Meta SAM 3D Body for realistic avatar creation from images.
 - **Asset Loading:** Comprehensive system for loading 3D assets (characters, props, modifiers, accessories, HDRI environments) with drag-and-drop.
