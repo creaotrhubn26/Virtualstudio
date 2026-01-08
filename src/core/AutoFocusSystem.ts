@@ -387,14 +387,22 @@ export class AutoFocusSystem {
       store.setFocusLocked(true);
       console.log('[AutoFocusSystem] Focus locked on eye');
     } else {
-      // Fallback: Try to focus on head/face
+      // Fallback 1: Try to focus on head/face by name
       const headTarget = this.detectHeadFallback();
       if (headTarget) {
         this.setFocusTarget(headTarget);
         store.setFocusLocked(true);
-        console.log('[AutoFocusSystem] Focus locked on head (fallback)');
+        console.log('[AutoFocusSystem] Focus locked on head (name fallback)');
       } else {
-        console.log('[AutoFocusSystem] No eyes or head detected - check console for mesh names');
+        // Fallback 2: Find top of character model (smart geometry-based detection)
+        const topTarget = this.detectTopOfModelFallback();
+        if (topTarget) {
+          this.setFocusTarget(topTarget);
+          store.setFocusLocked(true);
+          console.log('[AutoFocusSystem] Focus locked on detected face (geometry fallback)');
+        } else {
+          console.log('[AutoFocusSystem] No focus target found - check console for mesh names');
+        }
       }
     }
   }
@@ -498,6 +506,76 @@ export class AutoFocusSystem {
           return detected;
         }
       }
+    }
+    
+    return null;
+  }
+  
+  // Smart fallback: Find the topmost point of any character mesh (approximates head/face position)
+  public detectTopOfModelFallback(): DetectedEye | null {
+    const cameraPos = this.camera.position;
+    
+    // Find meshes that look like character/avatar meshes
+    const characterMeshes = this.scene.meshes.filter(mesh => {
+      if (!mesh.isEnabled() || !mesh.isVisible) return false;
+      if (mesh.name.startsWith('gizmo') || mesh.name.startsWith('__')) return false;
+      if (mesh.name === 'ground' || mesh.name === 'backWall' || mesh.name === 'grid') return false;
+      if (mesh.name.includes('light') || mesh.name.includes('Light')) return false;
+      
+      // Check if it's a reasonable size for a character (between 0.5m and 3m tall)
+      const boundingInfo = mesh.getBoundingInfo();
+      const height = boundingInfo.boundingBox.maximumWorld.y - boundingInfo.boundingBox.minimumWorld.y;
+      return height > 0.5 && height < 3.0;
+    });
+    
+    if (characterMeshes.length === 0) {
+      console.log('[AutoFocusSystem] No character-sized meshes found');
+      return null;
+    }
+    
+    // Find the topmost point across all character meshes
+    let highestPoint: BABYLON.Vector3 | null = null;
+    let highestMesh: BABYLON.AbstractMesh | null = null;
+    let maxY = -Infinity;
+    
+    for (const mesh of characterMeshes) {
+      const boundingInfo = mesh.getBoundingInfo();
+      const topY = boundingInfo.boundingBox.maximumWorld.y;
+      
+      if (topY > maxY) {
+        maxY = topY;
+        highestMesh = mesh;
+        // Estimate eye level: slightly below the top of the head
+        const centerX = (boundingInfo.boundingBox.maximumWorld.x + boundingInfo.boundingBox.minimumWorld.x) / 2;
+        const centerZ = (boundingInfo.boundingBox.maximumWorld.z + boundingInfo.boundingBox.minimumWorld.z) / 2;
+        // Eyes are typically 5-10cm below the top of the head
+        highestPoint = new BABYLON.Vector3(centerX, topY - 0.08, centerZ);
+      }
+    }
+    
+    if (highestPoint && highestMesh) {
+      const distance = BABYLON.Vector3.Distance(cameraPos, highestPoint);
+      
+      // Extract actor name from mesh hierarchy
+      let actorName = 'Actor';
+      if (highestMesh.parent) {
+        actorName = highestMesh.parent.name || highestMesh.name;
+      } else {
+        actorName = highestMesh.name;
+      }
+      actorName = actorName.replace(/^default_/, '').replace(/_/g, ' ') || 'Actor';
+      
+      const detected: DetectedEye = {
+        id: `${highestMesh.name}_auto_face`,
+        actorName,
+        eyeSide: 'left', // Default
+        worldPosition: { x: highestPoint.x, y: highestPoint.y, z: highestPoint.z },
+        distanceFromCamera: distance,
+        screenPosition: this.getScreenPosition(highestPoint)
+      };
+      
+      console.log(`[AutoFocusSystem] Auto-detected face at top of model: ${highestMesh.name} at ${distance.toFixed(2)}m (Y=${highestPoint.y.toFixed(2)})`);
+      return detected;
     }
     
     return null;
