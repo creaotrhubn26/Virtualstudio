@@ -8208,6 +8208,24 @@ html, body {
   color: #fbbf24;
 }
 
+/* Needs save state - pulsing highlight to draw attention */
+.camera-preset-btn.needs-save {
+  animation: needsSavePulse 1s ease-in-out infinite;
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.6), inset 0 0 15px rgba(245, 158, 11, 0.2) !important;
+}
+
+@keyframes needsSavePulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.6), inset 0 0 15px rgba(245, 158, 11, 0.2);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.8), inset 0 0 20px rgba(245, 158, 11, 0.3);
+  }
+}
+
 .camera-preset-btn.active-camera .camera-preset-name {
   color: #fcd34d;
 }

@@ -17708,7 +17708,36 @@ class VirtualStudio {
       detail: { panel: 'camera-light', tab: 'monitors', targetCamera: cameraId }
     }));
     
-    this.showNotification(`Åpnet Kamera & Lys-panelet - lagre vinkel som ${cameraId.replace('cam', 'Cam ')}`, 'info');
+    // After panel opens, scroll to and highlight the camera preset button
+    setTimeout(() => {
+      this.scrollToAndHighlightCameraPreset(cameraId);
+    }, 300);
+    
+    this.showNotification(`Lagre nåværende vinkel som ${cameraId.replace('cam', 'Cam ')}`, 'info');
+  }
+  
+  private scrollToAndHighlightCameraPreset(cameraId: string): void {
+    // Find the camera preset button
+    const presetBtn = document.querySelector(`.camera-preset-btn[data-preset="${cameraId}"]`) as HTMLElement;
+    
+    if (presetBtn) {
+      // Scroll the button into view
+      presetBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Add highlight effect
+      presetBtn.classList.add('needs-save');
+      
+      // Remove highlight after 5 seconds or when preset is saved
+      setTimeout(() => {
+        presetBtn.classList.remove('needs-save');
+      }, 5000);
+    }
+    
+    // Also try to find and scroll to the presets section container
+    const presetsSection = document.querySelector('.camera-presets-section, .preset-buttons-container, #cameraPresetsContainer') as HTMLElement;
+    if (presetsSection && !presetBtn) {
+      presetsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
   
   private arcTimerInterval: number | null = null;
