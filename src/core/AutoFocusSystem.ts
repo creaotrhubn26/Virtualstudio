@@ -103,15 +103,58 @@ export class AutoFocusSystem {
     const detectedEyes: DetectedEye[] = [];
     const cameraPos = this.camera.position;
     
+    // Common eye mesh naming patterns across different 3D model formats
+    const leftEyePatterns = [
+      '_leftEye', 'leftEye', 'left_eye', 'LeftEye', 'Left_Eye',
+      'eye_l', 'eye.l', 'Eye_L', 'Eye.L', 'eyeL', 'EyeL',
+      'l_eye', 'L_eye', 'L_Eye', 'LEye',
+      'eyeball_l', 'Eyeball_L', 'eyeball.l',
+      'lefteye', 'LEFTEYE', 'LEFT_EYE'
+    ];
+    
+    const rightEyePatterns = [
+      '_rightEye', 'rightEye', 'right_eye', 'RightEye', 'Right_Eye',
+      'eye_r', 'eye.r', 'Eye_R', 'Eye.R', 'eyeR', 'EyeR',
+      'r_eye', 'R_eye', 'R_Eye', 'REye',
+      'eyeball_r', 'Eyeball_R', 'eyeball.r',
+      'righteye', 'RIGHTEYE', 'RIGHT_EYE'
+    ];
+    
     this.scene.meshes.forEach(mesh => {
-      if (mesh.name.includes('_leftEye') || mesh.name.includes('_rightEye')) {
-        if (!mesh.isEnabled() || !mesh.isVisible) return;
-        
+      if (!mesh.isEnabled() || !mesh.isVisible) return;
+      
+      const meshNameLower = mesh.name.toLowerCase();
+      let eyeSide: 'left' | 'right' | null = null;
+      
+      // Check for left eye patterns
+      for (const pattern of leftEyePatterns) {
+        if (mesh.name.includes(pattern) || meshNameLower.includes(pattern.toLowerCase())) {
+          eyeSide = 'left';
+          break;
+        }
+      }
+      
+      // Check for right eye patterns
+      if (!eyeSide) {
+        for (const pattern of rightEyePatterns) {
+          if (mesh.name.includes(pattern) || meshNameLower.includes(pattern.toLowerCase())) {
+            eyeSide = 'right';
+            break;
+          }
+        }
+      }
+      
+      if (eyeSide) {
         const worldPos = mesh.getAbsolutePosition();
         const distance = BABYLON.Vector3.Distance(cameraPos, worldPos);
         
-        const actorName = mesh.name.replace('_leftEye', '').replace('_rightEye', '');
-        const eyeSide = mesh.name.includes('_leftEye') ? 'left' : 'right';
+        // Extract actor name by removing eye-related parts
+        let actorName = mesh.name;
+        const allPatterns = [...leftEyePatterns, ...rightEyePatterns];
+        for (const pattern of allPatterns) {
+          actorName = actorName.replace(pattern, '');
+        }
+        actorName = actorName.replace(/^[_.-]+|[_.-]+$/g, '').trim() || 'Actor';
         
         const screenPos = this.getScreenPosition(worldPos);
         
@@ -123,6 +166,8 @@ export class AutoFocusSystem {
           distanceFromCamera: distance,
           screenPosition: screenPos
         });
+        
+        console.log(`[AutoFocusSystem] Detected ${eyeSide} eye: ${mesh.name} at ${distance.toFixed(2)}m`);
       }
     });
     
@@ -331,15 +376,26 @@ export class AutoFocusSystem {
       return;
     }
     
+    // Debug: List all meshes to help find eye naming patterns
+    this.debugListMeshes();
+    
     this.detectEyes();
     const nearestEye = store.getNearestEye();
     
     if (nearestEye) {
       this.setFocusTarget(nearestEye);
       store.setFocusLocked(true);
-      console.log('[AutoFocusSystem] Focus locked');
+      console.log('[AutoFocusSystem] Focus locked on eye');
     } else {
-      console.log('[AutoFocusSystem] No eyes detected');
+      // Fallback: Try to focus on head/face
+      const headTarget = this.detectHeadFallback();
+      if (headTarget) {
+        this.setFocusTarget(headTarget);
+        store.setFocusLocked(true);
+        console.log('[AutoFocusSystem] Focus locked on head (fallback)');
+      } else {
+        console.log('[AutoFocusSystem] No eyes or head detected - check console for mesh names');
+      }
     }
   }
   
@@ -380,5 +436,70 @@ export class AutoFocusSystem {
     this.stopTracking();
     this.clearEyeIndicators();
     console.log('[AutoFocusSystem] Disposed');
+  }
+  
+  // Debug method to list all mesh names in the scene
+  public debugListMeshes(): void {
+    console.log('[AutoFocusSystem] === Scene Mesh Names ===');
+    const meshNames: string[] = [];
+    this.scene.meshes.forEach(mesh => {
+      if (mesh.isEnabled() && mesh.isVisible) {
+        meshNames.push(mesh.name);
+      }
+    });
+    meshNames.sort();
+    meshNames.forEach(name => console.log(`  - ${name}`));
+    console.log(`[AutoFocusSystem] Total visible meshes: ${meshNames.length}`);
+    
+    // Look for potential focus targets
+    const potentialTargets = meshNames.filter(name => {
+      const lower = name.toLowerCase();
+      return lower.includes('eye') || lower.includes('head') || lower.includes('face') || 
+             lower.includes('skull') || lower.includes('hode') || lower.includes('ansikt');
+    });
+    if (potentialTargets.length > 0) {
+      console.log('[AutoFocusSystem] Potential focus targets:');
+      potentialTargets.forEach(name => console.log(`  * ${name}`));
+    } else {
+      console.log('[AutoFocusSystem] No obvious eye/head/face meshes found');
+    }
+  }
+  
+  // Fallback: Focus on head/face if no eyes detected
+  public detectHeadFallback(): DetectedEye | null {
+    const cameraPos = this.camera.position;
+    
+    const headPatterns = [
+      'head', 'Head', 'HEAD', 'hode', 'Hode',
+      'face', 'Face', 'FACE', 'ansikt', 'Ansikt',
+      'skull', 'Skull', 'cranium', 'Cranium'
+    ];
+    
+    for (const mesh of this.scene.meshes) {
+      if (!mesh.isEnabled() || !mesh.isVisible) continue;
+      
+      const meshNameLower = mesh.name.toLowerCase();
+      for (const pattern of headPatterns) {
+        if (mesh.name.includes(pattern) || meshNameLower.includes(pattern.toLowerCase())) {
+          const worldPos = mesh.getAbsolutePosition();
+          const distance = BABYLON.Vector3.Distance(cameraPos, worldPos);
+          
+          // Create a synthetic "eye" target for the head
+          const detected: DetectedEye = {
+            id: mesh.name,
+            actorName: mesh.name.replace(new RegExp(pattern, 'gi'), '').replace(/^[_.-]+|[_.-]+$/g, '').trim() || 'Actor',
+            eyeSide: 'left', // Default
+            worldPosition: { x: worldPos.x, y: worldPos.y, z: worldPos.z },
+            distanceFromCamera: distance,
+            screenPosition: this.getScreenPosition(worldPos)
+          };
+          
+          console.log(`[AutoFocusSystem] Head fallback detected: ${mesh.name} at ${distance.toFixed(2)}m`);
+          return detected;
+        }
+      }
+    }
+    
+    return null;
   }
 }
