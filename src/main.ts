@@ -917,12 +917,15 @@ class VirtualStudio {
     this.renderingPipeline.bloomKernel = 64;
     this.renderingPipeline.bloomScale = 0.6;
     
-    // Depth of Field (disabled by default, enabled via camera settings)
-    this.renderingPipeline.depthOfFieldEnabled = false;
-    this.renderingPipeline.depthOfFieldBlurLevel = BABYLON.DepthOfFieldEffectBlurLevel.Medium;
-    this.renderingPipeline.depthOfField.focalLength = 50;
-    this.renderingPipeline.depthOfField.fStop = 2.8;
-    this.renderingPipeline.depthOfField.focusDistance = 5000; // In mm
+    // Depth of Field - enabled by default for wide apertures
+    const initialAperture = this.cameraSettings.aperture || 2.8;
+    const initialFocalLength = this.cameraSettings.focalLength || 50;
+    this.renderingPipeline.depthOfFieldEnabled = initialAperture <= 5.6;
+    this.renderingPipeline.depthOfFieldBlurLevel = BABYLON.DepthOfFieldEffectBlurLevel.High;
+    this.renderingPipeline.depthOfField.focalLength = initialFocalLength;
+    this.renderingPipeline.depthOfField.fStop = initialAperture;
+    this.renderingPipeline.depthOfField.focusDistance = 3000; // 3 meters in mm
+    this.renderingPipeline.depthOfField.lensSize = initialFocalLength / initialAperture;
     
     // Film grain for cinematic look (subtle)
     this.renderingPipeline.grainEnabled = false;
@@ -4043,10 +4046,11 @@ class VirtualStudio {
       if (apertureDisplay) apertureDisplay.textContent = `f/${aperture}`;
       this.updateExposureDisplay();
       
-      // Update DOF based on aperture (lower f-stop = shallower DOF)
-      // Enable DOF for wide apertures (f/4 or lower)
-      const enableDOF = aperture <= 4.0;
-      const focusDistance = this.camera.radius; // Use camera distance as focus distance
+      // Update DOF based on aperture - use focus distance from store if available
+      // Enable DOF for wide apertures (f/5.6 or lower) for visible effect
+      const enableDOF = aperture <= 5.6;
+      const storedFocusDistance = useFocusStore.getState().focusDistance;
+      const focusDistance = storedFocusDistance > 0.1 ? storedFocusDistance : this.camera.radius;
       this.updateDOFSettings(aperture, focusDistance, enableDOF);
     });
 
