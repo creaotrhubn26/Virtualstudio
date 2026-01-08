@@ -7,6 +7,7 @@ import PanelCreator from './components/PanelCreator';
 import { useAppStore, useFocusStore, useAutoFocusStore, useFocusPeakingStore, SceneNode } from './state/store';
 import { AutoFocusSystem } from './core/AutoFocusSystem';
 import { FocusPeakingEffect } from './core/FocusPeakingEffect';
+import { PhysicsBasedDOF } from './core/PhysicsBasedDOF';
 import { useLoadingStore } from './state/loadingStore';
 import { LoadingOverlay } from './components/LoadingOverlay';
 import { focusController } from './core/FocusController';
@@ -287,6 +288,7 @@ class VirtualStudio {
   // Autofocus system with eye detection
   private autoFocusSystem: AutoFocusSystem | null = null;
   private focusPeakingEffect: FocusPeakingEffect | null = null;
+  private physicsBasedDOF: PhysicsBasedDOF | null = null;
   
   public cameraSettings: CameraSettings & { whiteBalance?: number } = {
     aperture: 2.8,
@@ -507,6 +509,7 @@ class VirtualStudio {
     // Initialize autofocus system with eye detection
     this.autoFocusSystem = new AutoFocusSystem(this.scene, this.camera);
     this.focusPeakingEffect = new FocusPeakingEffect(this.scene, this.camera);
+    this.physicsBasedDOF = new PhysicsBasedDOF(this.scene, this.camera);
     this.setupAutoFocusUI();
     this.setupFocusPeakingUI();
     
@@ -917,16 +920,9 @@ class VirtualStudio {
     this.renderingPipeline.bloomKernel = 64;
     this.renderingPipeline.bloomScale = 0.6;
     
-    // Depth of Field - enabled by default for wide apertures
-    const initialAperture = this.cameraSettings.aperture || 2.8;
-    const initialFocalLength = this.cameraSettings.focalLength || 50;
-    const blurStrengthFactor = 5.0; // Amplification for visible blur
-    this.renderingPipeline.depthOfFieldEnabled = initialAperture <= 5.6;
-    this.renderingPipeline.depthOfFieldBlurLevel = BABYLON.DepthOfFieldEffectBlurLevel.High;
-    this.renderingPipeline.depthOfField.focalLength = initialFocalLength;
-    this.renderingPipeline.depthOfField.fStop = initialAperture;
-    this.renderingPipeline.depthOfField.focusDistance = 3000; // 3 meters in mm
-    this.renderingPipeline.depthOfField.lensSize = (initialFocalLength / initialAperture) * blurStrengthFactor;
+    // Depth of Field - DISABLED: Using custom PhysicsBasedDOF instead
+    // Our custom DOF uses accurate CoC calculations from optical physics research
+    this.renderingPipeline.depthOfFieldEnabled = false;
     
     // Film grain for cinematic look (subtle)
     this.renderingPipeline.grainEnabled = false;
@@ -982,28 +978,15 @@ class VirtualStudio {
    * Uses physically-based DOF calculation for realistic blur
    */
   public updateDOFSettings(fStop: number, focusDistance: number, enabled: boolean): void {
-    if (!this.renderingPipeline) return;
-    
-    this.renderingPipeline.depthOfFieldEnabled = enabled;
-    if (enabled) {
-      const focalLengthMM = this.cameraSettings.focalLength || 50;
-      const focusDistMM = focusDistance * 1000; // meters to mm
-      
-      this.renderingPipeline.depthOfField.fStop = fStop;
-      this.renderingPipeline.depthOfField.focusDistance = focusDistMM;
-      this.renderingPipeline.depthOfField.focalLength = focalLengthMM;
-      
-      // Calculate lens size - multiply by blur strength factor for visible effect
-      // Base: lensSize = focalLength / fStop (aperture diameter in mm)
-      // Amplify for artistic effect (real cameras would be ~17mm at f/2.8 50mm)
-      const baseLensSize = focalLengthMM / fStop;
-      const blurStrength = 5.0; // Amplification factor for visible blur
-      this.renderingPipeline.depthOfField.lensSize = baseLensSize * blurStrength;
-      
-      // Use higher blur level for more visible effect
-      this.renderingPipeline.depthOfFieldBlurLevel = BABYLON.DepthOfFieldEffectBlurLevel.High;
-      
-      console.log(`[DOF] fStop=${fStop}, focus=${focusDistance.toFixed(2)}m, focal=${focalLengthMM}mm, lensSize=${(baseLensSize * blurStrength).toFixed(1)}mm (x${blurStrength})`);
+    // PhysicsBasedDOF handles all DOF rendering - it reads settings from stores automatically
+    // This method is kept for API compatibility but the custom DOF reads from camera settings
+    if (this.physicsBasedDOF) {
+      this.physicsBasedDOF.setEnabled(enabled);
+      this.physicsBasedDOF.updateSettings({
+        fStop,
+        focalLength: this.cameraSettings.focalLength || 50
+      });
+      console.log(`[PhysicsDOF] fStop=${fStop}, focus=${focusDistance.toFixed(2)}m, enabled=${enabled}`);
     }
   }
 
