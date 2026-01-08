@@ -12217,6 +12217,15 @@ class VirtualStudio {
       console.log(`[Monitor] Created camera for ${presetId} during reassign`);
     }
     
+    // CRITICAL: Always update camera parameters to match preset
+    // This ensures the camera uses the preset's perspective, not the main camera's view
+    monitorCamera.alpha = preset.alpha;
+    monitorCamera.beta = preset.beta;
+    monitorCamera.radius = preset.radius;
+    monitorCamera.setTarget(preset.target.clone());
+    monitorCamera.position = preset.position.clone();
+    monitorCamera.fov = preset.fov;
+    
     if (!renderTarget) {
       // Create RTT for this preset
       renderTarget = new BABYLON.RenderTargetTexture(
