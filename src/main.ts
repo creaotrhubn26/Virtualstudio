@@ -8177,6 +8177,9 @@ class VirtualStudio {
         // Scale if needed (avatars are usually in correct scale)
         rootMesh.scaling = new BABYLON.Vector3(1, 1, 1);
         
+        // Apply PBR shading so lights affect the model properly
+        this.applyPBRShadingToMeshes(result.meshes);
+        
         // Add to casting candidates
         this.castingCandidates.set(avatarId, { 
           mesh: rootMesh, 
@@ -8184,7 +8187,7 @@ class VirtualStudio {
           avatarUrl 
         });
         
-        console.log('Default avatar loaded:', avatarUrl);
+        console.log('Default avatar loaded with PBR shading:', avatarUrl);
         
         // Force bounding box recalculation after rotation
         rootMesh.computeWorldMatrix(true);
