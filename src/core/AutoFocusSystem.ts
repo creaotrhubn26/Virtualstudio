@@ -96,6 +96,11 @@ export class AutoFocusSystem {
   
   // Detect eyes with fallback to head/geometry detection
   private detectAndFocusWithFallback(): void {
+    // Skip if tracking is paused (e.g., after manual click-to-focus)
+    if (this.isPaused) {
+      return;
+    }
+    
     this.detectEyes();
     const store = useAutoFocusStore.getState();
     const nearestEye = store.getNearestEye();
@@ -135,6 +140,26 @@ export class AutoFocusSystem {
     
     this.clearEyeIndicators();
     console.log('[AutoFocusSystem] Tracking stopped');
+  }
+  
+  // Temporarily pause tracking (for manual focus override)
+  private pauseTimeout: ReturnType<typeof setTimeout> | null = null;
+  private isPaused: boolean = false;
+  
+  public pauseTracking(durationMs: number = 2000): void {
+    console.log(`[AutoFocusSystem] Pausing tracking for ${durationMs}ms`);
+    this.isPaused = true;
+    
+    // Clear any existing pause timeout
+    if (this.pauseTimeout) {
+      clearTimeout(this.pauseTimeout);
+    }
+    
+    // Resume after the specified duration
+    this.pauseTimeout = setTimeout(() => {
+      this.isPaused = false;
+      console.log('[AutoFocusSystem] Resuming tracking');
+    }, durationMs);
   }
   
   public detectEyes(): DetectedEye[] {

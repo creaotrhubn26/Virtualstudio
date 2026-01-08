@@ -3607,6 +3607,9 @@ class VirtualStudio {
             };
             
             this.autoFocusSystem.setFocusTarget(syntheticTarget);
+            
+            // Temporarily pause AF-C tracking to prevent immediate override
+            this.autoFocusSystem.pauseTracking(2000); // Pause for 2 seconds
           }
         }
       }
