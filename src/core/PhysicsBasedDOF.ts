@@ -83,7 +83,10 @@ export class PhysicsBasedDOF {
       uniform vec2 screenSize;
       
       float linearizeDepth(float depth) {
-        return nearPlane * farPlane / (farPlane - depth * (farPlane - nearPlane));
+        // Babylon.js depth renderer stores linear depth normalized to [0,1] range
+        // where 0 = near plane and 1 = far plane
+        // So we just need to convert back to world units
+        return nearPlane + depth * (farPlane - nearPlane);
       }
       
       float calculateCoC(float objectDistance, float focusDist, float f, float N) {
