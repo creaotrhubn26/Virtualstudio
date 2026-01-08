@@ -17527,17 +17527,48 @@ class VirtualStudio {
   
   private updateRecordingArcCameras(arc: HTMLElement): void {
     const cameraBtns = arc.querySelectorAll('.arc-camera-btn[data-camera^="cam"]');
+    const allBtn = arc.querySelector('.arc-camera-btn[data-camera="all"]') as HTMLElement;
+    
+    let hasSavedCameras = false;
     
     cameraBtns.forEach(btn => {
       const cameraId = btn.getAttribute('data-camera');
+      const htmlBtn = btn as HTMLButtonElement;
+      
       if (cameraId && this.cameraPresets.has(cameraId)) {
-        (btn as HTMLButtonElement).disabled = false;
+        // Camera is saved - show and enable
+        htmlBtn.disabled = false;
+        htmlBtn.style.display = 'flex';
         btn.classList.add('available');
+        hasSavedCameras = true;
       } else {
-        (btn as HTMLButtonElement).disabled = true;
+        // Camera not saved - hide completely
+        htmlBtn.disabled = true;
+        htmlBtn.style.display = 'none';
         btn.classList.remove('available');
       }
     });
+    
+    // Only show "all cameras" button if there are saved cameras
+    if (allBtn) {
+      allBtn.style.display = hasSavedCameras ? 'flex' : 'none';
+    }
+    
+    // Show hint if no cameras are saved
+    let hint = arc.querySelector('.arc-no-cameras-hint') as HTMLElement;
+    if (!hasSavedCameras) {
+      if (!hint) {
+        hint = document.createElement('span');
+        hint.className = 'arc-no-cameras-hint';
+        hint.textContent = 'Lagre vinkler i Kamera-panelet';
+        hint.style.cssText = 'font-size: 11px; color: rgba(255,255,255,0.5); margin-left: 8px;';
+        const camerasDiv = arc.querySelector('.recording-arc-cameras');
+        camerasDiv?.appendChild(hint);
+      }
+      hint.style.display = 'inline';
+    } else if (hint) {
+      hint.style.display = 'none';
+    }
   }
   
   private arcTimerInterval: number | null = null;
