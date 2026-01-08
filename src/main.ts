@@ -17347,8 +17347,28 @@ class VirtualStudio {
         if (this.selectedRecordingCamera !== 'main' && this.selectedRecordingCamera !== 'all') {
           this.loadCameraPreset(this.selectedRecordingCamera);
         }
+        
+        // Dispatch event for panel synchronization
+        window.dispatchEvent(new CustomEvent('ch-recording-camera-changed', {
+          detail: { 
+            cameraId: this.selectedRecordingCamera,
+            isAll: this.selectedRecordingCamera === 'all'
+          }
+        }));
       });
     });
+    
+    // Listen for external camera selection changes (from panels)
+    window.addEventListener('ch-panel-camera-selected', ((e: CustomEvent) => {
+      const { cameraId } = e.detail;
+      if (cameraId) {
+        cameraBtns.forEach(b => {
+          const btnCamId = b.getAttribute('data-camera');
+          b.classList.toggle('active', btnCamId === cameraId);
+        });
+        this.selectedRecordingCamera = cameraId;
+      }
+    }) as EventListener);
     
     // Record button - toggle recording
     recordBtn?.addEventListener('click', () => {

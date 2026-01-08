@@ -202,6 +202,9 @@ export const MonitorFeedPanel: React.FC = () => {
   // Available monitor presets
   const MONITOR_PRESETS = ['camA', 'camB', 'camC', 'camD', 'camE'];
   
+  // State for sync with recording arc
+  const [selectedRecordingCamera, setSelectedRecordingCamera] = useState<string>('main');
+  
   // Listen for camera preset changes from main.ts
   useEffect(() => {
     const handlePresetChange = (event: Event) => {
@@ -255,8 +258,17 @@ export const MonitorFeedPanel: React.FC = () => {
       });
     };
     
+    // Listen for recording camera changes from the arc
+    const handleRecordingCameraChange = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { cameraId, isAll } = customEvent.detail;
+      setSelectedRecordingCamera(cameraId);
+      log.info('Recording camera changed from arc:', cameraId, isAll ? '(all cameras)' : '');
+    };
+    
     window.addEventListener('camera-preset-changed', handlePresetChange);
     window.addEventListener('camera-settings-changed', handleCameraSettingsChange);
+    window.addEventListener('ch-recording-camera-changed', handleRecordingCameraChange);
     
     // Check for existing presets on mount
     MONITOR_PRESETS.forEach(presetId => {
@@ -273,6 +285,7 @@ export const MonitorFeedPanel: React.FC = () => {
     return () => {
       window.removeEventListener('camera-preset-changed', handlePresetChange);
       window.removeEventListener('camera-settings-changed', handleCameraSettingsChange);
+      window.removeEventListener('ch-recording-camera-changed', handleRecordingCameraChange);
     };
   }, []);
   
@@ -366,11 +379,21 @@ export const MonitorFeedPanel: React.FC = () => {
       renderer.setActiveCamera(cameraId);
       setActiveCameraId(cameraId);
     }
+    
+    // Sync with recording arc
+    window.dispatchEvent(new CustomEvent('ch-panel-camera-selected', {
+      detail: { cameraId }
+    }));
   };
   
   const handleTogglePresetRecording = async (presetId: string) => {
     await multiCameraRecordingService.toggleRecording(presetId);
     log.info('Toggled recording for preset:', presetId);
+    
+    // Sync with recording arc
+    window.dispatchEvent(new CustomEvent('ch-panel-camera-selected', {
+      detail: { cameraId: presetId }
+    }));
   };
   
   const handleStartAllRecording = async () => {
