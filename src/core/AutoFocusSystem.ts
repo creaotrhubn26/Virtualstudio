@@ -37,6 +37,16 @@ export class AutoFocusSystem {
     
     this.isInitialized = true;
     console.log('[AutoFocusSystem] Initialized');
+    
+    // Auto-start tracking if default mode is AF-C
+    const initialMode = useAutoFocusStore.getState().mode;
+    if (initialMode === 'AF-C') {
+      // Delay slightly to ensure scene is fully loaded
+      setTimeout(() => {
+        this.startContinuousTracking();
+        console.log('[AutoFocusSystem] Auto-started AF-C tracking on init');
+      }, 500);
+    }
   }
   
   private handleModeChange(mode: string): void {

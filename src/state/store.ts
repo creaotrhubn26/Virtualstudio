@@ -174,10 +174,10 @@ interface AutoFocusState {
 }
 
 export const useAutoFocusStore = create<AutoFocusState>((set, get) => ({
-  mode: 'MF',
+  mode: 'AF-C',
   eyePriority: 'nearest',
-  isActive: false,
-  isTracking: false,
+  isActive: true,
+  isTracking: true,
   detectedEyes: [],
   currentTarget: null,
   focusLocked: false,
