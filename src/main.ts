@@ -12209,22 +12209,26 @@ class VirtualStudio {
         preset.target.clone(),
         this.scene
       );
-      monitorCamera.position = preset.position.clone();
       monitorCamera.fov = preset.fov;
       monitorCamera.minZ = 0.1;
       monitorCamera.maxZ = 1000;
+      // CRITICAL: Detach control so user input doesn't affect monitor camera
+      monitorCamera.detachControl();
       this.monitorCameras.set(presetId, monitorCamera);
       console.log(`[Monitor] Created camera for ${presetId} during reassign`);
     }
     
     // CRITICAL: Always update camera parameters to match preset
     // This ensures the camera uses the preset's perspective, not the main camera's view
+    // NOTE: For ArcRotateCamera, use ONLY spherical coords (alpha/beta/radius/target)
+    // Setting position directly conflicts with spherical positioning
     monitorCamera.alpha = preset.alpha;
     monitorCamera.beta = preset.beta;
     monitorCamera.radius = preset.radius;
     monitorCamera.setTarget(preset.target.clone());
-    monitorCamera.position = preset.position.clone();
     monitorCamera.fov = preset.fov;
+    // Don't set position directly - let ArcRotateCamera compute it from alpha/beta/radius/target
+    console.log(`[Monitor] ${presetId}: Camera updated - alpha=${preset.alpha.toFixed(2)}, beta=${preset.beta.toFixed(2)}, radius=${preset.radius.toFixed(2)}`);
     
     if (!renderTarget) {
       // Create RTT for this preset
@@ -12339,10 +12343,10 @@ class VirtualStudio {
             preset.target.clone(),
             this.scene
           );
-          monitorCamera.position = preset.position.clone();
           monitorCamera.fov = preset.fov;
           monitorCamera.minZ = 0.1;
           monitorCamera.maxZ = 1000;
+          monitorCamera.detachControl();
           this.monitorCameras.set(presetId, monitorCamera);
         }
         
@@ -12502,12 +12506,11 @@ class VirtualStudio {
       // The camera object reference must remain stable for activeCamera to work
       const monitorCamera = this.monitorCameras.get(presetId);
       if (monitorCamera) {
-        // Update camera parameters to match preset
+        // Update camera parameters to match preset using spherical coords only
         monitorCamera.alpha = preset.alpha;
         monitorCamera.beta = preset.beta;
         monitorCamera.radius = preset.radius;
-        monitorCamera.setTarget(preset.target);
-        monitorCamera.position = preset.position.clone();
+        monitorCamera.setTarget(preset.target.clone());
         monitorCamera.fov = preset.fov;
         
         // CRITICAL: Ensure activeCamera still points to the same camera object
