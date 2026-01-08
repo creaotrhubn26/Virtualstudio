@@ -17539,6 +17539,9 @@ class VirtualStudio {
   }
   
   private updateRecordingArcCameras(arc: HTMLElement): void {
+    console.log('[RecordingArc] updateRecordingArcCameras called');
+    console.log('[RecordingArc] cameraPresets:', Array.from(this.cameraPresets.keys()));
+    
     const cameraBtns = arc.querySelectorAll('.arc-camera-btn[data-camera^="cam"]');
     const allBtn = arc.querySelector('.arc-camera-btn[data-camera="all"]') as HTMLElement;
     
@@ -17548,14 +17551,17 @@ class VirtualStudio {
       const cameraId = btn.getAttribute('data-camera');
       const htmlBtn = btn as HTMLButtonElement;
       
-      if (cameraId && this.cameraPresets.has(cameraId)) {
+      const isSaved = cameraId && this.cameraPresets.has(cameraId);
+      console.log(`[RecordingArc] Button ${cameraId}: saved=${isSaved}`);
+      
+      if (isSaved) {
         // Camera is saved - enable and style as available
         htmlBtn.disabled = false;
         htmlBtn.style.display = 'flex';
         htmlBtn.style.opacity = '1';
         btn.classList.add('available');
         btn.classList.remove('inactive');
-        htmlBtn.title = `Kamera ${cameraId.replace('cam', '')}`;
+        htmlBtn.title = `Kamera ${cameraId!.replace('cam', '')}`;
         hasSavedCameras = true;
       } else {
         // Camera not saved - show grayed out with click handler
@@ -17565,6 +17571,7 @@ class VirtualStudio {
         btn.classList.remove('available');
         btn.classList.add('inactive');
         htmlBtn.title = 'Aktiver kamera i Kamera & Lys-panelet';
+        console.log(`[RecordingArc] Set ${cameraId} to inactive, opacity 0.4`);
       }
     });
     
