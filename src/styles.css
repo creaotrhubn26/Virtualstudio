@@ -13998,7 +13998,7 @@ html, body {
 
 .recording-arc {
   position: fixed;
-  top: 80px;
+  top: 120px;
   left: 50%;
   transform: translateX(-50%) translateY(-100%);
   z-index: 9998;
