@@ -12215,11 +12215,15 @@ class VirtualStudio {
       monitorCamera.fov = preset.fov;
       monitorCamera.minZ = 0.1;
       monitorCamera.maxZ = 1000;
+      
+      // CRITICAL: Force camera to recalculate its position from the spherical coordinates
+      monitorCamera.rebuildAnglesAndRadius();
+      
       // CRITICAL: Detach control so user input doesn't affect monitor camera
       monitorCamera.detachControl();
       this.monitorCameras.set(presetId, monitorCamera);
       cameraJustCreated = true;
-      console.log(`[Monitor] Created camera for ${presetId} with saved perspective - alpha=${preset.alpha.toFixed(2)}, beta=${preset.beta.toFixed(2)}, radius=${preset.radius.toFixed(2)}`);
+      console.log(`[Monitor] Created camera for ${presetId} with saved perspective - alpha=${preset.alpha.toFixed(2)}, beta=${preset.beta.toFixed(2)}, radius=${preset.radius.toFixed(2)}, pos=${monitorCamera.position.toString()}`);
     }
     
     // NOTE: Camera parameters are ONLY set when the camera is created.
@@ -12355,14 +12359,25 @@ class VirtualStudio {
           monitorCamera.fov = preset.fov;
           monitorCamera.minZ = 0.1;
           monitorCamera.maxZ = 1000;
+          
+          // CRITICAL: Force camera to recalculate its position from the spherical coordinates
+          monitorCamera.rebuildAnglesAndRadius();
+          
           monitorCamera.detachControl();
           this.monitorCameras.set(presetId, monitorCamera);
+          console.log(`[Monitor] Created camera ${presetId} in updateMonitorCanvases - pos=${monitorCamera.position.toString()}`);
         }
         
         // CRITICAL: HARD LOCK activeCamera, renderList, and refreshRate at creation
         // These settings MUST remain correct for RTT to render continuously
         renderTarget.activeCamera = monitorCamera;
         renderTarget.renderList = visibleMeshes;
+        
+        // DEBUG: Add onBeforeRender to verify correct camera is being used
+        renderTarget.onBeforeRenderObservable.addOnce(() => {
+          const activeCam = renderTarget.activeCamera;
+          console.log(`[Monitor] ${presetId}: RTT onBeforeRender - activeCamera=${activeCam?.name}, pos=${activeCam?.position?.toString()}`);
+        });
         // HARD LOCK: Force refreshRate to render every frame - DO NOT ALLOW THIS TO CHANGE
         renderTarget.refreshRate = BABYLON.RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME;
         
@@ -16009,6 +16024,10 @@ class VirtualStudio {
     monitorCamera.beta = preset.beta;
     monitorCamera.radius = preset.radius;
     monitorCamera.fov = preset.fov;
+    
+    // CRITICAL: Force camera to recalculate its position from the new spherical coordinates
+    // Without this, the camera's view matrix might not update correctly
+    monitorCamera.rebuildAnglesAndRadius();
     
     console.log(`[Monitor] ${presetId}: Camera UPDATED to saved perspective - alpha=${preset.alpha.toFixed(2)}, beta=${preset.beta.toFixed(2)}, radius=${preset.radius.toFixed(2)}`);
   }
