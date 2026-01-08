@@ -17358,17 +17358,25 @@ class VirtualStudio {
       });
     });
     
-    // Listen for external camera selection changes (from panels)
-    window.addEventListener('ch-panel-camera-selected', ((e: CustomEvent) => {
-      const { cameraId } = e.detail;
-      if (cameraId) {
-        cameraBtns.forEach(b => {
-          const btnCamId = b.getAttribute('data-camera');
-          b.classList.toggle('active', btnCamId === cameraId);
-        });
-        this.selectedRecordingCamera = cameraId;
-      }
-    }) as EventListener);
+    // Listen for external camera selection changes (from panels) - use fresh query
+    if (!(window as any).__chPanelCameraListenerAttached) {
+      (window as any).__chPanelCameraListenerAttached = true;
+      window.addEventListener('ch-panel-camera-selected', ((e: CustomEvent) => {
+        const { cameraId } = e.detail;
+        if (cameraId) {
+          const arcEl = document.getElementById('recordingArc');
+          if (arcEl) {
+            const btns = arcEl.querySelectorAll('.arc-camera-btn');
+            btns.forEach(b => {
+              const btnCamId = b.getAttribute('data-camera');
+              b.classList.toggle('active', btnCamId === cameraId);
+            });
+          }
+          this.selectedRecordingCamera = cameraId;
+          console.log('[Recording Arc] Camera synced from panel:', cameraId);
+        }
+      }) as EventListener);
+    }
     
     // Record button - toggle recording
     recordBtn?.addEventListener('click', () => {
