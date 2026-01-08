@@ -14188,6 +14188,88 @@ html, body {
   transition: all 0.2s ease;
 }
 
+.arc-camera-btn.inactive {
+  opacity: 0.4;
+  cursor: pointer;
+}
+
+.arc-camera-btn.inactive:hover {
+  opacity: 0.6;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Camera Activation Prompt */
+.camera-activation-prompt {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease;
+}
+
+.camera-activation-prompt .prompt-content {
+  background: #2a2a2a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 24px 32px;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.camera-activation-prompt .prompt-content p {
+  margin: 0 0 12px;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.camera-activation-prompt .prompt-content p:first-child {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.camera-activation-prompt .prompt-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.camera-activation-prompt .prompt-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.camera-activation-prompt .prompt-btn.cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.camera-activation-prompt .prompt-btn.cancel:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.camera-activation-prompt .prompt-btn.confirm {
+  background: #4a9eff;
+  color: #fff;
+}
+
+.camera-activation-prompt .prompt-btn.confirm:hover {
+  background: #5aafff;
+}
+
 .arc-camera-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;

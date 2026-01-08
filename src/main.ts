@@ -17445,10 +17445,17 @@ class VirtualStudio {
     // Camera selection
     cameraBtns.forEach(btn => {
       btn.addEventListener('click', () => {
-        if ((btn as HTMLButtonElement).disabled) return;
+        const cameraId = btn.getAttribute('data-camera') || 'main';
+        
+        // Check if this is an inactive camera (not saved)
+        if (btn.classList.contains('inactive')) {
+          this.handleInactiveCameraClick(cameraId);
+          return;
+        }
+        
         cameraBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        this.selectedRecordingCamera = btn.getAttribute('data-camera') || 'main';
+        this.selectedRecordingCamera = cameraId;
         
         // If a specific camera is selected, switch view to it
         if (this.selectedRecordingCamera !== 'main' && this.selectedRecordingCamera !== 'all') {
@@ -17536,39 +17543,97 @@ class VirtualStudio {
       const htmlBtn = btn as HTMLButtonElement;
       
       if (cameraId && this.cameraPresets.has(cameraId)) {
-        // Camera is saved - show and enable
+        // Camera is saved - enable and style as available
         htmlBtn.disabled = false;
         htmlBtn.style.display = 'flex';
+        htmlBtn.style.opacity = '1';
         btn.classList.add('available');
+        btn.classList.remove('inactive');
+        htmlBtn.title = `Kamera ${cameraId.replace('cam', '')}`;
         hasSavedCameras = true;
       } else {
-        // Camera not saved - hide completely
-        htmlBtn.disabled = true;
-        htmlBtn.style.display = 'none';
+        // Camera not saved - show grayed out with click handler
+        htmlBtn.disabled = false; // Allow click to show info
+        htmlBtn.style.display = 'flex';
+        htmlBtn.style.opacity = '0.4';
         btn.classList.remove('available');
+        btn.classList.add('inactive');
+        htmlBtn.title = 'Aktiver kamera i Kamera & Lys-panelet';
       }
     });
     
-    // Only show "all cameras" button if there are saved cameras
+    // Gray out "all cameras" button if no saved cameras
     if (allBtn) {
-      allBtn.style.display = hasSavedCameras ? 'flex' : 'none';
+      allBtn.style.display = 'flex';
+      if (hasSavedCameras) {
+        allBtn.style.opacity = '1';
+        allBtn.classList.remove('inactive');
+        allBtn.title = 'Ta opp fra alle kameraer';
+      } else {
+        allBtn.style.opacity = '0.4';
+        allBtn.classList.add('inactive');
+        allBtn.title = 'Aktiver kameraer i Kamera & Lys-panelet';
+      }
+    }
+  }
+  
+  private handleInactiveCameraClick(cameraId: string): void {
+    // Show confirmation popup
+    const cameraLabel = cameraId.replace('cam', 'Kamera ');
+    this.showCameraActivationPrompt(cameraId, cameraLabel);
+  }
+  
+  private showCameraActivationPrompt(cameraId: string, cameraLabel: string): void {
+    // Remove any existing prompt
+    const existing = document.getElementById('cameraActivationPrompt');
+    if (existing) existing.remove();
+    
+    const prompt = document.createElement('div');
+    prompt.id = 'cameraActivationPrompt';
+    prompt.className = 'camera-activation-prompt';
+    prompt.innerHTML = `
+      <div class="prompt-content">
+        <p><strong>${cameraLabel}</strong> er ikke aktivert.</p>
+        <p>Vil du gå til Kamera & Lys-panelet for å aktivere denne vinkelen?</p>
+        <div class="prompt-buttons">
+          <button class="prompt-btn cancel">Avbryt</button>
+          <button class="prompt-btn confirm">Ja, åpne panelet</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(prompt);
+    
+    // Event handlers
+    const cancelBtn = prompt.querySelector('.cancel');
+    const confirmBtn = prompt.querySelector('.confirm');
+    
+    cancelBtn?.addEventListener('click', () => prompt.remove());
+    
+    confirmBtn?.addEventListener('click', () => {
+      prompt.remove();
+      this.openCameraPanel(cameraId);
+    });
+    
+    // Close on outside click
+    prompt.addEventListener('click', (e) => {
+      if (e.target === prompt) prompt.remove();
+    });
+  }
+  
+  private openCameraPanel(cameraId: string): void {
+    // Try different methods to open the panel
+    const cameraTab = document.querySelector('[data-panel="camera-light"]') as HTMLElement;
+    if (cameraTab) {
+      cameraTab.click();
     }
     
-    // Show hint if no cameras are saved
-    let hint = arc.querySelector('.arc-no-cameras-hint') as HTMLElement;
-    if (!hasSavedCameras) {
-      if (!hint) {
-        hint = document.createElement('span');
-        hint.className = 'arc-no-cameras-hint';
-        hint.textContent = 'Lagre vinkler i Kamera-panelet';
-        hint.style.cssText = 'font-size: 11px; color: rgba(255,255,255,0.5); margin-left: 8px;';
-        const camerasDiv = arc.querySelector('.recording-arc-cameras');
-        camerasDiv?.appendChild(hint);
-      }
-      hint.style.display = 'inline';
-    } else if (hint) {
-      hint.style.display = 'none';
-    }
+    // Also dispatch event for panel system
+    window.dispatchEvent(new CustomEvent('ch-open-panel', { 
+      detail: { panel: 'camera-light', tab: 'monitors', targetCamera: cameraId }
+    }));
+    
+    this.showNotification(`Åpnet Kamera & Lys-panelet - lagre vinkel som ${cameraId.replace('cam', 'Cam ')}`, 'info');
   }
   
   private arcTimerInterval: number | null = null;
