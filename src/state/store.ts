@@ -71,7 +71,7 @@ const compositionGuides: CompositionGuide[] = ['none', 'thirds', 'golden', 'spir
 const helperGuides: HelperGuide[] = ['none', 'colortemp', 'exposure', 'height', 'glasses', 'classphoto', 'safety', 'lighting'];
 
 export const useFocusStore = create<FocusState>((set, get) => ({
-  mode: 'none',
+  mode: 'tracking', // Default to tracking to match AF-C autofocus mode
   safeAreaMode: 'none',
   compositionGuide: 'none',
   helperGuide: 'none',

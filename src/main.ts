@@ -4309,16 +4309,55 @@ class VirtualStudio {
       }
     };
 
-    // Setup focus mode radio buttons
+    // Setup focus mode radio buttons - integrates with AutoFocus system
     const focusModeRadios = document.querySelectorAll('input[name="focusMode"]') as NodeListOf<HTMLInputElement>;
     focusModeRadios.forEach(radio => {
       radio.addEventListener('change', (e) => {
         const target = e.target as HTMLInputElement;
         if (target.checked) {
           const value = target.value;
-          // Update store directly
+          // Update overlay focus mode store
           useFocusStore.getState().setMode(value as any);
-          console.log('Focus mode changed:', value);
+          
+          // Integrate with AutoFocus system
+          const afStore = useAutoFocusStore.getState();
+          switch (value) {
+            case 'none':
+              // Manual focus - disable autofocus
+              afStore.setMode('MF');
+              afStore.setDofEnabled(false);
+              break;
+            case 'single':
+              // Single point focus - AF-S mode
+              afStore.setMode('AF-S');
+              afStore.setDofEnabled(true);
+              break;
+            case 'zone':
+              // Zone focus - AF-S with zone detection
+              afStore.setMode('AF-S');
+              afStore.setDofEnabled(true);
+              break;
+            case 'wide':
+              // Wide area focus - AF-C for broader detection
+              afStore.setMode('AF-C');
+              afStore.setDofEnabled(true);
+              break;
+            case 'tracking':
+              // Continuous tracking - AF-C mode
+              afStore.setMode('AF-C');
+              afStore.setDofEnabled(true);
+              break;
+          }
+          
+          // Show/hide focus grid based on mode
+          const focusGrid = document.querySelector('#focusGrid') as HTMLElement;
+          const focusGridToggle = document.getElementById('overlayFocusGridToggle') as HTMLInputElement;
+          if (focusGrid) {
+            const showGrid = (value === 'zone' || value === 'wide') && focusGridToggle?.checked;
+            focusGrid.style.display = showGrid ? 'block' : 'none';
+          }
+          
+          console.log('[Focus Mode] Changed to:', value, '→ AutoFocus:', afStore.mode);
         }
       });
     });
@@ -4397,6 +4436,14 @@ class VirtualStudio {
     // Initial state
     updateGridVisibility();
     updateFocusGridVisibility();
+    
+    // Sync focus mode UI with store default (tracking = AF-C)
+    const currentFocusMode = useFocusStore.getState().mode;
+    const matchingRadio = document.querySelector(`input[name="focusMode"][value="${currentFocusMode}"]`) as HTMLInputElement;
+    if (matchingRadio) {
+      matchingRadio.checked = true;
+    }
+    console.log('[Focus Mode] Initial mode:', currentFocusMode);
   }
 
   private setupMissingButtonHandlers(): void {
