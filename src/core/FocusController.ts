@@ -426,19 +426,21 @@ export class FocusController {
       return;
     }
     
-    // Get click position relative to canvas
-    const canvas = e.target as HTMLCanvasElement;
+    // Get click position relative to canvas (don't scale by DPR - Babylon.js handles that internally)
+    const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement;
+    if (!canvas) {
+      console.log('[FocusController] Canvas not found');
+      return;
+    }
+    
     const rect = canvas.getBoundingClientRect();
     const screenX = e.clientX - rect.left;
     const screenY = e.clientY - rect.top;
     
-    // Scale for device pixel ratio
-    const dpr = window.devicePixelRatio || 1;
-    const adjustedX = screenX * dpr;
-    const adjustedY = screenY * dpr;
+    console.log(`[FocusController] Canvas-relative coords: (${screenX.toFixed(1)}, ${screenY.toFixed(1)})`);
     
-    // Call AutoFocusSystem to focus at this point
-    const success = autoFocusSystem.focusAtScreenPoint(adjustedX, adjustedY);
+    // Call AutoFocusSystem to focus at this point (no DPR adjustment needed)
+    const success = autoFocusSystem.focusAtScreenPoint(screenX, screenY);
     
     if (success) {
       // Update the single focus point position in the UI overlay
@@ -451,7 +453,7 @@ export class FocusController {
       
       // Dispatch event for other listeners
       window.dispatchEvent(new CustomEvent('focus:click', {
-        detail: { x: normalizedX, y: normalizedY, screenX: adjustedX, screenY: adjustedY }
+        detail: { x: normalizedX, y: normalizedY, screenX, screenY }
       }));
     }
   }
