@@ -534,6 +534,64 @@ export class AutoFocusSystem {
     console.log('[AutoFocusSystem] Disposed');
   }
   
+  // Focus at a specific screen point (click-to-focus)
+  public focusAtScreenPoint(screenX: number, screenY: number): boolean {
+    const scene = this.scene;
+    const engine = scene.getEngine();
+    
+    // Convert screen coordinates to normalized device coordinates
+    const pickResult = scene.pick(screenX, screenY, (mesh) => {
+      // Skip gizmos, UI elements, and ground
+      if (mesh.name.startsWith('gizmo') || mesh.name.startsWith('__')) return false;
+      if (mesh.name.includes('ground') || mesh.name.includes('Ground')) return false;
+      if (mesh.name.includes('grid') || mesh.name.includes('Grid')) return false;
+      if (mesh.name.includes('Wall') || mesh.name.includes('wall')) return false;
+      if (mesh.name.includes('backdrop') || mesh.name.includes('Backdrop')) return false;
+      return mesh.isEnabled() && mesh.isVisible;
+    });
+    
+    if (pickResult && pickResult.hit && pickResult.pickedPoint) {
+      const distance = BABYLON.Vector3.Distance(this.camera.position, pickResult.pickedPoint);
+      
+      // Create a synthetic focus target
+      const syntheticEye: DetectedEye = {
+        id: `clickfocus_${Date.now()}`,
+        actorName: pickResult.pickedMesh?.name || 'ClickFocus',
+        eyeSide: 'left',
+        worldPosition: {
+          x: pickResult.pickedPoint.x,
+          y: pickResult.pickedPoint.y,
+          z: pickResult.pickedPoint.z
+        },
+        distanceFromCamera: distance
+      };
+      
+      // Set focus target
+      this.setFocusTarget(syntheticEye);
+      
+      // In AF-S mode, lock focus
+      const store = useAutoFocusStore.getState();
+      if (store.mode === 'AF-S') {
+        store.setFocusLocked(true);
+      }
+      
+      console.log(`[AutoFocusSystem] Click focus at ${distance.toFixed(2)}m on ${pickResult.pickedMesh?.name}`);
+      return true;
+    } else {
+      // No hit - focus at infinity or use depth from screen position
+      console.log('[AutoFocusSystem] Click focus - no mesh hit');
+      return false;
+    }
+  }
+  
+  // Focus at normalized viewport coordinates (0-1 range)
+  public focusAtNormalizedPoint(normalizedX: number, normalizedY: number): boolean {
+    const engine = this.scene.getEngine();
+    const screenX = normalizedX * engine.getRenderWidth();
+    const screenY = normalizedY * engine.getRenderHeight();
+    return this.focusAtScreenPoint(screenX, screenY);
+  }
+  
   // Debug method to list all mesh names in the scene
   public debugListMeshes(): void {
     console.log('[AutoFocusSystem] === Scene Mesh Names ===');

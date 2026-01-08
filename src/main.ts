@@ -566,6 +566,10 @@ class VirtualStudio {
     return this.camera.fov;
   }
   
+  public getAutoFocusSystem(): AutoFocusSystem | null {
+    return this.autoFocusSystem;
+  }
+  
   public setCameraPosition(position: BABYLON.Vector3): void {
     this.camera.position = position;
   }

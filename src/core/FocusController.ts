@@ -68,6 +68,12 @@ export class FocusController {
     document.addEventListener('pointermove', this.handlePointerMove);
     document.addEventListener('pointerup', this.handlePointerUp);
     
+    // Click-to-focus on 3D viewport canvas
+    const canvas = document.getElementById('renderCanvas');
+    if (canvas) {
+      canvas.addEventListener('click', this.handleViewportClick.bind(this));
+    }
+    
     // Debounced update function to prevent too frequent updates and blinking
     const debouncedLightingUpdate = this.debounce(() => {
       const state = useFocusStore.getState();
@@ -366,6 +372,57 @@ export class FocusController {
     this.dragPointId = null;
   }
 
+  private handleViewportClick(e: MouseEvent) {
+    // Get focus mode from store
+    const focusState = useFocusStore.getState();
+    const appState = useAppStore.getState();
+    
+    // Only handle click-to-focus in single, zone, wide, or tracking modes
+    if (focusState.mode === 'none') return;
+    
+    // Get the AutoFocusSystem from VirtualStudio
+    const studio = (window as any).virtualStudio;
+    if (!studio || !studio.getAutoFocusSystem) {
+      console.log('[FocusController] AutoFocusSystem not available');
+      return;
+    }
+    
+    const autoFocusSystem = studio.getAutoFocusSystem();
+    if (!autoFocusSystem) {
+      console.log('[FocusController] AutoFocusSystem is null');
+      return;
+    }
+    
+    // Get click position relative to canvas
+    const canvas = e.target as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
+    
+    // Scale for device pixel ratio
+    const dpr = window.devicePixelRatio || 1;
+    const adjustedX = screenX * dpr;
+    const adjustedY = screenY * dpr;
+    
+    // Call AutoFocusSystem to focus at this point
+    const success = autoFocusSystem.focusAtScreenPoint(adjustedX, adjustedY);
+    
+    if (success) {
+      // Update the single focus point position in the UI overlay
+      const normalizedX = screenX / rect.width;
+      const normalizedY = screenY / rect.height;
+      
+      // Update store and visual indicator
+      focusState.updateSinglePoint(normalizedX, normalizedY);
+      this.updateSinglePointPosition(normalizedX, normalizedY);
+      
+      // Dispatch event for other listeners
+      window.dispatchEvent(new CustomEvent('focus:click', {
+        detail: { x: normalizedX, y: normalizedY, screenX: adjustedX, screenY: adjustedY }
+      }));
+    }
+  }
+
   private handleModeChange() {
     const modes: FocusMode[] = ['zone', 'single', 'wide', 'tracking'];
     const state = useFocusStore.getState();
@@ -438,6 +495,7 @@ export class FocusController {
 
   private getModeLabel(mode: FocusMode): string {
     const labels: Record<FocusMode, string> = {
+      none: 'Av',
       single: 'Enkeltpunkt fokus',
       zone: 'Sone fokus',
       wide: 'Bred fokus',
