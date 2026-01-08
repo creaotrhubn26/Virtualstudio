@@ -17671,14 +17671,14 @@ class VirtualStudio {
       detail: { cameras: allCameras }
     }));
     
-    // Stop all recorders
+    // Stop all recorders and save each as separate file
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    let savedCount = 0;
+    const totalRecorders = this.multiCameraRecorders.size;
     
     for (const [cameraId, recorder] of this.multiCameraRecorders.entries()) {
       if (recorder.state === 'recording') {
-        recorder.stop();
-        
-        // Save recording when stopped
+        // Set onstop handler BEFORE calling stop()
         recorder.onstop = () => {
           const chunks = this.multiCameraChunks.get(cameraId) || [];
           if (chunks.length > 0) {
@@ -17693,23 +17693,30 @@ class VirtualStudio {
             document.body.removeChild(a);
             
             URL.revokeObjectURL(url);
-            console.log(`[Recording] Saved ${cameraId} recording`);
+            savedCount++;
+            console.log(`[Recording] Saved ${cameraId} recording (${savedCount}/${totalRecorders})`);
           }
         };
+        
+        // Now stop the recorder
+        recorder.stop();
       }
     }
     
-    // Cleanup
-    this.multiCameraRecorders.clear();
-    this.multiCameraChunks.clear();
-    this.multiCameraCanvases.clear();
+    // Delay cleanup to allow all onstop handlers to complete
+    setTimeout(() => {
+      this.multiCameraRecorders.clear();
+      this.multiCameraChunks.clear();
+      this.multiCameraCanvases.clear();
+      console.log('[Recording] Multi-camera recording cleanup complete');
+    }, 2000);
     
     // Update UI
     this.updateRecordingUI(false);
     this.stopRecordingTimer();
     
-    this.showNotification('Alle opptak lagret', 'success');
-    console.log('[Recording] Multi-camera recording stopped and saved');
+    this.showNotification(`${totalRecorders} opptak lagres som separate filer`, 'success');
+    console.log(`[Recording] Multi-camera recording stopped - saving ${totalRecorders} files`);
   }
 
   private centerCameraOnObject(mesh: BABYLON.Mesh): void {
