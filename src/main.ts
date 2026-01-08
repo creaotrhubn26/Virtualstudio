@@ -12268,6 +12268,10 @@ class VirtualStudio {
     renderTarget.renderList = visibleMeshes;
     renderTarget.refreshRate = BABYLON.RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME;
     
+    // DEBUG: Log camera comparison to verify RTT is using preset camera, not main camera
+    console.log(`[Monitor] ${presetId}: RTT camera = ${monitorCamera.name}, alpha=${monitorCamera.alpha.toFixed(2)}, beta=${monitorCamera.beta.toFixed(2)}, radius=${monitorCamera.radius.toFixed(2)}`);
+    console.log(`[Monitor] ${presetId}: Main camera = ${this.camera.name}, alpha=${this.camera.alpha.toFixed(2)}, beta=${this.camera.beta.toFixed(2)}, radius=${this.camera.radius.toFixed(2)}`);
+    
     // Update tracked renderList length (for change detection in updateMonitorCanvases)
     this.monitorLastRenderListLength.set(presetId, visibleMeshes.length);
     
