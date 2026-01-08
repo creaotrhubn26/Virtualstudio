@@ -15,6 +15,7 @@ export class PhysicsBasedDOF {
   private blurPass: BABYLON.PostProcess | null = null;
   private depthRenderer: BABYLON.DepthRenderer | null = null;
   private isEnabled: boolean = false;
+  private lastDebugLog: number = 0;
   
   private settings: DOFCameraSettings = {
     focalLength: 50,
@@ -244,6 +245,12 @@ export class PhysicsBasedDOF {
       effect.setFloat('cocLimit', this.settings.cocLimit);
       effect.setFloat('nearPlane', this.camera.minZ);
       effect.setFloat('farPlane', this.camera.maxZ);
+      
+      // Debug logging (once per second)
+      if (!this.lastDebugLog || Date.now() - this.lastDebugLog > 1000) {
+        this.lastDebugLog = Date.now();
+        console.log(`[DOF] f=${focalLength}mm, f/${fStop}, focus=${focusDistance.toFixed(2)}m, near=${this.camera.minZ}, far=${this.camera.maxZ}`);
+      }
       
       const engine = this.scene.getEngine();
       effect.setVector2('screenSize', new BABYLON.Vector2(
