@@ -68,19 +68,19 @@ export class FocusController {
     document.addEventListener('pointermove', this.handlePointerMove);
     document.addEventListener('pointerup', this.handlePointerUp);
     
-    // Click-to-focus on 3D viewport canvas
+    // Click-to-focus on 3D viewport canvas - use dblclick to avoid conflicts with camera controls
     const canvas = document.getElementById('renderCanvas');
     if (canvas) {
-      console.log('[FocusController] Adding click-to-focus handler to canvas');
-      canvas.addEventListener('click', this.handleViewportClick.bind(this));
+      console.log('[FocusController] Adding double-click-to-focus handler to canvas');
+      canvas.addEventListener('dblclick', this.handleViewportClick.bind(this));
     } else {
       console.warn('[FocusController] renderCanvas not found, retrying...');
       // Retry after a short delay
       setTimeout(() => {
         const retryCanvas = document.getElementById('renderCanvas');
         if (retryCanvas) {
-          console.log('[FocusController] Adding click-to-focus handler to canvas (retry)');
-          retryCanvas.addEventListener('click', this.handleViewportClick.bind(this));
+          console.log('[FocusController] Adding double-click-to-focus handler to canvas (retry)');
+          retryCanvas.addEventListener('dblclick', this.handleViewportClick.bind(this));
         } else {
           console.error('[FocusController] renderCanvas still not found');
         }
