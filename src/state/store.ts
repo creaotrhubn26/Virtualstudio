@@ -253,6 +253,39 @@ export const useAutoFocusStore = create<AutoFocusState>((set, get) => ({
   }
 }));
 
+// Focus Peaking Store
+export type FocusPeakingColor = 'red' | 'green' | 'blue' | 'yellow' | 'white';
+
+interface FocusPeakingState {
+  enabled: boolean;
+  color: FocusPeakingColor;
+  intensity: number; // 0.0-1.0
+  threshold: number; // Edge detection threshold 0.0-1.0
+  depthAware: boolean; // Only show peaking in DOF focus range
+  
+  setEnabled: (enabled: boolean) => void;
+  setColor: (color: FocusPeakingColor) => void;
+  setIntensity: (intensity: number) => void;
+  setThreshold: (threshold: number) => void;
+  setDepthAware: (depthAware: boolean) => void;
+  toggle: () => void;
+}
+
+export const useFocusPeakingStore = create<FocusPeakingState>((set) => ({
+  enabled: false,
+  color: 'red',
+  intensity: 0.8,
+  threshold: 0.3,
+  depthAware: true,
+  
+  setEnabled: (enabled) => set({ enabled }),
+  setColor: (color) => set({ color }),
+  setIntensity: (intensity) => set({ intensity: Math.max(0, Math.min(1, intensity)) }),
+  setThreshold: (threshold) => set({ threshold: Math.max(0, Math.min(1, threshold)) }),
+  setDepthAware: (depthAware) => set({ depthAware }),
+  toggle: () => set((state) => ({ enabled: !state.enabled })),
+}));
+
 export interface NodeTransform {
   position: [number, number, number];
   rotation: [number, number, number];
