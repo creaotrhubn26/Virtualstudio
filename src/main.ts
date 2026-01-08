@@ -17245,13 +17245,8 @@ class VirtualStudio {
         </div>
       `;
       
-      // Insert into viewport-container
-      const viewport = document.querySelector('.viewport-container') || document.querySelector('.main-viewport') || document.getElementById('renderCanvas')?.parentElement;
-      if (viewport) {
-        viewport.appendChild(arc);
-      } else {
-        document.body.appendChild(arc);
-      }
+      // Insert directly into body so it's above all panels and overlays
+      document.body.appendChild(arc);
       
       // Setup arc event listeners
       this.setupRecordingArcEvents(arc);
