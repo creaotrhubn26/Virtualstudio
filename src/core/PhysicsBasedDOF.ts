@@ -280,11 +280,11 @@ export class PhysicsBasedDOF {
       effect.setFloat('nearPlane', this.camera.minZ);
       effect.setFloat('farPlane', this.camera.maxZ);
       
-      // Debug logging (once per second)
-      if (!this.lastDebugLog || Date.now() - this.lastDebugLog > 1000) {
-        this.lastDebugLog = Date.now();
-        console.log(`[DOF] f=${focalLength}mm, f/${fStop}, focus=${focusDistance.toFixed(2)}m, near=${this.camera.minZ}, far=${this.camera.maxZ}`);
-      }
+      // Debug logging disabled for performance (uncomment for debugging)
+      // if (!this.lastDebugLog || Date.now() - this.lastDebugLog > 5000) {
+      //   this.lastDebugLog = Date.now();
+      //   console.log(`[DOF] f=${focalLength}mm, f/${fStop}, focus=${focusDistance.toFixed(2)}m`);
+      // }
       
       const engine = this.scene.getEngine();
       effect.setVector2('screenSize', new BABYLON.Vector2(
@@ -297,12 +297,14 @@ export class PhysicsBasedDOF {
       }
     };
     
+    // Performance optimization: Run blur at half resolution
+    // This reduces texture reads by 4x (from 400M+ to ~100M at 4K)
     this.blurPass = new BABYLON.PostProcess(
       'dofBlur',
       'dofBlur',
       ['screenSize', 'blurScale', 'bladeCount', 'bladeRotation', 'highlightThreshold', 'highlightGain'],
       [],  // No extra samplers - textureSampler is the output from cocPass with CoC in alpha
-      1.0,
+      0.5,  // Half resolution for performance (was 1.0)
       null,
       BABYLON.Texture.BILINEAR_SAMPLINGMODE,
       this.scene.getEngine(),
@@ -311,10 +313,11 @@ export class PhysicsBasedDOF {
     
     this.blurPass.onApply = (effect: BABYLON.Effect) => {
       const engine = this.scene.getEngine();
-      effect.setVector2('screenSize', new BABYLON.Vector2(
-        engine.getRenderWidth(),
-        engine.getRenderHeight()
-      ));
+      // Use actual post-process size (accounts for 0.5 ratio)
+      // The blur pass runs at half resolution, so use actual render size
+      const ppWidth = this.blurPass!.width;
+      const ppHeight = this.blurPass!.height;
+      effect.setVector2('screenSize', new BABYLON.Vector2(ppWidth, ppHeight));
       
       // Blur scale for artistic control
       effect.setFloat('blurScale', 3.0);

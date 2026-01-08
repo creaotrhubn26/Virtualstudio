@@ -13,6 +13,14 @@ export class AutoFocusSystem {
   private isInitialized: boolean = false;
   private isTransitioningToTarget: boolean = false; // Flag for AF-S initial transition
   
+  // Performance optimization: cache and throttle
+  private lastCameraPosition: BABYLON.Vector3 = BABYLON.Vector3.Zero();
+  private cachedEyeMeshes: BABYLON.AbstractMesh[] | null = null;
+  private lastEyeCacheTime: number = 0;
+  private readonly EYE_CACHE_TTL = 2000; // Refresh eye mesh cache every 2 seconds
+  private lastFocusDistanceUpdate: number = 0;
+  private readonly FOCUS_UPDATE_THRESHOLD = 0.001; // Minimum change to trigger update
+  
   constructor(scene: BABYLON.Scene, camera: BABYLON.ArcRotateCamera) {
     this.scene = scene;
     this.camera = camera;
@@ -79,19 +87,19 @@ export class AutoFocusSystem {
       clearInterval(this.updateInterval);
     }
     
-    // AF-C mode: Always track continuously, ignoring focusLocked flag
-    // (focusLocked is only relevant for AF-S mode)
+    // AF-C mode: Fast continuous tracking with cached mesh scanning
+    // 150ms interval runs detection every tick using cached eye meshes for speed
     this.updateInterval = window.setInterval(() => {
       const store = useAutoFocusStore.getState();
       if (store.mode === 'AF-C') {
+        this.lastCameraPosition = this.camera.position.clone();
+        // Run detection every tick - eye mesh caching handles performance
         this.detectAndFocusWithFallback();
       }
-    }, 100);
+    }, 150);
     
     // Run detection immediately on start
     this.detectAndFocusWithFallback();
-    
-    console.log('[AutoFocusSystem] Continuous tracking started');
   }
   
   // Detect eyes with fallback to head/geometry detection
@@ -147,7 +155,6 @@ export class AutoFocusSystem {
   private isPaused: boolean = false;
   
   public pauseTracking(durationMs: number = 2000): void {
-    console.log(`[AutoFocusSystem] Pausing tracking for ${durationMs}ms`);
     this.isPaused = true;
     
     // Clear any existing pause timeout
@@ -158,15 +165,50 @@ export class AutoFocusSystem {
     // Resume after the specified duration
     this.pauseTimeout = setTimeout(() => {
       this.isPaused = false;
-      console.log('[AutoFocusSystem] Resuming tracking');
     }, durationMs);
+  }
+  
+  /**
+   * Refresh the cache of eye-candidate meshes.
+   * Called periodically to avoid scanning all scene meshes every detection cycle.
+   */
+  private refreshEyeMeshCache(): void {
+    const eyePatterns = ['eye', 'Eye', 'EYE'];
+    const excludePatterns = ['eyebrow', 'Eyebrow', 'eyelash', 'Eyelash', 'eyelid', 'Eyelid'];
+    
+    this.cachedEyeMeshes = this.scene.meshes.filter(mesh => {
+      // Include synthetic eye markers
+      if (mesh.metadata?.isEyeMarker === true) return true;
+      
+      // Check name patterns
+      const name = mesh.name;
+      const hasEyePattern = eyePatterns.some(p => name.includes(p));
+      const isExcluded = excludePatterns.some(p => name.includes(p));
+      
+      return hasEyePattern && !isExcluded;
+    });
+  }
+  
+  /**
+   * Force refresh of eye mesh cache (call after loading new models)
+   */
+  public invalidateEyeCache(): void {
+    this.cachedEyeMeshes = null;
+    this.lastEyeCacheTime = 0;
   }
   
   public detectEyes(): DetectedEye[] {
     const detectedEyes: DetectedEye[] = [];
     const cameraPos = this.camera.position;
+    const now = Date.now();
     
-    // Common eye mesh naming patterns across different 3D model formats
+    // Performance optimization: Cache eye-candidate meshes
+    if (!this.cachedEyeMeshes || (now - this.lastEyeCacheTime > this.EYE_CACHE_TTL)) {
+      this.refreshEyeMeshCache();
+      this.lastEyeCacheTime = now;
+    }
+    
+    // Common eye mesh naming patterns (static - no need to recreate each call)
     const leftEyePatterns = [
       '_leftEye', 'leftEye', 'left_eye', 'LeftEye', 'Left_Eye',
       'eye_l', 'eye.l', 'Eye_L', 'Eye.L', 'eyeL', 'EyeL',
@@ -183,7 +225,10 @@ export class AutoFocusSystem {
       'righteye', 'RIGHTEYE', 'RIGHT_EYE'
     ];
     
-    this.scene.meshes.forEach(mesh => {
+    // Use cached meshes instead of scanning all scene meshes
+    const meshesToCheck = this.cachedEyeMeshes || [];
+    
+    for (const mesh of meshesToCheck) {
       // Check for synthetic eye markers first (created by addEyeMarkersToModel)
       if (mesh.metadata?.isEyeMarker === true) {
         const worldPos = mesh.getAbsolutePosition();
@@ -198,13 +243,11 @@ export class AutoFocusSystem {
           distanceFromCamera: distance,
           screenPosition: screenPos
         });
-        
-        console.log(`[AutoFocusSystem] Detected synthetic ${mesh.metadata.eyeSide} eye: ${mesh.name} at ${distance.toFixed(2)}m`);
-        return;
+        continue;
       }
       
       // Skip invisible meshes for normal eye detection (but synthetic markers are OK)
-      if (!mesh.isEnabled() || !mesh.isVisible) return;
+      if (!mesh.isEnabled() || !mesh.isVisible) continue;
       
       const meshNameLower = mesh.name.toLowerCase();
       let eyeSide: 'left' | 'right' | null = null;
@@ -249,10 +292,8 @@ export class AutoFocusSystem {
           distanceFromCamera: distance,
           screenPosition: screenPos
         });
-        
-        console.log(`[AutoFocusSystem] Detected ${eyeSide} eye: ${mesh.name} at ${distance.toFixed(2)}m`);
       }
-    });
+    }
     
     detectedEyes.sort((a, b) => a.distanceFromCamera - b.distanceFromCamera);
     
@@ -320,18 +361,28 @@ export class AutoFocusSystem {
       return;
     }
     
-    const speed = store.smoothTransitionSpeed;
     const delta = Math.abs(this.currentFocusDistance - this.targetFocusDistance);
     
-    if (delta > 0.001) {
+    // Early-out optimization: skip if focus distance hasn't changed significantly
+    if (delta <= this.FOCUS_UPDATE_THRESHOLD && !this.isTransitioningToTarget) {
+      return;
+    }
+    
+    const speed = store.smoothTransitionSpeed;
+    
+    if (delta > this.FOCUS_UPDATE_THRESHOLD) {
       this.currentFocusDistance = BABYLON.Scalar.Lerp(
         this.currentFocusDistance,
         this.targetFocusDistance,
         speed
       );
       
-      useFocusStore.getState().setFocusDistance(this.currentFocusDistance);
-      this.updateDOFRenderingPipeline(this.currentFocusDistance);
+      // Only update store and DOF if value actually changed
+      const storedDistance = useFocusStore.getState().focusDistance;
+      if (Math.abs(storedDistance - this.currentFocusDistance) > this.FOCUS_UPDATE_THRESHOLD) {
+        useFocusStore.getState().setFocusDistance(this.currentFocusDistance);
+        this.updateDOFRenderingPipeline(this.currentFocusDistance);
+      }
     } else if (this.isTransitioningToTarget) {
       // Transition complete - now we can truly lock AF-S
       this.isTransitioningToTarget = false;
