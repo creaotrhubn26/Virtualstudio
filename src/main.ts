@@ -363,6 +363,12 @@ class VirtualStudio {
   private recordingStartTime: number = 0;
   private recordingTimerInterval: number | null = null;
   private activeRecordingCamera: string | null = null;
+  
+  // Multi-camera recording state
+  private multiCameraRecorders: Map<string, MediaRecorder> = new Map();
+  private multiCameraChunks: Map<string, Blob[]> = new Map();
+  private multiCameraCanvases: Map<string, HTMLCanvasElement> = new Map();
+  private isMultiCameraRecording: boolean = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.engine = new BABYLON.Engine(canvas, true, { 
@@ -16755,6 +16761,12 @@ class VirtualStudio {
   }
 
   public stopRecording(): void {
+    // Check if we're in multi-camera recording mode
+    if (this.isMultiCameraRecording) {
+      this.stopMultiCameraRecording();
+      return;
+    }
+    
     if (!this.isRecording || !this.mediaRecorder) {
       console.log('Not recording');
       return;
@@ -17376,7 +17388,7 @@ class VirtualStudio {
   }
   
   private async startMultiCameraRecording(): Promise<void> {
-    // Record from all saved camera presets simultaneously
+    // Record from all saved camera presets simultaneously using their RTT feeds
     const savedPresets = Array.from(this.cameraPresets.keys());
     
     if (savedPresets.length === 0) {
@@ -17385,11 +17397,179 @@ class VirtualStudio {
       return;
     }
     
+    this.isMultiCameraRecording = true;
+    this.recordingStartTime = Date.now();
+    this.isRecording = true;
+    
     // Start recording from main camera
-    this.startRecording();
+    const mainCanvas = this.engine.getRenderingCanvas();
+    if (mainCanvas) {
+      try {
+        const mainStream = mainCanvas.captureStream(30);
+        const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+          ? 'video/webm;codecs=vp9'
+          : 'video/webm;codecs=vp8';
+        
+        const mainRecorder = new MediaRecorder(mainStream, {
+          mimeType,
+          videoBitsPerSecond: 8000000
+        });
+        
+        this.multiCameraChunks.set('main', []);
+        mainRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            const chunks = this.multiCameraChunks.get('main') || [];
+            chunks.push(event.data);
+            this.multiCameraChunks.set('main', chunks);
+          }
+        };
+        
+        mainRecorder.start(100);
+        this.multiCameraRecorders.set('main', mainRecorder);
+      } catch (e) {
+        console.error('Failed to start main camera recording:', e);
+      }
+    }
+    
+    // Start recording from each RTT using offscreen canvases
+    for (const presetId of savedPresets) {
+      const rtt = this.monitorRenderTargets.get(presetId);
+      if (!rtt) continue;
+      
+      try {
+        // Create offscreen canvas for this RTT
+        const offscreenCanvas = document.createElement('canvas');
+        offscreenCanvas.width = 1280;
+        offscreenCanvas.height = 720;
+        const ctx = offscreenCanvas.getContext('2d');
+        if (!ctx) continue;
+        
+        this.multiCameraCanvases.set(presetId, offscreenCanvas);
+        
+        // Capture stream from offscreen canvas
+        const stream = offscreenCanvas.captureStream(30);
+        const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+          ? 'video/webm;codecs=vp9'
+          : 'video/webm;codecs=vp8';
+        
+        const recorder = new MediaRecorder(stream, {
+          mimeType,
+          videoBitsPerSecond: 8000000
+        });
+        
+        this.multiCameraChunks.set(presetId, []);
+        recorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            const chunks = this.multiCameraChunks.get(presetId) || [];
+            chunks.push(event.data);
+            this.multiCameraChunks.set(presetId, chunks);
+          }
+        };
+        
+        recorder.start(100);
+        this.multiCameraRecorders.set(presetId, recorder);
+        
+        // Set up RTT to canvas copying
+        rtt.onAfterRenderObservable.add(() => {
+          if (!this.isMultiCameraRecording) return;
+          
+          const offCanvas = this.multiCameraCanvases.get(presetId);
+          if (!offCanvas) return;
+          
+          const offCtx = offCanvas.getContext('2d');
+          if (!offCtx) return;
+          
+          // Read RTT pixels and draw to offscreen canvas
+          const size = rtt.getSize();
+          const pixels = new Uint8Array(size.width * size.height * 4);
+          
+          try {
+            // Use readPixels to get RTT content
+            const engine = this.engine;
+            engine.readPixels(0, 0, size.width, size.height, true, true, pixels, undefined, undefined, rtt);
+            
+            // Create ImageData and draw to canvas
+            const imageData = new ImageData(new Uint8ClampedArray(pixels), size.width, size.height);
+            
+            // Create temporary canvas for flipping (RTT is upside down)
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = size.width;
+            tempCanvas.height = size.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            if (tempCtx) {
+              tempCtx.putImageData(imageData, 0, 0);
+              
+              // Flip vertically when drawing to offscreen canvas
+              offCtx.save();
+              offCtx.translate(0, offCanvas.height);
+              offCtx.scale(1, -1);
+              offCtx.drawImage(tempCanvas, 0, 0, offCanvas.width, offCanvas.height);
+              offCtx.restore();
+            }
+          } catch (e) {
+            // Silently fail - RTT might not be ready
+          }
+        });
+        
+      } catch (e) {
+        console.error(`Failed to start recording for ${presetId}:`, e);
+      }
+    }
+    
+    // Update UI
+    this.updateRecordingUI(true);
+    this.startRecordingTimer();
     
     // Show notification about multi-camera recording
-    this.showNotification(`Tar opp fra ${savedPresets.length + 1} kameraer`, 'info');
+    this.showNotification(`Tar opp fra ${savedPresets.length + 1} kameraer (Hovedkamera + ${savedPresets.join(', ')})`, 'info');
+    console.log(`[Recording] Started multi-camera recording: main + ${savedPresets.join(', ')}`);
+  }
+  
+  public stopMultiCameraRecording(): void {
+    if (!this.isMultiCameraRecording) return;
+    
+    this.isMultiCameraRecording = false;
+    this.isRecording = false;
+    
+    // Stop all recorders
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    
+    for (const [cameraId, recorder] of this.multiCameraRecorders.entries()) {
+      if (recorder.state === 'recording') {
+        recorder.stop();
+        
+        // Save recording when stopped
+        recorder.onstop = () => {
+          const chunks = this.multiCameraChunks.get(cameraId) || [];
+          if (chunks.length > 0) {
+            const blob = new Blob(chunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `creatorhub-studio-${cameraId}-${timestamp}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            URL.revokeObjectURL(url);
+            console.log(`[Recording] Saved ${cameraId} recording`);
+          }
+        };
+      }
+    }
+    
+    // Cleanup
+    this.multiCameraRecorders.clear();
+    this.multiCameraChunks.clear();
+    this.multiCameraCanvases.clear();
+    
+    // Update UI
+    this.updateRecordingUI(false);
+    this.stopRecordingTimer();
+    
+    this.showNotification('Alle opptak lagret', 'success');
+    console.log('[Recording] Multi-camera recording stopped and saved');
   }
 
   private centerCameraOnObject(mesh: BABYLON.Mesh): void {
