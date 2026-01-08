@@ -16752,13 +16752,14 @@ class VirtualStudio {
   
   private getBestRecordingCodec(): { mimeType: string; extension: string; bitrate: number } {
     // Priority: MP4/H.264 (best compatibility) > VP9 (best quality) > VP8 (fallback)
+    // Bitrates optimized for 4K @ 60fps
     const codecs = [
-      { mime: 'video/mp4;codecs=avc1.42E01E,mp4a.40.2', ext: 'mp4', bitrate: 12000000 }, // H.264 High Profile
-      { mime: 'video/mp4;codecs=avc1.4d002a', ext: 'mp4', bitrate: 12000000 }, // H.264 Main Profile
-      { mime: 'video/webm;codecs=vp9,opus', ext: 'webm', bitrate: 10000000 }, // VP9 with Opus audio
-      { mime: 'video/webm;codecs=vp9', ext: 'webm', bitrate: 10000000 }, // VP9
-      { mime: 'video/webm;codecs=vp8,opus', ext: 'webm', bitrate: 12000000 }, // VP8 with Opus
-      { mime: 'video/webm;codecs=vp8', ext: 'webm', bitrate: 12000000 }, // VP8
+      { mime: 'video/mp4;codecs=avc1.42E01E,mp4a.40.2', ext: 'mp4', bitrate: 50000000 }, // H.264 High Profile - 50 Mbps for 4K
+      { mime: 'video/mp4;codecs=avc1.4d002a', ext: 'mp4', bitrate: 50000000 }, // H.264 Main Profile
+      { mime: 'video/webm;codecs=vp9,opus', ext: 'webm', bitrate: 35000000 }, // VP9 with Opus - 35 Mbps (better compression)
+      { mime: 'video/webm;codecs=vp9', ext: 'webm', bitrate: 35000000 }, // VP9
+      { mime: 'video/webm;codecs=vp8,opus', ext: 'webm', bitrate: 50000000 }, // VP8 with Opus
+      { mime: 'video/webm;codecs=vp8', ext: 'webm', bitrate: 50000000 }, // VP8
     ];
     
     for (const codec of codecs) {
@@ -17637,10 +17638,10 @@ class VirtualStudio {
       if (!rtt) continue;
       
       try {
-        // Create offscreen canvas for this RTT
+        // Create offscreen canvas for this RTT (4K resolution)
         const offscreenCanvas = document.createElement('canvas');
-        offscreenCanvas.width = 1280;
-        offscreenCanvas.height = 720;
+        offscreenCanvas.width = 3840;
+        offscreenCanvas.height = 2160;
         const ctx = offscreenCanvas.getContext('2d');
         if (!ctx) continue;
         
