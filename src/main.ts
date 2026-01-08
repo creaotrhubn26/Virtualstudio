@@ -17584,13 +17584,17 @@ class VirtualStudio {
   }
   
   private showCameraActivationPrompt(cameraId: string, cameraLabel: string): void {
-    // Remove any existing prompt
-    const existing = document.getElementById('cameraActivationPrompt');
-    if (existing) existing.remove();
+    // Use existing prompt container or create once
+    let prompt = document.getElementById('cameraActivationPrompt') as HTMLElement;
     
-    const prompt = document.createElement('div');
-    prompt.id = 'cameraActivationPrompt';
-    prompt.className = 'camera-activation-prompt';
+    if (!prompt) {
+      prompt = document.createElement('div');
+      prompt.id = 'cameraActivationPrompt';
+      prompt.className = 'camera-activation-prompt';
+      document.body.appendChild(prompt);
+    }
+    
+    // Update content
     prompt.innerHTML = `
       <div class="prompt-content">
         <p><strong>${cameraLabel}</strong> er ikke aktivert.</p>
@@ -17602,23 +17606,32 @@ class VirtualStudio {
       </div>
     `;
     
-    document.body.appendChild(prompt);
+    // Show the prompt
+    prompt.style.display = 'flex';
     
-    // Event handlers
+    // Event handlers (use one-time listeners)
     const cancelBtn = prompt.querySelector('.cancel');
     const confirmBtn = prompt.querySelector('.confirm');
     
-    cancelBtn?.addEventListener('click', () => prompt.remove());
+    const hidePrompt = () => {
+      prompt.style.display = 'none';
+    };
+    
+    cancelBtn?.addEventListener('click', hidePrompt, { once: true });
     
     confirmBtn?.addEventListener('click', () => {
-      prompt.remove();
+      hidePrompt();
       this.openCameraPanel(cameraId);
-    });
+    }, { once: true });
     
     // Close on outside click
-    prompt.addEventListener('click', (e) => {
-      if (e.target === prompt) prompt.remove();
-    });
+    const outsideClickHandler = (e: MouseEvent) => {
+      if (e.target === prompt) {
+        hidePrompt();
+        prompt.removeEventListener('click', outsideClickHandler as EventListener);
+      }
+    };
+    prompt.addEventListener('click', outsideClickHandler as EventListener);
   }
   
   private openCameraPanel(cameraId: string): void {
