@@ -4037,7 +4037,11 @@ class VirtualStudio {
       const enableDOF = aperture <= 5.6;
       const storedFocusDistance = useFocusStore.getState().focusDistance;
       const focusDistance = storedFocusDistance > 0.1 ? storedFocusDistance : this.camera.radius;
-      this.updateDOFSettings(aperture, focusDistance, enableDOF);
+      
+      // Dispatch event for PhysicsBasedDOF to respond
+      window.dispatchEvent(new CustomEvent('vs-aperture-changed', {
+        detail: { aperture, focusDistance, enabled: enableDOF }
+      }));
     });
 
     const shutterSlider = document.getElementById('shutterSlider') as HTMLInputElement;
@@ -20748,6 +20752,14 @@ window.addEventListener('DOMContentLoaded', () => {
         // Update scene brightness based on new settings
         studioInstance.updateSceneBrightness();
         studioInstance.updateExposureDisplay();
+        
+        // Dispatch event for PhysicsBasedDOF to respond to aperture changes
+        const enableDOF = aperture <= 5.6;
+        const storedFocusDistance = useFocusStore.getState().focusDistance;
+        const focusDistance = storedFocusDistance > 0.1 ? storedFocusDistance : studioInstance.camera?.radius || 3;
+        window.dispatchEvent(new CustomEvent('vs-aperture-changed', {
+          detail: { aperture, focusDistance, enabled: enableDOF }
+        }));
       };
       
       const updateCameraDisplay = () => {

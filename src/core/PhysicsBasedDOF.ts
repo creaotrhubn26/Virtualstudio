@@ -34,11 +34,32 @@ export class PhysicsBasedDOF {
     this.createShaders();
     this.createPostProcesses();
     
+    // Subscribe to autofocus DOF toggle
     useAutoFocusStore.subscribe((state, prevState) => {
       if (state.dofEnabled !== prevState.dofEnabled) {
         this.setEnabled(state.dofEnabled);
       }
     });
+    
+    // Listen for camera aperture changes from the UI panel
+    window.addEventListener('vs-aperture-changed', ((e: CustomEvent) => {
+      const { aperture, focusDistance, enabled } = e.detail;
+      this.settings.fStop = aperture;
+      // Auto-enable DOF for wide apertures (f/5.6 or lower)
+      const shouldEnable = enabled !== undefined ? enabled : (aperture <= 5.6);
+      this.setEnabled(shouldEnable);
+      console.log(`[PhysicsBasedDOF] Aperture changed: f/${aperture}, DOF ${shouldEnable ? 'enabled' : 'disabled'}`);
+    }) as EventListener);
+    
+    // Auto-enable on startup if aperture is wide
+    const studio = (window as any).virtualStudio;
+    if (studio?.cameraSettings?.aperture) {
+      const aperture = studio.cameraSettings.aperture;
+      if (aperture <= 5.6) {
+        this.setEnabled(true);
+        console.log(`[PhysicsBasedDOF] Auto-enabled for f/${aperture}`);
+      }
+    }
     
     console.log('[PhysicsBasedDOF] Initialized with physically accurate CoC calculations');
   }
