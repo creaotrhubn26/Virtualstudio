@@ -3557,17 +3557,31 @@ class VirtualStudio {
     // Double-tap/double-click to focus - use POINTERUP with double-click detection
     let lastClickTime = 0;
     this.scene.onPointerObservable.add((info) => {
+      // Log all pointer events for debugging
+      if (info.type === BABYLON.PointerEventTypes.POINTERUP) {
+        console.log('[VirtualStudio] POINTERUP detected, button:', info.event.button);
+      }
+      
       if (info.type === BABYLON.PointerEventTypes.POINTERUP && info.event.button === 0) {
         const now = Date.now();
         const timeDiff = now - lastClickTime;
+        console.log('[VirtualStudio] Click detected, timeDiff:', timeDiff, 'ms');
         lastClickTime = now;
         
-        // Check if this is a double-click (within 300ms)
-        if (timeDiff > 50 && timeDiff < 300) {
+        // Check if this is a double-click (within 400ms, widened from 300)
+        if (timeDiff > 50 && timeDiff < 400) {
           console.log('[VirtualStudio] Double-click detected!');
           
-          if (this.autoFocusSystem && info.pickInfo?.pickedPoint) {
-            const pickedMesh = info.pickInfo.pickedMesh;
+          // Try to get pick info - if not available from observer, do manual pick
+          let pickInfo = info.pickInfo;
+          if (!pickInfo?.pickedPoint) {
+            // Manual raycast pick
+            pickInfo = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
+            console.log('[VirtualStudio] Manual pick result:', pickInfo?.pickedPoint ? 'hit' : 'miss');
+          }
+          
+          if (this.autoFocusSystem && pickInfo?.pickedPoint) {
+            const pickedMesh = pickInfo.pickedMesh;
             
             // Skip certain meshes
             if (pickedMesh) {
@@ -3579,12 +3593,12 @@ class VirtualStudio {
               }
             }
             
-            const distance = BABYLON.Vector3.Distance(this.camera.position, info.pickInfo.pickedPoint);
+            const distance = BABYLON.Vector3.Distance(this.camera.position, pickInfo.pickedPoint!);
             console.log(`[VirtualStudio] Double-click focus at ${distance.toFixed(2)}m on ${pickedMesh?.name || 'unknown'}`);
             
             // Create synthetic focus target
             const screenPos = BABYLON.Vector3.Project(
-              info.pickInfo.pickedPoint,
+              pickInfo.pickedPoint!,
               BABYLON.Matrix.Identity(),
               this.scene.getTransformMatrix(),
               this.camera.viewport.toGlobal(this.engine.getRenderWidth(), this.engine.getRenderHeight())
@@ -3595,9 +3609,9 @@ class VirtualStudio {
               actorName: pickedMesh?.name || 'ClickFocus',
               eyeSide: 'left' as const,
               worldPosition: {
-                x: info.pickInfo.pickedPoint.x,
-                y: info.pickInfo.pickedPoint.y,
-                z: info.pickInfo.pickedPoint.z
+                x: pickInfo.pickedPoint!.x,
+                y: pickInfo.pickedPoint!.y,
+                z: pickInfo.pickedPoint!.z
               },
               screenPosition: {
                 x: screenPos.x,
