@@ -57,13 +57,22 @@ import {
 interface AnimationPreset {
   id: string;
   name: string;
-  category: 'kamera' | 'lys' | 'overgang' | 'effekt';
+  category: 'kamera' | 'lys' | 'overgang' | 'effekt' | 'fokus';
   duration: number;
   description: string;
   tags: string[];
   easing: string;
   keyframes: number;
   previewIcon: string;
+  // DOF-specific properties for fokus category
+  dofSettings?: {
+    apertureStart?: number;
+    apertureEnd?: number;
+    focusDistanceStart?: number;
+    focusDistanceEnd?: number;
+    useAutoFocus?: boolean;
+    focusTargetType?: 'foreground' | 'background' | 'subject' | 'custom';
+  };
 }
 
 interface ComboItem {
@@ -328,6 +337,201 @@ const ANIMATION_PRESETS: AnimationPreset[] = [
     keyframes: 2,
     previewIcon: 'cut',
   },
+  // ============ FOKUS & DOF PRESETS ============
+  {
+    id: 'rack_focus_fg_bg',
+    name: 'Rack Focus: Foran → Bak',
+    category: 'fokus',
+    duration: 2.5,
+    description: 'Skift fokus fra forgrunn til bakgrunn - klassisk filmteknikk',
+    tags: ['fokus', 'rack', 'cinematisk', 'dof', 'dramatisk'],
+    easing: 'easeInOut',
+    keyframes: 2,
+    previewIcon: 'rack_focus',
+    dofSettings: {
+      focusDistanceStart: 1.5,
+      focusDistanceEnd: 5.0,
+      apertureStart: 2.8,
+      apertureEnd: 2.8,
+      focusTargetType: 'foreground',
+    },
+  },
+  {
+    id: 'rack_focus_bg_fg',
+    name: 'Rack Focus: Bak → Foran',
+    category: 'fokus',
+    duration: 2.5,
+    description: 'Skift fokus fra bakgrunn til forgrunn',
+    tags: ['fokus', 'rack', 'cinematisk', 'dof', 'reveal'],
+    easing: 'easeInOut',
+    keyframes: 2,
+    previewIcon: 'rack_focus',
+    dofSettings: {
+      focusDistanceStart: 5.0,
+      focusDistanceEnd: 1.5,
+      apertureStart: 2.8,
+      apertureEnd: 2.8,
+      focusTargetType: 'background',
+    },
+  },
+  {
+    id: 'focus_reveal',
+    name: 'Fokus Reveal',
+    category: 'fokus',
+    duration: 3,
+    description: 'Start ute av fokus, gradvis skarphet - dramatisk intro',
+    tags: ['fokus', 'reveal', 'intro', 'cinematisk', 'drømmende'],
+    easing: 'easeOut',
+    keyframes: 2,
+    previewIcon: 'blur_reveal',
+    dofSettings: {
+      focusDistanceStart: 0.5,
+      focusDistanceEnd: 3.0,
+      apertureStart: 1.4,
+      apertureEnd: 2.8,
+      useAutoFocus: true,
+      focusTargetType: 'subject',
+    },
+  },
+  {
+    id: 'focus_fadeout',
+    name: 'Fokus Fadeout',
+    category: 'fokus',
+    duration: 2.5,
+    description: 'Gradvis blur for drømmende avslutning',
+    tags: ['fokus', 'fadeout', 'outro', 'cinematisk', 'drømmende'],
+    easing: 'easeIn',
+    keyframes: 2,
+    previewIcon: 'blur_out',
+    dofSettings: {
+      focusDistanceStart: 3.0,
+      focusDistanceEnd: 0.3,
+      apertureStart: 2.8,
+      apertureEnd: 1.4,
+      focusTargetType: 'subject',
+    },
+  },
+  {
+    id: 'bokeh_pulse',
+    name: 'Bokeh Puls',
+    category: 'fokus',
+    duration: 4,
+    description: 'Blender pulserer f/1.4 ↔ f/8 for kreativ effekt',
+    tags: ['fokus', 'bokeh', 'puls', 'kreativ', 'musikkvideo'],
+    easing: 'sine',
+    keyframes: 5,
+    previewIcon: 'bokeh_pulse',
+    dofSettings: {
+      apertureStart: 1.4,
+      apertureEnd: 8,
+      focusTargetType: 'subject',
+      useAutoFocus: true,
+    },
+  },
+  {
+    id: 'shallow_to_deep',
+    name: 'Grunn → Dyp DOF',
+    category: 'fokus',
+    duration: 3,
+    description: 'Fra intimt bokeh til full kontekst - utvider perspektivet',
+    tags: ['fokus', 'dof', 'overgang', 'kontekst', 'establishing'],
+    easing: 'easeInOut',
+    keyframes: 2,
+    previewIcon: 'aperture_open',
+    dofSettings: {
+      apertureStart: 1.4,
+      apertureEnd: 11,
+      focusTargetType: 'subject',
+      useAutoFocus: true,
+    },
+  },
+  {
+    id: 'deep_to_shallow',
+    name: 'Dyp → Grunn DOF',
+    category: 'fokus',
+    duration: 3,
+    description: 'Fra kontekstuelt til intimt - isolerer subjektet',
+    tags: ['fokus', 'dof', 'overgang', 'intimt', 'portrett'],
+    easing: 'easeInOut',
+    keyframes: 2,
+    previewIcon: 'aperture_close',
+    dofSettings: {
+      apertureStart: 11,
+      apertureEnd: 1.4,
+      focusTargetType: 'subject',
+      useAutoFocus: true,
+    },
+  },
+  {
+    id: 'follow_focus',
+    name: 'Follow Focus',
+    category: 'fokus',
+    duration: 5,
+    description: 'Kontinuerlig sporing av bevegelig motiv med Øye-AF',
+    tags: ['fokus', 'tracking', 'bevegelse', 'af-c', 'walk-and-talk'],
+    easing: 'linear',
+    keyframes: 10,
+    previewIcon: 'tracking',
+    dofSettings: {
+      apertureStart: 2.0,
+      apertureEnd: 2.0,
+      useAutoFocus: true,
+      focusTargetType: 'subject',
+    },
+  },
+  {
+    id: 'vertigo_zoom',
+    name: 'Vertigo / Dolly Zoom',
+    category: 'fokus',
+    duration: 4,
+    description: 'Hitchcock-effekt: Dolly + zoom for å holde størrelse',
+    tags: ['fokus', 'vertigo', 'dolly', 'zoom', 'hitchcock', 'cinematisk'],
+    easing: 'easeInOut',
+    keyframes: 2,
+    previewIcon: 'vertigo',
+    dofSettings: {
+      focusDistanceStart: 2.0,
+      focusDistanceEnd: 5.0,
+      apertureStart: 2.8,
+      apertureEnd: 2.8,
+      focusTargetType: 'subject',
+    },
+  },
+  {
+    id: 'soft_glow',
+    name: 'Soft Glow',
+    category: 'fokus',
+    duration: 2,
+    description: 'Lett diffus uskarphet for romantisk stemning',
+    tags: ['fokus', 'soft', 'romantisk', 'drømmende', 'beauty'],
+    easing: 'easeInOut',
+    keyframes: 3,
+    previewIcon: 'soft_focus',
+    dofSettings: {
+      apertureStart: 4,
+      apertureEnd: 1.8,
+      focusTargetType: 'subject',
+      useAutoFocus: true,
+    },
+  },
+  {
+    id: 'macro_reveal',
+    name: 'Makro Reveal',
+    category: 'fokus',
+    duration: 3,
+    description: 'Ekstrem nærfokus med minimalt dybdeskarphet',
+    tags: ['fokus', 'makro', 'nær', 'detalj', 'produkt'],
+    easing: 'easeOut',
+    keyframes: 2,
+    previewIcon: 'macro',
+    dofSettings: {
+      focusDistanceStart: 0.3,
+      focusDistanceEnd: 0.5,
+      apertureStart: 2.8,
+      apertureEnd: 2.8,
+      focusTargetType: 'custom',
+    },
+  },
 ];
 
 const CATEGORY_INFO: Record<string, { label: string; icon: React.ReactNode; color: string; gradient: string }> = {
@@ -336,6 +540,12 @@ const CATEGORY_INFO: Record<string, { label: string; icon: React.ReactNode; colo
     icon: <CameraAlt />, 
     color: '#3498db',
     gradient: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)'
+  },
+  fokus: { 
+    label: 'Fokus & DOF', 
+    icon: <CenterFocusStrong />, 
+    color: '#e74c3c',
+    gradient: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)'
   },
   lys: { 
     label: 'Lys', 
@@ -429,6 +639,49 @@ const COMBO_PRESETS = [
     items: ['crane_up', 'light_circle_overhead'],
     mode: 'parallel' as const,
   },
+  // DOF/Fokus kombinasjoner
+  {
+    id: 'cinematic_focus_dolly',
+    name: 'Cinematisk Fokus Dolly',
+    description: 'Dolly inn med rack focus for filmisk effekt',
+    items: ['dolly_in', 'rack_focus_bg_fg'],
+    mode: 'parallel' as const,
+  },
+  {
+    id: 'reveal_with_focus',
+    name: 'Reveal med Fokus',
+    description: 'Fokus reveal kombinert med lys fade inn',
+    items: ['focus_reveal', 'light_fade_in'],
+    mode: 'parallel' as const,
+  },
+  {
+    id: 'dreamy_outro',
+    name: 'Drømmende Avslutning',
+    description: 'Fokus fadeout med lys fade ut',
+    items: ['focus_fadeout', 'light_fade_out'],
+    mode: 'parallel' as const,
+  },
+  {
+    id: 'portrait_isolation',
+    name: 'Portrett Isolasjon',
+    description: 'Dyp til grunn DOF med crane opp',
+    items: ['deep_to_shallow', 'crane_up'],
+    mode: 'parallel' as const,
+  },
+  {
+    id: 'product_macro',
+    name: 'Produkt Makro',
+    description: 'Makro reveal med orbit for produktvisning',
+    items: ['macro_reveal', 'orbit_360'],
+    mode: 'parallel' as const,
+  },
+  {
+    id: 'hitchcock_moment',
+    name: 'Hitchcock Øyeblikk',
+    description: 'Vertigo zoom med dramatisk lys reveal',
+    items: ['vertigo_zoom', 'dramatic_reveal'],
+    mode: 'parallel' as const,
+  },
 ];
 
 function AnimatedPreview({ type, color, isHovered }: { type: string; color: string; isHovered: boolean }) {
@@ -456,6 +709,17 @@ function AnimatedPreview({ type, color, isHovered }: { type: string; color: stri
       case 'strobe': return { animation: 'strobe 0.3s step-end infinite' };
       case 'smooth': return { animation: 'smoothFade 2s ease-in-out infinite' };
       case 'cut': return { animation: 'quickCut 0.5s step-end infinite' };
+      // DOF/Focus animations
+      case 'rack_focus': return { animation: 'rackFocus 2s ease-in-out infinite' };
+      case 'blur_reveal': return { animation: 'blurReveal 2.5s ease-out infinite' };
+      case 'blur_out': return { animation: 'blurOut 2s ease-in infinite' };
+      case 'bokeh_pulse': return { animation: 'bokehPulse 2s ease-in-out infinite' };
+      case 'aperture_open': return { animation: 'apertureOpen 2s ease-in-out infinite' };
+      case 'aperture_close': return { animation: 'apertureClose 2s ease-in-out infinite' };
+      case 'tracking': return { animation: 'trackingMove 1.5s ease-in-out infinite' };
+      case 'vertigo': return { animation: 'vertigoZoom 2s ease-in-out infinite' };
+      case 'soft_focus': return { animation: 'softGlow 2s ease-in-out infinite' };
+      case 'macro': return { animation: 'macroZoom 2s ease-in-out infinite' };
       default: return {};
     }
   };
@@ -477,6 +741,18 @@ function AnimatedPreview({ type, color, isHovered }: { type: string; color: stri
       case 'strobe': return <FlashOn sx={animStyle} />;
       case 'smooth': return <AutoAwesome sx={animStyle} />;
       case 'cut': return <Bolt sx={animStyle} />;
+      // DOF/Focus icons
+      case 'rack_focus': return <CenterFocusStrong sx={animStyle} />;
+      case 'blur_reveal': return <BlurOn sx={animStyle} />;
+      case 'blur_out': return <BlurOn sx={animStyle} />;
+      case 'bokeh_pulse': return <BlurOn sx={animStyle} />;
+      case 'aperture_open': return <CenterFocusStrong sx={animStyle} />;
+      case 'aperture_close': return <CenterFocusStrong sx={animStyle} />;
+      case 'tracking': return <Videocam sx={animStyle} />;
+      case 'vertigo': return <ZoomIn sx={animStyle} />;
+      case 'soft_focus': return <BlurOn sx={animStyle} />;
+      case 'macro': return <CenterFocusStrong sx={animStyle} />;
+      case 'tilt': return <ArrowUpward sx={animStyle} />;
       default: return <Animation sx={iconStyle} />;
     }
   };
@@ -498,6 +774,17 @@ function AnimatedPreview({ type, color, isHovered }: { type: string; color: stri
         @keyframes strobe { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0.1; } }
         @keyframes smoothFade { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         @keyframes quickCut { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+        /* DOF/Focus animations */
+        @keyframes rackFocus { 0% { filter: blur(0px); transform: scale(1); } 50% { filter: blur(3px); transform: scale(0.95); } 100% { filter: blur(0px); transform: scale(1); } }
+        @keyframes blurReveal { 0% { filter: blur(6px); opacity: 0.5; } 100% { filter: blur(0px); opacity: 1; } }
+        @keyframes blurOut { 0% { filter: blur(0px); opacity: 1; } 100% { filter: blur(6px); opacity: 0.5; } }
+        @keyframes bokehPulse { 0%, 100% { filter: blur(0px); transform: scale(1); } 50% { filter: blur(2px); transform: scale(1.1); } }
+        @keyframes apertureOpen { 0% { transform: scale(0.8); } 50% { transform: scale(1.2); } 100% { transform: scale(0.8); } }
+        @keyframes apertureClose { 0% { transform: scale(1.2); } 50% { transform: scale(0.8); } 100% { transform: scale(1.2); } }
+        @keyframes trackingMove { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        @keyframes vertigoZoom { 0%, 100% { transform: scale(1) translateZ(0); } 50% { transform: scale(1.2) translateZ(10px); } }
+        @keyframes softGlow { 0%, 100% { filter: blur(0px) brightness(1); } 50% { filter: blur(2px) brightness(1.2); } }
+        @keyframes macroZoom { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.4); } }
       `}</style>
       {getIcon()}
     </Box>
@@ -712,7 +999,7 @@ export function TidslinjeLibraryPanel() {
               min={0.25}
               max={3}
               step={0.25}
-              onChange={(_, val) => setSingleSpeedMultiplier(val as number)}
+              onChange={(_: Event, val: number | number[]) => setSingleSpeedMultiplier(val as number)}
               marks={[
                 { value: 0.5, label: '0.5x' },
                 { value: 1, label: '1x' },
@@ -863,7 +1150,7 @@ export function TidslinjeLibraryPanel() {
                               min={0.5}
                               max={15}
                               step={0.5}
-                              onChange={(_, val) => handleUpdateComboItem(item.preset.id, { customDuration: val as number })}
+                              onChange={(_: Event, val: number | number[]) => handleUpdateComboItem(item.preset.id, { customDuration: val as number })}
                               sx={{ 
                                 color: catInfo.color,
                                 '& .MuiSlider-thumb': { width: 16, height: 16 },
@@ -879,7 +1166,7 @@ export function TidslinjeLibraryPanel() {
                               min={0.25}
                               max={3}
                               step={0.25}
-                              onChange={(_, val) => handleUpdateComboItem(item.preset.id, { speedMultiplier: val as number })}
+                              onChange={(_: Event, val: number | number[]) => handleUpdateComboItem(item.preset.id, { speedMultiplier: val as number })}
                               marks={[
                                 { value: 0.5, label: '0.5x' },
                                 { value: 1, label: '1x' },
@@ -1157,7 +1444,7 @@ export function TidslinjeLibraryPanel() {
                         fontSize: isTouchDevice ? 17 : 15,
                         boxShadow: `0 4px 20px ${categoryInfo.color}40`,
                       }}
-                      onClick={(e) => { e.stopPropagation(); handleApplyPreset(preset); }}
+                      onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleApplyPreset(preset); }}
                     >
                       {isPlaying ? 'Spiller...' : 'Kjør Sekvens'}
                     </Button>
@@ -1176,7 +1463,7 @@ export function TidslinjeLibraryPanel() {
                         fontWeight: 700, textTransform: 'none',
                         fontSize: isTouchDevice ? 17 : 15,
                       }}
-                      onClick={(e) => { e.stopPropagation(); handleApplyPreset(preset); }}
+                      onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleApplyPreset(preset); }}
                     >
                       {inCombo ? 'Valgt' : 'Legg til'}
                     </Button>

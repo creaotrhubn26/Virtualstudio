@@ -144,6 +144,8 @@ export const useFocusStore = create<FocusState>((set, get) => ({
 }));
 
 // Autofocus Store
+type FocusTargetType = 'eye' | 'subject' | 'face' | 'plane' | 'background' | 'foreground' | 'custom' | 'auto';
+
 interface AutoFocusState {
   mode: AutoFocusMode;
   eyePriority: EyeDetectionPriority;
@@ -155,6 +157,7 @@ interface AutoFocusState {
   smoothTransitionSpeed: number; // 0.0-1.0, higher = faster focus
   showEyeIndicators: boolean;
   dofEnabled: boolean; // Enable/disable depth of field rendering effect
+  focusTargetType: FocusTargetType; // Target type for AF detection (eye, subject, face, etc.)
   
   setMode: (mode: AutoFocusMode) => void;
   setEyePriority: (priority: EyeDetectionPriority) => void;
@@ -167,6 +170,7 @@ interface AutoFocusState {
   setSmoothTransitionSpeed: (speed: number) => void;
   setShowEyeIndicators: (show: boolean) => void;
   setDofEnabled: (enabled: boolean) => void;
+  setFocusTargetType: (targetType: FocusTargetType) => void;
   
   // Convenience methods
   triggerSingleFocus: () => void;
@@ -184,6 +188,7 @@ export const useAutoFocusStore = create<AutoFocusState>((set, get) => ({
   smoothTransitionSpeed: 0.15,
   showEyeIndicators: true,
   dofEnabled: true, // DOF enabled by default
+  focusTargetType: 'eye', // Default to eye detection
   
   setMode: (mode) => set({ mode, isActive: mode !== 'MF', isTracking: mode === 'AF-C' }),
   setEyePriority: (priority) => set({ eyePriority: priority }),
@@ -196,6 +201,7 @@ export const useAutoFocusStore = create<AutoFocusState>((set, get) => ({
   setSmoothTransitionSpeed: (speed) => set({ smoothTransitionSpeed: Math.max(0.01, Math.min(1.0, speed)) }),
   setShowEyeIndicators: (show) => set({ showEyeIndicators: show }),
   setDofEnabled: (enabled) => set({ dofEnabled: enabled }),
+  setFocusTargetType: (targetType) => set({ focusTargetType: targetType }),
   
   triggerSingleFocus: () => {
     const state = get();

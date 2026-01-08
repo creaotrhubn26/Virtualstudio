@@ -43,6 +43,12 @@ export class AutoFocusSystem {
       this.smoothFocusTransition();
     });
     
+    // Listen for focus target type changes from DOF animation presets
+    window.addEventListener('vs-set-focus-target-type', ((e: CustomEvent) => {
+      const { targetType } = e.detail;
+      this.handleFocusTargetTypeChange(targetType);
+    }) as EventListener);
+    
     this.isInitialized = true;
     console.log('[AutoFocusSystem] Initialized');
     
@@ -166,6 +172,84 @@ export class AutoFocusSystem {
     this.pauseTimeout = setTimeout(() => {
       this.isPaused = false;
     }, durationMs);
+  }
+  
+  public resumeTracking(enterContinuousMode: boolean = false): void {
+    // Clear any pending pause timeout
+    if (this.pauseTimeout) {
+      clearTimeout(this.pauseTimeout);
+      this.pauseTimeout = null;
+    }
+    
+    this.isPaused = false;
+    
+    // Optionally switch to AF-C mode and restart continuous tracking
+    if (enterContinuousMode) {
+      useAutoFocusStore.getState().setMode('AF-C');
+      this.startContinuousTracking();
+      console.log('[AutoFocusSystem] Tracking resumed and entered AF-C mode');
+    } else {
+      console.log('[AutoFocusSystem] Tracking resumed');
+    }
+  }
+  
+  /**
+   * Handle focus target type changes from DOF animation presets.
+   * Supports 'eye', 'subject', and other target types for AF reacquisition.
+   */
+  private handleFocusTargetTypeChange(targetType: string): void {
+    console.log(`[AutoFocusSystem] Focus target type changed to: ${targetType}`);
+    
+    // Update store with new focus target type
+    const validTargetTypes = ['eye', 'subject', 'face', 'plane', 'background', 'foreground', 'custom', 'auto'];
+    if (validTargetTypes.includes(targetType)) {
+      useAutoFocusStore.getState().setFocusTargetType(targetType as any);
+    } else {
+      // Map unknown types to 'auto' for graceful fallback
+      useAutoFocusStore.getState().setFocusTargetType('auto');
+    }
+    
+    // Invalidate eye cache to force fresh detection
+    this.invalidateEyeCache();
+    
+    switch (targetType) {
+      case 'eye':
+        // Eye priority - detect and focus on eyes
+        this.detectAndFocusWithFallback();
+        break;
+      case 'subject':
+      case 'face':
+        // Subject/face focus - use head detection as primary
+        const headTarget = this.detectHeadFallback();
+        if (headTarget) {
+          this.setFocusTarget(headTarget);
+        } else {
+          // Fallback to eye detection if no head found
+          this.detectAndFocusWithFallback();
+        }
+        break;
+      case 'foreground':
+        // Foreground focus - target nearest visible object
+        this.detectAndFocusWithFallback();
+        break;
+      case 'plane':
+      case 'background':
+        // For background/plane focus, use geometry fallback
+        const topTarget = this.detectTopOfModelFallback();
+        if (topTarget) {
+          this.setFocusTarget(topTarget);
+        }
+        break;
+      case 'custom':
+        // Custom target - maintain current focus, don't re-detect
+        console.log('[AutoFocusSystem] Custom focus target - maintaining current focus');
+        break;
+      case 'auto':
+      default:
+        // Default: run standard detection
+        this.detectAndFocusWithFallback();
+        break;
+    }
   }
   
   /**

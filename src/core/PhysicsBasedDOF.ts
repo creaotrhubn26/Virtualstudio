@@ -14,7 +14,7 @@ export class PhysicsBasedDOF {
   private cocPass: BABYLON.PostProcess | null = null;
   private blurPass: BABYLON.PostProcess | null = null;
   private depthRenderer: BABYLON.DepthRenderer | null = null;
-  private isEnabled: boolean = false;
+  private _isEnabled: boolean = false;
   private lastDebugLog: number = 0;
   
   private settings: DOFCameraSettings = {
@@ -334,7 +334,7 @@ export class PhysicsBasedDOF {
   }
   
   public setEnabled(enabled: boolean): void {
-    this.isEnabled = enabled;
+    this._isEnabled = enabled;
     
     if (enabled) {
       if (this.cocPass) {
@@ -363,6 +363,48 @@ export class PhysicsBasedDOF {
   
   public updateSettings(settings: Partial<DOFCameraSettings>): void {
     this.settings = { ...this.settings, ...settings };
+  }
+  
+  public isEnabled(): boolean {
+    return this._isEnabled;
+  }
+  
+  public getAperture(): number {
+    return this.settings.fStop;
+  }
+  
+  public setAperture(fStop: number): void {
+    this.settings.fStop = fStop;
+    // Also update virtualStudio.cameraSettings which is used by shader onApply
+    const studio = (window as any).virtualStudio;
+    if (studio?.cameraSettings) {
+      studio.cameraSettings.aperture = fStop;
+    }
+    // Dispatch event to sync UI
+    window.dispatchEvent(new CustomEvent('vs-dof-aperture-updated', { 
+      detail: { aperture: fStop } 
+    }));
+  }
+  
+  public getFocusDistance(): number {
+    const focusState = useFocusStore.getState();
+    return focusState.focusDistance || 3.0;
+  }
+  
+  public setFocusDistance(distance: number): void {
+    useFocusStore.getState().setFocusDistance(distance);
+    // Dispatch event to sync UI
+    window.dispatchEvent(new CustomEvent('vs-dof-focus-updated', { 
+      detail: { focusDistance: distance } 
+    }));
+  }
+  
+  public enable(): void {
+    this.setEnabled(true);
+  }
+  
+  public disable(): void {
+    this.setEnabled(false);
   }
   
   public dispose(): void {

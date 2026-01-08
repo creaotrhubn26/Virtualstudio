@@ -6988,7 +6988,23 @@ class VirtualStudio {
     });
   }
 
-  private applyAnimationPreset(preset: { id: string; name: string; category: string; duration: number; easing: string; keyframes: number; autoResetCamera?: boolean }): void {
+  private applyAnimationPreset(preset: { 
+    id: string; 
+    name: string; 
+    category: string; 
+    duration: number; 
+    easing: string; 
+    keyframes: number; 
+    autoResetCamera?: boolean;
+    dofSettings?: {
+      apertureStart?: number;
+      apertureEnd?: number;
+      focusDistanceStart?: number;
+      focusDistanceEnd?: number;
+      useAutoFocus?: boolean;
+      focusTargetType?: string;
+    };
+  }): void {
     const fps = 30;
     const totalFrames = preset.duration * fps;
     const shouldResetCamera = preset.autoResetCamera !== false;
@@ -7007,13 +7023,126 @@ class VirtualStudio {
       this.animateLights(preset.id, totalFrames, fps, easingFunction);
     } else if (preset.category === 'overgang' || preset.category === 'effekt') {
       this.animateEffect(preset.id, totalFrames, fps, easingFunction);
+    } else if (preset.category === 'fokus') {
+      this.animateDOF(preset.id, totalFrames, fps, easingFunction, preset.dofSettings);
     }
     
     console.log(`Animation "${preset.name}" started - ${preset.duration}s @ ${fps}fps`);
   }
+  
+  private animateDOF(
+    presetId: string,
+    totalFrames: number,
+    fps: number,
+    babylonEasing?: BABYLON.EasingFunction,
+    dofSettings?: {
+      apertureStart?: number;
+      apertureEnd?: number;
+      focusDistanceStart?: number;
+      focusDistanceEnd?: number;
+      useAutoFocus?: boolean;
+      focusTargetType?: string;
+    }
+  ): void {
+    if (!this.physicsBasedDOF) {
+      console.warn('PhysicsBasedDOF not initialized');
+      return;
+    }
+    
+    // Use defaults from current DOF state if settings not provided
+    const settings = dofSettings || {};
+    const currentAperture = this.physicsBasedDOF.getAperture();
+    const currentFocusDistance = this.physicsBasedDOF.getFocusDistance();
+    
+    const { 
+      apertureStart = currentAperture, 
+      apertureEnd = currentAperture, 
+      focusDistanceStart, 
+      focusDistanceEnd,
+      useAutoFocus = false,
+      focusTargetType
+    } = settings;
+    
+    // Check if there's anything to animate
+    const hasApertureChange = apertureStart !== apertureEnd;
+    const hasFocusChange = focusDistanceStart !== undefined && focusDistanceEnd !== undefined;
+    
+    if (!hasApertureChange && !hasFocusChange) {
+      console.log(`DOF preset "${presetId}" has no animation values, using current DOF state`);
+      return;
+    }
+    
+    const duration = totalFrames / fps;
+    const startTime = performance.now();
+    
+    // Create numeric easing function from Babylon easing
+    const easeValue = (t: number): number => {
+      if (!babylonEasing) return t; // Linear if no easing
+      return babylonEasing.ease(t);
+    };
+    
+    // Enable DOF if not already enabled
+    if (!this.physicsBasedDOF.isEnabled()) {
+      this.physicsBasedDOF.enable();
+    }
+    
+    // Pause autofocus during DOF animation if we're manually controlling focus
+    // pauseTracking auto-resumes after the animation duration
+    if (this.autoFocusSystem && focusDistanceStart !== undefined && focusDistanceEnd !== undefined) {
+      this.autoFocusSystem.pauseTracking(duration * 1000 + 500);
+    }
+    
+    const animate = () => {
+      const elapsed = (performance.now() - startTime) / 1000;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = easeValue(progress);
+      
+      // Animate aperture
+      if (apertureStart !== apertureEnd) {
+        const currentAperture = apertureStart + (apertureEnd - apertureStart) * eased;
+        this.physicsBasedDOF!.setAperture(currentAperture);
+      }
+      
+      // Animate focus distance
+      if (focusDistanceStart !== undefined && focusDistanceEnd !== undefined) {
+        const currentFocusDistance = focusDistanceStart + (focusDistanceEnd - focusDistanceStart) * eased;
+        this.physicsBasedDOF!.setFocusDistance(currentFocusDistance);
+      }
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        // Animation complete
+        console.log(`DOF animation "${presetId}" completed`);
+        
+        // Always sync focus target type to store if specified (even for manual focus presets)
+        if (focusTargetType) {
+          window.dispatchEvent(new CustomEvent('vs-set-focus-target-type', { 
+            detail: { targetType: focusTargetType } 
+          }));
+        }
+        
+        // Handle useAutoFocus - resume autofocus tracking after animation
+        if (useAutoFocus && this.autoFocusSystem) {
+          // Resume autofocus tracking and enter AF-C continuous mode
+          this.autoFocusSystem.resumeTracking(true);
+          console.log(`DOF animation: Autofocus resumed in AF-C mode${focusTargetType ? ` with target type "${focusTargetType}"` : ''}`);
+        } else if (focusTargetType) {
+          console.log(`DOF animation: Focus target type set to "${focusTargetType}" (manual focus mode)`);
+        }
+        
+        // Dispatch completion event
+        window.dispatchEvent(new CustomEvent('ch-dof-animation-complete', { 
+          detail: { presetId, finalAperture: apertureEnd, finalFocusDistance: focusDistanceEnd, useAutoFocus, focusTargetType } 
+        }));
+      }
+    };
+    
+    animate();
+  }
 
   private async applyAnimationCombo(comboData: { 
-    items: Array<{ id: string; name: string; category: string; duration: number; easing: string; keyframes: number; speedMultiplier?: number }>;
+    items: Array<{ id: string; name: string; category: string; duration: number; easing: string; keyframes: number; speedMultiplier?: number; dofSettings?: { apertureStart?: number; apertureEnd?: number; focusDistanceStart?: number; focusDistanceEnd?: number; useAutoFocus?: boolean; focusTargetType?: string } }>;
     mode: 'parallel' | 'sequential';
     totalDuration: number;
     autoResetCamera?: boolean;
@@ -7037,6 +7166,8 @@ class VirtualStudio {
           this.animateLights(preset.id, totalFrames, fps, easingFunction);
         } else if (preset.category === 'overgang' || preset.category === 'effekt') {
           this.animateEffect(preset.id, totalFrames, fps, easingFunction);
+        } else if (preset.category === 'fokus') {
+          this.animateDOF(preset.id, totalFrames, fps, easingFunction, preset.dofSettings);
         }
       });
       console.log(`Combo (parallel) started - ${items.length} animations`);
@@ -7054,6 +7185,8 @@ class VirtualStudio {
               this.animateLights(preset.id, totalFrames, fps, easingFunction);
             } else if (preset.category === 'overgang' || preset.category === 'effekt') {
               this.animateEffect(preset.id, totalFrames, fps, easingFunction);
+            } else if (preset.category === 'fokus') {
+              this.animateDOF(preset.id, totalFrames, fps, easingFunction, preset.dofSettings);
             }
             
             setTimeout(resolve, preset.duration * 1000);
