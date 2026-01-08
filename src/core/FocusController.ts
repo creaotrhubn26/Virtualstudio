@@ -71,7 +71,20 @@ export class FocusController {
     // Click-to-focus on 3D viewport canvas
     const canvas = document.getElementById('renderCanvas');
     if (canvas) {
+      console.log('[FocusController] Adding click-to-focus handler to canvas');
       canvas.addEventListener('click', this.handleViewportClick.bind(this));
+    } else {
+      console.warn('[FocusController] renderCanvas not found, retrying...');
+      // Retry after a short delay
+      setTimeout(() => {
+        const retryCanvas = document.getElementById('renderCanvas');
+        if (retryCanvas) {
+          console.log('[FocusController] Adding click-to-focus handler to canvas (retry)');
+          retryCanvas.addEventListener('click', this.handleViewportClick.bind(this));
+        } else {
+          console.error('[FocusController] renderCanvas still not found');
+        }
+      }, 500);
     }
     
     // Debounced update function to prevent too frequent updates and blinking
@@ -373,12 +386,19 @@ export class FocusController {
   }
 
   private handleViewportClick(e: MouseEvent) {
+    console.log('[FocusController] Viewport clicked at:', e.clientX, e.clientY);
+    
     // Get focus mode from store
     const focusState = useFocusStore.getState();
     const appState = useAppStore.getState();
     
+    console.log('[FocusController] Current focus mode:', focusState.mode);
+    
     // Only handle click-to-focus in single, zone, wide, or tracking modes
-    if (focusState.mode === 'none') return;
+    if (focusState.mode === 'none') {
+      console.log('[FocusController] Mode is none, skipping click-to-focus');
+      return;
+    }
     
     // Get the AutoFocusSystem from VirtualStudio
     const studio = (window as any).virtualStudio;
