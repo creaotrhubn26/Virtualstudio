@@ -17308,8 +17308,13 @@ class VirtualStudio {
   }
 
   private initRecordingArc(): void {
+    console.log('[RecordingArc] initRecordingArc() called');
     // Create the recording arc on startup (it will be collapsed until hover)
-    if (document.getElementById('recordingArc')) return;
+    if (document.getElementById('recordingArc')) {
+      console.log('[RecordingArc] Arc already exists, skipping');
+      return;
+    }
+    console.log('[RecordingArc] Creating new recording arc');
     
     const arc = document.createElement('div');
     arc.id = 'recordingArc';
