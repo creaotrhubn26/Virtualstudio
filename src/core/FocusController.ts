@@ -68,37 +68,51 @@ export class FocusController {
     document.addEventListener('pointermove', this.handlePointerMove);
     document.addEventListener('pointerup', this.handlePointerUp);
     
-    // Click-to-focus on 3D viewport canvas - use dblclick to avoid conflicts with camera controls
+    // Click-to-focus on 3D viewport - add to both canvas and viewport container
     const canvas = document.getElementById('renderCanvas');
+    const viewport = document.getElementById('viewport3d');
+    
+    // Manual double-click detection
+    let lastClickTime = 0;
+    const handlePointerUp = (e: PointerEvent) => {
+      if (e.button !== 0) return; // Only left click
+      const now = Date.now();
+      const timeDiff = now - lastClickTime;
+      console.log('[FocusController] Pointer up on viewport, timeDiff:', timeDiff);
+      lastClickTime = now;
+      
+      if (timeDiff > 50 && timeDiff < 400) {
+        console.log('[FocusController] Manual double-click detected!');
+        this.handleViewportClick(e as unknown as MouseEvent);
+      }
+    };
+    
+    if (viewport) {
+      console.log('[FocusController] Adding double-click-to-focus handler to viewport');
+      viewport.addEventListener('dblclick', this.handleViewportClick.bind(this), { capture: true });
+      viewport.addEventListener('pointerup', handlePointerUp, { capture: true });
+    }
+    
     if (canvas) {
       console.log('[FocusController] Adding double-click-to-focus handler to canvas');
-      // Use capture phase to get events before Babylon.js can consume them
       canvas.addEventListener('dblclick', this.handleViewportClick.bind(this), { capture: true });
-      
-      // Also add a manual double-click detection via pointerup
-      let lastClickTime = 0;
-      canvas.addEventListener('pointerup', (e: PointerEvent) => {
-        if (e.button !== 0) return; // Only left click
-        const now = Date.now();
-        const timeDiff = now - lastClickTime;
-        console.log('[FocusController] Pointer up, timeDiff:', timeDiff);
-        lastClickTime = now;
-        
-        if (timeDiff > 50 && timeDiff < 400) {
-          console.log('[FocusController] Manual double-click detected!');
-          this.handleViewportClick(e as unknown as MouseEvent);
-        }
-      }, { capture: true });
-    } else {
-      console.warn('[FocusController] renderCanvas not found, retrying...');
-      // Retry after a short delay
+      canvas.addEventListener('pointerup', handlePointerUp, { capture: true });
+    }
+    
+    if (!canvas && !viewport) {
+      console.warn('[FocusController] Neither canvas nor viewport found, retrying...');
       setTimeout(() => {
         const retryCanvas = document.getElementById('renderCanvas');
+        const retryViewport = document.getElementById('viewport3d');
         if (retryCanvas) {
-          console.log('[FocusController] Adding double-click-to-focus handler to canvas (retry)');
+          console.log('[FocusController] Adding handlers to canvas (retry)');
           retryCanvas.addEventListener('dblclick', this.handleViewportClick.bind(this), { capture: true });
-        } else {
-          console.error('[FocusController] renderCanvas still not found');
+          retryCanvas.addEventListener('pointerup', handlePointerUp, { capture: true });
+        }
+        if (retryViewport) {
+          console.log('[FocusController] Adding handlers to viewport (retry)');
+          retryViewport.addEventListener('dblclick', this.handleViewportClick.bind(this), { capture: true });
+          retryViewport.addEventListener('pointerup', handlePointerUp, { capture: true });
         }
       }, 500);
     }
