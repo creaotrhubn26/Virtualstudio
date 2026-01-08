@@ -17519,26 +17519,27 @@ class VirtualStudio {
         
         if (isRecording) {
           // Gray out all camera buttons and record button when CameraPathRecorder is active
+          // Use setProperty with !important to override existing inline styles
           allBtns.forEach(btn => {
-            (btn as HTMLElement).style.opacity = '0.3';
-            (btn as HTMLElement).style.pointerEvents = 'none';
+            (btn as HTMLElement).style.setProperty('opacity', '0.3', 'important');
+            (btn as HTMLElement).style.setProperty('pointer-events', 'none', 'important');
           });
           if (recordBtn) {
-            (recordBtn as HTMLElement).style.opacity = '0.3';
-            (recordBtn as HTMLElement).style.pointerEvents = 'none';
+            (recordBtn as HTMLElement).style.setProperty('opacity', '0.3', 'important');
+            (recordBtn as HTMLElement).style.setProperty('pointer-events', 'none', 'important');
           }
           arcEl.classList.add('external-recording');
         } else {
-          // Re-enable buttons
+          // Re-enable buttons - remove inline overrides
           allBtns.forEach(btn => {
-            (btn as HTMLElement).style.pointerEvents = '';
+            (btn as HTMLElement).style.removeProperty('pointer-events');
           });
           if (recordBtn) {
-            (recordBtn as HTMLElement).style.opacity = '';
-            (recordBtn as HTMLElement).style.pointerEvents = '';
+            (recordBtn as HTMLElement).style.removeProperty('opacity');
+            (recordBtn as HTMLElement).style.removeProperty('pointer-events');
           }
           arcEl.classList.remove('external-recording');
-          // Refresh camera states
+          // Refresh camera states (this will restore proper opacity values)
           this.updateRecordingArcCameras(arcEl);
         }
       }) as EventListener);
