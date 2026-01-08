@@ -17,15 +17,16 @@ import { getActiveCameraId } from '../core/services/viewports';
 import { AtmosphereSettings } from '../core/models/sceneComposer';
 
 export function CameraPanel() {
-  const { scene, updateNode } = useAppStore();
+  const scene = useAppStore((state) => state.scene);
+  const updateNode = useAppStore((state) => state.updateNode);
   const [activeTab, setActiveTab] = useState(0);
   const [atmosphereActive, setAtmosphereActive] = useState(false);
 
   // Find active camera node
   const activeCameraId = getActiveCameraId();
   const cameraNode = activeCameraId
-    ? scene.nodes.find((n) => n.id === activeCameraId)
-    : scene.nodes.find((n) => n.camera);
+    ? scene.find((n) => n.id === activeCameraId)
+    : scene.find((n) => n.camera);
 
   // Initialize settings from camera node
   const [cameraSettings, setCameraSettings] = useState<CameraSettings>(() => {
@@ -34,7 +35,7 @@ export function CameraPanel() {
         aperture: cameraNode.camera.aperture || 2.8,
         iso: cameraNode.camera.iso || 100,
         shutter: cameraNode.camera.shutter || 1 / 125,
-        focusDistance: cameraNode.userData?.focusDistance || 3.0,
+        focusDistance: (cameraNode.userData?.focusDistance as number) || 3.0,
         focalLength: cameraNode.camera.focalLength || 50,
       };
     }
@@ -67,7 +68,7 @@ export function CameraPanel() {
         aperture: cameraNode.camera.aperture || 2.8,
         iso: cameraNode.camera.iso || 100,
         shutter: cameraNode.camera.shutter || 1 / 125,
-        focusDistance: cameraNode.userData?.focusDistance || 3.0,
+        focusDistance: (cameraNode.userData?.focusDistance as number) || 3.0,
         focalLength: cameraNode.camera.focalLength || 50,
       });
 
@@ -207,7 +208,7 @@ export function CameraPanel() {
     <Box>
       <Tabs
         value={activeTab}
-        onChange={(_, v) => setActiveTab(v)}
+        onChange={(_: React.SyntheticEvent, v: number) => setActiveTab(v)}
         sx={{ borderBottom: 1, borderColor:'divider' }}
       >
         <Tab label="Camera" />

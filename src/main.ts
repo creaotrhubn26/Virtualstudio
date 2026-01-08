@@ -12484,15 +12484,50 @@ class VirtualStudio {
         this.scene.customRenderTargets.push(renderTarget);
       }
       
-      // Log renderList.length changes (not every frame, only on change)
-      const currentRenderListLength = renderTarget.renderList?.length || 0;
-      const lastRenderListLength = this.monitorLastRenderListLength.get(presetId);
-      if (lastRenderListLength !== undefined && currentRenderListLength !== lastRenderListLength) {
-        console.warn(`[Monitor] ${presetId}: renderList.length changed from ${lastRenderListLength} to ${currentRenderListLength}. This may cause signals to disappear if renderList becomes empty.`);
-        this.monitorLastRenderListLength.set(presetId, currentRenderListLength);
-      } else if (lastRenderListLength === undefined) {
-        this.monitorLastRenderListLength.set(presetId, currentRenderListLength);
+      // CRITICAL FIX: Always keep renderList up-to-date with current visible meshes
+      // If meshes are added/removed from scene, we need to update the RTT's renderList
+      // Otherwise the RTT will render an empty/stale list and show "no signal"
+      // NOTE: Use splice to modify in-place so Babylon retains its reference to the array
+      const currentRenderList = renderTarget.renderList || [];
+      const currentRenderListLength = currentRenderList.length;
+      
+      // Check if we need to update: length mismatch OR mesh identity change
+      // Mesh identity change: a mesh was swapped (removed + added same frame, count stays equal)
+      let needsUpdate = false;
+      if (currentRenderListLength !== visibleMeshes.length) {
+        needsUpdate = true;
+      } else if (currentRenderListLength > 0) {
+        // Quick identity check: compare first/last mesh references
+        // This catches most mesh swap cases without O(n) comparison
+        const firstMismatch = currentRenderList[0] !== visibleMeshes[0];
+        const lastMismatch = currentRenderList[currentRenderListLength - 1] !== visibleMeshes[visibleMeshes.length - 1];
+        if (firstMismatch || lastMismatch) {
+          needsUpdate = true;
+        }
       }
+      
+      if (needsUpdate && visibleMeshes.length > 0) {
+        // Use splice to modify array in-place, preserving Babylon's internal reference
+        if (renderTarget.renderList) {
+          renderTarget.renderList.splice(0, renderTarget.renderList.length, ...visibleMeshes);
+        } else {
+          // Initialize renderList if it doesn't exist
+          renderTarget.renderList = [...visibleMeshes];
+        }
+        
+        // Log the update
+        const lastLength = this.monitorLastRenderListLength.get(presetId);
+        if (lastLength !== undefined && lastLength !== visibleMeshes.length) {
+          console.log(`[Monitor] ${presetId}: Updated renderList from ${lastLength} to ${visibleMeshes.length} meshes`);
+        }
+        
+        this.monitorLastRenderListLength.set(presetId, visibleMeshes.length);
+      } else if (visibleMeshes.length === 0 && currentRenderListLength === 0) {
+        // Scene is confirmed empty, track this state
+        this.monitorLastRenderListLength.set(presetId, 0);
+      }
+      // Note: If visibleMeshes is empty but renderList has meshes, we keep the existing
+      // renderList to prevent flickering during transient empty states
       
       // NOTE: Do NOT call renderTarget.render() manually!
       // When renderTarget is in scene.customRenderTargets (which it is),
