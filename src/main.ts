@@ -17599,8 +17599,10 @@ class VirtualStudio {
       const cameraId = btn.getAttribute('data-camera');
       const htmlBtn = btn as HTMLButtonElement;
       
-      const isSaved = cameraId && this.cameraPresets.has(cameraId);
-      console.log(`[RecordingArc] Button ${cameraId}: saved=${isSaved}`);
+      // Check if preset exists AND has actual data (not null)
+      const preset = cameraId ? this.cameraPresets.get(cameraId) : null;
+      const isSaved = cameraId && preset !== null && preset !== undefined;
+      console.log(`[RecordingArc] Button ${cameraId}: saved=${isSaved}, preset=${preset ? 'exists' : 'null/undefined'}`);
       
       if (isSaved) {
         // Camera is saved - enable and style as available
