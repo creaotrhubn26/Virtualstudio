@@ -29,6 +29,12 @@ The application uses a hybrid architecture combining Vanilla TypeScript with Bab
   - Smart geometry-based face detection for models without separate eye meshes
   - Eye priority selection (nearest, left, right)
   - Visual focus frame indicator and smooth focus transitions
+  - DOF integration: Focus distance automatically updates depth of field rendering based on camera aperture
+- **Focus Peaking:** Real-time visual focus aid using Sobel edge detection:
+  - Highlights sharp edges with configurable colors (red, green, blue, yellow, white)
+  - Adjustable intensity and threshold settings
+  - Depth-aware mode: Only highlights edges in the DOF focus range
+  - Integrates with aperture settings - wider apertures show narrower focus zones
 - **Properties Panel:** Allows selection-specific adjustments for lights (position, rotation, CCT, modifier settings, IES, Gobo, Focus) and cameras (Aperture, Shutter, ISO, ND), along with a light meter.
 - **Virtual Actor Panel:** Generates and customizes 3D actors with adjustable parameters, presets, and integration with Meta SAM 3D Body for realistic avatar creation from images.
 - **Asset Loading:** Comprehensive system for loading 3D assets (characters, props, modifiers, accessories, HDRI environments) with drag-and-drop.
