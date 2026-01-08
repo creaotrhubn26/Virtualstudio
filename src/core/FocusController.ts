@@ -72,7 +72,23 @@ export class FocusController {
     const canvas = document.getElementById('renderCanvas');
     if (canvas) {
       console.log('[FocusController] Adding double-click-to-focus handler to canvas');
-      canvas.addEventListener('dblclick', this.handleViewportClick.bind(this));
+      // Use capture phase to get events before Babylon.js can consume them
+      canvas.addEventListener('dblclick', this.handleViewportClick.bind(this), { capture: true });
+      
+      // Also add a manual double-click detection via pointerup
+      let lastClickTime = 0;
+      canvas.addEventListener('pointerup', (e: PointerEvent) => {
+        if (e.button !== 0) return; // Only left click
+        const now = Date.now();
+        const timeDiff = now - lastClickTime;
+        console.log('[FocusController] Pointer up, timeDiff:', timeDiff);
+        lastClickTime = now;
+        
+        if (timeDiff > 50 && timeDiff < 400) {
+          console.log('[FocusController] Manual double-click detected!');
+          this.handleViewportClick(e as unknown as MouseEvent);
+        }
+      }, { capture: true });
     } else {
       console.warn('[FocusController] renderCanvas not found, retrying...');
       // Retry after a short delay
@@ -80,7 +96,7 @@ export class FocusController {
         const retryCanvas = document.getElementById('renderCanvas');
         if (retryCanvas) {
           console.log('[FocusController] Adding double-click-to-focus handler to canvas (retry)');
-          retryCanvas.addEventListener('dblclick', this.handleViewportClick.bind(this));
+          retryCanvas.addEventListener('dblclick', this.handleViewportClick.bind(this), { capture: true });
         } else {
           console.error('[FocusController] renderCanvas still not found');
         }
