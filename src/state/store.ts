@@ -5,6 +5,29 @@ export type SafeAreaMode = 'none' | 'action' | 'title' | 'both';
 export type CompositionGuide = 'none' | 'thirds' | 'golden' | 'spiral' | 'diagonal' | 'center' | 'triangle' | 'symmetry';
 export type HelperGuide = 'none' | 'colortemp' | 'exposure' | 'height' | 'glasses' | 'classphoto' | 'safety' | 'lighting';
 
+// Autofocus modes: AF-S (single), AF-C (continuous), MF (manual)
+export type AutoFocusMode = 'MF' | 'AF-S' | 'AF-C';
+
+// Eye detection priority
+export type EyeDetectionPriority = 'nearest' | 'left' | 'right' | 'center';
+
+export interface DetectedEye {
+  id: string;
+  actorName: string;
+  eyeSide: 'left' | 'right';
+  worldPosition: { x: number; y: number; z: number };
+  distanceFromCamera: number;
+  screenPosition: { x: number; y: number } | null;
+}
+
+export interface AutoFocusTarget {
+  actorId: string;
+  actorName: string;
+  selectedEye: DetectedEye | null;
+  focusDistance: number;
+  isLocked: boolean;
+}
+
 export interface FocusPoint {
   id: number;
   x: number;
@@ -117,6 +140,112 @@ export const useFocusStore = create<FocusState>((set, get) => ({
     }
     const activePoint = state.zonePoints.find(p => p.id === state.activePointId);
     return activePoint ? { x: activePoint.x, y: activePoint.y } : { x: 0.5, y: 0.5 };
+  }
+}));
+
+// Autofocus Store
+interface AutoFocusState {
+  mode: AutoFocusMode;
+  eyePriority: EyeDetectionPriority;
+  isActive: boolean;
+  isTracking: boolean;
+  detectedEyes: DetectedEye[];
+  currentTarget: AutoFocusTarget | null;
+  focusLocked: boolean;
+  smoothTransitionSpeed: number; // 0.0-1.0, higher = faster focus
+  showEyeIndicators: boolean;
+  
+  setMode: (mode: AutoFocusMode) => void;
+  setEyePriority: (priority: EyeDetectionPriority) => void;
+  setActive: (active: boolean) => void;
+  setTracking: (tracking: boolean) => void;
+  setDetectedEyes: (eyes: DetectedEye[]) => void;
+  setCurrentTarget: (target: AutoFocusTarget | null) => void;
+  toggleFocusLock: () => void;
+  setFocusLocked: (locked: boolean) => void;
+  setSmoothTransitionSpeed: (speed: number) => void;
+  setShowEyeIndicators: (show: boolean) => void;
+  
+  // Convenience methods
+  triggerSingleFocus: () => void;
+  getNearestEye: () => DetectedEye | null;
+}
+
+export const useAutoFocusStore = create<AutoFocusState>((set, get) => ({
+  mode: 'MF',
+  eyePriority: 'nearest',
+  isActive: false,
+  isTracking: false,
+  detectedEyes: [],
+  currentTarget: null,
+  focusLocked: false,
+  smoothTransitionSpeed: 0.15,
+  showEyeIndicators: true,
+  
+  setMode: (mode) => set({ mode, isActive: mode !== 'MF', isTracking: mode === 'AF-C' }),
+  setEyePriority: (priority) => set({ eyePriority: priority }),
+  setActive: (active) => set({ isActive: active }),
+  setTracking: (tracking) => set({ isTracking: tracking }),
+  setDetectedEyes: (eyes) => set({ detectedEyes: eyes }),
+  setCurrentTarget: (target) => set({ currentTarget: target }),
+  toggleFocusLock: () => set((state) => ({ focusLocked: !state.focusLocked })),
+  setFocusLocked: (locked) => set({ focusLocked: locked }),
+  setSmoothTransitionSpeed: (speed) => set({ smoothTransitionSpeed: Math.max(0.01, Math.min(1.0, speed)) }),
+  setShowEyeIndicators: (show) => set({ showEyeIndicators: show }),
+  
+  triggerSingleFocus: () => {
+    const state = get();
+    if (state.mode === 'AF-S' && !state.focusLocked) {
+      const nearest = state.detectedEyes.length > 0 
+        ? state.detectedEyes.reduce((prev, curr) => 
+            curr.distanceFromCamera < prev.distanceFromCamera ? curr : prev
+          )
+        : null;
+      if (nearest) {
+        set({ 
+          focusLocked: true,
+          currentTarget: {
+            actorId: nearest.id.split('_')[0],
+            actorName: nearest.actorName,
+            selectedEye: nearest,
+            focusDistance: nearest.distanceFromCamera,
+            isLocked: true
+          }
+        });
+      }
+    }
+  },
+  
+  getNearestEye: () => {
+    const state = get();
+    if (state.detectedEyes.length === 0) return null;
+    
+    switch (state.eyePriority) {
+      case 'nearest':
+        return state.detectedEyes.reduce((prev, curr) => 
+          curr.distanceFromCamera < prev.distanceFromCamera ? curr : prev
+        );
+      case 'left':
+        const leftEyes = state.detectedEyes.filter(e => e.eyeSide === 'left');
+        return leftEyes.length > 0 
+          ? leftEyes.reduce((prev, curr) => curr.distanceFromCamera < prev.distanceFromCamera ? curr : prev)
+          : null;
+      case 'right':
+        const rightEyes = state.detectedEyes.filter(e => e.eyeSide === 'right');
+        return rightEyes.length > 0 
+          ? rightEyes.reduce((prev, curr) => curr.distanceFromCamera < prev.distanceFromCamera ? curr : prev)
+          : null;
+      case 'center':
+        // Find eye closest to center of view
+        return state.detectedEyes.reduce((prev, curr) => {
+          if (!curr.screenPosition || !prev.screenPosition) return prev;
+          const currDist = Math.hypot(curr.screenPosition.x - 0.5, curr.screenPosition.y - 0.5);
+          const prevDist = Math.hypot(prev.screenPosition.x - 0.5, prev.screenPosition.y - 0.5);
+          return currDist < prevDist ? curr : prev;
+        });
+      default:
+        return state.detectedEyes[0] || null;
+    }
   }
 }));
 

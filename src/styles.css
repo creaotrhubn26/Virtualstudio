@@ -15012,6 +15012,116 @@ html, body {
   transform: scale(0.98);
 }
 
+/* Inline radio group for compact layouts */
+.overlay-radio-group-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.overlay-radio-group-inline .overlay-radio {
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+/* Autofocus Mode Indicator */
+.af-mode-indicator {
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.af-mode-indicator.af-mode-mf {
+  background: rgba(128, 128, 128, 0.3);
+  color: #888;
+}
+
+.af-mode-indicator.af-mode-af-s {
+  background: rgba(0, 212, 255, 0.2);
+  color: #00d4ff;
+}
+
+.af-mode-indicator.af-mode-af-c {
+  background: rgba(0, 255, 136, 0.2);
+  color: #00ff88;
+  animation: af-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes af-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Autofocus Control Row */
+.af-control-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.af-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Autofocus Buttons */
+.af-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.af-btn-trigger {
+  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+  color: #000;
+}
+
+.af-btn-trigger:hover {
+  background: linear-gradient(135deg, #00e5ff 0%, #00b3e6 100%);
+  transform: translateY(-1px);
+}
+
+.af-btn-trigger:active {
+  transform: translateY(0);
+}
+
+.af-btn-lock {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e0e0e0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.af-btn-lock:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.af-btn-lock.active {
+  background: rgba(255, 193, 7, 0.2);
+  border-color: #ffc107;
+  color: #ffc107;
+}
+
+.af-btn-lock.active svg {
+  stroke: #ffc107;
+}
+
 /* Checkbox grid - WCAG 2.2+ */
 .overlay-checkbox-grid {
   display: grid;

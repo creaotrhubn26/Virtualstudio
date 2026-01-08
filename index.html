@@ -1336,6 +1336,70 @@
                 </label>
               </div>
             </div>
+            <!-- Autofokus Section -->
+            <div class="overlay-section">
+              <div class="overlay-section-header">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/>
+                  <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+                </svg>
+                <span>Autofokus (Øye-AF)</span>
+                <span id="afModeIndicator" class="af-mode-indicator af-mode-mf">MF</span>
+              </div>
+              <div class="overlay-section-content">
+                <div class="overlay-radio-group" id="overlayAFMode">
+                  <label class="overlay-radio"><input type="radio" name="afMode" value="MF" checked><span>MF (Manuell)</span></label>
+                  <label class="overlay-radio"><input type="radio" name="afMode" value="AF-S"><span>AF-S (Enkelt)</span></label>
+                  <label class="overlay-radio"><input type="radio" name="afMode" value="AF-C"><span>AF-C (Kontinuerlig)</span></label>
+                </div>
+                <div class="af-controls" style="margin-top: 12px;">
+                  <div class="af-control-row">
+                    <span class="af-label">Øye-prioritet:</span>
+                    <div class="overlay-radio-group overlay-radio-group-inline">
+                      <label class="overlay-radio"><input type="radio" name="eyePriority" value="nearest" checked><span>Nærmeste</span></label>
+                      <label class="overlay-radio"><input type="radio" name="eyePriority" value="left"><span>Venstre</span></label>
+                      <label class="overlay-radio"><input type="radio" name="eyePriority" value="right"><span>Høyre</span></label>
+                    </div>
+                  </div>
+                  <div class="af-status-row" style="margin-top: 8px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="color: rgba(255,255,255,0.6); font-size: 11px;">Mål:</span>
+                      <span id="afTargetName" style="color: #00ff88; font-size: 12px; font-weight: 500;">—</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                      <span style="color: rgba(255,255,255,0.6); font-size: 11px;">Avstand:</span>
+                      <span id="afTargetDistance" style="color: #00ff88; font-size: 12px; font-weight: 500;">—</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                      <span style="color: rgba(255,255,255,0.6); font-size: 11px;">Detektert:</span>
+                      <span id="afEyeCount" style="color: rgba(255,255,255,0.8); font-size: 12px;">0 øyne</span>
+                    </div>
+                  </div>
+                  <div class="af-buttons" style="display: flex; gap: 8px; margin-top: 10px;">
+                    <button id="afTriggerBtn" type="button" class="af-btn af-btn-trigger">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                      Fokuser
+                    </button>
+                    <button id="afLockBtn" type="button" class="af-btn af-btn-lock">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      </svg>
+                      Lås
+                    </button>
+                  </div>
+                  <label class="overlay-toggle-switch" style="margin-top: 10px;">
+                    <input type="checkbox" id="eyeIndicatorToggle" checked>
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">Vis øye-indikatorer i 3D</span>
+                  </label>
+                </div>
+              </div>
+            </div>
             <!-- Komposisjon Section -->
             <div class="overlay-section">
               <div class="overlay-section-header">

@@ -4,7 +4,8 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, MarketplacePanelApp, AIAssistantApp, CastingPlannerApp, SceneComposerPanelApp, AnimationComposerApp } from './App';
 import PanelCreator from './components/PanelCreator';
-import { useAppStore, useFocusStore, SceneNode } from './state/store';
+import { useAppStore, useFocusStore, useAutoFocusStore, SceneNode } from './state/store';
+import { AutoFocusSystem } from './core/AutoFocusSystem';
 import { useLoadingStore } from './state/loadingStore';
 import { LoadingOverlay } from './components/LoadingOverlay';
 import { focusController } from './core/FocusController';
@@ -282,6 +283,9 @@ class VirtualStudio {
     initialWorldForward: BABYLON.Vector3;
   }> = new Map();
   
+  // Autofocus system with eye detection
+  private autoFocusSystem: AutoFocusSystem | null = null;
+  
   public cameraSettings: CameraSettings & { whiteBalance?: number } = {
     aperture: 2.8,
     shutter: '1/125',
@@ -497,6 +501,10 @@ class VirtualStudio {
     this.setupUI();
     this.setupAssetEventListeners();
     this.setupFocusEventListeners();
+    
+    // Initialize autofocus system with eye detection
+    this.autoFocusSystem = new AutoFocusSystem(this.scene, this.camera);
+    this.setupAutoFocusUI();
     
     // Add default mannequin for focus target testing
     this.addDefaultMannequin();
@@ -7206,6 +7214,94 @@ class VirtualStudio {
 
     const pos = useFocusStore.getState().getActivePointPosition();
     this.calculateFocusDistance(pos.x, pos.y);
+  }
+
+  private setupAutoFocusUI(): void {
+    const afModeRadios = document.querySelectorAll('input[name="afMode"]') as NodeListOf<HTMLInputElement>;
+    afModeRadios.forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        const target = e.target as HTMLInputElement;
+        if (target.checked) {
+          const mode = target.value as 'MF' | 'AF-S' | 'AF-C';
+          useAutoFocusStore.getState().setMode(mode);
+          console.log('[AutoFocus UI] Mode set to:', mode);
+        }
+      });
+    });
+    
+    const eyePriorityRadios = document.querySelectorAll('input[name="eyePriority"]') as NodeListOf<HTMLInputElement>;
+    eyePriorityRadios.forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        const target = e.target as HTMLInputElement;
+        if (target.checked) {
+          useAutoFocusStore.getState().setEyePriority(target.value as any);
+        }
+      });
+    });
+    
+    const afTriggerBtn = document.getElementById('afTriggerBtn');
+    if (afTriggerBtn) {
+      afTriggerBtn.addEventListener('click', () => {
+        this.autoFocusSystem?.triggerSingleFocus();
+      });
+    }
+    
+    const afLockBtn = document.getElementById('afLockBtn');
+    if (afLockBtn) {
+      afLockBtn.addEventListener('click', () => {
+        useAutoFocusStore.getState().toggleFocusLock();
+        const isLocked = useAutoFocusStore.getState().focusLocked;
+        afLockBtn.classList.toggle('active', isLocked);
+      });
+    }
+    
+    const eyeIndicatorToggle = document.getElementById('eyeIndicatorToggle') as HTMLInputElement;
+    if (eyeIndicatorToggle) {
+      eyeIndicatorToggle.addEventListener('change', () => {
+        useAutoFocusStore.getState().setShowEyeIndicators(eyeIndicatorToggle.checked);
+      });
+    }
+    
+    useAutoFocusStore.subscribe((state) => {
+      const modeIndicator = document.getElementById('afModeIndicator');
+      if (modeIndicator) {
+        modeIndicator.textContent = state.mode;
+        modeIndicator.className = `af-mode-indicator af-mode-${state.mode.toLowerCase()}`;
+      }
+      
+      const lockIndicator = document.getElementById('afLockIndicator');
+      if (lockIndicator) {
+        lockIndicator.style.display = state.focusLocked ? 'flex' : 'none';
+      }
+      
+      const targetName = document.getElementById('afTargetName');
+      if (targetName) {
+        if (state.currentTarget) {
+          const eye = state.currentTarget.selectedEye;
+          targetName.textContent = eye 
+            ? `${eye.actorName} (${eye.eyeSide === 'left' ? 'V' : 'H'}-øye)`
+            : state.currentTarget.actorName;
+        } else {
+          targetName.textContent = '—';
+        }
+      }
+      
+      const targetDistance = document.getElementById('afTargetDistance');
+      if (targetDistance) {
+        if (state.currentTarget) {
+          targetDistance.textContent = `${state.currentTarget.focusDistance.toFixed(2)}m`;
+        } else {
+          targetDistance.textContent = '—';
+        }
+      }
+      
+      const eyeCount = document.getElementById('afEyeCount');
+      if (eyeCount) {
+        eyeCount.textContent = `${state.detectedEyes.length} øyne`;
+      }
+    });
+    
+    console.log('[AutoFocus UI] Setup complete');
   }
 
   private calculateFocusDistance(normalizedX: number, normalizedY: number): void {
