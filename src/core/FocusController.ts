@@ -68,32 +68,37 @@ export class FocusController {
     document.addEventListener('pointermove', this.handlePointerMove);
     document.addEventListener('pointerup', this.handlePointerUp);
     
-    // Click-to-focus on 3D viewport - use document-level listener for reliability
+    // Click-to-focus on 3D viewport - use multiple event types for maximum compatibility
     let lastClickTime = 0;
     
-    // Use document-level listener to ensure we catch all clicks
-    document.addEventListener('pointerup', (e: PointerEvent) => {
+    const handleClickEvent = (e: Event, eventType: string) => {
+      const mouseEvent = e as MouseEvent;
       // Only process left-clicks
-      if (e.button !== 0) return;
+      if (mouseEvent.button !== 0) return;
       
       // Check if click is on canvas or viewport
-      const target = e.target as HTMLElement;
+      const target = mouseEvent.target as HTMLElement;
       const isOnCanvas = target.id === 'renderCanvas' || target.closest('#viewport3d');
       
       if (!isOnCanvas) return;
       
       const now = Date.now();
       const timeDiff = now - lastClickTime;
-      console.log('[FocusController] Pointer up on viewport, timeDiff:', timeDiff, 'target:', target.id || target.tagName);
+      console.log(`[FocusController] ${eventType} on viewport, timeDiff: ${timeDiff}, target: ${target.id || target.tagName}`);
       lastClickTime = now;
       
       if (timeDiff > 50 && timeDiff < 400) {
         console.log('[FocusController] Manual double-click detected!');
-        this.handleViewportClick(e as unknown as MouseEvent);
+        this.handleViewportClick(mouseEvent);
       }
-    }, { capture: true });
+    };
     
-    console.log('[FocusController] Document-level click handler added for viewport focus');
+    // Add multiple event listeners for maximum compatibility
+    document.addEventListener('pointerup', (e) => handleClickEvent(e, 'pointerup'), { capture: true });
+    document.addEventListener('mouseup', (e) => handleClickEvent(e, 'mouseup'), { capture: true });
+    document.addEventListener('click', (e) => handleClickEvent(e, 'click'), { capture: true });
+    
+    console.log('[FocusController] Document-level click handlers added (pointerup, mouseup, click)');
     
     // Debounced update function to prevent too frequent updates and blinking
     const debouncedLightingUpdate = this.debounce(() => {
