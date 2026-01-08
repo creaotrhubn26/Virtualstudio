@@ -74,23 +74,37 @@ export class AutoFocusSystem {
     this.updateInterval = window.setInterval(() => {
       const store = useAutoFocusStore.getState();
       if (store.mode === 'AF-C') {
-        this.detectEyes();
-        const nearestEye = store.getNearestEye();
-        if (nearestEye) {
-          this.setFocusTarget(nearestEye);
-        }
+        this.detectAndFocusWithFallback();
       }
     }, 100);
     
     // Run detection immediately on start
+    this.detectAndFocusWithFallback();
+    
+    console.log('[AutoFocusSystem] Continuous tracking started');
+  }
+  
+  // Detect eyes with fallback to head/geometry detection
+  private detectAndFocusWithFallback(): void {
     this.detectEyes();
     const store = useAutoFocusStore.getState();
     const nearestEye = store.getNearestEye();
+    
     if (nearestEye) {
       this.setFocusTarget(nearestEye);
+    } else {
+      // Fallback 1: Try head/face detection
+      const headTarget = this.detectHeadFallback();
+      if (headTarget) {
+        this.setFocusTarget(headTarget);
+      } else {
+        // Fallback 2: Try geometry-based detection (top of model)
+        const topTarget = this.detectTopOfModelFallback();
+        if (topTarget) {
+          this.setFocusTarget(topTarget);
+        }
+      }
     }
-    
-    console.log('[AutoFocusSystem] Continuous tracking started');
   }
   
   public stopTracking(): void {
