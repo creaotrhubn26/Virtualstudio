@@ -483,8 +483,14 @@ export class AutoFocusSystem {
       'skull', 'Skull', 'cranium', 'Cranium'
     ];
     
+    // Exclusion patterns - walls, logos, lights, etc.
+    const excludePatterns = ['wall', 'Wall', 'logo', 'Logo', 'light', 'Light', 'bulb', 'ground', 'grid'];
+    
     for (const mesh of this.scene.meshes) {
       if (!mesh.isEnabled() || !mesh.isVisible) continue;
+      
+      // Skip excluded meshes
+      if (excludePatterns.some(ex => mesh.name.includes(ex))) continue;
       
       const meshNameLower = mesh.name.toLowerCase();
       for (const pattern of headPatterns) {
