@@ -136,57 +136,37 @@ export class PhysicsBasedDOF {
       precision highp float;
       
       varying vec2 vUV;
-      uniform sampler2D textureSampler;  // Output from cocPass (color.rgb + CoC in alpha)
+      uniform sampler2D textureSampler;
       
       uniform vec2 screenSize;
       uniform float blurScale;
-      uniform float bladeCount;        // Number of aperture blades (0 = circular, 5-9 = polygonal)
-      uniform float bladeRotation;     // Rotation of aperture blades in radians
-      uniform float highlightThreshold; // Brightness threshold for highlight boost
-      uniform float highlightGain;      // Multiplier for bright highlights (bokeh balls)
+      uniform float bladeCount;
+      uniform float bladeRotation;
+      uniform float highlightThreshold;
+      uniform float highlightGain;
       
       #define PI 3.14159265359
-      #define RING_COUNT 4
-      #define SAMPLES_PER_RING 8
       
-      // Read signed CoC from alpha channel (encoded as (signedCoC + 40) / 80)
       float getCoC(vec2 uv) {
         float encoded = texture2D(textureSampler, uv).a;
         return (encoded * 80.0) - 40.0;
       }
       
-      // Calculate luminance for highlight detection
       float luminance(vec3 color) {
         return dot(color, vec3(0.2126, 0.7152, 0.0722));
       }
       
-      // Generate aperture blade shape mask
       float apertureShape(vec2 point, float blades, float rotation) {
         if (blades < 3.0) {
-          // Circular aperture
           return length(point);
         }
-        
-        // Polygonal aperture with n blades
         float angle = atan(point.y, point.x) + rotation;
         float segmentAngle = 2.0 * PI / blades;
         float halfSegment = segmentAngle * 0.5;
-        
-        // Find distance to edge of polygon
         float theta = mod(angle + halfSegment, segmentAngle) - halfSegment;
         float r = length(point);
         float polygonRadius = cos(halfSegment) / cos(theta);
-        
         return r / polygonRadius;
-      }
-      
-      // Generate ring-based sample positions for smooth bokeh
-      vec2 getSampleOffset(int ring, int sample, float rotation) {
-        float ringRadius = float(ring + 1) / float(RING_COUNT);
-        int samplesInRing = (ring + 1) * SAMPLES_PER_RING;
-        float angle = (float(sample) / float(samplesInRing)) * 2.0 * PI + rotation;
-        
-        return vec2(cos(angle), sin(angle)) * ringRadius;
       }
       
       void main(void) {
@@ -194,7 +174,6 @@ export class PhysicsBasedDOF {
         float centerCoC = getCoC(vUV);
         float absCoC = abs(centerCoC);
         
-        // Skip blur for sharp areas
         if (absCoC < 0.5) {
           vec4 color = texture2D(textureSampler, vUV);
           gl_FragColor = vec4(color.rgb, 1.0);
@@ -205,68 +184,57 @@ export class PhysicsBasedDOF {
         vec3 highlightSum = vec3(0.0);
         float weightSum = 0.0;
         float highlightWeightSum = 0.0;
-        
         float blurRadius = absCoC * blurScale;
         
-        // Ring-based sampling for smoother bokeh
-        for (int ring = 0; ring < RING_COUNT; ring++) {
-          int samplesInRing = (ring + 1) * SAMPLES_PER_RING;
-          float ringRadius = float(ring + 1) / float(RING_COUNT);
+        // 48 samples in concentric rings for smooth bokeh
+        for (int i = 0; i < 48; i++) {
+          float fi = float(i);
+          float ring = floor(fi / 12.0);
+          float sampleInRing = mod(fi, 12.0);
+          float ringRadius = (ring + 1.0) / 4.0;
+          float angle = (sampleInRing / 12.0) * 2.0 * PI + bladeRotation + ring * 0.5;
           
-          for (int s = 0; s < 32; s++) {
-            if (s >= samplesInRing) break;
-            
-            float angle = (float(s) / float(samplesInRing)) * 2.0 * PI + bladeRotation;
-            vec2 samplePoint = vec2(cos(angle), sin(angle)) * ringRadius;
-            
-            // Apply aperture shape
-            float shapeMask = apertureShape(samplePoint, bladeCount, bladeRotation);
-            if (shapeMask > 1.0) continue;
-            
+          vec2 samplePoint = vec2(cos(angle), sin(angle)) * ringRadius;
+          float shapeMask = apertureShape(samplePoint, bladeCount, bladeRotation);
+          
+          if (shapeMask <= 1.0) {
             vec2 offset = samplePoint * blurRadius * texelSize;
             vec2 sampleUV = vUV + offset;
             
-            if (sampleUV.x < 0.0 || sampleUV.x > 1.0 || sampleUV.y < 0.0 || sampleUV.y > 1.0) continue;
-            
-            vec4 sampleData = texture2D(textureSampler, sampleUV);
-            vec3 sampleColor = sampleData.rgb;
-            float sampleCoC = (sampleData.a * 80.0) - 40.0;
-            
-            // Edge weighting for smoother bokeh rim
-            float edgeWeight = 1.0 - smoothstep(0.7, 1.0, shapeMask);
-            float weight = 1.0 + edgeWeight * 0.5;
-            
-            // Prevent background bleeding into foreground
-            if (centerCoC < 0.0 && sampleCoC > 0.0) {
-              weight *= 0.1;
+            if (sampleUV.x >= 0.0 && sampleUV.x <= 1.0 && sampleUV.y >= 0.0 && sampleUV.y <= 1.0) {
+              vec4 sampleData = texture2D(textureSampler, sampleUV);
+              vec3 sampleColor = sampleData.rgb;
+              float sampleCoC = (sampleData.a * 80.0) - 40.0;
+              
+              float edgeWeight = 1.0 - smoothstep(0.7, 1.0, shapeMask);
+              float weight = 1.0 + edgeWeight * 0.5;
+              
+              if (centerCoC < 0.0 && sampleCoC > 0.0) {
+                weight *= 0.1;
+              }
+              if (abs(sampleCoC) < absCoC * 0.5) {
+                weight *= 0.5;
+              }
+              
+              float lum = luminance(sampleColor);
+              if (lum > highlightThreshold) {
+                float highlightBoost = (lum - highlightThreshold) * highlightGain;
+                highlightSum += sampleColor * highlightBoost * weight;
+                highlightWeightSum += highlightBoost * weight;
+              }
+              
+              colorSum += sampleColor * weight;
+              weightSum += weight;
             }
-            
-            // Reduce sharp sample influence
-            if (abs(sampleCoC) < absCoC * 0.5) {
-              weight *= 0.5;
-            }
-            
-            // Highlight preservation for bokeh balls
-            float lum = luminance(sampleColor);
-            if (lum > highlightThreshold) {
-              float highlightBoost = (lum - highlightThreshold) * highlightGain;
-              highlightSum += sampleColor * highlightBoost * weight;
-              highlightWeightSum += highlightBoost * weight;
-            }
-            
-            colorSum += sampleColor * weight;
-            weightSum += weight;
           }
         }
         
-        // Add center sample
         vec4 centerData = texture2D(textureSampler, vUV);
         colorSum += centerData.rgb;
         weightSum += 1.0;
         
         vec3 blurredColor = colorSum / max(weightSum, 0.001);
         
-        // Add highlight bloom for bokeh balls
         if (highlightWeightSum > 0.0) {
           vec3 highlights = highlightSum / highlightWeightSum;
           float highlightMix = min(highlightWeightSum / weightSum, 0.5);
