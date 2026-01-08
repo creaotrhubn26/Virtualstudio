@@ -12186,12 +12186,13 @@ class VirtualStudio {
     const preset = this.cameraPresets.get(presetId);
     if (!preset) return;
     
-    // Get current visible meshes
+    // Get current visible meshes - exclude camera preset meshes from RTT
     const visibleMeshes = this.scene.meshes.filter(mesh => 
       mesh.isVisible && 
       mesh.isEnabled() && 
       !mesh.name.startsWith('gizmo') &&
-      !mesh.name.startsWith('__')
+      !mesh.name.startsWith('__') &&
+      !mesh.name.startsWith('camera-')  // Exclude camera preset meshes from monitor view
     );
     
     // Create RTT if it doesn't exist yet - this fixes the "no signal" issue
@@ -12298,11 +12299,13 @@ class VirtualStudio {
     
     // Filter visible meshes - critical for RTT to work!
     // According to checklist: "Hvis renderList er tom og du ikke har aktiv renderParticles/renderSprites-oppsett, blir resultatet typisk 'ingenting'."
+    // CRITICAL: Exclude camera preset meshes (camera-camA-body, etc.) from RTT - they would block the view
     const visibleMeshes = this.scene.meshes.filter(mesh => 
       mesh.isVisible && 
       mesh.isEnabled() && 
       !mesh.name.startsWith('gizmo') &&
-      !mesh.name.startsWith('__')
+      !mesh.name.startsWith('__') &&
+      !mesh.name.startsWith('camera-')  // Exclude camera preset meshes from monitor view
     );
     
     if (visibleMeshes.length === 0) {
