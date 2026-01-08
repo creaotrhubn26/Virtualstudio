@@ -248,13 +248,29 @@ export class AutoFocusSystem {
       );
       
       useFocusStore.getState().setFocusDistance(this.currentFocusDistance);
+      this.updateDOFRenderingPipeline(this.currentFocusDistance);
     } else if (this.isTransitioningToTarget) {
       // Transition complete - now we can truly lock AF-S
       this.isTransitioningToTarget = false;
       this.currentFocusDistance = this.targetFocusDistance;
       useFocusStore.getState().setFocusDistance(this.currentFocusDistance);
+      this.updateDOFRenderingPipeline(this.currentFocusDistance);
       console.log('[AutoFocusSystem] AF-S transition complete, focus locked');
     }
+  }
+  
+  private updateDOFRenderingPipeline(focusDistance: number): void {
+    const studio = (window as any).virtualStudio;
+    if (!studio || !studio.updateDOFSettings) return;
+    
+    // Get camera settings for aperture (fStop)
+    const aperture = studio.cameraSettings?.aperture || 2.8;
+    
+    // Check if DOF is enabled in the store
+    const dofEnabled = useAutoFocusStore.getState().dofEnabled ?? true;
+    
+    // Update the rendering pipeline DOF
+    studio.updateDOFSettings(aperture, focusDistance, dofEnabled);
   }
   
   private updateEyeIndicators(eyes: DetectedEye[]): void {
