@@ -12220,14 +12220,13 @@ class VirtualStudio {
     
     // CRITICAL: Always update camera parameters to match preset
     // This ensures the camera uses the preset's perspective, not the main camera's view
-    // NOTE: For ArcRotateCamera, use ONLY spherical coords (alpha/beta/radius/target)
-    // Setting position directly conflicts with spherical positioning
+    // NOTE: Set target PROPERTY directly (not setTarget method) to avoid recalculating alpha/beta/radius
+    // Then set alpha/beta/radius to override any computed values
+    monitorCamera.target = preset.target.clone();
     monitorCamera.alpha = preset.alpha;
     monitorCamera.beta = preset.beta;
     monitorCamera.radius = preset.radius;
-    monitorCamera.setTarget(preset.target.clone());
     monitorCamera.fov = preset.fov;
-    // Don't set position directly - let ArcRotateCamera compute it from alpha/beta/radius/target
     console.log(`[Monitor] ${presetId}: Camera updated - alpha=${preset.alpha.toFixed(2)}, beta=${preset.beta.toFixed(2)}, radius=${preset.radius.toFixed(2)}`);
     
     if (!renderTarget) {
@@ -12511,10 +12510,12 @@ class VirtualStudio {
       const monitorCamera = this.monitorCameras.get(presetId);
       if (monitorCamera) {
         // Update camera parameters to match preset using spherical coords only
+        // CRITICAL: Set target PROPERTY directly (not setTarget method) to avoid recalculating alpha/beta/radius
+        // Then set alpha/beta/radius to override any computed values
+        monitorCamera.target = preset.target.clone();
         monitorCamera.alpha = preset.alpha;
         monitorCamera.beta = preset.beta;
         monitorCamera.radius = preset.radius;
-        monitorCamera.setTarget(preset.target.clone());
         monitorCamera.fov = preset.fov;
         
         // CRITICAL: Ensure activeCamera still points to the same camera object
