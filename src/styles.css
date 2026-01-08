@@ -6262,9 +6262,13 @@ html, body {
   top: 120px !important;
   right: 20px !important;
   left: auto !important;
-  display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
+}
+
+/* Only apply flex display when panel is visible (not display:none) */
+#cameraControlsPanel:not([style*="display: none"]):not([style*="display:none"]) {
+  display: flex !important;
 }
 
 /* Scrollable wrapper for panel content */
