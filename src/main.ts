@@ -17605,32 +17605,31 @@ class VirtualStudio {
       if (isSaved) {
         // Camera is saved - enable and style as available
         htmlBtn.disabled = false;
-        htmlBtn.style.cssText = 'display: flex !important; opacity: 1 !important;';
+        htmlBtn.style.removeProperty('opacity');
         btn.classList.add('available');
         btn.classList.remove('inactive');
         htmlBtn.title = `Kamera ${cameraId!.replace('cam', '')}`;
         hasSavedCameras = true;
-        console.log(`[RecordingArc] Set ${cameraId} to ACTIVE, opacity 1`);
+        console.log(`[RecordingArc] Set ${cameraId} to ACTIVE`);
       } else {
         // Camera not saved - show grayed out with click handler
         htmlBtn.disabled = false; // Allow click to show info
-        htmlBtn.style.cssText = 'display: flex !important; opacity: 0.4 !important;';
+        htmlBtn.style.removeProperty('opacity');
         btn.classList.remove('available');
         btn.classList.add('inactive');
         htmlBtn.title = 'Aktiver kamera i Kamera & Lys-panelet';
-        console.log(`[RecordingArc] Set ${cameraId} to INACTIVE, opacity 0.4`);
+        console.log(`[RecordingArc] Set ${cameraId} to INACTIVE`);
       }
     });
     
     // Gray out "all cameras" button if no saved cameras
     if (allBtn) {
+      allBtn.style.removeProperty('opacity');
       if (hasSavedCameras) {
-        allBtn.style.cssText = 'display: flex !important; opacity: 1 !important;';
         allBtn.classList.remove('inactive');
         allBtn.title = 'Ta opp fra alle kameraer';
         console.log(`[RecordingArc] Set ALL to ACTIVE`);
       } else {
-        allBtn.style.cssText = 'display: flex !important; opacity: 0.4 !important;';
         allBtn.classList.add('inactive');
         allBtn.title = 'Aktiver kameraer i Kamera & Lys-panelet';
         console.log(`[RecordingArc] Set ALL to INACTIVE`);

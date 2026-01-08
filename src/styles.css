@@ -14189,12 +14189,12 @@ html, body {
 }
 
 .arc-camera-btn.inactive {
-  opacity: 0.4;
+  opacity: 0.4 !important;
   cursor: pointer;
 }
 
 .arc-camera-btn.inactive:hover {
-  opacity: 0.6;
+  opacity: 0.6 !important;
   background: rgba(255, 255, 255, 0.1);
 }
 
