@@ -467,7 +467,7 @@ class VirtualStudio {
       'mainCamera',
       -Math.PI / 2,
       Math.PI / 3,
-      18,
+      5, // Reduced from 18 for better DOF visibility
       new BABYLON.Vector3(0, 1.5, 0),
       this.scene
     );
@@ -6823,7 +6823,7 @@ class VirtualStudio {
   private defaultCameraPosition = {
     alpha: -Math.PI / 2,
     beta: Math.PI / 3,
-    radius: 12,
+    radius: 5, // Reduced from 12 for better DOF visibility
     target: new BABYLON.Vector3(0, 1.5, 0)
   };
 
