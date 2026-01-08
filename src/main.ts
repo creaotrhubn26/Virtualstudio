@@ -16,6 +16,7 @@ import { ScenarioPreset } from './data/scenarioPresets';
 import { marketplaceService } from './services/marketplaceService';
 import { mountHelpVideoPlayers } from './components/HelpVideoPlayer';
 import { getLightById, LIGHT_DATABASE, LightSpec } from './data/lightFixtures';
+import { zipSync, strToU8 } from 'fflate';
 
 declare global {
   interface Window {
@@ -16704,6 +16705,31 @@ class VirtualStudio {
 
 
   // Video Recording Methods
+  
+  private getBestRecordingCodec(): { mimeType: string; extension: string; bitrate: number } {
+    // Priority: MP4/H.264 (best compatibility) > VP9 (best quality) > VP8 (fallback)
+    const codecs = [
+      { mime: 'video/mp4;codecs=avc1.42E01E,mp4a.40.2', ext: 'mp4', bitrate: 12000000 }, // H.264 High Profile
+      { mime: 'video/mp4;codecs=avc1.4d002a', ext: 'mp4', bitrate: 12000000 }, // H.264 Main Profile
+      { mime: 'video/webm;codecs=vp9,opus', ext: 'webm', bitrate: 10000000 }, // VP9 with Opus audio
+      { mime: 'video/webm;codecs=vp9', ext: 'webm', bitrate: 10000000 }, // VP9
+      { mime: 'video/webm;codecs=vp8,opus', ext: 'webm', bitrate: 12000000 }, // VP8 with Opus
+      { mime: 'video/webm;codecs=vp8', ext: 'webm', bitrate: 12000000 }, // VP8
+    ];
+    
+    for (const codec of codecs) {
+      if (MediaRecorder.isTypeSupported(codec.mime)) {
+        console.log(`[Recording] Using codec: ${codec.mime} at ${codec.bitrate / 1000000} Mbps`);
+        return { mimeType: codec.mime, extension: codec.ext, bitrate: codec.bitrate };
+      }
+    }
+    
+    // Ultimate fallback
+    return { mimeType: 'video/webm', extension: 'webm', bitrate: 8000000 };
+  }
+  
+  private recordingExtension: string = 'webm';
+  
   public async startRecording(cameraPresetId?: string): Promise<boolean> {
     if (this.isRecording) {
       console.log('Already recording');
@@ -16723,16 +16749,15 @@ class VirtualStudio {
     }
 
     try {
-      const stream = canvas.captureStream(30); // 30 fps
-
-      // Try to use VP9 codec for better quality, fallback to VP8
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9'
-        : 'video/webm;codecs=vp8';
+      const stream = canvas.captureStream(60); // 60 fps for smoother video
+      
+      // Get best available codec
+      const codec = this.getBestRecordingCodec();
+      this.recordingExtension = codec.extension;
 
       this.mediaRecorder = new MediaRecorder(stream, {
-        mimeType,
-        videoBitsPerSecond: 8000000 // 8 Mbps
+        mimeType: codec.mimeType,
+        videoBitsPerSecond: codec.bitrate
       });
 
       this.recordedChunks = [];
@@ -16787,7 +16812,8 @@ class VirtualStudio {
   }
 
   private saveRecording(): void {
-    const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
+    const mimeType = this.recordingExtension === 'mp4' ? 'video/mp4' : 'video/webm';
+    const blob = new Blob(this.recordedChunks, { type: mimeType });
     const url = URL.createObjectURL(blob);
 
     // Create download link
@@ -16795,7 +16821,7 @@ class VirtualStudio {
     a.href = url;
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const cameraName = this.activeRecordingCamera || 'main';
-    a.download = `creatorhub-studio-${cameraName}-${timestamp}.webm`;
+    a.download = `creatorhub-studio-${cameraName}-${timestamp}.${this.recordingExtension}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -16804,7 +16830,7 @@ class VirtualStudio {
     URL.revokeObjectURL(url);
     this.recordedChunks = [];
 
-    console.log('Recording saved');
+    console.log(`Recording saved as ${this.recordingExtension.toUpperCase()}`);
   }
 
   private updateRecordingUI(isRecording: boolean): void {
@@ -17530,18 +17556,19 @@ class VirtualStudio {
       this.addMonitorRecIndicator(camId);
     });
     
+    // Get best codec for all recordings
+    const codec = this.getBestRecordingCodec();
+    this.recordingExtension = codec.extension;
+    
     // Start recording from main camera
     const mainCanvas = this.engine.getRenderingCanvas();
     if (mainCanvas) {
       try {
-        const mainStream = mainCanvas.captureStream(30);
-        const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-          ? 'video/webm;codecs=vp9'
-          : 'video/webm;codecs=vp8';
+        const mainStream = mainCanvas.captureStream(60); // 60fps
         
         const mainRecorder = new MediaRecorder(mainStream, {
-          mimeType,
-          videoBitsPerSecond: 8000000
+          mimeType: codec.mimeType,
+          videoBitsPerSecond: codec.bitrate
         });
         
         this.multiCameraChunks.set('main', []);
@@ -17576,14 +17603,11 @@ class VirtualStudio {
         this.multiCameraCanvases.set(presetId, offscreenCanvas);
         
         // Capture stream from offscreen canvas
-        const stream = offscreenCanvas.captureStream(30);
-        const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-          ? 'video/webm;codecs=vp9'
-          : 'video/webm;codecs=vp8';
+        const stream = offscreenCanvas.captureStream(60); // 60fps
         
         const recorder = new MediaRecorder(stream, {
-          mimeType,
-          videoBitsPerSecond: 8000000
+          mimeType: codec.mimeType,
+          videoBitsPerSecond: codec.bitrate
         });
         
         this.multiCameraChunks.set(presetId, []);
@@ -17671,52 +17695,85 @@ class VirtualStudio {
       detail: { cameras: allCameras }
     }));
     
-    // Stop all recorders and save each as separate file
+    // Collect all recordings as promises, then create ZIP
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    let savedCount = 0;
     const totalRecorders = this.multiCameraRecorders.size;
+    
+    const blobPromises: Promise<{ name: string; data: Uint8Array }>[] = [];
     
     for (const [cameraId, recorder] of this.multiCameraRecorders.entries()) {
       if (recorder.state === 'recording') {
-        // Set onstop handler BEFORE calling stop()
-        recorder.onstop = () => {
-          const chunks = this.multiCameraChunks.get(cameraId) || [];
-          if (chunks.length > 0) {
-            const blob = new Blob(chunks, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `creatorhub-studio-${cameraId}-${timestamp}.webm`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            
-            URL.revokeObjectURL(url);
-            savedCount++;
-            console.log(`[Recording] Saved ${cameraId} recording (${savedCount}/${totalRecorders})`);
-          }
-        };
-        
-        // Now stop the recorder
+        const promise = new Promise<{ name: string; data: Uint8Array }>((resolve, reject) => {
+          recorder.onstop = async () => {
+            try {
+              const chunks = this.multiCameraChunks.get(cameraId) || [];
+              if (chunks.length > 0) {
+                const blobType = this.recordingExtension === 'mp4' ? 'video/mp4' : 'video/webm';
+                const blob = new Blob(chunks, { type: blobType });
+                const arrayBuffer = await blob.arrayBuffer();
+                resolve({
+                  name: `${cameraId}-${timestamp}.${this.recordingExtension}`,
+                  data: new Uint8Array(arrayBuffer)
+                });
+              } else {
+                reject(new Error(`No chunks for ${cameraId}`));
+              }
+            } catch (e) {
+              reject(e);
+            }
+          };
+        });
+        blobPromises.push(promise);
         recorder.stop();
       }
     }
     
-    // Delay cleanup to allow all onstop handlers to complete
-    setTimeout(() => {
-      this.multiCameraRecorders.clear();
-      this.multiCameraChunks.clear();
-      this.multiCameraCanvases.clear();
-      console.log('[Recording] Multi-camera recording cleanup complete');
-    }, 2000);
+    // Wait for all recordings then create ZIP
+    Promise.all(blobPromises)
+      .then(files => {
+        if (files.length === 0) {
+          console.warn('[Recording] No files to save');
+          return;
+        }
+        
+        // Create ZIP file
+        const zipData: { [key: string]: Uint8Array } = {};
+        files.forEach(file => {
+          zipData[file.name] = file.data;
+        });
+        
+        const zipped = zipSync(zipData);
+        const zipBlob = new Blob([zipped], { type: 'application/zip' });
+        const url = URL.createObjectURL(zipBlob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `creatorhub-opptak-${timestamp}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        URL.revokeObjectURL(url);
+        console.log(`[Recording] Saved ${files.length} recordings as ZIP`);
+        this.showNotification(`${files.length} opptak lagret som ZIP-fil`, 'success');
+      })
+      .catch(err => {
+        console.error('[Recording] Failed to create ZIP:', err);
+        this.showNotification('Kunne ikke lage ZIP-fil', 'error');
+      })
+      .finally(() => {
+        this.multiCameraRecorders.clear();
+        this.multiCameraChunks.clear();
+        this.multiCameraCanvases.clear();
+        console.log('[Recording] Multi-camera recording cleanup complete');
+      });
     
-    // Update UI
+    // Update UI immediately
     this.updateRecordingUI(false);
     this.stopRecordingTimer();
     
-    this.showNotification(`${totalRecorders} opptak lagres som separate filer`, 'success');
-    console.log(`[Recording] Multi-camera recording stopped - saving ${totalRecorders} files`);
+    this.showNotification(`Pakker ${totalRecorders} opptak...`, 'info');
+    console.log(`[Recording] Multi-camera recording stopped - creating ZIP with ${totalRecorders} files`);
   }
 
   private centerCameraOnObject(mesh: BABYLON.Mesh): void {
