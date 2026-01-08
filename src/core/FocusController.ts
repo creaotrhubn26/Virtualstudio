@@ -68,54 +68,32 @@ export class FocusController {
     document.addEventListener('pointermove', this.handlePointerMove);
     document.addEventListener('pointerup', this.handlePointerUp);
     
-    // Click-to-focus on 3D viewport - add to both canvas and viewport container
-    const canvas = document.getElementById('renderCanvas');
-    const viewport = document.getElementById('viewport3d');
-    
-    // Manual double-click detection
+    // Click-to-focus on 3D viewport - use document-level listener for reliability
     let lastClickTime = 0;
-    const handlePointerUp = (e: PointerEvent) => {
-      if (e.button !== 0) return; // Only left click
+    
+    // Use document-level listener to ensure we catch all clicks
+    document.addEventListener('pointerup', (e: PointerEvent) => {
+      // Only process left-clicks
+      if (e.button !== 0) return;
+      
+      // Check if click is on canvas or viewport
+      const target = e.target as HTMLElement;
+      const isOnCanvas = target.id === 'renderCanvas' || target.closest('#viewport3d');
+      
+      if (!isOnCanvas) return;
+      
       const now = Date.now();
       const timeDiff = now - lastClickTime;
-      console.log('[FocusController] Pointer up on viewport, timeDiff:', timeDiff);
+      console.log('[FocusController] Pointer up on viewport, timeDiff:', timeDiff, 'target:', target.id || target.tagName);
       lastClickTime = now;
       
       if (timeDiff > 50 && timeDiff < 400) {
         console.log('[FocusController] Manual double-click detected!');
         this.handleViewportClick(e as unknown as MouseEvent);
       }
-    };
+    }, { capture: true });
     
-    if (viewport) {
-      console.log('[FocusController] Adding double-click-to-focus handler to viewport');
-      viewport.addEventListener('dblclick', this.handleViewportClick.bind(this), { capture: true });
-      viewport.addEventListener('pointerup', handlePointerUp, { capture: true });
-    }
-    
-    if (canvas) {
-      console.log('[FocusController] Adding double-click-to-focus handler to canvas');
-      canvas.addEventListener('dblclick', this.handleViewportClick.bind(this), { capture: true });
-      canvas.addEventListener('pointerup', handlePointerUp, { capture: true });
-    }
-    
-    if (!canvas && !viewport) {
-      console.warn('[FocusController] Neither canvas nor viewport found, retrying...');
-      setTimeout(() => {
-        const retryCanvas = document.getElementById('renderCanvas');
-        const retryViewport = document.getElementById('viewport3d');
-        if (retryCanvas) {
-          console.log('[FocusController] Adding handlers to canvas (retry)');
-          retryCanvas.addEventListener('dblclick', this.handleViewportClick.bind(this), { capture: true });
-          retryCanvas.addEventListener('pointerup', handlePointerUp, { capture: true });
-        }
-        if (retryViewport) {
-          console.log('[FocusController] Adding handlers to viewport (retry)');
-          retryViewport.addEventListener('dblclick', this.handleViewportClick.bind(this), { capture: true });
-          retryViewport.addEventListener('pointerup', handlePointerUp, { capture: true });
-        }
-      }, 500);
-    }
+    console.log('[FocusController] Document-level click handler added for viewport focus');
     
     // Debounced update function to prevent too frequent updates and blinking
     const debouncedLightingUpdate = this.debounce(() => {
