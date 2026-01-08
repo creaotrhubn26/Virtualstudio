@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type FocusMode = 'single' | 'zone' | 'wide' | 'tracking';
+export type FocusMode = 'none' | 'single' | 'zone' | 'wide' | 'tracking';
 export type SafeAreaMode = 'none' | 'action' | 'title' | 'both';
 export type CompositionGuide = 'none' | 'thirds' | 'golden' | 'spiral' | 'diagonal' | 'center' | 'triangle' | 'symmetry';
 export type HelperGuide = 'none' | 'colortemp' | 'exposure' | 'height' | 'glasses' | 'classphoto' | 'safety' | 'lighting';
@@ -48,7 +48,7 @@ const compositionGuides: CompositionGuide[] = ['none', 'thirds', 'golden', 'spir
 const helperGuides: HelperGuide[] = ['none', 'colortemp', 'exposure', 'height', 'glasses', 'classphoto', 'safety', 'lighting'];
 
 export const useFocusStore = create<FocusState>((set, get) => ({
-  mode: 'single',
+  mode: 'none',
   safeAreaMode: 'none',
   compositionGuide: 'none',
   helperGuide: 'none',
