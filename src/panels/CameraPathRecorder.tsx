@@ -109,6 +109,12 @@ export const CameraPathRecorder: React.FC = () => {
 
     startRecording(activeCamera.id);
     setRecordingStartTime(Date.now());
+    
+    // Dispatch event to notify other components
+    window.dispatchEvent(new CustomEvent('ch-camera-path-recording-changed', {
+      detail: { isRecording: true, cameraId: activeCamera.id }
+    }));
+    
     addToast({
       message: '🎬 Camera recording started',
       type: 'info',
@@ -175,6 +181,12 @@ export const CameraPathRecorder: React.FC = () => {
     }
     stopRecording();
     setRecordingStartTime(null);
+    
+    // Dispatch event to notify other components
+    window.dispatchEvent(new CustomEvent('ch-camera-path-recording-changed', {
+      detail: { isRecording: false, cameraId: null }
+    }));
+    
     addToast({
       message: '⏹️ Camera recording stopped',
       type: 'success',

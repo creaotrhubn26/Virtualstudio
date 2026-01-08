@@ -205,6 +205,9 @@ export const MonitorFeedPanel: React.FC = () => {
   // State for sync with recording arc
   const [selectedRecordingCamera, setSelectedRecordingCamera] = useState<string>('main');
   
+  // CameraPathRecorder state
+  const [isCameraPathRecording, setIsCameraPathRecording] = useState(false);
+  
   // Listen for camera preset changes from main.ts
   useEffect(() => {
     const handlePresetChange = (event: Event) => {
@@ -266,9 +269,18 @@ export const MonitorFeedPanel: React.FC = () => {
       log.info('Recording camera changed from arc:', cameraId, isAll ? '(all cameras)' : '');
     };
     
+    // Listen for CameraPathRecorder state changes
+    const handleCameraPathRecordingChange = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { isRecording } = customEvent.detail;
+      setIsCameraPathRecording(isRecording);
+      log.info('CameraPathRecorder state changed:', isRecording);
+    };
+    
     window.addEventListener('camera-preset-changed', handlePresetChange);
     window.addEventListener('camera-settings-changed', handleCameraSettingsChange);
     window.addEventListener('ch-recording-camera-changed', handleRecordingCameraChange);
+    window.addEventListener('ch-camera-path-recording-changed', handleCameraPathRecordingChange);
     
     // Check for existing presets on mount
     MONITOR_PRESETS.forEach(presetId => {
@@ -286,6 +298,7 @@ export const MonitorFeedPanel: React.FC = () => {
       window.removeEventListener('camera-preset-changed', handlePresetChange);
       window.removeEventListener('camera-settings-changed', handleCameraSettingsChange);
       window.removeEventListener('ch-recording-camera-changed', handleRecordingCameraChange);
+      window.removeEventListener('ch-camera-path-recording-changed', handleCameraPathRecordingChange);
     };
   }, []);
   

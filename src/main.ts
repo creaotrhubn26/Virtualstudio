@@ -17504,6 +17504,46 @@ class VirtualStudio {
       }) as EventListener);
     }
     
+    // Listen for CameraPathRecorder recording state changes
+    if (!(window as any).__chCameraPathRecordingListenerAttached) {
+      (window as any).__chCameraPathRecordingListenerAttached = true;
+      window.addEventListener('ch-camera-path-recording-changed', ((e: CustomEvent) => {
+        const { isRecording, cameraId } = e.detail;
+        console.log('[Recording Arc] CameraPathRecorder state changed:', isRecording, cameraId);
+        
+        const arcEl = document.getElementById('recordingArc');
+        if (!arcEl) return;
+        
+        const allBtns = arcEl.querySelectorAll('.arc-camera-btn');
+        const recordBtn = arcEl.querySelector('#arcRecordBtn');
+        
+        if (isRecording) {
+          // Gray out all camera buttons and record button when CameraPathRecorder is active
+          allBtns.forEach(btn => {
+            (btn as HTMLElement).style.opacity = '0.3';
+            (btn as HTMLElement).style.pointerEvents = 'none';
+          });
+          if (recordBtn) {
+            (recordBtn as HTMLElement).style.opacity = '0.3';
+            (recordBtn as HTMLElement).style.pointerEvents = 'none';
+          }
+          arcEl.classList.add('external-recording');
+        } else {
+          // Re-enable buttons
+          allBtns.forEach(btn => {
+            (btn as HTMLElement).style.pointerEvents = '';
+          });
+          if (recordBtn) {
+            (recordBtn as HTMLElement).style.opacity = '';
+            (recordBtn as HTMLElement).style.pointerEvents = '';
+          }
+          arcEl.classList.remove('external-recording');
+          // Refresh camera states
+          this.updateRecordingArcCameras(arcEl);
+        }
+      }) as EventListener);
+    }
+    
     // Record button - toggle recording
     recordBtn?.addEventListener('click', () => {
       if (this.isRecording) {
