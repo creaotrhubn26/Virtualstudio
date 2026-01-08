@@ -17192,6 +17192,7 @@ class VirtualStudio {
   }
 
   private showRecordingDialog(): void {
+    console.log('[Recording] showRecordingDialog called');
     // Check if arc already exists
     let arc = document.getElementById('recordingArc');
     
