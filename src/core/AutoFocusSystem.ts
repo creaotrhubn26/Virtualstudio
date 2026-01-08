@@ -483,8 +483,13 @@ export class AutoFocusSystem {
       'skull', 'Skull', 'cranium', 'Cranium'
     ];
     
-    // Exclusion patterns - walls, logos, lights, etc.
-    const excludePatterns = ['wall', 'Wall', 'logo', 'Logo', 'light', 'Light', 'bulb', 'ground', 'grid'];
+    // Exclusion patterns - walls, logos, lights, scene elements, etc.
+    const excludePatterns = [
+      'wall', 'Wall', 'logo', 'Logo', 'light', 'Light', 'bulb', 'ground', 'grid',
+      'world', 'World', 'scene', 'Scene', 'environment', 'Environment', 'skybox', 'Skybox',
+      'floor', 'Floor', 'ceiling', 'Ceiling', 'backdrop', 'Backdrop', 'studio', 'Studio',
+      'camera', 'Camera', 'root', 'Root', '__root__'
+    ];
     
     for (const mesh of this.scene.meshes) {
       if (!mesh.isEnabled() || !mesh.isVisible) continue;
@@ -524,14 +529,21 @@ export class AutoFocusSystem {
     // Common avatar/character mesh name patterns
     const avatarPatterns = ['avatar', 'character', 'actor', 'person', 'human', 'mannequin', 'geometry'];
     
+    // Exclusion patterns - scene elements that should never be focus targets
+    const excludePatterns = [
+      'wall', 'Wall', 'logo', 'Logo', 'light', 'Light', 'bulb', 'ground', 'grid',
+      'world', 'World', 'scene', 'Scene', 'environment', 'Environment', 'skybox', 'Skybox',
+      'floor', 'Floor', 'ceiling', 'Ceiling', 'backdrop', 'Backdrop', 'studio', 'Studio',
+      'camera', 'Camera', 'root', 'Root', '__root__', 'backWall', 'cyclorama', 'Cyclorama'
+    ];
+    
     // Find meshes that look like character/avatar meshes
     const characterMeshes = this.scene.meshes.filter(mesh => {
       if (!mesh.isEnabled() || !mesh.isVisible) return false;
       if (mesh.name.startsWith('gizmo') || mesh.name.startsWith('__')) return false;
-      if (mesh.name === 'ground' || mesh.name === 'backWall' || mesh.name === 'grid') return false;
-      if (mesh.name.includes('Wall') || mesh.name.includes('wall')) return false;
-      if (mesh.name.includes('light') || mesh.name.includes('Light') || mesh.name.includes('bulb')) return false;
-      if (mesh.name === 'logo' || mesh.name.startsWith('logo')) return false;
+      
+      // Skip any mesh matching exclusion patterns
+      if (excludePatterns.some(ex => mesh.name.includes(ex))) return false;
       
       const meshNameLower = mesh.name.toLowerCase();
       
