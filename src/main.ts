@@ -17697,10 +17697,20 @@ class VirtualStudio {
   }
   
   private openCameraPanel(cameraId: string): void {
-    // Try different methods to open the panel
-    const cameraTab = document.querySelector('[data-panel="camera-light"]') as HTMLElement;
-    if (cameraTab) {
-      cameraTab.click();
+    // Click the Kamera & Lys button in the footer to open the panel
+    const cameraControlBtn = document.getElementById('cameraControlBtn') as HTMLElement;
+    if (cameraControlBtn) {
+      cameraControlBtn.click();
+      console.log('[CameraPanel] Clicked cameraControlBtn to open panel');
+    }
+    
+    // Fallback: try data-panel selector
+    if (!cameraControlBtn) {
+      const cameraTab = document.querySelector('[data-panel="camera-light"]') as HTMLElement;
+      if (cameraTab) {
+        cameraTab.click();
+        console.log('[CameraPanel] Clicked data-panel selector');
+      }
     }
     
     // Also dispatch event for panel system
@@ -17711,7 +17721,7 @@ class VirtualStudio {
     // After panel opens, scroll to and highlight the camera preset button
     setTimeout(() => {
       this.scrollToAndHighlightCameraPreset(cameraId);
-    }, 300);
+    }, 400);
     
     this.showNotification(`Lagre nåværende vinkel som ${cameraId.replace('cam', 'Cam ')}`, 'info');
   }
