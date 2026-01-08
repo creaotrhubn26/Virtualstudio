@@ -4377,6 +4377,7 @@ class VirtualStudio {
   }
 
   private setupMissingButtonHandlers(): void {
+    console.log('[Debug] setupMissingButtonHandlers called');
     // Transform mode buttons
     const selectModeBtn = document.getElementById('selectModeBtn');
     const moveModeBtn = document.getElementById('moveModeBtn');
