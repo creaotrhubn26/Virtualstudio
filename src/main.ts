@@ -4441,10 +4441,13 @@ class VirtualStudio {
         playBtn.innerHTML = '<span aria-hidden="true">▶</span>';
         playBtn.title = 'Spill av / Ta opp (Space)';
       } else {
-        // Open recording dialog or start recording directly
+        // Toggle recording dialog visibility
         this.showRecordingDialog();
       }
     });
+    
+    // Initialize recording arc on startup (collapsed, expands on hover)
+    this.initRecordingArc();
     
     // Space bar to toggle recording
     document.addEventListener('keydown', (e) => {
@@ -17189,6 +17192,63 @@ class VirtualStudio {
   
   public getCurrentProjectType(): 'casting' | 'studio' | null {
     return this.currentProjectType;
+  }
+
+  private initRecordingArc(): void {
+    // Create the recording arc on startup (it will be collapsed until hover)
+    if (document.getElementById('recordingArc')) return;
+    
+    const arc = document.createElement('div');
+    arc.id = 'recordingArc';
+    arc.className = 'recording-arc';
+    arc.innerHTML = `
+      <div class="recording-arc-content">
+        <div class="recording-arc-header">
+          <div class="recording-arc-title">
+            <div class="rec-indicator"></div>
+            <span>Opptak</span>
+          </div>
+          <div class="recording-arc-timer" id="arcRecordTimer">00:00:00</div>
+        </div>
+        
+        <div class="recording-arc-cameras">
+          <button class="arc-camera-btn active" data-camera="main" title="Hovedkamera">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 7l-7 5 7 5V7z"/>
+              <rect x="1" y="5" width="15" height="14" rx="2"/>
+            </svg>
+          </button>
+          <button class="arc-camera-btn" data-camera="camA" title="Kamera A" disabled>A</button>
+          <button class="arc-camera-btn" data-camera="camB" title="Kamera B" disabled>B</button>
+          <button class="arc-camera-btn" data-camera="camC" title="Kamera C" disabled>C</button>
+          <button class="arc-camera-btn" data-camera="camD" title="Kamera D" disabled>D</button>
+          <button class="arc-camera-btn" data-camera="all" title="Alle kameraer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7"/>
+              <rect x="14" y="3" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="recording-arc-controls">
+          <button class="arc-record-btn" id="arcRecordBtn" title="Start opptak">
+            <div class="arc-record-icon"></div>
+          </button>
+          <button class="arc-close-btn" id="arcCloseBtn" title="Lukk">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(arc);
+    this.setupRecordingArcEvents(arc);
+    this.updateRecordingArcCameras(arc);
   }
 
   private showRecordingDialog(): void {
