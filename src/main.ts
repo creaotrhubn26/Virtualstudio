@@ -16019,6 +16019,12 @@ class VirtualStudio {
     // THEN update monitor camera to match the newly saved preset
     // This must come AFTER reassignMonitorRTTSettings because the camera might not exist yet
     this.updateMonitorCameraFromPreset(presetId, preset);
+    
+    // Update recording arc to show this camera as available
+    const arc = document.getElementById('recordingArc');
+    if (arc) {
+      this.updateRecordingArcCameras(arc);
+    }
   }
   
   /**
