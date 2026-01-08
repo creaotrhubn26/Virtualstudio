@@ -17332,11 +17332,11 @@ class VirtualStudio {
               <rect x="1" y="5" width="15" height="14" rx="2"/>
             </svg>
           </button>
-          <button class="arc-camera-btn" data-camera="camA" title="Kamera A" disabled>A</button>
-          <button class="arc-camera-btn" data-camera="camB" title="Kamera B" disabled>B</button>
-          <button class="arc-camera-btn" data-camera="camC" title="Kamera C" disabled>C</button>
-          <button class="arc-camera-btn" data-camera="camD" title="Kamera D" disabled>D</button>
-          <button class="arc-camera-btn" data-camera="all" title="Alle kameraer">
+          <button class="arc-camera-btn inactive" data-camera="camA" title="Aktiver kamera i Kamera & Lys-panelet" style="opacity: 0.4;">A</button>
+          <button class="arc-camera-btn inactive" data-camera="camB" title="Aktiver kamera i Kamera & Lys-panelet" style="opacity: 0.4;">B</button>
+          <button class="arc-camera-btn inactive" data-camera="camC" title="Aktiver kamera i Kamera & Lys-panelet" style="opacity: 0.4;">C</button>
+          <button class="arc-camera-btn inactive" data-camera="camD" title="Aktiver kamera i Kamera & Lys-panelet" style="opacity: 0.4;">D</button>
+          <button class="arc-camera-btn inactive" data-camera="all" title="Aktiver kameraer i Kamera & Lys-panelet" style="opacity: 0.4;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="3" width="7" height="7"/>
               <rect x="14" y="3" width="7" height="7"/>
@@ -17393,11 +17393,11 @@ class VirtualStudio {
                 <rect x="1" y="5" width="15" height="14" rx="2"/>
               </svg>
             </button>
-            <button class="arc-camera-btn" data-camera="camA" title="Kamera A" disabled>A</button>
-            <button class="arc-camera-btn" data-camera="camB" title="Kamera B" disabled>B</button>
-            <button class="arc-camera-btn" data-camera="camC" title="Kamera C" disabled>C</button>
-            <button class="arc-camera-btn" data-camera="camD" title="Kamera D" disabled>D</button>
-            <button class="arc-camera-btn" data-camera="all" title="Alle kameraer">
+            <button class="arc-camera-btn inactive" data-camera="camA" title="Aktiver kamera i Kamera & Lys-panelet" style="opacity: 0.4;">A</button>
+            <button class="arc-camera-btn inactive" data-camera="camB" title="Aktiver kamera i Kamera & Lys-panelet" style="opacity: 0.4;">B</button>
+            <button class="arc-camera-btn inactive" data-camera="camC" title="Aktiver kamera i Kamera & Lys-panelet" style="opacity: 0.4;">C</button>
+            <button class="arc-camera-btn inactive" data-camera="camD" title="Aktiver kamera i Kamera & Lys-panelet" style="opacity: 0.4;">D</button>
+            <button class="arc-camera-btn inactive" data-camera="all" title="Aktiver kameraer i Kamera & Lys-panelet" style="opacity: 0.4;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="3" width="7" height="7"/>
                 <rect x="14" y="3" width="7" height="7"/>
