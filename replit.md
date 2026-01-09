@@ -19,7 +19,17 @@ The application uses a hybrid architecture combining Vanilla TypeScript with Bab
 - Modern UI elements like spring-effect animations, gradient backgrounds, and redesigned interactive components enhance the user experience.
 
 **Technical Implementations & Features:**
-- **Realistic Lighting System:** Simulates 17 professional lights with accurate specifications and inverse square law.
+- **Realistic Lighting System:** Simulates 17 professional lights with accurate specifications.
+- **LightingPhysics Engine (src/core/LightingPhysics.ts):** Research-backed physically accurate lighting calculations:
+  - **Inverse Square Law:** I = I₀ × (d₀/d)² with proper radiometric/photometric units
+  - **Luminous Intensity:** Candela calculation from lumens with solid angle correction for beam angles
+  - **EV Calculation:** ISO 2720:1974 compliant exposure value with calibration constant C=250
+  - **F-stop Equivalents:** Real photography-style stop calculations (doubling distance = -2 stops)
+  - **Light Meter:** Combines multiple sources with proper falloff, returns EV, lux, stops difference
+  - **Falloff Visualization:** Distance rings at 1x, 1.4x, 2x, 2.8x, 4x with percentage labels
+  - **Lighting Ratio:** Key:fill ratio calculation (1:1 flat to 8:1+ dramatic)
+  - **Group Lighting:** Optimal distance calculation for even illumination across rows
+  - **Color Temperature:** Kelvin to RGB conversion based on Planckian locus (1000K-40000K)
 - **Equipment Panel:** Library of lights, modifiers, stands, backgrounds, and props with filters and search.
 - **Viewport:** Displays a 3D studio, camera info, histogram, light indicators, 2D top view, focal length controls, and interactive light placement gizmos. Includes professional helper guide overlays and interactive viewfinder focus points.
 - **AutoFocus System (Øye-AF):** Professional autofocus with three modes:

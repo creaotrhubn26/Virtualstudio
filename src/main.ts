@@ -21,6 +21,7 @@ import { mountHelpVideoPlayers } from './components/HelpVideoPlayer';
 import { getLightById, LIGHT_DATABASE, LightSpec } from './data/lightFixtures';
 import { zipSync, strToU8 } from 'fflate';
 import MP4Box from 'mp4box';
+import { LightingPhysics } from './core/LightingPhysics';
 
 declare global {
   interface Window {
@@ -9999,53 +10000,51 @@ class VirtualStudio {
   }
 
   private drawLightFalloff(ctx: CanvasRenderingContext2D, x: number, y: number, data: LightData, scale: number): void {
-    // Calculate distance to subject (center) - approximate as distance to canvas center
-    const canvasCenterX = ctx.canvas.width / 2;
-    const canvasCenterY = ctx.canvas.height / 2;
-    const distanceToSubject = Math.sqrt((x - canvasCenterX) ** 2 + (y - canvasCenterY) ** 2) / scale;
+    const baseLux = LightingPhysics.calculateLux1mFromSpecs(data.specs || {});
+    const falloffZones = LightingPhysics.generateFalloffZones(baseLux);
     
-    // Use base distance of 1m for falloff rings if no subject distance
-    const baseDistance = distanceToSubject > 0.1 ? distanceToSubject : 1.0;
-    
-    // Draw concentric circles at 1x, 1.5x, 2x, 3x base distance
-    const multipliers = [1, 1.5, 2, 3];
     const lightColor = this.topViewShowCCTColors 
       ? this.cctToCanvasColor(data.cct || 5600, 1.0)
       : 'rgba(255, 255, 0, 1)';
     
-    multipliers.forEach((multiplier, index) => {
-      const radius = baseDistance * multiplier * scale;
-      const intensity = 1 / (multiplier * multiplier); // Inverse square law
+    const colorMatch = lightColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    const r = colorMatch ? parseInt(colorMatch[1]) : 255;
+    const g = colorMatch ? parseInt(colorMatch[2]) : 255;
+    const b = colorMatch ? parseInt(colorMatch[3]) : 0;
+    
+    falloffZones.slice(0, 5).forEach((zone, index) => {
+      const radius = zone.distance * scale;
+      const intensity = zone.intensity / 100;
       
-      // Calculate opacity based on intensity
-      const opacity = Math.max(0.15, Math.min(0.6, intensity));
+      const opacity = Math.max(0.12, Math.min(0.55, intensity * 0.7));
       
-      // Extract RGB from color string
-      const colorMatch = lightColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-      if (colorMatch) {
-        const r = parseInt(colorMatch[1]);
-        const g = parseInt(colorMatch[2]);
-        const b = parseInt(colorMatch[3]);
-        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
-      } else {
-        ctx.strokeStyle = `rgba(255, 255, 0, ${opacity})`;
-      }
-      
-      ctx.lineWidth = index === 0 ? 2 : 1.5;
-      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+      ctx.lineWidth = index === 0 ? 2.5 : (index === 1 ? 2 : 1.5);
+      ctx.setLineDash(index === 0 ? [] : [4, 4]);
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
       
-      // Draw intensity label on first ring
-      if (index === 0 && this.topViewShowLabels) {
-        const labelText = `${Math.round(intensity * 100)}%`;
+      if (this.topViewShowLabels && index < 4) {
+        const labelText = zone.stops === 0 
+          ? '100%' 
+          : `${zone.intensity.toFixed(0)}% (-${zone.stops.toFixed(1)} stopp)`;
+        
         ctx.font = '9px Inter, system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = `rgba(255, 255, 255, ${opacity + 0.2})`;
-        ctx.fillText(labelText, x, y + radius + 10);
+        
+        const labelAngle = -Math.PI / 4;
+        const labelX = x + Math.cos(labelAngle) * radius;
+        const labelY = y + Math.sin(labelAngle) * radius;
+        
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        const textWidth = ctx.measureText(labelText).width;
+        ctx.fillRect(labelX - textWidth/2 - 2, labelY - 6, textWidth + 4, 12);
+        
+        ctx.fillStyle = `rgba(255, 255, 255, 0.9)`;
+        ctx.fillText(labelText, labelX, labelY);
       }
     });
   }
@@ -13839,37 +13838,18 @@ class VirtualStudio {
   }
 
   private calculateLightIntensity(specs: LightSpecs): number {
-    // Priority 1: Use lux at 1m (most accurate for continuous/LED lights)
-    // Realistic conversion: lux at 1m = candela, and candela relates to intensity
-    // For Babylon.js: Intensity is approximately lux/10000 for reasonable scaling
-    if (specs.lux1m) {
-      return specs.lux1m / 10000;
-    }
+    const lux1m = LightingPhysics.calculateLux1mFromSpecs({
+      lux1m: specs.lux1m,
+      lumens: specs.lumens,
+      guideNumber: specs.guideNumber,
+      power: specs.power,
+      powerUnit: specs.powerUnit as 'W' | 'Ws',
+      beamAngle: specs.beamAngle
+    });
     
-    // Priority 2: Use lumens (total luminous flux)
-    // Realistic conversion: For a spotlight, lumens ≈ intensity * area factor
-    // Scale factor adjusted for realistic scene lighting (typically 20000-40000 lumens = strong studio light)
-    if (specs.lumens) {
-      return specs.lumens / 15000;
-    }
+    const babylonIntensity = Math.log10(lux1m + 1) * 0.5;
     
-    // Priority 3: Use guide number (for strobes)
-    // Guide number relates to flash power at ISO 100
-    // Conversion: GN² ≈ effective power, scale appropriately for scene
-    if (specs.guideNumber) {
-      return (specs.guideNumber * specs.guideNumber) / 800;
-    }
-    
-    // Priority 4: Estimate from power
-    if (specs.powerUnit === 'Ws') {
-      // Strobe power: approximately 40 lumens per Ws is a reasonable estimate
-      const estimatedLumens = specs.power * 40;
-      return estimatedLumens / 15000;
-    } else {
-      // Continuous LED/Watt: varies widely, but ~100 lumens per watt is typical for good LEDs
-      const estimatedLumens = specs.power * 100;
-      return estimatedLumens / 15000;
-    }
+    return Math.max(0.5, Math.min(babylonIntensity, 50));
   }
 
   private getLightModelUrl(type: string): string | null {
@@ -15601,35 +15581,73 @@ class VirtualStudio {
   }
 
   public updateLightMeterReading(): void {
-    let totalLux = 0;
     const subjectPos = new BABYLON.Vector3(0, 1, 0);
     
+    const lightsArray: Array<{
+      position: { x: number; y: number; z: number };
+      specs: Partial<LightSpecs>;
+      powerMultiplier?: number;
+      enabled?: boolean;
+    }> = [];
+    
     for (const [, data] of this.lights) {
-      const lightPos = data.mesh.position;
-      const distance = BABYLON.Vector3.Distance(lightPos, subjectPos);
-      
-      if (data.specs?.lux1m) {
-        const luxAtSubject = data.specs.lux1m / (distance * distance);
-        totalLux += luxAtSubject;
-      } else if (data.specs?.guideNumber) {
-        const luxEstimate = (data.specs.guideNumber * data.specs.guideNumber * 12.5) / (distance * distance);
-        totalLux += luxEstimate;
-      } else if (data.specs?.lumens) {
-        const luxEstimate = data.specs.lumens / (4 * Math.PI * distance * distance);
-        totalLux += luxEstimate;
-      }
+      if (!data.enabled) continue;
+      lightsArray.push({
+        position: {
+          x: data.mesh.position.x,
+          y: data.mesh.position.y,
+          z: data.mesh.position.z
+        },
+        specs: data.specs || { power: 100, powerUnit: 'W' },
+        powerMultiplier: data.powerMultiplier || 1.0,
+        enabled: data.enabled
+      });
     }
     
-    const ev = Math.log2(totalLux / 2.5);
+    const shutterStr = this.cameraSettings.shutter || '1/125';
+    let shutterSpeed = 1/125;
+    if (shutterStr.includes('/')) {
+      const parts = shutterStr.split('/');
+      shutterSpeed = parseInt(parts[0]) / parseInt(parts[1]);
+    } else {
+      shutterSpeed = parseFloat(shutterStr);
+    }
+    
+    const result = LightingPhysics.calculateLightMeter(
+      lightsArray,
+      { x: subjectPos.x, y: subjectPos.y, z: subjectPos.z },
+      {
+        aperture: this.cameraSettings.aperture || 2.8,
+        shutterSpeed: shutterSpeed,
+        iso: this.cameraSettings.iso || 100
+      }
+    );
+    
     const evDisplay = document.getElementById('evValue');
     if (evDisplay) {
-      evDisplay.textContent = `EV ${ev.toFixed(1)}`;
+      const evClass = result.evAtISO100 < 8 ? 'ev-low' : result.evAtISO100 > 14 ? 'ev-high' : 'ev-good';
+      evDisplay.textContent = `EV ${result.evAtISO100.toFixed(1)}`;
+      evDisplay.className = `ev-value ${evClass}`;
     }
     
     const luxDisplay = document.getElementById('luxValue');
     if (luxDisplay) {
-      luxDisplay.textContent = `${Math.round(totalLux)} lux`;
+      luxDisplay.textContent = `${Math.round(result.luxAtSubject).toLocaleString()} lux`;
     }
+    
+    const stopsDiffDisplay = document.getElementById('stopsValue');
+    if (stopsDiffDisplay) {
+      const sign = result.stopsDifference > 0 ? '+' : '';
+      stopsDiffDisplay.textContent = `${sign}${result.stopsDifference.toFixed(1)} stopp`;
+    }
+    
+    const percentDisplay = document.getElementById('intensityPercent');
+    if (percentDisplay) {
+      percentDisplay.textContent = `${result.percentIntensity.toFixed(0)}%`;
+    }
+    
+    const totalLux = result.luxAtSubject;
+    const ev = result.evAtISO100;
     
     // Check if lights are too weak and recommend stronger lights
     // Target EV for well-lit studio is typically EV 10-12
