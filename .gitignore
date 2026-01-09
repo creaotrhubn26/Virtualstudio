@@ -7,7 +7,7 @@ dist/
 # ML Modeller og store binærfiler
 backend/models/
 backend/rodin_models/
-backend/humaniflow/model_files/
+# backend/humaniflow/model_files/ - Tracked with Git LFS
 backend/downloads/
 backend/test_images/
 backend/outputs/
@@ -27,7 +27,7 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
-.wrangler/
+# backend/.wrangler/ is tracked with Git LFS
 
 # Build artifacts
 build/
