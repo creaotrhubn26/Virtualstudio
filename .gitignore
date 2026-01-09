@@ -6,7 +6,7 @@ dist/
 
 # ML Modeller og store binærfiler
 backend/models/
-backend/rodin_models/
+# backend/rodin_models/ - Now tracked in git
 # backend/humaniflow/model_files/ - Tracked with Git LFS
 backend/downloads/
 backend/test_images/
