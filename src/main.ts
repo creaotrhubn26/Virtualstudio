@@ -20018,25 +20018,14 @@ window.addEventListener('DOMContentLoaded', () => {
   const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement;
   console.log('[Init] Canvas found:', canvas);
   
-  // Debug: show visible indicator
-  const debugEl = document.createElement('div');
-  debugEl.id = 'vs-debug';
-  debugEl.style.cssText = 'position:fixed;top:10px;left:10px;z-index:99999;background:red;color:white;padding:5px 10px;font-size:12px;border-radius:4px;';
-  debugEl.textContent = 'Canvas: ' + (canvas ? 'Found' : 'NOT FOUND');
-  document.body.appendChild(debugEl);
-  
   if (canvas) {
     updateProgress(30, 'Laster 3D-motor...');
-    debugEl.textContent = 'Creating VirtualStudio...';
-    debugEl.style.background = 'orange';
     
     let studio: VirtualStudio;
     try {
       studio = new VirtualStudio(canvas);
     } catch (err) {
       console.error('[Init] Failed to create VirtualStudio:', err);
-      debugEl.textContent = 'WebGL Error!';
-      debugEl.style.background = 'red';
       
       // Show error in loading overlay
       const loadingOverlay = document.getElementById('loadingOverlay');
@@ -20054,8 +20043,6 @@ window.addEventListener('DOMContentLoaded', () => {
       return; // Stop initialization
     }
     
-    debugEl.textContent = 'VirtualStudio OK! Meshes: ' + studio.scene.meshes.length;
-    debugEl.style.background = 'green';
     window.virtualStudio = studio;
     updateProgress(70, 'Konfigurerer scene...');
 
