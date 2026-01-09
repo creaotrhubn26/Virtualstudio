@@ -1,7 +1,5 @@
-const CACHE_NAME = 'vs-planner-v1';
+const CACHE_NAME = 'vs-planner-v2';
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/creatorhub-vs-icon-32.svg',
   '/creatorhub-vs-header.svg'
@@ -37,6 +35,14 @@ self.addEventListener('fetch', (event) => {
   // Skip non-http(s) schemes like chrome-extension://
   if (!url.protocol.startsWith('http')) return;
   
+  // Skip caching for development - always fetch fresh content for HTML and JS
+  if (url.pathname === '/' || 
+      url.pathname.endsWith('.html') || 
+      url.pathname.startsWith('/src/') ||
+      url.pathname.includes('node_modules')) {
+    return; // Let the browser handle it normally
+  }
+  
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(event.request)
@@ -54,29 +60,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Only cache static assets
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, networkResponse);
-            });
-          }
-        }).catch(() => {});
-        return cachedResponse;
+    fetch(event.request).then((networkResponse) => {
+      if (networkResponse && networkResponse.status === 200) {
+        const responseClone = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseClone);
+        });
       }
-
-      return fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200) {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-        }
-        return networkResponse;
-      }).catch(() => {
-        return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
+      return networkResponse;
+    }).catch(() => {
+      return caches.match(event.request).then((cachedResponse) => {
+        return cachedResponse || new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
       });
     })
   );

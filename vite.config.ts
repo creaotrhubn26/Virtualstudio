@@ -43,10 +43,8 @@ export default defineConfig({
         '**/.cursor/**'  // Ignore Cursor IDE files
       ]
     },
-    // Increase timeout for HMR and module requests
-    hmr: {
-      timeout: 30000,
-    },
+    // Disable HMR to avoid WebSocket issues in Replit environment
+    hmr: false,
   },
   build: {
     outDir: 'dist',

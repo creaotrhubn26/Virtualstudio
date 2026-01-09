@@ -381,13 +381,20 @@ class VirtualStudio {
   private isMultiCameraRecording: boolean = false;
 
   constructor(canvas: HTMLCanvasElement) {
-    this.engine = new BABYLON.Engine(canvas, true, { 
-      preserveDrawingBuffer: true,
-      stencil: true,
-      powerPreference: 'high-performance',
-      doNotHandleContextLost: false,
-      adaptToDeviceRatio: true
-    });
+    console.log('[Constructor] Creating Babylon.js engine...');
+    try {
+      this.engine = new BABYLON.Engine(canvas, true, { 
+        preserveDrawingBuffer: true,
+        stencil: true,
+        powerPreference: 'high-performance',
+        doNotHandleContextLost: false,
+        adaptToDeviceRatio: true
+      });
+      console.log('[Constructor] Engine created successfully');
+    } catch (err) {
+      console.error('[Constructor] Engine creation failed:', err);
+      throw err;
+    }
     
     // Handle WebGL context loss - critical for RTT stability
     canvas.addEventListener('webglcontextlost', (event) => {
@@ -448,16 +455,20 @@ class VirtualStudio {
       console.log('[Monitor] GPU resource cleanup complete. RTTs will be recreated on next render.');
     });
     
+    console.log('[Constructor] Creating scene...');
     this.scene = new BABYLON.Scene(this.engine);
     this.scene.clearColor = new BABYLON.Color4(0.08, 0.09, 0.11, 1);
+    console.log('[Constructor] Scene created, loading environment texture...');
     
     // Create environment texture for PBR materials to render correctly
     // PBR materials need an environment for reflections and proper lighting
+    // Note: This loads asynchronously but doesn't block construction
     this.scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData(
       'https://assets.babylonjs.com/environments/environmentSpecular.env',
       this.scene
     );
     this.scene.environmentIntensity = 0.6; // Subtle environment lighting
+    console.log('[Constructor] Environment texture loading initiated');
     
     // Scene optimizations - only override non-defaults that improve performance
     // autoClear and autoClearDepthAndStencil already default to true
@@ -486,43 +497,25 @@ class VirtualStudio {
     this.camera.angularSensibilityY = 500; // Smoother vertical rotation
 
     // Setup professional rendering pipeline (Work Mode)
+    console.log('[Constructor] Setting up rendering pipeline...');
     this.setupRenderingPipeline();
+    console.log('[Constructor] Rendering pipeline complete');
 
-    this.gizmoManager = new BABYLON.GizmoManager(this.scene);
-    this.gizmoManager.positionGizmoEnabled = true;
-    this.gizmoManager.rotationGizmoEnabled = false;
-    this.gizmoManager.scaleGizmoEnabled = false;
-    this.gizmoManager.attachableMeshes = [];
-    
-    // Professional studio gizmo styling
-    this.customizeGizmoAppearance();
-
-    virtualActorService.setScene(this.scene);
-    propRenderingService.setScene(this.scene);
-
-    this.setupStudio();
-    this.setup2DViews(); // Must be called before setupUI so canvas is available
-    this.setupUI();
-    this.setupAssetEventListeners();
-    this.setupFocusEventListeners();
-    
-    // Initialize autofocus system with eye detection
-    this.autoFocusSystem = new AutoFocusSystem(this.scene, this.camera);
-    this.focusPeakingEffect = new FocusPeakingEffect(this.scene, this.camera);
-    this.physicsBasedDOF = new PhysicsBasedDOF(this.scene, this.camera);
-    this.setupAutoFocusUI();
-    this.setupFocusPeakingUI();
-    
-    // Add default mannequin for focus target testing
-    this.addDefaultMannequin();
-
+    // Start render loop immediately to ensure scene renders even if later setup fails
+    let renderCount = 0;
     this.engine.runRenderLoop(() => {
       this.scene.render();
+      renderCount++;
+      if (renderCount === 1) {
+        console.log('[RenderLoop] First frame rendered. Scene meshes:', this.scene.meshes.length);
+      }
+      if (renderCount === 60) {
+        console.log('[RenderLoop] 60 frames rendered. Meshes:', this.scene.meshes.length, ', Lights:', this.scene.lights.length);
+      }
       this.updateTopView();
       this.updateHistogram();
       this.updateMonitorCanvases();
       this.updateSelectedLightProperties();
-      // Update info panel in fullscreen mode
       if (this.topViewIsFullscreen) {
         this.updateTopViewInfoPanel();
       }
@@ -533,16 +526,50 @@ class VirtualStudio {
       this.resizeCanvases();
     });
     
-    // Use ResizeObserver to detect viewport-3d size changes
     const viewport3d = canvas.parentElement;
     if (viewport3d) {
       const resizeObserver = new ResizeObserver(() => {
-        // Small delay to ensure CSS has applied
         setTimeout(() => {
           this.engine.resize();
         }, 0);
       });
       resizeObserver.observe(viewport3d);
+    }
+
+    // Wrap remaining setup in try/catch to prevent render loop from being blocked
+    try {
+      console.log('[VirtualStudio] Starting gizmo setup...');
+      this.gizmoManager = new BABYLON.GizmoManager(this.scene);
+      this.gizmoManager.positionGizmoEnabled = true;
+      this.gizmoManager.rotationGizmoEnabled = false;
+      this.gizmoManager.scaleGizmoEnabled = false;
+      this.gizmoManager.attachableMeshes = [];
+      
+      this.customizeGizmoAppearance();
+
+      virtualActorService.setScene(this.scene);
+      propRenderingService.setScene(this.scene);
+
+      console.log('[VirtualStudio] Starting setupStudio...');
+      this.setupStudio();
+      console.log('[VirtualStudio] setupStudio complete. Meshes:', this.scene.meshes.length);
+      
+      this.setup2DViews();
+      this.setupUI();
+      this.setupAssetEventListeners();
+      this.setupFocusEventListeners();
+      
+      this.autoFocusSystem = new AutoFocusSystem(this.scene, this.camera);
+      this.focusPeakingEffect = new FocusPeakingEffect(this.scene, this.camera);
+      this.physicsBasedDOF = new PhysicsBasedDOF(this.scene, this.camera);
+      this.setupAutoFocusUI();
+      this.setupFocusPeakingUI();
+      
+      console.log('[VirtualStudio] Starting addDefaultMannequin...');
+      this.addDefaultMannequin();
+      console.log('[VirtualStudio] Setup complete!');
+    } catch (err) {
+      console.error('[VirtualStudio] Setup error (render loop still running):', err);
     }
     
     this.engine.resize();
@@ -3419,6 +3446,39 @@ class VirtualStudio {
     
     // Update scene list to show all lights
     this.updateSceneList();
+    
+    // Debug: Log lighting setup status
+    console.log('[Lighting Debug] Setup complete. Light status:');
+    this.lights.forEach((light, id) => {
+      const babylonLight = light.light;
+      console.log(`  ${id}: intensity=${babylonLight.intensity.toFixed(3)}, enabled=${babylonLight.isEnabled()}, type=${babylonLight.getClassName()}`);
+      if (babylonLight instanceof BABYLON.SpotLight) {
+        const spot = babylonLight as BABYLON.SpotLight;
+        console.log(`    direction=(${spot.direction.x.toFixed(2)}, ${spot.direction.y.toFixed(2)}, ${spot.direction.z.toFixed(2)}), angle=${(spot.angle * 180 / Math.PI).toFixed(1)}°`);
+      }
+    });
+    
+    // Debug: Check avatar materials
+    setTimeout(() => {
+      const avatarMesh = this.scene.getMeshByName('default_avatar');
+      if (avatarMesh) {
+        console.log('[Lighting Debug] Avatar found at:', avatarMesh.position.toString());
+        const allMeshes = avatarMesh.getChildMeshes(true);
+        allMeshes.push(avatarMesh);
+        allMeshes.forEach(m => {
+          if (m.material) {
+            const mat = m.material;
+            if (mat instanceof BABYLON.PBRMaterial) {
+              console.log(`  Mesh ${m.name}: PBR unlit=${mat.unlit}, metallic=${mat.metallic}, roughness=${mat.roughness}`);
+            } else if (mat instanceof BABYLON.StandardMaterial) {
+              console.log(`  Mesh ${m.name}: Standard disableLighting=${mat.disableLighting}`);
+            }
+          }
+        });
+      } else {
+        console.warn('[Lighting Debug] Avatar not found yet');
+      }
+    }, 2000);
     
     // Deselect all lights so user starts fresh
     this.selectedLightId = null;
@@ -7781,9 +7841,29 @@ class VirtualStudio {
           if (child.material instanceof BABYLON.PBRMaterial) {
             child.material.unlit = false;
             child.material.backFaceCulling = true;
+            child.material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
+            child.material.alpha = 1.0;
+            // Ensure reasonable metallic/roughness for light response
+            if (child.material.metallic === undefined || child.material.metallic === null || child.material.metallic > 0.8) {
+              child.material.metallic = 0.3;
+            }
+            if (child.material.roughness === undefined || child.material.roughness === null || child.material.roughness < 0.2) {
+              child.material.roughness = 0.5;
+            }
+            // Ensure visible albedo
+            if (!child.material.albedoColor || 
+                (child.material.albedoColor.r < 0.05 && child.material.albedoColor.g < 0.05 && child.material.albedoColor.b < 0.05)) {
+              child.material.albedoColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+            }
           } else if (child.material instanceof BABYLON.StandardMaterial) {
             child.material.disableLighting = false;
             child.material.backFaceCulling = true;
+            child.material.alpha = 1.0;
+            // Ensure visible diffuse
+            if (!child.material.diffuseColor ||
+                (child.material.diffuseColor.r < 0.05 && child.material.diffuseColor.g < 0.05 && child.material.diffuseColor.b < 0.05)) {
+              child.material.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+            }
           }
         }
       });
@@ -19936,9 +20016,46 @@ window.addEventListener('DOMContentLoaded', () => {
   }, 10000);
 
   const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement;
+  console.log('[Init] Canvas found:', canvas);
+  
+  // Debug: show visible indicator
+  const debugEl = document.createElement('div');
+  debugEl.id = 'vs-debug';
+  debugEl.style.cssText = 'position:fixed;top:10px;left:10px;z-index:99999;background:red;color:white;padding:5px 10px;font-size:12px;border-radius:4px;';
+  debugEl.textContent = 'Canvas: ' + (canvas ? 'Found' : 'NOT FOUND');
+  document.body.appendChild(debugEl);
+  
   if (canvas) {
     updateProgress(30, 'Laster 3D-motor...');
-    const studio = new VirtualStudio(canvas);
+    debugEl.textContent = 'Creating VirtualStudio...';
+    debugEl.style.background = 'orange';
+    
+    let studio: VirtualStudio;
+    try {
+      studio = new VirtualStudio(canvas);
+    } catch (err) {
+      console.error('[Init] Failed to create VirtualStudio:', err);
+      debugEl.textContent = 'WebGL Error!';
+      debugEl.style.background = 'red';
+      
+      // Show error in loading overlay
+      const loadingOverlay = document.getElementById('loadingOverlay');
+      if (loadingOverlay) {
+        const messageEl = loadingOverlay.querySelector('p');
+        if (messageEl) {
+          messageEl.textContent = 'Nettleseren din støtter ikke WebGL. Prøv en annen nettleser eller aktiver maskinvareakselerasjon.';
+          messageEl.style.color = '#ff6b6b';
+        }
+        const progressEl = loadingOverlay.querySelector('.loading-progress');
+        if (progressEl) {
+          (progressEl as HTMLElement).style.display = 'none';
+        }
+      }
+      return; // Stop initialization
+    }
+    
+    debugEl.textContent = 'VirtualStudio OK! Meshes: ' + studio.scene.meshes.length;
+    debugEl.style.background = 'green';
     window.virtualStudio = studio;
     updateProgress(70, 'Konfigurerer scene...');
 
