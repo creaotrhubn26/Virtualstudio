@@ -1,0 +1,193 @@
+Var ikke helt det jeg så for meg at dette skulle være. 
+
+Men jeg tenker at man bruke noe funksjonaliteten som har blitt implementert.
+
+
+Det jeg så for meg var følgende.
+Du kommer inn i shot list.
+
+
+Du har mulighet for å lage en shot list på en enkel måte som allerede finnes. Men du har også mulighet for en interaktiv shot list view.
+
+Interaktiv shot list view vil si følgende:
+
+Tanken bak dette bildet er å visualisere et operativt, interaktivt shot-list-system som fungerer som en aktiv assistent under produksjon, ikke bare som et planleggingsdokument
+
+1. Shot list som et levende kontrollpanel
+
+Bildet viser shot listen som et sentralisert produksjonsdashboard. I stedet for statiske punktlister presenteres hvert shot som et visuelt kort med status, fremdrift og kontekst. Dette signaliserer at systemet hele tiden er “på”, og tilpasser seg produksjonen i sanntid.
+
+Kjernetanke:
+
+Shot list skal støtte beslutninger mens du jobber – ikke bare før du starter.
+
+2. Samme system – ulike produksjonstyper
+
+Ved å vise flere scenarier (outdoor, kommersielt produkt, eiendom, BTS/SoMe) kommuniserer bildet at løsningen er sjanger-agnostisk. Det samme rammeverket kan brukes til:
+	•	Lifestyle og dokumentarisk foto/video
+	•	Kommersiell produktproduksjon
+	•	Eiendom og interiør
+	•	Sosiale medier og behind-the-scenes
+
+Tanken er at brukeren ikke trenger ulike verktøy – kun ulike presets og kontekster.
+
+
+3. Tids- og fremdriftsbevisst UI
+
+Nedtellinger som “10 min left”, “shots remaining” og visuelle tidslinjer viser at systemet er tidssensitivt. Det hjelper brukeren å:
+	•	Prioritere riktige shots når tiden er knapp
+	•	Forstå hva som kan droppes uten å risikere leveransen
+	•	Beholde flyt uten å stoppe opp og tenke
+
+Dette er spesielt viktig i produksjoner med høyt tempo.
+
+4. Operativ bruk – én hånd, midt i situasjonen
+
+Bildet med mobil i hånden (Quick Creator Mode) illustrerer at løsningen er designet for aktiv bruk under opptak, ikke etterpå. Store trykkflater, tydelige valg og minimal tekst viser:
+	•	Én-hånds-bruk
+	•	Rask handling
+	•	Null behov for menyer eller scrolling
+
+Dette kommuniserer et “field-ready” verktøy.
+
+5. Foto og video som parallelle oppgaver
+
+Kortene viser tydelig om et shot er foto, video eller hybrid, og hvilke krav som gjelder for hvert. Tanken er å eliminere misforståelser som:
+	•	“Fikk vi dette på video også?”
+	•	“Var dette ment som B-roll eller hero-shot?”
+
+Systemet gjør forventningene eksplisitte.
+
+
+6. Systemet gir anbefalinger – ikke bare info
+
+Elementer som:
+	•	Linsevalg
+	•	Lysoppsett
+	•	Anbefalt bakgrunn
+
+viser at shot listen fungerer som en kunnskapsforsterker, ikke bare en sjekkliste. Den hjelper brukeren å gjøre riktige valg raskere, spesielt under press.
+
+⸻
+
+7. Overordnet designintensjon
+
+Helheten i bildet kommuniserer én tydelig idé:
+
+Dette er ikke en app du åpner for å lese –
+det er et verktøy du jobber gjennom.
+
+Shot listen blir:
+	•	Planlegger
+	•	Påminner
+	•	Fremdriftsmåler
+	•	Kvalitetssikrer
+
+alt i ett grensesnitt.
+
+
+UX- og UI-design: Interaktiv Shot List
+
+1. UX-mål (User Experience)
+
+Primært mål
+
+Redusere mental belastning under produksjon, samtidig som brukeren alltid vet:
+	•	hva som er viktigst
+	•	hva som gjenstår
+	•	hva som kan ignoreres hvis tiden ryker
+
+Kjerneprinsipp:
+
+Brukeren skal aldri måtte “tenke seg frem” til neste handling.
+
+⸻
+
+2. UX-prinsipper (fundament)
+
+2.1 Task-first UX (ikke feature-first)
+
+UX er bygget rundt oppgaven i felt, ikke rundt menyer eller innstillinger.
+	•	Ett shot = én handling
+	•	Ett kort = én beslutning
+	•	Én gest = én effekt
+
+Ingen skjulte funksjoner som krever kognitiv innsats.
+
+
+2.2 Progressive disclosure
+
+Informasjon vises kun når den er relevant.
+	•	Før opptak: oversikt
+	•	Under opptak: handling
+	•	Etter opptak: status og leveranse
+
+Dette hindrer overinformasjon under stress.
+
+
+2.3 Context-aware UX
+
+Grensesnittet tilpasser seg:
+	•	tid
+	•	fremdrift
+	•	produksjonstype
+
+Eksempel:
+	•	Lite tid → UI forenkles
+	•	Kritiske shots gjenstår → visuelt fremhevet
+	•	“Nice-to-have” → tones ned
+
+Flyt
+	1.	Plan
+	•	shots grupperes automatisk
+	•	prioritet settes
+	2.	Execute
+	•	shooting mode
+	•	store handlingselementer
+	3.	Confirm
+	•	ferdig / ikke mulig / mangler
+	4.	Deliver
+	•	kobling til redigering og levering
+
+Shot list er en lineær produksjonsreise, ikke et dokument.
+
+4. UI-design (visualt språk)
+
+4.1 Card-basert UI (hovedkomponent)
+
+Hvorfor cards:
+	•	taktile
+	•	skalerbare
+	•	enkle å flytte, prioritere og ferdigstille
+
+Hvert kort representerer:
+	•	én forventning
+	•	én leveranse
+	•	én status
+
+5. Farger, kontrast og hierarki (UI)
+
+5.1 Farge = betydning (ikke pynt)
+
+5.2 Typografi
+	•	Store overskrifter → handling
+	•	Små labels → kontekst
+	•	Ingen brødtekst under shooting mode
+
+Målet er lesbarhet på avstand og i bevegelse.
+
+Designregler
+	•	Full skjerm
+	•	Én primær handling
+	•	Ingen navigasjon
+
+Interaksjon:
+	•	Tap = ferdig
+	•	Swipe = neste
+	•	Hold = notat
+
+Dette er et verktøy for arbeid, ikke browsing.
+
+7. Foto og video – UI-separasjon uten friksjon Med tanke på profesjon.
+
+UI markerer ...

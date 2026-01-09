@@ -1,0 +1,166 @@
+ Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+ BJS - [09:34:43]: Babylon.js v8.42.0 - WebGL2 - Parallel shader compilation
+ SSR pipeline enabled
+ Professional rendering pipeline initialized (Work Mode)
+ Studio gizmo appearance customized
+ [2026-01-08T08:34:43.252Z] [INFO] [PropRendering] Scene set for prop rendering
+ Loading light 3D model from: /api/models/300D_Light.glb for light type: aputure-300d
+ [Overlay] Scroll enabled on content area, height: 320px
+ Marketplace trigger element: 
+ Studio Library elements: Object
+ MarketplacePanelApp mounted
+ AIAssistantApp mounted
+ CastingPlannerApp mounted
+ SceneComposerPanelApp mounted
+main.ts:19201 AnimationComposerApp mounted
+main.ts:19211 PanelCreator mounted
+main.ts:19225 Rendering installed tools: 0
+main.ts:19667 [Camera Info] Dialog elements found, setting up handlers
+main.ts:21732 Camera controls initialized with drag, hold-to-move, speed control, and camera settings
+(index):1 Access to fetch at 'http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5' from origin 'https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev' has been blocked by CORS policy: Permission was denied for this request to access the `unknown` address space.
+localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5:1  Failed to load resource: net::ERR_FAILED
+(index):26 SW registered: https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/
+main.ts:7751 Default avatar loaded: /models/avatars/avatar_woman.glb
+client:745 WebSocket connection to 'wss://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/?token=nXLAToRDROm3' failed: 
+createConnection @ client:745
+AvatarGeneratorPanel.tsx:337 AvatarGeneratorPanel: open prop changed to false
+App.tsx:848 AvatarGeneratorApp: Event listener registered
+App.tsx:853 AvatarGeneratorApp: isOpen changed to false
+App.tsx:347 MarketplacePanelApp: render, isOpen = false
+App.tsx:292 MarketplacePanelApp: Event listener registered
+App.tsx:477 AIAssistantApp: render, isOpen = false
+App.tsx:451 AIAssistantApp: Event listeners registered
+main.ts:13974 Loaded 2 meshes from light model /api/models/300D_Light.glb
+main.ts:14002 Root mesh __root__ has no geometry, searching for mesh with geometry...
+addLight @ main.ts:14002
+main.ts:14009 Found mesh with geometry: model (373733 vertices)
+main.ts:14047 Root mesh selected: mesh_light_0, visible: true, enabled: isEnabled(checkAncestors = true) {
+        if (checkAncestors === false) {
+            return this._nodeDataStorage._isEnabled;
+        }
+        if (!this._nodeDataStorage._isEnabled) {
+            return false;
+        }
+        return this._nodeDataStorage._isParentEnabled;
+    }, in scene: true
+main.ts:14090 Positioned model on ground: bottomY=2.500, adjustedY=0.001
+main.ts:14121 Mesh visibility check: name=mesh_light_0, visible=true, enabled=isEnabled(checkAncestors = true) {
+        if (checkAncestors === false) {
+            return this._nodeDataStorage._isEnabled;
+        }
+        if (!this._nodeDataStorage._isEnabled) {
+            return false;
+        }
+        return this._nodeDataStorage._isParentEnabled;
+    }, inScene=true, hasMaterial=true
+main.ts:14227 [Light Direction] Detected mesh extents: X=0.485, Y=0.934, Z=0.533
+main.ts:14228 [Light Direction] Auto-detected dominant axis: y (extent=0.934), suggested forwardAxis: -y
+main.ts:14253 [Light Direction] Using forwardAxis '+z' for aputure-300d: (0, 0, 1)
+main.ts:14271 Using absoluteRotationQuaternion for light orientation
+main.ts:14293 Calculated world forward for light model: (0.000, 0.000, 1.000)
+main.ts:14358 Mesh __root__ has no vertices/geometry!
+(anonymous) @ main.ts:14358
+main.ts:14360 Mesh mesh_light_0 has 373733 vertices
+main.ts:14423 Light model loaded successfully: Object
+main.ts:14453 [Mesh Instancing] Cached model for aputure-300d - future lights will clone instead of reload
+main.ts:14486 Using stored initial forward for light_0: (0.000, 0.000, 1.000)
+main.ts:14575 Shadow generator created for light light_0
+main.ts:14787 Beam visualization created for light light_0
+main.ts:14838 Light bulb created for light_0
+main.ts:1282 Studio gizmos created for light: light_0
+main.ts:3275 [aimLightAt] light_0: pos={X: 3.5 Y: 0.001 Z: -2}, target={X: 0 Y: 1 Z: 0}, dir={X: -0.8427498036486899 Y: 0.24054487252715465 Z: 0.48157131637067996}
+main.ts:3299 [aimLightAt] light_0: rotation set
+main.ts:3307 [aimLightAt] light_0: SpotLight direction set
+main.ts:13893 [Mesh Instancing] Cloning cached model for aputure-300d (avoiding GLB reload)
+main.ts:13962 [Mesh Instancing] Clone successful for aputure-300d: mesh_light_1
+main.ts:14486 Using stored initial forward for light_1: (0.000, 0.000, 1.000)
+main.ts:14575 Shadow generator created for light light_1
+main.ts:14787 Beam visualization created for light light_1
+main.ts:14838 Light bulb created for light_1
+main.ts:1282 Studio gizmos created for light: light_1
+main.ts:3275 [aimLightAt] light_1: pos={X: -3 Y: 0.12911140127523024 Z: -3}, target={X: 0 Y: 1 Z: 0}, dir={X: 0.6926643165476778 Y: 0.20107781867495247 Z: 0.6926643165476778}
+main.ts:3299 [aimLightAt] light_1: rotation set
+main.ts:3307 [aimLightAt] light_1: SpotLight direction set
+main.ts:13893 [Mesh Instancing] Cloning cached model for aputure-300d (avoiding GLB reload)
+main.ts:13962 [Mesh Instancing] Clone successful for aputure-300d: mesh_light_2
+main.ts:14486 Using stored initial forward for light_2: (0.000, 0.000, 1.000)
+main.ts:14575 Shadow generator created for light light_2
+main.ts:14787 Beam visualization created for light light_2
+main.ts:14838 Light bulb created for light_2
+main.ts:1282 Studio gizmos created for light: light_2
+main.ts:3275 [aimLightAt] light_2: pos={X: -3.5 Y: 0.12911140127523046 Z: 4}, target={X: 0 Y: 1.5 Z: 0}, dir={X: 0.6376366438839883 Y: 0.24975108720848163 Z: -0.7287275930102723}
+main.ts:3299 [aimLightAt] light_2: rotation set
+main.ts:3307 [aimLightAt] light_2: SpotLight direction set
+main.ts:15886 Camera preset camA saved with focal=71mm, distance=18m, height=10m
+main.ts:12217 [Monitor] Created camera for camA during reassign
+main.ts:12235 [Monitor] Added RTT camA to customRenderTargets during reassign
+main.ts:12249 [Monitor] Created RTT for camA during reassign
+main.ts:16045 Camera camA activated for perspective control
+child.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+teenager.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+woman.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+man.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+elderly.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+athlete.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+pregnant.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+dancer.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+default_light.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+/api/ml/health:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+main.ts:16239 Camera preset camA loaded
+canon_c70_cinema_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+sony_fx6_cinema_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+canon_c80_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+canon_c50_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+panasonic_s1h_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+(index):1 Access to fetch at 'http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5' from origin 'https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev' has been blocked by CORS policy: Permission was denied for this request to access the `unknown` address space.
+localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5:1  Failed to load resource: net::ERR_FAILED
+(index):1 Access to fetch at 'http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5' from origin 'https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev' has been blocked by CORS policy: Permission was denied for this request to access the `unknown` address space.
+localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5:1  Failed to load resource: net::ERR_FAILED
+(index):1 Access to fetch at 'http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5' from origin 'https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev' has been blocked by CORS policy: Permission was denied for this request to access the `unknown` address space.
+localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5:1  Failed to load resource: net::ERR_FAILED
+(index):1 Access to fetch at 'http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5' from origin 'https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev' has been blocked by CORS policy: Permission was denied for this request to access the `unknown` address space.
+localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5:1  Failed to load resource: net::ERR_FAILED
+main.ts:19667 [Camera Info] Dialog elements found, setting up handlers
+main.ts:19667 [Camera Info] Dialog elements found, setting up handlers
+client:755 WebSocket connection to 'wss://localhost:5000/?token=nXLAToRDROm3' failed: 
+createConnection @ client:755
+client:765 [vite] failed to connect to websocket.
+your current setup:
+  (browser) aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/ <--[HTTP]--> localhost:5000/ (server)
+  (browser) aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev:/ <--[WebSocket (failing)]--> localhost:5000/ (server)
+Check out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr .
+connect @ client:765
+main.ts:19667 [Camera Info] Dialog elements found, setting up handlers
+main.ts:19667 [Camera Info] Dialog elements found, setting up handlers
+main.ts:19667 [Camera Info] Dialog elements found, setting up handlers
+main.ts:19667 [Camera Info] Dialog elements found, setting up handlers
+main.ts:19667 [Camera Info] Dialog elements found, setting up handlers
+main.ts:19667 [Camera Info] Dialog elements found, setting up handlers
+(index):1 Access to fetch at 'http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5' from origin 'https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev' has been blocked by CORS policy: Permission was denied for this request to access the `unknown` address space.
+localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5:1  Failed to load resource: net::ERR_FAILED
+main.ts:19667 [Camera Info] Dialog elements found, setting up handlers
+main.ts:1282 Studio gizmos created for light: light_0
+main.ts:1282 Studio gizmos created for light: light_1
+main.ts:1282 Studio gizmos created for light: light_2
+main.ts:1282 Studio gizmos created for light: light_0
+main.ts:19667 [Camera Info] Dialog elements found, setting up handlers
+main.ts:19667 [Camera Info] Dialog elements found, setting up handlers
+main.ts:19667 [Camera Info] Dialog elements found, setting up handlers
+main.ts:19667 [Camera Info] Dialog elements found, setting up handlers
+(index):1 Access to fetch at 'http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5' from origin 'https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev' has been blocked by CORS policy: Permission was denied for this request to access the `unknown` address space.
+localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5:1  Failed to load resource: net::ERR_FAILED
+(index):1 Access to fetch at 'http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5' from origin 'https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev' has been blocked by CORS policy: Permission was denied for this request to access the `unknown` address space.
+localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5:1  Failed to load resource: net::ERR_FAILED
+(index):1 Access to fetch at 'http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5' from origin 'https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev' has been blocked by CORS policy: Permission was denied for this request to access the `unknown` address space.
+localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5:1  Failed to load resource: net::ERR_FAILED
+(index):1 Access to fetch at 'http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5' from origin 'https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev' has been blocked by CORS policy: Permission was denied for this request to access the `unknown` address space.
+localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5:1  Failed to load resource: net::ERR_FAILED
+main.ts:19667 [Camera Info] Dialog elements found, setting up handlers
+(index):1 Access to fetch at 'http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5' from origin 'https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev' has been blocked by CORS policy: Permission was denied for this request to access the `unknown` address space.
+localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5:1  Failed to load resource: net::ERR_FAILED
+(index):1 Access to fetch at 'http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5' from origin 'https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev' has been blocked by CORS policy: Permission was denied for this request to access the `unknown` address space.
+localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5:1  Failed to load resource: net::ERR_FAILED
+(index):1 Access to fetch at 'http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5' from origin 'https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev' has been blocked by CORS policy: Permission was denied for this request to access the `unknown` address space.
+localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5:1  Failed to load resource: net::ERR_FAILED
+(index):1 Access to fetch at 'http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5' from origin 'https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev' has been blocked by CORS policy: Permission was denied for this request to access the `unknown` address space.
+localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5:1  Failed to load resource: net::ERR_FAILED

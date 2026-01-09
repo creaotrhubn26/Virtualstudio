@@ -1,0 +1,926 @@
+ Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+ BJS - [18:38:56]: Babylon.js v8.42.0 - WebGL2 - Parallel shader compilation
+ SSR pipeline enabled
+ Professional rendering pipeline initialized (Work Mode)
+ Studio gizmo appearance customized
+ [2026-01-08T17:38:56.825Z] [INFO] [PropRendering] Scene set for prop rendering
+ Loading light 3D model from: /api/models/300D_Light.glb for light type: aputure-300d
+ [Overlay] Scroll enabled on content area, height: 320px
+ [Debug] setupMissingButtonHandlers called
+ [RecordingArc] initRecordingArc() called
+ [RecordingArc] Creating new recording arc
+ [RecordingArc] updateRecordingArcCameras called
+ [RecordingArc] cameraPresets: Array(5)
+ [RecordingArc] Found buttons: 4
+ [RecordingArc] Button camA: saved=false, preset=null/undefined
+ [RecordingArc] Set camA to INACTIVE
+ [RecordingArc] Button camB: saved=false, preset=null/undefined
+ [RecordingArc] Set camB to INACTIVE
+ [RecordingArc] Button camC: saved=false, preset=null/undefined
+ [RecordingArc] Set camC to INACTIVE
+ [RecordingArc] Button camD: saved=false, preset=null/undefined
+ [RecordingArc] Set camD to INACTIVE
+ [RecordingArc] Set ALL to INACTIVE
+ Marketplace trigger element: 
+ [AutoFocusSystem] Initialized
+ [FocusPeakingEffect] Disabled
+ [FocusPeakingEffect] Initialized
+ [PhysicsBasedDOF] Enabled
+ [PhysicsBasedDOF] Initialized with physically accurate CoC calculations
+ [AutoFocus UI] Setup complete
+ [Focus Peaking UI] Setup complete
+ Studio Library elements: Object
+ MarketplacePanelApp mounted
+ AIAssistantApp mounted
+ CastingPlannerApp mounted
+ SceneComposerPanelApp mounted
+ AnimationComposerApp mounted
+ PanelCreator mounted
+ Rendering installed tools: 0
+ [Camera Info] Dialog elements found, setting up handlers
+ Camera controls initialized with drag, hold-to-move, speed control, and camera settings
+ [DOF] f=35mm, f/2.8, focus=6.25m, near=0.5, far=200
+(index):1 Access to fetch at 'http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5' from origin 'https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev' has been blocked by CORS policy: Permission was denied for this request to access the `unknown` address space.
+localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5:1  Failed to load resource: net::ERR_FAILED
+ SW registered: https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/
+ Default avatar loaded: /models/avatars/avatar_woman.glb
+ AvatarGeneratorPanel: open prop changed to false
+ AvatarGeneratorApp: Event listener registered
+ AvatarGeneratorApp: isOpen changed to false
+ MarketplacePanelApp: render, isOpen = false
+ MarketplacePanelApp: Event listener registered
+ AIAssistantApp: render, isOpen = false
+ AIAssistantApp: Event listeners registered
+ Loaded 2 meshes from light model /api/models/300D_Light.glb
+ Root mesh __root__ has no geometry, searching for mesh with geometry...
+addLight @ main.ts:10830
+ Found mesh with geometry: model (373733 vertices)
+ Root mesh selected: mesh_light_0, visible: true, enabled: isEnabled(checkAncestors = true) {
+        if (checkAncestors === false) {
+            return this._nodeDataStorage._isEnabled;
+        }
+        if (!this._nodeDataStorage._isEnabled) {
+            return false;
+        }
+        return this._nodeDataStorage._isParentEnabled;
+    }, in scene: true
+ Positioned model on ground: bottomY=2.500, adjustedY=0.001
+ Mesh visibility check: name=mesh_light_0, visible=true, enabled=isEnabled(checkAncestors = true) {
+        if (checkAncestors === false) {
+            return this._nodeDataStorage._isEnabled;
+        }
+        if (!this._nodeDataStorage._isEnabled) {
+            return false;
+        }
+        return this._nodeDataStorage._isParentEnabled;
+    }, inScene=true, hasMaterial=true
+ [Light Direction] Detected mesh extents: X=0.485, Y=0.934, Z=0.533
+ [Light Direction] Auto-detected dominant axis: y (extent=0.934), suggested forwardAxis: -y
+ [Light Direction] Using forwardAxis '+z' for aputure-300d: (0, 0, 1)
+ Using absoluteRotationQuaternion for light orientation
+ Calculated world forward for light model: (0.000, 0.000, 1.000)
+ Mesh __root__ has no vertices/geometry!
+(anonymous) @ main.ts:11083
+ Mesh mesh_light_0 has 373733 vertices
+ Light model loaded successfully: Object
+ [Mesh Instancing] Cached model for aputure-300d - future lights will clone instead of reload
+ Using stored initial forward for light_0: (0.000, 0.000, 1.000)
+ Shadow generator created for light light_0
+ Beam visualization created for light light_0
+ Light bulb created for light_0
+ Studio gizmos created for light: light_0
+ [aimLightAt] light_0: pos={X: 3.5 Y: 0.001 Z: -2}, target={X: 0 Y: 1 Z: 0}, dir={X: -0.8427498036486899 Y: 0.24054487252715465 Z: 0.48157131637067996}
+ [aimLightAt] light_0: rotation set
+ [aimLightAt] light_0: SpotLight direction set
+ [Mesh Instancing] Cloning cached model for aputure-300d (avoiding GLB reload)
+ [Mesh Instancing] Clone successful for aputure-300d: mesh_light_1
+ Using stored initial forward for light_1: (0.000, 0.000, 1.000)
+ Shadow generator created for light light_1
+ Beam visualization created for light light_1
+ Light bulb created for light_1
+ Studio gizmos created for light: light_1
+ [aimLightAt] light_1: pos={X: -3 Y: 0.12911140127523024 Z: -3}, target={X: 0 Y: 1 Z: 0}, dir={X: 0.6926643165476778 Y: 0.20107781867495247 Z: 0.6926643165476778}
+ [aimLightAt] light_1: rotation set
+ [aimLightAt] light_1: SpotLight direction set
+ [Mesh Instancing] Cloning cached model for aputure-300d (avoiding GLB reload)
+ [Mesh Instancing] Clone successful for aputure-300d: mesh_light_2
+ Using stored initial forward for light_2: (0.000, 0.000, 1.000)
+ Shadow generator created for light light_2
+ Beam visualization created for light light_2
+ Light bulb created for light_2
+ Studio gizmos created for light: light_2
+ [aimLightAt] light_2: pos={X: -3.5 Y: 0.12911140127523046 Z: 4}, target={X: 0 Y: 1.5 Z: 0}, dir={X: 0.6376366438839883 Y: 0.24975108720848163 Z: -0.7287275930102723}
+ [aimLightAt] light_2: rotation set
+ [aimLightAt] light_2: SpotLight direction set
+ [DOF] f=35mm, f/2.8, focus=6.25m, near=0.5, far=200
+ [DOF] f=35mm, f/2.8, focus=6.25m, near=0.5, far=200
+ [DOF] f=35mm, f/2.8, focus=6.25m, near=0.5, far=200
+child.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+teenager.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+man.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+woman.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+elderly.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+athlete.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+pregnant.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+dancer.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+default_light.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+ [DOF] f=35mm, f/2.8, focus=6.25m, near=0.5, far=200
+sony_fx6_cinema_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+canon_c70_cinema_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+canon_c50_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+canon_c80_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+panasonic_s1h_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+ [DOF] f=35mm, f/2.8, focus=6.25m, near=0.5, far=200
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Continuous tracking started
+ [AutoFocusSystem] Mode changed to: AF-C
+ [AutoFocus UI] Mode set to: AF-C
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=2.41m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=2.77m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=3.06m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=3.32m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=3.53m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=3.72m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=3.87m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.01m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.12m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.22m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.30m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.37m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.43m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.48m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.52m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.55m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.58m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.61m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.63m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.65m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.67m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.68m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.69m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.70m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.71m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.72m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.72m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.73m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.73m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.74m, enabled=true
+ [DOF] f=35mm, f/2.8, focus=4.74m, near=0.5, far=200
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.74m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.74m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.75m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.75m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.75m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.75m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.75m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.75m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.75m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.75m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [DOF] f=35mm, f/2.8, focus=4.76m, near=0.5, far=200
+ [AutoFocusSystem] AF-S mode required for single focus
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [DOF] f=35mm, f/2.8, focus=4.76m, near=0.5, far=200
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.75m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.75m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.75m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.75m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.75m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.75m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.75m
+ [DOF] f=35mm, f/2.8, focus=4.75m, near=0.5, far=200
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.75m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.75m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.75m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.75m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.76m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.76m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [DOF] f=35mm, f/2.8, focus=4.76m, near=0.5, far=200
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [PhysicsBasedDOF] Enabled
+ [PhysicsDOF] fStop=2.8, focus=4.76m, enabled=true
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [DOF] f=35mm, f/2.8, focus=4.76m, near=0.5, far=200
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [DOF] f=35mm, f/2.8, focus=4.76m, near=0.5, far=200
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [DOF] f=35mm, f/2.8, focus=4.76m, near=0.5, far=200
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [DOF] f=35mm, f/2.8, focus=4.76m, near=0.5, far=200
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+PhysicsBasedDOF.ts:252 [DOF] f=35mm, f/2.8, focus=4.76m, near=0.5, far=200
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+PhysicsBasedDOF.ts:252 [DOF] f=35mm, f/2.8, focus=4.76m, near=0.5, far=200
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+PhysicsBasedDOF.ts:252 [DOF] f=35mm, f/2.8, focus=4.76m, near=0.5, far=200
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+PhysicsBasedDOF.ts:252 [DOF] f=35mm, f/2.8, focus=4.76m, near=0.5, far=200
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+PhysicsBasedDOF.ts:252 [DOF] f=35mm, f/2.8, focus=4.76m, near=0.5, far=200
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+AutoFocusSystem.ts:640 [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+AutoFocusSystem.ts:722 [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+AutoFocusSystem.ts:252 [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [DOF] f=35mm, f/2.8, focus=4.76m, near=0.5, far=200
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m
+ [AutoFocusSystem] Candidate mesh: default_avatar, height=0.00m, isAvatar=true
+ [AutoFocusSystem] Candidate mesh: geometry_0, height=1.69m, isAvatar=true
+ [AutoFocusSystem] Auto-detected face at top of model: geometry_0 at 4.77m (Y=1.57)
+ [AutoFocusSystem] Focus target set: Modell left eye at 4.77m

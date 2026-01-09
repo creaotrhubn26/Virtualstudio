@@ -1,0 +1,130 @@
+
+You said:
+La oss si at du du har et hovedkamera som alltid lages i 3D som er for å navigere rundt, men du ønsker å legge til flere kamera som er separat fra hovedkamera som navigerer 3d scenen. 
+ChatGPT said:
+Ja — dette er et veldig vanlig oppsett i 3D/virtual studio: ett “editor / navigation camera” (hovedkameraet) som alltid styrer viewporten, og flere “shot cameras” som er uavhengige og kan forhåndsvises, lagres, og rendres fra, uten å påvirke navigasjonen.
+
+Her er en robust måte å tenke arkitektur og flyt på.
+
+1) Rolleinndeling: EditorCam vs ShotCams
+Hovedkamera (EditorCam)
+
+Brukes kun til navigasjon, gizmo/hud, picking, og generelt “arbeidskamera”.
+
+Skal aldri erstattes eller “miste kontroll” når du klikker på andre kamera.
+
+Ekstra kamera (ShotCams)
+
+Egen transform (pos/rot/FOV), egne settings (DOF, exposure, tone mapping, safe frame).
+
+Skal kunne: låses, dupliseres, keyframes, previewes, og brukes i render/export.
+
+Resultat: Du kan navigere med EditorCam hele tiden, samtidig som du har 1–N ShotCams som lever “sitt eget liv”.
+
+2) Data-modell for flere kamera
+Tenk at hvert ShotCam er en “asset” i scenen (som et lys eller et objekt):
+
+id, name
+
+transform (pos, rot, evt target)
+
+lens (fov/focalLength, sensor, aspect)
+
+post (DOF, exposure, LUT, vignette)
+
+output (render resolution, safe areas, framing guides)
+
+state (locked, visible, solo, inTimeline)
+
+EditorCam har også en modell, men lagres gjerne separat som “workspace state” (ikke en del av shot-listen).
+
+3) Render-/preview-strategi (viktig)
+Du vil typisk ha disse visningene:
+
+A) Aktiv viewport (EditorCam)
+Hele UI, manipulering, picking
+
+Alltid rask, alltid responsiv
+
+B) Kamera-preview (ShotCam previews)
+To gode valg:
+
+1. RenderTargetTexture / offscreen per kamera
+
+Hver ShotCam rendrer til en liten texture (thumbnail / monitor).
+
+Brukes til “camera wall” / multiview.
+
+Skaleres dynamisk (f.eks. bare rendr 1–2 previews per frame, round-robin) for ytelse.
+
+2. On-demand preview
+
+Når brukeren velger et ShotCam-kort: rendr én preview i høyere kvalitet.
+
+For thumbnails: rendr sjeldnere (f.eks. hver 0.5–2 sek) eller ved endring.
+
+I praksis: kombiner. Thumbnails = lav FPS / lav res. Aktiv preview = høyere.
+
+4) “Pilot view” uten å bytte hovedkamera
+Du får ofte behovet: “Se gjennom ShotCam i viewport” men uten at det blir permanent bytte.
+
+Gjør det som en view-mode, ikke som kamera-bytte:
+
+Mode: EDIT → viewport bruker EditorCam.
+
+Mode: PILOT (Cam X) → viewport bruker “Cam X” til rendering, men:
+
+Navigasjon input kan fortsatt gå til EditorCam (om ønskelig), eller
+
+du kan “drive” ShotCam direkte (typisk med en tydelig “PILOT” label og exit).
+
+Den viktige regelen: Når du forlater PILOT, skal EditorCam komme tilbake eksakt der den var.
+
+5) Kontroll og UX som føles “spill”
+For å få “spillsfølelse”:
+
+EditorCam: WASD + mouse look / orbit / pan (avhengig av modus)
+
+ShotCam: når du piloterer, samme kontroller, men det er ShotCam som flyttes
+
+“Lock camera” forhindrer utilsiktet endring
+
+“Match Editor → ShotCam” knapp (kopierer EditorCam transform til valgt ShotCam)
+
+“Match ShotCam → Editor” (hopper EditorCam til samme viewpoint)
+
+Dette gir en svært effektiv “blocking”-workflow.
+
+6) Synk/avhengigheter som bør unngås
+Ikke la ShotCam “arve” kontroller fra EditorCam via samme input-binding samtidig (da får du dobbeltbevegelser).
+
+Ikke bruk samme postprocess pipeline-instans på tvers av kamera uten en klar strategi (enten per kamera, eller en delt pipeline men med per-camera overrides).
+
+Unngå å gjøre alle kamera til “activeCamera” om du jobber i Babylon/Three — ha ett aktivt viewport-camera, resten rendres eksplisitt til RTT.
+
+7) Minimal, praktisk implementasjonsplan
+Hold EditorCam alltid aktiv i hovedviewport.
+
+Lag en CameraManager som eier:
+
+liste av ShotCams
+
+preview renderer (RTT / on-demand)
+
+pilot state (hvilket cam som “vises” i viewport når pilot er på)
+
+Lag UI:
+
+“Add camera”, “Duplicate”, “Delete”
+
+thumbnail grid
+
+“Pilot”, “Lock”, “Set from view”, “Jump to view”
+
+Optimaliser previews med:
+
+adaptive resolution
+
+round-robin update
+
+pause previews når kamera ikke er synlig i UI

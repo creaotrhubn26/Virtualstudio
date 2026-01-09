@@ -1,0 +1,202 @@
+react-dom_client.js?v=030d012a:20103 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+CastingPlannerPanel.tsx:569 Initial useEffect: Existing projects: 1
+CastingPlannerPanel.tsx:777 loadProjects: Loaded projects: 1
+CastingPlannerPanel.tsx:783 Setting current project: mock-project-1 with 6 candidates
+CastingPlannerPanel.tsx:3211 In HTML, <h6> cannot be a child of <h2>.
+This will cause a hydration error.
+
+  ...
+    <FocusTrap disableEnforceFocus={false} disableAutoFocus={false} disableRestoreFocus={false} ...>
+      <div>
+      <Grow2 appear={true} in={true} timeout={{enter:225,exit:150}} role="presentation" enter={true} exit={true} ...>
+        <Transition2 appear={true} in={true} nodeRef={{current:null}} onEnter={function} onEntered={function} ...>
+          <MuiDialog-container onMouseDown={function handleMouseDown} className="MuiDialog-..." ref={function} ...>
+            <Insertion6>
+            <div onMouseDown={function handleMouseDown} className="MuiDialog-..." style={{opacity:0, ...}} ...>
+              <MuiDialog-paper as={{...}} elevation={24} role="dialog" aria-describedby={undefined} ...>
+                <Insertion6>
+                <Paper2 elevation={24} role="dialog" aria-describedby={undefined} aria-labelledby="_r_r_" ...>
+                  <MuiPaper-root as="div" ownerState={{elevation:24, ...}} className="MuiPaper-r..." ref={null} ...>
+                    <Insertion6>
+                    <div className="MuiPaper-r..." role="dialog" aria-describedby={undefined} aria-labelledby="_r_r_" ...>
+                      <DialogTitle2 sx={{display:"flex", ...}}>
+                        <MuiDialogTitle-root component="h2" className="MuiDialogT..." ownerState={{sx:{...}, ...}} ...>
+                          <Insertion6>
+                          <Typography2 component="h2" className="MuiDialogT..." variant="h6" id="_r_r_">
+                            <MuiTypography-root as="h2" ref={null} className="MuiTypogra..." id="_r_r_" sx={{...}} ...>
+                              <Insertion6>
+>                             <h2
+>                               className="MuiTypography-root MuiTypography-h6 MuiDialogTitle-root css-wlukt7-MuiTypog..."
+>                               id="_r_r_"
+>                               style={{}}
+>                             >
+                                <Typography2 variant="h6" sx={{fontWeight:700, ...}}>
+                                  <MuiTypography-root as="h6" ref={null} className="MuiTypogra..." ...>
+                                    <Insertion6>
+>                                   <h6
+>                                     className="MuiTypography-root MuiTypography-h6 css-1yy7cy5-MuiTypography-root"
+>                                     style={{}}
+>                                   >
+                                ...
+                      ...
+      ...
+
+validateDOMNesting @ react-dom_client.js?v=030d012a:2150
+completeWork @ react-dom_client.js?v=030d012a:9002
+runWithFiberInDEV @ react-dom_client.js?v=030d012a:997
+completeUnitOfWork @ react-dom_client.js?v=030d012a:12669
+performUnitOfWork @ react-dom_client.js?v=030d012a:12575
+workLoopSync @ react-dom_client.js?v=030d012a:12424
+renderRootSync @ react-dom_client.js?v=030d012a:12408
+performWorkOnRoot @ react-dom_client.js?v=030d012a:11766
+performSyncWorkOnRoot @ react-dom_client.js?v=030d012a:13517
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=030d012a:13414
+processRootScheduleInMicrotask @ react-dom_client.js?v=030d012a:13437
+(anonymous) @ react-dom_client.js?v=030d012a:13531
+<h6>
+exports.createElement @ chunk-BXEBRY3I.js?v=030d012a:793
+(anonymous) @ chunk-KBLC3MJ7.js?v=030d012a:3388
+MuiTypography-root @ chunk-KBLC3MJ7.js?v=030d012a:2509
+react_stack_bottom_frame @ react-dom_client.js?v=030d012a:18509
+renderWithHooks @ react-dom_client.js?v=030d012a:5654
+updateForwardRef @ react-dom_client.js?v=030d012a:7198
+beginWork @ react-dom_client.js?v=030d012a:8735
+runWithFiberInDEV @ react-dom_client.js?v=030d012a:997
+performUnitOfWork @ react-dom_client.js?v=030d012a:12561
+workLoopSync @ react-dom_client.js?v=030d012a:12424
+renderRootSync @ react-dom_client.js?v=030d012a:12408
+performWorkOnRoot @ react-dom_client.js?v=030d012a:11766
+performSyncWorkOnRoot @ react-dom_client.js?v=030d012a:13517
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=030d012a:13414
+processRootScheduleInMicrotask @ react-dom_client.js?v=030d012a:13437
+(anonymous) @ react-dom_client.js?v=030d012a:13531
+<MuiTypographyRoot>
+exports.jsx @ chunk-4UTF2CDO.js?v=030d012a:247
+Typography2 @ @mui_material.js?v=030d012a:5442
+react_stack_bottom_frame @ react-dom_client.js?v=030d012a:18509
+renderWithHooks @ react-dom_client.js?v=030d012a:5654
+updateForwardRef @ react-dom_client.js?v=030d012a:7198
+beginWork @ react-dom_client.js?v=030d012a:8735
+runWithFiberInDEV @ react-dom_client.js?v=030d012a:997
+performUnitOfWork @ react-dom_client.js?v=030d012a:12561
+workLoopSync @ react-dom_client.js?v=030d012a:12424
+renderRootSync @ react-dom_client.js?v=030d012a:12408
+performWorkOnRoot @ react-dom_client.js?v=030d012a:11766
+performSyncWorkOnRoot @ react-dom_client.js?v=030d012a:13517
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=030d012a:13414
+processRootScheduleInMicrotask @ react-dom_client.js?v=030d012a:13437
+(anonymous) @ react-dom_client.js?v=030d012a:13531
+<ForwardRef(Typography2)>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=030d012a:247
+CastingPlannerPanel @ CastingPlannerPanel.tsx:3211
+react_stack_bottom_frame @ react-dom_client.js?v=030d012a:18509
+renderWithHooks @ react-dom_client.js?v=030d012a:5654
+updateFunctionComponent @ react-dom_client.js?v=030d012a:7475
+beginWork @ react-dom_client.js?v=030d012a:8525
+runWithFiberInDEV @ react-dom_client.js?v=030d012a:997
+performUnitOfWork @ react-dom_client.js?v=030d012a:12561
+workLoopSync @ react-dom_client.js?v=030d012a:12424
+renderRootSync @ react-dom_client.js?v=030d012a:12408
+performWorkOnRoot @ react-dom_client.js?v=030d012a:11766
+performSyncWorkOnRoot @ react-dom_client.js?v=030d012a:13517
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=030d012a:13414
+processRootScheduleInMicrotask @ react-dom_client.js?v=030d012a:13437
+(anonymous) @ react-dom_client.js?v=030d012a:13531
+CastingPlannerPanel.tsx:3200 <h2> cannot contain a nested <h6>.
+See this log for the ancestor stack trace.
+(anonymous) @ react-dom_client.js?v=030d012a:2163
+runWithFiberInDEV @ react-dom_client.js?v=030d012a:997
+validateDOMNesting @ react-dom_client.js?v=030d012a:2162
+completeWork @ react-dom_client.js?v=030d012a:9002
+runWithFiberInDEV @ react-dom_client.js?v=030d012a:997
+completeUnitOfWork @ react-dom_client.js?v=030d012a:12669
+performUnitOfWork @ react-dom_client.js?v=030d012a:12575
+workLoopSync @ react-dom_client.js?v=030d012a:12424
+renderRootSync @ react-dom_client.js?v=030d012a:12408
+performWorkOnRoot @ react-dom_client.js?v=030d012a:11766
+performSyncWorkOnRoot @ react-dom_client.js?v=030d012a:13517
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=030d012a:13414
+processRootScheduleInMicrotask @ react-dom_client.js?v=030d012a:13437
+(anonymous) @ react-dom_client.js?v=030d012a:13531
+<h2>
+exports.createElement @ chunk-BXEBRY3I.js?v=030d012a:793
+(anonymous) @ chunk-KBLC3MJ7.js?v=030d012a:3388
+MuiTypography-root @ chunk-KBLC3MJ7.js?v=030d012a:2509
+react_stack_bottom_frame @ react-dom_client.js?v=030d012a:18509
+renderWithHooks @ react-dom_client.js?v=030d012a:5654
+updateForwardRef @ react-dom_client.js?v=030d012a:7198
+beginWork @ react-dom_client.js?v=030d012a:8735
+runWithFiberInDEV @ react-dom_client.js?v=030d012a:997
+performUnitOfWork @ react-dom_client.js?v=030d012a:12561
+workLoopSync @ react-dom_client.js?v=030d012a:12424
+renderRootSync @ react-dom_client.js?v=030d012a:12408
+performWorkOnRoot @ react-dom_client.js?v=030d012a:11766
+performSyncWorkOnRoot @ react-dom_client.js?v=030d012a:13517
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=030d012a:13414
+processRootScheduleInMicrotask @ react-dom_client.js?v=030d012a:13437
+(anonymous) @ react-dom_client.js?v=030d012a:13531
+<MuiTypographyRoot>
+exports.jsx @ chunk-4UTF2CDO.js?v=030d012a:247
+Typography2 @ @mui_material.js?v=030d012a:5442
+react_stack_bottom_frame @ react-dom_client.js?v=030d012a:18509
+renderWithHooks @ react-dom_client.js?v=030d012a:5654
+updateForwardRef @ react-dom_client.js?v=030d012a:7198
+beginWork @ react-dom_client.js?v=030d012a:8735
+runWithFiberInDEV @ react-dom_client.js?v=030d012a:997
+performUnitOfWork @ react-dom_client.js?v=030d012a:12561
+workLoopSync @ react-dom_client.js?v=030d012a:12424
+renderRootSync @ react-dom_client.js?v=030d012a:12408
+performWorkOnRoot @ react-dom_client.js?v=030d012a:11766
+performSyncWorkOnRoot @ react-dom_client.js?v=030d012a:13517
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=030d012a:13414
+processRootScheduleInMicrotask @ react-dom_client.js?v=030d012a:13437
+(anonymous) @ react-dom_client.js?v=030d012a:13531
+<ForwardRef(Typography2)>
+exports.createElement @ chunk-BXEBRY3I.js?v=030d012a:793
+(anonymous) @ chunk-KBLC3MJ7.js?v=030d012a:3388
+MuiDialogTitle-root @ chunk-KBLC3MJ7.js?v=030d012a:2509
+react_stack_bottom_frame @ react-dom_client.js?v=030d012a:18509
+renderWithHooks @ react-dom_client.js?v=030d012a:5654
+updateForwardRef @ react-dom_client.js?v=030d012a:7198
+beginWork @ react-dom_client.js?v=030d012a:8735
+runWithFiberInDEV @ react-dom_client.js?v=030d012a:997
+performUnitOfWork @ react-dom_client.js?v=030d012a:12561
+workLoopSync @ react-dom_client.js?v=030d012a:12424
+renderRootSync @ react-dom_client.js?v=030d012a:12408
+performWorkOnRoot @ react-dom_client.js?v=030d012a:11766
+performSyncWorkOnRoot @ react-dom_client.js?v=030d012a:13517
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=030d012a:13414
+processRootScheduleInMicrotask @ react-dom_client.js?v=030d012a:13437
+(anonymous) @ react-dom_client.js?v=030d012a:13531
+<MuiDialogTitleRoot>
+exports.jsx @ chunk-4UTF2CDO.js?v=030d012a:247
+DialogTitle2 @ @mui_material.js?v=030d012a:18948
+react_stack_bottom_frame @ react-dom_client.js?v=030d012a:18509
+renderWithHooks @ react-dom_client.js?v=030d012a:5654
+updateForwardRef @ react-dom_client.js?v=030d012a:7198
+beginWork @ react-dom_client.js?v=030d012a:8735
+runWithFiberInDEV @ react-dom_client.js?v=030d012a:997
+performUnitOfWork @ react-dom_client.js?v=030d012a:12561
+workLoopSync @ react-dom_client.js?v=030d012a:12424
+renderRootSync @ react-dom_client.js?v=030d012a:12408
+performWorkOnRoot @ react-dom_client.js?v=030d012a:11766
+performSyncWorkOnRoot @ react-dom_client.js?v=030d012a:13517
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=030d012a:13414
+processRootScheduleInMicrotask @ react-dom_client.js?v=030d012a:13437
+(anonymous) @ react-dom_client.js?v=030d012a:13531
+<ForwardRef(DialogTitle2)>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=030d012a:247
+CastingPlannerPanel @ CastingPlannerPanel.tsx:3200
+react_stack_bottom_frame @ react-dom_client.js?v=030d012a:18509
+renderWithHooks @ react-dom_client.js?v=030d012a:5654
+updateFunctionComponent @ react-dom_client.js?v=030d012a:7475
+beginWork @ react-dom_client.js?v=030d012a:8525
+runWithFiberInDEV @ react-dom_client.js?v=030d012a:997
+performUnitOfWork @ react-dom_client.js?v=030d012a:12561
+workLoopSync @ react-dom_client.js?v=030d012a:12424
+renderRootSync @ react-dom_client.js?v=030d012a:12408
+performWorkOnRoot @ react-dom_client.js?v=030d012a:11766
+performSyncWorkOnRoot @ react-dom_client.js?v=030d012a:13517
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=030d012a:13414
+processRootScheduleInMicrotask @ react-dom_client.js?v=030d012a:13437
+(anonymous) @ react-dom_client.js?v=030d012a:13531

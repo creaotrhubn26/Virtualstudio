@@ -1,0 +1,2439 @@
+client:745 WebSocket connection to 'wss://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/?token=kjePhRs8FlMw' failed: 
+createConnection @ client:745
+connect @ client:411
+connect @ client:751
+connect @ client:289
+connect @ client:373
+(anonymous) @ client:823
+react-dom_client.js?v=5ef87bba:20103 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+main.ts:384 BJS - [18:49:20]: Babylon.js v8.42.0 - WebGL2 - Parallel shader compilation
+main.ts:963 SSR pipeline enabled
+main.ts:973 Professional rendering pipeline initialized (Work Mode)
+main.ts:886 Studio gizmo appearance customized
+logger.ts:20 [2026-01-08T17:49:20.813Z] [INFO] [PropRendering] Scene set for prop rendering
+main.ts:14270 Loading light 3D model from: /api/models/300D_Light.glb for light type: aputure-300d
+main.ts:4279 [Overlay] Scroll enabled on content area, height: 320px
+main.ts:4403 [Debug] setupMissingButtonHandlers called
+main.ts:17481 [RecordingArc] initRecordingArc() called
+main.ts:17487 [RecordingArc] Creating new recording arc
+main.ts:17758 [RecordingArc] updateRecordingArcCameras called
+main.ts:17759 [RecordingArc] cameraPresets: (5) ['camA', 'camB', 'camC', 'camD', 'camE']
+main.ts:17760 [RecordingArc] Found buttons: 4
+main.ts:17774 [RecordingArc] Button camA: saved=false, preset=null/undefined
+main.ts:17792 [RecordingArc] Set camA to INACTIVE
+main.ts:17774 [RecordingArc] Button camB: saved=false, preset=null/undefined
+main.ts:17792 [RecordingArc] Set camB to INACTIVE
+main.ts:17774 [RecordingArc] Button camC: saved=false, preset=null/undefined
+main.ts:17792 [RecordingArc] Set camC to INACTIVE
+main.ts:17774 [RecordingArc] Button camD: saved=false, preset=null/undefined
+main.ts:17792 [RecordingArc] Set camD to INACTIVE
+main.ts:17806 [RecordingArc] Set ALL to INACTIVE
+main.ts:4557 Marketplace trigger element: <button class=​"actor-panel-trigger" id=​"marketplaceTrigger" aria-expanded=​"false" aria-controls=​"marketplacePanel" style=​"margin-bottom:​8px;​">​…​</button>​
+AutoFocusSystem.ts:39 [AutoFocusSystem] Initialized
+FocusPeakingEffect.ts:172 [FocusPeakingEffect] Disabled
+FocusPeakingEffect.ts:39 [FocusPeakingEffect] Initialized
+PhysicsBasedDOF.ts:390 [PhysicsBasedDOF] Enabled
+PhysicsBasedDOF.ts:73 [PhysicsBasedDOF] Initialized with physically accurate CoC calculations
+main.ts:7316 [AutoFocus UI] Setup complete
+main.ts:7373 [Focus Peaking UI] Setup complete
+main.ts:20032 Studio Library elements: {actorPanelRoot: true, actorBottomPanel: true, actorPanelTrigger: true}
+main.ts:20114 MarketplacePanelApp mounted
+main.ts:20124 AIAssistantApp mounted
+main.ts:20134 CastingPlannerApp mounted
+main.ts:20144 SceneComposerPanelApp mounted
+main.ts:20154 AnimationComposerApp mounted
+main.ts:20164 PanelCreator mounted
+main.ts:20178 Rendering installed tools: 0
+main.ts:20620 [Camera Info] Dialog elements found, setting up handlers
+main.ts:22693 Camera controls initialized with drag, hold-to-move, speed control, and camera settings
+PhysicsBasedDOF.ts:318 [DOF] f=35mm, f/2.8, focus=6.14m, near=0.5, far=200
+(index):1 Access to fetch at 'http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5' from origin 'https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev' has been blocked by CORS policy: Permission was denied for this request to access the `unknown` address space.
+main.ts:20282  POST http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5 net::ERR_FAILED
+(anonymous) @ main.ts:20282
+PhysicsBasedDOF.ts:332 BJS - [18:49:21]: Unable to compile effect:
+_LogEnabled @ logger.js?v=5ef87bba:52
+_processCompilationErrors @ effect.js?v=5ef87bba:587
+(anonymous) @ effect.js?v=5ef87bba:399
+RunWithCondition @ timingTools.js?v=5ef87bba:32
+(anonymous) @ timingTools.js?v=5ef87bba:50
+setInterval
+_RetryWithInterval @ timingTools.js?v=5ef87bba:49
+_checkIsReady @ effect.js?v=5ef87bba:394
+_prepareEffect @ effect.js?v=5ef87bba:560
+(anonymous) @ effect.js?v=5ef87bba:232
+(anonymous) @ effect.functions.js?v=5ef87bba:79
+(anonymous) @ shaderProcessor.js?v=5ef87bba:37
+ProcessIncludes @ shaderProcessor.js?v=5ef87bba:399
+Process @ shaderProcessor.js?v=5ef87bba:32
+shadersLoaded @ effect.functions.js?v=5ef87bba:69
+(anonymous) @ effect.functions.js?v=5ef87bba:102
+LoadShader @ effect.functions.js?v=5ef87bba:128
+_ProcessShaderCode @ effect.functions.js?v=5ef87bba:97
+_processShaderCodeAsync @ effect.js?v=5ef87bba:229
+await in _processShaderCodeAsync
+Effect @ effect.js?v=5ef87bba:188
+createEffect @ thinEngine.js?v=5ef87bba:1658
+updateEffect @ effectRenderer.js?v=5ef87bba:357
+_postConstructor @ effectRenderer.js?v=5ef87bba:313
+PostProcess @ postProcess.js?v=5ef87bba:402
+createPostProcesses @ PhysicsBasedDOF.ts:332
+initialize @ PhysicsBasedDOF.ts:44
+PhysicsBasedDOF @ PhysicsBasedDOF.ts:38
+VirtualStudio @ main.ts:512
+(anonymous) @ main.ts:19673
+PhysicsBasedDOF.ts:332 BJS - [18:49:21]: Uniforms: screenSize blurScale bladeCount bladeRotation highlightThreshold highlightGain scale textureSampler
+_LogEnabled @ logger.js?v=5ef87bba:52
+_processCompilationErrors @ effect.js?v=5ef87bba:588
+(anonymous) @ effect.js?v=5ef87bba:399
+RunWithCondition @ timingTools.js?v=5ef87bba:32
+(anonymous) @ timingTools.js?v=5ef87bba:50
+setInterval
+_RetryWithInterval @ timingTools.js?v=5ef87bba:49
+_checkIsReady @ effect.js?v=5ef87bba:394
+_prepareEffect @ effect.js?v=5ef87bba:560
+(anonymous) @ effect.js?v=5ef87bba:232
+(anonymous) @ effect.functions.js?v=5ef87bba:79
+(anonymous) @ shaderProcessor.js?v=5ef87bba:37
+ProcessIncludes @ shaderProcessor.js?v=5ef87bba:399
+Process @ shaderProcessor.js?v=5ef87bba:32
+shadersLoaded @ effect.functions.js?v=5ef87bba:69
+(anonymous) @ effect.functions.js?v=5ef87bba:102
+LoadShader @ effect.functions.js?v=5ef87bba:128
+_ProcessShaderCode @ effect.functions.js?v=5ef87bba:97
+_processShaderCodeAsync @ effect.js?v=5ef87bba:229
+await in _processShaderCodeAsync
+Effect @ effect.js?v=5ef87bba:188
+createEffect @ thinEngine.js?v=5ef87bba:1658
+updateEffect @ effectRenderer.js?v=5ef87bba:357
+_postConstructor @ effectRenderer.js?v=5ef87bba:313
+PostProcess @ postProcess.js?v=5ef87bba:402
+createPostProcesses @ PhysicsBasedDOF.ts:332
+initialize @ PhysicsBasedDOF.ts:44
+PhysicsBasedDOF @ PhysicsBasedDOF.ts:38
+VirtualStudio @ main.ts:512
+(anonymous) @ main.ts:19673
+PhysicsBasedDOF.ts:332 BJS - [18:49:21]: Attributes: position
+_LogEnabled @ logger.js?v=5ef87bba:52
+_processCompilationErrors @ effect.js?v=5ef87bba:589
+(anonymous) @ effect.js?v=5ef87bba:399
+RunWithCondition @ timingTools.js?v=5ef87bba:32
+(anonymous) @ timingTools.js?v=5ef87bba:50
+setInterval
+_RetryWithInterval @ timingTools.js?v=5ef87bba:49
+_checkIsReady @ effect.js?v=5ef87bba:394
+_prepareEffect @ effect.js?v=5ef87bba:560
+(anonymous) @ effect.js?v=5ef87bba:232
+(anonymous) @ effect.functions.js?v=5ef87bba:79
+(anonymous) @ shaderProcessor.js?v=5ef87bba:37
+ProcessIncludes @ shaderProcessor.js?v=5ef87bba:399
+Process @ shaderProcessor.js?v=5ef87bba:32
+shadersLoaded @ effect.functions.js?v=5ef87bba:69
+(anonymous) @ effect.functions.js?v=5ef87bba:102
+LoadShader @ effect.functions.js?v=5ef87bba:128
+_ProcessShaderCode @ effect.functions.js?v=5ef87bba:97
+_processShaderCodeAsync @ effect.js?v=5ef87bba:229
+await in _processShaderCodeAsync
+Effect @ effect.js?v=5ef87bba:188
+createEffect @ thinEngine.js?v=5ef87bba:1658
+updateEffect @ effectRenderer.js?v=5ef87bba:357
+_postConstructor @ effectRenderer.js?v=5ef87bba:313
+PostProcess @ postProcess.js?v=5ef87bba:402
+createPostProcesses @ PhysicsBasedDOF.ts:332
+initialize @ PhysicsBasedDOF.ts:44
+PhysicsBasedDOF @ PhysicsBasedDOF.ts:38
+VirtualStudio @ main.ts:512
+(anonymous) @ main.ts:19673
+PhysicsBasedDOF.ts:332 BJS - [18:49:21]: Defines:
+
+_LogEnabled @ logger.js?v=5ef87bba:52
+_processCompilationErrors @ effect.js?v=5ef87bba:590
+(anonymous) @ effect.js?v=5ef87bba:399
+RunWithCondition @ timingTools.js?v=5ef87bba:32
+(anonymous) @ timingTools.js?v=5ef87bba:50
+setInterval
+_RetryWithInterval @ timingTools.js?v=5ef87bba:49
+_checkIsReady @ effect.js?v=5ef87bba:394
+_prepareEffect @ effect.js?v=5ef87bba:560
+(anonymous) @ effect.js?v=5ef87bba:232
+(anonymous) @ effect.functions.js?v=5ef87bba:79
+(anonymous) @ shaderProcessor.js?v=5ef87bba:37
+ProcessIncludes @ shaderProcessor.js?v=5ef87bba:399
+Process @ shaderProcessor.js?v=5ef87bba:32
+shadersLoaded @ effect.functions.js?v=5ef87bba:69
+(anonymous) @ effect.functions.js?v=5ef87bba:102
+LoadShader @ effect.functions.js?v=5ef87bba:128
+_ProcessShaderCode @ effect.functions.js?v=5ef87bba:97
+_processShaderCodeAsync @ effect.js?v=5ef87bba:229
+await in _processShaderCodeAsync
+Effect @ effect.js?v=5ef87bba:188
+createEffect @ thinEngine.js?v=5ef87bba:1658
+updateEffect @ effectRenderer.js?v=5ef87bba:357
+_postConstructor @ effectRenderer.js?v=5ef87bba:313
+PostProcess @ postProcess.js?v=5ef87bba:402
+createPostProcesses @ PhysicsBasedDOF.ts:332
+initialize @ PhysicsBasedDOF.ts:44
+PhysicsBasedDOF @ PhysicsBasedDOF.ts:38
+VirtualStudio @ main.ts:512
+(anonymous) @ main.ts:19673
+PhysicsBasedDOF.ts:332 BJS - [18:49:21]: Vertex code:
+_LogEnabled @ logger.js?v=5ef87bba:52
+_processCompilationErrors @ effect.js?v=5ef87bba:596
+(anonymous) @ effect.js?v=5ef87bba:399
+RunWithCondition @ timingTools.js?v=5ef87bba:32
+(anonymous) @ timingTools.js?v=5ef87bba:50
+setInterval
+_RetryWithInterval @ timingTools.js?v=5ef87bba:49
+_checkIsReady @ effect.js?v=5ef87bba:394
+_prepareEffect @ effect.js?v=5ef87bba:560
+(anonymous) @ effect.js?v=5ef87bba:232
+(anonymous) @ effect.functions.js?v=5ef87bba:79
+(anonymous) @ shaderProcessor.js?v=5ef87bba:37
+ProcessIncludes @ shaderProcessor.js?v=5ef87bba:399
+Process @ shaderProcessor.js?v=5ef87bba:32
+shadersLoaded @ effect.functions.js?v=5ef87bba:69
+(anonymous) @ effect.functions.js?v=5ef87bba:102
+LoadShader @ effect.functions.js?v=5ef87bba:128
+_ProcessShaderCode @ effect.functions.js?v=5ef87bba:97
+_processShaderCodeAsync @ effect.js?v=5ef87bba:229
+await in _processShaderCodeAsync
+Effect @ effect.js?v=5ef87bba:188
+createEffect @ thinEngine.js?v=5ef87bba:1658
+updateEffect @ effectRenderer.js?v=5ef87bba:357
+_postConstructor @ effectRenderer.js?v=5ef87bba:313
+PostProcess @ postProcess.js?v=5ef87bba:402
+createPostProcesses @ PhysicsBasedDOF.ts:332
+initialize @ PhysicsBasedDOF.ts:44
+PhysicsBasedDOF @ PhysicsBasedDOF.ts:38
+VirtualStudio @ main.ts:512
+(anonymous) @ main.ts:19673
+PhysicsBasedDOF.ts:332 BJS - [18:49:21]: #version 300 es
+#define WEBGL2 
+#define SHADER_NAME vertex:postprocess
+precision highp float;
+in vec2 position;
+uniform vec2 scale;
+out vec2 vUV;
+const vec2 madd=vec2(0.5,0.5);
+#define CUSTOM_VERTEX_DEFINITIONS
+void main(void) {
+#define CUSTOM_VERTEX_MAIN_BEGIN
+vUV=(position*madd+madd)*scale;
+gl_Position=vec4(position,0.0,1.0);
+#define CUSTOM_VERTEX_MAIN_END
+}
+
+_LogEnabled @ logger.js?v=5ef87bba:52
+_processCompilationErrors @ effect.js?v=5ef87bba:597
+(anonymous) @ effect.js?v=5ef87bba:399
+RunWithCondition @ timingTools.js?v=5ef87bba:32
+(anonymous) @ timingTools.js?v=5ef87bba:50
+setInterval
+_RetryWithInterval @ timingTools.js?v=5ef87bba:49
+_checkIsReady @ effect.js?v=5ef87bba:394
+_prepareEffect @ effect.js?v=5ef87bba:560
+(anonymous) @ effect.js?v=5ef87bba:232
+(anonymous) @ effect.functions.js?v=5ef87bba:79
+(anonymous) @ shaderProcessor.js?v=5ef87bba:37
+ProcessIncludes @ shaderProcessor.js?v=5ef87bba:399
+Process @ shaderProcessor.js?v=5ef87bba:32
+shadersLoaded @ effect.functions.js?v=5ef87bba:69
+(anonymous) @ effect.functions.js?v=5ef87bba:102
+LoadShader @ effect.functions.js?v=5ef87bba:128
+_ProcessShaderCode @ effect.functions.js?v=5ef87bba:97
+_processShaderCodeAsync @ effect.js?v=5ef87bba:229
+await in _processShaderCodeAsync
+Effect @ effect.js?v=5ef87bba:188
+createEffect @ thinEngine.js?v=5ef87bba:1658
+updateEffect @ effectRenderer.js?v=5ef87bba:357
+_postConstructor @ effectRenderer.js?v=5ef87bba:313
+PostProcess @ postProcess.js?v=5ef87bba:402
+createPostProcesses @ PhysicsBasedDOF.ts:332
+initialize @ PhysicsBasedDOF.ts:44
+PhysicsBasedDOF @ PhysicsBasedDOF.ts:38
+VirtualStudio @ main.ts:512
+(anonymous) @ main.ts:19673
+PhysicsBasedDOF.ts:332 BJS - [18:49:21]: Fragment code:
+_LogEnabled @ logger.js?v=5ef87bba:52
+_processCompilationErrors @ effect.js?v=5ef87bba:603
+(anonymous) @ effect.js?v=5ef87bba:399
+RunWithCondition @ timingTools.js?v=5ef87bba:32
+(anonymous) @ timingTools.js?v=5ef87bba:50
+setInterval
+_RetryWithInterval @ timingTools.js?v=5ef87bba:49
+_checkIsReady @ effect.js?v=5ef87bba:394
+_prepareEffect @ effect.js?v=5ef87bba:560
+(anonymous) @ effect.js?v=5ef87bba:232
+(anonymous) @ effect.functions.js?v=5ef87bba:79
+(anonymous) @ shaderProcessor.js?v=5ef87bba:37
+ProcessIncludes @ shaderProcessor.js?v=5ef87bba:399
+Process @ shaderProcessor.js?v=5ef87bba:32
+shadersLoaded @ effect.functions.js?v=5ef87bba:69
+(anonymous) @ effect.functions.js?v=5ef87bba:102
+LoadShader @ effect.functions.js?v=5ef87bba:128
+_ProcessShaderCode @ effect.functions.js?v=5ef87bba:97
+_processShaderCodeAsync @ effect.js?v=5ef87bba:229
+await in _processShaderCodeAsync
+Effect @ effect.js?v=5ef87bba:188
+createEffect @ thinEngine.js?v=5ef87bba:1658
+updateEffect @ effectRenderer.js?v=5ef87bba:357
+_postConstructor @ effectRenderer.js?v=5ef87bba:313
+PostProcess @ postProcess.js?v=5ef87bba:402
+createPostProcesses @ PhysicsBasedDOF.ts:332
+initialize @ PhysicsBasedDOF.ts:44
+PhysicsBasedDOF @ PhysicsBasedDOF.ts:38
+VirtualStudio @ main.ts:512
+(anonymous) @ main.ts:19673
+PhysicsBasedDOF.ts:332 BJS - [18:49:21]: #version 300 es
+#define WEBGL2 
+#define SHADER_NAME fragment:dofBlur
+precision highp float;
+in vec2 vUV;
+uniform sampler2D textureSampler;
+// Output from cocPass (color.rgb + CoC in alpha)
+uniform vec2 screenSize;
+uniform float blurScale;
+uniform float bladeCount;
+// Number of aperture blades (0 = circular, 5-9 = polygonal)
+uniform float bladeRotation;
+// Rotation of aperture blades in radians
+uniform float highlightThreshold;
+// Brightness threshold for highlight boost
+uniform float highlightGain;
+// Multiplier for bright highlights (bokeh balls)
+#define PI 3.14159265359
+#define RING_COUNT 4
+#define SAMPLES_PER_RING 8
+      // Read signed CoC from alpha channel (encoded as (signedCoC + 40) / 80)
+float getCoC(vec2 uv) {
+float encoded = texture(textureSampler, uv).a;
+return (encoded * 80.0) - 40.0;
+}
+      // Calculate luminance for highlight detection
+float luminance(vec3 color) {
+return dot(color, vec3(0.2126, 0.7152, 0.0722));
+}
+      // Generate aperture blade shape mask
+float apertureShape(vec2 point, float blades, float rotation) {
+if (blades < 3.0) {
+          // Circular aperture
+return length(point);
+}
+        // Polygonal aperture with n blades
+float angle = atan(point.y, point.x) + rotation;
+float segmentAngle = 2.0 * PI / blades;
+float halfSegment = segmentAngle * 0.5;
+        // Find distance to edge of polygon
+float theta = mod(angle + halfSegment, segmentAngle) - halfSegment;
+float r = length(point);
+float polygonRadius = cos(halfSegment) / cos(theta);
+return r / polygonRadius;
+}
+      // Generate ring-based sample positions for smooth bokeh
+vec2 getSampleOffset(int ring, int sample, float rotation) {
+float ringRadius = float(ring + 1) / float(RING_COUNT);
+int samplesInRing = (ring + 1) * SAMPLES_PER_RING;
+float angle = (float(sample) / float(samplesInRing)) * 2.0 * PI + rotation;
+return vec2(cos(angle), sin(angle)) * ringRadius;
+}
+layout(location = 0) out vec4 glFragColor;
+void main(void) {
+vec2 texelSize = 1.0 / screenSize;
+float centerCoC = getCoC(vUV);
+float absCoC = abs(centerCoC);
+        // Skip blur for sharp areas
+if (absCoC < 0.5) {
+vec4 color = texture(textureSampler, vUV);
+glFragColor = vec4(color.rgb, 1.0);
+return;
+}
+vec3 colorSum = vec3(0.0);
+vec3 highlightSum = vec3(0.0);
+float weightSum = 0.0;
+float highlightWeightSum = 0.0;
+float blurRadius = absCoC * blurScale;
+        // Ring-based sampling for smoother bokeh
+for (int ring = 0;
+ring < RING_COUNT;
+ring++) {
+int samplesInRing = (ring + 1) * SAMPLES_PER_RING;
+float ringRadius = float(ring + 1) / float(RING_COUNT);
+for (int s = 0;
+s < 32;
+s++) {
+if (s >= samplesInRing) break;
+float angle = (float(s) / float(samplesInRing)) * 2.0 * PI + bladeRotation;
+vec2 samplePoint = vec2(cos(angle), sin(angle)) * ringRadius;
+            // Apply aperture shape
+float shapeMask = apertureShape(samplePoint, bladeCount, bladeRotation);
+if (shapeMask > 1.0) continue;
+vec2 offset = samplePoint * blurRadius * texelSize;
+vec2 sampleUV = vUV + offset;
+if (sampleUV.x < 0.0 || sampleUV.x > 1.0 || sampleUV.y < 0.0 || sampleUV.y > 1.0) continue;
+vec4 sampleData = texture(textureSampler, sampleUV);
+vec3 sampleColor = sampleData.rgb;
+float sampleCoC = (sampleData.a * 80.0) - 40.0;
+            // Edge weighting for smoother bokeh rim
+float edgeWeight = 1.0 - smoothstep(0.7, 1.0, shapeMask);
+float weight = 1.0 + edgeWeight * 0.5;
+            // Prevent background bleeding into foreground
+if (centerCoC < 0.0 && sampleCoC > 0.0) {
+weight *= 0.1;
+}
+            // Reduce sharp sample influence
+if (abs(sampleCoC) < absCoC * 0.5) {
+weight *= 0.5;
+}
+            // Highlight preservation for bokeh balls
+float lum = luminance(sampleColor);
+if (lum > highlightThreshold) {
+float highlightBoost = (lum - highlightThreshold) * highlightGain;
+highlightSum += sampleColor * highlightBoost * weight;
+highlightWeightSum += highlightBoost * weight;
+}
+colorSum += sampleColor * weight;
+weightSum += weight;
+}
+}
+        // Add center sample
+vec4 centerData = texture(textureSampler, vUV);
+colorSum += centerData.rgb;
+weightSum += 1.0;
+vec3 blurredColor = colorSum / max(weightSum, 0.001);
+        // Add highlight bloom for bokeh balls
+if (highlightWeightSum > 0.0) {
+vec3 highlights = highlightSum / highlightWeightSum;
+float highlightMix = min(highlightWeightSum / weightSum, 0.5);
+blurredColor = mix(blurredColor, blurredColor + highlights * 0.3, highlightMix);
+}
+vec3 sharpColor = centerData.rgb;
+float blendFactor = smoothstep(0.0, 3.0, absCoC);
+glFragColor = vec4(mix(sharpColor, blurredColor, blendFactor), 1.0);
+}
+
+_LogEnabled @ logger.js?v=5ef87bba:52
+_processCompilationErrors @ effect.js?v=5ef87bba:604
+(anonymous) @ effect.js?v=5ef87bba:399
+RunWithCondition @ timingTools.js?v=5ef87bba:32
+(anonymous) @ timingTools.js?v=5ef87bba:50
+setInterval
+_RetryWithInterval @ timingTools.js?v=5ef87bba:49
+_checkIsReady @ effect.js?v=5ef87bba:394
+_prepareEffect @ effect.js?v=5ef87bba:560
+(anonymous) @ effect.js?v=5ef87bba:232
+(anonymous) @ effect.functions.js?v=5ef87bba:79
+(anonymous) @ shaderProcessor.js?v=5ef87bba:37
+ProcessIncludes @ shaderProcessor.js?v=5ef87bba:399
+Process @ shaderProcessor.js?v=5ef87bba:32
+shadersLoaded @ effect.functions.js?v=5ef87bba:69
+(anonymous) @ effect.functions.js?v=5ef87bba:102
+LoadShader @ effect.functions.js?v=5ef87bba:128
+_ProcessShaderCode @ effect.functions.js?v=5ef87bba:97
+_processShaderCodeAsync @ effect.js?v=5ef87bba:229
+await in _processShaderCodeAsync
+Effect @ effect.js?v=5ef87bba:188
+createEffect @ thinEngine.js?v=5ef87bba:1658
+updateEffect @ effectRenderer.js?v=5ef87bba:357
+_postConstructor @ effectRenderer.js?v=5ef87bba:313
+PostProcess @ postProcess.js?v=5ef87bba:402
+createPostProcesses @ PhysicsBasedDOF.ts:332
+initialize @ PhysicsBasedDOF.ts:44
+PhysicsBasedDOF @ PhysicsBasedDOF.ts:38
+VirtualStudio @ main.ts:512
+(anonymous) @ main.ts:19673
+PhysicsBasedDOF.ts:332 BJS - [18:49:21]: Offending line [47] in fragment code: vec2 getSampleOffset(int ring, int sample, float rotation) {
+_LogEnabled @ logger.js?v=5ef87bba:52
+_processCompilationErrors @ effect.js?v=5ef87bba:611
+(anonymous) @ effect.js?v=5ef87bba:399
+RunWithCondition @ timingTools.js?v=5ef87bba:32
+(anonymous) @ timingTools.js?v=5ef87bba:50
+setInterval
+_RetryWithInterval @ timingTools.js?v=5ef87bba:49
+_checkIsReady @ effect.js?v=5ef87bba:394
+_prepareEffect @ effect.js?v=5ef87bba:560
+(anonymous) @ effect.js?v=5ef87bba:232
+(anonymous) @ effect.functions.js?v=5ef87bba:79
+(anonymous) @ shaderProcessor.js?v=5ef87bba:37
+ProcessIncludes @ shaderProcessor.js?v=5ef87bba:399
+Process @ shaderProcessor.js?v=5ef87bba:32
+shadersLoaded @ effect.functions.js?v=5ef87bba:69
+(anonymous) @ effect.functions.js?v=5ef87bba:102
+LoadShader @ effect.functions.js?v=5ef87bba:128
+_ProcessShaderCode @ effect.functions.js?v=5ef87bba:97
+_processShaderCodeAsync @ effect.js?v=5ef87bba:229
+await in _processShaderCodeAsync
+Effect @ effect.js?v=5ef87bba:188
+createEffect @ thinEngine.js?v=5ef87bba:1658
+updateEffect @ effectRenderer.js?v=5ef87bba:357
+_postConstructor @ effectRenderer.js?v=5ef87bba:313
+PostProcess @ postProcess.js?v=5ef87bba:402
+createPostProcesses @ PhysicsBasedDOF.ts:332
+initialize @ PhysicsBasedDOF.ts:44
+PhysicsBasedDOF @ PhysicsBasedDOF.ts:38
+VirtualStudio @ main.ts:512
+(anonymous) @ main.ts:19673
+PhysicsBasedDOF.ts:332 BJS - [18:49:21]: Error: FRAGMENT SHADER ERROR: 0:47: 'sample' : Illegal use of reserved word
+ERROR: 0:47: 'sample' : syntax error
+ 
+_LogEnabled @ logger.js?v=5ef87bba:52
+_processCompilationErrors @ effect.js?v=5ef87bba:614
+(anonymous) @ effect.js?v=5ef87bba:399
+RunWithCondition @ timingTools.js?v=5ef87bba:32
+(anonymous) @ timingTools.js?v=5ef87bba:50
+setInterval
+_RetryWithInterval @ timingTools.js?v=5ef87bba:49
+_checkIsReady @ effect.js?v=5ef87bba:394
+_prepareEffect @ effect.js?v=5ef87bba:560
+(anonymous) @ effect.js?v=5ef87bba:232
+(anonymous) @ effect.functions.js?v=5ef87bba:79
+(anonymous) @ shaderProcessor.js?v=5ef87bba:37
+ProcessIncludes @ shaderProcessor.js?v=5ef87bba:399
+Process @ shaderProcessor.js?v=5ef87bba:32
+shadersLoaded @ effect.functions.js?v=5ef87bba:69
+(anonymous) @ effect.functions.js?v=5ef87bba:102
+LoadShader @ effect.functions.js?v=5ef87bba:128
+_ProcessShaderCode @ effect.functions.js?v=5ef87bba:97
+_processShaderCodeAsync @ effect.js?v=5ef87bba:229
+await in _processShaderCodeAsync
+Effect @ effect.js?v=5ef87bba:188
+createEffect @ thinEngine.js?v=5ef87bba:1658
+updateEffect @ effectRenderer.js?v=5ef87bba:357
+_postConstructor @ effectRenderer.js?v=5ef87bba:313
+PostProcess @ postProcess.js?v=5ef87bba:402
+createPostProcesses @ PhysicsBasedDOF.ts:332
+initialize @ PhysicsBasedDOF.ts:44
+PhysicsBasedDOF @ PhysicsBasedDOF.ts:38
+VirtualStudio @ main.ts:512
+(anonymous) @ main.ts:19673
+(index):26 SW registered: https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/
+main.ts:7931 Default avatar loaded: /models/avatars/avatar_woman.glb
+PhysicsBasedDOF.ts:318 [DOF] f=35mm, f/2.8, focus=6.14m, near=0.5, far=200
+/images/models/child.png:1  GET https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/images/models/child.png 404 (Not Found)
+Image
+commitMount @ react-dom_client.js?v=5ef87bba:15882
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+commitHostMount @ react-dom_client.js?v=5ef87bba:9657
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9994
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9963
+flushLayoutEffects @ react-dom_client.js?v=5ef87bba:12924
+commitRoot @ react-dom_client.js?v=5ef87bba:12803
+commitRootWhenReady @ react-dom_client.js?v=5ef87bba:12016
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11950
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<img>
+exports.createElement @ chunk-BXEBRY3I.js?v=5ef87bba:793
+(anonymous) @ chunk-KBLC3MJ7.js?v=5ef87bba:3388
+MuiCardMedia-root @ chunk-KBLC3MJ7.js?v=5ef87bba:2509
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<MuiCardMediaRoot>
+exports.jsx @ chunk-4UTF2CDO.js?v=5ef87bba:247
+CardMedia2 @ @mui_material.js?v=5ef87bba:16009
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<ForwardRef(CardMedia2)>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+(anonymous) @ CharacterModelLoader.tsx:497
+CharacterModelLoader @ CharacterModelLoader.tsx:481
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<CharacterModelLoader>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+CharacterLoaderApp @ App.tsx:119
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+/images/models/teenager.png:1  GET https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/images/models/teenager.png 404 (Not Found)
+Image
+commitMount @ react-dom_client.js?v=5ef87bba:15882
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+commitHostMount @ react-dom_client.js?v=5ef87bba:9657
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9994
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9963
+flushLayoutEffects @ react-dom_client.js?v=5ef87bba:12924
+commitRoot @ react-dom_client.js?v=5ef87bba:12803
+commitRootWhenReady @ react-dom_client.js?v=5ef87bba:12016
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11950
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<img>
+exports.createElement @ chunk-BXEBRY3I.js?v=5ef87bba:793
+(anonymous) @ chunk-KBLC3MJ7.js?v=5ef87bba:3388
+MuiCardMedia-root @ chunk-KBLC3MJ7.js?v=5ef87bba:2509
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<MuiCardMediaRoot>
+exports.jsx @ chunk-4UTF2CDO.js?v=5ef87bba:247
+CardMedia2 @ @mui_material.js?v=5ef87bba:16009
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<ForwardRef(CardMedia2)>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+(anonymous) @ CharacterModelLoader.tsx:497
+CharacterModelLoader @ CharacterModelLoader.tsx:481
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<CharacterModelLoader>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+CharacterLoaderApp @ App.tsx:119
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+AvatarGeneratorPanel.tsx:337 AvatarGeneratorPanel: open prop changed to false
+App.tsx:848 AvatarGeneratorApp: Event listener registered
+App.tsx:853 AvatarGeneratorApp: isOpen changed to false
+App.tsx:347 MarketplacePanelApp: render, isOpen = false
+App.tsx:292 MarketplacePanelApp: Event listener registered
+App.tsx:477 AIAssistantApp: render, isOpen = false
+App.tsx:451 AIAssistantApp: Event listeners registered
+woman.png:1  GET https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/images/models/woman.png 404 (Not Found)
+Image
+commitMount @ react-dom_client.js?v=5ef87bba:15882
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+commitHostMount @ react-dom_client.js?v=5ef87bba:9657
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9994
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9963
+flushLayoutEffects @ react-dom_client.js?v=5ef87bba:12924
+commitRoot @ react-dom_client.js?v=5ef87bba:12803
+commitRootWhenReady @ react-dom_client.js?v=5ef87bba:12016
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11950
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<img>
+exports.createElement @ chunk-BXEBRY3I.js?v=5ef87bba:793
+(anonymous) @ chunk-KBLC3MJ7.js?v=5ef87bba:3388
+MuiCardMedia-root @ chunk-KBLC3MJ7.js?v=5ef87bba:2509
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<MuiCardMediaRoot>
+exports.jsx @ chunk-4UTF2CDO.js?v=5ef87bba:247
+CardMedia2 @ @mui_material.js?v=5ef87bba:16009
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<ForwardRef(CardMedia2)>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+(anonymous) @ CharacterModelLoader.tsx:497
+CharacterModelLoader @ CharacterModelLoader.tsx:481
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<CharacterModelLoader>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+CharacterLoaderApp @ App.tsx:119
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+man.png:1  GET https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/images/models/man.png 404 (Not Found)
+Image
+commitMount @ react-dom_client.js?v=5ef87bba:15882
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+commitHostMount @ react-dom_client.js?v=5ef87bba:9657
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9994
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9963
+flushLayoutEffects @ react-dom_client.js?v=5ef87bba:12924
+commitRoot @ react-dom_client.js?v=5ef87bba:12803
+commitRootWhenReady @ react-dom_client.js?v=5ef87bba:12016
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11950
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<img>
+exports.createElement @ chunk-BXEBRY3I.js?v=5ef87bba:793
+(anonymous) @ chunk-KBLC3MJ7.js?v=5ef87bba:3388
+MuiCardMedia-root @ chunk-KBLC3MJ7.js?v=5ef87bba:2509
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<MuiCardMediaRoot>
+exports.jsx @ chunk-4UTF2CDO.js?v=5ef87bba:247
+CardMedia2 @ @mui_material.js?v=5ef87bba:16009
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<ForwardRef(CardMedia2)>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+(anonymous) @ CharacterModelLoader.tsx:497
+CharacterModelLoader @ CharacterModelLoader.tsx:481
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<CharacterModelLoader>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+CharacterLoaderApp @ App.tsx:119
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+elderly.png:1  GET https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/images/models/elderly.png 404 (Not Found)
+Image
+commitMount @ react-dom_client.js?v=5ef87bba:15882
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+commitHostMount @ react-dom_client.js?v=5ef87bba:9657
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9994
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9963
+flushLayoutEffects @ react-dom_client.js?v=5ef87bba:12924
+commitRoot @ react-dom_client.js?v=5ef87bba:12803
+commitRootWhenReady @ react-dom_client.js?v=5ef87bba:12016
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11950
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<img>
+exports.createElement @ chunk-BXEBRY3I.js?v=5ef87bba:793
+(anonymous) @ chunk-KBLC3MJ7.js?v=5ef87bba:3388
+MuiCardMedia-root @ chunk-KBLC3MJ7.js?v=5ef87bba:2509
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<MuiCardMediaRoot>
+exports.jsx @ chunk-4UTF2CDO.js?v=5ef87bba:247
+CardMedia2 @ @mui_material.js?v=5ef87bba:16009
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<ForwardRef(CardMedia2)>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+(anonymous) @ CharacterModelLoader.tsx:497
+CharacterModelLoader @ CharacterModelLoader.tsx:481
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<CharacterModelLoader>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+CharacterLoaderApp @ App.tsx:119
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+athlete.png:1  GET https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/images/models/athlete.png 404 (Not Found)
+Image
+commitMount @ react-dom_client.js?v=5ef87bba:15882
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+commitHostMount @ react-dom_client.js?v=5ef87bba:9657
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9994
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9963
+flushLayoutEffects @ react-dom_client.js?v=5ef87bba:12924
+commitRoot @ react-dom_client.js?v=5ef87bba:12803
+commitRootWhenReady @ react-dom_client.js?v=5ef87bba:12016
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11950
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<img>
+exports.createElement @ chunk-BXEBRY3I.js?v=5ef87bba:793
+(anonymous) @ chunk-KBLC3MJ7.js?v=5ef87bba:3388
+MuiCardMedia-root @ chunk-KBLC3MJ7.js?v=5ef87bba:2509
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<MuiCardMediaRoot>
+exports.jsx @ chunk-4UTF2CDO.js?v=5ef87bba:247
+CardMedia2 @ @mui_material.js?v=5ef87bba:16009
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<ForwardRef(CardMedia2)>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+(anonymous) @ CharacterModelLoader.tsx:497
+CharacterModelLoader @ CharacterModelLoader.tsx:481
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<CharacterModelLoader>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+CharacterLoaderApp @ App.tsx:119
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+pregnant.png:1  GET https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/images/models/pregnant.png 404 (Not Found)
+Image
+commitMount @ react-dom_client.js?v=5ef87bba:15882
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+commitHostMount @ react-dom_client.js?v=5ef87bba:9657
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9994
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9963
+flushLayoutEffects @ react-dom_client.js?v=5ef87bba:12924
+commitRoot @ react-dom_client.js?v=5ef87bba:12803
+commitRootWhenReady @ react-dom_client.js?v=5ef87bba:12016
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11950
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<img>
+exports.createElement @ chunk-BXEBRY3I.js?v=5ef87bba:793
+(anonymous) @ chunk-KBLC3MJ7.js?v=5ef87bba:3388
+MuiCardMedia-root @ chunk-KBLC3MJ7.js?v=5ef87bba:2509
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<MuiCardMediaRoot>
+exports.jsx @ chunk-4UTF2CDO.js?v=5ef87bba:247
+CardMedia2 @ @mui_material.js?v=5ef87bba:16009
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<ForwardRef(CardMedia2)>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+(anonymous) @ CharacterModelLoader.tsx:497
+CharacterModelLoader @ CharacterModelLoader.tsx:481
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<CharacterModelLoader>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+CharacterLoaderApp @ App.tsx:119
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+dancer.png:1  GET https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/images/models/dancer.png 404 (Not Found)
+Image
+commitMount @ react-dom_client.js?v=5ef87bba:15882
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+commitHostMount @ react-dom_client.js?v=5ef87bba:9657
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9994
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9963
+flushLayoutEffects @ react-dom_client.js?v=5ef87bba:12924
+commitRoot @ react-dom_client.js?v=5ef87bba:12803
+commitRootWhenReady @ react-dom_client.js?v=5ef87bba:12016
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11950
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<img>
+exports.createElement @ chunk-BXEBRY3I.js?v=5ef87bba:793
+(anonymous) @ chunk-KBLC3MJ7.js?v=5ef87bba:3388
+MuiCardMedia-root @ chunk-KBLC3MJ7.js?v=5ef87bba:2509
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<MuiCardMediaRoot>
+exports.jsx @ chunk-4UTF2CDO.js?v=5ef87bba:247
+CardMedia2 @ @mui_material.js?v=5ef87bba:16009
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<ForwardRef(CardMedia2)>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+(anonymous) @ CharacterModelLoader.tsx:497
+CharacterModelLoader @ CharacterModelLoader.tsx:481
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<CharacterModelLoader>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+CharacterLoaderApp @ App.tsx:119
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+PhysicsBasedDOF.ts:318 [DOF] f=35mm, f/2.8, focus=6.14m, near=0.5, far=200
+default_light.png:1  GET https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/images/gear/default_light.png 404 (Not Found)
+Image
+commitMount @ react-dom_client.js?v=5ef87bba:15882
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+commitHostMount @ react-dom_client.js?v=5ef87bba:9657
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9994
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9963
+flushLayoutEffects @ react-dom_client.js?v=5ef87bba:12924
+commitRoot @ react-dom_client.js?v=5ef87bba:12803
+commitRootWhenReady @ react-dom_client.js?v=5ef87bba:12016
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11950
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<img>
+exports.createElement @ chunk-BXEBRY3I.js?v=5ef87bba:793
+(anonymous) @ chunk-KBLC3MJ7.js?v=5ef87bba:3388
+MuiCardMedia-root @ chunk-KBLC3MJ7.js?v=5ef87bba:2509
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<MuiCardMediaRoot>
+exports.jsx @ chunk-4UTF2CDO.js?v=5ef87bba:247
+CardMedia2 @ @mui_material.js?v=5ef87bba:16009
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<ForwardRef(CardMedia2)>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+(anonymous) @ LightsBrowser.tsx:718
+LightsBrowser @ LightsBrowser.tsx:702
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<LightsBrowser>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+LightsBrowserApp @ App.tsx:128
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+sony_fx6_cinema_camera.png:1  GET https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/images/gear/sony_fx6_cinema_camera.png 404 (Not Found)
+Image
+commitMount @ react-dom_client.js?v=5ef87bba:15882
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+commitHostMount @ react-dom_client.js?v=5ef87bba:9657
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9994
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9963
+flushLayoutEffects @ react-dom_client.js?v=5ef87bba:12924
+commitRoot @ react-dom_client.js?v=5ef87bba:12803
+commitRootWhenReady @ react-dom_client.js?v=5ef87bba:12016
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11950
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<img>
+exports.createElement @ chunk-BXEBRY3I.js?v=5ef87bba:793
+(anonymous) @ chunk-KBLC3MJ7.js?v=5ef87bba:3388
+MuiCardMedia-root @ chunk-KBLC3MJ7.js?v=5ef87bba:2509
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<MuiCardMediaRoot>
+exports.jsx @ chunk-4UTF2CDO.js?v=5ef87bba:247
+CardMedia2 @ @mui_material.js?v=5ef87bba:16009
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<ForwardRef(CardMedia2)>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+(anonymous) @ CameraGearPanel.tsx:554
+CameraGearPanel @ CameraGearPanel.tsx:537
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<CameraGearPanel>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+CameraGearApp @ App.tsx:137
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+canon_c70_cinema_camera.png:1  GET https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/images/gear/canon_c70_cinema_camera.png 404 (Not Found)
+Image
+commitMount @ react-dom_client.js?v=5ef87bba:15882
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+commitHostMount @ react-dom_client.js?v=5ef87bba:9657
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9994
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9963
+flushLayoutEffects @ react-dom_client.js?v=5ef87bba:12924
+commitRoot @ react-dom_client.js?v=5ef87bba:12803
+commitRootWhenReady @ react-dom_client.js?v=5ef87bba:12016
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11950
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<img>
+exports.createElement @ chunk-BXEBRY3I.js?v=5ef87bba:793
+(anonymous) @ chunk-KBLC3MJ7.js?v=5ef87bba:3388
+MuiCardMedia-root @ chunk-KBLC3MJ7.js?v=5ef87bba:2509
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<MuiCardMediaRoot>
+exports.jsx @ chunk-4UTF2CDO.js?v=5ef87bba:247
+CardMedia2 @ @mui_material.js?v=5ef87bba:16009
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<ForwardRef(CardMedia2)>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+(anonymous) @ CameraGearPanel.tsx:554
+CameraGearPanel @ CameraGearPanel.tsx:537
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<CameraGearPanel>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+CameraGearApp @ App.tsx:137
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+/images/gear/canon_c80_camera.png:1  GET https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/images/gear/canon_c80_camera.png 404 (Not Found)
+Image
+commitMount @ react-dom_client.js?v=5ef87bba:15882
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+commitHostMount @ react-dom_client.js?v=5ef87bba:9657
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9994
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9963
+flushLayoutEffects @ react-dom_client.js?v=5ef87bba:12924
+commitRoot @ react-dom_client.js?v=5ef87bba:12803
+commitRootWhenReady @ react-dom_client.js?v=5ef87bba:12016
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11950
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<img>
+exports.createElement @ chunk-BXEBRY3I.js?v=5ef87bba:793
+(anonymous) @ chunk-KBLC3MJ7.js?v=5ef87bba:3388
+MuiCardMedia-root @ chunk-KBLC3MJ7.js?v=5ef87bba:2509
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<MuiCardMediaRoot>
+exports.jsx @ chunk-4UTF2CDO.js?v=5ef87bba:247
+CardMedia2 @ @mui_material.js?v=5ef87bba:16009
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<ForwardRef(CardMedia2)>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+(anonymous) @ CameraGearPanel.tsx:554
+CameraGearPanel @ CameraGearPanel.tsx:537
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<CameraGearPanel>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+CameraGearApp @ App.tsx:137
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+canon_c50_camera.png:1  GET https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/images/gear/canon_c50_camera.png 404 (Not Found)
+Image
+commitMount @ react-dom_client.js?v=5ef87bba:15882
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+commitHostMount @ react-dom_client.js?v=5ef87bba:9657
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9994
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9963
+flushLayoutEffects @ react-dom_client.js?v=5ef87bba:12924
+commitRoot @ react-dom_client.js?v=5ef87bba:12803
+commitRootWhenReady @ react-dom_client.js?v=5ef87bba:12016
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11950
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<img>
+exports.createElement @ chunk-BXEBRY3I.js?v=5ef87bba:793
+(anonymous) @ chunk-KBLC3MJ7.js?v=5ef87bba:3388
+MuiCardMedia-root @ chunk-KBLC3MJ7.js?v=5ef87bba:2509
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<MuiCardMediaRoot>
+exports.jsx @ chunk-4UTF2CDO.js?v=5ef87bba:247
+CardMedia2 @ @mui_material.js?v=5ef87bba:16009
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<ForwardRef(CardMedia2)>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+(anonymous) @ CameraGearPanel.tsx:554
+CameraGearPanel @ CameraGearPanel.tsx:537
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<CameraGearPanel>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+CameraGearApp @ App.tsx:137
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+PhysicsBasedDOF.ts:318 [DOF] f=35mm, f/2.8, focus=6.14m, near=0.5, far=200
+panasonic_s1h_camera.png:1  GET https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/images/gear/panasonic_s1h_camera.png 404 (Not Found)
+Image
+commitMount @ react-dom_client.js?v=5ef87bba:15882
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+commitHostMount @ react-dom_client.js?v=5ef87bba:9657
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9994
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9992
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:10074
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9903
+recursivelyTraverseLayoutEffects @ react-dom_client.js?v=5ef87bba:10792
+commitLayoutEffectOnFiber @ react-dom_client.js?v=5ef87bba:9963
+flushLayoutEffects @ react-dom_client.js?v=5ef87bba:12924
+commitRoot @ react-dom_client.js?v=5ef87bba:12803
+commitRootWhenReady @ react-dom_client.js?v=5ef87bba:12016
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11950
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<img>
+exports.createElement @ chunk-BXEBRY3I.js?v=5ef87bba:793
+(anonymous) @ chunk-KBLC3MJ7.js?v=5ef87bba:3388
+MuiCardMedia-root @ chunk-KBLC3MJ7.js?v=5ef87bba:2509
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<MuiCardMediaRoot>
+exports.jsx @ chunk-4UTF2CDO.js?v=5ef87bba:247
+CardMedia2 @ @mui_material.js?v=5ef87bba:16009
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateForwardRef @ react-dom_client.js?v=5ef87bba:7198
+beginWork @ react-dom_client.js?v=5ef87bba:8735
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<ForwardRef(CardMedia2)>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+(anonymous) @ CameraGearPanel.tsx:554
+CameraGearPanel @ CameraGearPanel.tsx:537
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+<CameraGearPanel>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=5ef87bba:247
+CameraGearApp @ App.tsx:137
+react_stack_bottom_frame @ react-dom_client.js?v=5ef87bba:18509
+renderWithHooks @ react-dom_client.js?v=5ef87bba:5654
+updateFunctionComponent @ react-dom_client.js?v=5ef87bba:7475
+beginWork @ react-dom_client.js?v=5ef87bba:8525
+runWithFiberInDEV @ react-dom_client.js?v=5ef87bba:997
+performUnitOfWork @ react-dom_client.js?v=5ef87bba:12561
+workLoopSync @ react-dom_client.js?v=5ef87bba:12424
+renderRootSync @ react-dom_client.js?v=5ef87bba:12408
+performWorkOnRoot @ react-dom_client.js?v=5ef87bba:11766
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=5ef87bba:13505
+performWorkUntilDeadline @ react-dom_client.js?v=5ef87bba:36
+PhysicsBasedDOF.ts:318 [DOF] f=35mm, f/2.8, focus=6.14m, near=0.5, far=200
+PhysicsBasedDOF.ts:318 [DOF] f=35mm, f/2.8, focus=6.14m, near=0.5, far=200
+PhysicsBasedDOF.ts:318 [DOF] f=35mm, f/2.8, focus=6.14m, near=0.5, far=200
+main.ts:14272 Loaded 2 meshes from light model /api/models/300D_Light.glb
+main.ts:14300 Root mesh __root__ has no geometry, searching for mesh with geometry...
+addLight @ main.ts:14300
+main.ts:14307 Found mesh with geometry: model (373733 vertices)
+main.ts:14345 Root mesh selected: mesh_light_0, visible: true, enabled: isEnabled(checkAncestors = true) {
+        if (checkAncestors === false) {
+            return this._nodeDataStorage._isEnabled;
+        }
+        if (!this._nodeDataStorage._isEnabled) {
+            return false;
+        }
+        return this._nodeDataStorage._isParentEnabled;
+    }, in scene: true
+main.ts:14388 Positioned model on ground: bottomY=2.500, adjustedY=0.001
+main.ts:14419 Mesh visibility check: name=mesh_light_0, visible=true, enabled=isEnabled(checkAncestors = true) {
+        if (checkAncestors === false) {
+            return this._nodeDataStorage._isEnabled;
+        }
+        if (!this._nodeDataStorage._isEnabled) {
+            return false;
+        }
+        return this._nodeDataStorage._isParentEnabled;
+    }, inScene=true, hasMaterial=true
+main.ts:14525 [Light Direction] Detected mesh extents: X=0.485, Y=0.934, Z=0.533
+main.ts:14526 [Light Direction] Auto-detected dominant axis: y (extent=0.934), suggested forwardAxis: -y
+main.ts:14551 [Light Direction] Using forwardAxis '+z' for aputure-300d: (0, 0, 1)
+main.ts:14569 Using absoluteRotationQuaternion for light orientation
+main.ts:14591 Calculated world forward for light model: (0.000, 0.000, 1.000)
+main.ts:14656 Mesh __root__ has no vertices/geometry!
+(anonymous) @ main.ts:14656
+addLight @ main.ts:14610
+main.ts:14658 Mesh mesh_light_0 has 373733 vertices
+main.ts:14721 Light model loaded successfully: {name: 'mesh_light_0', position: '3.50, 0.00, -2.00', center: '-3.50, 0.93, -2.00', size: '0.97 x 1.87 x 1.07', meshCount: 2, …}
+main.ts:14751 [Mesh Instancing] Cached model for aputure-300d - future lights will clone instead of reload
+main.ts:14784 Using stored initial forward for light_0: (0.000, 0.000, 1.000)
+main.ts:14873 Shadow generator created for light light_0
+main.ts:15085 Beam visualization created for light light_0
+main.ts:15136 Light bulb created for light_0
+main.ts:1305 Studio gizmos created for light: light_0
+main.ts:3298 [aimLightAt] light_0: pos={X: 3.5 Y: 0.001 Z: -2}, target={X: 0 Y: 1 Z: 0}, dir={X: -0.8427498036486899 Y: 0.24054487252715465 Z: 0.48157131637067996}
+main.ts:3322 [aimLightAt] light_0: rotation set
+main.ts:3330 [aimLightAt] light_0: SpotLight direction set
+main.ts:14191 [Mesh Instancing] Cloning cached model for aputure-300d (avoiding GLB reload)
+main.ts:14260 [Mesh Instancing] Clone successful for aputure-300d: mesh_light_1
+main.ts:14784 Using stored initial forward for light_1: (0.000, 0.000, 1.000)
+main.ts:14873 Shadow generator created for light light_1
+main.ts:15085 Beam visualization created for light light_1
+main.ts:15136 Light bulb created for light_1
+main.ts:1305 Studio gizmos created for light: light_1
+main.ts:3298 [aimLightAt] light_1: pos={X: -3 Y: 0.12911140127523024 Z: -3}, target={X: 0 Y: 1 Z: 0}, dir={X: 0.6926643165476778 Y: 0.20107781867495247 Z: 0.6926643165476778}
+main.ts:3322 [aimLightAt] light_1: rotation set
+main.ts:3330 [aimLightAt] light_1: SpotLight direction set
+main.ts:14191 [Mesh Instancing] Cloning cached model for aputure-300d (avoiding GLB reload)
+main.ts:14260 [Mesh Instancing] Clone successful for aputure-300d: mesh_light_2
+main.ts:14784 Using stored initial forward for light_2: (0.000, 0.000, 1.000)
+main.ts:14873 Shadow generator created for light light_2
+main.ts:15085 Beam visualization created for light light_2
+main.ts:15136 Light bulb created for light_2
+main.ts:1305 Studio gizmos created for light: light_2
+main.ts:3298 [aimLightAt] light_2: pos={X: -3.5 Y: 0.12911140127523046 Z: 4}, target={X: 0 Y: 1.5 Z: 0}, dir={X: 0.6376366438839883 Y: 0.24975108720848163 Z: -0.7287275930102723}
+main.ts:3322 [aimLightAt] light_2: rotation set
+main.ts:3330 [aimLightAt] light_2: SpotLight direction set
+PhysicsBasedDOF.ts:318 [DOF] f=35mm, f/2.8, focus=6.14m, near=0.5, far=200
+PhysicsBasedDOF.ts:318 [DOF] f=35mm, f/2.8, focus=6.14m, near=0.5, far=200
+PhysicsBasedDOF.ts:318 [DOF] f=35mm, f/2.8, focus=6.14m, near=0.5, far=200
+PhysicsBasedDOF.ts:318 [DOF] f=35mm, f/2.8, focus=6.14m, near=0.5, far=200
+PhysicsBasedDOF.ts:318 [DOF] f=35mm, f/2.8, focus=6.14m, near=0.5, far=200
+PhysicsBasedDOF.ts:318 [DOF] f=35mm, f/2.8, focus=6.14m, near=0.5, far=200
+PhysicsBasedDOF.ts:318 [DOF] f=35mm, f/2.8, focus=6.14m, near=0.5, far=200
+PhysicsBasedDOF.ts:318 [DOF] f=35mm, f/2.8, focus=6.14m, near=0.5, far=200

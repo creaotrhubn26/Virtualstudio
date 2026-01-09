@@ -1,0 +1,156 @@
+client:745 WebSocket connection to 'wss://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/?token=n76nTuqjRBu9' failed: 
+createConnection @ client:745
+client:755 WebSocket connection to 'wss://localhost:5000/?token=n76nTuqjRBu9' failed: 
+createConnection @ client:755
+client:765 [vite] failed to connect to websocket.
+your current setup:
+  (browser) aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/ <--[HTTP]--> localhost:5000/ (server)
+  (browser) aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev:/ <--[WebSocket (failing)]--> localhost:5000/ (server)
+Check out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr .
+connect @ client:765
+react-dom_client.js?v=5ef87bba:20103 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+logger.js?v=5ef87bba:52 BJS - [14:38:45]: Babylon.js v8.42.0 - WebGL2 - Parallel shader compilation
+main.ts:951 SSR pipeline enabled
+main.ts:961 Professional rendering pipeline initialized (Work Mode)
+main.ts:871 Studio gizmo appearance customized
+logger.ts:20 [2026-01-08T13:38:45.533Z] [INFO] [PropRendering] Scene set for prop rendering
+main.ts:14100 Loading light 3D model from: /api/models/300D_Light.glb for light type: aputure-300d
+main.ts:4256 [Overlay] Scroll enabled on content area, height: 320px
+main.ts:4533 Marketplace trigger element: <button class=​"actor-panel-trigger" id=​"marketplaceTrigger" aria-expanded=​"false" aria-controls=​"marketplacePanel" style=​"margin-bottom:​8px;​">​…​</button>​
+main.ts:19768 Studio Library elements: Object
+main.ts:19850 MarketplacePanelApp mounted
+main.ts:19860 AIAssistantApp mounted
+main.ts:19870 CastingPlannerApp mounted
+main.ts:19880 SceneComposerPanelApp mounted
+main.ts:19890 AnimationComposerApp mounted
+main.ts:19900 PanelCreator mounted
+main.ts:19914 Rendering installed tools: 0
+main.ts:20356 [Camera Info] Dialog elements found, setting up handlers
+main.ts:22421 Camera controls initialized with drag, hold-to-move, speed control, and camera settings
+(index):1 Access to fetch at 'http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5' from origin 'https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev' has been blocked by CORS policy: Permission was denied for this request to access the `unknown` address space.
+localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5:1  Failed to load resource: net::ERR_FAILED
+(index):26 SW registered: https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/
+main.ts:7762 Default avatar loaded: /models/avatars/avatar_woman.glb
+AvatarGeneratorPanel.tsx:337 AvatarGeneratorPanel: open prop changed to false
+App.tsx:848 AvatarGeneratorApp: Event listener registered
+App.tsx:853 AvatarGeneratorApp: isOpen changed to false
+App.tsx:347 MarketplacePanelApp: render, isOpen = false
+App.tsx:292 MarketplacePanelApp: Event listener registered
+App.tsx:477 AIAssistantApp: render, isOpen = false
+App.tsx:451 AIAssistantApp: Event listeners registered
+main.ts:14102 Loaded 2 meshes from light model /api/models/300D_Light.glb
+main.ts:14130 Root mesh __root__ has no geometry, searching for mesh with geometry...
+addLight @ main.ts:14130
+main.ts:14137 Found mesh with geometry: model (373733 vertices)
+main.ts:14175 Root mesh selected: mesh_light_0, visible: true, enabled: isEnabled(checkAncestors = true) {
+        if (checkAncestors === false) {
+            return this._nodeDataStorage._isEnabled;
+        }
+        if (!this._nodeDataStorage._isEnabled) {
+            return false;
+        }
+        return this._nodeDataStorage._isParentEnabled;
+    }, in scene: true
+main.ts:14218 Positioned model on ground: bottomY=2.500, adjustedY=0.001
+main.ts:14249 Mesh visibility check: name=mesh_light_0, visible=true, enabled=isEnabled(checkAncestors = true) {
+        if (checkAncestors === false) {
+            return this._nodeDataStorage._isEnabled;
+        }
+        if (!this._nodeDataStorage._isEnabled) {
+            return false;
+        }
+        return this._nodeDataStorage._isParentEnabled;
+    }, inScene=true, hasMaterial=true
+main.ts:14355 [Light Direction] Detected mesh extents: X=0.485, Y=0.934, Z=0.533
+main.ts:14356 [Light Direction] Auto-detected dominant axis: y (extent=0.934), suggested forwardAxis: -y
+main.ts:14381 [Light Direction] Using forwardAxis '+z' for aputure-300d: (0, 0, 1)
+main.ts:14399 Using absoluteRotationQuaternion for light orientation
+main.ts:14421 Calculated world forward for light model: (0.000, 0.000, 1.000)
+main.ts:14486 Mesh __root__ has no vertices/geometry!
+(anonymous) @ main.ts:14486
+main.ts:14488 Mesh mesh_light_0 has 373733 vertices
+main.ts:14551 Light model loaded successfully: Object
+main.ts:14581 [Mesh Instancing] Cached model for aputure-300d - future lights will clone instead of reload
+main.ts:14614 Using stored initial forward for light_0: (0.000, 0.000, 1.000)
+main.ts:14703 Shadow generator created for light light_0
+main.ts:14915 Beam visualization created for light light_0
+main.ts:14966 Light bulb created for light_0
+main.ts:1290 Studio gizmos created for light: light_0
+main.ts:3283 [aimLightAt] light_0: pos={X: 3.5 Y: 0.001 Z: -2}, target={X: 0 Y: 1 Z: 0}, dir={X: -0.8427498036486899 Y: 0.24054487252715465 Z: 0.48157131637067996}
+main.ts:3307 [aimLightAt] light_0: rotation set
+main.ts:3315 [aimLightAt] light_0: SpotLight direction set
+main.ts:14021 [Mesh Instancing] Cloning cached model for aputure-300d (avoiding GLB reload)
+main.ts:14090 [Mesh Instancing] Clone successful for aputure-300d: mesh_light_1
+main.ts:14614 Using stored initial forward for light_1: (0.000, 0.000, 1.000)
+main.ts:14703 Shadow generator created for light light_1
+main.ts:14915 Beam visualization created for light light_1
+main.ts:14966 Light bulb created for light_1
+main.ts:1290 Studio gizmos created for light: light_1
+main.ts:3283 [aimLightAt] light_1: pos={X: -3 Y: 0.12911140127523024 Z: -3}, target={X: 0 Y: 1 Z: 0}, dir={X: 0.6926643165476778 Y: 0.20107781867495247 Z: 0.6926643165476778}
+main.ts:3307 [aimLightAt] light_1: rotation set
+main.ts:3315 [aimLightAt] light_1: SpotLight direction set
+main.ts:14021 [Mesh Instancing] Cloning cached model for aputure-300d (avoiding GLB reload)
+main.ts:14090 [Mesh Instancing] Clone successful for aputure-300d: mesh_light_2
+main.ts:14614 Using stored initial forward for light_2: (0.000, 0.000, 1.000)
+main.ts:14703 Shadow generator created for light light_2
+main.ts:14915 Beam visualization created for light light_2
+main.ts:14966 Light bulb created for light_2
+main.ts:1290 Studio gizmos created for light: light_2
+main.ts:3283 [aimLightAt] light_2: pos={X: -3.5 Y: 0.12911140127523046 Z: 4}, target={X: 0 Y: 1.5 Z: 0}, dir={X: 0.6376366438839883 Y: 0.24975108720848163 Z: -0.7287275930102723}
+main.ts:3307 [aimLightAt] light_2: rotation set
+main.ts:3315 [aimLightAt] light_2: SpotLight direction set
+child.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+teenager.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+woman.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+man.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+elderly.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+athlete.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+pregnant.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+dancer.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+default_light.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+sony_fx6_cinema_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+canon_c70_cinema_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+canon_c80_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+canon_c50_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+panasonic_s1h_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+main.ts:16357 Camera preset camA is empty
+main.ts:16014 Camera preset camA saved with focal=71mm, distance=18m, height=10m
+main.ts:12238 [Monitor] Created camera for camA - alpha=-1.57, beta=1.05, radius=18.00, pos={X: 9.545177148524161e-16 Y: 10.500000000000002 Z: -15.588457268119894}
+main.ts:12247 [Monitor] camA: Using initial preset values (camera just created)
+main.ts:12267 [Monitor] Added RTT camA to customRenderTargets during reassign
+main.ts:12281 [Monitor] Created RTT for camA during reassign
+main.ts:12291 [Monitor] camA: RTT camera = monitor-camera-camA, alpha=-1.57, beta=1.05, radius=18.00
+main.ts:12292 [Monitor] camA: Main camera = mainCamera, alpha=-1.57, beta=1.05, radius=18.00
+main.ts:16052 [Monitor] camA: Camera UPDATED - alpha=-1.57, beta=1.05, radius=18.00, pos={X: 9.545177148524161e-16 Y: 10.500000000000002 Z: -15.588457268119894}
+main.ts:12249 [Monitor] camA: Using existing camera values (alpha=-1.57, beta=1.05)
+main.ts:12291 [Monitor] camA: RTT camera = monitor-camera-camA, alpha=-1.57, beta=1.05, radius=18.00
+main.ts:12292 [Monitor] camA: Main camera = mainCamera, alpha=-1.57, beta=1.05, radius=18.00
+main.ts:12249 [Monitor] camA: Using existing camera values (alpha=-1.57, beta=1.05)
+main.ts:12291 [Monitor] camA: RTT camera = monitor-camera-camA, alpha=-1.57, beta=1.05, radius=18.00
+main.ts:12292 [Monitor] camA: Main camera = mainCamera, alpha=-1.57, beta=1.05, radius=18.00
+main.ts:16207 Camera camA activated for perspective control
+main.ts:12538 [Monitor] camA: Callbacks registered for existing RTT
+main.ts:12510 [Monitor] camA: First render complete, framebuffer ready
+main.ts:16401 Camera preset camA loaded
+main.ts:16014 Camera preset camB saved with focal=71mm, distance=18m, height=10m
+main.ts:12238 [Monitor] Created camera for camB - alpha=-1.57, beta=1.05, radius=18.00, pos={X: 9.545177148524161e-16 Y: 10.500000000000002 Z: -15.588457268119894}
+main.ts:12247 [Monitor] camB: Using initial preset values (camera just created)
+main.ts:12267 [Monitor] Added RTT camB to customRenderTargets during reassign
+main.ts:12281 [Monitor] Created RTT for camB during reassign
+main.ts:12291 [Monitor] camB: RTT camera = monitor-camera-camB, alpha=-1.57, beta=1.05, radius=18.00
+main.ts:12292 [Monitor] camB: Main camera = mainCamera, alpha=-1.57, beta=1.05, radius=18.00
+main.ts:16052 [Monitor] camB: Camera UPDATED - alpha=-1.57, beta=1.05, radius=18.00, pos={X: 9.545177148524161e-16 Y: 10.500000000000002 Z: -15.588457268119894}
+main.ts:12249 [Monitor] camB: Using existing camera values (alpha=-1.57, beta=1.05)
+main.ts:12291 [Monitor] camB: RTT camera = monitor-camera-camB, alpha=-1.57, beta=1.05, radius=18.00
+main.ts:12292 [Monitor] camB: Main camera = mainCamera, alpha=-1.57, beta=1.05, radius=18.00
+main.ts:12249 [Monitor] camB: Using existing camera values (alpha=-1.57, beta=1.05)
+main.ts:12291 [Monitor] camB: RTT camera = monitor-camera-camB, alpha=-1.57, beta=1.05, radius=18.00
+main.ts:12292 [Monitor] camB: Main camera = mainCamera, alpha=-1.57, beta=1.05, radius=18.00
+main.ts:16207 Camera camB activated for perspective control
+main.ts:12538 [Monitor] camB: Callbacks registered for existing RTT
+main.ts:12510 [Monitor] camB: First render complete, framebuffer ready
+main.ts:16401 Camera preset camB loaded
+main.ts:12249 [Monitor] camB: Using existing camera values (alpha=-1.57, beta=1.05)
+main.ts:12291 [Monitor] camB: RTT camera = monitor-camera-camB, alpha=-1.57, beta=1.05, radius=18.00
+main.ts:12292 [Monitor] camB: Main camera = mainCamera, alpha=-1.57, beta=1.05, radius=18.00
+main.ts:16401 Camera preset camB loaded

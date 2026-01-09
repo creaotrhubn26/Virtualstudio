@@ -1,0 +1,178 @@
+sw.js:69 Uncaught (in promise) TypeError: Failed to execute 'put' on 'Cache': Request scheme 'chrome-extension' is unsupported
+    at sw.js:69:19
+(anonymous) @ sw.js:69
+sw.js:69 Uncaught (in promise) TypeError: Failed to execute 'put' on 'Cache': Request scheme 'chrome-extension' is unsupported
+    at sw.js:69:19
+(anonymous) @ sw.js:69
+client:745 WebSocket connection to 'wss://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/?token=neNfO5xvwLmI' failed: 
+createConnection @ client:745
+react-dom_client.js?v=773290bd:20103 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+logger.js?v=773290bd:52 BJS - [15:10:44]: Babylon.js v8.42.0 - WebGL2 - Parallel shader compilation
+logger.ts:20 [2026-01-06T14:10:44.608Z] [INFO] [PropRendering] Scene set for prop rendering
+main.ts:10502 Loading light 3D model from: /api/models/300D_Light.glb for light type: aputure-300d
+main.ts:1765 Marketplace trigger element: <button class=​"actor-panel-trigger" id=​"marketplaceTrigger" aria-expanded=​"false" aria-controls=​"marketplacePanel" style=​"margin-bottom:​8px;​">​…​</button>​
+main.ts:15106 Studio Library elements: Object
+main.ts:15188 MarketplacePanelApp mounted
+main.ts:15198 AIAssistantApp mounted
+main.ts:15208 CastingPlannerApp mounted
+main.ts:15218 SceneComposerPanelApp mounted
+main.ts:15228 AnimationComposerApp mounted
+main.ts:15238 PanelCreator mounted
+main.ts:15252 Rendering installed tools: 0
+main.ts:15648 [Camera Info] Dialog elements found, setting up handlers
+main.ts:17613 Camera controls initialized with drag, hold-to-move, speed control, and camera settings
+(index):26 SW registered: https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/
+(index):1 <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+AvatarGeneratorPanel.tsx:337 AvatarGeneratorPanel: open prop changed to false
+App.tsx:848 AvatarGeneratorApp: Event listener registered
+App.tsx:853 AvatarGeneratorApp: isOpen changed to false
+App.tsx:347 MarketplacePanelApp: render, isOpen = false
+App.tsx:292 MarketplacePanelApp: Event listener registered
+App.tsx:477 AIAssistantApp: render, isOpen = false
+App.tsx:451 AIAssistantApp: Event listeners registered
+main.ts:10504 Loaded 2 meshes from light model /api/models/300D_Light.glb
+main.ts:10532 Root mesh __root__ has no geometry, searching for mesh with geometry...
+addLight @ main.ts:10532
+main.ts:10539 Found mesh with geometry: model (373733 vertices)
+main.ts:10577 Root mesh selected: mesh_light_0, visible: true, enabled: isEnabled(checkAncestors = true) {
+        if (checkAncestors === false) {
+            return this._nodeDataStorage._isEnabled;
+        }
+        if (!this._nodeDataStorage._isEnabled) {
+            return false;
+        }
+        return this._nodeDataStorage._isParentEnabled;
+    }, in scene: true
+main.ts:10620 Positioned model on ground: bottomY=2.500, adjustedY=0.001
+main.ts:10651 Mesh visibility check: name=mesh_light_0, visible=true, enabled=isEnabled(checkAncestors = true) {
+        if (checkAncestors === false) {
+            return this._nodeDataStorage._isEnabled;
+        }
+        if (!this._nodeDataStorage._isEnabled) {
+            return false;
+        }
+        return this._nodeDataStorage._isParentEnabled;
+    }, inScene=true, hasMaterial=true
+main.ts:10757 [Light Direction] Detected mesh extents: X=0.485, Y=0.934, Z=0.533
+main.ts:10758 [Light Direction] Auto-detected dominant axis: y (extent=0.934), suggested forwardAxis: -y
+main.ts:10783 [Light Direction] Using forwardAxis '+z' for aputure-300d: (0, 0, 1)
+main.ts:10801 Using absoluteRotationQuaternion for light orientation
+main.ts:10823 Calculated world forward for light model: (0.000, 0.000, 1.000)
+main.ts:10895 Created new PBR material for __root__: isLightHead=false
+main.ts:10901 Mesh __root__ has no vertices/geometry!
+(anonymous) @ main.ts:10901
+main.ts:10895 Created new PBR material for mesh_light_0: isLightHead=true
+main.ts:10903 Mesh mesh_light_0 has 373733 vertices
+main.ts:10976 Light model loaded successfully: Object
+main.ts:11025 Using stored initial forward for light_0: (0.000, 0.000, 1.000)
+main.ts:11106 Shadow generator created for light light_0
+main.ts:11318 Beam visualization created for light light_0
+main.ts:756 [aimLightAt] light_0: pos={X: 3.5 Y: 0.001 Z: -2}, target={X: 0 Y: 1 Z: 0}, dir={X: -0.8427498036486899 Y: 0.24054487252715465 Z: 0.48157131637067996}
+main.ts:780 [aimLightAt] light_0: rotation set
+main.ts:788 [aimLightAt] light_0: SpotLight direction set
+main.ts:10502 Loading light 3D model from: /api/models/300D_Light.glb for light type: aputure-300d
+main.ts:10504 Loaded 2 meshes from light model /api/models/300D_Light.glb
+main.ts:10532 Root mesh __root__ has no geometry, searching for mesh with geometry...
+addLight @ main.ts:10532
+main.ts:10539 Found mesh with geometry: model (373733 vertices)
+main.ts:10577 Root mesh selected: mesh_light_1, visible: true, enabled: isEnabled(checkAncestors = true) {
+        if (checkAncestors === false) {
+            return this._nodeDataStorage._isEnabled;
+        }
+        if (!this._nodeDataStorage._isEnabled) {
+            return false;
+        }
+        return this._nodeDataStorage._isParentEnabled;
+    }, in scene: true
+main.ts:10620 Positioned model on ground: bottomY=2.000, adjustedY=0.001
+main.ts:10651 Mesh visibility check: name=mesh_light_1, visible=true, enabled=isEnabled(checkAncestors = true) {
+        if (checkAncestors === false) {
+            return this._nodeDataStorage._isEnabled;
+        }
+        if (!this._nodeDataStorage._isEnabled) {
+            return false;
+        }
+        return this._nodeDataStorage._isParentEnabled;
+    }, inScene=true, hasMaterial=true
+main.ts:10757 [Light Direction] Detected mesh extents: X=0.485, Y=0.934, Z=0.533
+main.ts:10758 [Light Direction] Auto-detected dominant axis: y (extent=0.934), suggested forwardAxis: -y
+main.ts:10783 [Light Direction] Using forwardAxis '+z' for aputure-300d: (0, 0, 1)
+main.ts:10801 Using absoluteRotationQuaternion for light orientation
+main.ts:10823 Calculated world forward for light model: (0.000, 0.000, 1.000)
+main.ts:10895 Created new PBR material for __root__: isLightHead=false
+main.ts:10901 Mesh __root__ has no vertices/geometry!
+(anonymous) @ main.ts:10901
+main.ts:10895 Created new PBR material for mesh_light_1: isLightHead=true
+main.ts:10903 Mesh mesh_light_1 has 373733 vertices
+main.ts:10976 Light model loaded successfully: Object
+main.ts:11025 Using stored initial forward for light_1: (0.000, 0.000, 1.000)
+main.ts:11106 Shadow generator created for light light_1
+main.ts:11318 Beam visualization created for light light_1
+main.ts:756 [aimLightAt] light_1: pos={X: -3 Y: 0.001 Z: -3}, target={X: 0 Y: 1 Z: 0}, dir={X: 0.6882834098939881 Y: 0.22919837549469804 Z: 0.6882834098939881}
+main.ts:780 [aimLightAt] light_1: rotation set
+main.ts:788 [aimLightAt] light_1: SpotLight direction set
+main.ts:10502 Loading light 3D model from: /api/models/300D_Light.glb for light type: aputure-300d
+main.ts:10504 Loaded 2 meshes from light model /api/models/300D_Light.glb
+main.ts:10532 Root mesh __root__ has no geometry, searching for mesh with geometry...
+addLight @ main.ts:10532
+main.ts:10539 Found mesh with geometry: model (373733 vertices)
+main.ts:10577 Root mesh selected: mesh_light_2, visible: true, enabled: isEnabled(checkAncestors = true) {
+        if (checkAncestors === false) {
+            return this._nodeDataStorage._isEnabled;
+        }
+        if (!this._nodeDataStorage._isEnabled) {
+            return false;
+        }
+        return this._nodeDataStorage._isParentEnabled;
+    }, in scene: true
+main.ts:10620 Positioned model on ground: bottomY=4.500, adjustedY=0.001
+main.ts:10651 Mesh visibility check: name=mesh_light_2, visible=true, enabled=isEnabled(checkAncestors = true) {
+        if (checkAncestors === false) {
+            return this._nodeDataStorage._isEnabled;
+        }
+        if (!this._nodeDataStorage._isEnabled) {
+            return false;
+        }
+        return this._nodeDataStorage._isParentEnabled;
+    }, inScene=true, hasMaterial=true
+main.ts:10757 [Light Direction] Detected mesh extents: X=0.485, Y=0.934, Z=0.533
+main.ts:10758 [Light Direction] Auto-detected dominant axis: y (extent=0.934), suggested forwardAxis: -y
+main.ts:10783 [Light Direction] Using forwardAxis '+z' for aputure-300d: (0, 0, 1)
+main.ts:10801 Using absoluteRotationQuaternion for light orientation
+main.ts:10823 Calculated world forward for light model: (0.000, 0.000, 1.000)
+main.ts:10895 Created new PBR material for __root__: isLightHead=false
+main.ts:10901 Mesh __root__ has no vertices/geometry!
+(anonymous) @ main.ts:10901
+main.ts:10895 Created new PBR material for mesh_light_2: isLightHead=true
+main.ts:10903 Mesh mesh_light_2 has 373733 vertices
+main.ts:10976 Light model loaded successfully: Object
+main.ts:11025 Using stored initial forward for light_2: (0.000, 0.000, 1.000)
+main.ts:11106 Shadow generator created for light light_2
+main.ts:11318 Beam visualization created for light light_2
+main.ts:756 [aimLightAt] light_2: pos={X: -3.5 Y: 0.001 Z: 4}, target={X: 0 Y: 1.5 Z: 0}, dir={X: 0.633781382249939 Y: 0.27143951199790245 Z: -0.724321579714216}
+main.ts:780 [aimLightAt] light_2: rotation set
+main.ts:788 [aimLightAt] light_2: SpotLight direction set
+/icons/icon-144x144.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+(index):1 Error while trying to use the following icon from the Manifest: https://aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/icons/icon-144x144.png (Download error or resource isn't a valid image)
+child.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+teenager.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+woman.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+man.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+elderly.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+athlete.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+pregnant.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+dancer.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+default_light.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+sony_fx6_cinema_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+canon_c70_cinema_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+canon_c80_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+panasonic_s1h_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+canon_c50_camera.png:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+client:755 WebSocket connection to 'wss://localhost:5000/?token=neNfO5xvwLmI' failed: 
+createConnection @ client:755
+client:765 [vite] failed to connect to websocket.
+your current setup:
+  (browser) aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev/ <--[HTTP]--> localhost:5000/ (server)
+  (browser) aba1f887-3681-44ed-8115-ebbce290d187-00-2d7tqsxkya6am.spock.replit.dev:/ <--[WebSocket (failing)]--> localhost:5000/ (server)
+Check out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr .
+connect @ client:765
