@@ -206,8 +206,8 @@ interface AnimationState {
 
 class VirtualStudio {
   private engine: BABYLON.Engine;
-  private scene: BABYLON.Scene;
-  private camera: BABYLON.ArcRotateCamera;
+  public scene: BABYLON.Scene;
+  public camera: BABYLON.ArcRotateCamera;
   public lights: Map<string, LightData> = new Map();
   public selectedLightId: string | null = null;
   private lightCounter = 0;
@@ -3310,7 +3310,7 @@ class VirtualStudio {
   }
   
   // Helper: Aim light and mesh at a target position
-  private aimLightAt(lightId: string, target: BABYLON.Vector3): void {
+  public aimLightAt(lightId: string, target: BABYLON.Vector3): void {
     const lightData = this.lights.get(lightId);
     if (!lightData) {
       console.warn(`[aimLightAt] No light data found for ${lightId}`);
@@ -8402,83 +8402,23 @@ class VirtualStudio {
   ): void {
     // Remove existing lights
     this.lights.forEach((lightData) => {
-      if (lightData.spotlight) lightData.spotlight.dispose();
+      if (lightData.light) lightData.light.dispose();
       if (lightData.mesh) lightData.mesh.dispose();
       if (lightData.shadowGenerator) lightData.shadowGenerator.dispose();
       if (lightData.beamVisualization) lightData.beamVisualization.dispose();
     });
-    this.lights = [];
+    this.lights.clear();
 
     // Create new lights from preset
     lights.forEach((lightConfig, index) => {
-      const lightId = `preset_light_${index}`;
       const position = new BABYLON.Vector3(
         lightConfig.position[0],
         lightConfig.position[1],
         lightConfig.position[2]
       );
       
-      // Create spotlight
-      const spotlight = new BABYLON.SpotLight(
-        lightId,
-        position,
-        new BABYLON.Vector3(0, -0.5, -1).normalize(),
-        Math.PI / 4,
-        2,
-        this.scene
-      );
-      
-      spotlight.intensity = lightConfig.intensity * 50;
-      
-      // Set color temperature
-      if (lightConfig.cct) {
-        const kelvin = lightConfig.cct;
-        let r: number, g: number, b: number;
-        if (kelvin <= 4000) {
-          r = 1.0;
-          g = 0.7 + (kelvin - 2700) * 0.0002;
-          b = 0.5 + (kelvin - 2700) * 0.0004;
-        } else if (kelvin <= 5600) {
-          r = 1.0;
-          g = 0.9 + (kelvin - 4000) * 0.0001;
-          b = 0.8 + (kelvin - 4000) * 0.0001;
-        } else {
-          r = 0.9 - (kelvin - 5600) * 0.00005;
-          g = 0.95;
-          b = 1.0;
-        }
-        spotlight.diffuse = new BABYLON.Color3(r, g, b);
-      }
-
-      // Create shadow generator
-      const shadowGenerator = new BABYLON.ShadowGenerator(1024, spotlight);
-      shadowGenerator.useBlurExponentialShadowMap = true;
-      shadowGenerator.blurKernel = 32;
-
-      // Aim light at center
-      const target = new BABYLON.Vector3(0, 1.2, 0);
-      const direction = target.subtract(position).normalize();
-      spotlight.direction = direction;
-
-      // Store light data
-      const lightData = {
-        id: lightId,
-        type: 'aputure-300d',
-        spotlight,
-        mesh: null as BABYLON.AbstractMesh | null,
-        shadowGenerator,
-        beamVisualization: null as BABYLON.Mesh | null,
-        aimTarget: target,
-        power: lightConfig.intensity * 100,
-        cct: lightConfig.cct || 5600,
-      };
-
-      this.lights.push(lightData);
-
-      // Load light model
-      this.load3DLightModel(lightId, 'aputure-300d', position).then(() => {
-        console.log(`[Lighting Preset] Light ${index + 1} created: ${lightConfig.type} at (${position.x.toFixed(1)}, ${position.y.toFixed(1)}, ${position.z.toFixed(1)})`);
-      });
+      // Use the existing addLight method to properly create lights
+      this.addLight(lightConfig.type || 'aputure-300d', position);
     });
 
     // Dispatch event to notify UI
@@ -16101,6 +16041,42 @@ class VirtualStudio {
           bulbMat.emissiveIntensity = 0;
         }
       }
+    }
+  }
+
+  public updateBeamVisualization(lightId: string | null): void {
+    if (!lightId) return;
+    
+    const data = this.lights.get(lightId);
+    if (!data || !data.beamVisualization) return;
+    
+    const beam = data.beamVisualization;
+    const light = data.light;
+    
+    if (light instanceof BABYLON.SpotLight) {
+      const direction = light.direction;
+      const up = new BABYLON.Vector3(0, 1, 0);
+      let right = BABYLON.Vector3.Cross(up, direction);
+      
+      if (right.length() < 0.001) {
+        right = new BABYLON.Vector3(1, 0, 0);
+      }
+      right.normalize();
+      
+      const newUp = BABYLON.Vector3.Cross(direction, right);
+      newUp.normalize();
+      
+      const rotationMatrix = BABYLON.Matrix.FromValues(
+        right.x, right.y, right.z, 0,
+        newUp.x, newUp.y, newUp.z, 0,
+        direction.x, direction.y, direction.z, 0,
+        0, 0, 0, 1
+      );
+      
+      beam.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(rotationMatrix);
+      
+      const lightOffset = light.position.subtract(data.mesh.position);
+      beam.position = lightOffset;
     }
   }
 

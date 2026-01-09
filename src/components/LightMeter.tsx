@@ -8,8 +8,8 @@
 import React, { useMemo } from 'react';
 import { Box, Typography, Paper } from '@mui/material';
 import * as THREE from 'three';
-import { photometricCalculator } from '../../core/services/photometric';
-import type { LightSourceConfig } from '../../core/services/photometric';
+import { photometricCalculator } from '../core/services/photometric';
+import type { LightSourceConfig } from '../core/services/photometric';
 
 interface LightMeterProps {
   lights: Array<{
