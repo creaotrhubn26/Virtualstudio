@@ -12,6 +12,7 @@ export class AutoFocusSystem {
   private focusFrameMesh: BABYLON.Mesh | null = null;
   private isInitialized: boolean = false;
   private isTransitioningToTarget: boolean = false; // Flag for AF-S initial transition
+  private lastLoggedFocus: string = ''; // Track last logged focus to avoid spam
   
   // Performance optimization: cache and throttle
   private lastCameraPosition: BABYLON.Vector3 = BABYLON.Vector3.Zero();
@@ -429,7 +430,12 @@ export class AutoFocusSystem {
     
     this.showFocusFrame(eye);
     
-    console.log(`[AutoFocusSystem] Focus target set: ${eye.actorName} ${eye.eyeSide} eye at ${eye.distanceFromCamera.toFixed(2)}m`);
+    // Only log focus changes, not every frame
+    const focusKey = `${eye.actorName}-${eye.eyeSide}-${eye.distanceFromCamera.toFixed(2)}`;
+    if (this.lastLoggedFocus !== focusKey) {
+      console.log(`[AutoFocusSystem] Focus target set: ${eye.actorName} ${eye.eyeSide} eye at ${eye.distanceFromCamera.toFixed(2)}m`);
+      this.lastLoggedFocus = focusKey;
+    }
   }
   
   private smoothFocusTransition(): void {

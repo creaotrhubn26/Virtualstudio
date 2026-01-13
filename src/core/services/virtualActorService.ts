@@ -53,7 +53,12 @@ class VirtualActorService {
 
   async checkHealth(): Promise<HealthStatus> {
     try {
-      const response = await fetch(`${this.apiBase}/health`);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+      
+      const response = await fetch(`${this.apiBase}/health`, { signal: controller.signal });
+      clearTimeout(timeout);
+      
       if (response.ok) {
         return await response.json();
       }
@@ -65,7 +70,12 @@ class VirtualActorService {
 
   async getModelInfo(): Promise<AnnyModelInfo> {
     try {
-      const response = await fetch(`${this.apiBase}/model-info`);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+      
+      const response = await fetch(`${this.apiBase}/model-info`, { signal: controller.signal });
+      clearTimeout(timeout);
+      
       if (response.ok) {
         return await response.json();
       }

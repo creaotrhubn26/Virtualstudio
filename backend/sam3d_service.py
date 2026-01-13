@@ -3,6 +3,7 @@ SAM 3D Body Service
 Handles loading the Meta SAM 3D Body model and generating 3D avatars from images.
 Supports CPU-only inference mode for Replit compatibility.
 Downloads models from Cloudflare R2 if not found locally.
+Generates PBR textures including normal maps for realistic material rendering.
 """
 
 import os
@@ -14,11 +15,14 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 import numpy as np
 from PIL import Image
+import cv2
 
 # Import texture extraction service
 from texture_extraction_service import texture_extraction_service
 # Import DECA service for face enhancement
 from deca_service import deca_service
+# Import normal map generator for PBR enhancement
+from normal_map_generator import NormalMapGenerator
 
 SAM3D_REPO_PATH = Path(__file__).parent / "sam3d_repo"
 if str(SAM3D_REPO_PATH) not in sys.path:
@@ -450,16 +454,51 @@ class SAM3DService:
                 texture_path = str(Path(output_path).parent / f"{Path(output_path).stem}_texture.png")
                 texture_extraction_service.save_texture_atlas(texture_atlas, texture_path)
                 
+                # Generate normal map from texture atlas for realistic surface detail
+                normal_map_path = str(Path(output_path).parent / f"{Path(output_path).stem}_normal.png")
+                try:
+                    print("Generating normal map from texture...")
+                    # Convert texture to numpy array for processing
+                    texture_np = cv2.imread(texture_path)
+                    if texture_np is not None:
+                        # Generate skin-optimized normal map (blended skin/fabric detail)
+                        normal_map = NormalMapGenerator.skin_normal_map(
+                            texture_np,
+                            pore_strength=0.8,
+                            wrinkle_strength=1.0,
+                            blur_radius=1
+                        )
+                        NormalMapGenerator.save_normal_map(normal_map, normal_map_path)
+                        print(f"Normal map generated: {normal_map_path}")
+                        normal_map_generated = True
+                    else:
+                        normal_map_generated = False
+                        print("Could not read texture for normal map generation")
+                except Exception as e:
+                    normal_map_generated = False
+                    print(f"Normal map generation failed: {e}")
+                
                 # Apply texture to mesh using trimesh
                 # Load texture image for material
                 texture_image = Image.open(texture_path)
                 
-                # Create PBR material with texture
-                material = trimesh.visual.material.PBRMaterial(
-                    baseColorTexture=texture_image,
-                    metallicFactor=0.0,
-                    roughnessFactor=0.8
-                )
+                # Create PBR material with texture (and normal map if generated)
+                pbr_kwargs = {
+                    'baseColorTexture': texture_image,
+                    'metallicFactor': 0.0,
+                    'roughnessFactor': 0.8
+                }
+                
+                # Add normal map if successfully generated
+                if normal_map_generated and Path(normal_map_path).exists():
+                    try:
+                        normal_image = Image.open(normal_map_path)
+                        pbr_kwargs['normalTexture'] = normal_image
+                        print("Normal map added to material")
+                    except Exception as e:
+                        print(f"Could not add normal map to material: {e}")
+                
+                material = trimesh.visual.material.PBRMaterial(**pbr_kwargs)
                 
                 # Create texture visual with UV coordinates
                 # Note: trimesh will handle texture packing when exporting to GLB
@@ -498,7 +537,8 @@ class SAM3DService:
             "focal_length": float(focal_length),
             "cam_t": cam_t.tolist() if isinstance(cam_t, np.ndarray) else list(cam_t),
             "texture_applied": texture_applied,
-            "note": "Generated using Meta SAM 3D Body model" + (" with texture" if texture_applied else "")
+            "normal_map_applied": texture_applied and 'normal_map_generated' in locals() and normal_map_generated,
+            "note": "Generated using Meta SAM 3D Body model" + (" with texture" if texture_applied else "") + (" and normal map" if (texture_applied and 'normal_map_generated' in locals() and normal_map_generated) else "")
         }
         
         return {

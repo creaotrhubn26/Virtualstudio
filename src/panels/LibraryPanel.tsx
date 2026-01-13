@@ -19,11 +19,7 @@ function useLibrary(type: AssetType) {
   const [q, setQ] = React.useState('');
   const [items, setItems] = React.useState<LibraryAsset[]>([]);
   const refresh = React.useCallback(async () => {
-    const list = await searchMergedLibrary(type, q);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0bda4408-a4ac-499d-af8d-1291b9fac2d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LibraryPanel.tsx:16',message:'Library items loaded',data:{type,query:q,count:list.length,items:list.map(i=>({id:i.id,title:i.title,hasModelUrl:!!i.data?.modelUrl,modelUrl:i.data?.modelUrl}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
-    setItems(list);
+    const list = await searchMergedLibrary(type, q);    setItems(list);
   }, [type, q]);
   React.useEffect(() => {
     refresh();

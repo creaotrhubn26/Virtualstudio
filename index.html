@@ -9,9 +9,16 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="VS Planner">
   <title>Virtual Studio - 3D Lysstudio Simulator</title>
+  <link rel="icon" type="image/png" href="/casting-planner-logo.png">
   <link rel="stylesheet" href="/src/styles.css">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Round" rel="stylesheet">
+  <!-- Cinema Fonts: Inter (sans-serif) + Source Serif Pro (serif headings) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+Pro:wght@400;600;700&display=swap" rel="stylesheet">
   <script>
     // Service worker disabled for development debugging
     // Unregister any existing service workers
@@ -230,6 +237,42 @@
           <option value="zebra">Zebra</option>
           <option value="falsecolor">False Color</option>
         </select>
+      </div>
+      <!-- Histogram Style Options (visible when histogram mode is selected) -->
+      <div id="histogramStylePanel" class="histogram-style-panel">
+        <div class="histogram-style-buttons">
+          <button id="histStyleOverlay" class="hist-style-btn active" title="Overlay RGB + Luma">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="8" cy="12" r="6" opacity="0.5"/><circle cx="16" cy="12" r="6" opacity="0.5"/>
+            </svg>
+          </button>
+          <button id="histStyleLuma" class="hist-style-btn" title="Luminance Only">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 20 L12 4 L22 20 Z"/>
+            </svg>
+          </button>
+          <button id="histStyleRGBParade" class="hist-style-btn" title="RGB Parade">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="1" y="6" width="6" height="12" fill="#f55" opacity="0.7"/>
+              <rect x="9" y="8" width="6" height="10" fill="#5f5" opacity="0.7"/>
+              <rect x="17" y="10" width="6" height="8" fill="#55f" opacity="0.7"/>
+            </svg>
+          </button>
+          <button id="histStyleParade" class="hist-style-btn" title="Parade (Luma + RGB)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="2" width="20" height="8" fill="#aaa" opacity="0.5"/>
+              <rect x="2" y="12" width="20" height="10" fill="#88f" opacity="0.5"/>
+            </svg>
+          </button>
+        </div>
+        <div class="histogram-options">
+          <label class="hist-option" title="Logarithmic scale (cinema style)">
+            <input type="checkbox" id="histLogScale"> Log
+          </label>
+          <label class="hist-option" title="Show exposure stats">
+            <input type="checkbox" id="histShowStats" checked> Stats
+          </label>
+        </div>
       </div>
       <div class="scope-dropdown-content">
         <canvas id="scopeCanvasDropdown" width="400" height="180"></canvas>
@@ -474,11 +517,20 @@
       <main class="viewport-container" id="main-viewport" role="main" aria-label="3D Viewport">
         <!-- Camera Controls Panel -->
         <div id="cameraControlsPanel" style="display:none;position:absolute;top:60px;right:16px;width:550px;z-index:999;background:rgba(15,20,28,0.6);border:2px solid rgba(0,212,255,0.25);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.4);overflow:visible;max-height:calc(100vh - 180px);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);opacity:0.75;transition:opacity 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, width 0.2s ease;" onmouseenter="this.style.opacity='0.95';this.style.borderColor='rgba(0,212,255,0.5)';this.style.boxShadow='0 12px 40px rgba(0,212,255,0.15)';" onmouseleave="this.style.opacity='0.75';this.style.borderColor='rgba(0,212,255,0.25)';this.style.boxShadow='0 8px 32px rgba(0,0,0,0.4)'">
-          <!-- Info Dialog Container - Outside scrollable area -->
+          <!-- Info Dialog Container - Draggable, Outside scrollable area -->
           <div id="cameraInfoDialog" class="camera-info-dialog">
-            <div class="camera-info-dialog-content">
+            <div class="camera-info-dialog-header" id="cameraInfoDialogHeader">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="camera-info-dialog-drag-handle">
+                  <div style="display: flex; gap: 3px;"><span></span><span></span></div>
+                  <div style="display: flex; gap: 3px;"><span></span><span></span></div>
+                  <div style="display: flex; gap: 3px;"><span></span><span></span></div>
+                </div>
+                <h3 class="camera-info-dialog-title" id="cameraInfoDialogTitle" style="margin: 0;">Blender</h3>
+              </div>
               <button class="camera-info-dialog-close" id="cameraInfoDialogClose">×</button>
-              <h3 class="camera-info-dialog-title" id="cameraInfoDialogTitle">Blender</h3>
+            </div>
+            <div class="camera-info-dialog-content">
               <p class="camera-info-dialog-text" id="cameraInfoDialogText"></p>
             </div>
           </div>
@@ -1295,35 +1347,49 @@
              role="dialog"
              aria-modal="false"
              aria-labelledby="overlayPanelTitle"
-             style="display:none;height:420px;max-height:420px;overflow:hidden;">
+             style="display:none;height:420px;max-height:calc(100vh - 100px);overflow:hidden;">
+          <!-- Resize handles for all edges and corners -->
+          <div class="resize-handle resize-n" data-resize="n"></div>
+          <div class="resize-handle resize-s" data-resize="s"></div>
+          <div class="resize-handle resize-e" data-resize="e"></div>
+          <div class="resize-handle resize-w" data-resize="w"></div>
+          <div class="resize-handle resize-ne" data-resize="ne"></div>
+          <div class="resize-handle resize-nw" data-resize="nw"></div>
+          <div class="resize-handle resize-se" data-resize="se"></div>
+          <div class="resize-handle resize-sw" data-resize="sw"></div>
+          
           <div id="overlayPanelHeader" class="overlay-settings-header" style="flex-shrink:0;">
             <div class="overlay-settings-title-group">
               <div class="drag-handle" aria-hidden="true" title="Dra for å flytte">
                 <span></span><span></span><span></span><span></span><span></span><span></span>
               </div>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                <path d="M3 9h18M9 21V9"/>
-              </svg>
+              <span class="material-icons-outlined" style="color:#00d4ff;font-size:20px;">layers</span>
               <h2 id="overlayPanelTitle" class="overlay-settings-title">Overlay-innstillinger</h2>
             </div>
             <button id="overlayPanelClose"
                     type="button"
                     class="overlay-settings-close"
                     aria-label="Lukk overlay-innstillinger">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
+              <span class="material-icons" style="font-size:20px;">close</span>
             </button>
           </div>
-          <div id="overlayPanelContent" class="overlay-settings-content" style="overflow-y:scroll !important;height:360px;max-height:360px;">
-            <!-- Fokus Section -->
-            <div class="overlay-section">
-              <div class="overlay-section-header">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-                <span>Fokus</span>
+          <div id="overlayPanelContent" class="overlay-settings-content" style="overflow-y:auto !important;flex:1;min-height:0;">
+            
+            <!-- ========== KAMERA & FOKUS GRUPPE ========== -->
+            <div class="overlay-section-group">
+              <div class="overlay-section-group-header">
+                <span class="material-icons-outlined">videocam</span>
+                Kamera & Fokus
               </div>
-              <div class="overlay-section-content">
+              <div class="overlay-section-group-content">
+              
+              <!-- Fokus Section -->
+              <div class="overlay-section">
+                <div class="overlay-section-header">
+                  <span class="material-icons-outlined" style="font-size:18px;">center_focus_strong</span>
+                  <span>Fokus</span>
+                </div>
+                <div class="overlay-section-content">
                 <div class="overlay-radio-group" id="overlayFocusMode">
                   <label class="overlay-radio"><input type="radio" name="focusMode" value="none" checked><span>Av</span></label>
                   <label class="overlay-radio"><input type="radio" name="focusMode" value="single"><span>Enkeltpunkt</span></label>
@@ -1341,11 +1407,7 @@
             <!-- Autofokus Section -->
             <div class="overlay-section">
               <div class="overlay-section-header">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="3"/>
-                  <circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/>
-                  <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
-                </svg>
+                <span class="material-icons-outlined" style="font-size:18px;">visibility</span>
                 <span>Autofokus (Øye-AF)</span>
                 <span id="afModeIndicator" class="af-mode-indicator af-mode-mf">MF</span>
               </div>
@@ -1402,13 +1464,11 @@
                 </div>
               </div>
             </div>
-            <!-- Focus Peaking Section -->
+            <!-- Focus Peaking Section - Professional Camera Style -->
             <div class="overlay-section">
               <div class="overlay-section-header">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M2 12l5-5v3h10V7l5 5-5 5v-3H7v3z"/>
-                </svg>
-                <span>Focus Peaking</span>
+                <span class="material-icons-outlined" style="font-size:18px;">blur_on</span>
+                <span>Focus Peaking Pro</span>
                 <span id="focusPeakingIndicator" class="focus-peaking-indicator" style="display: none; color: red; font-size: 10px; padding: 2px 6px; background: rgba(255,0,0,0.2); border-radius: 3px;">PEAK</span>
               </div>
               <div class="overlay-section-content">
@@ -1417,7 +1477,30 @@
                   <span class="toggle-slider"></span>
                   <span class="toggle-label">Aktiver Focus Peaking</span>
                 </label>
+                
                 <div class="peaking-controls" style="margin-top: 12px;">
+                  <!-- Camera Mode Selection -->
+                  <div class="peaking-control-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="color: rgba(255,255,255,0.7); font-size: 11px;">Kameramodus:</span>
+                    <select id="focusPeakingMode" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px;">
+                      <option value="standard">Standard</option>
+                      <option value="sony">Sony Alpha</option>
+                      <option value="red">RED DSMC2</option>
+                      <option value="blackmagic">Blackmagic</option>
+                    </select>
+                  </div>
+                  
+                  <!-- RED Style Level Selection -->
+                  <div class="peaking-control-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="color: rgba(255,255,255,0.7); font-size: 11px;">Sensitivitet:</span>
+                    <div style="display: flex; gap: 4px;">
+                      <button id="peakingLevelLow" class="peaking-level-btn" data-level="low" style="padding: 3px 8px; font-size: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.6); border-radius: 3px; cursor: pointer;">LOW</button>
+                      <button id="peakingLevelMid" class="peaking-level-btn active" data-level="mid" style="padding: 3px 8px; font-size: 10px; background: rgba(255,100,100,0.3); border: 1px solid rgba(255,100,100,0.5); color: #fff; border-radius: 3px; cursor: pointer;">MID</button>
+                      <button id="peakingLevelHigh" class="peaking-level-btn" data-level="high" style="padding: 3px 8px; font-size: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.6); border-radius: 3px; cursor: pointer;">HIGH</button>
+                    </div>
+                  </div>
+                  
+                  <!-- Color Selection -->
                   <div class="peaking-control-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <span style="color: rgba(255,255,255,0.7); font-size: 11px;">Farge:</span>
                     <select id="focusPeakingColor" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px;">
@@ -1425,9 +1508,24 @@
                       <option value="green">Grønn</option>
                       <option value="blue">Blå</option>
                       <option value="yellow">Gul</option>
+                      <option value="cyan">Cyan</option>
+                      <option value="magenta">Magenta</option>
                       <option value="white">Hvit</option>
                     </select>
                   </div>
+                  
+                  <!-- Line Width -->
+                  <div class="peaking-control-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="color: rgba(255,255,255,0.7); font-size: 11px;">Linjetykkelse:</span>
+                    <select id="focusPeakingLineWidth" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px;">
+                      <option value="1">1px (Fin)</option>
+                      <option value="2">2px (Normal)</option>
+                      <option value="3">3px (Tykk)</option>
+                      <option value="4">4px (Ekstra tykk)</option>
+                    </select>
+                  </div>
+                  
+                  <!-- Intensity Slider -->
                   <div class="peaking-control-row" style="margin-bottom: 8px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                       <span style="color: rgba(255,255,255,0.7); font-size: 11px;">Intensitet:</span>
@@ -1435,75 +1533,496 @@
                     </div>
                     <input type="range" id="focusPeakingIntensity" min="0" max="1" step="0.05" value="0.8" style="width: 100%; margin-top: 4px;">
                   </div>
+                  
+                  <!-- Threshold Slider -->
                   <div class="peaking-control-row" style="margin-bottom: 8px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                       <span style="color: rgba(255,255,255,0.7); font-size: 11px;">Terskel:</span>
                       <span id="focusPeakingThresholdValue" style="color: rgba(255,255,255,0.5); font-size: 10px;">30%</span>
                     </div>
-                    <input type="range" id="focusPeakingThreshold" min="0.1" max="1" step="0.05" value="0.3" style="width: 100%; margin-top: 4px;">
+                    <input type="range" id="focusPeakingThreshold" min="0.05" max="1" step="0.05" value="0.3" style="width: 100%; margin-top: 4px;">
                   </div>
-                  <label class="overlay-toggle-switch" style="margin-top: 8px;">
-                    <input type="checkbox" id="focusPeakingDepthAware" checked>
-                    <span class="toggle-slider"></span>
-                    <span class="toggle-label">Dybdebevisst (kun i fokusområde)</span>
-                  </label>
+                  
+                  <!-- Advanced Toggles -->
+                  <div style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.15); border-radius: 4px;">
+                    <div style="font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Avanserte innstillinger</div>
+                    
+                    <label class="overlay-toggle-switch" style="margin-bottom: 6px;">
+                      <input type="checkbox" id="focusPeakingDepthAware" checked>
+                      <span class="toggle-slider"></span>
+                      <span class="toggle-label">Dybdebevisst (Blackmagic)</span>
+                    </label>
+                    
+                    <label class="overlay-toggle-switch" style="margin-bottom: 6px;">
+                      <input type="checkbox" id="focusPeakingMultiScale" checked>
+                      <span class="toggle-slider"></span>
+                      <span class="toggle-label">Multi-skala deteksjon</span>
+                    </label>
+                    
+                    <label class="overlay-toggle-switch" style="margin-bottom: 6px;">
+                      <input type="checkbox" id="focusPeakingAdaptive">
+                      <span class="toggle-slider"></span>
+                      <span class="toggle-label">Adaptiv terskel</span>
+                    </label>
+                    
+                    <label class="overlay-toggle-switch">
+                      <input type="checkbox" id="focusPeakingStrictFocus">
+                      <span class="toggle-slider"></span>
+                      <span class="toggle-label">Kun i fokusplanet</span>
+                    </label>
+                  </div>
+                  
+                  <!-- Info Box -->
                   <div style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 10px; color: rgba(255,255,255,0.5);">
-                    Focus Peaking markerer skarpe kanter med farget overlay. Fungerer best med lavere blenderåpning (f/2.8-f/5.6).
+                    <strong style="color: rgba(255,255,255,0.7);">Profesjonell Focus Peaking</strong><br>
+                    Basert på Sony Alpha (Scharr), RED DSMC2 (Multi-level), og Blackmagic (Depth-aware) teknikker.
                   </div>
                 </div>
               </div>
             </div>
-            <!-- Komposisjon Section -->
-            <div class="overlay-section">
-              <div class="overlay-section-header">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-                <span>Komposisjon</span>
+            </div><!-- content -->
+            </div><!-- END Kamera & Fokus Gruppe -->
+            
+            <!-- ========== KOMPOSISJON GRUPPE ========== -->
+            <div class="overlay-section-group">
+              <div class="overlay-section-group-header">
+                <span class="material-icons-outlined">photo_camera</span>
+                Komposisjon & Framing
               </div>
-              <div class="overlay-section-content">
-                <div class="overlay-checkbox-grid" id="overlayComposition">
-                  <label class="overlay-checkbox"><input type="radio" name="composition" value="none" checked><span>Ingen</span></label>
-                  <label class="overlay-checkbox"><input type="radio" name="composition" value="thirds"><span>Tredjedeler</span></label>
-                  <label class="overlay-checkbox"><input type="radio" name="composition" value="golden"><span>Gyllent snitt</span></label>
-                  <label class="overlay-checkbox"><input type="radio" name="composition" value="spiral"><span>Fibonacci</span></label>
-                  <label class="overlay-checkbox"><input type="radio" name="composition" value="diagonal"><span>Diagonaler</span></label>
-                  <label class="overlay-checkbox"><input type="radio" name="composition" value="center"><span>Senterkryss</span></label>
-                  <label class="overlay-checkbox"><input type="radio" name="composition" value="triangle"><span>Gyllen trekant</span></label>
-                  <label class="overlay-checkbox"><input type="radio" name="composition" value="dynamic"><span>Dynamisk</span></label>
+              <div class="overlay-section-group-content">
+              
+              <!-- Komposisjon Section - Professional Camera Style -->
+              <div class="overlay-section">
+                <div class="overlay-section-header">
+                  <span class="material-icons-outlined" style="font-size:18px;">grid_on</span>
+                  <span>Komposisjonsguider</span>
+                  <span id="compositionIndicator" class="composition-indicator" style="display: none; font-size: 10px; padding: 2px 6px; background: rgba(0,255,136,0.2); border-radius: 3px; color: #00ff88;">AKTIV</span>
+                </div>
+                <div class="overlay-section-content">
+                  <!-- Primary composition guides -->
+                  <div class="composition-guide-grid" id="overlayComposition">
+                    <label class="composition-guide-option" data-guide="none">
+                      <input type="radio" name="composition" value="none" checked>
+                      <div class="guide-preview">
+                        <svg viewBox="0 0 40 30"><rect x="1" y="1" width="38" height="28" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3"/></svg>
+                      </div>
+                      <span>Av</span>
+                    </label>
+                    <label class="composition-guide-option" data-guide="thirds">
+                    <input type="radio" name="composition" value="thirds">
+                    <div class="guide-preview">
+                      <svg viewBox="0 0 40 30">
+                        <line x1="13.3" y1="0" x2="13.3" y2="30" stroke="currentColor" stroke-width="1"/>
+                        <line x1="26.6" y1="0" x2="26.6" y2="30" stroke="currentColor" stroke-width="1"/>
+                        <line x1="0" y1="10" x2="40" y2="10" stroke="currentColor" stroke-width="1"/>
+                        <line x1="0" y1="20" x2="40" y2="20" stroke="currentColor" stroke-width="1"/>
+                        <circle cx="13.3" cy="10" r="2" fill="currentColor"/>
+                        <circle cx="26.6" cy="10" r="2" fill="currentColor"/>
+                        <circle cx="13.3" cy="20" r="2" fill="currentColor"/>
+                        <circle cx="26.6" cy="20" r="2" fill="currentColor"/>
+                      </svg>
+                    </div>
+                    <span>Tredjedeler</span>
+                  </label>
+                  <label class="composition-guide-option" data-guide="golden">
+                    <input type="radio" name="composition" value="golden">
+                    <div class="guide-preview">
+                      <svg viewBox="0 0 40 30">
+                        <line x1="15.3" y1="0" x2="15.3" y2="30" stroke="currentColor" stroke-width="1"/>
+                        <line x1="24.7" y1="0" x2="24.7" y2="30" stroke="currentColor" stroke-width="1"/>
+                        <line x1="0" y1="11.5" x2="40" y2="11.5" stroke="currentColor" stroke-width="1"/>
+                        <line x1="0" y1="18.5" x2="40" y2="18.5" stroke="currentColor" stroke-width="1"/>
+                        <circle cx="15.3" cy="11.5" r="2" fill="currentColor"/>
+                        <circle cx="24.7" cy="18.5" r="2" fill="currentColor"/>
+                        <text x="2" y="8" fill="currentColor" font-size="5">φ</text>
+                      </svg>
+                    </div>
+                    <span>Gyllent snitt</span>
+                  </label>
+                  <label class="composition-guide-option" data-guide="diagonal">
+                    <input type="radio" name="composition" value="diagonal">
+                    <div class="guide-preview">
+                      <svg viewBox="0 0 40 30">
+                        <line x1="0" y1="0" x2="40" y2="30" stroke="currentColor" stroke-width="1"/>
+                        <line x1="40" y1="0" x2="0" y2="30" stroke="currentColor" stroke-width="1"/>
+                        <line x1="0" y1="0" x2="20" y2="30" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+                        <line x1="20" y1="0" x2="40" y2="30" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+                      </svg>
+                    </div>
+                    <span>Diagonaler</span>
+                  </label>
+                  <label class="composition-guide-option" data-guide="center">
+                    <input type="radio" name="composition" value="center">
+                    <div class="guide-preview">
+                      <svg viewBox="0 0 40 30">
+                        <line x1="20" y1="0" x2="20" y2="30" stroke="currentColor" stroke-width="1" stroke-dasharray="2,2"/>
+                        <line x1="0" y1="15" x2="40" y2="15" stroke="currentColor" stroke-width="1" stroke-dasharray="2,2"/>
+                        <circle cx="20" cy="15" r="5" fill="none" stroke="currentColor" stroke-width="1"/>
+                        <circle cx="20" cy="15" r="2" fill="currentColor"/>
+                      </svg>
+                    </div>
+                    <span>Senterkryss</span>
+                  </label>
+                  <label class="composition-guide-option" data-guide="triangle">
+                    <input type="radio" name="composition" value="triangle">
+                    <div class="guide-preview">
+                      <svg viewBox="0 0 40 30">
+                        <line x1="0" y1="30" x2="40" y2="0" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="0" y1="0" x2="20" y2="15" stroke="currentColor" stroke-width="1"/>
+                        <line x1="40" y1="30" x2="20" y2="15" stroke="currentColor" stroke-width="1"/>
+                        <circle cx="20" cy="15" r="2" fill="currentColor"/>
+                      </svg>
+                    </div>
+                    <span>Gyllen trekant</span>
+                  </label>
+                  <label class="composition-guide-option" data-guide="dynamic">
+                    <input type="radio" name="composition" value="dynamic">
+                    <div class="guide-preview">
+                      <svg viewBox="0 0 40 30">
+                        <line x1="0" y1="0" x2="40" y2="30" stroke="currentColor" stroke-width="1"/>
+                        <line x1="40" y1="0" x2="0" y2="30" stroke="currentColor" stroke-width="1"/>
+                        <line x1="0" y1="0" x2="28" y2="30" stroke="currentColor" stroke-width="0.5" opacity="0.6"/>
+                        <line x1="12" y1="0" x2="40" y2="30" stroke="currentColor" stroke-width="0.5" opacity="0.6"/>
+                      </svg>
+                    </div>
+                    <span>Dynamisk</span>
+                  </label>
+                  <label class="composition-guide-option" data-guide="headshot">
+                    <input type="radio" name="composition" value="headshot">
+                    <div class="guide-preview">
+                      <svg viewBox="0 0 40 30">
+                        <!-- Head outline -->
+                        <ellipse cx="20" cy="12" rx="7" ry="9" fill="none" stroke="currentColor" stroke-width="1"/>
+                        <!-- Eye line -->
+                        <line x1="8" y1="10" x2="32" y2="10" stroke="currentColor" stroke-width="1" stroke-dasharray="2,1"/>
+                        <!-- Shoulder line -->
+                        <path d="M 6 30 Q 10 22, 20 22 Q 30 22, 34 30" fill="none" stroke="currentColor" stroke-width="1"/>
+                        <!-- Center line -->
+                        <line x1="20" y1="2" x2="20" y2="22" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+                        <!-- Eye markers -->
+                        <circle cx="16" cy="10" r="1.5" fill="currentColor"/>
+                        <circle cx="24" cy="10" r="1.5" fill="currentColor"/>
+                      </svg>
+                    </div>
+                    <span>Portrett</span>
+                  </label>
+                </div>
+                
+                <!-- Advanced composition options -->
+                <div class="composition-advanced-options" style="margin-top: 12px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+                  <div style="font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Innstillinger</div>
+                  
+                  <!-- Guide Color -->
+                  <div class="composition-control-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="color: rgba(255,255,255,0.7); font-size: 11px;">Guide-farge:</span>
+                    <div style="display: flex; gap: 4px;">
+                      <button class="comp-color-btn active" data-color="#00ff88" style="width: 20px; height: 20px; border-radius: 4px; background: #00ff88; border: 2px solid rgba(255,255,255,0.3); cursor: pointer;"></button>
+                      <button class="comp-color-btn" data-color="#ff6b6b" style="width: 20px; height: 20px; border-radius: 4px; background: #ff6b6b; border: 2px solid transparent; cursor: pointer;"></button>
+                      <button class="comp-color-btn" data-color="#00d4ff" style="width: 20px; height: 20px; border-radius: 4px; background: #00d4ff; border: 2px solid transparent; cursor: pointer;"></button>
+                      <button class="comp-color-btn" data-color="#ffcc00" style="width: 20px; height: 20px; border-radius: 4px; background: #ffcc00; border: 2px solid transparent; cursor: pointer;"></button>
+                      <button class="comp-color-btn" data-color="#ffffff" style="width: 20px; height: 20px; border-radius: 4px; background: #ffffff; border: 2px solid transparent; cursor: pointer;"></button>
+                    </div>
+                  </div>
+                  
+                  <!-- Opacity -->
+                  <div class="composition-control-row" style="margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="color: rgba(255,255,255,0.7); font-size: 11px;">Synlighet:</span>
+                      <span id="compositionOpacityValue" style="color: rgba(255,255,255,0.5); font-size: 10px;">70%</span>
+                    </div>
+                    <input type="range" id="compositionOpacity" min="20" max="100" step="5" value="70" style="width: 100%; margin-top: 4px;">
+                  </div>
+                  
+                  <!-- Line Thickness -->
+                  <div class="composition-control-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="color: rgba(255,255,255,0.7); font-size: 11px;">Linjetykkelse:</span>
+                    <select id="compositionLineWidth" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 3px 6px; border-radius: 4px; font-size: 10px;">
+                      <option value="1">Tynn</option>
+                      <option value="2" selected>Normal</option>
+                      <option value="3">Tykk</option>
+                    </select>
+                  </div>
+                  
+                  <!-- Toggles -->
+                  <label class="overlay-toggle-switch" style="margin-bottom: 6px;">
+                    <input type="checkbox" id="compositionAnimatedPoints" checked>
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">Animerte kraftpunkter</span>
+                  </label>
+                  
+                  <label class="overlay-toggle-switch" style="margin-bottom: 6px;">
+                    <input type="checkbox" id="compositionShowScore">
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">Vis komposisjons-score</span>
+                  </label>
+                  
+                  <label class="overlay-toggle-switch">
+                    <input type="checkbox" id="compositionGlowEffect" checked>
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">Glødeeffekt</span>
+                  </label>
+                </div>
+                
+                <!-- Quick presets -->
+                <div class="composition-presets" style="margin-top: 10px;">
+                  <div style="font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Hurtig-valg</div>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button class="comp-preset-btn" data-preset="portrait" style="padding: 4px 8px; font-size: 10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px;"><span class="material-icons-outlined" style="font-size:14px;">face</span> Portrett</button>
+                    <button class="comp-preset-btn" data-preset="landscape" style="padding: 4px 8px; font-size: 10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px;"><span class="material-icons-outlined" style="font-size:14px;">landscape</span> Landskap</button>
+                    <button class="comp-preset-btn" data-preset="product" style="padding: 4px 8px; font-size: 10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px;"><span class="material-icons-outlined" style="font-size:14px;">inventory_2</span> Produkt</button>
+                    <button class="comp-preset-btn" data-preset="cinematic" style="padding: 4px 8px; font-size: 10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px;"><span class="material-icons-outlined" style="font-size:14px;">movie</span> Film</button>
+                  </div>
                 </div>
               </div>
             </div>
-            <!-- Trygg sone Section -->
-            <div class="overlay-section">
-              <div class="overlay-section-header">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><rect x="5" y="5" width="14" height="14" rx="1" stroke-dasharray="3 2"/></svg>
-                <span>Trygg sone</span>
+            </div><!-- content -->
+            </div><!-- END Komposisjon & Framing Gruppe -->
+            
+            <!-- ========== BROADCAST & SAFE ZONES GRUPPE ========== -->
+            <div class="overlay-section-group">
+              <div class="overlay-section-group-header">
+                <span class="material-icons-outlined">tv</span>
+                Broadcast & Soner
               </div>
-              <div class="overlay-section-content">
-                <div class="overlay-checkbox-list" id="overlaySafeArea">
+              <div class="overlay-section-group-content">
+              
+              <!-- Trygg sone Section - Enhanced Professional Safe Area -->
+              <div class="overlay-section safe-zone-section">
+                <div class="overlay-section-header">
+                  <span class="material-icons-outlined" style="font-size:18px;">crop_free</span>
+                  <span>Trygg sone</span>
+                </div>
+                <div class="overlay-section-content">
+                  <!-- Visual Safe Zone Grid Selector -->
+                  <div class="safe-zone-grid-selector" id="safeZoneGridSelector">
+                    <button class="safe-zone-grid-item active" data-zone="none" title="Ingen trygg sone">
+                      <div class="safe-zone-preview">
+                        <svg viewBox="0 0 48 36" width="48" height="36">
+                          <rect x="1" y="1" width="46" height="34" fill="rgba(30,30,40,0.9)" stroke="rgba(80,80,100,0.4)" stroke-width="1" rx="2"/>
+                          <line x1="12" y1="18" x2="36" y2="18" stroke="rgba(100,100,120,0.4)" stroke-width="1.5"/>
+                          <circle cx="24" cy="18" r="3" fill="rgba(100,100,120,0.4)"/>
+                        </svg>
+                      </div>
+                      <span>Ingen</span>
+                    </button>
+                    <button class="safe-zone-grid-item" data-zone="action" title="Action Safe (90%)">
+                      <div class="safe-zone-preview">
+                        <svg viewBox="0 0 48 36" width="48" height="36">
+                          <rect x="1" y="1" width="46" height="34" fill="rgba(30,30,40,0.9)" stroke="rgba(80,80,100,0.4)" stroke-width="1" rx="2"/>
+                          <rect x="4" y="3" width="40" height="30" fill="none" stroke="#ffc800" stroke-width="1.5" stroke-dasharray="3,2" rx="1"/>
+                          <circle cx="4" cy="3" r="2" fill="#ffc800"/>
+                          <circle cx="44" cy="3" r="2" fill="#ffc800"/>
+                          <circle cx="4" cy="33" r="2" fill="#ffc800"/>
+                          <circle cx="44" cy="33" r="2" fill="#ffc800"/>
+                        </svg>
+                      </div>
+                      <span>Action (90%)</span>
+                    </button>
+                    <button class="safe-zone-grid-item" data-zone="title" title="Title Safe (80%)">
+                      <div class="safe-zone-preview">
+                        <svg viewBox="0 0 48 36" width="48" height="36">
+                          <rect x="1" y="1" width="46" height="34" fill="rgba(30,30,40,0.9)" stroke="rgba(80,80,100,0.4)" stroke-width="1" rx="2"/>
+                          <rect x="7" y="5" width="34" height="26" fill="none" stroke="#00c8ff" stroke-width="1.5" stroke-dasharray="2,2" rx="1"/>
+                          <text x="24" y="20" fill="#00c8ff" font-size="6" text-anchor="middle" font-weight="bold">Aa</text>
+                        </svg>
+                      </div>
+                    <span>Title (80%)</span>
+                  </button>
+                  <button class="safe-zone-grid-item" data-zone="both" title="Begge soner">
+                    <div class="safe-zone-preview">
+                      <svg viewBox="0 0 48 36" width="48" height="36">
+                        <rect x="1" y="1" width="46" height="34" fill="rgba(30,30,40,0.9)" stroke="rgba(80,80,100,0.4)" stroke-width="1" rx="2"/>
+                        <rect x="4" y="3" width="40" height="30" fill="none" stroke="#ffc800" stroke-width="1" stroke-dasharray="3,2" rx="1"/>
+                        <rect x="7" y="5" width="34" height="26" fill="none" stroke="#00c8ff" stroke-width="1" stroke-dasharray="2,2" rx="1"/>
+                      </svg>
+                    </div>
+                    <span>Begge</span>
+                  </button>
+                  <button class="safe-zone-grid-item" data-zone="broadcast" title="Broadcast Safe (EBU R95)">
+                    <div class="safe-zone-preview">
+                      <svg viewBox="0 0 48 36" width="48" height="36">
+                        <rect x="1" y="1" width="46" height="34" fill="rgba(30,30,40,0.9)" stroke="rgba(80,80,100,0.4)" stroke-width="1" rx="2"/>
+                        <rect x="3" y="2" width="42" height="32" fill="none" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="4,2" rx="1"/>
+                        <text x="24" y="20" fill="#ff6b35" font-size="5" text-anchor="middle">EBU</text>
+                      </svg>
+                    </div>
+                    <span>Broadcast</span>
+                  </button>
+                  <button class="safe-zone-grid-item" data-zone="social" title="Social Media Safe (1:1)">
+                    <div class="safe-zone-preview">
+                      <svg viewBox="0 0 48 36" width="48" height="36">
+                        <rect x="1" y="1" width="46" height="34" fill="rgba(30,30,40,0.9)" stroke="rgba(80,80,100,0.4)" stroke-width="1" rx="2"/>
+                        <rect x="12" y="3" width="24" height="30" fill="none" stroke="#e040fb" stroke-width="1.5" stroke-dasharray="2,2" rx="1"/>
+                        <circle cx="24" cy="18" r="5" fill="none" stroke="#e040fb" stroke-width="1"/>
+                      </svg>
+                    </div>
+                    <span>Social</span>
+                  </button>
+                  <button class="safe-zone-grid-item" data-zone="cinema" title="Cinemascope 2.39:1">
+                    <div class="safe-zone-preview">
+                      <svg viewBox="0 0 48 36" width="48" height="36">
+                        <rect x="1" y="1" width="46" height="34" fill="rgba(30,30,40,0.9)" stroke="rgba(80,80,100,0.4)" stroke-width="1" rx="2"/>
+                        <rect x="1" y="1" width="46" height="6" fill="rgba(0,0,0,0.9)"/>
+                        <rect x="1" y="29" width="46" height="6" fill="rgba(0,0,0,0.9)"/>
+                        <rect x="3" y="8" width="42" height="20" fill="none" stroke="#00e676" stroke-width="1.5" rx="1"/>
+                        <text x="24" y="19" fill="#00e676" font-size="5" text-anchor="middle">2.39:1</text>
+                      </svg>
+                    </div>
+                    <span>Cinema</span>
+                  </button>
+                  <button class="safe-zone-grid-item" data-zone="custom" title="Egendefinert">
+                    <div class="safe-zone-preview">
+                      <svg viewBox="0 0 48 36" width="48" height="36">
+                        <rect x="1" y="1" width="46" height="34" fill="rgba(30,30,40,0.9)" stroke="rgba(80,80,100,0.4)" stroke-width="1" rx="2"/>
+                        <rect x="6" y="4" width="36" height="28" fill="none" stroke="#888" stroke-width="1" stroke-dasharray="2,2" rx="1"/>
+                        <path d="M22 16 L26 16 L26 20 L22 20 Z" fill="none" stroke="#aaa" stroke-width="1"/>
+                        <line x1="24" y1="14" x2="24" y2="22" stroke="#aaa" stroke-width="1"/>
+                        <line x1="20" y1="18" x2="28" y2="18" stroke="#aaa" stroke-width="1"/>
+                      </svg>
+                    </div>
+                    <span>Egendefinert</span>
+                  </button>
+                </div>
+
+                <!-- Safe Zone Settings Accordion -->
+                <div class="safe-zone-settings-container" id="safeZoneSettingsContainer">
+                  <!-- Zone Color Settings -->
+                  <div class="safe-zone-color-row">
+                    <div class="safe-zone-color-group">
+                      <label>Action farge</label>
+                      <div class="color-picker-wrapper">
+                        <input type="color" id="actionZoneColor" value="#ffc800" class="safe-zone-color-picker">
+                        <span class="color-hex-value">#ffc800</span>
+                      </div>
+                    </div>
+                    <div class="safe-zone-color-group">
+                      <label>Title farge</label>
+                      <div class="color-picker-wrapper">
+                        <input type="color" id="titleZoneColor" value="#00c8ff" class="safe-zone-color-picker">
+                        <span class="color-hex-value">#00c8ff</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Opacity Control -->
+                  <div class="safe-zone-slider-row">
+                    <label>
+                      <span>Linjetykkelse</span>
+                      <span class="slider-value" id="zoneLineWidthValue">2px</span>
+                    </label>
+                    <input type="range" id="zoneLineWidth" min="1" max="5" value="2" step="0.5" class="safe-zone-slider">
+                  </div>
+
+                  <div class="safe-zone-slider-row">
+                    <label>
+                      <span>Gjennomsiktighet</span>
+                      <span class="slider-value" id="zoneOpacityValue">70%</span>
+                    </label>
+                    <input type="range" id="zoneOpacity" min="20" max="100" value="70" class="safe-zone-slider">
+                  </div>
+
+                  <!-- Custom Margins (only for custom mode) -->
+                  <div class="safe-zone-custom-margins" id="customMarginsSection" style="display:none;">
+                    <div class="margin-control-row">
+                      <label>Action margin (%)</label>
+                      <input type="number" id="customActionMargin" min="1" max="20" value="5" class="margin-input">
+                    </div>
+                    <div class="margin-control-row">
+                      <label>Title margin (%)</label>
+                      <input type="number" id="customTitleMargin" min="5" max="30" value="10" class="margin-input">
+                    </div>
+                  </div>
+
+                  <!-- Additional Options -->
+                  <div class="safe-zone-options">
+                    <label class="safe-zone-toggle">
+                      <input type="checkbox" id="showCenterMarker" checked>
+                      <span class="toggle-slider"></span>
+                      <span class="toggle-label">Vis senterpunkt</span>
+                    </label>
+                    <label class="safe-zone-toggle">
+                      <input type="checkbox" id="showCornerMarkers" checked>
+                      <span class="toggle-slider"></span>
+                      <span class="toggle-label">Vis hjørnemarkører</span>
+                    </label>
+                    <label class="safe-zone-toggle">
+                      <input type="checkbox" id="showZoneLabels" checked>
+                      <span class="toggle-slider"></span>
+                      <span class="toggle-label">Vis soneetiketter</span>
+                    </label>
+                    <label class="safe-zone-toggle">
+                      <input type="checkbox" id="animateZones">
+                      <span class="toggle-slider"></span>
+                      <span class="toggle-label">Animert puls</span>
+                    </label>
+                  </div>
+
+                  <!-- Aspect Ratio Presets -->
+                  <div class="safe-zone-aspect-presets">
+                    <label>Aspektforhold preset</label>
+                    <div class="aspect-buttons">
+                      <button class="aspect-btn active" data-aspect="16:9" title="HD/4K Video">16:9</button>
+                      <button class="aspect-btn" data-aspect="4:3" title="Standard TV">4:3</button>
+                      <button class="aspect-btn" data-aspect="2.39:1" title="Cinemascope">2.39:1</button>
+                      <button class="aspect-btn" data-aspect="1:1" title="Instagram">1:1</button>
+                      <button class="aspect-btn" data-aspect="9:16" title="TikTok/Reels">9:16</button>
+                      <button class="aspect-btn" data-aspect="4:5" title="Instagram Portrait">4:5</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Legacy checkboxes for compatibility (hidden) -->
+                <div class="overlay-checkbox-list" id="overlaySafeArea" style="display:none;">
                   <label class="overlay-checkbox"><input type="checkbox" name="safeArea" value="action"><span>Action Safe (90%)</span></label>
                   <label class="overlay-checkbox"><input type="checkbox" name="safeArea" value="title"><span>Title Safe (80%)</span></label>
                 </div>
               </div>
             </div>
-            <!-- Hjelp & Guider Section -->
-            <div class="overlay-section">
+            
+            <!-- Rutenett Section (flyttet inn i Broadcast-gruppen) -->
+            <div class="overlay-section overlay-section-rutenett">
               <div class="overlay-section-header">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                <span>Hjelp & Guider</span>
-                <button id="overlayHelpBtn"
-                        type="button"
-                        class="overlay-help-btn"
-                        aria-label="Vis hjelp om overlay-guider">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                </button>
+                <span class="material-icons-outlined" style="font-size:18px;">grid_4x4</span>
+                <span>Rutenett</span>
               </div>
               <div class="overlay-section-content">
-                <div class="overlay-checkbox-grid" id="overlayHelperGuides">
-                  <label class="overlay-checkbox"><input type="radio" name="helperGuide" value="none" checked><span>Ingen</span></label>
-                  <label class="overlay-checkbox"><input type="radio" name="helperGuide" value="colortemp"><span>Fargetemperatur</span></label>
-                  <label class="overlay-checkbox"><input type="radio" name="helperGuide" value="exposure"><span>Eksponering</span></label>
-                  <label class="overlay-checkbox"><input type="radio" name="helperGuide" value="height"><span>Høydereferanser</span></label>
-                  <label class="overlay-checkbox"><input type="radio" name="helperGuide" value="glasses"><span>Brillerefleksjoner</span></label>
+                <label class="overlay-toggle-switch">
+                  <input type="checkbox" id="overlayGridToggle">
+                  <span class="toggle-slider"></span>
+                  <span class="toggle-label">Vis rutenett (Rule of Thirds)</span>
+                </label>
+              </div>
+            </div>
+            </div><!-- content -->
+            </div><!-- END Broadcast & Soner Gruppe -->
+            
+            <!-- ========== VERKTØY & HJELP GRUPPE ========== -->
+            <div class="overlay-section-group">
+              <div class="overlay-section-group-header">
+                <span class="material-icons-outlined">build</span>
+                Verktøy & Hjelp
+              </div>
+              <div class="overlay-section-group-content">
+              
+              <!-- Hjelp & Guider Section -->
+              <div class="overlay-section">
+                <div class="overlay-section-header">
+                  <span class="material-icons-outlined" style="font-size:18px;">help_outline</span>
+                  <span>Hjelp-guider</span>
+                  <button id="overlayHelpBtn"
+                          type="button"
+                          class="overlay-help-btn"
+                          aria-label="Vis hjelp om overlay-guider">
+                    <span class="material-icons-outlined" style="font-size:16px;">info</span>
+                  </button>
+                </div>
+                <div class="overlay-section-content">
+                  <div class="overlay-checkbox-grid" id="overlayHelperGuides">
+                    <label class="overlay-checkbox"><input type="radio" name="helperGuide" value="none" checked><span>Ingen</span></label>
+                    <label class="overlay-checkbox"><input type="radio" name="helperGuide" value="colortemp"><span>Fargetemperatur</span></label>
+                    <label class="overlay-checkbox"><input type="radio" name="helperGuide" value="exposure"><span>Eksponering</span></label>
+                    <label class="overlay-checkbox"><input type="radio" name="helperGuide" value="height"><span>Høydereferanser</span></label>
+                    <label class="overlay-checkbox"><input type="radio" name="helperGuide" value="glasses"><span>Brillerefleksjoner</span></label>
                   <label class="overlay-checkbox"><input type="radio" name="helperGuide" value="classphoto"><span>Klassefoto</span></label>
                   <label class="overlay-checkbox"><input type="radio" name="helperGuide" value="safety"><span>Sikkerhetssoner</span></label>
                   <label class="overlay-checkbox overlay-checkbox-with-help">
@@ -1517,20 +2036,9 @@
                 </div>
               </div>
             </div>
-            <!-- Rutenett Section -->
-            <div class="overlay-section overlay-section-rutenett">
-              <div class="overlay-section-header">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-                <span>Rutenett</span>
-              </div>
-              <div class="overlay-section-content">
-                <label class="overlay-toggle-switch">
-                  <input type="checkbox" id="overlayGridToggle">
-                  <span class="toggle-slider"></span>
-                  <span class="toggle-label">Vis rutenett (Rule of Thirds)</span>
-                </label>
-              </div>
-            </div>
+            </div><!-- content -->
+            </div><!-- END Verktøy & Hjelp Gruppe -->
+            
           </div>
         </div>
         <!-- Monitor Panel -->
@@ -1667,6 +2175,12 @@
         </div>
         <div class="viewport-3d" id="viewport3d">
           <canvas id="renderCanvas" tabindex="0" aria-label="3D scene visning - bruk mus for aa navigere"></canvas>
+          <!-- Virtual Studio Pro Panel Root -->
+          <div id="virtualStudioProRoot" style="position:absolute;inset:0;pointer-events:none;z-index:50;"></div>
+          <!-- Interactive Elements Browser Root -->
+          <div id="interactiveElementsRoot" style="position:absolute;inset:0;pointer-events:none;z-index:51;"></div>
+          <!-- Ambient Sounds Browser Root -->
+          <div id="ambientSoundsRoot" style="position:absolute;inset:0;pointer-events:none;z-index:51;"></div>
           <!-- Render Mode Toggle -->
           <div id="renderModeToggle" class="render-mode-toggle" style="position:absolute;top:12px;right:12px;z-index:100;display:flex;gap:4px;background:rgba(0,0,0,0.7);border-radius:8px;padding:4px;border:1px solid rgba(255,255,255,0.1);">
             <button id="workModeBtn" class="render-mode-btn active" title="Work Mode - Interaktiv, høy FPS" style="padding:6px 12px;border:none;background:rgba(0,212,255,0.3);color:#00d4ff;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all 0.2s;">
@@ -2077,6 +2591,55 @@
                 <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
               </svg>
             </button>
+            <div class="topview-separator"></div>
+            <!-- Pro Features Menu -->
+            <div class="topview-pro-menu-container">
+              <button class="topview-btn topview-pro-btn" id="topviewProMenu" title="Pro-funksjoner">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+                <span class="pro-badge">PRO</span>
+              </button>
+              <div class="topview-pro-dropdown" id="topviewProDropdown">
+                <div class="topview-pro-header">Pro-funksjoner</div>
+                <button class="topview-pro-item" data-panel="collaboration">
+                  <span class="material-icons-outlined">groups</span>
+                  <span>Samarbeid</span>
+                  <span class="pro-item-badge" id="collabBadge"></span>
+                </button>
+                <button class="topview-pro-item" data-panel="xr">
+                  <span class="material-icons-outlined">view_in_ar</span>
+                  <span>VR/AR</span>
+                </button>
+                <button class="topview-pro-item" data-panel="animation">
+                  <span class="material-icons-outlined">animation</span>
+                  <span>Animasjon</span>
+                </button>
+                <button class="topview-pro-item" data-panel="streaming">
+                  <span class="material-icons-outlined">live_tv</span>
+                  <span>Direktestrømming</span>
+                  <span class="pro-item-indicator streaming-indicator" id="streamingIndicator"></span>
+                </button>
+                <button class="topview-pro-item" data-panel="rendering">
+                  <span class="material-icons-outlined">tune</span>
+                  <span>Rendering</span>
+                </button>
+                <button class="topview-pro-item" data-panel="export">
+                  <span class="material-icons-outlined">download</span>
+                  <span>Eksporter</span>
+                </button>
+                <button class="topview-pro-item" data-panel="particles">
+                  <span class="material-icons-outlined">whatshot</span>
+                  <span>Partikkeleffekter</span>
+                  <span class="pro-item-badge" id="particlesBadge"></span>
+                </button>
+                <button class="topview-pro-item" data-panel="audio">
+                  <span class="material-icons-outlined">spatial_audio</span>
+                  <span>Romlig lyd</span>
+                  <span class="pro-item-badge" id="audioBadge"></span>
+                </button>
+              </div>
+            </div>
           </div>
           <canvas id="topViewCanvas"></canvas>
           <div class="scale-info">
@@ -2708,6 +3271,7 @@
   <div id="cinematographyPatternsRoot"></div>
   <div id="lightPatternLibraryRoot"></div>
   <div id="avatarGeneratorRoot"></div>
+  <div id="accessoriesPanelRoot"></div>
     <!-- Marketplace Panel -->
     <div class="actor-bottom-panel" id="marketplacePanel" style="display:none;">
       <div class="panel-resize-handle" id="marketplaceResizeHandle" aria-label="Dra for å endre panelstørrelse"></div>

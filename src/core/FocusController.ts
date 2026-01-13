@@ -552,11 +552,30 @@ export class FocusController {
     const safeAreaOverlay = document.getElementById('safeAreaOverlay');
     const safeAreaBtn = document.querySelector('.vf-btn.safe-area');
     
+    // Get custom settings from window object
+    const settings = (window as any).safeZoneSettings || {
+      actionColor: '#ffc800',
+      titleColor: '#00c8ff',
+      lineWidth: 2,
+      opacity: 70,
+      showCenter: true,
+      showCorners: true,
+      showLabels: true,
+      animated: false,
+      aspectRatio: '16:9',
+      customActionMargin: 5,
+      customTitleMargin: 10,
+      zoneType: mode
+    };
+    
     if (safeAreaOverlay) {
-      safeAreaOverlay.classList.remove('mode-none', 'mode-action', 'mode-title', 'mode-both');
+      safeAreaOverlay.classList.remove('mode-none', 'mode-action', 'mode-title', 'mode-both', 'mode-broadcast', 'mode-social', 'mode-cinema', 'mode-custom', 'animated');
       safeAreaOverlay.classList.add(`mode-${mode}`);
+      if (settings.animated) {
+        safeAreaOverlay.classList.add('animated');
+      }
       safeAreaOverlay.style.display = mode === 'none' ? 'none' : 'block';
-      safeAreaOverlay.innerHTML = mode !== 'none' ? this.getSafeAreaSVG(mode) + this.getSafeAreaFeedbackHTML(mode) : '';
+      safeAreaOverlay.innerHTML = mode !== 'none' ? this.getSafeAreaSVG(mode, settings) + this.getSafeAreaFeedbackHTML(mode) : '';
     }
 
     if (safeAreaBtn) {
@@ -564,7 +583,167 @@ export class FocusController {
     }
   }
 
-  private getSafeAreaSVG(mode: SafeAreaMode): string {
+  private getSafeAreaSVG(mode: SafeAreaMode, settings?: any): string {
+    const s = settings || (window as any).safeZoneSettings || {
+      actionColor: '#ffc800',
+      titleColor: '#00c8ff',
+      lineWidth: 2,
+      opacity: 70,
+      showCenter: true,
+      showCorners: true,
+      showLabels: true,
+      animated: false,
+      aspectRatio: '16:9',
+      customActionMargin: 5,
+      customTitleMargin: 10
+    };
+    
+    const opacityVal = s.opacity / 100;
+    const actionColorRGBA = this.hexToRGBA(s.actionColor, opacityVal);
+    const titleColorRGBA = this.hexToRGBA(s.titleColor, opacityVal);
+    const lineWidth = s.lineWidth || 2;
+    
+    const glowFilter = `
+      <defs>
+        <filter id="safeGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        <filter id="safeGlowStrong" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+    `;
+
+    let svg = `<svg width="100%" height="100%" class="safe-area-svg">${glowFilter}`;
+    
+    // Calculate margins based on mode
+    let actionMargin = 5;
+    let titleMargin = 10;
+    
+    if (mode === 'broadcast') {
+      actionMargin = 3.5;  // EBU R95 standard
+      titleMargin = 5;
+    } else if (mode === 'custom') {
+      actionMargin = s.customActionMargin || 5;
+      titleMargin = s.customTitleMargin || 10;
+    }
+    
+    // Handle special modes
+    if (mode === 'social') {
+      // Social media 1:1 safe zone (vertical content)
+      svg += `
+        <rect x="25%" y="5%" width="50%" height="90%" fill="none" stroke="${this.hexToRGBA('#e040fb', opacityVal)}" stroke-width="${lineWidth}" stroke-dasharray="8,4" filter="url(#safeGlow)"/>
+        ${s.showLabels ? `<text x="50%" y="3%" fill="${this.hexToRGBA('#e040fb', opacityVal)}" font-size="11" text-anchor="middle" opacity="0.9">SOCIAL 1:1</text>` : ''}
+        ${s.showCenter ? `
+          <circle cx="50%" cy="50%" r="8" fill="none" stroke="${this.hexToRGBA('#e040fb', opacityVal)}" stroke-width="1.5" filter="url(#safeGlow)"/>
+          <line x1="48%" y1="50%" x2="52%" y2="50%" stroke="${this.hexToRGBA('#e040fb', opacityVal)}" stroke-width="1.5"/>
+          <line x1="50%" y1="48%" x2="50%" y2="52%" stroke="${this.hexToRGBA('#e040fb', opacityVal)}" stroke-width="1.5"/>
+        ` : ''}
+        <rect x="30%" y="10%" width="40%" height="80%" fill="none" stroke="${this.hexToRGBA('#e040fb', opacityVal * 0.5)}" stroke-width="1" stroke-dasharray="4,4"/>
+      `;
+      svg += '</svg>';
+      return svg;
+    }
+    
+    if (mode === 'cinema') {
+      // Cinemascope 2.39:1 letterbox
+      const letterboxHeight = 12; // ~12% on each side for 2.39:1 from 16:9
+      svg += `
+        <rect x="0" y="0" width="100%" height="${letterboxHeight}%" fill="rgba(0,0,0,0.9)"/>
+        <rect x="0" y="${100 - letterboxHeight}%" width="100%" height="${letterboxHeight}%" fill="rgba(0,0,0,0.9)"/>
+        <rect x="3%" y="${letterboxHeight + 2}%" width="94%" height="${100 - 2*letterboxHeight - 4}%" fill="none" stroke="${this.hexToRGBA('#00e676', opacityVal)}" stroke-width="${lineWidth}" filter="url(#safeGlow)"/>
+        ${s.showLabels ? `<text x="50%" y="${letterboxHeight + 1}%" fill="${this.hexToRGBA('#00e676', opacityVal)}" font-size="11" text-anchor="middle" opacity="0.9">CINEMASCOPE 2.39:1</text>` : ''}
+        ${s.showCenter ? `
+          <circle cx="50%" cy="50%" r="8" fill="none" stroke="${this.hexToRGBA('#00e676', opacityVal)}" stroke-width="1.5" filter="url(#safeGlow)"/>
+          <line x1="48%" y1="50%" x2="52%" y2="50%" stroke="${this.hexToRGBA('#00e676', opacityVal)}" stroke-width="1.5"/>
+          <line x1="50%" y1="48%" x2="50%" y2="52%" stroke="${this.hexToRGBA('#00e676', opacityVal)}" stroke-width="1.5"/>
+        ` : ''}
+      `;
+      svg += '</svg>';
+      return svg;
+    }
+    
+    if (mode === 'broadcast') {
+      // EBU R95 broadcast safe
+      svg += `
+        <rect x="${actionMargin}%" y="${actionMargin}%" width="${100 - 2*actionMargin}%" height="${100 - 2*actionMargin}%" fill="none" stroke="${this.hexToRGBA('#ff6b35', opacityVal)}" stroke-width="${lineWidth}" stroke-dasharray="10,5" filter="url(#safeGlow)"/>
+        ${s.showLabels ? `<text x="${actionMargin + 0.5}%" y="${actionMargin - 1}%" fill="${this.hexToRGBA('#ff6b35', opacityVal)}" font-size="11" opacity="0.9">EBU R95 (${100 - 2*actionMargin}%)</text>` : ''}
+        <rect x="${titleMargin}%" y="${titleMargin}%" width="${100 - 2*titleMargin}%" height="${100 - 2*titleMargin}%" fill="none" stroke="${this.hexToRGBA('#ff9500', opacityVal * 0.7)}" stroke-width="${lineWidth * 0.75}" stroke-dasharray="6,4"/>
+        ${s.showLabels ? `<text x="${titleMargin + 0.5}%" y="${titleMargin - 1}%" fill="${this.hexToRGBA('#ff9500', opacityVal * 0.7)}" font-size="10" opacity="0.8">GRAPHICS SAFE</text>` : ''}
+        ${s.showCenter ? `
+          <circle cx="50%" cy="50%" r="8" fill="none" stroke="${this.hexToRGBA('#ff6b35', opacityVal)}" stroke-width="1.5" filter="url(#safeGlow)"/>
+          <line x1="48%" y1="50%" x2="52%" y2="50%" stroke="${this.hexToRGBA('#ff6b35', opacityVal)}" stroke-width="1.5"/>
+          <line x1="50%" y1="48%" x2="50%" y2="52%" stroke="${this.hexToRGBA('#ff6b35', opacityVal)}" stroke-width="1.5"/>
+        ` : ''}
+        ${s.showCorners ? `
+          <circle cx="${actionMargin}%" cy="${actionMargin}%" r="4" fill="${this.hexToRGBA('#ff6b35', opacityVal)}" filter="url(#safeGlow)"/>
+          <circle cx="${100 - actionMargin}%" cy="${actionMargin}%" r="4" fill="${this.hexToRGBA('#ff6b35', opacityVal)}" filter="url(#safeGlow)"/>
+          <circle cx="${actionMargin}%" cy="${100 - actionMargin}%" r="4" fill="${this.hexToRGBA('#ff6b35', opacityVal)}" filter="url(#safeGlow)"/>
+          <circle cx="${100 - actionMargin}%" cy="${100 - actionMargin}%" r="4" fill="${this.hexToRGBA('#ff6b35', opacityVal)}" filter="url(#safeGlow)"/>
+        ` : ''}
+      `;
+      svg += '</svg>';
+      return svg;
+    }
+    
+    // Standard action/title/both/custom modes
+    if (mode === 'action' || mode === 'both' || mode === 'custom') {
+      svg += `
+        <rect x="${actionMargin}%" y="${actionMargin}%" width="${100 - 2*actionMargin}%" height="${100 - 2*actionMargin}%" fill="none" stroke="${actionColorRGBA}" stroke-width="${lineWidth}" stroke-dasharray="12,6" filter="url(#safeGlow)"/>
+        ${s.showLabels ? `<text x="${actionMargin + 0.5}%" y="${actionMargin - 1}%" fill="${actionColorRGBA}" font-size="11" opacity="0.9">ACTION SAFE (${100 - 2*actionMargin}%)</text>` : ''}
+        ${s.showCorners ? `
+          <circle cx="${actionMargin}%" cy="${actionMargin}%" r="4" fill="${actionColorRGBA}" filter="url(#safeGlow)"/>
+          <circle cx="${100 - actionMargin}%" cy="${actionMargin}%" r="4" fill="${actionColorRGBA}" filter="url(#safeGlow)"/>
+          <circle cx="${actionMargin}%" cy="${100 - actionMargin}%" r="4" fill="${actionColorRGBA}" filter="url(#safeGlow)"/>
+          <circle cx="${100 - actionMargin}%" cy="${100 - actionMargin}%" r="4" fill="${actionColorRGBA}" filter="url(#safeGlow)"/>
+        ` : ''}
+      `;
+    }
+    
+    if (mode === 'title' || mode === 'both' || mode === 'custom') {
+      svg += `
+        <rect x="${titleMargin}%" y="${titleMargin}%" width="${100 - 2*titleMargin}%" height="${100 - 2*titleMargin}%" fill="none" stroke="${titleColorRGBA}" stroke-width="${lineWidth}" stroke-dasharray="8,4" filter="url(#safeGlow)"/>
+        ${s.showLabels ? `<text x="${titleMargin + 0.5}%" y="${titleMargin - 1}%" fill="${titleColorRGBA}" font-size="11" opacity="0.9">TITLE SAFE (${100 - 2*titleMargin}%)</text>` : ''}
+        ${s.showCorners ? `
+          <circle cx="${titleMargin}%" cy="${titleMargin}%" r="4" fill="${titleColorRGBA}" filter="url(#safeGlow)"/>
+          <circle cx="${100 - titleMargin}%" cy="${titleMargin}%" r="4" fill="${titleColorRGBA}" filter="url(#safeGlow)"/>
+          <circle cx="${titleMargin}%" cy="${100 - titleMargin}%" r="4" fill="${titleColorRGBA}" filter="url(#safeGlow)"/>
+          <circle cx="${100 - titleMargin}%" cy="${100 - titleMargin}%" r="4" fill="${titleColorRGBA}" filter="url(#safeGlow)"/>
+        ` : ''}
+      `;
+    }
+    
+    // Center marker for all modes
+    if (s.showCenter && (mode === 'action' || mode === 'title' || mode === 'both' || mode === 'custom')) {
+      const centerColor = mode === 'title' ? titleColorRGBA : actionColorRGBA;
+      svg += `
+        <circle cx="50%" cy="50%" r="8" fill="none" stroke="${centerColor}" stroke-width="1.5" filter="url(#safeGlow)"/>
+        <line x1="48%" y1="50%" x2="52%" y2="50%" stroke="${centerColor}" stroke-width="1.5"/>
+        <line x1="50%" y1="48%" x2="50%" y2="52%" stroke="${centerColor}" stroke-width="1.5"/>
+      `;
+    }
+    
+    svg += '</svg>';
+    return svg;
+  }
+  
+  // Helper to convert hex color to RGBA
+  private hexToRGBA(hex: string, alpha: number): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  private getSafeAreaSVGLegacy(mode: SafeAreaMode): string {
     const actionColor = 'rgba(255, 200, 0, 0.7)';
     const titleColor = 'rgba(0, 200, 255, 0.7)';
     
@@ -601,6 +780,9 @@ export class FocusController {
         <circle cx="90%" cy="10%" r="4" fill="${titleColor}" filter="url(#safeGlow)"/>
         <circle cx="10%" cy="90%" r="4" fill="${titleColor}" filter="url(#safeGlow)"/>
         <circle cx="90%" cy="90%" r="4" fill="${titleColor}" filter="url(#safeGlow)"/>
+        <circle cx="90%" cy="10%" r="4" fill="${titleColor}" filter="url(#safeGlow)"/>
+        <circle cx="10%" cy="90%" r="4" fill="${titleColor}" filter="url(#safeGlow)"/>
+        <circle cx="90%" cy="90%" r="4" fill="${titleColor}" filter="url(#safeGlow)"/>
       `;
     }
     
@@ -610,7 +792,47 @@ export class FocusController {
 
   private calculateSafeAreaScore(mode: SafeAreaMode): { actionSafe: boolean; titleSafe: boolean; level: string; color: string; message: string; objectName: string | null } {
     const scene = useAppStore.getState().scene;
-    const models = scene.filter(n => n.type === 'model');
+    let models = scene.filter(n => n.type === 'model');
+    
+    // Also check for registered model meshes in Babylon scene via virtualStudio
+    if (models.length === 0) {
+      const studio = (window as any).virtualStudio;
+      if (studio?.scene) {
+        // Look for avatars, character models, and any mesh with model metadata
+        const registeredMeshes = studio.scene.meshes?.filter((mesh: any) => 
+          // Check for model geometry metadata
+          mesh.metadata?.isModelGeometry === true ||
+          // Check for parent model references
+          mesh.metadata?.parentModelName ||
+          // Check for avatar-related meshes
+          (mesh.name && (
+            mesh.name.includes('avatar') || 
+            mesh.name.includes('Avatar') ||
+            mesh.name.includes('default_avatar') ||
+            mesh.name.includes('character') ||
+            mesh.name.includes('geometry_') || 
+            mesh.name.includes('primitive') ||
+            mesh.name.includes('__root__')
+          )) ||
+          // Any mesh that has a skeleton (character models)
+          mesh.skeleton
+        ) || [];
+        
+        if (registeredMeshes.length > 0) {
+          const mesh = registeredMeshes[0];
+          const modelName = mesh.metadata?.parentModelName || 
+                           (mesh.name?.includes('avatar') ? 'Avatar' : 
+                            mesh.name?.replace(/_geometry_\d+$/, '').replace('__root__', 'Model') || 'Model');
+          const pos = mesh.position ? [mesh.position.x, mesh.position.y, mesh.position.z] : [0, 0, 0];
+          models = [{
+            id: mesh.uniqueId?.toString() || 'mesh-model',
+            name: modelName,
+            type: 'model' as const,
+            transform: { position: pos, rotation: [0, 0, 0], scale: [1, 1, 1] }
+          }];
+        }
+      }
+    }
     
     if (models.length === 0) {
       return { 
@@ -675,8 +897,8 @@ export class FocusController {
     };
 
     return `
-      <div class="safe-area-feedback-panel">
-        <div class="safe-area-feedback-header">
+      <div class="safe-area-feedback-panel" id="safeAreaFeedbackPanel">
+        <div class="safe-area-feedback-header safe-area-drag-handle">
           <h4>${modeLabels[mode]}</h4>
           <div class="safe-area-score-badge" style="background: ${feedback.color}20; border-color: ${feedback.color}; color: ${feedback.color};">
             ${feedback.level}
@@ -738,6 +960,126 @@ export class FocusController {
     }
   }
 
+  // Get model bounds in screen space for dynamic composition guides
+  private getModelScreenBounds(): { 
+    found: boolean; 
+    centerX: number; 
+    centerY: number; 
+    width: number; 
+    height: number;
+    headTop: number;
+    eyeLine: number;
+    chinLine: number;
+    shoulderLine: number;
+  } | null {
+    const studio = (window as any).virtualStudio;
+    if (!studio?.scene || !studio?.camera) {
+      return null;
+    }
+
+    // Find avatar or character mesh
+    const characterMeshes = studio.scene.meshes?.filter((mesh: any) => 
+      mesh.isVisible && mesh.isEnabled() && (
+        mesh.name?.includes('avatar') || 
+        mesh.name?.includes('Avatar') ||
+        mesh.name?.includes('default_avatar') ||
+        mesh.name?.includes('character') ||
+        mesh.skeleton ||
+        mesh.metadata?.isModelGeometry === true
+      )
+    ) || [];
+
+    if (characterMeshes.length === 0) {
+      return null;
+    }
+
+    // Get the root mesh (usually __root__ or parent of all)
+    let rootMesh = characterMeshes.find((m: any) => m.name?.includes('__root__')) || characterMeshes[0];
+    
+    // Calculate bounding box in world space
+    let minY = Infinity, maxY = -Infinity;
+    let minX = Infinity, maxX = -Infinity;
+    let minZ = Infinity, maxZ = -Infinity;
+
+    for (const mesh of characterMeshes) {
+      if (mesh.getBoundingInfo) {
+        const bounds = mesh.getBoundingInfo().boundingBox;
+        const worldMatrix = mesh.getWorldMatrix();
+        
+        // Get corners in world space
+        const corners = [
+          bounds.minimum,
+          bounds.maximum,
+          new BABYLON.Vector3(bounds.minimum.x, bounds.minimum.y, bounds.maximum.z),
+          new BABYLON.Vector3(bounds.minimum.x, bounds.maximum.y, bounds.minimum.z),
+          new BABYLON.Vector3(bounds.maximum.x, bounds.minimum.y, bounds.minimum.z),
+          new BABYLON.Vector3(bounds.minimum.x, bounds.maximum.y, bounds.maximum.z),
+          new BABYLON.Vector3(bounds.maximum.x, bounds.minimum.y, bounds.maximum.z),
+          new BABYLON.Vector3(bounds.maximum.x, bounds.maximum.y, bounds.minimum.z),
+        ];
+        
+        for (const corner of corners) {
+          const worldPos = BABYLON.Vector3.TransformCoordinates(corner, worldMatrix);
+          minX = Math.min(minX, worldPos.x);
+          maxX = Math.max(maxX, worldPos.x);
+          minY = Math.min(minY, worldPos.y);
+          maxY = Math.max(maxY, worldPos.y);
+          minZ = Math.min(minZ, worldPos.z);
+          maxZ = Math.max(maxZ, worldPos.z);
+        }
+      }
+    }
+
+    if (minY === Infinity) {
+      return null;
+    }
+
+    // Get canvas dimensions
+    const canvas = studio.engine?.getRenderingCanvas();
+    if (!canvas) return null;
+    
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+
+    // Project key points to screen space
+    const projectToScreen = (worldPos: BABYLON.Vector3) => {
+      const screenPos = BABYLON.Vector3.Project(
+        worldPos,
+        BABYLON.Matrix.Identity(),
+        studio.scene.getTransformMatrix(),
+        { x: 0, y: 0, width: canvasWidth, height: canvasHeight }
+      );
+      return { x: screenPos.x / canvasWidth, y: screenPos.y / canvasHeight };
+    };
+
+    const modelHeight = maxY - minY;
+    const centerX = (minX + maxX) / 2;
+    const centerZ = (minZ + maxZ) / 2;
+
+    // Key anatomical positions (assuming standing humanoid)
+    const headTop = projectToScreen(new BABYLON.Vector3(centerX, maxY, centerZ));
+    const eyeLevel = projectToScreen(new BABYLON.Vector3(centerX, minY + modelHeight * 0.92, centerZ)); // Eyes at ~92% height
+    const chinLevel = projectToScreen(new BABYLON.Vector3(centerX, minY + modelHeight * 0.85, centerZ)); // Chin at ~85% height
+    const shoulderLevel = projectToScreen(new BABYLON.Vector3(centerX, minY + modelHeight * 0.78, centerZ)); // Shoulders at ~78% height
+    const center = projectToScreen(new BABYLON.Vector3(centerX, minY + modelHeight * 0.5, centerZ));
+
+    // Calculate screen width of model
+    const leftEdge = projectToScreen(new BABYLON.Vector3(minX, minY + modelHeight * 0.5, centerZ));
+    const rightEdge = projectToScreen(new BABYLON.Vector3(maxX, minY + modelHeight * 0.5, centerZ));
+    
+    return {
+      found: true,
+      centerX: center.x,
+      centerY: center.y,
+      width: Math.abs(rightEdge.x - leftEdge.x),
+      height: Math.abs(headTop.y - shoulderLevel.y) * 1.5,
+      headTop: headTop.y,
+      eyeLine: eyeLevel.y,
+      chinLine: chinLevel.y,
+      shoulderLine: shoulderLevel.y
+    };
+  }
+
   private updateCompositionGuide(guide: CompositionGuide) {
     const overlay = document.getElementById('compositionOverlay');
     const btn = document.querySelector('.vf-btn.composition-guide');
@@ -775,14 +1117,20 @@ export class FocusController {
         ];
       case 'center':
         return [{ x: 0.5, y: 0.5 }];
-      case 'spiral':
-        return [{ x: 0.382, y: 0.382 }, { x: 0.618, y: 0.618 }];
       case 'triangle':
         return [{ x: 0.5, y: 0.5 }];
       case 'diagonal':
         return [{ x: 0.5, y: 0.5 }, { x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 }];
       case 'symmetry':
         return [{ x: 0.5, y: 0.5 }];
+      case 'headshot':
+        // Eye positions are the key power points for headshots
+        // Left eye, right eye, and center face position
+        return [
+          { x: 0.38, y: 0.3333 },  // Left eye position
+          { x: 0.62, y: 0.3333 },  // Right eye position
+          { x: 0.50, y: 0.40 }     // Center face/nose bridge
+        ];
       default:
         return [];
     }
@@ -790,7 +1138,48 @@ export class FocusController {
 
   private calculateCompositionScore(guide: CompositionGuide): { score: number; level: string; color: string; message: string; objectName: string | null } {
     const scene = useAppStore.getState().scene;
-    const models = scene.filter(n => n.type === 'model');
+    let models = scene.filter(n => n.type === 'model');
+    
+    // Also check for registered model meshes in Babylon scene
+    if (models.length === 0) {
+      const studio = (window as any).virtualStudio;
+      if (studio?.scene) {
+        // Look for avatars, character models, and any mesh with model metadata
+        const registeredMeshes = studio.scene.meshes?.filter((mesh: any) => 
+          // Check for model geometry metadata
+          mesh.metadata?.isModelGeometry === true ||
+          // Check for parent model references
+          mesh.metadata?.parentModelName ||
+          // Check for avatar-related meshes
+          (mesh.name && (
+            mesh.name.includes('avatar') || 
+            mesh.name.includes('Avatar') ||
+            mesh.name.includes('default_avatar') ||
+            mesh.name.includes('character') ||
+            mesh.name.includes('geometry_') || 
+            mesh.name.includes('primitive') ||
+            mesh.name.includes('__root__')
+          )) ||
+          // Any mesh that has a skeleton (character models)
+          mesh.skeleton
+        ) || [];
+        
+        if (registeredMeshes.length > 0) {
+          // Create a virtual model entry from the mesh
+          const mesh = registeredMeshes[0];
+          const modelName = mesh.metadata?.parentModelName || 
+                           (mesh.name?.includes('avatar') ? 'Avatar' : 
+                            mesh.name?.replace(/_geometry_\d+$/, '').replace('__root__', 'Model') || 'Model');
+          const pos = mesh.position ? [mesh.position.x, mesh.position.y, mesh.position.z] : [0, 0, 0];
+          models = [{
+            id: mesh.uniqueId?.toString() || 'mesh-model',
+            name: modelName,
+            type: 'model' as const,
+            transform: { position: pos, rotation: [0, 0, 0], scale: [1, 1, 1] }
+          }];
+        }
+      }
+    }
     
     if (models.length === 0) {
       return { 
@@ -870,18 +1259,28 @@ export class FocusController {
       none: '',
       thirds: 'Plasser hovedmotivet på ett av de fire skjæringspunktene',
       golden: 'Det gyldne snitt gir naturlig balansert komposisjon',
-      spiral: 'Led blikket langs spiralen mot fokuspunktet',
       diagonal: 'Bruk diagonaler for dynamikk og bevegelse',
       center: 'Senterkomposisjon for symmetri og kraftfulle portretter',
       triangle: 'Trekantformasjon skaper stabilitet',
-      symmetry: 'Dynamisk symmetri for klassisk harmoni'
+      symmetry: 'Dynamisk symmetri for klassisk harmoni',
+      headshot: 'Plasser øynene på øyelinjen, hodet innenfor rammen'
     };
 
     const scoreBarWidth = Math.max(5, feedback.score);
     
     return `
-      <div class="composition-feedback-panel">
-        <div class="composition-feedback-header">
+      <div class="composition-feedback-panel" id="compositionFeedbackPanel">
+        <!-- Resize handles for all edges and corners -->
+        <div class="resize-handle resize-n" data-resize="n"></div>
+        <div class="resize-handle resize-s" data-resize="s"></div>
+        <div class="resize-handle resize-e" data-resize="e"></div>
+        <div class="resize-handle resize-w" data-resize="w"></div>
+        <div class="resize-handle resize-ne" data-resize="ne"></div>
+        <div class="resize-handle resize-nw" data-resize="nw"></div>
+        <div class="resize-handle resize-se" data-resize="se"></div>
+        <div class="resize-handle resize-sw" data-resize="sw"></div>
+        
+        <div class="composition-feedback-header composition-drag-handle" title="Dra for å flytte panelet">
           <h4>${this.getGuideLabel(guide)}</h4>
           <div class="composition-score-badge" style="background: ${feedback.color}20; border-color: ${feedback.color}; color: ${feedback.color};">
             ${feedback.level}
@@ -930,122 +1329,396 @@ export class FocusController {
       none: 'Komposisjonsguide',
       thirds: 'Tredjedelsregelen',
       golden: 'Gyllent snitt',
-      spiral: 'Fibonacci-spiral',
       diagonal: 'Diagonaler',
       center: 'Senter-kryss',
       triangle: 'Gyldne trekanter',
-      symmetry: 'Dynamisk symmetri'
+      symmetry: 'Dynamisk symmetri',
+      headshot: 'Portrett/Headshot'
     };
     return labels[guide];
   }
 
   private getCompositionSVG(guide: CompositionGuide): string {
-    const lineColor = 'rgba(0, 255, 136, 0.7)';
-    const glowColor = 'rgba(0, 255, 136, 0.3)';
-    const pointColor = '#00ff88';
+    // Get composition settings from window
+    const settings = (window as any).compositionSettings || {
+      color: '#00ff88',
+      opacity: 0.7,
+      lineWidth: 2,
+      animatedPoints: true,
+      showScore: false,
+      glowEffect: true
+    };
+    
+    const baseColor = settings.color || '#00ff88';
+    const lineWidth = settings.lineWidth || 2;
+    const showGlow = settings.glowEffect !== false;
+    const showAnimation = settings.animatedPoints !== false;
+    
+    // Generate color variants
+    const lineColor = this.hexToRgba(baseColor, 0.7);
+    const glowColor = this.hexToRgba(baseColor, 0.3);
+    const pointColor = baseColor;
+    const fadedColor = this.hexToRgba(baseColor, 0.15);
+    
     const phi = 1.618;
     const pos1 = (1 / (1 + phi)) * 100;
     const pos2 = (phi / (1 + phi)) * 100;
 
-    const glowFilter = `
+    // Professional SVG filters
+    const svgDefs = `
       <defs>
-        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+        <filter id="compGlow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
           <feMerge>
             <feMergeNode in="coloredBlur"/>
             <feMergeNode in="SourceGraphic"/>
           </feMerge>
         </filter>
-        <filter id="glowStrong" x="-50%" y="-50%" width="200%" height="200%">
+        <filter id="compGlowStrong" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
           <feMerge>
             <feMergeNode in="coloredBlur"/>
             <feMergeNode in="SourceGraphic"/>
           </feMerge>
         </filter>
+        <filter id="compShadow" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#000" flood-opacity="0.5"/>
+        </filter>
+        <linearGradient id="compFade" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:${baseColor};stop-opacity:0.2" />
+          <stop offset="50%" style="stop-color:${baseColor};stop-opacity:0.7" />
+          <stop offset="100%" style="stop-color:${baseColor};stop-opacity:0.2" />
+        </linearGradient>
+        <pattern id="crosshatch" width="4" height="4" patternUnits="userSpaceOnUse">
+          <path d="M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2" stroke="${baseColor}" stroke-width="0.3" opacity="0.15"/>
+        </pattern>
       </defs>
     `;
 
-    const powerPointStyle = `fill="${pointColor}" filter="url(#glowStrong)"`;
+    const glowFilter = showGlow ? 'filter="url(#compGlow)"' : '';
+    const strongGlowFilter = showGlow ? 'filter="url(#compGlowStrong)"' : '';
+    
+    // Animated power point template
+    const powerPoint = (cx: string, cy: string, r: number = 8) => {
+      const animation = showAnimation 
+        ? `<animate attributeName="r" values="${r-2};${r+2};${r-2}" dur="2s" repeatCount="indefinite"/>
+           <animate attributeName="opacity" values="0.8;1;0.8" dur="2s" repeatCount="indefinite"/>`
+        : '';
+      return `
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="${pointColor}" ${strongGlowFilter} opacity="0.9">
+          ${animation}
+        </circle>
+        <circle cx="${cx}" cy="${cy}" r="${r*0.4}" fill="#fff" opacity="0.7"/>
+      `;
+    };
+
+    // Guide-specific label
+    const guideLabel = (text: string, x: string = "5", y: string = "20") => `
+      <g ${showGlow ? 'filter="url(#compShadow)"' : ''}>
+        <rect x="${parseFloat(x)-2}" y="${parseFloat(y)-12}" width="${text.length * 7 + 4}" height="16" fill="rgba(0,0,0,0.4)" rx="3"/>
+        <text x="${x}" y="${y}" fill="${baseColor}" font-size="11" font-family="system-ui, sans-serif" opacity="0.9">${text}</text>
+      </g>
+    `;
 
     switch (guide) {
       case 'thirds':
-        return `<svg width="100%" height="100%" class="composition-svg">
-          ${glowFilter}
-          <line x1="33.33%" y1="0" x2="33.33%" y2="100%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
-          <line x1="66.67%" y1="0" x2="66.67%" y2="100%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
-          <line x1="0" y1="33.33%" x2="100%" y2="33.33%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
-          <line x1="0" y1="66.67%" x2="100%" y2="66.67%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
-          <circle cx="33.33%" cy="33.33%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
-          <circle cx="66.67%" cy="33.33%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
-          <circle cx="33.33%" cy="66.67%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
-          <circle cx="66.67%" cy="66.67%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
+        return `<svg width="100%" height="100%" class="composition-svg professional-guide">
+          ${svgDefs}
+          <!-- Third lines with gradient fade at edges -->
+          <line x1="33.33%" y1="0" x2="33.33%" y2="100%" stroke="${lineColor}" stroke-width="${lineWidth}" ${glowFilter}/>
+          <line x1="66.67%" y1="0" x2="66.67%" y2="100%" stroke="${lineColor}" stroke-width="${lineWidth}" ${glowFilter}/>
+          <line x1="0" y1="33.33%" x2="100%" y2="33.33%" stroke="${lineColor}" stroke-width="${lineWidth}" ${glowFilter}/>
+          <line x1="0" y1="66.67%" x2="100%" y2="66.67%" stroke="${lineColor}" stroke-width="${lineWidth}" ${glowFilter}/>
+          
+          <!-- Secondary grid (lighter) -->
+          <line x1="16.67%" y1="0" x2="16.67%" y2="100%" stroke="${fadedColor}" stroke-width="1" stroke-dasharray="4,8"/>
+          <line x1="50%" y1="0" x2="50%" y2="100%" stroke="${fadedColor}" stroke-width="1" stroke-dasharray="4,8"/>
+          <line x1="83.33%" y1="0" x2="83.33%" y2="100%" stroke="${fadedColor}" stroke-width="1" stroke-dasharray="4,8"/>
+          <line x1="0" y1="16.67%" x2="100%" y2="16.67%" stroke="${fadedColor}" stroke-width="1" stroke-dasharray="4,8"/>
+          <line x1="0" y1="50%" x2="100%" y2="50%" stroke="${fadedColor}" stroke-width="1" stroke-dasharray="4,8"/>
+          <line x1="0" y1="83.33%" x2="100%" y2="83.33%" stroke="${fadedColor}" stroke-width="1" stroke-dasharray="4,8"/>
+          
+          <!-- Power points with labels -->
+          ${powerPoint('33.33%', '33.33%')}
+          ${powerPoint('66.67%', '33.33%')}
+          ${powerPoint('33.33%', '66.67%')}
+          ${powerPoint('66.67%', '66.67%')}
+          
+          ${guideLabel('⅓ Tredjedelsregelen')}
         </svg>`;
+        
       case 'golden':
-        return `<svg width="100%" height="100%" class="composition-svg">
-          ${glowFilter}
-          <line x1="${pos1}%" y1="0" x2="${pos1}%" y2="100%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
-          <line x1="${pos2}%" y1="0" x2="${pos2}%" y2="100%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
-          <line x1="0" y1="${pos1}%" x2="100%" y2="${pos1}%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
-          <line x1="0" y1="${pos2}%" x2="100%" y2="${pos2}%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
-          <circle cx="${pos1}%" cy="${pos1}%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
-          <circle cx="${pos2}%" cy="${pos1}%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
-          <circle cx="${pos1}%" cy="${pos2}%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
-          <circle cx="${pos2}%" cy="${pos2}%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
-          <text x="5" y="20" fill="${lineColor}" font-size="11" opacity="0.8">φ = 1.618</text>
+        return `<svg width="100%" height="100%" class="composition-svg professional-guide">
+          ${svgDefs}
+          <!-- Golden ratio lines -->
+          <line x1="${pos1}%" y1="0" x2="${pos1}%" y2="100%" stroke="${lineColor}" stroke-width="${lineWidth}" ${glowFilter}/>
+          <line x1="${pos2}%" y1="0" x2="${pos2}%" y2="100%" stroke="${lineColor}" stroke-width="${lineWidth}" ${glowFilter}/>
+          <line x1="0" y1="${pos1}%" x2="100%" y2="${pos1}%" stroke="${lineColor}" stroke-width="${lineWidth}" ${glowFilter}/>
+          <line x1="0" y1="${pos2}%" x2="100%" y2="${pos2}%" stroke="${lineColor}" stroke-width="${lineWidth}" ${glowFilter}/>
+          
+          <!-- Phi proportion markers -->
+          <rect x="0" y="0" width="${pos1}%" height="${pos1}%" fill="${fadedColor}" opacity="0.1"/>
+          <rect x="${pos2}%" y="${pos2}%" width="${100-pos2}%" height="${100-pos2}%" fill="${fadedColor}" opacity="0.1"/>
+          
+          <!-- Power points -->
+          ${powerPoint(`${pos1}%`, `${pos1}%`)}
+          ${powerPoint(`${pos2}%`, `${pos1}%`)}
+          ${powerPoint(`${pos1}%`, `${pos2}%`)}
+          ${powerPoint(`${pos2}%`, `${pos2}%`)}
+          
+          ${guideLabel('φ Gyllent snitt = 1.618')}
         </svg>`;
-      case 'spiral':
-        return `<svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" class="composition-svg">
-          ${glowFilter}
-          <rect x="0" y="0" width="61.8" height="100" fill="none" stroke="${glowColor}" stroke-width="0.8"/>
-          <rect x="61.8" y="0" width="38.2" height="61.8" fill="none" stroke="${glowColor}" stroke-width="0.8"/>
-          <rect x="61.8" y="61.8" width="23.6" height="38.2" fill="none" stroke="${glowColor}" stroke-width="0.8"/>
-          <rect x="85.4" y="61.8" width="14.6" height="23.6" fill="none" stroke="${glowColor}" stroke-width="0.8"/>
-          <path d="M 100 100 Q 100 61.8, 61.8 61.8 Q 38.2 61.8, 38.2 38.2 Q 38.2 23.6, 52.8 23.6 Q 61.8 23.6, 61.8 32.6 Q 61.8 38.2, 56.2 38.2" fill="none" stroke="${pointColor}" stroke-width="3" filter="url(#glow)"/>
-          <circle cx="38.2" cy="38.2" r="1.5" ${powerPointStyle}/>
-        </svg>`;
+        
       case 'diagonal':
-        return `<svg width="100%" height="100%" class="composition-svg">
-          ${glowFilter}
-          <line x1="0" y1="0" x2="100%" y2="100%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
-          <line x1="100%" y1="0" x2="0" y2="100%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
-          <line x1="0" y1="0" x2="50%" y2="100%" stroke="${glowColor}" stroke-width="1" stroke-dasharray="6,4"/>
-          <line x1="50%" y1="0" x2="100%" y2="100%" stroke="${glowColor}" stroke-width="1" stroke-dasharray="6,4"/>
-          <line x1="0" y1="0" x2="100%" y2="50%" stroke="${glowColor}" stroke-width="1" stroke-dasharray="6,4"/>
-          <line x1="0" y1="50%" x2="100%" y2="100%" stroke="${glowColor}" stroke-width="1" stroke-dasharray="6,4"/>
-          <circle cx="50%" cy="50%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
+        return `<svg width="100%" height="100%" class="composition-svg professional-guide">
+          ${svgDefs}
+          <!-- Main diagonals -->
+          <line x1="0" y1="0" x2="100%" y2="100%" stroke="${lineColor}" stroke-width="${lineWidth}" ${glowFilter}/>
+          <line x1="100%" y1="0" x2="0" y2="100%" stroke="${lineColor}" stroke-width="${lineWidth}" ${glowFilter}/>
+          
+          <!-- Baroque diagonals -->
+          <line x1="0" y1="0" x2="50%" y2="100%" stroke="${glowColor}" stroke-width="${lineWidth - 0.5}" stroke-dasharray="6,4"/>
+          <line x1="50%" y1="0" x2="100%" y2="100%" stroke="${glowColor}" stroke-width="${lineWidth - 0.5}" stroke-dasharray="6,4"/>
+          <line x1="0" y1="0" x2="100%" y2="50%" stroke="${glowColor}" stroke-width="${lineWidth - 0.5}" stroke-dasharray="6,4"/>
+          <line x1="0" y1="50%" x2="100%" y2="100%" stroke="${glowColor}" stroke-width="${lineWidth - 0.5}" stroke-dasharray="6,4"/>
+          
+          <!-- Sinister diagonals -->
+          <line x1="100%" y1="0" x2="50%" y2="100%" stroke="${glowColor}" stroke-width="${lineWidth - 0.5}" stroke-dasharray="6,4"/>
+          <line x1="50%" y1="0" x2="0" y2="100%" stroke="${glowColor}" stroke-width="${lineWidth - 0.5}" stroke-dasharray="6,4"/>
+          
+          <!-- Center intersection -->
+          ${powerPoint('50%', '50%', 10)}
+          
+          <!-- Corner markers -->
+          <circle cx="25%" cy="25%" r="4" fill="${glowColor}" opacity="0.6"/>
+          <circle cx="75%" cy="25%" r="4" fill="${glowColor}" opacity="0.6"/>
+          <circle cx="25%" cy="75%" r="4" fill="${glowColor}" opacity="0.6"/>
+          <circle cx="75%" cy="75%" r="4" fill="${glowColor}" opacity="0.6"/>
+          
+          ${guideLabel('⤫ Diagonaler')}
         </svg>`;
+        
       case 'center':
-        return `<svg width="100%" height="100%" class="composition-svg">
-          ${glowFilter}
-          <line x1="50%" y1="0" x2="50%" y2="100%" stroke="${lineColor}" stroke-width="2" stroke-dasharray="12,6" filter="url(#glow)"/>
-          <line x1="0" y1="50%" x2="100%" y2="50%" stroke="${lineColor}" stroke-width="2" stroke-dasharray="12,6" filter="url(#glow)"/>
-          <circle cx="50%" cy="50%" r="20" fill="none" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"><animate attributeName="r" values="18;24;18" dur="3s" repeatCount="indefinite"/></circle>
-          <circle cx="50%" cy="50%" r="8" ${powerPointStyle}/>
-          <text x="52%" y="47%" fill="${lineColor}" font-size="11" opacity="0.8">Sentrum</text>
+        return `<svg width="100%" height="100%" class="composition-svg professional-guide">
+          ${svgDefs}
+          <!-- Radial zones -->
+          <circle cx="50%" cy="50%" r="35%" fill="none" stroke="${fadedColor}" stroke-width="1" opacity="0.3"/>
+          <circle cx="50%" cy="50%" r="25%" fill="none" stroke="${fadedColor}" stroke-width="1" opacity="0.4"/>
+          <circle cx="50%" cy="50%" r="15%" fill="none" stroke="${glowColor}" stroke-width="1.5"/>
+          
+          <!-- Center crosshairs -->
+          <line x1="50%" y1="0" x2="50%" y2="42%" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-dasharray="8,4" ${glowFilter}/>
+          <line x1="50%" y1="58%" x2="50%" y2="100%" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-dasharray="8,4" ${glowFilter}/>
+          <line x1="0" y1="50%" x2="42%" y2="50%" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-dasharray="8,4" ${glowFilter}/>
+          <line x1="58%" y1="50%" x2="100%" y2="50%" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-dasharray="8,4" ${glowFilter}/>
+          
+          <!-- Center target -->
+          <circle cx="50%" cy="50%" r="8%" fill="none" stroke="${pointColor}" stroke-width="${lineWidth}" ${strongGlowFilter}>
+            ${showAnimation ? '<animate attributeName="r" values="7%;9%;7%" dur="3s" repeatCount="indefinite"/>' : ''}
+          </circle>
+          ${powerPoint('50%', '50%', 6)}
+          
+          <!-- Edge marks -->
+          <line x1="48%" y1="1%" x2="52%" y2="1%" stroke="${glowColor}" stroke-width="2"/>
+          <line x1="48%" y1="99%" x2="52%" y2="99%" stroke="${glowColor}" stroke-width="2"/>
+          <line x1="1%" y1="48%" x2="1%" y2="52%" stroke="${glowColor}" stroke-width="2"/>
+          <line x1="99%" y1="48%" x2="99%" y2="52%" stroke="${glowColor}" stroke-width="2"/>
+          
+          ${guideLabel('◎ Senter-fokus')}
         </svg>`;
+        
       case 'triangle':
-        return `<svg width="100%" height="100%" class="composition-svg">
-          ${glowFilter}
-          <line x1="0" y1="100%" x2="100%" y2="0" stroke="${lineColor}" stroke-width="2.5" filter="url(#glow)"/>
-          <line x1="0" y1="0" x2="50%" y2="50%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
-          <line x1="100%" y1="100%" x2="50%" y2="50%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
-          <circle cx="50%" cy="50%" r="10" ${powerPointStyle}><animate attributeName="r" values="8;12;8" dur="2s" repeatCount="indefinite"/></circle>
+        return `<svg width="100%" height="100%" class="composition-svg professional-guide">
+          ${svgDefs}
+          <!-- Golden triangle main line -->
+          <line x1="0" y1="100%" x2="100%" y2="0" stroke="${lineColor}" stroke-width="${lineWidth + 0.5}" ${glowFilter}/>
+          
+          <!-- Perpendicular lines from corners -->
+          <line x1="0" y1="0" x2="50%" y2="50%" stroke="${lineColor}" stroke-width="${lineWidth}" ${glowFilter}/>
+          <line x1="100%" y1="100%" x2="50%" y2="50%" stroke="${lineColor}" stroke-width="${lineWidth}" ${glowFilter}/>
+          
+          <!-- Reciprocal triangles (flipped) -->
+          <line x1="100%" y1="0" x2="0" y2="100%" stroke="${glowColor}" stroke-width="${lineWidth - 0.5}" stroke-dasharray="8,6" opacity="0.5"/>
+          <line x1="100%" y1="100%" x2="35%" y2="35%" stroke="${glowColor}" stroke-width="${lineWidth - 0.5}" stroke-dasharray="8,6" opacity="0.5"/>
+          <line x1="0" y1="0" x2="65%" y2="65%" stroke="${glowColor}" stroke-width="${lineWidth - 0.5}" stroke-dasharray="8,6" opacity="0.5"/>
+          
+          <!-- Triangle zones filled -->
+          <polygon points="0,100 50,50 0,0" fill="${fadedColor}" opacity="0.15"/>
+          <polygon points="100,0 50,50 100,100" fill="${fadedColor}" opacity="0.15"/>
+          
+          <!-- Key intersection point -->
+          ${powerPoint('50%', '50%', 10)}
+          
+          ${guideLabel('△ Gyllen trekant')}
         </svg>`;
+        
       case 'symmetry':
-        return `<svg width="100%" height="100%" class="composition-svg">
-          ${glowFilter}
-          <line x1="0" y1="0" x2="70.7%" y2="100%" stroke="${glowColor}" stroke-width="1.5"/>
-          <line x1="29.3%" y1="0" x2="100%" y2="100%" stroke="${glowColor}" stroke-width="1.5"/>
-          <line x1="0" y1="0" x2="100%" y2="70.7%" stroke="${glowColor}" stroke-width="1.5"/>
-          <line x1="0" y1="29.3%" x2="100%" y2="100%" stroke="${glowColor}" stroke-width="1.5"/>
-          <line x1="0" y1="0" x2="100%" y2="100%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
-          <line x1="100%" y1="0" x2="0" y2="100%" stroke="${lineColor}" stroke-width="2" filter="url(#glow)"/>
-          <circle cx="50%" cy="50%" r="8" ${powerPointStyle}><animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/></circle>
+        return `<svg width="100%" height="100%" class="composition-svg professional-guide">
+          ${svgDefs}
+          <!-- Dynamic symmetry - root rectangles -->
+          <!-- Main diagonals -->
+          <line x1="0" y1="0" x2="100%" y2="100%" stroke="${lineColor}" stroke-width="${lineWidth}" ${glowFilter}/>
+          <line x1="100%" y1="0" x2="0" y2="100%" stroke="${lineColor}" stroke-width="${lineWidth}" ${glowFilter}/>
+          
+          <!-- Root 2 rectangle diagonals -->
+          <line x1="0" y1="0" x2="70.7%" y2="100%" stroke="${glowColor}" stroke-width="${lineWidth - 0.5}"/>
+          <line x1="29.3%" y1="0" x2="100%" y2="100%" stroke="${glowColor}" stroke-width="${lineWidth - 0.5}"/>
+          <line x1="100%" y1="0" x2="29.3%" y2="100%" stroke="${glowColor}" stroke-width="${lineWidth - 0.5}"/>
+          <line x1="70.7%" y1="0" x2="0" y2="100%" stroke="${glowColor}" stroke-width="${lineWidth - 0.5}"/>
+          
+          <!-- Horizontal reciprocals -->
+          <line x1="0" y1="0" x2="100%" y2="70.7%" stroke="${fadedColor}" stroke-width="1" stroke-dasharray="4,4"/>
+          <line x1="0" y1="29.3%" x2="100%" y2="100%" stroke="${fadedColor}" stroke-width="1" stroke-dasharray="4,4"/>
+          <line x1="0" y1="70.7%" x2="100%" y2="0" stroke="${fadedColor}" stroke-width="1" stroke-dasharray="4,4"/>
+          <line x1="0" y1="100%" x2="100%" y2="29.3%" stroke="${fadedColor}" stroke-width="1" stroke-dasharray="4,4"/>
+          
+          <!-- Intersection points -->
+          ${powerPoint('50%', '50%', 8)}
+          <circle cx="29.3%" cy="29.3%" r="5" fill="${glowColor}" opacity="0.7"/>
+          <circle cx="70.7%" cy="29.3%" r="5" fill="${glowColor}" opacity="0.7"/>
+          <circle cx="29.3%" cy="70.7%" r="5" fill="${glowColor}" opacity="0.7"/>
+          <circle cx="70.7%" cy="70.7%" r="5" fill="${glowColor}" opacity="0.7"/>
+          
+          ${guideLabel('◇ Dynamisk symmetri (√2)')}
         </svg>`;
+        
+      case 'headshot':
+        // Dynamic headshot/portrait composition guide
+        // Detects model in scene and calculates guide positions based on model dimensions
+        const modelBounds = this.getModelScreenBounds();
+        
+        // Default positions if no model found
+        let eyeLineY = 33.33;
+        let headCenterX = 50;
+        let headWidth = 18;
+        let headHeight = 28;
+        let chinLineY = 50;
+        let shoulderLineY = 78;
+        let headTopY = 15;
+        let modelDetected = false;
+        
+        if (modelBounds && modelBounds.found) {
+          modelDetected = true;
+          // Convert from 0-1 screen space to percentage
+          headCenterX = modelBounds.centerX * 100;
+          eyeLineY = modelBounds.eyeLine * 100;
+          chinLineY = modelBounds.chinLine * 100;
+          shoulderLineY = modelBounds.shoulderLine * 100;
+          headTopY = modelBounds.headTop * 100;
+          headWidth = Math.max(12, modelBounds.width * 100 * 0.6);
+          headHeight = Math.max(18, Math.abs(eyeLineY - shoulderLineY) * 0.8);
+        }
+        
+        // Calculate derived positions
+        const leftEyeX = headCenterX - headWidth * 0.35;
+        const rightEyeX = headCenterX + headWidth * 0.35;
+        const headCenterY = (eyeLineY + chinLineY) / 2;
+        const headroomHeight = Math.max(10, headTopY);
+        
+        return `<svg width="100%" height="100%" class="composition-svg professional-guide headshot-guide">
+          ${svgDefs}
+          
+          ${modelDetected ? `
+          <!-- DYNAMIC MODE: Model detected -->
+          <!-- Head room zone (based on model head position) -->
+          <rect x="0" y="0" width="100%" height="${headroomHeight}%" fill="${fadedColor}" opacity="0.15"/>
+          <text x="50%" y="${Math.max(5, headroomHeight * 0.6)}%" fill="${lineColor}" font-size="10" text-anchor="middle" opacity="0.6">HEADROOM</text>
+          
+          <!-- Dynamic eye line based on detected model -->
+          <line x1="0" y1="${eyeLineY}%" x2="100%" y2="${eyeLineY}%" stroke="${baseColor}" stroke-width="${lineWidth + 1.5}" ${strongGlowFilter}/>
+          <text x="2%" y="${eyeLineY - 2}%" fill="${baseColor}" font-size="11" font-weight="bold" opacity="0.9">ØYELINJE</text>
+          
+          <!-- Model center indicator -->
+          <line x1="${headCenterX}%" y1="${headTopY}%" x2="${headCenterX}%" y2="${shoulderLineY + 5}%" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-dasharray="6,4" ${glowFilter}/>
+          
+          <!-- Dynamic head oval based on model dimensions -->
+          <ellipse cx="${headCenterX}%" cy="${headCenterY}%" rx="${headWidth}%" ry="${headHeight}%" fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" ${glowFilter}/>
+          
+          <!-- Eye position markers based on model -->
+          ${powerPoint(`${leftEyeX}%`, `${eyeLineY}%`, 8)}
+          ${powerPoint(`${rightEyeX}%`, `${eyeLineY}%`, 8)}
+          <text x="${leftEyeX}%" y="${eyeLineY + 5}%" fill="${baseColor}" font-size="8" text-anchor="middle" opacity="0.7">V.ØYE</text>
+          <text x="${rightEyeX}%" y="${eyeLineY + 5}%" fill="${baseColor}" font-size="8" text-anchor="middle" opacity="0.7">H.ØYE</text>
+          
+          <!-- Chin line -->
+          <line x1="${headCenterX - headWidth * 1.2}%" y1="${chinLineY}%" x2="${headCenterX + headWidth * 1.2}%" y2="${chinLineY}%" stroke="${glowColor}" stroke-width="1" stroke-dasharray="4,4" opacity="0.5"/>
+          <text x="${headCenterX + headWidth * 1.3}%" y="${chinLineY - 1}%" fill="${glowColor}" font-size="8" opacity="0.6">HAKE</text>
+          
+          <!-- Shoulder curve based on model -->
+          <path d="M ${headCenterX - 35}% 100% Q ${headCenterX - 20}% ${shoulderLineY}%, ${headCenterX}% ${shoulderLineY}% Q ${headCenterX + 20}% ${shoulderLineY}%, ${headCenterX + 35}% 100%" fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-dasharray="6,4" ${glowFilter}/>
+          <text x="${headCenterX}%" y="${shoulderLineY + 4}%" fill="${lineColor}" font-size="9" text-anchor="middle" opacity="0.7">SKULDER</text>
+          
+          <!-- Model detection indicator -->
+          <circle cx="95%" cy="5%" r="4" fill="${baseColor}" opacity="0.8">
+            ${showAnimation ? '<animate attributeName="opacity" values="0.8;0.4;0.8" dur="2s" repeatCount="indefinite"/>' : ''}
+          </circle>
+          <text x="91%" y="6%" fill="${baseColor}" font-size="7" text-anchor="end" opacity="0.7">LIVE</text>
+          
+          ` : `
+          <!-- STATIC MODE: No model detected - using standard portrait guidelines -->
+          <!-- Head room zone (top area) -->
+          <rect x="0" y="0" width="100%" height="15%" fill="${fadedColor}" opacity="0.2"/>
+          <text x="50%" y="10%" fill="${lineColor}" font-size="11" text-anchor="middle" opacity="0.7">HEADROOM</text>
+          
+          <!-- Standard eye line at 1/3 from top -->
+          <line x1="0" y1="33.33%" x2="100%" y2="33.33%" stroke="${baseColor}" stroke-width="${lineWidth + 1}" ${strongGlowFilter}/>
+          <text x="3%" y="31%" fill="${baseColor}" font-size="12" font-weight="bold" opacity="0.9">ØYELINJE</text>
+          
+          <!-- Secondary eye line option -->
+          <line x1="0" y1="28%" x2="100%" y2="28%" stroke="${glowColor}" stroke-width="1" stroke-dasharray="6,4" opacity="0.5"/>
+          
+          <!-- Center vertical axis -->
+          <line x1="50%" y1="5%" x2="50%" y2="75%" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-dasharray="8,6" ${glowFilter}/>
+          
+          <!-- Head oval outline -->
+          <ellipse cx="50%" cy="40%" rx="18%" ry="28%" fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" ${glowFilter}/>
+          
+          <!-- Inner face zone -->
+          <ellipse cx="50%" cy="42%" rx="12%" ry="18%" fill="none" stroke="${fadedColor}" stroke-width="1" stroke-dasharray="4,4" opacity="0.5"/>
+          
+          <!-- Eye position markers -->
+          ${powerPoint('38%', '33.33%', 7)}
+          ${powerPoint('62%', '33.33%', 7)}
+          <text x="38%" y="40%" fill="${baseColor}" font-size="9" text-anchor="middle" opacity="0.7">V.ØYE</text>
+          <text x="62%" y="40%" fill="${baseColor}" font-size="9" text-anchor="middle" opacity="0.7">H.ØYE</text>
+          
+          <!-- Nose/mouth line -->
+          <line x1="0" y1="50%" x2="100%" y2="50%" stroke="${glowColor}" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+          <text x="97%" y="48%" fill="${glowColor}" font-size="9" text-anchor="end" opacity="0.6">NESE</text>
+          
+          <!-- Chin line -->
+          <line x1="0" y1="62%" x2="100%" y2="62%" stroke="${glowColor}" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+          <text x="97%" y="60%" fill="${glowColor}" font-size="9" text-anchor="end" opacity="0.6">HAKE</text>
+          
+          <!-- Shoulder curve guide -->
+          <path d="M 15% 100% Q 25% 78%, 50% 78% Q 75% 78%, 85% 100%" fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" stroke-dasharray="6,4" ${glowFilter}/>
+          <text x="50%" y="82%" fill="${lineColor}" font-size="10" text-anchor="middle" opacity="0.7">SKULDERLINJEN</text>
+          
+          <!-- No model indicator -->
+          <text x="50%" y="95%" fill="${glowColor}" font-size="9" text-anchor="middle" opacity="0.5">⚠ Ingen modell funnet - bruker standard</text>
+          `}
+          
+          <!-- Rule of thirds overlay (subtle) -->
+          <line x1="33.33%" y1="0" x2="33.33%" y2="100%" stroke="${fadedColor}" stroke-width="1" opacity="0.2"/>
+          <line x1="66.67%" y1="0" x2="66.67%" y2="100%" stroke="${fadedColor}" stroke-width="1" opacity="0.2"/>
+          
+          <!-- Safe zone for cropping -->
+          <rect x="10%" y="8%" width="80%" height="82%" fill="none" stroke="${glowColor}" stroke-width="1" stroke-dasharray="3,3" opacity="0.3"/>
+          
+          ${guideLabel('👤 Portrett/Headshot')}
+        </svg>`;
+        
       default:
         return '';
     }
+  }
+  
+  // Helper to convert hex color to rgba
+  private hexToRgba(hex: string, alpha: number): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
   private debounce<T extends (...args: any[]) => void>(func: T, wait: number): T {

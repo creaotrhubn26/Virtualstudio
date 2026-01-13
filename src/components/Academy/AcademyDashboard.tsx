@@ -3492,7 +3492,17 @@ function AcademyDashboard() {
                         description: result.description || result.courseTitle,
                         type: result.type || 'course'
                       }}
-                      onClick={() => {}}
+                      onClick={(result) => {
+                        // Navigate to the result based on type
+                        if (result.type === 'course') {
+                          setCurrentView('courses');
+                          setSelectedCourse(result.courseId);
+                        } else if (result.type === 'lesson') {
+                          setCurrentView('courses');
+                          setSelectedCourse(result.courseId);
+                        }
+                        setGlobalSearchOpen(false);
+                      }}
                     />
                   )}
                 />

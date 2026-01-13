@@ -661,3 +661,617 @@ def health_check() -> bool:
         if conn:
             conn.close()
 
+
+# ============================================================================
+# MANUSCRIPT API FUNCTIONS
+# ============================================================================
+
+def get_manuscripts(project_id: str) -> List[Dict[str, Any]]:
+    """Get all manuscripts for a project"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT 
+                    id, project_id, title, subtitle, author, version, format,
+                    content, page_count, word_count, estimated_runtime,
+                    status, notes, metadata, created_at, updated_at
+                FROM casting_manuscripts
+                WHERE project_id = %s
+                ORDER BY updated_at DESC
+            """, (project_id,))
+            rows = cur.fetchall()
+            
+            manuscripts = []
+            for row in rows:
+                manuscript = dict(row)
+                # Convert datetime to ISO format
+                if manuscript.get('created_at'):
+                    manuscript['created_at'] = manuscript['created_at'].isoformat()
+                if manuscript.get('updated_at'):
+                    manuscript['updated_at'] = manuscript['updated_at'].isoformat()
+                manuscripts.append(convert_decimal(manuscript))
+            
+            return manuscripts
+    except Exception as e:
+        print(f"Error fetching manuscripts: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+
+def get_manuscript(manuscript_id: str) -> Optional[Dict[str, Any]]:
+    """Get a single manuscript by ID"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT 
+                    id, project_id, title, subtitle, author, version, format,
+                    content, page_count, word_count, estimated_runtime,
+                    status, notes, metadata, created_at, updated_at
+                FROM casting_manuscripts
+                WHERE id = %s
+            """, (manuscript_id,))
+            row = cur.fetchone()
+            
+            if row:
+                manuscript = dict(row)
+                if manuscript.get('created_at'):
+                    manuscript['created_at'] = manuscript['created_at'].isoformat()
+                if manuscript.get('updated_at'):
+                    manuscript['updated_at'] = manuscript['updated_at'].isoformat()
+                return convert_decimal(manuscript)
+            return None
+    except Exception as e:
+        print(f"Error fetching manuscript: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+
+
+def create_manuscript(manuscript: Dict[str, Any]) -> bool:
+    """Create a new manuscript"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO casting_manuscripts (
+                    id, project_id, title, subtitle, author, version, format,
+                    content, page_count, word_count, estimated_runtime,
+                    status, notes, metadata, created_at, updated_at
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
+            """, (
+                manuscript.get('id'),
+                manuscript.get('projectId'),
+                manuscript.get('title'),
+                manuscript.get('subtitle'),
+                manuscript.get('author'),
+                manuscript.get('version', '1.0'),
+                manuscript.get('format', 'fountain'),
+                manuscript.get('content', ''),
+                manuscript.get('pageCount', 0),
+                manuscript.get('wordCount', 0),
+                manuscript.get('estimatedRuntime'),
+                manuscript.get('status', 'draft'),
+                manuscript.get('notes'),
+                Json(manuscript.get('metadata', {})),
+                manuscript.get('createdAt', datetime.now().isoformat()),
+                manuscript.get('updatedAt', datetime.now().isoformat())
+            ))
+            conn.commit()
+            return True
+    except Exception as e:
+        print(f"Error creating manuscript: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def update_manuscript(manuscript_id: str, manuscript: Dict[str, Any]) -> bool:
+    """Update a manuscript"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE casting_manuscripts SET
+                    title = %s,
+                    subtitle = %s,
+                    author = %s,
+                    version = %s,
+                    format = %s,
+                    content = %s,
+                    page_count = %s,
+                    word_count = %s,
+                    estimated_runtime = %s,
+                    status = %s,
+                    notes = %s,
+                    metadata = %s,
+                    updated_at = %s
+                WHERE id = %s
+            """, (
+                manuscript.get('title'),
+                manuscript.get('subtitle'),
+                manuscript.get('author'),
+                manuscript.get('version'),
+                manuscript.get('format'),
+                manuscript.get('content'),
+                manuscript.get('pageCount'),
+                manuscript.get('wordCount'),
+                manuscript.get('estimatedRuntime'),
+                manuscript.get('status'),
+                manuscript.get('notes'),
+                Json(manuscript.get('metadata', {})),
+                datetime.now().isoformat(),
+                manuscript_id
+            ))
+            conn.commit()
+            return cur.rowcount > 0
+    except Exception as e:
+        print(f"Error updating manuscript: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def delete_manuscript(manuscript_id: str) -> bool:
+    """Delete a manuscript"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM casting_manuscripts WHERE id = %s", (manuscript_id,))
+            conn.commit()
+            return cur.rowcount > 0
+    except Exception as e:
+        print(f"Error deleting manuscript: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def get_scenes(manuscript_id: str) -> List[Dict[str, Any]]:
+    """Get all scenes for a manuscript"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT *
+                FROM casting_scenes
+                WHERE manuscript_id = %s
+                ORDER BY scene_number
+            """, (manuscript_id,))
+            rows = cur.fetchall()
+            
+            scenes = []
+            for row in rows:
+                scene = dict(row)
+                # Convert datetime to ISO format
+                if scene.get('created_at'):
+                    scene['created_at'] = scene['created_at'].isoformat()
+                if scene.get('updated_at'):
+                    scene['updated_at'] = scene['updated_at'].isoformat()
+                if scene.get('shooting_date') and hasattr(scene['shooting_date'], 'isoformat'):
+                    scene['shooting_date'] = scene['shooting_date'].isoformat()
+                scenes.append(convert_decimal(scene))
+            
+            return scenes
+    except Exception as e:
+        print(f"Error fetching scenes: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+
+def save_scene(scene: Dict[str, Any]) -> bool:
+    """Create or update a scene"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            # Check if scene exists
+            cur.execute("SELECT id FROM casting_scenes WHERE id = %s", (scene.get('id'),))
+            exists = cur.fetchone() is not None
+            
+            if exists:
+                # Update existing scene
+                cur.execute("""
+                    UPDATE casting_scenes SET
+                        scene_number = %s,
+                        scene_heading = %s,
+                        int_ext = %s,
+                        location_name = %s,
+                        time_of_day = %s,
+                        page_length = %s,
+                        estimated_screen_time = %s,
+                        description = %s,
+                        dramatic_day = %s,
+                        sequence = %s,
+                        characters = %s,
+                        extras_count = %s,
+                        props_needed = %s,
+                        wardrobe_notes = %s,
+                        makeup_notes = %s,
+                        special_effects = %s,
+                        stunts_notes = %s,
+                        vehicles = %s,
+                        animals = %s,
+                        sound_notes = %s,
+                        music_notes = %s,
+                        location_id = %s,
+                        shooting_date = %s,
+                        call_time = %s,
+                        estimated_duration = %s,
+                        priority = %s,
+                        status = %s,
+                        notes = %s,
+                        updated_at = %s
+                    WHERE id = %s
+                """, (
+                    scene.get('sceneNumber'),
+                    scene.get('sceneHeading'),
+                    scene.get('intExt'),
+                    scene.get('locationName'),
+                    scene.get('timeOfDay'),
+                    scene.get('pageLength'),
+                    scene.get('estimatedScreenTime'),
+                    scene.get('description'),
+                    scene.get('dramaticDay'),
+                    scene.get('sequence'),
+                    Json(scene.get('characters', [])),
+                    scene.get('extrasCount'),
+                    Json(scene.get('propsNeeded', [])),
+                    scene.get('wardrobeNotes'),
+                    scene.get('makeupNotes'),
+                    scene.get('specialEffects'),
+                    scene.get('stuntsNotes'),
+                    Json(scene.get('vehicles', [])),
+                    Json(scene.get('animals', [])),
+                    scene.get('soundNotes'),
+                    scene.get('musicNotes'),
+                    scene.get('locationId'),
+                    scene.get('shootingDate'),
+                    scene.get('callTime'),
+                    scene.get('estimatedDuration'),
+                    scene.get('priority'),
+                    scene.get('status', 'not-scheduled'),
+                    scene.get('notes'),
+                    datetime.now().isoformat(),
+                    scene.get('id')
+                ))
+            else:
+                # Insert new scene
+                cur.execute("""
+                    INSERT INTO casting_scenes (
+                        id, manuscript_id, project_id, scene_number, scene_heading,
+                        int_ext, location_name, time_of_day, page_length,
+                        estimated_screen_time, description, dramatic_day, sequence,
+                        characters, extras_count, props_needed, wardrobe_notes,
+                        makeup_notes, special_effects, stunts_notes, vehicles,
+                        animals, sound_notes, music_notes, location_id,
+                        shooting_date, call_time, estimated_duration, priority,
+                        status, notes, created_at, updated_at
+                    ) VALUES (
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s, %s, %s, %s
+                    )
+                """, (
+                    scene.get('id'),
+                    scene.get('manuscriptId'),
+                    scene.get('projectId'),
+                    scene.get('sceneNumber'),
+                    scene.get('sceneHeading'),
+                    scene.get('intExt'),
+                    scene.get('locationName'),
+                    scene.get('timeOfDay'),
+                    scene.get('pageLength'),
+                    scene.get('estimatedScreenTime'),
+                    scene.get('description'),
+                    scene.get('dramaticDay'),
+                    scene.get('sequence'),
+                    Json(scene.get('characters', [])),
+                    scene.get('extrasCount'),
+                    Json(scene.get('propsNeeded', [])),
+                    scene.get('wardrobeNotes'),
+                    scene.get('makeupNotes'),
+                    scene.get('specialEffects'),
+                    scene.get('stuntsNotes'),
+                    Json(scene.get('vehicles', [])),
+                    Json(scene.get('animals', [])),
+                    scene.get('soundNotes'),
+                    scene.get('musicNotes'),
+                    scene.get('locationId'),
+                    scene.get('shootingDate'),
+                    scene.get('callTime'),
+                    scene.get('estimatedDuration'),
+                    scene.get('priority'),
+                    scene.get('status', 'not-scheduled'),
+                    scene.get('notes'),
+                    datetime.now().isoformat(),
+                    datetime.now().isoformat()
+                ))
+            
+            conn.commit()
+            return True
+    except Exception as e:
+        print(f"Error saving scene: {e}")
+        import traceback
+        print(traceback.format_exc())
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def get_dialogue(manuscript_id: str) -> List[Dict[str, Any]]:
+    """Get all dialogue lines for a manuscript"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT *
+                FROM casting_dialogue
+                WHERE manuscript_id = %s
+                ORDER BY scene_id, line_number
+            """, (manuscript_id,))
+            rows = cur.fetchall()
+            
+            dialogue = []
+            for row in rows:
+                line = dict(row)
+                if line.get('created_at'):
+                    line['created_at'] = line['created_at'].isoformat()
+                if line.get('updated_at'):
+                    line['updated_at'] = line['updated_at'].isoformat()
+                dialogue.append(convert_decimal(line))
+            
+            return dialogue
+    except Exception as e:
+        print(f"Error fetching dialogue: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+
+def get_revisions(manuscript_id: str) -> List[Dict[str, Any]]:
+    """Get all revisions for a manuscript"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT *
+                FROM casting_script_revisions
+                WHERE manuscript_id = %s
+                ORDER BY created_at DESC
+            """, (manuscript_id,))
+            rows = cur.fetchall()
+            
+            revisions = []
+            for row in rows:
+                revision = dict(row)
+                if revision.get('created_at'):
+                    revision['created_at'] = revision['created_at'].isoformat()
+                revisions.append(convert_decimal(revision))
+            
+            return revisions
+    except Exception as e:
+        print(f"Error fetching revisions: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+
+def create_revision(revision: Dict[str, Any]) -> bool:
+    """Create a new script revision"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO casting_script_revisions (
+                    id, manuscript_id, version, content, changes_summary,
+                    changed_by, color_code, revision_notes, created_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                revision.get('id'),
+                revision.get('manuscriptId'),
+                revision.get('version'),
+                revision.get('content'),
+                revision.get('changesSummary'),
+                revision.get('changedBy'),
+                revision.get('colorCode'),
+                revision.get('revisionNotes'),
+                revision.get('createdAt', datetime.now().isoformat())
+            ))
+            conn.commit()
+            return True
+    except Exception as e:
+        print(f"Error creating revision: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+# ==================== Acts Functions ====================
+
+def get_acts(manuscript_id: str) -> List[Dict[str, Any]]:
+    """Get all acts for a manuscript"""
+    conn = None
+    try:
+        conn = get_db()
+        if not conn:
+            return []
+        
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT * FROM casting_acts
+                WHERE manuscript_id = %s
+                ORDER BY act_number
+            """, (manuscript_id,))
+            return [dict(row) for row in cur.fetchall()]
+    except Exception as e:
+        print(f"Error fetching acts: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+
+def get_act(act_id: str) -> Optional[Dict[str, Any]]:
+    """Get a single act by ID"""
+    conn = None
+    try:
+        conn = get_db()
+        if not conn:
+            return None
+        
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT * FROM casting_acts
+                WHERE id = %s
+            """, (act_id,))
+            row = cur.fetchone()
+            return dict(row) if row else None
+    except Exception as e:
+        print(f"Error fetching act: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+
+
+def create_act(act: Dict[str, Any]) -> bool:
+    """Create a new act"""
+    conn = None
+    try:
+        conn = get_db()
+        if not conn:
+            return False
+        
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO casting_acts (
+                    id, manuscript_id, project_id, act_number, title, description,
+                    page_start, page_end, estimated_runtime, color_code, sort_order, created_at, updated_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                act.get('id'),
+                act.get('manuscriptId'),
+                act.get('projectId', ''),
+                act.get('actNumber'),
+                act.get('title'),
+                act.get('description'),
+                act.get('pageStart'),
+                act.get('pageEnd'),
+                act.get('estimatedRuntime'),
+                act.get('colorCode'),
+                act.get('sortOrder', 0),
+                act.get('createdAt', datetime.now().isoformat()),
+                act.get('updatedAt', datetime.now().isoformat())
+            ))
+            conn.commit()
+            return True
+    except Exception as e:
+        print(f"Error creating act: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def update_act(act_id: str, act: Dict[str, Any]) -> bool:
+    """Update an existing act"""
+    conn = None
+    try:
+        conn = get_db()
+        if not conn:
+            return False
+        
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE casting_acts SET
+                    act_number = %s,
+                    title = %s,
+                    description = %s,
+                    page_start = %s,
+                    page_end = %s,
+                    estimated_runtime = %s,
+                    color_code = %s,
+                    sort_order = %s,
+                    updated_at = %s
+                WHERE id = %s
+            """, (
+                act.get('actNumber'),
+                act.get('title'),
+                act.get('description'),
+                act.get('pageStart'),
+                act.get('pageEnd'),
+                act.get('estimatedRuntime'),
+                act.get('colorCode'),
+                act.get('sortOrder'),
+                datetime.now().isoformat(),
+                act_id
+            ))
+            conn.commit()
+            return cur.rowcount > 0
+    except Exception as e:
+        print(f"Error updating act: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def delete_act(act_id: str) -> bool:
+    """Delete an act"""
+    conn = None
+    try:
+        conn = get_db()
+        if not conn:
+            return False
+        
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM casting_acts WHERE id = %s", (act_id,))
+            conn.commit()
+            return cur.rowcount > 0
+    except Exception as e:
+        print(f"Error deleting act: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()

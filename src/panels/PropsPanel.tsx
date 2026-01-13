@@ -52,13 +52,7 @@ import {
   PropCategory,
 } from '../../core/data/propDefinitions';
 
-export const PropsPanel: React.FC = () => {
-  // #region agent log
-  React.useEffect(() => {
-    fetch('http://127.0.0.1:7242/ingest/0bda4408-a4ac-499d-af8d-1291b9fac2d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PropsPanel.tsx:55',message:'PropsPanel rendered',data:{panelName:'PropsPanel'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-  }, []);
-  // #endregion
-  const { addNode } = useAppStore();
+export const PropsPanel: React.FC = () => {  const { addNode } = useAppStore();
 
   // UI State
   const [activeCategory, setActiveCategory] = useState<PropCategory>('furniture');

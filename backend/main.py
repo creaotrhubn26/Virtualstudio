@@ -20,7 +20,24 @@ try:
         get_project as db_get_project,
         save_project as db_save_project,
         delete_project as db_delete_project,
-        health_check as db_health_check
+        health_check as db_health_check,
+        # Manuscript functions
+        get_manuscripts as db_get_manuscripts,
+        get_manuscript as db_get_manuscript,
+        create_manuscript as db_create_manuscript,
+        update_manuscript as db_update_manuscript,
+        delete_manuscript as db_delete_manuscript,
+        get_scenes as db_get_scenes,
+        save_scene as db_save_scene,
+        get_dialogue as db_get_dialogue,
+        get_revisions as db_get_revisions,
+        create_revision as db_create_revision,
+        # Acts functions
+        get_acts as db_get_acts,
+        get_act as db_get_act,
+        create_act as db_create_act,
+        update_act as db_update_act,
+        delete_act as db_delete_act
     )
     CASTING_SERVICE_AVAILABLE = True
 except ImportError as e:
@@ -98,6 +115,14 @@ except ImportError as e:
     print(f"Warning: Casting service not available: {e}")
     CASTING_SERVICE_AVAILABLE = False
 
+# Collaboration service imports
+try:
+    from collaboration_server import collaboration_router
+    COLLABORATION_SERVICE_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Collaboration service not available: {e}")
+    COLLABORATION_SERVICE_AVAILABLE = False
+
 app = FastAPI(
     title="Virtual Studio Avatar API",
     description="Generate 3D avatars from images using Meta SAM 3D Body",
@@ -119,9 +144,6 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 RODIN_MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
-# Mount static files for generated 3D models
-app.mount("/api/models", StaticFiles(directory=str(RODIN_MODELS_DIR)), name="rodin_models")
-
 sam3d_service = None
 face_analysis = None
 facexformer = None
@@ -131,21 +153,25 @@ storyboard_service = None
 @app.on_event("startup")
 async def startup_event():
     global sam3d_service, face_analysis, facexformer, flux_service, storyboard_service
-    from sam3d_service import SAM3DService
-    from face_analysis_service import face_analysis_service
-    from facexformer_service import facexformer_service
-    from flux_service import flux_service as flux_svc
-    from storyboard_image_service import storyboard_image_service
-    sam3d_service = SAM3DService()
-    face_analysis = face_analysis_service
-    facexformer = facexformer_service
-    flux_service = flux_svc
-    storyboard_service = storyboard_image_service
-    print("SAM 3D Body service initialized")
-    print("Face analysis service initialized")
-    print(f"FaceXFormer service initialized (enabled: {facexformer.is_enabled()})")
-    print(f"FLUX service initialized (enabled: {flux_service.is_enabled()})")
-    print(f"Storyboard Image Service initialized (enabled: {storyboard_service.enabled})")
+    try:
+        from sam3d_service import SAM3DService
+        from face_analysis_service import face_analysis_service
+        from facexformer_service import facexformer_service
+        from flux_service import flux_service as flux_svc
+        from storyboard_image_service import storyboard_image_service
+        sam3d_service = SAM3DService()
+        face_analysis = face_analysis_service
+        facexformer = facexformer_service
+        flux_service = flux_svc
+        storyboard_service = storyboard_image_service
+        print("SAM 3D Body service initialized")
+        print("Face analysis service initialized")
+        print(f"FaceXFormer service initialized (enabled: {facexformer.is_enabled()})")
+        print(f"FLUX service initialized (enabled: {flux_service.is_enabled()})")
+        print(f"Storyboard Image Service initialized (enabled: {storyboard_service.enabled})")
+    except Exception as e:
+        print(f"Warning: ML services failed to initialize: {e}")
+        print("Server will continue with basic functionality only")
     
     # Initialize admin users table
     if AUTH_SERVICE_AVAILABLE:
@@ -195,27 +221,36 @@ from casting_service import (
 async def health_check():
     response: dict = {"status": "healthy"}
     
-    if sam3d_service:
-        response["sam3d"] = {
-            "model_loaded": sam3d_service.model_loaded,
-            "model_loading": sam3d_service.model_loading,
-            "use_placeholder": sam3d_service.use_placeholder,
-            "model_files_available": getattr(sam3d_service, 'model_files_available', False)
-        }
+    try:
+        if sam3d_service:
+            response["sam3d"] = {
+                "model_loaded": getattr(sam3d_service, 'model_loaded', False),
+                "model_loading": getattr(sam3d_service, 'model_loading', False),
+                "use_placeholder": getattr(sam3d_service, 'use_placeholder', True),
+                "model_files_available": getattr(sam3d_service, 'model_files_available', False)
+            }
+    except Exception as e:
+        response["sam3d"] = {"error": str(e)}
     
-    if facexformer:
-        response["facexformer"] = {
-            "enabled": facexformer.is_enabled(),
-            "model_loaded": facexformer.is_model_loaded(),
-            "model_loading": facexformer.model_loading
-        }
+    try:
+        if facexformer:
+            response["facexformer"] = {
+                "enabled": facexformer.is_enabled() if hasattr(facexformer, 'is_enabled') else False,
+                "model_loaded": facexformer.is_model_loaded() if hasattr(facexformer, 'is_model_loaded') else False,
+                "model_loading": getattr(facexformer, 'model_loading', False)
+            }
+    except Exception as e:
+        response["facexformer"] = {"error": str(e)}
     
-    if flux_service:
-        response["flux"] = {
-            "enabled": flux_service.is_enabled(),
-            "model_loaded": flux_service.is_model_loaded(),
-            "model_loading": flux_service.model_loading
-        }
+    try:
+        if flux_service:
+            response["flux"] = {
+                "enabled": flux_service.is_enabled() if hasattr(flux_service, 'is_enabled') else False,
+                "model_loaded": flux_service.is_model_loaded() if hasattr(flux_service, 'is_model_loaded') else False,
+                "model_loading": getattr(flux_service, 'model_loading', False)
+            }
+    except Exception as e:
+        response["flux"] = {"error": str(e)}
     
     return response
 
@@ -224,27 +259,42 @@ async def ml_health_check():
     """ML service health check - alias for /api/health."""
     response: dict = {"status": "healthy", "ml_ready": True}
     
-    if sam3d_service:
-        response["sam3d"] = {
-            "model_loaded": sam3d_service.model_loaded,
-            "model_loading": sam3d_service.model_loading,
-            "use_placeholder": sam3d_service.use_placeholder,
-            "model_files_available": getattr(sam3d_service, 'model_files_available', False)
-        }
+    try:
+        if sam3d_service:
+            response["sam3d"] = {
+                "model_loaded": getattr(sam3d_service, 'model_loaded', False),
+                "model_loading": getattr(sam3d_service, 'model_loading', False),
+                "use_placeholder": getattr(sam3d_service, 'use_placeholder', True),
+                "model_files_available": getattr(sam3d_service, 'model_files_available', False)
+            }
+        else:
+            response["sam3d"] = {"available": False}
+    except Exception as e:
+        response["sam3d"] = {"error": str(e)}
     
-    if facexformer:
-        response["facexformer"] = {
-            "enabled": facexformer.is_enabled(),
-            "model_loaded": facexformer.is_model_loaded(),
-            "model_loading": facexformer.model_loading
-        }
+    try:
+        if facexformer:
+            response["facexformer"] = {
+                "enabled": facexformer.is_enabled() if hasattr(facexformer, 'is_enabled') else False,
+                "model_loaded": facexformer.is_model_loaded() if hasattr(facexformer, 'is_model_loaded') else False,
+                "model_loading": getattr(facexformer, 'model_loading', False)
+            }
+        else:
+            response["facexformer"] = {"available": False}
+    except Exception as e:
+        response["facexformer"] = {"error": str(e)}
     
-    if flux_service:
-        response["flux"] = {
-            "enabled": flux_service.is_enabled(),
-            "model_loaded": flux_service.is_model_loaded(),
-            "model_loading": flux_service.model_loading
-        }
+    try:
+        if flux_service:
+            response["flux"] = {
+                "enabled": flux_service.is_enabled() if hasattr(flux_service, 'is_enabled') else False,
+                "model_loaded": flux_service.is_model_loaded() if hasattr(flux_service, 'is_model_loaded') else False,
+                "model_loading": getattr(flux_service, 'model_loading', False)
+            }
+        else:
+            response["flux"] = {"available": False}
+    except Exception as e:
+        response["flux"] = {"error": str(e)}
     
     return response
 
@@ -561,6 +611,14 @@ try:
     print("External data routes loaded (Kartverket property analysis)")
 except ImportError as e:
     print(f"Warning: External data routes not available: {e}")
+
+# Collaboration routes (WebSocket real-time)
+try:
+    if COLLABORATION_SERVICE_AVAILABLE:
+        app.include_router(collaboration_router)
+        print("Collaboration routes loaded (WebSocket real-time)")
+except Exception as e:
+    print(f"Warning: Collaboration routes not available: {e}")
 
 class RodinGenerateRequest(BaseModel):
     prompt: str
@@ -900,6 +958,251 @@ async def delete_casting_project(project_id: str):
             return JSONResponse({"success": True, "message": "Project deleted"})
         else:
             raise HTTPException(status_code=404, detail="Project not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# Manuscript API Endpoints
+# ============================================================================
+
+@app.get("/api/casting/manuscripts")
+async def get_manuscripts(projectId: str):
+    """Get all manuscripts for a project"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    
+    try:
+        manuscripts = db_get_manuscripts(projectId)
+        return JSONResponse(manuscripts)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/casting/manuscripts/{manuscript_id}")
+async def get_manuscript(manuscript_id: str):
+    """Get a single manuscript by ID"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    
+    try:
+        manuscript = db_get_manuscript(manuscript_id)
+        if manuscript:
+            return JSONResponse(manuscript)
+        else:
+            raise HTTPException(status_code=404, detail="Manuscript not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/casting/manuscripts")
+async def create_manuscript(request: Request):
+    """Create a new manuscript"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    
+    try:
+        manuscript = await request.json()
+        success = db_create_manuscript(manuscript)
+        if success:
+            return JSONResponse(manuscript)
+        else:
+            raise HTTPException(status_code=500, detail="Failed to create manuscript")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/casting/manuscripts/{manuscript_id}")
+async def update_manuscript(manuscript_id: str, request: Request):
+    """Update a manuscript"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    
+    try:
+        manuscript = await request.json()
+        success = db_update_manuscript(manuscript_id, manuscript)
+        if success:
+            return JSONResponse(manuscript)
+        else:
+            raise HTTPException(status_code=404, detail="Manuscript not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/casting/manuscripts/{manuscript_id}")
+async def delete_manuscript(manuscript_id: str):
+    """Delete a manuscript"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    
+    try:
+        success = db_delete_manuscript(manuscript_id)
+        if success:
+            return JSONResponse({"success": True, "message": "Manuscript deleted"})
+        else:
+            raise HTTPException(status_code=404, detail="Manuscript not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/casting/manuscripts/{manuscript_id}/scenes")
+async def get_manuscript_scenes(manuscript_id: str):
+    """Get all scenes for a manuscript"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    
+    try:
+        scenes = db_get_scenes(manuscript_id)
+        return JSONResponse(scenes)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/casting/scenes")
+async def save_scene(request: Request):
+    """Create or update a scene"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    
+    try:
+        scene = await request.json()
+        success = db_save_scene(scene)
+        if success:
+            return JSONResponse(scene)
+        else:
+            raise HTTPException(status_code=500, detail="Failed to save scene")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/casting/manuscripts/{manuscript_id}/dialogue")
+async def get_manuscript_dialogue(manuscript_id: str):
+    """Get all dialogue for a manuscript"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    
+    try:
+        dialogue = db_get_dialogue(manuscript_id)
+        return JSONResponse(dialogue)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/casting/manuscripts/{manuscript_id}/revisions")
+async def get_manuscript_revisions(manuscript_id: str):
+    """Get all revisions for a manuscript"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    
+    try:
+        revisions = db_get_revisions(manuscript_id)
+        return JSONResponse(revisions)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/casting/revisions")
+async def create_revision(request: Request):
+    """Create a new script revision"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    
+    try:
+        revision = await request.json()
+        success = db_create_revision(revision)
+        if success:
+            return JSONResponse(revision)
+        raise HTTPException(status_code=500, detail="Failed to create revision")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Acts Endpoints ====================
+
+@app.get("/api/casting/manuscripts/{manuscript_id}/acts")
+async def get_manuscript_acts(manuscript_id: str):
+    """Get all acts for a manuscript"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    
+    try:
+        acts = db_get_acts(manuscript_id)
+        return JSONResponse(acts)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/casting/acts/{act_id}")
+async def get_act_by_id(act_id: str):
+    """Get a single act by ID"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    
+    try:
+        act = db_get_act(act_id)
+        if act:
+            return JSONResponse(act)
+        raise HTTPException(status_code=404, detail="Act not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/casting/acts")
+async def create_new_act(request: Request):
+    """Create a new act"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    
+    try:
+        act = await request.json()
+        success = db_create_act(act)
+        if success:
+            return JSONResponse(act)
+        raise HTTPException(status_code=500, detail="Failed to create act")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/casting/acts/{act_id}")
+async def update_existing_act(act_id: str, request: Request):
+    """Update an existing act"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    
+    try:
+        act = await request.json()
+        success = db_update_act(act_id, act)
+        if success:
+            return JSONResponse(act)
+        raise HTTPException(status_code=404, detail="Act not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/casting/acts/{act_id}")
+async def delete_existing_act(act_id: str):
+    """Delete an act"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    
+    try:
+        success = db_delete_act(act_id)
+        if success:
+            return JSONResponse({"success": True})
+        else:
+            raise HTTPException(status_code=404, detail="Act not found")
     except HTTPException:
         raise
     except Exception as e:
@@ -6540,6 +6843,39 @@ async def get_email_logo(logo_key: str):
     except Exception as e:
         print(f"Error serving logo {logo_key}: {e}")
         raise HTTPException(status_code=404, detail="Logo ikke funnet")
+
+
+# Explicit route to serve 3D model files from rodin_models directory
+@app.get("/api/models/{filename:path}")
+async def serve_model_file(filename: str):
+    """Serve 3D model files (GLB, GLTF, etc.) from rodin_models directory."""
+    file_path = RODIN_MODELS_DIR / filename
+    
+    if not file_path.exists():
+        print(f"[Models] File not found: {file_path}")
+        raise HTTPException(status_code=404, detail=f"Model file not found: {filename}")
+    
+    # Determine content type based on extension
+    content_types = {
+        '.glb': 'model/gltf-binary',
+        '.gltf': 'model/gltf+json',
+        '.bin': 'application/octet-stream',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+    }
+    
+    ext = file_path.suffix.lower()
+    content_type = content_types.get(ext, 'application/octet-stream')
+    
+    print(f"[Models] Serving: {filename} ({content_type})")
+    
+    from fastapi.responses import FileResponse
+    return FileResponse(
+        path=str(file_path),
+        media_type=content_type,
+        filename=filename
+    )
 
 
 if __name__ == "__main__":

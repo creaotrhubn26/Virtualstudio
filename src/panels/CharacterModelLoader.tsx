@@ -48,6 +48,20 @@ const createCharacterSVG = (type: 'female' | 'male' | 'couple', color = '#666') 
   return `data:image/svg+xml,${encodeURIComponent(svgs[type])}`;
 };
 
+// Create avatar thumbnail placeholder SVG - must be defined before CHARACTER_MODELS
+const createAvatarSVG = (type: 'child' | 'teenager' | 'woman' | 'man' | 'elderly' | 'athlete' | 'pregnant' | 'dancer', color = '#00d4ff') => {
+  const svgs: Record<string, string> = {
+    child: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150" fill="none"><circle cx="50" cy="25" r="18" fill="${color}"/><rect x="32" y="48" width="36" height="42" rx="4" fill="${color}"/><rect x="36" y="90" width="12" height="38" fill="${color}"/><rect x="52" y="90" width="12" height="38" fill="${color}"/></svg>`,
+    teenager: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150" fill="${color}"><circle cx="50" cy="22" r="16"/><path d="M35 42h30l5 48H30z"/><rect x="38" y="90" width="10" height="42"/><rect x="52" y="90" width="10" height="42"/></svg>`,
+    woman: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150" fill="${color}"><circle cx="50" cy="20" r="14"/><path d="M34 38h32l8 50H26z"/><rect x="36" y="88" width="11" height="45"/><rect x="53" y="88" width="11" height="45"/></svg>`,
+    man: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150" fill="${color}"><circle cx="50" cy="20" r="15"/><rect x="30" y="40" width="40" height="50" rx="5"/><rect x="35" y="90" width="12" height="45"/><rect x="53" y="90" width="12" height="45"/><rect x="20" y="45" width="15" height="8" rx="2"/><rect x="65" y="45" width="15" height="8" rx="2"/></svg>`,
+    elderly: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150" fill="${color}"><circle cx="50" cy="22" r="14"/><path d="M36 40h28l6 46H30z"/><rect x="38" y="86" width="10" height="40"/><rect x="52" y="86" width="10" height="40"/><line x1="75" y1="50" x2="75" y2="110" stroke="${color}" stroke-width="3"/></svg>`,
+    athlete: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150" fill="${color}"><circle cx="50" cy="18" r="14"/><rect x="28" y="36" width="44" height="48" rx="6"/><rect x="32" y="84" width="14" height="48"/><rect x="54" y="84" width="14" height="48"/><rect x="18" y="42" width="18" height="10" rx="3"/><rect x="64" y="42" width="18" height="10" rx="3"/></svg>`,
+    pregnant: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150" fill="${color}"><circle cx="50" cy="20" r="14"/><ellipse cx="50" cy="65" rx="24" ry="28"/><rect x="36" y="93" width="11" height="42"/><rect x="53" y="93" width="11" height="42"/></svg>`,
+    dancer: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150" fill="${color}"><circle cx="50" cy="18" r="13"/><path d="M38 34h24l4 38H34z"/><line x1="45" y1="72" x2="35" y2="120" stroke="${color}" stroke-width="8"/><line x1="55" y1="72" x2="70" y2="115" stroke="${color}" stroke-width="8"/><line x1="38" y1="38" x2="15" y2="28" stroke="${color}" stroke-width="6"/><line x1="62" y1="38" x2="85" y2="50" stroke="${color}" stroke-width="6"/></svg>`
+  };
+  return `data:image/svg+xml,${encodeURIComponent(svgs[type])}`;
+};
 
 const CHARACTER_MODELS: CharacterModel[] = [
   {
@@ -56,7 +70,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     gender: 'neutral',
     category: 'portrett' as any,
     modelUrl: '/models/avatars/avatar_child.glb',
-    thumbnail: '/images/models/child.png',
+    thumbnail: createAvatarSVG('child'),
     description: 'SAM 3D Body - Barn 8 år',
     poses: 1,
   },
@@ -66,7 +80,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     gender: 'female',
     category: 'portrett' as any,
     modelUrl: '/models/avatars/avatar_teenager.glb',
-    thumbnail: '/images/models/teenager.png',
+    thumbnail: createAvatarSVG('teenager'),
     description: 'SAM 3D Body - Tenåring 14 år',
     poses: 1,
   },
@@ -76,7 +90,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     gender: 'female',
     category: 'portrett' as any,
     modelUrl: '/models/avatars/avatar_woman.glb',
-    thumbnail: '/images/models/woman.png',
+    thumbnail: createAvatarSVG('woman'),
     description: 'SAM 3D Body - Profesjonell kvinne',
     poses: 1,
   },
@@ -86,7 +100,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     gender: 'male',
     category: 'portrett' as any,
     modelUrl: '/models/avatars/avatar_man.glb',
-    thumbnail: '/images/models/man.png',
+    thumbnail: createAvatarSVG('man'),
     description: 'SAM 3D Body - Casual mann',
     poses: 1,
   },
@@ -96,7 +110,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     gender: 'female',
     category: 'portrett' as any,
     modelUrl: '/models/avatars/avatar_elderly.glb',
-    thumbnail: '/images/models/elderly.png',
+    thumbnail: createAvatarSVG('elderly'),
     description: 'SAM 3D Body - Bestemor 70+',
     poses: 1,
   },
@@ -106,7 +120,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     gender: 'male',
     category: 'mote' as any,
     modelUrl: '/models/avatars/avatar_athlete.glb',
-    thumbnail: '/images/models/athlete.png',
+    thumbnail: createAvatarSVG('athlete'),
     description: 'SAM 3D Body - Atletisk mann',
     poses: 1,
   },
@@ -116,7 +130,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     gender: 'female',
     category: 'portrett' as any,
     modelUrl: '/models/avatars/avatar_pregnant.glb',
-    thumbnail: '/images/models/pregnant.png',
+    thumbnail: createAvatarSVG('pregnant'),
     description: 'SAM 3D Body - Gravid kvinne',
     poses: 1,
   },
@@ -126,7 +140,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     gender: 'female',
     category: 'mote' as any,
     modelUrl: '/models/avatars/avatar_dancer.glb',
-    thumbnail: '/images/models/dancer.png',
+    thumbnail: createAvatarSVG('dancer'),
     description: 'SAM 3D Body - Grasiøs danser',
     poses: 1,
   },

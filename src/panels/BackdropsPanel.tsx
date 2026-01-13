@@ -61,13 +61,7 @@ const BACKDROPS_BY_CATEGORY: Record<BackdropCategory, BackdropSpec[]> = {
   reflektor: getBackdropsByCategory('reflektor'),
 };
 
-export const BackdropsPanel: React.FC = () => {
-  // #region agent log
-  React.useEffect(() => {
-    fetch('http://127.0.0.1:7242/ingest/0bda4408-a4ac-499d-af8d-1291b9fac2d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BackdropsPanel.tsx:55',message:'BackdropsPanel rendered',data:{panelName:'BackdropsPanel'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-  }, []);
-  // #endregion
-  const { addNode, removeNode } = useAppStore();
+export const BackdropsPanel: React.FC = () => {  const { addNode, removeNode } = useAppStore();
   const nodes = useAppStore((s) => s.scene);
 
   // UI State
@@ -82,20 +76,12 @@ export const BackdropsPanel: React.FC = () => {
   const [enableLOD, setEnableLOD] = useState(true);
 
   // Get backdrops for active category
-  const backdropItems = useMemo(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0bda4408-a4ac-499d-af8d-1291b9fac2d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BackdropsPanel.tsx:76',message:'Getting backdrop items',data:{activeCategory,hasBACKDROPS_BY_CATEGORY:!!BACKDROPS_BY_CATEGORY,backdropsByCategoryType:typeof BACKDROPS_BY_CATEGORY,hasCategory:!!BACKDROPS_BY_CATEGORY?.[activeCategory]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-    // #endregion
-    if (!BACKDROPS_BY_CATEGORY || !BACKDROPS_BY_CATEGORY[activeCategory]) return [];
+  const backdropItems = useMemo(() => {    if (!BACKDROPS_BY_CATEGORY || !BACKDROPS_BY_CATEGORY[activeCategory]) return [];
     return BACKDROPS_BY_CATEGORY[activeCategory] || [];
   }, [activeCategory]);
 
   // Check if backdrop exists in scene
-  const currentBackdrop = useMemo(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0bda4408-a4ac-499d-af8d-1291b9fac2d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BackdropsPanel.tsx:80',message:'Finding backdrop',data:{nodesType:typeof nodes,nodesIsArray:Array.isArray(nodes),nodesLength:nodes?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
-    if (!nodes || !Array.isArray(nodes)) return undefined;
+  const currentBackdrop = useMemo(() => {    if (!nodes || !Array.isArray(nodes)) return undefined;
     return nodes.find(node => node.type === 'background');
   }, [nodes]);
 

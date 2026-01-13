@@ -65,7 +65,7 @@ const getBabylonScene = (): BABYLON.Scene | null => {
 interface HDRIPreset {
   id: string;
   name: string;
-  category: 'studio' | 'outdoor' | 'indoor' | 'sunset' | 'night' | 'overcast' | 'school';
+  category: 'studio' | 'outdoor' | 'indoor' | 'sunset' | 'night' | 'overcast' | 'school' | 'urban';
   url: string;
   thumbnail: string;
   intensity: number;
@@ -881,6 +881,110 @@ const HDRI_PRESETS: HDRIPreset[] = [
     rotation: 0,
     description: 'Beautiful school environment - 4K (BlenderKit)',
   },
+
+  // ============================================================================
+  // URBAN HDRIs (10) - City streets, industrial, night scenes
+  // ============================================================================
+  {
+    id: 'urban_potsdamer_platz',
+    name: 'City Night (Potsdamer)',
+    category: 'urban',
+    url: 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/potsdamer_platz_1k.hdr',
+    thumbnail: 'https://cdn.polyhaven.com/asset_img/thumbs/potsdamer_platz.png',
+    intensity: 0.6,
+    rotation: 0,
+    description: 'Berlin city square at night with neon lights',
+  },
+  {
+    id: 'urban_empty_warehouse',
+    name: 'Industrial Warehouse',
+    category: 'urban',
+    url: 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/empty_warehouse_01_1k.hdr',
+    thumbnail: 'https://cdn.polyhaven.com/asset_img/thumbs/empty_warehouse_01.png',
+    intensity: 0.9,
+    rotation: 0,
+    description: 'Empty industrial warehouse with skylights',
+  },
+  {
+    id: 'urban_alley_01',
+    name: 'Urban Alley',
+    category: 'urban',
+    url: 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/urban_alley_01_1k.hdr',
+    thumbnail: 'https://cdn.polyhaven.com/asset_img/thumbs/urban_alley_01.png',
+    intensity: 0.8,
+    rotation: 0,
+    description: 'City alley with overhead lighting - graffiti vibes',
+  },
+  {
+    id: 'urban_leadenhall',
+    name: 'Victorian Market',
+    category: 'urban',
+    url: 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/leadenhall_market_1k.hdr',
+    thumbnail: 'https://cdn.polyhaven.com/asset_img/thumbs/leadenhall_market.png',
+    intensity: 0.7,
+    rotation: 0,
+    description: 'Historic Leadenhall Market - vintage urban',
+  },
+  {
+    id: 'urban_night_bridge',
+    name: 'Night Bridge',
+    category: 'urban',
+    url: 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/night_bridge_1k.hdr',
+    thumbnail: 'https://cdn.polyhaven.com/asset_img/thumbs/night_bridge.png',
+    intensity: 0.5,
+    rotation: 0,
+    description: 'Urban bridge at night - moody city vibes',
+  },
+  {
+    id: 'urban_old_depot',
+    name: 'Old Train Depot',
+    category: 'urban',
+    url: 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/old_depot_1k.hdr',
+    thumbnail: 'https://cdn.polyhaven.com/asset_img/thumbs/old_depot.png',
+    intensity: 0.8,
+    rotation: 0,
+    description: 'Historic train depot - industrial heritage',
+  },
+  {
+    id: 'urban_modern_buildings',
+    name: 'Modern City Buildings',
+    category: 'urban',
+    url: 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/modern_buildings_1k.hdr',
+    thumbnail: 'https://cdn.polyhaven.com/asset_img/thumbs/modern_buildings.png',
+    intensity: 0.9,
+    rotation: 0,
+    description: 'Contemporary architecture - glass and steel',
+  },
+  {
+    id: 'urban_theater',
+    name: 'Theater District',
+    category: 'urban',
+    url: 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/theater_01_1k.hdr',
+    thumbnail: 'https://cdn.polyhaven.com/asset_img/thumbs/theater_01.png',
+    intensity: 0.6,
+    rotation: 0,
+    description: 'Classic theater - downtown entertainment',
+  },
+  {
+    id: 'urban_dancing_hall',
+    name: 'Nightclub / Dance Hall',
+    category: 'urban',
+    url: 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/dancing_hall_1k.hdr',
+    thumbnail: 'https://cdn.polyhaven.com/asset_img/thumbs/dancing_hall.png',
+    intensity: 0.7,
+    rotation: 0,
+    description: 'Urban nightlife - dance floor vibes',
+  },
+  {
+    id: 'urban_peppermint',
+    name: 'Powerplant Industrial',
+    category: 'urban',
+    url: 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/peppermint_powerplant_1k.hdr',
+    thumbnail: 'https://cdn.polyhaven.com/asset_img/thumbs/peppermint_powerplant.png',
+    intensity: 0.7,
+    rotation: 0,
+    description: 'Industrial powerplant - urban grit',
+  },
 ];
 
 export const HDRIEnvironmentLoader: React.FC = () => {
@@ -1078,6 +1182,7 @@ export const HDRIEnvironmentLoader: React.FC = () => {
     { value: 'night', label: 'Night', icon: <NightsStay /> },
     { value: 'overcast', label: 'Overcast', icon: <CloudQueue /> },
     { value: 'school', label: 'School', icon: <School /> },
+    { value: 'urban', label: 'Urban', icon: <Landscape /> },
   ];
 
   const filteredHDRIs =

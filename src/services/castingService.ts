@@ -12,10 +12,38 @@ import {
   Consent,
 } from '../core/models/casting';
 import { sceneComposerService } from './sceneComposerService';
+import { apiRequest } from '../lib/queryClient';
 
 // Database availability cache
 let dbAvailable: boolean | null = null;
 let dbCheckPromise: Promise<boolean> | null = null;
+
+// Local storage fallback for projects
+const PROJECTS_STORAGE_KEY = 'casting-projects';
+
+/**
+ * Get projects from local storage fallback
+ */
+function getProjectsFromStorage(): CastingProject[] {
+  try {
+    const stored = localStorage.getItem(PROJECTS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.warn('Failed to get projects from storage:', error);
+    return [];
+  }
+}
+
+/**
+ * Save projects to local storage fallback
+ */
+function saveProjectsToStorage(projects: CastingProject[]): void {
+  try {
+    localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
+  } catch (error) {
+    console.warn('Failed to save projects to storage:', error);
+  }
+}
 
 /**
  * Check if database is available
@@ -48,7 +76,7 @@ async function checkDatabaseAvailability(): Promise<boolean> {
 }
 
 /**
- * Get projects from database
+ * Get projects from database with fallback to storage
  */
 async function getProjectsFromDb(): Promise<CastingProject[]> {
   try {
@@ -56,17 +84,34 @@ async function getProjectsFromDb(): Promise<CastingProject[]> {
     if (!response.ok) {
       throw new Error(`Failed to fetch projects: ${response.statusText}`);
     }
-    return await response.json();
+    const data = await response.json();
+    const projects = Array.isArray(data) ? data : data.projects || [];
+    saveProjectsToStorage(projects); // Cache to storage
+    return projects;
   } catch (error) {
     console.error('Error fetching projects from database:', error);
-    throw error;
+    // Fall back to local storage
+    console.log('Using cached projects from local storage');
+    return getProjectsFromStorage();
   }
 }
 
 /**
- * Save project to database
+ * Save project to database with fallback to storage
  */
 async function saveProjectToDb(project: CastingProject): Promise<void> {
+  // Always save to storage first
+  const projects = getProjectsFromStorage();
+  const existingIndex = projects.findIndex(p => p.id === project.id);
+  
+  if (existingIndex >= 0) {
+    projects[existingIndex] = project;
+  } else {
+    projects.push(project);
+  }
+  saveProjectsToStorage(projects);
+  
+  // Try to sync with database
   try {
     const response = await fetch('/api/casting/projects', {
       method: 'POST',
@@ -80,15 +125,21 @@ async function saveProjectToDb(project: CastingProject): Promise<void> {
       throw new Error(`Failed to save project: ${response.statusText}`);
     }
   } catch (error) {
-    console.error('Error saving project to database:', error);
-    throw error;
+    console.warn('Failed to save project to database, using local storage:', error);
+    // Not throwing - user can continue working offline
   }
 }
 
 /**
- * Delete project from database
+ * Delete project from database with fallback to storage
  */
 async function deleteProjectFromDb(id: string): Promise<void> {
+  // Remove from storage first
+  let projects = getProjectsFromStorage();
+  projects = projects.filter(p => p.id !== id);
+  saveProjectsToStorage(projects);
+  
+  // Try to sync with database
   try {
     const response = await fetch(`/api/casting/projects/${id}`, {
       method: 'DELETE',
@@ -98,33 +149,27 @@ async function deleteProjectFromDb(id: string): Promise<void> {
       throw new Error(`Failed to delete project: ${response.statusText}`);
     }
   } catch (error) {
-    console.error('Error deleting project from database:', error);
-    throw error;
+    console.warn('Failed to delete project from database, using local storage:', error);
+    // Not throwing - user can continue working offline
   }
 }
 
 export const castingService = {
   /**
-   * Get all projects from database
+   * Get all projects from database or storage
    */
   async getProjects(): Promise<CastingProject[]> {
-    const useDb = await checkDatabaseAvailability();
-    
-    if (!useDb) {
-      throw new Error('Database is not available');
-    }
-    
     try {
       return await getProjectsFromDb();
     } catch (error) {
-      console.error('Database fetch failed:', error);
-      dbAvailable = false; // Mark as unavailable
-      throw error;
+      console.error('Database fetch failed, falling back to storage:', error);
+      // Return projects from local storage even if database is unavailable
+      return getProjectsFromStorage();
     }
   },
 
   /**
-   * Get project by ID from database
+   * Get project by ID from database or storage
    */
   async getProject(id: string): Promise<CastingProject | null> {
     try {
@@ -137,49 +182,47 @@ export const castingService = {
       }
       return await response.json();
     } catch (error) {
-      console.error('Error fetching project from database:', error);
-      throw error;
+      // Fall back to storage
+      const projects = getProjectsFromStorage();
+      return projects.find(p => p.id === id) || null;
     }
   },
 
   /**
-   * Save project (create or update) to database
+   * Save project (create or update) to database or storage
    */
   async saveProject(project: CastingProject): Promise<void> {
-    const useDb = await checkDatabaseAvailability();
-    
-    if (!useDb) {
-      throw new Error('Database is not available');
-    }
-    
     // Update timestamp
     project = { ...project, updatedAt: new Date().toISOString() };
     
     try {
       await saveProjectToDb(project);
     } catch (error) {
-      console.error('Database save failed:', error);
-      dbAvailable = false; // Mark as unavailable
-      throw error;
+      console.warn('Database save failed, using local storage:', error);
+      // Still save to storage as fallback
+      const projects = getProjectsFromStorage();
+      const existingIndex = projects.findIndex(p => p.id === project.id);
+      if (existingIndex >= 0) {
+        projects[existingIndex] = project;
+      } else {
+        projects.push(project);
+      }
+      saveProjectsToStorage(projects);
     }
   },
 
   /**
-   * Delete project from database
+   * Delete project from database or storage
    */
   async deleteProject(id: string): Promise<void> {
-    const useDb = await checkDatabaseAvailability();
-    
-    if (!useDb) {
-      throw new Error('Database is not available');
-    }
-    
     try {
       await deleteProjectFromDb(id);
     } catch (error) {
-      console.error('Database delete failed:', error);
-      dbAvailable = false; // Mark as unavailable
-      throw error;
+      console.warn('Database delete failed, using local storage:', error);
+      // Still delete from storage as fallback
+      let projects = getProjectsFromStorage();
+      projects = projects.filter(p => p.id !== id);
+      saveProjectsToStorage(projects);
     }
   },
 

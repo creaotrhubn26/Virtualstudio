@@ -54,13 +54,7 @@ import {
   ClothingCategory,
 } from '../../core/data/clothingStyles';
 
-export const ClothingPanel: React.FC = () => {
-  // #region agent log
-  React.useEffect(() => {
-    fetch('http://127.0.0.1:7242/ingest/0bda4408-a4ac-499d-af8d-1291b9fac2d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ClothingPanel.tsx:57',message:'ClothingPanel rendered',data:{panelName:'ClothingPanel'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-  }, []);
-  // #endregion
-  const { addNode } = useAppStore();
+export const ClothingPanel: React.FC = () => {  const { addNode } = useAppStore();
   const nodes = useAppStore((s) => s.scene.nodes);
 
   // UI State
@@ -77,20 +71,12 @@ export const ClothingPanel: React.FC = () => {
   const [enableLOD, setEnableLOD] = useState(true);
 
   // Get actors from scene
-  const actors = useMemo(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0bda4408-a4ac-499d-af8d-1291b9fac2d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ClothingPanel.tsx:79',message:'Filtering actors',data:{nodesType:typeof nodes,nodesIsArray:Array.isArray(nodes),nodesLength:nodes?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
-    if (!nodes || !Array.isArray(nodes)) return [];
+  const actors = useMemo(() => {    if (!nodes || !Array.isArray(nodes)) return [];
     return nodes.filter(node => node.type === 'model' || node.type === 'virtual');
   }, [nodes]);
 
   // Get clothing for active category
-  const clothingItems = useMemo(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0bda4408-a4ac-499d-af8d-1291b9fac2d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ClothingPanel.tsx:84',message:'Getting clothing items',data:{activeCategory,hasCLOTHING_BY_CATEGORY:!!CLOTHING_BY_CATEGORY,clothingByCategoryType:typeof CLOTHING_BY_CATEGORY,hasCategory:!!CLOTHING_BY_CATEGORY?.[activeCategory]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-    // #endregion
-    if (!CLOTHING_BY_CATEGORY || !CLOTHING_BY_CATEGORY[activeCategory]) return [];
+  const clothingItems = useMemo(() => {    if (!CLOTHING_BY_CATEGORY || !CLOTHING_BY_CATEGORY[activeCategory]) return [];
     return CLOTHING_BY_CATEGORY[activeCategory] || [];
   }, [activeCategory]);
 

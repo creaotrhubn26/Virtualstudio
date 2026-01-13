@@ -35,10 +35,12 @@ export function CastingLandingPage({ onEnter }: CastingLandingPageProps) {
   };
 
   const handleStartClick = () => {
+    console.log('Opening login dialog...');
     setLoginDialogOpen(true);
   };
 
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = (user: { id: number; email: string; role: string; display_name: string }) => {
+    console.log('Login successful, user:', user);
     setLoginDialogOpen(false);
     // Reload the page - the app will now show planner since user is authenticated
     window.location.reload();
@@ -56,8 +58,8 @@ export function CastingLandingPage({ onEnter }: CastingLandingPageProps) {
       width: '100%', 
       minHeight: '100vh', 
       bgcolor: '#0a0a0f',
-      overflowX: 'hidden',
-      overflowY: 'auto',
+      overflowX: loginDialogOpen ? 'visible' : 'hidden',
+      overflowY: loginDialogOpen ? 'visible' : 'auto',
       position: 'relative',
     }}>
       <AnimatePresence>
@@ -77,6 +79,7 @@ export function CastingLandingPage({ onEnter }: CastingLandingPageProps) {
               alignItems: 'center',
               justifyContent: 'center',
               background: '#0a0a0f',
+              pointerEvents: showIntro ? 'auto' : 'none',
             }}
           >
             <Box sx={{ 

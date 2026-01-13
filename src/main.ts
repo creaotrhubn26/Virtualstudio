@@ -2,7 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, MarketplacePanelApp, AIAssistantApp, CastingPlannerApp, SceneComposerPanelApp, AnimationComposerApp } from './App';
+import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, MarketplacePanelApp, AIAssistantApp, CastingPlannerApp, SceneComposerPanelApp, AnimationComposerApp, VirtualStudioProApp, InteractiveElementsBrowserApp, AmbientSoundsBrowserApp, AccessoriesPanelApp } from './App';
 import PanelCreator from './components/PanelCreator';
 import { useAppStore, useFocusStore, useAutoFocusStore, useFocusPeakingStore, SceneNode } from './state/store';
 import { AutoFocusSystem } from './core/AutoFocusSystem';
@@ -14,6 +14,9 @@ import { focusController } from './core/FocusController';
 import { virtualActorService } from './core/services/virtualActorService';
 import { propRenderingService } from './core/services/propRenderingService';
 import { environmentService } from './core/services/environmentService';
+import { useRenderingStore, RENDERING_PRESETS } from './services/renderingService';
+import { getWallById } from './data/wallDefinitions';
+import { getFloorById } from './data/floorDefinitions';
 import { getPropById } from './core/data/propDefinitions';
 import { ScenarioPreset } from './data/scenarioPresets';
 import { marketplaceService } from './services/marketplaceService';
@@ -22,6 +25,13 @@ import { getLightById, LIGHT_DATABASE, LightSpec } from './data/lightFixtures';
 import { zipSync, strToU8 } from 'fflate';
 import MP4Box from 'mp4box';
 import { LightingPhysics } from './core/LightingPhysics';
+import { SceneComposition } from './core/models/sceneComposer';
+import { ShotList, CastingShot } from './core/models/casting';
+import { useStreamingStore, StreamConfig } from './services/streamingService';
+import { useExportStore, ExportFormat, ExportSettings } from './services/exportService';
+import { useCollaborationStore } from './services/collaborationService';
+import { AvatarMaterialService } from './services/avatarMaterialService';
+import { getAvatarById } from './data/avatarDefinitions';
 
 declare global {
   interface Window {
@@ -137,7 +147,13 @@ type UndoActionType =
   | 'light-rotate' 
   | 'light-property'
   | 'camera-change'
-  | 'selection-change';
+  | 'selection-change'
+  | 'prop-move'
+  | 'actor-move'
+  | 'camera-preset-move'
+  | 'multi-move'
+  | 'group-create'
+  | 'group-remove';
 
 interface UndoAction {
   type: UndoActionType;
@@ -147,14 +163,59 @@ interface UndoAction {
     lightId?: string;
     previousState?: any;
     newState?: any;
+    // Multi-select undo data
+    items?: Array<{
+      type: 'light' | 'prop' | 'actor' | 'camera';
+      id: string;
+      previousPosition: { x: number; y: number; z: number };
+      newPosition: { x: number; y: number; z: number };
+    }>;
+    groupId?: string;
+    groupName?: string;
+    memberIds?: string[];
   };
 }
 
-interface LightData {
-  light: BABYLON.Light;
-  mesh: BABYLON.Mesh;
-  type: string;
+// Object group for grouping lights/props/actors
+interface TopViewObjectGroup {
+  id: string;
   name: string;
+  members: Set<string>; // IDs of objects in group
+  color: string;
+  locked: boolean;
+  visible: boolean;
+}
+
+// Marquee selection state
+interface MarqueeSelection {
+  active: boolean;
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+}
+
+// Touch gesture state for iPad Pro / Apple Pencil
+interface TouchGestureState {
+  lastTapTime: number;
+  lastTapX: number;
+  lastTapY: number;
+  touchHoldTimer: ReturnType<typeof setTimeout> | null;
+  pinchCenter: { x: number; y: number } | null;
+  initialPinchDistance: number;
+  initialZoom: number;
+  initialPan: { x: number; y: number };
+  isPencil: boolean;
+  forceTouchValue: number;
+}
+
+// Snap guide line for visual feedback
+interface SnapGuideLine {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  type: 'center-h' | 'center-v' | 'edge-h' | 'edge-v';
   cct: number;
   modifier: string;
   specs?: LightSpecs;
@@ -183,6 +244,32 @@ interface CameraSettings {
   iso: number;
   focalLength: number;
   nd: number;
+}
+
+interface LightData {
+  light: BABYLON.Light;
+  mesh: BABYLON.Mesh;
+  type: string;
+  name: string;
+  cct: number;
+  modifier: string;
+  specs?: LightSpecs;
+  intensity: number;
+  enabled?: boolean;
+  azimuth?: number;
+  elevation?: number;
+  powerMultiplier?: number;
+  baseIntensity?: number;
+  modelingLight?: BABYLON.Light;
+  modelingLightEnabled?: boolean;
+  modelingLightIntensity?: number;
+  shadowGenerator?: BABYLON.ShadowGenerator;
+  beamVisualization?: BABYLON.Mesh;
+  useCustomColor?: boolean;
+  customColor?: string;
+  shadowsEnabled?: boolean;
+  directionHelper?: BABYLON.LinesMesh;
+  originalDiffuse?: BABYLON.Color3;
 }
 
 interface Keyframe {
@@ -268,6 +355,16 @@ class VirtualStudio {
   private monitorTempFramebuffers: Map<string, WebGLFramebuffer | null> = new Map();
   // Track if callbacks are already registered to avoid duplicates
   private monitorCallbacksRegistered: Map<string, boolean> = new Map();
+
+  // Scene state tracking for assets (Phase 3: Asset Pipeline)
+  private sceneState = {
+    props: new Map<string, { id: string; mesh: BABYLON.Mesh; assetId: string; name: string; metadata?: any }>(),
+    characters: new Map<string, { id: string; mesh: BABYLON.Mesh; name: string; avatarUrl?: string }>(),
+    backdrops: new Map<string, { id: string; mesh: BABYLON.Mesh; backdropId: string }>()
+  };
+  
+  // Getter to access lights via sceneState for consistency
+  private get sceneLights() { return this.lights; }
   // Track if first render has completed
   private monitorFirstRenderComplete: Map<string, boolean> = new Map();
   // Track logged warnings to avoid spam (only log once per state change)
@@ -552,8 +649,11 @@ class VirtualStudio {
       propRenderingService.setScene(this.scene);
 
       console.log('[VirtualStudio] Starting setupStudio...');
-      this.setupStudio();
-      console.log('[VirtualStudio] setupStudio complete. Meshes:', this.scene.meshes.length);
+      this.setupStudio().then(() => {
+        console.log('[VirtualStudio] setupStudio complete. Meshes:', this.scene.meshes.length, 'Lights:', this.lights.size);
+      }).catch(err => {
+        console.error('[VirtualStudio] setupStudio error:', err);
+      });
       
       this.setup2DViews();
       this.setupUI();
@@ -679,6 +779,818 @@ class VirtualStudio {
       });
     }
   }
+
+    public updateShadowMaps(): void {
+      this.lights.forEach((lightData) => {
+        if (!lightData.shadowGenerator && lightData.light instanceof BABYLON.SpotLight) {
+          lightData.shadowGenerator = new BABYLON.ShadowGenerator(2048, lightData.light);
+          lightData.shadowGenerator.useBlurExponentialShadowMap = true;
+        }
+        if (lightData.shadowGenerator) {
+          this.scene.meshes.filter(m => m.isVisible && m !== lightData.mesh).forEach(m => {
+            lightData.shadowGenerator!.addShadowCaster(m, true);
+          });
+        }
+      });
+      this.scene.meshes.forEach(m => { if (m.isVisible) m.receiveShadows = true; });
+      console.log('[Shadow] Shadow maps updated');
+    }
+
+    public recalculateAmbientLighting(): void {
+      const bounds = this.getSceneBounds();
+      const volume = (bounds.max.x - bounds.min.x) * (bounds.max.y - bounds.min.y) * (bounds.max.z - bounds.min.z);
+      const targetIntensity = Math.max(0.3, Math.min(0.8, volume / 1000));
+      this.ambientLight.intensity = targetIntensity;
+      console.log('[Ambient] Lighting recalculated. Intensity:', targetIntensity.toFixed(2));
+    }
+
+    // Get bounding box of all visible scene geometry
+    private getSceneBounds(): { min: BABYLON.Vector3; max: BABYLON.Vector3 } {
+      let minX = Infinity, minY = Infinity, minZ = Infinity;
+      let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+      let hasGeometry = false;
+
+      this.scene.meshes.forEach(mesh => {
+        if (mesh.isVisible && mesh.getTotalVertices() > 0 && mesh.name !== 'ground' && !mesh.name.startsWith('wall')) {
+          const boundingInfo = mesh.getBoundingInfo();
+          const min = boundingInfo.boundingBox.minimumWorld;
+          const max = boundingInfo.boundingBox.maximumWorld;
+          
+          minX = Math.min(minX, min.x);
+          minY = Math.min(minY, min.y);
+          minZ = Math.min(minZ, min.z);
+          maxX = Math.max(maxX, max.x);
+          maxY = Math.max(maxY, max.y);
+          maxZ = Math.max(maxZ, max.z);
+          hasGeometry = true;
+        }
+      });
+
+      // Default bounds if no geometry
+      if (!hasGeometry) {
+        return {
+          min: new BABYLON.Vector3(-5, 0, -5),
+          max: new BABYLON.Vector3(5, 3, 5)
+        };
+      }
+
+      return {
+        min: new BABYLON.Vector3(minX, minY, minZ),
+        max: new BABYLON.Vector3(maxX, maxY, maxZ)
+      };
+    }
+
+    // Regenerate shadow maps for all lights (Phase 3: Shadow Map Auto-Update)
+    private regenerateShadowMaps(): void {
+      this.lights.forEach((lightData) => {
+        // Dispose existing shadow generator if present
+        if (lightData.shadowGenerator) {
+          const shadowMap = lightData.shadowGenerator.getShadowMap();
+          if (shadowMap) {
+            shadowMap.dispose();
+          }
+          lightData.shadowGenerator.dispose();
+          lightData.shadowGenerator = null;
+        }
+
+        // Create new shadow generator for spot/directional lights
+        if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.DirectionalLight) {
+          const shadowGenerator = new BABYLON.ShadowGenerator(2048, lightData.light);
+          shadowGenerator.useBlurExponentialShadowMap = true;
+          shadowGenerator.blurKernel = 32;
+          
+          // Add all visible meshes as shadow casters
+          this.scene.meshes.forEach(mesh => {
+            if (mesh.isVisible && mesh !== lightData.mesh && mesh.getTotalVertices() > 0) {
+              shadowGenerator.addShadowCaster(mesh, true);
+            }
+          });
+          
+          lightData.shadowGenerator = shadowGenerator;
+        }
+      });
+
+      // Ensure all meshes receive shadows
+      this.scene.meshes.forEach(mesh => {
+        if (mesh.isVisible && mesh.getTotalVertices() > 0) {
+          mesh.receiveShadows = true;
+        }
+      });
+
+      console.log('[Scene] Shadow maps regenerated for all lights');
+    }
+
+    public applyRenderingPreset(presetName: string): void {
+      const preset = RENDERING_PRESETS[presetName];
+      if (!preset) {
+        console.warn('[Rendering] Unknown preset:', presetName);
+        return;
+      }
+      // Update our pipeline if available
+      if (this.renderingPipeline?.imageProcessing) {
+        if (preset.exposure !== undefined) {
+          this.renderingPipeline.imageProcessing.exposure = preset.exposure;
+        }
+        if (preset.tonemapping) {
+          const type = preset.tonemapping;
+          this.renderingPipeline.imageProcessing.toneMappingEnabled = type !== 'none';
+          if (type === 'aces') {
+            this.renderingPipeline.imageProcessing.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+          } else if (type === 'filmic') {
+            this.renderingPipeline.imageProcessing.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_KHR_PBR_NEUTRAL;
+          }
+        }
+      }
+      // Drive the rendering store so UI stays in sync
+      try {
+        useRenderingStore.getState().applyPreset(presetName);
+        useRenderingStore.setState({ activePreset: presetName });
+      } catch (e) {
+        console.warn('[Rendering] Store unavailable:', e);
+      }
+      window.dispatchEvent(new CustomEvent('vs-rendering-changed'));
+      console.log('[Rendering] Preset applied:', presetName);
+    }
+
+    /**
+     * Phase 4.3: Serialize current scene state to SceneComposition format
+     */
+    public getCurrentSceneAsPreset(): SceneComposition {
+      const envState = environmentService.getState();
+      const renderState = useRenderingStore.getState();
+      
+      return {
+        id: `preset_${Date.now()}`,
+        name: 'Scene ' + new Date().toLocaleString(),
+        description: 'Auto-saved scene composition',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        
+        // Serialize lights
+        lights: Array.from(this.lights.values()).map(light => ({
+          id: light.name,
+          name: light.name,
+          type: light.light.getTypeID() === BABYLON.Light.LIGHTTYPEID_SPOTLIGHT ? 'spot' : 'directional',
+          position: [light.mesh.position.x, light.mesh.position.y, light.mesh.position.z] as [number, number, number],
+          rotation: [light.mesh.rotation.x, light.mesh.rotation.y, light.mesh.rotation.z] as [number, number, number],
+          scale: [light.mesh.scaling.x, light.mesh.scaling.y, light.mesh.scaling.z] as [number, number, number],
+          cct: light.cct || 5600,
+          intensity: light.intensity,
+          modifier: light.modifier || 'none',
+          visible: light.mesh.isVisible,
+          specs: light.specs
+        })),
+        
+        // Serialize props
+        props: Array.from(this.sceneState.props.values()).map(prop => ({
+          id: prop.id,
+          type: 'mesh',
+          name: prop.name,
+          assetId: prop.assetId,
+          visible: prop.mesh.isVisible,
+          locked: false,
+          position: { x: prop.mesh.position.x, y: prop.mesh.position.y, z: prop.mesh.position.z },
+          rotation: { x: prop.mesh.rotation.x, y: prop.mesh.rotation.y, z: prop.mesh.rotation.z },
+          scale: { x: prop.mesh.scaling.x, y: prop.mesh.scaling.y, z: prop.mesh.scaling.z },
+          metadata: prop.metadata
+        })),
+        
+        // Serialize characters/actors
+        actors: Array.from(this.sceneState.characters.values()).map(char => ({
+          id: char.id,
+          type: 'mesh',
+          name: char.name,
+          assetId: char.avatarUrl || '',
+          visible: char.mesh.isVisible,
+          locked: false,
+          position: { x: char.mesh.position.x, y: char.mesh.position.y, z: char.mesh.position.z },
+          rotation: { x: char.mesh.rotation.x, y: char.mesh.rotation.y, z: char.mesh.rotation.z },
+          scale: { x: char.mesh.scaling.x, y: char.mesh.scaling.y, z: char.mesh.scaling.z }
+        })),
+        
+        // Serialize camera
+        cameras: [{
+          id: 'main',
+          alpha: this.camera.alpha,
+          beta: this.camera.beta,
+          radius: this.camera.radius,
+          target: { x: this.camera.target.x, y: this.camera.target.y, z: this.camera.target.z },
+          fov: this.camera.fov
+        }],
+        
+        // Camera settings
+        cameraSettings: {
+          aperture: 2.8,
+          shutter: '1/50',
+          iso: 800,
+          focalLength: 50,
+          nd: 0
+        },
+        
+        // Environment state
+        environment: {
+          walls: envState.walls.map(wall => ({
+            id: wall.id,
+            assetId: wall.materialId,
+            position: [0, 0, 0] as [number, number, number],
+            rotation: [0, 0, 0] as [number, number, number],
+            scale: [1, 1, 1] as [number, number, number]
+          })),
+          floors: envState.floors.map(floor => ({
+            id: floor.id,
+            assetId: floor.materialId,
+            position: [0, 0, 0] as [number, number, number],
+            dimensions: { width: 10, height: 10 }
+          })),
+          atmosphere: {
+            fogEnabled: false,
+            fogDensity: 0.01,
+            fogColor: '#ffffff',
+            clearColor: this.scene.clearColor.toHexString(),
+            ambientColor: this.ambientLight?.diffuse.toHexString() || '#ffffff',
+            ambientIntensity: this.ambientLight?.intensity || 0.3
+          }
+        },
+        
+        // Layers (default layer with all nodes)
+        layers: [{
+          id: 'default',
+          name: 'Default Layer',
+          color: '#00d4ff',
+          visible: true,
+          locked: false,
+          nodeIds: [
+            ...Array.from(this.sceneState.props.keys()),
+            ...Array.from(this.sceneState.characters.keys())
+          ]
+        }],
+        
+        tags: [renderState.activePreset || 'custom']
+      };
+    }
+
+    /**
+     * Phase 4.1: Apply a full scene preset (load lights, props, camera, environment)
+     */
+    public async applyScenePreset(preset: SceneComposition): Promise<void> {
+      console.log('[Scene] Applying preset:', preset.name);
+      
+      // Clear current scene
+      await this.clearScene();
+      
+      // Load lights
+      if (preset.lights && preset.lights.length > 0) {
+        for (const lightData of preset.lights) {
+          try {
+            const position = new BABYLON.Vector3(
+              lightData.position[0],
+              lightData.position[1],
+              lightData.position[2]
+            );
+            await this.addLight(lightData.name, position);
+            
+            // Apply light properties
+            const light = this.lights.get(lightData.id);
+            if (light) {
+              light.mesh.rotation.set(lightData.rotation[0], lightData.rotation[1], lightData.rotation[2]);
+              light.mesh.scaling.set(lightData.scale[0], lightData.scale[1], lightData.scale[2]);
+              light.intensity = lightData.intensity;
+              light.cct = lightData.cct;
+              if (lightData.modifier) light.modifier = lightData.modifier;
+              light.mesh.isVisible = lightData.visible;
+              this.updateLightColor(lightData.id, lightData.cct);
+            }
+          } catch (error) {
+            console.warn('[Scene] Failed to load light:', lightData.name, error);
+          }
+        }
+      }
+      
+      // Load props
+      if (preset.props && preset.props.length > 0) {
+        for (const propData of preset.props) {
+          try {
+            const position = new BABYLON.Vector3(
+              propData.position.x,
+              propData.position.y,
+              propData.position.z
+            );
+            
+            // Get prop definition from library
+            const propDef = getPropById(propData.assetId);
+            if (propDef?.modelUrl) {
+              await this.loadAssetFromLibrary(
+                propData.assetId,
+                propData.name,
+                { modelUrl: propDef.modelUrl, metadata: propData.metadata },
+                position
+              );
+              
+              // Apply rotation and scale
+              const prop = this.sceneState.props.get(propData.id);
+              if (prop) {
+                prop.mesh.rotation.set(propData.rotation.x, propData.rotation.y, propData.rotation.z);
+                prop.mesh.scaling.set(propData.scale.x, propData.scale.y, propData.scale.z);
+                prop.mesh.isVisible = propData.visible;
+              }
+            }
+          } catch (error) {
+            console.warn('[Scene] Failed to load prop:', propData.name, error);
+          }
+        }
+      }
+      
+      // Load actors/characters
+      if (preset.actors && preset.actors.length > 0) {
+        for (const actorData of preset.actors) {
+          try {
+            if (actorData.assetId) {
+              await this.loadAvatarModel(actorData.assetId, { name: actorData.name });
+              
+              // Find the loaded character and apply transform
+              const character = this.sceneState.characters.get(actorData.id);
+              if (character) {
+                character.mesh.position.set(actorData.position.x, actorData.position.y, actorData.position.z);
+                character.mesh.rotation.set(actorData.rotation.x, actorData.rotation.y, actorData.rotation.z);
+                character.mesh.scaling.set(actorData.scale.x, actorData.scale.y, actorData.scale.z);
+                character.mesh.isVisible = actorData.visible;
+              }
+            }
+          } catch (error) {
+            console.warn('[Scene] Failed to load actor:', actorData.name, error);
+          }
+        }
+      }
+      
+      // Apply camera
+      if (preset.cameras && preset.cameras.length > 0) {
+        const camData = preset.cameras[0];
+        this.camera.alpha = camData.alpha;
+        this.camera.beta = camData.beta;
+        this.camera.radius = camData.radius;
+        this.camera.setTarget(new BABYLON.Vector3(camData.target.x, camData.target.y, camData.target.z));
+        this.camera.fov = camData.fov;
+      }
+      
+      // Apply environment
+      if (preset.environment) {
+        // Apply walls
+        if (preset.environment.walls && preset.environment.walls.length > 0) {
+          const wall = preset.environment.walls[0];
+          this.applyWallTexture(wall.id, wall.assetId);
+        }
+        
+        // Apply floors
+        if (preset.environment.floors && preset.environment.floors.length > 0) {
+          const floor = preset.environment.floors[0];
+          this.updateFloorProperties(floor.assetId);
+        }
+        
+        // Apply atmosphere
+        if (preset.environment.atmosphere) {
+          const atm = preset.environment.atmosphere;
+          if (this.ambientLight) {
+            this.ambientLight.intensity = atm.ambientIntensity;
+          }
+          this.scene.clearColor = BABYLON.Color4.FromHexString(atm.clearColor + 'FF');
+        }
+      }
+      
+      // Apply rendering preset if available
+      if (preset.tags && preset.tags.length > 0) {
+        const renderPreset = preset.tags[0];
+        if (RENDERING_PRESETS[renderPreset]) {
+          this.applyRenderingPreset(renderPreset);
+        }
+      }
+      
+      console.log('[Scene] Preset applied successfully');
+      window.dispatchEvent(new CustomEvent('vs-preset-applied', { 
+        detail: { presetId: preset.id, presetName: preset.name } 
+      }));
+    }
+
+    /**
+     * Phase 4.2: Apply shot list to scene (position characters, setup camera, adjust lighting)
+     */
+    public async applyShotList(shotList: ShotList): Promise<void> {
+      console.log('[Scene] Applying shot list:', shotList.id);
+      
+      // Apply camera settings from shot list
+      if (shotList.cameraSettings) {
+        const settings = shotList.cameraSettings;
+        if (settings.focalLength) {
+          // Convert focal length to FOV approximation
+          // FOV (radians) ≈ 2 * atan(sensor_width / (2 * focal_length))
+          // Assuming 35mm sensor width
+          const sensorWidth = 36; // mm
+          const fov = 2 * Math.atan(sensorWidth / (2 * settings.focalLength));
+          this.camera.fov = fov;
+        }
+      }
+      
+      // Process shots
+      if (shotList.shots && shotList.shots.length > 0) {
+        for (const shot of shotList.shots) {
+          // Apply shot-specific setup
+          this.applyShotListCamera(shot);
+          this.applyShotListLighting(shot);
+        }
+      }
+      
+      console.log('[Scene] Shot list applied');
+      window.dispatchEvent(new CustomEvent('vs-shotlist-applied', { 
+        detail: { shotListId: shotList.id } 
+      }));
+    }
+
+    /**
+     * Apply camera setup based on shot specifications
+     */
+    private applyShotListCamera(shot: CastingShot): void {
+      // Set focal length from shot
+      if (shot.focalLength) {
+        const sensorWidth = 36; // mm
+        const fov = 2 * Math.atan(sensorWidth / (2 * shot.focalLength));
+        this.camera.fov = fov;
+      }
+      
+      // Apply camera angle adjustments
+      switch (shot.cameraAngle) {
+        case 'eye_level':
+          this.camera.beta = Math.PI / 2; // 90 degrees
+          break;
+        case 'high_angle':
+          this.camera.beta = Math.PI / 3; // 60 degrees (looking down)
+          break;
+        case 'low_angle':
+          this.camera.beta = Math.PI * 2 / 3; // 120 degrees (looking up)
+          break;
+        case 'birds_eye':
+          this.camera.beta = Math.PI / 6; // 30 degrees (top-down)
+          break;
+        case 'dutch_angle':
+          // Dutch angle is typically roll, but ArcRotateCamera doesn't support roll
+          // Could be simulated with post-processing or viewport rotation
+          console.log('[Camera] Dutch angle requested - not fully supported');
+          break;
+      }
+      
+      console.log('[Camera] Applied shot camera:', shot.shotType, shot.cameraAngle);
+    }
+
+    /**
+     * Adjust lighting based on shot mood and type
+     */
+    private applyShotListLighting(shot: CastingShot): void {
+      // Adjust lighting intensity based on shot type
+      const moodMultipliers: Record<string, { key: number; fill: number; rim: number }> = {
+        'extreme_closeup': { key: 1.2, fill: 0.3, rim: 0.4 }, // High contrast
+        'closeup': { key: 1.0, fill: 0.4, rim: 0.3 },
+        'medium': { key: 0.9, fill: 0.5, rim: 0.2 },
+        'wide': { key: 0.8, fill: 0.6, rim: 0.2 }, // More ambient
+        'establishing': { key: 0.7, fill: 0.7, rim: 0.1 }, // Even lighting
+      };
+      
+      const multiplier = moodMultipliers[shot.shotType] || { key: 1.0, fill: 0.5, rim: 0.3 };
+      
+      // Apply multipliers to lights based on their role
+      this.lights.forEach((light, lightId) => {
+        const name = light.name.toLowerCase();
+        if (name.includes('key') || name.includes('main')) {
+          light.intensity = light.intensity * multiplier.key;
+        } else if (name.includes('fill')) {
+          light.intensity = light.intensity * multiplier.fill;
+        } else if (name.includes('rim') || name.includes('back')) {
+          light.intensity = light.intensity * multiplier.rim;
+        }
+        this.updateLightIntensity(lightId, light.intensity);
+      });
+      
+      console.log('[Lighting] Applied shot lighting:', shot.shotType);
+    }
+
+    /**
+     * Clear the current scene (remove all props, characters, lights)
+     */
+    private async clearScene(): Promise<void> {
+      console.log('[Scene] Clearing scene');
+      
+      // Remove all props
+      this.sceneState.props.forEach((prop, id) => {
+        prop.mesh.dispose();
+      });
+      this.sceneState.props.clear();
+      
+      // Remove all characters
+      this.sceneState.characters.forEach((char, id) => {
+        char.mesh.dispose();
+      });
+      this.sceneState.characters.clear();
+      
+      // Remove all lights (keep ambient)
+      this.lights.forEach((light, id) => {
+        this.removeLight(id);
+      });
+      
+      console.log('[Scene] Scene cleared');
+    }
+
+    /**
+     * Phase 5.1: Start streaming the 3D scene
+     */
+    public async startStreaming(config: StreamConfig): Promise<void> {
+      console.log('[Streaming] Starting stream with config:', config);
+      
+      const streamingStore = useStreamingStore.getState();
+      
+      // Update config
+      streamingStore.setConfig(config);
+      
+      // Create render target texture for streaming
+      const rtt = new BABYLON.RenderTargetTexture(
+        'streamRTT',
+        { width: config.quality.width, height: config.quality.height },
+        this.scene,
+        false,
+        true,
+        BABYLON.Constants.TEXTURETYPE_UNSIGNED_BYTE,
+        false,
+        BABYLON.Texture.BILINEAR_SAMPLINGMODE
+      );
+      
+      // Render all meshes to the texture
+      rtt.renderList = this.scene.meshes;
+      rtt.activeCamera = this.camera;
+      
+      // Create canvas for stream capture
+      const streamCanvas = document.createElement('canvas');
+      streamCanvas.width = config.quality.width;
+      streamCanvas.height = config.quality.height;
+      const streamCtx = streamCanvas.getContext('2d');
+      
+      if (!streamCtx) {
+        console.error('[Streaming] Failed to create stream canvas context');
+        return;
+      }
+      
+      // Setup frame capture loop
+      const frameInterval = 1000 / config.quality.frameRate;
+      let lastFrameTime = 0;
+      
+      const captureFrame = () => {
+        const now = performance.now();
+        if (now - lastFrameTime >= frameInterval) {
+          // Read pixels from RTT
+          const pixels = rtt.readPixels();
+          if (pixels) {
+            const imageData = streamCtx.createImageData(config.quality.width, config.quality.height);
+            imageData.data.set(pixels);
+            streamCtx.putImageData(imageData, 0, 0);
+          }
+          lastFrameTime = now;
+        }
+      };
+      
+      // Register render observer
+      const observer = this.scene.onAfterRenderObservable.add(captureFrame);
+      
+      // Start streaming via service
+      try {
+        await streamingStore.startStream(streamCanvas);
+        console.log('[Streaming] Stream started successfully');
+        
+        // Store cleanup reference
+        (this as any)._streamingCleanup = () => {
+          this.scene.onAfterRenderObservable.remove(observer);
+          rtt.dispose();
+          streamingStore.stopStream();
+        };
+      } catch (error) {
+        console.error('[Streaming] Failed to start stream:', error);
+        this.scene.onAfterRenderObservable.remove(observer);
+        rtt.dispose();
+        throw error;
+      }
+    }
+
+    /**
+     * Stop active streaming
+     */
+    public stopStreaming(): void {
+      console.log('[Streaming] Stopping stream');
+      if ((this as any)._streamingCleanup) {
+        (this as any)._streamingCleanup();
+        delete (this as any)._streamingCleanup;
+      }
+    }
+
+    /**
+     * Phase 5.2: Export scene to various formats
+     */
+    public async exportScene(format: ExportFormat, options?: Partial<ExportSettings>): Promise<Blob | null> {
+      console.log('[Export] Exporting scene as:', format);
+      
+      const exportStore = useExportStore.getState();
+      
+      // Get current scene composition
+      const sceneData = this.getCurrentSceneAsPreset();
+      
+      try {
+        // Screenshot exports
+        if (format === 'screenshot-png' || format === 'screenshot-exr') {
+          const width = options?.imageWidth || 1920;
+          const height = options?.imageHeight || 1080;
+          const samples = options?.imageSamples || 4;
+          
+          return await this.captureScreenshot(width, height, format === 'screenshot-exr', samples);
+        }
+        
+        // 3D model exports (GLB, GLTF, OBJ, etc.)
+        if (format === 'glb' || format === 'gltf' || format === 'obj' || format === 'stl' || format === 'babylon') {
+          // Validate all geometry is available
+          const meshesToExport: BABYLON.Mesh[] = [];
+          
+          // Collect props
+          this.sceneState.props.forEach((prop) => {
+            if (prop.mesh && prop.mesh.isVisible) {
+              meshesToExport.push(prop.mesh);
+            }
+          });
+          
+          // Collect characters
+          this.sceneState.characters.forEach((char) => {
+            if (char.mesh && char.mesh.isVisible) {
+              meshesToExport.push(char.mesh);
+            }
+          });
+          
+          // Include ground/walls if not selectedOnly
+          if (!options?.selectedOnly) {
+            const ground = this.scene.getMeshByName('ground') as BABYLON.Mesh;
+            if (ground) meshesToExport.push(ground);
+          }
+          
+          console.log('[Export] Exporting', meshesToExport.length, 'meshes');
+          
+          // Use export service to generate file
+          return await exportStore.exportScene(sceneData.name, format);
+        }
+        
+        // USD exports
+        if (format === 'usda' || format === 'usdz') {
+          console.log('[Export] USD export - using export service');
+          return await exportStore.exportScene(sceneData.name, format);
+        }
+        
+        console.warn('[Export] Unsupported format:', format);
+        return null;
+      } catch (error) {
+        console.error('[Export] Export failed:', error);
+        throw error;
+      }
+    }
+
+    /**
+     * Capture high-quality screenshot
+     */
+    private async captureScreenshot(
+      width: number,
+      height: number,
+      hdr: boolean = false,
+      samples: number = 4
+    ): Promise<Blob> {
+      console.log('[Export] Capturing screenshot:', width, 'x', height, hdr ? 'HDR' : 'LDR');
+      
+      return new Promise((resolve, reject) => {
+        // Create high-res render target
+        const rtt = new BABYLON.RenderTargetTexture(
+          'screenshotRTT',
+          { width, height },
+          this.scene,
+          false,
+          true,
+          hdr ? BABYLON.Constants.TEXTURETYPE_HALF_FLOAT : BABYLON.Constants.TEXTURETYPE_UNSIGNED_BYTE,
+          false,
+          BABYLON.Texture.TRILINEAR_SAMPLINGMODE
+        );
+        
+        rtt.renderList = this.scene.meshes;
+        rtt.activeCamera = this.camera;
+        rtt.samples = samples;
+        
+        // Render once
+        rtt.onAfterRenderObservable.addOnce(() => {
+          // Read pixels
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          
+          if (!ctx) {
+            rtt.dispose();
+            reject(new Error('Failed to create canvas context'));
+            return;
+          }
+          
+          const pixels = rtt.readPixels();
+          if (pixels) {
+            const imageData = ctx.createImageData(width, height);
+            imageData.data.set(pixels);
+            ctx.putImageData(imageData, 0, 0);
+            
+            canvas.toBlob((blob) => {
+              rtt.dispose();
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error('Failed to create blob'));
+              }
+            }, hdr ? 'image/png' : 'image/png', 1.0);
+          } else {
+            rtt.dispose();
+            reject(new Error('Failed to read pixels'));
+          }
+        });
+        
+        // Trigger render
+        this.scene.incrementRenderId();
+        rtt.render();
+      });
+    }
+
+    /**
+     * Phase 5.3: Setup real-time collaboration
+     */
+    public setupCollaboration(roomId: string, userName: string): void {
+      console.log('[Collaboration] Setting up collaboration:', roomId, userName);
+      
+      const collabStore = useCollaborationStore.getState();
+      
+      // Connect to collaboration session
+      collabStore.connect(roomId, userName).then(() => {
+        console.log('[Collaboration] Connected to room:', roomId);
+        
+        // Subscribe to scene changes and broadcast to collaborators
+        this.setupCollaborationListeners();
+      }).catch((error) => {
+        console.error('[Collaboration] Failed to connect:', error);
+      });
+    }
+
+    /**
+     * Setup collaboration event listeners
+     */
+    private setupCollaborationListeners(): void {
+      const collabStore = useCollaborationStore.getState();
+      
+      // Listen for light changes
+      window.addEventListener('vs-light-changed', ((event: CustomEvent) => {
+        const { lightId, property, value } = event.detail;
+        collabStore.broadcastObjectUpdate(lightId, {
+          type: 'light',
+          property,
+          value
+        });
+      }) as EventListener);
+      
+      // Listen for prop additions
+      window.addEventListener('vs-prop-added', ((event: CustomEvent) => {
+        const { propId, data } = event.detail;
+        collabStore.broadcastObjectCreate({
+          type: 'prop',
+          id: propId,
+          data
+        });
+      }) as EventListener);
+      
+      // Listen for prop removals
+      window.addEventListener('vs-prop-removed', ((event: CustomEvent) => {
+        const { propId } = event.detail;
+        collabStore.broadcastObjectDelete(propId);
+      }) as EventListener);
+      
+      // Listen for camera changes
+      this.camera.onViewMatrixChangedObservable.add(() => {
+        collabStore.broadcastCameraSync({
+          alpha: this.camera.alpha,
+          beta: this.camera.beta,
+          radius: this.camera.radius,
+          target: this.camera.target.asArray()
+        });
+      });
+      
+      console.log('[Collaboration] Event listeners registered');
+    }
+
+    /**
+     * Disconnect from collaboration
+     */
+    public disconnectCollaboration(): void {
+      console.log('[Collaboration] Disconnecting');
+      const collabStore = useCollaborationStore.getState();
+      collabStore.disconnect();
+    }
 
   public setFloorColor(hexColor: string): void {
     const color = BABYLON.Color3.FromHexString(hexColor);
@@ -2673,6 +3585,17 @@ class VirtualStudio {
     
     // Initial population of focus objects
     this.updateFocusObjectsList();
+    
+    // Listen for model registration events to update the list
+    window.addEventListener('model-meshes-registered', () => {
+      console.log('[Focus Objects] New model registered, updating list...');
+      setTimeout(() => this.updateFocusObjectsList(), 100);
+    });
+    
+    // Periodically refresh focus objects list to catch newly loaded models
+    setInterval(() => {
+      this.updateFocusObjectsList();
+    }, 3000);
   }
   
   /**
@@ -2829,27 +3752,85 @@ class VirtualStudio {
       }
     });
     
-    // Add scene props
-    const store = (window as any).virtualStudioStore?.getState?.();
+    // Add scene props and models from useAppStore
+    const store = useAppStore.getState();
     if (store?.scene) {
       store.scene.forEach((node: any) => {
-        if ((node.type === 'prop' || node.type === 'model') && node.visible) {
-          // Try to find corresponding mesh
-          const mesh = this.scene.getMeshByName(node.id) as BABYLON.Mesh;
-          if (mesh) {
-            const center = mesh.getBoundingInfo().boundingSphere.centerWorld;
+        if ((node.type === 'prop' || node.type === 'model') && node.visible !== false) {
+          // Try to find corresponding mesh by node ID
+          let mesh = this.scene.getMeshByName(node.id) as BABYLON.Mesh;
+          
+          // If not found by ID, try finding by checking metadata
+          if (!mesh) {
+            for (const sceneMesh of this.scene.meshes) {
+              if (sceneMesh.metadata?.modelId === node.id || 
+                  sceneMesh.metadata?.parentModelId === node.id) {
+                mesh = sceneMesh as BABYLON.Mesh;
+                break;
+              }
+            }
+          }
+          
+          // Skip if we already have this object from castingCandidates
+          if (mesh && !objects.some(o => o.id === node.id)) {
+            const bounds = this.getCombinedBounds(mesh);
+            const centerX = (bounds.min.x + bounds.max.x) / 2;
+            const centerY = (bounds.min.y + bounds.max.y) / 2;
+            const centerZ = (bounds.min.z + bounds.max.z) / 2;
+            const center = new BABYLON.Vector3(centerX, centerY, centerZ);
             const distance = lightPos ? BABYLON.Vector3.Distance(lightPos, center) : 0;
+            
+            // Detect type based on bounding box proportions
+            const height = bounds.max.y - bounds.min.y;
+            const width = Math.max(
+              bounds.max.x - bounds.min.x,
+              bounds.max.z - bounds.min.z
+            );
+            const isHuman = height > width * 1.5 && height > 0.8;
             
             objects.push({
               id: node.id,
-              name: node.name || 'Prop',
+              name: node.name || 'Model',
               mesh: mesh,
-              type: 'product',
+              type: isHuman ? 'human' : 'product',
               distance
             });
           }
         }
       });
+    }
+    
+    // Also scan for any meshes with model geometry metadata that aren't yet tracked
+    for (const sceneMesh of this.scene.meshes) {
+      if (sceneMesh.metadata?.isModelRoot && sceneMesh.isEnabled()) {
+        const modelId = sceneMesh.metadata.modelId;
+        const modelName = sceneMesh.metadata.modelName;
+        
+        // Skip if already in objects list
+        if (!objects.some(o => o.id === modelId)) {
+          const bounds = this.getCombinedBounds(sceneMesh);
+          const centerX = (bounds.min.x + bounds.max.x) / 2;
+          const centerY = (bounds.min.y + bounds.max.y) / 2;
+          const centerZ = (bounds.min.z + bounds.max.z) / 2;
+          const center = new BABYLON.Vector3(centerX, centerY, centerZ);
+          const distance = lightPos ? BABYLON.Vector3.Distance(lightPos, center) : 0;
+          
+          const height = bounds.max.y - bounds.min.y;
+          const width = Math.max(
+            bounds.max.x - bounds.min.x,
+            bounds.max.z - bounds.min.z
+          );
+          const isHuman = height > width * 1.5 && height > 0.8;
+          
+          objects.push({
+            id: modelId,
+            name: modelName || 'Model',
+            mesh: sceneMesh as BABYLON.Mesh,
+            type: isHuman ? 'human' : 'product',
+            distance
+          });
+        }
+      }
     }
     
     // Filter by current mode if desired (optional - show all but highlight matching)
@@ -3251,7 +4232,7 @@ class VirtualStudio {
     }
   }
 
-  private setupStudio(): void {
+  private async setupStudio(): Promise<void> {
     // Create ambient hemispheric light and store reference for control
     this.ambientLight = new BABYLON.HemisphericLight('ambient', new BABYLON.Vector3(0, 1, 0), this.scene);
     this.ambientLight.intensity = this.ambientLightBaseIntensity;
@@ -3306,9 +4287,274 @@ class VirtualStudio {
     this.addWallLogos();
 
     // Default 3-point lighting setup with Aputure 300D lights
-    this.setupDefaultLighting();
+    // IMPORTANT: Must await this to ensure lights are fully loaded before continuing
+    await this.setupDefaultLighting();
+    
+    console.log('[VirtualStudio] Default lighting setup complete. Lights loaded:', this.lights.size);
+
+      // Initialize and subscribe to environment service for wall/floor/ambient lighting sync
+      environmentService.initializeDefaults();
+      environmentService.subscribe((state) => {
+        // Update scene walls, floors, and lighting when environment changes
+        this.updateSceneEnvironment(state);
+      });
+      console.log('[VirtualStudio] Environment service initialized and subscribed');
   }
-  
+
+  // Apply environment service state to scene walls/floor
+  private updateSceneEnvironment(state: any): void {
+    try {
+      if (state?.walls) {
+        Object.entries(state.walls).forEach(([wallId, config]: [string, any]) => {
+          const wall = this.scene.getMeshByName(wallId);
+          if (wall && config?.materialId) {
+            this.applyWallTexture(wallId, config.materialId);
+          }
+          if (wall) wall.isVisible = config?.visible !== false;
+        });
+      }
+
+      if (state?.floor?.materialId) {
+        this.updateFloorProperties(state.floor.materialId);
+      } else if (state?.floor) {
+        const floor = this.scene.getMeshByName('ground');
+        if (floor) {
+          const floorMat = new BABYLON.StandardMaterial('floorMat_updated', this.scene);
+          floorMat.diffuseColor = new BABYLON.Color3(0.18, 0.18, 0.22);
+          floor.material = floorMat;
+          floor.isVisible = state.floor.visible !== false;
+        }
+      }
+
+      this.recalculateAmbientLighting();
+      window.dispatchEvent(new CustomEvent('vs-environment-changed'));
+      console.log('[Scene] Environment updated from service state');
+    } catch (err) {
+      console.error('[Scene] Error updating environment:', err);
+    }
+  }
+
+  private applyWallTexture(wallId: string, materialId: string): void {
+    const wall = this.scene.getMeshByName(wallId);
+    if (!wall) return;
+
+    const wallMaterial = getWallById(materialId);
+    if (!wallMaterial) {
+      console.warn(`[Scene] Wall material not found: ${materialId}`);
+      return;
+    }
+
+    // Use PBR material for realistic rendering
+    const mat = new BABYLON.PBRMaterial(`${wallId}_${materialId}`, this.scene);
+
+    // Base color
+    if (wallMaterial.color) {
+      const rgb = this.parseColor(wallMaterial.color);
+      mat.albedoColor = new BABYLON.Color3(rgb.r, rgb.g, rgb.b);
+    }
+
+    // Textures
+    if (wallMaterial.textureUrl) {
+      mat.albedoTexture = new BABYLON.Texture(wallMaterial.textureUrl, this.scene);
+      mat.albedoTexture.uScale = 2;
+      mat.albedoTexture.vScale = 2;
+    }
+    if (wallMaterial.normalMapUrl) {
+      mat.bumpTexture = new BABYLON.Texture(wallMaterial.normalMapUrl, this.scene);
+      mat.bumpTexture.uScale = 2;
+      mat.bumpTexture.vScale = 2;
+    }
+
+    // PBR properties
+    mat.roughness = wallMaterial.roughness ?? 0.8;
+    mat.metallic = wallMaterial.metallic ?? 0;
+
+    // Emissive (for neon/glowing materials)
+    if (wallMaterial.emissive && wallMaterial.emissiveIntensity) {
+      const emissiveRgb = this.parseColor(wallMaterial.emissive);
+      mat.emissiveColor = new BABYLON.Color3(emissiveRgb.r, emissiveRgb.g, emissiveRgb.b);
+      mat.emissiveIntensity = wallMaterial.emissiveIntensity;
+    }
+
+    // Opacity
+    if (wallMaterial.opacity !== undefined && wallMaterial.opacity < 1) {
+      mat.alpha = wallMaterial.opacity;
+      mat.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+    }
+
+    wall.material = mat;
+    console.log(`[Scene] Applied wall material: ${wallMaterial.nameNo} to ${wallId}`);
+  }
+
+  private updateFloorProperties(materialId: string): void {
+    const floor = this.scene.getMeshByName('ground');
+    if (!floor) return;
+
+    const floorMaterial = getFloorById(materialId);
+    if (!floorMaterial) {
+      console.warn(`[Scene] Floor material not found: ${materialId}`);
+      return;
+    }
+
+    // Use PBR material for realistic rendering
+    const mat = new BABYLON.PBRMaterial(`floor_${materialId}`, this.scene);
+
+    // Base color
+    if (floorMaterial.color) {
+      const rgb = this.parseColor(floorMaterial.color);
+      mat.albedoColor = new BABYLON.Color3(rgb.r, rgb.g, rgb.b);
+    }
+
+    // Textures
+    if (floorMaterial.textureUrl) {
+      mat.albedoTexture = new BABYLON.Texture(floorMaterial.textureUrl, this.scene);
+      const scale = floorMaterial.tileScale ?? 4;
+      mat.albedoTexture.uScale = scale;
+      mat.albedoTexture.vScale = scale;
+    }
+    if (floorMaterial.normalMapUrl) {
+      mat.bumpTexture = new BABYLON.Texture(floorMaterial.normalMapUrl, this.scene);
+      const scale = floorMaterial.tileScale ?? 4;
+      mat.bumpTexture.uScale = scale;
+      mat.bumpTexture.vScale = scale;
+    }
+    if (floorMaterial.roughnessMapUrl) {
+      mat.metallicTexture = new BABYLON.Texture(floorMaterial.roughnessMapUrl, this.scene);
+      mat.useRoughnessFromMetallicTextureAlpha = false;
+      mat.useRoughnessFromMetallicTextureGreen = true;
+    }
+
+    // PBR properties
+    mat.roughness = floorMaterial.roughness ?? 0.7;
+    mat.metallic = floorMaterial.metallic ?? 0;
+
+    // Reflectivity (for glossy/mirror floors)
+    if (floorMaterial.reflectivity !== undefined) {
+      mat.environmentIntensity = floorMaterial.reflectivity;
+    }
+
+    // Emissive (for special effects)
+    if (floorMaterial.emissive && floorMaterial.emissiveIntensity) {
+      const emissiveRgb = this.parseColor(floorMaterial.emissive);
+      mat.emissiveColor = new BABYLON.Color3(emissiveRgb.r, emissiveRgb.g, emissiveRgb.b);
+      mat.emissiveIntensity = floorMaterial.emissiveIntensity;
+    }
+
+    floor.material = mat;
+    console.log(`[Scene] Applied floor material: ${floorMaterial.nameNo}`);
+  }
+
+  // Helper: Parse hex color to RGB (0-1 range)
+  private parseColor(hex: string): { r: number; g: number; b: number } {
+    const cleaned = hex.replace('#', '');
+    const r = parseInt(cleaned.substring(0, 2), 16) / 255;
+    const g = parseInt(cleaned.substring(2, 4), 16) / 255;
+    const b = parseInt(cleaned.substring(4, 6), 16) / 255;
+    return { r, g, b };
+  }
+
+  // Helper: Add a light model to the scene
+  private async addLight(modelId: string, position: BABYLON.Vector3): Promise<string> {
+    const lightId = `light_${this.lightCounter++}`;
+    
+    console.log(`[addLight] Loading light model: ${modelId} at position ${position.toString()}`);
+    
+    // Map model IDs to light specs
+    const lightSpecs: { [key: string]: { intensity: number; name: string; cct: number; beamAngle: number } } = {
+      'aputure-300d': { intensity: 2.0, name: 'Aputure 300D', cct: 5600, beamAngle: Math.PI / 5 },
+      'aputure-120d': { intensity: 1.5, name: 'Aputure 120D', cct: 5600, beamAngle: Math.PI / 5 },
+      'aputure-600d': { intensity: 3.0, name: 'Aputure 600D Pro', cct: 5600, beamAngle: Math.PI / 6 },
+      'godox-ad600': { intensity: 1.2, name: 'Godox AD600', cct: 5600, beamAngle: Math.PI / 4 },
+      'godox-ad200pro': { intensity: 0.8, name: 'Godox AD200Pro', cct: 5600, beamAngle: Math.PI / 3 },
+      'godox-ad400pro': { intensity: 1.0, name: 'Godox AD400Pro', cct: 5600, beamAngle: Math.PI / 3 },
+      'godox-ad600pro': { intensity: 1.3, name: 'Godox AD600Pro', cct: 5600, beamAngle: Math.PI / 4 },
+      'profoto-b10plus': { intensity: 1.4, name: 'Profoto B10 Plus', cct: 5600, beamAngle: Math.PI / 3.5 },
+      'profoto-b10': { intensity: 1.3, name: 'Profoto B10', cct: 5600, beamAngle: Math.PI / 3.5 },
+      'profoto-d2': { intensity: 1.1, name: 'Profoto D2', cct: 5600, beamAngle: Math.PI / 3.8 }
+    };
+    
+    const lightConfig = lightSpecs[modelId] || { intensity: 1.5, name: modelId, cct: 5600, beamAngle: Math.PI / 5 };
+    
+    try {
+      // For now, create a simple representation since we don't have actual 3D light models
+      // In production, this would load .glb/.gltf light models from /models/lights/
+      const mesh = BABYLON.MeshBuilder.CreateCylinder(`light_${lightId}`, {
+        height: 0.5,
+        diameterTop: 0.15,
+        diameterBottom: 0.35,
+        tessellation: 16
+      }, this.scene);
+      
+      mesh.position = position.clone();
+      mesh.name = lightId;
+      
+      // Create material for the light head
+      const mat = new BABYLON.StandardMaterial(`mat_${lightId}`, this.scene);
+      const color = this.cctToColor(lightConfig.cct);
+      const emissiveIntensity = Math.min(2.5, 0.3 + lightConfig.intensity / 3);
+      mat.emissiveColor = new BABYLON.Color3(
+        Math.min(2.5, color.r * emissiveIntensity),
+        Math.min(2.5, color.g * emissiveIntensity),
+        Math.min(2.5, color.b * emissiveIntensity)
+      );
+      mat.useEmissiveAsIllumination = true;
+      mat.disableLighting = true;
+      mesh.material = mat;
+      
+      // Create the actual light
+      const babylonLight = new BABYLON.SpotLight(
+        lightId,
+        position.clone(),
+        new BABYLON.Vector3(0, -1, 0).normalize(),
+        lightConfig.beamAngle,
+        2.0,
+        this.scene
+      );
+      
+      babylonLight.intensity = lightConfig.intensity;
+      babylonLight.diffuse = color;
+      babylonLight.range = 50;
+      
+      // Sync light position with mesh
+      this.scene.onBeforeRenderObservable.add(() => {
+        if (babylonLight instanceof BABYLON.SpotLight || babylonLight instanceof BABYLON.PointLight) {
+          babylonLight.position = mesh.position.clone();
+        }
+      });
+      
+      // Create light data object
+      const lightData: LightData = {
+        light: babylonLight,
+        mesh: mesh,
+        type: 'spotlight',
+        name: lightConfig.name,
+        cct: lightConfig.cct,
+        modifier: 'Ingen',
+        specs: {
+          power: lightConfig.intensity * 600,
+          powerUnit: 'Ws' as const,
+          cct: lightConfig.cct,
+          beamAngle: lightConfig.beamAngle * 180 / Math.PI
+        },
+        intensity: lightConfig.intensity
+      };
+      
+      // Store light in lights map
+      this.lights.set(lightId, lightData);
+      
+      // Add mesh to gizmo manager for selection
+      if (this.gizmoManager?.attachableMeshes) {
+        this.gizmoManager.attachableMeshes.push(mesh);
+      }
+      
+      console.log(`[addLight] Light created successfully: ${lightId}`);
+      return lightId;
+    } catch (err) {
+      console.error(`[addLight] Error loading light ${modelId}:`, err);
+      throw err;
+    }
+  }
+
   // Helper: Aim light and mesh at a target position
   public aimLightAt(lightId: string, target: BABYLON.Vector3): void {
     const lightData = this.lights.get(lightId);
@@ -3855,6 +5101,7 @@ class VirtualStudio {
     // Right panel scope controls
     const scopeModeSelect = document.getElementById('scopeModeSelect') as HTMLSelectElement;
     const scopeModeSelectDropdown = document.getElementById('scopeModeSelectDropdown') as HTMLSelectElement;
+    const histogramStylePanel = document.getElementById('histogramStylePanel') as HTMLDivElement;
 
     // Sync both selects
     const setScopeMode = (mode: typeof this.currentScopeMode) => {
@@ -3876,6 +5123,11 @@ class VirtualStudio {
       // Sync both selects
       if (scopeModeSelect) scopeModeSelect.value = mode;
       if (scopeModeSelectDropdown) scopeModeSelectDropdown.value = mode;
+      
+      // Show/hide histogram style panel
+      if (histogramStylePanel) {
+        histogramStylePanel.style.display = mode === 'histogram' ? 'flex' : 'none';
+      }
     };
 
     scopeModeSelect?.addEventListener('change', () => {
@@ -3884,6 +5136,52 @@ class VirtualStudio {
     
     scopeModeSelectDropdown?.addEventListener('change', () => {
       setScopeMode(scopeModeSelectDropdown.value as typeof this.currentScopeMode);
+    });
+    
+    // Histogram style controls
+    this.setupHistogramStyleControls();
+  }
+  
+  private setupHistogramStyleControls(): void {
+    const styleButtons = {
+      overlay: document.getElementById('histStyleOverlay'),
+      luma: document.getElementById('histStyleLuma'),
+      'rgb-parade': document.getElementById('histStyleRGBParade'),
+      parade: document.getElementById('histStyleParade')
+    };
+    
+    const setHistogramStyle = (style: typeof this.histogramStyle) => {
+      this.histogramStyle = style;
+      
+      // Update button states
+      Object.entries(styleButtons).forEach(([key, btn]) => {
+        if (btn) {
+          btn.classList.toggle('active', key === style);
+        }
+      });
+      
+      console.log(`[Histogram] Style changed to: ${style}`);
+    };
+    
+    // Wire up style buttons
+    Object.entries(styleButtons).forEach(([style, btn]) => {
+      btn?.addEventListener('click', () => {
+        setHistogramStyle(style as typeof this.histogramStyle);
+      });
+    });
+    
+    // Log scale checkbox
+    const logScaleCheckbox = document.getElementById('histLogScale') as HTMLInputElement;
+    logScaleCheckbox?.addEventListener('change', () => {
+      this.histogramLogScale = logScaleCheckbox.checked;
+      console.log(`[Histogram] Log scale: ${this.histogramLogScale}`);
+    });
+    
+    // Show stats checkbox
+    const showStatsCheckbox = document.getElementById('histShowStats') as HTMLInputElement;
+    showStatsCheckbox?.addEventListener('change', () => {
+      this.histogramShowStats = showStatsCheckbox.checked;
+      console.log(`[Histogram] Show stats: ${this.histogramShowStats}`);
     });
   }
 
@@ -4347,6 +5645,79 @@ class VirtualStudio {
       }
     });
 
+    // ============================================
+    // COLLAPSIBLE OVERLAY SECTIONS
+    // ============================================
+    const setupCollapsibleSections = () => {
+      // Individual section headers
+      const sectionHeaders = overlayPanel.querySelectorAll('.overlay-section-header');
+      sectionHeaders.forEach(header => {
+        header.addEventListener('click', (e) => {
+          // Don't collapse if clicking on a button inside the header
+          if ((e.target as HTMLElement).closest('button')) return;
+          
+          const section = header.closest('.overlay-section');
+          if (section) {
+            section.classList.toggle('collapsed');
+            
+            // Save state to localStorage
+            const sectionId = section.querySelector('span:not(.material-icons-outlined)')?.textContent?.trim();
+            if (sectionId) {
+              const collapsedSections = JSON.parse(localStorage.getItem('overlayCollapsedSections') || '{}');
+              collapsedSections[sectionId] = section.classList.contains('collapsed');
+              localStorage.setItem('overlayCollapsedSections', JSON.stringify(collapsedSections));
+            }
+          }
+        });
+      });
+      
+      // Restore collapsed state from localStorage
+      const collapsedSections = JSON.parse(localStorage.getItem('overlayCollapsedSections') || '{}');
+      sectionHeaders.forEach(header => {
+        const section = header.closest('.overlay-section');
+        const sectionId = section?.querySelector('span:not(.material-icons-outlined)')?.textContent?.trim();
+        if (sectionId && collapsedSections[sectionId]) {
+          section?.classList.add('collapsed');
+        }
+      });
+    };
+    setupCollapsibleSections();
+    
+    // ============================================
+    // COLLAPSIBLE SECTION GROUPS
+    // ============================================
+    const setupCollapsibleGroups = () => {
+      const groupHeaders = overlayPanel.querySelectorAll('.overlay-section-group-header');
+      groupHeaders.forEach(header => {
+        header.addEventListener('click', () => {
+          const group = header.closest('.overlay-section-group');
+          if (group) {
+            group.classList.toggle('collapsed');
+            
+            // Save state to localStorage
+            const groupName = header.textContent?.trim();
+            if (groupName) {
+              const collapsedGroups = JSON.parse(localStorage.getItem('overlayCollapsedGroups') || '{}');
+              collapsedGroups[groupName] = group.classList.contains('collapsed');
+              localStorage.setItem('overlayCollapsedGroups', JSON.stringify(collapsedGroups));
+            }
+          }
+        });
+      });
+      
+      // Restore collapsed state from localStorage
+      const collapsedGroups = JSON.parse(localStorage.getItem('overlayCollapsedGroups') || '{}');
+      groupHeaders.forEach(header => {
+        const group = header.closest('.overlay-section-group');
+        const groupName = header.textContent?.trim();
+        if (groupName && collapsedGroups[groupName]) {
+          group?.classList.add('collapsed');
+        }
+      });
+    };
+    setupCollapsibleGroups();
+    // ============================================
+
     // Make panel draggable via header
     const overlayPanelHeader = document.getElementById('overlayPanelHeader');
     if (overlayPanelHeader) {
@@ -4379,12 +5750,144 @@ class VirtualStudio {
         overlayPanelHeader.style.cursor = 'grab';
       });
     }
+    
+    // ============================================
+    // OVERLAY PANEL RESIZE FUNCTIONALITY
+    // ============================================
+    {
+      let overlayResizing = false;
+      let overlayResizeDirection = '';
+      let overlayResizeStartX = 0;
+      let overlayResizeStartY = 0;
+      let overlayResizeStartWidth = 0;
+      let overlayResizeStartHeight = 0;
+      let overlayResizeStartLeft = 0;
+      let overlayResizeStartTop = 0;
+      
+      const overlayResizeHandles = overlayPanel.querySelectorAll('.resize-handle');
+      
+      const startOverlayResize = (e: MouseEvent | TouchEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const target = e.target as HTMLElement;
+        overlayResizeDirection = target.dataset.resize || '';
+        if (!overlayResizeDirection) return;
+        
+        overlayResizing = true;
+        
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+        
+        overlayResizeStartX = clientX;
+        overlayResizeStartY = clientY;
+        
+        const rect = overlayPanel.getBoundingClientRect();
+        overlayResizeStartWidth = rect.width;
+        overlayResizeStartHeight = rect.height;
+        overlayResizeStartLeft = rect.left;
+        overlayResizeStartTop = rect.top;
+        
+        // Convert to fixed positioning for resize
+        overlayPanel.classList.add('resizing');
+        overlayPanel.style.left = rect.left + 'px';
+        overlayPanel.style.top = rect.top + 'px';
+        overlayPanel.style.right = 'auto';
+        overlayPanel.style.bottom = 'auto';
+        overlayPanel.style.transform = 'none';
+        overlayPanel.style.width = rect.width + 'px';
+        overlayPanel.style.height = rect.height + 'px';
+      };
+      
+      overlayResizeHandles.forEach(handle => {
+        handle.addEventListener('mousedown', startOverlayResize as EventListener);
+        handle.addEventListener('touchstart', startOverlayResize as EventListener, { passive: false });
+      });
+      
+      const doOverlayResize = (e: MouseEvent | TouchEvent) => {
+        if (!overlayResizing) return;
+        e.preventDefault();
+        
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+        
+        const deltaX = clientX - overlayResizeStartX;
+        const deltaY = clientY - overlayResizeStartY;
+        
+        const minWidth = 280;
+        const minHeight = 200;
+        const maxWidth = 700;
+        const maxHeight = window.innerHeight - 80;
+        
+        let newWidth = overlayResizeStartWidth;
+        let newHeight = overlayResizeStartHeight;
+        let newLeft = overlayResizeStartLeft;
+        let newTop = overlayResizeStartTop;
+        
+        // Handle different resize directions
+        if (overlayResizeDirection.includes('e')) {
+          newWidth = Math.min(maxWidth, Math.max(minWidth, overlayResizeStartWidth + deltaX));
+        }
+        if (overlayResizeDirection.includes('w')) {
+          const proposedWidth = overlayResizeStartWidth - deltaX;
+          if (proposedWidth >= minWidth && proposedWidth <= maxWidth) {
+            newWidth = proposedWidth;
+            newLeft = overlayResizeStartLeft + deltaX;
+          }
+        }
+        if (overlayResizeDirection.includes('s')) {
+          newHeight = Math.min(maxHeight, Math.max(minHeight, overlayResizeStartHeight + deltaY));
+        }
+        if (overlayResizeDirection.includes('n')) {
+          const proposedHeight = overlayResizeStartHeight - deltaY;
+          if (proposedHeight >= minHeight && proposedHeight <= maxHeight) {
+            newHeight = proposedHeight;
+            newTop = overlayResizeStartTop + deltaY;
+          }
+        }
+        
+        // Apply constraints to keep panel in viewport
+        newLeft = Math.max(10, Math.min(newLeft, window.innerWidth - newWidth - 10));
+        newTop = Math.max(10, Math.min(newTop, window.innerHeight - newHeight - 10));
+        
+        overlayPanel.style.width = newWidth + 'px';
+        overlayPanel.style.height = newHeight + 'px';
+        overlayPanel.style.left = newLeft + 'px';
+        overlayPanel.style.top = newTop + 'px';
+        
+        // Update content area height
+        const header = document.getElementById('overlayPanelHeader');
+        const content = document.getElementById('overlayPanelContent');
+        if (header && content) {
+          const headerHeight = header.offsetHeight;
+          const contentHeight = newHeight - headerHeight - 4;
+          content.style.height = contentHeight + 'px';
+          content.style.maxHeight = contentHeight + 'px';
+        }
+      };
+      
+      const endOverlayResize = () => {
+        if (overlayResizing) {
+          overlayPanel.classList.remove('resizing');
+          overlayResizing = false;
+          overlayResizeDirection = '';
+        }
+      };
+      
+      document.addEventListener('mousemove', doOverlayResize as EventListener);
+      document.addEventListener('touchmove', doOverlayResize as EventListener, { passive: false });
+      document.addEventListener('mouseup', endOverlayResize);
+      document.addEventListener('touchend', endOverlayResize);
+      
+      console.log('[Overlay Panel] Resize handlers attached');
+    }
+    // ============================================
 
     // Ensure content area is scrollable
     const overlayContent = document.getElementById('overlayPanelContent');
     if (overlayContent) {
       // Force scroll styles via JavaScript with setAttribute for priority
-      overlayContent.setAttribute('style', 'overflow-y: scroll !important; max-height: 320px !important; height: 320px !important; display: block !important; -webkit-overflow-scrolling: touch;');
+      overlayContent.setAttribute('style', 'overflow-y: auto !important; flex: 1; min-height: 0; display: block !important; -webkit-overflow-scrolling: touch;');
       
       // Add wheel event listener to ensure scroll works
       overlayContent.addEventListener('wheel', (e: WheelEvent) => {
@@ -4501,10 +6004,353 @@ class VirtualStudio {
           const value = target.value;
           // Update store directly
           useFocusStore.getState().setCompositionGuide(value as any);
+          // Update indicator
+          const indicator = document.getElementById('compositionIndicator');
+          if (indicator) {
+            indicator.style.display = value !== 'none' ? 'inline' : 'none';
+          }
           console.log('Composition guide changed:', value);
         }
       });
     });
+
+    // Setup composition color buttons
+    const compColorBtns = document.querySelectorAll('.comp-color-btn');
+    compColorBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const color = (btn as HTMLElement).dataset.color;
+        if (color) {
+          compColorBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          // Update CSS custom property for composition color
+          document.documentElement.style.setProperty('--composition-color', color);
+          // Store the color for use in SVG generation
+          (window as any).compositionSettings = {
+            ...(window as any).compositionSettings,
+            color: color
+          };
+          // Re-render composition guide with new color
+          const currentGuide = useFocusStore.getState().compositionGuide;
+          if (currentGuide && currentGuide !== 'none') {
+            useFocusStore.getState().setCompositionGuide('none' as any);
+            setTimeout(() => useFocusStore.getState().setCompositionGuide(currentGuide), 10);
+          }
+        }
+      });
+    });
+
+    // Setup composition opacity slider
+    const compOpacity = document.getElementById('compositionOpacity') as HTMLInputElement;
+    const compOpacityValue = document.getElementById('compositionOpacityValue');
+    if (compOpacity) {
+      compOpacity.addEventListener('input', () => {
+        const value = parseInt(compOpacity.value);
+        if (compOpacityValue) compOpacityValue.textContent = value + '%';
+        (window as any).compositionSettings = {
+          ...(window as any).compositionSettings,
+          opacity: value / 100
+        };
+        // Update composition overlay opacity
+        const overlay = document.getElementById('compositionOverlay');
+        if (overlay) {
+          overlay.style.opacity = (value / 100).toString();
+        }
+      });
+    }
+
+    // Setup composition line width
+    const compLineWidth = document.getElementById('compositionLineWidth') as HTMLSelectElement;
+    if (compLineWidth) {
+      compLineWidth.addEventListener('change', () => {
+        (window as any).compositionSettings = {
+          ...(window as any).compositionSettings,
+          lineWidth: parseInt(compLineWidth.value)
+        };
+        // Re-render with new line width
+        const currentGuide = useFocusStore.getState().compositionGuide;
+        if (currentGuide && currentGuide !== 'none') {
+          useFocusStore.getState().setCompositionGuide('none' as any);
+          setTimeout(() => useFocusStore.getState().setCompositionGuide(currentGuide), 10);
+        }
+      });
+    }
+
+    // Setup composition toggles
+    const setupCompositionToggle = (id: string, settingKey: string) => {
+      const toggle = document.getElementById(id) as HTMLInputElement;
+      if (toggle) {
+        toggle.addEventListener('change', () => {
+          (window as any).compositionSettings = {
+            ...(window as any).compositionSettings,
+            [settingKey]: toggle.checked
+          };
+          // Re-render composition guide
+          const currentGuide = useFocusStore.getState().compositionGuide;
+          if (currentGuide && currentGuide !== 'none') {
+            useFocusStore.getState().setCompositionGuide('none' as any);
+            setTimeout(() => useFocusStore.getState().setCompositionGuide(currentGuide), 10);
+          }
+        });
+      }
+    };
+    setupCompositionToggle('compositionAnimatedPoints', 'animatedPoints');
+    setupCompositionToggle('compositionShowScore', 'showScore');
+    setupCompositionToggle('compositionGlowEffect', 'glowEffect');
+
+    // Setup composition presets
+    const presetBtns = document.querySelectorAll('.comp-preset-btn');
+    presetBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const preset = (btn as HTMLElement).dataset.preset;
+        presetBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // Apply preset settings
+        switch (preset) {
+          case 'portrait':
+            // Best for portraits - golden ratio, warm colors
+            (document.querySelector('input[name="composition"][value="golden"]') as HTMLInputElement)?.click();
+            (document.querySelector('.comp-color-btn[data-color="#ffcc00"]') as HTMLElement)?.click();
+            break;
+          case 'landscape':
+            // Landscape - rule of thirds, blue-green
+            (document.querySelector('input[name="composition"][value="thirds"]') as HTMLInputElement)?.click();
+            (document.querySelector('.comp-color-btn[data-color="#00d4ff"]') as HTMLElement)?.click();
+            break;
+          case 'product':
+            // Product - center + diagonals, white
+            (document.querySelector('input[name="composition"][value="center"]') as HTMLInputElement)?.click();
+            (document.querySelector('.comp-color-btn[data-color="#ffffff"]') as HTMLElement)?.click();
+            break;
+          case 'cinematic':
+            // Film - dynamic symmetry, signature green
+            (document.querySelector('input[name="composition"][value="dynamic"]') as HTMLInputElement)?.click();
+            (document.querySelector('.comp-color-btn[data-color="#00ff88"]') as HTMLElement)?.click();
+            break;
+        }
+        console.log('Composition preset applied:', preset);
+      });
+    });
+
+    // Initialize composition settings
+    (window as any).compositionSettings = {
+      color: '#00ff88',
+      opacity: 0.7,
+      lineWidth: 2,
+      animatedPoints: true,
+      showScore: false,
+      glowEffect: true
+    };
+
+    // ============================================
+    // DRAGGABLE COMPOSITION FEEDBACK PANEL
+    // ============================================
+    let compPanelDragging = false;
+    let compDragOffsetX = 0;
+    let compDragOffsetY = 0;
+    
+    // RESIZABLE PANEL FUNCTIONALITY
+    let resizing = false;
+    let resizeDirection = '';
+    let resizeStartX = 0;
+    let resizeStartY = 0;
+    let resizeStartWidth = 0;
+    let resizeStartHeight = 0;
+    let resizeStartLeft = 0;
+    let resizeStartTop = 0;
+    let resizePanel: HTMLElement | null = null;
+    
+    // Use MutationObserver to attach drag handlers when panel is created
+    const compositionOverlay = document.getElementById('compositionOverlay');
+    if (compositionOverlay) {
+      const attachCompPanelDrag = () => {
+        const panel = document.getElementById('compositionFeedbackPanel');
+        const dragHandle = panel?.querySelector('.composition-drag-handle');
+        
+        if (panel && dragHandle && !panel.dataset.dragInitialized) {
+          panel.dataset.dragInitialized = 'true';
+          
+          const startCompDrag = (e: MouseEvent | TouchEvent) => {
+            // Don't start drag if we're resizing
+            if (resizing) return;
+            e.preventDefault();
+            const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+            const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+            
+            compPanelDragging = true;
+            const rect = panel.getBoundingClientRect();
+            compDragOffsetX = clientX - rect.left;
+            compDragOffsetY = clientY - rect.top;
+            
+            panel.classList.add('dragging', 'user-positioned');
+            panel.style.left = rect.left + 'px';
+            panel.style.top = rect.top + 'px';
+            panel.style.bottom = 'auto';
+            panel.style.right = 'auto';
+          };
+          
+          const doCompDrag = (e: MouseEvent | TouchEvent) => {
+            if (!compPanelDragging) return;
+            e.preventDefault();
+            
+            const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+            const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+            
+            let newX = clientX - compDragOffsetX;
+            let newY = clientY - compDragOffsetY;
+            
+            // Constrain to viewport
+            const panelRect = panel.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            newX = Math.max(10, Math.min(newX, viewportWidth - panelRect.width - 10));
+            newY = Math.max(10, Math.min(newY, viewportHeight - panelRect.height - 10));
+            
+            panel.style.left = newX + 'px';
+            panel.style.top = newY + 'px';
+          };
+          
+          const endCompDrag = () => {
+            if (compPanelDragging) {
+              compPanelDragging = false;
+              panel.classList.remove('dragging');
+            }
+          };
+          
+          dragHandle.addEventListener('mousedown', startCompDrag as EventListener);
+          dragHandle.addEventListener('touchstart', startCompDrag as EventListener, { passive: false });
+          document.addEventListener('mousemove', doCompDrag as EventListener);
+          document.addEventListener('touchmove', doCompDrag as EventListener, { passive: false });
+          document.addEventListener('mouseup', endCompDrag);
+          document.addEventListener('touchend', endCompDrag);
+          
+          // ============================================
+          // RESIZE HANDLERS FOR COMPOSITION PANEL
+          // ============================================
+          const resizeHandles = panel.querySelectorAll('.resize-handle');
+          
+          const startResize = (e: MouseEvent | TouchEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const target = e.target as HTMLElement;
+            resizeDirection = target.dataset.resize || '';
+            if (!resizeDirection) return;
+            
+            resizing = true;
+            resizePanel = panel;
+            
+            const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+            const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+            
+            resizeStartX = clientX;
+            resizeStartY = clientY;
+            
+            const rect = panel.getBoundingClientRect();
+            resizeStartWidth = rect.width;
+            resizeStartHeight = rect.height;
+            resizeStartLeft = rect.left;
+            resizeStartTop = rect.top;
+            
+            // Convert to fixed positioning for resize
+            panel.classList.add('resizing', 'user-positioned');
+            panel.style.left = rect.left + 'px';
+            panel.style.top = rect.top + 'px';
+            panel.style.bottom = 'auto';
+            panel.style.right = 'auto';
+            panel.style.width = rect.width + 'px';
+            panel.style.height = rect.height + 'px';
+          };
+          
+          resizeHandles.forEach(handle => {
+            handle.addEventListener('mousedown', startResize as EventListener);
+            handle.addEventListener('touchstart', startResize as EventListener, { passive: false });
+          });
+          
+          console.log('[Composition] Drag and resize handlers attached to feedback panel');
+        }
+      };
+      
+      // Global resize move/end handlers
+      const doResize = (e: MouseEvent | TouchEvent) => {
+        if (!resizing || !resizePanel) return;
+        e.preventDefault();
+        
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+        
+        const deltaX = clientX - resizeStartX;
+        const deltaY = clientY - resizeStartY;
+        
+        const minWidth = 180;
+        const minHeight = 120;
+        const maxWidth = 600;
+        const maxHeight = window.innerHeight - 100;
+        
+        let newWidth = resizeStartWidth;
+        let newHeight = resizeStartHeight;
+        let newLeft = resizeStartLeft;
+        let newTop = resizeStartTop;
+        
+        // Handle different resize directions
+        if (resizeDirection.includes('e')) {
+          newWidth = Math.min(maxWidth, Math.max(minWidth, resizeStartWidth + deltaX));
+        }
+        if (resizeDirection.includes('w')) {
+          const proposedWidth = resizeStartWidth - deltaX;
+          if (proposedWidth >= minWidth && proposedWidth <= maxWidth) {
+            newWidth = proposedWidth;
+            newLeft = resizeStartLeft + deltaX;
+          }
+        }
+        if (resizeDirection.includes('s')) {
+          newHeight = Math.min(maxHeight, Math.max(minHeight, resizeStartHeight + deltaY));
+        }
+        if (resizeDirection.includes('n')) {
+          const proposedHeight = resizeStartHeight - deltaY;
+          if (proposedHeight >= minHeight && proposedHeight <= maxHeight) {
+            newHeight = proposedHeight;
+            newTop = resizeStartTop + deltaY;
+          }
+        }
+        
+        // Apply constraints to keep panel in viewport
+        newLeft = Math.max(10, Math.min(newLeft, window.innerWidth - newWidth - 10));
+        newTop = Math.max(10, Math.min(newTop, window.innerHeight - newHeight - 10));
+        
+        resizePanel.style.width = newWidth + 'px';
+        resizePanel.style.height = newHeight + 'px';
+        resizePanel.style.left = newLeft + 'px';
+        resizePanel.style.top = newTop + 'px';
+      };
+      
+      const endResize = () => {
+        if (resizing && resizePanel) {
+          resizePanel.classList.remove('resizing');
+          resizing = false;
+          resizePanel = null;
+          resizeDirection = '';
+        }
+      };
+      
+      document.addEventListener('mousemove', doResize as EventListener);
+      document.addEventListener('touchmove', doResize as EventListener, { passive: false });
+      document.addEventListener('mouseup', endResize);
+      document.addEventListener('touchend', endResize);
+      
+      // Observe for composition panel creation
+      const compObserver = new MutationObserver(() => {
+        attachCompPanelDrag();
+      });
+      
+      compObserver.observe(compositionOverlay, { childList: true, subtree: true });
+      
+      // Also try attaching immediately in case panel already exists
+      attachCompPanelDrag();
+    }
+    console.log('[Composition] Draggable panel initialization complete');
+    // ============================================
 
     // Setup safe area checkboxes
     const safeAreaCheckboxes = document.querySelectorAll('input[name="safeArea"]') as NodeListOf<HTMLInputElement>;
@@ -4529,6 +6375,269 @@ class VirtualStudio {
         console.log('Safe area changed:', mode);
       });
     });
+
+    // ============================================
+    // PROFESSIONAL SAFE ZONE CONTROLS
+    // ============================================
+    
+    // Initialize safe zone settings
+    (window as any).safeZoneSettings = {
+      actionColor: '#ffc800',
+      titleColor: '#00c8ff',
+      lineWidth: 2,
+      opacity: 70,
+      showCenter: true,
+      showCorners: true,
+      showLabels: true,
+      animated: false,
+      aspectRatio: '16:9',
+      customActionMargin: 5,
+      customTitleMargin: 10,
+      zoneType: 'none'
+    };
+    
+    // Safe Zone Grid Selector
+    const safeZoneGridItems = document.querySelectorAll('.safe-zone-grid-item');
+    const customMarginsSection = document.getElementById('customMarginsSection');
+    
+    safeZoneGridItems.forEach(item => {
+      item.addEventListener('click', () => {
+        // Update active state
+        safeZoneGridItems.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        
+        const zone = (item as HTMLElement).dataset.zone as any;
+        (window as any).safeZoneSettings.zoneType = zone;
+        
+        // Show/hide custom margins section
+        if (customMarginsSection) {
+          customMarginsSection.style.display = zone === 'custom' ? 'block' : 'none';
+        }
+        
+        // Update legacy checkboxes for compatibility
+        const actionCheckbox = document.querySelector('input[name="safeArea"][value="action"]') as HTMLInputElement;
+        const titleCheckbox = document.querySelector('input[name="safeArea"][value="title"]') as HTMLInputElement;
+        
+        if (actionCheckbox && titleCheckbox) {
+          actionCheckbox.checked = zone === 'action' || zone === 'both' || zone === 'custom';
+          titleCheckbox.checked = zone === 'title' || zone === 'both' || zone === 'custom';
+        }
+        
+        // Update store
+        useFocusStore.getState().setSafeAreaMode(zone);
+        console.log('[SafeZone] Zone changed:', zone);
+      });
+    });
+    
+    // Color pickers
+    const actionColorPicker = document.getElementById('actionZoneColor') as HTMLInputElement;
+    const titleColorPicker = document.getElementById('titleZoneColor') as HTMLInputElement;
+    
+    const updateColorHexDisplay = (picker: HTMLInputElement) => {
+      const hexSpan = picker.parentElement?.querySelector('.color-hex-value');
+      if (hexSpan) {
+        hexSpan.textContent = picker.value;
+      }
+    };
+    
+    actionColorPicker?.addEventListener('input', (e) => {
+      const color = (e.target as HTMLInputElement).value;
+      (window as any).safeZoneSettings.actionColor = color;
+      updateColorHexDisplay(actionColorPicker);
+      // Refresh display
+      const currentMode = useFocusStore.getState().safeAreaMode;
+      if (currentMode !== 'none') {
+        useFocusStore.getState().setSafeAreaMode(currentMode);
+      }
+    });
+    
+    titleColorPicker?.addEventListener('input', (e) => {
+      const color = (e.target as HTMLInputElement).value;
+      (window as any).safeZoneSettings.titleColor = color;
+      updateColorHexDisplay(titleColorPicker);
+      // Refresh display
+      const currentMode = useFocusStore.getState().safeAreaMode;
+      if (currentMode !== 'none') {
+        useFocusStore.getState().setSafeAreaMode(currentMode);
+      }
+    });
+    
+    // Line width slider
+    const lineWidthSlider = document.getElementById('zoneLineWidth') as HTMLInputElement;
+    const lineWidthValue = document.getElementById('zoneLineWidthValue');
+    
+    lineWidthSlider?.addEventListener('input', (e) => {
+      const value = parseFloat((e.target as HTMLInputElement).value);
+      (window as any).safeZoneSettings.lineWidth = value;
+      if (lineWidthValue) lineWidthValue.textContent = `${value}px`;
+      // Refresh display
+      const currentMode = useFocusStore.getState().safeAreaMode;
+      if (currentMode !== 'none') {
+        useFocusStore.getState().setSafeAreaMode(currentMode);
+      }
+    });
+    
+    // Opacity slider
+    const opacitySlider = document.getElementById('zoneOpacity') as HTMLInputElement;
+    const opacityValue = document.getElementById('zoneOpacityValue');
+    
+    opacitySlider?.addEventListener('input', (e) => {
+      const value = parseInt((e.target as HTMLInputElement).value);
+      (window as any).safeZoneSettings.opacity = value;
+      if (opacityValue) opacityValue.textContent = `${value}%`;
+      // Refresh display
+      const currentMode = useFocusStore.getState().safeAreaMode;
+      if (currentMode !== 'none') {
+        useFocusStore.getState().setSafeAreaMode(currentMode);
+      }
+    });
+    
+    // Custom margin inputs
+    const customActionMargin = document.getElementById('customActionMargin') as HTMLInputElement;
+    const customTitleMargin = document.getElementById('customTitleMargin') as HTMLInputElement;
+    
+    customActionMargin?.addEventListener('change', (e) => {
+      const value = parseInt((e.target as HTMLInputElement).value);
+      (window as any).safeZoneSettings.customActionMargin = Math.max(1, Math.min(20, value));
+      // Refresh if in custom mode
+      if ((window as any).safeZoneSettings.zoneType === 'custom') {
+        useFocusStore.getState().setSafeAreaMode('custom');
+      }
+    });
+    
+    customTitleMargin?.addEventListener('change', (e) => {
+      const value = parseInt((e.target as HTMLInputElement).value);
+      (window as any).safeZoneSettings.customTitleMargin = Math.max(5, Math.min(30, value));
+      // Refresh if in custom mode
+      if ((window as any).safeZoneSettings.zoneType === 'custom') {
+        useFocusStore.getState().setSafeAreaMode('custom');
+      }
+    });
+    
+    // Toggle options
+    const toggleOptionIds = [
+      { id: 'showCenterMarker', key: 'showCenter' },
+      { id: 'showCornerMarkers', key: 'showCorners' },
+      { id: 'showZoneLabels', key: 'showLabels' },
+      { id: 'animateZones', key: 'animated' }
+    ];
+    
+    toggleOptionIds.forEach(({ id, key }) => {
+      const toggle = document.getElementById(id) as HTMLInputElement;
+      toggle?.addEventListener('change', (e) => {
+        (window as any).safeZoneSettings[key] = (e.target as HTMLInputElement).checked;
+        // Refresh display
+        const currentMode = useFocusStore.getState().safeAreaMode;
+        if (currentMode !== 'none') {
+          useFocusStore.getState().setSafeAreaMode(currentMode);
+        }
+      });
+    });
+    
+    // Aspect ratio buttons
+    const aspectButtons = document.querySelectorAll('.aspect-btn');
+    aspectButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        aspectButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        (window as any).safeZoneSettings.aspectRatio = (btn as HTMLElement).dataset.aspect;
+        console.log('[SafeZone] Aspect ratio changed:', (btn as HTMLElement).dataset.aspect);
+        // Refresh display
+        const currentMode = useFocusStore.getState().safeAreaMode;
+        if (currentMode !== 'none') {
+          useFocusStore.getState().setSafeAreaMode(currentMode);
+        }
+      });
+    });
+    
+    console.log('[SafeZone] Professional safe zone controls initialized');
+    
+    // ============================================
+    // DRAGGABLE SAFE AREA FEEDBACK PANEL
+    // ============================================
+    let safePanelDragging = false;
+    let safeDragOffsetX = 0;
+    let safeDragOffsetY = 0;
+    
+    // Use MutationObserver to attach drag handlers when panel is created
+    const safeAreaOverlay = document.getElementById('safeAreaOverlay');
+    if (safeAreaOverlay) {
+      const attachSafePanelDrag = () => {
+        const panel = document.getElementById('safeAreaFeedbackPanel');
+        const dragHandle = panel?.querySelector('.safe-area-drag-handle');
+        
+        if (panel && dragHandle && !panel.dataset.dragInitialized) {
+          panel.dataset.dragInitialized = 'true';
+          
+          const startSafeDrag = (e: MouseEvent | TouchEvent) => {
+            e.preventDefault();
+            const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+            const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+            
+            safePanelDragging = true;
+            const rect = panel.getBoundingClientRect();
+            safeDragOffsetX = clientX - rect.left;
+            safeDragOffsetY = clientY - rect.top;
+            
+            panel.classList.add('dragging', 'user-positioned');
+            panel.style.left = rect.left + 'px';
+            panel.style.top = rect.top + 'px';
+            panel.style.bottom = 'auto';
+            panel.style.right = 'auto';
+          };
+          
+          const doSafeDrag = (e: MouseEvent | TouchEvent) => {
+            if (!safePanelDragging) return;
+            e.preventDefault();
+            
+            const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+            const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+            
+            let newX = clientX - safeDragOffsetX;
+            let newY = clientY - safeDragOffsetY;
+            
+            // Constrain to viewport
+            const panelRect = panel.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            newX = Math.max(10, Math.min(newX, viewportWidth - panelRect.width - 10));
+            newY = Math.max(10, Math.min(newY, viewportHeight - panelRect.height - 10));
+            
+            panel.style.left = newX + 'px';
+            panel.style.top = newY + 'px';
+          };
+          
+          const endSafeDrag = () => {
+            if (safePanelDragging) {
+              safePanelDragging = false;
+              panel.classList.remove('dragging');
+            }
+          };
+          
+          dragHandle.addEventListener('mousedown', startSafeDrag as EventListener);
+          dragHandle.addEventListener('touchstart', startSafeDrag as EventListener, { passive: false });
+          document.addEventListener('mousemove', doSafeDrag as EventListener);
+          document.addEventListener('touchmove', doSafeDrag as EventListener, { passive: false });
+          document.addEventListener('mouseup', endSafeDrag);
+          document.addEventListener('touchend', endSafeDrag);
+          
+          console.log('[SafeZone] Drag handlers attached to feedback panel');
+        }
+      };
+      
+      // Observe for safe area panel creation
+      const safeObserver = new MutationObserver(() => {
+        attachSafePanelDrag();
+      });
+      
+      safeObserver.observe(safeAreaOverlay, { childList: true, subtree: true });
+      
+      // Also try attaching immediately in case panel already exists
+      attachSafePanelDrag();
+    }
+    console.log('[SafeZone] Draggable panel initialization complete');
+    // ============================================
 
     // Setup helper guide radio buttons
     const helperGuideRadios = document.querySelectorAll('input[name="helperGuide"]') as NodeListOf<HTMLInputElement>;
@@ -6653,10 +8762,13 @@ class VirtualStudio {
       this.topViewCtx = this.topViewCanvas.getContext('2d');
     }
 
-    // Use embedded scope canvas in right panel
-    this.histogramCanvas = document.getElementById('scopeCanvasEmbed') as HTMLCanvasElement;
+    // Use scope canvas from dropdown panel
+    this.histogramCanvas = document.getElementById('scopeCanvasDropdown') as HTMLCanvasElement;
     if (this.histogramCanvas) {
       this.histogramCtx = this.histogramCanvas.getContext('2d');
+      console.log('[Histogram] Canvas initialized:', this.histogramCanvas.width, 'x', this.histogramCanvas.height);
+    } else {
+      console.warn('[Histogram] scopeCanvasDropdown not found in DOM');
     }
 
     this.resizeCanvases();
@@ -7634,10 +9746,48 @@ class VirtualStudio {
       });
     }
     
+    // Camera mode selection (Sony, RED, Blackmagic)
+    const peakingModeSelect = document.getElementById('focusPeakingMode') as HTMLSelectElement;
+    if (peakingModeSelect) {
+      peakingModeSelect.addEventListener('change', () => {
+        useFocusPeakingStore.getState().setMode(peakingModeSelect.value as any);
+        console.log(`[Focus Peaking] Mode changed to: ${peakingModeSelect.value}`);
+      });
+    }
+    
+    // RED DSMC2 style level buttons
+    const levelButtons = document.querySelectorAll('.peaking-level-btn');
+    levelButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const level = (btn as HTMLElement).dataset.level as any;
+        useFocusPeakingStore.getState().setLevel(level);
+        
+        // Update button styles
+        levelButtons.forEach((b) => {
+          (b as HTMLElement).style.background = 'rgba(0,0,0,0.3)';
+          (b as HTMLElement).style.borderColor = 'rgba(255,255,255,0.2)';
+          (b as HTMLElement).style.color = 'rgba(255,255,255,0.6)';
+        });
+        (btn as HTMLElement).style.background = 'rgba(255,100,100,0.3)';
+        (btn as HTMLElement).style.borderColor = 'rgba(255,100,100,0.5)';
+        (btn as HTMLElement).style.color = '#fff';
+        
+        console.log(`[Focus Peaking] Level changed to: ${level}`);
+      });
+    });
+    
     const peakingColorSelect = document.getElementById('focusPeakingColor') as HTMLSelectElement;
     if (peakingColorSelect) {
       peakingColorSelect.addEventListener('change', () => {
         useFocusPeakingStore.getState().setColor(peakingColorSelect.value as any);
+      });
+    }
+    
+    // Line width selection
+    const lineWidthSelect = document.getElementById('focusPeakingLineWidth') as HTMLSelectElement;
+    if (lineWidthSelect) {
+      lineWidthSelect.addEventListener('change', () => {
+        useFocusPeakingStore.getState().setLineWidth(parseInt(lineWidthSelect.value));
       });
     }
     
@@ -7672,15 +9822,47 @@ class VirtualStudio {
       });
     }
     
+    // Multi-scale toggle
+    const multiScaleToggle = document.getElementById('focusPeakingMultiScale') as HTMLInputElement;
+    if (multiScaleToggle) {
+      multiScaleToggle.addEventListener('change', () => {
+        useFocusPeakingStore.getState().setMultiScale(multiScaleToggle.checked);
+      });
+    }
+    
+    // Adaptive threshold toggle
+    const adaptiveToggle = document.getElementById('focusPeakingAdaptive') as HTMLInputElement;
+    if (adaptiveToggle) {
+      adaptiveToggle.addEventListener('change', () => {
+        useFocusPeakingStore.getState().setAdaptiveThreshold(adaptiveToggle.checked);
+      });
+    }
+    
+    // Strict focus plane toggle
+    const strictFocusToggle = document.getElementById('focusPeakingStrictFocus') as HTMLInputElement;
+    if (strictFocusToggle) {
+      strictFocusToggle.addEventListener('change', () => {
+        useFocusPeakingStore.getState().setShowOnlyInFocus(strictFocusToggle.checked);
+      });
+    }
+    
     useFocusPeakingStore.subscribe((state) => {
       const indicator = document.getElementById('focusPeakingIndicator');
       if (indicator) {
         indicator.style.display = state.enabled ? 'flex' : 'none';
         indicator.style.color = state.color === 'white' ? '#fff' : state.color;
+        // Update indicator text based on mode
+        const modeLabels: Record<string, string> = {
+          'standard': 'PEAK',
+          'sony': 'SONY',
+          'red': 'RED',
+          'blackmagic': 'BMD'
+        };
+        indicator.textContent = modeLabels[state.mode] || 'PEAK';
       }
     });
     
-    console.log('[Focus Peaking UI] Setup complete');
+    console.log('[Focus Peaking UI] Professional camera peaking setup complete');
   }
 
   private calculateFocusDistance(normalizedX: number, normalizedY: number): void {
@@ -7761,12 +9943,41 @@ class VirtualStudio {
   }
 
   // Apply proper PBR shading to all loaded meshes - ensures models aren't wireframe/unlit
-  private applyPBRShadingToMeshes(meshes: BABYLON.AbstractMesh[]): void {
+  private applyPBRShadingToMeshes(meshes: BABYLON.AbstractMesh[], avatarId?: string): void {
     let pbrCount = 0;
     let standardCount = 0;
     let createdCount = 0;
     let shadowCasterCount = 0;
     
+    // PHASE 2 ENHANCEMENT: If avatar ID provided, use enhanced PBR material definitions
+    // This replaces generic gray fallback with realistic skin/fabric/hair materials
+    if (avatarId) {
+      console.log(`[PBR] Applying enhanced materials for avatar: ${avatarId}`);
+      try {
+        // Apply enhanced PBR using avatar material definitions
+        // This includes skin tone, fabric textures, subsurface scattering, etc.
+        AvatarMaterialService.applyEnhancedPBR(meshes, avatarId, this.scene);
+        
+        // Add shadow casting to all meshes
+        meshes.forEach(m => {
+          m.receiveShadows = true;
+          this.lights.forEach(lightData => {
+            if (lightData.shadowGenerator) {
+              lightData.shadowGenerator.addShadowCaster(m);
+            }
+          });
+        });
+        
+        console.log(`[PBR] Enhanced PBR applied successfully to ${meshes.length} meshes`);
+        return; // Early exit - enhanced PBR handles all configuration
+      } catch (err) {
+        console.warn(`[PBR] Failed to apply enhanced PBR, falling back to generic:`, err);
+        // Fall through to generic fallback below
+      }
+    }
+    
+    // FALLBACK: Generic PBR shading (original behavior)
+    // Used when no avatar definition exists or enhancement fails
     meshes.forEach(m => {
       m.receiveShadows = true;
       
@@ -7877,6 +10088,51 @@ class VirtualStudio {
       shadowCastersAdded: shadowCasterCount,
       confirmed: true
     });
+  }
+
+  /**
+   * Detect embedded textures in loaded GLB meshes
+   * Used for inspection and optional fallback to embedded textures
+   * 
+   * @param meshes - Array of meshes from imported GLB
+   * @returns Object with embedded texture detection results per mesh
+   */
+  private detectEmbeddedTextures(meshes: BABYLON.AbstractMesh[]): Array<{ 
+    meshName: string; 
+    hasAlbedo: boolean; 
+    hasNormal: boolean; 
+    hasORM: boolean;
+  }> {
+    const results = meshes
+      .filter(m => m.material && m.getTotalVertices && m.getTotalVertices() > 0)
+      .map(m => {
+        const mat = m.material;
+        let hasAlbedo = false;
+        let hasNormal = false;
+        let hasORM = false;
+        
+        if (mat instanceof BABYLON.PBRMaterial) {
+          hasAlbedo = !!(mat.albedoTexture);
+          hasNormal = !!(mat.bumpTexture);
+          hasORM = !!(mat.metallicTexture);
+        } else if (mat instanceof BABYLON.StandardMaterial) {
+          hasAlbedo = !!(mat.diffuseTexture);
+          hasNormal = !!(mat.bumpTexture);
+        }
+        
+        return {
+          meshName: m.name,
+          hasAlbedo,
+          hasNormal,
+          hasORM
+        };
+      });
+    
+    // Log summary
+    const totalWithTextures = results.filter(r => r.hasAlbedo || r.hasNormal || r.hasORM).length;
+    console.log(`[TextureDetection] Scanned ${meshes.length} meshes, found ${totalWithTextures} with embedded textures:`, results);
+    
+    return results;
   }
 
   private positionMeshOnGround(mesh: BABYLON.AbstractMesh, position: BABYLON.Vector3): BABYLON.Vector3 {
@@ -8029,10 +10285,22 @@ class VirtualStudio {
           },
         });
         
+        // Track in scene state (Phase 3: Metadata Tracking)
+        this.sceneState.props.set(nodeId, {
+          id: nodeId,
+          mesh: mesh as BABYLON.Mesh,
+          assetId: assetId,
+          name: propDef.name || name,
+          metadata: data?.metadata
+        });
+        
         if (this.gizmoManager) {
           this.gizmoManager.attachToMesh(mesh as BABYLON.AbstractMesh);
         }
         console.log(`Loaded prop via service: ${propDef.name}`);
+          // Update shadows and lighting for new geometry (Phase 3: Shadow/Lighting Auto-Update)
+          this.regenerateShadowMaps();
+          this.recalculateAmbientLighting();
         return;
       } catch (error) {
         console.warn(`propRenderingService failed for ${assetId}, using fallback`);
@@ -8061,6 +10329,9 @@ class VirtualStudio {
         // Apply proper PBR shading to all meshes
         this.applyPBRShadingToMeshes(result.meshes);
         
+        // Register all child meshes (geometry_0, etc.) for proper scene tracking
+        this.registerModelMeshesInScene(rootMesh, nodeId, name);
+        
         // Add node to store so it can be moved in 2D top view
         useAppStore.getState().addNode({
           id: nodeId,
@@ -8075,6 +10346,7 @@ class VirtualStudio {
           userData: {
             assetId: assetId,
             modelUrl: data.modelUrl,
+            meshNames: this.getChildMeshNames(rootMesh),
             ...data?.metadata,
           },
         });
@@ -8083,6 +10355,9 @@ class VirtualStudio {
           this.gizmoManager.attachToMesh(mesh as BABYLON.AbstractMesh);
         }
         console.log(`Loaded asset model: ${name}`);
+          // Update shadows and lighting for new geometry
+          this.updateShadowMaps();
+          this.recalculateAmbientLighting();
         return;
       } catch (error) {
         console.warn(`Model not found: ${data.modelUrl}`);
@@ -8160,10 +10435,26 @@ class VirtualStudio {
       
       rootMesh.rotation = new BABYLON.Vector3(Math.PI, 0, 0);
       
-      this.applyPBRShadingToMeshes(result.meshes);
+      this.applyPBRShadingToMeshes(result.meshes, `casting_${candidateId}`);
+      
+      // Register all child meshes (geometry_0, etc.) for proper scene tracking
+      this.registerModelMeshesInScene(rootMesh, `casting_${candidateId}`, name);
       
       this.castingCandidates.set(candidateId, { mesh: rootMesh, name, avatarUrl });
+      
+      // Track in scene state (Phase 3: Metadata Tracking)
+      this.sceneState.characters.set(candidateId, {
+        id: candidateId,
+        mesh: rootMesh,
+        name,
+        avatarUrl
+      });
+      
       console.log(`[Casting Avatar] Loaded ${name} with ${result.meshes.length} meshes, shading applied, position: (${position.x.toFixed(1)}, ${position.y.toFixed(1)}, ${position.z.toFixed(1)})`);
+      
+      // Update shadows and lighting for new character (Phase 3)
+      this.regenerateShadowMaps();
+      this.recalculateAmbientLighting();
       
       // Add synthetic eye markers for autofocus
       setTimeout(() => {
@@ -8259,7 +10550,10 @@ class VirtualStudio {
         rootMesh.scaling = new BABYLON.Vector3(1, 1, 1);
         
         // Apply PBR shading so lights affect the model properly
-        this.applyPBRShadingToMeshes(result.meshes);
+        this.applyPBRShadingToMeshes(result.meshes, 'avatar_woman');
+        
+        // Register all child meshes (geometry_0, etc.) for proper scene tracking
+        this.registerModelMeshesInScene(rootMesh, avatarId, 'Avatar (Woman)');
         
         // Add to casting candidates
         this.castingCandidates.set(avatarId, { 
@@ -8828,6 +11122,10 @@ class VirtualStudio {
     // Set mesh name to node ID so we can find it when dragging
     if (this.characterMesh) {
       this.characterMesh.name = modelId;
+      
+      // Register all child meshes (geometry_0, geometry_1, etc.) in the scene
+      // This ensures autofocus and other systems can find them
+      this.registerModelMeshesInScene(this.characterMesh, modelId, name);
     }
     
     const newNode: SceneNode = {
@@ -8840,6 +11138,9 @@ class VirtualStudio {
         position: [meshPosition.x, meshPosition.y, meshPosition.z],
         rotation: [0, 0, 0],
         scale: [1, 1, 1]
+      },
+      userData: {
+        meshNames: this.characterMesh ? this.getChildMeshNames(this.characterMesh) : []
       }
     };
     
@@ -8876,6 +11177,118 @@ class VirtualStudio {
       weight: store.actorParams.weight,
       skinTone: store.actorParams.skinTone,
     });
+  }
+
+  /**
+   * Register all child meshes of a model in the scene for proper tracking
+   * This ensures geometry_0, geometry_1, etc. are properly registered
+   */
+  private registerModelMeshesInScene(rootMesh: BABYLON.AbstractMesh, modelId: string, modelName: string): void {
+    const childMeshes = rootMesh.getChildMeshes(true);
+    const registeredMeshes: string[] = [];
+    
+    childMeshes.forEach((mesh, index) => {
+      // Store original name for reference
+      const originalName = mesh.name;
+      
+      // Add metadata to link child mesh to parent model
+      mesh.metadata = mesh.metadata || {};
+      mesh.metadata.parentModelId = modelId;
+      mesh.metadata.parentModelName = modelName;
+      mesh.metadata.originalMeshName = originalName;
+      mesh.metadata.isModelGeometry = true;
+      
+      // Log geometry_0 specifically as it's commonly used for face detection
+      if (originalName.includes('geometry_0') || originalName === 'geometry_0') {
+        console.log(`[Model Registration] Primary geometry mesh found: ${originalName} → parent: ${modelId} (${modelName})`);
+        mesh.metadata.isPrimaryGeometry = true;
+      }
+      
+      registeredMeshes.push(originalName);
+    });
+    
+    // Also register the root mesh
+    rootMesh.metadata = rootMesh.metadata || {};
+    rootMesh.metadata.isModelRoot = true;
+    rootMesh.metadata.modelId = modelId;
+    rootMesh.metadata.modelName = modelName;
+    rootMesh.metadata.childMeshCount = childMeshes.length;
+    
+    console.log(`[Model Registration] Registered ${childMeshes.length} child meshes for model "${modelName}" (${modelId}):`, registeredMeshes);
+    
+    // Dispatch event for other systems to know about the new model
+    window.dispatchEvent(new CustomEvent('model-meshes-registered', {
+      detail: {
+        modelId,
+        modelName,
+        rootMesh: rootMesh.name,
+        childMeshes: registeredMeshes,
+        hasGeometry0: registeredMeshes.some(n => n.includes('geometry_0'))
+      }
+    }));
+  }
+  
+  /**
+   * Get all child mesh names from a model
+   */
+  private getChildMeshNames(rootMesh: BABYLON.AbstractMesh): string[] {
+    return rootMesh.getChildMeshes(true).map(m => m.name);
+  }
+  
+  /**
+   * Find a model by its geometry mesh name (e.g., find parent model from geometry_0)
+   */
+  public findModelByGeometryMesh(meshName: string): { modelId: string; modelName: string; rootMesh: BABYLON.AbstractMesh } | null {
+    // First try direct scene lookup
+    const mesh = this.scene.getMeshByName(meshName);
+    if (mesh?.metadata?.parentModelId) {
+      const rootMesh = this.scene.getMeshByName(mesh.metadata.parentModelId);
+      if (rootMesh) {
+        return {
+          modelId: mesh.metadata.parentModelId,
+          modelName: mesh.metadata.parentModelName || 'Unknown',
+          rootMesh
+        };
+      }
+    }
+    
+    // Search all meshes for matching geometry
+    for (const sceneMesh of this.scene.meshes) {
+      if (sceneMesh.name === meshName || sceneMesh.metadata?.originalMeshName === meshName) {
+        if (sceneMesh.metadata?.parentModelId) {
+          const rootMesh = this.scene.getMeshByName(sceneMesh.metadata.parentModelId);
+          if (rootMesh) {
+            return {
+              modelId: sceneMesh.metadata.parentModelId,
+              modelName: sceneMesh.metadata.parentModelName || 'Unknown',
+              rootMesh
+            };
+          }
+        }
+      }
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Get all registered model geometries (useful for autofocus, selection, etc.)
+   */
+  public getRegisteredModelGeometries(): Array<{ meshName: string; modelId: string; modelName: string; isPrimary: boolean }> {
+    const geometries: Array<{ meshName: string; modelId: string; modelName: string; isPrimary: boolean }> = [];
+    
+    for (const mesh of this.scene.meshes) {
+      if (mesh.metadata?.isModelGeometry) {
+        geometries.push({
+          meshName: mesh.name,
+          modelId: mesh.metadata.parentModelId || '',
+          modelName: mesh.metadata.parentModelName || 'Unknown',
+          isPrimary: mesh.metadata.isPrimaryGeometry || false
+        });
+      }
+    }
+    
+    return geometries;
   }
 
   private removeCharacterModel(): void {
@@ -8934,6 +11347,46 @@ class VirtualStudio {
   private topViewMeasurements: Array<{ id: string; start: { x: number; z: number }; end: { x: number; z: number } }> = [];
   private topViewCurrentMeasurement: { start: { x: number; z: number } | null; end: { x: number; z: number } | null } = { start: null, end: null };
   private topViewContextMenuTarget: { type: 'light' | 'prop' | 'actor' | 'camera'; id: string } | null = null;
+
+  // === MULTI-SELECT SYSTEM ===
+  private topViewSelectedIds: Set<string> = new Set(); // Multiple selected object IDs
+  private topViewSelectionAnchorId: string | null = null; // For shift-click range selection
+  private topViewMarquee: MarqueeSelection = { active: false, startX: 0, startY: 0, endX: 0, endY: 0 };
+  private topViewDragStartPositions: Map<string, { x: number; y: number; z: number }> = new Map(); // Capture positions before drag
+
+  // === GROUPING SYSTEM ===
+  private topViewGroups: Map<string, TopViewObjectGroup> = new Map();
+  private topViewGroupCounter: number = 0;
+
+  // === SNAP-TO-OBJECT ===
+  private topViewSnapToObject: boolean = true;
+  private topViewSnapDistance: number = 20; // Pixels for snap threshold
+  private topViewSnapGuides: SnapGuideLine[] = [];
+  private topViewShowSnapGuides: boolean = true;
+
+  // === TOUCH GESTURES (iPad Pro / Apple Pencil) ===
+  private topViewTouchGesture: TouchGestureState = {
+    lastTapTime: 0,
+    lastTapX: 0,
+    lastTapY: 0,
+    touchHoldTimer: null,
+    pinchCenter: null,
+    initialPinchDistance: 0,
+    initialZoom: 1,
+    initialPan: { x: 0, y: 0 },
+    isPencil: false,
+    forceTouchValue: 0
+  };
+  private topViewTouchHoldDuration: number = 500; // ms for context menu
+
+  // === MINIMAP ===
+  private topViewMinimapCanvas: HTMLCanvasElement | null = null;
+  private topViewMinimapCtx: CanvasRenderingContext2D | null = null;
+  private topViewShowMinimap: boolean = true;
+
+  // === VISUALIZATION OPTIONS ===
+  private topViewShowLightOverlap: boolean = false;
+  private topViewShowHeightIndicator: boolean = false;
 
   private updateTopView(): void {
     if (!this.topViewCtx || !this.topViewCanvas) return;
@@ -11848,6 +14301,45 @@ class VirtualStudio {
       }
     });
     
+    // ============================================
+    // PRO MENU IN TOPVIEW
+    // ============================================
+    const proMenuBtn = document.getElementById('topviewProMenu');
+    const proDropdown = document.getElementById('topviewProDropdown');
+    
+    if (proMenuBtn && proDropdown) {
+      proMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        proDropdown.classList.toggle('open');
+      });
+      
+      // Close on outside click
+      document.addEventListener('click', (e) => {
+        if (!proMenuBtn.contains(e.target as Node) && !proDropdown.contains(e.target as Node)) {
+          proDropdown.classList.remove('open');
+        }
+      });
+      
+      // Handle pro panel selection
+      proDropdown.querySelectorAll('.topview-pro-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const panel = item.getAttribute('data-panel');
+          if (panel) {
+            // Dispatch event for VirtualStudioPro component
+            window.dispatchEvent(new CustomEvent('toggle-pro-panel', { detail: { panel } }));
+            
+            // Update active state
+            proDropdown.querySelectorAll('.topview-pro-item').forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            
+            proDropdown.classList.remove('open');
+            
+            console.log(`[Pro Menu] Toggled panel: ${panel}`);
+          }
+        });
+      });
+    }
+    
     // Delete/Backspace to remove selected light
     document.addEventListener('keydown', (e) => {
       // Don't trigger if user is typing in an input field
@@ -12089,13 +14581,27 @@ class VirtualStudio {
     b: new Array(256).fill(0),
     lum: new Array(256).fill(0)
   };
+  // Smoothed histogram data for temporal stability (like professional monitors)
+  private histogramSmoothed: { r: number[], g: number[], b: number[], lum: number[] } = {
+    r: new Array(256).fill(0),
+    g: new Array(256).fill(0),
+    b: new Array(256).fill(0),
+    lum: new Array(256).fill(0)
+  };
   private highlightClipping: number = 0;
   private shadowClipping: number = 0;
+  private midtoneExposure: number = 0; // Average exposure in middle 18% gray zone
   private histogramFrameCount: number = 0;
   private lastHistogramUpdate: number = 0;
   private histogramUpdateInterval: number = 100; // ms between updates
   private pixelReadBuffer: Uint8Array | null = null;
   private isReadingPixels: boolean = false;
+  
+  // Professional histogram settings
+  private histogramStyle: 'parade' | 'overlay' | 'luma' | 'rgb-parade' = 'overlay';
+  private histogramLogScale: boolean = false; // Logarithmic scale like cinema cameras
+  private histogramSmoothingFactor: number = 0.3; // Temporal smoothing (0 = instant, 1 = very smooth)
+  private histogramShowStats: boolean = true; // Show exposure statistics
 
   private updateHistogram(): void {
     if (!this.histogramCtx || !this.histogramCanvas) return;
@@ -12140,8 +14646,8 @@ class VirtualStudio {
     const width = this.engine.getRenderWidth();
     const height = this.engine.getRenderHeight();
     
-    // Adaptive sampling: more pixels for smaller resolutions, fewer for larger
-    const targetSamples = 15000;
+    // Professional sampling: more samples for accuracy (like Atomos/SmallHD monitors)
+    const targetSamples = 25000;
     const sampleStep = Math.max(1, Math.floor(Math.sqrt((width * height) / targetSamples)));
     
     // Read pixels from engine
@@ -12161,6 +14667,8 @@ class VirtualStudio {
       let totalPixels = 0;
       let highlightClipped = 0;
       let shadowClipped = 0;
+      let midtoneSum = 0;
+      let midtoneCount = 0;
       
       // Optimized sampling with staggered pattern for better coverage
       for (let y = 0; y < height; y += sampleStep) {
@@ -12171,7 +14679,7 @@ class VirtualStudio {
           const g = data[idx + 1];
           const b = data[idx + 2];
           
-          // Calculate luminance (Rec. 709 standard)
+          // Calculate luminance (Rec. 709 standard - professional broadcast)
           const lum = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
           
           rHist[r]++;
@@ -12190,20 +14698,40 @@ class VirtualStudio {
           if (r <= 5 && g <= 5 && b <= 5) {
             shadowClipped++;
           }
+          
+          // Midtone exposure (18% gray zone: ~95-160 luminance)
+          if (lum >= 95 && lum <= 160) {
+            midtoneSum += lum;
+            midtoneCount++;
+          }
         }
       }
       
-      // Copy to class histogram data
+      // Apply temporal smoothing for stable readout (like professional monitors)
+      const smooth = this.histogramSmoothingFactor;
+      const instant = 1 - smooth;
+      
       for (let i = 0; i < 256; i++) {
+        this.histogramSmoothed.r[i] = this.histogramSmoothed.r[i] * smooth + rHist[i] * instant;
+        this.histogramSmoothed.g[i] = this.histogramSmoothed.g[i] * smooth + gHist[i] * instant;
+        this.histogramSmoothed.b[i] = this.histogramSmoothed.b[i] * smooth + bHist[i] * instant;
+        this.histogramSmoothed.lum[i] = this.histogramSmoothed.lum[i] * smooth + lumHist[i] * instant;
+        
+        // Also keep raw data
         this.histogramData.r[i] = rHist[i];
         this.histogramData.g[i] = gHist[i];
         this.histogramData.b[i] = bHist[i];
         this.histogramData.lum[i] = lumHist[i];
       }
       
-      // Calculate clipping percentages
-      this.highlightClipping = totalPixels > 0 ? (highlightClipped / totalPixels) * 100 : 0;
-      this.shadowClipping = totalPixels > 0 ? (shadowClipped / totalPixels) * 100 : 0;
+      // Calculate clipping percentages with smoothing
+      const newHighlight = totalPixels > 0 ? (highlightClipped / totalPixels) * 100 : 0;
+      const newShadow = totalPixels > 0 ? (shadowClipped / totalPixels) * 100 : 0;
+      const newMidtone = midtoneCount > 0 ? midtoneSum / midtoneCount : 128;
+      
+      this.highlightClipping = this.highlightClipping * smooth + newHighlight * instant;
+      this.shadowClipping = this.shadowClipping * smooth + newShadow * instant;
+      this.midtoneExposure = this.midtoneExposure * smooth + newMidtone * instant;
       
       // Update UI displays
       const highlightEl = document.getElementById('highlightPercent');
@@ -12231,129 +14759,429 @@ class VirtualStudio {
     const ctx = this.histogramCtx!;
     const w = this.histogramCanvas!.width;
     const h = this.histogramCanvas!.height;
+    
+    // Use smoothed data for stable display
+    const histData = this.histogramSmoothed;
 
-    // Clear with dark gradient background
+    // Professional dark background with subtle gradient
     const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-    bgGrad.addColorStop(0, 'rgba(10, 15, 20, 0.98)');
-    bgGrad.addColorStop(1, 'rgba(5, 8, 12, 0.98)');
+    bgGrad.addColorStop(0, 'rgba(8, 10, 14, 0.98)');
+    bgGrad.addColorStop(1, 'rgba(4, 6, 10, 0.98)');
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // Draw subtle grid lines
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+    // Professional IRE/stop grid lines (like SmallHD/Atomos)
+    this.drawHistogramGrid(ctx, w, h);
+    
+    // Draw exposure zone indicators
+    this.drawExposureZones(ctx, w, h);
+
+    // Find max value for normalization (ignore extreme edges to prevent spikes)
+    let maxVal = 1;
+    for (let i = 5; i < 250; i++) {
+      maxVal = Math.max(maxVal, histData.lum[i], histData.r[i], histData.g[i], histData.b[i]);
+    }
+    
+    // Apply logarithmic scaling if enabled (like cinema cameras)
+    const getHeight = (val: number) => {
+      if (this.histogramLogScale && val > 0) {
+        return (Math.log10(val + 1) / Math.log10(maxVal + 1)) * (h - 20);
+      }
+      return (val / maxVal) * (h - 20);
+    };
+
+    const binWidth = w / 256;
+    const padding = 8;
+    
+    // Draw based on selected style
+    switch (this.histogramStyle) {
+      case 'rgb-parade':
+        this.drawRGBParade(ctx, histData, getHeight, w, h, binWidth);
+        break;
+      case 'luma':
+        this.drawLumaHistogram(ctx, histData, getHeight, w, h, binWidth);
+        break;
+      case 'parade':
+        this.drawParadeHistogram(ctx, histData, getHeight, w, h, binWidth);
+        break;
+      case 'overlay':
+      default:
+        this.drawOverlayHistogram(ctx, histData, getHeight, w, h, binWidth);
+        break;
+    }
+
+    // Draw clipping warnings
+    this.drawClippingWarnings(ctx, w, h);
+    
+    // Draw professional exposure statistics
+    if (this.histogramShowStats) {
+      this.drawExposureStats(ctx, w, h);
+    }
+  }
+  
+  private drawHistogramGrid(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+    // IRE-style grid lines (0%, 25%, 50%, 75%, 100%)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1;
+    
+    // Horizontal grid (exposure levels)
     for (let i = 1; i < 4; i++) {
       const y = (i / 4) * h;
       ctx.beginPath();
+      ctx.setLineDash([2, 4]);
       ctx.moveTo(0, y);
       ctx.lineTo(w, y);
       ctx.stroke();
     }
+    ctx.setLineDash([]);
     
-    // Draw zone indicators (shadows, midtones, highlights)
-    ctx.fillStyle = 'rgba(0, 100, 200, 0.08)';
-    ctx.fillRect(0, 0, w * 0.25, h);
-    ctx.fillStyle = 'rgba(0, 200, 100, 0.05)';
-    ctx.fillRect(w * 0.25, 0, w * 0.5, h);
-    ctx.fillStyle = 'rgba(255, 200, 0, 0.08)';
-    ctx.fillRect(w * 0.75, 0, w * 0.25, h);
-
-    // Find max value for normalization (ignore extreme edges)
-    const maxVal = Math.max(
-      ...this.histogramData.lum.slice(3, 252),
-      1
-    );
-
-    const binWidth = w / 256;
+    // Vertical grid (brightness levels: 0, 64, 128, 192, 255)
+    const stops = [0.25, 0.5, 0.75]; // Skip 0 and 1
+    for (const stop of stops) {
+      const x = stop * w;
+      ctx.beginPath();
+      ctx.strokeStyle = stop === 0.5 ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.06)';
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
     
-    // Draw luminance histogram with gradient fill
+    // 18% gray marker (IRE 42 / value ~118)
+    const grayX = (118 / 255) * w;
+    ctx.strokeStyle = 'rgba(255, 180, 0, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(grayX, h - 20);
+    ctx.lineTo(grayX, h);
+    ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+  
+  private drawExposureZones(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+    // Shadow zone (crushed blacks warning)
+    const shadowGrad = ctx.createLinearGradient(0, 0, w * 0.12, 0);
+    shadowGrad.addColorStop(0, 'rgba(0, 100, 255, 0.15)');
+    shadowGrad.addColorStop(1, 'rgba(0, 100, 255, 0)');
+    ctx.fillStyle = shadowGrad;
+    ctx.fillRect(0, 0, w * 0.12, h);
+    
+    // Highlight zone (blown highlights warning)
+    const hlGrad = ctx.createLinearGradient(w * 0.88, 0, w, 0);
+    hlGrad.addColorStop(0, 'rgba(255, 100, 0, 0)');
+    hlGrad.addColorStop(1, 'rgba(255, 100, 0, 0.15)');
+    ctx.fillStyle = hlGrad;
+    ctx.fillRect(w * 0.88, 0, w * 0.12, h);
+  }
+  
+  private drawOverlayHistogram(ctx: CanvasRenderingContext2D, histData: typeof this.histogramSmoothed, 
+                                getHeight: (v: number) => number, w: number, h: number, binWidth: number): void {
+    // Draw luminance fill first
     const lumGrad = ctx.createLinearGradient(0, h, 0, 0);
-    lumGrad.addColorStop(0, 'rgba(0, 80, 140, 0.9)');
-    lumGrad.addColorStop(0.4, 'rgba(0, 160, 220, 0.85)');
-    lumGrad.addColorStop(0.8, 'rgba(80, 200, 255, 0.75)');
-    lumGrad.addColorStop(1, 'rgba(150, 230, 255, 0.6)');
+    lumGrad.addColorStop(0, 'rgba(60, 60, 80, 0.95)');
+    lumGrad.addColorStop(0.5, 'rgba(100, 100, 120, 0.7)');
+    lumGrad.addColorStop(1, 'rgba(140, 140, 160, 0.4)');
     
     ctx.fillStyle = lumGrad;
     ctx.beginPath();
     ctx.moveTo(0, h);
     
-    // Smoothed curve using moving average
     for (let i = 0; i < 256; i++) {
-      const x = i * binWidth + binWidth / 2;
-      // 3-point moving average for smoother curve
-      const avg = i === 0 ? this.histogramData.lum[0] :
-                  i === 255 ? this.histogramData.lum[255] :
-                  (this.histogramData.lum[i-1] + this.histogramData.lum[i] * 2 + this.histogramData.lum[i+1]) / 4;
-      const barHeight = (avg / maxVal) * (h - 6);
-      const y = h - Math.min(barHeight, h - 4);
-      
-      if (i === 0) {
-        ctx.lineTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
+      const x = i * binWidth;
+      // Gaussian smoothing for professional look
+      const val = this.gaussianSmooth(histData.lum, i, 2);
+      const barHeight = getHeight(val);
+      ctx.lineTo(x, h - barHeight);
     }
-    
     ctx.lineTo(w, h);
     ctx.closePath();
     ctx.fill();
-
-    // Draw RGB channel lines with better visibility
-    this.drawChannelLine(ctx, this.histogramData.r, maxVal, 'rgba(255, 90, 90, 0.65)', w, h);
-    this.drawChannelLine(ctx, this.histogramData.g, maxVal, 'rgba(90, 255, 90, 0.55)', w, h);
-    this.drawChannelLine(ctx, this.histogramData.b, maxVal, 'rgba(90, 130, 255, 0.65)', w, h);
-
-    // Draw shadow clipping warning zone
-    if (this.shadowClipping > 2) {
-      const shadowGrad = ctx.createLinearGradient(0, 0, 25, 0);
-      shadowGrad.addColorStop(0, 'rgba(80, 80, 255, 0.4)');
-      shadowGrad.addColorStop(1, 'rgba(80, 80, 255, 0)');
-      ctx.fillStyle = shadowGrad;
-      ctx.fillRect(0, 0, 25, h);
-    }
-
-    // Draw highlight clipping warning zone
-    if (this.highlightClipping > 1) {
-      const hlGrad = ctx.createLinearGradient(w - 25, 0, w, 0);
-      hlGrad.addColorStop(0, 'rgba(255, 100, 100, 0)');
-      hlGrad.addColorStop(1, 'rgba(255, 100, 100, 0.5)');
-      ctx.fillStyle = hlGrad;
-      ctx.fillRect(w - 25, 0, 25, h);
-    }
     
-    // Draw clipping indicators text
-    ctx.font = '9px monospace';
-    if (this.shadowClipping > 2) {
-      ctx.fillStyle = '#6688ff';
-      ctx.fillText(`${this.shadowClipping.toFixed(0)}%`, 3, 12);
-    }
-    if (this.highlightClipping > 1) {
-      ctx.fillStyle = '#ff6666';
-      ctx.textAlign = 'right';
-      ctx.fillText(`${this.highlightClipping.toFixed(0)}%`, w - 3, 12);
-      ctx.textAlign = 'left';
-    }
+    // Draw RGB channels with blend modes
+    ctx.globalCompositeOperation = 'screen';
+    
+    // Red channel
+    this.drawChannelFill(ctx, histData.r, getHeight, 'rgba(255, 50, 50, 0.5)', w, h, binWidth);
+    // Green channel
+    this.drawChannelFill(ctx, histData.g, getHeight, 'rgba(50, 255, 50, 0.4)', w, h, binWidth);
+    // Blue channel
+    this.drawChannelFill(ctx, histData.b, getHeight, 'rgba(80, 80, 255, 0.5)', w, h, binWidth);
+    
+    ctx.globalCompositeOperation = 'source-over';
+    
+    // Draw channel outlines for clarity
+    ctx.lineWidth = 1.5;
+    this.drawChannelOutline(ctx, histData.r, getHeight, 'rgba(255, 100, 100, 0.8)', w, h, binWidth);
+    this.drawChannelOutline(ctx, histData.g, getHeight, 'rgba(100, 255, 100, 0.7)', w, h, binWidth);
+    this.drawChannelOutline(ctx, histData.b, getHeight, 'rgba(130, 130, 255, 0.8)', w, h, binWidth);
   }
-
-  private drawChannelLine(ctx: CanvasRenderingContext2D, data: number[], maxVal: number, color: string, w: number, h: number): void {
-    const binWidth = w / 256;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1;
+  
+  private drawLumaHistogram(ctx: CanvasRenderingContext2D, histData: typeof this.histogramSmoothed,
+                             getHeight: (v: number) => number, w: number, h: number, binWidth: number): void {
+    // Cinema-style luminance only with gradient
+    const lumGrad = ctx.createLinearGradient(0, h, 0, 0);
+    lumGrad.addColorStop(0, 'rgba(0, 180, 255, 0.95)');
+    lumGrad.addColorStop(0.3, 'rgba(0, 220, 200, 0.8)');
+    lumGrad.addColorStop(0.6, 'rgba(100, 255, 180, 0.6)');
+    lumGrad.addColorStop(1, 'rgba(200, 255, 220, 0.3)');
+    
+    ctx.fillStyle = lumGrad;
     ctx.beginPath();
+    ctx.moveTo(0, h);
     
     for (let i = 0; i < 256; i++) {
       const x = i * binWidth;
-      const barHeight = (data[i] / maxVal) * (h - 4);
-      const y = h - Math.min(barHeight, h - 2);
+      const val = this.gaussianSmooth(histData.lum, i, 3);
+      const barHeight = getHeight(val);
+      ctx.lineTo(x, h - barHeight);
+    }
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Add glow effect
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < 256; i++) {
+      const x = i * binWidth;
+      const val = this.gaussianSmooth(histData.lum, i, 3);
+      const barHeight = getHeight(val);
+      if (i === 0) ctx.moveTo(x, h - barHeight);
+      else ctx.lineTo(x, h - barHeight);
+    }
+    ctx.stroke();
+  }
+  
+  private drawRGBParade(ctx: CanvasRenderingContext2D, histData: typeof this.histogramSmoothed,
+                         getHeight: (v: number) => number, w: number, h: number, binWidth: number): void {
+    // Split into 3 sections for R, G, B
+    const sectionWidth = w / 3;
+    const sectionBinWidth = sectionWidth / 256;
+    
+    const channels = [
+      { data: histData.r, color: 'rgba(255, 80, 80, 0.85)', outline: 'rgba(255, 120, 120, 0.9)' },
+      { data: histData.g, color: 'rgba(80, 255, 80, 0.75)', outline: 'rgba(120, 255, 120, 0.85)' },
+      { data: histData.b, color: 'rgba(100, 100, 255, 0.85)', outline: 'rgba(140, 140, 255, 0.9)' }
+    ];
+    
+    channels.forEach((channel, idx) => {
+      const offsetX = idx * sectionWidth;
       
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
+      // Draw channel histogram
+      ctx.fillStyle = channel.color;
+      ctx.beginPath();
+      ctx.moveTo(offsetX, h);
+      
+      for (let i = 0; i < 256; i++) {
+        const x = offsetX + i * sectionBinWidth;
+        const val = this.gaussianSmooth(channel.data, i, 2);
+        const barHeight = getHeight(val);
+        ctx.lineTo(x, h - barHeight);
       }
+      ctx.lineTo(offsetX + sectionWidth, h);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Outline
+      ctx.strokeStyle = channel.outline;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i < 256; i++) {
+        const x = offsetX + i * sectionBinWidth;
+        const val = this.gaussianSmooth(channel.data, i, 2);
+        const barHeight = getHeight(val);
+        if (i === 0) ctx.moveTo(x, h - barHeight);
+        else ctx.lineTo(x, h - barHeight);
+      }
+      ctx.stroke();
+      
+      // Section divider
+      if (idx < 2) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.beginPath();
+        ctx.moveTo(offsetX + sectionWidth, 0);
+        ctx.lineTo(offsetX + sectionWidth, h);
+        ctx.stroke();
+      }
+    });
+    
+    // Channel labels
+    ctx.font = '10px "SF Mono", Monaco, monospace';
+    ctx.fillStyle = 'rgba(255, 100, 100, 0.9)';
+    ctx.fillText('R', 4, 14);
+    ctx.fillStyle = 'rgba(100, 255, 100, 0.9)';
+    ctx.fillText('G', sectionWidth + 4, 14);
+    ctx.fillStyle = 'rgba(140, 140, 255, 0.9)';
+    ctx.fillText('B', sectionWidth * 2 + 4, 14);
+  }
+  
+  private drawParadeHistogram(ctx: CanvasRenderingContext2D, histData: typeof this.histogramSmoothed,
+                               getHeight: (v: number) => number, w: number, h: number, binWidth: number): void {
+    // Stacked parade: Luma on top, RGB below
+    const lumaHeight = h * 0.4;
+    const rgbHeight = h * 0.55;
+    const gap = h * 0.05;
+    
+    // Draw Luma
+    const lumGrad = ctx.createLinearGradient(0, lumaHeight, 0, 0);
+    lumGrad.addColorStop(0, 'rgba(200, 200, 220, 0.9)');
+    lumGrad.addColorStop(1, 'rgba(255, 255, 255, 0.5)');
+    
+    ctx.fillStyle = lumGrad;
+    ctx.beginPath();
+    ctx.moveTo(0, lumaHeight);
+    for (let i = 0; i < 256; i++) {
+      const x = i * binWidth;
+      const val = this.gaussianSmooth(histData.lum, i, 2);
+      const barHeight = (getHeight(val) / h) * lumaHeight;
+      ctx.lineTo(x, lumaHeight - barHeight);
+    }
+    ctx.lineTo(w, lumaHeight);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Draw RGB overlaid below
+    const rgbTop = lumaHeight + gap;
+    ctx.globalCompositeOperation = 'screen';
+    
+    const rgbChannels = [
+      { data: histData.r, color: 'rgba(255, 60, 60, 0.7)' },
+      { data: histData.g, color: 'rgba(60, 255, 60, 0.6)' },
+      { data: histData.b, color: 'rgba(80, 80, 255, 0.7)' }
+    ];
+    
+    rgbChannels.forEach(channel => {
+      ctx.fillStyle = channel.color;
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      for (let i = 0; i < 256; i++) {
+        const x = i * binWidth;
+        const val = this.gaussianSmooth(channel.data, i, 2);
+        const barHeight = (getHeight(val) / h) * rgbHeight;
+        ctx.lineTo(x, h - barHeight);
+      }
+      ctx.lineTo(w, h);
+      ctx.closePath();
+      ctx.fill();
+    });
+    
+    ctx.globalCompositeOperation = 'source-over';
+    
+    // Labels
+    ctx.font = '9px "SF Mono", Monaco, monospace';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.fillText('Y', 4, 12);
+    ctx.fillText('RGB', 4, rgbTop + 12);
+  }
+  
+  private drawChannelFill(ctx: CanvasRenderingContext2D, data: number[], getHeight: (v: number) => number,
+                           color: string, w: number, h: number, binWidth: number): void {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    for (let i = 0; i < 256; i++) {
+      const x = i * binWidth;
+      const val = this.gaussianSmooth(data, i, 2);
+      const barHeight = getHeight(val);
+      ctx.lineTo(x, h - barHeight);
+    }
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fill();
+  }
+  
+  private drawChannelOutline(ctx: CanvasRenderingContext2D, data: number[], getHeight: (v: number) => number,
+                              color: string, w: number, h: number, binWidth: number): void {
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    for (let i = 0; i < 256; i++) {
+      const x = i * binWidth;
+      const val = this.gaussianSmooth(data, i, 2);
+      const barHeight = getHeight(val);
+      if (i === 0) ctx.moveTo(x, h - barHeight);
+      else ctx.lineTo(x, h - barHeight);
+    }
+    ctx.stroke();
+  }
+  
+  private gaussianSmooth(data: number[], index: number, radius: number): number {
+    // Simple Gaussian smoothing for professional look
+    let sum = 0;
+    let weight = 0;
+    for (let i = -radius; i <= radius; i++) {
+      const idx = Math.max(0, Math.min(255, index + i));
+      const w = Math.exp(-(i * i) / (2 * radius * radius));
+      sum += data[idx] * w;
+      weight += w;
+    }
+    return sum / weight;
+  }
+  
+  private drawClippingWarnings(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+    // Animated shadow clipping warning
+    if (this.shadowClipping > 2) {
+      const intensity = Math.min(this.shadowClipping / 10, 1);
+      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 300);
+      const shadowGrad = ctx.createLinearGradient(0, 0, 30, 0);
+      shadowGrad.addColorStop(0, `rgba(0, 100, 255, ${0.4 * intensity * pulse})`);
+      shadowGrad.addColorStop(1, 'rgba(0, 100, 255, 0)');
+      ctx.fillStyle = shadowGrad;
+      ctx.fillRect(0, 0, 30, h);
+      
+      // Warning indicator
+      ctx.fillStyle = `rgba(80, 150, 255, ${0.9 * pulse})`;
+      ctx.beginPath();
+      ctx.arc(8, h - 12, 4, 0, Math.PI * 2);
+      ctx.fill();
     }
     
-    ctx.stroke();
+    // Animated highlight clipping warning
+    if (this.highlightClipping > 1) {
+      const intensity = Math.min(this.highlightClipping / 5, 1);
+      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 250);
+      const hlGrad = ctx.createLinearGradient(w - 30, 0, w, 0);
+      hlGrad.addColorStop(0, 'rgba(255, 80, 0, 0)');
+      hlGrad.addColorStop(1, `rgba(255, 80, 0, ${0.5 * intensity * pulse})`);
+      ctx.fillStyle = hlGrad;
+      ctx.fillRect(w - 30, 0, 30, h);
+      
+      // Warning indicator
+      ctx.fillStyle = `rgba(255, 150, 80, ${0.9 * pulse})`;
+      ctx.beginPath();
+      ctx.arc(w - 8, h - 12, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  
+  private drawExposureStats(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+    ctx.font = '9px "SF Mono", Monaco, monospace';
+    
+    // Shadow percentage
+    if (this.shadowClipping > 0.5) {
+      ctx.fillStyle = this.shadowClipping > 5 ? '#ff6666' : '#6699ff';
+      ctx.fillText(`${this.shadowClipping.toFixed(1)}%`, 3, 12);
+    }
+    
+    // Highlight percentage
+    if (this.highlightClipping > 0.5) {
+      ctx.fillStyle = this.highlightClipping > 3 ? '#ff6666' : '#ffaa66';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${this.highlightClipping.toFixed(1)}%`, w - 3, 12);
+      ctx.textAlign = 'left';
+    }
+    
+    // Midtone exposure indicator (18% gray reference)
+    const exposureStops = ((this.midtoneExposure - 118) / 118) * 5; // Convert to stops from 18% gray
+    const expText = exposureStops >= 0 ? `+${exposureStops.toFixed(1)}` : exposureStops.toFixed(1);
+    const expColor = Math.abs(exposureStops) < 0.5 ? '#00ff88' : 
+                     Math.abs(exposureStops) < 1 ? '#ffcc00' : '#ff6666';
+    
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(w / 2 - 25, h - 16, 50, 14);
+    ctx.fillStyle = expColor;
+    ctx.textAlign = 'center';
+    ctx.fillText(`EV ${expText}`, w / 2, h - 5);
+    ctx.textAlign = 'left';
   }
 
   private drawWaveform(): void {
@@ -12361,83 +15189,131 @@ class VirtualStudio {
     const w = this.histogramCanvas!.width;
     const h = this.histogramCanvas!.height;
 
-    // Dark background with subtle gradient
+    // Professional dark background
     const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-    bgGrad.addColorStop(0, 'rgba(8, 12, 16, 0.98)');
-    bgGrad.addColorStop(1, 'rgba(4, 6, 10, 0.98)');
+    bgGrad.addColorStop(0, 'rgba(6, 8, 12, 0.98)');
+    bgGrad.addColorStop(1, 'rgba(2, 4, 8, 0.98)');
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // Draw IRE scale labels and grid lines
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    const leftMargin = 28;
+    const waveWidth = w - leftMargin - 4;
+    const waveHeight = h - 8;
+    const topMargin = 4;
+
+    // Draw IRE scale with professional styling
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
     ctx.lineWidth = 1;
-    ctx.font = '8px monospace';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.font = '8px "SF Mono", Monaco, monospace';
     
-    const ireValues = [0, 25, 50, 75, 100];
+    const ireValues = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
     ireValues.forEach(ire => {
-      const py = h - (ire / 100) * h;
+      const py = topMargin + waveHeight - (ire / 100) * waveHeight;
+      
+      // Grid line
+      ctx.strokeStyle = ire === 0 || ire === 100 ? 'rgba(255, 255, 255, 0.15)' : 
+                        ire === 70 ? 'rgba(255, 200, 150, 0.2)' : 'rgba(255, 255, 255, 0.06)';
       ctx.beginPath();
-      ctx.moveTo(20, py);
-      ctx.lineTo(w, py);
+      ctx.moveTo(leftMargin, py);
+      ctx.lineTo(w - 4, py);
       ctx.stroke();
-      ctx.fillText(`${ire}`, 2, py + 3);
+      
+      // Label
+      if (ire % 20 === 0 || ire === 70) {
+        ctx.fillStyle = ire === 70 ? 'rgba(255, 200, 150, 0.7)' : 'rgba(255, 255, 255, 0.4)';
+        ctx.fillText(`${ire}`, 2, py + 3);
+      }
     });
     
     // Draw warning zones
-    // Superwhite zone (>100 IRE)
-    ctx.fillStyle = 'rgba(255, 50, 50, 0.15)';
-    ctx.fillRect(20, 0, w - 20, h * 0.05);
-    // Below black zone (<0 IRE)
-    ctx.fillStyle = 'rgba(50, 50, 255, 0.15)';
-    ctx.fillRect(20, h * 0.95, w - 20, h * 0.05);
-
-    // Draw waveform trace - plot luminance at each horizontal position
-    const maxVal = Math.max(...this.histogramData.lum.slice(2, 253), 1);
-    const colWidth = (w - 20) / 256;
+    // Super-white zone (>100 IRE) - broadcast illegal
+    const superWhiteGrad = ctx.createLinearGradient(0, topMargin, 0, topMargin + waveHeight * 0.05);
+    superWhiteGrad.addColorStop(0, 'rgba(255, 0, 0, 0.25)');
+    superWhiteGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+    ctx.fillStyle = superWhiteGrad;
+    ctx.fillRect(leftMargin, topMargin, waveWidth, waveHeight * 0.05);
     
-    for (let i = 0; i < 256; i++) {
-      const x = 20 + i * colWidth;
-      const count = this.histogramData.lum[i];
+    // Sub-black zone (<0 IRE)
+    const subBlackGrad = ctx.createLinearGradient(0, topMargin + waveHeight * 0.95, 0, topMargin + waveHeight);
+    subBlackGrad.addColorStop(0, 'rgba(0, 0, 255, 0)');
+    subBlackGrad.addColorStop(1, 'rgba(0, 0, 255, 0.25)');
+    ctx.fillStyle = subBlackGrad;
+    ctx.fillRect(leftMargin, topMargin + waveHeight * 0.95, waveWidth, waveHeight * 0.05);
+
+    // Use smoothed histogram data for waveform
+    const histData = this.histogramSmoothed;
+    const maxVal = Math.max(...histData.lum.slice(2, 253), 1);
+    const binWidth = waveWidth / 256;
+    
+    // Create waveform trace using luminance distribution
+    // Each column shows the intensity distribution at that brightness level
+    ctx.globalCompositeOperation = 'lighter';
+    
+    for (let lumLevel = 0; lumLevel < 256; lumLevel++) {
+      const count = histData.lum[lumLevel];
+      if (count < maxVal * 0.005) continue; // Skip very low counts
       
-      if (count > 0) {
-        // Map bin index (0-255) to IRE (0-100)
-        const ire = (i / 255) * 100;
-        const y = h - (ire / 100) * h;
-        
-        // Intensity based on count
-        const intensity = Math.min(count / maxVal, 1);
-        const alpha = 0.3 + intensity * 0.6;
-        
-        // Color based on IRE level
-        let color: string;
-        if (ire > 95) {
-          color = `rgba(255, 100, 100, ${alpha})`; // Overexposed - red
-        } else if (ire < 5) {
-          color = `rgba(100, 100, 255, ${alpha})`; // Underexposed - blue
-        } else {
-          color = `rgba(0, 255, 160, ${alpha})`; // Normal - green
-        }
-        
-        ctx.fillStyle = color;
-        const dotSize = 2 + intensity * 2;
-        ctx.fillRect(x, y - dotSize/2, colWidth + 0.5, dotSize);
+      const x = leftMargin + lumLevel * binWidth;
+      const ire = (lumLevel / 255) * 100;
+      const y = topMargin + waveHeight - (ire / 100) * waveHeight;
+      
+      // Intensity based on pixel count
+      const intensity = Math.pow(count / maxVal, 0.6); // Gamma for visibility
+      
+      // Color coding by IRE level (like SmallHD monitors)
+      let r: number, g: number, b: number;
+      if (ire > 95) {
+        // Clipping - red warning
+        r = 255; g = 50 + intensity * 100; b = 50;
+      } else if (ire > 85) {
+        // Near clipping - orange
+        r = 255; g = 150 + intensity * 80; b = 50;
+      } else if (ire < 5) {
+        // Crushed blacks - blue warning
+        r = 50; g = 100 + intensity * 100; b = 255;
+      } else if (ire >= 65 && ire <= 75) {
+        // Skin tone zone - warm highlight
+        r = 150 + intensity * 105; g = 200 + intensity * 55; b = 100 + intensity * 55;
+      } else {
+        // Normal - green phosphor style
+        r = 0; g = 180 + intensity * 75; b = 100 + intensity * 80;
+      }
+      
+      const alpha = 0.15 + intensity * 0.7;
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      
+      // Draw trace with variable thickness based on intensity
+      const thickness = 2 + intensity * 4;
+      ctx.fillRect(x, y - thickness/2, binWidth + 0.5, thickness);
+      
+      // Add glow for high intensity
+      if (intensity > 0.5) {
+        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${intensity * 0.3})`;
+        ctx.fillRect(x - 1, y - thickness, binWidth + 2, thickness * 2);
       }
     }
     
-    // Draw 70 IRE reference line (typical skin tone target)
-    ctx.strokeStyle = 'rgba(255, 200, 150, 0.4)';
-    ctx.setLineDash([4, 4]);
+    ctx.globalCompositeOperation = 'source-over';
+    
+    // Skin tone reference line at 70 IRE
+    ctx.strokeStyle = 'rgba(255, 200, 150, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    const skinY = topMargin + waveHeight - (70 / 100) * waveHeight;
     ctx.beginPath();
-    const skinY = h - (70 / 100) * h;
-    ctx.moveTo(20, skinY);
-    ctx.lineTo(w, skinY);
+    ctx.moveTo(leftMargin, skinY);
+    ctx.lineTo(w - 4, skinY);
     ctx.stroke();
     ctx.setLineDash([]);
     
-    ctx.fillStyle = 'rgba(255, 200, 150, 0.5)';
-    ctx.font = '8px monospace';
-    ctx.fillText('Hud', w - 22, skinY - 2);
+    // Stats overlay
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(w - 60, h - 28, 56, 24);
+    ctx.font = '9px "SF Mono", Monaco, monospace';
+    ctx.fillStyle = this.highlightClipping > 1 ? '#ff6666' : '#66ff99';
+    ctx.fillText(`Hi: ${this.highlightClipping.toFixed(1)}%`, w - 56, h - 16);
+    ctx.fillStyle = this.shadowClipping > 2 ? '#6699ff' : '#66ff99';
+    ctx.fillText(`Lo: ${this.shadowClipping.toFixed(1)}%`, w - 56, h - 6);
   }
 
   private drawVectorscope(): void {
@@ -12446,26 +15322,34 @@ class VirtualStudio {
     const h = this.histogramCanvas!.height;
     const cx = w / 2;
     const cy = h / 2;
-    const radius = Math.min(w, h) / 2 - 8;
+    const radius = Math.min(w, h) / 2 - 12;
 
-    // Dark background
-    const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 1.2);
-    bgGrad.addColorStop(0, 'rgba(12, 16, 20, 0.98)');
-    bgGrad.addColorStop(1, 'rgba(4, 6, 10, 0.98)');
+    // Professional dark background with subtle radial gradient
+    const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 1.3);
+    bgGrad.addColorStop(0, 'rgba(8, 10, 14, 0.98)');
+    bgGrad.addColorStop(0.7, 'rgba(4, 6, 10, 0.98)');
+    bgGrad.addColorStop(1, 'rgba(2, 4, 8, 0.98)');
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // Draw graticule rings
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    // Draw graticule rings (25%, 50%, 75%, 100% saturation)
     ctx.lineWidth = 1;
-    [0.25, 0.5, 0.75, 1.0].forEach(scale => {
+    [0.25, 0.5, 0.75, 1.0].forEach((scale, i) => {
+      ctx.strokeStyle = scale === 0.75 ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.06)';
       ctx.beginPath();
       ctx.arc(cx, cy, radius * scale, 0, Math.PI * 2);
       ctx.stroke();
+      
+      // Label at 75% ring
+      if (scale === 0.75) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.font = '7px "SF Mono", Monaco, monospace';
+        ctx.fillText('75%', cx + radius * 0.75 + 2, cy - 2);
+      }
     });
 
     // Draw crosshairs
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
     ctx.beginPath();
     ctx.moveTo(cx - radius, cy);
     ctx.lineTo(cx + radius, cy);
@@ -12473,101 +15357,136 @@ class VirtualStudio {
     ctx.lineTo(cx, cy + radius);
     ctx.stroke();
 
-    // Draw color target boxes (SMPTE color bar positions)
+    // SMPTE/EBU color bar target boxes (75% saturation positions)
+    // Angles are in standard vectorscope orientation (Cb = horizontal, Cr = vertical)
     const colorTargets = [
-      { name: 'R', angle: 103, color: 'rgba(255, 0, 0, 0.4)' },
-      { name: 'Mg', angle: 61, color: 'rgba(255, 0, 255, 0.4)' },
-      { name: 'B', angle: -13, color: 'rgba(0, 0, 255, 0.4)' },
-      { name: 'Cy', angle: -77, color: 'rgba(0, 255, 255, 0.4)' },
-      { name: 'G', angle: -167, color: 'rgba(0, 255, 0, 0.4)' },
-      { name: 'Yl', angle: 167, color: 'rgba(255, 255, 0, 0.4)' }
+      { name: 'R', angle: 103.5, sat: 0.75, color: '#ff4444' },
+      { name: 'Mg', angle: 60.8, sat: 0.75, color: '#ff44ff' },
+      { name: 'B', angle: -12.7, sat: 0.75, color: '#4444ff' },
+      { name: 'Cy', angle: -76.5, sat: 0.75, color: '#44ffff' },
+      { name: 'G', angle: -165.2, sat: 0.75, color: '#44ff44' },
+      { name: 'Yl', angle: 167.1, sat: 0.75, color: '#ffff44' }
     ];
     
     colorTargets.forEach(target => {
       const rad = (target.angle * Math.PI) / 180;
-      const tx = cx + Math.cos(rad) * radius * 0.75;
-      const ty = cy - Math.sin(rad) * radius * 0.75;
+      const tx = cx + Math.cos(rad) * radius * target.sat;
+      const ty = cy - Math.sin(rad) * radius * target.sat;
+      
+      // Target box
+      ctx.strokeStyle = target.color;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(tx - 5, ty - 5, 10, 10);
+      
+      // Inner crosshair
+      ctx.beginPath();
+      ctx.moveTo(tx - 3, ty);
+      ctx.lineTo(tx + 3, ty);
+      ctx.moveTo(tx, ty - 3);
+      ctx.lineTo(tx, ty + 3);
+      ctx.stroke();
+      
+      // Label
       ctx.fillStyle = target.color;
-      ctx.fillRect(tx - 6, ty - 6, 12, 12);
-      ctx.strokeStyle = target.color.replace('0.4', '0.8');
-      ctx.strokeRect(tx - 6, ty - 6, 12, 12);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-      ctx.font = '7px monospace';
-      ctx.fillText(target.name, tx - 4, ty + 2);
+      ctx.font = '8px "SF Mono", Monaco, monospace';
+      const labelRad = (target.angle * Math.PI) / 180;
+      const lx = cx + Math.cos(labelRad) * radius * 0.92;
+      const ly = cy - Math.sin(labelRad) * radius * 0.92;
+      ctx.fillText(target.name, lx - 4, ly + 3);
     });
 
-    // Draw skin tone line (I-line)
-    ctx.strokeStyle = 'rgba(255, 200, 150, 0.5)';
+    // Draw skin tone line (I-line) - critical for proper flesh tone
+    // The I-line is at approximately 123° (between R and Yl)
+    ctx.strokeStyle = 'rgba(255, 200, 150, 0.7)';
     ctx.lineWidth = 2;
-    ctx.setLineDash([]);
+    const skinAngle = (123 * Math.PI) / 180;
     ctx.beginPath();
-    const skinAngle = (123 * Math.PI) / 180; // Skin tone angle
     ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(skinAngle) * radius * 0.9, cy - Math.sin(skinAngle) * radius * 0.9);
+    ctx.lineTo(cx + Math.cos(skinAngle) * radius * 0.95, cy - Math.sin(skinAngle) * radius * 0.95);
     ctx.stroke();
     
-    ctx.fillStyle = 'rgba(255, 200, 150, 0.6)';
-    ctx.font = '8px monospace';
-    ctx.fillText('I', cx + Math.cos(skinAngle) * radius * 0.95, cy - Math.sin(skinAngle) * radius * 0.95);
+    // Skin tone tolerance zone (±10°)
+    ctx.fillStyle = 'rgba(255, 200, 150, 0.08)';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, radius * 0.95, -(133 * Math.PI) / 180, -(113 * Math.PI) / 180);
+    ctx.closePath();
+    ctx.fill();
+    
+    // I-line label
+    ctx.fillStyle = 'rgba(255, 200, 150, 0.8)';
+    ctx.font = '9px "SF Mono", Monaco, monospace';
+    ctx.fillText('I', cx + Math.cos(skinAngle) * radius * 0.98 - 2, cy - Math.sin(skinAngle) * radius * 0.98);
 
-    // Plot color distribution based on RGB histogram data
-    // Convert RGB values to YUV-like coordinates
+    // Plot actual color distribution using RGB histogram data
+    // We need to convert histogram data to approximate chrominance values
+    ctx.globalCompositeOperation = 'lighter';
+    
     const maxCount = Math.max(
-      ...this.histogramData.r.slice(5, 250),
-      ...this.histogramData.g.slice(5, 250),
-      ...this.histogramData.b.slice(5, 250),
+      Math.max(...this.histogramSmoothed.r.slice(10, 245)),
+      Math.max(...this.histogramSmoothed.g.slice(10, 245)),
+      Math.max(...this.histogramSmoothed.b.slice(10, 245)),
       1
     );
-
-    for (let i = 5; i < 250; i++) {
-      const rCount = this.histogramData.r[i];
-      const gCount = this.histogramData.g[i];
-      const bCount = this.histogramData.b[i];
+    
+    // Plot chrominance for each brightness level
+    for (let lum = 20; lum < 240; lum += 2) {
+      const rCount = this.histogramSmoothed.r[lum];
+      const gCount = this.histogramSmoothed.g[lum];
+      const bCount = this.histogramSmoothed.b[lum];
       
-      // Plot based on relative channel strengths
-      if (rCount > maxCount * 0.02 || gCount > maxCount * 0.02 || bCount > maxCount * 0.02) {
-        // Calculate chrominance from normalized values
-        const rNorm = i / 255;
-        const gNorm = i / 255;
-        const bNorm = i / 255;
-        
-        // Approximate Cb/Cr (simplified YCbCr)
-        const intensity = Math.max(rCount, gCount, bCount) / maxCount;
-        
-        // Plot R channel contribution
-        if (rCount > maxCount * 0.02) {
-          const cb = 0.5 - rNorm * 0.169 - 0.331 * 0.5 + 0.5 * rNorm;
-          const cr = 0.5 + rNorm * 0.5 - 0.419 * 0.5 - 0.081 * 0.5;
-          const u = (cb - 0.5) * 2 * radius * 0.8;
-          const v = (cr - 0.5) * 2 * radius * 0.8;
-          const alpha = Math.min(rCount / maxCount * 1.5, 0.9);
-          ctx.fillStyle = `rgba(255, 100, 100, ${alpha})`;
-          ctx.fillRect(cx + u - 1, cy - v - 1, 2, 2);
-        }
-        
-        // Plot G channel contribution
-        if (gCount > maxCount * 0.02) {
-          const cb = 0.5 - 0.169 * 0.5 - gNorm * 0.331 + 0.5 * 0.5;
-          const cr = 0.5 + 0.5 * 0.5 - gNorm * 0.419 - 0.081 * 0.5;
-          const u = (cb - 0.5) * 2 * radius * 0.8;
-          const v = (cr - 0.5) * 2 * radius * 0.8;
-          const alpha = Math.min(gCount / maxCount * 1.5, 0.9);
-          ctx.fillStyle = `rgba(100, 255, 100, ${alpha})`;
-          ctx.fillRect(cx + u - 1, cy - v - 1, 2, 2);
-        }
-        
-        // Plot B channel contribution
-        if (bCount > maxCount * 0.02) {
-          const cb = 0.5 - 0.169 * 0.5 - 0.331 * 0.5 + bNorm * 0.5;
-          const cr = 0.5 + 0.5 * 0.5 - 0.419 * 0.5 - bNorm * 0.081;
-          const u = (cb - 0.5) * 2 * radius * 0.8;
-          const v = (cr - 0.5) * 2 * radius * 0.8;
-          const alpha = Math.min(bCount / maxCount * 1.5, 0.9);
-          ctx.fillStyle = `rgba(100, 150, 255, ${alpha})`;
-          ctx.fillRect(cx + u - 1, cy - v - 1, 2, 2);
-        }
+      const totalCount = rCount + gCount + bCount;
+      if (totalCount < maxCount * 0.01) continue;
+      
+      // Calculate approximate chrominance from channel imbalance
+      // This is a simplified model - real vectorscopes read per-pixel Cb/Cr
+      const rNorm = lum / 255;
+      const gNorm = lum / 255;
+      const bNorm = lum / 255;
+      
+      // Weighted contribution based on channel counts
+      const rWeight = rCount / (totalCount + 1);
+      const gWeight = gCount / (totalCount + 1);
+      const bWeight = bCount / (totalCount + 1);
+      
+      // Calculate Cb (U) and Cr (V) from weighted RGB
+      // Cb = 0.564 * (B - Y), Cr = 0.713 * (R - Y)
+      const y = 0.299 * rWeight + 0.587 * gWeight + 0.114 * bWeight;
+      const cb = 0.564 * (bWeight - y);
+      const cr = 0.713 * (rWeight - y);
+      
+      // Map to vectorscope coordinates
+      const u = cb * radius * 3.5;
+      const v = cr * radius * 3.5;
+      
+      const intensity = Math.min(totalCount / maxCount, 1);
+      const size = 1 + intensity * 3;
+      
+      // Color based on dominant channel
+      let color: string;
+      if (rWeight > gWeight && rWeight > bWeight) {
+        color = `rgba(255, 100, 100, ${0.3 + intensity * 0.5})`;
+      } else if (gWeight > rWeight && gWeight > bWeight) {
+        color = `rgba(100, 255, 100, ${0.3 + intensity * 0.5})`;
+      } else if (bWeight > rWeight && bWeight > gWeight) {
+        color = `rgba(100, 150, 255, ${0.3 + intensity * 0.5})`;
+      } else {
+        color = `rgba(200, 200, 200, ${0.2 + intensity * 0.4})`;
       }
+      
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(cx + u, cy - v, size, 0, Math.PI * 2);
+      ctx.fill();
     }
+    
+    ctx.globalCompositeOperation = 'source-over';
+    
+    // Center dot (neutral)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   private drawSkinIndicator(): void {
@@ -12575,38 +15494,160 @@ class VirtualStudio {
     const w = this.histogramCanvas!.width;
     const h = this.histogramCanvas!.height;
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+    // Professional dark background
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, 'rgba(8, 10, 14, 0.98)');
+    bgGrad.addColorStop(1, 'rgba(4, 6, 10, 0.98)');
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // Draw skin tone reference zones
-    const skinZones = [
-      { name: 'Lys', y: 0.15, color: 'rgba(255, 220, 200, 0.3)' },
-      { name: 'Medium', y: 0.45, color: 'rgba(200, 150, 120, 0.3)' },
-      { name: 'Mørk', y: 0.75, color: 'rgba(120, 80, 60, 0.3)' }
-    ];
-
-    skinZones.forEach(zone => {
-      const y = zone.y * h;
-      ctx.fillStyle = zone.color;
-      ctx.fillRect(0, y, w, h * 0.25);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-      ctx.font = '9px sans-serif';
-      ctx.fillText(zone.name, 4, y + 14);
-    });
-
-    // Draw optimal skin tone line
+    // This is a combination display: mini vectorscope focused on skin tones + luminance guide
+    const vsRadius = Math.min(w * 0.35, h * 0.4);
+    const vsCx = w * 0.3;
+    const vsCy = h * 0.5;
+    
+    // Draw mini vectorscope background
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(vsCx, vsCy, vsRadius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(vsCx, vsCy, vsRadius * 0.5, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Draw skin tone I-line with tolerance zone
+    const skinAngle = (123 * Math.PI) / 180;
+    
+    // Tolerance zone (±15° for all skin tones)
+    ctx.fillStyle = 'rgba(255, 200, 150, 0.15)';
+    ctx.beginPath();
+    ctx.moveTo(vsCx, vsCy);
+    ctx.arc(vsCx, vsCy, vsRadius, -(138 * Math.PI) / 180, -(108 * Math.PI) / 180);
+    ctx.closePath();
+    ctx.fill();
+    
+    // I-line
     ctx.strokeStyle = 'rgba(255, 200, 150, 0.8)';
     ctx.lineWidth = 2;
-    ctx.setLineDash([4, 4]);
     ctx.beginPath();
-    ctx.moveTo(w * 0.3, 0);
-    ctx.lineTo(w * 0.7, h);
+    ctx.moveTo(vsCx, vsCy);
+    ctx.lineTo(vsCx + Math.cos(skinAngle) * vsRadius, vsCy - Math.sin(skinAngle) * vsRadius);
     ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.fillStyle = 'rgba(255, 200, 150, 0.6)';
-    ctx.font = '10px sans-serif';
-    ctx.fillText('Hudtone-linje', w * 0.5, h - 6);
+    
+    // Plot chrominance data in skin tone zone
+    ctx.globalCompositeOperation = 'lighter';
+    const maxCount = Math.max(...this.histogramSmoothed.r.slice(30, 220), 1);
+    
+    let skinTonePixels = 0;
+    let totalPixels = 0;
+    
+    for (let lum = 40; lum < 220; lum += 3) {
+      const rCount = this.histogramSmoothed.r[lum];
+      const gCount = this.histogramSmoothed.g[lum];
+      const bCount = this.histogramSmoothed.b[lum];
+      const total = rCount + gCount + bCount;
+      if (total < maxCount * 0.02) continue;
+      
+      totalPixels += total;
+      
+      // Calculate chrominance angle
+      const rWeight = rCount / (total + 1);
+      const gWeight = gCount / (total + 1);
+      const bWeight = bCount / (total + 1);
+      
+      const y = 0.299 * rWeight + 0.587 * gWeight + 0.114 * bWeight;
+      const cb = 0.564 * (bWeight - y);
+      const cr = 0.713 * (rWeight - y);
+      
+      const angle = Math.atan2(cr, cb) * (180 / Math.PI);
+      const sat = Math.sqrt(cb * cb + cr * cr);
+      
+      // Check if in skin tone zone (108° to 138°)
+      const normalizedAngle = ((angle % 360) + 360) % 360;
+      const isInSkinZone = normalizedAngle >= 108 && normalizedAngle <= 138;
+      
+      if (isInSkinZone) {
+        skinTonePixels += total;
+      }
+      
+      // Plot point
+      const u = cb * vsRadius * 4;
+      const v = cr * vsRadius * 4;
+      const intensity = Math.min(total / maxCount, 1);
+      
+      ctx.fillStyle = isInSkinZone 
+        ? `rgba(255, 200, 150, ${0.4 + intensity * 0.5})`
+        : `rgba(100, 150, 200, ${0.2 + intensity * 0.3})`;
+      
+      ctx.beginPath();
+      ctx.arc(vsCx + u, vsCy - v, 2 + intensity * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    ctx.globalCompositeOperation = 'source-over';
+    
+    // Right side: Skin tone luminance guide
+    const guideX = w * 0.55;
+    const guideW = w * 0.4;
+    const guideH = h - 20;
+    
+    // Fitzpatrick skin tone scale with luminance ranges
+    const skinTones = [
+      { name: 'Type I', range: [75, 90], color: '#ffe0d0', textColor: '#333' },
+      { name: 'Type II', range: [65, 80], color: '#f5d0b8', textColor: '#333' },
+      { name: 'Type III', range: [55, 70], color: '#d4a574', textColor: '#333' },
+      { name: 'Type IV', range: [45, 60], color: '#a67c52', textColor: '#fff' },
+      { name: 'Type V', range: [35, 50], color: '#6b4423', textColor: '#fff' },
+      { name: 'Type VI', range: [20, 40], color: '#3d2314', textColor: '#fff' }
+    ];
+    
+    const zoneH = guideH / skinTones.length;
+    
+    skinTones.forEach((tone, i) => {
+      const y = 10 + i * zoneH;
+      
+      // Background
+      ctx.fillStyle = tone.color;
+      ctx.fillRect(guideX, y, 25, zoneH - 2);
+      
+      // IRE range bar
+      const ireMin = tone.range[0];
+      const ireMax = tone.range[1];
+      const barY = y + 4;
+      const barH = zoneH - 10;
+      
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.fillRect(guideX + 30, barY, guideW - 35, barH);
+      
+      // Optimal zone highlight
+      const optStart = ((ireMin - 20) / 80) * (guideW - 35);
+      const optWidth = ((ireMax - ireMin) / 80) * (guideW - 35);
+      ctx.fillStyle = 'rgba(255, 200, 150, 0.3)';
+      ctx.fillRect(guideX + 30 + optStart, barY, optWidth, barH);
+      
+      // Label
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.font = '9px "SF Mono", Monaco, monospace';
+      ctx.fillText(tone.name, guideX + 30, y + zoneH / 2 + 3);
+      
+      // IRE values
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.font = '8px "SF Mono", Monaco, monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${ireMin}-${ireMax}%`, guideX + guideW - 2, y + zoneH / 2 + 3);
+      ctx.textAlign = 'left';
+    });
+    
+    // Skin tone percentage indicator
+    const skinPercent = totalPixels > 0 ? (skinTonePixels / totalPixels) * 100 : 0;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(vsCx - 35, vsCy + vsRadius + 8, 70, 20);
+    ctx.fillStyle = skinPercent > 30 ? '#66ff99' : skinPercent > 10 ? '#ffcc66' : '#ff6666';
+    ctx.font = 'bold 11px "SF Mono", Monaco, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${skinPercent.toFixed(0)}% I-line`, vsCx, vsCy + vsRadius + 22);
+    ctx.textAlign = 'left';
   }
 
   private drawZebra(): void {
@@ -12614,32 +15655,142 @@ class VirtualStudio {
     const w = this.histogramCanvas!.width;
     const h = this.histogramCanvas!.height;
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+    // Professional dark background
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, 'rgba(8, 10, 14, 0.98)');
+    bgGrad.addColorStop(1, 'rgba(4, 6, 10, 0.98)');
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // Draw exposure zones
+    // Draw exposure level meter (vertical bar on left)
+    const meterX = 8;
+    const meterW = 20;
+    const meterH = h - 20;
+    const meterTop = 10;
+    
+    // Meter background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.fillRect(meterX, meterTop, meterW, meterH);
+    
+    // Exposure zones with zebra-style diagonal patterns
     const zones = [
-      { level: '100%+', y: 0, h: h * 0.15, color: 'rgba(255, 0, 0, 0.4)', text: 'Utbrent' },
-      { level: '95-100%', y: h * 0.15, h: h * 0.15, color: 'rgba(255, 150, 0, 0.3)', text: 'Advarsel' },
-      { level: '70-95%', y: h * 0.3, h: h * 0.25, color: 'rgba(255, 255, 100, 0.2)', text: 'Høylys' },
-      { level: '30-70%', y: h * 0.55, h: h * 0.25, color: 'rgba(100, 200, 100, 0.2)', text: 'Mellomtoner' },
-      { level: '0-30%', y: h * 0.8, h: h * 0.2, color: 'rgba(50, 100, 200, 0.2)', text: 'Skygger' }
+      { name: 'CLIP', min: 100, max: 110, color: '#ff0000', stripeColor: '#ff4444' },
+      { name: '100%', min: 95, max: 100, color: '#ff4400', stripeColor: '#ff6622' },
+      { name: '90%', min: 85, max: 95, color: '#ffaa00', stripeColor: '#ffcc33' },
+      { name: '70%', min: 65, max: 85, color: '#88cc00', stripeColor: '#aadd44' },
+      { name: '50%', min: 40, max: 65, color: '#00aa44', stripeColor: '#44cc66' },
+      { name: '30%', min: 15, max: 40, color: '#0066aa', stripeColor: '#3388cc' },
+      { name: 'BLACK', min: 0, max: 15, color: '#2244aa', stripeColor: '#4466cc' }
     ];
-
+    
     zones.forEach(zone => {
+      const y1 = meterTop + meterH - (zone.max / 110) * meterH;
+      const y2 = meterTop + meterH - (zone.min / 110) * meterH;
+      const zoneH = y2 - y1;
+      
+      // Zone fill
       ctx.fillStyle = zone.color;
-      ctx.fillRect(0, zone.y, w, zone.h);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-      ctx.font = '9px sans-serif';
-      ctx.fillText(zone.text, 4, zone.y + zone.h / 2 + 3);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.fillText(zone.level, w - 40, zone.y + zone.h / 2 + 3);
+      ctx.fillRect(meterX, y1, meterW, zoneH);
     });
-
-    // Show clipping percentage
-    ctx.fillStyle = this.highlightClipping > 1 ? 'rgba(255, 100, 100, 1)' : 'rgba(100, 255, 100, 1)';
-    ctx.font = 'bold 12px sans-serif';
-    ctx.fillText(`${this.highlightClipping.toFixed(1)}% klippet`, w / 2 - 30, 12);
+    
+    // Draw zebra pattern preview in main area
+    const previewX = 40;
+    const previewW = w - 50;
+    const previewH = h - 20;
+    const previewTop = 10;
+    
+    // Calculate luminance distribution for zebra preview
+    const histData = this.histogramSmoothed;
+    const maxVal = Math.max(...histData.lum.slice(5, 250), 1);
+    
+    // Create zebra stripe pattern
+    const stripeWidth = 4;
+    const stripeAngle = 45 * (Math.PI / 180);
+    
+    // Draw luminance distribution as horizontal bands with zebra patterns
+    zones.forEach((zone, zoneIdx) => {
+      const y1 = previewTop + previewH - (zone.max / 110) * previewH;
+      const y2 = previewTop + previewH - (zone.min / 110) * previewH;
+      const zoneH = y2 - y1;
+      
+      // Calculate how much of the image is in this zone
+      let zonePixels = 0;
+      const minBin = Math.floor((zone.min / 100) * 255);
+      const maxBin = Math.min(255, Math.ceil((zone.max / 100) * 255));
+      
+      for (let i = minBin; i <= maxBin; i++) {
+        zonePixels += histData.lum[i];
+      }
+      
+      const zoneIntensity = zonePixels / maxVal;
+      
+      // Background
+      ctx.fillStyle = `rgba(${parseInt(zone.color.slice(1, 3), 16)}, ${parseInt(zone.color.slice(3, 5), 16)}, ${parseInt(zone.color.slice(5, 7), 16)}, 0.15)`;
+      ctx.fillRect(previewX, y1, previewW, zoneH);
+      
+      // Draw zebra stripes if zone has significant content
+      if (zoneIntensity > 0.05) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(previewX, y1, previewW * Math.min(zoneIntensity * 3, 1), zoneH);
+        ctx.clip();
+        
+        // Draw diagonal stripes
+        ctx.strokeStyle = zone.stripeColor;
+        ctx.lineWidth = 2;
+        
+        const numStripes = Math.ceil((previewW + zoneH) / stripeWidth / 2);
+        for (let i = -numStripes; i < numStripes * 2; i++) {
+          const startX = previewX + i * stripeWidth * 2;
+          ctx.beginPath();
+          ctx.moveTo(startX, y1 + zoneH);
+          ctx.lineTo(startX + zoneH, y1);
+          ctx.stroke();
+        }
+        
+        ctx.restore();
+      }
+      
+      // Zone label and percentage
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.font = '9px "SF Mono", Monaco, monospace';
+      ctx.fillText(zone.name, previewX + 4, y1 + zoneH / 2 + 3);
+      
+      if (zoneIntensity > 0.01) {
+        const percent = (zoneIntensity * 100 / 3).toFixed(1); // Normalize to rough percentage
+        ctx.fillStyle = zone.color;
+        ctx.textAlign = 'right';
+        ctx.fillText(`${percent}%`, previewX + previewW - 4, y1 + zoneH / 2 + 3);
+        ctx.textAlign = 'left';
+      }
+    });
+    
+    // Draw grid lines at key IRE levels
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 4]);
+    
+    [70, 100].forEach(ire => {
+      const y = previewTop + previewH - (ire / 110) * previewH;
+      ctx.beginPath();
+      ctx.moveTo(previewX, y);
+      ctx.lineTo(previewX + previewW, y);
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+    
+    // Clipping warning at top
+    if (this.highlightClipping > 0.5) {
+      const pulse = 0.6 + 0.4 * Math.sin(performance.now() / 200);
+      ctx.fillStyle = `rgba(255, 0, 0, ${0.3 * pulse})`;
+      ctx.fillRect(previewX, previewTop, previewW, 15);
+      
+      ctx.fillStyle = '#ff4444';
+      ctx.font = 'bold 10px "SF Mono", Monaco, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`⚠ CLIPPING: ${this.highlightClipping.toFixed(1)}%`, previewX + previewW / 2, previewTop + 11);
+      ctx.textAlign = 'left';
+    }
   }
 
   /**
@@ -13090,31 +16241,137 @@ class VirtualStudio {
     const w = this.histogramCanvas!.width;
     const h = this.histogramCanvas!.height;
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+    // Professional dark background
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, 'rgba(8, 10, 14, 0.98)');
+    bgGrad.addColorStop(1, 'rgba(4, 6, 10, 0.98)');
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // False color legend
+    // ARRI-style false color legend (matches ARRI Alexa / RED / Sony Venice)
     const colors = [
-      { range: '0-10%', color: '#0000ff', label: 'Undereks.' },
-      { range: '10-30%', color: '#00aa00', label: 'Skygger' },
-      { range: '30-50%', color: '#00ff00', label: 'Mellom' },
-      { range: '50-70%', color: '#ffff00', label: 'Høylys' },
-      { range: '70-90%', color: '#ff8800', label: 'Varsel' },
-      { range: '90-100%', color: '#ff0000', label: 'Overeks.' }
+      { ire: [0, 3], color: '#0000ff', name: 'Black Clip', desc: 'Crushed' },
+      { ire: [3, 10], color: '#0044aa', name: 'Near Black', desc: 'Very Dark' },
+      { ire: [10, 20], color: '#006688', name: 'Shadows', desc: 'Dark' },
+      { ire: [20, 30], color: '#00aa66', name: 'Dark Mid', desc: 'Low Mid' },
+      { ire: [30, 38], color: '#00cc00', name: 'Middle Gray', desc: '18% Gray' },
+      { ire: [38, 42], color: '#44dd00', name: 'Gray Zone', desc: 'Key Gray' },
+      { ire: [42, 50], color: '#88ee00', name: 'Mid-High', desc: 'Upper Mid' },
+      { ire: [50, 60], color: '#cccc00', name: 'Highlights', desc: 'Bright' },
+      { ire: [60, 70], color: '#ffaa00', name: 'Skin Hi', desc: 'Caucasian' },
+      { ire: [70, 80], color: '#ff8800', name: 'Hot', desc: 'Very Bright' },
+      { ire: [80, 95], color: '#ff4400', name: 'Warning', desc: 'Near Clip' },
+      { ire: [95, 105], color: '#ff0000', name: 'Clip', desc: 'Overexposed' }
     ];
 
-    const barHeight = h / colors.length;
+    const legendWidth = 90;
+    const barHeight = (h - 10) / colors.length;
+    
+    // Draw false color legend with IRE values
     colors.forEach((c, i) => {
-      const y = i * barHeight;
-      ctx.fillStyle = c.color;
-      ctx.fillRect(0, y, w * 0.15, barHeight - 1);
+      const y = 5 + i * barHeight;
       
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-      ctx.font = '9px sans-serif';
-      ctx.fillText(c.label, w * 0.18, y + barHeight / 2 + 3);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.fillText(c.range, w * 0.6, y + barHeight / 2 + 3);
+      // Color swatch
+      ctx.fillStyle = c.color;
+      ctx.fillRect(4, y, 20, barHeight - 2);
+      
+      // IRE range
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.font = '8px "SF Mono", Monaco, monospace';
+      ctx.fillText(`${c.ire[0]}-${c.ire[1]}`, 28, y + barHeight / 2 + 2);
+      
+      // Description
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.fillText(c.name, 55, y + barHeight / 2 + 2);
     });
+    
+    // Draw histogram visualization with false colors
+    const histX = legendWidth + 10;
+    const histW = w - legendWidth - 20;
+    const histH = h - 20;
+    const histTop = 10;
+    
+    // Background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(histX, histTop, histW, histH);
+    
+    // Plot luminance histogram with false color coding
+    const histData = this.histogramSmoothed;
+    const maxVal = Math.max(...histData.lum.slice(3, 252), 1);
+    const binWidth = histW / 256;
+    
+    for (let i = 0; i < 256; i++) {
+      const count = histData.lum[i];
+      if (count < maxVal * 0.005) continue;
+      
+      const ire = (i / 255) * 100;
+      const x = histX + i * binWidth;
+      
+      // Find matching color zone
+      const zone = colors.find(c => ire >= c.ire[0] && ire < c.ire[1]);
+      const color = zone?.color || '#888888';
+      
+      // Draw bar with false color
+      const barH = (count / maxVal) * histH * 0.9;
+      
+      // Gradient from color to darker version
+      const grad = ctx.createLinearGradient(0, histTop + histH - barH, 0, histTop + histH);
+      grad.addColorStop(0, color);
+      grad.addColorStop(1, this.darkenColor(color, 0.5));
+      
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, histTop + histH - barH, binWidth + 0.5, barH);
+    }
+    
+    // IRE scale at bottom
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.font = '8px "SF Mono", Monaco, monospace';
+    [0, 25, 50, 75, 100].forEach(ire => {
+      const x = histX + (ire / 100) * histW;
+      ctx.fillText(`${ire}`, x - 6, histTop + histH + 10);
+      
+      // Tick mark
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.beginPath();
+      ctx.moveTo(x, histTop);
+      ctx.lineTo(x, histTop + histH);
+      ctx.stroke();
+    });
+    
+    // 18% gray marker
+    const grayX = histX + (38 / 100) * histW;
+    ctx.strokeStyle = 'rgba(100, 255, 100, 0.5)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(grayX, histTop);
+    ctx.lineTo(grayX, histTop + histH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1;
+    
+    // Exposure statistics
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(histX + histW - 80, histTop + 4, 76, 36);
+    
+    ctx.font = '9px "SF Mono", Monaco, monospace';
+    ctx.fillStyle = this.highlightClipping > 1 ? '#ff4444' : '#66ff99';
+    ctx.fillText(`Clip: ${this.highlightClipping.toFixed(1)}%`, histX + histW - 76, histTop + 16);
+    
+    ctx.fillStyle = this.shadowClipping > 2 ? '#4488ff' : '#66ff99';
+    ctx.fillText(`Black: ${this.shadowClipping.toFixed(1)}%`, histX + histW - 76, histTop + 28);
+    
+    // Midtone indicator
+    const midEV = ((this.midtoneExposure - 118) / 118) * 5;
+    ctx.fillStyle = Math.abs(midEV) < 0.5 ? '#66ff99' : Math.abs(midEV) < 1 ? '#ffcc44' : '#ff6644';
+    ctx.fillText(`EV: ${midEV >= 0 ? '+' : ''}${midEV.toFixed(1)}`, histX + histW - 76, histTop + 40);
+  }
+  
+  private darkenColor(hex: string, factor: number): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgb(${Math.round(r * factor)}, ${Math.round(g * factor)}, ${Math.round(b * factor)})`;
   }
 
   // ============================================
@@ -13794,39 +17051,40 @@ class VirtualStudio {
 
   private getLightModelUrl(type: string): string | null {
     // Map light types to their 3D model URLs
-    // Uses available GLB models, with 300D_Light as default for LED panels
+    // Models are served from /models/ (public folder) for direct static serving
+    // Falls back to 300D_Light as default for LED panels
     // and Profoto_B10 for strobes, softbox for modifiers
     const modelMap: Record<string, string> = {
       // Aputure LED lights - use 300D model
-      'aputure-300d': '/api/models/300D_Light.glb',
-      'aputure-120d': '/api/models/300D_Light.glb',
-      'aputure-600d': '/api/models/300D_Light.glb',
-      'aputure-300x': '/api/models/300D_Light.glb',
-      'aputure-nova': '/api/models/300D_Light.glb',
+      'aputure-300d': '/models/300D_Light.glb',
+      'aputure-120d': '/models/300D_Light.glb',
+      'aputure-600d': '/models/300D_Light.glb',
+      'aputure-300x': '/models/300D_Light.glb',
+      'aputure-nova': '/models/300D_Light.glb',
       
       // Godox strobes - use Profoto B10 model (similar form factor)
-      'godox-ad200': '/api/models/Profoto_B10.glb',
-      'godox-ad200pro': '/api/models/Profoto_B10.glb',
-      'godox-ad400pro': '/api/models/Profoto_B10.glb',
-      'godox-ad600': '/api/models/Profoto_B10.glb',
-      'godox-ad600pro': '/api/models/Profoto_B10.glb',
+      'godox-ad200': '/models/Profoto_B10.glb',
+      'godox-ad200pro': '/models/Profoto_B10.glb',
+      'godox-ad400pro': '/models/Profoto_B10.glb',
+      'godox-ad600': '/models/Profoto_B10.glb',
+      'godox-ad600pro': '/models/Profoto_B10.glb',
       
       // Profoto strobes
-      'profoto-b10': '/api/models/Profoto_B10.glb',
-      'profoto-b10plus': '/api/models/Profoto_B10.glb',
-      'profoto-b1x': '/api/models/Profoto_B10.glb',
-      'profoto-d2': '/api/models/Profoto_B10.glb',
-      'profoto-a1': '/api/models/Profoto_B10.glb',
+      'profoto-b10': '/models/Profoto_B10.glb',
+      'profoto-b10plus': '/models/Profoto_B10.glb',
+      'profoto-b1x': '/models/Profoto_B10.glb',
+      'profoto-d2': '/models/Profoto_B10.glb',
+      'profoto-a1': '/models/Profoto_B10.glb',
       
       // Softbox modifiers
-      'softbox': '/api/models/softbox.glb',
-      'softbox-rect': '/api/models/softbox.glb',
-      'softbox-octa': '/api/models/softbox.glb',
-      'profoto-softbox': '/api/models/profoto_softbox.glb',
+      'softbox': '/models/softbox.glb',
+      'softbox-rect': '/models/softbox.glb',
+      'softbox-octa': '/models/softbox.glb',
+      'profoto-softbox': '/models/profoto_softbox.glb',
       
       // Generic/default mappings
-      'led-panel': '/api/models/300D_Light.glb',
-      'strobe': '/api/models/Profoto_B10.glb',
+      'led-panel': '/models/300D_Light.glb',
+      'strobe': '/models/Profoto_B10.glb',
     };
     
     // Return mapped model or fall back to 300D for any unrecognized LED/continuous lights
@@ -13836,11 +17094,11 @@ class VirtualStudio {
     
     // Fallback: LEDs/continuous use 300D, strobes use Profoto
     if (type.includes('strobe') || type.includes('flash')) {
-      return '/api/models/Profoto_B10.glb';
+      return '/models/Profoto_B10.glb';
     }
     
     // Default to 300D for any light type
-    return '/api/models/300D_Light.glb';
+    return '/models/300D_Light.glb';
   }
   
   /**
@@ -14397,7 +17655,7 @@ class VirtualStudio {
     console.log(`Light pattern "${pattern.name}" applied with ${lightsConfig.length} lights`);
   }
 
-  async addLight(type: string, position: BABYLON.Vector3): Promise<string> {
+  private async addLightDuplicate(type: string, position: BABYLON.Vector3): Promise<string> {
     const id = `light_${this.lightCounter++}`;
     
     // Try to get light specs from database
@@ -14523,6 +17781,9 @@ class VirtualStudio {
               this.setupClonedLightMaterials(child, color, intensity);
             }
           });
+          
+          // Register all child meshes (geometry_0, etc.) for cloned model too
+          this.registerModelMeshesInScene(lightMesh, id, name);
           
           loadedFromModel = true;
           console.log(`[Mesh Instancing] Clone successful for ${type}: ${lightMesh.name}`);
@@ -15017,6 +18278,11 @@ class VirtualStudio {
             initialWorldForward: initialForward.clone()
           });
           console.log(`[Mesh Instancing] Cached model for ${type} - future lights will clone instead of reload`);
+          
+          // Register all child meshes (geometry_0, etc.) for proper scene tracking
+          this.registerModelMeshesInScene(lightMesh, id, name);
+          
+          loadedFromModel = true;
           
         } else {
           throw new Error('No meshes found in model');
@@ -20038,6 +23304,11 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     
     window.virtualStudio = studio;
+    
+    // Expose model geometry registration helpers on window for debugging/external access
+    (window as any).getRegisteredModelGeometries = () => studio.getRegisteredModelGeometries();
+    (window as any).findModelByGeometryMesh = (meshName: string) => studio.findModelByGeometryMesh(meshName);
+    
     updateProgress(70, 'Konfigurerer scene...');
 
     focusController.init();
@@ -20522,6 +23793,42 @@ window.addEventListener('DOMContentLoaded', () => {
       console.error('animationComposerRoot element not found!');
     }
 
+    // Mount Virtual Studio Pro App (Collaboration, XR, Animation, Streaming, Rendering, Export, Particles, Audio)
+    const virtualStudioProRoot = document.getElementById('virtualStudioProRoot');
+    if (virtualStudioProRoot) {
+      const vsProReactRoot = createRoot(virtualStudioProRoot);
+      vsProReactRoot.render(React.createElement(VirtualStudioProApp, {}));
+      console.log('VirtualStudioProApp mounted - Pro features available');
+    } else {
+      console.warn('virtualStudioProRoot element not found - Pro features unavailable');
+    }
+
+    // Mount Interactive Elements Browser
+    const interactiveElementsRoot = document.getElementById('interactiveElementsRoot');
+    if (interactiveElementsRoot) {
+      const ieReactRoot = createRoot(interactiveElementsRoot);
+      ieReactRoot.render(React.createElement(InteractiveElementsBrowserApp, {}));
+      console.log('InteractiveElementsBrowserApp mounted');
+    }
+
+    // Mount Ambient Sounds Browser
+    const ambientSoundsRoot = document.getElementById('ambientSoundsRoot');
+    if (ambientSoundsRoot) {
+      const asReactRoot = createRoot(ambientSoundsRoot);
+      asReactRoot.render(React.createElement(AmbientSoundsBrowserApp, {}));
+      console.log('AmbientSoundsBrowserApp mounted');
+    }
+
+    // Mount Accessories Panel App
+    const accessoriesPanelRoot = document.getElementById('accessoriesPanelRoot');
+    if (accessoriesPanelRoot) {
+      const accessoriesRoot = createRoot(accessoriesPanelRoot);
+      accessoriesRoot.render(React.createElement(AccessoriesPanelApp, {}));
+      console.log('AccessoriesPanelApp mounted');
+    } else {
+      console.log('accessoriesPanelRoot element not found (will be created when needed)');
+    }
+
     // Mount Panel Creator App
     const panelCreatorRoot = document.getElementById('panelCreatorRoot');
     if (panelCreatorRoot) {
@@ -20620,55 +23927,27 @@ window.addEventListener('DOMContentLoaded', () => {
     const toggleCameraControls = () => {
       if (!cameraControlsPanel) return;
       const isVisible = cameraControlsPanel.style.display !== 'none';
-      // #region agent log
-      fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:15357',message:'toggleCameraControls called',data:{isVisible,currentDisplay:cameraControlsPanel.style.display},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-
       if (isVisible) {
         cameraControlsPanel.style.display = 'none';
-        cameraControlBtn?.classList.remove('active');
-        // #region agent log
-        fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:15362',message:'Panel hidden via toggle',data:{displayAfter:cameraControlsPanel.style.display},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-      } else {
+        cameraControlBtn?.classList.remove('active');      } else {
         cameraControlsPanel.style.display = 'block';
-        cameraControlBtn?.classList.add('active');
-        // #region agent log
-        fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:15366',message:'Panel shown via toggle',data:{displayAfter:cameraControlsPanel.style.display},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-      }
+        cameraControlBtn?.classList.add('active');      }
     };
 
     // Bind camera button
     cameraControlBtn?.addEventListener('click', toggleCameraControls);
 
     // Direct click handler for close button (most reliable)
-    if (cameraControlsClose) {
-      // #region agent log
-      fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:15374',message:'Close button found, attaching handler',data:{buttonExists:!!cameraControlsClose,panelExists:!!cameraControlsPanel},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      cameraControlsClose.addEventListener('click', (e) => {
-        // #region agent log
-        fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:15376',message:'Close button clicked',data:{targetId:(e.target as HTMLElement)?.id,currentTargetId:(e.currentTarget as HTMLElement)?.id,panelDisplayBefore:cameraControlsPanel?.style.display},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-        e.preventDefault();
+    if (cameraControlsClose) {      cameraControlsClose.addEventListener('click', (e) => {        e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation(); // Prevent any other handlers from running
         if (cameraControlsPanel) {
           // Use setProperty with important to ensure it takes precedence
-          cameraControlsPanel.style.setProperty('display', 'none', 'important');
-          // #region agent log
-          fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:15380',message:'Panel hidden after close click',data:{panelDisplayAfter:cameraControlsPanel.style.display,computedDisplay:window.getComputedStyle(cameraControlsPanel).display},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
-        }
+          cameraControlsPanel.style.setProperty('display', 'none', 'important');        }
         cameraControlBtn?.classList.remove('active');
         return false; // Additional safeguard
       });
-    } else {
-      // #region agent log
-      fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:15374',message:'Close button NOT found',data:{buttonExists:false},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-    }
+    } else {    }
 
     // Also use event delegation as fallback for close button (with lower priority)
     if (cameraControlsPanel) {
@@ -20974,6 +24253,7 @@ window.addEventListener('DOMContentLoaded', () => {
       // Setup camera info dialog handlers - use event delegation for reliability
       const setupCameraInfoDialogs = () => {
         const infoDialog = document.getElementById('cameraInfoDialog');
+        const infoDialogHeader = document.getElementById('cameraInfoDialogHeader');
         const infoDialogTitle = document.getElementById('cameraInfoDialogTitle');
         const infoDialogText = document.getElementById('cameraInfoDialogText');
         const infoDialogClose = document.getElementById('cameraInfoDialogClose');
@@ -20985,26 +24265,82 @@ window.addEventListener('DOMContentLoaded', () => {
         
         console.log('[Camera Info] Dialog elements found, setting up handlers');
         
+        // === Make dialog draggable ===
+        let isDragging = false;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        
+        const startDrag = (e: MouseEvent | TouchEvent) => {
+          if (!infoDialog.classList.contains('show')) return;
+          
+          const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+          const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+          
+          const rect = infoDialog.getBoundingClientRect();
+          dragOffsetX = clientX - rect.left;
+          dragOffsetY = clientY - rect.top;
+          
+          isDragging = true;
+          infoDialog.classList.add('dragging');
+          infoDialog.classList.add('user-positioned');
+          
+          e.preventDefault();
+        };
+        
+        const doDrag = (e: MouseEvent | TouchEvent) => {
+          if (!isDragging) return;
+          
+          const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+          const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+          
+          let newX = clientX - dragOffsetX;
+          let newY = clientY - dragOffsetY;
+          
+          // Keep dialog within viewport bounds
+          const rect = infoDialog.getBoundingClientRect();
+          const maxX = window.innerWidth - rect.width;
+          const maxY = window.innerHeight - rect.height;
+          
+          newX = Math.max(0, Math.min(newX, maxX));
+          newY = Math.max(0, Math.min(newY, maxY));
+          
+          infoDialog.style.left = newX + 'px';
+          infoDialog.style.top = newY + 'px';
+          
+          e.preventDefault();
+        };
+        
+        const endDrag = () => {
+          if (isDragging) {
+            isDragging = false;
+            infoDialog.classList.remove('dragging');
+          }
+        };
+        
+        // Attach drag handlers to header
+        if (infoDialogHeader) {
+          infoDialogHeader.addEventListener('mousedown', startDrag);
+          infoDialogHeader.addEventListener('touchstart', startDrag, { passive: false });
+        }
+        
+        document.addEventListener('mousemove', doDrag);
+        document.addEventListener('touchmove', doDrag, { passive: false });
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('touchend', endDrag);
+        
         const showInfoDialog = (title: string, text: string) => {
           console.log('[Camera Info] showInfoDialog called:', title);
           infoDialogTitle.textContent = title;
           infoDialogText.textContent = text;
           
-          // Get button position to position dialog correctly (relative to panel)
-          const activeButton = document.querySelector('.camera-info-btn[data-info-title="' + title + '"]') as HTMLElement;
-          const cameraControlsPanel = document.getElementById('cameraControlsPanel');
-          if (activeButton && cameraControlsPanel) {
-            const buttonRect = activeButton.getBoundingClientRect();
-            const panelRect = cameraControlsPanel.getBoundingClientRect();
-            // Calculate relative position within panel
-            const relativeTop = buttonRect.top - panelRect.top;
-            infoDialog.style.top = relativeTop + 'px';
-            infoDialog.style.right = 'calc(100% + 16px)';
+          // Reset position to center if not user-positioned
+          if (!infoDialog.classList.contains('user-positioned')) {
+            infoDialog.style.left = '50%';
+            infoDialog.style.top = '50%';
           }
           
           infoDialog.style.display = 'block';
           infoDialog.style.opacity = '0';
-          infoDialog.style.transform = 'translateX(20px)';
           // Force reflow
           void infoDialog.offsetHeight;
           // Add show class
@@ -21259,11 +24595,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const cameraTabContent = document.getElementById('cameraTabContent');
       const lightTabContent = document.getElementById('lightTabContent');
       
-      const switchToTab = (tab: 'camera' | 'light') => {
-        // #region agent log
-        fetch('http://localhost:7243/ingest/82d9ea38-5630-4ae2-b859-214f146ea1b5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'main.ts:15963',message:'switchToTab called',data:{tab,cameraTabContentExists:!!cameraTabContent,lightTabContentExists:!!lightTabContent},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-        const cameraControlsPanel = document.getElementById('cameraControlsPanel') as HTMLElement;
+      const switchToTab = (tab: 'camera' | 'light') => {        const cameraControlsPanel = document.getElementById('cameraControlsPanel') as HTMLElement;
         const cameraControlsScrollable = document.getElementById('cameraControlsScrollable') as HTMLElement;
         const screenWidth = window.innerWidth;
         // Determine width based on screen size: 1100px for screens 1440px+, 900px otherwise

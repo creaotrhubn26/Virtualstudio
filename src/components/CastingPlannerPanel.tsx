@@ -88,8 +88,6 @@ import {
   Folder,
 } from '@mui/icons-material';
 import { CastingProject, Role, Candidate, Schedule } from '../core/models/casting';
-import AdminDashboard from './AdminDashboard';
-import LoginDialog from './LoginDialog';
 import { RichTextEditor } from './RichTextEditor';
 
 // Custom icon: Person holding camera with list/clipboard
@@ -128,9 +126,6 @@ import { resetMockCastingData } from '../data/mockCastingData';
 import { sceneComposerService } from '../services/sceneComposerService';
 import { consentService } from '../services/consentService';
 import { castingAuthService } from '../services/castingAuthService';
-import { CastingSharingDialog } from './CastingSharingDialog';
-import { CastingProfessionDialog } from './CastingProfessionDialog';
-import NewProjectCreationModal from './Planning/NewProjectCreationModal';
 import { Tutorial } from '../services/tutorialService';
 
 // Lazy load heavy panels for better performance
@@ -140,6 +135,7 @@ const PropManagementPanel = lazy(() => import('./PropManagementPanel').then(m =>
 const EquipmentManagementPanel = lazy(() => import('./EquipmentManagementPanel').then(m => ({ default: m.EquipmentManagementPanel })));
 const ProductionDayView = lazy(() => import('./ProductionDayView').then(m => ({ default: m.ProductionDayView })));
 const CastingShotListPanel = lazy(() => import('./CastingShotListPanel').then(m => ({ default: m.CastingShotListPanel })));
+const ManuscriptPanel = lazy(() => import('./ManuscriptPanel').then(m => ({ default: m.ManuscriptPanel })));
 const RoleManagementPanel = lazy(() => import('./RoleManagementPanel').then(m => ({ default: m.RoleManagementPanel })));
 const CandidateManagementPanel = lazy(() => import('./CandidateManagementPanel').then(m => ({ default: m.CandidateManagementPanel })));
 const DashboardPanel = lazy(() => import('./DashboardPanel').then(m => ({ default: m.DashboardPanel })));
@@ -151,7 +147,16 @@ const TutorialEditorPanel = lazy(() => import('./TutorialEditorPanel').then(m =>
 const ConsentManagementPanel = lazy(() => import('./ConsentManagementPanel').then(m => ({ default: m.ConsentManagementPanel })));
 const OffersContractsPanel = lazy(() => import('./OffersContractsPanel'));
 const ProductionCalendarPanel = lazy(() => import('./ProductionCalendarPanel'));
-import { ProfessionOnboardingDialog, useProfessionOnboarding, ProfessionType } from './ProfessionOnboardingDialog';
+
+// Lazy load dialogs and modals for better initial load
+const AdminDashboard = lazy(() => import('./AdminDashboard'));
+const LoginDialog = lazy(() => import('./LoginDialog'));
+const CastingSharingDialog = lazy(() => import('./CastingSharingDialog').then(m => ({ default: m.CastingSharingDialog })));
+const CastingProfessionDialog = lazy(() => import('./CastingProfessionDialog').then(m => ({ default: m.CastingProfessionDialog })));
+const NewProjectCreationModal = lazy(() => import('./Planning/NewProjectCreationModal'));
+const ProfessionOnboardingDialog = lazy(() => import('./ProfessionOnboardingDialog').then(m => ({ default: m.ProfessionOnboardingDialog })));
+
+import { useProfessionOnboarding, ProfessionType } from './ProfessionOnboardingDialog';
 import { useAuth } from '../hooks/useAuth';
 import { ProjectProvider } from '../contexts/ProjectContext';
 import { MemoryRouter } from 'react-router-dom';
@@ -181,6 +186,7 @@ const TAB_IDS = [
   'tabpanel-rekvisitter',
   'tabpanel-produksjonsplan',
   'tabpanel-shot-lists',
+  'tabpanel-manuskript',
   'tabpanel-deling',
 ];
 
@@ -469,6 +475,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
     { color: '#ff9800', icon: PropIcon },
     { color: '#9c27b0', icon: CalendarIcon },
     { color: professionConfig?.color || '#e91e63', icon: ShotListIcon },
+    { color: '#3b82f6', icon: DescriptionIcon },
     { color: '#06b6d4', icon: ShareIcon },
   ], [professionConfig?.color]);
 
@@ -1069,10 +1076,12 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
 
   return (
     <>
-      <CastingProfessionDialog
-        open={professionDialogOpen}
-        onSelect={handleProfessionSelect}
-      />
+      <Suspense fallback={null}>
+        <CastingProfessionDialog
+          open={professionDialogOpen}
+          onSelect={handleProfessionSelect}
+        />
+      </Suspense>
       <Box
         role="main"
         aria-label="Casting Planner"
@@ -1635,6 +1644,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               'Utstyr',
               'Kalender',
               profession ? getTerm('shotList') : 'Shot-list',
+              'Manuskript',
               'Deling',
             ];
             const tabIds = [
@@ -1647,6 +1657,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               'tab-rekvisitter',
               'tab-produksjonsplan',
               'tab-shot-lists',
+              'tab-manuskript',
               'tab-deling',
             ];
             const tabPanelIds = [
@@ -1659,6 +1670,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               'tabpanel-rekvisitter',
               'tabpanel-produksjonsplan',
               'tabpanel-shot-lists',
+              'tabpanel-manuskript',
               'tabpanel-deling',
             ];
             
@@ -1927,6 +1939,24 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
         </TabPanel>
 
         <TabPanel value={activeTab} index={9}>
+          {!currentProject ? (
+            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+              <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
+                Ingen prosjekt valgt
+              </Typography>
+            </Box>
+          ) : (
+            <ManuscriptPanel
+              projectId={currentProject.id}
+              onManuscriptChange={async () => {
+                const updated = await castingService.getProject(currentProject.id);
+                if (updated) setCurrentProject(updated);
+              }}
+            />
+          )}
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={10}>
           {!permissions.canApprove && currentProject ? (
             <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
               <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
@@ -3243,17 +3273,19 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
 
       {/* Sharing Dialog */}
       {currentProject && (
-        <CastingSharingDialog
-          open={sharingDialogOpen}
-          projectId={currentProject.id}
-          onClose={() => setSharingDialogOpen(false)}
-          onUpdate={async () => {
-            if (currentProject) {
-              const updated = await castingService.getProject(currentProject.id);
-              if (updated) setCurrentProject(updated);
-            }
-          }}
-        />
+        <Suspense fallback={null}>
+          <CastingSharingDialog
+            open={sharingDialogOpen}
+            projectId={currentProject.id}
+            onClose={() => setSharingDialogOpen(false)}
+            onUpdate={async () => {
+              if (currentProject) {
+                const updated = await castingService.getProject(currentProject.id);
+                if (updated) setCurrentProject(updated);
+              }
+            }}
+          />
+        </Suspense>
       )}
 
       {/* Project Creation Modal */}
@@ -3390,8 +3422,9 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           <QueryClientProvider client={queryClient}>
             <MemoryRouter>
               <ProjectProvider>
-                <NewProjectCreationModal
-                  profession={profession || 'photographer'}
+                <Suspense fallback={<Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,0.5)' }}>Laster...</Box>}>
+                  <NewProjectCreationModal
+                    profession={profession || 'photographer'}
                   userId={user?.id}
                   isCastingPlanner={true}
                   getTerm={getTerm}
@@ -3481,6 +3514,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                     }
                   }}
                 />
+                </Suspense>
               </ProjectProvider>
             </MemoryRouter>
           </QueryClientProvider>
@@ -3746,17 +3780,21 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
       </SpeedDial>
     </Box>
 
-      <AdminDashboard
-        open={adminDashboardOpen}
-        onClose={() => setAdminDashboardOpen(false)}
-        projectName={currentProject?.name}
-      />
+      <Suspense fallback={null}>
+        <AdminDashboard
+          open={adminDashboardOpen}
+          onClose={() => setAdminDashboardOpen(false)}
+          projectName={currentProject?.name}
+        />
+      </Suspense>
 
-      <LoginDialog
-        open={loginDialogOpen}
-        onClose={() => setLoginDialogOpen(false)}
-        onLoginSuccess={(user) => setAdminUser(user)}
-      />
+      <Suspense fallback={null}>
+        <LoginDialog
+          open={loginDialogOpen}
+          onClose={() => setLoginDialogOpen(false)}
+          onLoginSuccess={(user) => setAdminUser(user)}
+        />
+      </Suspense>
 
       <Suspense fallback={null}>
         <CastingPlannerTutorial
@@ -3782,12 +3820,14 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
       </Suspense>
 
       {onboardingProfession && (
-        <ProfessionOnboardingDialog
-          open={showOnboarding}
-          onClose={closeOnboarding}
-          profession={onboardingProfession}
-          userName={adminUser?.display_name}
-        />
+        <Suspense fallback={null}>
+          <ProfessionOnboardingDialog
+            open={showOnboarding}
+            onClose={closeOnboarding}
+            profession={onboardingProfession}
+            userName={adminUser?.display_name}
+          />
+        </Suspense>
       )}
     </>
   );

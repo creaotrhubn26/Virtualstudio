@@ -707,3 +707,270 @@ export interface ApprovalRequest {
   status: 'pending' | 'approved' | 'rejected';
   comments?: string;
 }
+// ============================================================================
+// MANUSCRIPT AND SCRIPT SYSTEM TYPES
+// ============================================================================
+
+/**
+ * Manuscript - Main script/screenplay document
+ */
+export interface Manuscript {
+  id: string;
+  projectId: string;
+  title: string;
+  subtitle?: string;
+  author?: string;
+  version: string; // e.g., "1.0", "2.3", "Final Draft"
+  format: 'fountain' | 'final-draft' | 'markdown'; // Script format
+  content: string; // Full manuscript content
+  pageCount: number;
+  wordCount: number;
+  estimatedRuntime?: number; // in minutes (1 page ≈ 1 minute)
+  status: 'draft' | 'review' | 'approved' | 'shooting' | 'completed';
+  notes?: string;
+  metadata?: {
+    copyright?: string;
+    wgaRegistration?: string; // Writers Guild registration
+    basedOn?: string; // "Based on the novel by..."
+    contactInfo?: {
+      name?: string;
+      email?: string;
+      phone?: string;
+    };
+    [key: string]: any;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Script Revision - Version control for manuscripts
+ */
+export interface ScriptRevision {
+  id: string;
+  manuscriptId: string;
+  version: string;
+  content: string;
+  changesSummary?: string;
+  changedBy?: string;
+  colorCode?: 'white' | 'blue' | 'pink' | 'yellow' | 'green' | 'goldenrod' | 'buff' | 'salmon' | 'cherry';
+  revisionNotes?: string;
+  createdAt: string;
+}
+
+/**
+ * Act/Chapter - Organize scenes into acts (3-act structure, chapters, etc.)
+ */
+export interface Act {
+  id: string;
+  manuscriptId: string;
+  projectId: string;
+  actNumber: number; // 1, 2, 3 for 3-act structure
+  title?: string; // e.g., "Setup", "Confrontation", "Resolution" or "Chapter 1: The Beginning"
+  description?: string;
+  pageStart?: number;
+  pageEnd?: number;
+  estimatedRuntime?: number; // in minutes
+  colorCode?: string; // For visual organization
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Scene Breakdown - Detailed scene information from script
+ */
+export interface SceneBreakdown {
+  id: string;
+  manuscriptId: string;
+  projectId: string;
+  actId?: string; // Link to Act/Chapter
+  sceneNumber: string; // e.g., "1", "1A", "1B", "42"
+  sceneHeading: string; // e.g., "INT. APARTMENT - DAY"
+  intExt?: 'INT' | 'EXT' | 'INT/EXT'; // Interior/Exterior
+  locationName: string; // e.g., "APARTMENT", "CITY STREET"
+  timeOfDay?: 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK' | 'CONTINUOUS' | 'LATER' | 'MORNING' | 'EVENING';
+  pageLength?: number; // in eighths (e.g., 2.375 = 2 3/8 pages)
+  estimatedScreenTime?: number; // in seconds
+  description?: string; // Action/description lines
+  dramaticDay?: string; // Story timeline day (e.g., "Day 1", "Day 2")
+  sequence?: string; // Sequence/act grouping
+  
+  // Production breakdown
+  characters: string[]; // Role IDs of characters in scene
+  extrasCount?: number;
+  propsNeeded?: string[]; // Prop IDs or names
+  wardrobeNotes?: string;
+  makeupNotes?: string;
+  specialEffects?: string;
+  stuntsNotes?: string;
+  vehicles?: string[];
+  animals?: string[];
+  soundNotes?: string;
+  musicNotes?: string;
+  
+  // Scheduling
+  locationId?: string; // Reference to Location
+  shootingDate?: string;
+  callTime?: string;
+  estimatedDuration?: number; // shooting time in minutes
+  priority?: number;
+  status: 'not-scheduled' | 'scheduled' | 'shot' | 'in-post' | 'completed';
+  
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Dialogue Line - Character dialogue from script
+ */
+export interface DialogueLine {
+  id: string;
+  sceneId: string;
+  manuscriptId: string;
+  characterName: string;
+  roleId?: string; // Reference to Role if linked
+  dialogueText: string;
+  parenthetical?: string; // e.g., "(whispering)", "(to John)"
+  lineNumber?: number;
+  dialogueType: 'dialogue' | 'voice-over' | 'off-screen';
+  emotionTag?: string; // For actor direction
+  language?: string; // 'no', 'en', etc.
+  translation?: string; // If multilingual
+  audioNote?: string; // ADR notes, emphasis, etc.
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Extended CastingProject to include manuscripts
+ */
+export interface CastingProjectWithManuscript extends CastingProject {
+  manuscripts?: Manuscript[];
+  scenes?: SceneBreakdown[];
+}
+
+/**
+ * Shot Camera Details for export
+ */
+export interface ShotCamera {
+  id: string;
+  shotNumber: string;
+  focalLength: number;
+  cameraType: string;
+  lensType: string;
+  movement: string;
+  framing: string;
+  angle: string;
+  notes?: string;
+}
+
+/**
+ * Shot Lighting Details for export
+ */
+export interface ShotLighting {
+  id: string;
+  shotNumber: string;
+  keyLight: { direction: string; intensity: number; color: string };
+  fillLight: { direction: string; intensity: number; color: string };
+  rimLight: { direction: string; intensity: number; color: string };
+  practicals: string[];
+  colorTemp: number;
+  lightingStyle: string;
+  notes?: string;
+}
+
+/**
+ * Shot Audio Details for export
+ */
+export interface ShotAudio {
+  id: string;
+  shotNumber: string;
+  dialogueType: string;
+  atmosphereNeeded: string[];
+  foleyNeeded: string[];
+  musicCue?: string;
+  micSetup: string;
+  notes?: string;
+}
+
+/**
+ * Shot Note for export
+ */
+export interface ShotNote {
+  id: string;
+  shotNumber: string;
+  category: string;
+  content: string;
+  priority: 'low' | 'medium' | 'high';
+  assignedTo?: string;
+  resolved: boolean;
+  createdAt: string;
+}
+
+/**
+ * Storyboard Frame for export
+ */
+export interface StoryboardFrame {
+  id: string;
+  shotNumber: string;
+  imageUrl?: string;
+  sketch?: string;
+  description: string;
+  cameraAngle: string;
+  movement: string;
+  duration: number;
+  notes?: string;
+}
+
+/**
+ * Complete Manuscript Export - includes everything needed for full restoration
+ */
+export interface ManuscriptExport {
+  version: string;
+  exportedAt: string;
+  exportedBy: string;
+
+  // Metadata
+  metadata: {
+    title: string;
+    subtitle: string;
+    author: string;
+    description?: string;
+    format: 'fountain' | 'final-draft' | 'markdown';
+    projectId: string;
+    manuscriptId: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+
+  // Core manuscript data
+  manuscript: Manuscript;
+  acts: Act[];
+  scenes: SceneBreakdown[];
+  characters: string[];
+  dialogueLines: DialogueLine[];
+
+  // Production data
+  production: {
+    shotDetails: {
+      cameras: Record<string, ShotCamera>;
+      lighting: Record<string, ShotLighting>;
+      audio: Record<string, ShotAudio>;
+      notes: Record<string, ShotNote[]>;
+    };
+    storyboards: StoryboardFrame[];
+  };
+
+  // Revision history
+  revisions: ScriptRevision[];
+
+  // Statistics
+  statistics: {
+    sceneCount: number;
+    characterCount: number;
+    estimatedRuntime: number;
+    shotCount: number;
+  };
+}

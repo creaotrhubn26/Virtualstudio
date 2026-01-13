@@ -538,19 +538,7 @@ export function DashboardPanel({
               <Button
                 variant="contained"
                 startIcon={<AddIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />}
-                onClick={(e) => {
-                  // #region agent log
-                  console.log('[DEBUG-A] Button onClick handler called', {hasEvent:!!e,hasOnCreateRole:typeof onCreateRole === 'function'});
-                  // #endregion
-                  e.stopPropagation();
-                  // #region agent log
-                  console.log('[DEBUG-B] About to call onCreateRole', {onCreateRoleType:typeof onCreateRole});
-                  // #endregion
-                  onCreateRole();
-                  // #region agent log
-                  console.log('[DEBUG-B] After calling onCreateRole');
-                  // #endregion
-                }}
+                onClick={(e) => {                  e.stopPropagation();                  onCreateRole();                }}
                 sx={{
                   bgcolor: '#00d4ff',
                   color: '#000',

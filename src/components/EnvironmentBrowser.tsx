@@ -43,6 +43,7 @@ import { environmentService, EnvironmentState } from '../core/services/environme
 import { WALL_CATEGORIES, WALL_MATERIALS, WallMaterial, WallCategory } from '../data/wallDefinitions';
 import { FLOOR_CATEGORIES, FLOOR_MATERIALS, FloorMaterial, FloorCategory } from '../data/floorDefinitions';
 import { ENVIRONMENT_CATEGORIES, ENVIRONMENT_PRESETS, EnvironmentPreset, EnvironmentCategory } from '../data/environmentPresets';
+import { ambientSoundsService } from '../services/AmbientSoundsService';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -201,6 +202,18 @@ export const EnvironmentBrowser: React.FC = () => {
     }
   };
 
+  const handleApplyPreset = (preset: EnvironmentPreset) => {
+    environmentService.applyPreset(preset.id);
+    
+    // Load ambient sounds if available
+    if (preset.ambientSounds && preset.ambientSounds.length > 0) {
+      // Initialize service if not already done
+      ambientSoundsService.initialize();
+      // Load the soundscape
+      ambientSoundsService.loadEnvironmentSounds(preset.ambientSounds);
+    }
+  };
+
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#141414', color: '#fff' }}>
       {/* Header */}
@@ -276,7 +289,7 @@ export const EnvironmentBrowser: React.FC = () => {
                 <PresetCard
                   preset={preset}
                   isActive={envState.activePresetId === preset.id}
-                  onApply={() => environmentService.applyPreset(preset.id)}
+                  onApply={() => handleApplyPreset(preset)}
                 />
               </Grid>
             ))}

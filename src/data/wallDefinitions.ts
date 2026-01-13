@@ -2,7 +2,7 @@
  * Wall Definitions - Materials, textures, and presets for studio walls
  */
 
-export type WallCategory = 'solid' | 'textured' | 'gradient' | 'pattern' | 'lovecraft' | 'cinematic';
+export type WallCategory = 'solid' | 'textured' | 'gradient' | 'pattern' | 'lovecraft' | 'cinematic' | 'urban';
 
 export interface WallMaterial {
   id: string;
@@ -28,6 +28,7 @@ export const WALL_CATEGORIES: { id: WallCategory; name: string; nameNo: string; 
   { id: 'textured', name: 'Textured', nameNo: 'Teksturerte', icon: '🧱' },
   { id: 'gradient', name: 'Gradients', nameNo: 'Gradienter', icon: '🌈' },
   { id: 'pattern', name: 'Patterns', nameNo: 'Mønstre', icon: '🔲' },
+  { id: 'urban', name: 'Urban', nameNo: 'Urbant', icon: '🏙️' },
   { id: 'lovecraft', name: 'Lovecraft/Horror', nameNo: 'Lovecraft/Skrekk', icon: '🐙' },
   { id: 'cinematic', name: 'Cinematic', nameNo: 'Filmisk', icon: '🎬' },
 ];
@@ -82,6 +83,22 @@ export const WALL_MATERIALS: WallMaterial[] = [
   { id: 'wes-anderson-mint', name: 'Wes Anderson Mint', nameNo: 'Wes Anderson mint', category: 'cinematic', color: '#a4e8d4', roughness: 0.85, metallic: 0, tags: ['cinematic', 'wes-anderson', 'quirky', 'pastel'], moodTags: ['whimsical', 'quirky'] },
   { id: 'blade-runner', name: 'Blade Runner', nameNo: 'Blade Runner', category: 'cinematic', color: '#1a1a2e', emissive: '#ff6b35', emissiveIntensity: 0.1, roughness: 0.7, metallic: 0.3, tags: ['cinematic', 'sci-fi', 'neon', 'futuristic'], moodTags: ['futuristic', 'moody'] },
   { id: 'alien-corridor', name: 'Alien Corridor', nameNo: 'Alien korridor', category: 'cinematic', color: '#1a2a1a', emissive: '#0a3a0a', emissiveIntensity: 0.15, roughness: 0.9, metallic: 0.4, tags: ['cinematic', 'sci-fi', 'horror', 'industrial'], moodTags: ['tense', 'industrial'] },
+
+  // ============================================
+  // URBAN - City and Industrial
+  // ============================================
+  { id: 'urban-graffiti', name: 'Graffiti Wall', nameNo: 'Grafittivegg', category: 'urban', color: '#4a4a4a', textureUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/graffiti_concrete_wall/graffiti_concrete_wall_diff_1k.jpg', normalMapUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/graffiti_concrete_wall/graffiti_concrete_wall_nor_gl_1k.jpg', roughness: 0.9, metallic: 0, tags: ['urban', 'street', 'graffiti', 'art'], moodTags: ['edgy', 'artistic', 'street'] },
+  { id: 'urban-rusted-metal', name: 'Rusted Metal', nameNo: 'Rustet metall', category: 'urban', color: '#6b4423', textureUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rusty_metal_02/rusty_metal_02_diff_1k.jpg', normalMapUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rusty_metal_02/rusty_metal_02_nor_gl_1k.jpg', roughness: 0.85, metallic: 0.6, tags: ['urban', 'industrial', 'rusty', 'decay'], moodTags: ['industrial', 'gritty', 'abandoned'] },
+  { id: 'urban-corrugated', name: 'Corrugated Metal', nameNo: 'Bølgeblikk', category: 'urban', color: '#5a5a5a', textureUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/corrugated_iron/corrugated_iron_diff_1k.jpg', normalMapUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/corrugated_iron/corrugated_iron_nor_gl_1k.jpg', roughness: 0.7, metallic: 0.7, tags: ['urban', 'industrial', 'warehouse'], moodTags: ['industrial', 'raw'] },
+  { id: 'urban-old-brick', name: 'Old City Brick', nameNo: 'Gammel bymurstein', category: 'urban', color: '#7a5040', textureUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brick_wall_008/brick_wall_008_diff_1k.jpg', normalMapUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brick_wall_008/brick_wall_008_nor_gl_1k.jpg', roughness: 0.9, metallic: 0, tags: ['urban', 'vintage', 'brick', 'alley'], moodTags: ['warm', 'vintage', 'gritty'] },
+  { id: 'urban-subway-tile', name: 'Subway Tile', nameNo: 'T-baneflis', category: 'urban', color: '#e8e8e8', textureUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/subway_tile/subway_tile_diff_1k.jpg', normalMapUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/subway_tile/subway_tile_nor_gl_1k.jpg', roughness: 0.3, metallic: 0.1, tags: ['urban', 'subway', 'metro', 'clean'], moodTags: ['urban', 'transit'] },
+  { id: 'urban-dirty-concrete', name: 'Dirty Concrete', nameNo: 'Skitten betong', category: 'urban', color: '#5a5a5a', textureUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_wall_008/concrete_wall_008_diff_1k.jpg', normalMapUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_wall_008/concrete_wall_008_nor_gl_1k.jpg', roughness: 0.95, metallic: 0, tags: ['urban', 'concrete', 'industrial', 'parking'], moodTags: ['industrial', 'gritty'] },
+  { id: 'urban-neon-panel', name: 'Neon Sign Panel', nameNo: 'Neonskiltpanel', category: 'urban', color: '#1a1a2a', emissive: '#ff00ff', emissiveIntensity: 0.3, roughness: 0.3, metallic: 0.5, tags: ['urban', 'neon', 'night', 'cyberpunk'], moodTags: ['neon', 'night', 'vibrant'] },
+  { id: 'urban-neon-cyan', name: 'Cyan Neon Panel', nameNo: 'Cyan neonpanel', category: 'urban', color: '#1a2a2a', emissive: '#00ffff', emissiveIntensity: 0.3, roughness: 0.3, metallic: 0.5, tags: ['urban', 'neon', 'night', 'cyberpunk'], moodTags: ['neon', 'night', 'vibrant'] },
+  { id: 'urban-neon-orange', name: 'Orange Neon Panel', nameNo: 'Oransje neonpanel', category: 'urban', color: '#2a1a1a', emissive: '#ff6600', emissiveIntensity: 0.3, roughness: 0.3, metallic: 0.5, tags: ['urban', 'neon', 'night', 'warm'], moodTags: ['neon', 'night', 'warm'] },
+  { id: 'urban-chain-link', name: 'Chain Link Fence', nameNo: 'Nettinggjerde', category: 'urban', color: '#606060', roughness: 0.6, metallic: 0.8, opacity: 0.3, tags: ['urban', 'fence', 'industrial', 'street'], moodTags: ['industrial', 'gritty'] },
+  { id: 'urban-posters', name: 'Poster Wall', nameNo: 'Plakatvegg', category: 'urban', color: '#3a3a3a', textureUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/plastered_wall_with_posters/plastered_wall_with_posters_diff_1k.jpg', normalMapUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/plastered_wall_with_posters/plastered_wall_with_posters_nor_gl_1k.jpg', roughness: 0.9, metallic: 0, tags: ['urban', 'street', 'posters', 'art'], moodTags: ['urban', 'artistic', 'street'] },
+  { id: 'urban-painted-metal', name: 'Painted Metal Door', nameNo: 'Malt metalldør', category: 'urban', color: '#2a4a3a', roughness: 0.6, metallic: 0.7, tags: ['urban', 'industrial', 'door', 'warehouse'], moodTags: ['industrial'] },
 ];
 
 // Helper functions

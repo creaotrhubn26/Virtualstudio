@@ -6,8 +6,9 @@ import { useAppStore } from '../../state/store';
 import { SceneNode } from '../../core/models/scene';
 
 // Lazy load mesh components
-const ClothingMesh = React.lazy(() => import('../../ui/components/ClothingMesh').then(m => ({ default: m.ClothingMesh })));
+const ClothingMesh = React.lazy(() => import('../../components/ClothingMesh').then(m => ({ default: m.ClothingMesh })));
 const HairMesh = React.lazy(() => import('../../ui/components/HairMesh').then(m => ({ default: m.HairMesh })));
+const AccessoryMesh = React.lazy(() => import('../../components/AccessoryMesh').then(m => ({ default: m.AccessoryMesh })));
 
 /**
  * SceneNodes Component - Renders model, backdrop, prop, clothing, and hair nodes
@@ -40,13 +41,6 @@ function ModelMesh({ node, selected, onSelect }: NodeMeshProps) {
 
   // Check if there's a custom model URL (check both locations for compatibility)
   const modelUrl = node.userData?.modelUrl || node.model?.url;
-
-  // #region agent log
-  React.useEffect(() => {
-    fetch('http://127.0.0.1:7242/ingest/0bda4408-a4ac-499d-af8d-1291b9fac2d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SceneNodes.tsx:38',message:'ModelMesh render check',data:{nodeId:node.id,nodeType:node.type,hasUserDataModelUrl:!!node.userData?.modelUrl,hasModelUrl:!!node.model?.url,modelUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-  }, [node.id, modelUrl]);
-  // #endregion
-
   if (modelUrl) {
     return (
       <group position={position} rotation={rotation} scale={scale}>
@@ -69,18 +63,10 @@ function LoadedGLTFModel({ url, selected, onClick }: { url: string; selected: bo
   const [model, setModel] = useState<THREE.Group | null>(null);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0bda4408-a4ac-499d-af8d-1291b9fac2d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SceneNodes.tsx:60',message:'Loading GLTF model',data:{url,selected},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    const loader = new GLTFLoader();
+  useEffect(() => {    const loader = new GLTFLoader();
     loader.load(
       url,
-      (gltf) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0bda4408-a4ac-499d-af8d-1291b9fac2d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SceneNodes.tsx:67',message:'GLTF model loaded successfully',data:{url,sceneChildren:gltf.scene.children.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-        const scene = gltf.scene.clone();
+      (gltf) => {        const scene = gltf.scene.clone();
         scene.traverse((child) => {
           if (child instanceof THREE.Mesh) {
             child.castShadow = true;
@@ -89,18 +75,8 @@ function LoadedGLTFModel({ url, selected, onClick }: { url: string; selected: bo
         });
         setModel(scene);
       },
-      (progress) => {
-        // #region agent log
-        if (progress.total > 0) {
-          fetch('http://127.0.0.1:7242/ingest/0bda4408-a4ac-499d-af8d-1291b9fac2d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SceneNodes.tsx:78',message:'GLTF loading progress',data:{url,loaded:progress.loaded,total:progress.total,percent:Math.round((progress.loaded/progress.total)*100)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        }
-        // #endregion
-      },
-      (err) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0bda4408-a4ac-499d-af8d-1291b9fac2d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SceneNodes.tsx:85',message:'GLTF load error',data:{url,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-        setError(true);
+      (progress) => {      },
+      (err) => {        setError(true);
       }
     );
   }, [url]);
@@ -464,17 +440,7 @@ export default function SceneNodes() {
   const { scene: threeScene } = useThree(); // Get THREE.Scene from React Three Fiber
 
   // Filter non-light, non-camera nodes
-  const sceneNodes = useMemo(() => {
-    // #region agent log
-    const filtered = scene.nodes.filter(
-      (node) =>
-        node.visible &&
-        ['model','backdrop','prop','clothing','hair'].includes(node.type)
-    );
-    fetch('http://127.0.0.1:7242/ingest/0bda4408-a4ac-499d-af8d-1291b9fac2d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SceneNodes.tsx:464',message:'SceneNodes filter check',data:{totalNodes:scene.nodes.length,filteredCount:filtered.length,nodeTypes:filtered.map(n=>n.type)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    return filtered;
-    // #endregion
-  }, [scene.nodes]);
+  const sceneNodes = useMemo(() => {  }, [scene.nodes]);
 
   const handleSelect = (id: string) => {
     useAppStore.getState().select([id]);
@@ -540,11 +506,6 @@ export default function SceneNodes() {
     <group name="scene-nodes">
       {sceneNodes.map((node) => {
         const isSelected = selection.includes(node.id);
-
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0bda4408-a4ac-499d-af8d-1291b9fac2d6',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SceneNodes.tsx:481',message:'Rendering node',data:{nodeId:node.id,nodeType:node.type,isSelected},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-
         switch (node.type) {
           case 'model':
             return (
@@ -592,6 +553,27 @@ export default function SceneNodes() {
                 <HairMesh
                   node={node}
                   actorNode={hairActorNode}
+                />
+              </Suspense>
+            );
+          case 'facial_feature':
+          case 'head_accessory':
+          case 'body_accessory':
+            // Find parent actor node if specified
+            const accessoryActorId = node.userData?.parentActorId;
+            const accessoryActorNode = accessoryActorId 
+              ? scene.nodes.find(n => n.id === accessoryActorId)
+              : undefined;
+            // Determine accessory type from node type
+            const accessoryType = node.type === 'facial_feature' ? 'facial_feature' 
+              : node.type === 'head_accessory' ? 'head_accessory' 
+              : 'body_accessory';
+            return (
+              <Suspense key={node.id} fallback={null}>
+                <AccessoryMesh
+                  node={node}
+                  actorNode={accessoryActorNode}
+                  accessoryType={accessoryType}
                 />
               </Suspense>
             );

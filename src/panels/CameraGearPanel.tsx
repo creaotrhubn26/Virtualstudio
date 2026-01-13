@@ -184,7 +184,7 @@ const CAMERA_BODIES: CameraBody[] = [
     maxShutter: '1/8000', flashSync: '-', maxFps: 120,
     codec: 'XAVC-I, XAVC-L', recording: '4K',
     category: 'cine',
-    image: '/images/gear/sony_fx6_cinema_camera.png'
+    image: '/images/gear/sony_fx6_compact_cinema_camera.png'
   },
   { 
     id: 'canon-c70', name: 'Canon C70', brand: 'Canon', 
@@ -193,7 +193,7 @@ const CAMERA_BODIES: CameraBody[] = [
     maxShutter: '1/8000', flashSync: '-', maxFps: 120,
     codec: 'Cinema RAW Light, XF-AVC', recording: '4K',
     category: 'cine',
-    image: '/images/gear/canon_c70_cinema_camera.png'
+    image: '/images/gear/canon_eos_c70_cinema_camera.png'
   },
   { 
     id: 'canon-c80', name: 'Canon C80', brand: 'Canon', 
@@ -202,7 +202,7 @@ const CAMERA_BODIES: CameraBody[] = [
     maxShutter: '1/8000', flashSync: '-', maxFps: 120,
     codec: 'Cinema RAW Light, XF-AVC', recording: '6K',
     category: 'cine',
-    image: '/images/gear/canon_c80_camera.png'
+    image: '/images/gear/canon_eos_c80_cinema_camera.png'
   },
   { 
     id: 'canon-c50', name: 'Canon C50', brand: 'Canon', 
@@ -211,7 +211,7 @@ const CAMERA_BODIES: CameraBody[] = [
     maxShutter: '1/8000', flashSync: '-', maxFps: 60,
     codec: 'Cinema RAW Light, XF-AVC', recording: '7K',
     category: 'cine',
-    image: '/images/gear/canon_c50_camera.png'
+    image: '/images/gear/canon_c50_compact_cinema_camera.png'
   },
   { 
     id: 'panasonic-s1h', name: 'Panasonic S1H', brand: 'Panasonic', 
@@ -220,7 +220,7 @@ const CAMERA_BODIES: CameraBody[] = [
     maxShutter: '1/8000', flashSync: '1/320', ibis: 6.5, maxFps: 60,
     codec: 'V-Log, 10-bit 4:2:2', recording: '6K',
     category: 'cine',
-    image: '/images/gear/panasonic_s1h_camera.png'
+    image: '/images/gear/panasonic_s1h_hybrid_cinema_camera.png'
   },
 ];
 

@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 
 export type FocusMode = 'none' | 'single' | 'zone' | 'wide' | 'tracking';
-export type SafeAreaMode = 'none' | 'action' | 'title' | 'both';
-export type CompositionGuide = 'none' | 'thirds' | 'golden' | 'spiral' | 'diagonal' | 'center' | 'triangle' | 'symmetry';
+export type SafeAreaMode = 'none' | 'action' | 'title' | 'both' | 'broadcast' | 'social' | 'cinema' | 'custom';
+export type CompositionGuide = 'none' | 'thirds' | 'golden' | 'diagonal' | 'center' | 'triangle' | 'symmetry' | 'headshot';
 export type HelperGuide = 'none' | 'colortemp' | 'exposure' | 'height' | 'glasses' | 'classphoto' | 'safety' | 'lighting';
 
 // Autofocus modes: AF-S (single), AF-C (continuous), MF (manual)
@@ -259,21 +259,42 @@ export const useAutoFocusStore = create<AutoFocusState>((set, get) => ({
   }
 }));
 
-// Focus Peaking Store
-export type FocusPeakingColor = 'red' | 'green' | 'blue' | 'yellow' | 'white';
+// Focus Peaking Store - Professional Camera Style
+// Inspired by Sony Alpha, RED DSMC2, and Blackmagic approaches
+export type FocusPeakingColor = 'red' | 'green' | 'blue' | 'yellow' | 'white' | 'cyan' | 'magenta';
+export type PeakingLevel = 'low' | 'mid' | 'high'; // RED DSMC2 style multi-level
+export type PeakingMode = 'standard' | 'sony' | 'red' | 'blackmagic';
 
 interface FocusPeakingState {
   enabled: boolean;
   color: FocusPeakingColor;
-  intensity: number; // 0.0-1.0
+  intensity: number; // 0.0-1.0 - Overall strength
   threshold: number; // Edge detection threshold 0.0-1.0
-  depthAware: boolean; // Only show peaking in DOF focus range
+  depthAware: boolean; // Blackmagic style - depth-based masking
+  
+  // Professional camera features
+  mode: PeakingMode; // Emulation mode
+  level: PeakingLevel; // RED style sensitivity level
+  lineWidth: number; // 1-4 pixels
+  temporalSmoothing: number; // 0.0-1.0 - Reduce flicker
+  multiScale: boolean; // Multi-resolution detection
+  adaptiveThreshold: boolean; // Auto-adjust to scene contrast
+  focalLength: number; // For accurate CoC calculation
+  showOnlyInFocus: boolean; // Strict depth filtering
   
   setEnabled: (enabled: boolean) => void;
   setColor: (color: FocusPeakingColor) => void;
   setIntensity: (intensity: number) => void;
   setThreshold: (threshold: number) => void;
   setDepthAware: (depthAware: boolean) => void;
+  setMode: (mode: PeakingMode) => void;
+  setLevel: (level: PeakingLevel) => void;
+  setLineWidth: (lineWidth: number) => void;
+  setTemporalSmoothing: (temporalSmoothing: number) => void;
+  setMultiScale: (multiScale: boolean) => void;
+  setAdaptiveThreshold: (adaptiveThreshold: boolean) => void;
+  setFocalLength: (focalLength: number) => void;
+  setShowOnlyInFocus: (showOnlyInFocus: boolean) => void;
   toggle: () => void;
 }
 
@@ -284,11 +305,29 @@ export const useFocusPeakingStore = create<FocusPeakingState>((set) => ({
   threshold: 0.3,
   depthAware: true,
   
+  // Professional defaults
+  mode: 'standard',
+  level: 'mid',
+  lineWidth: 1,
+  temporalSmoothing: 0.3,
+  multiScale: true,
+  adaptiveThreshold: false,
+  focalLength: 50,
+  showOnlyInFocus: false,
+  
   setEnabled: (enabled) => set({ enabled }),
   setColor: (color) => set({ color }),
   setIntensity: (intensity) => set({ intensity: Math.max(0, Math.min(1, intensity)) }),
   setThreshold: (threshold) => set({ threshold: Math.max(0, Math.min(1, threshold)) }),
   setDepthAware: (depthAware) => set({ depthAware }),
+  setMode: (mode) => set({ mode }),
+  setLevel: (level) => set({ level }),
+  setLineWidth: (lineWidth) => set({ lineWidth: Math.max(1, Math.min(4, lineWidth)) }),
+  setTemporalSmoothing: (temporalSmoothing) => set({ temporalSmoothing: Math.max(0, Math.min(1, temporalSmoothing)) }),
+  setMultiScale: (multiScale) => set({ multiScale }),
+  setAdaptiveThreshold: (adaptiveThreshold) => set({ adaptiveThreshold }),
+  setFocalLength: (focalLength) => set({ focalLength: Math.max(10, Math.min(800, focalLength)) }),
+  setShowOnlyInFocus: (showOnlyInFocus) => set({ showOnlyInFocus }),
   toggle: () => set((state) => ({ enabled: !state.enabled })),
 }));
 
