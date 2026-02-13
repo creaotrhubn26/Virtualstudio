@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useProfessionConfigs, ProfessionConfig } from './useProfessionConfigs';
 
 export interface AdaptedProfession {
@@ -33,10 +33,29 @@ export const useProfessionAdapter = (professionId?: string) => {
       isActive: config.id === professionId,
     }));
   }, [configs, professionId]);
+
+  const adaptDashboardTitle = useCallback(() => {
+    if (!professionId) return 'Academy Dashboard';
+    const config = getConfigById(professionId);
+    return config ? `${config.name} Academy` : 'Academy Dashboard';
+  }, [professionId, getConfigById]);
+
+  const adaptTabLabels = useCallback(() => {
+    return {
+      courses: 'Kurs',
+      modules: 'Moduler',
+      lessons: 'Leksjoner',
+      assessments: 'Vurderinger',
+      library: 'Bibliotek',
+    };
+  }, []);
   
   return {
     adapted,
     adaptAll,
+    adaptDashboardTitle,
+    adaptTabLabels,
+    profession: professionId || null,
   };
 };
 

@@ -267,7 +267,7 @@ export const castingToSceneService = {
   },
 
   async transferProjectToScene(projectId: string): Promise<SceneTransferResult> {
-    const project = castingService.getProject(projectId);
+    const project = await castingService.getProject(projectId);
     if (!project) {
       return {
         success: false,

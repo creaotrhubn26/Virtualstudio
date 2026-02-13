@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FC } from 'react';
 import {
   Box,
   Typography,
@@ -42,12 +42,12 @@ import {
   Link as LinkIcon,
   Warning as WarningIcon,
   PersonAdd as PersonAddIcon,
-  LocationOn as LocationOnIcon,
   Category as CategoryIcon,
   Comment as CommentIcon,
   PlaylistAddCheck as PlaylistAddCheckIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
+import { LocationsIcon as LocationOnIcon } from './icons/CastingIcons';
 import { SceneBreakdown, DialogueLine } from '../core/models/casting';
 import { useToast } from './ToastStack';
 import { manuscriptService } from '../services/manuscriptService';
@@ -62,7 +62,7 @@ interface BreakdownReviewPanelProps {
   onReject: () => void;
 }
 
-export const BreakdownReviewPanel: React.FC<BreakdownReviewPanelProps> = ({
+export const BreakdownReviewPanel: FC<BreakdownReviewPanelProps> = ({
   projectId,
   manuscriptId,
   scenes,

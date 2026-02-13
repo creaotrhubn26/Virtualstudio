@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -167,7 +167,7 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)' }} />
+                  <SearchIcon sx={{ color: 'rgba(255,255,255,0.87)' }} />
                 </InputAdornment>
               ),
             }}
@@ -218,7 +218,7 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
           <IconButton
             onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
             sx={{ 
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               minWidth: { xs: '44px', sm: '46px', md: '48px', xl: '52px' },
               minHeight: { xs: '44px', sm: '46px', md: '48px', xl: '52px' },
               touchAction: 'manipulation',
@@ -248,7 +248,7 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
           sx={{
             minHeight: { xs: '48px', sm: '52px', md: '56px', xl: '64px' },
             '& .MuiTab-root': {
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               textTransform: 'none',
               fontSize: { xs: '12px', sm: '13px', md: '14px', lg: '15px', xl: '16px' },
               minHeight: { xs: '44px', sm: '48px', md: '52px', lg: '56px', xl: '64px' },
@@ -264,7 +264,7 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
               height: { xs: '2px', md: '3px' },
             },
             '& .MuiTabs-scrollButtons': {
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               '&.Mui-disabled': { opacity: 0.3 },
             },
           }}
@@ -293,7 +293,7 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
           }}
         >
           <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Pris</InputLabel>
+            <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Pris</InputLabel>
             <Select
               value={filters.price || 'all'}
               onChange={(e) => setFilters({ ...filters, price: e.target.value as any })}
@@ -310,7 +310,7 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
           </FormControl>
 
           <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Sorter</InputLabel>
+            <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Sorter</InputLabel>
             <Select
               value={filters.sortBy || 'popularity'}
               onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as any })}
@@ -331,7 +331,7 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
           <Button
             size="small"
             onClick={() => setShowFilters(false)}
-            sx={{ color: 'rgba(255,255,255,0.7)' }}
+            sx={{ color: 'rgba(255,255,255,0.87)' }}
           >
             Skjul filtre
           </Button>
@@ -344,7 +344,7 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
             size="small"
             startIcon={<FilterIcon />}
             onClick={() => setShowFilters(true)}
-            sx={{ color: 'rgba(255,255,255,0.7)' }}
+            sx={{ color: 'rgba(255,255,255,0.87)' }}
           >
             Vis filtre
           </Button>
@@ -366,7 +366,7 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
               alignItems: 'center',
               justifyContent: 'center',
               py: { xs: 4, sm: 6, md: 8 },
-              color: 'rgba(255,255,255,0.5)',
+              color: 'rgba(255,255,255,0.87)',
             }}
           >
             <SearchIcon sx={{ fontSize: { xs: 48, sm: 56, md: 64 }, mb: 2, opacity: 0.5 }} />

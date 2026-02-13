@@ -4,15 +4,15 @@
  * Styled TextField wrapper with design system tokens
  */
 
-import React from 'react';
+import type { FC } from 'react';
 import { TextField, TextFieldProps } from '@mui/material';
 import { colors, borderRadius, transitions } from '../../styles/designTokens';
 
-export interface EnhancedTextFieldProps extends TextFieldProps {
+export type EnhancedTextFieldProps = TextFieldProps & {
   // Additional props can be added here
-}
+};
 
-export const EnhancedTextField: React.FC<EnhancedTextFieldProps> = ({
+export const EnhancedTextField: FC<EnhancedTextFieldProps> = ({
   sx,
   ...props
 }) => {

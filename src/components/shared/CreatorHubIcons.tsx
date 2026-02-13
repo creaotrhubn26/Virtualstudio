@@ -80,6 +80,7 @@ export const CertificateIcon = (props: SvgIconProps) => <EmojiEvents {...props} 
 export const QuizIcon = (props: SvgIconProps) => <Quiz {...props} />;
 export const BookmarkIcon = (props: SvgIconProps) => <Bookmark {...props} />;
 export const NoteIcon = (props: SvgIconProps) => <Note {...props} />;
+export const ContentCreationIcon = (props: SvgIconProps) => <Edit {...props} />;
 export const ViewDetailsIcon = (props: SvgIconProps) => <Visibility {...props} />;
 export const EditCourseIcon = (props: SvgIconProps) => <Edit {...props} />;
 export const DeleteCourseIcon = (props: SvgIconProps) => <Delete {...props} />;

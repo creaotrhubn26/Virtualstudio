@@ -309,6 +309,7 @@ export const CreateCustomPatternDialog: React.FC<CreateCustomPatternDialogProps>
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 label="Category"
+                MenuProps={{ sx: { zIndex: 1400 } }}
               >
                 <MenuItem value="portrait">Portrait</MenuItem>
                 <MenuItem value="product">Product</MenuItem>
@@ -326,6 +327,7 @@ export const CreateCustomPatternDialog: React.FC<CreateCustomPatternDialogProps>
                 value={difficultyLevel}
                 onChange={(e) => setDifficultyLevel(e.target.value)}
                 label="Difficulty Level"
+                MenuProps={{ sx: { zIndex: 1400 } }}
               >
                 <MenuItem value="beginner">Beginner</MenuItem>
                 <MenuItem value="intermediate">Intermediate</MenuItem>

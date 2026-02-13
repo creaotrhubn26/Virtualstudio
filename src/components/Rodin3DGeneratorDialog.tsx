@@ -652,7 +652,7 @@ export default function Rodin3DGeneratorDialog({
                   }}
                 >
                   <AccordionSummary
-                    expandIcon={<ExpandMoreIcon sx={{ color: 'rgba(255,255,255,0.7)', fontSize: 28, transition: 'transform 0.2s' }} />}
+                    expandIcon={<ExpandMoreIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 28, transition: 'transform 0.2s' }} />}
                     sx={{
                       minHeight: 64,
                       px: 3,
@@ -812,7 +812,7 @@ export default function Rodin3DGeneratorDialog({
 
           <Stack direction={isLandscape ? 'row' : 'column'} spacing={2}>
           <FormControl fullWidth disabled={loading}>
-              <InputLabel sx={{ color: 'rgba(255,255,255,0.7)', fontSize: fontSizeSmall, fontWeight: 500 }}>Kvalitet</InputLabel>
+              <InputLabel sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSizeSmall, fontWeight: 500 }}>Kvalitet</InputLabel>
             <Select
               value={quality}
               label="Kvalitet"
@@ -838,7 +838,7 @@ export default function Rodin3DGeneratorDialog({
                     outline: '3px solid #8b5cf6',
                     outlineOffset: '2px',
                   },
-                  '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.7)', fontSize: isLandscape ? 36 : 32 },
+                  '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.87)', fontSize: isLandscape ? 36 : 32 },
                   '& .MuiSelect-select': {
                     py: isLandscape ? 1.5 : 2,
                     px: 2,
@@ -879,7 +879,7 @@ export default function Rodin3DGeneratorDialog({
           </FormControl>
 
             <FormControl fullWidth disabled={loading}>
-              <InputLabel sx={{ color: 'rgba(255,255,255,0.7)', fontSize: fontSizeSmall, fontWeight: 500 }}>Kategori</InputLabel>
+              <InputLabel sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSizeSmall, fontWeight: 500 }}>Kategori</InputLabel>
               <Select
                 value={category}
                 label="Kategori"
@@ -905,7 +905,7 @@ export default function Rodin3DGeneratorDialog({
                     outline: '3px solid #8b5cf6',
                     outlineOffset: '2px',
                   },
-                  '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.7)', fontSize: isLandscape ? 36 : 32 },
+                  '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.87)', fontSize: isLandscape ? 36 : 32 },
                   '& .MuiSelect-select': {
                     py: isLandscape ? 1.5 : 2,
                     px: 2,
@@ -996,7 +996,7 @@ export default function Rodin3DGeneratorDialog({
                   }}
                 />
               </Stack>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mt: 1.5, display: 'block', fontSize: fontSizeSmall }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mt: 1.5, display: 'block', fontSize: fontSizeSmall }}>
                 Vil bli lagt til i: <strong style={{ color: '#a78bfa' }}>{getCategoryLabel(category)}</strong>
               </Typography>
             </Box>
@@ -1021,7 +1021,7 @@ export default function Rodin3DGeneratorDialog({
               }
             }}>
               {Object.keys(modelsByCategory).length === 0 ? (
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', p: 3, display: 'block', fontSize: fontSizeSmall, textAlign: 'center' }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontStyle: 'italic', p: 3, display: 'block', fontSize: fontSizeSmall, textAlign: 'center' }}>
                   Ingen modeller i biblioteket enda
                 </Typography>
               ) : (
@@ -1054,7 +1054,7 @@ export default function Rodin3DGeneratorDialog({
                       }}
                     >
                       <AccordionSummary
-                        expandIcon={<ExpandMoreIcon sx={{ color: 'rgba(255,255,255,0.7)', fontSize: 24 }} />}
+                        expandIcon={<ExpandMoreIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 24 }} />}
                         sx={{
                           minHeight: 56,
                           px: 2,
@@ -1222,7 +1222,7 @@ export default function Rodin3DGeneratorDialog({
             },
             '&:disabled': { 
               bgcolor: 'rgba(255,255,255,0.1)',
-              color: 'rgba(255,255,255,0.3)',
+              color: 'rgba(255,255,255,0.6)',
               boxShadow: 'none',
             },
             transition: 'all 0.2s',

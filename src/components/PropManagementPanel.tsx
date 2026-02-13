@@ -19,6 +19,7 @@ import {
   Checkbox,
   FormControl,
   InputLabel,
+  InputAdornment,
   Select,
   MenuItem,
   Table,
@@ -49,7 +50,6 @@ import {
   StarBorder as StarBorderIcon,
   ContentCopy as DuplicateIcon,
   FileDownload as ExportIcon,
-  BarChart as StatsIcon,
   ExpandMore as ExpandIcon,
   ExpandLess as CollapseIcon,
   Close as CloseIcon,
@@ -60,13 +60,22 @@ import {
   Photo as PhotoIcon,
   PhotoCamera as PhotoCameraIcon,
   CloudUpload as CloudUploadIcon,
-  LocationOn as LocationIcon,
   Inventory as InventoryIcon,
   Inventory2 as Inventory2Icon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
   Category as CategoryIcon,
 } from '@mui/icons-material';
+import { 
+  LocationsIcon as LocationIcon, 
+  StatsIcon, 
+  PropsIcon,
+  PersonNameIcon,
+  NotesIcon,
+  QuantityIcon,
+  StorageIcon,
+  CategoryCustomIcon,
+} from './icons/CastingIcons';
 import { Prop } from '../core/models/casting';
 import { castingService } from '../services/castingService';
 import { useToast } from './ToastStack';
@@ -852,7 +861,7 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
             </Typography>
             <Typography
               sx={{
-                color: 'rgba(255,255,255,0.6)',
+                color: 'rgba(255,255,255,0.87)',
                 fontSize: { xs: '0.8rem', sm: '0.875rem', md: '0.9375rem' },
                 fontWeight: 500,
                 mt: 0.25,
@@ -884,7 +893,7 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
               sx={{
                 minHeight: TOUCH_TARGET_SIZE,
                 minWidth: TOUCH_TARGET_SIZE,
-                color: 'rgba(255,255,255,0.7)',
+                color: 'rgba(255,255,255,0.87)',
                 borderColor: 'rgba(255,255,255,0.2)',
                 px: { xs: 1, sm: 2 },
                 ...focusVisibleStyles,
@@ -951,29 +960,38 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
           aria-label="Statistikk over rekvisitter"
         >
           <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <PropsIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#ff9800' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#ff9800', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
               {stats.total}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Unike</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Unike</Typography>
           </Box>
           <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <Inventory2Icon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#2196f3' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#2196f3', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
               {stats.totalQuantity}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Totalt antall</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Totalt antall</Typography>
           </Box>
           <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <StarIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#ffc107' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#ffc107', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
               {stats.favorites}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Favoritter</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Favoritter</Typography>
           </Box>
           {!isMobile && Object.entries(stats.categoryCount).slice(0, 4).map(([cat, count]) => (
             <Box key={cat} sx={{ textAlign: 'center' }}>
               <Typography variant="h5" sx={{ color: getCategoryColor(cat), fontWeight: 600 }}>
                 {count}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                 {getCategoryLabel(cat)}
               </Typography>
             </Box>
@@ -998,7 +1016,7 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
           size="small"
           slotProps={{
             input: {
-              startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)', mr: 1 }} />,
+              startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.87)', mr: 1 }} />,
               sx: { minHeight: TOUCH_TARGET_SIZE },
             },
             htmlInput: { 'aria-label': 'Søk i rekvisitter' },
@@ -1104,7 +1122,7 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
           }}
         >
           <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 150 } }}>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Filtrer på kategori</InputLabel>
+            <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Filtrer på kategori</InputLabel>
             <Select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
@@ -1158,7 +1176,7 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
       {props.length === 0 ? (
         <Box
           role="status"
-          sx={{ textAlign: 'center', py: { xs: 4, sm: 8 }, color: 'rgba(255,255,255,0.5)' }}
+          sx={{ textAlign: 'center', py: { xs: 4, sm: 8 }, color: 'rgba(255,255,255,0.87)' }}
         >
           <BuildIcon sx={{ fontSize: { xs: 48, sm: 64 }, mb: 2, opacity: 0.3 }} />
           <Typography variant="body1">Ingen utstyr ennå</Typography>
@@ -1167,7 +1185,7 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
           </Typography>
         </Box>
       ) : filteredAndSortedProps.length === 0 ? (
-        <Box role="status" sx={{ textAlign: 'center', py: 6, color: 'rgba(255,255,255,0.5)' }}>
+        <Box role="status" sx={{ textAlign: 'center', py: 6, color: 'rgba(255,255,255,0.87)' }}>
           <SearchIcon sx={{ fontSize: 48, mb: 2, opacity: 0.3 }} />
           <Typography variant="body1">Ingen treff på søket</Typography>
         </Box>
@@ -1192,7 +1210,7 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
                     indeterminate={selectedIds.size > 0 && selectedIds.size < filteredAndSortedProps.length}
                     onChange={handleSelectAll}
                     aria-label="Velg alle rekvisitter"
-                    sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-checked': { color: '#ff9800' } }}
+                    sx={{ color: 'rgba(255,255,255,0.87)', '&.Mui-checked': { color: '#ff9800' } }}
                   />
                 </TableCell>
                 <TableCell>
@@ -1252,7 +1270,7 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
                     <Checkbox
                       checked={selectedIds.has(prop.id)}
                       onChange={() => handleToggleSelect(prop.id)}
-                      sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-checked': { color: '#ff9800' } }}
+                      sx={{ color: 'rgba(255,255,255,0.87)', '&.Mui-checked': { color: '#ff9800' } }}
                     />
                   </TableCell>
                   <TableCell>
@@ -1269,17 +1287,17 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.87)' }}>
                       {prop.quantity || 1}
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '0.875rem' }}>
                       {prop.location || '-'}
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.87)' }}>
                       {prop.assignedScenes.length}
                     </Typography>
                   </TableCell>
@@ -1294,7 +1312,7 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Dupliser">
-                        <IconButton onClick={() => handleDuplicate(prop)} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                        <IconButton onClick={() => handleDuplicate(prop)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
                           <DuplicateIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -1423,7 +1441,7 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
                         onChange={() => handleToggleSelect(prop.id)}
                         sx={{
                           p: 0.5,
-                          color: 'rgba(255,255,255,0.7)',
+                          color: 'rgba(255,255,255,0.87)',
                           '&.Mui-checked': { color: '#ff9800' },
                         }}
                       />
@@ -1521,7 +1539,7 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
                   {prop.description && (
                     <Typography
                       sx={{
-                        color: 'rgba(255,255,255,0.7)',
+                        color: 'rgba(255,255,255,0.87)',
                         mb: 1.5,
                         fontSize: '0.875rem',
                         lineHeight: 1.5,
@@ -1563,7 +1581,7 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
                         <LocationIcon sx={{ fontSize: 20, color: '#81c784' }} />
                       </Box>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase' }}>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase' }}>
                           Lagringsplass
                         </Typography>
                         <Typography sx={{ color: '#fff', fontSize: '0.85rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1619,7 +1637,7 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
                             border: '1px solid rgba(255,255,255,0.1)',
                           }}
                         >
-                          <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', mb: 0.5 }}>
+                          <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', mb: 0.5 }}>
                             Notater
                           </Typography>
                           <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem', lineHeight: 1.5 }}>
@@ -1631,7 +1649,7 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
                       {/* Additional images */}
                       {prop.images && prop.images.length > 1 && (
                         <Box>
-                          <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', mb: 1 }}>
+                          <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', mb: 1 }}>
                             Flere bilder ({prop.images.length})
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -1728,7 +1746,7 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
                           sx={{
                             minWidth: TOUCH_TARGET_SIZE,
                             minHeight: TOUCH_TARGET_SIZE,
-                            color: 'rgba(255,255,255,0.6)',
+                            color: 'rgba(255,255,255,0.87)',
                             '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
                             ...focusVisibleStyles,
                           }}
@@ -1849,13 +1867,13 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
         >
           {editingProp ? 'Rediger utstyr' : 'Nytt utstyr'}
           {isMobile && (
-            <IconButton onClick={handleCloseDialog} aria-label="Lukk dialog" sx={{ color: 'rgba(255,255,255,0.7)', mr: -1 }}>
+            <IconButton onClick={handleCloseDialog} aria-label="Lukk dialog" sx={{ color: 'rgba(255,255,255,0.87)', mr: -1 }}>
               <CloseIcon />
             </IconButton>
           )}
         </DialogTitle>
         <DialogContent sx={{ pt: { xs: 2, sm: 3 }, px: { xs: 2, sm: 3 }, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <Typography id={dialogDescId} variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 2 }}>
+          <Typography id={dialogDescId} variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 2 }}>
             Fyll ut informasjon om utstyret. Felter merket med * er påkrevd.
           </Typography>
           <Stack spacing={2.5}>
@@ -1865,6 +1883,13 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
               value={formData.name || ''}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <PersonNameIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   color: '#fff',
@@ -1872,13 +1897,13 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
                   '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                   '&.Mui-focused fieldset': { borderColor: '#ff9800' },
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                 '& .MuiInputLabel-root.Mui-focused': { color: '#ff9800' },
               }}
             />
 
             <FormControl fullWidth>
-              <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Kategori</InputLabel>
+              <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Kategori</InputLabel>
               <Select
                 value={formData.category || ''}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
@@ -1905,12 +1930,19 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
               rows={2}
               value={formData.description || ''}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1.5 }}>
+                    <NotesIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   color: '#fff',
                   '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
               }}
             />
 
@@ -2007,13 +2039,20 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
               value={formData.quantity || 1}
               onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
               slotProps={{ htmlInput: { min: 1 } }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <QuantityIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   color: '#fff',
                   minHeight: TOUCH_TARGET_SIZE,
                   '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
               }}
             />
 
@@ -2022,13 +2061,20 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
               fullWidth
               value={formData.location || ''}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <StorageIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   color: '#fff',
                   minHeight: TOUCH_TARGET_SIZE,
                   '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
               }}
             />
 
@@ -2039,12 +2085,19 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
               rows={3}
               value={formData.notes || ''}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1.5 }}>
+                    <NotesIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   color: '#fff',
                   '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
               }}
             />
           </Stack>
@@ -2064,7 +2117,7 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
             onClick={handleCloseDialog}
             startIcon={<CancelIcon />}
             fullWidth={isMobile}
-            sx={{ color: 'rgba(255,255,255,0.7)', minHeight: TOUCH_TARGET_SIZE, ...focusVisibleStyles }}
+            sx={{ color: 'rgba(255,255,255,0.87)', minHeight: TOUCH_TARGET_SIZE, ...focusVisibleStyles }}
           >
             Avbryt
           </Button>

@@ -4,7 +4,7 @@ import { useAcademyContext } from '@/contexts/AcademyContext';
  * Integrated asset management for CreatorHub Academy with Google Drive connectivity
  */
 
-import React, { useState, useCallback, useMemo, memo, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, memo, useRef, useEffect, type ReactElement, cloneElement } from 'react';
 import {
   Box,
   Typography,
@@ -297,6 +297,7 @@ const AssetCard = memo(({
   onContextMenu,
   onToggleFavorite,
   getAssetTypeIcon,
+  assetIndex,
   formatFileSize,
   formatDuration,
 }: {
@@ -307,7 +308,8 @@ const AssetCard = memo(({
   onSelect: (asset: AcademyAsset) => void;
   onContextMenu: (e: React.MouseEvent, asset: AcademyAsset) => void;
   onToggleFavorite: (id: string) => void;
-  getAssetTypeIcon: (type: string) => JSX.Element;
+  getAssetTypeIcon: (type: string) => ReactElement;
+  assetIndex: number;
   formatFileSize: (bytes: number) => string;
   formatDuration: (seconds: number) => string;
 }) => (
@@ -326,6 +328,7 @@ const AssetCard = memo(({
         borderColor: selectedAsset?.id === asset.id ? 'primary.main' : 'divider'}}
       onClick={() => onSelect(asset)}
       onContextMenu={(e) => onContextMenu(e, asset)}
+      data-index={assetIndex}
     >
       <CardContent sx={{ p: 2 }}>
         <Stack direction="row" spacing={2} alignItems="flex-start">
@@ -461,12 +464,14 @@ const AssetCardSkeleton = memo(() => (
   }, [performance, debugging, features, mode, allowedTypes, academyContext.state.courses.length]);
 
   // Profession wiring (API configs + adapter)
-  const { professionConfigs: apiProfessionConfigs } = useProfessionConfigs();
+  const { configs: apiProfessionConfigs } = useProfessionConfigs();
   const professionAdapter = useProfessionAdapter();
   const currentProfession = professionAdapter.profession || 'music_producer';
-  const enhancedProfessionConfig = apiProfessionConfigs?.[currentProfession];
+  const enhancedProfessionConfig = apiProfessionConfigs?.find((config) =>
+    config.id === currentProfession || config.name === currentProfession
+  );
   const professionDisplayName =
-    enhancedProfessionConfig?.displayName || enhancedProfessionConfig?.name || currentProfession;
+    enhancedProfessionConfig?.name || currentProfession;
   const professionColor = enhancedProfessionConfig?.color || '#00d4ff';
   const professionIcon = getProfessionIcon(currentProfession);
 
@@ -733,7 +738,7 @@ const AssetCardSkeleton = memo(() => (
                     endReached={loadMore}
                     itemContent={(index, asset) => (
                       <AssetCard
-                        key={asset.id}
+                        key={`${asset.id}-${index}`}
                         asset={asset}
                         selectedAsset={selectedAsset}
                         mode={mode}
@@ -742,6 +747,7 @@ const AssetCardSkeleton = memo(() => (
                         onContextMenu={handleContextMenu}
                         onToggleFavorite={toggleFavorite}
                         getAssetTypeIcon={getAssetTypeIcon}
+                        assetIndex={index}
                         formatFileSize={formatFileSize}
                         formatDuration={formatDuration}
                       />
@@ -803,7 +809,7 @@ const AssetCardSkeleton = memo(() => (
                     data={favoriteAssets}
                     itemContent={(index, asset) => (
                       <AssetCard
-                        key={asset.id}
+                        key={`${asset.id}-${index}`}
                         asset={asset}
                         selectedAsset={selectedAsset}
                         mode={mode}
@@ -812,6 +818,7 @@ const AssetCardSkeleton = memo(() => (
                         onContextMenu={handleContextMenu}
                         onToggleFavorite={toggleFavorite}
                         getAssetTypeIcon={getAssetTypeIcon}
+                        assetIndex={index}
                         formatFileSize={formatFileSize}
                         formatDuration={formatDuration}
                       />
@@ -862,7 +869,7 @@ const AssetCardSkeleton = memo(() => (
             
             {/* Quick asset type buttons */}
             <Grid container spacing={2} sx={{ mt: 2 }}>
-              <Grid item xs={6} sm={3}>
+              <Grid size={{ xs: 6, sm: 3 }}>
                 <Paper 
                   elevation={1} 
                   sx={{ 
@@ -876,7 +883,7 @@ const AssetCardSkeleton = memo(() => (
                   <Typography variant="body2">Images</Typography>
                 </Paper>
               </Grid>
-              <Grid item xs={6} sm={3}>
+              <Grid size={{ xs: 6, sm: 3 }}>
                 <Paper 
                   elevation={1} 
                   sx={{ 
@@ -890,7 +897,7 @@ const AssetCardSkeleton = memo(() => (
                   <Typography variant="body2">Videos</Typography>
                 </Paper>
               </Grid>
-              <Grid item xs={6} sm={3}>
+              <Grid size={{ xs: 6, sm: 3 }}>
                 <Paper 
                   elevation={1} 
                   sx={{ 
@@ -904,7 +911,7 @@ const AssetCardSkeleton = memo(() => (
                   <Typography variant="body2">Audio</Typography>
                 </Paper>
               </Grid>
-              <Grid item xs={6} sm={3}>
+              <Grid size={{ xs: 6, sm: 3 }}>
                 <Paper 
                   elevation={1} 
                   sx={{ 
@@ -998,7 +1005,7 @@ const AssetCardSkeleton = memo(() => (
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              {React.cloneElement(professionIcon as any, {
+              {cloneElement(professionIcon as any, {
                 sx: { color: professionColor, fontSize: 26 }
               })}
             </Box>

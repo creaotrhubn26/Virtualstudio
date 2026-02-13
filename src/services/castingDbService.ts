@@ -5,9 +5,6 @@
 
 import { CastingProject } from '../core/models/casting';
 
-const DB_CONNECTION_STRING = import.meta.env.VITE_DATABASE_URL || 
-  'postgresql://neondb_owner:npg_vgy4STuQ8Mja@ep-soft-pond-ag9vm5a4-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
-
 /**
  * Save casting project to database
  */

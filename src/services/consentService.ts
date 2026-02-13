@@ -99,7 +99,8 @@ export const consentService = {
 
   async deleteConsent(projectId: string, candidateId: string, consentId: string): Promise<boolean> {
     try {
-      const response = await fetch(`${API_BASE}/consents/${consentId}`, {
+      const params = new URLSearchParams({ projectId, candidateId });
+      const response = await fetch(`${API_BASE}/consents/${consentId}?${params.toString()}`, {
         method: 'DELETE',
       });
       const data = await response.json();

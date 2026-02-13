@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Drawer,
   Box,
@@ -162,7 +162,7 @@ export default function CrewAvailabilityDrawer({
             <Typography variant="h6" sx={{ color: '#fff' }}>
               Tilgjengelighet: {crewName}
             </Typography>
-            <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+            <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.87)' }}>
               <CloseIcon />
             </IconButton>
           </Box>
@@ -196,12 +196,12 @@ export default function CrewAvailabilityDrawer({
             Legg til periode
           </Button>
 
-          <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+          <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
             Registrerte perioder
           </Typography>
 
           {availability.length === 0 ? (
-            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.87)' }}>
               <Typography>Ingen perioder registrert</Typography>
             </Box>
           ) : (
@@ -242,7 +242,7 @@ export default function CrewAvailabilityDrawer({
                       }
                       secondary={
                         entry.notes && (
-                          <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', mt: 0.5 }}>
+                          <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '0.75rem', mt: 0.5 }}>
                             {entry.notes}
                           </Typography>
                         )
@@ -252,7 +252,7 @@ export default function CrewAvailabilityDrawer({
                       <IconButton
                         edge="end"
                         onClick={() => handleDeleteEntry(entry.id)}
-                        sx={{ color: 'rgba(255,255,255,0.5)', '&:hover': { color: '#ef4444' } }}
+                        sx={{ color: 'rgba(255,255,255,0.87)', '&:hover': { color: '#ef4444' } }}
                       >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
@@ -266,7 +266,7 @@ export default function CrewAvailabilityDrawer({
           {conflicts.length > 0 && (
             <>
               <Divider sx={{ my: 2, borderColor: 'rgba(255,255,255,0.1)' }} />
-              <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+              <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
                 Kommende bookinger
               </Typography>
               <List sx={{ bgcolor: 'transparent' }}>
@@ -287,7 +287,7 @@ export default function CrewAvailabilityDrawer({
                         </Typography>
                       }
                       secondary={
-                        <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '0.75rem' }}>
                           {conflict.start_time?.split('T')[0]}
                         </Typography>
                       }
@@ -326,7 +326,7 @@ export default function CrewAvailabilityDrawer({
                   color: '#fff',
                   '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
               }}
             />
             <TextField
@@ -341,11 +341,11 @@ export default function CrewAvailabilityDrawer({
                   color: '#fff',
                   '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
               }}
             />
             <FormControl fullWidth>
-              <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Status</InputLabel>
+              <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Status</InputLabel>
               <Select
                 value={newEntry.status}
                 onChange={(e) => setNewEntry({ ...newEntry, status: e.target.value as any })}
@@ -372,7 +372,7 @@ export default function CrewAvailabilityDrawer({
                   color: '#fff',
                   '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
               }}
             />
             <FormControlLabel
@@ -384,12 +384,12 @@ export default function CrewAvailabilityDrawer({
                 />
               }
               label="Gjentakende"
-              sx={{ color: 'rgba(255,255,255,0.7)' }}
+              sx={{ color: 'rgba(255,255,255,0.87)' }}
             />
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <Button onClick={() => setDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Avbryt
           </Button>
           <Button

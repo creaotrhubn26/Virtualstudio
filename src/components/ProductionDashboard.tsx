@@ -15,7 +15,6 @@ import {
 import {
   Movie as MovieIcon,
   People as PeopleIcon,
-  LocationOn as LocationIcon,
   Videocam as VideocamIcon,
   ViewInAr as ViewInArIcon,
   PlayArrow as PlayIcon,
@@ -23,6 +22,7 @@ import {
   PhotoCamera as CameraIcon,
   Lightbulb as LightIcon,
 } from '@mui/icons-material';
+import { LocationsIcon as LocationIcon } from './icons/CastingIcons';
 import { CastingProject } from '../core/models/casting';
 import { castingService } from '../services/castingService';
 import { castingToSceneService } from '../services/castingToSceneService';
@@ -45,26 +45,38 @@ export function ProductionDashboard({
   const { showSuccess, showError, showInfo } = useToast();
 
   useEffect(() => {
-    if (projectId) {
-      const p = castingService.getProject(projectId);
-      setProject(p);
-    } else {
-      const projects = castingService.getProjects();
-      if (projects.length > 0) {
-        setProject(projects[0]);
+    const loadProject = async () => {
+      setLoading(true);
+      try {
+        if (projectId) {
+          const p = await castingService.getProject(projectId);
+          setProject(p);
+        } else {
+          const projects = await castingService.getProjects();
+          if (projects.length > 0) {
+            setProject(projects[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load project:', error);
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+    loadProject();
   }, [projectId]);
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
+    if (!project) return;
     setLoading(true);
-    setTimeout(() => {
-      if (project) {
-        const updated = castingService.getProject(project.id);
-        setProject(updated);
-      }
+    try {
+      const updated = await castingService.getProject(project.id);
+      setProject(updated);
+    } catch (error) {
+      console.error('Failed to refresh project:', error);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   const handleTransferToScene = async () => {

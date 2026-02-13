@@ -55,7 +55,7 @@ export function WeatherForecastCard({ forecast, alerts, date }: WeatherForecastC
     return (
       <Card sx={{ bgcolor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
         <CardContent>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', textAlign: 'center' }}>
             Ingen værvarsel tilgjengelig
           </Typography>
         </CardContent>
@@ -72,7 +72,7 @@ export function WeatherForecastCard({ forecast, alerts, date }: WeatherForecastC
     if (symbol.includes('sun') || symbol.includes('clear')) {
       return <SunIcon sx={{ color: '#ffb800', fontSize: 32 }} />;
     } else if (symbol.includes('cloud')) {
-      return <CloudIcon sx={{ color: 'rgba(255,255,255,0.7)', fontSize: 32 }} />;
+      return <CloudIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 32 }} />;
     } else if (symbol.includes('rain')) {
       return <UmbrellaIcon sx={{ color: '#00d4ff', fontSize: 32 }} />;
     } else if (symbol.includes('snow')) {
@@ -124,7 +124,7 @@ export function WeatherForecastCard({ forecast, alerts, date }: WeatherForecastC
                 <Typography variant="h4" sx={{ color: getWeatherColor(dayForecast.symbol), fontWeight: 700 }}>
                   {Math.round(dayForecast.temperature)}°C
                 </Typography>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   {forecast.location}
                 </Typography>
               </Box>
@@ -135,9 +135,9 @@ export function WeatherForecastCard({ forecast, alerts, date }: WeatherForecastC
             <Grid container spacing={2}>
               <Grid item xs={6}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <WindIcon sx={{ fontSize: 20, color: 'rgba(255,255,255,0.5)' }} />
+                  <WindIcon sx={{ fontSize: 20, color: 'rgba(255,255,255,0.87)' }} />
                   <Box>
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block' }}>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block' }}>
                       Vind
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600 }}>
@@ -148,9 +148,9 @@ export function WeatherForecastCard({ forecast, alerts, date }: WeatherForecastC
               </Grid>
               <Grid item xs={6}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <UmbrellaIcon sx={{ fontSize: 20, color: 'rgba(255,255,255,0.5)' }} />
+                  <UmbrellaIcon sx={{ fontSize: 20, color: 'rgba(255,255,255,0.87)' }} />
                   <Box>
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block' }}>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block' }}>
                       Nedbør
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600 }}>
@@ -161,7 +161,7 @@ export function WeatherForecastCard({ forecast, alerts, date }: WeatherForecastC
               </Grid>
               <Grid item xs={6}>
                 <Box>
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block' }}>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block' }}>
                     Luftfuktighet
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600 }}>
@@ -208,7 +208,7 @@ export function WeatherForecastCard({ forecast, alerts, date }: WeatherForecastC
             )}
           </Stack>
         ) : (
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', textAlign: 'center' }}>
             Ingen værvarsel for denne datoen
           </Typography>
         )}

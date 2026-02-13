@@ -6,6 +6,7 @@ Handles CRUD operations for user favorites in Casting Planner
 import os
 import json
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional, List, Dict, Any
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -184,9 +185,11 @@ def init_casting_favorites_tables():
 
 def _format_row(row: dict) -> dict:
     result = dict(row)
-    for key in ['created_at', 'updated_at', 'start_time', 'end_time']:
-        if key in result and result[key]:
-            result[key] = result[key].isoformat()
+    for key, value in result.items():
+        if isinstance(value, Decimal):
+            result[key] = float(value)
+        elif key in ['created_at', 'updated_at', 'start_time', 'end_time'] and value:
+            result[key] = value.isoformat()
     return result
 
 def get_favorites(project_id: str, favorite_type: str, user_id: Optional[str] = None) -> List[str]:

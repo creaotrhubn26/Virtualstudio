@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment, type ChangeEvent, type ReactElement } from 'react';
 import { useToast } from './ToastStack';
 import {
   Dialog,
@@ -196,7 +196,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
     return emailRegex.test(email);
   };
 
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setNewUserEmail(value);
     
@@ -1092,7 +1092,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
             <ShareIcon sx={{ fontSize: '1.5rem', color: '#00d4ff' }} />
             <Typography variant="h6">Del prosjekt</Typography>
           </Box>
-          <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             <CloseIcon />
           </IconButton>
         </Box>
@@ -1147,14 +1147,14 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
                         '&:hover fieldset': { borderColor: emailError ? '#f44336' : 'rgba(255,255,255,0.5)' },
                         '&.Mui-focused fieldset': { borderColor: emailError ? '#f44336' : '#00d4ff' },
                       },
-                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                       '& .MuiFormHelperText-root': {
                         color: emailError ? '#f44336' : 'rgba(255,255,255,0.5)',
                       },
                     }}
                   />
                   <FormControl fullWidth>
-                    <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Rolle</InputLabel>
+                    <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Rolle</InputLabel>
                     <Select
                       value={newUserRole}
                       onChange={(e) => setNewUserRole(e.target.value as UserRoleType)}
@@ -1167,7 +1167,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
                     >
                       {roleTypes.map((role) => {
                         const getRoleIcon = (r: UserRoleType) => {
-                          const icons: Record<UserRoleType, React.ReactElement> = {
+                          const icons: Record<UserRoleType, ReactElement> = {
                             director: <MovieIcon sx={{ fontSize: '1rem' }} />,
                             producer: <BusinessIcon sx={{ fontSize: '1rem' }} />,
                             casting_director: <PeopleIcon sx={{ fontSize: '1rem' }} />,
@@ -1213,7 +1213,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
                       startIcon={<CancelIcon />}
                       sx={{
                         borderColor: 'rgba(255,255,255,0.3)',
-                        color: 'rgba(255,255,255,0.7)',
+                        color: 'rgba(255,255,255,0.87)',
                       }}
                     >
                       Avbryt
@@ -1228,7 +1228,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
                 sx={{
                   textAlign: 'center',
                   py: 4,
-                  color: 'rgba(255,255,255,0.5)',
+                  color: 'rgba(255,255,255,0.87)',
                 }}
               >
                 <PersonIcon sx={{ fontSize: 48, mb: 1, opacity: 0.3 }} />
@@ -1237,10 +1237,10 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
             ) : (
               <List sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2 }}>
                 {sharedUsers.map((userRole, index) => (
-                  <React.Fragment key={userRole.id}>
+                  <Fragment key={userRole.id}>
                     <ListItem>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-                        <EmailIcon sx={{ color: 'rgba(255,255,255,0.5)' }} />
+                        <EmailIcon sx={{ color: 'rgba(255,255,255,0.87)' }} />
                         <Box sx={{ flex: 1 }}>
                           <Typography variant="body1" sx={{ color: '#fff' }}>
                             {userRole.userId}
@@ -1268,7 +1268,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
                       </ListItemSecondaryAction>
                     </ListItem>
                     {index < sharedUsers.length - 1 && <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />}
-                  </React.Fragment>
+                  </Fragment>
                 ))}
               </List>
             )}
@@ -1296,7 +1296,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
         </Stack>
       </DialogContent>
       <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2 }}>
-        <Button onClick={onClose} startIcon={<CloseIcon />} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+        <Button onClick={onClose} startIcon={<CloseIcon />} sx={{ color: 'rgba(255,255,255,0.87)' }}>
           Lukk
         </Button>
       </DialogActions>
@@ -1349,7 +1349,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
                   fullWidth
                   sx={{
                     '& .MuiInputLabel-root': {
-                      color: 'rgba(255,255,255,0.6)',
+                      color: 'rgba(255,255,255,0.87)',
                     },
                     '& .MuiOutlinedInput-root': {
                       color: '#fff',
@@ -1382,7 +1382,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
                     size="small"
                     onClick={handleDeselectAllExportOptions}
                     sx={{
-                      color: 'rgba(255,255,255,0.7)',
+                      color: 'rgba(255,255,255,0.87)',
                       borderColor: 'rgba(255,255,255,0.3)',
                       '&:hover': { borderColor: 'rgba(255,255,255,0.5)', bgcolor: 'rgba(255,255,255,0.05)' },
                     }}
@@ -1535,7 +1535,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
               <Button
                 onClick={() => setExportDialogOpen(false)}
                 startIcon={<CancelIcon />}
-                sx={{ color: 'rgba(255,255,255,0.7)' }}
+                sx={{ color: 'rgba(255,255,255,0.87)' }}
               >
                 Avbryt
               </Button>
@@ -1551,7 +1551,7 @@ export function CastingSharingDialog({ open, projectId, onClose, onUpdate }: Cas
                   '&:hover': { bgcolor: '#00b8e6' },
                   '&.Mui-disabled': {
                     bgcolor: 'rgba(255,255,255,0.1)',
-                    color: 'rgba(255,255,255,0.3)',
+                    color: 'rgba(255,255,255,0.87)',
                   },
                 }}
               >

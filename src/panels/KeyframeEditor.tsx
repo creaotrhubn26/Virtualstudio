@@ -209,7 +209,7 @@ function EasingSelector({ value, onChange }: EasingSelectorProps) {
   return (
     <FormControl size="small" sx={{ minWidth: 140 }}>
       <InputLabel>Easing</InputLabel>
-      <Select value={value} label="Easing" onChange={(e) => onChange(e.target.value as EasingName)}>
+      <Select value={value} label="Easing" onChange={(e) => onChange(e.target.value as EasingName)} MenuProps={{ sx: { zIndex: 1400 } }}>
         {EASING_OPTIONS.map((easing) => (
           <MenuItem key={easing} value={easing}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

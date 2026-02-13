@@ -138,7 +138,7 @@ function AIRecommendationsTab() {
       <Stack direction="row" spacing={2} mb={3}>
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>Mood</InputLabel>
-          <Select value={mood} onChange={(e) => setMood(e.target.value)} label="Mood">
+          <Select value={mood} onChange={(e) => setMood(e.target.value)} label="Mood" MenuProps={{ sx: { zIndex: 1400 } }}>
             <MenuItem value="bright">Bright</MenuItem>
             <MenuItem value="neutral">Neutral</MenuItem>
             <MenuItem value="dramatic">Dramatic</MenuItem>
@@ -150,7 +150,7 @@ function AIRecommendationsTab() {
         
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>Subject</InputLabel>
-          <Select value={subject} onChange={(e) => setSubject(e.target.value as any)} label="Subject">
+          <Select value={subject} onChange={(e) => setSubject(e.target.value as any)} label="Subject" MenuProps={{ sx: { zIndex: 1400 } }}>
             <MenuItem value="portrait">Portrait</MenuItem>
             <MenuItem value="product">Product</MenuItem>
             <MenuItem value="fashion">Fashion</MenuItem>
@@ -161,7 +161,7 @@ function AIRecommendationsTab() {
         
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>Skill</InputLabel>
-          <Select value={skillLevel} onChange={(e) => setSkillLevel(e.target.value as any)} label="Skill">
+          <Select value={skillLevel} onChange={(e) => setSkillLevel(e.target.value as any)} label="Skill" MenuProps={{ sx: { zIndex: 1400 } }}>
             <MenuItem value="beginner">Beginner</MenuItem>
             <MenuItem value="intermediate">Intermediate</MenuItem>
             <MenuItem value="advanced">Advanced</MenuItem>
@@ -248,6 +248,7 @@ function HDRIExposureTab() {
           value={currentHDRI || ', '} 
           onChange={(e) => setHDRI(e.target.value)}
           label="Environment"
+          MenuProps={{ sx: { zIndex: 1400 } }}
         >
           <MenuItem value="">None</MenuItem>
           {hdriOptions.map(opt => (
@@ -321,7 +322,7 @@ function CostCalculatorTab() {
       <Stack direction="row" spacing={2} mb={3}>
         <FormControl size="small" sx={{ minWidth: 200 }}>
           <InputLabel>Pattern</InputLabel>
-          <Select value={selectedPattern} onChange={(e) => setSelectedPattern(e.target.value)} label="Pattern">
+          <Select value={selectedPattern} onChange={(e) => setSelectedPattern(e.target.value)} label="Pattern" MenuProps={{ sx: { zIndex: 1400 } }}>
             <MenuItem value="">Select a pattern</MenuItem>
             {aiRecommendations.map(rec => (
               <MenuItem key={rec.pattern.id} value={rec.pattern.id}>
@@ -504,7 +505,7 @@ function MultiCameraSyncTab() {
       <Stack direction="row" spacing={2} mb={3}>
         <FormControl size="small" sx={{ minWidth: 150 }}>
           <InputLabel>Sync Mode</InputLabel>
-          <Select value={syncMode} onChange={(e) => setSyncMode(e.target.value as any)} label="Sync Mode">
+          <Select value={syncMode} onChange={(e) => setSyncMode(e.target.value as any)} label="Sync Mode" MenuProps={{ sx: { zIndex: 1400 } }}>
             <MenuItem value="match-ev">Match EV</MenuItem>
             <MenuItem value="match-aperture">Match Aperture</MenuItem>
             <MenuItem value="independent">Independent</MenuItem>

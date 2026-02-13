@@ -1,4 +1,4 @@
-import React, { useState, useId, useMemo, useEffect } from 'react';
+import { useState, useId, useMemo, useEffect, type ReactElement } from 'react';
 import {
   Box,
   Typography,
@@ -44,7 +44,6 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Person as PersonIcon,
-  Groups as GroupsIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
   Search as SearchIcon,
@@ -79,6 +78,15 @@ import {
   Badge as BadgeIcon,
   PieChart as PieChartIcon,
 } from '@mui/icons-material';
+import { 
+  TeamIcon as GroupsIcon, 
+  PersonNameIcon, 
+  EmailIcon as CustomEmailIcon, 
+  PhoneIcon as CustomPhoneIcon,
+  AddressIcon,
+  RateIcon,
+  SplitSheetIcon,
+} from './icons/CastingIcons';
 import { CrewMember, CrewRole } from '../core/models/casting';
 import { castingService } from '../services/castingService';
 import CrewAvailabilityDrawer from './CrewAvailabilityDrawer';
@@ -336,8 +344,8 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
     return labels[role] || role;
   };
 
-  const getRoleIcon = (role: CrewRole): React.ReactElement => {
-    const icons: Record<CrewRole, React.ReactElement> = {
+  const getRoleIcon = (role: CrewRole): ReactElement => {
+    const icons: Record<CrewRole, ReactElement> = {
       director: <MovieIcon sx={{ fontSize: '1rem' }} />,
       producer: <BusinessIcon sx={{ fontSize: '1rem' }} />,
       casting_director: <PeopleIcon sx={{ fontSize: '1rem' }} />,
@@ -1030,7 +1038,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
             </Typography>
             <Typography
               sx={{
-                color: 'rgba(255,255,255,0.6)',
+                color: 'rgba(255,255,255,0.87)',
                 fontSize: { xs: '0.8rem', sm: '0.875rem', md: '0.85rem', lg: '0.9rem', xl: '1rem' },
                 fontWeight: 500,
                 mt: 0.25,
@@ -1107,7 +1115,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                 minHeight: TOUCH_TARGET_SIZE,
                 minWidth: { xs: TOUCH_TARGET_SIZE, sm: 'auto' },
                 borderColor: 'rgba(255,255,255,0.3)',
-                color: 'rgba(255,255,255,0.7)',
+                color: 'rgba(255,255,255,0.87)',
                 fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                 px: { xs: 1, sm: 2, md: 1.75, lg: 2, xl: 2.5 },
                 py: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 },
@@ -1194,7 +1202,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                   color: '#fff',
                   minHeight: TOUCH_TARGET_SIZE,
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
               }}
             />
             <TextField
@@ -1215,7 +1223,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                   color: '#fff',
                   minHeight: TOUCH_TARGET_SIZE,
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
               }}
             />
           </Box>
@@ -1232,7 +1240,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
               }}
             >
               <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block' }}>
                   Antall dager
                 </Typography>
                 <Typography variant="h6" sx={{ color: '#fff', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
@@ -1240,7 +1248,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                 </Typography>
               </Box>
               <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block' }}>
                   Team
                 </Typography>
                 <Typography variant="h6" sx={{ color: '#fff', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
@@ -1248,7 +1256,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                 </Typography>
               </Box>
               <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block' }}>
                   Fast honorar totalt
                 </Typography>
                 <Typography variant="h6" sx={{ color: '#fff', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
@@ -1256,7 +1264,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                 </Typography>
               </Box>
               <Box sx={{ textAlign: { xs: 'center', sm: 'left' }, gridColumn: { xs: 'span 2', sm: 'auto' } }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block' }}>
                   Totalkostnad
                 </Typography>
                 <Typography
@@ -1297,6 +1305,9 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
             aria-label="Crew statistikk"
           >
             <Box sx={{ textAlign: 'center', p: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+                <GroupsIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#00d4ff' }} />
+              </Box>
               <Typography
                 variant="h5"
                 sx={{
@@ -1307,11 +1318,14 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
               >
                 {stats.total}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
                 Totalt
               </Typography>
             </Box>
             <Box sx={{ textAlign: 'center', p: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+                <CheckCircleIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#4caf50' }} />
+              </Box>
               <Typography
                 variant="h5"
                 sx={{
@@ -1322,11 +1336,14 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
               >
                 {stats.availableNow}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
                 Tilgjengelig
               </Typography>
             </Box>
             <Box sx={{ textAlign: 'center', gridColumn: { xs: 'span 2', sm: 'auto' }, p: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+                <CalculateIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#ff9800' }} />
+              </Box>
               <Typography
                 variant="h5"
                 sx={{
@@ -1337,12 +1354,15 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
               >
                 {stats.totalDailyRate.toLocaleString('no-NO')} kr
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
                 Total fast honorar
               </Typography>
             </Box>
             {Object.entries(stats.roleCount).slice(0, isMobile ? 2 : 4).map(([role, count]) => (
               <Box key={role} sx={{ textAlign: 'center', p: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+                  <GroupsIcon sx={{ fontSize: { xs: 14, sm: 16, md: 15, lg: 17, xl: 20 }, color: '#fff', opacity: 0.7 }} />
+                </Box>
                 <Typography
                   variant="h6"
                   sx={{
@@ -1356,7 +1376,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                 <Typography
                   variant="caption"
                   sx={{
-                    color: 'rgba(255,255,255,0.6)',
+                    color: 'rgba(255,255,255,0.87)',
                     fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' },
                   }}
                 >
@@ -1392,7 +1412,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
-                      <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />
+                      <SearchIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />
                     </InputAdornment>
                   ),
                   'aria-label': 'Søk i crewmedlemmer',
@@ -1460,7 +1480,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                   value="grid"
                   aria-label="Kortvisning"
                   sx={{
-                    color: 'rgba(255,255,255,0.7)',
+                    color: 'rgba(255,255,255,0.87)',
                     minWidth: TOUCH_TARGET_SIZE,
                     minHeight: TOUCH_TARGET_SIZE,
                     '&.Mui-selected': { color: '#00d4ff', bgcolor: 'rgba(0,212,255,0.1)' },
@@ -1473,7 +1493,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                   value="table"
                   aria-label="Tabellvisning"
                   sx={{
-                    color: 'rgba(255,255,255,0.7)',
+                    color: 'rgba(255,255,255,0.87)',
                     minWidth: TOUCH_TARGET_SIZE,
                     minHeight: TOUCH_TARGET_SIZE,
                     '&.Mui-selected': { color: '#00d4ff', bgcolor: 'rgba(0,212,255,0.1)' },
@@ -1506,7 +1526,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
             >
               <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 150, md: 135, lg: 150, xl: 180 }, flex: { xs: 1, sm: 'none' } }}>
                 <InputLabel
-                  sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}
+                  sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}
                   id="filter-role-label"
                 >
                   Filtrer på rolle
@@ -1611,7 +1631,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
           sx={{
             textAlign: 'center',
             py: 8,
-            color: 'rgba(255,255,255,0.5)',
+            color: 'rgba(255,255,255,0.87)',
           }}
         >
           <PersonIcon sx={{ fontSize: { xs: 60, sm: 70, md: 65, lg: 80, xl: 104 }, mb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, opacity: 0.3 }} aria-hidden="true" />
@@ -1623,7 +1643,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
       ) : filteredAndSortedCrew.length === 0 ? (
         <Box
           role="status"
-          sx={{ textAlign: 'center', py: 6, color: 'rgba(255,255,255,0.5)' }}
+          sx={{ textAlign: 'center', py: 6, color: 'rgba(255,255,255,0.87)' }}
         >
           <SearchIcon sx={{ fontSize: { xs: 48, sm: 56, md: 52, lg: 64, xl: 80 }, mb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, opacity: 0.3 }} />
           <Typography variant="body1" sx={{ fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.25rem' } }}>Ingen treff på søket</Typography>
@@ -1660,7 +1680,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                     onChange={handleSelectAll}
                     aria-label="Velg alle crewmedlemmer"
                     sx={{
-                      color: 'rgba(255,255,255,0.5)',
+                      color: 'rgba(255,255,255,0.87)',
                       '&.Mui-checked': { color: '#00d4ff' },
                     }}
                   />
@@ -1726,7 +1746,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                       onChange={() => handleSelectOne(member.id)}
                       aria-label={`Velg ${member.name}`}
                       sx={{
-                        color: 'rgba(255,255,255,0.5)',
+                        color: 'rgba(255,255,255,0.87)',
                         '&.Mui-checked': { color: '#00d4ff' },
                       }}
                     />
@@ -1776,7 +1796,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                             variant="body2"
                             component="a"
                             href={`mailto:${member.contactInfo.email}`}
-                            sx={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}
+                            sx={{ color: 'rgba(255,255,255,0.87)', textDecoration: 'none', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}
                           >
                             {member.contactInfo.email}
                           </Typography>
@@ -1797,7 +1817,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                             variant="body2"
                             component="a"
                             href={`tel:${member.contactInfo.phone}`}
-                            sx={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}
+                            sx={{ color: 'rgba(255,255,255,0.87)', textDecoration: 'none', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}
                           >
                             {member.contactInfo.phone}
                           </Typography>
@@ -1814,7 +1834,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                       )}
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.7)', py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.87)', py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
                     {member.rate ? `${member.rate.toLocaleString('no-NO')} kr` : '-'}
                   </TableCell>
                   <TableCell sx={{ py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
@@ -1828,12 +1848,12 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                             bgcolor: isAvailableNow(member) ? '#4caf50' : '#ff9800',
                           }}
                         />
-                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
+                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
                           {member.availability.startDate} - {member.availability.endDate}
                         </Typography>
                       </Box>
                     ) : (
-                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
                         Ikke satt
                       </Typography>
                     )}
@@ -1853,7 +1873,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                         <IconButton
                           onClick={() => handleDuplicate(member)}
                           aria-label={`Dupliser ${member.name}`}
-                          sx={{ color: 'rgba(255,255,255,0.5)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE, ...focusVisibleStyles }}
+                          sx={{ color: 'rgba(255,255,255,0.87)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE, ...focusVisibleStyles }}
                         >
                           <DuplicateIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />
                         </IconButton>
@@ -1925,7 +1945,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                         checked={selectedIds.has(member.id)}
                         onChange={() => handleSelectOne(member.id)}
                         aria-label={`Velg ${member.name}`}
-                        sx={{ p: 0.5, color: 'rgba(255,255,255,0.3)', '&.Mui-checked': { color: '#4dd0e1' } }}
+                        sx={{ p: 0.5, color: 'rgba(255,255,255,0.6)', '&.Mui-checked': { color: '#4dd0e1' } }}
                       />
                       <Box sx={{ flex: 1 }}>
                         {/* Eye-catching Member Header */}
@@ -2066,7 +2086,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                           <Typography
                             sx={{
-                              color: 'rgba(255,255,255,0.6)',
+                              color: 'rgba(255,255,255,0.87)',
                               fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' },
                               fontWeight: 600,
                               textTransform: 'uppercase',
@@ -2133,7 +2153,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                         <Box sx={{ flex: 1 }}>
                           <Typography
                             sx={{
-                              color: 'rgba(255,255,255,0.6)',
+                              color: 'rgba(255,255,255,0.87)',
                               fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' },
                               fontWeight: 600,
                               textTransform: 'uppercase',
@@ -2198,7 +2218,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                         <Box sx={{ flex: 1 }}>
                           <Typography
                             sx={{
-                              color: 'rgba(255,255,255,0.6)',
+                              color: 'rgba(255,255,255,0.87)',
                               fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' },
                               fontWeight: 600,
                               textTransform: 'uppercase',
@@ -2308,7 +2328,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                           <Box sx={{ flex: 1 }}>
                             <Typography
                               sx={{
-                                color: 'rgba(255,255,255,0.6)',
+                                color: 'rgba(255,255,255,0.87)',
                                 fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' },
                                 fontWeight: 600,
                                 textTransform: 'uppercase',
@@ -2337,7 +2357,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                     <Typography
                       variant="caption"
                       sx={{
-                        color: 'rgba(255,255,255,0.5)',
+                        color: 'rgba(255,255,255,0.87)',
                         display: 'block',
                         mt: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 },
                         fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.78125rem', lg: '0.875rem', xl: '1rem' },
@@ -2403,7 +2423,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                           sx={{
                             minWidth: TOUCH_TARGET_SIZE,
                             minHeight: TOUCH_TARGET_SIZE,
-                            color: 'rgba(255,255,255,0.6)',
+                            color: 'rgba(255,255,255,0.87)',
                             '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
                             ...focusVisibleStyles,
                           }}
@@ -2553,7 +2573,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
             <IconButton
               onClick={handleCloseDialog}
               aria-label="Lukk dialog"
-              sx={{ color: 'rgba(255,255,255,0.7)', mr: -1 }}
+              sx={{ color: 'rgba(255,255,255,0.87)', mr: -1 }}
             >
               <CloseIcon />
             </IconButton>
@@ -2572,7 +2592,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
           <Typography
             id={dialogDescId}
             variant="body2"
-            sx={{ color: 'rgba(255,255,255,0.6)', mb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}
+            sx={{ color: 'rgba(255,255,255,0.87)', mb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}
           >
             Fyll ut informasjon om teammedlemmet. Felter merket med * er påkrevd.
           </Typography>
@@ -2590,6 +2610,13 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                   'aria-label': 'Navn på crewmedlem (påkrevd)',
                 },
               }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <PersonNameIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   color: '#fff',
@@ -2603,7 +2630,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                   },
                 },
                 '& .MuiInputLabel-root': { 
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                 },
                 '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
@@ -2614,7 +2641,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
               <InputLabel
                 id="crew-role-label"
                 sx={{
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                   '&.Mui-focused': { color: '#00d4ff' },
                 }}
@@ -2689,6 +2716,13 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                 })
               }
               slotProps={{ htmlInput: { 'aria-label': 'E-postadresse' } }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <CustomEmailIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   color: '#fff',
@@ -2702,7 +2736,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                   },
                 },
                 '& .MuiInputLabel-root': { 
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                 },
                 '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
@@ -2723,6 +2757,13 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                 })
               }
               slotProps={{ htmlInput: { 'aria-label': 'Telefonnummer' } }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <CustomPhoneIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   color: '#fff',
@@ -2736,7 +2777,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                   },
                 },
                 '& .MuiInputLabel-root': { 
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                 },
                 '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
@@ -2755,6 +2796,13 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                 })
               }
               slotProps={{ htmlInput: { 'aria-label': 'Adresse' } }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <AddressIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   color: '#fff',
@@ -2768,7 +2816,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                   },
                 },
                 '& .MuiInputLabel-root': { 
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                 },
                 '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
@@ -2782,6 +2830,13 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
               value={formData.rate || ''}
               onChange={(e) => setFormData({ ...formData, rate: parseInt(e.target.value) || undefined })}
               slotProps={{ htmlInput: { 'aria-label': 'Fast honorar i kroner', min: 0 } }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <RateIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   color: '#fff',
@@ -2795,7 +2850,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                   },
                 },
                 '& .MuiInputLabel-root': { 
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                 },
                 '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
@@ -2816,7 +2871,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                   fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                 }}
               >
-                <PieChartIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 20 } }} />
+                <SplitSheetIcon sx={{ color: '#f59e0b', fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 20 } }} />
                 Split Sheet
               </Typography>
               
@@ -2858,7 +2913,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                       },
                       '& .MuiInputLabel-root.Mui-focused': { color: '#f59e0b' },
                       '& .MuiFormHelperText-root': { 
-                        color: 'rgba(255,255,255,0.5)',
+                        color: 'rgba(255,255,255,0.87)',
                         fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.78125rem', lg: '0.875rem', xl: '1rem' },
                       },
                     }}
@@ -2931,12 +2986,12 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                       }),
                     },
                     '& .MuiInputLabel-root': { 
-                      color: 'rgba(255,255,255,0.7)',
+                      color: 'rgba(255,255,255,0.87)',
                       fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                     },
                     '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
                     '& .MuiFormHelperText-root': { 
-                      color: 'rgba(255,255,255,0.5)',
+                      color: 'rgba(255,255,255,0.87)',
                       fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.78125rem', lg: '0.875rem', xl: '1rem' },
                     },
                   }}
@@ -2946,7 +3001,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                   <InputLabel
                     id="invitation-status-label"
                     sx={{
-                      color: 'rgba(255,255,255,0.7)',
+                      color: 'rgba(255,255,255,0.87)',
                       fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                       '&.Mui-focused': { color: '#00d4ff' },
                     }}
@@ -3039,7 +3094,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                       },
                     },
                     '& .MuiInputLabel-root': { 
-                      color: 'rgba(255,255,255,0.7)',
+                      color: 'rgba(255,255,255,0.87)',
                       fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                     },
                     '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
@@ -3076,7 +3131,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                   },
                 },
                 '& .MuiInputLabel-root': { 
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                 },
                 '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
@@ -3111,7 +3166,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                   },
                 },
                 '& .MuiInputLabel-root': { 
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                 },
                 '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
@@ -3138,7 +3193,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
                   },
                 },
                 '& .MuiInputLabel-root': { 
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                 },
                 '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
@@ -3165,7 +3220,7 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
             aria-label="Avbryt og lukk dialog"
             fullWidth={isMobile}
             sx={{
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               minHeight: TOUCH_TARGET_SIZE,
               minWidth: { xs: 'auto', sm: 100, md: 110, lg: 120, xl: 140 },
               fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },

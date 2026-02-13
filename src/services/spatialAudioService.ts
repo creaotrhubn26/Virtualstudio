@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import * as BABYLON from '@babylonjs/core';
+import { resolveAudioPath } from '../config/assetConfig';
 
 // Audio source types
 export type AudioSourceType = 
@@ -586,11 +587,14 @@ export const useSpatialAudioStore = create<SpatialAudioStore>((set, get) => ({
     
     const sourceId = `audio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
+    // Resolve audio URL (local or R2 CDN)
+    const resolvedUrl = resolveAudioPath(config.url);
+    
     const newSource: AudioSource = {
       id: sourceId,
       name: config.name,
       type: config.type || 'point',
-      url: config.url,
+      url: resolvedUrl,
       position: config.position || new BABYLON.Vector3(0, 0, 0),
       direction: config.direction,
       isPlaying: false,

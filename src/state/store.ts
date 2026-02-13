@@ -67,7 +67,7 @@ interface FocusState {
   getActivePointPosition: () => { x: number; y: number };
 }
 
-const compositionGuides: CompositionGuide[] = ['none', 'thirds', 'golden', 'spiral', 'diagonal', 'center', 'triangle', 'symmetry'];
+const compositionGuides: CompositionGuide[] = ['none', 'thirds', 'golden', 'diagonal', 'center', 'triangle', 'symmetry', 'headshot'];
 const helperGuides: HelperGuide[] = ['none', 'colortemp', 'exposure', 'height', 'glasses', 'classphoto', 'safety', 'lighting'];
 
 export const useFocusStore = create<FocusState>((set, get) => ({
@@ -345,15 +345,23 @@ export interface CameraSettings {
   sensor?: [number, number];
 }
 
+export interface LightSettings {
+  power: number;
+  modifier?: string;
+  color?: string;
+  temperature?: number;
+}
+
 export interface SceneNode {
   id: string;
-  type: 'light' | 'model' | 'camera' | 'accessory' | 'background' | 'modifier';
+  type: 'light' | 'model' | 'camera' | 'accessory' | 'background' | 'modifier' | 'prop';
   name: string;
   transform: NodeTransform;
   visible: boolean;
   locked?: boolean;
   userData?: Record<string, unknown>;
   camera?: CameraSettings;
+  light?: LightSettings;
 }
 
 export interface ActorParams {

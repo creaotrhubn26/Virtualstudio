@@ -6,7 +6,7 @@
  * Designed to feel like actually directing a scene.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type FC, type MouseEvent } from 'react';
 import {
   Box,
   Paper,
@@ -72,7 +72,7 @@ interface CameraFeed {
 // Camera Thumbnail Component
 // ============================================================================
 
-const CameraThumbnail: React.FC<{
+const CameraThumbnail: FC<{
   camera: CameraFeed;
   isSelected: boolean;
   onClick: () => void;
@@ -169,7 +169,7 @@ const CameraThumbnail: React.FC<{
 // Guidelines Component
 // ============================================================================
 
-const DirectorGuidelines: React.FC<{ show: boolean; onDismiss: () => void }> = ({ show, onDismiss }) => {
+const DirectorGuidelines: FC<{ show: boolean; onDismiss: () => void }> = ({ show, onDismiss }) => {
   if (!show) return null;
   
   return (
@@ -286,7 +286,7 @@ const DirectorGuidelines: React.FC<{ show: boolean; onDismiss: () => void }> = (
 // Main Component
 // ============================================================================
 
-export const DirectorModeOverlay: React.FC<DirectorModeOverlayProps> = ({
+export const DirectorModeOverlay: FC<DirectorModeOverlayProps> = ({
   isActive,
   monitorId,
   monitorName,
@@ -460,7 +460,7 @@ export const DirectorModeOverlay: React.FC<DirectorModeOverlayProps> = ({
     };
   }, [isActive, selectedCameraId, showGuidelines, cameras, handleSelectCamera, handleCameraMove, handleCameraRotate, handleCameraZoom, handleCameraReset]);
   
-  const handleLayoutChange = (_: React.MouseEvent<HTMLElement>, newLayout: MonitorLayout | null) => {
+  const handleLayoutChange = (_: MouseEvent<HTMLElement>, newLayout: MonitorLayout | null) => {
     if (newLayout) {
       setLayout(newLayout);
     }
@@ -780,7 +780,7 @@ export const DirectorModeOverlay: React.FC<DirectorModeOverlayProps> = ({
                 pb: 1, '&::-webkit-scrollbar': {
                   height: 6,
                 }, '&::-webkit-scrollbar-thumb': {
-                  bgcolor: 'rgba(255,255,255,0.3)',
+                  bgcolor: 'rgba(255,255,255,0.87)',
                   borderRadius: 3,
                 }}}
             >

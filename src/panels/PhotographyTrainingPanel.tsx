@@ -56,7 +56,7 @@ import {
   Cancel,
   School,
   CameraAlt,
-  Aperture,
+  Camera,
   ShutterSpeed,
   Iso,
   GridView,
@@ -101,7 +101,19 @@ import {
   kelvinToHex,
   getColorTemperatureRange,
   QuizQuestion,
-} from '../../core/data/photographyEducation';
+} from '../core/data/photographyEducation';
+import type {
+  WhiteBalancePreset,
+  ColorTemperatureRange,
+  ExposureLesson,
+  CompositionRule,
+  SchoolPhotographySection,
+  FocalLengthEntry,
+  LightAngle,
+  LightHeight,
+  DistanceGuideline,
+  EquipmentSetup,
+} from '../core/data/photographyEducation';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -135,7 +147,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   FlashOn: <FlashOn />,
   Tune: <Tune />,
   AutoMode: <AutoMode />,
-  Aperture: <Aperture />,
+  Aperture: <Camera />,
   ShutterSpeed: <ShutterSpeed />,
   Iso: <Iso />,
   GridView: <GridView />,
@@ -296,7 +308,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
             Color Temperature Scale (Kelvin)
           </Typography>
           <Box sx={{ display: 'flex', mb: 3, borderRadius: 1, overflow: 'hidden' }}>
-            {COLOR_TEMPERATURE_SCALE.map((range) => (
+            {COLOR_TEMPERATURE_SCALE.map((range: ColorTemperatureRange) => (
               <Tooltip key={range.name} title={`${range.min}-${range.max}K: ${range.examples.join(', ')}`}>
                 <Box
                   sx={{
@@ -330,8 +342,8 @@ export const PhotographyTrainingPanel: React.FC = () => {
             Camera White Balance Presets
           </Typography>
           <Grid container spacing={2}>
-            {WHITE_BALANCE_PRESETS.map((preset) => (
-              <Grid item xs={12} sm={6} key={preset.id}>
+            {WHITE_BALANCE_PRESETS.map((preset: WhiteBalancePreset) => (
+              <Grid size={{ xs: 12, sm: 6 }} key={preset.id}>
                 <Card
                   sx={{
                     cursor: 'pointer','&:hover': { bgcolor: 'action.hover' }}}
@@ -359,7 +371,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
                       {preset.description}
                     </Typography>
                     <Stack direction="row" spacing={0.5} sx={{ mt: 1, flexWrap: 'wrap', gap: 0.5 }}>
-                      {preset.scenarios.slice(0, 3).map((s) => (
+                      {preset.scenarios.slice(0, 3).map((s: string) => (
                         <Chip key={s} label={s} size="small" variant="outlined" />
                       ))}
                     </Stack>
@@ -379,7 +391,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
             Different focal lengths create different perspectives. Choose the right one for your shot.
           </Typography>
 
-          {FOCAL_LENGTH_GUIDE.map((fl) => (
+          {FOCAL_LENGTH_GUIDE.map((fl: FocalLengthEntry) => (
             <Accordion key={fl.id}>
               <AccordionSummary expandIcon={<ExpandMore />}>
                 <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%' }}>
@@ -396,22 +408,22 @@ export const PhotographyTrainingPanel: React.FC = () => {
               </AccordionSummary>
               <AccordionDetails>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Typography variant="subtitle2" color="success.main" gutterBottom>
                       Best For:
                     </Typography>
                     <Stack direction="row" flexWrap="wrap" gap={0.5}>
-                      {fl.bestFor.map((item) => (
+                      {fl.bestFor.map((item: string) => (
                         <Chip key={item} label={item} size="small" variant="outlined" color="success" />
                       ))}
                     </Stack>
                   </Grid>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Typography variant="subtitle2" gutterBottom>
                       Characteristics:
                     </Typography>
                     <List dense>
-                      {fl.characteristics.map((c, i) => (
+                      {fl.characteristics.map((c: string, i: number) => (
                         <ListItem key={i} sx={{ py: 0 }}>
                           <ListItemIcon sx={{ minWidth: 24 }}>
                             <CheckCircle fontSize="small" color="primary" />
@@ -424,13 +436,13 @@ export const PhotographyTrainingPanel: React.FC = () => {
                 </Grid>
                 <Divider sx={{ my: 2 }} />
                 <Grid container spacing={2}>
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <Paper sx={{ p: 1.5, bgcolor: 'action.hover' }}>
                       <Typography variant="caption" color="text.secondary">Distortion</Typography>
                       <Typography variant="body2">{fl.distortion}</Typography>
                     </Paper>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <Paper sx={{ p: 1.5, bgcolor: 'action.hover' }}>
                       <Typography variant="caption" color="text.secondary">Subject Distance</Typography>
                       <Typography variant="body2">{fl.subjectDistance}</Typography>
@@ -461,7 +473,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
           <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
             Horizontal Light Positions
           </Typography>
-          {LIGHT_ANGLES.map((angle) => (
+          {LIGHT_ANGLES.map((angle: LightAngle) => (
             <Card key={angle.id} sx={{ mb: 2 }}>
               <CardContent>
                 <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
@@ -481,18 +493,18 @@ export const PhotographyTrainingPanel: React.FC = () => {
                   <strong>Effect:</strong> {angle.effect}
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <Typography variant="caption" color="success.main" fontWeight={600}>Best For:</Typography>
                     <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
-                      {angle.bestFor.map((item) => (
+                      {angle.bestFor.map((item: string) => (
                         <Chip key={item} label={item} size="small" variant="outlined" />
                       ))}
                     </Stack>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <Typography variant="caption" color="error.main" fontWeight={600}>Avoid:</Typography>
                     <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
-                      {angle.avoid.map((item) => (
+                      {angle.avoid.map((item: string) => (
                         <Chip key={item} label={item} size="small" variant="outlined" color="error" />
                       ))}
                     </Stack>
@@ -508,7 +520,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
             Light Height Positions
           </Typography>
           <Paper sx={{ p: 2 }}>
-            {LIGHT_HEIGHTS.map((height, index) => (
+            {LIGHT_HEIGHTS.map((height: LightHeight, index: number) => (
               <Box key={height.position} sx={{ mb: index < LIGHT_HEIGHTS.length - 1 ? 2 : 0 }}>
                 <Stack direction="row" spacing={2} alignItems="center">
                   <Chip 
@@ -544,7 +556,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
             Proper distances between subject, background, lights, and camera are crucial for professional results.
           </Typography>
 
-          {DISTANCE_GUIDELINES.map((guide) => (
+          {DISTANCE_GUIDELINES.map((guide: DistanceGuideline) => (
             <Accordion key={guide.id} defaultExpanded={guide.id === 'headshot'}>
               <AccordionSummary expandIcon={<ExpandMore />}>
                 <Stack direction="row" spacing={2} alignItems="center">
@@ -557,17 +569,17 @@ export const PhotographyTrainingPanel: React.FC = () => {
               <AccordionDetails>
                 <Grid container spacing={2}>
                   {/* Subject to Background */}
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Paper sx={{ p: 2, bgcolor: 'primary.dark', color: 'white' }}>
                       <Typography variant="subtitle2" gutterBottom>
                         Subject to Background
                       </Typography>
                       <Grid container spacing={2}>
-                        <Grid item xs={6}>
+                        <Grid size={{ xs: 6 }}>
                           <Typography variant="caption">Minimum</Typography>
                           <Typography variant="h6">{guide.subjectToBackground.minimum}</Typography>
                         </Grid>
-                        <Grid item xs={6}>
+                        <Grid size={{ xs: 6 }}>
                           <Typography variant="caption">Recommended</Typography>
                           <Typography variant="h6" color="success.light">{guide.subjectToBackground.recommended}</Typography>
                         </Grid>
@@ -579,7 +591,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
                   </Grid>
 
                   {/* Light to Subject */}
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Paper sx={{ p: 2, bgcolor: 'warning.dark', color: 'white' }}>
                       <Typography variant="subtitle2" gutterBottom>
                         Key Light to Subject
@@ -594,7 +606,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
                   </Grid>
 
                   {/* Camera to Subject */}
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Paper sx={{ p: 2, bgcolor: 'info.dark', color: 'white' }}>
                       <Typography variant="subtitle2" gutterBottom>
                         Camera to Subject
@@ -614,7 +626,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
                     Pro Tips
                   </Typography>
                   <List dense>
-                    {guide.tips.map((tip, i) => (
+                    {guide.tips.map((tip: string, i: number) => (
                       <ListItem key={i} sx={{ py: 0 }}>
                         <ListItemIcon sx={{ minWidth: 24 }}>
                           <CheckCircle fontSize="small" color="success" />
@@ -638,7 +650,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
             Work with what you have! Here's how to get professional results with different equipment combinations.
           </Typography>
 
-          {EQUIPMENT_SETUPS.map((setup) => (
+          {EQUIPMENT_SETUPS.map((setup: EquipmentSetup) => (
             <Accordion key={setup.id} defaultExpanded={setup.id === 'one_light_reflector'}>
               <AccordionSummary expandIcon={<ExpandMore />}>
                 <Stack direction="row" spacing={2} alignItems="center">
@@ -661,14 +673,14 @@ export const PhotographyTrainingPanel: React.FC = () => {
                 <Paper sx={{ p: 2, mb: 2, bgcolor: 'action.hover' }}>
                   <Typography variant="subtitle2" gutterBottom>Equipment Needed:</Typography>
                   <Stack direction="row" flexWrap="wrap" gap={0.5}>
-                    {setup.equipment.map((eq) => (
+                    {setup.equipment.map((eq: string) => (
                       <Chip key={eq} label={eq} size="small" color="primary" />
                     ))}
                   </Stack>
                 </Paper>
 
                 <Grid container spacing={2} sx={{ mb: 2 }}>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Paper sx={{ p: 2, height: '100%' }}>
                       <Typography variant="subtitle2" color="warning.main" gutterBottom>
                         Key Light Position
@@ -676,7 +688,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
                       <Typography variant="body2">{setup.setup.keyPosition}</Typography>
                     </Paper>
                   </Grid>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Paper sx={{ p: 2, height: '100%' }}>
                       <Typography variant="subtitle2" color="info.main" gutterBottom>
                         Fill Position
@@ -685,7 +697,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
                     </Paper>
                   </Grid>
                   {setup.setup.rimLight && (
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <Paper sx={{ p: 2 }}>
                         <Typography variant="subtitle2" color="secondary.main" gutterBottom>
                           Rim/Hair Light
@@ -697,18 +709,18 @@ export const PhotographyTrainingPanel: React.FC = () => {
                 </Grid>
 
                 <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Typography variant="subtitle2" color="success.main" gutterBottom>Best For:</Typography>
                     <Stack direction="row" flexWrap="wrap" gap={0.5}>
-                      {setup.bestFor.map((item) => (
+                      {setup.bestFor.map((item: string) => (
                         <Chip key={item} label={item} size="small" variant="outlined" color="success" />
                       ))}
                     </Stack>
                   </Grid>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Typography variant="subtitle2" color="error.main" gutterBottom>Limitations:</Typography>
                     <List dense>
-                      {setup.limitations.map((item, i) => (
+                      {setup.limitations.map((item: string, i: number) => (
                         <ListItem key={i} sx={{ py: 0 }}>
                           <ListItemIcon sx={{ minWidth: 20 }}>
                             <Warning fontSize="small" color="error" />
@@ -727,7 +739,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
                   Pro Tips
                 </Typography>
                 <List dense>
-                  {setup.tips.map((tip, i) => (
+                  {setup.tips.map((tip: string, i: number) => (
                     <ListItem key={i} sx={{ py: 0 }}>
                       <ListItemIcon sx={{ minWidth: 24 }}>
                         <CheckCircle fontSize="small" color="primary" />
@@ -758,7 +770,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
             how light affects your images.
           </Typography>
 
-          {EXPOSURE_LESSONS.map((lesson) => (
+          {EXPOSURE_LESSONS.map((lesson: ExposureLesson) => (
             <Accordion key={lesson.id} defaultExpanded={lesson.id === 'aperture'}>
               <AccordionSummary expandIcon={<ExpandMore />}>
                 <Stack direction="row" spacing={2} alignItems="center">
@@ -780,11 +792,11 @@ export const PhotographyTrainingPanel: React.FC = () => {
 
                 <Paper sx={{ p: 2, mb: 2, bgcolor: 'action.hover' }}>
                   <Grid container spacing={2}>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Typography variant="caption" color="text.secondary">Effect</Typography>
                       <Typography variant="body2">{lesson.settings.effect}</Typography>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Typography variant="caption" color="text.secondary">Trade-off</Typography>
                       <Typography variant="body2">{lesson.settings.tradeoff}</Typography>
                     </Grid>
@@ -796,7 +808,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
                   Tips
                 </Typography>
                 <List dense>
-                  {lesson.tips.map((tip, i) => (
+                  {lesson.tips.map((tip: string, i: number) => (
                     <ListItem key={i} sx={{ py: 0 }}>
                       <ListItemIcon sx={{ minWidth: 32 }}>
                         <CheckCircle color="success" fontSize="small" />
@@ -811,7 +823,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
                   Practice Exercises
                 </Typography>
                 <List dense>
-                  {lesson.exercises.map((ex, i) => (
+                  {lesson.exercises.map((ex: string, i: number) => (
                     <ListItem key={i} sx={{ py: 0 }}>
                       <ListItemIcon sx={{ minWidth: 32 }}>
                         <Typography variant="body2" color="primary" fontWeight={700}>
@@ -836,7 +848,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
             Master these composition techniques to create more engaging images.
           </Typography>
 
-          {COMPOSITION_RULES.map((rule) => (
+          {COMPOSITION_RULES.map((rule: CompositionRule) => (
             <Accordion key={rule.id}>
               <AccordionSummary expandIcon={<ExpandMore />}>
                 <Stack direction="row" spacing={2} alignItems="center">
@@ -854,7 +866,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
                   How to apply:
                 </Typography>
                 <List dense>
-                  {rule.howTo.map((item, i) => (
+                  {rule.howTo.map((item: string, i: number) => (
                     <ListItem key={i} sx={{ py: 0 }}>
                       <ListItemIcon sx={{ minWidth: 32 }}>
                         <CheckCircle color="primary" fontSize="small" />
@@ -864,7 +876,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
                   ))}
                 </List>
                 <Stack direction="row" spacing={0.5} sx={{ mt: 1, flexWrap: 'wrap', gap: 0.5 }}>
-                  {rule.examples.map((ex) => (
+                  {rule.examples.map((ex: string) => (
                     <Chip key={ex} label={ex} size="small" variant="outlined" />
                   ))}
                 </Stack>
@@ -882,7 +894,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
             Professional tips for high-volume school portrait sessions.
           </Typography>
 
-          {SCHOOL_PHOTOGRAPHY_TIPS.map((section) => (
+          {SCHOOL_PHOTOGRAPHY_TIPS.map((section: SchoolPhotographySection) => (
             <Accordion key={section.id}>
               <AccordionSummary expandIcon={<ExpandMore />}>
                 <Stack direction="row" spacing={2} alignItems="center">
@@ -907,7 +919,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
                   {section.description}
                 </Typography>
                 <List dense>
-                  {section.tips.map((tip, i) => (
+                  {section.tips.map((tip: string, i: number) => (
                     <ListItem key={i} sx={{ py: 0.5 }}>
                       <ListItemIcon sx={{ minWidth: 32 }}>
                         <CheckCircle color="success" fontSize="small" />
@@ -987,7 +999,7 @@ export const PhotographyTrainingPanel: React.FC = () => {
                   value={selectedAnswer}
                   onChange={(e) => handleAnswerSelect(parseInt(e.target.value))}
                 >
-                  {currentQuestion.options.map((option, index) => (
+                  {currentQuestion.options.map((option: string, index: number) => (
                     <FormControlLabel
                       key={index}
                       value={index}

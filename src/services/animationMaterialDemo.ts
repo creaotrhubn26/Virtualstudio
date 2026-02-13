@@ -10,7 +10,7 @@ import { AnimationMaterialController } from './animationMaterialController';
 export class AnimationMaterialDemo {
   private store = useSkeletalAnimationStore;
   private scene: BABYLON.Scene;
-  private updateLoop: () => void;
+  private updateLoop: (() => void) | null = null;
 
   constructor(scene: BABYLON.Scene) {
     this.scene = scene;
@@ -169,13 +169,22 @@ export class AnimationMaterialDemo {
    * This should be called every frame
    */
   private setupUpdateLoop(): void {
-    const materialController = this.store.getState().materialController;
-    if (!materialController) return;
+    if (this.updateLoop) {
+      this.scene.onBeforeRenderObservable.removeCallback(this.updateLoop);
+    }
 
-    const rigs = this.store.getState().rigs;
-    rigs.forEach((rig) => {
-      materialController.update(rig.id, 1 / 60); // Assuming 60 FPS
-    });
+    this.updateLoop = () => {
+      const materialController = this.store.getState().materialController;
+      if (!materialController) return;
+
+      const rigs = this.store.getState().rigs;
+      const deltaTime = this.scene.getEngine().getDeltaTime() / 1000;
+      rigs.forEach((rig) => {
+        materialController.update(rig.id, deltaTime);
+      });
+    };
+
+    this.scene.onBeforeRenderObservable.add(this.updateLoop);
   }
 
   /**
@@ -184,6 +193,13 @@ export class AnimationMaterialDemo {
   setIntegrationEnabled(enabled: boolean): void {
     if (enabled) {
       this.store.getState().initializeMaterialController(this.scene);
+      this.setupUpdateLoop();
+      return;
+    }
+
+    if (this.updateLoop) {
+      this.scene.onBeforeRenderObservable.removeCallback(this.updateLoop);
+      this.updateLoop = null;
     }
   }
 

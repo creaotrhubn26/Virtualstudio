@@ -8,7 +8,7 @@
  * - SSAO settings
  */
 
-import React from 'react';
+import type { FC } from 'react';
 import {
   Box,
   Typography,
@@ -38,7 +38,7 @@ interface GlobalIlluminationPanelProps {
   onSSAORadiusChange: (radius: number) => void;
 }
 
-export const GlobalIlluminationPanel: React.FC<GlobalIlluminationPanelProps> = ({
+export const GlobalIlluminationPanel: FC<GlobalIlluminationPanelProps> = ({
   enableGI,
   giIntensity,
   giBounces,

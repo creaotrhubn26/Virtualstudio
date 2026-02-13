@@ -131,7 +131,12 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
 
   const saveNotes = useCallback((updatedNotes: Note[]) => {
     setNotes(updatedNotes);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedNotes));
+    // Only save to localStorage as backup - database is the primary source
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedNotes));
+    } catch (e) {
+      console.warn('Failed to backup notes to localStorage:', e);
+    }
   }, []);
 
   const handleCreate = () => {

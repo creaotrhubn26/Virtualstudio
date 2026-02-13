@@ -9,7 +9,7 @@
  * - Keyboard shortcut registration
  */
 
-import React, {
+import {
   createContext,
   useContext,
   useState,

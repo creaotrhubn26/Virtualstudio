@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode, useCallback, useMemo } from 'react';
+import { createContext, useContext, ReactNode, useCallback, useMemo } from 'react';
 
 interface GestureConfig {
   pinchZoomEnabled: boolean;

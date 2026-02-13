@@ -1720,7 +1720,9 @@ class ProductionWorkflowService {
   }
 
   async getTodayTakes(shootingDayId: string): Promise<Take[]> {
-    return this.takes;
+    const day = this.shootingDaysCache.find(d => d.id === shootingDayId);
+    if (!day) return [];
+    return this.takes.filter(take => day.scenes.includes(take.sceneId));
   }
 
   async circleTake(takeId: string, circledBy: string): Promise<Take | null> {

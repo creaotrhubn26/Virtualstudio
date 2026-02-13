@@ -20,7 +20,11 @@ const APERTURE_VALUES = [1.4, 2, 2.8, 4, 5.6, 8, 11, 16, 22];
 const ISO_VALUES = [100, 200, 400, 800, 1600, 3200, 6400];
 const SHUTTER_VALUES = [1/1000, 1/500, 1/250, 1/125, 1/60, 1/30, 1/15, 1/8];
 
-export function CameraControls({ settings, onChange, onReset }: CameraControlsProps) {
+export const CameraControls = React.memo(function CameraControls({
+  settings,
+  onChange,
+  onReset,
+}: CameraControlsProps) {
   const handleApertureChange = (_: Event, value: number | number[]) => {
     const idx = typeof value === 'number' ? value : value[0];
     onChange({ ...settings, aperture: APERTURE_VALUES[idx] || 2.8 });
@@ -115,4 +119,4 @@ export function CameraControls({ settings, onChange, onReset }: CameraControlsPr
       </Stack>
     </Box>
   );
-}
+});

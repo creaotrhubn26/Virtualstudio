@@ -24,7 +24,7 @@ def run_migration():
         cur.execute("""
             CREATE TABLE IF NOT EXISTS casting_equipment (
                 id VARCHAR(255) PRIMARY KEY,
-                project_id VARCHAR(255) NOT NULL,
+                project_id VARCHAR(255),
                 name VARCHAR(255) NOT NULL,
                 description TEXT,
                 category VARCHAR(100),
@@ -39,6 +39,7 @@ def run_migration():
                 notes TEXT,
                 image_url TEXT,
                 status VARCHAR(50) DEFAULT 'available',
+                is_global BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )

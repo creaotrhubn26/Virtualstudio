@@ -28,7 +28,7 @@ export const sceneComposerAPI = {
     // In production: return fetch(`/api/scenes/${id}`).then(r => r.json());
     return {
       success: false,
-      error: 'API not implemented - using local storage',
+      error: `API not implemented - using local storage (scene ${id})`,
     };
   },
 
@@ -39,7 +39,7 @@ export const sceneComposerAPI = {
     // In production: return fetch('/api/scenes', { method: 'POST', body: JSON.stringify(scene) }).then(r => r.json());
     return {
       success: false,
-      error: 'API not implemented - using local storage',
+      error: `API not implemented - using local storage (scene ${scene.id})`,
     };
   },
 
@@ -50,7 +50,7 @@ export const sceneComposerAPI = {
     // In production: return fetch(`/api/scenes/${id}`, { method: 'PUT', body: JSON.stringify(scene) }).then(r => r.json());
     return {
       success: false,
-      error: 'API not implemented - using local storage',
+      error: `API not implemented - using local storage (scene ${id})`,
     };
   },
 
@@ -61,7 +61,7 @@ export const sceneComposerAPI = {
     // In production: return fetch(`/api/scenes/${id}`, { method: 'DELETE' }).then(r => r.json());
     return {
       success: false,
-      error: 'API not implemented - using local storage',
+      error: `API not implemented - using local storage (scene ${id})`,
     };
   },
 };

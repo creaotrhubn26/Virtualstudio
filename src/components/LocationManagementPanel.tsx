@@ -15,6 +15,7 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  InputAdornment,
   Chip,
   Stack,
   Grid,
@@ -40,7 +41,6 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  LocationOn as LocationIcon,
   Phone as PhoneIcon,
   Search as SearchIcon,
   FilterList as FilterIcon,
@@ -55,10 +55,8 @@ import {
   ExpandLess as CollapseIcon,
   FileDownload as ExportIcon,
   FileCopy as DuplicateIcon,
-  BarChart as StatsIcon,
   Map as MapIcon,
   Place as PlaceIcon,
-  Analytics as AnalyticsIcon,
   Assessment as AssessmentIcon,
   Person as PersonIcon,
   Cancel as CancelIcon,
@@ -66,6 +64,16 @@ import {
   Explore as ExploreIcon,
   Group as GroupIcon,
 } from '@mui/icons-material';
+import { 
+  LocationsIcon as LocationIcon, 
+  StatsIcon, 
+  AnalyticsIcon,
+  PersonNameIcon,
+  AddressIcon,
+  CapacityIcon,
+  NotesIcon,
+  PhoneIcon as CustomPhoneIcon,
+} from './icons/CastingIcons';
 import { Location } from '../core/models/casting';
 import { castingService } from '../services/castingService';
 import { externalDataService } from '../services/ExternalDataService';
@@ -852,7 +860,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
             </Typography>
             <Typography
               sx={{
-                color: 'rgba(255,255,255,0.6)',
+                color: 'rgba(255,255,255,0.87)',
                 fontSize: { xs: '0.8rem', sm: '0.875rem', md: '0.85rem', lg: '0.9rem', xl: '1rem' },
                 fontWeight: 500,
                 mt: 0.25,
@@ -885,7 +893,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
               sx={{
                 minHeight: TOUCH_TARGET_SIZE,
                 minWidth: TOUCH_TARGET_SIZE,
-                color: 'rgba(255,255,255,0.7)',
+                color: 'rgba(255,255,255,0.87)',
                 borderColor: 'rgba(255,255,255,0.2)',
                 fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                 px: { xs: 1, sm: 2, md: 1.75, lg: 2, xl: 2.5 },
@@ -958,35 +966,47 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
           aria-label="Statistikk over lokasjoner"
         >
           <Box sx={{ textAlign: 'center', p: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <LocationIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#4caf50' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#4caf50', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem', md: '1.6rem', lg: '1.85rem', xl: '2.5rem' } }}>
               {stats.total}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Totalt</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Totalt</Typography>
           </Box>
           <Box sx={{ textAlign: 'center', p: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <GroupIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#2196f3' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#2196f3', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem', md: '1.6rem', lg: '1.85rem', xl: '2.5rem' } }}>
               {stats.totalCapacity}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Total kapasitet</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Total kapasitet</Typography>
           </Box>
           <Box sx={{ textAlign: 'center', p: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <MapIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#ff9800' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#ff9800', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem', md: '1.6rem', lg: '1.85rem', xl: '2.5rem' } }}>
               {stats.withCoordinates}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Med koordinater</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Med koordinater</Typography>
           </Box>
           <Box sx={{ textAlign: 'center', p: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <StarIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#ffc107' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#ffc107', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem', md: '1.6rem', lg: '1.85rem', xl: '2.5rem' } }}>
               {stats.favorites}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Favoritter</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Favoritter</Typography>
           </Box>
           {!isMobile && Object.entries(stats.typeCount).slice(0, 3).map(([type, count]) => (
             <Box key={type} sx={{ textAlign: 'center', p: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
               <Typography variant="h5" sx={{ color: getTypeColor(type as Location['type']), fontWeight: 600, fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.375rem', lg: '1.625rem', xl: '2rem' } }}>
                 {count}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
                 {getTypeLabel(type as Location['type'])}
               </Typography>
             </Box>
@@ -1011,7 +1031,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
           size="small"
           slotProps={{
             input: {
-              startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)', mr: 1, fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />,
+              startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.87)', mr: 1, fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />,
               sx: { minHeight: TOUCH_TARGET_SIZE },
             },
             htmlInput: { 'aria-label': 'Søk i lokasjoner' },
@@ -1123,7 +1143,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
           }}
         >
           <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 150, md: 135, lg: 150, xl: 180 } }}>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>Filtrer på type</InputLabel>
+            <InputLabel sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>Filtrer på type</InputLabel>
             <Select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as Location['type'] | 'all')}
@@ -1191,7 +1211,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
       {locations.length === 0 ? (
         <Box
           role="status"
-          sx={{ textAlign: 'center', py: { xs: 4, sm: 8 }, color: 'rgba(255,255,255,0.5)' }}
+          sx={{ textAlign: 'center', py: { xs: 4, sm: 8 }, color: 'rgba(255,255,255,0.87)' }}
         >
           <LocationIcon sx={{ fontSize: { xs: 60, sm: 70, md: 65, lg: 80, xl: 104 }, mb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, opacity: 0.3 }} />
           <Typography variant="body1" sx={{ fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.25rem' } }}>Ingen lokasjoner ennå</Typography>
@@ -1200,7 +1220,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
           </Typography>
         </Box>
       ) : filteredAndSortedLocations.length === 0 ? (
-        <Box role="status" sx={{ textAlign: 'center', py: 6, color: 'rgba(255,255,255,0.5)' }}>
+        <Box role="status" sx={{ textAlign: 'center', py: 6, color: 'rgba(255,255,255,0.87)' }}>
           <SearchIcon sx={{ fontSize: { xs: 48, sm: 56, md: 52, lg: 64, xl: 80 }, mb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, opacity: 0.3 }} />
           <Typography variant="body1" sx={{ fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.25rem' } }}>Ingen treff på søket</Typography>
         </Box>
@@ -1225,7 +1245,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                     indeterminate={selectedIds.size > 0 && selectedIds.size < filteredAndSortedLocations.length}
                     onChange={handleSelectAll}
                     aria-label="Velg alle lokasjoner"
-                    sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-checked': { color: '#4caf50' } }}
+                    sx={{ color: 'rgba(255,255,255,0.87)', '&.Mui-checked': { color: '#4caf50' } }}
                   />
                 </TableCell>
                 <TableCell sx={{ py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
@@ -1285,7 +1305,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                     <Checkbox
                       checked={selectedIds.has(location.id)}
                       onChange={() => handleToggleSelect(location.id)}
-                      sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-checked': { color: '#4caf50' } }}
+                      sx={{ color: 'rgba(255,255,255,0.87)', '&.Mui-checked': { color: '#4caf50' } }}
                     />
                   </TableCell>
                   <TableCell sx={{ py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
@@ -1308,7 +1328,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                   </TableCell>
                   <TableCell sx={{ py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 } }}>
-                      <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
                         {location.address || '-'}
                       </Typography>
                       {location.address && (
@@ -1325,12 +1345,12 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                     </Box>
                   </TableCell>
                   <TableCell sx={{ py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
                       {location.capacity || '-'}
                     </Typography>
                   </TableCell>
                   <TableCell sx={{ py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
                       {location.assignedScenes.length}
                     </Typography>
                   </TableCell>
@@ -1345,7 +1365,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Dupliser">
-                        <IconButton onClick={() => handleDuplicate(location)} sx={{ color: 'rgba(255,255,255,0.5)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
+                        <IconButton onClick={() => handleDuplicate(location)} sx={{ color: 'rgba(255,255,255,0.87)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
                           <DuplicateIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />
                         </IconButton>
                       </Tooltip>
@@ -1408,7 +1428,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                         onChange={() => handleToggleSelect(location.id)}
                         sx={{
                           p: 0.5,
-                          color: 'rgba(255,255,255,0.5)',
+                          color: 'rgba(255,255,255,0.87)',
                           '&.Mui-checked': { color: '#4caf50' },
                         }}
                       />
@@ -1519,7 +1539,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         <Typography
                           sx={{
-                            color: 'rgba(255,255,255,0.6)',
+                            color: 'rgba(255,255,255,0.87)',
                             fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' },
                             fontWeight: 600,
                             textTransform: 'uppercase',
@@ -1621,7 +1641,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                     <Box sx={{ mb: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 } }}>
                       <Typography
                         sx={{
-                          color: 'rgba(255,255,255,0.5)',
+                          color: 'rgba(255,255,255,0.87)',
                           fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' },
                           fontWeight: 600,
                           textTransform: 'uppercase',
@@ -1713,7 +1733,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                         >
                           <Typography
                             sx={{
-                              color: 'rgba(255,255,255,0.5)',
+                              color: 'rgba(255,255,255,0.87)',
                               fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' },
                               fontWeight: 600,
                               textTransform: 'uppercase',
@@ -1756,7 +1776,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                                 <PersonIcon sx={{ fontSize: { xs: 20, sm: 22, md: 21, lg: 24, xl: 28 }, color: '#4dd0e1' }} />
                               </Box>
                               <Box>
-                                <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.68rem', lg: '0.75rem', xl: '0.85rem' }, fontWeight: 600, textTransform: 'uppercase' }}>
+                                <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.68rem', lg: '0.75rem', xl: '0.85rem' }, fontWeight: 600, textTransform: 'uppercase' }}>
                                   Kontaktperson
                                 </Typography>
                                 <Typography sx={{ color: '#fff', fontSize: { xs: '0.9rem', sm: '0.95rem', md: '0.925rem', lg: '1rem', xl: '1.125rem' }, fontWeight: 600 }}>
@@ -1791,7 +1811,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                                 <PhoneIcon sx={{ fontSize: { xs: 20, sm: 22, md: 21, lg: 24, xl: 28 }, color: '#a78bfa' }} />
                               </Box>
                               <Box>
-                                <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.68rem', lg: '0.75rem', xl: '0.85rem' }, fontWeight: 600, textTransform: 'uppercase' }}>
+                                <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.68rem', lg: '0.75rem', xl: '0.85rem' }, fontWeight: 600, textTransform: 'uppercase' }}>
                                   Telefon
                                 </Typography>
                                 <Typography
@@ -1902,7 +1922,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                           sx={{
                             minWidth: TOUCH_TARGET_SIZE,
                             minHeight: TOUCH_TARGET_SIZE,
-                            color: 'rgba(255,255,255,0.6)',
+                            color: 'rgba(255,255,255,0.87)',
                             '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
                             ...focusVisibleStyles,
                           }}
@@ -1988,6 +2008,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
         maxWidth="sm"
         fullWidth
         fullScreen={isMobile}
+        container={() => document.body}
         aria-labelledby={dialogTitleId}
         aria-describedby={dialogDescId}
         TransitionComponent={Grow}
@@ -2007,11 +2028,15 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
               borderRadius: { xs: 0, sm: 2 },
               willChange: 'transform, opacity',
               transformOrigin: 'center center',
+              zIndex: 100000,
             },
           },
         }}
         sx={{
+          zIndex: 100000,
           '& .MuiBackdrop-root': {
+            zIndex: 99998,
+            bgcolor: 'rgba(0,0,0,0.8)',
             willChange: 'opacity',
           },
         }}
@@ -2033,13 +2058,13 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
             {editingLocation ? 'Rediger lokasjon' : 'Ny lokasjon'}
           </Typography>
           {isMobile && (
-            <IconButton onClick={handleCloseDialog} aria-label="Lukk dialog" sx={{ color: 'rgba(255,255,255,0.7)', mr: -1, minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
+            <IconButton onClick={handleCloseDialog} aria-label="Lukk dialog" sx={{ color: 'rgba(255,255,255,0.87)', mr: -1, minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
               <CloseIcon sx={{ fontSize: { xs: 20, sm: 24, md: 22, lg: 26, xl: 30 } }} />
             </IconButton>
           )}
         </DialogTitle>
         <DialogContent sx={{ pt: { xs: 2, sm: 3, md: 2.5, lg: 3, xl: 3.5 }, px: { xs: 2, sm: 3, md: 2.75, lg: 3, xl: 3.5 }, pb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <Typography id={dialogDescId} variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
+          <Typography id={dialogDescId} variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
             Fyll ut informasjon om lokasjonen. Felter merket med * er påkrevd.
           </Typography>
           <Stack spacing={{ xs: 2.5, sm: 3, md: 2.75, lg: 3, xl: 3.5 }}>
@@ -2049,6 +2074,13 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
               value={formData.name || ''}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <PersonNameIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   color: '#fff',
@@ -2061,7 +2093,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                   },
                 },
                 '& .MuiInputLabel-root': { 
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                 },
                 '& .MuiInputLabel-root.Mui-focused': { color: '#4caf50' },
@@ -2074,6 +2106,13 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                 fullWidth
                 value={formData.address || ''}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <AddressIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                    </InputAdornment>
+                  ),
+                }}
                 sx={{
                   mb: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 },
                   '& .MuiOutlinedInput-root': {
@@ -2086,7 +2125,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                     },
                   },
                   '& .MuiInputLabel-root': { 
-                    color: 'rgba(255,255,255,0.7)',
+                    color: 'rgba(255,255,255,0.87)',
                     fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                   },
                 }}
@@ -2116,11 +2155,27 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
             </Box>
 
             <FormControl fullWidth>
-              <InputLabel sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>Type</InputLabel>
+              <InputLabel sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>Type</InputLabel>
               <Select
                 value={formData.type || 'indoor'}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value as Location['type'] })}
                 label="Type"
+                MenuProps={{
+                  sx: { zIndex: 100001 },
+                  slotProps: {
+                    paper: {
+                      sx: {
+                        bgcolor: '#1c2128',
+                        color: '#fff',
+                        maxHeight: 300,
+                        '& .MuiMenuItem-root': {
+                          '&:hover': { bgcolor: 'rgba(76,175,80,0.1)' },
+                          '&.Mui-selected': { bgcolor: 'rgba(76,175,80,0.2)' },
+                        },
+                      },
+                    },
+                  },
+                }}
                 sx={{
                   color: '#fff',
                   minHeight: { xs: 40, sm: 44, md: 48, lg: 52, xl: 60 },
@@ -2145,6 +2200,13 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
               type="number"
               value={formData.capacity || ''}
               onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || undefined })}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <CapacityIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   color: '#fff',
@@ -2156,14 +2218,14 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                   },
                 },
                 '& .MuiInputLabel-root': { 
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                 },
               }}
             />
 
             <Box>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
                 Fasiliteter:
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 } }}>
@@ -2179,7 +2241,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                     }
                     label={getFacilityLabel(facility)}
                     sx={{ 
-                      color: 'rgba(255,255,255,0.7)', 
+                      color: 'rgba(255,255,255,0.87)', 
                       minHeight: TOUCH_TARGET_SIZE,
                       '& .MuiFormControlLabel-label': {
                         fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
@@ -2206,7 +2268,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                   },
                 },
                 '& .MuiInputLabel-root': { 
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                 },
               }}
@@ -2228,7 +2290,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                   },
                 },
                 '& .MuiInputLabel-root': { 
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                 },
               }}
@@ -2251,7 +2313,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
                   },
                 },
                 '& .MuiInputLabel-root': { 
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                 },
               }}
@@ -2274,7 +2336,7 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
             startIcon={<CancelIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />}
             fullWidth={isMobile}
             sx={{ 
-              color: 'rgba(255,255,255,0.7)', 
+              color: 'rgba(255,255,255,0.87)', 
               minHeight: TOUCH_TARGET_SIZE,
               fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
               px: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 },

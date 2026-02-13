@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FC, type ReactNode, type ReactElement } from 'react';
 import {
   Box,
   Typography,
@@ -25,8 +25,6 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
-import LocalOfferIcon from '@mui/icons-material/LocalOffer';
-import DescriptionIcon from '@mui/icons-material/Description';
 import SendIcon from '@mui/icons-material/Send';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -35,6 +33,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import DrawIcon from '@mui/icons-material/Draw';
 import AddIcon from '@mui/icons-material/Add';
+import { OffersIcon as LocalOfferIcon, ContractsIcon as DescriptionIcon } from './icons/CastingIcons';
 import { useSnackbar } from 'notistack';
 import {
   offersApi,
@@ -57,15 +56,15 @@ interface Role {
 
 interface OffersContractsPanelProps {
   projectId: string;
-  candidates: Candidate[];
-  roles: Role[];
+  candidates?: Candidate[];
+  roles?: Role[];
   onCandidateStatusChange?: (candidateId: string, status: string) => void;
 }
 
-const OffersContractsPanel: React.FC<OffersContractsPanelProps> = ({
+const OffersContractsPanel: FC<OffersContractsPanelProps> = ({
   projectId,
-  candidates,
-  roles,
+  candidates = [],
+  roles = [],
   onCandidateStatusChange,
 }) => {
   const { enqueueSnackbar } = useSnackbar();
@@ -220,7 +219,7 @@ const OffersContractsPanel: React.FC<OffersContractsPanelProps> = ({
   };
 
   const getOfferStatusChip = (status: string) => {
-    const configs: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
+    const configs: Record<string, { color: string; label: string; icon: ReactNode }> = {
       pending: { color: '#f59e0b', label: 'Venter', icon: <AccessTimeIcon sx={{ fontSize: 14 }} /> },
       accepted: { color: '#10b981', label: 'Akseptert', icon: <CheckCircleIcon sx={{ fontSize: 14 }} /> },
       declined: { color: '#ef4444', label: 'Avslått', icon: <CancelIcon sx={{ fontSize: 14 }} /> },
@@ -228,7 +227,7 @@ const OffersContractsPanel: React.FC<OffersContractsPanelProps> = ({
     const config = configs[status] || configs.pending;
     return (
       <Chip
-        icon={config.icon as React.ReactElement}
+        icon={config.icon as ReactElement}
         label={config.label}
         size="small"
         sx={{
@@ -301,7 +300,7 @@ const OffersContractsPanel: React.FC<OffersContractsPanelProps> = ({
         onChange={(_, newValue) => setTabValue(newValue)}
         sx={{
           mb: 3,
-          '& .MuiTab-root': { color: 'rgba(255,255,255,0.6)' },
+          '& .MuiTab-root': { color: 'rgba(255,255,255,0.87)' },
           '& .Mui-selected': { color: '#8b5cf6' },
           '& .MuiTabs-indicator': { bgcolor: '#8b5cf6' },
         }}
@@ -319,7 +318,7 @@ const OffersContractsPanel: React.FC<OffersContractsPanelProps> = ({
           ) : (
             <Grid container spacing={2}>
               {offers.map((offer) => (
-                <Grid item xs={12} md={6} lg={4} key={offer.id}>
+                <Grid size={{ xs: 12, md: 6, lg: 4 }} key={offer.id}>
                   <Card sx={{ bgcolor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 2 }}>
                     <CardContent>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -332,7 +331,7 @@ const OffersContractsPanel: React.FC<OffersContractsPanelProps> = ({
                               {offer.candidate_name || 'Ukjent kandidat'}
                             </Typography>
                             {offer.role_name && (
-                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                                 {offer.role_name}
                               </Typography>
                             )}
@@ -344,7 +343,7 @@ const OffersContractsPanel: React.FC<OffersContractsPanelProps> = ({
                       {offer.compensation && (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
                           <AttachMoneyIcon sx={{ fontSize: 16, color: '#10b981' }} />
-                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                             {offer.compensation}
                           </Typography>
                         </Box>
@@ -353,14 +352,14 @@ const OffersContractsPanel: React.FC<OffersContractsPanelProps> = ({
                       {offer.response_deadline && (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
                           <AccessTimeIcon sx={{ fontSize: 16, color: '#f59e0b' }} />
-                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                             Frist: {new Date(offer.response_deadline).toLocaleDateString('nb-NO')}
                           </Typography>
                         </Box>
                       )}
 
                       {offer.notes && (
-                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mt: 1 }}>
+                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mt: 1 }}>
                           {offer.notes}
                         </Typography>
                       )}
@@ -405,7 +404,7 @@ const OffersContractsPanel: React.FC<OffersContractsPanelProps> = ({
           ) : (
             <Grid container spacing={2}>
               {contracts.map((contract) => (
-                <Grid item xs={12} md={6} lg={4} key={contract.id}>
+                <Grid size={{ xs: 12, md: 6, lg: 4 }} key={contract.id}>
                   <Card sx={{ bgcolor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 2 }}>
                     <CardContent>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -418,7 +417,7 @@ const OffersContractsPanel: React.FC<OffersContractsPanelProps> = ({
                               {contract.candidate_name || 'Ukjent kandidat'}
                             </Typography>
                             {contract.contract_type && (
-                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                                 {contract.contract_type}
                               </Typography>
                             )}
@@ -428,13 +427,13 @@ const OffersContractsPanel: React.FC<OffersContractsPanelProps> = ({
                       </Box>
 
                       {contract.role_name && (
-                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
                           Rolle: {contract.role_name}
                         </Typography>
                       )}
 
                       {(contract.start_date || contract.end_date) && (
-                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 1 }}>
+                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
                           {contract.start_date && new Date(contract.start_date).toLocaleDateString('nb-NO')}
                           {contract.start_date && contract.end_date && ' - '}
                           {contract.end_date && new Date(contract.end_date).toLocaleDateString('nb-NO')}
@@ -444,7 +443,7 @@ const OffersContractsPanel: React.FC<OffersContractsPanelProps> = ({
                       {contract.compensation && (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <AttachMoneyIcon sx={{ fontSize: 16, color: '#10b981' }} />
-                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                             {contract.compensation}
                           </Typography>
                         </Box>

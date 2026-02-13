@@ -44,7 +44,6 @@ import {
   PhotoCamera,
   Lightbulb,
   Timer,
-  LocationOn,
   ExpandMore,
   ExpandLess,
   FilterList,
@@ -63,6 +62,7 @@ import {
   DragIndicator,
   Save,
 } from '@mui/icons-material';
+import { LocationsIcon as LocationOn } from './icons/CastingIcons';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import jsPDF from 'jspdf';
 import {
@@ -419,14 +419,14 @@ export const ShootModeView: React.FC<ShootModeViewProps> = ({
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
           {/* Title and scene */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+            <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.87)' }}>
               <Close />
             </IconButton>
             <Box>
               <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>
                 {shotList.sceneName || 'Shot List'}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                 Shoot Mode
               </Typography>
             </Box>
@@ -474,7 +474,7 @@ export const ShootModeView: React.FC<ShootModeViewProps> = ({
               <Typography variant="h4" sx={{ color: '#4caf50', fontWeight: 700 }}>
                 {stats.completed}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                 Fullfort
               </Typography>
             </Box>
@@ -482,7 +482,7 @@ export const ShootModeView: React.FC<ShootModeViewProps> = ({
               <Typography variant="h4" sx={{ color: '#ff9800', fontWeight: 700 }}>
                 {stats.inProgress}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                 Pagar
               </Typography>
             </Box>
@@ -490,7 +490,7 @@ export const ShootModeView: React.FC<ShootModeViewProps> = ({
               <Typography variant="h4" sx={{ color: '#9e9e9e', fontWeight: 700 }}>
                 {stats.notStarted}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                 Gjenstaar
               </Typography>
             </Box>
@@ -504,7 +504,7 @@ export const ShootModeView: React.FC<ShootModeViewProps> = ({
             size="small"
             sx={{
               '& .MuiToggleButton-root': {
-                color: 'rgba(255,255,255,0.5)',
+                color: 'rgba(255,255,255,0.87)',
                 borderColor: 'rgba(255,255,255,0.2)',
                 '&.Mui-selected': {
                   color: '#00d4ff',
@@ -574,7 +574,7 @@ export const ShootModeView: React.FC<ShootModeViewProps> = ({
         {/* Progress bar */}
         <Box sx={{ mt: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
               {stats.completed} av {stats.total} shots fullfort
             </Typography>
             <Typography variant="caption" sx={{ color: '#ff9800' }}>
@@ -695,7 +695,7 @@ export const ShootModeView: React.FC<ShootModeViewProps> = ({
                         }}
                       />
                     </Box>
-                    {isExpanded ? <ExpandLess sx={{ color: 'rgba(255,255,255,0.5)' }} /> : <ExpandMore sx={{ color: 'rgba(255,255,255,0.5)' }} />}
+                    {isExpanded ? <ExpandLess sx={{ color: 'rgba(255,255,255,0.87)' }} /> : <ExpandMore sx={{ color: 'rgba(255,255,255,0.87)' }} />}
                   </Box>
                   <Collapse in={isExpanded}>
                     <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -766,7 +766,7 @@ export const ShootModeView: React.FC<ShootModeViewProps> = ({
             {/* Equipment recommendation */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Lightbulb sx={{ color: '#ffc107', fontSize: 20 }} />
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                 {getEquipmentRecommendation(currentShot).slice(0, 2).join(' + ')}
               </Typography>
             </Box>
@@ -824,11 +824,11 @@ export const ShootModeView: React.FC<ShootModeViewProps> = ({
                   color: '#fff',
                   bgcolor: 'rgba(255,255,255,0.05)',
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.5)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
               }}
             />
             <FormControl fullWidth>
-              <InputLabel sx={{ color: 'rgba(255,255,255,0.5)' }}>Shot type</InputLabel>
+              <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Shot type</InputLabel>
               <Select
                 value={quickShotData.shotType}
                 onChange={(e) => setQuickShotData({ ...quickShotData, shotType: e.target.value as ShotType })}
@@ -836,7 +836,7 @@ export const ShootModeView: React.FC<ShootModeViewProps> = ({
                 sx={{
                   color: '#fff',
                   bgcolor: 'rgba(255,255,255,0.05)',
-                  '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.5)' },
+                  '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.87)' },
                 }}
               >
                 {(['Wide', 'Full', 'Medium', 'Medium Close-Up', 'Close-Up', 'Extreme Close-Up', 'Insert'] as ShotType[]).map((type) => (
@@ -855,13 +855,13 @@ export const ShootModeView: React.FC<ShootModeViewProps> = ({
                   color: '#fff',
                   bgcolor: 'rgba(255,255,255,0.05)',
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.5)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
               }}
             />
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-          <Button onClick={() => setQuickAddOpen(false)} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <Button onClick={() => setQuickAddOpen(false)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Avbryt
           </Button>
           <Button
@@ -908,15 +908,15 @@ export const ShootModeView: React.FC<ShootModeViewProps> = ({
                 color: '#fff',
                 bgcolor: 'rgba(255,255,255,0.05)',
               },
-              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.5)' },
+              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
             }}
           />
-          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', mt: 1, display: 'block' }}>
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', mt: 1, display: 'block' }}>
             Tips: Notater lagres automatisk og inkluderes i eksportert rapport
           </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-          <Button onClick={() => setNotesDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <Button onClick={() => setNotesDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Avbryt
           </Button>
           <Button
@@ -1089,8 +1089,8 @@ const ShootModeCard: React.FC<ShootModeCardProps> = ({
         {/* Location */}
         {shot.locationId && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <LocationOn sx={{ fontSize: 16, color: 'rgba(255,255,255,0.5)' }} />
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+            <LocationOn sx={{ fontSize: 16, color: 'rgba(255,255,255,0.87)' }} />
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
               {getLocationName(shot.locationId)}
             </Typography>
           </Box>
@@ -1179,7 +1179,7 @@ const TimelineShotRow: React.FC<TimelineShotRowProps> = ({
       {/* Index */}
       <Typography
         sx={{
-          color: 'rgba(255,255,255,0.5)',
+          color: 'rgba(255,255,255,0.87)',
           fontFamily: 'monospace',
           minWidth: 30,
         }}
@@ -1219,7 +1219,7 @@ const TimelineShotRow: React.FC<TimelineShotRowProps> = ({
       </Box>
 
       {/* Duration */}
-      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', minWidth: 40 }}>
+      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', minWidth: 40 }}>
         {shot.duration || 3}s
       </Typography>
 

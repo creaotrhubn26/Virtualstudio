@@ -57,7 +57,7 @@ export function TravelCostsCard({ productionDay, projectId }: TravelCostsCardPro
     return (
       <Card sx={{ bgcolor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
         <CardContent>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', textAlign: 'center' }}>
             Ingen reisekostnader beregnet
           </Typography>
         </CardContent>
@@ -107,8 +107,8 @@ export function TravelCostsCard({ productionDay, projectId }: TravelCostsCardPro
                     <ListItemText
                       primary={
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <CarIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.5)' }} />
-                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                          <CarIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.87)' }} />
+                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                             Distanse: {travelCost.breakdown.kilometers.toFixed(1)} km
                           </Typography>
                         </Box>
@@ -119,8 +119,8 @@ export function TravelCostsCard({ productionDay, projectId }: TravelCostsCardPro
                     <ListItemText
                       primary={
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <FuelIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.5)' }} />
-                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                          <FuelIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.87)' }} />
+                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                             Drivstoff: {travelCost.breakdown.fuelCost.toFixed(0)} NOK
                           </Typography>
                         </Box>
@@ -132,8 +132,8 @@ export function TravelCostsCard({ productionDay, projectId }: TravelCostsCardPro
                       <ListItemText
                         primary={
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <TollIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.5)' }} />
-                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                            <TollIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.87)' }} />
+                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                               Bompenger: {travelCost.breakdown.tollFees.toFixed(0)} NOK
                             </Typography>
                           </Box>

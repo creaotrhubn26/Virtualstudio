@@ -556,7 +556,7 @@ function AcademyLandingPage() {
               <Groups />
             </Avatar>
             <Typography variant="h6" sx={{ color: '#fff' }}>{stats.groups}</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Studiegrupper</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Studiegrupper</Typography>
           </Stack>
         </Grid>
         <Grid item xs={6} sm={4} md={2}>
@@ -565,7 +565,7 @@ function AcademyLandingPage() {
               <Message />
             </Avatar>
             <Typography variant="h6" sx={{ color: '#fff' }}>{stats.messages}+</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Meldinger</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Meldinger</Typography>
           </Stack>
         </Grid>
         <Grid item xs={6} sm={4} md={2}>
@@ -574,7 +574,7 @@ function AcademyLandingPage() {
               <People />
             </Avatar>
             <Typography variant="h6" sx={{ color: '#fff' }}>{showStudentStats ? stats.students : (stats.students || '300+')}</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Studenter</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Studenter</Typography>
           </Stack>
         </Grid>
         <Grid item xs={6} sm={4} md={2}>
@@ -583,7 +583,7 @@ function AcademyLandingPage() {
               <School />
             </Avatar>
             <Typography variant="h6" sx={{ color: '#fff' }}>{showInstructorStats ? stats.instructors : (stats.instructors || '150+')}</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Instruktører</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Instruktører</Typography>
           </Stack>
         </Grid>
         <Grid item xs={6} sm={4} md={2}>
@@ -592,7 +592,7 @@ function AcademyLandingPage() {
               <Schedule />
             </Avatar>
             <Typography variant="h6" sx={{ color: '#fff' }}>{stats.schedules}</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Live økter</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Live økter</Typography>
           </Stack>
         </Grid>
         <Grid item xs={6} sm={4} md={2}>
@@ -601,7 +601,7 @@ function AcademyLandingPage() {
               <Settings />
             </Avatar>
             <Typography variant="h6" sx={{ color: '#fff' }}>24/7</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Support</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Support</Typography>
           </Stack>
         </Grid>
       </Grid>
@@ -669,8 +669,8 @@ function AcademyLandingPage() {
             variant="outlined"
             sx={{
               borderColor: 'rgba(255,255,255,0.2)',
-              color: 'rgba(255,255,255,0.7)',
-              '& .MuiChip-icon': { color: 'rgba(255,255,255,0.7)' },
+              color: 'rgba(255,255,255,0.87)',
+              '& .MuiChip-icon': { color: 'rgba(255,255,255,0.87)' },
             }}
           />
         ))}
@@ -807,7 +807,7 @@ function AcademyLandingPage() {
                 <Typography 
                   variant="caption" 
                   sx={{ 
-                    color: 'rgba(255,255,255,0.5)',
+                    color: 'rgba(255,255,255,0.87)',
                     fontSize: '0.7rem',
                     letterSpacing: '2px',
                     textTransform: 'uppercase',
@@ -823,7 +823,7 @@ function AcademyLandingPage() {
               <Button 
                 onClick={() => handleNavigation('/')}
                 sx={{ 
-                  color: 'rgba(255,255,255,0.7)', 
+                  color: 'rgba(255,255,255,0.87)', 
                   textTransform: 'none',
                   '&:hover': { color: '#f59e0b', background: 'rgba(245,158,11,0.1)' },
                 }}
@@ -833,7 +833,7 @@ function AcademyLandingPage() {
               <Button 
                 onClick={() => handleNavigation('/community')}
                 sx={{ 
-                  color: 'rgba(255,255,255,0.7)', 
+                  color: 'rgba(255,255,255,0.87)', 
                   textTransform: 'none',
                   '&:hover': { color: '#f59e0b', background: 'rgba(245,158,11,0.1)' },
                 }}
@@ -846,7 +846,7 @@ function AcademyLandingPage() {
               <Button 
                 href="#features"
                 sx={{ 
-                  color: 'rgba(255,255,255,0.7)', 
+                  color: 'rgba(255,255,255,0.87)', 
                   textTransform: 'none',
                   '&:hover': { color: '#f59e0b', background: 'rgba(245,158,11,0.1)' },
                 }}
@@ -856,7 +856,7 @@ function AcademyLandingPage() {
               <Button 
                 href="#courses"
                 sx={{ 
-                  color: 'rgba(255,255,255,0.7)', 
+                  color: 'rgba(255,255,255,0.87)', 
                   textTransform: 'none',
                   '&:hover': { color: '#f59e0b', background: 'rgba(245,158,11,0.1)' },
                 }}
@@ -866,7 +866,7 @@ function AcademyLandingPage() {
               <Button 
                 href="#faq"
                 sx={{ 
-                  color: 'rgba(255,255,255,0.7)', 
+                  color: 'rgba(255,255,255,0.87)', 
                   textTransform: 'none',
                   '&:hover': { color: '#f59e0b', background: 'rgba(245,158,11,0.1)' },
                 }}
@@ -968,7 +968,7 @@ function AcademyLandingPage() {
                   sx={{ 
                     mb: 4, 
                     maxWidth: '600px',
-                    color: 'rgba(255,255,255,0.7)',
+                    color: 'rgba(255,255,255,0.87)',
                     fontWeight: 400,
                     lineHeight: 1.6,
                   }}
@@ -1024,7 +1024,7 @@ function AcademyLandingPage() {
                 {/* Trusted Companies - Only show when companies exist */}
                 {realTrustedBy.length > 0 && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                     Brukt av team hos
                   </Typography>
                   {realTrustedBy.map((company, index) => (
@@ -1053,7 +1053,7 @@ function AcademyLandingPage() {
                             opacity: 0.8,
                           }}
                         />
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                           {company.name}
                         </Typography>
                       </Box>
@@ -1065,7 +1065,7 @@ function AcademyLandingPage() {
                         variant="outlined"
                         sx={{ 
                           borderColor: 'rgba(255,255,255,0.2)',
-                          color: 'rgba(255,255,255,0.7)',
+                          color: 'rgba(255,255,255,0.87)',
                           background: 'rgba(255,255,255,0.05)',
                         }}
                       />
@@ -1348,7 +1348,7 @@ function AcademyLandingPage() {
                       <Typography variant="h6" sx={{ color: '#fff', fontWeight: 500 }}>
                         Aktive Instruktører
                       </Typography>
-                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mt: 1 }}>
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mt: 1 }}>
                         Eksperter som deler sin kunnskap
                       </Typography>
                     </Card>
@@ -1395,7 +1395,7 @@ function AcademyLandingPage() {
                       <Typography variant="h6" sx={{ color: '#fff', fontWeight: 500 }}>
                         Fornøyde Studenter
                       </Typography>
-                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mt: 1 }}>
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mt: 1 }}>
                         Lærer nye ferdigheter hver dag
                       </Typography>
                     </Card>
@@ -1442,7 +1442,7 @@ function AcademyLandingPage() {
                     <Typography variant="h6" sx={{ color: '#fff', fontWeight: 500 }}>
                       Kurs tilgjengelig
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mt: 1 }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mt: 1 }}>
                       Lær fra de beste
                     </Typography>
                   </Card>
@@ -1521,7 +1521,7 @@ function AcademyLandingPage() {
                         {plan.price}
                       </Typography>
                       {plan.price !== 'Custom' && plan.price !== 'Tilpasset' && (
-                        <Typography variant="body1" sx={{ ml: 1, color: 'rgba(255,255,255,0.5)' }}>
+                        <Typography variant="body1" sx={{ ml: 1, color: 'rgba(255,255,255,0.87)' }}>
                           /mnd
                         </Typography>
                       )}
@@ -1536,7 +1536,7 @@ function AcademyLandingPage() {
                           alignItems="flex-start"
                         >
                           <CheckCircle sx={{ fontSize: 16, color: '#10b981', mt: 0.5 }} />
-                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                             {feature}
                           </Typography>
                         </Stack>
@@ -1621,7 +1621,7 @@ function AcademyLandingPage() {
                         <Typography variant="body2" fontWeight="semibold" sx={{ color: '#fff' }}>
                           {testimonial.name}
                         </Typography>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                           {testimonial.role}
                         </Typography>
                       </Box>
@@ -1689,7 +1689,7 @@ function AcademyLandingPage() {
                         variant="body2" 
                         sx={{ 
                           mt: 2,
-                          color: 'rgba(255,255,255,0.7)',
+                          color: 'rgba(255,255,255,0.87)',
                           lineHeight: 1.6,
                         }}
                       >
@@ -1770,7 +1770,7 @@ function AcademyLandingPage() {
                 Utforsk funksjoner
               </Button>
             </Stack>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
               Ved å fortsette godtar du våre vilkår og personvern.
             </Typography>
           </Container>
@@ -1918,7 +1918,7 @@ function AcademyLandingPage() {
           </Grid>
 
           <Box sx={{ borderTop: '1px solid rgba(255,140,0,0.1)', py: 3 }}>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
               © {new Date().getFullYear()} CreatorHub Academy. Alle rettigheter reservert.
             </Typography>
           </Box>

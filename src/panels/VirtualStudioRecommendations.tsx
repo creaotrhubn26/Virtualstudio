@@ -103,9 +103,9 @@ export const VirtualStudioRecommendations: React.FC<VirtualStudioRecommendations
         </Typography>
       </Box>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
+      <Grid container spacing={2}>
         {displayRecommendations.map((recommendation: VirtualStudioRecommendation, index: number) => (
-          <Box key={index}>
+          <Grid key={index} size={{ xs: 12, sm: 6, md: 4 }}>
             <Card
               sx={{
                 height: '100%',
@@ -113,10 +113,12 @@ export const VirtualStudioRecommendations: React.FC<VirtualStudioRecommendations
                 flexDirection: 'column',
                 border: selectedId === recommendation.title ? '2px solid' : '1px solid',
                 borderColor: selectedId === recommendation.title ? 'primary.main' : 'divider',
-                transition: 'all 0.2s','&:hover': {
+                transition: 'all 0.2s',
+                '&:hover': {
                   boxShadow: 3,
                   borderColor: 'primary.main',
-                }}}
+                },
+              }}
             >
               <CardContent sx={{ flexGrow: 1 }}>
                 <Typography variant="h6" gutterBottom>
@@ -181,9 +183,9 @@ export const VirtualStudioRecommendations: React.FC<VirtualStudioRecommendations
                 </Button>
               </CardActions>
             </Card>
-          </Box>
+          </Grid>
         ))}
-      </Box>
+      </Grid>
     </Box>
   );
 };

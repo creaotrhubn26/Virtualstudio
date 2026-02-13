@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { createElement, type FC } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Box, Typography, IconButton } from '@mui/material';
 import { PlayArrow, Close, Edit } from '@mui/icons-material';
@@ -13,7 +13,7 @@ interface HelpVideoPlayerProps {
   thumbnailUrl?: string;
 }
 
-const HelpVideoPlayer: React.FC<HelpVideoPlayerProps> = ({
+const HelpVideoPlayer: FC<HelpVideoPlayerProps> = ({
   videoId,
   title,
   description,
@@ -113,7 +113,7 @@ const HelpVideoPlayer: React.FC<HelpVideoPlayerProps> = ({
         // Mount ElegantVideoPlayer in the container
         const root = createRoot(videoContainer);
         root.render(
-          React.createElement(ElegantVideoPlayer, {
+          createElement(ElegantVideoPlayer, {
             videoUrl: videoUrl,
             title: title,
             description: description,
@@ -364,7 +364,7 @@ const HelpVideoPlayer: React.FC<HelpVideoPlayerProps> = ({
         <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, mb: 0.5 }}>
           {title}
         </Typography>
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
           {description}
         </Typography>
         <Typography variant="caption" sx={{ color: videoUrl ? '#a78bfa' : 'rgba(255,255,255,0.5)' }}>

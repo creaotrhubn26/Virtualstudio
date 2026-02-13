@@ -186,7 +186,7 @@ export const sceneImportService = {
     return {
       valid: false,
       errors: ['YAML-import krever YAML-parser bibliotek'],
-      warnings: [],
+      warnings: yaml.trim() ? [`Mottok ${yaml.trim().length} tegn YAML som ikke kunne parses.`] : [],
     };
   },
 

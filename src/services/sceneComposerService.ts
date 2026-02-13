@@ -701,8 +701,12 @@ export const sceneComposerService = {
     if (!goboService) return gobos;
     
     // Capture attached gobos
-    const attachments = goboService.getAllAttachments();
-    attachments.forEach(attachment => {
+    const attachments = goboService.getAllAttachments() as Array<{
+      lightId: string;
+      goboId: string;
+      options: { pattern: string; size: number; rotation: number; intensity: number };
+    }>;
+    attachments.forEach((attachment) => {
       gobos.push({
         id: `gobo_${attachment.lightId}_${Date.now()}`,
         goboId: attachment.goboId,
@@ -717,8 +721,8 @@ export const sceneComposerService = {
     });
     
     // Capture standalone gobos
-    const standaloneGobos = goboService.getAllStandaloneGobos();
-    standaloneGobos.forEach((mesh, goboId) => {
+    const standaloneGobos = goboService.getAllStandaloneGobos() as Map<string, any>;
+    standaloneGobos.forEach((mesh: any, goboId: string) => {
       const metadata = mesh.metadata;
       if (metadata?.type === 'gobo') {
         gobos.push({

@@ -6,7 +6,7 @@
  * registered cameras with various layout options.
  */
 
-import React, { useRef, useEffect, useMemo, useState } from 'react';
+import { useRef, useEffect, useMemo, useState, type FC } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import { useNodes } from '../../state/store';
@@ -39,7 +39,7 @@ interface DirectorMonitor3DProps {
 // Monitor Screen Component
 // ============================================================================
 
-const MonitorScreen: React.FC<{
+const MonitorScreen: FC<{
   renderer: MonitorRenderer;
   width: number;
   height: number;
@@ -98,7 +98,7 @@ const MonitorScreen: React.FC<{
 // Monitor Frame Component
 // ============================================================================
 
-const MonitorFrame: React.FC<{
+const MonitorFrame: FC<{
   width: number;
   height: number;
   depth: number;
@@ -159,7 +159,7 @@ const MonitorFrame: React.FC<{
 // Monitor Controls (HTML overlay)
 // ============================================================================
 
-const MonitorControls: React.FC<{
+const MonitorControls: FC<{
   renderer: MonitorRenderer;
   onLayoutChange: (layout: MonitorLayout) => void;
   currentLayout: MonitorLayout;
@@ -213,7 +213,7 @@ const MonitorControls: React.FC<{
 // Main Component
 // ============================================================================
 
-export const DirectorMonitor3D: React.FC<DirectorMonitor3DProps> = ({
+export const DirectorMonitor3D: FC<DirectorMonitor3DProps> = ({
   position = [0, 1.5, -2],
   rotation = [0, 0, 0],
   scale = 1,

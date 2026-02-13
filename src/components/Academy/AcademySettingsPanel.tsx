@@ -616,17 +616,43 @@ export function AcademySettingsPanel({ onClose }: AcademySettingsPanelProps) {
     };
   }, [performance, debugging, pushEnabled, isSupported, isAIAssistanceEnabled, isVideoProcessingEnabled, isAnalyticsEnabled, isIntegrationEnabled]);
 
-  // Load settings from localStorage on mount
+  // Load settings from database with localStorage fallback on mount
   useEffect(() => {
-    const savedSettings =
-      localStorage.getItem('academy-settings');
-    if (savedSettings) {
-      try {
-        setSettings({ ...defaultSettings, ...JSON.parse(savedSettings) });
-      } catch (error) {
-        console.error('Failed to load academy settings: ', error);
+    const loadSettings = async () => {
+      // Try to load from server first if user is authenticated
+      if (user?.id) {
+        try {
+          const response = await fetch('/api/user/settings/academy', {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+            },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.settings) {
+              setSettings({ ...defaultSettings, ...data.settings });
+              // Cache to localStorage
+              localStorage.setItem('academy-settings', JSON.stringify(data.settings));
+              return;
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to load settings from server:', error);
+        }
       }
-    }
+      
+      // Fallback to localStorage
+      const savedSettings = localStorage.getItem('academy-settings');
+      if (savedSettings) {
+        try {
+          setSettings({ ...defaultSettings, ...JSON.parse(savedSettings) });
+        } catch (error) {
+          console.error('Failed to load academy settings: ', error);
+        }
+      }
+    };
+    
+    loadSettings();
 
     // Track feature usage
     analytics.trackEvent('academy_settings_opened', {
@@ -634,7 +660,7 @@ export function AcademySettingsPanel({ onClose }: AcademySettingsPanelProps) {
       userId: user?.id,
       component: 'AcademySettingsPanel',
     });
-  }, []);
+  }, [user?.id]);
 
   // Generic change handler for settings
   const handleChange = <K extends keyof AcademySettings>(key: K, value: AcademySettings[K]) => {
@@ -2896,7 +2922,7 @@ export function AcademySettingsPanel({ onClose }: AcademySettingsPanelProps) {
               >
                 <Typography
                   variant="caption"
-                  sx={{ color: 'rgba(255,255,255,0.7)', mb: 1, display: 'block' }}
+                  sx={{ color: 'rgba(255,255,255,0.87)', mb: 1, display: 'block' }}
                 >
                   Eksempel Academy-innstillinger
                 </Typography>
@@ -2911,7 +2937,7 @@ export function AcademySettingsPanel({ onClose }: AcademySettingsPanelProps) {
                     alignItems: 'center',
                     justifyContent: 'center'}}
                 >
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                     Video Spiller
                   </Typography>
                 </Box>
@@ -2955,7 +2981,7 @@ export function AcademySettingsPanel({ onClose }: AcademySettingsPanelProps) {
                   )}
                 </Box>
 
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   {settings.enableProgressTracking ? 'Fremgang: 75%' : 'Ingen fremgangssporing'}
                 </Typography>
               </Box>

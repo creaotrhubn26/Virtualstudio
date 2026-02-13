@@ -8,7 +8,7 @@
  * - Dark/Light themes
  */
 
-import React, { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, Fragment } from 'react';
 import { logger } from '../../core/services/logger';
 
 const log = logger.module('KeyboardShortcuts, ');
@@ -190,7 +190,7 @@ function ShortcutRow({ shortcutKey, description, theme, categoryColor }: Shortcu
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
         {keys.map((key, index) => (
-          <React.Fragment key={index}>
+          <Fragment key={index}>
             {index > 0 && (
               <Typography 
                 variant="caption" 
@@ -200,7 +200,7 @@ function ShortcutRow({ shortcutKey, description, theme, categoryColor }: Shortcu
               </Typography>
             )}
             <Key keyName={key} theme={theme} small />
-          </React.Fragment>
+          </Fragment>
         ))}
       </Box>
     </Box>

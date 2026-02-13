@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense, memo, type FC, type MouseEvent, type ReactElement, type ReactNode, type SyntheticEvent } from 'react';
 import { useToast } from './ToastStack';
 import {
   Box,
@@ -15,6 +15,8 @@ import {
   Select,
   MenuItem,
   FormControl,
+  FormControlLabel,
+  Checkbox,
   InputLabel,
   Dialog,
   DialogTitle,
@@ -30,14 +32,14 @@ import {
   SpeedDialAction,
   SpeedDialIcon,
   Stack,
+  CircularProgress,
+  Tooltip,
 } from '@mui/material';
 import {
   Close as CloseIcon,
   Add as AddIcon,
   People as PeopleIcon,
   Person as PersonIcon,
-  CalendarToday as CalendarIcon,
-  Dashboard as DashboardIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Refresh as RefreshIcon,
@@ -47,11 +49,8 @@ import {
   PhotoCamera as PhotoCameraIcon,
   ViewList as ViewListIcon,
   Group as GroupIcon,
-  Groups as GroupsIcon,
-  LocationOn as LocationIcon,
   Inventory as InventoryIcon,
   Movie as MovieIcon,
-  Share as ShareIcon,
   Assignment as AssignmentIcon,
   Work as WorkIcon,
   CheckCircleOutline as CheckCircleOutlineIcon,
@@ -73,54 +72,47 @@ import {
   Face as FaceIcon,
   Checkroom as CheckroomIcon,
   Build as BuildIcon,
-  Inventory2 as PropIcon,
   Note as NoteIcon,
   ContactEmergency as ContactEmergencyIcon,
   Description as DescriptionIcon,
-  TheaterComedy as TheaterComedyIcon,
-  RecentActors as RecentActorsIcon,
-  InterpreterMode as InterpreterModeIcon,
   AdminPanelSettings as AdminPanelSettingsIcon,
   Login as LoginIcon,
   Logout as LogoutIcon,
   SwapHoriz as SwapHorizIcon,
   School as TutorialIcon,
   Folder,
+  Timeline as TimelineIcon,
+  AccountTree as StoryLogicIcon,
+  Create as StoryWriterIcon,
+  CalendarMonth as CalendarMonthIcon,
 } from '@mui/icons-material';
+
+// Custom SVG icons for consistent visual language
+import {
+  DashboardCustomIcon as DashboardIcon,
+  RolesIcon as TheaterComedyIcon,
+  CandidatesIcon as RecentActorsIcon,
+  AuditionsIcon as InterpreterModeIcon,
+  TeamIcon as GroupsIcon,
+  LocationsIcon as LocationIcon,
+  EquipmentIcon as PropIcon,
+  EquipmentIcon,
+  CalendarCustomIcon as CalendarIcon,
+  ShotListIcon,
+  StoryArcIcon,
+  ShareCustomIcon as ShareIcon,
+  PersonNameIcon,
+  NotesIcon,
+  EmailIcon as CustomEmailIcon,
+  PhoneIcon as CustomPhoneIcon,
+  AddressIcon,
+  ConsentsIcon,
+} from './icons/CastingIcons';
+
 import { CastingProject, Role, Candidate, Schedule } from '../core/models/casting';
 import { RichTextEditor } from './RichTextEditor';
 
 // Custom icon: Person holding camera with list/clipboard
-const ShotListIcon = ({ sx, ...props }: { sx?: any; [key: string]: any }) => {
-  const style = { width: '1em', height: '1em', display: 'block', ...sx };
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={style}
-      {...props}
-    >
-      {/* Person body */}
-      <circle cx="12" cy="8" r="3" />
-      <path d="M5 20v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2" />
-      {/* Camera in person's hand (right side) */}
-      <rect x="15" y="3" width="4" height="3" rx="0.5" />
-      <circle cx="17" cy="4.5" r="0.8" />
-      <line x1="15" y1="4.5" x2="13" y2="4.5" />
-      <line x1="16" y1="6" x2="16" y2="7" />
-      {/* List/Clipboard in person's hand (left side) */}
-      <rect x="3" y="5" width="3" height="5" rx="0.5" />
-      <line x1="4" y1="6.5" x2="5" y2="6.5" />
-      <line x1="4" y1="7.5" x2="5" y2="7.5" />
-      <line x1="4" y1="8.5" x2="5" y2="8.5" />
-      <line x1="4" y1="9.5" x2="5" y2="9.5" />
-    </svg>
-  );
-};
 import { castingService } from '../services/castingService';
 import { resetMockCastingData } from '../data/mockCastingData';
 import { sceneComposerService } from '../services/sceneComposerService';
@@ -136,17 +128,23 @@ const EquipmentManagementPanel = lazy(() => import('./EquipmentManagementPanel')
 const ProductionDayView = lazy(() => import('./ProductionDayView').then(m => ({ default: m.ProductionDayView })));
 const CastingShotListPanel = lazy(() => import('./CastingShotListPanel').then(m => ({ default: m.CastingShotListPanel })));
 const ManuscriptPanel = lazy(() => import('./ManuscriptPanel').then(m => ({ default: m.ManuscriptPanel })));
+const StoryLogicPanel = lazy(() => import('./screenplay/StoryLogicPanel').then(m => ({ default: m.StoryLogicPanel })));
 const RoleManagementPanel = lazy(() => import('./RoleManagementPanel').then(m => ({ default: m.RoleManagementPanel })));
 const CandidateManagementPanel = lazy(() => import('./CandidateManagementPanel').then(m => ({ default: m.CandidateManagementPanel })));
 const DashboardPanel = lazy(() => import('./DashboardPanel').then(m => ({ default: m.DashboardPanel })));
 const AuditionSchedulePanel = lazy(() => import('./AuditionSchedulePanel').then(m => ({ default: m.AuditionSchedulePanel })));
 const SharingPanel = lazy(() => import('./SharingPanel').then(m => ({ default: m.SharingPanel })));
+
+// Import ErrorBoundary for robustness
+import { ErrorBoundary } from './ErrorBoundary';
 const KanbanPanel = lazy(() => import('./KanbanPanel').then(m => ({ default: m.KanbanPanel })));
 const CastingPlannerTutorial = lazy(() => import('./CastingPlannerTutorial').then(m => ({ default: m.CastingPlannerTutorial })));
 const TutorialEditorPanel = lazy(() => import('./TutorialEditorPanel').then(m => ({ default: m.TutorialEditorPanel })));
 const ConsentManagementPanel = lazy(() => import('./ConsentManagementPanel').then(m => ({ default: m.ConsentManagementPanel })));
+const ConsentContractDialog = lazy(() => import('./ConsentContractDialog').then(m => ({ default: m.ConsentContractDialog })));
 const OffersContractsPanel = lazy(() => import('./OffersContractsPanel'));
 const ProductionCalendarPanel = lazy(() => import('./ProductionCalendarPanel'));
+const CrewCalendarPanel = lazy(() => import('./production/CrewCalendarPanel').then(m => ({ default: m.CrewCalendarPanel })));
 
 // Lazy load dialogs and modals for better initial load
 const AdminDashboard = lazy(() => import('./AdminDashboard'));
@@ -171,10 +169,72 @@ interface CastingPlannerPanelProps {
 }
 
 interface TabPanelProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   index: number;
   value: number;
 }
+
+// Helper function to map CrewRole to Department for calendar
+const mapRoleToDepartment = (role: string): 'regi' | 'produksjon' | 'kamera' | 'lys' | 'grip' | 'lyd' | 'art' | 'hmu' | 'kostyme' | 'personal' => {
+  const roleMap: Record<string, 'regi' | 'produksjon' | 'kamera' | 'lys' | 'grip' | 'lyd' | 'art' | 'hmu' | 'kostyme' | 'personal'> = {
+    director: 'regi',
+    producer: 'produksjon',
+    casting_director: 'produksjon',
+    production_manager: 'produksjon',
+    camera_operator: 'kamera',
+    camera_assistant: 'kamera',
+    cinematographer: 'kamera',
+    drone_pilot: 'kamera',
+    gaffer: 'lys',
+    grip: 'grip',
+    sound_engineer: 'lyd',
+    audio_mixer: 'lyd',
+    video_editor: 'produksjon',
+    colorist: 'produksjon',
+    vfx_artist: 'art',
+    motion_graphics: 'art',
+    production_assistant: 'produksjon',
+    script_supervisor: 'regi',
+    location_manager: 'produksjon',
+    production_designer: 'art',
+    makeup_artist: 'hmu',
+    wardrobe: 'kostyme',
+    stylist: 'kostyme',
+    collaborator: 'produksjon',
+    other: 'personal',
+  };
+  return roleMap[role] || 'personal';
+};
+
+// Helper function to get an icon for each crew role — used in crew calendars & team displays
+const getCrewRoleIcon = (role: string): ReactElement => {
+  const iconProps = { sx: { fontSize: 18 } };
+  const roleIcons: Record<string, ReactElement> = {
+    director: <MovieIcon {...iconProps} />,
+    producer: <BusinessIcon {...iconProps} />,
+    casting_director: <SupervisorAccountIcon {...iconProps} />,
+    production_manager: <SupervisorAccountIcon {...iconProps} />,
+    camera_operator: <CameraAltIcon {...iconProps} />,
+    camera_assistant: <CameraAltIcon {...iconProps} />,
+    cinematographer: <CameraAltIcon {...iconProps} />,
+    drone_pilot: <CameraAltIcon {...iconProps} />,
+    gaffer: <LightbulbIcon {...iconProps} />,
+    grip: <BuildIcon {...iconProps} />,
+    sound_engineer: <GraphicEqIcon {...iconProps} />,
+    audio_mixer: <GraphicEqIcon {...iconProps} />,
+    video_editor: <TimelineIcon {...iconProps} />,
+    colorist: <TimelineIcon {...iconProps} />,
+    vfx_artist: <MovieIcon {...iconProps} />,
+    motion_graphics: <MovieIcon {...iconProps} />,
+    photographer: <CameraAltIcon {...iconProps} />,
+    stylist: <FaceIcon {...iconProps} />,
+    makeup_artist: <FaceIcon {...iconProps} />,
+    wardrobe: <CheckroomIcon {...iconProps} />,
+    location_manager: <HomeIcon {...iconProps} />,
+    other: <PersonIcon {...iconProps} />,
+  };
+  return roleIcons[role] || <PersonIcon {...iconProps} />;
+};
 
 const TAB_IDS = [
   'tabpanel-oversikt',
@@ -186,11 +246,11 @@ const TAB_IDS = [
   'tabpanel-rekvisitter',
   'tabpanel-produksjonsplan',
   'tabpanel-shot-lists',
-  'tabpanel-manuskript',
+  'tabpanel-story-arc-studio',
   'tabpanel-deling',
 ];
 
-const TabPanel = React.memo(function TabPanel({ children, value, index }: TabPanelProps) {
+const TabPanel = memo(function TabPanel({ children, value, index }: TabPanelProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
@@ -218,6 +278,37 @@ const TabPanel = React.memo(function TabPanel({ children, value, index }: TabPan
   );
 });
 
+// Consent status summary using consentService
+const ConsentStatusSummary: FC<{ projectId: string; candidateId: string }> = ({ projectId, candidateId }) => {
+  const [consentCount, setConsentCount] = useState(0);
+  const [signedCount, setSignedCount] = useState(0);
+
+  useEffect(() => {
+    consentService.getConsents(projectId, candidateId).then(consents => {
+      setConsentCount(consents.length);
+      setSignedCount(consents.filter(c => c.signed).length);
+    });
+  }, [projectId, candidateId]);
+
+  if (consentCount === 0) return null;
+
+  return (
+    <Box sx={{ display: 'flex', gap: 1, mb: 1.5, alignItems: 'center' }}>
+      <Chip
+        size="small"
+        icon={<CheckCircleIcon sx={{ fontSize: 14 }} />}
+        label={`${signedCount}/${consentCount} samtykker signert`}
+        sx={{
+          bgcolor: signedCount === consentCount ? 'rgba(16,185,129,0.15)' : 'rgba(255,184,0,0.15)',
+          color: signedCount === consentCount ? '#10b981' : '#ffb800',
+          border: `1px solid ${signedCount === consentCount ? 'rgba(16,185,129,0.3)' : 'rgba(255,184,0,0.3)'}`,
+          fontSize: '0.75rem',
+        }}
+      />
+    </Box>
+  );
+};
+
 export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFullscreen, isStandalone = false }: CastingPlannerPanelProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -232,7 +323,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
   // Responsive: xs (0.875rem), sm (1rem), md (0.95rem), lg (1.05rem), xl (1.125rem)
   const textFieldStyles = {
     '& .MuiInputLabel-root': { 
-      color: 'rgba(255,255,255,0.6)',
+      color: 'rgba(255,255,255,0.87)',
       fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
     },
     '& .MuiOutlinedInput-root': {
@@ -255,7 +346,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
   
   // Shared InputLabel styling for Select components
   const inputLabelStyles = {
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.87)',
     fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
   };
   
@@ -333,6 +424,8 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
   };
   
   const [activeTab, setActiveTab] = useState(0);
+  const [storyArcView, setStoryArcView] = useState<'main' | 'story-logic' | 'story-writer'>('main');
+  const [calendarViewMode, setCalendarViewMode] = useState<'production' | 'crew'>('production');
   const [projects, setProjects] = useState<CastingProject[]>([]);
   const [currentProject, setCurrentProject] = useState<CastingProject | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
@@ -400,6 +493,8 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
     resetOnboarding 
   } = useProfessionOnboarding(onboardingProfession);
   const [deleteProjectDialogOpen, setDeleteProjectDialogOpen] = useState(false);
+  const [consentContractDialogOpen, setConsentContractDialogOpen] = useState(false);
+  const [sendConsentOnSave, setSendConsentOnSave] = useState(false);
   const [adminDashboardOpen, setAdminDashboardOpen] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [adminUser, setAdminUser] = useState<{ id: number; email: string; role: string; display_name: string } | null>(() => {
@@ -410,13 +505,21 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
   const [projectCreationModalOpen, setProjectCreationModalOpen] = useState(false);
   const [projectToEdit, setProjectToEdit] = useState<CastingProject | null>(null);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
-  const [projectSelectorOpen, setProjectSelectorOpen] = useState(false);
+  const [projectSelectorOpen, setProjectSelectorOpen] = useState(true); // Open by default to let user choose project
   const [speedDialOpen, setSpeedDialOpen] = useState(false);
   
   // Stable callback for project ID changes to prevent infinite loops
-  const handleProjectIdChange = useCallback((projectId: string) => {
+  const handleProjectIdChange = useCallback((projectId: string | null) => {
     setCurrentProjectId(projectId);
   }, []);
+
+  // Stable callback for manuscript changes
+  const handleManuscriptChange = useCallback(async () => {
+    if (currentProject?.id) {
+      const updated = await castingService.getProject(currentProject.id);
+      if (updated) setCurrentProject(updated);
+    }
+  }, [currentProject?.id]);
   
   // Sort projects by updatedAt (most recent first) and limit to 4 for header
   const recentProjects = useMemo(() => {
@@ -475,7 +578,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
     { color: '#ff9800', icon: PropIcon },
     { color: '#9c27b0', icon: CalendarIcon },
     { color: professionConfig?.color || '#e91e63', icon: ShotListIcon },
-    { color: '#3b82f6', icon: DescriptionIcon },
+    { color: '#ec4899', icon: StoryArcIcon },
     { color: '#06b6d4', icon: ShareIcon },
   ], [professionConfig?.color]);
 
@@ -634,33 +737,43 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
   }, [adminUser]);
 
   useEffect(() => {
-    // Only initialize data if profession is set
-    if (!profession) {
-      return; // Wait for profession to be selected
-    }
-
+    // Load projects regardless of profession being set
+    // TROLL project should be accessible to all professions
+    // Initialize mock data (TROLL) regardless of profession
+    
     // Use async function to handle async getProjects
     const initializeData = async () => {
+      console.log('🎬 CastingPlannerPanel: Starting project initialization...');
       try {
         const projects = await castingService.getProjects();
-        console.log('Initial useEffect: Existing projects:', projects.length);
+        console.log('🎬 Initial useEffect: Existing projects:', projects.length, projects.map(p => p.name));
         
         let shouldInitializeMock = false;
         
         if (projects.length === 0) {
-          console.log('No projects found, initializing mock data...');
+          console.log('No projects found, initializing TROLL project...');
           shouldInitializeMock = true;
         } else {
           // Check if the first project is empty (no candidates, roles, etc.)
+          // Also check counts from backend (rolesCount, candidatesCount, etc.)
           const firstProject = projects[0];
-          const isEmpty = 
-            (!firstProject.candidates || firstProject.candidates.length === 0) &&
-            (!firstProject.roles || firstProject.roles.length === 0) &&
-            (!firstProject.crew || firstProject.crew.length === 0) &&
-            (!firstProject.locations || firstProject.locations.length === 0);
+          const hasArrayData = 
+            (firstProject.candidates && firstProject.candidates.length > 0) ||
+            (firstProject.roles && firstProject.roles.length > 0) ||
+            (firstProject.crew && firstProject.crew.length > 0) ||
+            (firstProject.locations && firstProject.locations.length > 0);
+          
+          // Backend may return counts instead of full arrays
+          const hasCountData = 
+            (firstProject.rolesCount && firstProject.rolesCount > 0) ||
+            (firstProject.candidatesCount && firstProject.candidatesCount > 0) ||
+            (firstProject.crewCount && firstProject.crewCount > 0) ||
+            (firstProject.locationsCount && firstProject.locationsCount > 0);
+          
+          const isEmpty = !hasArrayData && !hasCountData;
           
           if (isEmpty) {
-            console.log('Existing project is empty, replacing with mock data...');
+            console.log('Existing project is empty, replacing with TROLL project...');
             // Delete empty project
             try {
               await castingService.deleteProject(firstProject.id);
@@ -673,31 +786,55 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
         
         if (shouldInitializeMock) {
           try {
+            console.log('🎬 Initializing TROLL mock data...');
             await castingService.initializeMockData();
+            
+            // Also initialize offers, contracts and consents for complete demo
+            try {
+              await fetch('/api/casting/demo/troll/offers-contracts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+              });
+              console.log('🎬 TROLL offers, contracts and consents initialized');
+            } catch (e) {
+              console.log('TROLL offers/contracts may already exist or API unavailable');
+            }
+            
             // Reload projects after mock data initialization
             const mockProjects = await castingService.getProjects();
-            console.log('After mock init: Projects found:', mockProjects.length);
+            console.log('🎬 After mock init: Projects found:', mockProjects.length);
             if (mockProjects.length > 0) {
-              console.log('Mock project candidates:', mockProjects[0].candidates?.length || 0);
+              console.log('🎬 TROLL project candidates:', mockProjects[0].candidates?.length || 0);
               setProjects(mockProjects);
-              setCurrentProject(mockProjects[0]);
+              // DON'T auto-select project - let user choose from the selector
+              // setCurrentProject(mockProjects[0]);
             }
             loadAvailableScenes();
             loadUserRole();
           } catch (error) {
-            console.error('Failed to initialize mock data:', error);
+            console.error('❌ Failed to initialize TROLL project:', error);
           }
         } else {
+          console.log('🎬 Loading existing projects via loadProjects()...');
           await loadProjects();
           loadAvailableScenes();
           loadUserRole();
         }
       } catch (error) {
-        console.error('Error initializing data:', error);
+        console.error('❌ Error initializing data:', error);
       }
     };
 
     initializeData();
+  }, []); // Run on mount - TROLL project is available to all professions
+
+  // Re-run when profession changes in case UI needs updating
+  useEffect(() => {
+    if (profession && projects.length > 0) {
+      loadAvailableScenes();
+      loadUserRole();
+    }
   }, [profession]);
 
   useEffect(() => {
@@ -738,6 +875,9 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
         // Check if logged in as admin/owner - grant full permissions
         if (adminUser && (adminUser.role === 'admin' || adminUser.role === 'owner')) {
           setCurrentUserRole({
+            id: `role-${adminUser.id}-${projectIdForRequest}`,
+            userId: String(adminUser.id),
+            projectId: projectIdForRequest,
             role: adminUser.role === 'owner' ? 'director' : 'producer',
             permissions: {
               canViewAll: true,
@@ -748,6 +888,8 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               canManageLocations: true,
               canApprove: true,
             },
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
           });
           setPermissions({
             canViewAll: true,
@@ -843,9 +985,29 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
     }
   };
 
-  const loadAvailableScenes = useCallback(() => {
-    const scenes = castingService.getAvailableScenes();
-    setAvailableScenes(scenes);
+  const loadAvailableScenes = useCallback(async () => {
+    // Load scenes from casting service
+    const castingScenes = castingService.getAvailableScenes();
+    // Also load scenes from the scene composer for a more complete list
+    try {
+      const composerScenes = await sceneComposerService.getAllScenesAsync();
+      const composerMapped = composerScenes.map(s => ({
+        id: s.id,
+        name: s.name || `Scene ${s.id}`,
+        thumbnail: undefined,
+      }));
+      // Merge both sources, deduplicate by id
+      const merged = [...castingScenes];
+      for (const cs of composerMapped) {
+        if (!merged.some(s => s.id === cs.id)) {
+          merged.push(cs);
+        }
+      }
+      setAvailableScenes(merged);
+    } catch {
+      // Fallback to casting scenes only
+      setAvailableScenes(castingScenes);
+    }
   }, []);
 
   const loadProjects = useCallback(async () => {
@@ -854,12 +1016,28 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
       console.log('loadProjects: Loaded projects:', loadedProjects.length);
       setProjects(loadedProjects);
       
-      // Set current project to first available, or create empty one if none exists
-      if (loadedProjects.length > 0) {
-        const firstProject = loadedProjects[0];
-        console.log('Setting current project:', firstProject.id, 'with', firstProject.candidates?.length || 0, 'candidates');
-        setCurrentProject(firstProject);
-      } else {
+      // If we have a current project already selected, refresh its data
+      // Otherwise, DON'T auto-select - let user choose from the project selector
+      const projectIdToLoad = currentProject?.id;
+      
+      if (loadedProjects.length > 0 && projectIdToLoad) {
+        // Only refresh data if user already selected a project
+        const targetProject = loadedProjects.find(p => p.id === projectIdToLoad);
+        
+        if (targetProject) {
+          console.log('Refreshing current project data for:', targetProject.id);
+          
+          // Fetch the full project with all nested data
+          const fullProject = await castingService.getProject(targetProject.id);
+          if (fullProject) {
+            console.log('Setting current project:', fullProject.id, 'with', fullProject.candidates?.length || 0, 'candidates');
+            setCurrentProject(fullProject);
+          } else {
+            console.log('Using summary project data:', targetProject.id);
+            setCurrentProject(targetProject);
+          }
+        }
+      } else if (loadedProjects.length === 0) {
         // Only create empty project if mock data initialization didn't work
         console.warn('No projects found, creating empty project');
         const defaultProject: CastingProject = {
@@ -888,10 +1066,14 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
       const loadedProjects = await castingService.getProjects();
       setProjects(loadedProjects);
       if (loadedProjects.length > 0) {
-        setCurrentProject(loadedProjects[0]);
+        // Maintain current project if possible
+        const targetProject = currentProject?.id 
+          ? loadedProjects.find(p => p.id === currentProject.id) || loadedProjects[0]
+          : loadedProjects[0];
+        setCurrentProject(targetProject);
       }
     }
-  }, [profession]);
+  }, [profession, currentProject?.id]);
 
   const handleCreateRole = useCallback(() => {
     if (!currentProject) {
@@ -970,16 +1152,39 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
       return;
     }
     
+    const isNewCandidate = !selectedCandidate.id || selectedCandidate.id.startsWith('candidate-');
+    const shouldSendConsent = isNewCandidate && sendConsentOnSave;
+    
     try {
       await castingService.saveCandidate(currentProject.id, selectedCandidate);
       await loadProjects();
-      setCandidateDialogOpen(false);
-      setSelectedCandidate(null);
+      
+      // If user wanted to send consent, open the consent dialog after save
+      if (shouldSendConsent) {
+        // Get the saved candidate to ensure we have the correct ID
+        const updatedProject = await castingService.getProject(currentProject.id);
+        const savedCandidate = updatedProject?.candidates.find(c => c.name === selectedCandidate.name);
+        
+        if (savedCandidate) {
+          setSelectedCandidate(savedCandidate);
+          setCandidateDialogOpen(false);
+          setSendConsentOnSave(false);
+          setConsentContractDialogOpen(true);
+        } else {
+          setCandidateDialogOpen(false);
+          setSelectedCandidate(null);
+          setSendConsentOnSave(false);
+        }
+      } else {
+        setCandidateDialogOpen(false);
+        setSelectedCandidate(null);
+        setSendConsentOnSave(false);
+      }
     } catch (error) {
       console.error('Error saving candidate:', error);
       toast.showError('Feil ved lagring av kandidat');
     }
-  }, [currentProject, selectedCandidate, toast, loadProjects]);
+  }, [currentProject, selectedCandidate, toast, loadProjects, sendConsentOnSave]);
 
   const handleDeleteCandidate = useCallback(async (candidateId: string) => {
     if (!currentProject) return;
@@ -1142,7 +1347,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
             <Typography 
               variant="caption" 
               sx={{ 
-                color: 'rgba(255,255,255,0.5)', 
+                color: 'rgba(255,255,255,0.87)', 
                 textTransform: 'uppercase', 
                 letterSpacing: 1,
                 fontSize: { xs: '0.6rem', sm: '0.65rem' },
@@ -1286,7 +1491,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                 {/* Edit button */}
                 <IconButton
                   size="small"
-                  onClick={(e: React.MouseEvent) => {
+                  onClick={(e: MouseEvent) => {
                     e.stopPropagation();
                     setProjectToEdit(project);
                     setProjectCreationModalOpen(true);
@@ -1311,7 +1516,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                 {/* Delete button */}
                 <IconButton
                   size="small"
-                  onClick={async (e: React.MouseEvent) => {
+                  onClick={async (e: MouseEvent) => {
                     e.stopPropagation();
                     if (window.confirm(`Er du sikker på at du vil slette prosjektet "${project.name}"? Denne handlingen kan ikke angres.`)) {
                       try {
@@ -1394,7 +1599,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               minWidth: { xs: 32, sm: 36 },
               border: '1px dashed rgba(255,255,255,0.2)',
               borderRadius: { xs: 1.5, sm: 2 },
-              color: 'rgba(255,255,255,0.5)',
+              color: 'rgba(255,255,255,0.87)',
               flexShrink: 0,
               '&:hover, &:active': {
                 borderColor: '#00d4ff',
@@ -1436,7 +1641,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
               <Typography
                 sx={{
-                  color: 'rgba(255,255,255,0.6)',
+                  color: 'rgba(255,255,255,0.87)',
                   fontSize: { xs: '0.7rem', sm: '0.75rem' },
                   display: { xs: 'none', md: 'block' },
                 }}
@@ -1500,8 +1705,42 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                   >
                     <AdminPanelSettingsIcon sx={{ fontSize: { xs: 18, sm: 20 } }} />
                   </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={async () => {
+                      if (window.confirm('Nullstill demoprosjekter? Dette vil gjenopprette standarddata.')) {
+                        resetMockCastingData();
+                        await loadProjects();
+                        toast.showSuccess('Demodata nullstilt');
+                      }
+                    }}
+                    aria-label="Nullstill demodata"
+                    title="Nullstill demodata"
+                    sx={{
+                      color: '#ff9800',
+                      '&:hover': { bgcolor: 'rgba(255,152,0,0.1)' },
+                    }}
+                  >
+                    <RefreshIcon sx={{ fontSize: { xs: 18, sm: 20 } }} />
+                  </IconButton>
                 </>
               )}
+              {/* Onboarding controls */}
+              <IconButton
+                size="small"
+                onClick={() => {
+                  resetOnboarding();
+                  triggerProfessionOnboarding();
+                }}
+                aria-label="Vis introduksjon"
+                title="Vis introduksjon på nytt"
+                sx={{
+                  color: '#ffb800',
+                  '&:hover': { bgcolor: 'rgba(255,184,0,0.1)' },
+                }}
+              >
+                <PlayArrowIcon sx={{ fontSize: { xs: 18, sm: 20 } }} />
+              </IconButton>
               <IconButton
                 size="small"
                 onClick={() => {
@@ -1514,7 +1753,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                 aria-label="Logg ut"
                 title="Logg ut"
                 sx={{
-                  color: 'rgba(255,255,255,0.5)',
+                  color: 'rgba(255,255,255,0.87)',
                   '&:hover': { color: '#ef4444', bgcolor: 'rgba(239,68,68,0.1)' },
                 }}
               >
@@ -1545,24 +1784,54 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
             alignItems: 'center', 
             gap: { xs: 1, sm: 2 }, 
             mt: { xs: 1.5, sm: 2 },
-            pt: { xs: 1.5, sm: 2 },
-            borderTop: '1px solid rgba(139,92,246,0.2)',
+            flexWrap: 'wrap',
           }}>
-            <Typography 
-              variant="h5" 
-              sx={{ 
-                fontWeight: 700,
-                fontSize: { xs: '1.1rem', sm: '1.3rem', md: '1.5rem' },
-                background: 'linear-gradient(135deg, #fff 0%, #8b5cf6 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                letterSpacing: '-0.01em',
-                textShadow: '0 0 30px rgba(139,92,246,0.3)',
-              }}
-            >
-              {currentProject.name}
-            </Typography>
+            {/* Stats summary chips */}
+            <Chip
+              icon={<TheaterComedyIcon sx={{ fontSize: 16 }} />}
+              label={`${stats.totalRoles} roller (${stats.openRoles} åpne)`}
+              size="small"
+              sx={{ bgcolor: 'rgba(244,143,177,0.15)', color: '#f48fb1', border: '1px solid rgba(244,143,177,0.3)', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+            />
+            <Chip
+              icon={<RecentActorsIcon sx={{ fontSize: 16 }} />}
+              label={`${stats.totalCandidates} kandidater`}
+              size="small"
+              sx={{ bgcolor: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+            />
+            <Chip
+              icon={<CalendarIcon sx={{ fontSize: 16 }} />}
+              label={`${stats.upcomingSchedules} kommende`}
+              size="small"
+              sx={{ bgcolor: 'rgba(156,39,176,0.15)', color: '#ce93d8', border: '1px solid rgba(156,39,176,0.3)', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+            />
+            {permissionsLoading && (
+              <CircularProgress size={16} sx={{ color: 'rgba(255,255,255,0.5)', ml: 1 }} />
+            )}
+            <Box sx={{ flex: 1 }} />
+            {/* Panel controls: fullscreen toggle + close */}
+            {!isStandalone && onToggleFullscreen && (
+              <IconButton
+                size="small"
+                onClick={onToggleFullscreen}
+                aria-label={isFullscreen ? 'Avslutt fullskjerm' : 'Fullskjerm'}
+                title={isFullscreen ? 'Avslutt fullskjerm' : 'Fullskjerm'}
+                sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#00d4ff', bgcolor: 'rgba(0,212,255,0.1)' } }}
+              >
+                {isFullscreen ? <CloseIcon sx={{ fontSize: 18 }} /> : <DescriptionIcon sx={{ fontSize: 18 }} />}
+              </IconButton>
+            )}
+            {!isStandalone && onClose && (
+              <IconButton
+                size="small"
+                onClick={onClose}
+                aria-label="Lukk panel"
+                title="Lukk panel"
+                sx={{ color: 'rgba(255,255,255,0.5)', '&:hover': { color: '#ff4444', bgcolor: 'rgba(255,68,68,0.1)' } }}
+              >
+                <CloseIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            )}
           </Box>
         )}
       </Box>
@@ -1575,7 +1844,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
       >
         <Tabs
           value={activeTab}
-          onChange={(_: React.SyntheticEvent, v: number) => setActiveTab(v)}
+          onChange={(_: SyntheticEvent, v: number) => setActiveTab(v)}
           aria-label="Casting Planner faner"
           variant="scrollable"
           scrollButtons={isMobile ? true : 'auto'}
@@ -1586,7 +1855,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               minWidth: isDesktop ? 120 : isTablet ? 80 : 'auto',
               fontSize: isDesktop ? '18px' : isTablet ? '14px' : '12px',
               fontWeight: 600,
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               padding: isDesktop ? '16px 20px' : isTablet ? '12px 16px' : '8px 10px',
               textTransform: 'none',
               flexShrink: 0,
@@ -1644,7 +1913,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               'Utstyr',
               'Kalender',
               profession ? getTerm('shotList') : 'Shot-list',
-              'Manuskript',
+              'Story Arc Studio',
               'Deling',
             ];
             const tabIds = [
@@ -1657,7 +1926,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               'tab-rekvisitter',
               'tab-produksjonsplan',
               'tab-shot-lists',
-              'tab-manuskript',
+              'tab-story-arc-studio',
               'tab-deling',
             ];
             const tabPanelIds = [
@@ -1670,7 +1939,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               'tabpanel-rekvisitter',
               'tabpanel-produksjonsplan',
               'tabpanel-shot-lists',
-              'tabpanel-manuskript',
+              'tabpanel-story-arc-studio',
               'tabpanel-deling',
             ];
             
@@ -1727,7 +1996,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
 
       {/* Content */}
       <Box sx={{ flex: 1, overflow: 'hidden', bgcolor: '#0d1117', display: 'flex', flexDirection: 'column', minHeight: 0, width: '100%' }}>
-        <Suspense fallback={<Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,0.5)' }}>Laster...</Box>}>
+        <Suspense fallback={<Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,0.87)' }}>Laster...</Box>}>
         <TabPanel value={activeTab} index={0}>
           <DashboardPanel
             project={currentProject}
@@ -1772,6 +2041,127 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
 
         <TabPanel value={activeTab} index={2}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* Candidate filters & view mode toolbar */}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+              <TextField
+                placeholder="Søk kandidater..."
+                size="small"
+                value={candidateSearchQuery}
+                onChange={(e) => setCandidateSearchQuery(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <RecentActorsIcon sx={{ color: 'rgba(255,255,255,0.5)', fontSize: 20 }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ ...textFieldStyles, flex: 1, minWidth: 180 }}
+              />
+              <FormControl size="small" sx={{ minWidth: 130 }}>
+                <Select
+                  value={candidateStatusFilter}
+                  onChange={(e) => setCandidateStatusFilter(e.target.value)}
+                  displayEmpty
+                  MenuProps={selectMenuProps}
+                  sx={{ color: '#fff', fontSize: '0.875rem', '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
+                >
+                  <MenuItem value="all">Alle statuser</MenuItem>
+                  <MenuItem value="pending">Venter</MenuItem>
+                  <MenuItem value="requested">Forespurt</MenuItem>
+                  <MenuItem value="shortlist">Shortlist</MenuItem>
+                  <MenuItem value="selected">Valgt</MenuItem>
+                  <MenuItem value="confirmed">Bekreftet</MenuItem>
+                  <MenuItem value="rejected">Avvist</MenuItem>
+                </Select>
+              </FormControl>
+              <Box sx={{ display: 'flex', gap: 0.5, ml: 'auto' }}>
+                <IconButton
+                  size="small"
+                  onClick={() => setCandidateViewMode('list')}
+                  aria-label="Listevisning"
+                  sx={{ color: candidateViewMode === 'list' ? '#00d4ff' : 'rgba(255,255,255,0.5)', bgcolor: candidateViewMode === 'list' ? 'rgba(0,212,255,0.15)' : 'transparent', borderRadius: 1 }}
+                >
+                  <ViewListIcon sx={{ fontSize: 20 }} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={() => setCandidateViewMode('kanban')}
+                  aria-label="Kanban-visning"
+                  sx={{ color: candidateViewMode === 'kanban' ? '#00d4ff' : 'rgba(255,255,255,0.5)', bgcolor: candidateViewMode === 'kanban' ? 'rgba(0,212,255,0.15)' : 'transparent', borderRadius: 1 }}
+                >
+                  <GroupIcon sx={{ fontSize: 20 }} />
+                </IconButton>
+              </Box>
+            </Box>
+            {candidateViewMode === 'kanban' ? (
+              <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={32} sx={{ color: '#00d4ff' }} /></Box>}>
+                <KanbanPanel
+                  project={currentProject}
+                  candidates={candidates}
+                  roles={roles}
+                  onCandidatesChange={loadProjects}
+                  onEditCandidate={(candidate: Candidate) => {
+                    setSelectedCandidate(candidate);
+                    setCandidateDialogOpen(true);
+                  }}
+                  onCreateCandidate={handleCreateCandidate}
+                  onNavigateToTab={setActiveTab}
+                />
+              </Suspense>
+            ) : (
+            <>
+              {/* Drag status banner */}
+              {draggedCandidate && (
+                <Box sx={{
+                  display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1,
+                  bgcolor: 'rgba(0,212,255,0.1)', borderRadius: 1, border: '1px dashed rgba(0,212,255,0.4)',
+                }}>
+                  <SwapHorizIcon sx={{ fontSize: 18, color: '#00d4ff' }} />
+                  <Typography variant="body2" sx={{ color: '#00d4ff', fontSize: '0.8rem' }}>
+                    Drar kandidat: <strong>{draggedCandidate.name}</strong>
+                  </Typography>
+                  <Button size="small" onClick={() => setDraggedCandidate(null)} sx={{ ml: 'auto', color: 'rgba(255,255,255,0.6)', textTransform: 'none', fontSize: '0.75rem' }}>
+                    Avbryt
+                  </Button>
+                </Box>
+              )}
+              {/* Quick contact actions for selected candidates */}
+              {candidates.filter(c => c.status === 'selected' || c.status === 'shortlist').length > 0 && (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', mr: 0.5, fontSize: '0.75rem' }}>
+                    Hurtigkontakt:
+                  </Typography>
+                  {candidates
+                    .filter(c => c.status === 'selected' || c.status === 'shortlist')
+                    .slice(0, 5)
+                    .map(c => (
+                      <Box key={c.id} sx={{ display: 'inline-flex', gap: 0.25 }}>
+                        {c.contactInfo?.email && (
+                          <Tooltip title={`E-post: ${c.contactInfo.email}`}>
+                            <IconButton
+                              size="small"
+                              onClick={() => window.open(`mailto:${c.contactInfo.email}`, '_blank')}
+                              sx={{ color: 'rgba(255,255,255,0.5)', p: 0.5 }}
+                            >
+                              <EmailIcon sx={{ fontSize: 14 }} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        {c.contactInfo?.phone && (
+                          <Tooltip title={`Ring: ${c.contactInfo.phone}`}>
+                            <IconButton
+                              size="small"
+                              onClick={() => window.open(`tel:${c.contactInfo.phone}`, '_blank')}
+                              sx={{ color: 'rgba(255,255,255,0.5)', p: 0.5 }}
+                            >
+                              <PhoneIcon sx={{ fontSize: 14 }} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
+                    ))}
+                </Box>
+              )}
             <CandidateManagementPanel
               projectId={currentProject?.id || ''}
               candidates={candidates}
@@ -1784,6 +2174,8 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               onCreateCandidate={handleCreateCandidate}
               profession={profession}
             />
+            </>
+            )}
             {currentProject && (
               <>
                 <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
@@ -1794,6 +2186,52 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
         </TabPanel>
 
         <TabPanel value={activeTab} index={3}>
+          {/* Schedule filters */}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', mb: 2 }}>
+            <TextField
+              label="Dato"
+              type="date"
+              size="small"
+              value={scheduleDateFilter}
+              onChange={(e) => setScheduleDateFilter(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ ...textFieldStyles, minWidth: 160 }}
+            />
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel sx={inputLabelStyles}>Kandidat</InputLabel>
+              <Select
+                value={scheduleCandidateFilter}
+                onChange={(e) => setScheduleCandidateFilter(e.target.value)}
+                MenuProps={selectMenuProps}
+                sx={{ color: '#fff', fontSize: '0.875rem', '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
+              >
+                <MenuItem value="all">Alle kandidater</MenuItem>
+                {allCandidates.map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 130 }}>
+              <InputLabel sx={inputLabelStyles}>Rolle</InputLabel>
+              <Select
+                value={scheduleRoleFilter}
+                onChange={(e) => setScheduleRoleFilter(e.target.value)}
+                MenuProps={selectMenuProps}
+                sx={{ color: '#fff', fontSize: '0.875rem', '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
+              >
+                <MenuItem value="all">Alle roller</MenuItem>
+                {roles.map(r => <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>)}
+              </Select>
+            </FormControl>
+            {(scheduleDateFilter || scheduleCandidateFilter !== 'all' || scheduleRoleFilter !== 'all') && (
+              <Button
+                size="small"
+                startIcon={<RefreshIcon sx={{ fontSize: 16 }} />}
+                onClick={() => { setScheduleDateFilter(''); setScheduleCandidateFilter('all'); setScheduleRoleFilter('all'); }}
+                sx={{ color: 'rgba(255,255,255,0.7)', textTransform: 'none', fontSize: '0.8rem' }}
+              >
+                Nullstill filter
+              </Button>
+            )}
+          </Box>
           <AuditionSchedulePanel
             projectId={currentProject?.id || ''}
             schedules={schedules}
@@ -1813,38 +2251,59 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
 
         <TabPanel value={activeTab} index={4}>
           {!currentProject ? (
-            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.87)' }}>
               <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
                 Ingen prosjekt valgt
               </Typography>
             </Box>
           ) : !permissions.canManageCrew ? (
-            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.87)' }}>
               <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
                 Du har ikke tilgang til å administrere teamet
               </Typography>
             </Box>
           ) : (
-            <CrewManagementPanel
-              projectId={currentProject.id}
-              onUpdate={async () => {
-                const updated = await castingService.getProject(currentProject.id);
-                if (updated) setCurrentProject(updated);
-              }}
-              profession={profession}
-            />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* Crew Role Legend */}
+              {currentProject.crew && currentProject.crew.length > 0 && (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, px: 2, pt: 1 }}>
+                  {Array.from(new Set(currentProject.crew.map(c => c.role))).map(role => (
+                    <Chip
+                      key={role}
+                      icon={getCrewRoleIcon(role)}
+                      label={role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      size="small"
+                      sx={{
+                        bgcolor: 'rgba(255,255,255,0.05)',
+                        color: 'rgba(255,255,255,0.87)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        '& .MuiChip-icon': { color: 'rgba(255,255,255,0.7)' },
+                      }}
+                    />
+                  ))}
+                </Box>
+              )}
+              <CrewManagementPanel
+                projectId={currentProject.id}
+                onUpdate={async () => {
+                  const updated = await castingService.getProject(currentProject.id);
+                  if (updated) setCurrentProject(updated);
+                }}
+                profession={profession}
+              />
+            </Box>
           )}
         </TabPanel>
 
         <TabPanel value={activeTab} index={5}>
           {!currentProject ? (
-            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.87)' }}>
               <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
                 Ingen prosjekt valgt
               </Typography>
             </Box>
           ) : !permissions.canManageLocations ? (
-            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.87)' }}>
               <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
                 Du har ikke tilgang til å administrere lokasjoner
               </Typography>
@@ -1862,66 +2321,167 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
 
         <TabPanel value={activeTab} index={6}>
           {!currentProject ? (
-            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.87)' }}>
               <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
                 Ingen prosjekt valgt
               </Typography>
             </Box>
           ) : !permissions.canEditProduction ? (
-            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.87)' }}>
               <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
                 Du har ikke tilgang til å administrere utstyr
               </Typography>
             </Box>
           ) : (
-            <EquipmentManagementPanel
-              projectId={currentProject.id}
-              onUpdate={async () => {
-                const updated = await castingService.getProject(currentProject.id);
-                if (updated) setCurrentProject(updated);
-              }}
-            />
-          )}
-        </TabPanel>
-
-        <TabPanel value={activeTab} index={7}>
-          {!currentProject ? (
-            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
-              <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
-                Ingen prosjekt valgt
-              </Typography>
-            </Box>
-          ) : !permissions.canEditProduction ? (
-            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
-              <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
-                Du har ikke tilgang til å redigere produksjonsplanen
-              </Typography>
-            </Box>
-          ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <ProductionCalendarPanel projectId={currentProject.id} />
-              <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
-              <ProductionDayView
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <EquipmentManagementPanel
                 projectId={currentProject.id}
                 onUpdate={async () => {
                   const updated = await castingService.getProject(currentProject.id);
                   if (updated) setCurrentProject(updated);
                 }}
-                profession={profession}
               />
+              <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <InventoryIcon sx={{ color: '#ff9800', fontSize: 22 }} />
+                  <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 600 }}>
+                    Rekvisitter
+                  </Typography>
+                </Box>
+                <PropManagementPanel
+                  projectId={currentProject.id}
+                  onUpdate={async () => {
+                    const updated = await castingService.getProject(currentProject.id);
+                    if (updated) setCurrentProject(updated);
+                  }}
+                />
+              </Box>
+            </Box>
+          )}
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={7}>
+          {!currentProject ? (
+            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.87)' }}>
+              <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
+                Ingen prosjekt valgt
+              </Typography>
+            </Box>
+          ) : !permissions.canEditProduction ? (
+            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.87)' }}>
+              <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
+                Du har ikke tilgang til å redigere produksjonsplanen
+              </Typography>
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, height: '100%' }}>
+              {/* Calendar View Toggle */}
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                gap: 1, 
+                p: 1,
+                borderRadius: 2,
+                bgcolor: 'rgba(0,0,0,0.2)',
+              }}>
+                <Button
+                  variant={calendarViewMode === 'production' ? 'contained' : 'outlined'}
+                  onClick={() => setCalendarViewMode('production')}
+                  startIcon={<CalendarMonthIcon />}
+                  size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    bgcolor: calendarViewMode === 'production' ? 'rgba(139,92,246,0.9)' : 'transparent',
+                    borderColor: 'rgba(139,92,246,0.5)',
+                    color: calendarViewMode === 'production' ? '#fff' : 'rgba(255,255,255,0.7)',
+                    '&:hover': {
+                      bgcolor: calendarViewMode === 'production' ? 'rgba(139,92,246,1)' : 'rgba(139,92,246,0.1)',
+                    },
+                  }}
+                >
+                  Produksjonsplan
+                </Button>
+                <Button
+                  variant={calendarViewMode === 'crew' ? 'contained' : 'outlined'}
+                  onClick={() => setCalendarViewMode('crew')}
+                  startIcon={<GroupsIcon />}
+                  size={isMobile ? 'small' : 'medium'}
+                  sx={{
+                    bgcolor: calendarViewMode === 'crew' ? 'rgba(16,185,129,0.9)' : 'transparent',
+                    borderColor: 'rgba(16,185,129,0.5)',
+                    color: calendarViewMode === 'crew' ? '#fff' : 'rgba(255,255,255,0.7)',
+                    '&:hover': {
+                      bgcolor: calendarViewMode === 'crew' ? 'rgba(16,185,129,1)' : 'rgba(16,185,129,0.1)',
+                    },
+                  }}
+                >
+                  Crew Kalender
+                </Button>
+              </Box>
+
+              {/* Calendar Content */}
+              {calendarViewMode === 'production' ? (
+                <>
+                  <ProductionCalendarPanel projectId={currentProject.id} />
+                  <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
+                  <ProductionDayView
+                    projectId={currentProject.id}
+                    onUpdate={async () => {
+                      const updated = await castingService.getProject(currentProject.id);
+                      if (updated) setCurrentProject(updated);
+                    }}
+                    profession={profession}
+                  />
+                </>
+              ) : (
+                <Box sx={{ flex: 1, minHeight: 0 }}>
+                  <Suspense fallback={
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                      <CircularProgress sx={{ color: 'rgba(16,185,129,0.8)' }} />
+                    </Box>
+                  }>
+                    <CrewCalendarPanel 
+                      projectId={currentProject.id}
+                      projectName={currentProject.name}
+                      crew={currentProject.crew?.map(c => ({
+                        id: c.id,
+                        name: c.name,
+                        role: c.role,
+                        department: mapRoleToDepartment(c.role),
+                        avatar: '',
+                        email: c.contactInfo?.email,
+                        phone: c.contactInfo?.phone,
+                      }))}
+                      events={currentProject.productionDays?.map(pd => ({
+                        id: pd.id,
+                        title: `Produksjonsdag - ${pd.status === 'completed' ? 'Ferdig' : pd.status === 'in_progress' ? 'Pågår' : 'Planlagt'}`,
+                        description: pd.notes || `Scenes: ${pd.scenes?.length || 0}`,
+                        date: new Date(pd.date),
+                        startTime: pd.callTime || '09:00',
+                        endTime: pd.wrapTime || '17:00',
+                        department: 'produksjon' as const,
+                        eventType: 'shooting' as const,
+                        crewIds: pd.crew || [],
+                        locationName: currentProject.locations?.find(l => l.id === pd.locationId)?.name,
+                        projectName: currentProject.name,
+                      }))}
+                    />
+                  </Suspense>
+                </Box>
+              )}
             </Box>
           )}
         </TabPanel>
 
         <TabPanel value={activeTab} index={8}>
           {!currentProject ? (
-            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.87)' }}>
               <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
                 Ingen prosjekt valgt
               </Typography>
             </Box>
           ) : !permissions.canEditShotLists ? (
-            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.87)' }}>
               <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
                 Du har ikke tilgang til å redigere shot lists
               </Typography>
@@ -1939,26 +2499,211 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
         </TabPanel>
 
         <TabPanel value={activeTab} index={9}>
-          {!currentProject ? (
-            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
-              <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
-                Ingen prosjekt valgt
-              </Typography>
+          {storyArcView === 'main' ? (
+            <Box sx={{ p: 2 }}>
+              {/* Story Arc Studio Header */}
+              <Box sx={{ mb: 3, textAlign: 'center' }}>
+                <Typography variant="h5" sx={{ 
+                  fontWeight: 700, 
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                  mb: 1,
+                }}>
+                  <StoryArcIcon sx={{ color: '#ec4899', fontSize: 32 }} />
+                  Story Arc Studio
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
+                  Planlegg og skriv din historie
+                </Typography>
+              </Box>
+
+              {/* Two Cards Grid */}
+              <Grid container spacing={3} justifyContent="center">
+                {/* Story Logic Card */}
+                <Grid size={{ xs: 12, sm: 6, md: 5 }}>
+                  <Card
+                    sx={{
+                      bgcolor: 'rgba(139, 92, 246, 0.1)',
+                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                      borderRadius: 3,
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 8px 32px rgba(139, 92, 246, 0.3)',
+                        borderColor: '#8b5cf6',
+                      },
+                    }}
+                    onClick={() => setStoryArcView('story-logic')}
+                  >
+                    <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                      <Box sx={{
+                        width: 80,
+                        height: 80,
+                        borderRadius: '50%',
+                        bgcolor: 'rgba(139, 92, 246, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mx: 'auto',
+                        mb: 2,
+                      }}>
+                        <StoryLogicIcon sx={{ fontSize: 40, color: '#8b5cf6' }} />
+                      </Box>
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: '#fff', mb: 1 }}>
+                        Story Logic
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 2 }}>
+                        Story Arc
+                      </Typography>
+                      <Chip 
+                        label="Strukturer din historie" 
+                        size="small" 
+                        sx={{ 
+                          bgcolor: 'rgba(139, 92, 246, 0.2)', 
+                          color: '#8b5cf6',
+                          fontSize: '0.75rem',
+                        }} 
+                      />
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                {/* Story Writer Card */}
+                <Grid size={{ xs: 12, sm: 6, md: 5 }}>
+                  <Card
+                    sx={{
+                      bgcolor: 'rgba(236, 72, 153, 0.1)',
+                      border: '1px solid rgba(236, 72, 153, 0.3)',
+                      borderRadius: 3,
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 8px 32px rgba(236, 72, 153, 0.3)',
+                        borderColor: '#ec4899',
+                      },
+                    }}
+                    onClick={() => setStoryArcView('story-writer')}
+                  >
+                    <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                      <Box sx={{
+                        width: 80,
+                        height: 80,
+                        borderRadius: '50%',
+                        bgcolor: 'rgba(236, 72, 153, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mx: 'auto',
+                        mb: 2,
+                      }}>
+                        <StoryWriterIcon sx={{ fontSize: 40, color: '#ec4899' }} />
+                      </Box>
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: '#fff', mb: 1 }}>
+                        Story Writer
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 2 }}>
+                        Story Planner
+                      </Typography>
+                      <Chip 
+                        label="Skriv manuskript" 
+                        size="small" 
+                        sx={{ 
+                          bgcolor: 'rgba(236, 72, 153, 0.2)', 
+                          color: '#ec4899',
+                          fontSize: '0.75rem',
+                        }} 
+                      />
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+            </Box>
+          ) : storyArcView === 'story-logic' ? (
+            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              {/* Back button header */}
+              <Box sx={{ 
+                p: 1.5, 
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+              }}>
+                <Button
+                  startIcon={<CloseIcon />}
+                  onClick={() => setStoryArcView('main')}
+                  size="small"
+                  sx={{ color: 'rgba(255,255,255,0.87)' }}
+                >
+                  Tilbake
+                </Button>
+                <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+                <StoryLogicIcon sx={{ color: '#8b5cf6' }} />
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#fff' }}>
+                  Story Logic - Story Arc
+                </Typography>
+              </Box>
+              {/* Story Logic Panel */}
+              <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                <Suspense fallback={
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                    <CircularProgress size={32} sx={{ color: '#8b5cf6' }} />
+                  </Box>
+                }>
+                  <StoryLogicPanel projectId={currentProject?.id} />
+                </Suspense>
+              </Box>
             </Box>
           ) : (
-            <ManuscriptPanel
-              projectId={currentProject.id}
-              onManuscriptChange={async () => {
-                const updated = await castingService.getProject(currentProject.id);
-                if (updated) setCurrentProject(updated);
-              }}
-            />
+            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              {/* Back button header */}
+              <Box sx={{ 
+                p: 1.5, 
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+              }}>
+                <Button
+                  startIcon={<CloseIcon />}
+                  onClick={() => setStoryArcView('main')}
+                  size="small"
+                  sx={{ color: 'rgba(255,255,255,0.87)' }}
+                >
+                  Tilbake
+                </Button>
+                <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+                <StoryWriterIcon sx={{ color: '#ec4899' }} />
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#fff' }}>
+                  Story Writer - Manuskript
+                </Typography>
+              </Box>
+              {/* Story Writer Content - ManuscriptPanel */}
+              <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                <ErrorBoundary>
+                  <Suspense fallback={
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                      <CircularProgress />
+                    </Box>
+                  }>
+                    <ManuscriptPanel
+                      projectId={currentProject?.id}
+                      onManuscriptChange={handleManuscriptChange}
+                    />
+                  </Suspense>
+                </ErrorBoundary>
+              </Box>
+            </Box>
           )}
         </TabPanel>
 
         <TabPanel value={activeTab} index={10}>
           {!permissions.canApprove && currentProject ? (
-            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+            <Box sx={{ p: 3, textAlign: 'center', color: 'rgba(255,255,255,0.87)' }}>
               <Typography variant="body1" sx={{ fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem' }}>
                 Du har ikke tilgang til delingsinnstillinger
               </Typography>
@@ -2001,13 +2746,13 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                 {selectedRole?.id && !selectedRole.name ? 'Ny rolle' : 'Rediger rolle'}
               </Typography>
               {selectedRole?.name && (
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   {selectedRole.name}
                 </Typography>
               )}
             </Box>
           </Box>
-          <IconButton onClick={() => { setRoleDialogOpen(false); setSelectedRole(null); }} sx={{ color: 'rgba(255,255,255,0.6)' }}>
+          <IconButton onClick={() => { setRoleDialogOpen(false); setSelectedRole(null); }} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
@@ -2015,9 +2760,9 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           {selectedRole && (
             <Grid container spacing={3}>
               {/* Left Column - Basic Info */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <PersonIcon sx={{ color: '#00d4ff', fontSize: 20 }} />
+                  <PersonNameIcon sx={{ color: '#00d4ff', fontSize: 20 }} />
                   <Typography variant="subtitle2" sx={{ color: '#00d4ff', fontWeight: 600 }}>
                     Grunnleggende
                   </Typography>
@@ -2030,6 +2775,13 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                     fullWidth
                     required
                     size="small"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <TheaterComedyIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
                     sx={textFieldStyles}
                   />
                   <TextField
@@ -2040,6 +2792,13 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                     multiline
                     rows={2}
                     size="small"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1 }}>
+                          <NotesIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
                     sx={textFieldStyles}
                   />
                   <Box sx={{ display: 'flex', gap: 2 }}>
@@ -2052,6 +2811,13 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                         requirements: { ...selectedRole.requirements, age: { ...selectedRole.requirements.age, min: e.target.value ? parseInt(e.target.value) : undefined } },
                       })}
                       size="small"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <AccessTimeIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 18 }} />
+                          </InputAdornment>
+                        ),
+                      }}
                       sx={{ flex: 1, ...textFieldStyles }}
                     />
                     <TextField
@@ -2063,6 +2829,13 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                         requirements: { ...selectedRole.requirements, age: { ...selectedRole.requirements.age, max: e.target.value ? parseInt(e.target.value) : undefined } },
                       })}
                       size="small"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <AccessTimeIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 18 }} />
+                          </InputAdornment>
+                        ),
+                      }}
                       sx={{ flex: 1, ...textFieldStyles }}
                     />
                   </Box>
@@ -2075,6 +2848,11 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                         ...selectedRole,
                         requirements: { ...selectedRole.requirements, gender: e.target.value ? [e.target.value as string] : undefined },
                       })}
+                      startAdornment={
+                        <InputAdornment position="start">
+                          <TransgenderIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20, ml: 1 }} />
+                        </InputAdornment>
+                      }
                       sx={{ color: '#fff', '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
                     >
                       <MenuItem value="mann">Mann</MenuItem>
@@ -2089,6 +2867,11 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                       value={selectedRole.status}
                       MenuProps={selectMenuProps}
                       onChange={(e) => setSelectedRole({ ...selectedRole, status: e.target.value as Role['status'] })}
+                      startAdornment={
+                        <InputAdornment position="start">
+                          <CheckCircleOutlineIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20, ml: 1 }} />
+                        </InputAdornment>
+                      }
                       sx={{ color: '#fff', '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' } }}
                     >
                       <MenuItem value="draft">Draft</MenuItem>
@@ -2102,7 +2885,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               </Grid>
 
               {/* Right Column - Requirements */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                   <AssignmentIcon sx={{ color: '#00d4ff', fontSize: 20 }} />
                   <Typography variant="subtitle2" sx={{ color: '#00d4ff', fontWeight: 600 }}>
@@ -2120,6 +2903,13 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                     fullWidth
                     size="small"
                     placeholder="høyde, hårfarge..."
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <FaceIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
                     sx={textFieldStyles}
                   />
                   <TextField
@@ -2132,6 +2922,13 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                     fullWidth
                     size="small"
                     placeholder="skuespill, dans..."
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <WorkIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
                     sx={textFieldStyles}
                   />
                   <TextField
@@ -2144,6 +2941,13 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                     fullWidth
                     size="small"
                     placeholder="uniform, dialekt..."
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <CheckroomIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
                     sx={textFieldStyles}
                   />
                   <FormControl fullWidth size="small">
@@ -2153,6 +2957,11 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                       value={selectedRole.sceneIds || []}
                       MenuProps={selectMenuProps}
                       onChange={(e) => setSelectedRole({ ...selectedRole, sceneIds: e.target.value as string[] })}
+                      startAdornment={
+                        <InputAdornment position="start">
+                          <ShotListIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20, ml: 1 }} />
+                        </InputAdornment>
+                      }
                       renderValue={(selected) => (
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                           {(selected as string[]).map((sceneId) => (
@@ -2176,6 +2985,11 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                           value={selectedRole.crewRequirements || []}
                           MenuProps={selectMenuProps}
                           onChange={(e) => setSelectedRole({ ...selectedRole, crewRequirements: e.target.value as string[] })}
+                          startAdornment={
+                            <InputAdornment position="start">
+                              <GroupsIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20, ml: 1 }} />
+                            </InputAdornment>
+                          }
                           renderValue={(selected) => (
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                               {(selected as string[]).map((crewId) => (
@@ -2197,6 +3011,11 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                           value={selectedRole.locationRequirements || []}
                           MenuProps={selectMenuProps}
                           onChange={(e) => setSelectedRole({ ...selectedRole, locationRequirements: e.target.value as string[] })}
+                          startAdornment={
+                            <InputAdornment position="start">
+                              <LocationIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20, ml: 1 }} />
+                            </InputAdornment>
+                          }
                           renderValue={(selected) => (
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                               {(selected as string[]).map((locId) => (
@@ -2218,6 +3037,11 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                           value={selectedRole.propRequirements || []}
                           MenuProps={selectMenuProps}
                           onChange={(e) => setSelectedRole({ ...selectedRole, propRequirements: e.target.value as string[] })}
+                          startAdornment={
+                            <InputAdornment position="start">
+                              <EquipmentIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20, ml: 1 }} />
+                            </InputAdornment>
+                          }
                           renderValue={(selected) => (
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                               {(selected as string[]).map((propId) => (
@@ -2242,7 +3066,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
         <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2, gap: 1 }}>
           <Button
             onClick={() => { setRoleDialogOpen(false); setSelectedRole(null); }}
-            sx={{ color: 'rgba(255,255,255,0.6)', minHeight: TOUCH_TARGET_SIZE }}
+            sx={{ color: 'rgba(255,255,255,0.87)', minHeight: TOUCH_TARGET_SIZE }}
           >
             Avbryt
           </Button>
@@ -2254,6 +3078,15 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           >
             Lagre rolle
           </Button>
+          {selectedRole?.id && selectedRole.name && (
+            <Button
+              onClick={() => { handleDeleteRole(selectedRole.id); setRoleDialogOpen(false); setSelectedRole(null); }}
+              startIcon={<DeleteIcon />}
+              sx={{ color: '#ff4444', minHeight: TOUCH_TARGET_SIZE, '&:hover': { bgcolor: 'rgba(255,68,68,0.1)' } }}
+            >
+              Slett
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
@@ -2304,7 +3137,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           px: 2.5,
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <PersonIcon sx={{ fontSize: '1.5rem', color: '#00d4ff' }} />
+            <RecentActorsIcon sx={{ fontSize: '1.5rem', color: '#00d4ff' }} />
             <Typography variant="h6" sx={{ fontSize: '1.125rem', fontWeight: 600 }}>
               {selectedCandidate?.id && !selectedCandidate.name ? 'Ny kandidat' : 'Rediger kandidat'}
             </Typography>
@@ -2315,7 +3148,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               setSelectedCandidate(null);
             }}
             size="small"
-            sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#fff' } }}
+            sx={{ color: 'rgba(255,255,255,0.87)', '&:hover': { color: '#fff' } }}
           >
             <CloseIcon />
           </IconButton>
@@ -2329,6 +3162,13 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                 onChange={(e) => setSelectedCandidate({ ...selectedCandidate, name: e.target.value })}
                 fullWidth
                 required
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <PersonNameIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.25rem' } }} />
+                    </InputAdornment>
+                  ),
+                }}
                 sx={{
                   ...textFieldStyles,
                 }}
@@ -2348,7 +3188,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <EmailIcon sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.25rem' } }} />
+                      <CustomEmailIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.25rem' } }} />
                     </InputAdornment>
                   ),
                 }}
@@ -2371,7 +3211,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <PhoneIcon sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.25rem' } }} />
+                      <CustomPhoneIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.25rem' } }} />
                     </InputAdornment>
                   ),
                 }}
@@ -2391,7 +3231,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <HomeIcon sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.25rem' } }} />
+                      <AddressIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.25rem' } }} />
                     </InputAdornment>
                   ),
                 }}
@@ -2486,7 +3326,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <NoteIcon sx={{ color: 'rgba(255,255,255,0.5)', fontSize: isDesktop ? '1.25rem' : '1rem' }} />
+                      <NoteIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: isDesktop ? '1.25rem' : '1rem' }} />
                     </InputAdornment>
                   ),
                 }}
@@ -2663,8 +3503,11 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                 }}
               />
 
-              {selectedCandidate.id && currentProject && (
+              {/* Consent Section */}
+              {selectedCandidate.id && currentProject ? (
                 <Box sx={{ mt: { xs: 3, sm: 3.5, md: 3.25, lg: 3.5, xl: 4 } }}>
+                  {/* Quick consent status check via consentService */}
+                  <ConsentStatusSummary projectId={currentProject.id} candidateId={selectedCandidate.id} />
                   <ConsentManagementPanel
                     projectId={currentProject.id}
                     candidateId={selectedCandidate.id}
@@ -2672,6 +3515,55 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                       loadProjects();
                     }}
                   />
+                </Box>
+              ) : (
+                /* For new candidates - show option to send consent on save */
+                <Box sx={{ 
+                  mt: { xs: 3, sm: 3.5, md: 3.25, lg: 3.5, xl: 4 },
+                  p: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 },
+                  bgcolor: 'rgba(0,212,255,0.05)',
+                  borderRadius: 2,
+                  border: '1px solid rgba(0,212,255,0.2)',
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, mb: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 } }}>
+                    <ConsentsIcon sx={{ color: '#00d4ff', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.3125rem', lg: '1.4375rem', xl: '1.5rem' } }} />
+                    <Typography variant="subtitle2" sx={{ 
+                      color: '#00d4ff', 
+                      fontSize: { xs: '1rem', sm: '1.0625rem', md: '1.03125rem', lg: '1.09375rem', xl: '1.125rem' },
+                      fontWeight: 600,
+                    }}>
+                      Samtykke
+                    </Typography>
+                  </Box>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={sendConsentOnSave}
+                        onChange={(e) => setSendConsentOnSave(e.target.checked)}
+                        sx={{ 
+                          color: '#00d4ff', 
+                          '&.Mui-checked': { color: '#00d4ff' },
+                        }}
+                      />
+                    }
+                    label={
+                      <Typography sx={{ 
+                        color: 'rgba(255,255,255,0.87)', 
+                        fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
+                      }}>
+                        Send samtykkekontrakt etter lagring
+                      </Typography>
+                    }
+                  />
+                  <Typography variant="caption" sx={{ 
+                    display: 'block', 
+                    color: 'rgba(255,255,255,0.87)', 
+                    mt: 0.5,
+                    ml: 4,
+                    fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.875rem' },
+                  }}>
+                    Kandidaten vil motta en invitasjon til å signere samtykkekontrakt via e-post eller SMS
+                  </Typography>
                 </Box>
               )}
             </Box>
@@ -2689,7 +3581,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
             }}
             startIcon={<CancelIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />}
             sx={{ 
-              color: 'rgba(255,255,255,0.6)',
+              color: 'rgba(255,255,255,0.87)',
               fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
               px: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 },
               py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 },
@@ -2715,6 +3607,22 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           >
             Lagre
           </Button>
+          {selectedCandidate?.id && selectedCandidate.name && (
+            <Button
+              onClick={() => { handleDeleteCandidate(selectedCandidate.id); setCandidateDialogOpen(false); setSelectedCandidate(null); }}
+              startIcon={<DeleteIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />}
+              sx={{
+                color: '#ff4444',
+                fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
+                px: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 },
+                py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 },
+                minHeight: TOUCH_TARGET_SIZE,
+                '&:hover': { bgcolor: 'rgba(255,68,68,0.1)' },
+              }}
+            >
+              Slett
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
@@ -2776,7 +3684,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               setSelectedSchedule(null);
             }}
             size="small"
-            sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#fff' } }}
+            sx={{ color: 'rgba(255,255,255,0.87)', '&:hover': { color: '#fff' } }}
           >
             <CloseIcon />
           </IconButton>
@@ -2846,7 +3754,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <CalendarIcon sx={{ color: 'rgba(255,255,255,0.5)', fontSize: isDesktop ? '1.25rem' : '1rem' }} />
+                      <CalendarIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: isDesktop ? '1.25rem' : '1rem' }} />
                     </InputAdornment>
                   ),
                 }}
@@ -2865,7 +3773,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <AccessTimeIcon sx={{ color: 'rgba(255,255,255,0.5)', fontSize: isDesktop ? '1.25rem' : '1rem' }} />
+                      <AccessTimeIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: isDesktop ? '1.25rem' : '1rem' }} />
                     </InputAdornment>
                   ),
                 }}
@@ -2910,7 +3818,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                         <Box>
                           <Typography sx={{ fontSize: 'inherit' }}>{loc.name}</Typography>
                           {loc.address && (
-                            <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>
+                            <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.87)' }}>
                               {loc.address}
                             </Typography>
                           )}
@@ -2936,7 +3844,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <LocationIcon sx={{ color: 'rgba(255,255,255,0.5)', fontSize: isDesktop ? '1.25rem' : '1rem' }} />
+                      <LocationIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: isDesktop ? '1.25rem' : '1rem' }} />
                     </InputAdornment>
                   ),
                 }}
@@ -3085,7 +3993,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
             }}
             startIcon={<CancelIcon />}
             sx={{ 
-              color: 'rgba(255,255,255,0.6)',
+              color: 'rgba(255,255,255,0.87)',
               fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem',
               px: isDesktop ? 3 : 2,
               py: isDesktop ? 1.5 : 1,
@@ -3109,6 +4017,21 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           >
             Lagre
           </Button>
+          {selectedSchedule?.id && selectedSchedule.date && (
+            <Button
+              onClick={() => { handleDeleteSchedule(selectedSchedule.id); setScheduleDialogOpen(false); setSelectedSchedule(null); }}
+              startIcon={<DeleteIcon />}
+              sx={{
+                color: '#ff4444',
+                fontSize: isDesktop ? '1.125rem' : isTablet ? '1rem' : '0.875rem',
+                px: isDesktop ? 3 : 2,
+                py: isDesktop ? 1.5 : 1,
+                '&:hover': { bgcolor: 'rgba(255,68,68,0.1)' },
+              }}
+            >
+              Slett
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
@@ -3143,7 +4066,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           </Typography>
           <IconButton
             onClick={() => setProjectSelectorOpen(false)}
-            sx={{ color: 'rgba(255,255,255,0.7)' }}
+            sx={{ color: 'rgba(255,255,255,0.87)' }}
           >
             <CloseIcon />
           </IconButton>
@@ -3154,7 +4077,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
               .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
               .map((project) => {
                 const isActive = currentProject?.id === project.id;
-                const candidateCount = project.candidates?.length || 0;
+                const candidateCount = project.candidatesCount ?? project.candidates?.length ?? 0;
                 const updatedDate = project.updatedAt 
                   ? new Date(project.updatedAt).toLocaleDateString('nb-NO', { 
                       day: '2-digit', 
@@ -3167,8 +4090,16 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                 return (
                   <Box
                     key={project.id}
-                    onClick={() => {
-                      setCurrentProject(project);
+                    onClick={async () => {
+                      // Load full project data when user selects it
+                      console.log('🎬 User selected project:', project.name);
+                      const fullProject = await castingService.getProject(project.id);
+                      if (fullProject) {
+                        console.log('🎬 Loaded full project with', fullProject.candidates?.length || 0, 'candidates');
+                        setCurrentProject(fullProject);
+                      } else {
+                        setCurrentProject(project);
+                      }
                       setProjectSelectorOpen(false);
                     }}
                     sx={{
@@ -3207,7 +4138,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                       <Typography 
                         sx={{ 
                           fontSize: '0.75rem',
-                          color: 'rgba(255,255,255,0.5)',
+                          color: 'rgba(255,255,255,0.87)',
                         }}
                       >
                         Sist endret: {updatedDate}
@@ -3219,21 +4150,21 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                       sx={{
                         height: 24,
                         bgcolor: 'rgba(255,255,255,0.1)',
-                        color: 'rgba(255,255,255,0.7)',
+                        color: 'rgba(255,255,255,0.87)',
                         fontSize: '0.7rem',
                       }}
                     />
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
                       <IconButton
                         size="small"
-                        onClick={(e: React.MouseEvent) => {
+                        onClick={(e: MouseEvent) => {
                           e.stopPropagation();
                           setProjectToEdit(project);
                           setProjectCreationModalOpen(true);
                           setProjectSelectorOpen(false);
                         }}
                         sx={{
-                          color: 'rgba(255,255,255,0.5)',
+                          color: 'rgba(255,255,255,0.87)',
                           '&:hover': { color: '#00d4ff' },
                         }}
                       >
@@ -3241,7 +4172,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                       </IconButton>
                       <IconButton
                         size="small"
-                        onClick={async (e: React.MouseEvent) => {
+                        onClick={async (e: MouseEvent) => {
                           e.stopPropagation();
                           if (window.confirm(`Er du sikker på at du vil slette "${project.name}"?`)) {
                             try {
@@ -3257,7 +4188,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                           }
                         }}
                         sx={{
-                          color: 'rgba(255,255,255,0.5)',
+                          color: 'rgba(255,255,255,0.87)',
                           '&:hover': { color: '#ff4444' },
                         }}
                       >
@@ -3400,7 +4331,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
             }}
             aria-label="Lukk"
             sx={{
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               '&:hover': {
                 color: '#fff',
                 bgcolor: 'rgba(255,255,255,0.1)',
@@ -3422,7 +4353,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           <QueryClientProvider client={queryClient}>
             <MemoryRouter>
               <ProjectProvider>
-                <Suspense fallback={<Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,0.5)' }}>Laster...</Box>}>
+                <Suspense fallback={<Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,0.87)' }}>Laster...</Box>}>
                   <NewProjectCreationModal
                     profession={profession || 'photographer'}
                   userId={user?.id}
@@ -3569,7 +4500,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           <Typography variant="body1" sx={{ mb: 2, color: 'rgba(255,255,255,0.9)', fontSize: '1rem' }}>
             Er du sikker på at du vil slette prosjektet <strong>"{projectToDelete?.name}"</strong>?
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '0.875rem' }}>
             Denne handlingen kan ikke angres. All data knyttet til prosjektet vil bli permanent slettet.
           </Typography>
         </DialogContent>
@@ -3756,7 +4687,7 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
                   transform: 'scale(1.1)',
                   boxShadow: `0 8px 28px ${link.color}70`,
                 },
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: `all 0.2s cubic-bezier(0.4, 0, 0.2, 1) ${index * 30}ms`,
                 '& .MuiSpeedDialAction-staticTooltip': {
                   bgcolor: '#1c2128',
                   border: `2px solid ${link.color}60`,
@@ -3815,6 +4746,25 @@ export function CastingPlannerPanel({ onClose, isFullscreen = false, onToggleFul
           onPreviewTutorial={(tutorial) => {
             setShowTutorialEditor(false);
             setPreviewTutorial(tutorial);
+          }}
+        />
+      </Suspense>
+
+      {/* Consent Contract Dialog */}
+      <Suspense fallback={null}>
+        <ConsentContractDialog
+          open={consentContractDialogOpen}
+          onClose={() => {
+            setConsentContractDialogOpen(false);
+            setSelectedCandidate(null);
+          }}
+          candidate={selectedCandidate}
+          project={currentProject}
+          onConsentSent={() => {
+            loadProjects();
+          }}
+          onConsentUpdated={() => {
+            loadProjects();
           }}
         />
       </Suspense>

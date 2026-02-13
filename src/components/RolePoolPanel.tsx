@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FC } from 'react';
 import {
   Box,
   Typography,
@@ -36,7 +36,7 @@ interface RolePoolPanelProps {
   onImport?: (roleId: string) => void;
 }
 
-export const RolePoolPanel: React.FC<RolePoolPanelProps> = ({
+export const RolePoolPanel: FC<RolePoolPanelProps> = ({
   projects,
   currentProjectId,
   onImport,
@@ -161,7 +161,7 @@ export const RolePoolPanel: React.FC<RolePoolPanelProps> = ({
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)' }} />
+                <SearchIcon sx={{ color: 'rgba(255,255,255,0.87)' }} />
               </InputAdornment>
             ),
           }}
@@ -174,19 +174,19 @@ export const RolePoolPanel: React.FC<RolePoolPanelProps> = ({
               '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
               '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
             },
-            '& .MuiInputBase-input::placeholder': { color: 'rgba(255,255,255,0.5)' },
+            '& .MuiInputBase-input::placeholder': { color: 'rgba(255,255,255,0.87)' },
           }}
         />
       </Box>
 
-      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 3 }}>
+      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 3 }}>
         Global rollepool - gjenbruk rollebeskrivelser på tvers av prosjekter.
         Lagre roller til poolen fra prosjekter, eller importer fra poolen til nye prosjekter.
       </Typography>
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Laster roller...</Typography>
+          <Typography sx={{ color: 'rgba(255,255,255,0.87)' }}>Laster roller...</Typography>
         </Box>
       ) : filteredRoles.length === 0 ? (
         <Box sx={{ 
@@ -197,10 +197,10 @@ export const RolePoolPanel: React.FC<RolePoolPanelProps> = ({
           border: '1px dashed rgba(255,255,255,0.1)',
         }}>
           <RoleIcon sx={{ fontSize: 48, color: 'rgba(255,255,255,0.2)', mb: 2 }} />
-          <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 1 }}>
+          <Typography sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
             {searchQuery ? 'Ingen roller matcher søket' : 'Ingen roller i poolen ennå'}
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.3)' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
             Lagre roller fra prosjekter for å fylle poolen
           </Typography>
         </Box>
@@ -264,7 +264,7 @@ export const RolePoolPanel: React.FC<RolePoolPanelProps> = ({
                   <Typography 
                     variant="body2" 
                     sx={{ 
-                      color: 'rgba(255,255,255,0.5)',
+                      color: 'rgba(255,255,255,0.87)',
                       mt: 1.5,
                       fontSize: '0.8rem',
                       display: '-webkit-box',
@@ -300,7 +300,7 @@ export const RolePoolPanel: React.FC<RolePoolPanelProps> = ({
                           height: 20,
                           fontSize: '0.7rem',
                           bgcolor: 'rgba(255,255,255,0.1)',
-                          color: 'rgba(255,255,255,0.5)',
+                          color: 'rgba(255,255,255,0.87)',
                         }}
                       />
                     )}
@@ -333,7 +333,7 @@ export const RolePoolPanel: React.FC<RolePoolPanelProps> = ({
                     size="small"
                     onClick={() => handleDeleteFromPool(role.id)}
                     sx={{
-                      color: 'rgba(255,255,255,0.4)',
+                      color: 'rgba(255,255,255,0.7)',
                       minWidth: TOUCH_TARGET,
                       minHeight: TOUCH_TARGET,
                       '&:hover': { 
@@ -385,7 +385,7 @@ export const RolePoolPanel: React.FC<RolePoolPanelProps> = ({
                     {selectedRole.name}
                   </Typography>
                   {selectedRole.roleType && (
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                       {selectedRole.roleType}
                     </Typography>
                   )}
@@ -395,7 +395,7 @@ export const RolePoolPanel: React.FC<RolePoolPanelProps> = ({
           )}
           
           <FormControl fullWidth>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Velg prosjekt</InputLabel>
+            <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Velg prosjekt</InputLabel>
             <Select
               value={targetProjectId}
               onChange={(e) => setTargetProjectId(e.target.value)}
@@ -418,7 +418,7 @@ export const RolePoolPanel: React.FC<RolePoolPanelProps> = ({
         <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2 }}>
           <Button 
             onClick={() => setImportDialogOpen(false)}
-            sx={{ color: 'rgba(255,255,255,0.6)' }}
+            sx={{ color: 'rgba(255,255,255,0.87)' }}
           >
             Avbryt
           </Button>
@@ -431,7 +431,7 @@ export const RolePoolPanel: React.FC<RolePoolPanelProps> = ({
               bgcolor: '#8b5cf6',
               color: '#fff',
               '&:hover': { bgcolor: '#7c3aed' },
-              '&.Mui-disabled': { bgcolor: 'rgba(139,92,246,0.3)', color: 'rgba(255,255,255,0.5)' },
+              '&.Mui-disabled': { bgcolor: 'rgba(139,92,246,0.3)', color: 'rgba(255,255,255,0.87)' },
             }}
           >
             Importer

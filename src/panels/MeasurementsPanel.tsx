@@ -51,6 +51,7 @@ export default function MeasurementsPanel() {
               value={a}
               onChange={(e) => setA(e.target.value)}
               displayEmpty
+              MenuProps={{ sx: { zIndex: 1400 } }}
             >
               <MenuItem value="">
                 <em>A</em>
@@ -69,6 +70,7 @@ export default function MeasurementsPanel() {
               value={b}
               onChange={(e) => setB(e.target.value)}
               displayEmpty
+              MenuProps={{ sx: { zIndex: 1400 } }}
             >
               <MenuItem value="">
                 <em>B</em>

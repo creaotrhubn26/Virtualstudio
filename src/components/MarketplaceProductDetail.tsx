@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type MouseEvent, type KeyboardEvent, type ChangeEvent } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -209,7 +209,7 @@ export function MarketplaceProductDetail({
     };
   }, [open, isEditing, onClose]);
 
-  const handleEdit = useCallback((e?: React.MouseEvent) => {
+  const handleEdit = useCallback((e?: MouseEvent) => {
     if (e) {
       e.stopPropagation();
     }
@@ -257,7 +257,7 @@ export function MarketplaceProductDetail({
     }
   };
 
-  const handleTagInputKeyPress = (e: React.KeyboardEvent) => {
+  const handleTagInputKeyPress = (e: KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleAddTag();
@@ -326,7 +326,7 @@ export function MarketplaceProductDetail({
     });
   };
 
-  const handleThumbnailUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleThumbnailUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
@@ -350,7 +350,7 @@ export function MarketplaceProductDetail({
     }
   };
 
-  const handleScreenshotUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleScreenshotUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
       try {
@@ -509,7 +509,7 @@ export function MarketplaceProductDetail({
                   '&.Mui-focused fieldset': { borderColor: '#00d4ff', borderWidth: 2 },
                 },
                 '& .MuiInputLabel-root': {
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   fontSize: { xs: '16px', sm: '14px' },
                 },
                 '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
@@ -689,7 +689,7 @@ export function MarketplaceProductDetail({
           '&::-webkit-scrollbar-thumb': {
             bgcolor: 'rgba(255,255,255,0.2)',
             borderRadius: '10px',
-            '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.6)' },
           },
         }}
       >
@@ -794,7 +794,7 @@ export function MarketplaceProductDetail({
                 <Typography
                   variant="body2"
                   sx={{
-                    color: 'rgba(255,255,255,0.6)',
+                    color: 'rgba(255,255,255,0.87)',
                     fontSize: { xs: '14px', sm: '16px' },
                     mb: { xs: 1.5, sm: 2 },
                   }}
@@ -1078,7 +1078,7 @@ export function MarketplaceProductDetail({
                   size="large"
                   sx={{
                     '& .MuiRating-iconFilled': { color: '#ffb800' },
-                    '& .MuiRating-iconEmpty': { color: 'rgba(255,255,255,0.3)' },
+                    '& .MuiRating-iconEmpty': { color: 'rgba(255,255,255,0.6)' },
                     fontSize: { xs: '32px', sm: '28px' },
                   }}
                 />
@@ -1175,7 +1175,7 @@ export function MarketplaceProductDetail({
                           '&.Mui-focused fieldset': { borderColor: '#00d4ff', borderWidth: 2 },
                         },
                         '& .MuiInputBase-input::placeholder': {
-                          color: 'rgba(255,255,255,0.5)',
+                          color: 'rgba(255,255,255,0.87)',
                           opacity: 1,
                         },
                       }}
@@ -1230,7 +1230,7 @@ export function MarketplaceProductDetail({
                         fontSize: { xs: '16px', sm: '14px' },
                       },
                       '& .MuiInputBase-input::placeholder': {
-                        color: 'rgba(255,255,255,0.5)',
+                        color: 'rgba(255,255,255,0.87)',
                         opacity: 1,
                       },
                     }}
@@ -1462,7 +1462,7 @@ export function MarketplaceProductDetail({
                             },
                           },
                           '& .MuiInputBase-input::placeholder': {
-                            color: 'rgba(255,255,255,0.5)',
+                            color: 'rgba(255,255,255,0.87)',
                             opacity: 1,
                           },
                           '@media (min-width: 768px) and (max-width: 1024px), (pointer: coarse)': {
@@ -1542,7 +1542,7 @@ export function MarketplaceProductDetail({
                           />
                         ))
                       ) : (
-                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '14px', sm: '13px' } }}>
+                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '14px', sm: '13px' } }}>
                           Ingen tags lagt til
                         </Typography>
                       )}
@@ -1575,7 +1575,7 @@ export function MarketplaceProductDetail({
                             },
                           },
                           '& .MuiInputBase-input::placeholder': {
-                            color: 'rgba(255,255,255,0.5)',
+                            color: 'rgba(255,255,255,0.87)',
                             opacity: 1,
                           },
                           '@media (min-width: 768px) and (max-width: 1024px), (pointer: coarse)': {
@@ -1609,7 +1609,7 @@ export function MarketplaceProductDetail({
                           },
                           '&:disabled': {
                             borderColor: 'rgba(255,255,255,0.2)',
-                            color: 'rgba(255,255,255,0.3)',
+                            color: 'rgba(255,255,255,0.6)',
                           },
                           '&:focus-visible': {
                             outline: '3px solid #00d4ff',
@@ -1644,7 +1644,7 @@ export function MarketplaceProductDetail({
             mb: { xs: 3, sm: 2.5 },
             borderBottom: '1px solid rgba(255,255,255,0.1)',
             '& .MuiTab-root': {
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               fontSize: { xs: '16px', sm: '14px' },
               fontWeight: 600,
               minHeight: { xs: '56px', sm: '48px' },
@@ -1778,10 +1778,10 @@ export function MarketplaceProductDetail({
                   bgcolor: 'rgba(255,255,255,0.02)',
                 }}
               >
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
                   Ingen anmeldelser ennå
                 </Typography>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '14px', sm: '13px' } }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '14px', sm: '13px' } }}>
                   Vær den første til å anmelde dette produktet!
                 </Typography>
               </Box>
@@ -1792,7 +1792,7 @@ export function MarketplaceProductDetail({
                   <Typography 
                     variant="body2" 
                     sx={{ 
-                      color: 'rgba(255,255,255,0.7)', 
+                      color: 'rgba(255,255,255,0.87)', 
                       alignSelf: 'center',
                       fontSize: { xs: '14px', sm: '13px' },
                     }}
@@ -1854,7 +1854,7 @@ export function MarketplaceProductDetail({
                             <Typography 
                               variant="caption" 
                               sx={{ 
-                                color: 'rgba(255,255,255,0.5)',
+                                color: 'rgba(255,255,255,0.87)',
                                 fontSize: { xs: '13px', sm: '12px' },
                               }}
                             >
@@ -1874,7 +1874,7 @@ export function MarketplaceProductDetail({
                                 color: '#ffb800',
                               },
                               '& .MuiRating-iconEmpty': { 
-                                color: 'rgba(255,255,255,0.3)',
+                                color: 'rgba(255,255,255,0.6)',
                               },
                               '& .MuiRating-icon': {
                                 fontSize: { xs: '20px', sm: '18px' },
@@ -1901,7 +1901,7 @@ export function MarketplaceProductDetail({
                         <IconButton 
                           size="small" 
                           sx={{ 
-                            color: 'rgba(255,255,255,0.6)',
+                            color: 'rgba(255,255,255,0.87)',
                             minWidth: { xs: '40px', sm: '36px' },
                             minHeight: { xs: '40px', sm: '36px' },
                             '&:hover': { 
@@ -1917,7 +1917,7 @@ export function MarketplaceProductDetail({
                         <Typography 
                           variant="caption" 
                           sx={{ 
-                            color: 'rgba(255,255,255,0.6)',
+                            color: 'rgba(255,255,255,0.87)',
                             fontSize: { xs: '13px', sm: '12px' },
                           }}
                         >
@@ -1961,7 +1961,7 @@ export function MarketplaceProductDetail({
                       color: '#ffb800',
                     },
                     '& .MuiRating-iconEmpty': { 
-                      color: 'rgba(255,255,255,0.3)',
+                      color: 'rgba(255,255,255,0.6)',
                     },
                     '& .MuiRating-icon': {
                       fontSize: { xs: '40px', sm: '36px', md: '32px' },
@@ -1979,7 +1979,7 @@ export function MarketplaceProductDetail({
                   <Typography 
                     variant="body2" 
                     sx={{ 
-                      color: 'rgba(255,255,255,0.7)', 
+                      color: 'rgba(255,255,255,0.87)', 
                       mt: 0.5,
                       fontSize: { xs: '15px', sm: '14px' },
                     }}
@@ -2020,14 +2020,14 @@ export function MarketplaceProductDetail({
                     },
                   },
                   '& .MuiInputLabel-root': {
-                    color: 'rgba(255,255,255,0.7)',
+                    color: 'rgba(255,255,255,0.87)',
                     fontSize: { xs: '16px', sm: '14px' },
                   },
                   '& .MuiInputLabel-root.Mui-focused': {
                     color: '#00d4ff',
                   },
                   '& .MuiInputBase-input::placeholder': {
-                    color: 'rgba(255,255,255,0.5)',
+                    color: 'rgba(255,255,255,0.87)',
                     opacity: 1,
                   },
                 }}
@@ -2058,7 +2058,7 @@ export function MarketplaceProductDetail({
                   },
                   '&:disabled': { 
                     bgcolor: 'rgba(255,255,255,0.1)', 
-                    color: 'rgba(255,255,255,0.3)',
+                    color: 'rgba(255,255,255,0.6)',
                     cursor: 'not-allowed',
                   },
                   '&:focus-visible': {
@@ -2149,7 +2149,7 @@ export function MarketplaceProductDetail({
                         <Typography variant="subtitle2" sx={{ color: '#00d4ff', mb: 0.5 }}>
                           Minimum versjon
                         </Typography>
-                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                           {product.requirements.minVersion}
                         </Typography>
                       </Box>
@@ -2176,7 +2176,7 @@ export function MarketplaceProductDetail({
                     )}
                   </>
                 ) : (
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                     Ingen spesielle systemkrav
                   </Typography>
                 )}

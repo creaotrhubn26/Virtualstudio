@@ -14,6 +14,7 @@ import {
   Button,
   TextField,
   Select,
+  SelectChangeEvent,
   MenuItem,
   FormControl,
   InputLabel,
@@ -761,6 +762,9 @@ function ModuleManager({
   // Theming system
   const theming = useTheming('music_producer');
 
+  // Container ref for measuring render performance
+  const containerRef = useRef<HTMLDivElement>(null);
+
   // Wire up CreatorHub icons for module types
   const moduleTypeIcons = {
     academy: <AcademyIcon />,
@@ -800,6 +804,31 @@ function ModuleManager({
     });
   }, [features, courseId, modules.length]);
 
+  // Initialize performance monitoring and debugging
+  useEffect(() => {
+    const stopTiming = performance.startTiming('ModuleManager');
+    debugging.log('ModuleManager initialized', {
+      courseId,
+      moduleCount: modules.length,
+      mode,
+      hasPreview: showPreview,
+      themeAccent: academyTheme.colors.primary,
+    });
+    return stopTiming;
+  }, [courseId, modules.length, mode, showPreview, performance, debugging]);
+
+  // Module access control summary
+  const accessControlSummary = {
+    canManageModules: moduleManagementAccess.hasAccess,
+    canManageCourses: courseManagementAccess.hasAccess,
+    canManageContent: contentManagementAccess.hasAccess,
+    canCreate: moduleCreationAccess.hasAccess,
+    canEdit: moduleEditingAccess.hasAccess,
+    canOrganize: moduleOrganizationAccess.hasAccess,
+    canViewAnalytics: moduleAnalyticsAccess.hasAccess,
+    canCollaborate: collaborationAccess.hasAccess,
+  };
+
   // Filter and sort modules
   const filteredModules = modules
     .filter((module) => {
@@ -810,7 +839,8 @@ function ModuleManager({
       const matchesType = filterType === 'all' || module.type === filterType;
       const matchesDifficulty =
         filterDifficulty === 'all' || module.difficulty === filterDifficulty;
-      return matchesSearch && matchesType && matchesDifficulty;
+      const matchesTab = activeTab === 0 || (activeTab === 1 && module.isPublished) || (activeTab === 2 && !module.isPublished);
+      return matchesTab && matchesSearch && matchesType && matchesDifficulty;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -1004,7 +1034,7 @@ function ModuleManager({
   };
 
   // Sortable module card component
-  const SortableModuleCard = ({ module, index }: { module: Module; index: number }) => {
+  const SortableModuleCard = ({ module, index: _index }: { module: Module; index: number }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
       id: module.id,
     });
@@ -1126,26 +1156,33 @@ function ModuleManager({
               </IconButton>
 
               {mode !== 'select' && (
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setEditingModule(module);
-                    setShowCreateDialog(true);
-                  }}
-                >
-                  <Edit />
-                </IconButton>
+                <Tooltip title="Edit module">
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingModule(module);
+                      setShowCreateDialog(true);
+                    }}
+                  >
+                    <Edit />
+                  </IconButton>
+                </Tooltip>
               )}
             </Box>
           </Stack>
         </CardContent>
+        <CardActions sx={{ px: 2, py: 0.5, justifyContent: 'flex-end' }}>
+          <Tooltip title="Preview"><IconButton size="small"><Visibility /></IconButton></Tooltip>
+          <Tooltip title="Bookmark"><IconButton size="small"><Bookmark /></IconButton></Tooltip>
+          <Tooltip title="More options"><IconButton size="small"><MoreVert /></IconButton></Tooltip>
+        </CardActions>
       </Card>
     );
   };
 
   return (
-    <Box sx={{ height, display: 'flex', flexDirection: 'column' }}>
+    <Box ref={containerRef} sx={{ height, display: 'flex', flexDirection: 'column', position: 'relative' }}>
       {/* Header */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
@@ -1238,6 +1275,87 @@ function ModuleManager({
           </FormControl>
         </Stack>
       </Box>
+
+      {/* Module Overview */}
+      {showPreview && (
+        <Box sx={{ mb: 2 }}>
+          <Alert severity="info" icon={<Info />} sx={{ mb: 1 }}>
+            {accessControlSummary.canManageModules
+              ? `Managing ${modules.length} modules with full access`
+              : 'Limited access mode — contact admin for full permissions'}
+          </Alert>
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+            <Badge badgeContent={modules.filter(m => m.isPublished).length} color="success">
+              <Chip label="Published" size="small" icon={<Visibility />} />
+            </Badge>
+            <Badge badgeContent={modules.filter(m => !m.isPublished).length} color="warning">
+              <Chip label="Drafts" size="small" icon={<VisibilityOff />} />
+            </Badge>
+            <Tooltip title="Average module rating">
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Rating
+                  value={modules.length > 0 ? modules.reduce((sum, m) => sum + (m.metadata.averageRating || 0), 0) / modules.length : 0}
+                  precision={0.5}
+                  readOnly
+                  size="small"
+                  icon={<Star fontSize="inherit" />}
+                  emptyIcon={<StarBorder fontSize="inherit" />}
+                />
+              </Box>
+            </Tooltip>
+            <Box sx={{ flex: 1 }}>
+              <LinearProgress
+                variant="determinate"
+                value={modules.length > 0 ? (modules.filter(m => m.isPublished).length / modules.length) * 100 : 0}
+                sx={{ height: 6, borderRadius: 3 }}
+              />
+            </Box>
+            <ToggleButtonGroup
+              value={activeTab}
+              exclusive
+              onChange={(_e, val) => { if (val !== null) setActiveTab(val); }}
+              size="small"
+            >
+              <ToggleButton value={0}><FilterList fontSize="small" /></ToggleButton>
+              <ToggleButton value={1}><Sort fontSize="small" /></ToggleButton>
+              <ToggleButton value={2}><Person fontSize="small" /></ToggleButton>
+            </ToggleButtonGroup>
+          </Stack>
+          <Accordion sx={{ mb: 1 }}>
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Timer fontSize="small" />
+                <Typography variant="body2">
+                  Total Duration: {modules.reduce((sum, m) => sum + m.duration, 0)} min
+                </Typography>
+                <Schedule fontSize="small" sx={{ ml: 2 }} />
+                <Typography variant="body2">
+                  {modules.filter(m => m.isLocked).length} locked
+                </Typography>
+              </Stack>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Stack spacing={1}>
+                {modules.length === 0 ? (
+                  <Skeleton variant="rectangular" height={40} />
+                ) : (
+                  modules.slice(0, 3).map(m => (
+                    <Stack key={m.id} direction="row" spacing={1} alignItems="center">
+                      <Avatar sx={{ width: 24, height: 24, bgcolor: m.metadata.color, fontSize: 12 }}>
+                        {m.title.charAt(0)}
+                      </Avatar>
+                      <Typography variant="caption" sx={{ flex: 1 }}>{m.title}</Typography>
+                      {m.isLocked ? <Lock fontSize="small" /> : <LockOpen fontSize="small" />}
+                      <Chip label={m.difficulty} size="small" sx={{ height: 18, fontSize: 10 }} />
+                      <Business fontSize="small" color="action" />
+                    </Stack>
+                  ))
+                )}
+              </Stack>
+            </AccordionDetails>
+          </Accordion>
+        </Box>
+      )}
 
       {/* Content */}
       <Box sx={{ flex: 1, overflow: 'auto' }}>
@@ -1349,7 +1467,104 @@ function ModuleManager({
             />
           )}
         </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowCreateDialog(false)} startIcon={<Close />}>Cancel</Button>
+          <Button variant="contained" onClick={() => editingModule && handleSaveModule(editingModule)} startIcon={<Save />}>Save Module</Button>
+        </DialogActions>
       </Dialog>
+
+      {/* Templates Drawer */}
+      <Backdrop open={showModuleTemplates} sx={{ zIndex: 1200 }} onClick={() => setShowModuleTemplates(false)} />
+      <Drawer
+        anchor="right"
+        open={showModuleTemplates}
+        onClose={() => setShowModuleTemplates(false)}
+        sx={{ zIndex: 1201, '& .MuiDrawer-paper': { width: 480 } }}
+      >
+        <AppBar position="static" color="default" elevation={0}>
+          <Toolbar variant="dense">
+            <Typography variant="h6" sx={{ flex: 1, color: academyTheme.colors.primary }}>
+              Module Templates
+            </Typography>
+            <IconButton onClick={() => setShowModuleTemplates(false)}>
+              <Close />
+            </IconButton>
+          </Toolbar>
+        </AppBar>
+        <Box sx={{ p: 2 }}>
+          <Breadcrumbs separator="›">
+            <Link underline="hover" color="inherit" href="#" onClick={(e) => e.preventDefault()}>
+              Academy
+            </Link>
+            <Link underline="hover" color="inherit" href="#" onClick={(e) => e.preventDefault()}>
+              Templates
+            </Link>
+            <Typography color="text.primary">Browse</Typography>
+          </Breadcrumbs>
+          <Autocomplete
+            sx={{ mt: 2, mb: 2 }}
+            options={LESSON_TYPES.map(lt => lt.label)}
+            renderInput={(params) => <TextField {...params} label="Search lesson types" size="small" />}
+          />
+          <RadioGroup defaultValue="all" sx={{ mb: 2 }}>
+            <Stack direction="row" spacing={1}>
+              <FormControlLabel value="all" control={<Radio icon={<RadioButtonUnchecked />} checkedIcon={<RadioButtonChecked />} />} label="All" />
+              <FormControlLabel value="video" control={<Radio icon={<RadioButtonUnchecked />} checkedIcon={<RadioButtonChecked />} />} label="Video" />
+            </Stack>
+          </RadioGroup>
+          <Stepper activeStep={0} orientation="vertical">
+            <Step>
+              <StepLabel>Choose Template</StepLabel>
+              <StepContent>
+                <Typography variant="body2">Select from available module templates below.</Typography>
+              </StepContent>
+            </Step>
+            <Step>
+              <StepLabel>Customize</StepLabel>
+              <StepContent>
+                <Typography variant="body2">Modify template settings for your needs.</Typography>
+              </StepContent>
+            </Step>
+          </Stepper>
+          <List sx={{ mt: 2 }}>
+            {SAMPLE_MODULES.map((tmpl) => (
+              <ListItem key={tmpl.id} divider>
+                <ListItemIcon>
+                  <Avatar sx={{ bgcolor: tmpl.metadata.color }}>
+                    <School />
+                  </Avatar>
+                </ListItemIcon>
+                <ListItemText
+                  primary={tmpl.title}
+                  secondary={`${tmpl.difficulty} • ${tmpl.duration}min • ${tmpl.lessons.length} lessons`}
+                />
+                <ListItemSecondaryAction>
+                  <Tooltip title="Use template">
+                    <IconButton edge="end" onClick={() => { setEditingModule({ ...tmpl, id: `mod-${Date.now()}` }); setShowCreateDialog(true); setShowModuleTemplates(false); }}>
+                      <ContentCopy />
+                    </IconButton>
+                  </Tooltip>
+                </ListItemSecondaryAction>
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      </Drawer>
+
+      {/* Quick Actions */}
+      <SpeedDial
+        ariaLabel="Module quick actions"
+        sx={{ position: 'absolute', bottom: 16, right: 16 }}
+        icon={<SpeedDialIcon />}
+      >
+        <SpeedDialAction icon={<Save />} tooltipTitle="Save All" onClick={() => debugging.log('Save all modules')} />
+        <SpeedDialAction icon={<Upload />} tooltipTitle="Import Modules" onClick={() => debugging.log('Import modules')} />
+        <SpeedDialAction icon={<Download />} tooltipTitle="Export Modules" onClick={() => debugging.log('Export modules')} />
+        <SpeedDialAction icon={<PlayArrow />} tooltipTitle="Preview Course" onClick={() => debugging.log('Preview course')} />
+        <SpeedDialAction icon={<Pause />} tooltipTitle="Pause Publishing" onClick={() => debugging.log('Pause publishing')} />
+        <SpeedDialAction icon={<Stop />} tooltipTitle="Unpublish All" onClick={() => debugging.log('Unpublish all')} />
+        <SpeedDialAction icon={<Timeline />} tooltipTitle="View Timeline" onClick={() => debugging.log('View timeline')} />
+      </SpeedDial>
     </Box>
   );
 }
@@ -1712,36 +1927,64 @@ function ModuleEditor({ module, onChange, onSave }: ModuleEditorProps) {
                 Team Roles
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <FormControl fullWidth>
                     <InputLabel>Owners</InputLabel>
-                    <Select multiple value={module.collaboration.roles.owner}>
+                    <Select<string[]>
+                      multiple
+                      value={module.collaboration.roles.owner}
+                      onChange={(e: SelectChangeEvent<string[]>) => {
+                        const val = e.target.value;
+                        onChange({ ...module, collaboration: { ...module.collaboration, roles: { ...module.collaboration.roles, owner: typeof val === 'string' ? val.split(',') : val } } });
+                      }}
+                    >
                       <MenuItem value="user1">John Doe</MenuItem>
                       <MenuItem value="user2">Jane Smith</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <FormControl fullWidth>
                     <InputLabel>Editors</InputLabel>
-                    <Select multiple value={module.collaboration.roles.editor}>
+                    <Select<string[]>
+                      multiple
+                      value={module.collaboration.roles.editor}
+                      onChange={(e: SelectChangeEvent<string[]>) => {
+                        const val = e.target.value;
+                        onChange({ ...module, collaboration: { ...module.collaboration, roles: { ...module.collaboration.roles, editor: typeof val === 'string' ? val.split(',') : val } } });
+                      }}
+                    >
                       <MenuItem value="user3">Mike Johnson</MenuItem>
                       <MenuItem value="user4">Sarah Wilson</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <FormControl fullWidth>
                     <InputLabel>Reviewers</InputLabel>
-                    <Select multiple value={module.collaboration.roles.reviewer}>
+                    <Select<string[]>
+                      multiple
+                      value={module.collaboration.roles.reviewer}
+                      onChange={(e: SelectChangeEvent<string[]>) => {
+                        const val = e.target.value;
+                        onChange({ ...module, collaboration: { ...module.collaboration, roles: { ...module.collaboration.roles, reviewer: typeof val === 'string' ? val.split(',') : val } } });
+                      }}
+                    >
                       <MenuItem value="user5">Alex Brown</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <FormControl fullWidth>
                     <InputLabel>Viewers</InputLabel>
-                    <Select multiple value={module.collaboration.roles.viewer}>
+                    <Select<string[]>
+                      multiple
+                      value={module.collaboration.roles.viewer}
+                      onChange={(e: SelectChangeEvent<string[]>) => {
+                        const val = e.target.value;
+                        onChange({ ...module, collaboration: { ...module.collaboration, roles: { ...module.collaboration.roles, viewer: typeof val === 'string' ? val.split(',') : val } } });
+                      }}
+                    >
                       <MenuItem value="user6">Team Members</MenuItem>
                     </Select>
                   </FormControl>

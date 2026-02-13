@@ -14,6 +14,7 @@ import {
   CardActionArea,
   CardMedia,
   Button,
+  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -21,7 +22,7 @@ import {
   Chip,
 } from '@mui/material';
 import { Home, Info } from '@mui/icons-material';
-import { roomLoader, RoomTemplate } from '../../core/services/roomLoader';
+import { roomLoader, RoomTemplate } from '../core/services/roomLoader';
 import { logger } from '../../core/services/logger';
 
 const log = logger.module('RoomTemplatesPanel');
@@ -55,6 +56,7 @@ export const RoomTemplatesPanel: React.FC<RoomTemplatesPanelProps> = ({
     }
     
     setTemplates(loadedTemplates);
+    log.info('Room templates loaded', { count: loadedTemplates.length });
     setLoading(false);
   };
   
@@ -65,6 +67,7 @@ export const RoomTemplatesPanel: React.FC<RoomTemplatesPanelProps> = ({
   
   const handleLoadTemplate = () => {
     if (selectedTemplate && onRoomLoaded) {
+      log.info('Room template loaded', { id: selectedTemplate.id, name: selectedTemplate.name });
       onRoomLoaded(selectedTemplate);
       setDialogOpen(false);
     }
@@ -93,7 +96,7 @@ export const RoomTemplatesPanel: React.FC<RoomTemplatesPanelProps> = ({
       
       <Grid container spacing={2}>
         {templates.map((template) => (
-          <Grid item xs={12} sm={6} key={template.id}>
+          <Grid size={{ xs: 12, sm: 6 }} key={template.id}>
             <Card
               sx={{
                 bgcolor: '#2a2a2a',
@@ -106,6 +109,14 @@ export const RoomTemplatesPanel: React.FC<RoomTemplatesPanelProps> = ({
               }}
             >
               <CardActionArea onClick={() => handleTemplateClick(template)}>
+                {template.thumbnailUrl && (
+                  <CardMedia
+                    component="img"
+                    height="160"
+                    image={template.thumbnailUrl}
+                    alt={template.name}
+                  />
+                )}
                 <CardContent>
                   <Typography variant="h6" sx={{ color: '#ffffff', mb: 1 }}>
                     {template.name}
@@ -124,6 +135,17 @@ export const RoomTemplatesPanel: React.FC<RoomTemplatesPanelProps> = ({
                       size="small"
                       sx={{ bgcolor: '#3a3a3a', color: '#ffffff' }}
                     />
+                    <IconButton
+                      size="small"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleTemplateClick(template);
+                      }}
+                      sx={{ color: '#aaaaaa' }}
+                      aria-label={`Info for ${template.name}`}
+                    >
+                      <Info fontSize="small" />
+                    </IconButton>
                   </Box>
                 </CardContent>
               </CardActionArea>

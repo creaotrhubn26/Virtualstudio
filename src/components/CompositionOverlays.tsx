@@ -9,7 +9,7 @@
  * - Golden Triangle
  */
 
-import React, { useMemo } from 'react';
+import { useMemo, type FC } from 'react';
 import { Box } from '@mui/material';
 
 export type CompositionGuideType = 
@@ -35,7 +35,7 @@ interface CompositionOverlaysProps {
 }
 
 // Rule of Thirds Grid
-const RuleOfThirds: React.FC<{ color: string; opacity: number }> = ({ color, opacity }) => (
+const RuleOfThirds: FC<{ color: string; opacity: number }> = ({ color, opacity }) => (
   <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
     {/* Vertical lines */}
     <line x1="33.33%" y1="0" x2="33.33%" y2="100%" stroke={color} strokeWidth="1" opacity={opacity} />
@@ -52,7 +52,7 @@ const RuleOfThirds: React.FC<{ color: string; opacity: number }> = ({ color, opa
 );
 
 // Golden Ratio Grid (Phi Grid)
-const GoldenRatio: React.FC<{ color: string; opacity: number }> = ({ color, opacity }) => {
+const GoldenRatio: FC<{ color: string; opacity: number }> = ({ color, opacity }) => {
   const phi = 1.618;
   const pos1 = (1 / (1 + phi)) * 100;
   const pos2 = (phi / (1 + phi)) * 100;
@@ -75,7 +75,7 @@ const GoldenRatio: React.FC<{ color: string; opacity: number }> = ({ color, opac
 };
 
 // Golden Spiral (Fibonacci)
-const GoldenSpiral: React.FC<{ color: string; opacity: number }> = ({ color, opacity }) => {
+const GoldenSpiral: FC<{ color: string; opacity: number }> = ({ color, opacity }) => {
   // Approximate golden spiral using bezier curves
   const spiralPath = `
     M 100 100
@@ -100,7 +100,7 @@ const GoldenSpiral: React.FC<{ color: string; opacity: number }> = ({ color, opa
 };
 
 // Diagonal Lines
-const DiagonalLines: React.FC<{ color: string; opacity: number }> = ({ color, opacity }) => (
+const DiagonalLines: FC<{ color: string; opacity: number }> = ({ color, opacity }) => (
   <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
     {/* Main diagonals */}
     <line x1="0" y1="0" x2="100%" y2="100%" stroke={color} strokeWidth="1" opacity={opacity} />
@@ -114,7 +114,7 @@ const DiagonalLines: React.FC<{ color: string; opacity: number }> = ({ color, op
 );
 
 // Center Cross
-const CenterCross: React.FC<{ color: string; opacity: number }> = ({ color, opacity }) => (
+const CenterCross: FC<{ color: string; opacity: number }> = ({ color, opacity }) => (
   <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
     {/* Vertical center line */}
     <line x1="50%" y1="0" x2="50%" y2="100%" stroke={color} strokeWidth="1" opacity={opacity} strokeDasharray="8,4" />
@@ -127,7 +127,7 @@ const CenterCross: React.FC<{ color: string; opacity: number }> = ({ color, opac
 );
 
 // Golden Triangle
-const GoldenTriangle: React.FC<{ color: string; opacity: number }> = ({ color, opacity }) => (
+const GoldenTriangle: FC<{ color: string; opacity: number }> = ({ color, opacity }) => (
   <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
     {/* Main diagonal */}
     <line x1="0" y1="100%" x2="100%" y2="0" stroke={color} strokeWidth="1.5" opacity={opacity} />
@@ -141,7 +141,7 @@ const GoldenTriangle: React.FC<{ color: string; opacity: number }> = ({ color, o
 );
 
 // Dynamic Symmetry (Root Rectangles)
-const DynamicSymmetry: React.FC<{ color: string; opacity: number }> = ({ color, opacity }) => (
+const DynamicSymmetry: FC<{ color: string; opacity: number }> = ({ color, opacity }) => (
   <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
     {/* Root 2 rectangle diagonals */}
     <line x1="0" y1="0" x2="70.7%" y2="100%" stroke={color} strokeWidth="1" opacity={opacity * 0.7} />
@@ -154,13 +154,16 @@ const DynamicSymmetry: React.FC<{ color: string; opacity: number }> = ({ color, 
   </svg>
 );
 
-export const CompositionOverlays: React.FC<CompositionOverlaysProps> = ({
+export const CompositionOverlays: FC<CompositionOverlaysProps> = ({
   activeGuides,
   color = '#00ff88',
   opacity = 0.5,
   width = '100%',
   height = '100%',
+  aiFeedback,
 }) => {
+  const overlayWidth = typeof width === 'number' ? width : 1920;
+  const overlayHeight = typeof height === 'number' ? height : 1080;
   const guideComponents = useMemo(() => {
     return activeGuides.map((guide) => {
       switch (guide) {
@@ -201,10 +204,10 @@ export const CompositionOverlays: React.FC<CompositionOverlaysProps> = ({
           key={idx}
           sx={{
             position: 'absolute',
-            left: `${(obj.center[0] / (width as number || 1920)) * 100}%`,
-            top: `${(obj.center[1] / (height as number || 1080)) * 100}%`,
-            width: `${(obj.bbox[2] / (width as number || 1920)) * 100}%`,
-            height: `${(obj.bbox[3] / (height as number || 1080)) * 100}%`,
+            left: `${(obj.center[0] / overlayWidth) * 100}%`,
+            top: `${(obj.center[1] / overlayHeight) * 100}%`,
+            width: `${(obj.bbox[2] / overlayWidth) * 100}%`,
+            height: `${(obj.bbox[3] / overlayHeight) * 100}%`,
             border: `2px solid ${aiFeedback.score >= 80 ? '#4CAF50' : aiFeedback.score >= 60 ? '#FFC107' : '#F44336'}`,
             borderRadius: 1,
             pointerEvents: 'none'}}

@@ -445,6 +445,7 @@ export function ClientSharingPanel({ projectId, projectName }: ClientSharingPane
                 value={newLinkExpiry}
                 onChange={(e) => setNewLinkExpiry(e.target.value as number | '')}
                 label="Link Expiration"
+                MenuProps={{ sx: { zIndex: 1400 } }}
               >
                 <MenuItem value="">Never expires</MenuItem>
                 <MenuItem value={24}>24 hours</MenuItem>

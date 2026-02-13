@@ -5,7 +5,8 @@
  */
 
 import { create } from 'zustand';
-import { ShotType, CameraAngle, CameraMovement } from '../core/models/casting';
+import type { ShotType, CameraAngle, CameraMovement } from '../core/models/casting';
+export type { ShotType, CameraAngle, CameraMovement };
 
 // Types
 export type FrameStatus = 'draft' | 'pending' | 'approved' | 'revision';
@@ -23,11 +24,29 @@ export interface FrameAnnotationData {
   createdAt: string;
 }
 
+export type FrameImageSource = 'ai' | 'captured' | 'drawn' | 'uploaded';
+
+export interface FrameDrawingData {
+  dataUrl: string; // Base64 canvas export
+  strokes?: string; // JSON stringified stroke data for replay
+  brushSettings?: {
+    type: string;
+    size: number;
+    color: string;
+    opacity: number;
+  };
+  deviceType?: 'pencil' | 'touch' | 'mouse';
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface StoryboardFrame {
   id: string;
   index: number;
   imageUrl?: string;
   thumbnailUrl?: string;
+  drawingData?: FrameDrawingData; // iPad drawing data
+  imageSource?: FrameImageSource; // How the image was created
   title: string;
   description?: string;
   shotType: ShotType;
@@ -68,11 +87,13 @@ interface StoryboardState {
   currentStoryboardId: string | null;
   selectedFrameId: string | null;
   isCapturing: boolean;
-  viewMode: 'grid' | 'timeline' | 'carousel';
+  viewMode: 'grid' | 'timeline' | 'carousel' | 'single';
   settings: {
     defaultDuration: number;
     playbackSpeed: number;
     transitionDuration: number;
+    defaultShotType: ShotType;
+    showTechnicalInfo: boolean;
   };
 
   // Actions
@@ -84,7 +105,7 @@ interface StoryboardState {
   deleteFrame: (frameId: string) => void;
   selectFrame: (frameId: string | null) => void;
   setCapturing: (isCapturing: boolean) => void;
-  setViewMode: (mode: 'grid' | 'timeline' | 'carousel') => void;
+  setViewMode: (mode: 'grid' | 'timeline' | 'carousel' | 'single') => void;
   addAnnotation: (frameId: string, annotation: Omit<FrameAnnotationData, 'id' | 'createdAt'>) => void;
   updateAnnotation: (frameId: string, annotationId: string, updates: Partial<FrameAnnotationData>) => void;
   deleteAnnotation: (frameId: string, annotationId: string) => void;
@@ -100,6 +121,8 @@ export const useStoryboardStore = create<StoryboardState>((set, get) => ({
     defaultDuration: 3,
     playbackSpeed: 1,
     transitionDuration: 0.5,
+    defaultShotType: 'Wide',
+    showTechnicalInfo: true,
   },
 
   createStoryboard: (name, aspectRatio) => {

@@ -608,7 +608,7 @@ const AddLayerDialog: React.FC<AddLayerDialogProps> = ({ open, onClose }) => {
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
           <FormControl fullWidth>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Velg Objekt</InputLabel>
+            <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Velg Objekt</InputLabel>
             <Select
               value={selectedTarget}
               label="Velg Objekt"
@@ -651,13 +651,13 @@ const AddLayerDialog: React.FC<AddLayerDialogProps> = ({ open, onClose }) => {
                 '&:hover fieldset': { borderColor: '#9c27b0' },
                 '&.Mui-focused fieldset': { borderColor: '#9c27b0' },
               },
-              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
             }}
           />
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} sx={{ color: 'rgba(255,255,255,0.7)' }}>Avbryt</Button>
+        <Button onClick={onClose} sx={{ color: 'rgba(255,255,255,0.87)' }}>Avbryt</Button>
         <Button 
           variant="contained" 
           onClick={handleAdd} 
@@ -666,7 +666,7 @@ const AddLayerDialog: React.FC<AddLayerDialogProps> = ({ open, onClose }) => {
             bgcolor: '#9c27b0',
             color: '#fff',
             '&:hover': { bgcolor: '#7b1fa2' },
-            '&:disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' },
+            '&:disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' },
           }}
         >
           Legg til
@@ -1050,14 +1050,14 @@ export const AnimationComposerPanel: React.FC = () => {
                 '&:hover fieldset': { borderColor: '#9c27b0' },
                 '&.Mui-focused fieldset': { borderColor: '#9c27b0' },
               },
-              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
             }}
           />
         </DialogContent>
         <DialogActions>
           <Button 
             onClick={() => setNewSequenceOpen(false)}
-            sx={{ color: 'rgba(255,255,255,0.7)' }}
+            sx={{ color: 'rgba(255,255,255,0.87)' }}
           >
             Avbryt
           </Button>

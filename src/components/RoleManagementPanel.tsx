@@ -47,16 +47,15 @@ import {
   ViewList as TableViewIcon,
   FileDownload as ExportIcon,
   FileDownload as DownloadIcon,
-  BarChart as StatsIcon,
   Close as CloseIcon,
   ContentCopy as DuplicateIcon,
   People as PeopleIcon,
   Movie as MovieIcon,
   Person as PersonIcon,
-  TheaterComedy as TheaterComedyIcon,
   Assignment as AssignmentIcon,
   Inventory as InventoryIcon,
 } from '@mui/icons-material';
+import { RolesIcon as TheaterComedyIcon, StatsIcon } from './icons/CastingIcons';
 import { Role, CastingProject } from '../core/models/casting';
 import { castingService } from '../services/castingService';
 import { castingAuthService } from '../services/castingAuthService';
@@ -383,46 +382,64 @@ export function RoleManagementPanel({
     });
   };
 
-  const handleDeleteWithUndo = (role: Role) => {
+  const handleDeleteWithUndo = async (role: Role) => {
     setDeletedRole(role);
-    castingService.deleteRole(projectId, role.id);
-    onRolesChange();
-    setUndoSnackbarOpen(true);
-    showInfo(`🗑️ ${role.name} slettet - klikk "Angre" for å gjenopprette`, 6000);
+    try {
+      await castingService.deleteRole(projectId, role.id);
+      onRolesChange();
+      setUndoSnackbarOpen(true);
+      showInfo(`🗑️ ${role.name} slettet - klikk "Angre" for å gjenopprette`, 6000);
+    } catch (error) {
+      console.error('Failed to delete role:', error);
+      setDeletedRole(null);
+    }
   };
 
-  const handleUndoDelete = () => {
+  const handleUndoDelete = async () => {
     if (deletedRole) {
-      castingService.createRole(projectId, deletedRole);
-      onRolesChange();
-      showSuccess(`↩️ ${deletedRole.name} gjenopprettet`, 3000);
+      try {
+        await castingService.saveRole(projectId, deletedRole);
+        onRolesChange();
+        showSuccess(`↩️ ${deletedRole.name} gjenopprettet`, 3000);
+      } catch (error) {
+        console.error('Failed to restore role:', error);
+      }
       setDeletedRole(null);
       setUndoSnackbarOpen(false);
     }
   };
 
-  const handleBulkDelete = () => {
-    selectedIds.forEach((id) => {
-      castingService.deleteRole(projectId, id);
-    });
-    setSelectedIds(new Set());
-    onRolesChange();
+  const handleBulkDelete = async () => {
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map(id => castingService.deleteRole(projectId, id))
+      );
+      setSelectedIds(new Set());
+      onRolesChange();
+    } catch (error) {
+      console.error('Failed to bulk delete roles:', error);
+    }
   };
 
-  const handleDuplicate = (role: Role) => {
-    const newRole: Omit<Role, 'id'> = {
+  const handleDuplicate = async (role: Role) => {
+    const newRole: Role = {
       ...role,
+      id: `role-${Date.now()}`,
       name: `${role.name} (kopi)`,
       status: 'draft',
       candidateIds: [],
     };
-    castingService.createRole(projectId, newRole as Role);
-    onRolesChange();
+    try {
+      await castingService.saveRole(projectId, newRole);
+      onRolesChange();
+    } catch (error) {
+      console.error('Failed to duplicate role:', error);
+    }
   };
 
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
     try {
-      const project = castingService.getProject(projectId);
+      const project = await castingService.getProject(projectId);
       if (!project) {
         alert('Prosjekt ikke funnet');
         return;
@@ -925,7 +942,7 @@ export function RoleManagementPanel({
             </Typography>
             <Typography
               sx={{
-                color: 'rgba(255,255,255,0.6)',
+                color: 'rgba(255,255,255,0.87)',
                 fontSize: { xs: '0.8rem', sm: '0.875rem', md: '0.85rem', lg: '0.9rem', xl: '1rem' },
                 fontWeight: 500,
                 mt: 0.25,
@@ -957,7 +974,7 @@ export function RoleManagementPanel({
               sx={{
                 minHeight: TOUCH_TARGET_SIZE,
                 minWidth: TOUCH_TARGET_SIZE,
-                color: 'rgba(255,255,255,0.7)',
+                color: 'rgba(255,255,255,0.87)',
                 borderColor: 'rgba(255,255,255,0.2)',
                 fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },
                 px: { xs: 1, sm: 2, md: 1.75, lg: 2, xl: 2.5 },
@@ -1028,7 +1045,7 @@ export function RoleManagementPanel({
           border: '1px solid rgba(255,255,255,0.1)',
         }}
       >
-        <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem', mr: 1 }}>
+        <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '0.875rem', mr: 1 }}>
           Vis:
         </Typography>
         <Button
@@ -1082,10 +1099,10 @@ export function RoleManagementPanel({
               <InventoryIcon sx={{ fontSize: 20 }} />
               Slik bruker du rollemaler
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
               Maler lar deg lagre rollebeskrivelser for gjenbruk i fremtidige prosjekter.
             </Typography>
-            <Box component="ul" sx={{ m: 0, pl: 2.5, color: 'rgba(255,255,255,0.6)', '& li': { mb: 0.5, fontSize: '0.875rem' } }}>
+            <Box component="ul" sx={{ m: 0, pl: 2.5, color: 'rgba(255,255,255,0.87)', '& li': { mb: 0.5, fontSize: '0.875rem' } }}>
               <li><strong>Lagre som mal:</strong> Klikk på lilla ikon på en prosjektrolle</li>
               <li><strong>Importer:</strong> Klikk "Importer" for å kopiere malen til prosjektet</li>
               <li><strong>Slett:</strong> Fjern maler du ikke trenger lenger</li>
@@ -1094,7 +1111,7 @@ export function RoleManagementPanel({
           
           {poolLoading ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Laster maler...</Typography>
+              <Typography sx={{ color: 'rgba(255,255,255,0.87)' }}>Laster maler...</Typography>
             </Box>
           ) : poolRoles.length === 0 ? (
             <Box sx={{ 
@@ -1105,10 +1122,10 @@ export function RoleManagementPanel({
               border: '1px dashed rgba(255,255,255,0.1)',
             }}>
               <TheaterComedyIcon sx={{ fontSize: 48, color: 'rgba(255,255,255,0.2)', mb: 2 }} />
-              <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 1 }}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
                 Ingen rollemaler ennå
               </Typography>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.3)' }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                 Klikk på lilla ikon på prosjektroller for å lagre som mal
               </Typography>
             </Box>
@@ -1158,7 +1175,7 @@ export function RoleManagementPanel({
                       <Typography 
                         variant="body2" 
                         sx={{ 
-                          color: 'rgba(255,255,255,0.5)',
+                          color: 'rgba(255,255,255,0.87)',
                           fontSize: '0.8rem',
                           display: '-webkit-box',
                           WebkitLineClamp: 2,
@@ -1195,7 +1212,7 @@ export function RoleManagementPanel({
                         size="small"
                         onClick={() => handleDeleteFromPool(poolRole)}
                         sx={{
-                          color: 'rgba(255,255,255,0.4)',
+                          color: 'rgba(255,255,255,0.87)',
                           minWidth: TOUCH_TARGET_SIZE,
                           minHeight: TOUCH_TARGET_SIZE,
                           '&:hover': { 
@@ -1231,34 +1248,49 @@ export function RoleManagementPanel({
           aria-label="Statistikk over roller"
         >
           <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <TheaterComedyIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#00d4ff' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#00d4ff', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem', md: '1.6rem', lg: '1.85rem', xl: '2.5rem' } }}>
               {stats.total}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Totalt</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Totalt</Typography>
           </Box>
           <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <TheaterComedyIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#00d4ff' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#00d4ff', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem', md: '1.6rem', lg: '1.85rem', xl: '2.5rem' } }}>
               {stats.open}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Åpne</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Åpne</Typography>
           </Box>
           <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <TheaterComedyIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#ffb800' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#ffb800', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem', md: '1.6rem', lg: '1.85rem', xl: '2.5rem' } }}>
               {stats.casting}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Casting</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Casting</Typography>
           </Box>
           <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <TheaterComedyIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#10b981' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#10b981', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem', md: '1.6rem', lg: '1.85rem', xl: '2.5rem' } }}>
               {stats.filled}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Besatt</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Besatt</Typography>
           </Box>
           <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <StarIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#ffc107' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#ffc107', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem', md: '1.6rem', lg: '1.85rem', xl: '2.5rem' } }}>
               {stats.favorites}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Favoritter</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Favoritter</Typography>
           </Box>
         </Box>
       </Collapse>
@@ -1281,7 +1313,7 @@ export function RoleManagementPanel({
           size="small"
           slotProps={{
             input: {
-              startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)', mr: 1, fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />,
+              startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.87)', mr: 1, fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />,
               sx: { minHeight: TOUCH_TARGET_SIZE },
             },
             htmlInput: { 'aria-label': 'Søk i roller' },
@@ -1431,7 +1463,7 @@ export function RoleManagementPanel({
           <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 }, fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.15rem', lg: '1.35rem', xl: '1.5rem' } }}>
             Kom i gang med casting
           </Typography>
-          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.6)', mb: { xs: 3, sm: 4, md: 3.5, lg: 4, xl: 4.5 }, maxWidth: { xs: '100%', sm: 400, md: 380, lg: 420, xl: 480 }, mx: 'auto', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
+          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.87)', mb: { xs: 3, sm: 4, md: 3.5, lg: 4, xl: 4.5 }, maxWidth: { xs: '100%', sm: 400, md: 380, lg: 420, xl: 480 }, mx: 'auto', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
             Definer rollene du trenger for produksjonen din, og start å legge til kandidater.
           </Typography>
           <Button
@@ -1456,7 +1488,7 @@ export function RoleManagementPanel({
           </Button>
         </Box>
       ) : filteredAndSortedRoles.length === 0 ? (
-        <Box role="status" sx={{ textAlign: 'center', py: { xs: 4, sm: 6, md: 5, lg: 6, xl: 8 }, color: 'rgba(255,255,255,0.5)' }}>
+        <Box role="status" sx={{ textAlign: 'center', py: { xs: 4, sm: 6, md: 5, lg: 6, xl: 8 }, color: 'rgba(255,255,255,0.87)' }}>
           <SearchIcon sx={{ fontSize: { xs: 40, sm: 48, md: 44, lg: 52, xl: 60 }, mb: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 }, opacity: 0.3 }} />
           <Typography variant="body1" sx={{ fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>Ingen treff på søket</Typography>
         </Box>
@@ -1481,7 +1513,7 @@ export function RoleManagementPanel({
                     indeterminate={selectedIds.size > 0 && selectedIds.size < filteredAndSortedRoles.length}
                     onChange={handleSelectAll}
                     aria-label="Velg alle roller"
-                    sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-checked': { color: '#00d4ff' } }}
+                    sx={{ color: 'rgba(255,255,255,0.87)', '&.Mui-checked': { color: '#00d4ff' } }}
                   />
                 </TableCell>
                 <TableCell sx={{ color: '#fff', fontSize: { xs: '0.8rem', sm: '0.875rem', md: '0.85rem', lg: '0.88rem', xl: '1rem' }, py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>Fav</TableCell>
@@ -1542,7 +1574,7 @@ export function RoleManagementPanel({
                     <Checkbox
                       checked={selectedIds.has(role.id)}
                       onChange={() => handleToggleSelect(role.id)}
-                      sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-checked': { color: '#00d4ff' } }}
+                      sx={{ color: 'rgba(255,255,255,0.87)', '&.Mui-checked': { color: '#00d4ff' } }}
                     />
                   </TableCell>
                   <TableCell sx={{ py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
@@ -1561,7 +1593,7 @@ export function RoleManagementPanel({
                     />
                   </TableCell>
                   <TableCell sx={{ py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
                       {role.requirements.age ? `${role.requirements.age.min || '?'} - ${role.requirements.age.max || '?'}` : '-'}
                     </Typography>
                   </TableCell>
@@ -1579,7 +1611,7 @@ export function RoleManagementPanel({
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Dupliser">
-                        <IconButton onClick={() => handleDuplicate(role)} sx={{ color: 'rgba(255,255,255,0.5)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
+                        <IconButton onClick={() => handleDuplicate(role)} sx={{ color: 'rgba(255,255,255,0.87)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
                           <DuplicateIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />
                         </IconButton>
                       </Tooltip>
@@ -1635,7 +1667,7 @@ export function RoleManagementPanel({
                         <Checkbox
                           checked={selectedIds.has(role.id)}
                           onChange={() => handleToggleSelect(role.id)}
-                          sx={{ p: 0.5, color: 'rgba(255,255,255,0.3)', '&.Mui-checked': { color: '#f48fb1' } }}
+                          sx={{ p: 0.5, color: 'rgba(255,255,255,0.87)', '&.Mui-checked': { color: '#f48fb1' } }}
                         />
                         <Box sx={{ flex: 1 }}>
                           {/* Eye-catching Role Header */}
@@ -1787,7 +1819,7 @@ export function RoleManagementPanel({
                           <Box sx={{ flex: 1 }}>
                             <Typography
                               sx={{
-                                color: 'rgba(255,255,255,0.6)',
+                                color: 'rgba(255,255,255,0.87)',
                                 fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' },
                                 fontWeight: 600,
                                 textTransform: 'uppercase',
@@ -1837,7 +1869,7 @@ export function RoleManagementPanel({
                         <Box sx={{ flex: 1 }}>
                           <Typography
                             sx={{
-                              color: 'rgba(255,255,255,0.6)',
+                              color: 'rgba(255,255,255,0.87)',
                               fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' },
                               fontWeight: 600,
                               textTransform: 'uppercase',
@@ -1924,7 +1956,7 @@ export function RoleManagementPanel({
                             <Box sx={{ flex: 1 }}>
                               <Typography
                                 sx={{
-                                  color: 'rgba(255,255,255,0.6)',
+                                  color: 'rgba(255,255,255,0.87)',
                                   fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' },
                                   fontWeight: 600,
                                   textTransform: 'uppercase',
@@ -2015,7 +2047,7 @@ export function RoleManagementPanel({
                             sx={{
                               minWidth: TOUCH_TARGET_SIZE,
                               minHeight: TOUCH_TARGET_SIZE,
-                              color: 'rgba(255,255,255,0.6)',
+                              color: 'rgba(255,255,255,0.87)',
                               '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
                               ...focusVisibleStyles,
                             }}
@@ -2095,7 +2127,7 @@ export function RoleManagementPanel({
               <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>
                 Rollepool er tom
               </Typography>
-              <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.6)', mb: 3, maxWidth: 400, mx: 'auto' }}>
+              <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.87)', mb: 3, maxWidth: 400, mx: 'auto' }}>
                 Lagre roller fra prosjekter til poolen for gjenbruk i fremtidige produksjoner.
               </Typography>
             </Box>
@@ -2137,7 +2169,7 @@ export function RoleManagementPanel({
                         <Typography
                           variant="body2"
                           sx={{
-                            color: 'rgba(255,255,255,0.6)',
+                            color: 'rgba(255,255,255,0.87)',
                             mb: 1.5,
                             display: '-webkit-box',
                             WebkitLineClamp: 2,
@@ -2153,7 +2185,7 @@ export function RoleManagementPanel({
                           <Chip
                             label={poolRole.roleType}
                             size="small"
-                            sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', fontSize: '0.7rem' }}
+                            sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.87)', fontSize: '0.7rem' }}
                           />
                         )}
                       </Box>

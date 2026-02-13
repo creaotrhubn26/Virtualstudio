@@ -500,6 +500,20 @@ export const VirtualActorPanel: React.FC<VirtualActorPanelProps> = ({ onActorGen
 
       {activeTab === 'hair' && (
         <Box>
+          <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+            <InputLabel>Harkategori</InputLabel>
+            <Select
+              value={hairCategory}
+              label="Harkategori"
+              onChange={(e) => setHairCategory(e.target.value as typeof hairCategory)}
+            >
+              <MenuItem value="all">Alle</MenuItem>
+              <MenuItem value="male">Mann</MenuItem>
+              <MenuItem value="female">Kvinne</MenuItem>
+              <MenuItem value="children">Barn</MenuItem>
+              <MenuItem value="textured">Teksturert</MenuItem>
+            </Select>
+          </FormControl>
           <Tabs
             value={hairCategory}
             onChange={(_, value) => setHairCategory(value)}

@@ -51,6 +51,7 @@ const AmbientSoundsBrowserFallback = lazy(() => import('./components/AmbientSoun
 const PanelCreator = lazy(() => import('./components/PanelCreator'));
 const VirtualStudioPro = lazy(() => import('./components/VirtualStudioPro').then(m => ({ default: m.VirtualStudioPro })));
 const AccessoriesPanel = lazy(() => import('./panels/AccessoriesPanel').then(m => ({ default: m.AccessoriesPanel })));
+const ShotPlannerPanel = lazy(() => import('./core/shotPlanner').then(m => ({ default: m.ShotPlannerPanel })));
 
 // Loading fallback for lazy-loaded components
 const PanelLoadingFallback = () => (
@@ -167,67 +168,79 @@ export const TimelineApp: React.FC<TimelineAppProps> = ({ clipId }) => {
 
 export const AssetLibraryApp: React.FC = () => {
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <AssetLibraryPanel />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
 export const CharacterLoaderApp: React.FC = () => {
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <CharacterModelLoader />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
 export const LightsBrowserApp: React.FC = () => {
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <LightsBrowser />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
 export const CameraGearApp: React.FC = () => {
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <CameraGearPanel />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
 export const HDRIPanelApp: React.FC = () => {
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <HDRIPanel />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
 export const EquipmentPanelApp: React.FC = () => {
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <EquipmentPanel />
       </Suspense>
-    </ThemeProvider>
+    
+  );
+};
+
+export const ShotPlannerApp: React.FC = () => {
+  return (
+    <CustomThemeProvider>
+      <ToastProvider>
+        <Suspense fallback={<PanelLoadingFallback />}>
+          <ShotPlannerPanel />
+        </Suspense>
+      </ToastProvider>
+    </CustomThemeProvider>
   );
 };
 
@@ -254,8 +267,8 @@ export const ScenerPanelApp: React.FC = () => {
   };
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <ScenerPanel 
           onApplyPreset={handleApplyPreset} 
@@ -263,29 +276,29 @@ export const ScenerPanelApp: React.FC = () => {
           getCurrentSceneConfig={getCurrentSceneConfig}
         />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
 export const TidslinjeLibraryPanelApp: React.FC = () => {
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <TidslinjeLibraryPanel />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
 export const LibraryPanelApp: React.FC = () => {
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <LibraryPanel />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
@@ -429,14 +442,14 @@ export const MarketplacePanelApp: React.FC = () => {
   if (!isOpen) return null;
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <ToastProvider>
         <Suspense fallback={<PanelLoadingFallback />}>
           <MarketplacePanel onClose={handleClose} isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} />
         </Suspense>
       </ToastProvider>
-    </ThemeProvider>
+    
   );
 };
 
@@ -561,8 +574,8 @@ export const AIAssistantApp: React.FC = () => {
   if (!isOpen) return null;
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <AIAssistantPanel
           onClose={handleClose}
@@ -582,7 +595,7 @@ export const AIAssistantApp: React.FC = () => {
           }}
         />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
@@ -750,14 +763,14 @@ export const CastingPlannerApp: React.FC = () => {
   if (!isOpen) return null;
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <ToastProvider>
         <Suspense fallback={<PanelLoadingFallback />}>
           <CastingPlannerPanel onClose={handleClose} isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} />
         </Suspense>
       </ToastProvider>
-    </ThemeProvider>
+    
   );
 };
 
@@ -772,12 +785,12 @@ export const SceneComposerPanelApp: React.FC = () => {
   };
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <SceneComposerPanel onSaveScene={handleSaveScene} onLoadScene={handleLoadScene} />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
@@ -814,12 +827,12 @@ export const NotesPanelApp: React.FC = () => {
   if (!showPanel) return null;
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <NotesPanel onClose={handleClose} isClosing={isClosing} />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
@@ -842,13 +855,15 @@ export const CinematographyPatternsApp: React.FC = () => {
   };
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Dialog
         open={isOpen}
         onClose={() => setIsOpen(false)}
         maxWidth="md"
         fullWidth
+        TransitionComponent={Slide}
+        TransitionProps={{ direction: 'up' } as any}
         PaperProps={{
           sx: {
             bgcolor: '#1c2128',
@@ -871,7 +886,8 @@ export const CinematographyPatternsApp: React.FC = () => {
               <Typography variant="h6" sx={{ color: '#ffaa00', fontWeight: 600 }}>
                 Hollywood Lysmønstre
               </Typography>
-              <Typography variant="caption" sx={{ color: '#999' }}>
+              <Typography variant="caption" sx={{ color: '#999', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <CameraIcon sx={{ fontSize: 14 }} />
                 Profesjonelle lysmønstre fra film og fotografi
               </Typography>
             </Box>
@@ -890,15 +906,19 @@ export const CinematographyPatternsApp: React.FC = () => {
           p: 2,
           justifyContent: 'space-between'
         }}>
-          <Typography variant="caption" sx={{ color: '#666' }}>
-            Klikk "Apply Pattern" for å bruke et lysmønster
+          <Typography variant="caption" sx={{ color: '#666', display: 'flex', alignItems: 'center', gap: 1 }}>
+            {applyingId ? (
+              <><CircularProgress size={14} sx={{ color: '#ffaa00' }} /> Bruker mønster...</>
+            ) : (
+              'Klikk "Apply Pattern" for å bruke et lysmønster'
+            )}
           </Typography>
           <Button onClick={() => setIsOpen(false)} variant="outlined" sx={{ borderColor: '#555', color: '#999' }}>
             Lukk
           </Button>
         </DialogActions>
       </Dialog>
-    </ThemeProvider>
+    
   );
 };
 
@@ -917,8 +937,8 @@ export const LightPatternLibraryApp: React.FC = () => {
   };
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <LightPatternLibrary
           open={isOpen}
@@ -926,7 +946,7 @@ export const LightPatternLibraryApp: React.FC = () => {
           onApplyPattern={handleApplyPattern}
         />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
@@ -952,8 +972,8 @@ export const AvatarGeneratorApp: React.FC = () => {
   };
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <AvatarGeneratorPanel
           open={isOpen}
@@ -961,7 +981,7 @@ export const AvatarGeneratorApp: React.FC = () => {
           onAvatarGenerated={handleAvatarGenerated}
         />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
@@ -983,12 +1003,12 @@ export const SoundBrowserApp: React.FC = () => {
   if (!isOpen) return null;
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <SoundBrowser />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
@@ -1010,26 +1030,26 @@ export const EnvironmentBrowserApp: React.FC = () => {
   if (!isOpen) return null;
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <EnvironmentBrowser />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
 // Animation Composer Panel App
 export const AnimationComposerApp: React.FC = () => {
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <ToastProvider>
         <Suspense fallback={<PanelLoadingFallback />}>
           <AnimationComposerPanel />
         </Suspense>
       </ToastProvider>
-    </ThemeProvider>
+    
   );
 };
 
@@ -1051,12 +1071,12 @@ export const InteractiveElementsBrowserApp: React.FC = () => {
   if (!isOpen) return null;
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <InteractiveElementsBrowser />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
@@ -1078,12 +1098,12 @@ export const AmbientSoundsBrowserApp: React.FC = () => {
   if (!isOpen) return null;
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
-        <AmbientSoundsBrowser />
+        <AmbientSoundsBrowserFallback />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
@@ -1254,8 +1274,9 @@ export const CourseCreatorSidebarApp: React.FC = () => {
         
         // Remount video player
         setTimeout(() => {
-          const { mountHelpVideoPlayers } = require('./components/HelpVideoPlayer');
-          mountHelpVideoPlayers();
+          import('./components/HelpVideoPlayer').then(({ mountHelpVideoPlayers }) => {
+            mountHelpVideoPlayers();
+          });
         }, 0);
       }
       
@@ -1269,8 +1290,8 @@ export const CourseCreatorSidebarApp: React.FC = () => {
   return (
     <React.Fragment>
       {isOpen && (
-        <ThemeProvider theme={darkTheme}>
-          <CssBaseline />
+        
+          
           <DemoModeProvider>
             <AcademyProvider>
               <EnhancedMasterIntegrationProvider>
@@ -1313,7 +1334,7 @@ export const CourseCreatorSidebarApp: React.FC = () => {
               </EnhancedMasterIntegrationProvider>
             </AcademyProvider>
           </DemoModeProvider>
-        </ThemeProvider>
+        
       )}
     </React.Fragment>
   );
@@ -1367,8 +1388,8 @@ export const Accessible3DControlsApp: React.FC<Accessible3DControlsAppProps> = (
   const [isVisible, setIsVisible] = React.useState(false);
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <AccessibilityProvider>
         {/* Toggle button - always visible */}
         <button
@@ -1414,30 +1435,42 @@ export const Accessible3DControlsApp: React.FC<Accessible3DControlsAppProps> = (
           </div>
         )}
       </AccessibilityProvider>
-    </ThemeProvider>
+    
   );
 };
 
 // Virtual Studio Pro - Advanced production features
 export const VirtualStudioProApp: React.FC = () => {
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <VirtualStudioPro />
       </Suspense>
-    </ThemeProvider>
+    
   );
 };
 
 // Accessories Panel App
 export const AccessoriesPanelApp: React.FC = () => {
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
+    
+      
       <Suspense fallback={<PanelLoadingFallback />}>
         <AccessoriesPanel />
       </Suspense>
-    </ThemeProvider>
+    
+  );
+};
+
+// Panel Creator App - Custom panel builder
+export const PanelCreatorApp: React.FC = () => {
+  return (
+    
+      
+      <Suspense fallback={<PanelLoadingFallback />}>
+        <PanelCreator />
+      </Suspense>
+    
   );
 };

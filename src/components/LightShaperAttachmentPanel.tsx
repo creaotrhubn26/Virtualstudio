@@ -4,7 +4,7 @@
  * Allows attaching/detaching light shapers to selected lights
  */
 
-import React from 'react';
+import { useState } from 'react';
 import { logger } from '../../core/services/logger';
 
 const log = logger.module('LightShaperPanel, ');
@@ -45,9 +45,9 @@ export function LightShaperAttachmentPanel({
   onAttachShaper,
   onDetachShaper,
 }: LightShaperAttachmentPanelProps) {
-  const [showDialog, setShowDialog] = React.useState(false);
-  const [shapers, setShapers] = React.useState<LightShaper[]>([]);
-  const [loading, setLoading] = React.useState(false);
+  const [showDialog, setShowDialog] = useState(false);
+  const [shapers, setShapers] = useState<LightShaper[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const hasAttachedShaper = !!lightNode.attachedShaper;
 

@@ -4,7 +4,7 @@
  * Consistent icon wrapper with design system styling
  */
 
-import React from 'react';
+import type { ComponentType, FC } from 'react';
 import { SvgIconProps } from '@mui/material/SvgIcon';
 import { colors } from '../../styles/designTokens';
 
@@ -14,7 +14,7 @@ export type IconColor = 'primary' | 'secondary' | 'disabled' | 'inherit' | 'erro
 export interface IconProps extends Omit<SvgIconProps, 'color'> {
   size?: IconSize;
   color?: IconColor | string;
-  component: React.ComponentType<SvgIconProps>;
+  component: ComponentType<SvgIconProps>;
 }
 
 const getColorValue = (color: IconColor | string): string => {
@@ -43,7 +43,7 @@ const getColorValue = (color: IconColor | string): string => {
   }
 };
 
-export const Icon: React.FC<IconProps> = ({
+export const Icon: FC<IconProps> = ({
   size = 24,
   color = 'inherit',
   component: Component,

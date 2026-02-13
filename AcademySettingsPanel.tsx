@@ -2896,7 +2896,7 @@ export function AcademySettingsPanel({ onClose }: AcademySettingsPanelProps) {
               >
                 <Typography
                   variant="caption"
-                  sx={{ color: 'rgba(255,255,255,0.7)', mb: 1, display: 'block' }}
+                  sx={{ color: 'rgba(255,255,255,0.87)', mb: 1, display: 'block' }}
                 >
                   Eksempel Academy-innstillinger
                 </Typography>

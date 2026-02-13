@@ -4,6 +4,8 @@ import { Box, Typography, Switch, FormControlLabel, Paper } from '@mui/material'
 interface PushNotificationSettingsProps {
   enabled?: boolean;
   onToggle?: (enabled: boolean) => void;
+  userId?: string;
+  showDescription?: boolean;
 }
 
 export const PushNotificationSettings: React.FC<PushNotificationSettingsProps> = ({

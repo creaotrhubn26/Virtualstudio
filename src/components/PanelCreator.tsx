@@ -55,7 +55,6 @@ import {
   Person,
   Settings,
   Public,
-  TheaterComedy,
   SmartToy,
   BarChart,
   People,
@@ -73,7 +72,6 @@ import {
   Label,
   Title,
   Description,
-  LocationOn,
   Height,
   ToggleOn,
   Code,
@@ -86,6 +84,7 @@ import {
   CloudDownload,
   CloudUpload,
 } from '@mui/icons-material';
+import { RolesIcon as TheaterComedy, LocationsIcon as LocationOn } from './icons/CastingIcons';
 import {
   DndContext,
   closestCenter,
@@ -215,7 +214,7 @@ const SortablePanelItem: React.FC<SortablePanelItemProps> = ({
           display: 'flex',
           alignItems: 'center',
           mr: 1,
-          color: 'rgba(255,255,255,0.5)',
+          color: 'rgba(255,255,255,0.87)',
           '&:active': {
             cursor: 'grabbing',
           },
@@ -244,7 +243,7 @@ const SortablePanelItem: React.FC<SortablePanelItemProps> = ({
             variant="body2"
             sx={{
               fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1rem' },
-              color: 'rgba(255,255,255,0.6)',
+              color: 'rgba(255,255,255,0.87)',
               mt: 0.5,
             }}
           >
@@ -868,7 +867,7 @@ const PanelCreatorContent: React.FC = () => {
                 onClick={() => setShowPanelList(false)}
                 title="Lukk panel-liste"
                 sx={{
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
                 }}
               >
@@ -1161,7 +1160,7 @@ const PanelCreatorContent: React.FC = () => {
               top: { xs: 8, sm: 12, md: 16 },
               minWidth: { xs: 40, sm: 44, md: 48 },
               minHeight: { xs: 40, sm: 44, md: 48 },
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               transition: 'all 0.2s ease',
               '&:hover': {
                 bgcolor: 'rgba(255,255,255,0.1)',
@@ -1199,7 +1198,7 @@ const PanelCreatorContent: React.FC = () => {
               border: '2px solid transparent',
               backgroundClip: 'padding-box',
               '&:hover': {
-                bgcolor: 'rgba(255,255,255,0.3)',
+                bgcolor: 'rgba(255,255,255,0.6)',
               },
             },
           }}
@@ -1726,7 +1725,7 @@ const PanelCreatorContent: React.FC = () => {
               }}
             >
               <AccordionSummary 
-                expandIcon={<ExpandMore sx={{ color: 'rgba(255,255,255,0.7)' }} />}
+                expandIcon={<ExpandMore sx={{ color: 'rgba(255,255,255,0.87)' }} />}
                 sx={{
                   borderRadius: 2,
                   '&:hover': {
@@ -1863,7 +1862,7 @@ const PanelCreatorContent: React.FC = () => {
               }}
             >
               <AccordionSummary 
-                expandIcon={<ExpandMore sx={{ color: 'rgba(255,255,255,0.7)' }} />}
+                expandIcon={<ExpandMore sx={{ color: 'rgba(255,255,255,0.87)' }} />}
                 sx={{
                   borderRadius: 2,
                   '&:hover': {
@@ -2041,7 +2040,7 @@ const PanelCreatorContent: React.FC = () => {
                           alignItems: 'center',
                           justifyContent: 'center',
                           minHeight: 200,
-                          color: 'rgba(255,255,255,0.5)',
+                          color: 'rgba(255,255,255,0.87)',
                         }}
                       >
                         <Typography variant="body2" sx={{ fontStyle: 'italic', textAlign: 'center' }}>
@@ -2131,7 +2130,7 @@ const PanelCreatorContent: React.FC = () => {
               },
               '&:disabled': {
                 bgcolor: 'rgba(255,255,255,0.1)',
-                color: 'rgba(255,255,255,0.3)',
+                color: 'rgba(255,255,255,0.6)',
               },
             }}
           >
@@ -2470,7 +2469,7 @@ const PanelCreatorContent: React.FC = () => {
           </Box>
           <IconButton
             onClick={() => setShowVersionHistory(false)}
-            sx={{ color: 'rgba(255,255,255,0.7)' }}
+            sx={{ color: 'rgba(255,255,255,0.87)' }}
           >
             <Close />
           </IconButton>
@@ -2535,7 +2534,7 @@ const PanelCreatorContent: React.FC = () => {
                           bgcolor: 'rgba(0,212,255,0.1)',
                         },
                         '&:disabled': {
-                          color: 'rgba(255,255,255,0.3)',
+                          color: 'rgba(255,255,255,0.6)',
                         },
                       }}
                     >
@@ -2599,7 +2598,7 @@ const PanelCreatorContent: React.FC = () => {
           </Box>
           <IconButton
             onClick={() => setShowBackupDialog(false)}
-            sx={{ color: 'rgba(255,255,255,0.7)' }}
+            sx={{ color: 'rgba(255,255,255,0.87)' }}
           >
             <Close />
           </IconButton>

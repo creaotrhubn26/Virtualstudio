@@ -5,7 +5,8 @@
  * Helps with exposure analysis
  */
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
+import type { FC } from 'react';
 import { Box, Typography, Paper } from '@mui/material';
 import * as THREE from 'three';
 import { photometricCalculator } from '../../core/services/photometric';
@@ -24,7 +25,7 @@ interface LuminanceHeatmapProps {
   showLegend?: boolean;
 }
 
-export const LuminanceHeatmap: React.FC<LuminanceHeatmapProps> = ({
+export const LuminanceHeatmap: FC<LuminanceHeatmapProps> = ({
   lights,
   resolution = 64,
   showLegend = true,

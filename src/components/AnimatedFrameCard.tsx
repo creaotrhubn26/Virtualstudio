@@ -11,7 +11,8 @@
  * - Duration stretch animation
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import type { FC } from 'react';
 import {
   Box,
   Card,
@@ -299,7 +300,7 @@ const LockOverlay = styled(Box)({
 // Component
 // =============================================================================
 
-export const AnimatedFrameCard: React.FC<AnimatedFrameCardProps> = ({
+export const AnimatedFrameCard: FC<AnimatedFrameCardProps> = ({
   id,
   index,
   imageUrl,
@@ -487,7 +488,7 @@ export const AnimatedFrameCard: React.FC<AnimatedFrameCardProps> = ({
           <LockOverlay onClick={handleLockedClick}>
             <Lock 
               className={showLockWiggle ? 'lock-icon' : ', '} 
-              sx={{ fontSize: 40, color: 'rgba(255,255,255,0.5)' }} 
+              sx={{ fontSize: 40, color: 'rgba(255,255,255,0.87)' }} 
             />
           </LockOverlay>
         )}

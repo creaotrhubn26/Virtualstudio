@@ -9,7 +9,7 @@
  * - Light height recommendations
  */
 
-import React, { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, type FC } from 'react';
 import { Html, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import { Box, Typography, Slider, Switch, FormControlLabel, Alert, Chip, Stack, Card, CardContent, Divider } from '@mui/material';
@@ -71,7 +71,7 @@ function calculateReflection(
 }
 
 // 3D Reflection Visualization
-const ReflectionVisualization: React.FC<{
+const ReflectionVisualization: FC<{
   subjectPosition: [number, number, number];
   eyeLevel: number;
   cameraPosition: [number, number, number];
@@ -224,7 +224,7 @@ const ReflectionVisualization: React.FC<{
 };
 
 // Safe Zone Visualization (cone showing safe light positions)
-const SafeZoneVisualization: React.FC<{
+const SafeZoneVisualization: FC<{
   subjectPosition: [number, number, number];
   eyeLevel: number;
   cameraPosition: [number, number, number];
@@ -301,7 +301,7 @@ const SafeZoneVisualization: React.FC<{
 };
 
 // Optimal Light Position Indicator
-const OptimalLightPositions: React.FC<{
+const OptimalLightPositions: FC<{
   subjectPosition: [number, number, number];
   eyeLevel: number;
   cameraPosition: [number, number, number];
@@ -393,7 +393,7 @@ const OptimalLightPositions: React.FC<{
 };
 
 // Main Glasses Reflection Guide Component
-export const GlassesReflectionGuide: React.FC<GlassesReflectionGuideProps> = ({
+export const GlassesReflectionGuide: FC<GlassesReflectionGuideProps> = ({
   enabled = true,
   subjectPosition,
   subjectHeight = 1.7,
@@ -490,7 +490,7 @@ export const GlassesReflectionGuide: React.FC<GlassesReflectionGuideProps> = ({
 };
 
 // Control Panel for Glasses Reflection Guide
-export const GlassesReflectionPanel: React.FC<{
+export const GlassesReflectionPanel: FC<{
   enabled: boolean;
   onEnabledChange: (enabled: boolean) => void;
   headTiltAngle: number;

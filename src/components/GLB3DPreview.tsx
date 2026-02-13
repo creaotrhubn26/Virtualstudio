@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, memo } from 'react';
+import { useEffect, useRef, memo, type FC } from 'react';
 import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 
@@ -31,7 +31,7 @@ interface GLB3DPreviewProps {
   onError?: () => void;
 }
 
-const GLB3DPreviewComponent: React.FC<GLB3DPreviewProps> = ({
+const GLB3DPreviewComponent: FC<GLB3DPreviewProps> = ({
   modelUrl,
   width = 200,
   height = 200,

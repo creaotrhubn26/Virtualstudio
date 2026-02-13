@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, type FC } from 'react';
 import {
   Box,
   Typography,
@@ -36,7 +36,6 @@ import {
   Videocam,
   Close,
   Timer,
-  LocationOn,
   FilterList,
   GridView,
   ViewList,
@@ -60,6 +59,7 @@ import {
   Edit,
   CheckCircle,
 } from '@mui/icons-material';
+import { LocationsIcon as LocationOn } from './icons/CastingIcons';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import jsPDF from 'jspdf';
 import {
@@ -92,7 +92,7 @@ interface InteractiveShotListViewProps {
 
 type ViewMode = 'dashboard' | 'focus' | 'timeline' | 'quick';
 
-export const InteractiveShotListView: React.FC<InteractiveShotListViewProps> = ({
+export const InteractiveShotListView: FC<InteractiveShotListViewProps> = ({
   shotList,
   shots,
   locations,
@@ -461,7 +461,7 @@ export const InteractiveShotListView: React.FC<InteractiveShotListViewProps> = (
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             <Close />
           </IconButton>
           <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, fontSize: isMobile ? 14 : 18 }}>
@@ -522,7 +522,7 @@ export const InteractiveShotListView: React.FC<InteractiveShotListViewProps> = (
               <FilterList />
             </IconButton>
             
-            <IconButton onClick={toggleFullscreen} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+            <IconButton onClick={toggleFullscreen} sx={{ color: 'rgba(255,255,255,0.87)' }}>
               {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
             </IconButton>
           </>
@@ -543,7 +543,7 @@ export const InteractiveShotListView: React.FC<InteractiveShotListViewProps> = (
           }}
         >
           <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.5)' }}>Lokasjon</InputLabel>
+            <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Lokasjon</InputLabel>
             <Select
               value={filterLocation}
               onChange={(e) => setFilterLocation(e.target.value)}
@@ -561,7 +561,7 @@ export const InteractiveShotListView: React.FC<InteractiveShotListViewProps> = (
           </FormControl>
 
           <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.5)' }}>Prioritet</InputLabel>
+            <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Prioritet</InputLabel>
             <Select
               value={filterPriority}
               onChange={(e) => setFilterPriority(e.target.value as ShotPriority | 'all')}
@@ -579,7 +579,7 @@ export const InteractiveShotListView: React.FC<InteractiveShotListViewProps> = (
           </FormControl>
 
           <FormControl size="small" sx={{ minWidth: 100 }}>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.5)' }}>Type</InputLabel>
+            <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Type</InputLabel>
             <Select
               value={filterMediaType}
               onChange={(e) => setFilterMediaType(e.target.value as MediaType | 'all')}
@@ -638,7 +638,7 @@ export const InteractiveShotListView: React.FC<InteractiveShotListViewProps> = (
             onClick={() => setShowPresetSelector(!showPresetSelector)}
             sx={{
               borderColor: 'rgba(255,255,255,0.15)',
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               fontSize: 11,
             }}
           >
@@ -707,7 +707,7 @@ export const InteractiveShotListView: React.FC<InteractiveShotListViewProps> = (
                     {preset.name}
                   </Typography>
                 </Box>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, display: 'block' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: 10, display: 'block' }}>
                   {preset.description}
                 </Typography>
               </Box>
@@ -729,7 +729,7 @@ export const InteractiveShotListView: React.FC<InteractiveShotListViewProps> = (
       >
         <Box sx={{ flex: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
               Fremdrift
             </Typography>
             <Typography variant="caption" sx={{ color: '#4caf50', fontWeight: 600 }}>
@@ -754,7 +754,7 @@ export const InteractiveShotListView: React.FC<InteractiveShotListViewProps> = (
         {!isMobile && (
           <>
             <Box sx={{ textAlign: 'center', minWidth: 80 }}>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block' }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block' }}>
                 Gjenstår
               </Typography>
               <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600 }}>
@@ -763,7 +763,7 @@ export const InteractiveShotListView: React.FC<InteractiveShotListViewProps> = (
             </Box>
 
             <Box sx={{ textAlign: 'center', minWidth: 80 }}>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block' }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block' }}>
                 Tid
               </Typography>
               <Typography variant="body2" sx={{ color: isTimePressure ? '#f44336' : '#fff', fontWeight: 600 }}>
@@ -816,7 +816,7 @@ export const InteractiveShotListView: React.FC<InteractiveShotListViewProps> = (
               <Typography 
                 variant="h5" 
                 sx={{ 
-                  color: 'rgba(255,255,255,0.7)', 
+                  color: 'rgba(255,255,255,0.87)', 
                   fontWeight: 500,
                   fontSize: isMobile ? 18 : 24,
                 }}
@@ -827,7 +827,7 @@ export const InteractiveShotListView: React.FC<InteractiveShotListViewProps> = (
                 <Typography 
                   variant="body1" 
                   sx={{ 
-                    color: 'rgba(255,255,255,0.5)', 
+                    color: 'rgba(255,255,255,0.87)', 
                     mt: 1,
                     maxWidth: 400,
                     mx: 'auto',
@@ -883,11 +883,11 @@ export const InteractiveShotListView: React.FC<InteractiveShotListViewProps> = (
 
             <Box sx={{ mt: 4, display: 'flex', gap: 3, opacity: 0.6 }}>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Gjenstår</Typography>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Gjenstår</Typography>
                 <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600 }}>{stats.notStarted + stats.inProgress}</Typography>
               </Box>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Kritiske</Typography>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Kritiske</Typography>
                 <Typography variant="h6" sx={{ color: '#f44336', fontWeight: 600 }}>{stats.critical - stats.criticalCompleted}</Typography>
               </Box>
             </Box>
@@ -906,7 +906,7 @@ export const InteractiveShotListView: React.FC<InteractiveShotListViewProps> = (
             <Typography variant="h4" sx={{ color: '#4caf50', fontWeight: 700 }}>
               Alle shots fullført!
             </Typography>
-            <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.5)', mt: 1 }}>
+            <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.87)', mt: 1 }}>
               Totalt {stats.completed} shots på {formatTime(elapsedTime)}
             </Typography>
           </Box>
@@ -1088,7 +1088,7 @@ export const InteractiveShotListView: React.FC<InteractiveShotListViewProps> = (
           </Button>
 
           <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block', fontSize: 10 }}>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', fontSize: 10 }}>
               Gjenstår
             </Typography>
             <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>
@@ -1133,7 +1133,7 @@ export const InteractiveShotListView: React.FC<InteractiveShotListViewProps> = (
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setNotesDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <Button onClick={() => setNotesDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Avbryt
           </Button>
           <Button onClick={handleSaveNotes} variant="contained" sx={{ bgcolor: '#e91e63' }}>

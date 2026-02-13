@@ -1,4 +1,4 @@
-import React, { useState, useId, useMemo, useEffect } from 'react';
+import { useState, useId, useMemo, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -46,7 +46,6 @@ import {
   ExpandMore as ExpandIcon,
   ExpandLess as CollapseIcon,
   FileDownload as ExportIcon,
-  BarChart as StatsIcon,
   ContentCopy as DuplicateIcon,
   GridView as GridViewIcon,
   TableRows as TableViewIcon,
@@ -55,7 +54,6 @@ import {
   Email as EmailIcon,
   Phone as PhoneIcon,
   Movie as MovieIcon,
-  RecentActors as RecentActorsIcon,
   ViewInAr as ViewInArIcon,
   Close as CloseIcon,
   Check as CheckIcon,
@@ -69,6 +67,8 @@ import {
   Inventory as InventoryIcon,
   FileDownload as DownloadIcon,
 } from '@mui/icons-material';
+import { CandidatesIcon as RecentActorsIcon, RolesIcon, StatsIcon } from './icons/CastingIcons';
+import { ConsentStatusBadge } from './ConsentStatusBadge';
 import { candidatePoolService } from '../services/candidatePoolService';
 import { GLB3DPreview, PERSONALITY_TRAITS } from './GLB3DPreview';
 
@@ -425,31 +425,46 @@ export function CandidateManagementPanel({
     });
   };
 
-  const handleDeleteWithUndo = (candidate: Candidate) => {
+  const handleDeleteWithUndo = async (candidate: Candidate) => {
     setLastDeleted(candidate);
-    castingService.deleteCandidate(projectId, candidate.id);
-    onCandidatesChange();
-    setUndoSnackbarOpen(true);
-    showInfo(`🗑️ ${candidate.name} slettet - klikk "Angre" for å gjenopprette`, 6000);
+    try {
+      await castingService.deleteCandidate(projectId, candidate.id);
+      onCandidatesChange();
+      setUndoSnackbarOpen(true);
+      showInfo(`🗑️ ${candidate.name} slettet - klikk "Angre" for å gjenopprette`, 6000);
+    } catch (error) {
+      console.error('Failed to delete candidate:', error);
+      setLastDeleted(null);
+    }
   };
 
-  const handleUndoDelete = () => {
+  const handleUndoDelete = async () => {
     if (lastDeleted) {
-      castingService.saveCandidate(projectId, lastDeleted);
-      onCandidatesChange();
-      showSuccess(`↩️ ${lastDeleted.name} gjenopprettet`, 3000);
+      try {
+        await castingService.saveCandidate(projectId, lastDeleted);
+        onCandidatesChange();
+        showSuccess(`↩️ ${lastDeleted.name} gjenopprettet`, 3000);
+      } catch (error) {
+        console.error('Failed to restore candidate:', error);
+      }
       setLastDeleted(null);
     }
     setUndoSnackbarOpen(false);
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (window.confirm(`Er du sikker på at du vil slette ${selectedIds.size} kandidater?`)) {
       const count = selectedIds.size;
-      selectedIds.forEach(id => castingService.deleteCandidate(projectId, id));
-      onCandidatesChange();
-      setSelectedIds(new Set());
-      showInfo(`🗑️ ${count} kandidater slettet`, 4000);
+      try {
+        await Promise.all(
+          Array.from(selectedIds).map(id => castingService.deleteCandidate(projectId, id))
+        );
+        onCandidatesChange();
+        setSelectedIds(new Set());
+        showInfo(`🗑️ ${count} kandidater slettet`, 4000);
+      } catch (error) {
+        console.error('Failed to bulk delete candidates:', error);
+      }
     }
   };
 
@@ -517,7 +532,7 @@ export function CandidateManagementPanel({
     setCandidatesToPreview(prev => prev.filter(c => c.id !== candidateId));
   };
 
-  const handleDuplicate = (candidate: Candidate) => {
+  const handleDuplicate = async (candidate: Candidate) => {
     const newCandidate: Candidate = {
       ...candidate,
       id: `candidate-${Date.now()}`,
@@ -525,8 +540,12 @@ export function CandidateManagementPanel({
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    castingService.saveCandidate(projectId, newCandidate);
-    onCandidatesChange();
+    try {
+      await castingService.saveCandidate(projectId, newCandidate);
+      onCandidatesChange();
+    } catch (error) {
+      console.error('Failed to duplicate candidate:', error);
+    }
   };
 
   const handleSaveToPool = async (candidate: Candidate) => {
@@ -1097,7 +1116,7 @@ export function CandidateManagementPanel({
             </Typography>
             <Typography
               sx={{
-                color: 'rgba(255,255,255,0.6)',
+                color: 'rgba(255,255,255,0.87)',
                 fontSize: { xs: '0.8rem', sm: '0.875rem', md: '0.85rem', lg: '0.9rem', xl: '1rem' },
                 fontWeight: 500,
                 mt: 0.25,
@@ -1255,28 +1274,46 @@ export function CandidateManagementPanel({
           }}
         >
           <Box sx={{ textAlign: 'center', p: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <RecentActorsIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#10b981' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#10b981', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem', md: '1.6rem', lg: '1.85rem', xl: '2.5rem' } }}>{statistics.total}</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Totalt</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Totalt</Typography>
           </Box>
           <Box sx={{ textAlign: 'center', p: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <CheckIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#10b981' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#10b981', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem', md: '1.6rem', lg: '1.85rem', xl: '2.5rem' } }}>{statistics.confirmed}</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Bekreftet</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Bekreftet</Typography>
           </Box>
           <Box sx={{ textAlign: 'center', p: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <RecentActorsIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#8b5cf6' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#8b5cf6', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem', md: '1.6rem', lg: '1.85rem', xl: '2.5rem' } }}>{statistics.selected}</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Valgt</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Valgt</Typography>
           </Box>
           <Box sx={{ textAlign: 'center', p: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <RecentActorsIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#ffb800' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#ffb800', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem', md: '1.6rem', lg: '1.85rem', xl: '2.5rem' } }}>{statistics.shortlist}</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Shortlist</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Shortlist</Typography>
           </Box>
           <Box sx={{ textAlign: 'center', p: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <RecentActorsIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#6b7280' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#6b7280', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem', md: '1.6rem', lg: '1.85rem', xl: '2.5rem' } }}>{statistics.pending}</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Venter</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Venter</Typography>
           </Box>
           <Box sx={{ textAlign: 'center', p: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <StarIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#ffc107' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#ffc107', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem', md: '1.6rem', lg: '1.85rem', xl: '2.5rem' } }}>{statistics.favorites}</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Favoritter</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>Favoritter</Typography>
           </Box>
         </Box>
       </Collapse>
@@ -1298,7 +1335,7 @@ export function CandidateManagementPanel({
           size="small"
           slotProps={{
             input: {
-              startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)', mr: 1, fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />,
+              startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.87)', mr: 1, fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />,
               sx: { minHeight: TOUCH_TARGET_SIZE },
             },
             htmlInput: { 'aria-label': 'Søk i kandidater' },
@@ -1444,7 +1481,7 @@ export function CandidateManagementPanel({
           <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: 1, fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.4rem', lg: '1.6rem', xl: '2rem' } }}>
             Legg til kandidater
           </Typography>
-          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.6)', mb: { xs: 3, sm: 4, md: 3.5, lg: 4, xl: 5 }, maxWidth: { xs: 300, sm: 400, md: 350, lg: 450, xl: 500 }, mx: 'auto', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
+          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.87)', mb: { xs: 3, sm: 4, md: 3.5, lg: 4, xl: 5 }, maxWidth: { xs: 300, sm: 400, md: 350, lg: 450, xl: 500 }, mx: 'auto', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
             {roles.length > 0
               ? `Du har ${roles.length} rolle${roles.length > 1 ? 'r' : ''} som venter på kandidater.`
               : 'Start med å opprette roller, deretter legg til kandidater.'}
@@ -1471,7 +1508,7 @@ export function CandidateManagementPanel({
           </Button>
         </Box>
       ) : filteredAndSortedCandidates.length === 0 ? (
-        <Box role="status" sx={{ textAlign: 'center', py: 6, color: 'rgba(255,255,255,0.5)' }}>
+        <Box role="status" sx={{ textAlign: 'center', py: 6, color: 'rgba(255,255,255,0.87)' }}>
           <SearchIcon sx={{ fontSize: 48, mb: 2, opacity: 0.3 }} />
           <Typography variant="body1">Ingen treff på søket</Typography>
         </Box>
@@ -1495,7 +1532,7 @@ export function CandidateManagementPanel({
                     checked={selectedIds.size === filteredAndSortedCandidates.length && filteredAndSortedCandidates.length > 0}
                     indeterminate={selectedIds.size > 0 && selectedIds.size < filteredAndSortedCandidates.length}
                     onChange={handleSelectAll}
-                    sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-checked': { color: '#10b981' } }}
+                    sx={{ color: 'rgba(255,255,255,0.87)', '&.Mui-checked': { color: '#10b981' } }}
                   />
                 </TableCell>
                 <TableCell sx={{ color: '#fff', py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>Fav</TableCell>
@@ -1547,7 +1584,7 @@ export function CandidateManagementPanel({
                     <Checkbox
                       checked={selectedIds.has(candidate.id)}
                       onChange={() => handleToggleSelect(candidate.id)}
-                      sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-checked': { color: '#10b981' } }}
+                      sx={{ color: 'rgba(255,255,255,0.87)', '&.Mui-checked': { color: '#10b981' } }}
                     />
                   </TableCell>
                   <TableCell sx={{ py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
@@ -1577,12 +1614,12 @@ export function CandidateManagementPanel({
                   <TableCell sx={{ py: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
                     <Stack spacing={0.5}>
                       {candidate.contactInfo.email && (
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: 0.5, fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'flex', alignItems: 'center', gap: 0.5, fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
                           <EmailIcon sx={{ fontSize: { xs: 12, sm: 14, md: 13, lg: 15, xl: 18 } }} /> {candidate.contactInfo.email}
                         </Typography>
                       )}
                       {candidate.contactInfo.phone && (
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: 0.5, fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'flex', alignItems: 'center', gap: 0.5, fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
                           <PhoneIcon sx={{ fontSize: { xs: 12, sm: 14, md: 13, lg: 15, xl: 18 } }} /> {candidate.contactInfo.phone}
                         </Typography>
                       )}
@@ -1594,7 +1631,7 @@ export function CandidateManagementPanel({
                         <Chip key={roleId} label={getRoleName(roleId)} size="small" sx={{ bgcolor: 'rgba(0,212,255,0.2)', color: '#00d4ff', fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.68rem', lg: '0.75rem', xl: '0.85rem' }, height: { xs: 20, sm: 22, md: 21, lg: 24, xl: 28 } }} />
                       ))}
                       {(candidate.assignedRoles?.length || 0) > 2 && (
-                        <Chip label={`+${candidate.assignedRoles.length - 2}`} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.68rem', lg: '0.75rem', xl: '0.85rem' }, height: { xs: 20, sm: 22, md: 21, lg: 24, xl: 28 } }} />
+                        <Chip label={`+${candidate.assignedRoles.length - 2}`} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.68rem', lg: '0.75rem', xl: '0.85rem' }, height: { xs: 20, sm: 22, md: 21, lg: 24, xl: 28 } }} />
                       )}
                     </Box>
                   </TableCell>
@@ -1606,7 +1643,7 @@ export function CandidateManagementPanel({
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Dupliser">
-                        <IconButton onClick={() => handleDuplicate(candidate)} sx={{ color: 'rgba(255,255,255,0.5)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
+                        <IconButton onClick={() => handleDuplicate(candidate)} sx={{ color: 'rgba(255,255,255,0.87)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
                           <DuplicateIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />
                         </IconButton>
                       </Tooltip>
@@ -1765,6 +1802,18 @@ export function CandidateManagementPanel({
                         backdropFilter: 'blur(8px)',
                       }}
                     />
+                    {/* Consent status badge */}
+                    <Box sx={{
+                      position: 'absolute',
+                      top: { xs: 12, sm: 14, md: 13, lg: 16, xl: 20 },
+                      left: { xs: 12, sm: 14, md: 13, lg: 16, xl: 20 },
+                    }}>
+                      <ConsentStatusBadge
+                        consents={candidate.consent || []}
+                        size="small"
+                        onClick={() => onEditCandidate(candidate)}
+                      />
+                    </Box>
                   </Box>
 
                   <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -1774,7 +1823,7 @@ export function CandidateManagementPanel({
                         <Checkbox
                           checked={selectedIds.has(candidate.id)}
                           onChange={() => handleToggleSelect(candidate.id)}
-                          sx={{ p: 0.5, color: 'rgba(255,255,255,0.3)', '&.Mui-checked': { color: '#10b981' } }}
+                          sx={{ p: 0.5, color: 'rgba(255,255,255,0.6)', '&.Mui-checked': { color: '#10b981' } }}
                         />
                         <Typography
                           variant="h6"
@@ -1833,7 +1882,7 @@ export function CandidateManagementPanel({
                           <Box sx={{ flex: 1, minWidth: 0 }}>
                             <Typography
                               sx={{
-                                color: 'rgba(255,255,255,0.6)',
+                                color: 'rgba(255,255,255,0.87)',
                                 fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' },
                                 fontWeight: 600,
                                 textTransform: 'uppercase',
@@ -1885,7 +1934,7 @@ export function CandidateManagementPanel({
                           <Box sx={{ flex: 1 }}>
                             <Typography
                               sx={{
-                                color: 'rgba(255,255,255,0.6)',
+                                color: 'rgba(255,255,255,0.87)',
                                 fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' },
                                 fontWeight: 600,
                                 textTransform: 'uppercase',
@@ -2043,7 +2092,7 @@ export function CandidateManagementPanel({
                             sx={{
                               minWidth: TOUCH_TARGET_SIZE,
                               minHeight: TOUCH_TARGET_SIZE,
-                              color: 'rgba(255,255,255,0.6)',
+                              color: 'rgba(255,255,255,0.87)',
                               '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
                               ...focusVisibleStyles,
                             }}
@@ -2106,10 +2155,10 @@ export function CandidateManagementPanel({
               <InventoryIcon sx={{ fontSize: 20 }} />
               Slik bruker du kandidatmaler
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
               Maler lar deg lagre favoritt-kandidater for rask tilgang i fremtidige prosjekter.
             </Typography>
-            <Box component="ul" sx={{ m: 0, pl: 2.5, color: 'rgba(255,255,255,0.6)', '& li': { mb: 0.5, fontSize: '0.875rem' } }}>
+            <Box component="ul" sx={{ m: 0, pl: 2.5, color: 'rgba(255,255,255,0.87)', '& li': { mb: 0.5, fontSize: '0.875rem' } }}>
               <li><strong>Lagre som mal:</strong> Klikk på lilla ikon på en prosjektkandidat</li>
               <li><strong>Importer:</strong> Klikk "Importer" for å kopiere kandidaten til prosjektet</li>
               <li><strong>Slett:</strong> Fjern maler du ikke trenger lenger</li>
@@ -2118,7 +2167,7 @@ export function CandidateManagementPanel({
 
           {poolLoading ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Laster maler...</Typography>
+              <Typography sx={{ color: 'rgba(255,255,255,0.87)' }}>Laster maler...</Typography>
             </Box>
           ) : poolCandidates.length === 0 ? (
             <Box
@@ -2150,7 +2199,7 @@ export function CandidateManagementPanel({
               <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>
                 Ingen kandidatmaler ennå
               </Typography>
-              <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.6)', mb: 3, maxWidth: 400, mx: 'auto' }}>
+              <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.87)', mb: 3, maxWidth: 400, mx: 'auto' }}>
                 Lagre kandidater fra prosjekter som maler for gjenbruk i fremtidige produksjoner.
               </Typography>
             </Box>
@@ -2190,7 +2239,7 @@ export function CandidateManagementPanel({
                               {poolCandidate.name}
                             </Typography>
                             {poolCandidate.contactInfo?.email && (
-                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                 <EmailIcon sx={{ fontSize: 12 }} />
                                 {poolCandidate.contactInfo.email}
                               </Typography>
@@ -2213,7 +2262,7 @@ export function CandidateManagementPanel({
                         <Typography
                           variant="body2"
                           sx={{
-                            color: 'rgba(255,255,255,0.6)',
+                            color: 'rgba(255,255,255,0.87)',
                             mb: 1.5,
                             display: '-webkit-box',
                             WebkitLineClamp: 2,
@@ -2231,7 +2280,7 @@ export function CandidateManagementPanel({
                               key={tag}
                               label={tag}
                               size="small"
-                              sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', fontSize: '0.7rem' }}
+                              sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.87)', fontSize: '0.7rem' }}
                             />
                           ))}
                         </Box>
@@ -2319,14 +2368,14 @@ export function CandidateManagementPanel({
           </Box>
           <IconButton 
             onClick={handleClosePreviewDialog}
-            sx={{ color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#fff' } }}
+            sx={{ color: 'rgba(255,255,255,0.87)', '&:hover': { color: '#fff' } }}
           >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
         
         <DialogContent sx={{ pt: 3 }}>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 2 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 2 }}>
             {candidatesToPreview.length} kandidat(er) vil bli lagt til i 3D-scenen. 
             Velg lysoppsett for scenen.
           </Typography>
@@ -2374,7 +2423,7 @@ export function CandidateManagementPanel({
                     </Typography>
                   </Box>
                   <Typography variant="caption" sx={{ 
-                    color: 'rgba(255,255,255,0.5)', 
+                    color: 'rgba(255,255,255,0.87)', 
                     fontSize: '0.65rem',
                     display: 'block',
                   }}>
@@ -2412,7 +2461,7 @@ export function CandidateManagementPanel({
           <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
 
           <Typography variant="subtitle2" sx={{ 
-            color: 'rgba(255,255,255,0.7)', 
+            color: 'rgba(255,255,255,0.87)', 
             mb: 1.5, 
             display: 'flex', 
             alignItems: 'center', 
@@ -2454,7 +2503,7 @@ export function CandidateManagementPanel({
                       position: 'absolute',
                       top: 4,
                       right: 4,
-                      color: 'rgba(255,255,255,0.5)',
+                      color: 'rgba(255,255,255,0.87)',
                       bgcolor: 'rgba(0,0,0,0.3)',
                       '&:hover': { 
                         color: '#ff4444', 
@@ -2527,7 +2576,7 @@ export function CandidateManagementPanel({
                             size="small"
                             sx={{
                               bgcolor: 'rgba(255,255,255,0.1)',
-                              color: 'rgba(255,255,255,0.6)',
+                              color: 'rgba(255,255,255,0.87)',
                               fontSize: '0.65rem',
                               height: 18,
                             }}
@@ -2561,7 +2610,7 @@ export function CandidateManagementPanel({
             <Box sx={{ 
               textAlign: 'center', 
               py: 4, 
-              color: 'rgba(255,255,255,0.5)' 
+              color: 'rgba(255,255,255,0.87)' 
             }}>
               <Typography>Ingen kandidater valgt</Typography>
             </Box>
@@ -2576,7 +2625,7 @@ export function CandidateManagementPanel({
             variant="outlined"
             sx={{
               borderColor: 'rgba(255,255,255,0.2)',
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               '&:hover': {
                 borderColor: 'rgba(255,255,255,0.4)',
                 bgcolor: 'rgba(255,255,255,0.05)',
@@ -2598,7 +2647,7 @@ export function CandidateManagementPanel({
               '&:hover': { bgcolor: '#7c3aed' },
               '&:disabled': { 
                 bgcolor: 'rgba(139, 92, 246, 0.3)',
-                color: 'rgba(255,255,255,0.5)',
+                color: 'rgba(255,255,255,0.87)',
               }
             }}
           >

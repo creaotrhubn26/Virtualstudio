@@ -12,10 +12,11 @@ const DEFAULT_PREFERENCES: TutorialPreferences = {
   dismissedTips: [],
 };
 
-export function useTutorialPreferences() {
+export function useTutorialPreferences(_tutorialId?: string) {
   const [preferences, setPreferences] = useState<TutorialPreferences>(() => {
     try {
-      const stored = localStorage.getItem('tutorialPreferences');
+      const storageKey = _tutorialId ? `tutorialPreferences_${_tutorialId}` : 'tutorialPreferences';
+      const stored = localStorage.getItem(storageKey);
       return stored ? JSON.parse(stored) : DEFAULT_PREFERENCES;
     } catch {
       return DEFAULT_PREFERENCES;
@@ -25,10 +26,11 @@ export function useTutorialPreferences() {
   const updatePreferences = useCallback((updates: Partial<TutorialPreferences>) => {
     setPreferences((prev) => {
       const newPrefs = { ...prev, ...updates };
-      localStorage.setItem('tutorialPreferences', JSON.stringify(newPrefs));
+      const storageKey = _tutorialId ? `tutorialPreferences_${_tutorialId}` : 'tutorialPreferences';
+      localStorage.setItem(storageKey, JSON.stringify(newPrefs));
       return newPrefs;
     });
-  }, []);
+  }, [_tutorialId]);
 
   const markTutorialComplete = useCallback(() => {
     updatePreferences({ hasSeenTutorial: true });
@@ -46,6 +48,7 @@ export function useTutorialPreferences() {
 
   return {
     ...preferences,
+    isDismissed: preferences.hasSeenTutorial,
     updatePreferences,
     markTutorialComplete,
     dismissTip,

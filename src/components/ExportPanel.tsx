@@ -3,7 +3,7 @@
  * UI for scene export with format selection, presets, and progress tracking
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FC, type ReactNode } from 'react';
 import {
   Box,
   Paper,
@@ -72,7 +72,7 @@ interface ExportPanelProps {
 }
 
 interface TabPanelProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   index: number;
   value: number;
 }
@@ -85,7 +85,7 @@ function TabPanel({ children, value, index }: TabPanelProps) {
   );
 }
 
-export const ExportPanel: React.FC<ExportPanelProps> = ({ scene }) => {
+export const ExportPanel: FC<ExportPanelProps> = ({ scene }) => {
   const {
     settings,
     activePreset,
@@ -140,7 +140,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ scene }) => {
     }
   };
   
-  const presetIcons: Record<string, React.ReactNode> = {
+  const presetIcons: Record<string, ReactNode> = {
     'web-ready': <WebIcon />,
     'unreal-engine': <GameIcon />,
     'unity': <GameIcon />,

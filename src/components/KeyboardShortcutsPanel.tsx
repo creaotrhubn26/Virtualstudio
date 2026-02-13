@@ -8,7 +8,7 @@
  * - Floating overlay option
  */
 
-import React, { useState } from 'react';
+import { useState, Fragment, type ReactNode } from 'react';
 import {
   Box,
   Typography,
@@ -102,14 +102,14 @@ function ShortcutItem({ shortcutKey, description, compact = false }: ShortcutIte
       </Typography>
       <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
         {keys.map((key, index) => (
-          <React.Fragment key={index}>
+          <Fragment key={index}>
             {index > 0 && (
               <Typography variant="caption" sx={{ mx: 0.25, color: '#666' }}>
                 +
               </Typography>
             )}
             <KeyCap keyName={key} small={compact} />
-          </React.Fragment>
+          </Fragment>
         ))}
       </Box>
     </Box>
@@ -317,7 +317,7 @@ export function KeyboardShortcutsFloatingButton({
 
 interface QuickShortcutHintProps {
   shortcutKey: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export function QuickShortcutHint({ shortcutKey, children }: QuickShortcutHintProps) {
@@ -328,10 +328,10 @@ export function QuickShortcutHint({ shortcutKey, children }: QuickShortcutHintPr
       title={
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           {keys.map((key, index) => (
-            <React.Fragment key={index}>
+            <Fragment key={index}>
               {index > 0 && <span>+</span>}
               <KeyCap keyName={key} small />
-            </React.Fragment>
+            </Fragment>
           ))}
         </Box>
       }

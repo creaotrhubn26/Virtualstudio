@@ -122,6 +122,42 @@ export const castingAuthService = {
   },
 
   /**
+   * Check if user can edit screenplay/script
+   */
+  async canEditScript(projectId: string, userId?: string): Promise<boolean> {
+    const userRole = await this.getUserRole(projectId, userId);
+    if (!userRole) return false;
+    
+    // Director, producer, writer, and script_editor can edit script
+    return ['director', 'producer', 'writer', 'script_editor'].includes(userRole.role) ||
+           userRole.permissions.canEditScript === true;
+  },
+
+  /**
+   * Check if user can lock/unlock script (final draft)
+   */
+  async canLockScript(projectId: string, userId?: string): Promise<boolean> {
+    const userRole = await this.getUserRole(projectId, userId);
+    if (!userRole) return false;
+    
+    // Only director, producer, and script_editor can lock script
+    return ['director', 'producer', 'script_editor'].includes(userRole.role) ||
+           userRole.permissions.canLockScript === true;
+  },
+
+  /**
+   * Check if user can run table reads (TTS)
+   */
+  async canRunTableRead(projectId: string, userId?: string): Promise<boolean> {
+    const userRole = await this.getUserRole(projectId, userId);
+    if (!userRole) return false;
+    
+    // Director, producer, writer, script_editor can run table reads
+    return ['director', 'producer', 'writer', 'script_editor'].includes(userRole.role) ||
+           userRole.permissions.canRunTableRead === true;
+  },
+
+  /**
    * Get default permissions for a role type
    */
   getDefaultPermissions(role: UserRoleType): UserRole['permissions'] {
@@ -136,6 +172,9 @@ export const castingAuthService = {
           canManageCrew: true,
           canManageLocations: true,
           canApprove: true,
+          canEditScript: true,
+          canLockScript: true,
+          canRunTableRead: true,
         };
       case 'casting_director':
         return {
@@ -146,6 +185,9 @@ export const castingAuthService = {
           canManageCrew: false,
           canManageLocations: false,
           canApprove: false,
+          canEditScript: false,
+          canLockScript: false,
+          canRunTableRead: false,
         };
       case 'production_manager':
         return {
@@ -156,6 +198,9 @@ export const castingAuthService = {
           canManageCrew: true,
           canManageLocations: true,
           canApprove: false,
+          canEditScript: false,
+          canLockScript: false,
+          canRunTableRead: false,
         };
       case 'camera_team':
         return {
@@ -166,6 +211,48 @@ export const castingAuthService = {
           canManageCrew: false,
           canManageLocations: false,
           canApprove: false,
+          canEditScript: false,
+          canLockScript: false,
+          canRunTableRead: false,
+        };
+      case 'writer':
+        return {
+          canViewAll: true,
+          canEditCasting: false,
+          canEditProduction: false,
+          canEditShotLists: false,
+          canManageCrew: false,
+          canManageLocations: false,
+          canApprove: false,
+          canEditScript: true,
+          canLockScript: false,
+          canRunTableRead: true,
+        };
+      case 'script_editor':
+        return {
+          canViewAll: true,
+          canEditCasting: false,
+          canEditProduction: false,
+          canEditShotLists: false,
+          canManageCrew: false,
+          canManageLocations: false,
+          canApprove: false,
+          canEditScript: true,
+          canLockScript: true,
+          canRunTableRead: true,
+        };
+      case 'reader':
+        return {
+          canViewAll: true,
+          canEditCasting: false,
+          canEditProduction: false,
+          canEditShotLists: false,
+          canManageCrew: false,
+          canManageLocations: false,
+          canApprove: false,
+          canEditScript: false,
+          canLockScript: false,
+          canRunTableRead: true,
         };
       case 'agency':
         return {
@@ -176,6 +263,9 @@ export const castingAuthService = {
           canManageCrew: false,
           canManageLocations: false,
           canApprove: false,
+          canEditScript: false,
+          canLockScript: false,
+          canRunTableRead: false,
         };
       default:
         return {
@@ -186,6 +276,9 @@ export const castingAuthService = {
           canManageCrew: false,
           canManageLocations: false,
           canApprove: false,
+          canEditScript: false,
+          canLockScript: false,
+          canRunTableRead: false,
         };
     }
   },

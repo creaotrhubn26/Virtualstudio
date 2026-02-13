@@ -4,20 +4,15 @@
  * Right-click context menu for objects
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, Fragment } from 'react';
+import type { FC, ReactNode, MouseEvent } from 'react';
 import { Menu, MenuItem, Divider, ListItemIcon, ListItemText } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import EditIcon from '@mui/icons-material/Edit';
-import InfoIcon from '@mui/icons-material/Info';
-import GroupIcon from '@mui/icons-material/Group';
-import UngroupIcon from '@mui/icons-material/Ungroup';
 import { colors, spacing } from '../../styles/designTokens';
 
 export interface ContextMenuItem {
   id: string;
   label: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   onClick: () => void;
   disabled?: boolean;
   divider?: boolean;
@@ -29,7 +24,7 @@ export interface ContextMenuProps {
   onClose: () => void;
 }
 
-export const ContextMenu: React.FC<ContextMenuProps> = ({ items, anchorEl, onClose }) => {
+export const ContextMenu: FC<ContextMenuProps> = ({ items, anchorEl, onClose }) => {
   const open = Boolean(anchorEl);
 
   const handleClick = (item: ContextMenuItem) => {
@@ -71,7 +66,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, anchorEl, onClo
       }}
     >
       {items.map((item, index) => (
-        <React.Fragment key={item.id}>
+        <Fragment key={item.id}>
           {item.divider && index > 0 && <Divider sx={{ borderColor: colors.border.divider }} />}
           <MenuItem
             onClick={() => handleClick(item)}
@@ -89,7 +84,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ items, anchorEl, onClo
             )}
             <ListItemText primary={item.label} />
           </MenuItem>
-        </React.Fragment>
+        </Fragment>
       ))}
     </Menu>
   );
@@ -102,7 +97,7 @@ export function useContextMenu() {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [items, setItems] = useState<ContextMenuItem[]>([]);
 
-  const handleContextMenu = (event: React.MouseEvent<HTMLElement>, menuItems: ContextMenuItem[]) => {
+  const handleContextMenu = (event: MouseEvent<HTMLElement>, menuItems: ContextMenuItem[]) => {
     event.preventDefault();
     setAnchorEl(event.currentTarget);
     setItems(menuItems);

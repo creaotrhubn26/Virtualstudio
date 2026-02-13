@@ -4,7 +4,7 @@
  * Styled Select wrapper with design system tokens
  */
 
-import React from 'react';
+import type { FC } from 'react';
 import { Select, SelectProps, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { colors, borderRadius, transitions } from '../../styles/designTokens';
 
@@ -13,7 +13,7 @@ export interface EnhancedSelectProps extends SelectProps {
   label?: string;
 }
 
-export const EnhancedSelect: React.FC<EnhancedSelectProps> = ({
+export const EnhancedSelect: FC<EnhancedSelectProps> = ({
   options = [],
   label,
   sx,

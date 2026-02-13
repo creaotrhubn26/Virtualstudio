@@ -143,7 +143,7 @@ export default function ConsentSignatureDialog({
               '&:hover fieldset': { borderColor: '#ce93d8' },
               '&.Mui-focused fieldset': { borderColor: '#9c27b0' },
             },
-            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
           }}
         />
 
@@ -167,8 +167,8 @@ export default function ConsentSignatureDialog({
               '&:hover fieldset': { borderColor: '#ce93d8' },
               '&.Mui-focused fieldset': { borderColor: '#9c27b0' },
             },
-            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
-            '& .MuiFormHelperText-root': { color: 'rgba(255,255,255,0.5)' },
+            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
+            '& .MuiFormHelperText-root': { color: 'rgba(255,255,255,0.87)' },
           }}
         />
 
@@ -195,7 +195,7 @@ export default function ConsentSignatureDialog({
         <Button 
           onClick={onClose} 
           startIcon={<CloseIcon />}
-          sx={{ color: 'rgba(255,255,255,0.7)' }}
+          sx={{ color: 'rgba(255,255,255,0.87)' }}
         >
           Avbryt
         </Button>

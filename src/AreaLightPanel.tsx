@@ -102,6 +102,7 @@ export const AreaLightPanel: React.FC<AreaLightPanelProps> = ({
                 value={selectedType}
                 label="Light Type"
                 onChange={(e) => setSelectedType(e.target.value as AreaLightType)}
+                MenuProps={{ sx: { zIndex: 1400 } }}
               >
                 <MenuItem value="softbox">Softbox</MenuItem>
                 <MenuItem value="umbrella">Umbrella</MenuItem>
@@ -117,6 +118,7 @@ export const AreaLightPanel: React.FC<AreaLightPanelProps> = ({
                 value={selectedEquipment}
                 label="Equipment"
                 onChange={(e) => setSelectedEquipment(e.target.value)}
+                MenuProps={{ sx: { zIndex: 1400 } }}
               >
                 <MenuItem value="">
                   <em>Generic</em>
@@ -135,6 +137,7 @@ export const AreaLightPanel: React.FC<AreaLightPanelProps> = ({
                 value={selectedModifier}
                 label="Modifier"
                 onChange={(e) => setSelectedModifier(e.target.value)}
+                MenuProps={{ sx: { zIndex: 1400 } }}
               >
                 <MenuItem value="">
                   <em>None</em>

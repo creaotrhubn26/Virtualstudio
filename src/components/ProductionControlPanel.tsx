@@ -28,9 +28,9 @@ import {
   Close as CloseIcon,
   Add as AddIcon,
   PersonOutline as PersonIcon,
-  LocationOn as LocationIcon,
   Schedule as ScheduleIcon,
 } from '@mui/icons-material';
+import { LocationsIcon as LocationIcon } from './icons/CastingIcons';
 import { SceneBreakdown } from '../core/models/casting';
 
 interface ProductionControlPanelProps {

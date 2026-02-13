@@ -691,6 +691,7 @@ export const MonitorFeedPanel: React.FC = () => {
               label="Recording Quality"
               onChange={(e) => setRecordingQuality(e.target.value as keyof typeof RECORDING_QUALITY)}
               disabled={isRecordingAll}
+              MenuProps={{ sx: { zIndex: 1400 } }}
             >
               <MenuItem value="low">
                 480p (2.5 Mbps) - Small files

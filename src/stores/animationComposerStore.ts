@@ -176,7 +176,7 @@ const generateId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9
 // Store Implementation
 // ============================================================================
 
-export const useAnimationComposerStore = create<AnimationComposerState>((set, get) => ({
+export const useAnimationComposerStore = create<AnimationComposerState>((set) => ({
   sequences: [],
   activeSequence: null,
   selectedLayerId: null,

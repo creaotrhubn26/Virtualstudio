@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useId, useCallback } from 'react';
+import { useState, useMemo, useEffect, useId, useCallback, lazy, Suspense, Fragment, type ChangeEvent, type ReactNode, type ReactElement } from 'react';
 import { useToast } from './ToastStack';
 import jsPDF from 'jspdf';
 import {
@@ -19,6 +19,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import VideoCallIcon from '@mui/icons-material/VideoCall';
 import {
   Box,
   Typography,
@@ -66,11 +67,11 @@ import {
   FilterList as FilterIcon,
   ViewModule as GridViewIcon,
   ViewList as TableViewIcon,
+  ViewWeek as PlannerViewIcon,
   Star as StarIcon,
   StarBorder as StarBorderIcon,
   ContentCopy as DuplicateIcon,
   FileDownload as ExportIcon,
-  BarChart as StatsIcon,
   ExpandMore as ExpandIcon,
   ExpandLess as CollapseIcon,
   Close as CloseIcon,
@@ -90,11 +91,11 @@ import {
   PersonAdd as AssignIcon,
   Lock as ReserveIcon,
   LockOpen as UnreserveIcon,
-  Group as TeamIcon,
-  Dashboard as DashboardIcon,
 } from '@mui/icons-material';
+import { TeamIcon, DashboardCustomIcon as DashboardIcon, StatsIcon } from './icons/CastingIcons';
 import { TeamDashboard } from './TeamDashboard';
-import { ShotList, CastingShot, ShotType, CameraAngle, CameraMovement, Role, ProductionDay, MediaType, ShotPriority, CrewMember, ShotComment, ShotStatus, UserRoleType, ProductionContext, PRODUCTION_PRESETS } from '../core/models/casting';
+import type { ShotList, CastingShot, ShotType, CameraAngle, CameraMovement, Role, ProductionDay, MediaType, ShotPriority, CrewMember, ShotComment, ShotStatus, UserRoleType, ProductionContext } from '../core/models/casting';
+import { PRODUCTION_PRESETS } from '../core/models/casting';
 import { castingService } from '../services/castingService';
 import { RichTextEditor } from './RichTextEditor';
 import { 
@@ -108,36 +109,7 @@ import { productionPlanningService } from '../services/productionPlanningService
 import { ProductionDayCardInfo } from './ProductionDayCardInfo';
 import { castingAuthService } from '../services/castingAuthService';
 import { useAuth } from '../hooks/useAuth';
-
-// Custom icon: Person holding camera with list/clipboard
-const ShotListIcon = ({ sx, ...props }: { sx?: any; [key: string]: any }) => (
-  <Box
-    component="svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    sx={{ width: '1em', height: '1em', display: 'inline-block', ...sx }}
-    {...props}
-  >
-    {/* Person body */}
-    <circle cx="12" cy="8" r="3" />
-    <path d="M5 20v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2" />
-    {/* Camera in person's hand (right side) */}
-    <rect x="15" y="3" width="4" height="3" rx="0.5" />
-    <circle cx="17" cy="4.5" r="0.8" />
-    <line x1="15" y1="4.5" x2="13" y2="4.5" />
-    <line x1="16" y1="6" x2="16" y2="7" />
-    {/* List/Clipboard in person's hand (left side) */}
-    <rect x="3" y="5" width="3" height="5" rx="0.5" />
-    <line x1="4" y1="6.5" x2="5" y2="6.5" />
-    <line x1="4" y1="7.5" x2="5" y2="7.5" />
-    <line x1="4" y1="8.5" x2="5" y2="8.5" />
-    <line x1="4" y1="9.5" x2="5" y2="9.5" />
-  </Box>
-);
+import { ShotPlannerPanel } from '../core/shotPlanner';
 
 // WCAG 2.2 - 2.5.5 Target Size: minimum 44x44px
 const TOUCH_TARGET_SIZE = 44;
@@ -152,11 +124,11 @@ const focusVisibleStyles = {
 
 type SortField = 'scene' | 'shots' | 'updated';
 type SortDirection = 'asc' | 'desc';
-type ViewMode = 'grid' | 'table';
+type ViewMode = 'grid' | 'table' | '2d-planner';
 
 interface SortableShotItemProps {
   id: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 function SortableShotItem({ id, children }: SortableShotItemProps) {
@@ -182,11 +154,11 @@ function SortableShotItem({ id, children }: SortableShotItemProps) {
         {...listeners}
         sx={{
           cursor: 'grab',
-          color: 'rgba(255,255,255,0.3)',
+          color: 'rgba(255,255,255,0.6)',
           display: 'flex',
           alignItems: 'center',
           pt: 0.5,
-          '&:hover': { color: 'rgba(255,255,255,0.7)' },
+          '&:hover': { color: 'rgba(255,255,255,0.87)' },
           '&:active': { cursor: 'grabbing' },
         }}
       >
@@ -368,6 +340,15 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
   const [selectedShotsForConversion, setSelectedShotsForConversion] = useState<Set<string>>(new Set());
   const [storyboardPanelOpen, setStoryboardPanelOpen] = useState(false);
 
+  // Add Shot Dialog state (upload/reference from Shot.cafe)
+  const [showAddShotDialog, setShowAddShotDialog] = useState(false);
+  const [addShotMode, setAddShotMode] = useState<'upload' | 'reference' | null>(null);
+  const [selectedShotImage, setSelectedShotImage] = useState<string | null>(null);
+  const [addShotReferenceQuery, setAddShotReferenceQuery] = useState('');
+  const [addShotReferenceResults, setAddShotReferenceResults] = useState<Array<{ id: string; url: string; thumbnailUrl: string; film?: string }>>([]);
+  const [addShotLoading, setAddShotLoading] = useState(false);
+  const [addShotTargetShotList, setAddShotTargetShotList] = useState<ShotList | null>(null);
+
   // Shoot Mode state (removed)
   const [crewMembers, setCrewMembers] = useState<CrewMember[]>([]);
   const [currentUserRole, setCurrentUserRole] = useState<UserRoleType | null>(null);
@@ -488,13 +469,16 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
       production_manager: 'Produsentleder',
       camera_team: 'Kamerateam',
       agency: 'Byrå',
+      writer: 'Forfatter',
+      script_editor: 'Manusredaktor',
+      reader: 'Leser',
     };
     return labels[role] || role;
   };
 
   const formatRoleLabel = (role?: string | null): string => {
     if (!role) return 'Ukjent rolle';
-    if (role in { director: true, producer: true, casting_director: true, production_manager: true, camera_team: true, agency: true }) {
+    if (role in { director: true, producer: true, casting_director: true, production_manager: true, camera_team: true, agency: true, writer: true, script_editor: true, reader: true }) {
       return getUserRoleLabel(role as UserRoleType);
     }
     return role
@@ -580,7 +564,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
     return colors[type] || '#e91e63';
   };
 
-  const mediaTypeConfig: Record<MediaType, { label: string; color: string; icon: React.ReactNode }> = {
+  const mediaTypeConfig: Record<MediaType, { label: string; color: string; icon: ReactElement }> = {
     photo: { label: 'Foto', color: '#2196f3', icon: <PhotoCameraIcon sx={{ fontSize: 14 }} /> },
     video: { label: 'Video', color: '#e91e63', icon: <VideocamIcon sx={{ fontSize: 14 }} /> },
     hybrid: { label: 'Hybrid', color: '#9c27b0', icon: <MovieIcon sx={{ fontSize: 14 }} /> },
@@ -1074,6 +1058,108 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
     }
   };
 
+  // Search reference shots from Shot.cafe
+  const handleSearchReferenceShots = async () => {
+    if (!addShotReferenceQuery.trim()) return;
+    setAddShotLoading(true);
+    try {
+      const response = await fetch(`http://localhost:8000/api/shotcafe/search?q=${encodeURIComponent(addShotReferenceQuery)}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.films && data.films.length > 0) {
+          // Get frames from first matching film
+          const firstFilm = data.films[0];
+          const framesResponse = await fetch(`http://localhost:8000/api/shotcafe/film/${firstFilm.slug}/frames`);
+          if (framesResponse.ok) {
+            const framesData = await framesResponse.json();
+            const frames = framesData.frames || [];
+            setAddShotReferenceResults(frames.map((f: any) => ({
+              id: f.id || String(Math.random()),
+              url: f.url || f.src,
+              thumbnailUrl: f.thumbnailUrl || f.url || f.src,
+              film: firstFilm.title,
+            })));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error searching reference shots:', error);
+      toast.showError('Kunne ikke søke referansebilder');
+    } finally {
+      setAddShotLoading(false);
+    }
+  };
+
+  // Open Add Shot Dialog
+  const handleOpenAddShotDialog = (shotList: ShotList) => {
+    setAddShotTargetShotList(shotList);
+    setShowAddShotDialog(true);
+    setAddShotMode(null);
+    setSelectedShotImage(null);
+    setAddShotReferenceQuery('');
+    setAddShotReferenceResults([]);
+  };
+
+  // Handle file upload for new shot
+  const handleAddShotImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedShotImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Create shot with image
+  const handleCreateShotWithImage = async (imageUrl?: string) => {
+    if (!addShotTargetShotList) return;
+    const now = new Date().toISOString();
+    const preset = getShotPreset(addShotTargetShotList);
+    const newShot: CastingShot = {
+      id: `shot-${Date.now()}`,
+      sceneId: addShotTargetShotList.sceneId || '',
+      roleId: roles.length > 0 ? roles[0].id : '',
+      shotType: 'Medium',
+      description: 'Ny shot',
+      cameraAngle: 'Eye Level',
+      cameraMovement: 'Static',
+      focalLength: 50,
+      duration: 5,
+      notes: '',
+      createdAt: now,
+      updatedAt: now,
+      imageUrl: imageUrl,
+      estimatedTime: preset.estimatedTime,
+      status: 'not_started',
+      priority: preset.priority,
+      mediaType: preset.mediaType,
+      lensRecommendation: preset.lensRecommendation,
+      lightingSetup: preset.lightingSetup,
+      backgroundRecommendation: preset.backgroundRecommendation,
+    };
+    try {
+      const updatedShotList: ShotList = {
+        ...addShotTargetShotList,
+        shots: [...addShotTargetShotList.shots, newShot],
+        updatedAt: now,
+      };
+      await castingService.saveShotList(projectId, updatedShotList);
+      const lists = await castingService.getShotLists(projectId);
+      setShotLists(Array.isArray(lists) ? lists : []);
+      if (onUpdate) onUpdate();
+      toast.showSuccess('Shot lagt til!');
+    } catch (error) {
+      console.error('Error creating shot:', error);
+      toast.showError('Kunne ikke opprette shot');
+    }
+    setShowAddShotDialog(false);
+    setAddShotTargetShotList(null);
+    setAddShotMode(null);
+    setSelectedShotImage(null);
+  };
+
   const handleExportStoryboardPDF = async (shotList: ShotList) => {
     const pdf = new jsPDF({
       orientation: 'landscape',
@@ -1089,7 +1175,8 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(20);
     pdf.setTextColor(50, 50, 50);
-    pdf.text(shotList.name, margin, 20);
+    const shotListTitle = getSceneName(shotList.sceneId, shotList.sceneName);
+    pdf.text(shotListTitle, margin, 20);
 
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
@@ -1175,7 +1262,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
       yPos += imageHeight + 25;
     }
 
-    pdf.save(`${shotList.name.replace(/\s+/g, '-').toLowerCase()}-storyboard.pdf`);
+    pdf.save(`${shotListTitle.replace(/\s+/g, '-').toLowerCase()}-storyboard.pdf`);
     toast.showSuccess('Storyboard eksportert som PDF!');
   };
 
@@ -2156,7 +2243,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
               justifyContent: 'center',
             }}
           >
-            <ShotListIcon sx={{ color: '#e91e63', fontSize: { xs: 20, sm: 24 } }} />
+            <VideoCallIcon sx={{ color: '#e91e63', fontSize: { xs: 20, sm: 24 } }} />
           </Box>
           <Box>
             <Typography
@@ -2174,7 +2261,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
             </Typography>
             <Typography
               variant="caption"
-              sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+              sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
             >
               Administrer shot lists
             </Typography>
@@ -2304,29 +2391,41 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
           aria-label="Statistikk over shot lists"
         >
           <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <VideoCallIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#e91e63' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#e91e63', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
               {stats.totalLists}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Shot Lists</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Shot Lists</Typography>
           </Box>
           <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <VideocamIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#2196f3' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#2196f3', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
               {stats.totalShots}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Totalt shots</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Totalt shots</Typography>
           </Box>
           <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <StarIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#ffc107' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#ffc107', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
               {stats.favorites}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Favoritter</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Favoritter</Typography>
           </Box>
           {!isMobile && Object.entries(stats.shotTypeCount).slice(0, 3).map(([type, count]) => (
             <Box key={type} sx={{ textAlign: 'center' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+                <VideocamIcon sx={{ fontSize: { xs: 14, sm: 16 }, color: getShotTypeColor(type as ShotType), opacity: 0.8 }} />
+              </Box>
               <Typography variant="h5" sx={{ color: getShotTypeColor(type as ShotType), fontWeight: 600 }}>
                 {count}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                 {getShotTypeLabel(type as ShotType)}
               </Typography>
             </Box>
@@ -2351,7 +2450,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
           size="small"
           slotProps={{
             input: {
-              startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)', mr: 1 }} />,
+              startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.87)', mr: 1 }} />,
               sx: { minHeight: TOUCH_TARGET_SIZE },
             },
             htmlInput: { 'aria-label': 'Søk i shot lists' },
@@ -2368,11 +2467,12 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
         />
 
         <FormControl size="small" sx={{ minWidth: 160 }}>
-          <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Media</InputLabel>
+          <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Media</InputLabel>
           <Select
             value={mediaTypeFilter}
             onChange={(e) => setMediaTypeFilter(e.target.value as MediaType | 'all')}
             label="Media"
+            MenuProps={{ sx: { zIndex: 1400 } }}
             sx={{
               color: '#fff',
               minHeight: TOUCH_TARGET_SIZE,
@@ -2389,12 +2489,13 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
         </FormControl>
 
         <FormControl size="small" sx={{ minWidth: 160 }}>
-          <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Tilordnet</InputLabel>
+          <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Tilordnet</InputLabel>
           <Select
             value={assigneeFilter}
             onChange={(e) => setAssigneeFilter(e.target.value as typeof assigneeFilter)}
             label="Tilordnet"
-            startAdornment={<TeamIcon sx={{ color: 'rgba(255,255,255,0.5)', mr: 0.5, fontSize: 18 }} />}
+            startAdornment={<TeamIcon sx={{ color: 'rgba(255,255,255,0.87)', mr: 0.5, fontSize: 18 }} />}
+            MenuProps={{ sx: { zIndex: 1400 } }}
             sx={{
               color: '#fff',
               minHeight: TOUCH_TARGET_SIZE,
@@ -2461,6 +2562,24 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
             </Button>
           </Tooltip>
 
+          <Tooltip title="Shot planner">
+            <Button
+              variant={viewMode === '2d-planner' ? 'contained' : 'outlined'}
+              onClick={() => setViewMode('2d-planner')}
+              aria-pressed={viewMode === '2d-planner'}
+              sx={{
+                minHeight: TOUCH_TARGET_SIZE,
+                minWidth: TOUCH_TARGET_SIZE,
+                bgcolor: viewMode === '2d-planner' ? 'rgba(233,30,99,0.2)' : 'transparent',
+                color: viewMode === '2d-planner' ? '#e91e63' : 'rgba(255,255,255,0.7)',
+                borderColor: viewMode === '2d-planner' ? '#e91e63' : 'rgba(255,255,255,0.2)',
+                ...focusVisibleStyles,
+              }}
+            >
+              <PlannerViewIcon />
+            </Button>
+          </Tooltip>
+
           {selectedIds.size > 0 && (
             <Tooltip title={`Slett ${selectedIds.size} valgte`}>
               <Button
@@ -2500,10 +2619,10 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
       {shotLists.length === 0 ? (
         <Box
           role="status"
-          sx={{ textAlign: 'center', py: { xs: 4, sm: 8 }, color: 'rgba(255,255,255,0.5)' }}
+          sx={{ textAlign: 'center', py: { xs: 4, sm: 8 }, color: 'rgba(255,255,255,0.87)' }}
         >
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-            <ShotListIcon sx={{ fontSize: { xs: 48, sm: 64 }, opacity: 0.3 }} />
+            <VideoCallIcon sx={{ fontSize: { xs: 48, sm: 64 }, opacity: 0.3 }} />
           </Box>
           <Typography variant="body1">Ingen shot lists ennå</Typography>
           <Typography variant="body2" sx={{ mt: 1 }}>
@@ -2511,7 +2630,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
           </Typography>
         </Box>
       ) : filteredAndSortedShotLists.length === 0 ? (
-        <Box role="status" sx={{ textAlign: 'center', py: 6, color: 'rgba(255,255,255,0.5)' }}>
+        <Box role="status" sx={{ textAlign: 'center', py: 6, color: 'rgba(255,255,255,0.87)' }}>
           <SearchIcon sx={{ fontSize: 48, mb: 2, opacity: 0.3 }} />
           <Typography variant="body1">Ingen treff på søket</Typography>
         </Box>
@@ -2536,7 +2655,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                     indeterminate={selectedIds.size > 0 && selectedIds.size < filteredAndSortedShotLists.length}
                     onChange={handleSelectAll}
                     aria-label="Velg alle shot lists"
-                    sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-checked': { color: '#e91e63' } }}
+                    sx={{ color: 'rgba(255,255,255,0.87)', '&.Mui-checked': { color: '#e91e63' } }}
                   />
                 </TableCell>
                 <TableCell>
@@ -2586,7 +2705,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                     <Checkbox
                       checked={selectedIds.has(shotList.id)}
                       onChange={() => handleToggleSelect(shotList.id)}
-                      sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-checked': { color: '#e91e63' } }}
+                      sx={{ color: 'rgba(255,255,255,0.87)', '&.Mui-checked': { color: '#e91e63' } }}
                     />
                   </TableCell>
                   <TableCell>
@@ -2615,7 +2734,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                       {new Date(shotList.updatedAt).toLocaleDateString('nb-NO')}
                     </Typography>
                   </TableCell>
@@ -2627,7 +2746,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Dupliser">
-                        <IconButton onClick={() => handleDuplicate(shotList)} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                        <IconButton onClick={() => handleDuplicate(shotList)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
                           <DuplicateIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -2648,6 +2767,13 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
             </TableBody>
           </Table>
         </TableContainer>
+      ) : viewMode === '2d-planner' ? (
+        /* 2D Shot Planner View */
+        <Box sx={{ height: 'calc(100vh - 300px)', bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 2, overflow: 'hidden' }}>
+          <Suspense fallback={<MUICircularProgress sx={{ mt: 4 }} />}>
+            <ShotPlannerPanel />
+          </Suspense>
+        </Box>
       ) : (
         /* Grid View - Responsive */
         <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }}>
@@ -2714,7 +2840,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                           onClick={() => handleDeleteWithUndo(shotList.id)}
                           size="small"
                           sx={{
-                            color: 'rgba(255,255,255,0.4)',
+                            color: 'rgba(255,255,255,0.7)',
                             ...focusVisibleStyles,
                             '&:hover': { color: '#ff4444' },
                           }}
@@ -2820,7 +2946,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                   {/* Expandable shots list */}
                   <Collapse in={expandedCards.has(shotList.id)}>
                     <Box sx={{ mb: 1.5, p: 1, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 1 }}>
-                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, mb: 1, display: 'block' }}>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontWeight: 600, mb: 1, display: 'block' }}>
                         Shots i denne listen:
                       </Typography>
                       <DndContext
@@ -2845,7 +2971,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                           ].filter(Boolean);
                           const inlineDraft = inlineEditDrafts[shot.id] || {};
                           return (
-                            <React.Fragment key={shot.id}>
+                            <Fragment key={shot.id}>
                               {shotIndex === 0 && (
                                 <Box
                                   onClick={() => handleOpenShotDialog(shotList.id, undefined, 0)}
@@ -2993,24 +3119,26 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                                     }}
                                   >
                                     <Tooltip title={shot.reservedBy === user?.id ? 'Fjern reservasjon' : 'Reserver'}>
-                                      <IconButton
-                                        size="small"
-                                        onClick={() => handleReserveShot(shotList, shot)}
-                                        disabled={shot.reservedBy && shot.reservedBy !== user?.id}
-                                        sx={{ 
-                                          p: 0.5, 
-                                          color: shot.reservedBy === user?.id ? '#4caf50' : 'rgba(255,255,255,0.4)',
-                                          '&:hover': { color: shot.reservedBy === user?.id ? '#66bb6a' : 'rgba(255,255,255,0.7)' },
-                                        }}
-                                      >
-                                        {shot.reservedBy === user?.id ? <UnreserveIcon sx={{ fontSize: 16 }} /> : <ReserveIcon sx={{ fontSize: 16 }} />}
-                                      </IconButton>
+                                      <span>
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => handleReserveShot(shotList, shot)}
+                                          disabled={Boolean(shot.reservedBy && shot.reservedBy !== user?.id)}
+                                          sx={{ 
+                                            p: 0.5, 
+                                            color: shot.reservedBy === user?.id ? '#4caf50' : 'rgba(255,255,255,0.4)',
+                                            '&:hover': { color: shot.reservedBy === user?.id ? '#66bb6a' : 'rgba(255,255,255,0.7)' },
+                                          }}
+                                        >
+                                          {shot.reservedBy === user?.id ? <UnreserveIcon sx={{ fontSize: 16 }} /> : <ReserveIcon sx={{ fontSize: 16 }} />}
+                                        </IconButton>
+                                      </span>
                                     </Tooltip>
                                     <Tooltip title="Rediger">
                                       <IconButton
                                         size="small"
                                         onClick={() => handleOpenShotDialog(shotList.id, shot)}
-                                        sx={{ p: 0.5, color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#00d4ff' } }}
+                                        sx={{ p: 0.5, color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#00d4ff' } }}
                                       >
                                         <EditIcon sx={{ fontSize: 16 }} />
                                       </IconButton>
@@ -3019,7 +3147,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                                       <IconButton
                                         size="small"
                                         onClick={() => handleDeleteShot(shotList.id, shot.id)}
-                                        sx={{ p: 0.5, color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#ff4444' } }}
+                                        sx={{ p: 0.5, color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#ff4444' } }}
                                       >
                                         <DeleteIcon sx={{ fontSize: 16 }} />
                                       </IconButton>
@@ -3034,6 +3162,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                                     <Select
                                       value={shot.status || 'not_started'}
                                       onChange={(e) => handleUpdateShotInline(shotList, shot.id, { status: e.target.value as ShotStatus })}
+                                      MenuProps={{ sx: { zIndex: 1400 } }}
                                       sx={{
                                         color: statusConfig[shot.status || 'not_started'].color,
                                         height: 26,
@@ -3059,6 +3188,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                                       value={inlineDraft.priority ?? priority}
                                       onChange={(e) => handleInlineEditChange(shot.id, { priority: e.target.value as ShotPriority })}
                                       onBlur={() => handleInlineEditCommit(shotList, shot)}
+                                      MenuProps={{ sx: { zIndex: 1400 } }}
                                       sx={{
                                         color: priorityInfo.color,
                                         height: 26,
@@ -3095,7 +3225,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                                   
                                   {/* Time estimate */}
                                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 'auto' }}>
-                                    <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>
+                                    <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '0.7rem' }}>
                                       Tid:
                                     </Typography>
                                     <TextField
@@ -3122,7 +3252,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                                         },
                                       }}
                                     />
-                                    <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>
+                                    <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '0.7rem' }}>
                                       min
                                     </Typography>
                                   </Box>
@@ -3150,7 +3280,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                                       size="small"
                                       sx={{
                                         bgcolor: 'rgba(255,255,255,0.08)',
-                                        color: 'rgba(255,255,255,0.6)',
+                                        color: 'rgba(255,255,255,0.87)',
                                         height: 24,
                                         fontSize: '0.65rem',
                                         minWidth: 24,
@@ -3161,7 +3291,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                                 
                                 {/* Recommendations row */}
                                 {recommendations.length > 0 && (
-                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', pl: 5, fontSize: '0.7rem' }}>
+                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', pl: 5, fontSize: '0.7rem' }}>
                                     {recommendations.join(' • ')}
                                   </Typography>
                                 )}
@@ -3191,26 +3321,28 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                                       }}
                                     />
                                     <Tooltip title="Regenerer bilde">
-                                      <IconButton
-                                        size="small"
-                                        onClick={() => handleRegenerateSingleImage(shotList, shot)}
-                                        disabled={regeneratingShotId === shot.id}
-                                        sx={{
-                                          position: 'absolute',
-                                          top: 4,
-                                          right: 4,
-                                          bgcolor: 'rgba(0,0,0,0.7)',
-                                          color: '#fff',
-                                          p: 0.4,
-                                          '&:hover': { bgcolor: 'rgba(0,0,0,0.9)' },
-                                        }}
-                                      >
+                                      <span>
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => handleRegenerateSingleImage(shotList, shot)}
+                                          disabled={regeneratingShotId === shot.id}
+                                          sx={{
+                                            position: 'absolute',
+                                            top: 4,
+                                            right: 4,
+                                            bgcolor: 'rgba(0,0,0,0.7)',
+                                            color: '#fff',
+                                            p: 0.4,
+                                            '&:hover': { bgcolor: 'rgba(0,0,0,0.9)' },
+                                          }}
+                                        >
                                         {regeneratingShotId === shot.id ? (
                                           <MUICircularProgress size={12} sx={{ color: '#fff' }} />
                                         ) : (
                                           <RefreshIcon sx={{ fontSize: 12 }} />
                                         )}
-                                      </IconButton>
+                                        </IconButton>
+                                      </span>
                                     </Tooltip>
                                   </Box>
                                 )}
@@ -3272,14 +3404,14 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                                   </Typography>
                                 </Box>
                               </Box>
-                            </React.Fragment>
+                            </Fragment>
                           );
                         })}
                       </Stack>
                         </SortableContext>
                       </DndContext>
                       <Box sx={{ mt: 1.5, p: 1, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 1, border: '1px dashed rgba(255,255,255,0.1)' }}>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600, mb: 1, display: 'block' }}>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontWeight: 600, mb: 1, display: 'block' }}>
                           Quick add
                         </Typography>
                         <Stack spacing={1}>
@@ -3297,11 +3429,12 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                           />
                           <Box sx={{ display: 'flex', gap: 1 }}>
                             <FormControl size="small" sx={{ flex: 1 }}>
-                              <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Shot type</InputLabel>
+                              <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Shot type</InputLabel>
                               <Select
                                 value={quickShotDrafts[shotList.id]?.shotType || 'Medium'}
                                 onChange={(e) => handleQuickShotChange(shotList.id, { shotType: e.target.value as ShotType })}
                                 label="Shot type"
+                                MenuProps={{ sx: { zIndex: 1400 } }}
                                 sx={{
                                   color: '#fff',
                                   '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
@@ -3324,7 +3457,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                                   color: '#fff',
                                   '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                                 },
-                                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                               }}
                             />
                           </Box>
@@ -3430,7 +3563,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                       onClick={() => toggleCardExpanded(shotList.id)}
                       endIcon={expandedCards.has(shotList.id) ? <CollapseIcon /> : <ExpandIcon />}
                       sx={{ 
-                        color: 'rgba(255,255,255,0.6)', 
+                        color: 'rgba(255,255,255,0.87)', 
                         fontSize: '12px', 
                         minHeight: 36, 
                         justifyContent: 'center',
@@ -3501,7 +3634,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
             {editingShotList ? 'Rediger shot list' : 'Opprett shot list'}
           </Typography>
           {isMobile && (
-            <IconButton onClick={handleCloseDialog} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+            <IconButton onClick={handleCloseDialog} sx={{ color: 'rgba(255,255,255,0.87)' }}>
               <CloseIcon />
             </IconButton>
           )}
@@ -3510,7 +3643,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
           <Stack spacing={2} sx={{ mt: 1 }}>
             {availableScenes.length > 0 ? (
               <FormControl fullWidth>
-                <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Scene (fra Scene Composer)</InputLabel>
+                <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Scene (fra Scene Composer)</InputLabel>
                 <Select
                   value={formData.sceneId || ''}
                   onChange={(e) => setFormData({ ...formData, sceneId: e.target.value, sceneName: '' })}
@@ -3551,14 +3684,14 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                     '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.4)' },
                     '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                   },
-                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
-                  '& .MuiFormHelperText-root': { color: 'rgba(255,255,255,0.5)' },
+                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
+                  '& .MuiFormHelperText-root': { color: 'rgba(255,255,255,0.87)' },
                 }}
               />
             )}
 
             <FormControl fullWidth>
-              <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Produksjonskontekst</InputLabel>
+              <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Produksjonskontekst</InputLabel>
               <Select
                 value={formData.productionContext || 'custom'}
                 onChange={(e) => setFormData({ ...formData, productionContext: e.target.value as ProductionContext })}
@@ -3637,7 +3770,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
         <DialogActions sx={{ p: 2, gap: 1 }}>
           <Button
             onClick={handleCloseDialog}
-            sx={{ color: 'rgba(255,255,255,0.7)', minHeight: TOUCH_TARGET_SIZE, ...focusVisibleStyles }}
+            sx={{ color: 'rgba(255,255,255,0.87)', minHeight: TOUCH_TARGET_SIZE, ...focusVisibleStyles }}
           >
             Avbryt
           </Button>
@@ -3674,7 +3807,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
             {editingShot ? 'Rediger shot' : 'Legg til shot'}
           </Typography>
           {isMobile && (
-            <IconButton onClick={handleCloseShotDialog} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+            <IconButton onClick={handleCloseShotDialog} sx={{ color: 'rgba(255,255,255,0.87)' }}>
               <CloseIcon />
             </IconButton>
           )}
@@ -3694,7 +3827,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                 <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 700 }}>
                   Visuell shot-brief
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   Overblikk før du dykker ned i detaljer
                 </Typography>
               </Box>
@@ -3753,7 +3886,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                 <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 700 }}>
                   Kjerneinfo
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   Start med de viktigste valgene
                 </Typography>
               </Box>
@@ -3778,7 +3911,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
               <Grid container spacing={2}>
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <FormControl fullWidth>
-                    <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Shot type</InputLabel>
+                    <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Shot type</InputLabel>
                     <Select
                       value={shotFormData.shotType || 'Medium'}
                       onChange={(e) => setShotFormData({ ...shotFormData, shotType: e.target.value as ShotType })}
@@ -3800,7 +3933,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <FormControl fullWidth>
-                    <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Media</InputLabel>
+                    <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Media</InputLabel>
                     <Select
                       value={shotFormData.mediaType || defaultMediaType}
                       onChange={(e) => setShotFormData({ ...shotFormData, mediaType: e.target.value as MediaType })}
@@ -3820,7 +3953,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <FormControl fullWidth>
-                    <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Kameravinkel</InputLabel>
+                    <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Kameravinkel</InputLabel>
                     <Select
                       value={shotFormData.cameraAngle || 'Eye Level'}
                       onChange={(e) => setShotFormData({ ...shotFormData, cameraAngle: e.target.value as CameraAngle })}
@@ -3840,7 +3973,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <FormControl fullWidth>
-                    <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Kamerabevegelse</InputLabel>
+                    <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Kamerabevegelse</InputLabel>
                     <Select
                       value={shotFormData.cameraMovement || 'Static'}
                       onChange={(e) => setShotFormData({ ...shotFormData, cameraMovement: e.target.value as CameraMovement })}
@@ -3860,7 +3993,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <FormControl fullWidth>
-                    <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Prioritet</InputLabel>
+                    <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Prioritet</InputLabel>
                     <Select
                       value={shotFormData.priority || 'important'}
                       onChange={(e) => setShotFormData({ ...shotFormData, priority: e.target.value as ShotPriority })}
@@ -3892,12 +4025,12 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                         '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                         '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                       },
-                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                     }}
                   />
                 </Grid>
                 <Grid size={{ xs: 12 }}>
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1, display: 'block' }}>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1, display: 'block' }}>
                     Fargekode
                   </Typography>
                   <Stack direction="row" spacing={1}>
@@ -3949,14 +4082,14 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                 <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 700 }}>
                   Scene og ansvar
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   Knytt shot-et til riktig kontekst og person
                 </Typography>
               </Box>
               <Grid container spacing={2}>
                 <Grid size={{ xs: 12, sm: 4 }}>
                   <FormControl fullWidth>
-                    <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Scene</InputLabel>
+                    <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Scene</InputLabel>
                     <Select
                       value={shotFormData.sceneId || ''}
                       onChange={(e) => setShotFormData({ ...shotFormData, sceneId: e.target.value })}
@@ -3976,7 +4109,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                 </Grid>
                 <Grid size={{ xs: 12, sm: 4 }}>
                   <FormControl fullWidth>
-                    <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Rolle</InputLabel>
+                    <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Rolle</InputLabel>
                     <Select
                       value={shotFormData.roleId || ''}
                       onChange={(e) => setShotFormData({ ...shotFormData, roleId: e.target.value })}
@@ -3996,7 +4129,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                 </Grid>
                 <Grid size={{ xs: 12, sm: 4 }}>
                   <FormControl fullWidth>
-                    <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Ansvarlig</InputLabel>
+                    <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Ansvarlig</InputLabel>
                     <Select
                       value={shotFormData.assigneeId || ''}
                       onChange={(e) => setShotFormData({ ...shotFormData, assigneeId: e.target.value })}
@@ -4054,7 +4187,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                   <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 700 }}>
                     Teknisk oppsett
                   </Typography>
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                     Tilpasset {profession === 'photographer' ? 'foto' : profession === 'videographer' ? 'video' : 'shot'}-profilen din
                   </Typography>
                 </Box>
@@ -4075,7 +4208,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                               '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                               '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                             },
-                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                           }}
                         />
                       </Grid>
@@ -4093,7 +4226,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                               '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                               '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                             },
-                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                           }}
                         />
                       </Grid>
@@ -4111,7 +4244,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                               '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                               '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                             },
-                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                           }}
                         />
                       </Grid>
@@ -4129,7 +4262,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                               '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                               '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                             },
-                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                           }}
                         />
                       </Grid>
@@ -4150,7 +4283,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                               '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                               '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                             },
-                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                           }}
                         />
                       </Grid>
@@ -4168,7 +4301,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                               '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                               '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                             },
-                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                           }}
                         />
                       </Grid>
@@ -4186,7 +4319,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                               '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                               '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                             },
-                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                           }}
                         />
                       </Grid>
@@ -4204,7 +4337,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                               '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                               '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                             },
-                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                           }}
                         />
                       </Grid>
@@ -4225,7 +4358,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                               '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                               '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                             },
-                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                           }}
                         />
                       </Grid>
@@ -4243,7 +4376,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                               '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                               '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                             },
-                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                           }}
                         />
                       </Grid>
@@ -4265,7 +4398,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                 <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 700 }}>
                   Beskrivelse og notater
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   Gi teamet rask kontekst
                 </Typography>
               </Box>
@@ -4284,7 +4417,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                         '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                         '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                       },
-                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                     }}
                   />
                 </Grid>
@@ -4302,7 +4435,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                         '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                         '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                       },
-                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                     }}
                   />
                 </Grid>
@@ -4321,7 +4454,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                 <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 700 }}>
                   Anbefalinger
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   Presets fra produksjon eller egne valg
                 </Typography>
               </Box>
@@ -4338,7 +4471,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                         '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                         '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                       },
-                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                     }}
                   />
                 </Grid>
@@ -4354,7 +4487,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                         '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                         '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                       },
-                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                     }}
                   />
                 </Grid>
@@ -4370,7 +4503,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                         '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                         '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                       },
-                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                     }}
                   />
                 </Grid>
@@ -4389,13 +4522,13 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                 <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 700 }}>
                   Team-samtale
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   Historikk med hvem, rolle og klokkeslett
                 </Typography>
               </Box>
               <Stack spacing={1.5} sx={{ mb: 1 }}>
                 {(shotFormData.comments || []).length === 0 ? (
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                     Ingen kommentarer ennå
                   </Typography>
                 ) : (
@@ -4466,7 +4599,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                         );
                       })()}
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                           {new Date(comment.createdAt).toLocaleDateString('nb-NO')} •{' '}
                           {new Date(comment.createdAt).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}
                           {comment.updatedAt ? ' (redigert)' : ''}
@@ -4482,7 +4615,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                           <IconButton
                             size="small"
                             onClick={() => handleStartEditComment(comment)}
-                            sx={{ color: 'rgba(255,255,255,0.6)' }}
+                            sx={{ color: 'rgba(255,255,255,0.87)' }}
                           >
                             <EditIcon fontSize="small" />
                           </IconButton>
@@ -4524,7 +4657,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                               setEditingCommentId(null);
                               setEditingCommentDraft('');
                             }}
-                            sx={{ color: 'rgba(255,255,255,0.6)' }}
+                            sx={{ color: 'rgba(255,255,255,0.87)' }}
                           >
                             <CloseIcon fontSize="small" />
                           </IconButton>
@@ -4556,7 +4689,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                       '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                       '&.Mui-focused fieldset': { borderColor: '#e91e63' },
                     },
-                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                   }}
                 />
                 <Button
@@ -4587,14 +4720,14 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                 <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 700 }}>
                   Visuell referanse
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   Generer storyboard-bilde basert på beskrivelse
                 </Typography>
               </Box>
 
               {shotFormData.imageUrl && (
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1, display: 'block' }}>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1, display: 'block' }}>
                     Generert bilde
                   </Typography>
                   <Box
@@ -4615,7 +4748,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
               {shotFormData.description ? (
                 <Stack spacing={1.25}>
                   <FormControl fullWidth>
-                    <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Visuell stil</InputLabel>
+                    <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Visuell stil</InputLabel>
                     <Select
                       value={selectedTemplate}
                       onChange={(e) => setSelectedTemplate(e.target.value)}
@@ -4623,7 +4756,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                       sx={{
                         color: '#fff',
                         '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
-                        '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.7)' },
+                        '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.87)' },
                       }}
                     >
                       <MenuItem value="cinematic">Filmisk - Dramatisk kinolook</MenuItem>
@@ -4656,7 +4789,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                       },
                       '&:disabled': {
                         borderColor: 'rgba(255,255,255,0.1)',
-                        color: 'rgba(255,255,255,0.3)',
+                        color: 'rgba(255,255,255,0.6)',
                       },
                       ...focusVisibleStyles,
                     }}
@@ -4665,7 +4798,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                   </Button>
                 </Stack>
               ) : (
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   Legg til en kort beskrivelse for å generere storyboard-bilde
                 </Typography>
               )}
@@ -4675,7 +4808,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
         <DialogActions sx={{ p: 2, gap: 1 }}>
           <Button
             onClick={handleCloseShotDialog}
-            sx={{ color: 'rgba(255,255,255,0.7)', minHeight: TOUCH_TARGET_SIZE, ...focusVisibleStyles }}
+            sx={{ color: 'rgba(255,255,255,0.87)', minHeight: TOUCH_TARGET_SIZE, ...focusVisibleStyles }}
           >
             Avbryt
           </Button>
@@ -4717,7 +4850,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
             Opprett storyboard fra shot list
           </Typography>
           {isMobile && (
-            <IconButton onClick={handleCloseStoryboardDialog} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+            <IconButton onClick={handleCloseStoryboardDialog} sx={{ color: 'rgba(255,255,255,0.87)' }}>
               <CloseIcon />
             </IconButton>
           )}
@@ -4726,10 +4859,10 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
           {selectedShotListForStoryboard && (
             <Stack spacing={3} sx={{ mt: 1 }}>
               <Box>
-                <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
                   Scene: {getSceneName(selectedShotListForStoryboard.sceneId, selectedShotListForStoryboard.sceneName)}
                 </Typography>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   Velg shots som skal inkluderes i storyboardet
                 </Typography>
               </Box>
@@ -4790,19 +4923,19 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                             }
                             setSelectedShotsForConversion(newSet);
                           }}
-                          sx={{ color: 'rgba(255,255,255,0.3)', '&.Mui-checked': { color: '#00d4ff' } }}
+                          sx={{ color: 'rgba(255,255,255,0.6)', '&.Mui-checked': { color: '#00d4ff' } }}
                         />
                         <Box sx={{ flex: 1 }}>
                           <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>
                             {getShotTypeLabel(shot.shotType)} - {shot.cameraAngle}
                           </Typography>
                           {roleName && (
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                               Rolle: {roleName}
                             </Typography>
                           )}
                           {shot.description && (
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block', mt: 0.5 }}>
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', mt: 0.5 }}>
                               {shot.description}
                             </Typography>
                           )}
@@ -4833,7 +4966,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
         <DialogActions sx={{ p: 2, gap: 1 }}>
           <Button
             onClick={handleCloseStoryboardDialog}
-            sx={{ color: 'rgba(255,255,255,0.7)', minHeight: TOUCH_TARGET_SIZE, ...focusVisibleStyles }}
+            sx={{ color: 'rgba(255,255,255,0.87)', minHeight: TOUCH_TARGET_SIZE, ...focusVisibleStyles }}
           >
             Avbryt
           </Button>
@@ -4848,7 +4981,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
               minHeight: TOUCH_TARGET_SIZE,
               ...focusVisibleStyles,
               '&:hover': { bgcolor: '#00b8e6' },
-              '&:disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' },
+              '&:disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' },
             }}
           >
             Opprett storyboard
@@ -4888,7 +5021,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
               Storyboard Viewer
             </Typography>
           </Box>
-          <IconButton onClick={handleCloseStoryboardPanel} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <IconButton onClick={handleCloseStoryboardPanel} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             <CloseIcon />
           </IconButton>
         </Box>
@@ -4906,7 +5039,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
               <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
                 Ingen storyboards funnet
               </Typography>
-              <Typography sx={{ color: 'rgba(255,255,255,0.6)' }}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.87)' }}>
                 Opprett et storyboard fra shot list for å se frames her.
               </Typography>
             </Box>
@@ -4926,7 +5059,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                 }}
               >
                 <FormControl size="small" sx={{ minWidth: 260 }}>
-                  <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Velg storyboard</InputLabel>
+                  <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Velg storyboard</InputLabel>
                   <Select
                     value={currentStoryboard?.id || ''}
                     onChange={(e) => e.target.value && loadStoryboard(e.target.value)}
@@ -4996,7 +5129,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                           <Typography variant="body2" sx={{ color: '#fff', fontWeight: 700 }}>
                             {frame.title || `Frame ${frame.index + 1}`}
                           </Typography>
-                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                             {frame.shotType} • {frame.cameraAngle}
                           </Typography>
                         </CardContent>
@@ -5017,7 +5150,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                   <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
                     Velg et storyboard
                   </Typography>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.87)' }}>
                     Velg et storyboard for å se frames og metadata.
                   </Typography>
                 </Box>
@@ -5046,7 +5179,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
           Eksporter til PDF
         </DialogTitle>
         <DialogContent>
-          <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 3 }}>
+          <Typography sx={{ color: 'rgba(255,255,255,0.87)', mb: 3 }}>
             {exportSceneId 
               ? 'Velg eksportformat for denne scenen:'
               : 'Velg hva du vil eksportere:'}
@@ -5087,7 +5220,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
             })()}
             
             {exportSceneId && (
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', textAlign: 'center' }}>
                 — eller velg annet alternativ —
               </Typography>
             )}
@@ -5111,7 +5244,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
             >
               <Box>
                 <Typography sx={{ fontWeight: 600 }}>Alle scener</Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   Eksporter alle {shotLists.length} scener med alle shots
                 </Typography>
               </Box>
@@ -5119,7 +5252,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
             
             {!exportSceneId && (
               <>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', textAlign: 'center' }}>
                   — eller velg en spesifikk scene —
                 </Typography>
                 {shotLists.map((sl) => (
@@ -5144,7 +5277,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                       <Typography sx={{ fontWeight: 500 }}>
                         {getSceneName(sl.sceneId, sl.sceneName)}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
                         {sl.shots.length} shots
                       </Typography>
                     </Box>
@@ -5155,7 +5288,7 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
           </Stack>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setShowExportDialog(false)} sx={{ color: 'rgba(255,255,255,0.6)' }}>
+          <Button onClick={() => setShowExportDialog(false)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Avbryt
           </Button>
         </DialogActions>
@@ -5182,12 +5315,12 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
             <StoryboardIcon sx={{ color: '#00d4ff' }} />
             Storyboard Manager
           </Box>
-          <IconButton onClick={() => setShowStoryboardManager(false)} sx={{ color: 'rgba(255,255,255,0.6)' }}>
+          <IconButton onClick={() => setShowStoryboardManager(false)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
         <DialogContent>
-          <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 3 }}>
+          <Typography sx={{ color: 'rgba(255,255,255,0.87)', mb: 3 }}>
             Administrer storyboards for dine scener. Du kan generere AI-storyboards for hver scene eller individuelle shots.
           </Typography>
           <Grid container spacing={2}>
@@ -5215,24 +5348,43 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                           />
                         )}
                       </Box>
-                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block', mb: 2 }}>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', mb: 2 }}>
                         {sl.shots.length} shots
                       </Typography>
                       <Stack direction="row" spacing={1}>
+                        {/* Add Shot Button */}
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => {
+                            handleOpenAddShotDialog(sl);
+                          }}
+                          startIcon={<AddIcon />}
+                          sx={{
+                            color: '#10b981',
+                            borderColor: 'rgba(16,185,129,0.3)',
+                            fontSize: '11px',
+                            minWidth: 'auto',
+                            px: 1.5,
+                            '&:hover': { borderColor: '#10b981', bgcolor: 'rgba(16,185,129,0.1)' },
+                          }}
+                        >
+                          Shot
+                        </Button>
                         {relatedStoryboard ? (
                           <Button
                             size="small"
                             variant="outlined"
-                            fullWidth
-                            onClick={() => {
-                              setShowStoryboardManager(false);
-                              handleOpenStoryboardDialog(sl);
-                            }}
                             sx={{
+                              flex: 1,
                               color: '#00d4ff',
                               borderColor: 'rgba(0,212,255,0.3)',
                               fontSize: '11px',
                               '&:hover': { borderColor: '#00d4ff' },
+                            }}
+                            onClick={() => {
+                              setShowStoryboardManager(false);
+                              handleOpenStoryboardDialog(sl);
                             }}
                           >
                             Vis storyboard
@@ -5241,18 +5393,18 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
                           <Button
                             size="small"
                             variant="contained"
-                            fullWidth
+                            sx={{
+                              flex: 1,
+                              bgcolor: '#e91e63',
+                              fontSize: '11px',
+                              '&:hover': { bgcolor: '#c2185b' },
+                            }}
                             disabled={generatingStoryboardImages[sl.id]}
                             onClick={() => {
                               setShowStoryboardManager(false);
                               handleAutoGenerateStoryboardImages(sl);
                             }}
                             startIcon={generatingStoryboardImages[sl.id] ? <MUICircularProgress size={14} /> : <AutoAwesomeIcon />}
-                            sx={{
-                              bgcolor: '#e91e63',
-                              fontSize: '11px',
-                              '&:hover': { bgcolor: '#c2185b' },
-                            }}
                           >
                             {generatingStoryboardImages[sl.id] ? 'Genererer...' : 'Generer AI'}
                           </Button>
@@ -5320,6 +5472,8 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
               shotLists={shotLists}
               crewMembers={crewMembers}
               currentUserId={user?.id}
+              projectId={projectId}
+              scenes={[]}
               onShotUpdate={async (shotList, shot) => {
                 // Optimistic update: Update state immediately
                 setShotLists(prev => prev.map(sl => 
@@ -5351,6 +5505,363 @@ export function CastingShotListPanel({ projectId, onUpdate, profession }: Castin
             />
           </Box>
         </Box>
+      </Dialog>
+
+      {/* Add Shot Dialog (Upload/Reference from Shot.cafe) */}
+      <Dialog
+        open={showAddShotDialog}
+        onClose={() => setShowAddShotDialog(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: '#1a1f2e',
+            border: '1px solid #3b82f6',
+            minHeight: addShotMode ? 500 : 'auto',
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: '#fff', borderBottom: '1px solid #2a3142' }}>
+          <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+            <Stack direction="row" spacing={1} alignItems="center">
+              <AddIcon sx={{ color: '#3b82f6' }} />
+              <span>Legg til shot</span>
+              {addShotTargetShotList && (
+                <Chip 
+                  label={getSceneName(addShotTargetShotList.sceneId, addShotTargetShotList.sceneName)}
+                  size="small"
+                  sx={{ bgcolor: 'rgba(59,130,246,0.2)', color: '#60a5fa' }}
+                />
+              )}
+            </Stack>
+            {addShotMode && (
+              <Button
+                size="small"
+                onClick={() => { setAddShotMode(null); setSelectedShotImage(null); setAddShotReferenceResults([]); }}
+                sx={{ color: '#6b7280', fontSize: 11 }}
+              >
+                ← Tilbake
+              </Button>
+            )}
+          </Stack>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          {!addShotMode ? (
+            /* Mode Selection */
+            <Stack spacing={3}>
+              <Typography sx={{ color: '#9ca3af', fontSize: 13 }}>
+                Velg hvordan du vil legge til et nytt shot
+              </Typography>
+              <Stack direction="row" spacing={2}>
+                {/* Upload Option */}
+                <Box
+                  onClick={() => setAddShotMode('upload')}
+                  sx={{
+                    flex: 1,
+                    p: 4,
+                    borderRadius: '12px',
+                    bgcolor: 'rgba(59,130,246,0.1)',
+                    border: '2px dashed #3b82f6',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      bgcolor: 'rgba(59,130,246,0.2)',
+                      borderStyle: 'solid',
+                    },
+                  }}
+                >
+                  <Box sx={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: '16px',
+                    bgcolor: 'rgba(59,130,246,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mx: 'auto',
+                    mb: 2,
+                  }}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/>
+                      <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                  </Box>
+                  <Typography sx={{ fontSize: 16, fontWeight: 600, color: '#fff', mb: 1 }}>
+                    Last opp eget bilde
+                  </Typography>
+                  <Typography sx={{ fontSize: 12, color: '#6b7280' }}>
+                    Last opp storyboard, skisse eller referanse
+                  </Typography>
+                </Box>
+
+                {/* Reference Search Option */}
+                <Box
+                  onClick={() => setAddShotMode('reference')}
+                  sx={{
+                    flex: 1,
+                    p: 4,
+                    borderRadius: '12px',
+                    bgcolor: 'rgba(139,92,246,0.1)',
+                    border: '2px dashed #8b5cf6',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      bgcolor: 'rgba(139,92,246,0.2)',
+                      borderStyle: 'solid',
+                    },
+                  }}
+                >
+                  <Box sx={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: '16px',
+                    bgcolor: 'rgba(139,92,246,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mx: 'auto',
+                    mb: 2,
+                  }}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2">
+                      <circle cx="11" cy="11" r="8"/>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                  </Box>
+                  <Typography sx={{ fontSize: 16, fontWeight: 600, color: '#fff', mb: 1 }}>
+                    Søk fra Shot.cafe
+                  </Typography>
+                  <Typography sx={{ fontSize: 12, color: '#6b7280' }}>
+                    Finn referansebilder fra filmer og serier
+                  </Typography>
+                </Box>
+              </Stack>
+            </Stack>
+          ) : addShotMode === 'upload' ? (
+            /* Upload Mode */
+            <Stack spacing={3}>
+              <Typography sx={{ color: '#9ca3af', fontSize: 13 }}>
+                Last opp et bilde for ditt nye shot
+              </Typography>
+              
+              {selectedShotImage ? (
+                <Box sx={{ textAlign: 'center' }}>
+                  <Box
+                    component="img"
+                    src={selectedShotImage}
+                    sx={{
+                      maxWidth: '100%',
+                      maxHeight: 300,
+                      borderRadius: '12px',
+                      border: '2px solid #3b82f6',
+                    }}
+                  />
+                  <Button
+                    onClick={() => setSelectedShotImage(null)}
+                    sx={{ mt: 2, color: '#6b7280' }}
+                  >
+                    Velg annet bilde
+                  </Button>
+                </Box>
+              ) : (
+                <Box
+                  component="label"
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    p: 6,
+                    borderRadius: '12px',
+                    bgcolor: 'rgba(0,0,0,0.2)',
+                    border: '2px dashed #374151',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      borderColor: '#3b82f6',
+                      bgcolor: 'rgba(59,130,246,0.1)',
+                    },
+                  }}
+                >
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAddShotImageUpload}
+                    style={{ display: 'none' }}
+                  />
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <path d="M21 15l-5-5L5 21"/>
+                  </svg>
+                  <Typography sx={{ fontSize: 14, color: '#9ca3af', mt: 2 }}>
+                    Klikk for å velge bilde
+                  </Typography>
+                  <Typography sx={{ fontSize: 11, color: '#6b7280', mt: 0.5 }}>
+                    Støtter JPG, PNG, WebP
+                  </Typography>
+                </Box>
+              )}
+            </Stack>
+          ) : (
+            /* Reference Search Mode */
+            <Stack spacing={3}>
+              <Typography sx={{ color: '#9ca3af', fontSize: 13 }}>
+                Søk etter referansebilder fra Shot.cafe
+              </Typography>
+              
+              <Stack direction="row" spacing={1}>
+                <TextField
+                  fullWidth
+                  placeholder="Søk: film, mood, shot type..."
+                  value={addShotReferenceQuery}
+                  onChange={(e) => setAddShotReferenceQuery(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearchReferenceShots()}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      bgcolor: '#0d1117',
+                      color: '#fff',
+                      '& fieldset': { borderColor: '#374151' },
+                      '&:hover fieldset': { borderColor: '#8b5cf6' },
+                      '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
+                    },
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleSearchReferenceShots}
+                  disabled={addShotLoading || !addShotReferenceQuery.trim()}
+                  sx={{
+                    bgcolor: '#8b5cf6',
+                    px: 3,
+                    '&:hover': { bgcolor: '#7c3aed' },
+                  }}
+                >
+                  {addShotLoading ? <MUICircularProgress size={20} sx={{ color: '#fff' }} /> : 'Søk'}
+                </Button>
+              </Stack>
+              
+              {/* Quick Search Tags */}
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                {['Blade Runner', 'Kubrick', 'Tarantino', 'Nolan', 'Close-up', 'Wide shot'].map(tag => (
+                  <Chip
+                    key={tag}
+                    label={tag}
+                    size="small"
+                    onClick={() => { setAddShotReferenceQuery(tag); }}
+                    sx={{
+                      bgcolor: 'rgba(139,92,246,0.15)',
+                      color: '#a78bfa',
+                      '&:hover': { bgcolor: 'rgba(139,92,246,0.3)' },
+                    }}
+                  />
+                ))}
+              </Stack>
+              
+              {/* Results Grid */}
+              {addShotReferenceResults.length > 0 && (
+                <Box sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                  gap: 1.5,
+                  maxHeight: 280,
+                  overflow: 'auto',
+                  p: 1,
+                }}>
+                  {addShotReferenceResults.map((result) => (
+                    <Box
+                      key={result.id}
+                      onClick={() => setSelectedShotImage(result.url)}
+                      sx={{
+                        position: 'relative',
+                        aspectRatio: '16/9',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        border: selectedShotImage === result.url ? '3px solid #3b82f6' : '2px solid transparent',
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          transform: 'scale(1.05)',
+                          boxShadow: '0 4px 20px rgba(59,130,246,0.3)',
+                        },
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src={result.thumbnailUrl || result.url}
+                        sx={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                        }}
+                      />
+                      {result.film && (
+                        <Box sx={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          p: 0.5,
+                          background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
+                        }}>
+                          <Typography sx={{ fontSize: 9, color: '#fff', fontWeight: 500 }}>
+                            {result.film}
+                          </Typography>
+                        </Box>
+                      )}
+                      {selectedShotImage === result.url && (
+                        <Box sx={{
+                          position: 'absolute',
+                          top: 4,
+                          right: 4,
+                          width: 20,
+                          height: 20,
+                          borderRadius: '50%',
+                          bgcolor: '#3b82f6',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          <CheckIcon sx={{ fontSize: 14, color: '#fff' }} />
+                        </Box>
+                      )}
+                    </Box>
+                  ))}
+                </Box>
+              )}
+              
+              {addShotLoading && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <MUICircularProgress sx={{ color: '#8b5cf6' }} />
+                </Box>
+              )}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button 
+            onClick={() => setShowAddShotDialog(false)} 
+            sx={{ color: '#9ca3af' }}
+          >
+            Avbryt
+          </Button>
+          {addShotMode && (
+            <Button
+              onClick={() => handleCreateShotWithImage(selectedShotImage || undefined)}
+              variant="contained"
+              disabled={addShotMode === 'upload' && !selectedShotImage}
+              sx={{
+                bgcolor: addShotMode === 'upload' ? '#3b82f6' : '#8b5cf6',
+                '&:hover': { bgcolor: addShotMode === 'upload' ? '#2563eb' : '#7c3aed' },
+                '&.Mui-disabled': { bgcolor: '#374151', color: '#6b7280' },
+              }}
+            >
+              {selectedShotImage ? 'Legg til med bilde' : 'Legg til uten bilde'}
+            </Button>
+          )}
+        </DialogActions>
       </Dialog>
 
     </Box>

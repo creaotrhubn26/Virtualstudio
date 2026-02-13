@@ -28,9 +28,9 @@ import {
   Movie as MovieIcon,
   PhotoCamera as PhotoIcon,
   MicNone as AudioIcon,
-  LocationOn as LocationIcon,
   ChildCare as ChildIcon,
 } from '@mui/icons-material';
+import { LocationsIcon as LocationIcon } from '../icons/CastingIcons';
 import ConsentSignatureDialog from './ConsentSignatureDialog';
 import type { Consent, ConsentType, ConsentSignatureData } from '../../core/models/casting';
 
@@ -207,7 +207,7 @@ export default function ConsentPortalView({
               '&:hover fieldset': { borderColor: '#ce93d8' },
               '&.Mui-focused fieldset': { borderColor: '#9c27b0' },
             },
-            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
           }}
           InputProps={{
             style: { letterSpacing: '0.2em', textTransform: 'uppercase' },
@@ -267,7 +267,7 @@ export default function ConsentPortalView({
                 color: '#fff',
                 '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
               },
-              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
             }}
           />
         )}
@@ -285,14 +285,14 @@ export default function ConsentPortalView({
                 color: '#fff',
                 '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
               },
-              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
             }}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton
                     onClick={() => setShowPassword(!showPassword)}
-                    sx={{ color: 'rgba(255,255,255,0.5)' }}
+                    sx={{ color: 'rgba(255,255,255,0.87)' }}
                   >
                     {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
                   </IconButton>
@@ -484,7 +484,7 @@ export default function ConsentPortalView({
         <Typography variant="h4" sx={{ color: '#ce93d8', fontWeight: 700 }}>
           Casting Planner
         </Typography>
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
           Samtykke-portal
         </Typography>
       </Box>

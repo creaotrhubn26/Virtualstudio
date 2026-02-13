@@ -47,8 +47,8 @@ import {
   drawPressureStroke,
   drawTiltStroke,
   InputType,
-} from '../../hooks/useApplePencil';
-import { useDeviceDetection } from '../../hooks/useDeviceDetection';
+} from '../hooks/useApplePencil';
+import { useDeviceDetection } from '../hooks/useDeviceDetection';
 
 // =============================================================================
 // Types
@@ -87,7 +87,7 @@ const CanvasContainer = styled(Box)({
   overflow: 'hidden',
 });
 
-const DrawingCanvas = styled('canvas, ')({
+const DrawingCanvas = styled('canvas')({
   position: 'absolute',
   top: 0,
   left: 0,
@@ -222,7 +222,7 @@ export const PencilCanvas: React.FC<PencilCanvasProps> = ({
     getStrokeWidth,
     getOpacity,
   } = useApplePencil({
-    onStrokeStart: (point, inputType) => {
+    onStrokeStart: (point: PencilPoint, inputType: InputType) => {
       // Clear preview canvas
       const previewCtx = previewCanvasRef.current?.getContext('2d');
       if (previewCtx) {
@@ -230,7 +230,7 @@ export const PencilCanvas: React.FC<PencilCanvasProps> = ({
       }
     },
     
-    onStrokeMove: (point, inputType) => {
+    onStrokeMove: (point: PencilPoint, inputType: InputType) => {
       // Draw preview stroke
       if (currentStroke && previewCanvasRef.current) {
         const ctx = previewCanvasRef.current.getContext('2d');
@@ -241,7 +241,7 @@ export const PencilCanvas: React.FC<PencilCanvasProps> = ({
       }
     },
     
-    onStrokeEnd: (stroke, inputType) => {
+    onStrokeEnd: (stroke: PencilStroke, inputType: InputType) => {
       // Handle eraser
       if (brushSettings.type === 'eraser') {
         // Erase strokes that intersect with this stroke
@@ -265,11 +265,11 @@ export const PencilCanvas: React.FC<PencilCanvasProps> = ({
       redrawMainCanvas();
     },
     
-    onHoverStart: (point) => {
+    onHoverStart: (point: PencilPoint) => {
       setHoverPosition({ x: point.x, y: point.y });
     },
     
-    onHoverMove: (point) => {
+    onHoverMove: (point: PencilPoint) => {
       setHoverPosition({ x: point.x, y: point.y });
     },
     

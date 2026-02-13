@@ -8,7 +8,8 @@
  * - Near/Far Focus Limits
  */
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
+import type { FC } from 'react';
 import { Html, Line } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -59,7 +60,7 @@ function calculateDoF(
 }
 
 // Focus Plane Visualization
-const FocusPlane: React.FC<{
+const FocusPlane: FC<{
   cameraPosition: [number, number, number];
   focusDistance: number;
   cameraDirection?: THREE.Vector3;
@@ -109,7 +110,7 @@ const FocusPlane: React.FC<{
 };
 
 // In-Focus Zone (DoF Volume)
-const InFocusZone: React.FC<{
+const InFocusZone: FC<{
   cameraPosition: [number, number, number];
   nearLimit: number;
   farLimit: number;
@@ -216,7 +217,7 @@ const InFocusZone: React.FC<{
 };
 
 // Hyperfocal Distance Marker
-const HyperfocalDistanceMarker: React.FC<{
+const HyperfocalDistanceMarker: FC<{
   cameraPosition: [number, number, number];
   hyperfocalDistance: number;
 }> = ({ cameraPosition, hyperfocalDistance }) => {

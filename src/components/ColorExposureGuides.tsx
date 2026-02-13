@@ -8,7 +8,8 @@
  * - Color Checker Position
  */
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
+import type { FC } from 'react';
 import { Html, Line } from '@react-three/drei';
 import { Box, Typography } from '@mui/material';
 import * as THREE from 'three';
@@ -51,7 +52,7 @@ const EXPOSURE_ZONES = [
 ];
 
 // Color Temperature Scale (2D overlay)
-const ColorTemperatureScale: React.FC<{
+const ColorTemperatureScale: FC<{
   currentKelvin?: number;
 }> = ({ currentKelvin = 5500 }) => {
   return (
@@ -116,7 +117,7 @@ const ColorTemperatureScale: React.FC<{
 };
 
 // Gray Card Position (3D)
-const GrayCardPosition: React.FC<{
+const GrayCardPosition: FC<{
   subjectPosition: [number, number, number];
 }> = ({ subjectPosition }) => {
   const cardPosition: [number, number, number] = [
@@ -177,7 +178,7 @@ const GrayCardPosition: React.FC<{
 };
 
 // Exposure Zone System (2D overlay)
-const ExposureZoneSystem: React.FC = () => {
+const ExposureZoneSystem: FC = () => {
   return (
     <Box
       sx={{

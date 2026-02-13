@@ -12,7 +12,7 @@
  * - Arrow flow animation
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, type FC, type MouseEvent } from 'react';
 import { logger } from '../../core/services/logger';
 
 const log = logger.module('FrameAnnotation, ');
@@ -264,7 +264,7 @@ interface AnnotationIconProps {
   isSelected?: boolean;
 }
 
-const AnnotationIcon: React.FC<AnnotationIconProps> = ({
+const AnnotationIcon: FC<AnnotationIconProps> = ({
   type,
   rotation = 0,
   label,
@@ -531,7 +531,7 @@ const PreviewPaper = styled(Paper)({
   animation: `${tooltipAppear} 0.2s ${animationEasings.easeOut} forwards`,
 });
 
-const AnnotationPreview: React.FC<AnnotationPreviewProps> = ({
+const AnnotationPreview: FC<AnnotationPreviewProps> = ({
   annotation,
   anchorEl,
   onClose,
@@ -676,7 +676,7 @@ const AnnotationPreview: React.FC<AnnotationPreviewProps> = ({
 // Main Component
 // =============================================================================
 
-export const FrameAnnotationOverlay: React.FC<FrameAnnotationOverlayProps> = ({
+export const FrameAnnotationOverlay: FC<FrameAnnotationOverlayProps> = ({
   frameId,
   imageUrl,
   annotations,
@@ -706,7 +706,7 @@ export const FrameAnnotationOverlay: React.FC<FrameAnnotationOverlayProps> = ({
   }, []);
 
   // Track cursor position when in placement mode
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseMove = useCallback((e: MouseEvent<HTMLDivElement>) => {
     if (!placementMode || !containerRef.current) return;
     
     const rect = containerRef.current.getBoundingClientRect();
@@ -716,7 +716,7 @@ export const FrameAnnotationOverlay: React.FC<FrameAnnotationOverlayProps> = ({
   }, [placementMode]);
 
   // Handle click to place annotation
-  const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+  const handleClick = useCallback((e: MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
     
     const rect = containerRef.current.getBoundingClientRect();
@@ -759,7 +759,7 @@ export const FrameAnnotationOverlay: React.FC<FrameAnnotationOverlayProps> = ({
   // Handle annotation hover
   const handleAnnotationHover = useCallback((
     annotationId: string,
-    event: React.MouseEvent<HTMLDivElement>
+    event: MouseEvent<HTMLDivElement>
   ) => {
     setHoveredAnnotation(annotationId);
     setPreviewAnchor(event.currentTarget);
@@ -797,7 +797,7 @@ export const FrameAnnotationOverlay: React.FC<FrameAnnotationOverlayProps> = ({
   const hoveredAnnotationData = annotations.find(a => a.id === hoveredAnnotation);
 
   // Handle annotation click for selection
-  const handleAnnotationClick = useCallback((e: React.MouseEvent, annotationId: string) => {
+  const handleAnnotationClick = useCallback((e: MouseEvent, annotationId: string) => {
     e.stopPropagation();
     setSelectedAnnotation(prev => prev === annotationId ? null : annotationId);
   }, []);

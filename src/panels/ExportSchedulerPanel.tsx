@@ -591,6 +591,7 @@ export function ExportSchedulerPanel({
                 value={selectedPreset}
                 label="Export Preset"
                 onChange={(e) => setSelectedPreset(e.target.value)}
+                MenuProps={{ sx: { zIndex: 1400 } }}
               >
                 {EXPORT_PRESETS.map((preset) => (
                   <MenuItem key={preset.id} value={preset.id}>
@@ -624,6 +625,7 @@ export function ExportSchedulerPanel({
                 value={priority}
                 label="Priority"
                 onChange={(e) => setPriority(e.target.value as ExportJobPriority)}
+                MenuProps={{ sx: { zIndex: 1400 } }}
               >
                 <MenuItem value="low">Low</MenuItem>
                 <MenuItem value="normal">Normal</MenuItem>
@@ -639,6 +641,7 @@ export function ExportSchedulerPanel({
                 value={scheduleType}
                 label="When"
                 onChange={(e) => setScheduleType(e.target.value as 'now' | 'delay' | 'time')}
+                MenuProps={{ sx: { zIndex: 1400 } }}
               >
                 <MenuItem value="now">Add to Queue Now</MenuItem>
                 <MenuItem value="delay">Delay Start</MenuItem>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -25,7 +25,6 @@ import {
 } from '@mui/material';
 import {
   Close as CloseIcon,
-  LocationOn as LocationIcon,
   CameraAlt as CameraIcon,
   Flight as FlightIcon,
   WbSunny as SunIcon,
@@ -39,6 +38,7 @@ import {
   OpenInNew as OpenInNewIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
+import { LocationsIcon as LocationIcon } from './icons/CastingIcons';
 import { Location } from '../core/models/casting';
 import { externalDataService } from '../services/ExternalDataService';
 
@@ -130,7 +130,7 @@ const SpotListItem = memo(({ spot, variant = 'default', spaceLabel, index }: Spo
         }
         secondary={
           <Box>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', display: 'block', mb: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 }, fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', mb: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 }, fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
               {spot.address}
             </Typography>
             <Box sx={{ display: 'flex', gap: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 }, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -163,10 +163,10 @@ const SpotListItem = memo(({ spot, variant = 'default', spaceLabel, index }: Spo
                 />
               )}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 }, ml: 'auto' }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
                   Trykk for navigering
                 </Typography>
-                <OpenInNewIcon sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.9rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }} />
+                <OpenInNewIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.9rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }} />
               </Box>
             </Box>
           </Box>
@@ -185,6 +185,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<Location['propertyAnalysis'] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoadedForLocation, setHasLoadedForLocation] = useState<string | null>(null);
 
   const loadAnalysisForProperty = useCallback(async (propertyId: string) => {
     setLoading(true);
@@ -212,43 +213,64 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
     }
   }, [onAnalysisComplete]);
 
-  const loadPropertyFromAddress = useCallback(async () => {
-    if (!location?.address) return;
-    
+  const loadPropertyFromAddress = useCallback(async (address: string) => {
     setLoading(true);
     setError(null);
     
     try {
-      const addressData = await externalDataService.getKartverketAddress(location.address);
+      const addressData = await externalDataService.getKartverketAddress(address);
       if (addressData.propertyId) {
         await loadAnalysisForProperty(addressData.propertyId);
       } else {
         setError('Kunne ikke finne lokasjons-ID for denne adressen');
+        setLoading(false);
       }
     } catch (err) {
       console.error('Error loading property from address:', err);
       setError('Kunne ikke laste lokasjonsdata');
-    } finally {
       setLoading(false);
     }
-  }, [location?.address, loadAnalysisForProperty]);
+  }, [loadAnalysisForProperty]);
 
-  const loadAnalysis = useCallback(async () => {
-    if (!location?.propertyId) {
-      await loadPropertyFromAddress();
+  // Load analysis when dialog opens - use stable location identifier to prevent repeated loads
+  useEffect(() => {
+    if (!open) {
+      // Reset loaded state when dialog closes
+      setHasLoadedForLocation(null);
       return;
     }
     
-    await loadAnalysisForProperty(location.propertyId);
-  }, [location?.propertyId, loadPropertyFromAddress, loadAnalysisForProperty]);
-
-  useEffect(() => {
-    if (open && location?.propertyId) {
-      loadAnalysis();
-    } else if (open && location?.address && !location.propertyId) {
-      loadPropertyFromAddress();
+    const locationKey = location?.propertyId || location?.address || null;
+    
+    // Skip if already loaded for this location
+    if (!locationKey || hasLoadedForLocation === locationKey) {
+      return;
     }
-  }, [open, location?.propertyId, location?.address, loadAnalysis, loadPropertyFromAddress]);
+    
+    // Mark as loading for this location
+    setHasLoadedForLocation(locationKey);
+    
+    if (location?.propertyId) {
+      loadAnalysisForProperty(location.propertyId);
+    } else if (location?.address) {
+      loadPropertyFromAddress(location.address);
+    }
+  }, [open, location?.propertyId, location?.address, hasLoadedForLocation, loadAnalysisForProperty, loadPropertyFromAddress]);
+
+  // Manual refresh function
+  const handleRefresh = useCallback(() => {
+    const locationKey = location?.propertyId || location?.address || null;
+    if (locationKey) {
+      setHasLoadedForLocation(null); // Reset to allow reload
+      if (location?.propertyId) {
+        loadAnalysisForProperty(location.propertyId);
+        setHasLoadedForLocation(locationKey);
+      } else if (location?.address) {
+        loadPropertyFromAddress(location.address);
+        setHasLoadedForLocation(locationKey);
+      }
+    }
+  }, [location?.propertyId, location?.address, loadAnalysisForProperty, loadPropertyFromAddress]);
 
   const handleClose = useCallback(() => {
     setAnalysis(null);
@@ -295,7 +317,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
               <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.175rem', lg: '1.375rem', xl: '1.5rem' } }}>
                 Lokasjonsanalyse
               </Typography>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.825rem', lg: '0.9rem', xl: '1rem' } }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.825rem', lg: '0.9rem', xl: '1rem' } }}>
                 {location.name}
               </Typography>
             </Box>
@@ -303,7 +325,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
           <IconButton 
             onClick={handleClose} 
             sx={{ 
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               minWidth: 44,
               minHeight: 44,
               '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
@@ -323,11 +345,11 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
       }}>
         {loading ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: { xs: 6, sm: 8, md: 7, lg: 9, xl: 12 } }}>
-            <CircularProgress sx={{ color: '#00d4ff', mb: { xs: 3, sm: 3.5, md: 3.25, lg: 4, xl: 5 }, fontSize: { xs: 48, sm: 56, md: 52, lg: 64, xl: 80 } }} size={{ xs: 48, sm: 56, md: 52, lg: 64, xl: 80 }} />
+            <CircularProgress sx={{ color: '#00d4ff', mb: { xs: 3, sm: 3.5, md: 3.25, lg: 4, xl: 5 }, fontSize: { xs: 48, sm: 56, md: 52, lg: 64, xl: 80 } }} size={56} />
             <Typography variant="body1" sx={{ color: '#fff', fontWeight: 600, mb: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.25rem' } }}>
               Analyserer lokasjon...
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', textAlign: 'center', maxWidth: { xs: '100%', sm: 400, md: 450, lg: 500, xl: 600 }, fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', textAlign: 'center', maxWidth: { xs: '100%', sm: 400, md: 450, lg: 500, xl: 600 }, fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
               Henter informasjon om fotografispotter, drone-restriksjoner, værforhold og tilgang
             </Typography>
           </Box>
@@ -339,7 +361,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
               <Button
                 color="inherit"
                 size="small"
-                onClick={loadAnalysis}
+                onClick={handleRefresh}
                 startIcon={<RefreshIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />}
                 sx={{ 
                   color: '#ef4444', 
@@ -398,7 +420,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                     <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.375rem' } }}>
                       Fotografispotter
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.825rem', lg: '0.9rem', xl: '1rem' } }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.825rem', lg: '0.9rem', xl: '1rem' } }}>
                       {photographySpotsCount} spot{photographySpotsCount !== 1 ? 'ter' : ''} identifisert
                     </Typography>
                   </Box>
@@ -406,7 +428,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                 <Divider sx={{ mb: { xs: 3, sm: 3.5, md: 3.25, lg: 3.5, xl: 4 }, borderColor: 'rgba(255,255,255,0.1)' }} />
                 <Grid container spacing={{ xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }}>
                   {analysis?.photographySpots.map((spot, idx) => (
-                    <Grid xs={12} sm={6} key={idx}>
+                    <Grid size={{ xs: 12, sm: 6 }} key={idx}>
                       <Card sx={{ 
                         bgcolor: 'rgba(255,255,255,0.05)', 
                         border: '1px solid rgba(255,255,255,0.1)',
@@ -443,7 +465,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                           </Typography>
                           {spot.restrictions.length > 0 && (
                             <Box sx={{ mb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 } }}>
-                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', display: 'block', mb: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, fontWeight: 600, textTransform: 'uppercase', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, letterSpacing: '0.5px' }}>
+                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', mb: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, fontWeight: 600, textTransform: 'uppercase', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, letterSpacing: '0.5px' }}>
                                 Restriksjoner
                               </Typography>
                               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 } }}>
@@ -472,8 +494,8 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                             alignItems: 'center',
                             gap: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 },
                           }}>
-                            <LocationIcon sx={{ fontSize: { xs: 14, sm: 16, md: 15, lg: 17, xl: 20 }, color: 'rgba(255,255,255,0.5)' }} />
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
+                            <LocationIcon sx={{ fontSize: { xs: 14, sm: 16, md: 15, lg: 17, xl: 20 }, color: 'rgba(255,255,255,0.87)' }} />
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' } }}>
                               {spot.coordinates.lat.toFixed(6)}, {spot.coordinates.lng.toFixed(6)}
                             </Typography>
                           </Box>
@@ -509,7 +531,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                     <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.375rem' } }}>
                       Drone-restriksjoner
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.825rem', lg: '0.9rem', xl: '1rem' } }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.825rem', lg: '0.9rem', xl: '1rem' } }}>
                       Luftfart og sikkerhetsregler
                     </Typography>
                   </Box>
@@ -538,7 +560,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                       bgcolor: 'rgba(0,212,255,0.1)',
                       border: '1px solid rgba(0,212,255,0.2)',
                     }}>
-                      <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.6)', mb: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 }, fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.78125rem', lg: '0.875rem', xl: '1rem' }, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.87)', mb: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 }, fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.78125rem', lg: '0.875rem', xl: '1rem' }, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         Maksimal høyde
                       </Typography>
                       <Typography variant="h6" sx={{ color: '#00d4ff', fontWeight: 700, fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.375rem', lg: '1.625rem', xl: '2rem' } }}>
@@ -546,13 +568,13 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                       </Typography>
                     </Box>
                   )}
-                  {analysis?.droneRestrictions.restrictions.length > 0 && (
+                  {(analysis?.droneRestrictions.restrictions.length ?? 0) > 0 && (
                     <Box>
                       <Typography variant="subtitle2" sx={{ color: '#fff', mb: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 }, fontWeight: 600, fontSize: { xs: '0.875rem', sm: '0.95rem', md: '0.9125rem', lg: '0.975rem', xl: '1.125rem' } }}>
                         Restriksjoner
                       </Typography>
                       <Stack spacing={{ xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }}>
-                        {analysis.droneRestrictions.restrictions.map((restriction, idx) => (
+                        {analysis?.droneRestrictions.restrictions.map((restriction, idx) => (
                           <Box 
                             key={idx}
                             sx={{ 
@@ -574,7 +596,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                       </Stack>
                     </Box>
                   )}
-                  {analysis?.droneRestrictions.noFlyZones.length > 0 && (
+                  {(analysis?.droneRestrictions.noFlyZones.length ?? 0) > 0 && (
                     <Box sx={{ 
                       p: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, 
                       borderRadius: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, 
@@ -585,7 +607,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                         No-fly soner
                       </Typography>
                       <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
-                        {analysis.droneRestrictions.noFlyZones.length} son{analysis.droneRestrictions.noFlyZones.length !== 1 ? 'er' : ''} identifisert i området
+                        {analysis?.droneRestrictions.noFlyZones.length} son{analysis?.droneRestrictions.noFlyZones.length !== 1 ? 'er' : ''} identifisert i området
                       </Typography>
                     </Box>
                   )}
@@ -617,14 +639,14 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                     <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.375rem' } }}>
                       Vær-eksponering
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.825rem', lg: '0.9rem', xl: '1rem' } }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.825rem', lg: '0.9rem', xl: '1rem' } }}>
                       Vind, sol og beskyttelsesmuligheter
                     </Typography>
                   </Box>
                 </Box>
                 <Divider sx={{ mb: { xs: 3, sm: 3.5, md: 3.25, lg: 3.5, xl: 4 }, borderColor: 'rgba(255,255,255,0.1)' }} />
                 <Grid container spacing={{ xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }} sx={{ mb: (analysis?.weatherExposure.shelterOptions?.length || 0) > 0 ? { xs: 2.5, sm: 3, md: 2.75, lg: 3, xl: 3.5 } : 0 }}>
-                  <Grid xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Box sx={{ 
                       p: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, 
                       borderRadius: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, 
@@ -632,7 +654,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                       border: '1px solid rgba(255,255,255,0.1)',
                       height: '100%',
                     }}>
-                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', display: 'block', mb: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 }, fontWeight: 600, textTransform: 'uppercase', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, letterSpacing: '0.5px' }}>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', mb: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 }, fontWeight: 600, textTransform: 'uppercase', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, letterSpacing: '0.5px' }}>
                         Vind-eksponering
                       </Typography>
                       <Chip
@@ -649,14 +671,14 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                       />
                       {analysis?.weatherExposure.windSpeedKmh !== undefined && (
                         <Box sx={{ mt: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 } }}>
-                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', display: 'block', fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.78125rem', lg: '0.875rem', xl: '1rem' } }}>
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.78125rem', lg: '0.875rem', xl: '1rem' } }}>
                             Vindhastighet: <strong>{analysis.weatherExposure.windSpeedKmh.toFixed(1)} km/h</strong>
                             {analysis.weatherExposure.windSpeed !== undefined && (
-                              <span style={{ color: 'rgba(255,255,255,0.5)' }}> ({analysis.weatherExposure.windSpeed.toFixed(1)} m/s)</span>
+                              <span style={{ color: 'rgba(255,255,255,0.87)' }}> ({analysis.weatherExposure.windSpeed.toFixed(1)} m/s)</span>
                             )}
                           </Typography>
                           {analysis.weatherExposure.windDirection !== undefined && (
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', display: 'block', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, mt: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 }, fontStyle: 'italic' }}>
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, mt: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 }, fontStyle: 'italic' }}>
                               Vindretning: {Math.round(analysis.weatherExposure.windDirection)}°
                             </Typography>
                           )}
@@ -668,7 +690,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                           pt: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 }, 
                           borderTop: '1px solid rgba(255,255,255,0.1)',
                         }}>
-                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', display: 'block', mb: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 }, fontWeight: 600, textTransform: 'uppercase', fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.68rem', lg: '0.75rem', xl: '0.85rem' }, letterSpacing: '0.5px' }}>
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', mb: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 }, fontWeight: 600, textTransform: 'uppercase', fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.68rem', lg: '0.75rem', xl: '0.85rem' }, letterSpacing: '0.5px' }}>
                             Drone-sikkerhet
                           </Typography>
                           <Chip
@@ -691,7 +713,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                             }}
                           />
                           {analysis.weatherExposure.droneSafetyDescription && (
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', display: 'block', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, mt: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 }, fontStyle: 'italic' }}>
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, mt: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 }, fontStyle: 'italic' }}>
                               {analysis.weatherExposure.droneSafetyDescription}
                             </Typography>
                           )}
@@ -699,7 +721,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                       )}
                     </Box>
                   </Grid>
-                  <Grid xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Box sx={{ 
                       p: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, 
                       borderRadius: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, 
@@ -707,7 +729,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                       border: '1px solid rgba(255,255,255,0.1)',
                       height: '100%',
                     }}>
-                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', display: 'block', mb: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 }, fontWeight: 600, textTransform: 'uppercase', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, letterSpacing: '0.5px' }}>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', mb: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 }, fontWeight: 600, textTransform: 'uppercase', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, letterSpacing: '0.5px' }}>
                         Sol-eksponering
                       </Typography>
                       <Chip
@@ -725,24 +747,24 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                       {(analysis?.weatherExposure.sunrise || analysis?.weatherExposure.sunset) && (
                         <Box sx={{ mt: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 } }}>
                           {analysis.weatherExposure.sunrise && (
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', display: 'block', fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.78125rem', lg: '0.875rem', xl: '1rem' } }}>
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.78125rem', lg: '0.875rem', xl: '1rem' } }}>
                               Soloppgang: <strong>{analysis.weatherExposure.sunrise}</strong>
                             </Typography>
                           )}
                           {analysis.weatherExposure.sunset && (
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', display: 'block', fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.78125rem', lg: '0.875rem', xl: '1rem' }, mt: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 } }}>
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.78125rem', lg: '0.875rem', xl: '1rem' }, mt: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 } }}>
                               Solnedgang: <strong>{analysis.weatherExposure.sunset}</strong>
                             </Typography>
                           )}
                           {analysis.weatherExposure.daylightHours !== undefined && (
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', display: 'block', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, mt: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 }, fontStyle: 'italic' }}>
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, mt: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 }, fontStyle: 'italic' }}>
                               {analysis.weatherExposure.daylightHours.toFixed(1)} timer dagslys
                             </Typography>
                           )}
                         </Box>
                       )}
                       {analysis?.weatherExposure.sunDescription && (
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', display: 'block', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, mt: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, fontStyle: 'italic' }}>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, mt: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, fontStyle: 'italic' }}>
                           {analysis.weatherExposure.sunDescription}
                         </Typography>
                       )}
@@ -755,7 +777,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                       Beskyttelsesmuligheter
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
-                      {analysis.weatherExposure.shelterOptions.map((option, idx) => (
+                      {analysis?.weatherExposure.shelterOptions.map((option, idx) => (
                         <Chip
                           key={idx}
                           label={option}
@@ -804,7 +826,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                     <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.375rem' } }}>
                       Tilgangsanalyse
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.825rem', lg: '0.9rem', xl: '1rem' } }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.825rem', lg: '0.9rem', xl: '1rem' } }}>
                       Parkering, tilgjengelighet og transport
                     </Typography>
                   </Box>
@@ -812,7 +834,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                 <Divider sx={{ mb: { xs: 3, sm: 3.5, md: 3.25, lg: 3.5, xl: 4 }, borderColor: 'rgba(255,255,255,0.1)' }} />
                 <Grid container spacing={{ xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }}>
                   {analysis?.accessAnalysis.parkingSpots && analysis.accessAnalysis.parkingSpots.length > 0 && (
-                    <Grid xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <Box sx={{ 
                         p: { xs: 2.5, sm: 3, md: 2.75, lg: 3, xl: 3.5 }, 
                         borderRadius: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, 
@@ -836,7 +858,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                             <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 600, mb: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 }, fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.375rem' } }}>
                               Parkeringssteder
                             </Typography>
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.78125rem', lg: '0.875rem', xl: '1rem' } }}>
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.78125rem', lg: '0.875rem', xl: '1rem' } }}>
                               {analysis.accessAnalysis.parkingSpots.length} parkeringssted{analysis.accessAnalysis.parkingSpots.length !== 1 ? 'er' : ''} i nærheten
                             </Typography>
                           </Box>
@@ -855,7 +877,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                       </Box>
                     </Grid>
                   )}
-                  <Grid xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Box sx={{ 
                       p: { xs: 2.5, sm: 3, md: 2.75, lg: 3, xl: 3.5 }, 
                       borderRadius: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, 
@@ -879,7 +901,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                         <AccessibleIcon sx={{ color: analysis?.accessAnalysis.accessibility === 'wheelchair-accessible' ? '#10b981' : '#ef4444', fontSize: { xs: '1.5rem', sm: '1.75rem', md: '1.625rem', lg: '1.875rem', xl: '2rem' } }} />
                       </Box>
                       <Box sx={{ flex: 1 }}>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', display: 'block', mb: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 }, textTransform: 'uppercase', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, letterSpacing: '0.5px' }}>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', mb: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 }, textTransform: 'uppercase', fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '0.9rem' }, letterSpacing: '0.5px' }}>
                           Tilgjengelighet
                         </Typography>
                         <Typography variant="body1" sx={{ color: '#fff', fontWeight: 600, fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.375rem' } }}>
@@ -890,7 +912,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                     </Box>
                   </Grid>
                   {(analysis?.accessAnalysis.publicTransport?.length || 0) > 0 && (
-                    <Grid xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <Box sx={{ 
                         p: { xs: 2.5, sm: 3, md: 2.75, lg: 3, xl: 3.5 }, 
                         borderRadius: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, 
@@ -914,13 +936,13 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                             <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 600, mb: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 }, fontSize: { xs: '1rem', sm: '1.125rem', md: '1.0625rem', lg: '1.1875rem', xl: '1.375rem' } }}>
                               Kollektivtransport
                             </Typography>
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.78125rem', lg: '0.875rem', xl: '1rem' } }}>
-                              {analysis.accessAnalysis.publicTransport.length} linj{analysis.accessAnalysis.publicTransport.length !== 1 ? 'er' : 'e'} tilgjengelig
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.78125rem', lg: '0.875rem', xl: '1rem' } }}>
+                              {analysis?.accessAnalysis.publicTransport.length} linj{analysis?.accessAnalysis.publicTransport.length !== 1 ? 'er' : 'e'} tilgjengelig
                             </Typography>
                           </Box>
                         </Box>
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, ml: { xs: 0, sm: 7, md: 6.5, lg: 7, xl: 8 } }}>
-                          {analysis.accessAnalysis.publicTransport.map((transport, idx) => (
+                          {analysis?.accessAnalysis.publicTransport.map((transport, idx) => (
                             <Chip
                               key={idx}
                               label={transport}
@@ -940,10 +962,10 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                             />
                           ))}
                         </Box>
-                        {(analysis.accessAnalysis.walkingDistance || 0) > 0 && (
+                        {(analysis?.accessAnalysis.walkingDistance || 0) > 0 && (
                           <Box sx={{ mt: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, ml: { xs: 0, sm: 7, md: 6.5, lg: 7, xl: 8 } }}>
-                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
-                              Gangeavstand til nærmeste stopp: <strong>{analysis.accessAnalysis.walkingDistance} meter</strong>
+                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
+                              Gangeavstand til nærmeste stopp: <strong>{analysis?.accessAnalysis.walkingDistance} meter</strong>
                             </Typography>
                           </Box>
                         )}
@@ -951,7 +973,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                     </Grid>
                   )}
                   {(analysis?.accessAnalysis.evParking || analysis?.accessAnalysis.evCharging) && (
-                    <Grid xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <Box sx={{ 
                         p: { xs: 2.5, sm: 3, md: 2.75, lg: 3, xl: 3.5 }, 
                         borderRadius: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, 
@@ -979,14 +1001,14 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                           Elbilparkering & Lading
                         </Typography>
                         <Stack spacing={{ xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }}>
-                          {analysis.accessAnalysis.evParking && (
+                          {analysis?.accessAnalysis.evParking && (
                             <Box>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, mb: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, flexWrap: 'wrap' }}>
                                 <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600, fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
                                   Elbilparkering
                                 </Typography>
                                 <Chip
-                                  label={`${analysis.accessAnalysis.evParking.distance} m unna`}
+                                  label={`${analysis?.accessAnalysis.evParking?.distance} m unna`}
                                   size="small"
                                   sx={{
                                     bgcolor: 'rgba(16,185,129,0.2)',
@@ -997,12 +1019,12 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                                   }}
                                 />
                               </Box>
-                              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' }, mb: (analysis.accessAnalysis.evParkingSpots?.length || 0) > 0 ? { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 } : 0 }}>
-                                {analysis.accessAnalysis.evParking.description}
+                              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' }, mb: (analysis?.accessAnalysis.evParkingSpots?.length || 0) > 0 ? { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 } : 0 }}>
+                                {analysis?.accessAnalysis.evParking?.description}
                               </Typography>
-                              {(analysis.accessAnalysis.evParkingSpots?.length || 0) > 0 && (
+                              {(analysis?.accessAnalysis.evParkingSpots?.length || 0) > 0 && (
                                 <List sx={{ p: 0, mt: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
-                                  {analysis.accessAnalysis.evParkingSpots.map((spot, idx) => (
+                                  {analysis?.accessAnalysis.evParkingSpots?.map((spot, idx) => (
                                     <SpotListItem
                                       key={idx}
                                       spot={spot}
@@ -1015,14 +1037,14 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                               )}
                             </Box>
                           )}
-                          {analysis.accessAnalysis.evCharging && (
+                          {analysis?.accessAnalysis.evCharging && (
                             <Box>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, mb: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 }, flexWrap: 'wrap' }}>
                                 <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600, fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
                                   Ladestasjon
                                 </Typography>
                                 <Chip
-                                  label={`${analysis.accessAnalysis.evCharging.distance} m unna`}
+                                  label={`${analysis?.accessAnalysis.evCharging?.distance} m unna`}
                                   size="small"
                                   sx={{
                                     bgcolor: 'rgba(16,185,129,0.2)',
@@ -1033,12 +1055,12 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                                   }}
                                 />
                               </Box>
-                              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' }, mb: (analysis.accessAnalysis.evChargingSpots?.length || 0) > 0 ? { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 } : 0 }}>
-                                {analysis.accessAnalysis.evCharging.description}
+                              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' }, mb: (analysis?.accessAnalysis.evChargingSpots?.length || 0) > 0 ? { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 } : 0 }}>
+                                {analysis?.accessAnalysis.evCharging?.description}
                               </Typography>
-                              {(analysis.accessAnalysis.evChargingSpots?.length || 0) > 0 && (
+                              {(analysis?.accessAnalysis.evChargingSpots?.length || 0) > 0 && (
                                 <List sx={{ p: 0, mt: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
-                                  {analysis.accessAnalysis.evChargingSpots.map((spot, idx) => (
+                                  {analysis?.accessAnalysis.evChargingSpots?.map((spot, idx) => (
                                     <SpotListItem
                                       key={idx}
                                       spot={spot}
@@ -1056,15 +1078,15 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
                     </Grid>
                   )}
                   {(analysis?.accessAnalysis.walkingDistance || 0) > 0 && (analysis?.accessAnalysis.publicTransport?.length || 0) === 0 && (
-                    <Grid xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <Box sx={{ 
                         p: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, 
                         borderRadius: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, 
                         bgcolor: 'rgba(255,255,255,0.05)',
                         border: '1px solid rgba(255,255,255,0.1)',
                       }}>
-                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
-                          Gangeavstand til nærmeste stopp: <strong>{analysis.accessAnalysis.walkingDistance} meter</strong>
+                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
+                          Gangeavstand til nærmeste stopp: <strong>{analysis?.accessAnalysis.walkingDistance} meter</strong>
                         </Typography>
                       </Box>
                     </Grid>
@@ -1091,12 +1113,12 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
             <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, mb: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 }, fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.375rem', lg: '1.625rem', xl: '2rem' } }}>
               Ingen analyse tilgjengelig
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: { xs: 3, sm: 3.5, md: 3.25, lg: 4, xl: 5 }, maxWidth: { xs: '100%', sm: 400, md: 450, lg: 500, xl: 600 }, mx: 'auto', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: { xs: 3, sm: 3.5, md: 3.25, lg: 4, xl: 5 }, maxWidth: { xs: '100%', sm: 400, md: 450, lg: 500, xl: 600 }, mx: 'auto', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
               Start en analyse for å få informasjon om fotografispotter, drone-restriksjoner, værforhold og tilgang for denne lokasjonen.
             </Typography>
             <Button
               variant="contained"
-              onClick={loadAnalysis}
+              onClick={handleRefresh}
               sx={{
                 bgcolor: '#00d4ff',
                 color: '#000',
@@ -1125,7 +1147,7 @@ export function LocationAnalysisDialog({ open, location, onClose, onAnalysisComp
           onClick={handleClose} 
           variant="outlined"
           sx={{ 
-            color: 'rgba(255,255,255,0.7)',
+            color: 'rgba(255,255,255,0.87)',
             borderColor: 'rgba(255,255,255,0.2)',
             fontWeight: 600,
             fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' },

@@ -9,7 +9,7 @@
  * - Grid and guides
  */
 
-import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
+import { useRef, useState, useCallback, useEffect, useMemo, type MouseEvent } from 'react';
 import {
   Box,
   Typography,
@@ -236,7 +236,7 @@ function ControlPoint({
   const toNormX = (svgX: number) => Math.max(0, Math.min(1, (svgX - padding) / chartWidth));
   const toNormY = (svgY: number) => 1 - (svgY - padding) / chartHeight;
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const handleMouseDown = useCallback((e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);

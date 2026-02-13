@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useId } from 'react';
+import { useState, useMemo, useEffect, useId, type ReactNode } from 'react';
 import {
   Box,
   Typography,
@@ -40,8 +40,6 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   CalendarToday as CalendarIcon,
-  CalendarMonth as CalendarMonthIcon,
-  LocationOn as LocationIcon,
   People as PeopleIcon,
   Inventory as InventoryIcon,
   Movie as MovieIcon,
@@ -62,7 +60,6 @@ import {
   StarBorder as StarBorderIcon,
   ContentCopy as DuplicateIcon,
   FileDownload as ExportIcon,
-  BarChart as StatsIcon,
   ExpandMore as ExpandIcon,
   ExpandLess as CollapseIcon,
   Close as CloseIcon,
@@ -77,7 +74,9 @@ import {
   Visibility as VisibilityIcon,
   KeyboardArrowDown as ArrowDownIcon,
   KeyboardArrowUp as ArrowUpIcon,
+  CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
+import { LocationsIcon as LocationIcon, CalendarCustomIcon as CalendarMonthIcon, StatsIcon } from './icons/CastingIcons';
 import { ProductionDay } from '../core/models/casting';
 import { productionPlanningService } from '../services/productionPlanningService';
 import { castingService } from '../services/castingService';
@@ -283,7 +282,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
   const [changedFields, setChangedFields] = useState<string[]>([]);
 
   // Render markdown-formatted notes as React elements
-  const renderFormattedNotes = (notes: string): React.ReactNode => {
+  const renderFormattedNotes = (notes: string): ReactNode => {
     if (!notes) return null;
 
     const lines = notes.split('\n');
@@ -322,8 +321,8 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
       const checkboxContent = (isUncheckedBox || isCheckedBox) ? line.substring(2) : numberedContent;
 
       // Parse inline formatting (bold and italic)
-      const parseInlineFormatting = (text: string): React.ReactNode => {
-        const parts: React.ReactNode[] = [];
+      const parseInlineFormatting = (text: string): ReactNode => {
+        const parts: ReactNode[] = [];
         let remaining = text;
         let keyCounter = 0;
 
@@ -1270,7 +1269,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
             </Typography>
             <Typography
               sx={{
-                color: 'rgba(255,255,255,0.6)',
+                color: 'rgba(255,255,255,0.87)',
                 fontSize: { xs: '0.8rem', sm: '0.875rem', md: '0.9375rem' },
                 fontWeight: 500,
                 mt: 0.25,
@@ -1302,7 +1301,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
               sx={{
                 minHeight: TOUCH_TARGET_SIZE,
                 minWidth: TOUCH_TARGET_SIZE,
-                color: 'rgba(255,255,255,0.7)',
+                color: 'rgba(255,255,255,0.87)',
                 borderColor: 'rgba(255,255,255,0.2)',
                 px: { xs: 1, sm: 2 },
                 ...focusVisibleStyles,
@@ -1332,6 +1331,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
           </Tooltip>
 
           <Tooltip title="Legg til produksjonsdag (Ctrl+N)">
+            <span>
             <Button
               variant="contained"
               onClick={() => handleOpenDialog()}
@@ -1345,12 +1345,13 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                 flex: { xs: 1, sm: 'none' },
                 ...focusVisibleStyles,
                 '&:hover': { bgcolor: '#7b1fa2' },
-                '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' },
+                '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' },
               }}
             >
               <AddIcon />
               {!isMobile && <Box component="span" sx={{ ml: 1 }}>Legg til</Box>}
             </Button>
+            </span>
           </Tooltip>
         </Box>
       </Box>
@@ -1387,34 +1388,49 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
           aria-label="Statistikk over produksjonsdager"
         >
           <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <CalendarMonthIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#9c27b0' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#9c27b0', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
               {stats.totalDays}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Totalt dager</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Totalt dager</Typography>
           </Box>
           <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <CheckCircleIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#10b981' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#10b981', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
               {stats.statusCount['completed'] || 0}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Fullført</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Fullført</Typography>
           </Box>
           <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <CalendarMonthIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#ffb800' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#ffb800', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
               {stats.statusCount['planned'] || 0}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Planlagt</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Planlagt</Typography>
           </Box>
           <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <MovieIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#2196f3' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#2196f3', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
               {stats.totalScenes}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Scener</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Scener</Typography>
           </Box>
           <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <StarIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#ffc107' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#ffc107', fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
               {stats.favorites}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Favoritter</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Favoritter</Typography>
           </Box>
         </Box>
       </Collapse>
@@ -1436,7 +1452,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
           size="small"
           slotProps={{
             input: {
-              startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)', mr: 1 }} />,
+              startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.87)', mr: 1 }} />,
               sx: { minHeight: TOUCH_TARGET_SIZE },
             },
             htmlInput: { 'aria-label': 'Søk i produksjonsdager' },
@@ -1548,7 +1564,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
       {productionDays.length === 0 ? (
         <Box
           role="status"
-          sx={{ textAlign: 'center', py: { xs: 4, sm: 8 }, color: 'rgba(255,255,255,0.5)' }}
+          sx={{ textAlign: 'center', py: { xs: 4, sm: 8 }, color: 'rgba(255,255,255,0.87)' }}
         >
           <CalendarIcon sx={{ fontSize: { xs: 48, sm: 64 }, mb: 2, opacity: 0.3 }} />
           <Typography variant="body1">Ingen produksjonsdager ennå</Typography>
@@ -1557,7 +1573,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
           </Typography>
         </Box>
       ) : filteredAndSortedDays.length === 0 ? (
-        <Box role="status" sx={{ textAlign: 'center', py: 6, color: 'rgba(255,255,255,0.5)' }}>
+        <Box role="status" sx={{ textAlign: 'center', py: 6, color: 'rgba(255,255,255,0.87)' }}>
           <SearchIcon sx={{ fontSize: 48, mb: 2, opacity: 0.3 }} />
           <Typography variant="body1">Ingen treff på søket</Typography>
         </Box>
@@ -1582,7 +1598,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                     indeterminate={selectedIds.size > 0 && selectedIds.size < filteredAndSortedDays.length}
                     onChange={handleSelectAll}
                     aria-label="Velg alle produksjonsdager"
-                    sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-checked': { color: '#9c27b0' } }}
+                    sx={{ color: 'rgba(255,255,255,0.87)', '&.Mui-checked': { color: '#9c27b0' } }}
                   />
                 </TableCell>
                 <TableCell>
@@ -1642,7 +1658,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                     <Checkbox
                       checked={selectedIds.has(day.id)}
                       onChange={() => handleToggleSelect(day.id)}
-                      sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-checked': { color: '#9c27b0' } }}
+                      sx={{ color: 'rgba(255,255,255,0.87)', '&.Mui-checked': { color: '#9c27b0' } }}
                     />
                   </TableCell>
                   <TableCell>
@@ -1654,10 +1670,10 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.7)' }}>{getLocationName(day.locationId)}</Typography>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.87)' }}>{getLocationName(day.locationId)}</Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                       {day.callTime} - {day.wrapTime}
                     </Typography>
                   </TableCell>
@@ -1679,7 +1695,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Dupliser">
-                        <IconButton onClick={() => handleDuplicate(day)} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                        <IconButton onClick={() => handleDuplicate(day)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
                           <DuplicateIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -1760,7 +1776,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                               <Checkbox
                                 checked={selectedIds.has(day.id)}
                                 onChange={() => handleToggleSelect(day.id)}
-                                sx={{ p: 0.5, color: 'rgba(255,255,255,0.3)', '&.Mui-checked': { color: '#9c27b0' } }}
+                                sx={{ p: 0.5, color: 'rgba(255,255,255,0.6)', '&.Mui-checked': { color: '#9c27b0' } }}
                               />
                               <Box sx={{ flex: 1 }}>
                                 {/* Eye-catching Date Display */}
@@ -1943,14 +1959,14 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                                 border: '1px solid rgba(156,39,176,0.15)',
                               }}
                             >
-                              <HistoryIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.4)' }} />
+                              <HistoryIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.7)' }} />
                               <Typography
                                 sx={{
                                   fontSize: '0.75rem',
-                                  color: 'rgba(255,255,255,0.5)',
+                                  color: 'rgba(255,255,255,0.87)',
                                 }}
                               >
-                                Sist endret av <strong style={{ color: 'rgba(255,255,255,0.7)' }}>{day.lastModifiedBy}</strong>
+                                Sist endret av <strong style={{ color: 'rgba(255,255,255,0.87)' }}>{day.lastModifiedBy}</strong>
                                 {' • '}
                                 {new Date(day.updatedAt).toLocaleDateString('nb-NO', {
                                   day: 'numeric',
@@ -1995,7 +2011,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                               <Box sx={{ flex: 1 }}>
                                 <Typography
                                   sx={{
-                                    color: 'rgba(255,255,255,0.6)',
+                                    color: 'rgba(255,255,255,0.87)',
                                     fontSize: { xs: '0.7rem', sm: '0.75rem' },
                                     fontWeight: 600,
                                     textTransform: 'uppercase',
@@ -2033,7 +2049,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                               >
                                 <Typography
                                   sx={{
-                                    color: 'rgba(255,255,255,0.7)',
+                                    color: 'rgba(255,255,255,0.87)',
                                     fontSize: { xs: '0.6rem', sm: '0.65rem' },
                                     fontWeight: 600,
                                     textTransform: 'uppercase',
@@ -2090,7 +2106,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                               <Box sx={{ flex: 1 }}>
                                 <Typography
                                   sx={{
-                                    color: 'rgba(255,255,255,0.6)',
+                                    color: 'rgba(255,255,255,0.87)',
                                     fontSize: { xs: '0.7rem', sm: '0.75rem' },
                                     fontWeight: 600,
                                     textTransform: 'uppercase',
@@ -2203,7 +2219,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                                     <Typography
                                       variant="caption"
                                       sx={{
-                                        color: 'rgba(255,255,255,0.6)',
+                                        color: 'rgba(255,255,255,0.87)',
                                         fontWeight: 600,
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.5px',
@@ -2359,7 +2375,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                                               <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: { xs: '0.9rem', sm: '1rem' }, lineHeight: 1 }}>
                                                 {Math.round(dayForecast.precipitation)} mm
                                               </Typography>
-                                              <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', textTransform: 'uppercase' }}>
+                                              <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '0.65rem', textTransform: 'uppercase' }}>
                                                 Nedbør
                                               </Typography>
                                             </Box>
@@ -2376,7 +2392,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                                               <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: { xs: '0.9rem', sm: '1rem' }, lineHeight: 1 }}>
                                                 {Math.round(dayForecast.windSpeed)} m/s
                                               </Typography>
-                                              <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', textTransform: 'uppercase' }}>
+                                              <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '0.65rem', textTransform: 'uppercase' }}>
                                                 Vind
                                               </Typography>
                                             </Box>
@@ -2400,7 +2416,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                                               <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: { xs: '0.9rem', sm: '1rem' }, lineHeight: 1 }}>
                                                 {Math.round(dayForecast.humidity)}%
                                               </Typography>
-                                              <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', textTransform: 'uppercase' }}>
+                                              <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '0.65rem', textTransform: 'uppercase' }}>
                                                 Fuktighet
                                               </Typography>
                                             </Box>
@@ -2505,7 +2521,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                                           <Typography sx={{ color: '#ce93d8', fontWeight: 700, fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                                             Scener
                                           </Typography>
-                                          <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.75rem', sm: '0.8rem' } }}>
+                                          <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.75rem', sm: '0.8rem' } }}>
                                             {dayScenes.length} {dayScenes.length === 1 ? 'scene' : 'scener'} planlagt
                                           </Typography>
                                         </Box>
@@ -2583,7 +2599,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                                           <Typography sx={{ color: '#00d4ff', fontWeight: 700, fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                                             Team
                                           </Typography>
-                                          <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.75rem', sm: '0.8rem' } }}>
+                                          <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.75rem', sm: '0.8rem' } }}>
                                             {dayCrew.length} {dayCrew.length === 1 ? 'person' : 'personer'} tildelt
                                           </Typography>
                                         </Box>
@@ -2649,7 +2665,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                                           <Typography sx={{ color: '#ffb74d', fontWeight: 700, fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                                             Utstyr
                                           </Typography>
-                                          <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.75rem', sm: '0.8rem' } }}>
+                                          <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.75rem', sm: '0.8rem' } }}>
                                             {dayProps.length} {dayProps.length === 1 ? 'gjenstand' : 'gjenstander'}
                                           </Typography>
                                         </Box>
@@ -2757,7 +2773,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                                           </Typography>
                                           <Typography
                                             sx={{
-                                              color: 'rgba(255,255,255,0.5)',
+                                              color: 'rgba(255,255,255,0.87)',
                                               fontSize: { xs: '0.75rem', sm: '0.8125rem' },
                                             }}
                                           >
@@ -2849,9 +2865,9 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                                       borderRadius: 1.5,
                                     }}
                                   >
-                                    <PersonIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.5)' }} />
+                                    <PersonIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.87)' }} />
                                     <Box>
-                                      <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>
+                                      <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.87)' }}>
                                         Sist endret av
                                       </Typography>
                                       <Typography sx={{ fontSize: '0.875rem', color: '#fff', fontWeight: 600 }}>
@@ -2859,14 +2875,14 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                                       </Typography>
                                     </Box>
                                     <Box sx={{ ml: 'auto', textAlign: 'right' }}>
-                                      <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>
+                                      <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.87)' }}>
                                         {new Date(day.updatedAt).toLocaleDateString('nb-NO', {
                                           day: 'numeric',
                                           month: 'short',
                                           year: 'numeric',
                                         })}
                                       </Typography>
-                                      <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
+                                      <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
                                         {new Date(day.updatedAt).toLocaleTimeString('nb-NO', {
                                           hour: '2-digit',
                                           minute: '2-digit',
@@ -2912,7 +2928,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                                             <Typography
                                               sx={{
                                                 fontSize: '0.75rem',
-                                                color: 'rgba(255,255,255,0.4)',
+                                                color: 'rgba(255,255,255,0.7)',
                                               }}
                                             >
                                               {log.user} • {new Date(log.timestamp).toLocaleDateString('nb-NO', {
@@ -2988,7 +3004,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                                   sx={{ 
                                     minWidth: TOUCH_TARGET_SIZE, 
                                     minHeight: TOUCH_TARGET_SIZE, 
-                                    color: 'rgba(255,255,255,0.6)',
+                                    color: 'rgba(255,255,255,0.87)',
                                     '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
                                     ...focusVisibleStyles,
                                   }}
@@ -3159,7 +3175,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
               <Typography
                 sx={{
                   fontSize: { xs: '0.75rem', sm: '0.8125rem' },
-                  color: 'rgba(255,255,255,0.5)',
+                  color: 'rgba(255,255,255,0.87)',
                   display: { xs: 'none', sm: 'block' },
                 }}
               >
@@ -3174,7 +3190,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
             onClick={handleCloseDialog}
             aria-label="Lukk dialog"
             sx={{
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               bgcolor: 'rgba(255,255,255,0.1)',
               '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
               minWidth: TOUCH_TARGET_SIZE,
@@ -3215,7 +3231,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
             <CalendarMonthIcon sx={{ color: '#ce93d8', fontSize: { xs: 20, sm: 24 } }} />
             <Typography
               sx={{
-                color: 'rgba(255,255,255,0.7)',
+                color: 'rgba(255,255,255,0.87)',
                 fontSize: { xs: '0.8125rem', sm: '0.875rem', md: '0.9375rem' },
               }}
             >
@@ -3241,7 +3257,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                   '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                   '&.Mui-focused fieldset': { borderColor: '#9c27b0' },
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
               }}
             />
 
@@ -3264,7 +3280,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                   '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
                   '&.Mui-focused fieldset': { borderColor: '#9c27b0' },
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                 '& .MuiInputLabel-root.Mui-focused': { color: '#9c27b0' },
               }}
             />
@@ -3286,14 +3302,14 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                     '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
                     '&.Mui-focused fieldset': { borderColor: '#9c27b0' },
                   },
-                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                   '& .MuiInputLabel-root.Mui-focused': { color: '#9c27b0' },
                 }}
               />
             </Box>
 
             <FormControl fullWidth required>
-              <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Lokasjon *</InputLabel>
+              <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Lokasjon *</InputLabel>
               <Select
                 value={formData.locationId || ''}
                 onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
@@ -3344,7 +3360,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
             </FormControl>
 
             <FormControl fullWidth>
-              <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Status</InputLabel>
+              <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Status</InputLabel>
               <Select
                 value={formData.status || 'planned'}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value as ProductionDay['status'] })}
@@ -3461,7 +3477,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
                   </Typography>
                   <Typography
                     sx={{
-                      color: 'rgba(255,255,255,0.5)',
+                      color: 'rgba(255,255,255,0.87)',
                       fontSize: { xs: '0.7rem', sm: '0.75rem' },
                     }}
                   >
@@ -3495,7 +3511,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
             startIcon={<CancelIcon />}
             fullWidth={isMobile}
             sx={{ 
-              color: 'rgba(255,255,255,0.7)', 
+              color: 'rgba(255,255,255,0.87)', 
               minHeight: TOUCH_TARGET_SIZE, 
               ...focusVisibleStyles,
               '&:hover': {
@@ -3578,7 +3594,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
             <Typography variant="h6" sx={{ fontWeight: 700, color: '#ff9800' }}>
               Informer teamet?
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
               Viktige endringer er gjort
             </Typography>
           </Box>
@@ -3662,7 +3678,7 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
             variant="outlined"
             fullWidth={isMobile}
             sx={{
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               borderColor: 'rgba(255,255,255,0.3)',
               minHeight: TOUCH_TARGET_SIZE,
               '&:hover': { borderColor: 'rgba(255,255,255,0.5)' },

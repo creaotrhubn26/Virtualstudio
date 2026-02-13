@@ -12,7 +12,7 @@
  * - Depth of field preview
  */
 
-import React, { useMemo } from 'react';
+import { useMemo, type FC } from 'react';
 import { Line, Html, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import {
@@ -84,7 +84,7 @@ const ASPECT_RATIOS = {
 // Head Alignment Lines
 // =============================================================================
 
-const HeadAlignmentLines: React.FC<{
+const HeadAlignmentLines: FC<{
   session: ClassPhotoSession;
 }> = ({ session }) => {
   const lines = useMemo(() => {
@@ -161,7 +161,7 @@ const HeadAlignmentLines: React.FC<{
 // Camera FOV Cone
 // =============================================================================
 
-const CameraFOVCone: React.FC<{
+const CameraFOVCone: FC<{
   session: ClassPhotoSession;
   fov?: number;
 }> = ({ session, fov = 50 }) => {
@@ -257,7 +257,7 @@ const CameraFOVCone: React.FC<{
 // Edge Warning Zones
 // =============================================================================
 
-const EdgeWarningZones: React.FC<{
+const EdgeWarningZones: FC<{
   session: ClassPhotoSession;
   fov?: number;
 }> = ({ session, fov = 50 }) => {
@@ -330,7 +330,7 @@ const EdgeWarningZones: React.FC<{
 // Spacing Rulers
 // =============================================================================
 
-const SpacingRulers: React.FC<{
+const SpacingRulers: FC<{
   session: ClassPhotoSession;
 }> = ({ session }) => {
   const rulers = useMemo(() => {
@@ -427,7 +427,7 @@ const SpacingRulers: React.FC<{
 // Center/Symmetry Line
 // =============================================================================
 
-const CenterLine: React.FC<{
+const CenterLine: FC<{
   session: ClassPhotoSession;
 }> = ({ session }) => {
   const { sceneDepth, cameraPosition } = session;
@@ -484,7 +484,7 @@ const CenterLine: React.FC<{
 // Height Gap Indicators
 // =============================================================================
 
-const HeightGapIndicators: React.FC<{
+const HeightGapIndicators: FC<{
   session: ClassPhotoSession;
 }> = ({ session }) => {
   const gaps = useMemo(() => {
@@ -594,7 +594,7 @@ const HeightGapIndicators: React.FC<{
 // Eye Line Convergence
 // =============================================================================
 
-const EyeLineGuide: React.FC<{
+const EyeLineGuide: FC<{
   session: ClassPhotoSession;
 }> = ({ session }) => {
   const { cameraPosition, cameraTarget } = session;
@@ -676,7 +676,7 @@ const EyeLineGuide: React.FC<{
 // Depth of Field Preview
 // =============================================================================
 
-const DOFPreview: React.FC<{
+const DOFPreview: FC<{
   session: ClassPhotoSession;
   aperture?: number;
   focusDistance?: number;
@@ -783,7 +783,7 @@ const DOFPreview: React.FC<{
 // Aspect Ratio Frame
 // =============================================================================
 
-const AspectRatioFrame: React.FC<{
+const AspectRatioFrame: FC<{
   session: ClassPhotoSession;
   aspectRatio: '4x6' | '5x7' | '8x10' | '8.5x11';
   fov?: number;
@@ -860,7 +860,7 @@ const AspectRatioFrame: React.FC<{
 // Main Component
 // =============================================================================
 
-export const ClassPhotoGuides: React.FC<ClassPhotoGuidesProps> = ({
+export const ClassPhotoGuides: FC<ClassPhotoGuidesProps> = ({
   session,
   showHeadLines = true,
   showFOV = true,

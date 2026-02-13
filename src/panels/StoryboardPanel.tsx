@@ -104,6 +104,8 @@ import { FrameContextMenu, QuickAnnotationType } from '../components/FrameContex
 import { quickAnnotationService } from '../core/storyboard/QuickAnnotationService';
 import { useAccessibility, VisuallyHidden } from '../providers/AccessibilityProvider';
 import { useVirtualStudio } from '../../VirtualStudioContext';
+import { QuickDrawButton } from '../components/FrameDrawingEditor';
+import { useDeviceDetection } from '../hooks/useDeviceDetection';
 
 // =============================================================================
 // Sub-Components
@@ -188,6 +190,24 @@ const FrameCard: React.FC<FrameCardProps> = ({
           fontSize: '0.65rem'}}
       />
 
+      {/* Image Source Badge */}
+      {frame.imageSource && (
+        <Chip
+          label={frame.imageSource === 'drawn' ? '✏️ Drawn' : frame.imageSource === 'ai' ? '🤖 AI' : frame.imageSource}
+          size="small"
+          sx={{
+            position: 'absolute',
+            top: 36,
+            right: 8,
+            bgcolor: frame.imageSource === 'drawn' ? 'rgba(139,92,246,0.9)' : 'rgba(6,182,212,0.9)',
+            color: '#fff',
+            fontWeight: 500,
+            fontSize: '0.6rem',
+            height: 18,
+          }}
+        />
+      )}
+
       {/* Duration Badge */}
       <Box
         sx={{
@@ -216,19 +236,19 @@ const FrameCard: React.FC<FrameCardProps> = ({
         {showTechnicalInfo && (
           <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
             <Chip
-              label={`f/${frame.sceneSnapshot.camera.aperture}`}
+              label={`f/${frame.sceneSnapshot?.camera?.aperture ?? '--'}`}
               size="small"
               variant="outlined"
               sx={{ height: 18, fontSize: '0.6rem' }}
             />
             <Chip
-              label={`${frame.sceneSnapshot.camera.focalLength}mm`}
+              label={`${frame.sceneSnapshot?.camera?.focalLength ?? 0}mm`}
               size="small"
               variant="outlined"
               sx={{ height: 18, fontSize: '0.6rem' }}
             />
             <Chip
-              label={`${frame.sceneSnapshot.lights.length} lights`}
+              label={`${frame.sceneSnapshot?.lights?.length ?? 0} lights`}
               size="small"
               variant="outlined"
               sx={{ height: 18, fontSize: '0.6rem' }}
@@ -513,17 +533,10 @@ export const StoryboardPanel: React.FC = () => {
         camera: {
           position: [0, 1.6, 3],
           rotation: [0, 0, 0],
-          fov: 50,
           focalLength: 50,
           aperture: 2.8,
-          focusDistance: 3,
-          iso: 100,
-          shutter: 1 / 125,
         },
         lights: [],
-        equipment: [],
-        props: [],
-        capturedAt: new Date().toISOString(),
       },
       status: 'draft',
     };
@@ -735,6 +748,7 @@ export const StoryboardPanel: React.FC = () => {
               value={currentStoryboard?.id || ''}
               onChange={(e) => e.target.value && loadStoryboard(e.target.value)}
               displayEmpty
+              MenuProps={{ sx: { zIndex: 1400 } }}
               sx={{ bgcolor: '#1e1e36' }}
             >
               <MenuItem value="" disabled>
@@ -1242,7 +1256,7 @@ export const StoryboardPanel: React.FC = () => {
                   },
                 },
                 '& .MuiInputLabel-root': {
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                 },
               }}
               helperText="Describe the frame you want to generate. The AI will create a storyboard image based on your description."

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import type { ChangeEvent, FC } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -39,7 +40,7 @@ interface ImportManuscriptDialogProps {
 
 type ImportStep = 'upload' | 'preview' | 'confirm' | 'importing';
 
-export const ImportManuscriptDialog: React.FC<ImportManuscriptDialogProps> = ({
+export const ImportManuscriptDialog: FC<ImportManuscriptDialogProps> = ({
   open,
   onClose,
   onImportComplete,
@@ -51,7 +52,7 @@ export const ImportManuscriptDialog: React.FC<ImportManuscriptDialogProps> = ({
   const [errors, setErrors] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (!selectedFile) return;
 

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback, type FC, type MouseEvent, type ReactElement, type ReactNode } from 'react';
 import {
   Box,
   Typography,
@@ -48,7 +48,7 @@ interface InteractiveShotCardProps {
   compactMode?: boolean;
 }
 
-const statusConfig: Record<ShotStatus, { label: string; color: string; bgColor: string; icon: React.ReactNode }> = {
+const statusConfig: Record<ShotStatus, { label: string; color: string; bgColor: string; icon: ReactNode }> = {
   not_started: { 
     label: 'Venter', 
     color: '#78909c', 
@@ -75,13 +75,13 @@ const priorityConfig: Record<ShotPriority, { label: string; color: string; weigh
   nice_to_have: { label: 'Bonus', color: '#9e9e9e', weight: 1 },
 };
 
-const mediaTypeConfig: Record<MediaType, { label: string; icon: React.ReactNode; color: string }> = {
+const mediaTypeConfig: Record<MediaType, { label: string; icon: ReactNode; color: string }> = {
   photo: { label: 'Foto', icon: <PhotoCamera sx={{ fontSize: 16 }} />, color: '#2196f3' },
   video: { label: 'Video', icon: <Videocam sx={{ fontSize: 16 }} />, color: '#e91e63' },
   hybrid: { label: 'Hybrid', icon: <CameraRoll sx={{ fontSize: 16 }} />, color: '#9c27b0' },
 };
 
-export const InteractiveShotCard: React.FC<InteractiveShotCardProps> = ({
+export const InteractiveShotCard: FC<InteractiveShotCardProps> = ({
   shot,
   index,
   isActive = false,
@@ -243,7 +243,7 @@ export const InteractiveShotCard: React.FC<InteractiveShotCardProps> = ({
 
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
           <Box
-            onClick={(e: React.MouseEvent) => { e.stopPropagation(); cycleStatus(); }}
+            onClick={(e: MouseEvent) => { e.stopPropagation(); cycleStatus(); }}
             sx={{
               width: 48,
               height: 48,
@@ -283,7 +283,7 @@ export const InteractiveShotCard: React.FC<InteractiveShotCardProps> = ({
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5, flexWrap: 'wrap' }}>
               <Chip
-                icon={mediaInfo.icon as React.ReactElement}
+                icon={mediaInfo.icon as ReactElement}
                 label={mediaInfo.label}
                 size="small"
                 sx={{
@@ -312,10 +312,10 @@ export const InteractiveShotCard: React.FC<InteractiveShotCardProps> = ({
                   size="small"
                   sx={{
                     bgcolor: 'rgba(255,255,255,0.05)',
-                    color: 'rgba(255,255,255,0.7)',
+                    color: 'rgba(255,255,255,0.87)',
                     height: 22,
                     fontSize: 11,
-                    '& .MuiChip-icon': { color: 'rgba(255,255,255,0.5)' },
+                    '& .MuiChip-icon': { color: 'rgba(255,255,255,0.87)' },
                   }}
                 />
               )}
@@ -345,7 +345,7 @@ export const InteractiveShotCard: React.FC<InteractiveShotCardProps> = ({
                 <Typography
                   variant="caption"
                   sx={{
-                    color: 'rgba(255,255,255,0.5)',
+                    color: 'rgba(255,255,255,0.87)',
                     fontSize: 11,
                   }}
                 >
@@ -355,7 +355,7 @@ export const InteractiveShotCard: React.FC<InteractiveShotCardProps> = ({
                   <Typography
                     variant="caption"
                     sx={{
-                      color: 'rgba(255,255,255,0.5)',
+                      color: 'rgba(255,255,255,0.87)',
                       fontSize: 11,
                     }}
                   >
@@ -407,7 +407,7 @@ export const InteractiveShotCard: React.FC<InteractiveShotCardProps> = ({
           {onNotesClick && (
             <Tooltip title="Feltnotater">
               <IconButton
-                onClick={(e: React.MouseEvent) => { e.stopPropagation(); onNotesClick(shot); }}
+                onClick={(e: MouseEvent) => { e.stopPropagation(); onNotesClick(shot); }}
                 size="small"
                 sx={{
                   color: shot.fieldNotes ? '#e91e63' : 'rgba(255,255,255,0.4)',
@@ -435,7 +435,7 @@ export const InteractiveShotCard: React.FC<InteractiveShotCardProps> = ({
               py: 0.25,
             }}
           >
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: 10 }}>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 10 }}>
               Take {shot.takesCount}
             </Typography>
           </Box>

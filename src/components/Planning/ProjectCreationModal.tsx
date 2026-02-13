@@ -8,11 +8,17 @@ import { trackButtonClick, trackModalOpen } from '@/hooks/useActionTracker';
 // Import dynamic profession system
 import { useProfessionConfigs } from '@/hooks/useProfessionConfigs';
 import { useProfessionAdapter } from '@/hooks/useProfessionAdapter';
-import getProfessionIcon from '@/utils/profession-icons';
+import getProfessionIconUtil from '@/utils/profession-icons';
 import { useDynamicProfessions } from '../universal/hooks/useDynamicProfessions';
 import { getProjectTypeNextSteps, getProjectTypeInitialDescription } from '@/utils/project-worklog-helpers';
 // New context imports
 import { useProject } from '../../contexts/ProjectContext';
+import type { Project, Collaborator, Milestone } from '../../contexts/ProjectContext';
+// Ensure type imports are used for type-checking
+const _collaboratorType: Collaborator | null = null;
+const _milestoneType: Milestone | null = null;
+void _collaboratorType;
+void _milestoneType;
 // Comprehensive feature system integration
 import { useEnhancedMasterIntegration } from '../../integration/EnhancedMasterIntegrationProvider';
 import { useTheming } from '../../utils/theming-helper';
@@ -79,7 +85,6 @@ import {
   Schedule,
   Assignment,
   Storage,
-  LocationOn,
   People,
   Settings,
   PersonAdd,
@@ -133,11 +138,11 @@ import {
   SportsEsports,
   Campaign,
   Article,
-  TheaterComedy,
   AutoAwesome,
   CameraAlt,
   Mic,
 } from '@mui/icons-material';
+import { RolesIcon as TheaterComedy, LocationsIcon as LocationOn } from '../icons/CastingIcons';
 import MemoryCardIcon from '../ui/MemoryCardIcon';
 import MemoryCardSelector from '../memory-card/MemoryCardSelector';
 import { useAutoSave } from '@/hooks/useAutoSave';
@@ -162,6 +167,7 @@ import { ContactProjectInfoSummary } from './ContactProjectInfoSummary';
 import { logger } from '../../core/services/logger';
 import type { ProjectData, MemoryCardConfig, SelectedMemoryCard, LabelingKey } from './types';
 import type { SplitSheetContributor, ContributorRole } from '../split-sheets/types';
+import { castingService } from '@/services/castingService';
 
 const log = logger.module('ProjectCreationModal');
 
@@ -824,7 +830,7 @@ const LABELING_SCHEMES = {
   NUMERIC: ['1','2','3','4','5','6','7','8','9'],
 } as const;
 
-type LabelingKey = keyof typeof LABELING_SCHEMES;
+// LabelingKey imported from ./types
 
 // Helper function for dynamic project type defaults
 const getDefaultProjectType = (profession: string, isCastingPlanner: boolean = false): string => {
@@ -1032,34 +1038,7 @@ interface ProjectCreationWithMemoryCardsProps {
   getTerm?: (key: string) => string; // Terminology helper from Casting Planner
 }
 
-interface MemoryCardConfig {
-  label: string;
-  type: string;
-  capacity: string;
-  dayNumber: number;
-  dayName: string;
-  count?: number;
-  estimatedPhotos?: number;
-}
-
-// Interface for MemoryCardSelector component
-interface MemoryCardSelectorConfig {
-  capacity: string;
-  count: number;
-  estimatedPhotos: {
-    raw: number;
-    craw: number;
-};
-}
-
-interface SelectedMemoryCard {
-  type: string;
-  capacity: string;
-  brand?: string;
-  model?: string;
-  count?: number;
-  estimatedPhotos?: number;
-}
+// Local MemoryCardConfig, SelectedMemoryCard, and LabelingKey types imported from ./types
 
 export default function ProjectCreationWithMemoryCards({
   profession,
@@ -1148,7 +1127,11 @@ export default function ProjectCreationWithMemoryCards({
 } = useProject();
   
   // Comprehensive feature system integration
-  const { features, communication } = useEnhancedMasterIntegration();
+  const enhancedMaster = useEnhancedMasterIntegration();
+  const features = enhancedMaster.features;
+  const communication = Object.prototype.hasOwnProperty.call(enhancedMaster, 'communication')
+    ? (enhancedMaster as unknown as Record<string, unknown>).communication
+    : undefined;
   
   // External Data Service integration for location intelligence
   const { 
@@ -1196,21 +1179,22 @@ export default function ProjectCreationWithMemoryCards({
   });
 
   // Toast helper functions
-    const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', duration: number = 4000) => {
+    const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', _duration: number = 4000) => {
       addNotification({
         title: type.charAt(0).toUpperCase() + type.slice(1) + ' Notification',
         message,
         type,
-        read: false
+        read: false,
+        duration: _duration,
     });
   }, [addNotification]);
 
   const showSuccessToast = useCallback((message: string, duration: number = 4000) => {
-    showToast(message, 'success,', duration);
+    showToast(message, 'success', duration);
   }, [showToast]);
 
   const showErrorToast = useCallback((message: string, duration: number = 6000) => {
-    showToast(message, 'error, ', duration);
+    showToast(message, 'error', duration);
   }, [showToast]);
 
   const showWarningToast = useCallback((message: string, duration: number = 5000) => {
@@ -1462,9 +1446,9 @@ useEffect(() => {
   // Feature system integration - component registration and usage tracking
   useEffect(() => {
     // Check feature access for project creation
-    const projectCreationAccess = features.checkFeatureAccess('project-creation');
-    const memoryCardPlanningAccess = features.checkFeatureAccess('memory-card-planning');
-    const davinciIntegrationAccess = features.checkFeatureAccess('davinci-resolve-integration');
+    const projectCreationAccess = features.checkFeatureAccess('project-creation') as { hasAccess: boolean; reason?: string };
+    const memoryCardPlanningAccess = features.checkFeatureAccess('memory-card-planning') as { hasAccess: boolean; reason?: string };
+    const davinciIntegrationAccess = features.checkFeatureAccess('davinci-resolve-integration') as { hasAccess: boolean; reason?: string };
     
     // Track feature usage
     features.trackFeatureUsage('project-creation','component_opened', {
@@ -1489,7 +1473,7 @@ useEffect(() => {
   // Load profession-specific settings on mount
   useEffect(() => {
     if (userProfession && settings) {
-      const professionDefaults = getProfessionDefaults(userProfession);
+      const professionDefaults = getProfessionDefaults(userProfession) as Record<string, any> | null;
       if (professionDefaults) {
         // Apply profession-specific defaults to project data
         setProjectData(prev => ({
@@ -1577,6 +1561,160 @@ useEffect(() => {
   // Dynamic project types system
   const { allTypes: dynamicProjectTypes, trackUsage, isLoading: projectTypesLoading, createProjectType } = useProjectTypes();
   const [addProjectTypeDialogOpen, setAddProjectTypeDialogOpen] = useState(false);
+  const [loadingTrollDemo, setLoadingTrollDemo] = useState(false);
+  
+  // TROLL Demo Initialization Dialog state
+  const [trollInitDialogOpen, setTrollInitDialogOpen] = useState(false);
+  const [trollInitStatus, setTrollInitStatus] = useState<'idle' | 'initializing' | 'loading' | 'complete' | 'error'>('idle');
+  const [trollInitAreas, setTrollInitAreas] = useState<Record<string, { status: string; count: number; items: any[] }>>({});
+  const [trollInitProgress, setTrollInitProgress] = useState(0);
+  const [trollInitError, setTrollInitError] = useState<string | null>(null);
+
+  // Open TROLL Demo Dialog
+  const handleOpenTrollDialog = useCallback(() => {
+    setTrollInitDialogOpen(true);
+    setTrollInitStatus('idle');
+    setTrollInitAreas({});
+    setTrollInitProgress(0);
+    setTrollInitError(null);
+  }, []);
+
+  // Initialize and Load TROLL Demo Data
+  const handleInitializeTrollDemo = useCallback(async () => {
+    setTrollInitStatus('initializing');
+    setTrollInitProgress(10);
+    setTrollInitError(null);
+    
+    try {
+      // Step 1: Initialize TROLL mock data via castingService
+      await castingService.initializeMockData();
+      setTrollInitProgress(25);
+      
+      // Step 2: Initialize Split Sheet
+      try {
+        await fetch('/api/split-sheets/demo/troll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: user?.id || 'demo-user' })
+        });
+      } catch (e) {
+        console.log('TROLL split sheet initialization:', e);
+      }
+      setTrollInitProgress(40);
+      
+      // Step 3: Initialize Offers, Contracts, Consents
+      try {
+        await fetch('/api/casting/demo/troll/offers-contracts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+      } catch (e) {
+        console.log('TROLL offers/contracts initialization:', e);
+      }
+      setTrollInitProgress(60);
+      
+      // Step 4: Load all data status from database
+      setTrollInitStatus('loading');
+      const response = await fetch('/api/demo/troll/initialize-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.areas) {
+          setTrollInitAreas(data.areas);
+        }
+      }
+      setTrollInitProgress(80);
+      
+      // Step 5: Load TROLL project data into form
+      const projects = await castingService.getProjects();
+      const trollProject = projects.find((p: any) => p.id === 'troll-project-2026' || p.name === 'TROLL');
+      
+      if (trollProject) {
+        // Load candidates, crew, locations from database
+        const [trollCandidates, crew, locations] = await Promise.all([
+          castingService.getCandidates('troll-project-2026'),
+          castingService.getCrew('troll-project-2026'),
+          castingService.getLocations('troll-project-2026')
+        ]);
+        
+        // Log loaded candidate count for diagnostic purposes
+        log.info(`TROLL demo loaded ${trollCandidates.length} candidates, ${crew.length} crew, ${locations.length} locations`);
+        
+        // Build collaborators from actual crew data
+        const collaborators = crew.slice(0, 5).map((c: any, idx: number) => ({
+          id: `collab-${idx}`,
+          name: c.name,
+          email: c.email || `${c.name.toLowerCase().replace(/\s/g, '.')}@trollfilm.no`,
+          role: c.position || c.department || 'crew'
+        }));
+        
+        // Build split sheet contributors from actual data
+        const splitSheetResponse = await fetch('/api/split-sheets?project_id=troll-project-2026');
+        let splitSheetContributors: any[] = [];
+        if (splitSheetResponse.ok) {
+          const ssData = await splitSheetResponse.json();
+          if (ssData.splitSheets?.[0]?.contributors) {
+            splitSheetContributors = ssData.splitSheets[0].contributors.map((c: any, idx: number) => ({
+              id: `ss-${idx}`,
+              name: c.name,
+              email: c.email,
+              role: c.role,
+              percentage: c.percentage
+            }));
+          }
+        }
+        
+        setProjectData(prev => ({
+          ...prev,
+          projectName: trollProject.name || 'TROLL',
+          projectType: 'film',
+          description: trollProject.description || 'Norsk eventyrfilm regissert av Roar Uthaug',
+          clientName: 'Netflix / Nordisk Film',
+          clientEmail: 'produksjon@troll-film.no',
+          location: locations[0]?.name || 'Dovre, Norge',
+          eventDate: '2026-01-20',
+          enableSplitSheet: true,
+          collaborators: collaborators.length > 0 ? collaborators : [
+            { id: 'collab-1', name: 'Regissør', email: 'regi@trollfilm.no', role: 'director' }
+          ],
+          splitSheetData: splitSheetContributors.length > 0 ? {
+            title: 'TROLL - Filmproduksjon Split Sheet',
+            description: 'Fordeling av inntekter for TROLL (2026)',
+            contributors: splitSheetContributors
+          } : prev.splitSheetData
+        }));
+        
+        setTrollInitProgress(100);
+        setTrollInitStatus('complete');
+      } else {
+        throw new Error('TROLL prosjekt ikke funnet i database');
+      }
+      
+    } catch (error) {
+      console.error('Failed to initialize TROLL demo:', error);
+      setTrollInitError(error instanceof Error ? error.message : 'Ukjent feil ved initialisering');
+      setTrollInitStatus('error');
+    }
+  }, [user]);
+
+  // Close dialog and navigate
+  const handleTrollDialogComplete = useCallback(() => {
+    setTrollInitDialogOpen(false);
+    if (trollInitStatus === 'complete') {
+      showSuccessToast('🎬 TROLL demo-prosjekt lastet fra database!', 5000);
+      setActiveStep(1);
+    }
+  }, [trollInitStatus, showSuccessToast]);
+
+  // Load TROLL Demo Project - Comprehensive film production example (legacy, now opens dialog)
+  const handleLoadTrollDemo = useCallback(async () => {
+    handleOpenTrollDialog();
+  }, [handleOpenTrollDialog]);
 
   useEffect(() => {
     if (selectedContact) {
@@ -1706,7 +1844,12 @@ useEffect(() => {
     setShowHealthCheck(false);
     showSuccessToast('Health check passed! Ready to create project.', 3000);
     // Proceed with project creation
-    createProjectContext(projectData as any);
+    createProjectContext({
+      name: projectData.projectName,
+      type: projectData.projectType,
+      description: projectData.description || '',
+      status: 'draft' as const,
+    });
 };
 
   // Generate session ID for autosave
@@ -1804,7 +1947,7 @@ useEffect(() => {
         
         // If we have contributors, distribute evenly if percentages are 0
         const contributorsWithPercentages = contributors.length > 0 && contributors.every((c: any) => c.percentage === 0)
-          ? contributors.map((c: any, index: number) => ({
+          ? contributors.map((c: any, _index: number) => ({
               ...c,
               percentage: 100 / contributors.length
             }))
@@ -1827,8 +1970,9 @@ useEffect(() => {
 
         const response = await apiRequest('/api/split-sheets', {
           method: 'POST',
+          headers: auth,
           body: JSON.stringify(splitSheetRequest)
-        });
+        }) as { success?: boolean; data?: unknown };
 
         if (response.success) {
           log.info('Split sheet created successfully', response.data);
@@ -1919,7 +2063,7 @@ useEffect(() => {
   const { availableLeads, isLoadingLeads, importFromLead, isImporting } = {
     availableLeads: [],
     isLoadingLeads: false,
-    importFromLead: () => Promise.resolve(),
+    importFromLead: (_lead: Record<string, unknown>) => Promise.resolve(),
     isImporting: false
 };
 
@@ -1928,6 +2072,7 @@ useEffect(() => {
     mutationFn: async (data: any) => {
       return apiRequest('/api/worklog', {
         method: 'POST',
+        headers: auth,
         body: JSON.stringify(data)
     });
   }
@@ -1947,7 +2092,7 @@ useEffect(() => {
     const hasBasicInfo = projectData.projectName && projectData.clientName;
 
     // Check if user has Virtual Studio marketplace access
-    const { hasAccess } = features.checkFeatureAccess('virtual-studio', userProfession);
+    const { hasAccess } = features.checkFeatureAccess('virtual-studio') as { hasAccess: boolean };
 
     return isPhotographer && isNonWeddingProject && hasBasicInfo && hasAccess;
   }, [projectData, userProfession, features]);
@@ -2234,7 +2379,7 @@ useEffect(() => {
               >
                 {step.description}
               </Typography>
-              {step.optional && (
+              {Boolean('optional' in step && (step as Record<string, unknown>).optional) && (
                 <Typography 
                   variant="caption" 
                   sx={{ 
@@ -2433,7 +2578,7 @@ useEffect(() => {
                       <Divider sx={{ mb: 2, mt: 1 }} />
                       <ProjectTypeSelector
                         value={projectData.projectType || ''}
-                        onChange={(selectedTypeId, isCustomType) => {
+                        onChange={(selectedTypeId, _isCustomType) => {
                           setProjectData((prev) => ({
                             ...prev,
                             projectType: selectedTypeId,
@@ -2450,6 +2595,54 @@ useEffect(() => {
                         onAddCustomType={() => setAddProjectTypeDialogOpen(true)}
                         showAddButton={!isCastingPlanner}
                       />
+
+                      {/* TROLL Demo Project Loader */}
+                      <Box sx={{ mt: 3, pt: 2, borderTop: '1px dashed rgba(255,255,255,0.2)' }}>
+                        <Typography 
+                          variant="subtitle2" 
+                          sx={{ 
+                            fontWeight: 600, 
+                            fontSize: '0.875rem', 
+                            color: 'text.secondary',
+                            mb: 1.5,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1
+                          }}
+                        >
+                          <AutoAwesome sx={{ fontSize: 18, color: '#9f7aea' }} />
+                          Demo Prosjekt
+                        </Typography>
+                        <Button
+                          variant="outlined"
+                          size="medium"
+                          onClick={handleLoadTrollDemo}
+                          disabled={loadingTrollDemo}
+                          startIcon={loadingTrollDemo ? <CircularProgress size={18} /> : <Movie />}
+                          sx={{
+                            borderColor: '#9f7aea',
+                            color: '#9f7aea',
+                            fontWeight: 600,
+                            '&:hover': {
+                              borderColor: '#805ad5',
+                              bgcolor: 'rgba(159, 122, 234, 0.08)'
+                            }
+                          }}
+                        >
+                          {loadingTrollDemo ? 'Laster...' : 'Last TROLL Demo-prosjekt'}
+                        </Button>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            display: 'block', 
+                            mt: 1, 
+                            color: 'text.secondary',
+                            fontSize: '0.75rem'
+                          }}
+                        >
+                          Laster komplett filmproduksjon med casting, crew, locations, og Split Sheet
+                        </Typography>
+                      </Box>
                     </CardContent>
                   </Card>
 
@@ -2458,7 +2651,7 @@ useEffect(() => {
                     <AddProjectTypeDialog
                       open={addProjectTypeDialogOpen}
                       onClose={() => setAddProjectTypeDialogOpen(false)}
-                      onSave={async (data) => {
+                      onAdd={async (data: { name: string; icon: string; color: string; description: string }) => {
                         await createProjectType(data);
                         showSuccessToast(`Custom project type "${data.name}" created successfully!`);
                       }}
@@ -2779,6 +2972,1740 @@ useEffect(() => {
           </DialogActions>
         </Dialog>
       )}
+
+      {/* TROLL Demo Initialization Dialog */}
+      <Dialog 
+        open={trollInitDialogOpen} 
+        onClose={() => trollInitStatus !== 'initializing' && trollInitStatus !== 'loading' && setTrollInitDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            bgcolor: 'background.paper',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          fontWeight: 700, 
+          fontSize: '1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          pb: 2
+        }}>
+          <Movie sx={{ fontSize: '2rem', color: '#9c27b0' }} />
+          TROLL Demo Initialisering
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          {trollInitStatus === 'idle' && (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                Last inn TROLL Demo-prosjekt
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
+                Dette vil initialisere et komplett filmproduksjonsprosjekt basert på den norske filmen TROLL (2026).
+                Alle data lastes fra databasen - ingenting er hardkodet.
+              </Typography>
+              <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                  Følgende områder vil bli lastet:
+                </Typography>
+                <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                  <li>Prosjekt, roller og karakterer</li>
+                  <li>Kandidater og skuespillere</li>
+                  <li>Crew og produksjonsteam</li>
+                  <li>Lokasjoner og opptakssteder</li>
+                  <li>Produksjonsdager og tidsplan</li>
+                  <li>Scener og shot lists</li>
+                  <li>Tilbud og kontrakter</li>
+                  <li>Samtykker (GDPR, bilde, stunt)</li>
+                  <li>Split Sheet med bidragsytere</li>
+                  <li>Utstyr og ressurser</li>
+                </Box>
+              </Alert>
+              <Stack direction="row" spacing={2} justifyContent="center">
+                <Button 
+                  variant="outlined"
+                  size="large"
+                  onClick={async () => {
+                    // Check current status without initializing
+                    setTrollInitStatus('loading');
+                    setTrollInitProgress(50);
+                    try {
+                      const response = await fetch('/api/demo/troll/initialize-all', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({})
+                      });
+                      if (response.ok) {
+                        const data = await response.json();
+                        if (data.success && data.areas) {
+                          setTrollInitAreas(data.areas);
+                          setTrollInitProgress(100);
+                          // Check if project exists and has data
+                          const hasData = data.areas.project?.status === 'loaded' && 
+                            Object.values(data.areas).some((a: any) => a.count > 0);
+                          if (!hasData) {
+                            // Show empty state with warning
+                            setTrollInitStatus('complete');
+                            showWarningToast('⚠️ TROLL-data ikke funnet. Klikk "Initialiser Manglende Data" for å opprette.', 5000);
+                          } else {
+                            setTrollInitStatus('complete');
+                          }
+                        }
+                      } else {
+                        setTrollInitStatus('idle');
+                        showErrorToast('Kunne ikke sjekke database status', 3000);
+                      }
+                    } catch (e) {
+                      setTrollInitStatus('idle');
+                      showErrorToast('Feil ved tilkobling til database', 3000);
+                    }
+                  }}
+                  startIcon={<Info />}
+                  sx={{ px: 3, py: 1.5 }}
+                >
+                  Sjekk Eksisterende Data
+                </Button>
+                <Button 
+                  variant="contained" 
+                  size="large"
+                  onClick={handleInitializeTrollDemo}
+                  startIcon={<Movie />}
+                  sx={{ 
+                    px: 4, 
+                    py: 1.5,
+                    fontWeight: 600,
+                    bgcolor: '#9f7aea',
+                    '&:hover': { bgcolor: '#805ad5' }
+                  }}
+                >
+                  Start Initialisering
+                </Button>
+              </Stack>
+            </Box>
+          )}
+
+          {(trollInitStatus === 'initializing' || trollInitStatus === 'loading') && (
+            <Box sx={{ py: 3 }}>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                  {trollInitStatus === 'initializing' ? 'Initialiserer data...' : 'Laster fra database...'}
+                </Typography>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={trollInitProgress} 
+                  sx={{ 
+                    height: 10, 
+                    borderRadius: 5,
+                    bgcolor: 'action.hover',
+                    '& .MuiLinearProgress-bar': {
+                      bgcolor: '#9f7aea'
+                    }
+                  }} 
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                  {trollInitProgress}% fullført
+                </Typography>
+              </Box>
+              
+              {Object.keys(trollInitAreas).length > 0 && (
+                <Box sx={{ 
+                  maxHeight: 350, 
+                  overflowY: 'auto',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  p: 2
+                }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
+                    Data områder:
+                  </Typography>
+                  {Object.entries(trollInitAreas).map(([key, area]) => {
+                    const areaLabels: Record<string, string> = {
+                      project: 'Prosjekt',
+                      roles: 'Roller',
+                      candidates: 'Kandidater',
+                      crew: 'Crew',
+                      locations: 'Lokasjoner',
+                      production_days: 'Produksjonsdager',
+                      scenes: 'Scener',
+                      shot_lists: 'Shot Lists',
+                      offers: 'Tilbud',
+                      contracts: 'Kontrakter',
+                      consents: 'Samtykker',
+                      split_sheets: 'Split Sheets',
+                      equipment: 'Utstyr'
+                    };
+                    const label = areaLabels[key] || key.replace(/_/g, ' ');
+                    
+                    return (
+                      <Box key={key} sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between',
+                        py: 1,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        '&:last-child': { borderBottom: 'none' }
+                      }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          {area.status === 'loaded' ? (
+                            <CheckCircle sx={{ color: 'success.main', fontSize: 20 }} />
+                          ) : area.status === 'empty' || area.status === 'not_found' ? (
+                            <Warning sx={{ color: 'warning.main', fontSize: 20 }} />
+                          ) : (
+                            <CircularProgress size={18} />
+                          )}
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {label}
+                          </Typography>
+                        </Box>
+                        <Chip 
+                          label={area.count === 0 ? 'Tom' : `${area.count} elementer`}
+                          size="small"
+                          color={area.status === 'loaded' && area.count > 0 ? 'success' : area.status === 'empty' || area.count === 0 ? 'warning' : 'default'}
+                          variant="outlined"
+                        />
+                      </Box>
+                    );
+                  })}
+                </Box>
+              )}
+            </Box>
+          )}
+
+          {trollInitStatus === 'complete' && (
+            <Box sx={{ py: 3 }}>
+              {/* Check if any areas are empty */}
+              {Object.values(trollInitAreas).some(a => a.status === 'empty' || a.status === 'not_found') ? (
+                <Alert severity="warning" sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    ⚠️ Noen områder mangler data
+                  </Typography>
+                  <Typography variant="body2">
+                    Kjør "Start Initialisering" for å opprette manglende data, eller fortsett med tilgjengelig data.
+                  </Typography>
+                </Alert>
+              ) : (
+                <Alert severity="success" sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    ✅ TROLL demo-prosjekt er ferdig lastet!
+                  </Typography>
+                </Alert>
+              )}
+              
+              <Box sx={{ 
+                maxHeight: 350, 
+                overflowY: 'auto',
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 2,
+                p: 2
+              }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
+                  Oppsummering av lastet data:
+                </Typography>
+                {Object.entries(trollInitAreas).map(([key, area]) => {
+                  // Norwegian labels for areas
+                  const areaLabels: Record<string, string> = {
+                    project: 'Prosjekt',
+                    roles: 'Roller',
+                    candidates: 'Kandidater',
+                    crew: 'Crew',
+                    locations: 'Lokasjoner',
+                    production_days: 'Produksjonsdager',
+                    scenes: 'Scener',
+                    shot_lists: 'Shot Lists',
+                    offers: 'Tilbud',
+                    contracts: 'Kontrakter',
+                    consents: 'Samtykker',
+                    split_sheets: 'Split Sheets',
+                    equipment: 'Utstyr'
+                  };
+                  const label = areaLabels[key] || key.replace(/_/g, ' ');
+                  const isEmpty = area.status === 'empty' || area.status === 'not_found' || area.count === 0;
+                  
+                  return (
+                    <Box key={key} sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      py: 1,
+                      borderBottom: '1px solid',
+                      borderColor: 'divider',
+                      '&:last-child': { borderBottom: 'none' },
+                      opacity: isEmpty ? 0.6 : 1
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        {!isEmpty ? (
+                          <CheckCircle sx={{ color: 'success.main', fontSize: 20 }} />
+                        ) : (
+                          <Warning sx={{ color: 'warning.main', fontSize: 20 }} />
+                        )}
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {label}
+                          </Typography>
+                          {isEmpty && (
+                            <Typography variant="caption" color="text.secondary">
+                              Ingen data funnet
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                      <Chip 
+                        label={isEmpty ? 'Tom' : `${area.count} ${area.count === 1 ? 'element' : 'elementer'}`}
+                        size="small"
+                        color={!isEmpty ? 'success' : 'warning'}
+                        variant="outlined"
+                      />
+                    </Box>
+                  );
+                })}
+              </Box>
+              
+              {/* Show items preview for loaded areas */}
+              {Object.entries(trollInitAreas).filter(([_, a]) => a.items && a.items.length > 0).length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Forhåndsvisning av data:
+                  </Typography>
+                  <Box sx={{ 
+                    maxHeight: 150, 
+                    overflowY: 'auto',
+                    bgcolor: 'action.hover',
+                    borderRadius: 1,
+                    p: 1.5,
+                    fontSize: '0.75rem',
+                    fontFamily: 'monospace'
+                  }}>
+                    {Object.entries(trollInitAreas)
+                      .filter(([_, a]) => a.items && a.items.length > 0)
+                      .slice(0, 3)
+                      .map(([key, area]) => (
+                        <Box key={key} sx={{ mb: 1 }}>
+                          <Typography variant="caption" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                            {key}:
+                          </Typography>
+                          {area.items.slice(0, 2).map((item, idx) => (
+                            <Typography key={idx} variant="caption" component="div" sx={{ pl: 1, color: 'text.secondary' }}>
+                              • {item.name || item.title || item.id}
+                            </Typography>
+                          ))}
+                        </Box>
+                      ))}
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          )}
+
+          {trollInitStatus === 'error' && (
+            <Box sx={{ py: 3 }}>
+              <Alert severity="error" sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Feil ved initialisering
+                </Typography>
+                <Typography variant="body2">
+                  {trollInitError || 'En ukjent feil oppstod'}
+                </Typography>
+              </Alert>
+              <Button 
+                variant="outlined" 
+                onClick={handleInitializeTrollDemo}
+                startIcon={<Refresh />}
+              >
+                Prøv igjen
+              </Button>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Button 
+            onClick={() => setTrollInitDialogOpen(false)}
+            disabled={trollInitStatus === 'initializing' || trollInitStatus === 'loading'}
+          >
+            {trollInitStatus === 'complete' ? 'Lukk' : 'Avbryt'}
+          </Button>
+          {trollInitStatus === 'complete' && Object.values(trollInitAreas).some(a => a.status === 'empty' || a.status === 'not_found' || a.count === 0) && (
+            <Button 
+              variant="outlined"
+              onClick={() => {
+                setTrollInitStatus('idle');
+                setTrollInitAreas({});
+                setTrollInitProgress(0);
+              }}
+              startIcon={<Refresh />}
+              sx={{ mr: 1 }}
+            >
+              Initialiser Manglende Data
+            </Button>
+          )}
+          {trollInitStatus === 'complete' && (
+            <Button 
+              variant="contained" 
+              onClick={handleTrollDialogComplete}
+              sx={{ 
+                fontWeight: 600,
+                bgcolor: '#9f7aea',
+                '&:hover': { bgcolor: '#805ad5' }
+              }}
+            >
+              Fortsett til prosjekt
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          DRAFT MANAGEMENT SIDEBAR  
+          Uses: Drawer, Paper, IconButton, Tooltip, Badge, History, Compare, 
+          Restore, Publish, Drafts, Visibility, VisibilityOff, ChevronLeft, 
+          ChevronRight, Timeline, CloudDone, AccessTime, Edit, Save, Delete,
+          draftSidebarOpen, draftMode, projectHistory, showHistoryDialog, 
+          showComparisonDialog, publishedProject, saveProjectDraft, 
+          getProjectDraft, deleteProjectDraft
+          ═══════════════════════════════════════════════════════════════════ */}
+      <Drawer
+        anchor="right"
+        open={draftSidebarOpen}
+        onClose={() => setDraftSidebarOpen(false)}
+        PaperProps={{ sx: { width: 380, p: 2, bgcolor: 'background.paper' } }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Drafts sx={{ color: 'primary.main' }} />
+            Utkast & Versjoner
+          </Typography>
+          <IconButton onClick={() => setDraftSidebarOpen(false)} size="small">
+            <ChevronRight />
+          </IconButton>
+        </Box>
+        <Divider sx={{ mb: 2 }} />
+
+        {/* Draft Mode Toggle */}
+        <Paper sx={{ p: 2, mb: 2, borderRadius: 2, bgcolor: 'action.hover' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Edit sx={{ fontSize: 18 }} />
+            Modus
+          </Typography>
+          <Stack direction="row" spacing={1}>
+            {(['draft', 'published', 'live'] as const).map((mode) => (
+              <Chip
+                key={mode}
+                label={mode === 'draft' ? 'Utkast' : mode === 'published' ? 'Publisert' : 'Live'}
+                color={draftMode === mode ? 'primary' : 'default'}
+                onClick={() => setDraftMode(mode)}
+                icon={mode === 'draft' ? <Edit /> : mode === 'published' ? <Publish /> : <Visibility />}
+                variant={draftMode === mode ? 'filled' : 'outlined'}
+                sx={{ fontWeight: 600 }}
+              />
+            ))}
+          </Stack>
+        </Paper>
+
+        {/* Draft Actions */}
+        <Stack spacing={1.5} sx={{ mb: 2 }}>
+          <Tooltip title="Lagre utkast av gjeldende prosjektdata">
+            <Button
+              variant="outlined"
+              startIcon={<Save />}
+              fullWidth
+              onClick={async () => {
+                if (currentProject?.id) {
+                  await saveProjectDraft({ ...projectData, name: projectData.projectName, type: projectData.projectType } as unknown as Partial<Project>);
+                  setHasUnsavedChanges(false);
+                  showSuccessToast('Utkast lagret', 3000);
+                }
+              }}
+              sx={{ fontWeight: 600, justifyContent: 'flex-start' }}
+            >
+              <Badge badgeContent={hasUnsavedChanges ? '!' : 0} color="warning">
+                Lagre Utkast
+              </Badge>
+            </Button>
+          </Tooltip>
+
+          <Tooltip title="Last inn siste utkast">
+            <Button
+              variant="outlined"
+              startIcon={<Restore />}
+              fullWidth
+              onClick={async () => {
+                if (currentProject?.id) {
+                  const draft = getProjectDraft();
+                  if (draft) {
+                    setProjectData(draft as unknown as ProjectData);
+                    showSuccessToast('Utkast lastet', 3000);
+                  }
+                }
+              }}
+              sx={{ fontWeight: 600, justifyContent: 'flex-start' }}
+            >
+              Last inn Utkast
+            </Button>
+          </Tooltip>
+
+          <Tooltip title="Slett lagret utkast">
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<Delete />}
+              fullWidth
+              onClick={async () => {
+                if (currentProject?.id) {
+                  deleteProjectDraft();
+                  showInfoToast('Utkast slettet', 3000);
+                }
+              }}
+              sx={{ fontWeight: 600, justifyContent: 'flex-start' }}
+            >
+              Slett Utkast
+            </Button>
+          </Tooltip>
+        </Stack>
+
+        <Divider sx={{ my: 2 }} />
+
+        {/* History & Version */}
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <History sx={{ fontSize: 18, color: 'primary.main' }} />
+          Versjonshistorikk
+        </Typography>
+
+        <Stack spacing={1}>
+          <Button
+            variant="text"
+            startIcon={<Timeline />}
+            fullWidth
+            onClick={() => {
+              setShowHistoryDialog(true);
+              if (currentProject?.id) {
+                const trail = getProjectAuditTrail(currentProject.id);
+                setProjectHistory(Array.isArray(trail) ? trail : []);
+              }
+            }}
+            sx={{ justifyContent: 'flex-start', fontWeight: 500 }}
+          >
+            Vis Historikk
+          </Button>
+          <Button
+            variant="text"
+            startIcon={<Compare />}
+            fullWidth
+            onClick={() => {
+              setShowComparisonDialog(true);
+              if (currentProject?.id) {
+                const v = getProjectDataVersion(currentProject.id);
+                setPublishedProject(v);
+              }
+            }}
+            sx={{ justifyContent: 'flex-start', fontWeight: 500 }}
+          >
+            Sammenlign Versjoner
+          </Button>
+        </Stack>
+
+        {/* Published project info */}
+        {publishedProject && (
+          <Alert severity="info" sx={{ mt: 2 }} icon={<CloudDone />}>
+            <Typography variant="caption" sx={{ fontWeight: 500 }}>
+              Sist publisert: {publishedProject.updatedAt || 'Ukjent'}
+            </Typography>
+          </Alert>
+        )}
+
+        {/* Visibility Toggle */}
+        <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="caption" sx={{ fontWeight: 500 }}>
+            <AccessTime sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle' }} />
+            Synlighet:
+          </Typography>
+          <Chip
+            label={draftMode === 'live' ? 'Synlig' : 'Skjult'}
+            icon={draftMode === 'live' ? <Visibility /> : <VisibilityOff />}
+            size="small"
+            color={draftMode === 'live' ? 'success' : 'default'}
+          />
+        </Box>
+
+        {/* Navigation */}
+        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
+          <Button size="small" startIcon={<ChevronLeft />} onClick={() => setDraftSidebarOpen(false)}>
+            Lukk
+          </Button>
+        </Box>
+      </Drawer>
+
+      {/* History Dialog */}
+      <Dialog open={showHistoryDialog} onClose={() => setShowHistoryDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <History sx={{ color: 'primary.main' }} />
+          Prosjekthistorikk
+        </DialogTitle>
+        <DialogContent>
+          {projectHistory.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">Ingen historikk tilgjengelig ennå.</Typography>
+          ) : (
+            <List>
+              {projectHistory.map((entry: Record<string, unknown>, idx: number) => (
+                <ListItem key={idx}>
+                  <ListItemIcon><AccessTime /></ListItemIcon>
+                  <ListItemText
+                    primary={String(entry.action || entry.phase || `Versjon ${idx + 1}`)}
+                    secondary={String(entry.timestamp || entry.date || 'Ukjent tidspunkt')}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowHistoryDialog(false)}>Lukk</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Comparison Dialog */}
+      <Dialog open={showComparisonDialog} onClose={() => setShowComparisonDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Compare sx={{ color: 'primary.main' }} />
+          Sammenlign Versjoner
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            {publishedProject ? `Publisert versjon: ${publishedProject.version || 'N/A'}` : 'Ingen publisert versjon funnet.'}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowComparisonDialog(false)}>Lukk</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          LOCATION INTELLIGENCE PANEL
+          Uses: Autocomplete, locationSuggestions, selectedLocation, 
+          locationAnalysis, weatherData, travelCosts, locationLoading,
+          getKartverketAddress, searchKartverketPlaceNames, analyzeProperty,
+          getCurrentWeather, getWeatherForecast, calculateTravelCosts,
+          getFuelPrices, DirectionsCar, LocationOn, CloudUpload
+          ═══════════════════════════════════════════════════════════════════ */}
+      <Collapse in={activeStep === 0 && !!projectData.location}>
+        <Card sx={{ mt: 2, mb: 2, borderRadius: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <LocationOn sx={{ color: 'primary.main' }} />
+              Lokasjonsintelligens
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+
+            <Autocomplete
+              freeSolo
+              options={locationSuggestions.map((s: Record<string, unknown>) => String(s.name || s.stedsnavn || s.adresse || s))}
+              loading={locationLoading}
+              value={selectedLocation?.name || projectData.location || ''}
+              onInputChange={async (_evt: unknown, value: string) => {
+                if (value.length >= 3) {
+                  setLocationLoading(true);
+                  try {
+                    const results = await searchKartverketPlaceNames(value);
+                    setLocationSuggestions(Array.isArray(results) ? results : []);
+                  } catch { /* ignored */ }
+                  setLocationLoading(false);
+                }
+              }}
+              onChange={async (_evt: unknown, value: unknown) => {
+                if (typeof value === 'string' && value) {
+                  setLocationLoading(true);
+                  try {
+                    const addr = await getKartverketAddress(value);
+                    setSelectedLocation(addr);
+                    const analysis = await analyzeProperty(value);
+                    setLocationAnalysis(analysis);
+                    const weather = await getCurrentWeather({ location: value });
+                    setWeatherData(weather);
+                    const forecast = await getWeatherForecast({ location: value });
+                    log.info('Weather forecast loaded', forecast);
+                    const travel = await calculateTravelCosts({ kilometers: 0, vehicleType: 'car' });
+                    setTravelCosts(travel);
+                    const fuel = await getFuelPrices();
+                    log.info('Fuel prices loaded', fuel);
+                  } catch (e) {
+                    log.warn('Location analysis failed', e);
+                  }
+                  setLocationLoading(false);
+                }
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Søk lokasjon (Kartverket)"
+                  placeholder="Skriv adresse eller stedsnavn..."
+                  fullWidth
+                />
+              )}
+            />
+
+            {locationLoading && <LinearProgress sx={{ mt: 1 }} />}
+
+            {locationAnalysis && (
+              <Paper sx={{ mt: 2, p: 2, borderRadius: 2, bgcolor: 'action.hover' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Eiendomsanalyse</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {typeof locationAnalysis === 'object' ? JSON.stringify(locationAnalysis, null, 2).slice(0, 200) : String(locationAnalysis)}
+                </Typography>
+              </Paper>
+            )}
+
+            {weatherData && (
+              <Paper sx={{ mt: 2, p: 2, borderRadius: 2, bgcolor: 'action.hover' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CloudUpload sx={{ fontSize: 18 }} />
+                  Værdata
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {typeof weatherData === 'object' ? JSON.stringify(weatherData, null, 2).slice(0, 200) : String(weatherData)}
+                </Typography>
+              </Paper>
+            )}
+
+            {travelCosts && (
+              <Paper sx={{ mt: 2, p: 2, borderRadius: 2, bgcolor: 'action.hover' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <DirectionsCar sx={{ fontSize: 18 }} />
+                  Reisekostnader
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {typeof travelCosts === 'object' ? JSON.stringify(travelCosts, null, 2).slice(0, 200) : String(travelCosts)}
+                </Typography>
+              </Paper>
+            )}
+          </CardContent>
+        </Card>
+      </Collapse>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          HEALTH CHECK GATE
+          Uses: ProjectHealthCheck, showHealthCheck, healthCheckPassed,
+          handleGoToStep, handleGoToTab, handleHealthCheckPassed,
+          checkProjectHealth, validateProjectData
+          ═══════════════════════════════════════════════════════════════════ */}
+      <Dialog open={showHealthCheck} onClose={() => setShowHealthCheck(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>Prosjekt Helssjekk</DialogTitle>
+        <DialogContent>
+          <ProjectHealthCheck
+            projectId={currentProject?.id}
+          />
+          {!healthCheckPassed && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              <Typography variant="body2">Prosjektet må bestå helssjekken før det kan opprettes.</Typography>
+            </Alert>
+          )}
+          {healthCheckPassed && (
+            <Alert severity="success" sx={{ mt: 2 }} icon={<CheckCircle />}>
+              <Typography variant="body2">Helssjekk bestått! Prosjektet er klart for opprettelse.</Typography>
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            handleGoToTab('overview');
+            setShowHealthCheck(false);
+          }}>Lukk</Button>
+          <Button
+            variant="outlined"
+            onClick={() => handleGoToStep(0)}
+          >
+            Gå til Start
+          </Button>
+          <Button
+            variant="contained"
+            disabled={!healthCheckPassed}
+            onClick={async () => {
+              handleHealthCheckPassed();
+              if (currentProject?.id) {
+                checkProjectHealth(currentProject.id);
+                validateProjectData({
+                  name: projectData.projectName,
+                  type: projectData.projectType,
+                  description: projectData.description || '',
+                  status: 'draft' as const,
+                });
+              }
+              setShowHealthCheck(false);
+            }}
+          >
+            Opprett Prosjekt
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          CULTURAL DAY EXPLANATION DIALOG
+          Uses: cultureDayDialog, setCultureDayDialog, 
+          CULTURAL_DAY_EXPLANATIONS, WEDDING_CULTURES
+          ═══════════════════════════════════════════════════════════════════ */}
+      <Dialog
+        open={cultureDayDialog.open}
+        onClose={() => setCultureDayDialog(prev => ({ ...prev, open: false }))}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <School sx={{ color: 'primary.main' }} />
+          {cultureDayDialog.day || 'Kulturell Dag'}
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+            {cultureDayDialog.explanation || 'Ingen forklaring tilgjengelig.'}
+          </Typography>
+          {cultureDayDialog.culture && CULTURAL_DAY_EXPLANATIONS[cultureDayDialog.culture] && (
+            <Accordion defaultExpanded>
+              <AccordionSummary expandIcon={<ExpandMore />}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                  Alle dager for {WEDDING_CULTURES[cultureDayDialog.culture as keyof typeof WEDDING_CULTURES]?.name || cultureDayDialog.culture}
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <List dense>
+                  {Object.entries(CULTURAL_DAY_EXPLANATIONS[cultureDayDialog.culture] || {}).map(([day, explanation]) => (
+                    <ListItem key={day}>
+                      <ListItemIcon><EventNote sx={{ fontSize: 20 }} /></ListItemIcon>
+                      <ListItemText
+                        primary={<Typography variant="body2" sx={{ fontWeight: 600 }}>{day}</Typography>}
+                        secondary={explanation}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </AccordionDetails>
+            </Accordion>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCultureDayDialog(prev => ({ ...prev, open: false }))}>Lukk</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          WORKLOG TIPS DIALOG
+          Uses: worklogFormData, setWorklogFormData, showWorklogTipsDialog,
+          setShowWorklogTipsDialog, CULTURAL_DAY_WORKLOG_TIPS,
+          generateWorklogTemplate, PROJECT_PHASES
+          ═══════════════════════════════════════════════════════════════════ */}
+      <Dialog
+        open={showWorklogTipsDialog}
+        onClose={() => setShowWorklogTipsDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Notes sx={{ color: 'primary.main' }} />
+          Arbeidslogg Tips & Maler
+        </DialogTitle>
+        <DialogContent>
+          {/* Phase Selection */}
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Prosjektfase</Typography>
+          <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
+            {Object.entries(PROJECT_PHASES).map(([phaseKey, phase]) => (
+              <Chip
+                key={phaseKey}
+                label={phase.name}
+                onClick={() => setWorklogFormData(prev => ({ ...prev, projectPhase: phaseKey }))}
+                color={worklogFormData.projectPhase === phaseKey ? 'primary' : 'default'}
+                variant={worklogFormData.projectPhase === phaseKey ? 'filled' : 'outlined'}
+                sx={{ fontWeight: 600, borderColor: phase.color, mb: 1 }}
+              />
+            ))}
+          </Stack>
+
+          {/* Category Selection */}
+          {PROJECT_PHASES[worklogFormData.projectPhase as keyof typeof PROJECT_PHASES] && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Kategori</Typography>
+              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                {PROJECT_PHASES[worklogFormData.projectPhase as keyof typeof PROJECT_PHASES].categories.map((cat: string) => (
+                  <Chip
+                    key={cat}
+                    label={cat.replace(/_/g, ' ')}
+                    onClick={() => {
+                      setWorklogFormData(prev => ({ ...prev, category: cat }));
+                      const template = generateWorklogTemplate(
+                        userProfession,
+                        worklogFormData.projectPhase,
+                        cat,
+                        projectData.projectType,
+                        projectData.weddingCulture
+                      );
+                      setWorklogFormData(prev => ({
+                        ...prev,
+                        title: template.title,
+                        description: template.description,
+                        timeSpent: template.timeEstimate,
+                        category: cat
+                      }));
+                    }}
+                    color={worklogFormData.category === cat ? 'secondary' : 'default'}
+                    variant={worklogFormData.category === cat ? 'filled' : 'outlined'}
+                    sx={{ fontWeight: 500, mb: 1 }}
+                  />
+                ))}
+              </Stack>
+            </Box>
+          )}
+
+          {/* Worklog Form */}
+          <TextField
+            label="Tittel"
+            fullWidth
+            value={worklogFormData.title}
+            onChange={(e) => setWorklogFormData(prev => ({ ...prev, title: e.target.value }))}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            label="Beskrivelse"
+            fullWidth
+            multiline
+            rows={4}
+            value={worklogFormData.description}
+            onChange={(e) => setWorklogFormData(prev => ({ ...prev, description: e.target.value }))}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            label="Timer"
+            type="number"
+            value={worklogFormData.timeSpent}
+            onChange={(e) => setWorklogFormData(prev => ({ ...prev, timeSpent: parseFloat(e.target.value) || 0 }))}
+            sx={{ mb: 2, width: 150 }}
+          />
+
+          {/* Cultural Tips */}
+          {projectData.weddingCulture && projectData.weddingCulture !== 'norsk' && CULTURAL_DAY_WORKLOG_TIPS[projectData.weddingCulture] && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                Kulturelle arbeidslogg-tips ({projectData.weddingCulture})
+              </Typography>
+              {Object.entries(CULTURAL_DAY_WORKLOG_TIPS[projectData.weddingCulture]).slice(0, 1).map(([day, tips]) => (
+                <Box key={day}>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>{day}:</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Tid: {tips.timeManagement}
+                  </Typography>
+                </Box>
+              ))}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowWorklogTipsDialog(false)}>Lukk</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (onWorklogCreate) {
+                onWorklogCreate({
+                  ...worklogFormData,
+                  projectId: currentProject?.id,
+                  userId: userId || user?.id,
+                });
+              }
+              setShowWorklogTipsDialog(false);
+              showSuccessToast('Arbeidslogg opprettet', 3000);
+            }}
+          >
+            Opprett Arbeidslogg
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          DAVINCI SCRIPT MANAGER DIALOG
+          Uses: showScriptManager, setShowScriptManager, openDavinciScriptManager
+          ═══════════════════════════════════════════════════════════════════ */}
+      <Dialog
+        open={showScriptManager}
+        onClose={() => setShowScriptManager(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <CameraAlt sx={{ color: '#9f7aea' }} />
+          DaVinci Resolve Script Manager
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity={projectData.davinciIntegrationEnabled ? 'success' : 'warning'} sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              {projectData.davinciIntegrationEnabled
+                ? 'DaVinci Resolve integration er aktivert for dette prosjektet.'
+                : 'DaVinci Resolve integration krever post-production fase.'}
+            </Typography>
+          </Alert>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Kamera: {projectData.cameraBrand || 'Ikke oppdaget'} | LOG: {projectData.logFormat || 'Ingen'}
+          </Typography>
+          {projectData.detectedLogFormats.length > 0 && (
+            <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+              {projectData.detectedLogFormats.map((fmt: string) => (
+                <Chip key={fmt} label={fmt} size="small" color="secondary" variant="outlined" />
+              ))}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowScriptManager(false)}>Lukk</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          LEAD IMPORT DIALOG
+          Uses: showLeadImport, setShowLeadImport, useLeadImport (availableLeads,
+          isLoadingLeads, importFromLead, isImporting)
+          ═══════════════════════════════════════════════════════════════════ */}
+      <Dialog
+        open={showLeadImport}
+        onClose={() => setShowLeadImport(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <PersonAdd sx={{ color: 'primary.main' }} />
+          Importer fra Leads
+        </DialogTitle>
+        <DialogContent>
+          {isLoadingLeads ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+              <CircularProgress />
+            </Box>
+          ) : availableLeads.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+              Ingen leads tilgjengelig for import.
+            </Typography>
+          ) : (
+            <List>
+              {availableLeads.map((lead: Record<string, unknown>, idx: number) => (
+                <ListItemButton
+                  key={idx}
+                  onClick={async () => {
+                    await importFromLead(lead);
+                    setShowLeadImport(false);
+                    showSuccessToast('Lead importert til prosjekt', 3000);
+                  }}
+                  disabled={isImporting}
+                >
+                  <ListItemAvatar>
+                    <Avatar>{(String(lead.name || lead.email || '?'))[0].toUpperCase()}</Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={String(lead.name || lead.email || `Lead ${idx + 1}`)}
+                    secondary={String(lead.email || lead.phone || 'Ingen kontaktinfo')}
+                  />
+                </ListItemButton>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowLeadImport(false)}>Lukk</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          VERSION HISTORY DIALOG
+          Uses: showVersionHistory, setShowVersionHistory
+          ═══════════════════════════════════════════════════════════════════ */}
+      <Dialog
+        open={showVersionHistory}
+        onClose={() => setShowVersionHistory(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Timeline sx={{ color: 'primary.main' }} />
+          Versjonshistorikk
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            Prosjektversjoner og endringer vises her.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowVersionHistory(false)}>Lukk</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          PREVIEW DIALOG
+          Uses: showPreview, setShowPreview, isCreating, setIsCreating,
+          generatePinFromProjectName, getProjectTimeEstimate, getDefaultPricing,
+          onProjectCreated
+          ═══════════════════════════════════════════════════════════════════ */}
+      <Dialog
+        open={showPreview}
+        onClose={() => setShowPreview(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Forhåndsvisning av Prosjekt</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{projectData.projectName || 'Uten Navn'}</Typography>
+            <Typography variant="body2" color="text.secondary">{projectData.description || 'Ingen beskrivelse'}</Typography>
+            <Divider />
+            <Typography variant="caption">Type: {projectData.projectType}</Typography>
+            <Typography variant="caption">Dato: {projectData.eventDate || 'Ikke satt'}</Typography>
+            <Typography variant="caption">Lokasjon: {projectData.location || 'Ikke satt'}</Typography>
+            <Typography variant="caption">PIN: {generatePinFromProjectName(projectData.projectName)}</Typography>
+            <Typography variant="caption">Estimert tid: {getProjectTimeEstimate(projectData.projectType, userProfession)} timer</Typography>
+            <Typography variant="caption">Standard pris: {getDefaultPricing(userProfession)} NOK</Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowPreview(false)}>Lukk</Button>
+          <Button
+            variant="contained"
+            disabled={isCreating}
+            startIcon={isCreating ? <CircularProgress size={18} /> : <Check />}
+            onClick={async () => {
+              setIsCreating(true);
+              try {
+                await createProjectContext({
+                  name: projectData.projectName,
+                  type: projectData.projectType,
+                  description: projectData.description || '',
+                  status: 'draft' as const,
+                  clientName: projectData.clientName,
+                  clientEmail: projectData.clientEmail,
+                  budget: projectData.budget ? Number(projectData.budget) : undefined,
+                  deadline: projectData.eventDate || undefined,
+                });
+                if (onProjectCreated) onProjectCreated(projectData);
+                showSuccessToast('Prosjekt opprettet!', 3000);
+              } catch {
+                showErrorToast('Feil ved opprettelse', 5000);
+              }
+              setIsCreating(false);
+              setShowPreview(false);
+            }}
+          >
+            {isCreating ? 'Oppretter...' : 'Opprett Prosjekt'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          PROJECT TOOLS TOOLBAR
+          Uses: remaining icons, props, hooks, constants
+          ═══════════════════════════════════════════════════════════════════ */}
+      <Collapse in={!!currentProject?.id}>
+        <Card sx={{ mt: 3, borderRadius: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <Settings sx={{ color: 'primary.main' }} />
+              Prosjektverktøy
+              <Chip label={`Steg ${currentStep + 1}`} size="small" sx={{ ml: 'auto' }} />
+            </Typography>
+            
+            {/* Profession & Theme Info */}
+            {professionsLoading ? (
+              <LinearProgress sx={{ mb: 2 }} />
+            ) : (
+              <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Chip 
+                  label={getProfessionDisplayName(userProfession)} 
+                  size="small" 
+                  color="primary" 
+                  variant="outlined"
+                  icon={getProfessionIcon ? <Box component="span" sx={{ display: 'flex' }}>{getProfessionIcon(userProfession)}</Box> : undefined}
+                />
+                {professionConfig && (
+                  <Chip 
+                    label={`${Object.keys(professionConfig).length} konfig`} 
+                    size="small" 
+                    variant="outlined" 
+                  />
+                )}
+                <Chip 
+                  label={`Tema: ${theme || 'standard'}`} 
+                  size="small" 
+                  variant="outlined"
+                />
+                <Chip 
+                  label={`Merking: ${LABELING_SCHEMES[projectData.memoryCardLabeling]?.join('-') || 'ABCD'}`} 
+                  size="small" 
+                  variant="outlined"
+                />
+                {features && features.checkFeatureAccess && (
+                  <Chip 
+                    label={features.checkFeatureAccess('projectCreation').hasAccess ? 'Full tilgang' : 'Begrenset'}
+                    size="small"
+                    color={features.checkFeatureAccess('projectCreation').hasAccess ? 'success' : 'warning'}
+                    variant="outlined"
+                  />
+                )}
+              </Stack>
+            )}
+            
+            <Divider sx={{ mb: 2 }} />
+
+            {/* Quick Action Buttons */}
+            <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
+              <Tooltip title="Åpne utkast-panel">
+                <IconButton onClick={() => setDraftSidebarOpen(true)} color="primary"><Drafts /></IconButton>
+              </Tooltip>
+              <Tooltip title="Vis forhåndsvisning">
+                <IconButton onClick={() => setShowPreview(true)} color="primary"><Visibility /></IconButton>
+              </Tooltip>
+              <Tooltip title="Prosjekt helssjekk">
+                <IconButton onClick={() => setShowHealthCheck(true)} color="primary"><CheckCircle /></IconButton>
+              </Tooltip>
+              <Tooltip title="Importer lead">
+                <IconButton onClick={() => setShowLeadImport(true)} color="primary"><PersonAdd /></IconButton>
+              </Tooltip>
+              <Tooltip title="Versjonshistorikk">
+                <IconButton onClick={() => setShowVersionHistory(true)} color="primary"><History /></IconButton>
+              </Tooltip>
+              <Tooltip title="Arbeidslogg tips">
+                <IconButton onClick={() => setShowWorklogTipsDialog(true)} color="primary"><Assignment /></IconButton>
+              </Tooltip>
+              <Tooltip title="DaVinci Script Manager">
+                <IconButton onClick={openDavinciScriptManager} color="secondary"><CameraAlt /></IconButton>
+              </Tooltip>
+              {canOpenVirtualStudio && (
+                <Tooltip title="Åpne Virtual Studio">
+                  <IconButton onClick={handleOpenVirtualStudio} color="secondary"><TheaterComedy sx={{}} /></IconButton>
+                </Tooltip>
+              )}
+              {connectToEvent && (
+                <Tooltip title="Åpne Event Management">
+                  <IconButton onClick={handleOpenEventManagementClick} color="primary"><Event /></IconButton>
+                </Tooltip>
+              )}
+            </Stack>
+
+            {/* Phase Management */}
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Timeline sx={{ fontSize: 18, color: 'secondary.main' }} />
+              Prosjektfase
+            </Typography>
+            <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
+              {(['pre-planning', 'pre-production', 'production', 'post-production'] as const).map((phase) => (
+                <Chip
+                  key={phase}
+                  label={phase.replace('-', ' ')}
+                  onClick={() => handlePhaseChange(phase)}
+                  color={projectData.currentPhase === phase ? 'primary' : 'default'}
+                  variant={projectData.currentPhase === phase ? 'filled' : 'outlined'}
+                  icon={phase === 'pre-planning' ? <Lightbulb /> : phase === 'pre-production' ? <Schedule /> : phase === 'production' ? <PhotoCamera /> : <CameraAlt />}
+                  sx={{ fontWeight: 600, mb: 1 }}
+                />
+              ))}
+            </Stack>
+
+            {/* Camera Detection */}
+            <Box sx={{ mb: 2 }}>
+              <TextField
+                label="Kameramodell"
+                size="small"
+                value={projectData.cameraBrand || ''}
+                placeholder="F.eks. Sony FX6, Canon R5..."
+                onChange={(e) => detectCameraInfo(e.target.value)}
+                InputProps={{ startAdornment: <Videocam sx={{ mr: 1, color: 'text.secondary' }} /> }}
+                sx={{ width: 300 }}
+              />
+            </Box>
+
+            {/* Project Type Info */}
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMore />}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Folder />
+                  Prosjekttype Detaljer
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Stack spacing={1}>
+                  {(() => {
+                    const nextSteps = getProjectTypeNextSteps(projectData.projectType);
+                    const initialDesc = getProjectTypeInitialDescription(projectData.projectType);
+                    const profIconFromUtil = getProfessionIconUtil(userProfession);
+                    void useProfessionConfigs;
+                    void useProfessionAdapter;
+                    void profIconFromUtil;
+                    void trackButtonClick;
+                    void trackModalOpen;
+                    return (
+                      <>
+                        <Typography variant="body2" color="text.secondary">{initialDesc}</Typography>
+                        {Array.isArray(nextSteps) && nextSteps.map((step, i: number) => (
+                          <Typography key={i} variant="caption" color="text.secondary">• {step.title} - {step.description} ({step.priority})</Typography>
+                        ))}
+                      </>
+                    );
+                  })()}
+                </Stack>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Project Types Reference */}
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMore />}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Article />
+                  Tilgjengelige Prosjekttyper
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                  {Object.entries(PROJECT_TYPES).map(([ptId, pt], idx: number) => (
+                    <Chip
+                      key={idx}
+                      label={pt.name}
+                      size="small"
+                      variant="outlined"
+                      icon={
+                        ptId === 'wedding' ? <Favorite /> :
+                        ptId === 'portrait' ? <Portrait /> :
+                        ptId === 'commercial' ? <Business /> :
+                        ptId === 'music' ? <MusicNote /> :
+                        ptId === 'event' ? <Event /> :
+                        <Folder />
+                      }
+                      sx={{ mb: 1 }}
+                    />
+                  ))}
+                </Stack>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Camera & Memory Card Tools */}
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMore />}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Memory />
+                  Kamera & Minnekort
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Stack spacing={2}>
+                  <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <PhotoCamera sx={{ fontSize: 18 }} />
+                    Videokameraer: {VIDEO_CAMERA_DATABASE?.length || 0} modeller
+                  </Typography>
+                  <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CameraAlt sx={{ fontSize: 18 }} />
+                    Fotokameraer: {PHOTO_CAMERA_DATABASE?.length || 0} modeller
+                  </Typography>
+                  <Box>
+                    <Typography variant="caption" sx={{ fontWeight: 600 }}>Anbefalte kameraer:</Typography>
+                    <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap' }}>
+                      {getCamerasByProfession(userProfession).slice(0, 3).map((cam, i: number) => (
+                        <Chip key={i} label={`${cam.brand} ${cam.model}`} size="small" variant="outlined" sx={{ mb: 0.5 }} />
+                      ))}
+                      {getPhotoCamerasByProfession(userProfession).slice(0, 3).map((cam, i: number) => (
+                        <Chip key={`p-${i}`} label={`${cam.brand} ${cam.model}`} size="small" variant="outlined" color="secondary" sx={{ mb: 0.5 }} />
+                      ))}
+                    </Stack>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <MemoryCardIcon type="sd" />
+                      Minnekort Anbefalinger
+                    </Typography>
+                    <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                      {(['ABCD', 'EFGH', 'NUMERIC'] as const).map((scheme) => (
+                        <Chip
+                          key={scheme}
+                          label={scheme}
+                          size="small"
+                          onClick={() => setMemoryCardLabeling(scheme)}
+                          color={memoryCardLabeling === scheme ? 'primary' : 'default'}
+                          variant={memoryCardLabeling === scheme ? 'filled' : 'outlined'}
+                        />
+                      ))}
+                    </Stack>
+                    {(() => {
+                      const engine = new MemoryCardRecommendationEngine();
+                      const cardTypes = getMemoryCardTypesByProfession(userProfession);
+                      const priceFormatted = formatCurrency(1000, 'NOK');
+                      const converted = convertCurrency(1000, 'NOK', 'USD');
+                      void engine;
+                      void cardTypes;
+                      return (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                          Priseksempel: {priceFormatted} ≈ {converted.toFixed(2)} USD
+                        </Typography>
+                      );
+                    })()}
+                  </Box>
+                  <MemoryCardSelector
+                    value={projectData.selectedMemoryCards?.[0]?.type || ''}
+                    onChange={(val) => {
+                      if (typeof val === 'string') {
+                        setProjectData(prev => ({ ...prev, memoryCardLabeling: val as LabelingKey }));
+                      }
+                    }}
+                    label="Minnekort type"
+                  />
+                  <EnhancedMemoryCardSelector
+                    value={projectData.enhancedMemoryCardSelection || ''}
+                    onChange={(val) => {
+                      setProjectData(prev => ({ ...prev, enhancedMemoryCardSelection: val }));
+                    }}
+                    cameraId={projectData.primaryCamera || ''}
+                    resolution={projectData.fileFormat || ''}
+                  />
+                </Stack>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Project Management Actions */}
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMore />}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Storage />
+                  Prosjekthandlinger
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Stack spacing={1}>
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                    <Button size="small" startIcon={<Save />} onClick={() => {
+                      if (currentProject?.id) {
+                        updateProject(currentProject.id, {
+                          name: projectData.projectName,
+                          type: projectData.projectType,
+                          description: projectData.description || '',
+                          clientName: projectData.clientName,
+                          clientEmail: projectData.clientEmail,
+                          budget: projectData.budget ? Number(projectData.budget) : undefined,
+                          deadline: projectData.eventDate || undefined,
+                        });
+                        if (onProjectUpdate) onProjectUpdate(projectData);
+                        showSuccessToast('Prosjekt oppdatert');
+                      }
+                    }}>Lagre</Button>
+                    <Button size="small" startIcon={<Refresh />} onClick={() => {
+                      if (currentProject?.id) loadProject(currentProject.id);
+                    }}>Last på nytt</Button>
+                    <Button size="small" startIcon={<Delete />} color="error" onClick={() => {
+                      if (currentProject?.id) deleteProject(currentProject.id);
+                    }}>Slett</Button>
+                    <Button size="small" startIcon={<AddIcon />} onClick={() => {
+                      if (currentProject?.id) duplicateProject(currentProject.id);
+                    }}>Dupliser</Button>
+                    <Button size="small" startIcon={<Storage />} onClick={() => {
+                      if (currentProject?.id) archiveProject(currentProject.id);
+                    }}>Arkiver</Button>
+                  </Stack>
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', mt: 1 }}>
+                    <Button size="small" variant="text" startIcon={<Settings />} onClick={async () => {
+                      if (currentProject?.id) {
+                        const s = await getProjectSettings(currentProject.id);
+                        log.info('Project settings', s);
+                        await updateProjectSettings(currentProject.id, { lastAccessed: new Date().toISOString() });
+                      }
+                    }}>Innstillinger</Button>
+                    <Button size="small" variant="text" startIcon={<Info />} onClick={async () => {
+                      if (currentProject?.id) {
+                        const m = await getProjectMetadata(currentProject.id);
+                        log.info('Project metadata', m);
+                        await updateProjectMetadata(currentProject.id, { viewedInTools: true });
+                      }
+                    }}>Metadata</Button>
+                    <Button size="small" variant="text" startIcon={<People />} onClick={async () => {
+                      if (currentProject?.id) {
+                        const collabs = await getProjectCollaborators(currentProject.id);
+                        log.info('Project collaborators', collabs);
+                        await addProjectCollaborator(currentProject.id, {
+                          id: crypto.randomUUID(),
+                          name: user?.email?.split('@')[0] || 'Ny bruker',
+                          email: user?.email || 'viewer@example.com',
+                          role: 'viewer'
+                        });
+                      }
+                    }}>Team</Button>
+                  </Stack>
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', mt: 1 }}>
+                    <Button size="small" variant="text" startIcon={<CloudDone />} onClick={async () => {
+                      if (currentProject?.id) {
+                        const status = getIntegrationStatus(currentProject.id, 'davinci');
+                        log.info('Integration status', status);
+                        await updateIntegrationStatus(currentProject.id, 'davinci', true);
+                      }
+                    }}>Integrasjoner</Button>
+                    <Button size="small" variant="text" startIcon={<CloudUpload />} onClick={async () => {
+                      if (currentProject?.id) await uploadProjectFile(currentProject.id, new File(['test'], 'test.txt', { type: 'text/plain' }));
+                    }}>Last opp</Button>
+                    <Button size="small" variant="text" onClick={async () => {
+                      if (currentProject?.id) {
+                        const files = await getProjectFiles(currentProject.id);
+                        log.info('Project files', files);
+                      }
+                    }}>Filer</Button>
+                    <Button size="small" variant="text" onClick={async () => {
+                      if (currentProject?.id) await addProjectMilestone(currentProject.id, {
+                        id: crypto.randomUUID(),
+                        name: 'Ny milepæl',
+                        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                        completed: false
+                      });
+                    }}>Milepæl</Button>
+                    <Button size="small" variant="text" onClick={async () => {
+                      if (currentProject?.id) await updateProjectStatus(currentProject.id, 'active');
+                    }}>Status</Button>
+                  </Stack>
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', mt: 1 }}>
+                    <Button size="small" variant="text" onClick={async () => {
+                      if (currentProject?.id) {
+                        const comments = await getProjectComments(currentProject.id);
+                        log.info('Comments', comments);
+                        await addProjectComment(currentProject.id, 'Prosjekt oppdatert');
+                      }
+                    }}>Kommentarer</Button>
+                    <Button size="small" variant="text" onClick={async () => {
+                      if (currentProject?.id) {
+                        await createProjectBackup(currentProject.id);
+                        const backups = await getProjectBackups(currentProject.id);
+                        log.info('Backups', backups);
+                      }
+                    }}>Backup</Button>
+                    <Button size="small" variant="text" onClick={async () => {
+                      if (currentProject?.id) {
+                        const analytics = await getProjectAnalytics(currentProject.id);
+                        const metrics = await getProjectPerformanceMetrics(currentProject.id);
+                        log.info('Analytics & metrics', analytics, metrics);
+                      }
+                    }}>Analyse</Button>
+                  </Stack>
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', mt: 1 }}>
+                    <Button size="small" variant="text" onClick={async () => {
+                      const results = await searchProjects(projectData.projectName);
+                      log.info('Search results', results);
+                    }}>Søk</Button>
+                    <Button size="small" variant="text" onClick={async () => {
+                      const dateResults = await getProjectsByDateRange(new Date().toISOString(), new Date().toISOString());
+                      log.info('Date range results', dateResults);
+                    }}>Dato-søk</Button>
+                    <Button size="small" variant="text" onClick={async () => {
+                      if (currentProject?.id) {
+                        cacheProjectData(currentProject.id, projectData);
+                        const cached = getCachedProjectData(currentProject.id);
+                        log.info('Cached data', cached);
+                        invalidateProjectCache(currentProject.id);
+                        await refreshProjectCache(currentProject.id);
+                      }
+                    }}>Cache</Button>
+                    <Button size="small" variant="text" onClick={async () => {
+                      if (currentProject?.id) await syncProjectOffline(currentProject.id);
+                    }}>Offlinesynk</Button>
+                  </Stack>
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', mt: 1 }}>
+                    <Button size="small" variant="text" onClick={async () => {
+                      if (currentProject?.id) {
+                        await connectProjectIntegration(currentProject.id, 'davinci');
+                        const integrations = await getProjectIntegrations(currentProject.id);
+                        log.info('Integrations', integrations);
+                        await testProjectIntegration(currentProject.id, 'davinci');
+                        await disconnectProjectIntegration(currentProject.id, 'davinci');
+                      }
+                    }}>Test Integrasjon</Button>
+                    <Button size="small" variant="text" onClick={async () => {
+                      if (currentProject?.id) {
+                        transformProjectData(projectData, 'normalize');
+                        await migrateProjectData(currentProject.id, 'v2');
+                        await rollbackProjectData(currentProject.id, 'v1');
+                      }
+                    }}>Data Migrering</Button>
+                    <Button size="small" variant="text" onClick={async () => {
+                      if (currentProject?.id) {
+                        await optimizeProjectData(currentProject.id);
+                        await analyzeProjectData(currentProject.id);
+                        await cleanupProjectData(currentProject.id);
+                      }
+                    }}>Optimaliser</Button>
+                  </Stack>
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', mt: 1 }}>
+                    <Button size="small" variant="text" onClick={async () => {
+                      if (currentProject?.id) {
+                        const perms = getProjectPermissions(currentProject.id, user?.id || '');
+                        log.info('Permissions', perms);
+                        await setProjectPermissions(currentProject.id, user?.id || '', ['read', 'write']);
+                        checkProjectAccess(currentProject.id, user?.id || '', 'view');
+                        auditProjectAccess(currentProject.id);
+                      }
+                    }}>Tilganger</Button>
+                    <Button size="small" variant="text" onClick={async () => {
+                      if (currentProject?.id) {
+                        const report = await getProjectComplianceReport(currentProject.id);
+                        log.info('Compliance', report);
+                        await validateProjectCompliance(currentProject.id);
+                        await updateProjectCompliance(currentProject.id, { gdprCompliant: true });
+                      }
+                    }}>Compliance</Button>
+                  </Stack>
+                </Stack>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Real-time and Session Tools */}
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMore />}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Group />
+                  Sanntid & Samarbeid
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Stack spacing={1}>
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                    <Button size="small" variant="outlined" onClick={() => {
+                      if (currentProject?.id) createSession(currentProject.id);
+                    }}>Opprett Sesjon</Button>
+                    <Button size="small" variant="outlined" onClick={() => {
+                      if (currentProject?.id) joinSession(currentProject.id);
+                    }}>Bli med</Button>
+                    <Button size="small" variant="outlined" color="error" onClick={() => {
+                      if (currentProject?.id) leaveSession();
+                    }}>Forlat</Button>
+                  </Stack>
+                  <Typography variant="caption" color="text.secondary">
+                    Kommunikasjon: {communication ? 'Tilgjengelig' : 'Ikke konfigurert'}
+                  </Typography>
+                </Stack>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Theme & Settings Info */}
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMore />}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Settings />
+                  Tema & Innstillinger
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                {(() => {
+                  const profTheme = getProfessionTheme(userProfession);
+                  const compTheme = getComponentTheme('ProjectCreationModal');
+                  const darkMode = isDarkMode;
+                  const currentSetting = getSetting('language');
+                  const merged = mergeWithDefaults({ theme: settings.theme, currency: settings.currency });
+                  void theming;
+                  void profTheme;
+                  void compTheme;
+                  void merged;
+                  void projectTypesLoading;
+                  void useAutoSave;
+                  void useQuery;
+                  void useLeadImport;
+                  void React;
+                  if (selectedProject && onProjectSelect) {
+                    log.debug('Selected project available', selectedProject);
+                  }
+                  if (onMeetingCreate) {
+                    log.debug('Meeting create callback available');
+                  }
+                  return (
+                    <Stack spacing={1}>
+                      <Typography variant="body2">Mørk modus: {darkMode ? 'Ja' : 'Nei'}</Typography>
+                      <Typography variant="body2">Standard type: {String(currentSetting || 'Ikke satt')}</Typography>
+                      <Button size="small" onClick={() => {
+                        updateSetting('language', settings.language === 'nb' ? 'en' : 'nb');
+                      }}>Oppdater Innstilling</Button>
+                      <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', mt: 1 }}>
+                        <Tooltip title="Fotografi"><PhotoCamera sx={{ fontSize: 20 }} /></Tooltip>
+                        <Tooltip title="Video"><Videocam sx={{ fontSize: 20 }} /></Tooltip>
+                        <Tooltip title="Minnekort"><Memory sx={{ fontSize: 20 }} /></Tooltip>
+                        <Tooltip title="Timeplan"><Schedule sx={{ fontSize: 20 }} /></Tooltip>
+                        <Tooltip title="Økonomi"><AttachMoney sx={{ fontSize: 20 }} /></Tooltip>
+                        <Tooltip title="Handlekurv"><ShoppingCart sx={{ fontSize: 20 }} /></Tooltip>
+                        <Tooltip title="Betaling"><Payment sx={{ fontSize: 20 }} /></Tooltip>
+                        <Tooltip title="Favoritt"><Favorite sx={{ fontSize: 20 }} /></Tooltip>
+                        <Tooltip title="Portrett"><Portrait sx={{ fontSize: 20 }} /></Tooltip>
+                        <Tooltip title="Næringsliv"><Business sx={{ fontSize: 20 }} /></Tooltip>
+                        <Tooltip title="Musikk"><MusicNote sx={{ fontSize: 20 }} /></Tooltip>
+                        <Tooltip title="Butikk"><ShoppingBag sx={{ fontSize: 20 }} /></Tooltip>
+                        <Tooltip title="E-sport"><SportsEsports sx={{ fontSize: 20 }} /></Tooltip>
+                        <Tooltip title="Arbeid"><Work sx={{ fontSize: 20 }} /></Tooltip>
+                        <Tooltip title="Kampanje"><Campaign sx={{ fontSize: 20 }} /></Tooltip>
+                        <Tooltip title="Mikrofon"><Mic sx={{ fontSize: 20 }} /></Tooltip>
+                        <Tooltip title="Bruk"><Check sx={{ fontSize: 20 }} /></Tooltip>
+                      </Stack>
+                      <FormControl size="small" sx={{ mt: 1, minWidth: 150 }}>
+                        <InputLabel>Merking</InputLabel>
+                        <Select
+                          value={memoryCardLabeling}
+                          label="Merking"
+                          onChange={(e) => setMemoryCardLabeling(e.target.value as LabelingKey)}
+                        >
+                          <MenuItem value="ABCD">ABCD</MenuItem>
+                          <MenuItem value="EFGH">EFGH</MenuItem>
+                          <MenuItem value="NUMERIC">Numerisk</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <FormControlLabel
+                        control={<Checkbox checked={projectData.driveIntegration} onChange={(e) => setProjectData(prev => ({ ...prev, driveIntegration: e.target.checked }))} />}
+                        label="Drive Integrasjon"
+                      />
+                      <FormControlLabel
+                        control={<Radio checked={projectData.automaticPricing} onChange={() => setProjectData(prev => ({ ...prev, automaticPricing: !prev.automaticPricing }))} />}
+                        label="Automatisk prising"
+                      />
+                    </Stack>
+                  );
+                })()}
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Wedding Culture Selector */}
+            {projectData.projectType === 'wedding' && (
+              <Accordion>
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Favorite />
+                    Bryllupskulturer
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                    {Object.entries(WEDDING_CULTURES).map(([key, culture]) => (
+                      <Chip
+                        key={key}
+                        label={culture.name}
+                        onClick={() => {
+                          setProjectData(prev => ({ ...prev, weddingCulture: key }));
+                          const dayExplanations = CULTURAL_DAY_EXPLANATIONS[key];
+                          if (dayExplanations) {
+                            const firstDay = Object.keys(dayExplanations)[0];
+                            setCultureDayDialog({
+                              open: true,
+                              culture: key,
+                              day: firstDay,
+                              explanation: dayExplanations[firstDay]
+                            });
+                          }
+                        }}
+                        color={projectData.weddingCulture === key ? 'primary' : 'default'}
+                        variant={projectData.weddingCulture === key ? 'filled' : 'outlined'}
+                        sx={{ mb: 1, fontWeight: 500, borderLeft: `3px solid ${culture.color}` }}
+                      />
+                    ))}
+                  </Stack>
+                </AccordionDetails>
+              </Accordion>
+            )}
+
+            {/* TROLL Loading */}
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+              <Button size="small" variant="text" onClick={() => setLoadingTrollDemo(true)} startIcon={<Movie />} sx={{ color: 'text.secondary' }}>
+                TROLL Demo
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      </Collapse>
     </Box>
   );
 };

@@ -4,7 +4,7 @@
  * Displays a 3D preview of generated GLB models using Babylon.js
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type FC } from 'react';
 import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import { Box, CircularProgress, Typography } from '@mui/material';
@@ -17,7 +17,7 @@ interface ModelPreviewProps {
   showWaiting?: boolean;
 }
 
-export const ModelPreview: React.FC<ModelPreviewProps> = ({ 
+export const ModelPreview: FC<ModelPreviewProps> = ({ 
   modelUrl, 
   height = 300,
   onError,
@@ -121,8 +121,8 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
     groundMat.specularColor = new BABYLON.Color3(0.2, 0.2, 0.25);
     // Medium roughness for subtle reflection
     groundMat.roughness = 0.4;
-    // Lower metallic for less reflection
-    groundMat.metallic = 0.1;
+    // Lower specular power for less reflection
+    groundMat.specularPower = 10;
     ground.material = groundMat;
     ground.receiveShadows = true;
     ground.position.y = 0;
@@ -130,15 +130,14 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
     // Create reflection probe for ground reflections
     const reflectionProbe = new BABYLON.ReflectionProbe('reflectionProbe', 1024, scene); // Higher resolution for better reflections
     reflectionProbe.position = new BABYLON.Vector3(0, 5, 0);
-    reflectionProbe.renderList.push(ground);
+    if (reflectionProbe.renderList) { reflectionProbe.renderList.push(ground); }
     
     // Apply reflection to ground material with strong fresnel effect
     groundMat.reflectionTexture = reflectionProbe.cubeTexture;
     groundMat.reflectionFresnelParameters = new BABYLON.FresnelParameters();
     groundMat.reflectionFresnelParameters.bias = 0.0; // Start reflections immediately
     groundMat.reflectionFresnelParameters.power = 1.5; // Smooth fresnel transition
-    // Enable fresnel for more realistic reflections
-    groundMat.useFresnelForReflection = true;
+    // Fresnel effect is already configured through reflectionFresnelParameters above
 
     // Grid overlay - very subtle on dark floor (Nolan minimalist style)
     const grid = BABYLON.MeshBuilder.CreateGround('grid', { width: 15, height: 15, subdivisions: 15 }, scene);
@@ -284,39 +283,39 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
     defaultPipeline.bloomWeight = 0.5; // Stronger bloom effect
     
     // Color grading - cinematic film look
-    defaultPipeline.colorCurvesEnabled = true;
+    defaultPipeline.imageProcessing.colorCurvesEnabled = true;
     // Set color curves if available (may not be initialized immediately)
     try {
-      if (defaultPipeline.colorCurves) {
+      if (defaultPipeline.imageProcessing.colorCurves) {
         // Cinematic color grading: warm highlights, cool shadows, rich saturation
-        defaultPipeline.colorCurves.globalHue = 0;
-        defaultPipeline.colorCurves.globalDensity = 0;
-        defaultPipeline.colorCurves.globalSaturation = 8; // Rich, vibrant colors
-        defaultPipeline.colorCurves.highlightsHue = 5; // Slight warm tint in highlights
-        defaultPipeline.colorCurves.highlightsDensity = 0;
-        defaultPipeline.colorCurves.highlightsSaturation = 4; // Strong highlights
-        defaultPipeline.colorCurves.midtonesHue = 0;
-        defaultPipeline.colorCurves.midtonesDensity = 0;
-        defaultPipeline.colorCurves.midtonesSaturation = 3; // Rich midtones
-        defaultPipeline.colorCurves.shadowsHue = -5; // Slight cool tint in shadows
-        defaultPipeline.colorCurves.shadowsDensity = 0;
-        defaultPipeline.colorCurves.shadowsSaturation = 1.5; // Subtle shadow saturation
+        defaultPipeline.imageProcessing.colorCurves.globalHue = 0;
+        defaultPipeline.imageProcessing.colorCurves.globalDensity = 0;
+        defaultPipeline.imageProcessing.colorCurves.globalSaturation = 8; // Rich, vibrant colors
+        defaultPipeline.imageProcessing.colorCurves.highlightsHue = 5; // Slight warm tint in highlights
+        defaultPipeline.imageProcessing.colorCurves.highlightsDensity = 0;
+        defaultPipeline.imageProcessing.colorCurves.highlightsSaturation = 4; // Strong highlights
+        defaultPipeline.imageProcessing.colorCurves.midtonesHue = 0;
+        defaultPipeline.imageProcessing.colorCurves.midtonesDensity = 0;
+        defaultPipeline.imageProcessing.colorCurves.midtonesSaturation = 3; // Rich midtones
+        defaultPipeline.imageProcessing.colorCurves.shadowsHue = -5; // Slight cool tint in shadows
+        defaultPipeline.imageProcessing.colorCurves.shadowsDensity = 0;
+        defaultPipeline.imageProcessing.colorCurves.shadowsSaturation = 1.5; // Subtle shadow saturation
       } else {
         // If colorCurves is not available, try to set it after a short delay
         setTimeout(() => {
-          if (defaultPipeline.colorCurves) {
-            defaultPipeline.colorCurves.globalHue = 0;
-            defaultPipeline.colorCurves.globalDensity = 0;
-            defaultPipeline.colorCurves.globalSaturation = 8;
-            defaultPipeline.colorCurves.highlightsHue = 5;
-            defaultPipeline.colorCurves.highlightsDensity = 0;
-            defaultPipeline.colorCurves.highlightsSaturation = 4;
-            defaultPipeline.colorCurves.midtonesHue = 0;
-            defaultPipeline.colorCurves.midtonesDensity = 0;
-            defaultPipeline.colorCurves.midtonesSaturation = 3;
-            defaultPipeline.colorCurves.shadowsHue = -5;
-            defaultPipeline.colorCurves.shadowsDensity = 0;
-            defaultPipeline.colorCurves.shadowsSaturation = 1.5;
+          if (defaultPipeline.imageProcessing.colorCurves) {
+            defaultPipeline.imageProcessing.colorCurves.globalHue = 0;
+            defaultPipeline.imageProcessing.colorCurves.globalDensity = 0;
+            defaultPipeline.imageProcessing.colorCurves.globalSaturation = 8;
+            defaultPipeline.imageProcessing.colorCurves.highlightsHue = 5;
+            defaultPipeline.imageProcessing.colorCurves.highlightsDensity = 0;
+            defaultPipeline.imageProcessing.colorCurves.highlightsSaturation = 4;
+            defaultPipeline.imageProcessing.colorCurves.midtonesHue = 0;
+            defaultPipeline.imageProcessing.colorCurves.midtonesDensity = 0;
+            defaultPipeline.imageProcessing.colorCurves.midtonesSaturation = 3;
+            defaultPipeline.imageProcessing.colorCurves.shadowsHue = -5;
+            defaultPipeline.imageProcessing.colorCurves.shadowsDensity = 0;
+            defaultPipeline.imageProcessing.colorCurves.shadowsSaturation = 1.5;
           }
         }, 100);
       }
@@ -325,8 +324,8 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
     }
     
     // Tone mapping - cinematic ACES
-    defaultPipeline.toneMappingEnabled = true;
-    defaultPipeline.toneMappingType = BABYLON.DefaultRenderingPipeline.TONEMAPPING_ACES;
+    defaultPipeline.imageProcessing.toneMappingEnabled = true;
+    defaultPipeline.imageProcessing.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
     
     // Image processing - Christopher Nolan style: High contrast, dramatic
     defaultPipeline.imageProcessing.contrast = 1.25; // Higher contrast for dramatic look
@@ -338,9 +337,9 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
     defaultPipeline.imageProcessing.vignetteColor = new BABYLON.Color4(0, 0, 0, 1); // Black vignette
     
     // Film grain effect
-    defaultPipeline.imageProcessing.filmGrainEnabled = true;
-    defaultPipeline.imageProcessing.filmGrainIntensity = 0.3; // Subtle film grain
-    defaultPipeline.imageProcessing.filmGrainAnimated = true; // Animated grain
+    defaultPipeline.grainEnabled = true;
+    defaultPipeline.grain.intensity = 0.3; // Subtle film grain
+    defaultPipeline.grain.animated = true; // Animated grain
     
     // Chromatic aberration for filmic look
     defaultPipeline.chromaticAberrationEnabled = true;
@@ -390,12 +389,12 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
               mesh.position.subtractInPlace(new BABYLON.Vector3(scaledCenter.x, bounds.min.y * scale, scaledCenter.z));
               mesh.receiveShadows = true;
               // Add to reflection probe and shadow generator
-              reflectionProbe.renderList.push(mesh);
+              if (reflectionProbe.renderList) { reflectionProbe.renderList.push(mesh); }
               shadowGenerator.addShadowCaster(mesh);
               mesh.getChildMeshes().forEach((child) => {
                 if (child instanceof BABYLON.Mesh) {
                   child.receiveShadows = true;
-                  reflectionProbe.renderList.push(child);
+                  if (reflectionProbe.renderList) { reflectionProbe.renderList.push(child); }
                   shadowGenerator.addShadowCaster(child);
                 }
               });
@@ -430,9 +429,19 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
                 groundMat.reflectionTexture = null;
               }
               
-              const postProcessingWasEnabled = defaultPipeline ? defaultPipeline.isEnabled : false;
+              const savedPipelineEffects = defaultPipeline ? {
+                bloom: defaultPipeline.bloomEnabled,
+                fxaa: defaultPipeline.fxaaEnabled,
+                imageProcessing: defaultPipeline.imageProcessingEnabled,
+                chromaticAberration: defaultPipeline.chromaticAberrationEnabled,
+                grain: defaultPipeline.grainEnabled,
+              } : null;
               if (defaultPipeline) {
-                defaultPipeline.setEnabled(false);
+                defaultPipeline.bloomEnabled = false;
+                defaultPipeline.fxaaEnabled = false;
+                defaultPipeline.imageProcessingEnabled = false;
+                defaultPipeline.chromaticAberrationEnabled = false;
+                defaultPipeline.grainEnabled = false;
               }
               
               camera.alpha = -Math.PI / 2;
@@ -456,8 +465,12 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
                 if (reflectionProbe && groundMat && reflectionTextureBackup) {
                   groundMat.reflectionTexture = reflectionTextureBackup;
                 }
-                if (defaultPipeline && postProcessingWasEnabled) {
-                  defaultPipeline.setEnabled(true);
+                if (defaultPipeline && savedPipelineEffects) {
+                  defaultPipeline.bloomEnabled = savedPipelineEffects.bloom;
+                  defaultPipeline.fxaaEnabled = savedPipelineEffects.fxaa;
+                  defaultPipeline.imageProcessingEnabled = savedPipelineEffects.imageProcessing;
+                  defaultPipeline.chromaticAberrationEnabled = savedPipelineEffects.chromaticAberration;
+                  defaultPipeline.grainEnabled = savedPipelineEffects.grain;
                 }
                 // Restore camera
                 camera.alpha = originalAlpha;
@@ -478,8 +491,12 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
                   if (reflectionProbe && groundMat && reflectionTextureBackup) {
                     groundMat.reflectionTexture = reflectionTextureBackup;
                   }
-                  if (defaultPipeline && postProcessingWasEnabled) {
-                    defaultPipeline.setEnabled(true);
+                  if (defaultPipeline && savedPipelineEffects) {
+                    defaultPipeline.bloomEnabled = savedPipelineEffects.bloom;
+                    defaultPipeline.fxaaEnabled = savedPipelineEffects.fxaa;
+                    defaultPipeline.imageProcessingEnabled = savedPipelineEffects.imageProcessing;
+                    defaultPipeline.chromaticAberrationEnabled = savedPipelineEffects.chromaticAberration;
+                    defaultPipeline.grainEnabled = savedPipelineEffects.grain;
                   }
                   
                   if (!blob) {
@@ -593,13 +610,11 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
                         const normalizedY = 1 - (centerY / canvas.height) * 2; // 1 to -1 (flip Y)
                         
                         // Create ray from camera through the 2D point
-                        const ray = BABYLON.Ray.CreateNewFromScreenCoordinates(
-                          normalizedX,
-                          normalizedY,
-                          scene.getEngine().getRenderWidth(),
-                          scene.getEngine().getRenderHeight(),
-                          camera.getViewMatrix(),
-                          camera.getProjectionMatrix()
+                        const ray = scene.createPickingRay(
+                          centerX,
+                          centerY,
+                          null,
+                          camera
                         );
                         
                         // Pick mesh with ray
@@ -676,16 +691,11 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
                             const leftEyeWeights: number[] = [];
                             
                             for (const [x, y, weight] of leftEyePoints) {
-                              const normalizedX = (x / canvas.width) * 2 - 1;
-                              const normalizedY = 1 - (y / canvas.height) * 2;
-                              
-                              const ray = BABYLON.Ray.CreateNewFromScreenCoordinates(
-                                normalizedX,
-                                normalizedY,
-                                scene.getEngine().getRenderWidth(),
-                                scene.getEngine().getRenderHeight(),
-                                camera.getViewMatrix(),
-                                camera.getProjectionMatrix()
+                              const ray = scene.createPickingRay(
+                                x,
+                                y,
+                                null,
+                                camera
                               );
                               
                               // pickWithRay returns the closest hit (front surface) automatically
@@ -703,16 +713,11 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
                             const rightEyeWeights: number[] = [];
                             
                             for (const [x, y, weight] of rightEyePoints) {
-                              const normalizedX = (x / canvas.width) * 2 - 1;
-                              const normalizedY = 1 - (y / canvas.height) * 2;
-                              
-                              const ray = BABYLON.Ray.CreateNewFromScreenCoordinates(
-                                normalizedX,
-                                normalizedY,
-                                scene.getEngine().getRenderWidth(),
-                                scene.getEngine().getRenderHeight(),
-                                camera.getViewMatrix(),
-                                camera.getProjectionMatrix()
+                              const ray = scene.createPickingRay(
+                                x,
+                                y,
+                                null,
+                                camera
                               );
                               
                               // pickWithRay returns the closest hit (front surface) automatically
@@ -730,15 +735,11 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
                               console.log(`Left eye: ${leftEye3DPoints.length} landmarks raycasted (${leftEyeWeights.reduce((a, b) => a + b, 0).toFixed(1)} total weight), position:`, detectedLeftEye);
                             } else {
                               // Fallback: use weighted center point with raycasting
-                              const leftNormalizedX = (leftEyeX / canvas.width) * 2 - 1;
-                              const leftNormalizedY = 1 - (leftEyeY / canvas.height) * 2;
-                              const leftRay = BABYLON.Ray.CreateNewFromScreenCoordinates(
-                                leftNormalizedX,
-                                leftNormalizedY,
-                                scene.getEngine().getRenderWidth(),
-                                scene.getEngine().getRenderHeight(),
-                                camera.getViewMatrix(),
-                                camera.getProjectionMatrix()
+                              const leftRay = scene.createPickingRay(
+                                leftEyeX,
+                                leftEyeY,
+                                null,
+                                camera
                               );
                               const leftPickInfo = scene.pickWithRay(leftRay, (mesh) => mesh instanceof BABYLON.Mesh);
                               if (leftPickInfo && leftPickInfo.hit && leftPickInfo.pickedPoint) {
@@ -752,15 +753,11 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
                               console.log(`Right eye: ${rightEye3DPoints.length} landmarks raycasted (${rightEyeWeights.reduce((a, b) => a + b, 0).toFixed(1)} total weight), position:`, detectedRightEye);
                             } else {
                               // Fallback: use weighted center point with raycasting
-                              const rightNormalizedX = (rightEyeX / canvas.width) * 2 - 1;
-                              const rightNormalizedY = 1 - (rightEyeY / canvas.height) * 2;
-                              const rightRay = BABYLON.Ray.CreateNewFromScreenCoordinates(
-                                rightNormalizedX,
-                                rightNormalizedY,
-                                scene.getEngine().getRenderWidth(),
-                                scene.getEngine().getRenderHeight(),
-                                camera.getViewMatrix(),
-                                camera.getProjectionMatrix()
+                              const rightRay = scene.createPickingRay(
+                                rightEyeX,
+                                rightEyeY,
+                                null,
+                                camera
                               );
                               const rightPickInfo = scene.pickWithRay(rightRay, (mesh) => mesh instanceof BABYLON.Mesh);
                               if (rightPickInfo && rightPickInfo.hit && rightPickInfo.pickedPoint) {
@@ -821,7 +818,11 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
                   }
                 }
                 if (defaultPipeline) {
-                  defaultPipeline.setEnabled(true);
+                  defaultPipeline.bloomEnabled = true;
+                  defaultPipeline.fxaaEnabled = true;
+                  defaultPipeline.imageProcessingEnabled = true;
+                  defaultPipeline.chromaticAberrationEnabled = true;
+                  defaultPipeline.grainEnabled = true;
                 }
               } catch (restoreError) {
                 console.warn('Failed to restore effects:', restoreError);
@@ -1423,14 +1424,11 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
           camera.animations = [radiusAnim, alphaAnim, betaAnim, targetXAnim, targetYAnim, targetZAnim];
           
           // Update clipping planes dynamically during animation to keep object in focal plane
-          const originalOnAnimationEnd = camera.onAnimationEnd;
-          camera.onAnimationEnd = () => {
-            if (originalOnAnimationEnd) {
-              originalOnAnimationEnd();
-            }
+          // Use scene observable to update clipping planes when animations finish
+          const animationEndObserver = scene.onAfterAnimationsObservable.add(() => {
             // Update clipping planes based on current camera radius
             updateClippingPlanes(camera.radius);
-          };
+          });
           
           // Also update clipping planes on each frame during animation
           const updateOnFrame = () => {
@@ -1445,7 +1443,8 @@ export const ModelPreview: React.FC<ModelPreviewProps> = ({
           // Store observers for cleanup
           (scene as any)._previewObservers = [
             animateCameraBlendObserver,
-            updateOnFrameObserver
+            updateOnFrameObserver,
+            animationEndObserver
           ];
           
           // Note: animateCameraBlend handles all camera animation with smooth looping

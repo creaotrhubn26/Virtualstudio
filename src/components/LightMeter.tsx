@@ -5,7 +5,8 @@
  * Displays real-time photometric measurements
  */
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
+import type { FC } from 'react';
 import { Box, Typography, Paper } from '@mui/material';
 import * as THREE from 'three';
 import { photometricCalculator } from '../core/services/photometric';
@@ -26,7 +27,7 @@ interface LightMeterProps {
   unit?: 'lux' | 'fc' | 'both';
 }
 
-export const LightMeter: React.FC<LightMeterProps> = ({
+export const LightMeter: FC<LightMeterProps> = ({
   lights,
   targetPoint,
   surfaceNormal = [0, 1, 0],

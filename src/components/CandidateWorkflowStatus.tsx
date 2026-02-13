@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState, cloneElement, type FC, type ReactNode, type ReactElement, type MouseEvent } from 'react';
 import {
   Box,
   Typography,
@@ -33,7 +33,7 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import StarIcon from '@mui/icons-material/Star';
 import type { WorkflowStatus } from '../services/castingApiService';
 
-const WORKFLOW_STEPS: { status: WorkflowStatus; label: string; icon: React.ReactNode; color: string }[] = [
+const WORKFLOW_STEPS: { status: WorkflowStatus; label: string; icon: ReactNode; color: string }[] = [
   { status: 'pending', label: 'Venter', icon: <PersonSearchIcon />, color: '#9ca3af' },
   { status: 'auditioned', label: 'Audition', icon: <TheatersIcon />, color: '#f59e0b' },
   { status: 'selected', label: 'Valgt', icon: <CheckCircleIcon />, color: '#10b981' },
@@ -98,7 +98,7 @@ interface CandidateWorkflowStatusProps {
   compact?: boolean;
 }
 
-export const CandidateWorkflowStatus: React.FC<CandidateWorkflowStatusProps> = ({
+export const CandidateWorkflowStatus: FC<CandidateWorkflowStatusProps> = ({
   candidateId,
   candidateName,
   currentStatus,
@@ -108,15 +108,15 @@ export const CandidateWorkflowStatus: React.FC<CandidateWorkflowStatusProps> = (
   onAuditionResultUpdate,
   compact = false,
 }) => {
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const [auditionDialogOpen, setAuditionDialogOpen] = React.useState(false);
-  const [rating, setRating] = React.useState(auditionRating || 0);
-  const [notes, setNotes] = React.useState(auditionNotes || '');
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [auditionDialogOpen, setAuditionDialogOpen] = useState(false);
+  const [rating, setRating] = useState(auditionRating || 0);
+  const [notes, setNotes] = useState(auditionNotes || '');
 
   const isDeclined = currentStatus === 'declined';
   const activeStep = isDeclined ? -1 : WORKFLOW_STEPS.findIndex(s => s.status === currentStatus);
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+  const handleMenuOpen = (event: MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
@@ -155,7 +155,7 @@ export const CandidateWorkflowStatus: React.FC<CandidateWorkflowStatusProps> = (
     if (!step) return null;
     return (
       <Chip
-        icon={step.icon as React.ReactElement}
+        icon={step.icon as ReactElement}
         label={step.label}
         size="small"
         sx={{
@@ -181,11 +181,11 @@ export const CandidateWorkflowStatus: React.FC<CandidateWorkflowStatusProps> = (
           </Box>
         )}
         <Tooltip title="Endre status">
-          <IconButton size="small" onClick={handleMenuOpen} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+          <IconButton size="small" onClick={handleMenuOpen} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             <MoreVertIcon sx={{ fontSize: 16 }} />
           </IconButton>
         </Tooltip>
-        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose} sx={{ zIndex: 1400 }}>
           {WORKFLOW_STEPS.map((step) => (
             <MenuItem
               key={step.status}
@@ -226,7 +226,7 @@ export const CandidateWorkflowStatus: React.FC<CandidateWorkflowStatusProps> = (
           <DialogTitle>Audition-vurdering for {candidateName}</DialogTitle>
           <DialogContent>
             <Box sx={{ mb: 2, mt: 1 }}>
-              <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255,255,255,0.7)' }}>
+              <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255,255,255,0.87)' }}>
                 Rating
               </Typography>
               <Rating
@@ -306,12 +306,12 @@ export const CandidateWorkflowStatus: React.FC<CandidateWorkflowStatusProps> = (
 
       {auditionRating && (
         <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Audition-vurdering:
           </Typography>
           <Rating value={auditionRating} readOnly size="small" sx={{ '& .MuiRating-iconFilled': { color: '#f59e0b' } }} />
           {auditionNotes && (
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', ml: 1 }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', ml: 1 }}>
               "{auditionNotes}"
             </Typography>
           )}
@@ -321,7 +321,7 @@ export const CandidateWorkflowStatus: React.FC<CandidateWorkflowStatusProps> = (
   );
 };
 
-export const WorkflowStatusBadge: React.FC<{
+export const WorkflowStatusBadge: FC<{
   status: WorkflowStatus | 'declined';
   showLabel?: boolean;
 }> = ({ status, showLabel = true }) => {
@@ -347,7 +347,7 @@ export const WorkflowStatusBadge: React.FC<{
 
   return (
     <Chip
-      icon={React.cloneElement(step.icon as React.ReactElement, { sx: { fontSize: 14 } })}
+      icon={cloneElement(step.icon as ReactElement, { sx: { fontSize: 14 } })}
       label={showLabel ? step.label : undefined}
       size="small"
       sx={{

@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import type { KeyboardEvent } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -71,7 +72,7 @@ export default function LoginDialog({ open, onClose, onLoginSuccess, isLandingPa
   const [error, setError] = useState('');
 
   // Reset form when dialog closes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!open) {
       const timer = setTimeout(() => {
         setEmail('');
@@ -107,32 +108,48 @@ export default function LoginDialog({ open, onClose, onLoginSuccess, isLandingPa
     setLoading(true);
     setError('');
 
+    // Save profession FIRST before login attempt
+    if (selectedRole) {
+      localStorage.setItem('selectedProfession', selectedRole);
+    }
+
+    console.log('🔐 Attempting login with:', { email: email.trim(), role: selectedRole });
+
     try {
-      const response = await fetch('/api/auth/login', {
+      // Create a timeout promise that rejects after 5 seconds
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Backend timeout - using fallback')), 5000)
+      );
+
+      const fetchPromise = fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password, role: selectedRole }),
+        mode: 'cors',
+        credentials: 'include',
+      }).then(r => {
+        console.log('📡 Fetch response received:', r.status, r.statusText);
+        return r.json();
       });
 
-      const data = await response.json();
+      const data = await Promise.race([fetchPromise, timeoutPromise]);
 
-      if (response.ok && data.success) {
+      console.log('🔐 Backend response:', { ok: true, success: data.success, user: data.user });
+
+      if (data.success) {
+        console.log('✅ Login successful, saving to localStorage and reloading...');
         localStorage.setItem('adminUser', JSON.stringify(data.user));
         localStorage.setItem('currentUserId', data.user.id.toString());
-        if (selectedRole) {
-          localStorage.setItem('selectedProfession', selectedRole);
-        }
         window.dispatchEvent(new Event('auth-user-updated'));
         onLoginSuccess(data.user);
-        setEmail('');
-        setPassword('');
-        setSelectedRole('');
-        onClose();
+        // Page will reload from onLoginSuccess, no need to clear form
       } else {
+        console.log('❌ Login failed:', data.detail || 'Unknown error');
+        setLoading(false);
         setError(data.detail || 'Ugyldig e-post eller passord');
       }
     } catch (err) {
-      console.error('Login error - Backend ikke tilgjengelig, bruker mock auth:', err);
+      console.error('❌ Login error - Backend ikke tilgjengelig, bruker mock auth:', err);
       
       // Fallback: Mock authentication når backend ikke kjører
       // Demo user for utvikling
@@ -143,23 +160,16 @@ export default function LoginDialog({ open, onClose, onLoginSuccess, isLandingPa
         display_name: email.trim().split('@')[0],
       };
       
+      console.log('🚀 Using mock auth with:', mockUser);
       localStorage.setItem('adminUser', JSON.stringify(mockUser));
       localStorage.setItem('currentUserId', mockUser.id.toString());
-      if (selectedRole) {
-        localStorage.setItem('selectedProfession', selectedRole);
-      }
       window.dispatchEvent(new Event('auth-user-updated'));
       onLoginSuccess(mockUser);
-      setEmail('');
-      setPassword('');
-      setSelectedRole('');
-      onClose();
-    } finally {
-      setLoading(false);
+      // Page will reload from onLoginSuccess, no need to clear form
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !loading) {
       e.preventDefault();
       handleLogin();
@@ -175,7 +185,7 @@ export default function LoginDialog({ open, onClose, onLoginSuccess, isLandingPa
       '&:hover fieldset': { borderColor: 'rgba(139,92,246,0.5)' },
       '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
     },
-    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.5)' },
+    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
     '& .MuiInputLabel-root.Mui-focused': { color: '#8b5cf6' },
   };
 
@@ -253,7 +263,7 @@ export default function LoginDialog({ open, onClose, onLoginSuccess, isLandingPa
           {isLandingPage ? 'Logg Inn' : 'Admin Logg Inn'}
         </Typography>
         
-        <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem' }}>
+        <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '0.875rem' }}>
           {isLandingPage 
             ? 'Velg din rolle og logg inn for å starte'
             : 'Logg inn for å administrere Casting Planner'}
@@ -266,7 +276,7 @@ export default function LoginDialog({ open, onClose, onLoginSuccess, isLandingPa
             position: 'absolute', 
             top: 8, 
             right: 8, 
-            color: 'rgba(255,255,255,0.5)',
+            color: 'rgba(255,255,255,0.87)',
             '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.1)' },
           }}
         >
@@ -294,7 +304,7 @@ export default function LoginDialog({ open, onClose, onLoginSuccess, isLandingPa
 
           {isLandingPage && (
             <FormControl fullWidth>
-              <InputLabel id="role-select-label" sx={{ color: 'rgba(255,255,255,0.5)' }}>Velg rolle</InputLabel>
+              <InputLabel id="role-select-label" sx={{ color: 'rgba(255,255,255,0.87)' }}>Velg rolle</InputLabel>
               <Select
                 labelId="role-select-label"
                 id="role-select"
@@ -309,7 +319,7 @@ export default function LoginDialog({ open, onClose, onLoginSuccess, isLandingPa
                       bgcolor: '#1c2128',
                       border: '1px solid rgba(255,255,255,0.1)',
                       maxHeight: 400,
-                      zIndex: 10000,
+                      zIndex: 10003,
                       '& .MuiMenuItem-root': {
                         color: '#fff',
                         '&:hover': { bgcolor: 'rgba(139,92,246,0.2)' },
@@ -339,7 +349,7 @@ export default function LoginDialog({ open, onClose, onLoginSuccess, isLandingPa
                   '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.1)' },
                   '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(139,92,246,0.5)' },
                   '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#8b5cf6' },
-                  '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.5)' },
+                  '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.87)' },
                 }}
               >
                 {professionCategories.map((category) => [
@@ -350,7 +360,7 @@ export default function LoginDialog({ open, onClose, onLoginSuccess, isLandingPa
                     <MenuItem key={role.id} value={role.id}>
                       <Box>
                         <Typography sx={{ fontWeight: 500, fontSize: '0.9rem' }}>{role.label}</Typography>
-                        <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>
+                        <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.87)' }}>
                           {role.description}
                         </Typography>
                       </Box>
@@ -409,7 +419,7 @@ export default function LoginDialog({ open, onClose, onLoginSuccess, isLandingPa
               },
               '&:disabled': {
                 background: 'rgba(139,92,246,0.3)',
-                color: 'rgba(255,255,255,0.5)',
+                color: 'rgba(255,255,255,0.87)',
               },
             }}
           >
@@ -420,7 +430,7 @@ export default function LoginDialog({ open, onClose, onLoginSuccess, isLandingPa
             onClick={onClose}
             disabled={loading}
             sx={{ 
-              color: 'rgba(255,255,255,0.5)', 
+              color: 'rgba(255,255,255,0.87)', 
               fontSize: '0.875rem',
               '&:hover': { color: 'rgba(255,255,255,0.8)', bgcolor: 'transparent' },
             }}

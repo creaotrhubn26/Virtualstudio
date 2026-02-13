@@ -45,14 +45,16 @@ import {
   Tune,
   Park,
 } from '@mui/icons-material';
-import { useAppStore } from '../../state/store';
+import { useAppStore } from '../state/store';
 import {
   ALL_PROPS,
   PROPS_BY_CATEGORY,
   PropCategory,
-} from '../../core/data/propDefinitions';
+  type PropDefinition,
+} from '../core/data/propDefinitions';
 
-export const PropsPanel: React.FC = () => {  const { addNode } = useAppStore();
+export const PropsPanel: React.FC = () => {
+  const { addNode } = useAppStore();
 
   // UI State
   const [activeCategory, setActiveCategory] = useState<PropCategory>('furniture');
@@ -73,7 +75,7 @@ export const PropsPanel: React.FC = () => {  const { addNode } = useAppStore();
   const [maxInstances, setMaxInstances] = useState(100);
 
   // Get props for active category
-  const propItems = useMemo(() => {
+  const propItems = useMemo<PropDefinition[]>(() => {
     return PROPS_BY_CATEGORY[activeCategory] || [];
   }, [activeCategory]);
 
@@ -234,7 +236,7 @@ export const PropsPanel: React.FC = () => {  const { addNode } = useAppStore();
         ) : (
           <Grid container spacing={2}>
             {propItems.map((prop) => (
-              <Grid item xs={12} sm={6} key={prop.id}>
+              <Grid size={{ xs: 12, sm: 6 }} key={prop.id}>
                 <Card
                   sx={{
                     backgroundColor: selectedProp === prop.id ? '#333' : '#2a2a2a', '&:hover': { backgroundColor: '#333' },

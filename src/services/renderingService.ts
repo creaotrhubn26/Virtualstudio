@@ -364,7 +364,7 @@ export const useRenderingStore = create<RenderingState>((set, get) => ({
     if (!preset) return;
     
     const newSettings = { ...get().settings, ...preset };
-    const { pipeline, ssaoPipeline, ssrPipeline } = get();
+    const { pipeline } = get();
     
     if (pipeline) {
       // Apply all settings from preset

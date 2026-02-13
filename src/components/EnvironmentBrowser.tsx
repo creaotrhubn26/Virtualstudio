@@ -3,7 +3,7 @@
  * Includes walls, floors, and complete environment configurations
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FC, type ReactNode } from 'react';
 import {
   Box,
   Typography,
@@ -46,7 +46,7 @@ import { ENVIRONMENT_CATEGORIES, ENVIRONMENT_PRESETS, EnvironmentPreset, Environ
 import { ambientSoundsService } from '../services/AmbientSoundsService';
 
 interface TabPanelProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   index: number;
   value: number;
 }
@@ -60,7 +60,7 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 }
 
 // Material Card Component
-const MaterialCard: React.FC<{
+const MaterialCard: FC<{
   material: WallMaterial | FloorMaterial;
   isSelected: boolean;
   onSelect: () => void;
@@ -110,7 +110,7 @@ const MaterialCard: React.FC<{
 );
 
 // Environment Preset Card
-const PresetCard: React.FC<{
+const PresetCard: FC<{
   preset: EnvironmentPreset;
   isActive: boolean;
   onApply: () => void;
@@ -151,7 +151,7 @@ const PresetCard: React.FC<{
   </Card>
 );
 
-export const EnvironmentBrowser: React.FC = () => {
+export const EnvironmentBrowser: FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedWallCategory, setSelectedWallCategory] = useState<WallCategory | 'all'>('all');

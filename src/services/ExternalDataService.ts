@@ -1759,23 +1759,26 @@ class ExternalDataService {
     if (cached) return cached;
 
     try {
-      const response = await apiRequest<ApiResponse>(`/api/external-data/kartverket/address/${encodeURIComponent(address)}`);
+      const response = await apiRequest<any>(`/api/external-data/kartverket/address/${encodeURIComponent(address)}`);
 
-      if (response.success && response.data) {
+      // Handle both wrapped {success, data} and direct response formats
+      const data = response.success !== undefined ? response.data : response;
+
+      if (data && data.address) {
         const result: KartverketAddress = {
-          address: response.data.address,
-          coordinates: response.data.coordinates,
-          municipality: response.data.municipality,
-          county: response.data.county,
-          postalCode: response.data.postalCode,
-          propertyId: response.data.propertyId,
+          address: data.address,
+          coordinates: data.coordinates,
+          municipality: data.municipality,
+          county: data.county,
+          postalCode: data.postalCode,
+          propertyId: data.propertyId,
           source: 'kartverket'
         };
 
         this.setCachedData(cacheKey, result);
         return result;
       } else {
-        throw new Error(response.error || 'Failed to fetch address data');
+        throw new Error('Invalid address data received');
       }
     } catch (error) {
       console.warn('Failed to fetch Kartverket address:', error);

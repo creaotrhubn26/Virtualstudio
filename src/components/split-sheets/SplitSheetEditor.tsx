@@ -22,7 +22,7 @@ import {
   Select,
   MenuItem,
   Paper,
-  Grid,
+  Grid2 as Grid,
   Accordion,
   AccordionSummary,
   AccordionDetails,
@@ -50,11 +50,15 @@ import {
   Percent as PercentIcon,
   Language as LanguageIcon,
   OpenInNew as OpenInNewIcon,
-  LocationOn as LocationOnIcon,
   AttachMoney as AttachMoneyIcon,
   Visibility as VisibilityIcon,
-  AccountBalance as PortalIcon
+  AccountBalance as PortalIcon,
+  Gavel as GavelIcon,
+  TheaterComedy as TheaterComedyIcon,
+  Movie as MovieIcon,
+  Payments as PaymentsIcon
 } from '@mui/icons-material';
+import { LocationsIcon as LocationOnIcon } from '../icons/CastingIcons';
 import { useDynamicProfessions } from '../universal/hooks/useDynamicProfessions';
 import getProfessionIcon from '@/utils/profession-icons';
 import type { 
@@ -62,9 +66,32 @@ import type {
   SplitSheetContributor,
   CreateSplitSheetRequest,
   UpdateSplitSheetRequest,
-  ContributorRole
+  ContributorRole,
+  UnionAgreementSettings,
+  ProductionType,
+  ParticipantType,
+  UnionMembershipType,
+  NSFAgreementType,
+  NFFAgreementType,
+  RightsManagementType,
 } from './types';
-import { ROLE_DISPLAY_NAMES as ROLE_NAMES } from './types';
+import { 
+  ROLE_DISPLAY_NAMES as ROLE_NAMES,
+  DEFAULT_UNION_AGREEMENT_SETTINGS,
+  PRODUCTION_TYPE_LABELS,
+  PARTICIPANT_TYPE_LABELS,
+  UNION_MEMBERSHIP_LABELS,
+  NSF_AGREEMENT_LABELS,
+  NFF_AGREEMENT_LABELS,
+  RIGHTS_MANAGEMENT_LABELS,
+  UNION_LEGAL_REFERENCES,
+  checkTariffApplicability,
+  NSF_WAGE_REFERENCES,
+  NFF_WAGE_REFERENCES,
+  WAGE_INFO_RESOURCES,
+  getWageReferenceUrl,
+  getRelevantWageReferences,
+} from './types';
 import SplitSheetSongFlowIntegration from './SplitSheetSongFlowIntegration';
 import SplitSheetPortalView from './SplitSheetPortalView';
 // import PricingSelector from '../shared/PricingSelector'; // TODO: Re-enable when PricingSelector component is available
@@ -137,6 +164,13 @@ export default function SplitSheetEditor({
   );
   const [expandedContributor, setExpandedContributor] = useState<number | null>(null);
   const [showPortalView, setShowPortalView] = useState(false);
+  const [showUnionSettings, setShowUnionSettings] = useState(false);
+  
+  // Union agreement settings state
+  const [unionSettings, setUnionSettings] = useState<UnionAgreementSettings>(() => {
+    const saved = splitSheet?.metadata?.union_settings;
+    return saved ? { ...DEFAULT_UNION_AGREEMENT_SETTINGS, ...saved } : DEFAULT_UNION_AGREEMENT_SETTINGS;
+  });
   
   // Update title when projectName changes (sync with project name)
   useEffect(() => {
@@ -536,7 +570,8 @@ export default function SplitSheetEditor({
       track_id: trackId,
       metadata: {
         total_budget: calculationMethod === 'budget' ? totalBudget : undefined,
-        calculation_method: calculationMethod
+        calculation_method: calculationMethod,
+        union_settings: unionSettings,
       },
       contributors: contributors.map((c, index) => {
         // Ensure custom_fields is always an object and includes all fields
@@ -636,6 +671,397 @@ export default function SplitSheetEditor({
             </Stack>
           </CardContent>
         </Card>
+
+        {/* Union Agreements & Rights Management - For film/TV productions */}
+        {(profession === 'videographer' || profession === 'photographer') && (
+          <Card sx={{ borderRadius: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4, '2xl': 4.5, '3xl': 5 } }}>
+            <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4, '2xl': 4.5, '3xl': 5 } }}>
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  mb: { xs: 2, sm: 2.5, md: 3, lg: 3.25, xl: 3.5, '2xl': 3.75, '3xl': 4 },
+                  cursor: 'pointer',
+                }}
+                onClick={() => setShowUnionSettings(!showUnionSettings)}
+              >
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '1rem', sm: '1.063rem', md: '1.125rem', lg: '1.188rem', xl: '1.25rem', '2xl': '1.313rem', '3xl': '1.375rem' }, display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.25, md: 1.5, lg: 1.75, xl: 2 } }}>
+                    <GavelIcon sx={{ fontSize: { xs: 20, sm: 21, md: 22, lg: 23, xl: 24, '2xl': 25, '3xl': 26 } }} /> Fagforeninger, tariff og lønn
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    NSF (Skuespillerforbundet) • NFF (Filmforbundet) • F©R rettighetsforvaltning • Lønnsatser
+                  </Typography>
+                </Box>
+                <IconButton size="small">
+                  <ExpandMoreIcon sx={{ transform: showUnionSettings ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }} />
+                </IconButton>
+              </Box>
+
+              {showUnionSettings && (
+                <Stack spacing={{ xs: 2, sm: 2.25, md: 2.5, lg: 2.75, xl: 3, '2xl': 3.25, '3xl': 3.5 }}>
+                  {/* Production Type */}
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Produksjonstype</InputLabel>
+                    <Select
+                      value={unionSettings.productionType}
+                      onChange={(e) => setUnionSettings({ ...unionSettings, productionType: e.target.value as ProductionType })}
+                      label="Produksjonstype"
+                      MenuProps={{ sx: { zIndex: 1400 } }}
+                    >
+                      {Object.entries(PRODUCTION_TYPE_LABELS).map(([key, label]) => (
+                        <MenuItem key={key} value={key}>{label}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  {/* Participant Type */}
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Hvem gjelder dette for?</InputLabel>
+                    <Select
+                      value={unionSettings.participantType}
+                      onChange={(e) => setUnionSettings({ ...unionSettings, participantType: e.target.value as ParticipantType })}
+                      label="Hvem gjelder dette for?"
+                      MenuProps={{ sx: { zIndex: 1400 } }}
+                    >
+                      {Object.entries(PARTICIPANT_TYPE_LABELS).map(([key, label]) => (
+                        <MenuItem key={key} value={key}>{label}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  {/* Union Membership */}
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Fagforeningsmedlemskap</InputLabel>
+                    <Select
+                      value={unionSettings.unionMembership}
+                      onChange={(e) => {
+                        const val = e.target.value as UnionMembershipType;
+                        setUnionSettings({
+                          ...unionSettings,
+                          unionMembership: val,
+                          isProfessionalActor: val === 'nsf_member' || val === 'both',
+                          isFilmWorker: val === 'nff_member' || val === 'both',
+                        });
+                      }}
+                      label="Fagforeningsmedlemskap"
+                      MenuProps={{ sx: { zIndex: 1400 } }}
+                    >
+                      {Object.entries(UNION_MEMBERSHIP_LABELS).map(([key, label]) => (
+                        <MenuItem key={key} value={key}>{label}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  {/* Virke Membership */}
+                  <Box sx={{ p: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5, '2xl': 2.75, '3xl': 3 }, bgcolor: 'rgba(245, 158, 11, 0.1)', borderRadius: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5, '2xl': 2.75, '3xl': 3 }, border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <input
+                        type="checkbox"
+                        checked={unionSettings.virkeProducerMember}
+                        onChange={(e) => setUnionSettings({ ...unionSettings, virkeProducerMember: e.target.checked })}
+                        style={{ width: 18, height: 18 }}
+                      />
+                      <Typography variant="body2" sx={{ fontWeight: 600, fontSize: { xs: '0.8rem', sm: '0.825rem', md: '0.85rem', lg: '0.875rem', xl: '0.9rem', '2xl': '0.925rem', '3xl': '0.95rem' } }}>
+                        Produsent er medlem av Virke Produsentforeningen
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.725rem', md: '0.75rem', lg: '0.775rem', xl: '0.8rem', '2xl': '0.825rem', '3xl': '0.85rem' } }}>
+                      Kollektive tariffavtaler gjelder kun når produsent er Virke-medlem
+                    </Typography>
+                  </Box>
+
+                  {/* NSF Section */}
+                  {(unionSettings.isProfessionalActor || unionSettings.unionMembership === 'nsf_member' || unionSettings.unionMembership === 'both') && (
+                    <Box sx={{ p: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5, '2xl': 2.75, '3xl': 3 }, bgcolor: 'rgba(236, 72, 153, 0.1)', borderRadius: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5, '2xl': 2.75, '3xl': 3 }, border: '1px solid rgba(236, 72, 153, 0.3)' }}>
+                      <Typography variant="subtitle2" sx={{ color: '#ec4899', fontWeight: 600, mb: { xs: 1.25, sm: 1.5, md: 1.75, lg: 2 }, display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5 }, fontSize: { xs: '0.875rem', sm: '0.9rem', md: '0.925rem', lg: '0.95rem', xl: '1rem', '2xl': '1.025rem', '3xl': '1.05rem' } }}>
+                        <TheaterComedyIcon sx={{ fontSize: { xs: 16, sm: 17, md: 18, lg: 19, xl: 20 } }} /> Norsk Skuespillerforbund (NSF)
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5 }, mb: { xs: 1.25, sm: 1.5, md: 1.75, lg: 2 } }}>
+                        <input
+                          type="checkbox"
+                          checked={unionSettings.nsfAgreementApplies}
+                          onChange={(e) => setUnionSettings({ ...unionSettings, nsfAgreementApplies: e.target.checked })}
+                          style={{ width: 16, height: 16 }}
+                        />
+                        <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.825rem', md: '0.85rem', lg: '0.875rem', xl: '0.9rem', '2xl': '0.925rem', '3xl': '0.95rem' } }}>NSF-tariffavtale gjelder</Typography>
+                      </Box>
+                      {unionSettings.nsfAgreementApplies && (
+                        <FormControl fullWidth size="small">
+                          <InputLabel>NSF-avtale</InputLabel>
+                          <Select
+                            value={unionSettings.nsfAgreementType || 'none'}
+                            onChange={(e) => setUnionSettings({ ...unionSettings, nsfAgreementType: e.target.value as NSFAgreementType })}
+                            label="NSF-avtale"
+                            MenuProps={{ sx: { zIndex: 1400 } }}
+                          >
+                            {Object.entries(NSF_AGREEMENT_LABELS).map(([key, label]) => (
+                              <MenuItem key={key} value={key}>{label}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      )}
+                    </Box>
+                  )}
+
+                  {/* NFF Section */}
+                  {(unionSettings.isFilmWorker || unionSettings.unionMembership === 'nff_member' || unionSettings.unionMembership === 'both') && (
+                    <Box sx={{ p: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5, '2xl': 2.75, '3xl': 3 }, bgcolor: 'rgba(0, 212, 255, 0.1)', borderRadius: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5, '2xl': 2.75, '3xl': 3 }, border: '1px solid rgba(0, 212, 255, 0.3)' }}>
+                      <Typography variant="subtitle2" sx={{ color: '#00d4ff', fontWeight: 600, mb: { xs: 1.25, sm: 1.5, md: 1.75, lg: 2 }, display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5 }, fontSize: { xs: '0.875rem', sm: '0.9rem', md: '0.925rem', lg: '0.95rem', xl: '1rem', '2xl': '1.025rem', '3xl': '1.05rem' } }}>
+                        <MovieIcon sx={{ fontSize: { xs: 16, sm: 17, md: 18, lg: 19, xl: 20 } }} /> Norsk Filmforbund (NFF)
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5 }, mb: { xs: 1.25, sm: 1.5, md: 1.75, lg: 2 } }}>
+                        <input
+                          type="checkbox"
+                          checked={unionSettings.nffAgreementApplies}
+                          onChange={(e) => setUnionSettings({ ...unionSettings, nffAgreementApplies: e.target.checked })}
+                          style={{ width: 16, height: 16 }}
+                        />
+                        <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.825rem', md: '0.85rem', lg: '0.875rem', xl: '0.9rem', '2xl': '0.925rem', '3xl': '0.95rem' } }}>NFF-tariffavtale gjelder</Typography>
+                      </Box>
+                      {unionSettings.nffAgreementApplies && (
+                        <>
+                          <FormControl fullWidth size="small" sx={{ mb: { xs: 1.25, sm: 1.5, md: 1.75, lg: 2 } }}>
+                            <InputLabel>NFF-avtale</InputLabel>
+                            <Select
+                              value={unionSettings.nffAgreementType || 'none'}
+                              onChange={(e) => setUnionSettings({ ...unionSettings, nffAgreementType: e.target.value as NFFAgreementType })}
+                              label="NFF-avtale"
+                              MenuProps={{ sx: { zIndex: 1400 } }}
+                            >
+                              {Object.entries(NFF_AGREEMENT_LABELS).map(([key, label]) => (
+                                <MenuItem key={key} value={key}>{label}</MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5 } }}>
+                            <input
+                              type="checkbox"
+                              checked={unionSettings.forRightsManagement}
+                              onChange={(e) => setUnionSettings({ ...unionSettings, forRightsManagement: e.target.checked })}
+                              style={{ width: 16, height: 16 }}
+                            />
+                            <Box>
+                              <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.825rem', md: '0.85rem', lg: '0.875rem', xl: '0.9rem', '2xl': '0.925rem', '3xl': '0.95rem' } }}>F©R rettighetsforvaltning</Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.725rem', md: '0.75rem', lg: '0.775rem', xl: '0.8rem', '2xl': '0.825rem', '3xl': '0.85rem' } }}>
+                                Opphavsrettsvederlag via Filmforbundet
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </>
+                      )}
+                    </Box>
+                  )}
+
+                  {/* Compensation Settings */}
+                  <Box sx={{ p: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5, '2xl': 2.75, '3xl': 3 }, bgcolor: 'rgba(139, 92, 246, 0.1)', borderRadius: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5, '2xl': 2.75, '3xl': 3 }, border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+                    <Typography variant="subtitle2" sx={{ color: '#8b5cf6', fontWeight: 600, mb: { xs: 1.25, sm: 1.5, md: 1.75, lg: 2 }, display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5 }, fontSize: { xs: '0.875rem', sm: '0.9rem', md: '0.925rem', lg: '0.95rem', xl: '1rem', '2xl': '1.025rem', '3xl': '1.05rem' } }}>
+                      <PaymentsIcon sx={{ fontSize: { xs: 16, sm: 17, md: 18, lg: 19, xl: 20 } }} /> Vederlag og kompensasjon
+                    </Typography>
+                    <Stack spacing={{ xs: 0.75, sm: 1, md: 1.25, lg: 1.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5 } }}>
+                        <input
+                          type="checkbox"
+                          checked={unionSettings.compensationAgreed}
+                          onChange={(e) => setUnionSettings({ ...unionSettings, compensationAgreed: e.target.checked })}
+                          style={{ width: 16, height: 16 }}
+                        />
+                        <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.825rem', md: '0.85rem', lg: '0.875rem', xl: '0.9rem', '2xl': '0.925rem', '3xl': '0.95rem' } }}>Honorar/lønn er avtalt separat</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5 } }}>
+                        <input
+                          type="checkbox"
+                          checked={unionSettings.rightsPaymentSeparate}
+                          onChange={(e) => setUnionSettings({ ...unionSettings, rightsPaymentSeparate: e.target.checked })}
+                          style={{ width: 16, height: 16 }}
+                        />
+                        <Box>
+                          <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.825rem', md: '0.85rem', lg: '0.875rem', xl: '0.9rem', '2xl': '0.925rem', '3xl': '0.95rem' } }}>Rettighetsvederlag adskilt fra lønn</Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.725rem', md: '0.75rem', lg: '0.775rem', xl: '0.8rem', '2xl': '0.825rem', '3xl': '0.85rem' } }}>
+                            Ref. EU/Stortinget: Krav om "rimelig vederlag"
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Stack>
+                  </Box>
+
+                  {/* Tariff Applicability Check */}
+                  {(unionSettings.nsfAgreementApplies || unionSettings.nffAgreementApplies) && (
+                    <Alert 
+                      severity={unionSettings.virkeProducerMember ? 'success' : 'warning'}
+                      sx={{ borderRadius: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5, '2xl': 2.75, '3xl': 3 } }}
+                    >
+                      {checkTariffApplicability(unionSettings).reason}
+                    </Alert>
+                  )}
+
+                  {/* Legal References */}
+                  <Box sx={{ pt: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5, xl: 1.75, '2xl': 2, '3xl': 2.25 } }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5 }, fontSize: { xs: '0.7rem', sm: '0.725rem', md: '0.75rem', lg: '0.775rem', xl: '0.8rem', '2xl': '0.825rem', '3xl': '0.85rem' } }}>
+                      Juridiske kilder:
+                    </Typography>
+                    <Stack direction="row" spacing={{ xs: 0.75, sm: 1, md: 1.25, lg: 1.5 }} flexWrap="wrap" useFlexGap>
+                      <Chip 
+                        label="skuespillerforbund.no" 
+                        size="small" 
+                        onClick={() => window.open(UNION_LEGAL_REFERENCES.nsf.url, '_blank')}
+                        sx={{ fontSize: { xs: '0.65rem', sm: '0.675rem', md: '0.7rem', lg: '0.725rem', xl: '0.75rem', '2xl': '0.775rem', '3xl': '0.8rem' }, cursor: 'pointer', height: { xs: 24, sm: 26, md: 28, lg: 30, xl: 32 } }}
+                      />
+                      <Chip 
+                        label="filmforbundet.no" 
+                        size="small" 
+                        onClick={() => window.open(UNION_LEGAL_REFERENCES.nff.url, '_blank')}
+                        sx={{ fontSize: { xs: '0.65rem', sm: '0.675rem', md: '0.7rem', lg: '0.725rem', xl: '0.75rem', '2xl': '0.775rem', '3xl': '0.8rem' }, cursor: 'pointer', height: { xs: 24, sm: 26, md: 28, lg: 30, xl: 32 } }}
+                      />
+                      <Chip 
+                        label="F©R rettigheter" 
+                        size="small" 
+                        onClick={() => window.open(UNION_LEGAL_REFERENCES.for.url, '_blank')}
+                        sx={{ fontSize: { xs: '0.65rem', sm: '0.675rem', md: '0.7rem', lg: '0.725rem', xl: '0.75rem', '2xl': '0.775rem', '3xl': '0.8rem' }, cursor: 'pointer', height: { xs: 24, sm: 26, md: 28, lg: 30, xl: 32 } }}
+                      />
+                      <Chip 
+                        label="Åndsverkloven" 
+                        size="small" 
+                        onClick={() => window.open(UNION_LEGAL_REFERENCES.lovdata_aandsverkloven.url, '_blank')}
+                        sx={{ fontSize: { xs: '0.65rem', sm: '0.675rem', md: '0.7rem', lg: '0.725rem', xl: '0.75rem', '2xl': '0.775rem', '3xl': '0.8rem' }, cursor: 'pointer', height: { xs: 24, sm: 26, md: 28, lg: 30, xl: 32 } }}
+                      />
+                    </Stack>
+                  </Box>
+
+                  {/* Wage/Salary References */}
+                  <Box sx={{ p: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5, '2xl': 2.75, '3xl': 3 }, bgcolor: 'rgba(34, 197, 94, 0.1)', borderRadius: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5, '2xl': 2.75, '3xl': 3 }, border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+                    <Typography variant="subtitle2" sx={{ color: '#22c55e', fontWeight: 600, mb: { xs: 1.25, sm: 1.5, md: 1.75, lg: 2 }, display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5 }, fontSize: { xs: '0.875rem', sm: '0.9rem', md: '0.925rem', lg: '0.95rem', xl: '1rem', '2xl': '1.025rem', '3xl': '1.05rem' } }}>
+                      <AttachMoneyIcon sx={{ fontSize: { xs: 16, sm: 17, md: 18, lg: 19, xl: 20, '2xl': 21, '3xl': 22 } }} /> Lønn og satser – Referanser
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5 }, fontSize: { xs: '0.8rem', sm: '0.825rem', md: '0.85rem', lg: '0.875rem', xl: '0.9rem', '2xl': '0.925rem', '3xl': '0.95rem' } }}>
+                      Bruk offisielle tariffavtaler for å sikre riktig lønn til skuespillere og crew.
+                    </Typography>
+                    
+                    {/* Dynamic wage references based on production type */}
+                    {(() => {
+                      const relevantRefs = getRelevantWageReferences(
+                        unionSettings.productionType,
+                        [unionSettings.participantType]
+                      );
+                      return relevantRefs.length > 0 ? (
+                        <Stack spacing={{ xs: 0.75, sm: 1, md: 1.25, lg: 1.5 }} sx={{ mb: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5 } }}>
+                          {relevantRefs.map((ref, idx) => (
+                            <Box 
+                              key={idx}
+                              sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5 },
+                                p: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5 },
+                                bgcolor: 'rgba(255,255,255,0.05)',
+                                borderRadius: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5 },
+                                cursor: 'pointer',
+                                '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }
+                              }}
+                              onClick={() => window.open(ref.url, '_blank')}
+                            >
+                              <AttachMoneyIcon sx={{ fontSize: { xs: 14, sm: 15, md: 16, lg: 17, xl: 18 }, color: '#22c55e' }} />
+                              <Box sx={{ flex: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {ref.name}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {ref.description}
+                                </Typography>
+                              </Box>
+                              <Chip label={ref.category} size="small" sx={{ fontSize: '0.65rem' }} />
+                              <OpenInNewIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                            </Box>
+                          ))}
+                        </Stack>
+                      ) : null;
+                    })()}
+
+                    {/* Quick links to wage overviews */}
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5 }, fontSize: { xs: '0.7rem', sm: '0.725rem', md: '0.75rem', lg: '0.775rem', xl: '0.8rem', '2xl': '0.825rem', '3xl': '0.85rem' } }}>
+                      Generelle lønnsressurser:
+                    </Typography>
+                    <Stack direction="row" spacing={{ xs: 0.75, sm: 1, md: 1.25, lg: 1.5 }} flexWrap="wrap" useFlexGap>
+                      <Chip 
+                        icon={<AttachMoneyIcon sx={{ fontSize: { xs: 12, sm: 13, md: 14, lg: 15, xl: 16 } }} />}
+                        label="NSF Lønn & Tariff" 
+                        size="small" 
+                        color="success"
+                        variant="outlined"
+                        onClick={() => window.open(WAGE_INFO_RESOURCES.nsf_main.url, '_blank')}
+                        sx={{ fontSize: { xs: '0.65rem', sm: '0.675rem', md: '0.7rem', lg: '0.725rem', xl: '0.75rem', '2xl': '0.775rem', '3xl': '0.8rem' }, cursor: 'pointer', height: { xs: 24, sm: 26, md: 28, lg: 30, xl: 32 } }}
+                      />
+                      <Chip 
+                        icon={<AttachMoneyIcon sx={{ fontSize: { xs: 12, sm: 13, md: 14, lg: 15, xl: 16 } }} />}
+                        label="NFF Tariff" 
+                        size="small" 
+                        color="info"
+                        variant="outlined"
+                        onClick={() => window.open(WAGE_INFO_RESOURCES.nff_main.url, '_blank')}
+                        sx={{ fontSize: { xs: '0.65rem', sm: '0.675rem', md: '0.7rem', lg: '0.725rem', xl: '0.75rem', '2xl': '0.775rem', '3xl': '0.8rem' }, cursor: 'pointer', height: { xs: 24, sm: 26, md: 28, lg: 30, xl: 32 } }}
+                      />
+                      <Chip 
+                        label="NFF Lønnskalkulator" 
+                        size="small" 
+                        variant="outlined"
+                        onClick={() => window.open(WAGE_INFO_RESOURCES.nff_lonnskalkulator.url, '_blank')}
+                        sx={{ fontSize: { xs: '0.65rem', sm: '0.675rem', md: '0.7rem', lg: '0.725rem', xl: '0.75rem', '2xl': '0.775rem', '3xl': '0.8rem' }, cursor: 'pointer', height: { xs: 24, sm: 26, md: 28, lg: 30, xl: 32 } }}
+                      />
+                      <Chip 
+                        label="Skuespillerkatalogen" 
+                        size="small" 
+                        variant="outlined"
+                        onClick={() => window.open(WAGE_INFO_RESOURCES.skuespillerkatalogen.url, '_blank')}
+                        sx={{ fontSize: { xs: '0.65rem', sm: '0.675rem', md: '0.7rem', lg: '0.725rem', xl: '0.75rem', '2xl': '0.775rem', '3xl': '0.8rem' }, cursor: 'pointer', height: { xs: 24, sm: 26, md: 28, lg: 30, xl: 32 } }}
+                      />
+                      <Chip 
+                        label="NSF Rettigheter" 
+                        size="small" 
+                        variant="outlined"
+                        onClick={() => window.open(WAGE_INFO_RESOURCES.betaling_rettigheter.url, '_blank')}
+                        sx={{ fontSize: { xs: '0.65rem', sm: '0.675rem', md: '0.7rem', lg: '0.725rem', xl: '0.75rem', '2xl': '0.775rem', '3xl': '0.8rem' }, cursor: 'pointer', height: { xs: 24, sm: 26, md: 28, lg: 30, xl: 32 } }}
+                      />
+                    </Stack>
+
+                    {/* Specific agreements based on production type */}
+                    {unionSettings.productionType !== 'other' && (
+                      <Box sx={{ mt: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5, '2xl': 2.75, '3xl': 3 }, pt: { xs: 1.25, sm: 1.5, md: 1.75, lg: 2 }, borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5 }, fontSize: { xs: '0.7rem', sm: '0.725rem', md: '0.75rem', lg: '0.775rem', xl: '0.8rem', '2xl': '0.825rem', '3xl': '0.85rem' } }}>
+                          Spesifikke avtaler for {PRODUCTION_TYPE_LABELS[unionSettings.productionType]}:
+                        </Typography>
+                        <Stack direction="row" spacing={{ xs: 0.75, sm: 1, md: 1.25, lg: 1.5 }} flexWrap="wrap" useFlexGap>
+                          {unionSettings.participantType === 'actor' && (
+                            <Button
+                              size="small"
+                              variant="text"
+                              startIcon={<OpenInNewIcon sx={{ fontSize: { xs: 12, sm: 13, md: 14, lg: 15, xl: 16 } }} />}
+                              onClick={() => window.open(getWageReferenceUrl(unionSettings.productionType, 'actor'), '_blank')}
+                              sx={{ fontSize: { xs: '0.7rem', sm: '0.725rem', md: '0.75rem', lg: '0.775rem', xl: '0.8rem', '2xl': '0.825rem', '3xl': '0.85rem' }, textTransform: 'none' }}
+                            >
+                              NSF satser for skuespillere
+                            </Button>
+                          )}
+                          {unionSettings.participantType === 'crew' && (
+                            <Button
+                              size="small"
+                              variant="text"
+                              startIcon={<OpenInNewIcon sx={{ fontSize: { xs: 12, sm: 13, md: 14, lg: 15, xl: 16 } }} />}
+                              onClick={() => window.open(getWageReferenceUrl(unionSettings.productionType, 'crew'), '_blank')}
+                              sx={{ fontSize: { xs: '0.7rem', sm: '0.725rem', md: '0.75rem', lg: '0.775rem', xl: '0.8rem', '2xl': '0.825rem', '3xl': '0.85rem' }, textTransform: 'none' }}
+                            >
+                              NFF satser for crew
+                            </Button>
+                          )}
+                        </Stack>
+                      </Box>
+                    )}
+                  </Box>
+                </Stack>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* SongFlow Integration - Only visible for music producers */}
         {splitSheet?.id && profession === 'music_producer' && (
@@ -1288,7 +1714,7 @@ export default function SplitSheetEditor({
 
                           {/* Main Fields Grid */}
                           <Grid container spacing={{ xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 }}>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                               <TextField
                                 label="Navn *"
                                 value={contributor.name}
@@ -1329,7 +1755,7 @@ export default function SplitSheetEditor({
                                 }}
                               />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                               <TextField
                                 label="E-post *"
                                 type="email"
@@ -1383,7 +1809,7 @@ export default function SplitSheetEditor({
                                 }}
                               />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                               <FormControl fullWidth size="medium">
                                 <InputLabel
                                   sx={{
@@ -1455,7 +1881,7 @@ export default function SplitSheetEditor({
                                 </Select>
                               </FormControl>
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                               {calculationMethod === 'budget' ? (
                                 <Box>
                                   <TextField
@@ -1703,7 +2129,7 @@ export default function SplitSheetEditor({
                                       Kontaktinformasjon
                                     </Typography>
                                     <Grid container spacing={{ xs: 2, sm: 2.5 }}>
-                                      <Grid item xs={12}>
+                                      <Grid size={12}>
                                         <TextField
                                           label="Adresse"
                                           value={contributor.custom_fields?.address || ''}
@@ -1723,7 +2149,7 @@ export default function SplitSheetEditor({
                                           }}
                                         />
                                       </Grid>
-                                      <Grid item xs={12} sm={profession === 'music_producer' ? 6 : 12}>
+                                      <Grid size={{ xs: 12, sm: profession === 'music_producer' ? 6 : 12 }}>
                                         <TextField
                                           label="Nettside"
                                           value={contributor.custom_fields?.website || ''}
@@ -1744,7 +2170,7 @@ export default function SplitSheetEditor({
                                         />
                                       </Grid>
                                       {profession === 'music_producer' && (
-                                        <Grid item xs={12} sm={6}>
+                                        <Grid size={{ xs: 12, sm: 6 }}>
                                           <TextField
                                             label="Spotify Artist URL"
                                             value={contributor.custom_fields?.spotify_url || ''}
@@ -1797,7 +2223,7 @@ export default function SplitSheetEditor({
                                       Sosiale medier
                                     </Typography>
                                     <Grid container spacing={{ xs: 2, sm: 2.5 }}>
-                                      <Grid item xs={12} sm={6} md={3}>
+                                      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                         <TextField
                                           label="Instagram"
                                           value={contributor.custom_fields?.instagram || ''}
@@ -1816,7 +2242,7 @@ export default function SplitSheetEditor({
                                           }}
                                         />
                                       </Grid>
-                                      <Grid item xs={12} sm={6} md={3}>
+                                      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                         <TextField
                                           label="Twitter/X"
                                           value={contributor.custom_fields?.twitter || ''}
@@ -1835,7 +2261,7 @@ export default function SplitSheetEditor({
                                           }}
                                         />
                                       </Grid>
-                                      <Grid item xs={12} sm={6} md={3}>
+                                      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                         <TextField
                                           label="Facebook"
                                           value={contributor.custom_fields?.facebook || ''}
@@ -1854,7 +2280,7 @@ export default function SplitSheetEditor({
                                           }}
                                         />
                                       </Grid>
-                                      <Grid item xs={12} sm={6} md={3}>
+                                      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                         <TextField
                                           label="LinkedIn"
                                           value={contributor.custom_fields?.linkedin || ''}
@@ -1966,7 +2392,7 @@ export default function SplitSheetEditor({
                   },
                   '&:disabled': {
                     borderColor: 'rgba(255,255,255,0.2)',
-                    color: 'rgba(255,255,255,0.3)',
+                    color: 'rgba(255,255,255,0.6)',
                   },
                 }}
                 tabIndex={0}
@@ -2064,7 +2490,7 @@ export default function SplitSheetEditor({
           <IconButton
             onClick={() => setShowPortalView(false)}
             sx={{
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
               width: { xs: 40, sm: 44, md: 48, lg: 52, xl: 56 },
               height: { xs: 40, sm: 44, md: 48, lg: 52, xl: 56 },

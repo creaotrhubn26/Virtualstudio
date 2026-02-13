@@ -3,7 +3,7 @@
  * Supports both attaching to lights and placing as standalone assets
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FC } from 'react';
 import {
   Box,
   Typography,
@@ -42,7 +42,7 @@ interface GoboBrowserProps {
   onClose?: () => void;
 }
 
-export const GoboBrowser: React.FC<GoboBrowserProps> = ({ selectedLightId, onClose }) => {
+export const GoboBrowser: FC<GoboBrowserProps> = ({ selectedLightId, onClose }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedGobo, setSelectedGobo] = useState<GoboDefinition | null>(null);

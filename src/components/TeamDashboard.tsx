@@ -34,6 +34,7 @@ import {
   Collapse,
   useMediaQuery,
   useTheme,
+  Drawer,
 } from '@mui/material';
 import {
   DndContext,
@@ -62,7 +63,6 @@ import {
   ViewKanban as KanbanIcon,
   TableChart as TableIcon,
   Timeline as TimelineIcon,
-  CalendarMonth as CalendarIcon,
   Person as PersonIcon,
   Assignment as TaskIcon,
   Warning as WarningIcon,
@@ -83,13 +83,22 @@ import {
   Download as DownloadIcon,
   PictureAsPdf as PdfIcon,
   TableView as ExcelIcon,
+  Description as CallSheetIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
-import { ShotList, CastingShot, CrewMember, ShotStatus, ShotPriority } from '../core/models/casting';
+import { CalendarCustomIcon as CalendarIcon } from './icons/CastingIcons';
+import { ShotList, CastingShot, CrewMember, ShotStatus, ShotPriority, SceneBreakdown, ProductionDay } from '../core/models/casting';
+
+// Lazy load CallSheetGenerator for performance
+const CallSheetGenerator = React.lazy(() => import('./CallSheetGenerator'));
 
 interface TeamDashboardProps {
   shotLists: ShotList[];
   crewMembers: CrewMember[];
   currentUserId?: string;
+  projectId?: string;
+  scenes?: SceneBreakdown[];
+  productionDay?: ProductionDay;
   onShotUpdate?: (shotList: ShotList, shot: CastingShot) => Promise<void>;
   onActivityLog?: (action: string, details: object) => void;
 }
@@ -199,7 +208,7 @@ const DroppableColumn: React.FC<DroppableColumnProps> = ({ id, children, isOver:
           bgcolor: 'rgba(255,255,255,0.2)',
           borderRadius: 4,
           '&:hover': {
-            bgcolor: 'rgba(255,255,255,0.3)',
+            bgcolor: 'rgba(255,255,255,0.6)',
           },
         },
       }}
@@ -324,7 +333,7 @@ const KanbanCard: React.FC<KanbanCardProps> = React.memo(({ shot, shotList, crew
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="caption" sx={{ 
-            color: 'rgba(255,255,255,0.5)',
+            color: 'rgba(255,255,255,0.87)',
             fontSize: { xs: '0.8rem', sm: '0.75rem' },
           }}>
             {shotList.sceneName || 'Scene'}
@@ -361,7 +370,7 @@ const KanbanCard: React.FC<KanbanCardProps> = React.memo(({ shot, shotList, crew
 
         {shot.estimatedTime && (
           <Typography variant="caption" sx={{ 
-            color: 'rgba(255,255,255,0.4)', 
+            color: 'rgba(255,255,255,0.7)', 
             display: 'block', 
             mt: { xs: 1, sm: 0.5 },
             fontSize: { xs: '0.8rem', sm: '0.75rem' },
@@ -389,6 +398,9 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
   shotLists,
   crewMembers,
   currentUserId,
+  projectId,
+  scenes = [],
+  productionDay,
   onShotUpdate,
   onActivityLog,
 }) => {
@@ -406,6 +418,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedMemberForAssign, setSelectedMemberForAssign] = useState<string | null>(null);
   const [expandedMembers, setExpandedMembers] = useState<Set<string>>(new Set());
+  const [showCallSheetDrawer, setShowCallSheetDrawer] = useState(false);
 
   // Memoize handleShotUpdate to prevent unnecessary re-renders
   const handleShotUpdate = useCallback((shotList: ShotList, shot: CastingShot, updates: Partial<CastingShot>) => {
@@ -699,7 +712,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontWeight: 500 }}>
               Statistikk
             </Typography>
             <Chip 
@@ -714,9 +727,9 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
             />
           </Box>
           {statsExpanded ? (
-            <ExpandLessIcon sx={{ color: 'rgba(255,255,255,0.5)', fontSize: 20 }} />
+            <ExpandLessIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
           ) : (
-            <ExpandMoreIcon sx={{ color: 'rgba(255,255,255,0.5)', fontSize: 20 }} />
+            <ExpandMoreIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
           )}
         </Box>
 
@@ -743,7 +756,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
               minHeight: { xs: 70, sm: 80, md: 75, lg: 85, xl: 110 },
             }}>
               <Typography variant="caption" sx={{ 
-                color: 'rgba(255,255,255,0.6)', 
+                color: 'rgba(255,255,255,0.87)', 
                 fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.7rem', lg: '0.72rem', xl: '0.875rem' },
                 mb: { xs: 0.5, sm: 0.75, md: 0.5, lg: 0.625, xl: 1 },
                 textAlign: 'center',
@@ -765,7 +778,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
               minHeight: { xs: 70, sm: 80, md: 75, lg: 85, xl: 110 },
             }}>
               <Typography variant="caption" sx={{ 
-                color: 'rgba(255,255,255,0.6)', 
+                color: 'rgba(255,255,255,0.87)', 
                 fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.7rem', lg: '0.72rem', xl: '0.875rem' },
                 mb: { xs: 0.5, sm: 0.75, md: 0.5, lg: 0.625, xl: 1 },
                 textAlign: 'center',
@@ -787,7 +800,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
               minHeight: { xs: 70, sm: 80, md: 75, lg: 85, xl: 110 },
             }}>
               <Typography variant="caption" sx={{ 
-                color: 'rgba(255,255,255,0.6)', 
+                color: 'rgba(255,255,255,0.87)', 
                 fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.7rem', lg: '0.72rem', xl: '0.875rem' },
                 mb: { xs: 0.5, sm: 0.75, md: 0.5, lg: 0.625, xl: 1 },
                 textAlign: 'center',
@@ -809,7 +822,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
               minHeight: { xs: 70, sm: 80, md: 75, lg: 85, xl: 110 },
             }}>
               <Typography variant="caption" sx={{ 
-                color: 'rgba(255,255,255,0.6)', 
+                color: 'rgba(255,255,255,0.87)', 
                 fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.7rem', lg: '0.72rem', xl: '0.875rem' },
                 mb: { xs: 0.5, sm: 0.75, md: 0.5, lg: 0.625, xl: 1 },
                 textAlign: 'center',
@@ -832,7 +845,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
               minHeight: { xs: 70, sm: 80, md: 75, lg: 85, xl: 110 },
             }}>
               <Typography variant="caption" sx={{ 
-                color: 'rgba(255,255,255,0.6)', 
+                color: 'rgba(255,255,255,0.87)', 
                 fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.7rem', lg: '0.72rem', xl: '0.875rem' },
                 mb: { xs: 0.5, sm: 0.75, md: 0.5, lg: 0.625, xl: 1 },
                 textAlign: 'center',
@@ -854,7 +867,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
               alignItems: 'center',
             }}>
               <Typography variant="caption" sx={{ 
-                color: 'rgba(255,255,255,0.6)',
+                color: 'rgba(255,255,255,0.87)',
                 fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.75rem', lg: '0.78rem', xl: '0.9rem' },
                 fontWeight: { xs: 500, sm: 400 },
               }}>
@@ -904,7 +917,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
               order: { xs: 1, sm: 1 },
               '& .MuiTab-root': { 
                 minHeight: { xs: 40, sm: 44, md: 42, lg: 46, xl: 56 }, 
-                color: 'rgba(255,255,255,0.6)',
+                color: 'rgba(255,255,255,0.87)',
                 minWidth: { xs: 70, sm: 90, md: 85, lg: 100, xl: 130 },
                 maxWidth: { xs: 'none', sm: 160, xl: 200 },
                 px: { xs: 1, sm: 1.5, md: 1.25, lg: 1.75, xl: 2.5 },
@@ -920,7 +933,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                 fontWeight: 600,
               },
               '& .MuiTabs-scrollButtons': { 
-                color: 'rgba(255,255,255,0.6)',
+                color: 'rgba(255,255,255,0.87)',
                 width: { xs: 32, sm: 40, md: 36, lg: 38, xl: 48 },
               },
               '& .MuiTabs-indicator': {
@@ -990,7 +1003,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
               placeholder="Søk..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{ startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)', mr: 0.5, fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} /> }}
+              InputProps={{ startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.87)', mr: 0.5, fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} /> }}
               sx={{
                 flex: { xs: 1, sm: 'none' },
                 width: { xs: '100%', sm: 160, md: 170, lg: 185, xl: 240 },
@@ -1012,7 +1025,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
 
             <FormControl size="small" sx={{ minWidth: { xs: 90, sm: 120, md: 110, lg: 125, xl: 160 }, flex: { xs: 1, sm: 'none' } }}>
               <InputLabel sx={{ 
-                color: 'rgba(255,255,255,0.6)', 
+                color: 'rgba(255,255,255,0.87)', 
                 fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.8rem', lg: '0.85rem', xl: '1rem' },
                 '&.Mui-focused': { color: '#e91e63' },
               }}>
@@ -1047,7 +1060,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
 
             <FormControl size="small" sx={{ minWidth: { xs: 80, sm: 100, md: 95, lg: 110, xl: 140 }, flex: { xs: 1, sm: 'none' } }}>
               <InputLabel sx={{ 
-                color: 'rgba(255,255,255,0.6)', 
+                color: 'rgba(255,255,255,0.87)', 
                 fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.8rem', lg: '0.85rem', xl: '1rem' },
                 '&.Mui-focused': { color: '#e91e63' },
               }}>
@@ -1086,7 +1099,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                 size="small"
                 onClick={() => exportToCSV(allShots, crewMembers)}
                 sx={{ 
-                  color: 'rgba(255,255,255,0.6)',
+                  color: 'rgba(255,255,255,0.87)',
                   display: { xs: 'none', sm: 'flex' },
                   '&:hover': { color: '#4caf50' },
                 }}
@@ -1100,12 +1113,49 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                 size="small"
                 onClick={() => exportToPDF(allShots, crewMembers)}
                 sx={{ 
-                  color: 'rgba(255,255,255,0.6)',
+                  color: 'rgba(255,255,255,0.87)',
                   display: { xs: 'none', sm: 'flex' },
                   '&:hover': { color: '#e91e63' },
                 }}
               >
                 <PdfIcon sx={{ fontSize: 20 }} />
+              </IconButton>
+            </Tooltip>
+
+            <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: 'rgba(255,255,255,0.2)' }} />
+
+            <Tooltip title="Generer Call Sheet">
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<CallSheetIcon />}
+                onClick={() => setShowCallSheetDrawer(true)}
+                sx={{ 
+                  color: '#8b5cf6',
+                  borderColor: 'rgba(139, 92, 246, 0.5)',
+                  display: { xs: 'none', md: 'flex' },
+                  '&:hover': { 
+                    borderColor: '#8b5cf6',
+                    bgcolor: 'rgba(139, 92, 246, 0.1)',
+                  },
+                }}
+              >
+                Call Sheet
+              </Button>
+            </Tooltip>
+            
+            {/* Mobile Call Sheet button */}
+            <Tooltip title="Call Sheet">
+              <IconButton
+                size="small"
+                onClick={() => setShowCallSheetDrawer(true)}
+                sx={{ 
+                  color: '#8b5cf6',
+                  display: { xs: 'flex', md: 'none' },
+                  '&:hover': { bgcolor: 'rgba(139, 92, 246, 0.1)' },
+                }}
+              >
+                <CallSheetIcon sx={{ fontSize: 20 }} />
               </IconButton>
             </Tooltip>
           </Box>
@@ -1247,7 +1297,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                               width: '100%',
                               p: { xs: 2, sm: 1.5 },
                               textAlign: 'center',
-                              color: 'rgba(255,255,255,0.3)',
+                              color: 'rgba(255,255,255,0.6)',
                               border: '2px dashed rgba(255,255,255,0.15)',
                               borderRadius: 2,
                               minHeight: { xs: 60, sm: 50 },
@@ -1362,7 +1412,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                             {member.name}
                           </Typography>
                           <Typography variant="caption" sx={{ 
-                            color: 'rgba(255,255,255,0.5)',
+                            color: 'rgba(255,255,255,0.87)',
                             fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.7rem', lg: '0.8rem', xl: '1rem' },
                           }}>
                             {member.role}
@@ -1431,7 +1481,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                       <Box sx={{ mb: { xs: 1, sm: 1.5, md: 1.25, lg: 1.375, xl: 2 } }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.7, xl: 1 } }}>
                           <Typography variant="caption" sx={{ 
-                            color: 'rgba(255,255,255,0.6)',
+                            color: 'rgba(255,255,255,0.87)',
                             fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.76rem', xl: '0.9rem' },
                           }}>
                             Fullføringsgrad
@@ -1468,7 +1518,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                         gap: { xs: 0.5, sm: 1 },
                       }}>
                         <Typography variant="caption" sx={{ 
-                          color: 'rgba(255,255,255,0.5)',
+                          color: 'rgba(255,255,255,0.87)',
                           fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem' },
                         }}>
                           Estimert tid: {load.totalTime} min
@@ -1489,7 +1539,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                             }}
                             endIcon={isExpanded ? <ExpandLessIcon sx={{ fontSize: { xs: 16, sm: 18 } }} /> : <ExpandMoreIcon sx={{ fontSize: { xs: 16, sm: 18 } }} />}
                             sx={{ 
-                              color: 'rgba(255,255,255,0.6)', 
+                              color: 'rgba(255,255,255,0.87)', 
                               fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem' },
                               minWidth: 'auto',
                               py: { xs: 0.5, sm: 0.75 },
@@ -1505,7 +1555,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 0.75, sm: 1 } }}>
                           {(isExpanded ? memberShots : memberShots.slice(0, 3)).map(({ shot, shotList }) => {
                             const priority = priorityConfig[shot.priority || 'important'];
-                            const statusCol = statusColumns.find(s => s.id === shot.status);
+                            const statusCol = statusColumns.find(s => s.id === (shot.status || 'not_started'));
                             return (
                               <Box
                                 key={shot.id}
@@ -1564,7 +1614,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                                       }
                                     }}
                                     sx={{ 
-                                      color: 'rgba(255,255,255,0.4)', 
+                                      color: 'rgba(255,255,255,0.7)', 
                                       '&:hover': { color: '#f44336' },
                                       p: { xs: 0.5, sm: 0.75, md: 1 },
                                       minWidth: { xs: 32, sm: 36, md: 40 },
@@ -1630,7 +1680,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                               <Typography variant="body2" sx={{ color: '#fff', fontSize: '0.8rem' }}>
                                 {shot.description || shot.shotType}
                               </Typography>
-                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                                 {shotList.sceneName || 'Scene'}
                               </Typography>
                             </Box>
@@ -1679,11 +1729,11 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                   Tilordne shots til {crewMembers.find(m => m.id === selectedMemberForAssign)?.name}
                 </DialogTitle>
                 <DialogContent sx={{ mt: 2 }}>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 2 }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 2 }}>
                     Velg shots å tilordne:
                   </Typography>
                   {allShots.filter(({ shot }) => !shot.assigneeId).length === 0 ? (
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', py: 4 }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', textAlign: 'center', py: 4 }}>
                       Ingen ledige shots å tilordne
                     </Typography>
                   ) : (
@@ -1714,7 +1764,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                               <Typography variant="body2" sx={{ color: '#fff' }}>
                                 {shot.description || shot.shotType}
                               </Typography>
-                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                                 {shotList.sceneName || 'Scene'}
                               </Typography>
                             </Box>
@@ -1726,7 +1776,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                   )}
                 </DialogContent>
                 <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2 }}>
-                  <Button onClick={() => setAssignDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                  <Button onClick={() => setAssignDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
                     Lukk
                   </Button>
                 </DialogActions>
@@ -1770,7 +1820,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                       alignItems: 'center',
                     }}>
                       <Typography variant="caption" sx={{ 
-                        color: 'rgba(255,255,255,0.6)', 
+                        color: 'rgba(255,255,255,0.87)', 
                         fontWeight: 600,
                         fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.7rem', lg: '0.75rem', xl: '0.9rem' },
                       }}>
@@ -1815,7 +1865,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                           </Typography>
                           {i === 0 && (
                             <Typography variant="caption" sx={{ 
-                              color: 'rgba(255,255,255,0.4)', 
+                              color: 'rgba(255,255,255,0.7)', 
                               display: 'block', 
                               fontSize: { xs: '0.5rem', sm: '0.55rem', md: '0.55rem', lg: '0.6rem', xl: '0.75rem' },
                               mt: { xs: 0.25, sm: 0.5, md: 0.375, lg: 0.45, xl: 0.75 },
@@ -1830,7 +1880,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                   
                   {allShots.length === 0 ? (
                     <Box sx={{ p: 3, textAlign: 'center' }}>
-                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
                         Ingen shots å vise i tidslinjen
                       </Typography>
                     </Box>
@@ -1838,8 +1888,9 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                     allShots.map(({ shot, shotList }, idx) => {
                       const assignee = crewMembers.find(m => m.id === shot.assigneeId);
                       const priority = priorityConfig[shot.priority || 'important'];
-                      const statusCol = statusColumns.find(s => s.id === shot.status);
-                      const statusOffset = shot.status === 'completed' ? 0 : shot.status === 'in_progress' ? 3 : 7;
+                      const statusCol = statusColumns.find(s => s.id === (shot.status || 'not_started'));
+                      const shotStatus = shot.status || 'not_started';
+                      const statusOffset = shotStatus === 'completed' ? 0 : shotStatus === 'in_progress' ? 3 : 7;
                       const barStart = statusOffset + (idx % 3);
                       const barLength = Math.max(1, Math.min(shot.estimatedTime ? Math.ceil(shot.estimatedTime / 30) : 2, daysToShow - barStart - 1));
                       
@@ -1882,7 +1933,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                                 {shot.description || shot.shotType}
                               </Typography>
                               <Typography variant="caption" sx={{ 
-                                color: 'rgba(255,255,255,0.4)', 
+                                color: 'rgba(255,255,255,0.7)', 
                                 fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.65rem', lg: '0.7rem', xl: '0.875rem' },
                                 display: { xs: 'none', sm: 'block' },
                                 mt: { xs: 0.25, sm: 0.5, md: 0.375, lg: 0.45, xl: 0.75 },
@@ -1994,25 +2045,25 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                     * Estimert visning basert på status
                   </Typography>
                   <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                     Prioritet:
                   </Typography>
                   {Object.entries(priorityConfig).map(([key, val]) => (
                     <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <Box sx={{ width: 12, height: 12, bgcolor: val.color, borderRadius: 0.5 }} />
-                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                         {val.label}
                       </Typography>
                     </Box>
                   ))}
                   <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                     Status:
                   </Typography>
                   {statusColumns.map(col => (
                     <Box key={col.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <Box sx={{ width: 8, height: 8, bgcolor: col.color, borderRadius: '50%' }} />
-                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                         {col.label}
                       </Typography>
                     </Box>
@@ -2042,7 +2093,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                     },
                     '& th': {
                       bgcolor: 'rgba(255,255,255,0.05)',
-                      color: 'rgba(255,255,255,0.7)',
+                      color: 'rgba(255,255,255,0.87)',
                       fontWeight: { xs: 600, sm: 600, md: 600 },
                       fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.75rem', lg: '0.82rem', xl: '1rem' },
                       position: 'sticky',
@@ -2077,7 +2128,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                 <tbody>
                   {allShots.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
+                      <td colSpan={6} style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>
                         Ingen shots funnet
                       </td>
                     </tr>
@@ -2085,7 +2136,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                     allShots.map(({ shot, shotList }) => {
                       const assignee = crewMembers.find(m => m.id === shot.assigneeId);
                       const priority = priorityConfig[shot.priority || 'important'];
-                      const statusCol = statusColumns.find(s => s.id === shot.status);
+                      const statusCol = statusColumns.find(s => s.id === (shot.status || 'not_started'));
                       return (
                         <tr key={shot.id}>
                           <td>
@@ -2098,7 +2149,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                           </td>
                           <td style={{ display: window.innerWidth < 600 ? 'none' : 'table-cell' }}>
                             <Typography variant="caption" sx={{ 
-                              color: 'rgba(255,255,255,0.6)',
+                              color: 'rgba(255,255,255,0.87)',
                               fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.72rem', lg: '0.8rem', xl: '1rem' },
                             }}>
                               {shotList.sceneName || 'Scene'}
@@ -2107,7 +2158,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                           <td>
                             <Select
                               size="small"
-                              value={shot.status}
+                              value={shot.status || 'not_started'}
                               onChange={async (e) => {
                                 if (onShotUpdate) {
                                   await onShotUpdate(shotList, { ...shot, status: e.target.value as any });
@@ -2234,7 +2285,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                             </Select>
                           </td>
                           <td>
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                               {shot.estimatedTime ? `${shot.estimatedTime} min` : '-'}
                             </Typography>
                           </td>
@@ -2268,7 +2319,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                 <ListItem>
                   <ListItemText
                     primary="Ingen aktivitet ennå"
-                    sx={{ '& .MuiListItemText-primary': { color: 'rgba(255,255,255,0.5)' } }}
+                    sx={{ '& .MuiListItemText-primary': { color: 'rgba(255,255,255,0.87)' } }}
                   />
                 </ListItem>
               ) : (
@@ -2286,7 +2337,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                         </Typography>
                       }
                       secondary={
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                           {new Date(entry.timestamp).toLocaleString('nb-NO')}
                         </Typography>
                       }
@@ -2298,6 +2349,66 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
           </Paper>
         )}
       </Box>
+
+      {/* Call Sheet Drawer */}
+      <Drawer
+        anchor="right"
+        open={showCallSheetDrawer}
+        onClose={() => setShowCallSheetDrawer(false)}
+        PaperProps={{
+          sx: {
+            width: { xs: '100%', sm: '80%', md: '60%', lg: '50%' },
+            maxWidth: 900,
+            bgcolor: '#1a1f2e',
+          },
+        }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            p: 2,
+            borderBottom: '1px solid rgba(255,255,255,0.1)',
+          }}>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <CallSheetIcon sx={{ color: '#8b5cf6' }} />
+              <Typography variant="h6" sx={{ color: '#fff' }}>
+                Call Sheet fra Team Dashboard
+              </Typography>
+            </Stack>
+            <IconButton onClick={() => setShowCallSheetDrawer(false)} sx={{ color: '#fff' }}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+            <React.Suspense fallback={
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
+                <Typography color="text.secondary">Laster Call Sheet Generator...</Typography>
+              </Box>
+            }>
+              {projectId && (
+                <CallSheetGenerator
+                  projectId={projectId}
+                  productionDay={productionDay}
+                  scenes={scenes}
+                  crew={crewMembers}
+                />
+              )}
+              {!projectId && (
+                <Box sx={{ p: 4, textAlign: 'center' }}>
+                  <Typography color="error" variant="body1">
+                    Mangler prosjekt-ID. Call Sheet kan ikke genereres.
+                  </Typography>
+                  <Typography color="text.secondary" variant="body2" sx={{ mt: 1 }}>
+                    Åpne Team Dashboard fra et prosjekt for å bruke Call Sheet.
+                  </Typography>
+                </Box>
+              )}
+            </React.Suspense>
+          </Box>
+        </Box>
+      </Drawer>
     </Box>
   );
 };

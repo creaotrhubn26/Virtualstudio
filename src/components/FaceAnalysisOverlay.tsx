@@ -8,7 +8,7 @@
  * - Face center marker
  */
 
-import React, { useMemo } from 'react';
+import { useMemo, type FC } from 'react';
 import { useThree } from '@react-three/fiber';
 import { Line, Sphere, Text } from '@react-three/drei';
 import * as THREE from 'three';
@@ -59,7 +59,7 @@ function projectLandmarksTo3D(
 /**
  * Landmark visualization component
  */
-const LandmarksOverlay: React.FC<{
+const LandmarksOverlay: FC<{
   landmarks: FaceLandmarks[];
   facePosition: [number, number, number];
   scale: number;
@@ -143,7 +143,7 @@ const LandmarksOverlay: React.FC<{
 /**
  * Composition guides visualization
  */
-const CompositionGuidesOverlay: React.FC<{
+const CompositionGuidesOverlay: FC<{
   guides: NonNullable<FaceAnalysisOverlayProps['compositionGuides']>;
   facePosition: [number, number, number];
   scale: number;
@@ -240,7 +240,7 @@ const CompositionGuidesOverlay: React.FC<{
 /**
  * Head pose indicator (3D arrows showing orientation)
  */
-const HeadPoseIndicator: React.FC<{
+const HeadPoseIndicator: FC<{
   headPose: HeadPose;
   facePosition: [number, number, number];
   scale: number;
@@ -316,7 +316,7 @@ const HeadPoseIndicator: React.FC<{
 /**
  * Main Face Analysis Overlay component
  */
-export const FaceAnalysisOverlay: React.FC<FaceAnalysisOverlayProps> = ({
+export const FaceAnalysisOverlay: FC<FaceAnalysisOverlayProps> = ({
   landmarks,
   headPose,
   compositionGuides,

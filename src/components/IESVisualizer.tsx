@@ -4,9 +4,9 @@
  * Visualizes IES profile distribution in 3D viewport
  */
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
+import type { FC } from 'react';
 import { Box, Typography, Paper } from '@mui/material';
-import * as THREE from 'three';
 import { IESProfile, renderIESToCanvas } from '../../core/services/ies';
 
 interface IESVisualizerProps {
@@ -15,7 +15,7 @@ interface IESVisualizerProps {
   show3D?: boolean;
 }
 
-export const IESVisualizer: React.FC<IESVisualizerProps> = ({
+export const IESVisualizer: FC<IESVisualizerProps> = ({
   profile,
   size = 256,
   show3D = false,

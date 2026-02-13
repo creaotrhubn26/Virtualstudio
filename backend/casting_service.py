@@ -738,6 +738,10 @@ def create_manuscript(manuscript: Dict[str, Any]) -> bool:
     """Create a new manuscript"""
     conn = None
     try:
+        # Generate ID if not provided
+        import uuid
+        manuscript_id = manuscript.get('id') or f"manuscript-{uuid.uuid4()}"
+        
         conn = get_db_connection()
         with conn.cursor() as cur:
             cur.execute("""
@@ -749,8 +753,8 @@ def create_manuscript(manuscript: Dict[str, Any]) -> bool:
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
             """, (
-                manuscript.get('id'),
-                manuscript.get('projectId'),
+                manuscript_id,
+                manuscript.get('projectId') or manuscript.get('project_id'),
                 manuscript.get('title'),
                 manuscript.get('subtitle'),
                 manuscript.get('author'),
@@ -896,6 +900,7 @@ def save_scene(scene: Dict[str, Any]) -> bool:
                 # Update existing scene
                 cur.execute("""
                     UPDATE casting_scenes SET
+                        act_id = %s,
                         scene_number = %s,
                         scene_heading = %s,
                         int_ext = %s,
@@ -924,37 +929,40 @@ def save_scene(scene: Dict[str, Any]) -> bool:
                         priority = %s,
                         status = %s,
                         notes = %s,
+                        metadata = %s,
                         updated_at = %s
                     WHERE id = %s
                 """, (
-                    scene.get('sceneNumber'),
-                    scene.get('sceneHeading'),
-                    scene.get('intExt'),
-                    scene.get('locationName'),
-                    scene.get('timeOfDay'),
-                    scene.get('pageLength'),
-                    scene.get('estimatedScreenTime'),
+                    scene.get('actId') or scene.get('act_id'),
+                    scene.get('sceneNumber') or scene.get('scene_number'),
+                    scene.get('sceneHeading') or scene.get('scene_heading'),
+                    scene.get('intExt') or scene.get('int_ext'),
+                    scene.get('locationName') or scene.get('location_name'),
+                    scene.get('timeOfDay') or scene.get('time_of_day'),
+                    scene.get('pageLength') or scene.get('page_length'),
+                    scene.get('estimatedScreenTime') or scene.get('estimated_screen_time'),
                     scene.get('description'),
-                    scene.get('dramaticDay'),
+                    scene.get('dramaticDay') or scene.get('dramatic_day'),
                     scene.get('sequence'),
                     Json(scene.get('characters', [])),
-                    scene.get('extrasCount'),
-                    Json(scene.get('propsNeeded', [])),
-                    scene.get('wardrobeNotes'),
-                    scene.get('makeupNotes'),
-                    scene.get('specialEffects'),
-                    scene.get('stuntsNotes'),
+                    scene.get('extrasCount') or scene.get('extras_count'),
+                    Json(scene.get('propsNeeded') or scene.get('props_needed') or []),
+                    scene.get('wardrobeNotes') or scene.get('wardrobe_notes'),
+                    scene.get('makeupNotes') or scene.get('makeup_notes'),
+                    scene.get('specialEffects') or scene.get('special_effects'),
+                    scene.get('stuntsNotes') or scene.get('stunts_notes'),
                     Json(scene.get('vehicles', [])),
                     Json(scene.get('animals', [])),
-                    scene.get('soundNotes'),
-                    scene.get('musicNotes'),
-                    scene.get('locationId'),
-                    scene.get('shootingDate'),
-                    scene.get('callTime'),
-                    scene.get('estimatedDuration'),
+                    scene.get('soundNotes') or scene.get('sound_notes'),
+                    scene.get('musicNotes') or scene.get('music_notes'),
+                    scene.get('locationId') or scene.get('location_id'),
+                    scene.get('shootingDate') or scene.get('shooting_date'),
+                    scene.get('callTime') or scene.get('call_time'),
+                    scene.get('estimatedDuration') or scene.get('estimated_duration'),
                     scene.get('priority'),
                     scene.get('status', 'not-scheduled'),
                     scene.get('notes'),
+                    Json(scene.get('metadata', {})),
                     datetime.now().isoformat(),
                     scene.get('id')
                 ))
@@ -962,51 +970,53 @@ def save_scene(scene: Dict[str, Any]) -> bool:
                 # Insert new scene
                 cur.execute("""
                     INSERT INTO casting_scenes (
-                        id, manuscript_id, project_id, scene_number, scene_heading,
+                        id, manuscript_id, project_id, act_id, scene_number, scene_heading,
                         int_ext, location_name, time_of_day, page_length,
                         estimated_screen_time, description, dramatic_day, sequence,
                         characters, extras_count, props_needed, wardrobe_notes,
                         makeup_notes, special_effects, stunts_notes, vehicles,
                         animals, sound_notes, music_notes, location_id,
                         shooting_date, call_time, estimated_duration, priority,
-                        status, notes, created_at, updated_at
+                        status, notes, metadata, created_at, updated_at
                     ) VALUES (
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s, %s, %s
+                        %s, %s, %s, %s, %s, %s, %s, %s
                     )
                 """, (
                     scene.get('id'),
-                    scene.get('manuscriptId'),
-                    scene.get('projectId'),
-                    scene.get('sceneNumber'),
-                    scene.get('sceneHeading'),
-                    scene.get('intExt'),
-                    scene.get('locationName'),
-                    scene.get('timeOfDay'),
-                    scene.get('pageLength'),
-                    scene.get('estimatedScreenTime'),
+                    scene.get('manuscriptId') or scene.get('manuscript_id'),
+                    scene.get('projectId') or scene.get('project_id'),
+                    scene.get('actId') or scene.get('act_id'),
+                    scene.get('sceneNumber') or scene.get('scene_number'),
+                    scene.get('sceneHeading') or scene.get('scene_heading'),
+                    scene.get('intExt') or scene.get('int_ext'),
+                    scene.get('locationName') or scene.get('location_name'),
+                    scene.get('timeOfDay') or scene.get('time_of_day'),
+                    scene.get('pageLength') or scene.get('page_length'),
+                    scene.get('estimatedScreenTime') or scene.get('estimated_screen_time'),
                     scene.get('description'),
-                    scene.get('dramaticDay'),
+                    scene.get('dramaticDay') or scene.get('dramatic_day'),
                     scene.get('sequence'),
                     Json(scene.get('characters', [])),
-                    scene.get('extrasCount'),
-                    Json(scene.get('propsNeeded', [])),
-                    scene.get('wardrobeNotes'),
-                    scene.get('makeupNotes'),
-                    scene.get('specialEffects'),
-                    scene.get('stuntsNotes'),
+                    scene.get('extrasCount') or scene.get('extras_count'),
+                    Json(scene.get('propsNeeded') or scene.get('props_needed') or []),
+                    scene.get('wardrobeNotes') or scene.get('wardrobe_notes'),
+                    scene.get('makeupNotes') or scene.get('makeup_notes'),
+                    scene.get('specialEffects') or scene.get('special_effects'),
+                    scene.get('stuntsNotes') or scene.get('stunts_notes'),
                     Json(scene.get('vehicles', [])),
                     Json(scene.get('animals', [])),
-                    scene.get('soundNotes'),
-                    scene.get('musicNotes'),
-                    scene.get('locationId'),
-                    scene.get('shootingDate'),
-                    scene.get('callTime'),
-                    scene.get('estimatedDuration'),
+                    scene.get('soundNotes') or scene.get('sound_notes'),
+                    scene.get('musicNotes') or scene.get('music_notes'),
+                    scene.get('locationId') or scene.get('location_id'),
+                    scene.get('shootingDate') or scene.get('shooting_date'),
+                    scene.get('callTime') or scene.get('call_time'),
+                    scene.get('estimatedDuration') or scene.get('estimated_duration'),
                     scene.get('priority'),
                     scene.get('status', 'not-scheduled'),
                     scene.get('notes'),
+                    Json(scene.get('metadata', {})),
                     datetime.now().isoformat(),
                     datetime.now().isoformat()
                 ))
@@ -1052,6 +1062,102 @@ def get_dialogue(manuscript_id: str) -> List[Dict[str, Any]]:
     except Exception as e:
         print(f"Error fetching dialogue: {e}")
         return []
+    finally:
+        if conn:
+            conn.close()
+
+
+def save_dialogue(dialogue: Dict[str, Any]) -> bool:
+    """Create or update a dialogue line"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            # Check if dialogue exists
+            cur.execute("SELECT id FROM casting_dialogue WHERE id = %s", (dialogue.get('id'),))
+            exists = cur.fetchone() is not None
+            
+            if exists:
+                # Update existing dialogue
+                cur.execute("""
+                    UPDATE casting_dialogue SET
+                        scene_id = %s,
+                        manuscript_id = %s,
+                        character_name = %s,
+                        role_id = %s,
+                        dialogue_text = %s,
+                        parenthetical = %s,
+                        line_number = %s,
+                        dialogue_type = %s,
+                        emotion_tag = %s,
+                        updated_at = %s
+                    WHERE id = %s
+                """, (
+                    dialogue.get('sceneId'),
+                    dialogue.get('manuscriptId'),
+                    dialogue.get('characterName'),
+                    dialogue.get('roleId'),
+                    dialogue.get('dialogueText'),
+                    dialogue.get('parenthetical'),
+                    dialogue.get('lineNumber'),
+                    dialogue.get('dialogueType', 'dialogue'),
+                    dialogue.get('emotionTag'),
+                    datetime.now().isoformat(),
+                    dialogue.get('id')
+                ))
+            else:
+                # Insert new dialogue
+                cur.execute("""
+                    INSERT INTO casting_dialogue (
+                        id, scene_id, manuscript_id, character_name, role_id,
+                        dialogue_text, parenthetical, line_number, dialogue_type,
+                        emotion_tag, created_at, updated_at
+                    ) VALUES (
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    )
+                """, (
+                    dialogue.get('id'),
+                    dialogue.get('sceneId'),
+                    dialogue.get('manuscriptId'),
+                    dialogue.get('characterName'),
+                    dialogue.get('roleId'),
+                    dialogue.get('dialogueText'),
+                    dialogue.get('parenthetical'),
+                    dialogue.get('lineNumber'),
+                    dialogue.get('dialogueType', 'dialogue'),
+                    dialogue.get('emotionTag'),
+                    datetime.now().isoformat(),
+                    datetime.now().isoformat()
+                ))
+            
+            conn.commit()
+            return True
+    except Exception as e:
+        print(f"Error saving dialogue: {e}")
+        import traceback
+        print(traceback.format_exc())
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def delete_dialogue(dialogue_id: str) -> bool:
+    """Delete a dialogue line"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM casting_dialogue WHERE id = %s", (dialogue_id,))
+            conn.commit()
+            return cur.rowcount > 0
+    except Exception as e:
+        print(f"Error deleting dialogue: {e}")
+        if conn:
+            conn.rollback()
+        return False
     finally:
         if conn:
             conn.close()
@@ -1127,7 +1233,7 @@ def get_acts(manuscript_id: str) -> List[Dict[str, Any]]:
     """Get all acts for a manuscript"""
     conn = None
     try:
-        conn = get_db()
+        conn = get_db_connection()
         if not conn:
             return []
         
@@ -1137,7 +1243,16 @@ def get_acts(manuscript_id: str) -> List[Dict[str, Any]]:
                 WHERE manuscript_id = %s
                 ORDER BY act_number
             """, (manuscript_id,))
-            return [dict(row) for row in cur.fetchall()]
+            acts = []
+            for row in cur.fetchall():
+                act = dict(row)
+                # Convert datetime to string for JSON serialization
+                if act.get('created_at'):
+                    act['created_at'] = act['created_at'].isoformat()
+                if act.get('updated_at'):
+                    act['updated_at'] = act['updated_at'].isoformat()
+                acts.append(convert_decimal(act))
+            return acts
     except Exception as e:
         print(f"Error fetching acts: {e}")
         return []
@@ -1150,7 +1265,7 @@ def get_act(act_id: str) -> Optional[Dict[str, Any]]:
     """Get a single act by ID"""
     conn = None
     try:
-        conn = get_db()
+        conn = get_db_connection()
         if not conn:
             return None
         
@@ -1160,7 +1275,15 @@ def get_act(act_id: str) -> Optional[Dict[str, Any]]:
                 WHERE id = %s
             """, (act_id,))
             row = cur.fetchone()
-            return dict(row) if row else None
+            if row:
+                act = dict(row)
+                # Convert datetime to string for JSON serialization
+                if act.get('created_at'):
+                    act['created_at'] = act['created_at'].isoformat()
+                if act.get('updated_at'):
+                    act['updated_at'] = act['updated_at'].isoformat()
+                return convert_decimal(act)
+            return None
     except Exception as e:
         print(f"Error fetching act: {e}")
         return None
@@ -1173,7 +1296,7 @@ def create_act(act: Dict[str, Any]) -> bool:
     """Create a new act"""
     conn = None
     try:
-        conn = get_db()
+        conn = get_db_connection()
         if not conn:
             return False
         
@@ -1214,7 +1337,7 @@ def update_act(act_id: str, act: Dict[str, Any]) -> bool:
     """Update an existing act"""
     conn = None
     try:
-        conn = get_db()
+        conn = get_db_connection()
         if not conn:
             return False
         
@@ -1259,7 +1382,7 @@ def delete_act(act_id: str) -> bool:
     """Delete an act"""
     conn = None
     try:
-        conn = get_db()
+        conn = get_db_connection()
         if not conn:
             return False
         

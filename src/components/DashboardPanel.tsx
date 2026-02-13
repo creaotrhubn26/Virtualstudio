@@ -1,4 +1,4 @@
-import React, { useId, useMemo, useState, useEffect } from 'react';
+import { useId, useMemo, useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -16,22 +16,25 @@ import {
 } from '@mui/material';
 import {
   Add as AddIcon,
-  People as PeopleIcon,
-  Person as PersonIcon,
-  CalendarMonth as CalendarIcon,
-  CheckCircle as CheckCircleIcon,
   Share as ShareIcon,
   ViewKanban as ViewKanbanIcon,
-  Dashboard as DashboardIcon,
-  TrendingUp as TrendingUpIcon,
-  Movie as MovieIcon,
-  LocationOn as LocationIcon,
-  Group as GroupIcon,
-  Inventory2 as PropIcon,
   Edit as EditIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
+  CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
+import { 
+  DashboardCustomIcon as DashboardIcon, 
+  CalendarCustomIcon as CalendarIcon, 
+  LocationsIcon as LocationIcon,
+  TrendingIcon as TrendingUpIcon,
+  RolesIcon,
+  CandidatesIcon,
+  TeamIcon,
+  PropsIcon,
+  ShotListIcon,
+  AuditionsIcon,
+} from './icons/CastingIcons';
 import { CastingProject, Role, Candidate, Schedule } from '../core/models/casting';
 import { castingService } from '../services/castingService';
 import { KanbanPanel } from './KanbanPanel';
@@ -112,14 +115,18 @@ export function DashboardPanel({
     setIsEditingTitle(false);
   };
 
-  const handleSaveTitle = () => {
+  const handleSaveTitle = async () => {
     if (!project) return;
     
     const trimmedTitle = editedTitle.trim();
     if (trimmedTitle && trimmedTitle !== project.name) {
       const updatedProject = { ...project, name: trimmedTitle };
-      castingService.saveProject(updatedProject);
-      if (onUpdate) onUpdate();
+      try {
+        await castingService.saveProject(updatedProject);
+        if (onUpdate) onUpdate();
+      } catch (error) {
+        console.error('Failed to save title:', error);
+      }
     }
     setIsEditingTitle(false);
   };
@@ -134,14 +141,18 @@ export function DashboardPanel({
     setIsEditingDescription(false);
   };
 
-  const handleSaveDescription = () => {
+  const handleSaveDescription = async () => {
     if (!project) return;
     
     const trimmedDescription = editedDescription.trim();
     if (trimmedDescription !== (project.description || '')) {
       const updatedProject = { ...project, description: trimmedDescription || undefined };
-      castingService.saveProject(updatedProject);
-      if (onUpdate) onUpdate();
+      try {
+        await castingService.saveProject(updatedProject);
+        if (onUpdate) onUpdate();
+      } catch (error) {
+        console.error('Failed to save description:', error);
+      }
     }
     setIsEditingDescription(false);
   };
@@ -182,17 +193,17 @@ export function DashboardPanel({
   }, [candidates]);
 
   const statCards = [
-    { title: 'Roller totalt', value: stats.totalRoles, color: '#00d4ff', icon: PeopleIcon, tabIndex: 1 },
-    { title: 'Åpne roller', value: stats.openRoles, color: '#10b981', icon: CheckCircleIcon, tabIndex: 1 },
-    { title: 'Kandidater', value: stats.totalCandidates, color: '#ffb800', icon: PersonIcon, tabIndex: 2 },
-    { title: 'Kommende avtaler', value: stats.upcomingSchedules, color: '#8b5cf6', icon: CalendarIcon, tabIndex: 8 },
+    { title: 'Roller totalt', value: stats.totalRoles, color: '#f48fb1', icon: RolesIcon, tabIndex: 1 },
+    { title: 'Åpne roller', value: stats.openRoles, color: '#10b981', icon: RolesIcon, tabIndex: 1 },
+    { title: 'Kandidater', value: stats.totalCandidates, color: '#10b981', icon: CandidatesIcon, tabIndex: 2 },
+    { title: 'Kommende avtaler', value: stats.upcomingSchedules, color: '#ffb800', icon: AuditionsIcon, tabIndex: 8 },
   ];
 
   const quickLinks = [
-    { title: 'Team', description: 'Administrer crew', color: '#00d4ff', icon: GroupIcon, tabIndex: 3 },
+    { title: 'Team', description: 'Administrer crew', color: '#00d4ff', icon: TeamIcon, tabIndex: 3 },
     { title: 'Steder', description: 'Lokasjoner', color: '#4caf50', icon: LocationIcon, tabIndex: 4 },
-    { title: 'Utstyr', description: 'Rekvisitter', color: '#ff9800', icon: PropIcon, tabIndex: 5 },
-    { title: 'Kamera', description: 'Shot lists', color: '#e91e63', icon: MovieIcon, tabIndex: 6 },
+    { title: 'Utstyr', description: 'Rekvisitter', color: '#ff9800', icon: PropsIcon, tabIndex: 5 },
+    { title: 'Kamera', description: 'Shot lists', color: '#e91e63', icon: ShotListIcon, tabIndex: 6 },
     { title: 'Kalender', description: 'Produksjonsplan', color: '#9c27b0', icon: CalendarIcon, tabIndex: 7 },
   ];
 
@@ -270,7 +281,7 @@ export function DashboardPanel({
                   onClick={handleCancelEdit}
                   size="small"
                   sx={{
-                    color: 'rgba(255,255,255,0.7)',
+                    color: 'rgba(255,255,255,0.87)',
                     minWidth: TOUCH_TARGET_SIZE,
                     minHeight: TOUCH_TARGET_SIZE,
                     '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
@@ -297,7 +308,7 @@ export function DashboardPanel({
                       onClick={handleStartEdit}
                       size="small"
                       sx={{
-                        color: 'rgba(255,255,255,0.6)',
+                        color: 'rgba(255,255,255,0.87)',
                         minWidth: TOUCH_TARGET_SIZE,
                         minHeight: TOUCH_TARGET_SIZE,
                         '&:hover': { 
@@ -334,7 +345,7 @@ export function DashboardPanel({
                   sx={{
                     flex: 1,
                     '& .MuiOutlinedInput-root': {
-                      color: 'rgba(255,255,255,0.7)',
+                      color: 'rgba(255,255,255,0.87)',
                       fontSize: { xs: '0.8rem', sm: '0.875rem', md: '0.85rem', lg: '0.9rem', xl: '1rem' },
                       '& fieldset': {
                         borderColor: 'rgba(255,255,255,0.2)',
@@ -368,7 +379,7 @@ export function DashboardPanel({
                   onClick={handleCancelEditDescription}
                   size="small"
                   sx={{
-                    color: 'rgba(255,255,255,0.7)',
+                    color: 'rgba(255,255,255,0.87)',
                     minWidth: TOUCH_TARGET_SIZE,
                     minHeight: TOUCH_TARGET_SIZE,
                     '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
@@ -381,7 +392,7 @@ export function DashboardPanel({
               </Box>
             ) : (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', flex: 1, fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.85rem', lg: '0.9rem', xl: '1rem' } }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', flex: 1, fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.85rem', lg: '0.9rem', xl: '1rem' } }}>
                   {project?.description || 'Oversikt over casting og produksjon'}
                 </Typography>
                 {project && (
@@ -390,7 +401,7 @@ export function DashboardPanel({
                       onClick={handleStartEditDescription}
                       size="small"
                       sx={{
-                        color: 'rgba(255,255,255,0.4)',
+                        color: 'rgba(255,255,255,0.7)',
                         minWidth: TOUCH_TARGET_SIZE,
                         minHeight: TOUCH_TARGET_SIZE,
                         '&:hover': { 
@@ -466,7 +477,7 @@ export function DashboardPanel({
                   <Typography variant="h4" sx={{ color: card.color, fontWeight: 700, lineHeight: 1, fontSize: { xs: '1.5rem', sm: '2rem', md: '1.6rem', lg: '1.85rem', xl: '2.5rem' } }}>
                     {card.value}
                   </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: { xs: '0.7rem', sm: '0.875rem', md: '0.85rem', lg: '0.9rem', xl: '1rem' } }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.7rem', sm: '0.875rem', md: '0.85rem', lg: '0.9rem', xl: '1rem' } }}>
                     {card.title}
                   </Typography>
                 </Box>
@@ -517,7 +528,7 @@ export function DashboardPanel({
               {statusDistribution.map(({ status, color, label, count }) => (
                 <Box key={status} sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
                   <Box sx={{ width: { xs: 10, sm: 12, md: 11, lg: 13, xl: 16 }, height: { xs: 10, sm: 12, md: 11, lg: 13, xl: 16 }, borderRadius: '50%', bgcolor: color }} />
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.85rem', lg: '0.9rem', xl: '1rem' } }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.85rem', lg: '0.9rem', xl: '1rem' } }}>
                     {label}: <strong style={{ color: '#fff' }}>{count}</strong>
                   </Typography>
                 </Box>
@@ -557,7 +568,7 @@ export function DashboardPanel({
             <Tooltip title="Legg til kandidat" arrow>
               <Button
                 variant="contained"
-                startIcon={<PersonIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />}
+                startIcon={<CandidatesIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />}
                 onClick={(e) => {
                   e.stopPropagation();
                   onCreateCandidate();

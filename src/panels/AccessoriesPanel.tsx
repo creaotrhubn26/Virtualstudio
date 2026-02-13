@@ -8,7 +8,7 @@
  */
 
 import React, { useState } from 'react';
-import { logger } from '../../core/services/logger';
+import { logger } from '../core/services/logger';
 import {
   Box,
   Paper,
@@ -30,22 +30,22 @@ import {
   ToggleButton,
 } from '@mui/material';
 import { Face, EmojiPeople, Watch, Add } from '@mui/icons-material';
-import { useAppStore } from '../../state/store';
+import { useAppStore } from '../state/store';
 import {
   FACIAL_FEATURES,
   FACIAL_FEATURES_BY_CATEGORY,
   FacialFeatureCategory,
-} from '../../core/data/facialFeaturesStyles';
+} from '../core/data/facialFeaturesStyles';
 import {
   HEAD_ACCESSORIES,
   HEAD_ACCESSORIES_BY_CATEGORY,
   HeadAccessoryCategory,
-} from '../../core/data/headAccessoriesStyles';
+} from '../core/data/headAccessoriesStyles';
 import {
   BODY_ACCESSORIES,
   BODY_ACCESSORIES_BY_CATEGORY,
   BodyAccessoryCategory,
-} from '../../core/data/bodyAccessoriesStyles';
+} from '../core/data/bodyAccessoriesStyles';
 
 const log = logger.module('AccessoriesPanel');
 
@@ -77,7 +77,7 @@ const BODY_CATEGORIES: { value: BodyAccessoryCategory; label: string }[] = [
 
 export const AccessoriesPanel: React.FC = () => {
   const { addNode } = useAppStore();
-  const nodes = useAppStore((s) => s.scene.nodes);
+  const nodes = useAppStore((s) => s.scene) || [];
 
   const [accessoryType, setAccessoryType] = useState<AccessoryType>('head');
   const [facialCategory, setFacialCategory] = useState<FacialFeatureCategory>('noses');
@@ -165,6 +165,7 @@ export const AccessoriesPanel: React.FC = () => {
           value={selectedActor}
           onChange={(e) => setSelectedActor(e.target.value)}
           label="Select Actor"
+          MenuProps={{ sx: { zIndex: 1400 } }}
         >
           {actors.map((actor) => (
             <MenuItem key={actor.id} value={actor.id}>

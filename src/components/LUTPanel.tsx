@@ -3,7 +3,8 @@
  * UI for loading and applying 3D LUTs (.cube format)
  */
 
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
+import type { ChangeEvent, FC } from 'react';
 import { logger } from '../../core/services/logger';
 
 const log = logger.module('LUTPanel, ');
@@ -31,7 +32,7 @@ export interface LUTPanelProps {
   onLUTLoaded?: (lut: any) => void;
 }
 
-export const LUTPanel: React.FC<LUTPanelProps> = ({
+export const LUTPanel: FC<LUTPanelProps> = ({
   enabled,
   intensity,
   onEnabledChange,
@@ -43,7 +44,7 @@ export const LUTPanel: React.FC<LUTPanelProps> = ({
   const [error, setError] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 

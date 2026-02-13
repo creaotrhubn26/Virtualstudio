@@ -4,7 +4,7 @@
  * Comprehensive AI-powered assistant for scene composition, lighting, and optimization
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -188,7 +188,7 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
         <Typography variant="h6" sx={{ color: '#ffffff', mb: 1 }}>
           Analyserer scene...
         </Typography>
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
           AI-assistenten analyserer komposisjon, belysning og optimalisering
         </Typography>
       </Box>
@@ -308,7 +308,7 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
             mb: 3,
             borderBottom: '1px solid rgba(255,255,255,0.1)',
             '& .MuiTab-root': {
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               fontSize: '14px',
               fontWeight: 600,
               textTransform: 'none',
@@ -417,7 +417,7 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
                         variant="body2"
                         sx={{
                           fontSize: 13,
-                          color: 'rgba(255,255,255,0.7)',
+                          color: 'rgba(255,255,255,0.87)',
                           lineHeight: 1.6,
                         }}
                       >
@@ -636,7 +636,7 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: 15, color: '#ffffff', mb: 0.5 }}>
                     {pattern.name}
                   </Typography>
-                  <Typography variant="body2" sx={{ display: 'block', fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
+                  <Typography variant="body2" sx={{ display: 'block', fontSize: 13, color: 'rgba(255,255,255,0.87)' }}>
                     {pattern.description}
                   </Typography>
                 </Box>

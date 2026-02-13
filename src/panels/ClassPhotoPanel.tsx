@@ -502,6 +502,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                 value={ageGroup}
                 label="Age Group"
                 onChange={(e) => setAgeGroup(e.target.value as AgeGroup)}
+                MenuProps={{ sx: { zIndex: 1400 } }}
               >
                 <MenuItem value="kindergarten">Kindergarten (95-115cm)</MenuItem>
                 <MenuItem value="elementary">Elementary (110-145cm)</MenuItem>
@@ -517,6 +518,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                 value={heightDistribution}
                 label="Height Distribution"
                 onChange={(e) => setHeightDistribution(e.target.value as HeightDistribution)}
+                MenuProps={{ sx: { zIndex: 1400 } }}
               >
                 <MenuItem value="bell_curve">Bell Curve (Realistic)</MenuItem>
                 <MenuItem value="random">Random</MenuItem>
@@ -628,6 +630,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                                 value={teacher.role}
                                 label="Role"
                                 onChange={(e) => handleUpdateTeacher(idx, { role: e.target.value as TeacherRole })}
+                                MenuProps={{ sx: { zIndex: 1400 } }}
                               >
                                 <MenuItem value="head_teacher">Head Teacher</MenuItem>
                                 <MenuItem value="assistant">Assistant</MenuItem>
@@ -643,6 +646,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                                 value={teacher.position}
                                 label="Position"
                                 onChange={(e) => handleUpdateTeacher(idx, { position: e.target.value as TeacherPosition })}
+                                MenuProps={{ sx: { zIndex: 1400 } }}
                               >
                                 <MenuItem value="center_back">Center (Back)</MenuItem>
                                 <MenuItem value="left_end">Left End</MenuItem>
@@ -809,6 +813,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                               const issues = classPhotoService.checkVisibility();
                               setVisibilityIssues(issues);
                             }}
+                            MenuProps={{ sx: { zIndex: 1400 } }}
                           >
                             <MenuItem value="center_back">Center (Back)</MenuItem>
                             <MenuItem value="left_end">Left End</MenuItem>
@@ -830,6 +835,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                               const updatedSession = classPhotoService.getSession();
                               setSession(updatedSession ? { ...updatedSession } : null);
                             }}
+                            MenuProps={{ sx: { zIndex: 1400 } }}
                           >
                             <MenuItem value="head_teacher">Head Teacher</MenuItem>
                             <MenuItem value="assistant">Assistant</MenuItem>
@@ -1260,6 +1266,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                       value={guideSettings.aspectRatio}
                       label="Aspect Ratio"
                       onChange={(e) => handleAspectRatioChange(e.target.value as ClassPhotoGuideSettings['aspectRatio'])}
+                      MenuProps={{ sx: { zIndex: 1400 } }}
                     >
                       <MenuItem value="4x6">4x6 (Standard Print)</MenuItem>
                       <MenuItem value="5x7">5x7</MenuItem>

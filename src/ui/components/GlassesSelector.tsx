@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Box,
-  Typography,
   FormControl,
   InputLabel,
   Select,
@@ -48,6 +47,7 @@ export const GlassesSelector: React.FC<GlassesSelectorProps> = ({
               onChange={(e) =>
                 onOptionsChange({ ...options, frameStyle: e.target.value as GlassesOptions['frameStyle'] })
               }
+              MenuProps={{ sx: { zIndex: 1400 } }}
             >
               <MenuItem value="rectangular">Rektangulær</MenuItem>
               <MenuItem value="round">Rund</MenuItem>
@@ -65,6 +65,7 @@ export const GlassesSelector: React.FC<GlassesSelectorProps> = ({
               onChange={(e) =>
                 onOptionsChange({ ...options, lensType: e.target.value as GlassesOptions['lensType'] })
               }
+              MenuProps={{ sx: { zIndex: 1400 } }}
             >
               <MenuItem value="clear">Klar</MenuItem>
               <MenuItem value="tinted">Tonet</MenuItem>
@@ -81,6 +82,7 @@ export const GlassesSelector: React.FC<GlassesSelectorProps> = ({
               onChange={(e) =>
                 onOptionsChange({ ...options, frameMaterial: e.target.value as GlassesOptions['frameMaterial'] })
               }
+              MenuProps={{ sx: { zIndex: 1400 } }}
             >
               <MenuItem value="plastic">Plast</MenuItem>
               <MenuItem value="metal">Metall</MenuItem>

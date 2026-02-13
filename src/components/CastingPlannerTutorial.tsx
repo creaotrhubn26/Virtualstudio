@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, createElement, type ComponentType, type FC, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   Box,
   Typography,
@@ -21,23 +21,26 @@ import {
   Pause as PauseIcon,
   Replay as ReplayIcon,
   School as TutorialIcon,
-  Dashboard as DashboardIcon,
-  TheaterComedy as RolesIcon,
-  RecentActors as CandidatesIcon,
-  Groups as TeamIcon,
-  LocationOn as LocationIcon,
   Inventory2 as PropIcon,
-  CalendarMonth as CalendarIcon,
   MovieCreation as ShotListIcon,
   InterpreterMode as AuditionIcon,
-  Share as ShareIcon,
   CheckCircle as CompleteIcon,
   TouchApp as ActionIcon,
   Speed as SpeedIcon,
   AutoAwesome as AIIcon,
   Celebration as CelebrationIcon,
 } from '@mui/icons-material';
-import { SvgIconComponent } from '@mui/icons-material';
+import {
+  DashboardCustomIcon as DashboardIcon,
+  RolesIcon,
+  CandidatesIcon,
+  TeamIcon,
+  LocationsIcon as LocationIcon,
+  CalendarCustomIcon as CalendarIcon,
+  ShareCustomIcon as ShareIcon,
+} from './icons/CastingIcons';
+// Compatible icon type for both MUI SvgIcon and custom FC<IconProps> components
+type IconComponentType = ComponentType<{ sx?: Record<string, unknown> }>;
 import { tutorialService, Tutorial, TutorialStep } from '../services/tutorialService';
 
 const defaultTutorialSteps: TutorialStep[] = [
@@ -274,7 +277,7 @@ const panelInfo = [
   { name: 'Deling', icon: ShareIcon, color: '#06b6d4' },
 ];
 
-const stepIndicatorMeta: Record<string, { label: string; icon: SvgIconComponent; color?: string }> = {
+const stepIndicatorMeta: Record<string, { label: string; icon: IconComponentType; color?: string }> = {
   'welcome': { label: 'Start', icon: TutorialIcon, color: '#e91e63' },
   'overview': { label: 'Oversikt', icon: DashboardIcon, color: '#8b5cf6' },
   'roles': { label: 'Roller', icon: RolesIcon, color: '#f48fb1' },
@@ -299,7 +302,7 @@ interface CastingPlannerTutorialProps {
   category?: Tutorial['category'];
 }
 
-export const CastingPlannerTutorial: React.FC<CastingPlannerTutorialProps> = ({
+export const CastingPlannerTutorial: FC<CastingPlannerTutorialProps> = ({
   open,
   onClose,
   onNavigateToTab,
@@ -307,6 +310,8 @@ export const CastingPlannerTutorial: React.FC<CastingPlannerTutorialProps> = ({
   category = 'casting-planner',
 }) => {
   const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
+  const borderColor = isDarkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)';
   const isMobile = useMediaQuery('(max-width:599px)');
   const isTablet = useMediaQuery('(min-width:600px) and (max-width:959px)');
   const is720p = useMediaQuery('(min-width:960px) and (max-width:1279px)');
@@ -327,6 +332,7 @@ export const CastingPlannerTutorial: React.FC<CastingPlannerTutorialProps> = ({
     if (is720p) return hd720;
     if (is1080p) return hd1080;
     if (is2K) return uhd2k;
+    if (is4K) return uhd4k;
     return uhd4k;
   };
 
@@ -646,7 +652,7 @@ export const CastingPlannerTutorial: React.FC<CastingPlannerTutorialProps> = ({
               <IconButton 
                 onClick={onClose} 
                 sx={{ 
-                  color: 'rgba(255,255,255,0.5)',
+                  color: 'rgba(255,255,255,0.87)',
                   minWidth: buttonMinHeight,
                   minHeight: buttonMinHeight,
                 }}
@@ -658,7 +664,7 @@ export const CastingPlannerTutorial: React.FC<CastingPlannerTutorialProps> = ({
 
             {step.panel >= 0 && (
               <Chip
-                icon={React.createElement(panelInfo[step.panel]?.icon || DashboardIcon)}
+                icon={createElement(panelInfo[step.panel]?.icon || DashboardIcon)}
                 label={panelInfo[step.panel]?.name || 'Panel'}
                 sx={{
                   mb: 2,
@@ -720,7 +726,7 @@ export const CastingPlannerTutorial: React.FC<CastingPlannerTutorialProps> = ({
                       key={index}
                       component="li"
                       variant="body2"
-                      sx={{ color: 'rgba(255,255,255,0.7)', mb: 0.5, fontSize: captionFontSize }}
+                      sx={{ color: 'rgba(255,255,255,0.87)', mb: 0.5, fontSize: captionFontSize }}
                     >
                       {tip}
                     </Typography>
@@ -762,7 +768,7 @@ export const CastingPlannerTutorial: React.FC<CastingPlannerTutorialProps> = ({
                     tabIndex={0}
                     aria-label={`Gå til steg ${index + 1}: ${s.title}`}
                     aria-current={isActive ? 'step' : undefined}
-                    onKeyDown={(e: React.KeyboardEvent) => {
+                    onKeyDown={(e: ReactKeyboardEvent<HTMLDivElement>) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         navigateToStep(index);
@@ -804,16 +810,29 @@ export const CastingPlannerTutorial: React.FC<CastingPlannerTutorialProps> = ({
                       },
                     }}
                   >
-                    <IconComponent
+                    <Avatar
                       sx={{
-                        fontSize: stepIconSize,
-                        color: isActive
-                          ? stepColor
+                        width: stepIconSize * 1.6,
+                        height: stepIconSize * 1.6,
+                        bgcolor: isActive
+                          ? `${stepColor}33`
                           : isCompleted
-                            ? '#4caf50'
-                            : 'rgba(255,255,255,0.6)',
+                            ? 'rgba(76,175,80,0.15)'
+                            : 'transparent',
+                        border: `1px solid ${isActive ? stepColor : isCompleted ? '#4caf50' : borderColor}`,
                       }}
-                    />
+                    >
+                      <IconComponent
+                        sx={{
+                          fontSize: stepIconSize,
+                          color: isActive
+                            ? stepColor
+                            : isCompleted
+                              ? '#4caf50'
+                              : 'rgba(255,255,255,0.6)',
+                        }}
+                      />
+                    </Avatar>
                     <Typography
                       variant="caption"
                       sx={{
@@ -851,8 +870,8 @@ export const CastingPlannerTutorial: React.FC<CastingPlannerTutorialProps> = ({
               py: 1.5,
             }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <SpeedIcon sx={{ color: 'rgba(255,255,255,0.6)', fontSize: iconSize }} />
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: smallTextSize, whiteSpace: 'nowrap', fontWeight: 500 }}>
+                <SpeedIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: iconSize }} />
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: smallTextSize, whiteSpace: 'nowrap', fontWeight: 500 }}>
                   Hastighet:
                 </Typography>
               </Box>
@@ -873,7 +892,7 @@ export const CastingPlannerTutorial: React.FC<CastingPlannerTutorialProps> = ({
                   color: '#e91e63',
                   height: getResponsiveValue(6, 7, 8, 9, 10, 12),
                   '& .MuiSlider-markLabel': {
-                    color: 'rgba(255,255,255,0.5)',
+                    color: 'rgba(255,255,255,0.87)',
                     fontSize: smallTextSize,
                   },
                   '& .MuiSlider-thumb': {
@@ -916,7 +935,7 @@ export const CastingPlannerTutorial: React.FC<CastingPlannerTutorialProps> = ({
                     borderColor: 'rgba(255,255,255,0.4)',
                   },
                   '&:disabled': { 
-                    color: 'rgba(255,255,255,0.3)',
+                    color: 'rgba(255,255,255,0.6)',
                     borderColor: 'rgba(255,255,255,0.1)',
                   },
                 }}
@@ -1000,7 +1019,7 @@ export const CastingPlannerTutorial: React.FC<CastingPlannerTutorialProps> = ({
                 display: isMobile ? 'none' : 'block',
                 textAlign: 'center',
                 mt: gapSize,
-                color: 'rgba(255,255,255,0.4)',
+                color: 'rgba(255,255,255,0.7)',
                 fontSize: smallTextSize,
               }}
             >

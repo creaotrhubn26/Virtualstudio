@@ -76,6 +76,7 @@ export const LightDiagramPanel: React.FC<LightDiagramPanelProps> = ({
           <Select
             value={exportFormat}
             onChange={(e) => setExportFormat(e.target.value as 'svg' | 'png' | 'pdf')}
+            MenuProps={{ sx: { zIndex: 1400 } }}
             sx={{
               color: '#ffffff',
               '& .MuiOutlinedInput-notchedOutline': { borderColor: '#444' },

@@ -4,7 +4,7 @@
  * Visualizes shadows and highlights in the 3D scene
  */
 
-import React from 'react';
+import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import type { ShadowInfo, HighlightInfo } from'@/core/services/shadowAnalysisService';
 
@@ -140,10 +140,10 @@ function HighlightIndicator({ highlight }: { highlight: HighlightInfo }) {
  * Pulsing animation for clipping highlights
  */
 export function AnimatedHighlightWarning({ position }: { position: [number, number, number] }) {
-  const meshRef = React.useRef<THREE.Mesh>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
 
   // Animate pulsing
-  React.useEffect(() => {
+  useEffect(() => {
     if (!meshRef.current) return;
 
     let frame = 0;

@@ -8,7 +8,7 @@
  * - Start a new project
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -132,7 +132,7 @@ export interface SessionActivity {
         'class_photo_setup' | 'export_created';
   description: string;
   timestamp: Date;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
 }
 
 export interface SavedProject {
@@ -181,7 +181,7 @@ interface Props {
 // Activity Icons
 // =============================================================================
 
-const getActivityIcon = (type: SessionActivity['type']): React.ReactNode => {
+const getActivityIcon = (type: SessionActivity['type']): ReactNode => {
   switch (type) {
     case 'light_added': return <Lightbulb fontSize="small" />;
     case 'camera_moved': return <CameraAlt fontSize="small" />;
@@ -198,7 +198,7 @@ const getActivityIcon = (type: SessionActivity['type']): React.ReactNode => {
   }
 };
 
-const getProjectTypeIcon = (type: string): React.ReactNode => {
+const getProjectTypeIcon = (type: string): ReactNode => {
   switch (type) {
     case 'photography': return <CameraAlt />;
     case 'videography': return <Videocam />;

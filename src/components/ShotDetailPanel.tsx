@@ -149,6 +149,66 @@ export const ShotDetailPanel: React.FC<ShotDetailPanelProps> = ({ scene, onUpdat
     initializeShotData('Shot 1');
   }, []);
 
+  // Sync shot data back to parent scene whenever it changes
+  useEffect(() => {
+    // Only sync if we have data
+    if (cameraData.size === 0 && lightingData.size === 0 && audioData.size === 0 && notesData.size === 0) {
+      return;
+    }
+
+    // Convert Maps to arrays for storage in scene metadata
+    const shotDetails = {
+      shots,
+      cameras: Object.fromEntries(cameraData),
+      lighting: Object.fromEntries(lightingData),
+      audio: Object.fromEntries(audioData),
+      notes: Object.fromEntries(
+        Array.from(notesData.entries()).map(([key, value]) => [key, value])
+      ),
+    };
+
+    // Update scene with shot details
+    const updatedScene: SceneBreakdown = {
+      ...scene,
+      metadata: {
+        ...scene.metadata,
+        shotDetails,
+      },
+    };
+
+    onUpdate(updatedScene);
+  }, [shots, cameraData, lightingData, audioData, notesData]);
+
+  // Load shot data from scene metadata on mount
+  useEffect(() => {
+    const shotDetails = scene.metadata?.shotDetails as {
+      shots?: string[];
+      cameras?: Record<string, ShotCamera>;
+      lighting?: Record<string, ShotLighting>;
+      audio?: Record<string, ShotAudio>;
+      notes?: Record<string, ShotNote[]>;
+    } | undefined;
+
+    if (shotDetails) {
+      if (shotDetails.shots) {
+        setShots(shotDetails.shots);
+        setSelectedShot(shotDetails.shots[0] || 'Shot 1');
+      }
+      if (shotDetails.cameras) {
+        setCameraData(new Map(Object.entries(shotDetails.cameras)));
+      }
+      if (shotDetails.lighting) {
+        setLightingData(new Map(Object.entries(shotDetails.lighting)));
+      }
+      if (shotDetails.audio) {
+        setAudioData(new Map(Object.entries(shotDetails.audio)));
+      }
+      if (shotDetails.notes) {
+        setNotesData(new Map(Object.entries(shotDetails.notes)));
+      }
+    }
+  }, [scene.id]); // Only reload when scene changes
+
   const currentCamera = cameraData.get(selectedShot);
   const currentLighting = lightingData.get(selectedShot);
   const currentAudio = audioData.get(selectedShot);

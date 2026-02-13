@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -30,7 +30,6 @@ import {
   Delete as DeleteIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
-  Description as DescriptionIcon,
   Save as SaveIcon,
   Send as SendIcon,
   ContentCopy as CopyIcon,
@@ -38,6 +37,7 @@ import {
   Schedule as ScheduleIcon,
   Visibility as ViewedIcon,
 } from '@mui/icons-material';
+import { ConsentsIcon as DescriptionIcon } from './icons/CastingIcons';
 import { Consent, ConsentType, Candidate, ConsentInvitationStatus } from '../core/models/casting';
 import { consentService } from '../services/consentService';
 import { castingService } from '../services/castingService';
@@ -293,7 +293,7 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
               size="small"
               sx={{
                 bgcolor: 'rgba(255,255,255,0.1)',
-                color: 'rgba(255,255,255,0.7)',
+                color: 'rgba(255,255,255,0.87)',
               }}
             />
             <Chip
@@ -342,7 +342,7 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
           sx={{
             textAlign: 'center',
             py: 8,
-            color: 'rgba(255,255,255,0.5)',
+            color: 'rgba(255,255,255,0.87)',
           }}
         >
           <DescriptionIcon sx={{ fontSize: 64, mb: 2, opacity: 0.3 }} />
@@ -442,13 +442,13 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
                   )}
 
                   {consent.date && (
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block', mb: 1 }}>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', mb: 1 }}>
                       Signert: {new Date(consent.date).toLocaleDateString('no-NO')}
                     </Typography>
                   )}
 
                   {consent.notes && (
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', mt: 1 }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '12px', mt: 1 }}>
                       {consent.notes}
                     </Typography>
                   )}
@@ -478,7 +478,7 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
         <DialogContent sx={{ pt: 3 }}>
           <Stack spacing={2}>
             <FormControl fullWidth>
-              <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Type</InputLabel>
+              <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Type</InputLabel>
               <Select
                 value={formData.type || 'photo_release'}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value as ConsentType })}
@@ -508,7 +508,7 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
                 />
               }
               label="Signert"
-              sx={{ color: 'rgba(255,255,255,0.7)' }}
+              sx={{ color: 'rgba(255,255,255,0.87)' }}
             />
 
             {formData.signed && !editingConsent?.date && (
@@ -524,7 +524,7 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
                     color: '#fff',
                     '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                   },
-                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                 }}
               />
             )}
@@ -540,7 +540,7 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
                   color: '#fff',
                   '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
               }}
             />
 
@@ -556,13 +556,13 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
                   color: '#fff',
                   '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
               }}
             />
           </Stack>
         </DialogContent>
         <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2 }}>
-          <Button onClick={handleCloseDialog} startIcon={<CancelIcon />} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <Button onClick={handleCloseDialog} startIcon={<CancelIcon />} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Avbryt
           </Button>
           <Button
@@ -627,8 +627,8 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
                     '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                     '&:hover fieldset': { borderColor: '#ce93d8' },
                   },
-                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
-                  '& .MuiFormHelperText-root': { color: 'rgba(255,255,255,0.5)' },
+                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
+                  '& .MuiFormHelperText-root': { color: 'rgba(255,255,255,0.87)' },
                 }}
               />
 
@@ -644,13 +644,13 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
                     '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
                     '&:hover fieldset': { borderColor: '#ce93d8' },
                   },
-                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
-                  '& .MuiFormHelperText-root': { color: 'rgba(255,255,255,0.5)' },
+                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
+                  '& .MuiFormHelperText-root': { color: 'rgba(255,255,255,0.87)' },
                 }}
               />
 
               <FormControl fullWidth>
-                <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Utløper etter</InputLabel>
+                <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Utløper etter</InputLabel>
                 <Select
                   value={inviteExpiresDays}
                   onChange={(e) => setInviteExpiresDays(Number(e.target.value))}
@@ -724,7 +724,7 @@ export function ConsentManagementPanel({ projectId, candidateId, onUpdate }: Con
         <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2 }}>
           <Button 
             onClick={handleCloseInviteDialog} 
-            sx={{ color: 'rgba(255,255,255,0.7)' }}
+            sx={{ color: 'rgba(255,255,255,0.87)' }}
           >
             Lukk
           </Button>

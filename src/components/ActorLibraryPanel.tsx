@@ -5,7 +5,7 @@
  * Supports batch generation and categorized browsing.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type FC, type ReactElement } from 'react';
 import {
   Box,
   Paper,
@@ -38,9 +38,9 @@ import {
   CheckCircle,
   ErrorOutline,
   Storage,
-  TheaterComedy,
   Add,
 } from '@mui/icons-material';
+import { RolesIcon as TheaterComedy } from './icons/CastingIcons';
 import { useAppStore } from '../../state/store';
 import { virtualActorService } from '../../core/services/virtualActorService';
 import {
@@ -62,7 +62,7 @@ import { logger } from '../../core/services/logger';
 
 const log = logger.module('ActorLibraryPanel');
 
-const CATEGORY_ICONS: Record<string, React.ReactElement> = {
+const CATEGORY_ICONS: Record<string, ReactElement> = {
   portrait: <Person />,
   fashion: <Checkroom />,
   commercial: <Business />,
@@ -72,7 +72,7 @@ const CATEGORY_ICONS: Record<string, React.ReactElement> = {
   'film-character': <TheaterComedy />,
 };
 
-export const ActorLibraryPanel: React.FC = () => {
+export const ActorLibraryPanel: FC = () => {
   const { addNode } = useAppStore();
 
   // State

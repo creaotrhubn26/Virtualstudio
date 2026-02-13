@@ -3,7 +3,7 @@
  * UI for managing environmental audio and soundscapes
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FC } from 'react';
 import {
   Box,
   Typography,
@@ -34,7 +34,7 @@ import {
   AmbientSoundDefinition,
 } from '../services/AmbientSoundsService';
 
-const SoundCard: React.FC<{
+const SoundCard: FC<{
   sound: AmbientSoundDefinition;
   isPlaying: boolean;
   onToggle: () => void;
@@ -98,7 +98,7 @@ const SoundCard: React.FC<{
   );
 };
 
-export const AmbientSoundsBrowser: React.FC = () => {
+export const AmbientSoundsBrowser: FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<SoundCategory | 'all'>('all');
   const [activeSounds, setActiveSounds] = useState<string[]>([]);

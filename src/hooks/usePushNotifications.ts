@@ -6,7 +6,7 @@ interface PushNotificationState {
   permission: NotificationPermission | 'default';
 }
 
-export function usePushNotifications() {
+export function usePushNotifications(_userId?: string) {
   const [state, setState] = useState<PushNotificationState>(() => ({
     isEnabled: false,
     isSupported: 'Notification' in window,
@@ -52,6 +52,7 @@ export function usePushNotifications() {
 
   return {
     ...state,
+    pushEnabled: state.isEnabled,
     requestPermission,
     sendNotification,
     toggleNotifications,

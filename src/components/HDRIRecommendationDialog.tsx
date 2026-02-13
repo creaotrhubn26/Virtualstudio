@@ -5,7 +5,8 @@
  * Displays thumbnails, match scores, and reasons for each recommendation.
  */
 
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { ReactElement } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -54,7 +55,7 @@ interface HDRIRecommendationDialogProps {
   onSkip: () => void;
 }
 
-const CATEGORY_ICONS: Record<string, React.ReactElement> = {
+const CATEGORY_ICONS: Record<string, ReactElement> = {
   studio: <Brightness4 />,
   outdoor: <WbSunny />,
   indoor: <Home />,

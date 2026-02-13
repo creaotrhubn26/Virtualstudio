@@ -275,7 +275,7 @@ export function TimelineEditor({ timeline, onTimelineChange, onTimeUpdate }: Tim
         <IconButton
           onClick={handleStop}
           sx={{
-            color: 'rgba(255,255,255,0.7)',
+            color: 'rgba(255,255,255,0.87)',
             '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
           }}
         >
@@ -284,15 +284,15 @@ export function TimelineEditor({ timeline, onTimelineChange, onTimeUpdate }: Tim
 
         <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.2)' }} />
 
-        <IconButton onClick={handleZoomIn} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+        <IconButton onClick={handleZoomIn} sx={{ color: 'rgba(255,255,255,0.87)' }}>
           <ZoomInIcon />
         </IconButton>
-        <IconButton onClick={handleZoomOut} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+        <IconButton onClick={handleZoomOut} sx={{ color: 'rgba(255,255,255,0.87)' }}>
           <ZoomOutIcon />
         </IconButton>
 
         <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Hastighet</InputLabel>
+          <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Hastighet</InputLabel>
           <Select
             value={playbackSpeed}
             onChange={(e) => handleSpeedChange(Number(e.target.value))}
@@ -314,9 +314,9 @@ export function TimelineEditor({ timeline, onTimelineChange, onTimeUpdate }: Tim
           <Checkbox
             checked={isLooping}
             onChange={(e) => setIsLooping(e.target.checked)}
-            sx={{ color: 'rgba(255,255,255,0.7)' }}
+            sx={{ color: 'rgba(255,255,255,0.87)' }}
           />
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Loop
           </Typography>
         </Box>
@@ -325,9 +325,9 @@ export function TimelineEditor({ timeline, onTimelineChange, onTimeUpdate }: Tim
           <Checkbox
             checked={snapToGrid}
             onChange={(e) => setSnapToGrid(e.target.checked)}
-            sx={{ color: 'rgba(255,255,255,0.7)' }}
+            sx={{ color: 'rgba(255,255,255,0.87)' }}
           />
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Snap to Grid
           </Typography>
         </Box>
@@ -552,7 +552,7 @@ export function TimelineEditor({ timeline, onTimelineChange, onTimeUpdate }: Tim
                 bottom: 4,
                 left: `${position}%`,
                 transform: 'translateX(-50%)',
-                color: 'rgba(255,255,255,0.5)',
+                color: 'rgba(255,255,255,0.87)',
                 fontSize: '10px',
                 pointerEvents: 'none',
               }}
@@ -565,7 +565,7 @@ export function TimelineEditor({ timeline, onTimelineChange, onTimeUpdate }: Tim
 
       {/* Current time display */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
           {currentTime.toFixed(2)}s / {duration}s
         </Typography>
         {isLooping && (
@@ -578,7 +578,7 @@ export function TimelineEditor({ timeline, onTimelineChange, onTimeUpdate }: Tim
       {/* Loop controls */}
       {isLooping && (
         <Box sx={{ mt: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', minWidth: 80 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', minWidth: 80 }}>
             Loop Start:
           </Typography>
           <Slider
@@ -592,7 +592,7 @@ export function TimelineEditor({ timeline, onTimelineChange, onTimeUpdate }: Tim
             step={0.1}
             sx={{ flex: 1 }}
           />
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', minWidth: 80 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', minWidth: 80 }}>
             Loop End:
           </Typography>
           <Slider
@@ -656,7 +656,7 @@ export function TimelineEditor({ timeline, onTimelineChange, onTimeUpdate }: Tim
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setMarkerDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <Button onClick={() => setMarkerDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Avbryt
           </Button>
           <Button
@@ -747,7 +747,7 @@ export function TimelineEditor({ timeline, onTimelineChange, onTimeUpdate }: Tim
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setRegionDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <Button onClick={() => setRegionDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Avbryt
           </Button>
           <Button

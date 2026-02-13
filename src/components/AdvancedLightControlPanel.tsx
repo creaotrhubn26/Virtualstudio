@@ -12,7 +12,7 @@
  * - Rotation (aim at subject)
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,

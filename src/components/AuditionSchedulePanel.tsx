@@ -1,4 +1,4 @@
-import React, { useState, useId, useMemo, useEffect } from 'react';
+import { useState, useId, useMemo, useEffect, type ReactNode } from 'react';
 import {
   Box,
   Typography,
@@ -41,22 +41,19 @@ import {
   ExpandMore as ExpandIcon,
   ExpandLess as CollapseIcon,
   FileDownload as ExportIcon,
-  BarChart as StatsIcon,
   ContentCopy as DuplicateIcon,
   GridView as GridViewIcon,
   TableRows as TableViewIcon,
-  CalendarMonth as CalendarIcon,
   Schedule as ScheduleIcon,
   Person as PersonIcon,
-  LocationOn as LocationIcon,
   Movie as MovieIcon,
   Clear as ClearIcon,
   InterpreterMode as InterpreterModeIcon,
-  TheaterComedy as TheaterComedyIcon,
   Note as NoteIcon,
   Inventory as InventoryIcon,
   FileDownload as DownloadIcon,
 } from '@mui/icons-material';
+import { RolesIcon as TheaterComedyIcon, AuditionsIcon, CandidatesIcon, CalendarCustomIcon as CalendarIcon, LocationsIcon as LocationIcon, StatsIcon } from './icons/CastingIcons';
 import { Schedule, Role, Candidate } from '../core/models/casting';
 import { castingService } from '../services/castingService';
 import { auditionPoolService, PoolAudition } from '../services/auditionPoolService';
@@ -205,7 +202,7 @@ export function AuditionSchedulePanel({
     sceneId ? availableScenes.find(s => s.id === sceneId)?.name : null;
 
   // Render formatted notes matching ProductionDayView style
-  const renderFormattedNotes = (notes: string): React.ReactNode => {
+  const renderFormattedNotes = (notes: string): ReactNode => {
     if (!notes) return null;
 
     const lines = notes.split('\n');
@@ -494,38 +491,57 @@ export function AuditionSchedulePanel({
     });
   };
 
-  const handleDeleteWithUndo = (schedule: Schedule) => {
+  const handleDeleteWithUndo = async (schedule: Schedule) => {
     setLastDeleted(schedule);
-    castingService.deleteSchedule(projectId, schedule.id);
-    onSchedulesChange();
-    setUndoSnackbarOpen(true);
+    try {
+      await castingService.deleteSchedule(projectId, schedule.id);
+      onSchedulesChange();
+      setUndoSnackbarOpen(true);
+    } catch (error) {
+      console.error('Failed to delete schedule:', error);
+      setLastDeleted(null);
+    }
   };
 
-  const handleUndoDelete = () => {
+  const handleUndoDelete = async () => {
     if (lastDeleted) {
-      castingService.saveSchedule(projectId, lastDeleted);
-      onSchedulesChange();
+      try {
+        await castingService.saveSchedule(projectId, lastDeleted);
+        onSchedulesChange();
+      } catch (error) {
+        console.error('Failed to restore schedule:', error);
+      }
       setLastDeleted(null);
     }
     setUndoSnackbarOpen(false);
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (window.confirm(`Er du sikker på at du vil slette ${selectedIds.size} avtaler?`)) {
-      selectedIds.forEach(id => castingService.deleteSchedule(projectId, id));
-      onSchedulesChange();
-      setSelectedIds(new Set());
+      try {
+        await Promise.all(
+          Array.from(selectedIds).map(id => castingService.deleteSchedule(projectId, id))
+        );
+        onSchedulesChange();
+        setSelectedIds(new Set());
+      } catch (error) {
+        console.error('Failed to bulk delete schedules:', error);
+      }
     }
   };
 
-  const handleDuplicate = (schedule: Schedule) => {
+  const handleDuplicate = async (schedule: Schedule) => {
     const newSchedule: Schedule = {
       ...schedule,
       id: `schedule-${Date.now()}`,
       status: 'scheduled',
     };
-    castingService.saveSchedule(projectId, newSchedule);
-    onSchedulesChange();
+    try {
+      await castingService.saveSchedule(projectId, newSchedule);
+      onSchedulesChange();
+    } catch (error) {
+      console.error('Failed to duplicate schedule:', error);
+    }
   };
 
   const loadPoolAuditions = async () => {
@@ -840,7 +856,7 @@ export function AuditionSchedulePanel({
             >
               Audition-planlegger
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
               Planlegg og administrer auditions
             </Typography>
           </Box>
@@ -959,28 +975,46 @@ export function AuditionSchedulePanel({
           }}
         >
           <Box sx={{ textAlign: 'center', p: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <AuditionsIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#ffb800' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#ffb800', fontWeight: 700 }}>{statistics.total}</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Totalt</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Totalt</Typography>
           </Box>
           <Box sx={{ textAlign: 'center', p: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <CalendarIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#00d4ff' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#00d4ff', fontWeight: 700 }}>{statistics.upcoming}</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Kommende</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Kommende</Typography>
           </Box>
           <Box sx={{ textAlign: 'center', p: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <AuditionsIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#00d4ff' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#00d4ff', fontWeight: 700 }}>{statistics.scheduled}</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Planlagt</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Planlagt</Typography>
           </Box>
           <Box sx={{ textAlign: 'center', p: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <AuditionsIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#10b981' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#10b981', fontWeight: 700 }}>{statistics.completed}</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Fullført</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Fullført</Typography>
           </Box>
           <Box sx={{ textAlign: 'center', p: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <AuditionsIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#ef4444' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#ef4444', fontWeight: 700 }}>{statistics.cancelled}</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Kansellert</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Kansellert</Typography>
           </Box>
           <Box sx={{ textAlign: 'center', p: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+              <StarIcon sx={{ fontSize: { xs: 16, sm: 18, md: 17, lg: 19, xl: 22 }, color: '#ffc107' }} />
+            </Box>
             <Typography variant="h4" sx={{ color: '#ffc107', fontWeight: 700 }}>{statistics.favorites}</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Favoritter</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>Favoritter</Typography>
           </Box>
         </Box>
       </Collapse>
@@ -998,7 +1032,7 @@ export function AuditionSchedulePanel({
             size="small"
             slotProps={{
               input: {
-                startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)', mr: 1 }} />,
+                startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.87)', mr: 1 }} />,
                 sx: { minHeight: TOUCH_TARGET_SIZE },
               },
               htmlInput: { 'aria-label': 'Søk i avtaler' },
@@ -1189,7 +1223,7 @@ export function AuditionSchedulePanel({
           <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>
             Planlegg auditions og møter
           </Typography>
-          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.6)', mb: 4, maxWidth: 450, mx: 'auto' }}>
+          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.87)', mb: 4, maxWidth: 450, mx: 'auto' }}>
             {candidates.length === 0 || roles.length === 0
               ? 'Du trenger minst én rolle og én kandidat for å opprette avtaler.'
               : `Du har ${candidates.length} kandidat${candidates.length > 1 ? 'er' : ''} klare for planlegging.`
@@ -1248,7 +1282,7 @@ export function AuditionSchedulePanel({
                     checked={selectedIds.size === filteredAndSortedSchedules.length && filteredAndSortedSchedules.length > 0}
                     indeterminate={selectedIds.size > 0 && selectedIds.size < filteredAndSortedSchedules.length}
                     onChange={handleSelectAll}
-                    sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-checked': { color: '#ffb800' } }}
+                    sx={{ color: 'rgba(255,255,255,0.87)', '&.Mui-checked': { color: '#ffb800' } }}
                   />
                 </TableCell>
                 <TableCell sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.1)', width: 40 }} />
@@ -1312,7 +1346,7 @@ export function AuditionSchedulePanel({
                     <Checkbox
                       checked={selectedIds.has(schedule.id)}
                       onChange={() => handleToggleSelect(schedule.id)}
-                      sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-checked': { color: '#ffb800' } }}
+                      sx={{ color: 'rgba(255,255,255,0.87)', '&.Mui-checked': { color: '#ffb800' } }}
                     />
                   </TableCell>
                   <TableCell sx={{ borderColor: 'rgba(255,255,255,0.1)' }} onClick={(e) => e.stopPropagation()}>
@@ -1342,7 +1376,7 @@ export function AuditionSchedulePanel({
                       {getRoleName(schedule.roleId)}
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ color: 'rgba(255,255,255,0.7)', borderColor: 'rgba(255,255,255,0.1)' }}>
+                  <TableCell sx={{ color: 'rgba(255,255,255,0.87)', borderColor: 'rgba(255,255,255,0.1)' }}>
                     {schedule.location || '-'}
                   </TableCell>
                   <TableCell sx={{ borderColor: 'rgba(255,255,255,0.1)' }}>
@@ -1355,17 +1389,17 @@ export function AuditionSchedulePanel({
                   <TableCell sx={{ borderColor: 'rgba(255,255,255,0.1)' }} onClick={(e) => e.stopPropagation()}>
                     <Stack direction="row" spacing={0.5}>
                       <Tooltip title="Rediger">
-                        <IconButton size="small" onClick={() => onEditSchedule(schedule)} sx={{ color: 'rgba(255,255,255,0.5)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
+                        <IconButton size="small" onClick={() => onEditSchedule(schedule)} sx={{ color: 'rgba(255,255,255,0.87)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
                           <EditIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Dupliser">
-                        <IconButton size="small" onClick={() => handleDuplicate(schedule)} sx={{ color: 'rgba(255,255,255,0.5)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
+                        <IconButton size="small" onClick={() => handleDuplicate(schedule)} sx={{ color: 'rgba(255,255,255,0.87)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
                           <DuplicateIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Slett">
-                        <IconButton size="small" onClick={() => handleDeleteWithUndo(schedule)} sx={{ color: 'rgba(255,255,255,0.5)', '&:hover': { color: '#ef4444' }, minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
+                        <IconButton size="small" onClick={() => handleDeleteWithUndo(schedule)} sx={{ color: 'rgba(255,255,255,0.87)', '&:hover': { color: '#ef4444' }, minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
                           <DeleteIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -1454,7 +1488,7 @@ export function AuditionSchedulePanel({
                         <Typography
                           variant="body2"
                           sx={{
-                            color: 'rgba(255,255,255,0.7)',
+                            color: 'rgba(255,255,255,0.87)',
                             fontWeight: 500,
                             fontSize: { xs: '0.8rem', md: '0.9rem' },
                           }}
@@ -1500,7 +1534,7 @@ export function AuditionSchedulePanel({
                           onClick={(e) => e.stopPropagation()}
                           sx={{
                             p: 0.5,
-                            color: 'rgba(255,255,255,0.3)',
+                            color: 'rgba(255,255,255,0.6)',
                             '&.Mui-checked': { color: '#ffb800' },
                             '& .MuiSvgIcon-root': { fontSize: { xs: 20, md: 24 } },
                           }}
@@ -1563,7 +1597,7 @@ export function AuditionSchedulePanel({
                           <Typography
                             variant="caption"
                             sx={{
-                              color: 'rgba(255,255,255,0.5)',
+                              color: 'rgba(255,255,255,0.87)',
                               display: 'block',
                               lineHeight: 1,
                               fontSize: { xs: '0.65rem', md: '0.7rem' },
@@ -1610,7 +1644,7 @@ export function AuditionSchedulePanel({
                             <Typography
                               variant="caption"
                               sx={{
-                                color: 'rgba(255,255,255,0.5)',
+                                color: 'rgba(255,255,255,0.87)',
                                 display: 'block',
                                 lineHeight: 1,
                                 fontSize: { xs: '0.65rem', md: '0.7rem' },
@@ -1793,7 +1827,7 @@ export function AuditionSchedulePanel({
                             sx={{
                               minWidth: { xs: TOUCH_TARGET_SIZE, md: 48 },
                               minHeight: { xs: TOUCH_TARGET_SIZE, md: 48 },
-                              color: 'rgba(255,255,255,0.5)',
+                              color: 'rgba(255,255,255,0.87)',
                               '&:hover': { color: '#00d4ff' },
                               ...focusVisibleStyles,
                             }}
@@ -1808,7 +1842,7 @@ export function AuditionSchedulePanel({
                             sx={{
                               minWidth: { xs: TOUCH_TARGET_SIZE, md: 48 },
                               minHeight: { xs: TOUCH_TARGET_SIZE, md: 48 },
-                              color: 'rgba(255,255,255,0.5)',
+                              color: 'rgba(255,255,255,0.87)',
                               '&:hover': { color: '#ef4444' },
                               ...focusVisibleStyles,
                             }}
@@ -1860,10 +1894,10 @@ export function AuditionSchedulePanel({
               <InventoryIcon sx={{ fontSize: 20 }} />
               Slik bruker du audition-maler
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
               Maler lar deg lagre audition-oppsett for gjenbruk i fremtidige produksjoner.
             </Typography>
-            <Box component="ul" sx={{ m: 0, pl: 2.5, color: 'rgba(255,255,255,0.6)', '& li': { mb: 0.5, fontSize: '0.875rem' } }}>
+            <Box component="ul" sx={{ m: 0, pl: 2.5, color: 'rgba(255,255,255,0.87)', '& li': { mb: 0.5, fontSize: '0.875rem' } }}>
               <li><strong>Lagre som mal:</strong> Klikk på lilla ikon på en prosjekt-audition</li>
               <li><strong>Importer:</strong> Klikk "Importer" for å kopiere malen til prosjektet</li>
               <li><strong>Slett:</strong> Fjern maler du ikke trenger lenger</li>
@@ -1872,7 +1906,7 @@ export function AuditionSchedulePanel({
 
           {poolLoading ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Laster maler...</Typography>
+              <Typography sx={{ color: 'rgba(255,255,255,0.87)' }}>Laster maler...</Typography>
             </Box>
           ) : poolAuditions.length === 0 ? (
             <Box
@@ -1904,7 +1938,7 @@ export function AuditionSchedulePanel({
               <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: 1 }}>
                 Ingen audition-maler ennå
               </Typography>
-              <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.6)', mb: 3, maxWidth: 400, mx: 'auto' }}>
+              <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.87)', mb: 3, maxWidth: 400, mx: 'auto' }}>
                 Lagre audition-oppsett som maler for gjenbruk i fremtidige produksjoner.
               </Typography>
             </Box>
@@ -1946,7 +1980,7 @@ export function AuditionSchedulePanel({
                         <Typography
                           variant="body2"
                           sx={{
-                            color: 'rgba(255,255,255,0.6)',
+                            color: 'rgba(255,255,255,0.87)',
                             mb: 1.5,
                             display: '-webkit-box',
                             WebkitLineClamp: 2,
@@ -1963,7 +1997,7 @@ export function AuditionSchedulePanel({
                             icon={<ScheduleIcon sx={{ fontSize: 14 }} />}
                             label={`${poolAudition.durationMinutes} min`}
                             size="small"
-                            sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', fontSize: '0.7rem' }}
+                            sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.87)', fontSize: '0.7rem' }}
                           />
                         )}
                         {poolAudition.location && (
@@ -1971,7 +2005,7 @@ export function AuditionSchedulePanel({
                             icon={<LocationIcon sx={{ fontSize: 14 }} />}
                             label={poolAudition.location}
                             size="small"
-                            sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', fontSize: '0.7rem' }}
+                            sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.87)', fontSize: '0.7rem' }}
                           />
                         )}
                       </Box>

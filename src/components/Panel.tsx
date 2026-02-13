@@ -4,17 +4,17 @@
  * Styled panel wrapper with header and consistent styling
  */
 
-import React from 'react';
+import type { FC, ReactNode } from 'react';
 import { Box, Typography, BoxProps } from '@mui/material';
 import { colors, spacing, borderRadius, shadows } from '../../styles/designTokens';
 
 export interface PanelProps extends BoxProps {
   title?: string;
-  header?: React.ReactNode;
+  header?: ReactNode;
   headerHeight?: number;
 }
 
-export const Panel: React.FC<PanelProps> = ({
+export const Panel: FC<PanelProps> = ({
   title,
   header,
   headerHeight = 48,

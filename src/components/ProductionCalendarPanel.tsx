@@ -26,18 +26,20 @@ import {
   FormControlLabel,
   Switch,
 } from '@mui/material';
-import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import TheatersIcon from '@mui/icons-material/Theaters';
 import CheckroomIcon from '@mui/icons-material/Checkroom';
 import MovieIcon from '@mui/icons-material/Movie';
-import GroupsIcon from '@mui/icons-material/Groups';
 import EventIcon from '@mui/icons-material/Event';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
 import PersonIcon from '@mui/icons-material/Person';
+import { 
+  CalendarCustomIcon as CalendarMonthIcon, 
+  TeamIcon as GroupsIcon, 
+  LocationsIcon as LocationOnIcon 
+} from './icons/CastingIcons';
 import { useSnackbar } from 'notistack';
 import {
   calendarEventsApi,
@@ -141,20 +143,38 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
 
   const loadProjectData = async () => {
     try {
+      // Use props data first, only fetch from API if not provided
       if (!propCandidates?.length) {
-        const candidatesData = await candidatesApi.getAll(projectId);
-        setCandidates(candidatesData.map(c => ({ id: c.id, name: c.name })));
+        try {
+          const candidatesData = await candidatesApi.getAll(projectId);
+          setCandidates(candidatesData.map(c => ({ id: c.id, name: c.name })));
+        } catch (e) {
+          console.warn('Could not load candidates from API, using props');
+        }
       }
       if (!propCrew?.length) {
-        const crewData = await crewApi.getAll(projectId);
-        setCrew(crewData.map(c => ({ id: c.id, name: c.name })));
+        try {
+          const crewData = await crewApi.getAll(projectId);
+          setCrew(crewData.map(c => ({ id: c.id, name: c.name })));
+        } catch (e) {
+          console.warn('Could not load crew from API, using props');
+        }
       }
       if (!propLocations?.length) {
-        const locationsData = await locationsApi.getAll(projectId);
-        setLocations(locationsData.map(l => ({ id: l.id, name: l.name })));
+        try {
+          const locationsData = await locationsApi.getAll(projectId);
+          setLocations(locationsData.map(l => ({ id: l.id, name: l.name })));
+        } catch (e) {
+          console.warn('Could not load locations from API, using props');
+        }
       }
-      const equipmentData = await equipmentApi.getAll(projectId);
-      setEquipment(equipmentData);
+      try {
+        const equipmentData = await equipmentApi.getAll(projectId);
+        setEquipment(equipmentData);
+      } catch (e) {
+        console.warn('Could not load equipment from API');
+        setEquipment([]);
+      }
     } catch (error) {
       console.error('Failed to load project data:', error);
     }
@@ -521,7 +541,7 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
                             <Box>
                               <Tooltip title="Rediger">
                                 <IconButton size="small" onClick={() => handleOpenDialog(event)}>
-                                  <EditIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.5)' }} />
+                                  <EditIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.87)' }} />
                                 </IconButton>
                               </Tooltip>
                               <Tooltip title="Slett">
@@ -533,8 +553,8 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
                           </Box>
 
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                            <AccessTimeIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }} />
-                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                            <AccessTimeIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.87)' }} />
+                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                               {event.all_day ? 'Hele dagen' : (
                                 <>
                                   {new Date(event.start_time).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}
@@ -546,8 +566,8 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
 
                           {location && (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                              <LocationOnIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }} />
-                              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                              <LocationOnIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.87)' }} />
+                              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                                 {location.name}
                               </Typography>
                             </Box>
@@ -556,7 +576,7 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
                           {eventCandidates.length > 0 && (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
                               <PersonIcon sx={{ fontSize: 14, color: '#8b5cf6' }} />
-                              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                                 {eventCandidates.map(c => c.name).join(', ')}
                               </Typography>
                             </Box>
@@ -565,14 +585,14 @@ const ProductionCalendarPanel: React.FC<ProductionCalendarPanelProps> = ({
                           {eventCrew.length > 0 && (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                               <GroupsIcon sx={{ fontSize: 14, color: '#06b6d4' }} />
-                              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                                 {eventCrew.map(c => c.name).join(', ')}
                               </Typography>
                             </Box>
                           )}
 
                           {event.description && (
-                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mt: 1, fontStyle: 'italic' }}>
+                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mt: 1, fontStyle: 'italic' }}>
                               {event.description}
                             </Typography>
                           )}

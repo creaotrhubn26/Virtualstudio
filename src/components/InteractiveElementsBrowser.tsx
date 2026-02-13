@@ -3,7 +3,7 @@
  * UI for placing and managing interactive 3D elements
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FC, type ReactElement, type ReactNode } from 'react';
 import {
   Box,
   Typography,
@@ -40,7 +40,7 @@ import {
 } from '../services/InteractiveElementsService';
 
 interface TabPanelProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   index: number;
   value: number;
 }
@@ -53,7 +53,7 @@ function TabPanel({ children, value, index }: TabPanelProps) {
   );
 }
 
-const ElementCard: React.FC<{
+const ElementCard: FC<{
   element: InteractiveElementConfig;
   onPlace: () => void;
 }> = ({ element, onPlace }) => {
@@ -108,7 +108,7 @@ const ElementCard: React.FC<{
   );
 };
 
-export const InteractiveElementsBrowser: React.FC = () => {
+export const InteractiveElementsBrowser: FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<InteractiveElementType | 'all'>('all');
@@ -145,7 +145,7 @@ export const InteractiveElementsBrowser: React.FC = () => {
     };
   }, []);
 
-  const categories: { value: InteractiveElementType | 'all'; label: string; icon: React.ReactElement }[] = [
+  const categories: { value: InteractiveElementType | 'all'; label: string; icon: ReactElement }[] = [
     { value: 'all', label: 'Alle', icon: <AddIcon /> },
     { value: 'door', label: 'Dører', icon: <DoorFrontIcon /> },
     { value: 'light-switch', label: 'Brytere', icon: <LightbulbIcon /> },

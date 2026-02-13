@@ -3,7 +3,7 @@
  * Built with React Three Fiber
  */
 
-import React, { useRef, useMemo, Suspense } from 'react';
+import { useRef, useMemo, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
@@ -393,7 +393,7 @@ function Particles() {
   return (
     <points ref={ref}>
       <bufferGeometry>
-        <bufferAttribute attach="attributes-position" count={count} array={positions} itemSize={3} />
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
       </bufferGeometry>
       <pointsMaterial size={0.08} color={amberColor} transparent opacity={0.6} sizeAttenuation />
     </points>

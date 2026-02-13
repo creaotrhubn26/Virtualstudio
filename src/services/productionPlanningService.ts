@@ -1,6 +1,5 @@
-import { ProductionDay, CastingProject, ShotList, CastingShot } from '../core/models/casting';
+import { ProductionDay } from '../core/models/casting';
 import { castingService } from './castingService';
-import { sceneComposerService } from './sceneComposerService';
 
 /**
  * Production Planning Service

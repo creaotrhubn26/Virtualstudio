@@ -210,6 +210,7 @@ export const ClothingPanel: React.FC = () => {  const { addNode } = useAppStore(
               value={selectedActor}
               onChange={(e) => setSelectedActor(e.target.value)}
               label="Select Actor"
+              MenuProps={{ sx: { zIndex: 1400 } }}
             >
               {actors.map((actor) => (
                 <MenuItem key={actor.id} value={actor.id}>

@@ -71,9 +71,9 @@ import {
   Folder,
   InsertDriveFile,
 } from '@mui/icons-material';
-import { useAppStore, SceneNode } from '../../state/store';
-import { virtualStudioApi, preferencesApi } from '../../core/api/virtualStudioApi';
-import { useVirtualStudio } from '../../../VirtualStudioContext';
+import { useAppStore, type SceneNode } from '../state/store';
+import { virtualStudioApi, preferencesApi } from '../core/api/virtualStudioApi';
+import { useVirtualStudio } from '../VirtualStudioContext';
 
 // ============================================================================
 // Types
@@ -201,6 +201,19 @@ function generateProjectId(): string {
   return `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
+const isProjectType = (
+  value: string
+): value is NonNullable<VirtualStudioProject['projectType']> => {
+  return [
+    'photography',
+    'videography',
+    'commercial',
+    'wedding',
+    'event',
+    'product',
+  ].includes(value);
+};
+
 // ============================================================================
 // Save Project Dialog
 // ============================================================================
@@ -294,6 +307,7 @@ export const SaveProjectDialog: React.FC<SaveProjectDialogProps> = ({
               value={projectType}
               label="Project Type"
               onChange={(e) => setProjectType(e.target.value)}
+              MenuProps={{ sx: { zIndex: 1400 } }}
             >
               <MenuItem value="photography">Photography</MenuItem>
               <MenuItem value="videography">Videography</MenuItem>
@@ -473,6 +487,7 @@ export const LoadProjectDialog: React.FC<LoadProjectDialogProps> = ({
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
               displayEmpty
+              MenuProps={{ sx: { zIndex: 1400 } }}
             >
               <MenuItem value="all">All Types</MenuItem>
               <MenuItem value="photography">Photography</MenuItem>
@@ -497,7 +512,7 @@ export const LoadProjectDialog: React.FC<LoadProjectDialogProps> = ({
         ) : (
           <Grid container spacing={2}>
             {sortedProjects.map((project) => (
-              <Grid item xs={12} sm={6} md={4} key={project.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={project.id}>
                 <Card
                   sx={{
                     cursor: 'pointer',
@@ -731,7 +746,7 @@ export const ProjectManagerPanel: React.FC<ProjectManagerPanelProps> = ({
   }>({ open: false, message: ', ', severity: 'info' });
 
   // Get scene state from store
-  const nodes = useAppStore((state) => state.nodes);
+  const nodes = useAppStore((state) => state.scene);
 
   // Load projects on mount
   useEffect(() => {
@@ -771,7 +786,8 @@ export const ProjectManagerPanel: React.FC<ProjectManagerPanelProps> = ({
 
       // Load recent from preferences
       const prefs = await preferencesApi.get();
-      if (prefs?.recentProjects) {
+      const recentProjects = prefs.recent?.projects || [];
+      if (recentProjects.length > 0) {
         // Merge recent project info
       }
     } catch (error) {
@@ -799,7 +815,7 @@ export const ProjectManagerPanel: React.FC<ProjectManagerPanelProps> = ({
         id: currentProject?.id || generateProjectId(),
         name,
         description,
-        projectType: options.projectType as any,
+        projectType: isProjectType(options.projectType) ? options.projectType : undefined,
         tags: options.tags,
         sceneData: {
           nodes: nodes,
@@ -807,7 +823,7 @@ export const ProjectManagerPanel: React.FC<ProjectManagerPanelProps> = ({
           environmentState: null, // Get from HDRI panel
         },
         nodeCount: nodes.length,
-        lightCount: nodes.filter((n) => n.type === 'light').length,
+        lightCount: nodes.filter((node: SceneNode) => node.type === 'light').length,
         version: (currentProject?.version || 0) + 1,
         createdAt: currentProject?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),

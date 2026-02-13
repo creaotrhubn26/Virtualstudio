@@ -173,7 +173,7 @@ export const PanelPreview: React.FC<PanelPreviewProps> = React.memo(({
               alignItems: 'center',
               justifyContent: 'center',
               minHeight: 200,
-              color: 'rgba(255,255,255,0.5)',
+              color: 'rgba(255,255,255,0.87)',
             }}
           >
             <Typography variant="body2" sx={{ fontStyle: 'italic', textAlign: 'center' }}>

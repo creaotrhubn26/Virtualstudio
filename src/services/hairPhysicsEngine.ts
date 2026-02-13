@@ -9,7 +9,7 @@
  * - Integration with bone velocity tracking
  */
 
-import { Vector3, Mesh, VertexBuffer } from 'babylonjs';
+import { Vector3, Mesh, VertexBuffer, Matrix, VertexData } from '@babylonjs/core';
 
 /**
  * Individual hair strand constraint (spring-like)
@@ -123,7 +123,7 @@ class HairStrand {
     const localOffset = new Vector3(0, -0.1, 0); // Small offset from bone
     const rotatedOffset = Vector3.TransformCoordinates(
       localOffset,
-      BABYLON.Matrix.RotationYawPitchRoll(boneRotation.y, boneRotation.x, boneRotation.z)
+      Matrix.RotationYawPitchRoll(boneRotation.y, boneRotation.x, boneRotation.z)
     );
 
     this.rootPosition = bonePosition.add(rotatedOffset);
@@ -215,6 +215,11 @@ export class HairPhysicsEngine {
   constructor() {
     // Initialize collision bodies for common character parts
     // These will be updated based on bone positions
+    this.collisionBodies = [
+      { position: Vector3.Zero(), radius: 0.15 },
+      { position: new Vector3(0, -0.12, 0), radius: 0.12 },
+      { position: new Vector3(0, -0.25, 0), radius: 0.1 }
+    ];
   }
 
   /**
@@ -254,7 +259,7 @@ export class HairPhysicsEngine {
    * Update hair physics for all registered rigs
    */
   update(deltaTime: number, bonePositions: Map<string, { position: Vector3; rotation: any }>): void {
-    for (const [rigId, state] of this.hairStates) {
+    for (const state of this.hairStates.values()) {
       if (!state.isEnabled) continue;
 
       this.updateRigHair(state, deltaTime, bonePositions);
@@ -298,18 +303,10 @@ export class HairPhysicsEngine {
    */
   private applyCollisions(strand: HairStrand): void {
     // Simple sphere collisions for character body parts
-    // Typical character collision radii:
-    const collisions = [
-      { radius: 0.15, name: 'head' },
-      { radius: 0.12, name: 'neck' },
-      { radius: 0.10, name: 'chest' }
-    ];
-
-    for (const collision of collisions) {
-      // In a full implementation, these positions would come from bone tracking
-      // For now, using simplified collision geometry
-      strand.collideWithSphere(Vector3.Zero(), collision.radius);
-    }
+    // In a full implementation, these positions would come from bone tracking
+    this.collisionBodies.forEach((body) => {
+      strand.collideWithSphere(body.position, body.radius);
+    });
   }
 
   /**
@@ -342,9 +339,10 @@ export class HairPhysicsEngine {
     // Recalculate normals for proper lighting
     const normals: number[] = [];
     const vertexCount = positions.length / 3;
-
-    BABYLON.VertexData.ComputeNormals(positions, positions, normals);
-    state.mesh.updateVerticesData(VertexBuffer.NormalKind, normals);
+    if (vertexCount > 0) {
+      VertexData.ComputeNormals(positions, positions, normals);
+      state.mesh.updateVerticesData(VertexBuffer.NormalKind, normals);
+    }
   }
 
   /**

@@ -196,30 +196,42 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
     showSaveMessage('Veiledning oppdatert');
   }, [selectedTutorial, loadTutorials, showSaveMessage]);
 
-  const handleDeleteTutorial = useCallback((id: string) => {
+  const handleDeleteTutorial = useCallback(async (id: string) => {
     if (!window.confirm('Er du sikker på at du vil slette denne veiledningen?')) return;
 
-    tutorialService.deleteTutorial(id);
-    loadTutorials();
-    if (selectedTutorial?.id === id) {
-      setSelectedTutorial(null);
+    try {
+      await tutorialService.deleteTutorial(id);
+      loadTutorials();
+      if (selectedTutorial?.id === id) {
+        setSelectedTutorial(null);
+      }
+      showSaveMessage('Veiledning slettet');
+    } catch (error) {
+      console.error('Failed to delete tutorial:', error);
     }
-    showSaveMessage('Veiledning slettet');
   }, [selectedTutorial, loadTutorials, showSaveMessage]);
 
-  const handleDuplicateTutorial = useCallback((id: string) => {
-    const duplicate = tutorialService.duplicateTutorial(id);
-    if (duplicate) {
-      loadTutorials();
-      setSelectedTutorial(duplicate);
-      showSaveMessage('Veiledning duplisert');
+  const handleDuplicateTutorial = useCallback(async (id: string) => {
+    try {
+      const duplicate = await tutorialService.duplicateTutorial(id);
+      if (duplicate) {
+        loadTutorials();
+        setSelectedTutorial(duplicate);
+        showSaveMessage('Veiledning duplisert');
+      }
+    } catch (error) {
+      console.error('Failed to duplicate tutorial:', error);
     }
   }, [loadTutorials, showSaveMessage]);
 
-  const handleSetActive = useCallback((id: string, category: Tutorial['category']) => {
-    tutorialService.setActiveTutorial(id, category);
-    loadTutorials();
-    showSaveMessage('Aktiv veiledning endret');
+  const handleSetActive = useCallback(async (id: string, category: Tutorial['category']) => {
+    try {
+      await tutorialService.setActiveTutorial(id, category);
+      loadTutorials();
+      showSaveMessage('Aktiv veiledning endret');
+    } catch (error) {
+      console.error('Failed to set active tutorial:', error);
+    }
   }, [loadTutorials, showSaveMessage]);
 
   const resetStepForm = useCallback(() => {
@@ -387,7 +399,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                     size="small"
                     sx={{ mt: 0.5, fontSize: fontSize.caption, height: chipHeight }}
                   />
-                  <Typography component="span" sx={{ display: 'block', color: 'rgba(255,255,255,0.5)', mt: 0.5, fontSize: fontSize.caption }}>
+                  <Typography component="span" sx={{ display: 'block', color: 'rgba(255,255,255,0.87)', mt: 0.5, fontSize: fontSize.caption }}>
                     {tutorial.steps.length} steg
                   </Typography>
                 </Box>
@@ -430,7 +442,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
           <IconButton 
             onClick={() => setSidebarOpen(true)} 
             sx={{ 
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               minWidth: iconButtonSize,
               minHeight: iconButtonSize,
             }}
@@ -468,7 +480,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
         <IconButton 
           onClick={onClose} 
           sx={{ 
-            color: 'rgba(255,255,255,0.7)',
+            color: 'rgba(255,255,255,0.87)',
             minWidth: iconButtonSize,
             minHeight: iconButtonSize,
           }}
@@ -496,7 +508,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
               <IconButton 
                 onClick={() => setSidebarOpen(false)} 
                 sx={{ 
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   minWidth: iconButtonSize,
                   minHeight: iconButtonSize,
                 }}
@@ -539,7 +551,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                           minHeight: buttonMinHeight,
                         } 
                       }}
-                      InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)', fontSize: fontSize.body } }}
+                      InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body } }}
                       InputProps={{ sx: { color: '#fff' } }}
                     />
                     <TextField
@@ -557,11 +569,11 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                           fontSize: fontSize.body,
                         } 
                       }}
-                      InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)', fontSize: fontSize.body } }}
+                      InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body } }}
                       InputProps={{ sx: { color: '#fff' } }}
                     />
                     <FormControl size={isMobile ? 'medium' : 'small'} fullWidth={isMobile} sx={{ minWidth: isMobile ? '100%' : 200 }}>
-                      <InputLabel sx={{ color: 'rgba(255,255,255,0.7)', fontSize: fontSize.body }}>Kategori</InputLabel>
+                      <InputLabel sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body }}>Kategori</InputLabel>
                       <Select
                         value={selectedTutorial.category}
                         label="Kategori"
@@ -624,7 +636,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                       onClick={() => handleDuplicateTutorial(selectedTutorial.id)}
                       sx={{ 
                         borderColor: 'rgba(255,255,255,0.3)', 
-                        color: 'rgba(255,255,255,0.7)',
+                        color: 'rgba(255,255,255,0.87)',
                         minHeight: buttonMinHeight,
                         fontSize: fontSize.button,
                         flex: isMobile ? 1 : 'none',
@@ -697,7 +709,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                       }}
                       onClick={() => toggleStepExpanded(step.id)}
                     >
-                      <DragIcon sx={{ color: 'rgba(255,255,255,0.3)', mr: 1, fontSize: iconSize + 2 }} />
+                      <DragIcon sx={{ color: 'rgba(255,255,255,0.6)', mr: 1, fontSize: iconSize + 2 }} />
                       <Chip
                         label={index + 1}
                         size="small"
@@ -708,7 +720,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                           {step.title}
                         </Typography>
                         {!isMobile && (
-                          <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: fontSize.caption }}>
+                          <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSize.caption }}>
                             Panel: {panelOptions.find(p => p.value === step.panel)?.label}
                             {step.action && ` | Handling: ${actionOptions.find(a => a.value === step.action)?.label}`}
                           </Typography>
@@ -718,14 +730,14 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                         <IconButton
                           onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleMoveStep(index, 'up'); }}
                           disabled={index === 0}
-                          sx={{ color: 'rgba(255,255,255,0.5)', minWidth: iconButtonSize, minHeight: iconButtonSize }}
+                          sx={{ color: 'rgba(255,255,255,0.87)', minWidth: iconButtonSize, minHeight: iconButtonSize }}
                         >
                           <MoveUpIcon sx={{ fontSize: iconSize }} />
                         </IconButton>
                         <IconButton
                           onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleMoveStep(index, 'down'); }}
                           disabled={index === selectedTutorial.steps.length - 1}
-                          sx={{ color: 'rgba(255,255,255,0.5)', minWidth: iconButtonSize, minHeight: iconButtonSize }}
+                          sx={{ color: 'rgba(255,255,255,0.87)', minWidth: iconButtonSize, minHeight: iconButtonSize }}
                         >
                           <MoveDownIcon sx={{ fontSize: iconSize }} />
                         </IconButton>
@@ -756,7 +768,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                           </Alert>
                         )}
                         {step.targetSelector && (
-                          <Typography sx={{ display: 'block', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', fontSize: fontSize.caption }}>
+                          <Typography sx={{ display: 'block', color: 'rgba(255,255,255,0.87)', fontFamily: 'monospace', fontSize: fontSize.caption }}>
                             Selector: {step.targetSelector}
                           </Typography>
                         )}
@@ -766,7 +778,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                             <ul style={{ margin: '4px 0', paddingLeft: 20 }}>
                               {step.tips.map((tip, i) => (
                                 <li key={i}>
-                                  <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: fontSize.caption }}>{tip}</Typography>
+                                  <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSize.caption }}>{tip}</Typography>
                                 </li>
                               ))}
                             </ul>
@@ -815,7 +827,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                 fontSize: fontSize.body,
               } 
             }}
-            InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)', fontSize: fontSize.body } }}
+            InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body } }}
             InputProps={{ sx: { color: '#fff' } }}
           />
           <TextField
@@ -833,11 +845,11 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                 fontSize: fontSize.body,
               } 
             }}
-            InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)', fontSize: fontSize.body } }}
+            InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body } }}
             InputProps={{ sx: { color: '#fff' } }}
           />
           <FormControl fullWidth size={isMobile ? 'medium' : 'small'}>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)', fontSize: fontSize.body }}>Kategori</InputLabel>
+            <InputLabel sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body }}>Kategori</InputLabel>
             <Select
               value={tutorialForm.category}
               label="Kategori"
@@ -899,7 +911,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                     fontSize: fontSize.body,
                   } 
                 }}
-                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)', fontSize: fontSize.body } }}
+                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body } }}
                 InputProps={{ sx: { color: '#fff' } }}
               />
             </Grid>
@@ -918,13 +930,13 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                     fontSize: fontSize.body,
                   } 
                 }}
-                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)', fontSize: fontSize.body } }}
+                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body } }}
                 InputProps={{ sx: { color: '#fff' } }}
               />
             </Grid>
             <Grid item xs={isMobile ? 12 : 6}>
               <FormControl fullWidth size={isMobile ? 'medium' : 'small'}>
-                <InputLabel sx={{ color: 'rgba(255,255,255,0.7)', fontSize: fontSize.body }}>Panel</InputLabel>
+                <InputLabel sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body }}>Panel</InputLabel>
                 <Select
                   value={stepForm.panel}
                   label="Panel"
@@ -944,7 +956,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
             </Grid>
             <Grid item xs={isMobile ? 12 : 6}>
               <FormControl fullWidth size={isMobile ? 'medium' : 'small'}>
-                <InputLabel sx={{ color: 'rgba(255,255,255,0.7)', fontSize: fontSize.body }}>Handling</InputLabel>
+                <InputLabel sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body }}>Handling</InputLabel>
                 <Select
                   value={stepForm.action || ''}
                   label="Handling"
@@ -977,7 +989,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                     fontSize: fontSize.body,
                   } 
                 }}
-                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)', fontSize: fontSize.body } }}
+                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body } }}
                 InputProps={{ sx: { color: '#fff', fontFamily: 'monospace' } }}
               />
             </Grid>
@@ -996,7 +1008,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                     fontSize: fontSize.body,
                   } 
                 }}
-                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)', fontSize: fontSize.body } }}
+                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body } }}
                 InputProps={{ sx: { color: '#fff' } }}
               />
             </Grid>
@@ -1015,12 +1027,12 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                     fontSize: fontSize.body,
                   } 
                 }}
-                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)', fontSize: fontSize.body } }}
+                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body } }}
                 InputProps={{ sx: { color: '#fff' } }}
               />
             </Grid>
             <Grid item xs={12}>
-              <Typography sx={{ mb: 1, color: 'rgba(255,255,255,0.7)', fontSize: fontSize.body }}>Tips</Typography>
+              <Typography sx={{ mb: 1, color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body }}>Tips</Typography>
               <Box sx={{ display: 'flex', gap: 1, mb: 1, flexDirection: isMobile ? 'column' : 'row' }}>
                 <TextField
                   fullWidth

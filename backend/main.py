@@ -47,6 +47,21 @@ except ImportError as e:
     print(f"Warning: Casting service not available: {e}")
     CASTING_SERVICE_AVAILABLE = False
 
+# Shot Planner service imports
+try:
+    from shot_planner_service import (
+        get_all_scenes,
+        get_scene_by_id,
+        save_scene as sp_save_scene,
+        delete_scene as sp_delete_scene,
+        get_scenes_by_manuscript,
+        link_to_manuscript_scene
+    )
+    SHOT_PLANNER_SERVICE_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Shot planner service not available: {e}")
+    SHOT_PLANNER_SERVICE_AVAILABLE = False
+
 # Auth service imports
 try:
     from auth_service import (
@@ -2369,6 +2384,193 @@ async def api_seed_troll_shot_lists(project_id: str):
         })
     except psycopg2.Error as e:
         print(f"Error seeding Troll shot lists: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
+# =============================================================================
+# Shot Planner 2D Scenes API
+# =============================================================================
+
+@app.get("/api/shot-planner/scenes")
+async def get_shot_planner_scenes():
+    """Get all shot planner 2D scenes from database."""
+    try:
+        from casting_service import get_db_connection
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+    except ImportError:
+        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT * FROM shot_planner_scenes 
+                ORDER BY updated_at DESC
+            """)
+            scenes = cur.fetchall()
+            
+            # Convert to JSON-serializable format
+            result = []
+            for scene in scenes:
+                scene_dict = dict(scene)
+                for k, v in scene_dict.items():
+                    if hasattr(v, 'isoformat'):
+                        scene_dict[k] = v.isoformat()
+                result.append(scene_dict)
+            
+            return JSONResponse({"success": True, "scenes": result})
+    except psycopg2.Error as e:
+        print(f"Error getting shot planner scenes: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.get("/api/shot-planner/scenes/{scene_id}")
+async def get_shot_planner_scene(scene_id: str):
+    """Get a specific shot planner 2D scene."""
+    try:
+        from casting_service import get_db_connection
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+    except ImportError:
+        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM shot_planner_scenes WHERE id = %s", (scene_id,))
+            scene = cur.fetchone()
+            
+            if not scene:
+                return JSONResponse({"success": False, "error": "Scene not found"}, status_code=404)
+            
+            # Convert to JSON-serializable format
+            scene_dict = dict(scene)
+            for k, v in scene_dict.items():
+                if hasattr(v, 'isoformat'):
+                    scene_dict[k] = v.isoformat()
+            
+            return JSONResponse({"success": True, "scene": scene_dict})
+    except psycopg2.Error as e:
+        print(f"Error getting shot planner scene: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.post("/api/shot-planner/scenes")
+async def save_shot_planner_scene(request: Request):
+    """Save or update a shot planner 2D scene."""
+    try:
+        from casting_service import get_db_connection
+        import psycopg2
+        from psycopg2.extras import Json as PgJson
+        from datetime import datetime
+    except ImportError:
+        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
+    
+    conn = None
+    try:
+        scene_data = await request.json()
+        scene_id = scene_data.get('id')
+        
+        if not scene_id:
+            return JSONResponse({"success": False, "error": "Scene ID required"}, status_code=400)
+        
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            # Check if scene exists
+            cur.execute("SELECT id FROM shot_planner_scenes WHERE id = %s", (scene_id,))
+            exists = cur.fetchone() is not None
+            
+            if exists:
+                cur.execute("""
+                    UPDATE shot_planner_scenes
+                    SET name = %s, location = %s, width = %s, height = %s,
+                        pixels_per_meter = %s, show_grid = %s, grid_size = %s,
+                        cameras = %s, actors = %s, props = %s, shots = %s,
+                        active_shot_id = %s, scene_data = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                """, (
+                    scene_data.get('name'),
+                    scene_data.get('location'),
+                    scene_data.get('width'),
+                    scene_data.get('height'),
+                    scene_data.get('pixelsPerMeter'),
+                    scene_data.get('showGrid', True),
+                    scene_data.get('gridSize', 50),
+                    PgJson(scene_data.get('cameras', [])),
+                    PgJson(scene_data.get('actors', [])),
+                    PgJson(scene_data.get('props', [])),
+                    PgJson(scene_data.get('shots', [])),
+                    scene_data.get('activeShotId'),
+                    PgJson(scene_data),
+                    scene_id
+                ))
+            else:
+                cur.execute("""
+                    INSERT INTO shot_planner_scenes 
+                    (id, name, location, width, height, pixels_per_meter, show_grid, grid_size,
+                     cameras, actors, props, shots, active_shot_id, scene_data)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    scene_id,
+                    scene_data.get('name'),
+                    scene_data.get('location'),
+                    scene_data.get('width'),
+                    scene_data.get('height'),
+                    scene_data.get('pixelsPerMeter'),
+                    scene_data.get('showGrid', True),
+                    scene_data.get('gridSize', 50),
+                    PgJson(scene_data.get('cameras', [])),
+                    PgJson(scene_data.get('actors', [])),
+                    PgJson(scene_data.get('props', [])),
+                    PgJson(scene_data.get('shots', [])),
+                    scene_data.get('activeShotId'),
+                    PgJson(scene_data)
+                ))
+            
+            conn.commit()
+            return JSONResponse({"success": True, "scene": scene_data})
+    except psycopg2.Error as e:
+        print(f"Error saving shot planner scene: {e}")
+        if conn:
+            conn.rollback()
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.delete("/api/shot-planner/scenes/{scene_id}")
+async def delete_shot_planner_scene(scene_id: str):
+    """Delete a shot planner 2D scene."""
+    try:
+        from casting_service import get_db_connection
+        import psycopg2
+    except ImportError:
+        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM shot_planner_scenes WHERE id = %s", (scene_id,))
+            conn.commit()
+            return JSONResponse({"success": True})
+    except psycopg2.Error as e:
+        print(f"Error deleting shot planner scene: {e}")
+        if conn:
+            conn.rollback()
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
     finally:
         if conn:
@@ -5341,6 +5543,85 @@ async def api_apply_equipment_template(template_id: str, request: Request):
             conn.commit()
         conn.close()
         return JSONResponse({"success": True, "equipment": created_equipment, "count": len(created_equipment)})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============ Equipment Categories API ============
+
+@app.get("/api/projects/{project_id}/equipment-categories")
+async def api_get_equipment_categories(project_id: str):
+    """Get custom equipment categories for a project"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Check if equipment_categories column exists in projects table
+            cur.execute("""
+                SELECT equipment_categories 
+                FROM casting_projects 
+                WHERE id = %s
+            """, (project_id,))
+            result = cur.fetchone()
+            
+        conn.close()
+        
+        if result and result.get('equipment_categories'):
+            return JSONResponse({
+                "success": True,
+                "categories": result['equipment_categories']
+            })
+        else:
+            # Return empty array if no custom categories
+            return JSONResponse({
+                "success": True,
+                "categories": []
+            })
+    except Exception as e:
+        # If column doesn't exist, return empty array
+        return JSONResponse({"success": True, "categories": []})
+
+@app.put("/api/projects/{project_id}/equipment-categories")
+async def api_update_equipment_categories(project_id: str, request: Request):
+    """Update custom equipment categories for a project"""
+    if not CASTING_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Casting service not available")
+    try:
+        data = await request.json()
+        categories = data.get('categories', [])
+        
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Try to update equipment_categories column
+            try:
+                cur.execute("""
+                    UPDATE casting_projects 
+                    SET equipment_categories = %s
+                    WHERE id = %s
+                    RETURNING equipment_categories
+                """, (PgJson(categories), project_id))
+                conn.commit()
+                result = cur.fetchone()
+            except Exception as col_error:
+                # If column doesn't exist, add it first
+                cur.execute("""
+                    ALTER TABLE casting_projects 
+                    ADD COLUMN IF NOT EXISTS equipment_categories JSONB DEFAULT '[]'::jsonb
+                """)
+                cur.execute("""
+                    UPDATE casting_projects 
+                    SET equipment_categories = %s
+                    WHERE id = %s
+                    RETURNING equipment_categories
+                """, (PgJson(categories), project_id))
+                conn.commit()
+                result = cur.fetchone()
+                
+        conn.close()
+        return JSONResponse({
+            "success": True,
+            "categories": result['equipment_categories'] if result else categories
+        })
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -13131,6 +13412,532 @@ async def seed_troll_production_data(project_id: str):
     finally:
         if conn:
             conn.close()
+
+
+# ============================================================================
+# LEGAL DOCUMENT GENERATION
+# ============================================================================
+
+LEGAL_DOCUMENT_TEMPLATES = {
+    "split_sheet_agreement": {
+        "title_no": "SPLIT SHEET-AVTALE",
+        "title_en": "SPLIT SHEET AGREEMENT",
+        "sections": ["parties", "work_description", "ownership_splits", "royalty_distribution", "credits"]
+    },
+    "royalty_agreement": {
+        "title_no": "ROYALTY-AVTALE",
+        "title_en": "ROYALTY AGREEMENT", 
+        "sections": ["parties", "royalty_terms", "payment_schedule", "reporting", "audit_rights"]
+    },
+    "collaboration_agreement": {
+        "title_no": "SAMARBEIDSAVTALE",
+        "title_en": "COLLABORATION AGREEMENT",
+        "sections": ["parties", "scope_of_work", "responsibilities", "ownership", "revenue_sharing", "term_termination"]
+    },
+    "custom": {
+        "title_no": "AVTALE",
+        "title_en": "AGREEMENT",
+        "sections": ["parties", "terms"]
+    }
+}
+
+CLAUSE_TEMPLATES = {
+    "dispute_resolution": {
+        "no": """
+## Tvisteløsning
+
+Enhver tvist som oppstår i forbindelse med denne avtalen skal først søkes løst gjennom forhandlinger 
+mellom partene. Dersom partene ikke kommer til enighet innen 30 dager, skal tvisten avgjøres ved 
+{arbitration_body} i henhold til gjeldende regler.""",
+        "en": """
+## Dispute Resolution
+
+Any dispute arising in connection with this agreement shall first be sought resolved through negotiations 
+between the parties. If the parties fail to reach an agreement within 30 days, the dispute shall be 
+settled by {arbitration_body} in accordance with applicable rules."""
+    },
+    "termination": {
+        "no": """
+## Oppsigelse
+
+Denne avtalen kan sies opp av hver av partene med {notice_period} dagers skriftlig varsel. Ved oppsigelse 
+skal alle utestående forpliktelser gjøres opp, og partenes rettigheter i henhold til avtalen skal bestå 
+for allerede skapte verk.""",
+        "en": """
+## Termination
+
+This agreement may be terminated by either party with {notice_period} days written notice. Upon termination, 
+all outstanding obligations shall be settled, and the parties' rights under the agreement shall continue 
+for works already created."""
+    },
+    "assignment": {
+        "no": """
+## Overføring av rettigheter
+
+Ingen av partene kan overdra eller overføre sine rettigheter eller forpliktelser etter denne avtalen til 
+en tredjepart uten skriftlig samtykke fra den andre parten. Slikt samtykke skal ikke nektes uten 
+rimelig grunn.""",
+        "en": """
+## Assignment of Rights
+
+Neither party may assign or transfer its rights or obligations under this agreement to a third party 
+without the written consent of the other party. Such consent shall not be unreasonably withheld."""
+    },
+    "governing_law": {
+        "norway": {
+            "no": "Denne avtalen er underlagt norsk rett. Oslo tingrett er avtalt verneting for tvister som ikke løses i minnelighet.",
+            "en": "This agreement is governed by Norwegian law. Oslo District Court is the agreed venue for disputes not resolved amicably."
+        },
+        "sweden": {
+            "no": "Denne avtalen er underlagt svensk rett. Stockholms tingsrätt er avtalt verneting.",
+            "en": "This agreement is governed by Swedish law. Stockholm District Court is the agreed venue."
+        },
+        "denmark": {
+            "no": "Denne avtalen er underlagt dansk rett. Københavns Byret er avtalt verneting.",
+            "en": "This agreement is governed by Danish law. Copenhagen City Court is the agreed venue."
+        },
+        "uk": {
+            "no": "Denne avtalen er underlagt engelsk rett. Engelske domstoler har eksklusiv jurisdiksjon.",
+            "en": "This agreement is governed by English law. English courts have exclusive jurisdiction."
+        },
+        "us": {
+            "no": "Denne avtalen er underlagt lovene i staten New York, USA. Føderale og statlige domstoler i New York har eksklusiv jurisdiksjon.",
+            "en": "This agreement is governed by the laws of the State of New York, USA. Federal and state courts in New York have exclusive jurisdiction."
+        }
+    }
+}
+
+
+def generate_legal_document_content(
+    split_sheet: dict,
+    contributors: list,
+    document_type: str,
+    include_clauses: dict,
+    governing_law: str,
+    custom_clauses: str,
+    language: str = "no"
+) -> str:
+    """Generate legal document content from split sheet data"""
+    from datetime import datetime
+    
+    template = LEGAL_DOCUMENT_TEMPLATES.get(document_type, LEGAL_DOCUMENT_TEMPLATES["custom"])
+    title = template.get(f"title_{language}", template["title_no"])
+    
+    # Start document
+    content = f"""# {title}
+
+**Dato:** {datetime.now().strftime('%d.%m.%Y')}
+**Referanse:** {split_sheet.get('id', 'N/A')[:8]}
+
+---
+
+## 1. Parter
+
+Denne avtalen («Avtalen») inngås mellom følgende parter:
+
+"""
+    
+    # Add parties (contributors)
+    for i, contributor in enumerate(contributors, 1):
+        role_display = contributor.get('role', 'Bidragsyter').replace('_', ' ').title()
+        content += f"""**Part {i}:**
+- Navn: {contributor.get('name', 'Ikke oppgitt')}
+- E-post: {contributor.get('email', 'Ikke oppgitt')}
+- Rolle: {role_display}
+- Andel: {contributor.get('percentage', 0)}%
+
+"""
+    
+    # Work description
+    content += f"""---
+
+## 2. Verket
+
+Denne avtalen gjelder følgende verk:
+
+- **Tittel:** {split_sheet.get('title', 'Ikke oppgitt')}
+- **Beskrivelse:** {split_sheet.get('description', 'Ingen beskrivelse')}
+- **Status:** {split_sheet.get('status', 'draft')}
+
+---
+
+## 3. Eierandeler og Fordeling
+
+Partene er enige om følgende fordeling av rettigheter og inntekter:
+
+| Part | Rolle | Andel |
+|------|-------|-------|
+"""
+    
+    total = 0
+    for contributor in contributors:
+        pct = contributor.get('percentage', 0)
+        total += pct
+        content += f"| {contributor.get('name', 'Ukjent')} | {contributor.get('role', 'Bidragsyter').replace('_', ' ').title()} | {pct}% |\n"
+    
+    content += f"| **Totalt** | | **{total}%** |\n\n"
+    
+    # Royalty terms for royalty agreement
+    if document_type == "royalty_agreement":
+        content += """---
+
+## 4. Royalty-vilkår
+
+Royalties skal beregnes og utbetales i henhold til følgende:
+
+- **Beregningsgrunnlag:** Netto inntekter etter fradrag for dokumenterte kostnader
+- **Utbetalingsfrekvens:** Kvartalsvis
+- **Rapportering:** Detaljert regnskap skal leveres sammen med hver utbetaling
+- **Revisjonsrett:** Hver part har rett til å kreve revisjon av regnskapet med 30 dagers varsel
+
+"""
+    
+    # Collaboration terms
+    if document_type == "collaboration_agreement":
+        content += """---
+
+## 4. Samarbeidsvilkår
+
+Partene forplikter seg til:
+
+- Å samarbeide i god tro for å fullføre verket
+- Å informere hverandre om forhold som kan påvirke prosjektet
+- Å respektere avtalte frister og leveranser
+- Å kreditere alle bidragsytere i henhold til denne avtalen
+
+"""
+    
+    # Add optional clauses
+    clause_num = 5 if document_type in ["royalty_agreement", "collaboration_agreement"] else 4
+    
+    if include_clauses.get('dispute_resolution', False):
+        clause_content = CLAUSE_TEMPLATES["dispute_resolution"][language]
+        clause_content = clause_content.replace("{arbitration_body}", "voldgiftsdomstol" if language == "no" else "arbitration tribunal")
+        content += f"\n---\n\n## {clause_num}. " + clause_content.strip().replace("## ", "") + "\n"
+        clause_num += 1
+    
+    if include_clauses.get('termination', False):
+        clause_content = CLAUSE_TEMPLATES["termination"][language]
+        clause_content = clause_content.replace("{notice_period}", "30")
+        content += f"\n---\n\n## {clause_num}. " + clause_content.strip().replace("## ", "") + "\n"
+        clause_num += 1
+    
+    if include_clauses.get('assignment', False):
+        clause_content = CLAUSE_TEMPLATES["assignment"][language]
+        content += f"\n---\n\n## {clause_num}. " + clause_content.strip().replace("## ", "") + "\n"
+        clause_num += 1
+    
+    if include_clauses.get('governing_law', False):
+        law_templates = CLAUSE_TEMPLATES["governing_law"].get(governing_law, CLAUSE_TEMPLATES["governing_law"]["norway"])
+        law_clause = law_templates[language]
+        content += f"\n---\n\n## {clause_num}. Gjeldende lov\n\n{law_clause}\n"
+        clause_num += 1
+    
+    # Custom clauses
+    if custom_clauses and custom_clauses.strip():
+        content += f"\n---\n\n## {clause_num}. Tilleggsvilkår\n\n{custom_clauses.strip()}\n"
+        clause_num += 1
+    
+    # Signatures section
+    content += f"""
+---
+
+## {clause_num}. Signaturer
+
+Ved å signere denne avtalen bekrefter partene at de har lest, forstått og akseptert alle vilkår.
+
+"""
+    
+    for contributor in contributors:
+        content += f"""
+**{contributor.get('name', 'Part')}**
+
+Signatur: ____________________________
+
+Dato: ____________________________
+
+"""
+    
+    # Footer
+    content += """
+---
+
+*Dette dokumentet er generert automatisk basert på split sheet-data. 
+Det anbefales å få dokumentet gjennomgått av en jurist før signering.*
+"""
+    
+    return content
+
+
+@app.post("/api/split-sheets/{split_sheet_id}/legal-documents/generate")
+async def generate_legal_document(split_sheet_id: str, request: Request):
+    """Generate a legal document from a split sheet"""
+    import uuid
+    import json
+    from datetime import datetime
+    
+    try:
+        from casting_service import get_db_connection
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+    except ImportError:
+        return JSONResponse({"success": False, "error": "Database service not available"}, status_code=503)
+    
+    body = await request.json()
+    document_type = body.get('document_type', 'split_sheet_agreement')
+    include_clauses = body.get('include_clauses', {})
+    governing_law = body.get('governing_law', 'norway')
+    custom_clauses = body.get('custom_clauses', '')
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Ensure contracts table exists
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS split_sheet_contracts (
+                    id VARCHAR(255) PRIMARY KEY,
+                    project_id VARCHAR(255),
+                    split_sheet_id VARCHAR(255),
+                    title VARCHAR(500) NOT NULL,
+                    content TEXT,
+                    parties JSONB DEFAULT '[]',
+                    obligations JSONB DEFAULT '[]',
+                    payment_terms JSONB DEFAULT '[]',
+                    legal_references JSONB DEFAULT '[]',
+                    applied_suggestions JSONB DEFAULT '[]',
+                    status VARCHAR(50) DEFAULT 'draft',
+                    signature_status VARCHAR(50) DEFAULT 'unsigned',
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
+            
+            # Get split sheet
+            cur.execute("SELECT * FROM split_sheets WHERE id = %s", (split_sheet_id,))
+            split_sheet = cur.fetchone()
+            
+            if not split_sheet:
+                return JSONResponse({"success": False, "error": "Split sheet not found"}, status_code=404)
+            
+            split_sheet = dict(split_sheet)
+            
+            # Get contributors
+            cur.execute("""
+                SELECT * FROM split_sheet_contributors 
+                WHERE split_sheet_id = %s 
+                ORDER BY order_index, created_at
+            """, (split_sheet_id,))
+            contributors = [dict(row) for row in cur.fetchall()]
+            
+            # Generate document content
+            content = generate_legal_document_content(
+                split_sheet=split_sheet,
+                contributors=contributors,
+                document_type=document_type,
+                include_clauses=include_clauses,
+                governing_law=governing_law,
+                custom_clauses=custom_clauses,
+                language="no"
+            )
+            
+            # Create contract record
+            contract_id = str(uuid.uuid4())
+            document_title = LEGAL_DOCUMENT_TEMPLATES.get(document_type, {}).get('title_no', 'Avtale')
+            full_title = f"{document_title} - {split_sheet.get('title', 'Untitled')}"
+            
+            cur.execute("""
+                INSERT INTO split_sheet_contracts 
+                (id, split_sheet_id, title, content, parties, obligations, payment_terms, legal_references, applied_suggestions, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING *
+            """, (
+                contract_id,
+                split_sheet_id,
+                full_title,
+                content,
+                json.dumps([{
+                    'id': c.get('id'),
+                    'name': c.get('name'),
+                    'email': c.get('email'),
+                    'role': c.get('role')
+                } for c in contributors]),
+                json.dumps([]),
+                json.dumps([]),
+                json.dumps([]),
+                json.dumps([]),
+                'draft'
+            ))
+            contract_row = cur.fetchone()
+            conn.commit()
+            
+            contract = dict(contract_row) if contract_row else {}
+            for k, v in contract.items():
+                if hasattr(v, 'isoformat'):
+                    contract[k] = v.isoformat()
+            
+            return JSONResponse({
+                "success": True,
+                "data": {
+                    "contract": contract,
+                    "documentContent": content,
+                    "documentType": document_type,
+                    "splitSheet": {
+                        "id": split_sheet.get('id'),
+                        "title": split_sheet.get('title')
+                    },
+                    "contributorCount": len(contributors)
+                }
+            })
+            
+    except psycopg2.Error as e:
+        if conn:
+            conn.rollback()
+        return JSONResponse({"success": False, "error": f"Database error: {str(e)}"}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.get("/api/split-sheets/{split_sheet_id}/legal-documents")
+async def get_legal_documents(split_sheet_id: str):
+    """Get all legal documents (contracts) for a split sheet"""
+    import json
+    
+    try:
+        from casting_service import get_db_connection
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+    except ImportError:
+        return JSONResponse({"success": False, "error": "Database service not available"}, status_code=503)
+    
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT * FROM split_sheet_contracts 
+                WHERE split_sheet_id = %s 
+                ORDER BY created_at DESC
+            """, (split_sheet_id,))
+            rows = cur.fetchall()
+            
+            documents = []
+            for row in rows:
+                doc = dict(row)
+                for k, v in doc.items():
+                    if hasattr(v, 'isoformat'):
+                        doc[k] = v.isoformat()
+                documents.append(doc)
+            
+            return JSONResponse({"success": True, "data": documents})
+            
+    except psycopg2.Error as e:
+        return JSONResponse({"success": False, "error": f"Database error: {str(e)}"}, status_code=500)
+    finally:
+        if conn:
+            conn.close()
+
+
+# ============ SHOT PLANNER 2D ENDPOINTS ============
+@app.get("/api/shot-planner/scenes")
+async def get_shot_planner_scenes():
+    """Get all shot planner scenes"""
+    if not SHOT_PLANNER_SERVICE_AVAILABLE:
+        return JSONResponse({"scenes": []})
+    
+    try:
+        scenes = get_all_scenes()
+        return JSONResponse({"success": True, "scenes": scenes})
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@app.get("/api/shot-planner/scenes/{scene_id}")
+async def get_shot_planner_scene(scene_id: str):
+    """Get a specific shot planner scene"""
+    if not SHOT_PLANNER_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Shot planner service not available")
+    
+    try:
+        scene = get_scene_by_id(scene_id)
+        if not scene:
+            raise HTTPException(status_code=404, detail="Scene not found")
+        return JSONResponse({"success": True, "scene": scene})
+    except HTTPException:
+        raise
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@app.post("/api/shot-planner/scenes")
+async def save_shot_planner_scene(request: Request):
+    """Save or update a shot planner scene"""
+    if not SHOT_PLANNER_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Shot planner service not available")
+    
+    try:
+        scene_data = await request.json()
+        success = sp_save_scene(scene_data)
+        if success:
+            return JSONResponse({"success": True, "message": "Scene saved successfully"})
+        else:
+            return JSONResponse({"success": False, "error": "Failed to save scene"}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@app.delete("/api/shot-planner/scenes/{scene_id}")
+async def delete_shot_planner_scene(scene_id: str):
+    """Delete a shot planner scene"""
+    if not SHOT_PLANNER_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Shot planner service not available")
+    
+    try:
+        success = sp_delete_scene(scene_id)
+        if success:
+            return JSONResponse({"success": True, "message": "Scene deleted successfully"})
+        else:
+            return JSONResponse({"success": False, "error": "Failed to delete scene"}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@app.get("/api/shot-planner/scenes/manuscript/{manuscript_scene_id}")
+async def get_scenes_for_manuscript(manuscript_scene_id: str):
+    """Get shot planner scenes linked to a manuscript scene"""
+    if not SHOT_PLANNER_SERVICE_AVAILABLE:
+        return JSONResponse({"scenes": []})
+    
+    try:
+        scenes = get_scenes_by_manuscript(manuscript_scene_id)
+        return JSONResponse({"success": True, "scenes": scenes})
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@app.post("/api/shot-planner/scenes/{scene_id}/link-manuscript")
+async def link_scene_to_manuscript(scene_id: str, request: Request):
+    """Link a shot planner scene to a manuscript scene"""
+    if not SHOT_PLANNER_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Shot planner service not available")
+    
+    try:
+        data = await request.json()
+        manuscript_scene_id = data.get('manuscriptSceneId')
+        if not manuscript_scene_id:
+            raise HTTPException(status_code=400, detail="manuscriptSceneId required")
+        
+        success = link_to_manuscript_scene(scene_id, manuscript_scene_id)
+        if success:
+            return JSONResponse({"success": True, "message": "Scene linked to manuscript"})
+        else:
+            return JSONResponse({"success": False, "error": "Failed to link scene"}, status_code=500)
+    except HTTPException:
+        raise
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
 if __name__ == "__main__":

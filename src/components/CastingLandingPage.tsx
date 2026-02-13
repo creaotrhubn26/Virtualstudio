@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Typography, Button, Container } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   PlayArrow as PlayArrowIcon,
   Movie as MovieIcon,
-  Groups as GroupsIcon,
-  CalendarMonth as CalendarIcon,
   Videocam as VideocamIcon,
 } from '@mui/icons-material';
+import { TeamIcon as GroupsIcon, CalendarCustomIcon as CalendarIcon } from './icons/CastingIcons';
 import LoginDialog from './LoginDialog';
 
 interface CastingLandingPageProps {
@@ -190,7 +189,7 @@ export function CastingLandingPage({ onEnter }: CastingLandingPageProps) {
                 <Typography
                   sx={{
                     mt: 2,
-                    color: 'rgba(255,255,255,0.6)',
+                    color: 'rgba(255,255,255,0.87)',
                     fontSize: { xs: '1rem', sm: '1.25rem' },
                     fontWeight: 300,
                     letterSpacing: '0.1em',
@@ -214,7 +213,7 @@ export function CastingLandingPage({ onEnter }: CastingLandingPageProps) {
               <Button
                 onClick={skipIntro}
                 sx={{
-                  color: 'rgba(255,255,255,0.4)',
+                  color: 'rgba(255,255,255,0.7)',
                   fontSize: '0.85rem',
                   '&:hover': { color: 'rgba(255,255,255,0.8)' },
                 }}
@@ -290,7 +289,7 @@ export function CastingLandingPage({ onEnter }: CastingLandingPageProps) {
                 <Typography
                   sx={{
                     fontSize: { xs: '1.1rem', sm: '1.25rem' },
-                    color: 'rgba(255,255,255,0.7)',
+                    color: 'rgba(255,255,255,0.87)',
                     maxWidth: 600,
                     mx: 'auto',
                     mb: 5,
@@ -373,7 +372,7 @@ export function CastingLandingPage({ onEnter }: CastingLandingPageProps) {
                       {feature.title}
                     </Typography>
                     <Typography sx={{ 
-                      color: 'rgba(255,255,255,0.6)',
+                      color: 'rgba(255,255,255,0.87)',
                       fontSize: '0.9rem',
                       lineHeight: 1.5,
                     }}>
@@ -392,7 +391,7 @@ export function CastingLandingPage({ onEnter }: CastingLandingPageProps) {
               <Box sx={{ 
                 mt: 12, 
                 textAlign: 'center',
-                color: 'rgba(255,255,255,0.4)',
+                color: 'rgba(255,255,255,0.7)',
                 fontSize: '0.85rem',
                 display: 'flex',
                 flexDirection: 'column',

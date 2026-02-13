@@ -4,7 +4,7 @@
  * Browse and apply 22+ Hollywood lighting patterns
  */
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Box,
   Typography,

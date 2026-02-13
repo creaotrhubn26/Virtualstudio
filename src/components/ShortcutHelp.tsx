@@ -4,7 +4,7 @@
  * Displays keyboard shortcuts in a help dialog
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FC } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -26,7 +26,7 @@ export interface ShortcutHelpProps {
   onClose: () => void;
 }
 
-export const ShortcutHelp: React.FC<ShortcutHelpProps> = ({ open, onClose }) => {
+export const ShortcutHelp: FC<ShortcutHelpProps> = ({ open, onClose }) => {
   const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
 
   useEffect(() => {

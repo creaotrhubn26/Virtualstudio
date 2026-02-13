@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type DragEvent } from 'react';
 import {
   Box,
   Typography,
@@ -115,17 +115,17 @@ export function LayerEditor({ layers, onLayersChange }: LayerEditorProps) {
     onLayersChange(layerManager.getLayers());
   };
 
-  const handleDragStart = (e: React.DragEvent, layerId: string) => {
+  const handleDragStart = (e: DragEvent, layerId: string) => {
     setDraggedLayerId(layerId);
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (e: React.DragEvent, targetLayerId: string) => {
+  const handleDrop = (e: DragEvent, targetLayerId: string) => {
     e.preventDefault();
     if (!draggedLayerId || draggedLayerId === targetLayerId) return;
 
@@ -156,7 +156,7 @@ export function LayerEditor({ layers, onLayersChange }: LayerEditorProps) {
           onChange={(e) => setSearchQuery(e.target.value)}
           size="small"
           InputProps={{
-            startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)', mr: 1 }} />,
+            startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.87)', mr: 1 }} />,
           }}
           sx={{
             flex: 1,
@@ -234,7 +234,7 @@ export function LayerEditor({ layers, onLayersChange }: LayerEditorProps) {
             bgcolor: '#00d4ff',
             color: '#000',
             '&:hover': { bgcolor: '#00b8e6' },
-            '&:disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' },
+            '&:disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' },
           }}
         >
           Legg til
@@ -243,7 +243,7 @@ export function LayerEditor({ layers, onLayersChange }: LayerEditorProps) {
 
       {/* Layers list */}
       {filteredLayers.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 8, color: 'rgba(255,255,255,0.5)' }}>
+        <Box sx={{ textAlign: 'center', py: 8, color: 'rgba(255,255,255,0.87)' }}>
           <LayersIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
           <Typography variant="h6" sx={{ mb: 1 }}>
             {searchQuery ? 'Ingen layers matcher søket' : 'Ingen layers'}
@@ -277,7 +277,7 @@ export function LayerEditor({ layers, onLayersChange }: LayerEditorProps) {
                 setEditDialogOpen(true);
               }}
             >
-              <DragIcon sx={{ color: 'rgba(255,255,255,0.5)', mr: 1, cursor: 'grab' }} />
+              <DragIcon sx={{ color: 'rgba(255,255,255,0.87)', mr: 1, cursor: 'grab' }} />
               <Box
                 sx={{
                   width: 20,
@@ -293,7 +293,7 @@ export function LayerEditor({ layers, onLayersChange }: LayerEditorProps) {
                 secondary={`${layer.nodeIds.length} objekter`}
                 sx={{
                   '& .MuiListItemText-primary': { color: '#fff' },
-                  '& .MuiListItemText-secondary': { color: 'rgba(255,255,255,0.7)' },
+                  '& .MuiListItemText-secondary': { color: 'rgba(255,255,255,0.87)' },
                 }}
               />
               <ListItemSecondaryAction>
@@ -396,7 +396,7 @@ export function LayerEditor({ layers, onLayersChange }: LayerEditorProps) {
                 }}
               />
               <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', minWidth: 100 }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', minWidth: 100 }}>
                   Farge:
                 </Typography>
                 <input
@@ -416,7 +416,7 @@ export function LayerEditor({ layers, onLayersChange }: LayerEditorProps) {
                 />
               </Box>
               <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255,255,255,0.7)' }}>
+                <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255,255,255,0.87)' }}>
                   Opacity: {Math.round((selectedLayer.opacity || 1) * 100)}%
                 </Typography>
                 <Slider
@@ -432,7 +432,7 @@ export function LayerEditor({ layers, onLayersChange }: LayerEditorProps) {
                 />
               </Box>
               <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Blending Mode</InputLabel>
+                <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Blending Mode</InputLabel>
                 <Select
                   value={selectedLayer.blendingMode || 'normal'}
                   onChange={(e) => {
@@ -467,7 +467,7 @@ export function LayerEditor({ layers, onLayersChange }: LayerEditorProps) {
                       },
                     }}
                   />
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                     Synlig
                   </Typography>
                 </Box>
@@ -484,7 +484,7 @@ export function LayerEditor({ layers, onLayersChange }: LayerEditorProps) {
                       },
                     }}
                   />
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                     Låst
                   </Typography>
                 </Box>
@@ -498,7 +498,7 @@ export function LayerEditor({ layers, onLayersChange }: LayerEditorProps) {
               setEditDialogOpen(false);
               setSelectedLayer(null);
             }}
-            sx={{ color: 'rgba(255,255,255,0.7)' }}
+            sx={{ color: 'rgba(255,255,255,0.87)' }}
           >
             Avbryt
           </Button>

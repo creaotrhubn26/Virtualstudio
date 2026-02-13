@@ -336,7 +336,7 @@ export const PBRRecommendationDialog: React.FC<PBRRecommendationDialogProps> = (
                             position: 'relative'}}
                         >
                           {/* Type Icon */}
-                          <Box sx={{ color: 'rgba(255,255,255,0.3)', fontSize: 40 }}>
+                          <Box sx={{ color: 'rgba(255,255,255,0.6)', fontSize: 40 }}>
                             {TYPE_ICONS[item.type]}
                           </Box>
                           

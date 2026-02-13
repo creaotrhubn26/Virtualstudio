@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import type { DragEvent, FC } from 'react';
 import {
   Box,
   Typography,
@@ -25,7 +26,7 @@ interface DraggableSceneListProps {
   selectedScene?: SceneBreakdown;
 }
 
-export const DraggableSceneList: React.FC<DraggableSceneListProps> = ({
+export const DraggableSceneList: FC<DraggableSceneListProps> = ({
   scenes,
   onReorder,
   onSceneSelect,
@@ -34,13 +35,13 @@ export const DraggableSceneList: React.FC<DraggableSceneListProps> = ({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  const handleDragStart = (e: React.DragEvent, index: number) => {
+  const handleDragStart = (e: DragEvent, index: number) => {
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/html', e.currentTarget.innerHTML);
   };
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
+  const handleDragOver = (e: DragEvent, index: number) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     
@@ -53,7 +54,7 @@ export const DraggableSceneList: React.FC<DraggableSceneListProps> = ({
     setDragOverIndex(null);
   };
 
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+  const handleDrop = (e: DragEvent, dropIndex: number) => {
     e.preventDefault();
     
     if (draggedIndex === null || draggedIndex === dropIndex) {
@@ -110,15 +111,15 @@ interface DraggableSceneCardProps {
   isDragging: boolean;
   isDragOver: boolean;
   isSelected: boolean;
-  onDragStart: (e: React.DragEvent) => void;
-  onDragOver: (e: React.DragEvent) => void;
+  onDragStart: (e: DragEvent) => void;
+  onDragOver: (e: DragEvent) => void;
   onDragLeave: () => void;
-  onDrop: (e: React.DragEvent) => void;
+  onDrop: (e: DragEvent) => void;
   onDragEnd: () => void;
   onClick: () => void;
 }
 
-const DraggableSceneCard: React.FC<DraggableSceneCardProps> = ({
+const DraggableSceneCard: FC<DraggableSceneCardProps> = ({
   scene,
   index,
   isDragging,

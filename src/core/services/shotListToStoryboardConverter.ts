@@ -5,7 +5,7 @@
  * Enables integration between shot lists in Casting Planner and Storyboard system.
  */
 
-import { CastingShot, ShotType, CameraAngle, CameraMovement } from '../models/casting';
+import type { CastingShot, ShotType, CameraAngle, CameraMovement } from '../models/casting';
 
 // StoryboardFrame interface (matching storyboardStore structure)
 export interface StoryboardFrame {

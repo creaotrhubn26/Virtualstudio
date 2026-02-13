@@ -43,7 +43,7 @@ export const customPresetService = {
         id: preset.id,
         name: preset.navn,
         type: 'custom',
-        preset_data: preset,
+        preset_data: preset as Record<string, unknown>,
       });
     } catch (error) {
       console.warn('Database save failed:', error);
@@ -108,7 +108,7 @@ export const customPresetService = {
           id: updated.id,
           name: updated.navn,
           type: 'custom',
-          preset_data: updated,
+          preset_data: updated as Record<string, unknown>,
         });
       } catch (error) {
         console.warn('Database update failed:', error);

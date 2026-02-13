@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { CircularProgress, Box, BoxProps, Typography } from '@mui/material';
-import { colors } from '../../styles/designTokens';
+import { colors } from '../styles/designTokens';
 
 export interface LoadingSpinnerProps extends BoxProps {
   size?: number;

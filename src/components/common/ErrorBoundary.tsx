@@ -5,6 +5,7 @@ import { ErrorOutline, Refresh } from '@mui/icons-material';
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  showDetails?: boolean;
 }
 
 interface State {

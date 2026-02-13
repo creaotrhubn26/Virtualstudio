@@ -19,7 +19,6 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import {
-  Share as ShareIcon,
   Person as PersonIcon,
   Group as GroupIcon,
   Lock as LockIcon,
@@ -31,6 +30,7 @@ import {
   AdminPanelSettings as AdminIcon,
   Email as EmailIcon,
 } from '@mui/icons-material';
+import { ShareCustomIcon as ShareIcon } from './icons/CastingIcons';
 import { CastingProject, UserRole, UserRoleType } from '../core/models/casting';
 
 // WCAG 2.2 - 2.5.5 Target Size: minimum 44x44px touch targets
@@ -193,7 +193,7 @@ export function SharingPanel({
             >
               Deling og tilgangskontroll
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
               Administrer hvem som har tilgang til prosjektet
             </Typography>
           </Box>
@@ -255,7 +255,7 @@ export function SharingPanel({
                   <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, fontSize: { xs: '1rem', sm: '1.1rem' } }}>
                     {card.title}
                   </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     {card.description}
                   </Typography>
                 </Box>
@@ -292,7 +292,7 @@ export function SharingPanel({
                 border: '1px solid rgba(255,255,255,0.1)',
               }}
             >
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
                 {`${window.location.origin}/casting/${project?.id || 'prosjekt-id'}`}
               </Typography>
             </Box>
@@ -348,7 +348,7 @@ export function SharingPanel({
           {sharedUsers.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <GroupIcon sx={{ fontSize: 48, color: 'rgba(255,255,255,0.2)', mb: 2 }} />
-              <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+              <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                 Ingen brukere har tilgang ennå
               </Typography>
               <Button
@@ -391,7 +391,7 @@ export function SharingPanel({
                       </Typography>
                     }
                     secondary={
-                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                         {user.email}
                       </Typography>
                     }

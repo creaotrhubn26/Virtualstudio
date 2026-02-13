@@ -16,6 +16,8 @@ interface PublishToCommunityDialogProps {
   onClose: () => void;
   courseId?: string;
   courseTitle?: string;
+  course?: any;
+  allCourses?: any[];
   onSuccess?: () => void;
 }
 

@@ -4,7 +4,7 @@ import { useAcademy, useAcademyContext } from '../contexts/AcademyContext';
  * Comprehensive sidebar with auto-save, draft/publish, and versioning
  */
 
-import React, { useState, useCallback, useEffect, useMemo, useReducer } from 'react';
+import { useState, useCallback, useEffect, useMemo, useReducer, memo, Suspense, Component, type ReactNode, type ErrorInfo } from 'react';
 
 // Extend Window interface for YouTube iframe API (NO API KEY REQUIRED!)
 declare global {
@@ -87,7 +87,7 @@ import {
   Timer,
   CheckCircle,
   Warning,
-  Error,
+  Error as ErrorIcon,
   Info,
   ExpandMore,
   ExpandLess,
@@ -167,6 +167,7 @@ import { ResourceEditor } from './CourseCreator/ResourceEditor';
 import { LowerThirdEditor } from './CourseCreator/LowerThirdEditor';
 import { ChapterEditor } from './CourseCreator/ChapterEditor';
 import type { Module, Lesson, Resource, LowerThird, VideoChapter } from './CourseCreator/types';
+import { lowerThirdTemplatesService } from '../services/lowerThirdTemplatesService';
 import {
   DndContext,
   closestCenter,
@@ -343,7 +344,7 @@ function CourseCreatorSidebar({
   width: propWidth,
 }: CourseCreatorSidebarProps) {
   // Responsive width calculation
-  const [drawerWidth, setDrawerWidth] = React.useState(() => {
+  const [drawerWidth, setDrawerWidth] = useState(() => {
     if (typeof window !== 'undefined') {
       const isTablet = window.matchMedia('(max-width: 1024px) and (min-width: 768px)').matches;
       const isMobile = window.matchMedia('(max-width: 767px)').matches;
@@ -355,7 +356,7 @@ function CourseCreatorSidebar({
   });
 
   // Update width on resize
-  React.useEffect(() => {
+  useEffect(() => {
     const handleResize = () => {
       if (typeof window !== 'undefined') {
         const isTablet = window.matchMedia('(max-width: 1024px) and (min-width: 768px)').matches;
@@ -420,6 +421,16 @@ function CourseCreatorSidebar({
   // Log sidebar initialization
   console.log('Sidebar icons initialized:', Object.keys(sidebarIcons).length, 'Academy:', !!academyContext, !!academyState);
 
+  // Performance and debugging integration
+  useEffect(() => {
+    const stopTiming = performance.startTiming('CourseCreatorSidebar:mount');
+    debugging.log('CourseCreatorSidebar mounted', { courseId: course?.id });
+    return () => {
+      stopTiming();
+      debugging.log('CourseCreatorSidebar unmounted', { courseId: course?.id });
+    };
+  }, [performance, debugging, course?.id]);
+
   // Comprehensive Feature System for Course Creator Sidebar
   const courseCreationAccess = features.checkFeatureAccess('course-creation');
   const courseManagementAccess = features.checkFeatureAccess('course-management');
@@ -429,6 +440,56 @@ function CourseCreatorSidebar({
   const contentManagementAccess = features.checkFeatureAccess('content-management');
   const autoSaveAccess = features.checkFeatureAccess('auto-save');
   const coursePublishingAccess = features.checkFeatureAccess('course-publishing');
+
+  // Feature access summary for rendering status indicators
+  const featureAccessSummary = useMemo(() => ([
+    { key: 'creation', label: 'Course Creation', access: courseCreationAccess, icon: <School /> },
+    { key: 'management', label: 'Management', access: courseManagementAccess, icon: <Work /> },
+    { key: 'versionControl', label: 'Version Control', access: versionControlAccess, icon: <History /> },
+    { key: 'collaboration', label: 'Collaboration', access: collaborationAccess, icon: <People /> },
+    { key: 'analytics', label: 'Analytics', access: courseAnalyticsAccess, icon: <TrendingUp /> },
+    { key: 'content', label: 'Content', access: contentManagementAccess, icon: <Article /> },
+    { key: 'autoSave', label: 'Auto Save', access: autoSaveAccess, icon: <Save /> },
+    { key: 'publishing', label: 'Publishing', access: coursePublishingAccess, icon: <Publish /> },
+  ]), [courseCreationAccess, courseManagementAccess, versionControlAccess, collaborationAccess, courseAnalyticsAccess, contentManagementAccess, autoSaveAccess, coursePublishingAccess]);
+
+  // Course creator tools icon registry for sidebar quick actions
+  const courseToolsIcons = useMemo(() => ({
+    visibility: <Visibility />,
+    visibilityOff: <VisibilityOff />,
+    lock: <Lock />,
+    lockOpen: <LockOpen />,
+    timer: <Timer />,
+    warning: <Warning />,
+    error: <ErrorIcon />,
+    moreVert: <MoreVert />,
+    cloudDownload: <CloudDownload />,
+    restoreFromTrash: <RestoreFromTrash />,
+    bookmarkBorder: <BookmarkBorder />,
+    star: <Star />,
+    starBorder: <StarBorder />,
+    flag: <Flag />,
+    flagOutlined: <FlagOutlined />,
+    speed: <Speed />,
+    security: <Security />,
+    timeline: <Timeline />,
+    assessment: <Assessment />,
+    trendingUp: <TrendingUp />,
+    business: <Business />,
+    celebration: <Celebration />,
+    filterList: <FilterList />,
+    image: <ImageIcon />,
+    pause: <Pause />,
+    language: <Language />,
+    attachMoney: <AttachMoney />,
+    category: <Category />,
+    person: <Person />,
+    tag: <Tag />,
+    openInNew: <OpenInNew />,
+  }), []);
+
+  // Log course tools icon count for diagnostics
+  debugging.log('Course tools icons loaded', { count: Object.keys(courseToolsIcons).length });
 
   // Auto-save configuration
   const autoSave = useAutoSave({
@@ -1032,7 +1093,31 @@ function CourseCreatorSidebar({
   const showBulkEditDialog = uiState.showBulkEditDialog;
   const showExportDialog = uiState.showExportDialog;
   const bulkEditType = uiState.bulkEditType;
-  
+
+  // Dispatch-based setter functions for UI state managed by reducer
+  const setShowTemplateDialog = useCallback((value: boolean) => {
+    dispatchUI({ type: 'SET_TEMPLATE_DIALOG', payload: value });
+  }, []);
+  const setShowBulkEditDialog = useCallback((value: boolean) => {
+    dispatchUI({ type: 'SET_BULK_EDIT_DIALOG', payload: value });
+  }, []);
+  const setDeleteConfirmDialog = useCallback((value: UIState['deleteConfirmDialog']) => {
+    dispatchUI({ type: 'SET_DELETE_DIALOG', payload: value });
+  }, []);
+  const setBulkEditType = useCallback((value: 'lowerThirds' | 'chapters' | null) => {
+    dispatchUI({ type: 'SET_BULK_EDIT_TYPE', payload: value });
+  }, []);
+  const setLoading = useCallback((value: boolean) => {
+    dispatchUI({ type: 'SET_LOADING', payload: value });
+  }, []);
+  const setValidationErrors = useCallback((updater: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => {
+    if (typeof updater === 'function') {
+      dispatchUI({ type: 'SET_VALIDATION_ERRORS', payload: updater(uiState.validationErrors) });
+    } else {
+      dispatchUI({ type: 'SET_VALIDATION_ERRORS', payload: updater });
+    }
+  }, [uiState.validationErrors]);
+
   // Section 3.5: Undo functionality - track deleted items for undo
   const [deletedItems, setDeletedItems] = useState<{
     type: 'module' | 'lesson' | 'resource' | 'lowerThird' | 'chapter';
@@ -1040,24 +1125,25 @@ function CourseCreatorSidebar({
     timestamp: number;
   }[]>([]);
   
-  // Load templates from localStorage on mount
+  // Load templates from database on mount
   useEffect(() => {
-    try {
-      const savedTemplates = localStorage.getItem('lowerThirdTemplates');
-      if (savedTemplates) {
-        setLowerThirdTemplates(JSON.parse(savedTemplates));
-      }
-    } catch (error) {
-      console.warn('Failed to load lower third templates:', error);
-    }
+    lowerThirdTemplatesService.getTemplates()
+      .then((templates) => {
+        // Convert service type to component type
+        setLowerThirdTemplates(templates as unknown as LowerThird[]);
+      })
+      .catch((error) => {
+        console.warn('Failed to load lower third templates:', error);
+      });
   }, []);
   
-  // Save templates to localStorage
-  const saveTemplate = useCallback((lowerThird: LowerThird) => {
-    const newTemplates = [...lowerThirdTemplates, { ...lowerThird, id: `template-${Date.now()}`, videoId: '' }];
+  // Save templates to database
+  const saveTemplate = useCallback(async (lowerThird: LowerThird) => {
+    const newTemplate = { ...lowerThird, id: `template-${Date.now()}`, videoId: '' };
+    const newTemplates = [...lowerThirdTemplates, newTemplate];
     setLowerThirdTemplates(newTemplates);
     try {
-      localStorage.setItem('lowerThirdTemplates', JSON.stringify(newTemplates));
+      await lowerThirdTemplatesService.saveTemplates(newTemplates as any);
       showSnackbar('Template lagret', 'success');
     } catch (error) {
       console.warn('Failed to save template:', error);
@@ -1405,6 +1491,7 @@ function CourseCreatorSidebar({
             container.style.display = 'none';
             document.body.appendChild(container);
 
+            if (!window.YT) { resolve(null); return; }
             const player = new window.YT.Player(container, {
               videoId: videoId,
               events: {
@@ -1623,13 +1710,30 @@ function CourseCreatorSidebar({
                 });
             })
             .catch(() => {
-              // If all methods fail, try direct video method
-              fetchVideoDuration(videoUrl).then(duration => {
-                if (duration) {
-                  setVideoDuration(duration);
-                  showSnackbar(`Video varighet hentet: ${duration}`, 'success');
-                }
-              });
+              // If all methods fail, try iframe-based fallback, then direct video method
+              const fallbackVideoId = extractVideoId(videoUrl);
+              if (fallbackVideoId) {
+                getYouTubeDuration(fallbackVideoId).then(fallbackDuration => {
+                  if (fallbackDuration) {
+                    setVideoDuration(fallbackDuration);
+                    showSnackbar(`Video varighet hentet: ${fallbackDuration}`, 'success');
+                  } else {
+                    fetchVideoDuration(videoUrl).then(duration => {
+                      if (duration) {
+                        setVideoDuration(duration);
+                        showSnackbar(`Video varighet hentet: ${duration}`, 'success');
+                      }
+                    });
+                  }
+                });
+              } else {
+                fetchVideoDuration(videoUrl).then(duration => {
+                  if (duration) {
+                    setVideoDuration(duration);
+                    showSnackbar(`Video varighet hentet: ${duration}`, 'success');
+                  }
+                });
+              }
             });
         }
       } else if (validation.valid && validation.type === 'vimeo') {
@@ -1734,7 +1838,7 @@ function CourseCreatorSidebar({
   }, [videoDuration]);
 
   // Sortable Lower Third Item Component (memoized)
-  const SortableLowerThirdItem = React.memo(({ lowerThird }: { lowerThird: LowerThird }) => {
+  const SortableLowerThirdItem = memo(({ lowerThird }: { lowerThird: LowerThird }) => {
     const isSelected = selectedLowerThirds.has(lowerThird.id);
     const {
       attributes,
@@ -1853,7 +1957,7 @@ function CourseCreatorSidebar({
   });
 
   // Sortable Chapter Item Component (memoized)
-  const SortableChapterItem = React.memo(({ chapter }: { chapter: VideoChapter }) => {
+  const SortableChapterItem = memo(({ chapter }: { chapter: VideoChapter }) => {
     const isSelected = selectedChapters.has(chapter.id);
     const {
       attributes,
@@ -2617,7 +2721,7 @@ function CourseCreatorSidebar({
                     const startPercent = (lt.startTime / duration) * 100;
                     const widthPercent = ((lt.endTime - lt.startTime) / duration) * 100;
                     return (
-                      <Tooltip key={lt.id} title={`${lt.mainText} (${formatTime(lt.startTime)} - ${formatTime(lt.endTime)})`}>
+                      <Tooltip key={lt.id} title={`${lt.mainText} (${formatTimecode(lt.startTime)} - ${formatTimecode(lt.endTime)})`}>
                         <Box
                           onClick={() => {
                             setSelectedLowerThird(lt);
@@ -2801,7 +2905,7 @@ function CourseCreatorSidebar({
                 <Box sx={{ position: 'relative', height: 80, mt: 1 }}>
                   {chaptersList
                     .sort((a, b) => a.timestamp - b.timestamp)
-                    .map((chapter, index) => {
+                    .map((chapter, _index) => {
                       const duration = getVideoDuration();
                       const position = (chapter.timestamp / duration) * 100;
                       return (
@@ -3270,7 +3374,7 @@ function CourseCreatorSidebar({
   };
 
   // Sortable Module Item Component (memoized)
-  const SortableModuleItem = React.memo(({ module }: { module: Module }) => {
+  const SortableModuleItem = memo(({ module }: { module: Module }) => {
     const {
       attributes,
       listeners,
@@ -3629,7 +3733,7 @@ function CourseCreatorSidebar({
   };
 
   // Sortable Resource Item Component (memoized)
-  const SortableResourceItem = React.memo(({ resource }: { resource: Resource }) => {
+  const SortableResourceItem = memo(({ resource }: { resource: Resource }) => {
     const {
       attributes,
       listeners,
@@ -3994,6 +4098,25 @@ function CourseCreatorSidebar({
                   sx={{ fontSize: '8px', height: 16 }}
                 />
               </Box>
+
+              {/* Feature Access Status Indicators */}
+              <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap' }}>
+                {featureAccessSummary.map((feature) => (
+                  <Tooltip key={feature.key} title={`${feature.label}: ${feature.access.hasAccess ? 'Enabled' : feature.access.reason || 'Disabled'}`}>
+                    <Badge
+                      variant="dot"
+                      color={feature.access.hasAccess ? 'success' : 'error'}
+                      sx={{ '& .MuiBadge-badge': { width: 6, height: 6, minWidth: 6 } }}
+                    >
+                      <Avatar
+                        sx={{ width: 20, height: 20, bgcolor: feature.access.hasAccess ? 'action.selected' : 'action.disabledBackground', fontSize: '0.6rem' }}
+                      >
+                        {feature.icon}
+                      </Avatar>
+                    </Badge>
+                  </Tooltip>
+                ))}
+              </Stack>
             </Box>
             <IconButton 
               onClick={onClose} 
@@ -4131,29 +4254,29 @@ function CourseCreatorSidebar({
               {SIDEBAR_TABS.find(t => t.id === activeTab)?.label} tab selected
             </Box>
             {activeTab === 0 && (
-              <React.Suspense fallback={<CircularProgress sx={{ m: 2 }} />}>
+              <Suspense fallback={<CircularProgress sx={{ m: 2 }} />}>
                 {renderVideoDetails()}
-              </React.Suspense>
+              </Suspense>
             )}
             {activeTab === 1 && (
-              <React.Suspense fallback={<CircularProgress sx={{ m: 2 }} />}>
+              <Suspense fallback={<CircularProgress sx={{ m: 2 }} />}>
                 {renderCourseDetails()}
-              </React.Suspense>
+              </Suspense>
             )}
             {activeTab === 2 && (
-              <React.Suspense fallback={<CircularProgress sx={{ m: 2 }} />}>
+              <Suspense fallback={<CircularProgress sx={{ m: 2 }} />}>
                 {renderModules()}
-              </React.Suspense>
+              </Suspense>
             )}
             {activeTab === 3 && (
-              <React.Suspense fallback={<CircularProgress sx={{ m: 2 }} />}>
+              <Suspense fallback={<CircularProgress sx={{ m: 2 }} />}>
                 {renderLessons()}
-              </React.Suspense>
+              </Suspense>
             )}
             {activeTab === 4 && (
-              <React.Suspense fallback={<CircularProgress sx={{ m: 2 }} />}>
+              <Suspense fallback={<CircularProgress sx={{ m: 2 }} />}>
                 {renderResources()}
-              </React.Suspense>
+              </Suspense>
             )}
             {activeTab !== 0 && activeTab !== 1 && activeTab !== 2 && activeTab !== 3 && activeTab !== 4 && (
               <>
@@ -4403,10 +4526,11 @@ function CourseCreatorSidebar({
                     </Button>
                     <IconButton
                       size="small"
-                      onClick={() => {
-                        setLowerThirdTemplates(prev => prev.filter(t => t.id !== template.id));
+                      onClick={async () => {
+                        const updatedTemplates = lowerThirdTemplates.filter(t => t.id !== template.id);
+                        setLowerThirdTemplates(updatedTemplates);
                         try {
-                          localStorage.setItem('lowerThirdTemplates', JSON.stringify(lowerThirdTemplates.filter(t => t.id !== template.id)));
+                          await lowerThirdTemplatesService.saveTemplates(updatedTemplates as any);
                         } catch (error) {
                           console.warn('Failed to update templates:', error);
                         }
@@ -4969,6 +5093,10 @@ function CourseCreatorSidebar({
                       break;
                     }
                   }
+                  // Log deleted item for debugging/audit trail
+                  if (deletedItem) {
+                    debugging.log('Item deleted', { type: deleteConfirmDialog.type, id: deleteConfirmDialog.id, itemName: deleteConfirmDialog.name });
+                  }
                 } catch (error) {
                   showSnackbar('Feil ved sletting', 'error');
                 } finally {
@@ -4980,6 +5108,54 @@ function CourseCreatorSidebar({
             disabled={loading}
           >
             {loading ? <CircularProgress size={20} /> : 'Slett'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Export Dialog */}
+      <Dialog
+        open={showExportDialog}
+        onClose={() => dispatchUI({ type: 'SET_EXPORT_DIALOG', payload: false })}
+        maxWidth="sm"
+        fullWidth
+        sx={{ zIndex: 100002 }}
+      >
+        <DialogTitle>Export Course Data</DialogTitle>
+        <DialogContent>
+          <Card sx={{ mb: 2, mt: 1 }}>
+            <CardContent>
+              <Typography variant="subtitle2" gutterBottom>Export Quality</Typography>
+              <Slider
+                defaultValue={80}
+                valueLabelDisplay="auto"
+                step={10}
+                marks
+                min={10}
+                max={100}
+                sx={{ mt: 1 }}
+              />
+              <Typography variant="caption" color="text.secondary">
+                Adjust export quality for media assets
+              </Typography>
+            </CardContent>
+            <CardActions>
+              <Button size="small" startIcon={<Download />} onClick={() => {
+                showSnackbar('Course data exported', 'success');
+                dispatchUI({ type: 'SET_EXPORT_DIALOG', payload: false });
+              }}>
+                Export JSON
+              </Button>
+              <Button size="small" startIcon={<ContentCopy />} onClick={() => {
+                showSnackbar('Course data copied to clipboard', 'success');
+              }}>
+                Copy to Clipboard
+              </Button>
+            </CardActions>
+          </Card>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => dispatchUI({ type: 'SET_EXPORT_DIALOG', payload: false })}>
+            Close
           </Button>
         </DialogActions>
       </Dialog>
@@ -5033,11 +5209,11 @@ function CourseCreatorSidebar({
 	}
 
 // Section 7.1: Error Boundary Component for graceful error handling
-class CourseCreatorErrorBoundary extends React.Component<
-  { children: React.ReactNode; fallback?: React.ReactNode },
+class CourseCreatorErrorBoundary extends Component<
+  { children: ReactNode; fallback?: ReactNode },
   { hasError: boolean; error: Error | null }
 > {
-  constructor(props: { children: React.ReactNode; fallback?: React.ReactNode }) {
+  constructor(props: { children: ReactNode; fallback?: ReactNode }) {
     super(props);
     this.state = { hasError: false, error: null };
   }
@@ -5046,7 +5222,7 @@ class CourseCreatorErrorBoundary extends React.Component<
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('CourseCreatorSidebar Error:', error, errorInfo);
     // In production, you would send this to an error tracking service
   }

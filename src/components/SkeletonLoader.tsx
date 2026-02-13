@@ -4,7 +4,7 @@
  * Loading placeholder with shimmer animation
  */
 
-import React from 'react';
+import type { FC, CSSProperties } from 'react';
 import { Box, BoxProps } from '@mui/material';
 import { colors, borderRadius } from '../../styles/designTokens';
 import { animations } from '../../styles/animations';
@@ -16,7 +16,7 @@ export interface SkeletonLoaderProps extends BoxProps {
   animation?: 'pulse' | 'wave' | 'shimmer';
 }
 
-export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
+export const SkeletonLoader: FC<SkeletonLoaderProps> = ({
   variant = 'rectangular',
   width,
   height,
@@ -24,8 +24,8 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   sx,
   ...props
 }) => {
-  const getVariantStyles = (): React.CSSProperties => {
-    const baseStyles: React.CSSProperties = {
+  const getVariantStyles = (): CSSProperties => {
+    const baseStyles: CSSProperties = {
       backgroundColor: colors.background.card,
       borderRadius: borderRadius.md,
     };
@@ -55,7 +55,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
     }
   };
 
-  const getAnimationStyles = (): React.CSSProperties => {
+  const getAnimationStyles = (): CSSProperties => {
     switch (animation) {
       case 'pulse':
         return {

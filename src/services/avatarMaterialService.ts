@@ -10,7 +10,15 @@
  */
 
 import * as BABYLON from '@babylonjs/core';
-import { AvatarMaterial, MaterialProperties, getAvatarById } from '../data/avatarDefinitions';
+import { MaterialProperties, getAvatarById } from '../data/avatarDefinitions';
+
+type SkinMaterialProperties = MaterialProperties & {
+  subsurfaceScattering?: {
+    enabled: boolean;
+    translucencyIntensity: number;
+    tintColor?: string;
+  };
+};
 
 export interface EmbeddedTextureInfo {
   meshName: string;
@@ -67,9 +75,11 @@ export class AvatarMaterialService {
       
       // Get appropriate material properties
       let matProps: MaterialProperties | undefined;
+      let skinProps: SkinMaterialProperties | undefined;
       switch (bodyPartType) {
         case 'skin':
-          matProps = materialDef.skin;
+          skinProps = materialDef.skin as SkinMaterialProperties;
+          matProps = skinProps;
           break;
         case 'fabric':
           matProps = materialDef.fabric;
@@ -103,8 +113,8 @@ export class AvatarMaterialService {
       );
       
       // Apply special skin properties
-      if (bodyPartType === 'skin' && 'subsurfaceScattering' in matProps && matProps.subsurfaceScattering?.enabled) {
-        this.applySkinSubsurfaceScattering(pbrMat, matProps as any);
+      if (bodyPartType === 'skin' && skinProps?.subsurfaceScattering?.enabled) {
+        this.applySkinSubsurfaceScattering(pbrMat, skinProps as any);
       }
       
       mesh.material = pbrMat;

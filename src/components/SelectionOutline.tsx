@@ -4,18 +4,18 @@
  * Visual outline for selected objects in 3D scene
  */
 
-import React from 'react';
+import type { FC, ReactNode } from 'react';
 import { Box } from '@mui/material';
 import { colors, borderRadius } from '../../styles/designTokens';
 
 export interface SelectionOutlineProps {
   selected: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
   outlineColor?: string;
   outlineWidth?: number;
 }
 
-export const SelectionOutline: React.FC<SelectionOutlineProps> = ({
+export const SelectionOutline: FC<SelectionOutlineProps> = ({
   selected,
   children,
   outlineColor = colors.border.focus,

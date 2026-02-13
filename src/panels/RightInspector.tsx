@@ -1,16 +1,27 @@
 import * as React from 'react';
 import { Box, Divider, Grid, Slider, Stack, TextField, Typography, Button, Tooltip, Select, MenuItem, FormControl, InputLabel, IconButton } from '@mui/material';
 import { Delete } from '@mui/icons-material';
-import { useActions, useScene } from '@/state/selectors';
+import { useScene, useAppStore, SceneNode } from '@/state/store';
 import { colors, spacing, shadows } from '@/styles/designTokens';
-import { NumberInput } from '@/ui/components/NumberInput';
-import { EnhancedTextField } from '@/ui/components/EnhancedTextField';
+import { NumberInput } from '@/components/NumberInput';
+import { EnhancedTextField } from '@/components/EnhancedTextField';
+
+declare global {
+  interface Window {
+    studio?: {
+      scene?: {
+        getMeshByName: (name: string) => { dispose: () => void } | null;
+      };
+    };
+  }
+}
 
 export default function RightInspector() {
   const scene = useScene();
-  const { updateNode, deleteNode } = useActions();
+  const updateNode = useAppStore(state => state.updateNode);
+  const deleteNode = useAppStore(state => state.removeNode);
   const id = scene.selection[0];
-  const node = scene.nodes.find((n) => n.id === id);
+  const node = scene.nodes.find((n: SceneNode) => n.id === id);
   if (!node)
     return (
       <Box sx={{ p: spacing.md, bgcolor: colors.background.panel, color: colors.text.primary, height: '100%' }}>
@@ -20,8 +31,8 @@ export default function RightInspector() {
 
   const setNum = (k: 'x' | 'y' | 'z', v: number) => {
     const [x, y, z] = node.transform.position;
-    const next = k === 'x' ? [v, y, z] : k === 'y' ? [x, v, z] : [x, y, v];
-    updateNode(node.id, { transform: { ...node.transform, position: next as any } });
+    const next: [number, number, number] = k === 'x' ? [v, y, z] : k === 'y' ? [x, v, z] : [x, y, v];
+    updateNode(node.id, { transform: { ...node.transform, position: next } });
   };
 
   return (
@@ -68,28 +79,28 @@ export default function RightInspector() {
             Position
           </Typography>
           <Grid container spacing={1}>
-            <Grid item xs={4}>
+            <Grid size={{ xs: 4 }}>
               <NumberInput
                 value={node.transform.position[0]}
-                onChange={(v) => setNum('x', v)}
+                onChange={(v: number) => setNum('x', v)}
                 size="small"
                 step={0.1}
                 precision={2}
               />
             </Grid>
-            <Grid item xs={4}>
+            <Grid size={{ xs: 4 }}>
               <NumberInput
                 value={node.transform.position[1]}
-                onChange={(v) => setNum('y', v)}
+                onChange={(v: number) => setNum('y', v)}
                 size="small"
                 step={0.1}
                 precision={2}
               />
             </Grid>
-            <Grid item xs={4}>
+            <Grid size={{ xs: 4 }}>
               <NumberInput
                 value={node.transform.position[2]}
-                onChange={(v) => setNum('z', v)}
+                onChange={(v: number) => setNum('z', v)}
                 size="small"
                 step={0.1}
                 precision={2}
@@ -103,36 +114,36 @@ export default function RightInspector() {
             Rotation
           </Typography>
           <Grid container spacing={1}>
-            <Grid item xs={4}>
+            <Grid size={{ xs: 4 }}>
               <NumberInput
                 value={node.transform.rotation[0]}
-                onChange={(v) => {
+                onChange={(v: number) => {
                   const [x, y, z] = node.transform.rotation;
-                  updateNode(node.id, { transform: { ...node.transform, rotation: [v, y, z] as any } });
+                  updateNode(node.id, { transform: { ...node.transform, rotation: [v, y, z] as [number, number, number] } });
                 }}
                 size="small"
                 step={0.1}
                 precision={2}
               />
             </Grid>
-            <Grid item xs={4}>
+            <Grid size={{ xs: 4 }}>
               <NumberInput
                 value={node.transform.rotation[1]}
-                onChange={(v) => {
+                onChange={(v: number) => {
                   const [x, y, z] = node.transform.rotation;
-                  updateNode(node.id, { transform: { ...node.transform, rotation: [x, v, z] as any } });
+                  updateNode(node.id, { transform: { ...node.transform, rotation: [x, v, z] as [number, number, number] } });
                 }}
                 size="small"
                 step={0.1}
                 precision={2}
               />
             </Grid>
-            <Grid item xs={4}>
+            <Grid size={{ xs: 4 }}>
               <NumberInput
                 value={node.transform.rotation[2]}
-                onChange={(v) => {
+                onChange={(v: number) => {
                   const [x, y, z] = node.transform.rotation;
-                  updateNode(node.id, { transform: { ...node.transform, rotation: [x, y, v] as any } });
+                  updateNode(node.id, { transform: { ...node.transform, rotation: [x, y, v] as [number, number, number] } });
                 }}
                 size="small"
                 step={0.1}
@@ -227,7 +238,7 @@ export default function RightInspector() {
                   value={node.camera.aperture}
                   onChange={(e) =>
                     updateNode(node.id, {
-                      camera: { ...node.camera!, aperture: parseFloat(e.target.value as string || '2.8') },
+                      camera: { ...node.camera!, aperture: Number(e.target.value) || 2.8 },
                     })
                   }
                   sx={{
@@ -256,7 +267,7 @@ export default function RightInspector() {
               </Typography>
               <Slider
                 size="small"
-                value={1/node.camera.shutter}
+                value={1/(node.camera.shutter ?? 1)}
                 min={30}
                 max={8000}
                 step={1}

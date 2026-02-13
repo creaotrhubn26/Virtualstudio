@@ -1,4 +1,6 @@
-export const elasticVariants = {
+import type { Variants } from 'framer-motion';
+
+export const elasticVariants: Variants = {
   hidden: { opacity: 0, scale: 0.8 },
   visible: { 
     opacity: 1, 
@@ -8,7 +10,7 @@ export const elasticVariants = {
   exit: { opacity: 0, scale: 0.8 }
 };
 
-export const smoothVariants = {
+export const smoothVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: { 
     opacity: 1, 
@@ -16,6 +18,17 @@ export const smoothVariants = {
     transition: { duration: 0.3, ease: 'easeOut' }
   },
   exit: { opacity: 0, y: -20 }
+};
+
+export const springVariants: Variants = {
+  hidden: { opacity: 0, y: 24, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { type: 'spring', stiffness: 260, damping: 24 },
+  },
+  exit: { opacity: 0, y: 24, scale: 0.98 },
 };
 
 export const bounceVariants = {

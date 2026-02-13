@@ -5,11 +5,11 @@
  * Integrated with Phase 1 animation-material system
  */
 
-import { HairPhysicsEngine, HairStrandConfig } from '../services/hairPhysicsEngine';
-import { MaterialLODManager, LODLevel } from '../services/materialLODManager';
+import { HairPhysicsEngine } from '../services/hairPhysicsEngine';
+import { MaterialLODManager } from '../services/materialLODManager';
 import { AnimationMaterialController } from '../services/animationMaterialController';
 import { getHairLayout, getHairIntensityForAnimation, WIND_PRESETS } from '../data/hairPhysicsPresets';
-import { Mesh, Camera, Scene, Vector3 } from 'babylonjs';
+import { Mesh, Camera, Scene, Vector3 } from '@babylonjs/core';
 
 /**
  * Phase 2 integrated demo
@@ -189,7 +189,7 @@ export class Phase2IntegrationDemo {
     console.log('\n😊→😢 EXAMPLE: Emotion Transition with Hair Response');
     console.log('═════════════════════════════════════════════════════');
 
-    const emotions = ['happy', 'surprised', 'sad'];
+    const emotions: Array<'happy' | 'surprised' | 'sad'> = ['happy', 'surprised', 'sad'];
     let transitionTime = 0;
 
     for (const emotion of emotions) {

@@ -177,6 +177,33 @@ export const BLEND_SHAPE_PRESETS: Record<string, Record<string, number>> = {
   surprised: { browUp: 1.0, mouthOpen: 0.7, eyeWide: 0.8 }
 };
 
+const resolveBoneName = (skeleton: BABYLON.Skeleton, boneName: string): string | null => {
+  const directMatch = skeleton.bones.find(b => b.name === boneName);
+  if (directMatch) return directMatch.name;
+
+  const aliases = HUMANOID_BONE_MAP[boneName];
+  if (!aliases) return null;
+
+  const aliasMatch = skeleton.bones.find(b => aliases.includes(b.name));
+  return aliasMatch?.name || null;
+};
+
+const getExertionIntensityForActivity = (activityType: ReturnType<typeof getActivityTypeFromAnimation>): number => {
+  switch (activityType) {
+    case 'run':
+      return 0.75;
+    case 'athletic':
+      return 0.6;
+    case 'walk':
+      return 0.3;
+    case 'combat':
+      return 0.9;
+    case 'idle':
+    default:
+      return 0.1;
+  }
+};
+
 export const useSkeletalAnimationStore = create<SkeletalAnimationState>((set, get) => ({
   // Initial state
   rigs: new Map(),
@@ -320,6 +347,8 @@ export const useSkeletalAnimationStore = create<SkeletalAnimationState>((set, ge
       // Apply animation-driven material effects
       if (materialController && rig.mesh) {
         const activityType = getActivityTypeFromAnimation(animationName);
+        const intensity = getExertionIntensityForActivity(activityType);
+        get().applyExertionEffects(rigId, intensity);
       }
       
       set((state) => {
@@ -391,7 +420,8 @@ export const useSkeletalAnimationStore = create<SkeletalAnimationState>((set, ge
     
     if (!rig?.skeleton) return;
     
-    const bone = rig.skeleton.bones.find(b => b.name === boneName);
+    const resolvedName = resolveBoneName(rig.skeleton, boneName);
+    const bone = resolvedName ? rig.skeleton.bones.find(b => b.name === resolvedName) : null;
     if (bone) {
       bone.setRotation(new BABYLON.Vector3(rotation.x, rotation.y, rotation.z));
     }
@@ -403,7 +433,8 @@ export const useSkeletalAnimationStore = create<SkeletalAnimationState>((set, ge
     
     if (!rig?.skeleton) return;
     
-    const bone = rig.skeleton.bones.find(b => b.name === boneName);
+    const resolvedName = resolveBoneName(rig.skeleton, boneName);
+    const bone = resolvedName ? rig.skeleton.bones.find(b => b.name === resolvedName) : null;
     if (bone) {
       bone.setPosition(new BABYLON.Vector3(position.x, position.y, position.z));
     }
@@ -415,7 +446,8 @@ export const useSkeletalAnimationStore = create<SkeletalAnimationState>((set, ge
     
     if (!rig?.skeleton) return;
     
-    const bone = rig.skeleton.bones.find(b => b.name === boneName);
+    const resolvedName = resolveBoneName(rig.skeleton, boneName);
+    const bone = resolvedName ? rig.skeleton.bones.find(b => b.name === resolvedName) : null;
     if (bone) {
       bone.returnToRest();
     }
@@ -504,8 +536,21 @@ export const useSkeletalAnimationStore = create<SkeletalAnimationState>((set, ge
     });
     
     // Apply emotion-based material changes if available
-    if (materialController && presetName !== 'neutral') {
-      materialController.applyFacialExpression(rigId, presetName);
+    if (materialController) {
+      const weights = new Map<string, number>();
+      rig.blendShapes.forEach((shape) => {
+        weights.set(shape.name, shape.weight);
+      });
+
+      const allowedEmotions = ['neutral', 'happy', 'sad', 'angry', 'surprised'] as const;
+      if (allowedEmotions.includes(presetName as typeof allowedEmotions[number])) {
+        materialController.applyFacialExpression(rigId, presetName as typeof allowedEmotions[number]);
+      } else {
+        const inferred = detectEmotionFromBlendShapes(weights);
+        if (inferred.emotion) {
+          materialController.applyFacialExpression(rigId, inferred.emotion as any, inferred.confidence);
+        }
+      }
     }
   },
   
@@ -535,6 +580,8 @@ export const useSkeletalAnimationStore = create<SkeletalAnimationState>((set, ge
     const rig = rigs.get(rigId);
     if (rig) {
       materialController.registerRig(rig);
+      materialController.setInterpolationDuration(Math.max(0.15, 0.5 - intensity * 0.3));
+      materialController.update(rigId, 1 / 60);
     }
   },
   
@@ -574,7 +621,20 @@ export const useSkeletalAnimationStore = create<SkeletalAnimationState>((set, ge
         false
       );
       
-      // Retarget animations to current skeleton
+      if (result.animationGroups?.length) {
+        result.animationGroups.forEach(group => {
+          const duration = (group.to - group.from) / (group.speedRatio || 1);
+          rig.animations.set(group.name, {
+            id: `anim_${group.name}`,
+            name: group.name,
+            duration,
+            frameRate: 30,
+            loop: true,
+            tracks: []
+          });
+          group.stop();
+        });
+      }
       console.log('Animation imported successfully');
     } finally {
       URL.revokeObjectURL(url);
@@ -620,8 +680,6 @@ export const useSkeletalAnimationStore = create<SkeletalAnimationState>((set, ge
       console.log('BVH mocap import not yet implemented');
     } else if (format === 'json') {
       // JSON mocap data
-      const scene = rig.skeleton.getScene();
-      
       if (data.frames && Array.isArray(data.frames)) {
         // Create animation from mocap frames
         const animationName = data.name || 'mocap_import';

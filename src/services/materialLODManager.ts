@@ -9,7 +9,7 @@
  * - Performance scaling for 20+ avatars
  */
 
-import { Mesh, Camera, Vector3 } from 'babylonjs';
+import { Mesh, Camera, Vector3 } from '@babylonjs/core';
 import { AnimationMaterialController } from './animationMaterialController';
 
 /**
@@ -224,9 +224,15 @@ export class MaterialLODManager {
   update(deltaTime: number): void {
     if (!this.camera || !this.enableAutoLOD) return;
 
+    if (deltaTime > 0.05) {
+      this.updateFrequency = Math.min(1000, this.updateFrequency + 50);
+    } else if (deltaTime > 0 && deltaTime < 0.02) {
+      this.updateFrequency = Math.max(100, this.updateFrequency - 25);
+    }
+
     const now = Date.now();
 
-    for (const [rigId, state] of this.avatarStates) {
+    for (const state of this.avatarStates.values()) {
       // Check distance periodically
       if (now - state.lastUpdateTime >= this.updateFrequency) {
         this.updateRigLOD(state);

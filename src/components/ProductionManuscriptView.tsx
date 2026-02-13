@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, memo, type FC, type ReactNode, type ChangeEvent, type MouseEvent } from 'react';
 import {
   Box,
   Typography,
@@ -24,6 +24,8 @@ import {
   Checkbox,
   CircularProgress,
   Alert,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   Theaters as SceneIcon,
@@ -105,7 +107,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { SceneBreakdown, DialogueLine, Act, Manuscript, CastingShot, ShotList, Candidate, Role, ShotType } from '../core/models/casting';
+import type { SceneBreakdown, DialogueLine, Act, Manuscript, CastingShot, ShotList, Candidate, Role, ShotType } from '../core/models/casting';
 import { ProductionEstimateDialog } from './ProductionEstimateDialog';
 import { castingService } from '../services/castingService';
 import { sceneNeedsService } from '../services/sceneNeedsService';
@@ -114,6 +116,7 @@ import { sceneNeedsService } from '../services/sceneNeedsService';
 import LiveSetMode from './production/LiveSetMode';
 import StripboardPanel from './production/StripboardPanel';
 import ShootingDayPlanner from './production/ShootingDayPlanner';
+import CallSheetGenerator from './CallSheetGenerator';
 import {
   productionWorkflowService,
   generateCallSheetHTML,
@@ -121,6 +124,77 @@ import {
   DEFAULT_CALL_SHEET_OPTIONS,
 } from './production';
 import type { CallSheet, ShootingDay, LiveSetStatus } from './production';
+
+// ============================================
+// 7-TIER RESPONSIVE SYSTEM
+// ============================================
+type ScreenTier = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | '4k';
+
+const useScreenTier = (): { tier: ScreenTier; isMobile: boolean; isTablet: boolean; isDesktop: boolean; is4K: boolean } => {
+  const theme = useTheme();
+  const isXs = useMediaQuery('(max-width:599px)');
+  const isSm = useMediaQuery('(min-width:600px) and (max-width:899px)');
+  const isMd = useMediaQuery('(min-width:900px) and (max-width:1199px)');
+  const isLg = useMediaQuery('(min-width:1200px) and (max-width:1535px)');
+  const isXl = useMediaQuery('(min-width:1536px) and (max-width:1919px)');
+  const isXxl = useMediaQuery('(min-width:1920px) and (max-width:2559px)');
+  const is4K = useMediaQuery('(min-width:2560px)');
+
+  const tier: ScreenTier = is4K ? '4k' : isXxl ? 'xxl' : isXl ? 'xl' : isLg ? 'lg' : isMd ? 'md' : isSm ? 'sm' : 'xs';
+  const isMobile = tier === 'xs' || tier === 'sm';
+  const isTablet = tier === 'md';
+  const isDesktop = tier === 'lg' || tier === 'xl' || tier === 'xxl' || tier === '4k';
+
+  return { tier, isMobile, isTablet, isDesktop, is4K };
+};
+
+const getResponsiveValues = (tier: ScreenTier) => {
+  const values = {
+    xs: { 
+      titleFontSize: '10px', bodyFontSize: '11px', captionFontSize: '9px',
+      buttonSize: 'small' as const, iconSize: 14, spacing: 1, padding: 1, chipSize: 'small' as const,
+      sidebarWidth: 0, rightPanelWidth: 0, headerPx: 1.5, headerPy: 1, sceneThumbnailSize: 36,
+      sceneInfoFontSize: 11, searchInputFontSize: 12, filterChipPx: 1, filterChipPy: 0.25,
+    },
+    sm: { 
+      titleFontSize: '11px', bodyFontSize: '12px', captionFontSize: '10px',
+      buttonSize: 'small' as const, iconSize: 16, spacing: 1, padding: 1.5, chipSize: 'small' as const,
+      sidebarWidth: 220, rightPanelWidth: 260, headerPx: 2, headerPy: 1.5, sceneThumbnailSize: 40,
+      sceneInfoFontSize: 11, searchInputFontSize: 12, filterChipPx: 1.25, filterChipPy: 0.5,
+    },
+    md: { 
+      titleFontSize: '12px', bodyFontSize: '12px', captionFontSize: '10px',
+      buttonSize: 'small' as const, iconSize: 18, spacing: 1.5, padding: 1.5, chipSize: 'small' as const,
+      sidebarWidth: 260, rightPanelWidth: 300, headerPx: 2.5, headerPy: 1.5, sceneThumbnailSize: 40,
+      sceneInfoFontSize: 12, searchInputFontSize: 12, filterChipPx: 1.5, filterChipPy: 0.5,
+    },
+    lg: { 
+      titleFontSize: '14px', bodyFontSize: '13px', captionFontSize: '11px',
+      buttonSize: 'small' as const, iconSize: 20, spacing: 2, padding: 2, chipSize: 'small' as const,
+      sidebarWidth: 300, rightPanelWidth: 380, headerPx: 3, headerPy: 2, sceneThumbnailSize: 44,
+      sceneInfoFontSize: 12, searchInputFontSize: 13, filterChipPx: 1.5, filterChipPy: 0.5,
+    },
+    xl: { 
+      titleFontSize: '14px', bodyFontSize: '13px', captionFontSize: '11px',
+      buttonSize: 'medium' as const, iconSize: 20, spacing: 2, padding: 2, chipSize: 'small' as const,
+      sidebarWidth: 320, rightPanelWidth: 400, headerPx: 3, headerPy: 2, sceneThumbnailSize: 48,
+      sceneInfoFontSize: 13, searchInputFontSize: 13, filterChipPx: 1.5, filterChipPy: 0.5,
+    },
+    xxl: { 
+      titleFontSize: '15px', bodyFontSize: '14px', captionFontSize: '12px',
+      buttonSize: 'medium' as const, iconSize: 22, spacing: 2, padding: 2, chipSize: 'medium' as const,
+      sidebarWidth: 340, rightPanelWidth: 420, headerPx: 3, headerPy: 2, sceneThumbnailSize: 52,
+      sceneInfoFontSize: 13, searchInputFontSize: 14, filterChipPx: 1.5, filterChipPy: 0.5,
+    },
+    '4k': { 
+      titleFontSize: '18px', bodyFontSize: '16px', captionFontSize: '14px',
+      buttonSize: 'large' as const, iconSize: 26, spacing: 3, padding: 3, chipSize: 'medium' as const,
+      sidebarWidth: 400, rightPanelWidth: 500, headerPx: 4, headerPy: 3, sceneThumbnailSize: 60,
+      sceneInfoFontSize: 15, searchInputFontSize: 16, filterChipPx: 2, filterChipPy: 0.75,
+    },
+  };
+  return values[tier];
+};
 
 interface ProductionManuscriptViewProps {
   manuscript: Manuscript;
@@ -168,7 +242,7 @@ interface SortableSceneItemProps {
   onSceneClick: (scene: SceneBreakdown) => void;
 }
 
-const SortableSceneItem: React.FC<SortableSceneItemProps> = React.memo(({
+const SortableSceneItem: FC<SortableSceneItemProps> = memo(({
   scene,
   isSelected,
   status,
@@ -303,7 +377,7 @@ const SortableSceneItem: React.FC<SortableSceneItemProps> = React.memo(({
       )}
     </Box>
   );
-}); // End of React.memo for SortableSceneItem
+}); // End of memo for SortableSceneItem
 
 // Debounce helper
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -315,7 +389,7 @@ const useDebounce = <T,>(value: T, delay: number): T => {
   return debouncedValue;
 };
 
-export const ProductionManuscriptView: React.FC<ProductionManuscriptViewProps> = ({
+export const ProductionManuscriptView: FC<ProductionManuscriptViewProps> = ({
   manuscript,
   scenes,
   dialogueLines,
@@ -328,6 +402,14 @@ export const ProductionManuscriptView: React.FC<ProductionManuscriptViewProps> =
   onManuscriptUpdate,
   onClose,
 }) => {
+  // 7-Tier Responsive
+  const { tier, isMobile, isTablet, isDesktop, is4K } = useScreenTier();
+  const responsive = getResponsiveValues(tier);
+  
+  // Mobile drawer states
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileRightPanelOpen, setMobileRightPanelOpen] = useState(false);
+  
   const [selectedScene, setSelectedScene] = useState<SceneBreakdown | null>(scenes[0] || null);
   const [selectedShot, setSelectedShot] = useState<CastingShot | null>(null);
   const [shotLists, setShotLists] = useState<ShotList[]>([]);
@@ -807,7 +889,7 @@ export const ProductionManuscriptView: React.FC<ProductionManuscriptViewProps> =
   };
 
   // Handle file upload for references
-  const handleReferenceUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleReferenceUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
       Array.from(files).forEach(file => {
@@ -1442,7 +1524,7 @@ export const ProductionManuscriptView: React.FC<ProductionManuscriptViewProps> =
     setTimelineIsPlaying(!timelineIsPlaying);
   };
 
-  const handleTimelineSeek = (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleTimelineSeek = (event: MouseEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const clickX = event.clientX - rect.left;
     const percentage = (clickX / rect.width) * 100;
@@ -1664,7 +1746,7 @@ export const ProductionManuscriptView: React.FC<ProductionManuscriptViewProps> =
   };
 
   // Handle file upload for new shot
-  const handleShotImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleShotImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -2308,49 +2390,63 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          px: 3,
-          py: 2,
+          px: responsive.headerPx,
+          py: responsive.headerPy,
           bgcolor: '#0c0f14',
           borderBottom: '1px solid #2a3142',
+          flexWrap: isMobile ? 'wrap' : 'nowrap',
+          gap: isMobile ? 1 : 0,
         }}
       >
-        <Stack direction="row" spacing={2} alignItems="center">
-          <Typography sx={{ fontSize: 14, fontWeight: 600, color: '#fff', letterSpacing: 1 }}>
-            PRODUCTION MANUSCRIPT
+        <Stack direction="row" spacing={isMobile ? 1 : 2} alignItems="center">
+          {/* Mobile menu button */}
+          {isMobile && (
+            <IconButton
+              onClick={() => setMobileSidebarOpen(true)}
+              sx={{ color: '#9ca3af', p: 0.5 }}
+            >
+              <SceneIcon sx={{ fontSize: responsive.iconSize }} />
+            </IconButton>
+          )}
+          <Typography sx={{ fontSize: responsive.titleFontSize, fontWeight: 600, color: '#fff', letterSpacing: isMobile ? 0.5 : 1 }}>
+            {isMobile ? 'PRODUCTION' : 'PRODUCTION MANUSCRIPT'}
           </Typography>
-          <Tooltip title={
-            <Box sx={{ p: 0.5 }}>
-              <Typography sx={{ fontSize: 11, fontWeight: 600, mb: 1 }}>Keyboard Shortcuts</Typography>
-              <Typography sx={{ fontSize: 10 }}>Space: Play/Pause timeline</Typography>
-              <Typography sx={{ fontSize: 10 }}>↑/↓: Navigate scenes</Typography>
-              <Typography sx={{ fontSize: 10 }}>Ctrl+Z: Undo</Typography>
-              <Typography sx={{ fontSize: 10 }}>Ctrl+Shift+Z: Redo</Typography>
-              <Typography sx={{ fontSize: 10 }}>Ctrl+A: Select all</Typography>
-              <Typography sx={{ fontSize: 10 }}>Delete: Delete scene(s)</Typography>
-              <Typography sx={{ fontSize: 10 }}>Esc: Clear selection</Typography>
-            </Box>
-          }>
-            <Box sx={{
-              px: 1,
-              py: 0.5,
-              borderRadius: '4px',
-              bgcolor: 'rgba(255,255,255,0.05)',
-              cursor: 'help',
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
-            }}>
-              <Stack direction="row" spacing={0.5} alignItems="center">
-                <ZoomInIcon sx={{ fontSize: 12, color: '#9ca3af' }} />
-                <Typography sx={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>SHORTCUTS</Typography>
-              </Stack>
-            </Box>
-          </Tooltip>
+          {!isMobile && (
+            <Tooltip title={
+              <Box sx={{ p: 0.5 }}>
+                <Typography sx={{ fontSize: 11, fontWeight: 600, mb: 1 }}>Keyboard Shortcuts</Typography>
+                <Typography sx={{ fontSize: 10 }}>Space: Play/Pause timeline</Typography>
+                <Typography sx={{ fontSize: 10 }}>↑/↓: Navigate scenes</Typography>
+                <Typography sx={{ fontSize: 10 }}>Ctrl+Z: Undo</Typography>
+                <Typography sx={{ fontSize: 10 }}>Ctrl+Shift+Z: Redo</Typography>
+                <Typography sx={{ fontSize: 10 }}>Ctrl+A: Select all</Typography>
+                <Typography sx={{ fontSize: 10 }}>Delete: Delete scene(s)</Typography>
+                <Typography sx={{ fontSize: 10 }}>Esc: Clear selection</Typography>
+              </Box>
+            }>
+              <Box sx={{
+                px: 1,
+                py: 0.5,
+                borderRadius: '4px',
+                bgcolor: 'rgba(255,255,255,0.05)',
+                cursor: 'help',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
+              }}>
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <ZoomInIcon sx={{ fontSize: 12, color: '#9ca3af' }} />
+                  <Typography sx={{ fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>SHORTCUTS</Typography>
+                </Stack>
+              </Box>
+            </Tooltip>
+          )}
         </Stack>
         
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={isMobile ? 0.5 : 1} alignItems="center" flexWrap="wrap" useFlexGap>
           {/* Read Through Mode Toggle */}
           <Tooltip title={readThroughMode ? "Avslutt Read Through" : "Start Read Through"}>
             <IconButton
               onClick={handleReadThroughToggle}
+              size={responsive.buttonSize}
               sx={{
                 color: readThroughMode ? '#10b981' : '#6b7280',
                 bgcolor: readThroughMode ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
@@ -2358,18 +2454,19 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
                   color: '#10b981', 
                   bgcolor: 'rgba(16, 185, 129, 0.15)' 
                 },
-                p: 1,
+                p: isMobile ? 0.5 : 1,
               }}
             >
-              <ReadThroughIcon sx={{ fontSize: 20 }} />
+              <ReadThroughIcon sx={{ fontSize: responsive.iconSize }} />
             </IconButton>
           </Tooltip>
 
           {/* Talent Panel Toggle */}
           <Tooltip title={showTalentPanel ? "Skjul Cast" : "Vis Cast"}>
-            <Badge badgeContent={sceneCandidates.length} color="primary">
+            <Badge badgeContent={isMobile ? 0 : sceneCandidates.length} color="primary">
               <IconButton
-                onClick={() => setShowTalentPanel(!showTalentPanel)}
+                onClick={() => isMobile ? setMobileRightPanelOpen(true) : setShowTalentPanel(!showTalentPanel)}
+                size={responsive.buttonSize}
                 sx={{
                   color: showTalentPanel ? '#3b82f6' : '#6b7280',
                   bgcolor: showTalentPanel ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
@@ -2377,137 +2474,157 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
                     color: '#3b82f6', 
                     bgcolor: 'rgba(59, 130, 246, 0.15)' 
                   },
-                  p: 1,
+                  p: isMobile ? 0.5 : 1,
                 }}
               >
-                <PeopleIcon sx={{ fontSize: 20 }} />
+                <PeopleIcon sx={{ fontSize: responsive.iconSize }} />
               </IconButton>
             </Badge>
           </Tooltip>
 
-          {/* Quick Notes Toggle */}
-          <Tooltip title="Quick Notes (Ctrl+T)">
-            <IconButton
-              onClick={() => setShowQuickNotes(!showQuickNotes)}
-              sx={{
-                color: showQuickNotes ? '#f97316' : '#6b7280',
-                bgcolor: showQuickNotes ? 'rgba(249, 115, 22, 0.1)' : 'transparent',
-                '&:hover': { 
-                  color: '#f97316', 
-                  bgcolor: 'rgba(249, 115, 22, 0.15)' 
-                },
-                p: 1,
-              }}
-            >
-              <NoteIcon sx={{ fontSize: 20 }} />
-            </IconButton>
-          </Tooltip>
+          {/* Quick Notes Toggle - Hide on mobile */}
+          {!isMobile && (
+            <Tooltip title="Quick Notes (Ctrl+T)">
+              <IconButton
+                onClick={() => setShowQuickNotes(!showQuickNotes)}
+                size={responsive.buttonSize}
+                sx={{
+                  color: showQuickNotes ? '#f97316' : '#6b7280',
+                  bgcolor: showQuickNotes ? 'rgba(249, 115, 22, 0.1)' : 'transparent',
+                  '&:hover': { 
+                    color: '#f97316', 
+                    bgcolor: 'rgba(249, 115, 22, 0.15)' 
+                  },
+                  p: 1,
+                }}
+              >
+                <NoteIcon sx={{ fontSize: responsive.iconSize }} />
+              </IconButton>
+            </Tooltip>
+          )}
 
-          {/* Duplicate Scene */}
-          <Tooltip title="Duplicate Scene (Ctrl+D)">
-            <IconButton
-              onClick={() => selectedScene && handleDuplicateScene(selectedScene)}
-              disabled={!selectedScene}
-              sx={{
-                color: '#6b7280',
-                '&:hover': { color: '#8b5cf6', bgcolor: 'rgba(139, 92, 246, 0.15)' },
-                '&:disabled': { opacity: 0.4 },
-                p: 1,
-              }}
-            >
-              <FileCopyIcon sx={{ fontSize: 20 }} />
-            </IconButton>
-          </Tooltip>
+          {/* Duplicate Scene - Hide on mobile */}
+          {!isMobile && (
+            <Tooltip title="Duplicate Scene (Ctrl+D)">
+              <IconButton
+                onClick={() => selectedScene && handleDuplicateScene(selectedScene)}
+                disabled={!selectedScene}
+                size={responsive.buttonSize}
+                sx={{
+                  color: '#6b7280',
+                  '&:hover': { color: '#8b5cf6', bgcolor: 'rgba(139, 92, 246, 0.15)' },
+                  '&:disabled': { opacity: 0.4 },
+                  p: 1,
+                }}
+              >
+                <FileCopyIcon sx={{ fontSize: responsive.iconSize }} />
+              </IconButton>
+            </Tooltip>
+          )}
 
-          {/* Save as Template */}
-          <Tooltip title="Save Template (Ctrl+S)">
-            <IconButton
-              onClick={() => selectedScene && setShowSceneTemplate(true)}
-              disabled={!selectedScene}
-              sx={{
-                color: '#6b7280',
-                '&:hover': { color: '#ec4899', bgcolor: 'rgba(236, 72, 153, 0.15)' },
-                '&:disabled': { opacity: 0.4 },
-                p: 1,
-              }}
-            >
-              <BookmarkIcon sx={{ fontSize: 20 }} />
-            </IconButton>
-          </Tooltip>
+          {/* Save as Template - Hide on mobile */}
+          {!isMobile && (
+            <Tooltip title="Save Template (Ctrl+S)">
+              <IconButton
+                onClick={() => selectedScene && setShowSceneTemplate(true)}
+                disabled={!selectedScene}
+                size={responsive.buttonSize}
+                sx={{
+                  color: '#6b7280',
+                  '&:hover': { color: '#ec4899', bgcolor: 'rgba(236, 72, 153, 0.15)' },
+                  '&:disabled': { opacity: 0.4 },
+                  p: 1,
+                }}
+              >
+                <BookmarkIcon sx={{ fontSize: responsive.iconSize }} />
+              </IconButton>
+            </Tooltip>
+          )}
 
           {/* Export PDF */}
           <Tooltip title="Export as PDF (Ctrl+E)">
             <IconButton
               onClick={handlePDFExport}
+              size={responsive.buttonSize}
               sx={{
                 color: '#6b7280',
                 '&:hover': { color: '#f87171', bgcolor: 'rgba(248, 113, 113, 0.15)' },
-                p: 1,
+                p: isMobile ? 0.5 : 1,
               }}
             >
-              <DownloadIcon sx={{ fontSize: 20 }} />
+              <DownloadIcon sx={{ fontSize: responsive.iconSize }} />
             </IconButton>
           </Tooltip>
 
-          {/* Call Sheet */}
-          <Tooltip title="Call Sheet (Ctrl+Shift+E)">
-            <IconButton
-              onClick={handleGenerateCallSheet}
-              sx={{
-                color: '#6b7280',
-                '&:hover': { color: '#06b6d4', bgcolor: 'rgba(6, 182, 212, 0.15)' },
-                p: 1,
-              }}
-            >
-              <AssignmentIcon sx={{ fontSize: 20 }} />
-            </IconButton>
-          </Tooltip>
+          {/* Call Sheet - Hide on xs mobile */}
+          {!isMobile && (
+            <Tooltip title="Call Sheet (Ctrl+Shift+E)">
+              <IconButton
+                onClick={handleGenerateCallSheet}
+                size={responsive.buttonSize}
+                sx={{
+                  color: '#6b7280',
+                  '&:hover': { color: '#06b6d4', bgcolor: 'rgba(6, 182, 212, 0.15)' },
+                  p: 1,
+                }}
+              >
+                <AssignmentIcon sx={{ fontSize: responsive.iconSize }} />
+              </IconButton>
+            </Tooltip>
+          )}
 
           {/* ============================================ */}
           {/* PRODUCTION WORKFLOW BUTTONS */}
           {/* ============================================ */}
           
-          <Divider orientation="vertical" flexItem sx={{ mx: 1, bgcolor: '#374151' }} />
+          {!isMobile && <Divider orientation="vertical" flexItem sx={{ mx: 1, bgcolor: '#374151' }} />}
           
-          {/* Stripboard */}
-          <Tooltip title="Stripboard - Shooting Schedule">
-            <IconButton
-              onClick={() => setShowStripboardPanel(true)}
-              sx={{
-                color: productionWorkflowTab === 'stripboard' ? '#fbbf24' : '#6b7280',
-                bgcolor: productionWorkflowTab === 'stripboard' ? 'rgba(251, 191, 36, 0.1)' : 'transparent',
-                '&:hover': { color: '#fbbf24', bgcolor: 'rgba(251, 191, 36, 0.15)' },
-                p: 1,
-              }}
-            >
-              <StripboardIcon sx={{ fontSize: 20 }} />
-            </IconButton>
-          </Tooltip>
+          {/* Stripboard - Hide on mobile */}
+          {!isMobile && (
+            <Tooltip title="Stripboard - Shooting Schedule">
+              <IconButton
+                onClick={() => setShowStripboardPanel(true)}
+                size={responsive.buttonSize}
+                sx={{
+                  color: productionWorkflowTab === 'stripboard' ? '#fbbf24' : '#6b7280',
+                  bgcolor: productionWorkflowTab === 'stripboard' ? 'rgba(251, 191, 36, 0.1)' : 'transparent',
+                  '&:hover': { color: '#fbbf24', bgcolor: 'rgba(251, 191, 36, 0.15)' },
+                  p: 1,
+                }}
+              >
+                <StripboardIcon sx={{ fontSize: responsive.iconSize }} />
+              </IconButton>
+            </Tooltip>
+          )}
 
-          {/* Shooting Day Planner */}
-          <Tooltip title="Opptaksplan - Day Planner">
-            <IconButton
-              onClick={() => setShowShootingDayPlanner(true)}
-              sx={{
-                color: productionWorkflowTab === 'schedule' ? '#34d399' : '#6b7280',
-                bgcolor: productionWorkflowTab === 'schedule' ? 'rgba(52, 211, 153, 0.1)' : 'transparent',
-                '&:hover': { color: '#34d399', bgcolor: 'rgba(52, 211, 153, 0.15)' },
-                p: 1,
-              }}
-            >
-              <CalendarIcon sx={{ fontSize: 20 }} />
-            </IconButton>
-          </Tooltip>
+          {/* Shooting Day Planner - Hide on mobile */}
+          {!isMobile && (
+            <Tooltip title="Opptaksplan - Day Planner">
+              <IconButton
+                onClick={() => setShowShootingDayPlanner(true)}
+                size={responsive.buttonSize}
+                sx={{
+                  color: productionWorkflowTab === 'schedule' ? '#34d399' : '#6b7280',
+                  bgcolor: productionWorkflowTab === 'schedule' ? 'rgba(52, 211, 153, 0.1)' : 'transparent',
+                  '&:hover': { color: '#34d399', bgcolor: 'rgba(52, 211, 153, 0.15)' },
+                  p: 1,
+                }}
+              >
+                <CalendarIcon sx={{ fontSize: responsive.iconSize }} />
+              </IconButton>
+            </Tooltip>
+          )}
 
           {/* Live Set Mode - WORKFLOW GAP FIX #1: Now opens day selector first */}
           <Tooltip title="Live Set Mode - On-Set Tracking">
             <IconButton
               onClick={() => setShowLiveSetDaySelector(true)}
+              size={responsive.buttonSize}
               sx={{
                 color: isLiveSetConnected ? '#ef4444' : '#6b7280',
                 bgcolor: isLiveSetConnected ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
                 '&:hover': { color: '#ef4444', bgcolor: 'rgba(239, 68, 68, 0.15)' },
-                p: 1,
+                p: isMobile ? 0.5 : 1,
                 animation: isLiveSetConnected ? 'pulse 2s infinite' : 'none',
               }}
             >
@@ -2516,52 +2633,56 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
                 color="error"
                 sx={{
                   '& .MuiBadge-badge': {
-                    fontSize: 8,
-                    height: 14,
-                    minWidth: 28,
+                    fontSize: isMobile ? 7 : 8,
+                    height: isMobile ? 12 : 14,
+                    minWidth: isMobile ? 22 : 28,
                     animation: isLiveSetConnected ? 'pulse 1s infinite' : 'none',
                   },
                 }}
               >
-                <LiveIcon sx={{ fontSize: 20 }} />
+                <LiveIcon sx={{ fontSize: responsive.iconSize }} />
               </Badge>
             </IconButton>
           </Tooltip>
 
-          {/* WORKFLOW GAP FIX #5: Timeline ↔ Live Set Connection Toggle */}
-          <Tooltip title={isLiveSetConnected ? "Koble fra Live Set" : "Koble til Live Set (synkroniser timeline)"}>
-            <IconButton
-              onClick={() => setIsLiveSetConnected(!isLiveSetConnected)}
-              sx={{
-                color: isLiveSetConnected ? '#10b981' : '#6b7280',
-                bgcolor: isLiveSetConnected ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
-                '&:hover': { color: '#10b981', bgcolor: 'rgba(16, 185, 129, 0.15)' },
-                p: 1,
-              }}
-            >
-              {isLiveSetConnected ? (
-                <Box sx={{ position: 'relative' }}>
-                  <TimerIcon sx={{ fontSize: 18 }} />
-                  <CheckIcon sx={{ fontSize: 10, position: 'absolute', bottom: -2, right: -2, color: '#10b981' }} />
-                </Box>
-              ) : (
-                <TimerIcon sx={{ fontSize: 18 }} />
-              )}
-            </IconButton>
-          </Tooltip>
+          {/* WORKFLOW GAP FIX #5: Timeline ↔ Live Set Connection Toggle - Hide on mobile */}
+          {!isMobile && (
+            <Tooltip title={isLiveSetConnected ? "Koble fra Live Set" : "Koble til Live Set (synkroniser timeline)"}>
+              <IconButton
+                onClick={() => setIsLiveSetConnected(!isLiveSetConnected)}
+                size={responsive.buttonSize}
+                sx={{
+                  color: isLiveSetConnected ? '#10b981' : '#6b7280',
+                  bgcolor: isLiveSetConnected ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                  '&:hover': { color: '#10b981', bgcolor: 'rgba(16, 185, 129, 0.15)' },
+                  p: 1,
+                }}
+              >
+                {isLiveSetConnected ? (
+                  <Box sx={{ position: 'relative' }}>
+                    <TimerIcon sx={{ fontSize: responsive.iconSize - 2 }} />
+                    <CheckIcon sx={{ fontSize: responsive.iconSize - 10, position: 'absolute', bottom: -2, right: -2, color: '#10b981' }} />
+                  </Box>
+                ) : (
+                  <TimerIcon sx={{ fontSize: responsive.iconSize - 2 }} />
+                )}
+              </IconButton>
+            </Tooltip>
+          )}
 
-          <Divider orientation="vertical" flexItem sx={{ mx: 1, bgcolor: '#374151' }} />
+          {!isMobile && <Divider orientation="vertical" flexItem sx={{ mx: 1, bgcolor: '#374151' }} />}
 
           {onClose && (
             <IconButton
               onClick={onClose}
+              size={responsive.buttonSize}
               sx={{
                 color: '#6b7280',
                 '&:hover': { color: '#f87171', bgcolor: 'rgba(248, 113, 113, 0.1)' },
-                p: 1,
+                p: isMobile ? 0.5 : 1,
               }}
             >
-              <CloseIcon sx={{ fontSize: 20 }} />
+              <CloseIcon sx={{ fontSize: responsive.iconSize }} />
             </IconButton>
           )}
         </Stack>
@@ -2571,12 +2692,34 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
       <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         
         {/* LEFT SIDEBAR - Scene Navigator - Enhanced */}
+        {/* Mobile Drawer for sidebar */}
+        <Drawer
+          anchor="left"
+          open={mobileSidebarOpen && isMobile}
+          onClose={() => setMobileSidebarOpen(false)}
+          PaperProps={{
+            sx: {
+              width: 280,
+              bgcolor: '#0f1318',
+              borderRight: '1px solid #1e2536',
+            },
+          }}
+        >
+          {/* Drawer Close Button */}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1 }}>
+            <IconButton onClick={() => setMobileSidebarOpen(false)} sx={{ color: '#6b7280' }}>
+              <CloseIcon sx={{ fontSize: 20 }} />
+            </IconButton>
+          </Box>
+        </Drawer>
+        
+        {/* Desktop sidebar or empty on mobile */}
         <Box
           sx={{
-            width: 300,
+            width: isMobile ? 0 : responsive.sidebarWidth,
+            display: isMobile ? 'none' : 'flex',
             bgcolor: '#0f1318',
             borderRight: '1px solid #1e2536',
-            display: 'flex',
             flexDirection: 'column',
           }}
         >
@@ -2784,6 +2927,20 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
                 mr: 1,
                 '& .MuiOutlinedInput-notchedOutline': { borderColor: '#252d3d' },
                 '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#374151' },
+              }}
+              MenuProps={{
+                sx: { zIndex: 1400 },
+                PaperProps: {
+                  sx: {
+                    bgcolor: '#1e2536',
+                    border: '1px solid #374151',
+                    '& .MuiMenuItem-root': {
+                      fontSize: 12,
+                      color: '#e5e7eb',
+                      '&:hover': { bgcolor: 'rgba(59, 130, 246, 0.15)' },
+                    },
+                  },
+                },
               }}
             >
               <MenuItem value="number" sx={{ fontSize: 12 }}>Sort: Number</MenuItem>
@@ -3082,67 +3239,70 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
         >
           {/* Top Panel Bar */}
           <Box sx={{ 
-            px: 3, 
-            py: 1.5, 
+            px: isMobile ? 1.5 : 3, 
+            py: isMobile ? 1 : 1.5, 
             borderBottom: '1px solid #1e2536',
             background: 'linear-gradient(180deg, #141a22 0%, #0f1318 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: isMobile ? 'wrap' : 'nowrap',
+            gap: isMobile ? 1 : 0,
           }}>
-            <Stack direction="row" alignItems="center" spacing={2}>
+            <Stack direction="row" alignItems="center" spacing={isMobile ? 1 : 2}>
               <Box sx={{
-                px: 1.5,
+                px: isMobile ? 1 : 1.5,
                 py: 0.5,
                 borderRadius: '6px',
                 bgcolor: readThroughMode ? 'rgba(16,185,129,0.15)' : 'rgba(59,130,246,0.15)',
                 border: readThroughMode ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(59,130,246,0.3)',
               }}>
-                <Typography sx={{ fontSize: 11, fontWeight: 700, color: readThroughMode ? '#10b981' : '#60a5fa', letterSpacing: 1 }}>
-                  {readThroughMode ? 'READ THROUGH' : 'MANUSKRIPT'}
+                <Typography sx={{ fontSize: responsive.bodyFontSize - 1, fontWeight: 700, color: readThroughMode ? '#10b981' : '#60a5fa', letterSpacing: 1 }}>
+                  {readThroughMode ? (isMobile ? 'READ' : 'READ THROUGH') : (isMobile ? 'MANUS' : 'MANUSKRIPT')}
                 </Typography>
               </Box>
-              {selectedScene && !readThroughMode && (
-                <Typography sx={{ fontSize: 13, color: '#6b7280' }}>
+              {selectedScene && !readThroughMode && !isMobile && (
+                <Typography sx={{ fontSize: responsive.bodyFontSize, color: '#6b7280' }}>
                   Scene {selectedScene.sceneNumber} av {scenes.length}
                 </Typography>
               )}
               {readThroughMode && (
                 <>
-                  <Stack direction="row" spacing={1}>
+                  <Stack direction="row" spacing={isMobile ? 0.5 : 1}>
                     <IconButton
                       onClick={handleReadThroughPrevious}
                       disabled={readThroughCurrentLine === 0}
-                      size="small"
-                      sx={{ color: '#6b7280', '&:hover': { color: '#fff' } }}
+                      size={responsive.buttonSize}
+                      sx={{ color: '#6b7280', '&:hover': { color: '#fff' }, p: isMobile ? 0.5 : 1 }}
                     >
-                      <ChevronLeftIcon />
+                      <ChevronLeftIcon sx={{ fontSize: responsive.iconSize }} />
                     </IconButton>
                     <IconButton
                       onClick={handleReadThroughPlay}
-                      size="small"
+                      size={responsive.buttonSize}
                       sx={{ 
                         color: readThroughPlaying ? '#10b981' : '#6b7280',
-                        '&:hover': { color: '#10b981' }
+                        '&:hover': { color: '#10b981' },
+                        p: isMobile ? 0.5 : 1,
                       }}
                     >
-                      {readThroughPlaying ? <PauseIcon /> : <PlayIcon />}
+                      {readThroughPlaying ? <PauseIcon sx={{ fontSize: responsive.iconSize }} /> : <PlayIcon sx={{ fontSize: responsive.iconSize }} />}
                     </IconButton>
                     <IconButton
                       onClick={handleReadThroughNext}
-                      size="small"
-                      sx={{ color: '#6b7280', '&:hover': { color: '#fff' } }}
+                      size={responsive.buttonSize}
+                      sx={{ color: '#6b7280', '&:hover': { color: '#fff' }, p: isMobile ? 0.5 : 1 }}
                     >
-                      <ChevronRightIcon />
+                      <ChevronRightIcon sx={{ fontSize: responsive.iconSize }} />
                     </IconButton>
                   </Stack>
-                  <Typography sx={{ fontSize: 13, color: '#6b7280' }}>
+                  <Typography sx={{ fontSize: responsive.bodyFontSize, color: '#6b7280' }}>
                     Linje {readThroughCurrentLine + 1} av {dialogueLines.length}
                   </Typography>
-                  {readThroughStartTime && (
+                  {readThroughStartTime && !isMobile && (
                     <Stack direction="row" spacing={1} alignItems="center">
-                      <TimerIcon sx={{ fontSize: 16, color: '#6b7280' }} />
-                      <Typography sx={{ fontSize: 13, color: '#6b7280' }}>
+                      <TimerIcon sx={{ fontSize: responsive.iconSize - 4, color: '#6b7280' }} />
+                      <Typography sx={{ fontSize: responsive.bodyFontSize, color: '#6b7280' }}>
                         {Math.floor((Date.now() - readThroughStartTime) / 60000)}:{String(Math.floor(((Date.now() - readThroughStartTime) % 60000) / 1000)).padStart(2, '0')}
                       </Typography>
                     </Stack>
@@ -3150,108 +3310,113 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
                 </>
               )}
             </Stack>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Typography sx={{ fontSize: 11, color: '#4b5563' }}>
-                {Math.round(manuscriptZoom * 100)}%
-              </Typography>
+            <Stack direction="row" spacing={isMobile ? 0.5 : 1} alignItems="center">
+              {!isMobile && (
+                <Typography sx={{ fontSize: responsive.bodyFontSize - 2, color: '#4b5563' }}>
+                  {Math.round(manuscriptZoom * 100)}%
+                </Typography>
+              )}
               <Tooltip title="Zoom inn">
                 <IconButton 
-                  size="small" 
+                  size={responsive.buttonSize}
                   onClick={handleManuscriptZoomIn}
                   disabled={manuscriptZoom >= 2}
-                  sx={{ color: '#6b7280', '&:hover': { color: '#fff' }, '&.Mui-disabled': { color: '#374151' } }}
+                  sx={{ color: '#6b7280', '&:hover': { color: '#fff' }, '&.Mui-disabled': { color: '#374151' }, p: isMobile ? 0.5 : 1 }}
                 >
-                  <ZoomInIcon sx={{ fontSize: 18 }} />
+                  <ZoomInIcon sx={{ fontSize: responsive.iconSize }} />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Zoom ut">
                 <IconButton 
-                  size="small" 
+                  size={responsive.buttonSize}
                   onClick={handleManuscriptZoomOut}
                   disabled={manuscriptZoom <= 0.5}
-                  sx={{ color: '#6b7280', '&:hover': { color: '#fff' }, '&.Mui-disabled': { color: '#374151' } }}
+                  sx={{ color: '#6b7280', '&:hover': { color: '#fff' }, '&.Mui-disabled': { color: '#374151' }, p: isMobile ? 0.5 : 1 }}
                 >
-                  <ZoomOutIcon sx={{ fontSize: 18 }} />
+                  <ZoomOutIcon sx={{ fontSize: responsive.iconSize }} />
                 </IconButton>
               </Tooltip>
               <Tooltip title={isManuscriptFullscreen ? "Avslutt fullskjerm" : "Fullskjerm"}>
                 <IconButton 
-                  size="small" 
+                  size={responsive.buttonSize}
                   onClick={handleManuscriptFullscreen}
                   sx={{ 
                     color: isManuscriptFullscreen ? '#3b82f6' : '#6b7280', 
-                    '&:hover': { color: '#fff' } 
+                    '&:hover': { color: '#fff' },
+                    p: isMobile ? 0.5 : 1,
                   }}
                 >
-                  <FullscreenIcon sx={{ fontSize: 18 }} />
+                  <FullscreenIcon sx={{ fontSize: responsive.iconSize }} />
                 </IconButton>
               </Tooltip>
             </Stack>
           </Box>
 
           {/* Manuscript Content */}
-          <Box sx={{ flex: 1, overflow: 'auto', p: 4, '&::-webkit-scrollbar': { width: 8 }, '&::-webkit-scrollbar-thumb': { bgcolor: '#374151', borderRadius: 4 } }}>
+          <Box sx={{ flex: 1, overflow: 'auto', p: isMobile ? 1.5 : 4, '&::-webkit-scrollbar': { width: 8 }, '&::-webkit-scrollbar-thumb': { bgcolor: '#374151', borderRadius: 4 } }}>
             {selectedScene ? (
               <Box sx={{ 
-                maxWidth: 900 * manuscriptZoom, 
+                maxWidth: isMobile ? '100%' : 900 * manuscriptZoom, 
                 mx: 'auto',
                 bgcolor: '#1a2230',
-                borderRadius: '16px',
+                borderRadius: isMobile ? '12px' : '16px',
                 border: '1px solid #252d3d',
                 overflow: 'hidden',
-                transform: `scale(${manuscriptZoom})`,
+                transform: isMobile ? 'none' : `scale(${manuscriptZoom})`,
                 transformOrigin: 'top center',
               }}>
                 {/* Scene Header Card */}
                 <Box sx={{
-                  p: 3,
+                  p: isMobile ? 2 : 3,
                   background: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(139,92,246,0.1) 100%)',
                   borderBottom: '1px solid #252d3d',
                 }}>
-                  <Stack direction="row" spacing={2} alignItems="flex-start">
+                  <Stack direction="row" spacing={isMobile ? 1.5 : 2} alignItems="flex-start">
                     {/* Scene number badge */}
                     <Box sx={{
-                      width: 64,
-                      height: 64,
-                      borderRadius: '12px',
+                      width: isMobile ? 48 : 64,
+                      height: isMobile ? 48 : 64,
+                      borderRadius: isMobile ? '10px' : '12px',
                       bgcolor: '#3b82f6',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
                       boxShadow: '0 4px 15px rgba(59,130,246,0.4)',
+                      flexShrink: 0,
                     }}>
-                      <Typography sx={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>SCENE</Typography>
-                      <Typography sx={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>{selectedScene.sceneNumber}</Typography>
+                      <Typography sx={{ fontSize: isMobile ? 8 : 10, color: 'rgba(255,255,255,0.87)', fontWeight: 600 }}>SCENE</Typography>
+                      <Typography sx={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, color: '#fff' }}>{selectedScene.sceneNumber}</Typography>
                     </Box>
                     
                     {/* Scene details */}
-                    <Box sx={{ flex: 1 }}>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography sx={{
-                        fontSize: 24,
+                        fontSize: isMobile ? 16 : 24,
                         fontWeight: 700,
                         color: '#fff',
                         mb: 1,
                         fontFamily: 'Courier New, monospace',
+                        wordBreak: 'break-word',
                       }}>
                         {selectedScene.intExt}. {selectedScene.locationName}
                       </Typography>
                       
-                      <Stack direction="row" spacing={1} flexWrap="wrap">
+                      <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ gap: 0.5 }}>
                         <Box sx={{
-                          px: 1.5, py: 0.5, borderRadius: '6px',
+                          px: isMobile ? 1 : 1.5, py: 0.5, borderRadius: '6px',
                           bgcolor: selectedScene.intExt === 'INT' ? 'rgba(168,85,247,0.2)' : 'rgba(34,197,94,0.2)',
                           border: selectedScene.intExt === 'INT' ? '1px solid rgba(168,85,247,0.4)' : '1px solid rgba(34,197,94,0.4)',
                         }}>
                           <Stack direction="row" spacing={0.5} alignItems="center">
-                            {selectedScene.intExt === 'INT' ? <HomeIcon sx={{ fontSize: 14, color: '#c084fc' }} /> : <ParkIcon sx={{ fontSize: 14, color: '#4ade80' }} />}
-                            <Typography sx={{ fontSize: 11, fontWeight: 600, color: selectedScene.intExt === 'INT' ? '#c084fc' : '#4ade80' }}>
+                            {selectedScene.intExt === 'INT' ? <HomeIcon sx={{ fontSize: isMobile ? 12 : 14, color: '#c084fc' }} /> : <ParkIcon sx={{ fontSize: isMobile ? 12 : 14, color: '#4ade80' }} />}
+                            <Typography sx={{ fontSize: isMobile ? 10 : 11, fontWeight: 600, color: selectedScene.intExt === 'INT' ? '#c084fc' : '#4ade80' }}>
                               {selectedScene.intExt === 'INT' ? 'Interior' : 'Exterior'}
                             </Typography>
                           </Stack>
                         </Box>
                         <Box sx={{
-                          px: 1.5, py: 0.5, borderRadius: '6px',
+                          px: isMobile ? 1 : 1.5, py: 0.5, borderRadius: '6px',
                           bgcolor: 'rgba(251,191,36,0.2)',
                           border: '1px solid rgba(251,191,36,0.4)',
                         }}>
@@ -4003,29 +4168,32 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
             sx={{
               bgcolor: '#0f1318',
               borderTop: '1px solid #1e2536',
+              display: isMobile ? 'none' : 'block', // Hide timeline on mobile
             }}
           >
         {/* Timeline Header - Enhanced */}
         <Box
           sx={{
-            px: 3,
-            py: 1.5,
+            px: isMobile ? 1.5 : 3,
+            py: isMobile ? 1 : 1.5,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             borderBottom: '1px solid #1e2536',
             background: 'linear-gradient(180deg, #141a22 0%, #0f1318 100%)',
+            flexWrap: isTablet ? 'wrap' : 'nowrap',
+            gap: isTablet ? 1 : 0,
           }}
         >
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack direction="row" spacing={isTablet ? 1 : 2} alignItems="center">
             <Box sx={{
-              px: 1.5,
+              px: isTablet ? 1 : 1.5,
               py: 0.5,
               borderRadius: '6px',
               bgcolor: 'rgba(139,92,246,0.15)',
               border: '1px solid rgba(139,92,246,0.3)',
             }}>
-              <Typography sx={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', letterSpacing: 1 }}>
+              <Typography sx={{ fontSize: responsive.bodyFontSize - 2, fontWeight: 700, color: '#a78bfa', letterSpacing: 1 }}>
                 TIMELINE
               </Typography>
             </Box>
@@ -4034,97 +4202,108 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
             <Stack direction="row" spacing={0.5}>
               <Tooltip title={timelineIsPlaying ? "Pause" : "Play"}>
                 <IconButton
-                  size="small"
+                  size={responsive.buttonSize}
                   onClick={handleTimelinePlay}
                   sx={{
                     color: timelineIsPlaying ? '#10b981' : '#6b7280',
                     bgcolor: timelineIsPlaying ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)',
                     '&:hover': { bgcolor: 'rgba(16,185,129,0.2)' },
+                    p: isTablet ? 0.5 : 1,
                   }}
                 >
-                  {timelineIsPlaying ? <PauseIcon sx={{ fontSize: 16 }} /> : <PlayIcon sx={{ fontSize: 16 }} />}
+                  {timelineIsPlaying ? <PauseIcon sx={{ fontSize: responsive.iconSize - 4 }} /> : <PlayIcon sx={{ fontSize: responsive.iconSize - 4 }} />}
                 </IconButton>
               </Tooltip>
               <Tooltip title="Zoom inn">
                 <IconButton
-                  size="small"
+                  size={responsive.buttonSize}
                   onClick={handleTimelineZoomIn}
                   disabled={timelineZoom >= 4}
                   sx={{
                     color: '#6b7280',
                     '&:hover': { color: '#3b82f6' },
                     '&:disabled': { color: '#374151' },
+                    p: isTablet ? 0.5 : 1,
                   }}
                 >
-                  <ZoomInIcon sx={{ fontSize: 16 }} />
+                  <ZoomInIcon sx={{ fontSize: responsive.iconSize - 4 }} />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Zoom ut">
                 <IconButton
-                  size="small"
+                  size={responsive.buttonSize}
                   onClick={handleTimelineZoomOut}
                   disabled={timelineZoom <= 0.5}
                   sx={{
                     color: '#6b7280',
                     '&:hover': { color: '#3b82f6' },
                     '&:disabled': { color: '#374151' },
+                    p: isTablet ? 0.5 : 1,
                   }}
                 >
-                  <ZoomOutIcon sx={{ fontSize: 16 }} />
+                  <ZoomOutIcon sx={{ fontSize: responsive.iconSize - 4 }} />
                 </IconButton>
               </Tooltip>
-              <Typography sx={{ fontSize: 11, color: '#6b7280', px: 1, display: 'flex', alignItems: 'center' }}>
-                {timelineZoom}x
-              </Typography>
+              {!isTablet && (
+                <Typography sx={{ fontSize: responsive.bodyFontSize - 2, color: '#6b7280', px: 1, display: 'flex', alignItems: 'center' }}>
+                  {timelineZoom}x
+                </Typography>
+              )}
             </Stack>
             
-            <Typography sx={{ fontSize: 12, color: '#6b7280' }}>
-              {timelineData.blocks.length} shots • {scenes.length} scener
-            </Typography>
-          </Stack>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Box sx={{
-              px: 1.5,
-              py: 0.5,
-              borderRadius: '6px',
-              bgcolor: 'rgba(234,179,8,0.15)',
-              border: '1px solid rgba(234,179,8,0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-            }}>
-              <WarningIcon sx={{ fontSize: 14, color: '#fbbf24' }} />
-              <Typography sx={{ fontSize: 11, fontWeight: 600, color: '#fcd34d' }}>
-                Overtid: +{getOvertimeDuration()}
+            {!isTablet && (
+              <Typography sx={{ fontSize: responsive.bodyFontSize, color: '#6b7280' }}>
+                {timelineData.blocks.length} shots • {scenes.length} scener
               </Typography>
-            </Box>
-            <Typography sx={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>
+            )}
+          </Stack>
+          <Stack direction="row" spacing={isTablet ? 0.5 : 1} alignItems="center">
+            {!isTablet && (
+              <Box sx={{
+                px: 1.5,
+                py: 0.5,
+                borderRadius: '6px',
+                bgcolor: 'rgba(234,179,8,0.15)',
+                border: '1px solid rgba(234,179,8,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+              }}>
+                <WarningIcon sx={{ fontSize: 14, color: '#fbbf24' }} />
+                <Typography sx={{ fontSize: responsive.bodyFontSize - 2, fontWeight: 600, color: '#fcd34d' }}>
+                  Overtid: +{getOvertimeDuration()}
+                </Typography>
+              </Box>
+            )}
+            <Typography sx={{ fontSize: responsive.bodyFontSize + 1, fontWeight: 700, color: '#fff' }}>
               {formatTime(getTotalDuration())}
             </Typography>
             <Tooltip title={timelineViewMode === 'grid' ? "Grid view aktiv" : "Grid view"}>
               <IconButton 
-                size="small" 
+                size={responsive.buttonSize}
                 onClick={() => handleTimelineViewChange('grid')}
                 sx={{ 
                   color: timelineViewMode === 'grid' ? '#3b82f6' : '#6b7280', 
                   bgcolor: timelineViewMode === 'grid' ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.05)',
-                  '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.1)' } 
+                  '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.1)' },
+                  p: isTablet ? 0.5 : 1,
                 }}
               >
-                <GridViewIcon sx={{ fontSize: 16 }} />
+                <GridViewIcon sx={{ fontSize: responsive.iconSize - 4 }} />
               </IconButton>
             </Tooltip>
             <Tooltip title={timelineViewMode === 'list' ? "List view aktiv" : "List view"}>
               <IconButton 
-                size="small"
+                size={responsive.buttonSize}
                 onClick={() => handleTimelineViewChange('list')}
                 sx={{ 
                   color: timelineViewMode === 'list' ? '#3b82f6' : '#6b7280', 
                   bgcolor: timelineViewMode === 'list' ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.05)',
-                  '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.1)' } 
+                  '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.1)' },
+                  p: isTablet ? 0.5 : 1,
                 }}
               >
-                <ViewListIcon sx={{ fontSize: 16 }} />
+                <ViewListIcon sx={{ fontSize: responsive.iconSize - 4 }} />
               </IconButton>
             </Tooltip>
           </Stack>
@@ -4749,6 +4928,7 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
                           '&.Mui-focused': { borderColor: '#3b82f6' },
                         }}
                         MenuProps={{
+                          sx: { zIndex: 1400 },
                           PaperProps: {
                             sx: {
                               bgcolor: '#1e2536',
@@ -4814,6 +4994,7 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
                           '&.Mui-focused': { borderColor: '#8b5cf6' },
                         }}
                         MenuProps={{
+                          sx: { zIndex: 1400 },
                           PaperProps: {
                             sx: {
                               bgcolor: '#1e2536',
@@ -4881,6 +5062,7 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
                           '&.Mui-focused': { borderColor: '#f97316' },
                         }}
                         MenuProps={{
+                          sx: { zIndex: 1400 },
                           PaperProps: {
                             sx: {
                               bgcolor: '#1e2536',
@@ -4946,6 +5128,7 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
                           '&.Mui-focused': { borderColor: '#10b981' },
                         }}
                         MenuProps={{
+                          sx: { zIndex: 1400 },
                           PaperProps: {
                             sx: {
                               bgcolor: '#1e2536',
@@ -6034,14 +6217,9 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
                 if (scene) scrollToScene(scene);
                 setShowStripboardPanel(false);
               }}
-              onGenerateCallSheet={async (dayId) => {
-                try {
-                  const callSheet = await productionWorkflowService.generateCallSheet(dayId);
-                  setCurrentCallSheet(callSheet);
-                  setShowCallSheetPreview(true);
-                } catch (error) {
-                  console.error('Failed to generate call sheet:', error);
-                }
+              onGenerateCallSheet={(dayId) => {
+                // Open the Call Sheet preview with the new CallSheetGenerator component
+                setShowCallSheetPreview(true);
               }}
             />
           </Box>
@@ -6086,14 +6264,9 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
               onDaySelect={(dayId) => {
                 console.log('Day selected:', dayId);
               }}
-              onGenerateCallSheet={async (dayId) => {
-                try {
-                  const callSheet = await productionWorkflowService.generateCallSheet(dayId);
-                  setCurrentCallSheet(callSheet);
-                  setShowCallSheetPreview(true);
-                } catch (error) {
-                  console.error('Failed to generate call sheet:', error);
-                }
+              onGenerateCallSheet={(dayId) => {
+                // Open the Call Sheet preview with the new CallSheetGenerator component
+                setShowCallSheetPreview(true);
               }}
             />
           </Box>
@@ -6190,12 +6363,13 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
       <Dialog
         open={showCallSheetPreview}
         onClose={() => setShowCallSheetPreview(false)}
-        maxWidth="lg"
+        maxWidth="xl"
         fullWidth
         PaperProps={{
           sx: {
-            bgcolor: '#fff',
-            minHeight: '80vh',
+            bgcolor: '#f8fafc',
+            minHeight: '90vh',
+            maxHeight: '95vh',
           },
         }}
       >
@@ -6203,43 +6377,26 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center',
-          borderBottom: '1px solid #e0e0e0',
+          borderBottom: '1px solid #e5e7eb',
+          bgcolor: '#fff',
+          py: 1.5,
         }}>
-          <Typography variant="h6">
-            <Stack direction="row" spacing={1} alignItems="center" component="span"><CallSheetIcon sx={{ color: '#3b82f6' }} /> Call Sheet Preview - {currentCallSheet?.projectTitle || 'TROLL'}</Stack>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: '#1a1a1a' }}>
+            <Stack direction="row" spacing={1} alignItems="center" component="span">
+              <CallSheetIcon sx={{ color: '#0369a1' }} /> 
+              Call Sheet Preview - TROLL
+            </Stack>
           </Typography>
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant="outlined"
-              startIcon={<PrintIcon />}
-              onClick={() => {
-                if (currentCallSheet) {
-                  downloadCallSheetPDF(currentCallSheet, DEFAULT_CALL_SHEET_OPTIONS);
-                }
-              }}
-            >
-              Skriv ut / PDF
-            </Button>
-            <IconButton onClick={() => setShowCallSheetPreview(false)}>
-              <CloseIcon />
-            </IconButton>
-          </Stack>
+          <IconButton onClick={() => setShowCallSheetPreview(false)} sx={{ color: '#4a4a4a' }}>
+            <CloseIcon />
+          </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ p: 0 }}>
-          {currentCallSheet && (
-            <Box
-              dangerouslySetInnerHTML={{
-                __html: generateCallSheetHTML(currentCallSheet, DEFAULT_CALL_SHEET_OPTIONS)
-              }}
-              sx={{
-                width: '100%',
-                height: '100%',
-                overflow: 'auto',
-                bgcolor: '#fff',
-                '& body': { margin: 0, padding: '20px' },
-              }}
+        <DialogContent sx={{ p: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ flex: 1, overflow: 'auto', p: { xs: 1, sm: 2, md: 3 } }}>
+            <CallSheetGenerator
+              projectId={projectId}
             />
-          )}
+          </Box>
         </DialogContent>
       </Dialog>
 
@@ -6326,45 +6483,52 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
       {/* Talent Panel Drawer */}
       <Drawer
         anchor="right"
-        open={showTalentPanel}
-        onClose={() => setShowTalentPanel(false)}
+        open={showTalentPanel || (isMobile && mobileRightPanelOpen)}
+        onClose={() => {
+          setShowTalentPanel(false);
+          setMobileRightPanelOpen(false);
+        }}
         PaperProps={{
           sx: {
-            width: 400,
+            width: isMobile ? '85vw' : Math.min(400, responsive.rightPanelWidth),
+            maxWidth: isMobile ? '100vw' : responsive.rightPanelWidth,
             bgcolor: '#1a1f2e',
             borderLeft: '1px solid #2a3142',
           },
         }}
       >
-        <Box sx={{ p: 3 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-            <Typography sx={{ fontSize: 18, fontWeight: 600, color: '#fff' }}>
+        <Box sx={{ p: isMobile ? 2 : 3 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: isMobile ? 2 : 3 }}>
+            <Typography sx={{ fontSize: isMobile ? 16 : 18, fontWeight: 600, color: '#fff' }}>
               Cast & Talent
             </Typography>
             <IconButton
-              onClick={() => setShowTalentPanel(false)}
-              size="small"
+              onClick={() => {
+                setShowTalentPanel(false);
+                setMobileRightPanelOpen(false);
+              }}
+              size={responsive.buttonSize}
               sx={{ color: '#6b7280', '&:hover': { color: '#fff' } }}
             >
-              <CloseIcon />
+              <CloseIcon sx={{ fontSize: responsive.iconSize }} />
             </IconButton>
           </Stack>
 
           {selectedScene && (
-            <Box sx={{ mb: 3, p: 2, bgcolor: '#0f1318', borderRadius: '12px', border: '1px solid #2a3142' }}>
-              <Typography sx={{ fontSize: 12, color: '#6b7280', mb: 1 }}>
+            <Box sx={{ mb: isMobile ? 2 : 3, p: isMobile ? 1.5 : 2, bgcolor: '#0f1318', borderRadius: '12px', border: '1px solid #2a3142' }}>
+              <Typography sx={{ fontSize: isMobile ? 11 : 12, color: '#6b7280', mb: 1 }}>
                 SCENE {selectedScene.sceneNumber}
               </Typography>
-              <Typography sx={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>
+              <Typography sx={{ fontSize: isMobile ? 13 : 14, color: '#fff', fontWeight: 500 }}>
                 {selectedScene.intExt}. {selectedScene.locationName}
               </Typography>
-              <Typography sx={{ fontSize: 12, color: '#9ca3af', mt: 0.5 }}>
+              <Typography sx={{ fontSize: isMobile ? 11 : 12, color: '#9ca3af', mt: 0.5 }}>
                 {selectedScene.characters?.length || 0} karakterer
               </Typography>
             </Box>
           )}
 
-          <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#6b7280', mb: 2, letterSpacing: 1 }}>
+          <Typography sx={{ fontSize: isMobile ? 11 : 12, fontWeight: 700, color: '#6b7280', mb: 2, letterSpacing: 1 }}>
             CONFIRMED CAST ({sceneCandidates.length})
           </Typography>
 
@@ -7889,7 +8053,7 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
 };
 
 // Helper component for detail rows (memoized)
-const DetailRow: React.FC<{ icon: string; label: string }> = React.memo(({ icon, label }) => (
+const DetailRow: FC<{ icon: string; label: string }> = memo(({ icon, label }) => (
   <Box
     sx={{
       display: 'flex',
@@ -7911,7 +8075,7 @@ const DetailRow: React.FC<{ icon: string; label: string }> = React.memo(({ icon,
 
 // Interactive editable detail row component
 interface EditableDetailRowProps {
-  icon: React.ReactNode;
+  icon: ReactNode;
   value: string;
   field: string;
   isEditing: boolean;
@@ -7923,7 +8087,7 @@ interface EditableDetailRowProps {
   options: string[];
 }
 
-const EditableDetailRow: React.FC<EditableDetailRowProps> = ({
+const EditableDetailRow: FC<EditableDetailRowProps> = ({
   icon,
   value,
   isEditing,
@@ -8067,7 +8231,7 @@ const EditableDetailRow: React.FC<EditableDetailRowProps> = ({
 };
 
 // New Scene Dialog
-const NewSceneDialog: React.FC<{
+const NewSceneDialog: FC<{
   open: boolean;
   onClose: () => void;
   onCreate: () => void;
@@ -8110,7 +8274,7 @@ const NewSceneDialog: React.FC<{
 );
 
 // Delete Confirmation Dialog
-const DeleteConfirmDialog: React.FC<{
+const DeleteConfirmDialog: FC<{
   open: boolean;
   onClose: () => void;
   onConfirm: () => void;

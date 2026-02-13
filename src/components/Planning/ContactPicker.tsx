@@ -146,6 +146,9 @@ export const ContactPicker: React.FC<ContactPickerProps> = ({
               getOptionLabel={(o: Contact) => o?.displayName || o?.email || ''}
               onInputChange={(_, val) => setContactQuery(val)}
               onChange={(_, val) => onContactSelect(val)}
+              slotProps={{
+                popper: { sx: { zIndex: 1400 } }
+              }}
               renderInput={(params) => (
                 <TextField
                   {...params}

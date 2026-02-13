@@ -11,7 +11,7 @@
  * - Blink animation support
  */
 
-import React, { useMemo, useRef, useEffect, useState } from 'react';
+import { useMemo, useRef, useEffect, useState, type FC } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { EyeAnimationController, EYE_ANIMATION_PRESETS, EyeAnimationConfig } from '../../core/animations/EyeAnimations';
@@ -280,7 +280,7 @@ function calculateGazeDirection(
 // Catchlight Shape Geometry Component
 // =============================================================================
 
-const CatchlightShape: React.FC<{
+const CatchlightShape: FC<{
   catchlight: CatchlightData;
   irisRadius: number;
   eyeRadius: number;
@@ -343,7 +343,7 @@ const CatchlightShape: React.FC<{
 // Single Eye Component
 // =============================================================================
 
-const Eye: React.FC<EyeProps> = ({
+const Eye: FC<EyeProps> = ({
   position,
   gazeDirection,
   irisColor,
@@ -480,7 +480,7 @@ const Eye: React.FC<EyeProps> = ({
 // Eye System Component (Both Eyes)
 // =============================================================================
 
-export const EyeSystem: React.FC<EyeSystemProps> = ({
+export const EyeSystem: FC<EyeSystemProps> = ({
   position,
   height = 1.7,
   gazeTarget,
@@ -654,9 +654,9 @@ export interface UseEyeMovementOptions {
 export function useEyeMovement(options: UseEyeMovementOptions = {}) {
   const { autoLook = false, followMouse = false, blinkInterval = 4000 } = options;
   
-  const [gazeTarget, setGazeTarget] = React.useState<[number, number, number]>([0, 1.6, 5]);
-  const [blinkState, setBlinkState] = React.useState(0);
-  const [pupilDilation, setPupilDilation] = React.useState(0.5);
+  const [gazeTarget, setGazeTarget] = useState<[number, number, number]>([0, 1.6, 5]);
+  const [blinkState, setBlinkState] = useState(0);
+  const [pupilDilation, setPupilDilation] = useState(0.5);
   
   // Auto blink
   useEffect(() => {
@@ -731,7 +731,7 @@ export interface CatchlightPreviewProps {
   showGuides?: boolean;
 }
 
-export const CatchlightPreview: React.FC<CatchlightPreviewProps> = ({
+export const CatchlightPreview: FC<CatchlightPreviewProps> = ({
   subjectPosition,
   subjectHeight = 1.7,
   lightSources,

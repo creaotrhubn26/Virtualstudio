@@ -1335,7 +1335,7 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
                     }}
                   >
                     <AccordionSummary
-                      expandIcon={<ExpandMore sx={{ color: 'rgba(255,255,255,0.7)', fontSize: 28, transition: 'transform 0.2s' }} />}
+                      expandIcon={<ExpandMore sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 28, transition: 'transform 0.2s' }} />}
                       sx={{
                         minHeight: 64,
                         px: 3,
@@ -1495,7 +1495,7 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
 
             <Stack direction={isLandscape ? 'row' : 'column'} spacing={2}>
               <FormControl fullWidth disabled={modelLoading}>
-                <InputLabel sx={{ color: 'rgba(255,255,255,0.7)', fontSize: fontSizeSmall, fontWeight: 500 }}>Kvalitet</InputLabel>
+                <InputLabel sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSizeSmall, fontWeight: 500 }}>Kvalitet</InputLabel>
                 <Select
                   value={modelQuality}
                   label="Kvalitet"
@@ -1521,7 +1521,7 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
                       borderWidth: 3,
                       boxShadow: '0 0 0 2px rgba(139,92,246,0.3)',
                     },
-                    '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.7)', fontSize: isLandscape ? 36 : 32 },
+                    '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.87)', fontSize: isLandscape ? 36 : 32 },
                     '& .MuiSelect-select': {
                       py: isLandscape ? 1.5 : 2,
                       px: 2,
@@ -1562,7 +1562,7 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
               </FormControl>
 
               <FormControl fullWidth disabled={modelLoading}>
-                <InputLabel sx={{ color: 'rgba(255,255,255,0.7)', fontSize: fontSizeSmall, fontWeight: 500 }}>Kategori</InputLabel>
+                <InputLabel sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSizeSmall, fontWeight: 500 }}>Kategori</InputLabel>
                 <Select
                   value={modelCategory}
                   label="Kategori"
@@ -1588,7 +1588,7 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
                       borderWidth: 3,
                       boxShadow: '0 0 0 2px rgba(139,92,246,0.3)',
                     },
-                    '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.7)', fontSize: isLandscape ? 36 : 32 },
+                    '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.87)', fontSize: isLandscape ? 36 : 32 },
                     '& .MuiSelect-select': {
                       py: isLandscape ? 1.5 : 2,
                       px: 2,
@@ -1736,7 +1736,7 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
                         }}
                       >
                         <AccordionSummary
-                          expandIcon={<ExpandMore sx={{ color: 'rgba(255,255,255,0.7)', fontSize: 28, transition: 'transform 0.2s' }} />}
+                          expandIcon={<ExpandMore sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 28, transition: 'transform 0.2s' }} />}
                           sx={{
                             minHeight: 64,
                             px: 3,
@@ -1945,7 +1945,7 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
                   },
                   '&:disabled': {
                     bgcolor: 'rgba(255,255,255,0.1)',
-                    color: 'rgba(255,255,255,0.3)',
+                    color: 'rgba(255,255,255,0.6)',
                   },
                   transition: 'all 0.2s',
               }}
@@ -2002,7 +2002,7 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
                   },
                   '&:disabled': {
                     bgcolor: 'rgba(255,255,255,0.1)',
-                    color: 'rgba(255,255,255,0.3)',
+                    color: 'rgba(255,255,255,0.6)',
                   },
                   transition: 'all 0.2s',
               }}
@@ -2059,7 +2059,7 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
                 },
                 '&:disabled': { 
                   bgcolor: 'rgba(255,255,255,0.1)',
-                  color: 'rgba(255,255,255,0.3)',
+                  color: 'rgba(255,255,255,0.6)',
                   boxShadow: 'none',
                 },
                 transition: 'all 0.2s',

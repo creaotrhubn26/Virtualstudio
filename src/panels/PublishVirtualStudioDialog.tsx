@@ -451,6 +451,7 @@ export const PublishVirtualStudioDialog: React.FC<PublishVirtualStudioDialogProp
                 value={difficultyLevel}
                 onChange={(e) => setDifficultyLevel(e.target.value)}
                 label="Difficulty Level"
+                MenuProps={{ sx: { zIndex: 1400 } }}
               >
                 <MenuItem value="beginner">Beginner - Easy to set up</MenuItem>
                 <MenuItem value="intermediate">Intermediate - Some experience needed</MenuItem>

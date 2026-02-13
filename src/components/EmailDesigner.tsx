@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, type ChangeEvent, type MouseEvent, type ReactNode } from 'react';
 import { useEditor, EditorContent, Extension } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -223,7 +223,7 @@ const BRAND_COLORS = {
 };
 
 const TEMPLATE_TYPE_CONFIG: Record<string, { 
-  icon: React.ReactNode; 
+  icon: ReactNode; 
   color: string; 
   bgColor: string;
   label: string;
@@ -485,7 +485,7 @@ export function EmailDesigner({
   const [headerLogoUrl, setHeaderLogoUrl] = useState(CASTING_PLANNER_LOGO_URL);
   const [headerTagline, setHeaderTagline] = useState('Profesjonell Casting Management');
   const [logoUploading, setLogoUploading] = useState(false);
-  const logoInputRef = React.useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   
   const editor = useEditor({
     extensions: [
@@ -516,7 +516,7 @@ export function EmailDesigner({
 
   // Validate project variables and show toast for missing data
   // Track last validated state using missing keys signature
-  const lastValidationRef = React.useRef<string>('');
+  const lastValidationRef = useRef<string>('');
   
   useEffect(() => {
     const missingVars = AVAILABLE_VARIABLES.filter(
@@ -667,7 +667,7 @@ export function EmailDesigner({
     toast.showSuccess('Mal lastet');
   }, [editor, toast]);
 
-  const handleLogoUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -717,7 +717,7 @@ export function EmailDesigner({
   }, [subject, body, previewMode, headerLogoUrl, headerTagline]);
 
   const toolbarButtonStyle = {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.87)',
     minWidth: iconButtonSize,
     minHeight: iconButtonSize,
     '&:hover': {
@@ -754,7 +754,7 @@ export function EmailDesigner({
             <Typography sx={{ fontWeight: 600, color: '#fff', fontSize: fontSize.title }}>
               E-postdesigner
             </Typography>
-            <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: fontSize.caption }}>
+            <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSize.caption }}>
               {lastSaved 
                 ? `Sist lagret: ${lastSaved.toLocaleTimeString('nb-NO')}`
                 : 'Ikke lagret ennå'}
@@ -880,7 +880,7 @@ export function EmailDesigner({
                 size="small" 
                 onClick={() => setTemplatePanelCollapsed(!templatePanelCollapsed)}
                 sx={{ 
-                  color: 'rgba(255,255,255,0.6)',
+                  color: 'rgba(255,255,255,0.87)',
                   '&:hover': { 
                     color: BRAND_COLORS.primary,
                     bgcolor: 'rgba(139, 92, 246, 0.1)',
@@ -970,7 +970,7 @@ export function EmailDesigner({
                 }}
                 sx={{
                   mt: 2,
-                  color: 'rgba(255,255,255,0.6)',
+                  color: 'rgba(255,255,255,0.87)',
                   borderColor: 'rgba(255,255,255,0.2)',
                   border: '1px dashed rgba(255,255,255,0.2)',
                   borderRadius: 2,
@@ -1049,11 +1049,11 @@ export function EmailDesigner({
                       '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.4)' },
                       '&.Mui-focused fieldset': { borderColor: BRAND_COLORS.primary },
                     },
-                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.6)', fontSize: fontSize.body },
+                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body },
                   }}
                 />
                 <FormControl size={isMobile ? 'medium' : 'small'} sx={{ minWidth: isMobile ? '100%' : 150 }}>
-                  <InputLabel sx={{ color: 'rgba(255,255,255,0.6)', fontSize: fontSize.body }}>Type</InputLabel>
+                  <InputLabel sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body }}>Type</InputLabel>
                   <Select
                     value={templateType}
                     label="Type"
@@ -1096,7 +1096,7 @@ export function EmailDesigner({
                     '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.4)' },
                     '&.Mui-focused fieldset': { borderColor: BRAND_COLORS.primary },
                   },
-                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.6)', fontSize: fontSize.body },
+                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body },
                 }}
               />
 
@@ -1108,7 +1108,7 @@ export function EmailDesigner({
                 p: spacing,
                 bgcolor: 'rgba(139, 92, 246, 0.05)',
               }}>
-                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600, mb: 1.5, display: 'block', fontSize: fontSize.caption }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontWeight: 600, mb: 1.5, display: 'block', fontSize: fontSize.caption }}>
                   Topptekst (Header)
                 </Typography>
                 <Stack spacing={1.5}>
@@ -1128,8 +1128,8 @@ export function EmailDesigner({
                           '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                           '&.Mui-focused fieldset': { borderColor: BRAND_COLORS.primary },
                         },
-                        '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.5)' },
-                        '& .MuiFormHelperText-root': { color: 'rgba(255,255,255,0.4)' },
+                        '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
+                        '& .MuiFormHelperText-root': { color: 'rgba(255,255,255,0.87)' },
                       }}
                     />
                     <input
@@ -1152,7 +1152,7 @@ export function EmailDesigner({
                             borderColor: BRAND_COLORS.primary,
                           },
                           '&.Mui-disabled': {
-                            color: 'rgba(255,255,255,0.3)',
+                            color: 'rgba(255,255,255,0.87)',
                           },
                         }}
                       >
@@ -1178,7 +1178,7 @@ export function EmailDesigner({
                         '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                         '&.Mui-focused fieldset': { borderColor: BRAND_COLORS.primary },
                       },
-                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.5)' },
+                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                     }}
                   />
                   <Button
@@ -1189,7 +1189,7 @@ export function EmailDesigner({
                       setHeaderTagline('Profesjonell Casting Management');
                     }}
                     sx={{ 
-                      color: 'rgba(255,255,255,0.5)', 
+                      color: 'rgba(255,255,255,0.87)', 
                       alignSelf: 'flex-start',
                       minHeight: buttonMinHeight,
                       fontSize: fontSize.button,
@@ -1283,10 +1283,10 @@ export function EmailDesigner({
             <Tooltip title="Sett inn variabel">
               <Button
                 startIcon={<VariableIcon />}
-                onClick={(e: React.MouseEvent<HTMLButtonElement>) => setVariableMenuAnchor(e.currentTarget)}
+                onClick={(e: MouseEvent<HTMLButtonElement>) => setVariableMenuAnchor(e.currentTarget)}
                 size="small"
                 sx={{ 
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'rgba(255,255,255,0.87)',
                   '&:hover': { color: BRAND_COLORS.primary }
                 }}
               >
@@ -1326,7 +1326,7 @@ export function EmailDesigner({
               '& li': { marginBottom: 4 },
               '& .is-empty::before': {
                 content: 'attr(data-placeholder)',
-                color: 'rgba(255,255,255,0.3)',
+                color: 'rgba(255,255,255,0.87)',
                 float: 'left',
                 height: 0,
                 pointerEvents: 'none',
@@ -1357,7 +1357,7 @@ export function EmailDesigner({
               p: 1.5,
               borderBottom: '1px solid rgba(255,255,255,0.1)',
             }}>
-              <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+              <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                 Forhåndsvisning
               </Typography>
               <ToggleButtonGroup
@@ -1366,12 +1366,12 @@ export function EmailDesigner({
                 onChange={(_, value) => value && setPreviewMode(value)}
                 size="small"
               >
-                <ToggleButton value="desktop" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                <ToggleButton value="desktop" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   <Tooltip title="Desktop">
                     <DesktopIcon fontSize="small" />
                   </Tooltip>
                 </ToggleButton>
-                <ToggleButton value="mobile" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                <ToggleButton value="mobile" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   <Tooltip title="Mobil">
                     <MobileIcon fontSize="small" />
                   </Tooltip>
@@ -1436,7 +1436,7 @@ export function EmailDesigner({
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <FolderIcon sx={{ fontSize: 18, color: BRAND_COLORS.primary }} />
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontWeight: 500 }}>
               Datakilde:
             </Typography>
           </Box>
@@ -1466,7 +1466,7 @@ export function EmailDesigner({
                 <Typography variant="body2" sx={{ fontWeight: 600, color: BRAND_COLORS.primary }}>
                   {`{{${variable.key}}}`}
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   {variable.label}
                 </Typography>
               </Box>
@@ -1522,7 +1522,7 @@ export function EmailDesigner({
                     <Typography 
                       variant="caption" 
                       sx={{ 
-                        color: 'rgba(255,255,255,0.4)',
+                        color: 'rgba(255,255,255,0.87)',
                         fontStyle: 'italic',
                       }}
                     >
@@ -1554,14 +1554,14 @@ export function EmailDesigner({
           Versjonshistorikk
           <IconButton
             onClick={() => setHistoryDialogOpen(false)}
-            sx={{ ml: 'auto', color: 'rgba(255,255,255,0.7)' }}
+            sx={{ ml: 'auto', color: 'rgba(255,255,255,0.87)' }}
           >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
         <DialogContent>
           {versions.length === 0 ? (
-            <Typography sx={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', py: 4 }}>
+            <Typography sx={{ color: 'rgba(255,255,255,0.87)', textAlign: 'center', py: 4 }}>
               Ingen lagrede versjoner ennå. Versjoner lagres automatisk hvert 30. sekund.
             </Typography>
           ) : (
@@ -1581,13 +1581,13 @@ export function EmailDesigner({
                     }}
                   >
                     <ListItemIcon>
-                      <RestoreIcon sx={{ color: 'rgba(255,255,255,0.5)' }} />
+                      <RestoreIcon sx={{ color: 'rgba(255,255,255,0.87)' }} />
                     </ListItemIcon>
                     <ListItemText
                       primary={version.subject || '(Uten emne)'}
                       secondary={version.timestamp.toLocaleString('nb-NO')}
                       primaryTypographyProps={{ sx: { color: '#fff' } }}
-                      secondaryTypographyProps={{ sx: { color: 'rgba(255,255,255,0.5)' } }}
+                      secondaryTypographyProps={{ sx: { color: 'rgba(255,255,255,0.87)' } }}
                     />
                     <Chip
                       label={index === 0 ? 'Nyeste' : `v${versions.length - index}`}
@@ -1623,14 +1623,14 @@ export function EmailDesigner({
           Velg mottakere
           <IconButton
             onClick={() => setRecipientDialogOpen(false)}
-            sx={{ ml: 'auto', color: 'rgba(255,255,255,0.7)' }}
+            sx={{ ml: 'auto', color: 'rgba(255,255,255,0.87)' }}
           >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
         <DialogContent>
           {recipients.length === 0 ? (
-            <Typography sx={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', py: 4 }}>
+            <Typography sx={{ color: 'rgba(255,255,255,0.87)', textAlign: 'center', py: 4 }}>
               Ingen mottakere tilgjengelig
             </Typography>
           ) : (
@@ -1672,7 +1672,7 @@ export function EmailDesigner({
                       primary={recipient.name}
                       secondary={`${recipient.email}${recipient.role ? ` • ${recipient.role}` : ''}`}
                       primaryTypographyProps={{ sx: { color: '#fff' } }}
-                      secondaryTypographyProps={{ sx: { color: 'rgba(255,255,255,0.5)' } }}
+                      secondaryTypographyProps={{ sx: { color: 'rgba(255,255,255,0.87)' } }}
                     />
                     {selectedRecipients.includes(recipient.id) && (
                       <CheckIcon sx={{ color: BRAND_COLORS.primary }} />
@@ -1684,12 +1684,12 @@ export function EmailDesigner({
           )}
         </DialogContent>
         <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-          <Typography variant="body2" sx={{ flex: 1, color: 'rgba(255,255,255,0.5)' }}>
+          <Typography variant="body2" sx={{ flex: 1, color: 'rgba(255,255,255,0.87)' }}>
             {selectedRecipients.length} valgt
           </Typography>
           <Button
             onClick={() => setRecipientDialogOpen(false)}
-            sx={{ color: 'rgba(255,255,255,0.7)' }}
+            sx={{ color: 'rgba(255,255,255,0.87)' }}
           >
             Avbryt
           </Button>
@@ -1729,13 +1729,13 @@ export function EmailDesigner({
           Send e-post
           <IconButton
             onClick={() => setSendOptionsDialogOpen(false)}
-            sx={{ ml: 'auto', color: 'rgba(255,255,255,0.7)' }}
+            sx={{ ml: 'auto', color: 'rgba(255,255,255,0.87)' }}
           >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 3 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 3 }}>
             Velg hvordan du vil sende e-posten. For å beholde designet, bruk HTML-alternativet.
           </Typography>
           
@@ -1788,7 +1788,7 @@ export function EmailDesigner({
                   <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#fff' }}>
                     Kopier med design (HTML)
                   </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                     Beholder logo, farger og formatering. Lim inn i e-postklient som støtter HTML.
                   </Typography>
                 </Box>
@@ -1828,11 +1828,11 @@ export function EmailDesigner({
                   <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#fff' }}>
                     Åpne i e-postklient
                   </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                     Kun ren tekst (uten design) - standard mailto-begrensning
                   </Typography>
                 </Box>
-                <OpenInNewIcon sx={{ color: 'rgba(255,255,255,0.3)' }} />
+                <OpenInNewIcon sx={{ color: 'rgba(255,255,255,0.87)' }} />
               </Box>
             </Paper>
 
@@ -1869,7 +1869,7 @@ export function EmailDesigner({
                   <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#fff' }}>
                     Kopier kun tekst
                   </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                     Ren tekst uten formatering
                   </Typography>
                 </Box>
@@ -1913,7 +1913,7 @@ export function EmailDesigner({
                     <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#fff' }}>
                       Send til kandidater/team
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                       Velg fra {recipients.length} registrerte mottakere
                     </Typography>
                   </Box>

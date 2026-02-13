@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import type { FC, ReactNode } from 'react';
 import {
   Alert,
   AlertColor,
@@ -12,7 +13,7 @@ export interface Toast {
   id: string;
   message: string;
   severity?: AlertColor;
-  duration?: number;
+  duration?: number | null;
   action?: ReactNode;
   onClose?: () => void;
 }
@@ -42,7 +43,7 @@ interface ToastProviderProps {
   position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
 }
 
-export const ToastProvider: React.FC<ToastProviderProps> = ({
+export const ToastProvider: FC<ToastProviderProps> = ({
   children,
   maxToasts = 5,
   position = 'bottom-right',
@@ -58,7 +59,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
       const id = `toast-${Date.now()}-${Math.random()}`;
       const newToast: Toast = {
         id,
-        duration: 5000,
+        duration: null,  // Default to persistent (no auto-dismiss)
         severity: 'info',
         ...toast,
       };
@@ -71,7 +72,8 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
         return updated;
       });
 
-      if (newToast.duration && newToast.duration > 0) {
+      // Only set timeout if duration is explicitly specified and > 0
+      if (typeof newToast.duration === 'number' && newToast.duration > 0) {
         setTimeout(() => {
           removeToast(id);
           newToast.onClose?.();
@@ -83,28 +85,28 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
 
   const showSuccess = useCallback(
     (message: string, duration?: number) => {
-      showToast({ message, severity: 'success', duration });
+      showToast({ message, severity: 'success', duration: duration ?? null });
     },
     [showToast]
   );
 
   const showError = useCallback(
     (message: string, duration?: number) => {
-      showToast({ message, severity: 'error', duration: duration ?? 7000 });
+      showToast({ message, severity: 'error', duration: duration ?? null });
     },
     [showToast]
   );
 
   const showWarning = useCallback(
     (message: string, duration?: number) => {
-      showToast({ message, severity: 'warning', duration });
+      showToast({ message, severity: 'warning', duration: duration ?? null });
     },
     [showToast]
   );
 
   const showInfo = useCallback(
     (message: string, duration?: number) => {
-      showToast({ message, severity: 'info', duration });
+      showToast({ message, severity: 'info', duration: duration ?? null });
     },
     [showToast]
   );

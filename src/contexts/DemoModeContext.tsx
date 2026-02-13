@@ -4,6 +4,7 @@ interface DemoModeContextType {
   isDemoMode: boolean;
   setDemoMode: (value: boolean) => void;
   toggleDemoMode: () => void;
+  getDemoMessage: () => string;
 }
 
 const DemoModeContext = createContext<DemoModeContextType | undefined>(undefined);
@@ -15,6 +16,9 @@ export const DemoModeProvider: React.FC<{ children: ReactNode }> = ({ children }
     isDemoMode,
     setDemoMode: setIsDemoMode,
     toggleDemoMode: () => setIsDemoMode(prev => !prev),
+    getDemoMessage: () => isDemoMode
+      ? 'Du ser på demodata. Logg inn for å se ekte data.'
+      : '',
   }), [isDemoMode]);
 
   return (
@@ -27,7 +31,12 @@ export const DemoModeProvider: React.FC<{ children: ReactNode }> = ({ children }
 export const useDemoMode = () => {
   const context = useContext(DemoModeContext);
   if (!context) {
-    return { isDemoMode: false, setDemoMode: () => {}, toggleDemoMode: () => {} };
+    return {
+      isDemoMode: false,
+      setDemoMode: () => {},
+      toggleDemoMode: () => {},
+      getDemoMessage: () => '',
+    };
   }
   return context;
 };
@@ -55,13 +64,19 @@ const defaultDemoData: DemoData = {
   },
 };
 
-export const useDemoModeData = () => {
+export function useDemoModeData<T>(key: string, defaultValue: T): T {
   const { isDemoMode } = useDemoMode();
   
-  return useMemo(() => ({
-    data: isDemoMode ? defaultDemoData : null,
-    isLoading: false,
-  }), [isDemoMode]);
-};
+  return useMemo(() => {
+    if (!isDemoMode) return defaultValue;
+    // In demo mode, check if there's specific demo data for this key
+    const demoDataMap: Record<string, unknown> = {
+      courses: defaultDemoData.courses,
+      users: defaultDemoData.users,
+      analytics: defaultDemoData.analytics,
+    };
+    return (demoDataMap[key] as T) ?? defaultValue;
+  }, [isDemoMode, key, defaultValue]);
+}
 
 export default DemoModeContext;

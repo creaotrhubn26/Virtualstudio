@@ -5,7 +5,7 @@
  * Color harmony analysis and skin tone optimization
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,

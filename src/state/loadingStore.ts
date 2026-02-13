@@ -57,7 +57,7 @@ interface LoadingState {
   updateSceneInitProgress: (progress: number) => void;
 }
 
-export const useLoadingStore = create<LoadingState>((set, get) => ({
+export const useLoadingStore = create<LoadingState>((set) => ({
   isLoading: false,
   currentStage: 'idle',
   message: '',

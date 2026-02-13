@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FC } from 'react';
 import {
   Box,
   Typography,
@@ -41,7 +41,7 @@ interface CandidatePoolPanelProps {
   onImport?: (candidateId: string) => void;
 }
 
-export const CandidatePoolPanel: React.FC<CandidatePoolPanelProps> = ({
+export const CandidatePoolPanel: FC<CandidatePoolPanelProps> = ({
   projects,
   currentProjectId,
   onImport,
@@ -157,7 +157,7 @@ export const CandidatePoolPanel: React.FC<CandidatePoolPanelProps> = ({
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)' }} />
+                <SearchIcon sx={{ color: 'rgba(255,255,255,0.87)' }} />
               </InputAdornment>
             ),
           }}
@@ -170,19 +170,19 @@ export const CandidatePoolPanel: React.FC<CandidatePoolPanelProps> = ({
               '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
               '&.Mui-focused fieldset': { borderColor: '#00d4ff' },
             },
-            '& .MuiInputBase-input::placeholder': { color: 'rgba(255,255,255,0.5)' },
+            '& .MuiInputBase-input::placeholder': { color: 'rgba(255,255,255,0.87)' },
           }}
         />
       </Box>
 
-      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 3 }}>
+      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 3 }}>
         Global kandidatpool - gjenbruk kandidater på tvers av prosjekter. 
         Lagre kandidater til poolen fra prosjekter, eller importer fra poolen til nye prosjekter.
       </Typography>
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Laster kandidater...</Typography>
+          <Typography sx={{ color: 'rgba(255,255,255,0.87)' }}>Laster kandidater...</Typography>
         </Box>
       ) : filteredCandidates.length === 0 ? (
         <Box sx={{ 
@@ -193,10 +193,10 @@ export const CandidatePoolPanel: React.FC<CandidatePoolPanelProps> = ({
           border: '1px dashed rgba(255,255,255,0.1)',
         }}>
           <PersonIcon sx={{ fontSize: 48, color: 'rgba(255,255,255,0.2)', mb: 2 }} />
-          <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 1 }}>
+          <Typography sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
             {searchQuery ? 'Ingen kandidater matcher søket' : 'Ingen kandidater i poolen ennå'}
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.3)' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Lagre kandidater fra prosjekter for å fylle poolen
           </Typography>
         </Box>
@@ -241,9 +241,9 @@ export const CandidatePoolPanel: React.FC<CandidatePoolPanelProps> = ({
                     
                     {candidate.contactInfo?.email && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                        <EmailIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.4)' }} />
+                        <EmailIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.87)' }} />
                         <Typography variant="body2" sx={{ 
-                          color: 'rgba(255,255,255,0.5)',
+                          color: 'rgba(255,255,255,0.87)',
                           fontSize: '0.75rem',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -256,9 +256,9 @@ export const CandidatePoolPanel: React.FC<CandidatePoolPanelProps> = ({
                     
                     {candidate.contactInfo?.phone && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
-                        <PhoneIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.4)' }} />
+                        <PhoneIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.87)' }} />
                         <Typography variant="body2" sx={{ 
-                          color: 'rgba(255,255,255,0.5)',
+                          color: 'rgba(255,255,255,0.87)',
                           fontSize: '0.75rem',
                         }}>
                           {candidate.contactInfo.phone}
@@ -291,7 +291,7 @@ export const CandidatePoolPanel: React.FC<CandidatePoolPanelProps> = ({
                           height: 20,
                           fontSize: '0.7rem',
                           bgcolor: 'rgba(255,255,255,0.1)',
-                          color: 'rgba(255,255,255,0.5)',
+                          color: 'rgba(255,255,255,0.87)',
                         }}
                       />
                     )}
@@ -324,7 +324,7 @@ export const CandidatePoolPanel: React.FC<CandidatePoolPanelProps> = ({
                     size="small"
                     onClick={() => handleDeleteFromPool(candidate.id)}
                     sx={{
-                      color: 'rgba(255,255,255,0.4)',
+                      color: 'rgba(255,255,255,0.87)',
                       minWidth: TOUCH_TARGET,
                       minHeight: TOUCH_TARGET,
                       '&:hover': { 
@@ -374,7 +374,7 @@ export const CandidatePoolPanel: React.FC<CandidatePoolPanelProps> = ({
           )}
           
           <FormControl fullWidth>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Velg prosjekt</InputLabel>
+            <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Velg prosjekt</InputLabel>
             <Select
               value={targetProjectId}
               onChange={(e) => setTargetProjectId(e.target.value)}
@@ -397,7 +397,7 @@ export const CandidatePoolPanel: React.FC<CandidatePoolPanelProps> = ({
         <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2 }}>
           <Button 
             onClick={() => setImportDialogOpen(false)}
-            sx={{ color: 'rgba(255,255,255,0.6)' }}
+            sx={{ color: 'rgba(255,255,255,0.87)' }}
           >
             Avbryt
           </Button>

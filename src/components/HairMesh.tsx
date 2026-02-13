@@ -15,7 +15,7 @@
  * Phase 2A - Week 1: Initial implementation
  */
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { SceneNode } from '../../core/models/scene';
 import { hairRenderingService, HairColorOptions } from '../../core/services/hairRenderingService';
 import { getHairStyleById } from '../../core/data/hairStyles';

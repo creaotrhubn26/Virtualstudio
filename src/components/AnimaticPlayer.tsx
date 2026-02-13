@@ -10,7 +10,8 @@
  * - Speed control
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import type { CSSProperties, FC } from 'react';
 import {
   Box,
   Paper,
@@ -97,7 +98,7 @@ interface TransitionOverlayProps {
   currentImage?: string;
 }
 
-const TransitionOverlay: React.FC<TransitionOverlayProps> = ({
+const TransitionOverlay: FC<TransitionOverlayProps> = ({
   type,
   progress,
   previousImage,
@@ -107,7 +108,7 @@ const TransitionOverlay: React.FC<TransitionOverlayProps> = ({
     return null;
   }
 
-  const overlayStyle: React.CSSProperties = {
+  const overlayStyle: CSSProperties = {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -207,7 +208,7 @@ const formatTimecode = (seconds: number): string => {
 // Main Component
 // =============================================================================
 
-export const AnimaticPlayer: React.FC<AnimaticPlayerProps> = ({
+export const AnimaticPlayer: FC<AnimaticPlayerProps> = ({
   onClose,
   fullscreen: initialFullscreen = false,
 }) => {
@@ -516,7 +517,7 @@ export const AnimaticPlayer: React.FC<AnimaticPlayerProps> = ({
             <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600}}>
               {currentFrameIndex + 1} / {storyboard.frames.length}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
               {currentFrame.title} • {currentFrame.shotType}
             </Typography>
           </Box>
@@ -750,7 +751,7 @@ interface AnimaticPlayerDialogProps {
   onClose: () => void;
 }
 
-export const AnimaticPlayerDialog: React.FC<AnimaticPlayerDialogProps> = ({
+export const AnimaticPlayerDialog: FC<AnimaticPlayerDialogProps> = ({
   open,
   onClose,
 }) => {

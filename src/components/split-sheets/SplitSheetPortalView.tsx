@@ -47,11 +47,10 @@ import {
   Download as DownloadIcon,
   Person as PersonIcon,
   Folder,
-  LocationOn,
   Event,
-  Groups,
   Phone,
 } from '@mui/icons-material';
+import { LocationsIcon as LocationOn, TeamIcon as Groups } from '../icons/CastingIcons';
 
 interface SplitSheetPortalViewProps {
   contributorEmail?: string;

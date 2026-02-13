@@ -95,7 +95,7 @@ export function SceneMetadataEditor({ open, scene, onClose, onSave }: SceneMetad
               '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
               '&:hover fieldset': { borderColor: '#00d4ff' },
             },
-            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
           }}
         />
         <TextField
@@ -114,11 +114,11 @@ export function SceneMetadataEditor({ open, scene, onClose, onSave }: SceneMetad
               '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
               '&:hover fieldset': { borderColor: '#00d4ff' },
             },
-            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
           }}
         />
         <Box sx={{ mb: 2 }}>
-          <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255,255,255,0.7)' }}>
+          <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255,255,255,0.87)' }}>
             Tags
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
@@ -168,7 +168,7 @@ export function SceneMetadataEditor({ open, scene, onClose, onSave }: SceneMetad
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+        <Button onClick={onClose} sx={{ color: 'rgba(255,255,255,0.87)' }}>
           Avbryt
         </Button>
         <Button
@@ -179,7 +179,7 @@ export function SceneMetadataEditor({ open, scene, onClose, onSave }: SceneMetad
             bgcolor: '#00d4ff',
             color: '#000',
             '&:hover': { bgcolor: '#00b8e6' },
-            '&:disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' },
+            '&:disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.87)' },
           }}
         >
           Lagre

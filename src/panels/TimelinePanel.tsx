@@ -624,6 +624,7 @@ export const TimelinePanel: React.FC = () => {
             <Select
               value={fps}
               onChange={(e) => setFPS(e.target.value as number)}
+              MenuProps={{ sx: { zIndex: 1400 } }}
               sx={{ color: '#fff' }}
             >
               <MenuItem value={24}>24 FPS</MenuItem>
@@ -639,6 +640,7 @@ export const TimelinePanel: React.FC = () => {
             <Select
               value={duration}
               onChange={(e) => setDuration(e.target.value as number)}
+              MenuProps={{ sx: { zIndex: 1400 } }}
               sx={{ color: '#fff' }}
             >
               <MenuItem value={3}>3s</MenuItem>

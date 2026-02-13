@@ -330,22 +330,22 @@ function AcademyDashboard() {
     useEnhancedMasterIntegration();
 
   // Profession system (API configs + adapter)
-  const { professionConfigs: apiProfessionConfigs } = useProfessionConfigs();
+  const { getConfigById: getProfConfigById } = useProfessionConfigs();
   const professionAdapter = useProfessionAdapter();
   const { adaptDashboardTitle, adaptTabLabels } = professionAdapter;
 
   // Get profession from user context or adapter fallback
-  const userProfession = (auth.state.user as any)?.profession || professionAdapter.profession || 'photographer';
-  const enhancedProfessionConfig = apiProfessionConfigs?.[userProfession];
+  const userProfession = (auth.state.user as { profession?: string } | null)?.profession || professionAdapter.profession || 'photographer';
+  const enhancedProfessionConfig = getProfConfigById(userProfession);
   const professionDisplayName =
-    enhancedProfessionConfig?.displayName || enhancedProfessionConfig?.name || userProfession;
+    enhancedProfessionConfig?.name || userProfession;
   const professionColor = enhancedProfessionConfig?.color || '#00d4ff';
   const professionIcon = getProfessionIcon(userProfession);
 
   const getProfessionDisplayNameById = useCallback(
     (professionId: string) => {
-      const cfg = apiProfessionConfigs?.[professionId];
-      if (cfg?.displayName || cfg?.name) return cfg.displayName || cfg.name;
+      const cfg = getProfConfigById(professionId);
+      if (cfg?.name) return cfg.name;
       const fallback: Record<string, string> = {
         photographer: 'Fotograf',
         videographer: 'Videograf',
@@ -354,7 +354,7 @@ function AcademyDashboard() {
       };
       return fallback[professionId] || professionId;
     },
-    [apiProfessionConfigs],
+    [getProfConfigById],
   );
   
   // Theming system
@@ -436,7 +436,7 @@ function AcademyDashboard() {
   const [pushSettingsOpen, setPushSettingsOpen] = useState(false);
   
   // Push notifications
-  const userId = auth.state.user?.id || (auth.state.user as any)?.sub;
+  const userId = auth.state.user?.id || auth.state.user?.sub;
   const { pushEnabled, isSupported } = usePushNotifications(userId);
   const [showGoogleLogin, setShowGoogleLogin] = useState(false);
   const [showModuleManager, setShowModuleManager] = useState(false);
@@ -1414,28 +1414,28 @@ function AcademyDashboard() {
   // Render quick stats with icons (wires up unused icons)
   const renderQuickStats = () => (
     <Grid container spacing={2} sx={{ mb: 3 }}>
-      <Grid item xs={6} md={3}>
+      <Grid size={{ xs: 6, md: 3 }}>
         <Card sx={{ textAlign: 'center', p: 2 }}>
           <AcademyIcon sx={{ fontSize: 40, color: 'primary.main' }} />
           <Typography variant="h6">{state.courses.length}</Typography>
           <Typography variant="caption" color="text.secondary">Kurs</Typography>
         </Card>
       </Grid>
-      <Grid item xs={6} md={3}>
+      <Grid size={{ xs: 6, md: 3 }}>
         <Card sx={{ textAlign: 'center', p: 2 }}>
           <LessonIcon sx={{ fontSize: 40, color: 'secondary.main' }} />
           <Typography variant="h6">{learningProgress.length}</Typography>
           <Typography variant="caption" color="text.secondary">Leksjoner</Typography>
         </Card>
       </Grid>
-      <Grid item xs={6} md={3}>
+      <Grid size={{ xs: 6, md: 3 }}>
         <Card sx={{ textAlign: 'center', p: 2 }}>
           <InstructorIcon sx={{ fontSize: 40, color: 'success.main' }} />
           <Typography variant="h6">{subscriptions.length}</Typography>
           <Typography variant="caption" color="text.secondary">Instruktører</Typography>
         </Card>
       </Grid>
-      <Grid item xs={6} md={3}>
+      <Grid size={{ xs: 6, md: 3 }}>
         <Card sx={{ textAlign: 'center', p: 2 }}>
           <StudentIcon sx={{ fontSize: 40, color: 'info.main' }} />
           <Typography variant="h6">{enrolledCourses.length}</Typography>
@@ -1479,7 +1479,7 @@ function AcademyDashboard() {
       </Typography>
       <Grid container spacing={2}>
         {featuredCourses.map((course: any) => (
-          <Grid item xs={12} md={6} key={course.id}>
+          <Grid size={{ xs: 12, md: 6 }} key={course.id}>
             <Card 
               sx={{ cursor: 'pointer' }}
               onClick={() => handleCourseSelect(course)}
@@ -1531,7 +1531,7 @@ function AcademyDashboard() {
       </Typography>
       <Grid container spacing={2}>
         {coursesToTry.map((course: any) => (
-          <Grid item xs={12} sm={6} md={3} key={course.id}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={course.id}>
             <Card 
               sx={{ cursor: 'pointer', height: '100%' }}
               onClick={() => {
@@ -1566,7 +1566,7 @@ function AcademyDashboard() {
   const renderLearnerWidgets = () => (
     <Grid container spacing={3}>
       {/* Continue Learning Widget */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card sx={{ height: '100%' }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -1616,7 +1616,7 @@ function AcademyDashboard() {
       </Grid>
 
       {/* Calendar Widget */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card sx={{ height: '100%' }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -1660,7 +1660,7 @@ function AcademyDashboard() {
       </Grid>
 
       {/* To-dos & Feedback Widget */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card sx={{ height: '100%' }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -1703,7 +1703,7 @@ function AcademyDashboard() {
       </Grid>
 
       {/* Notes & Bookmarks Widget */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card sx={{ height: '100%' }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -1732,7 +1732,7 @@ function AcademyDashboard() {
       </Grid>
 
       {/* Certificates Widget */}
-      <Grid item xs={12}>
+      <Grid size={12}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -1795,7 +1795,7 @@ function AcademyDashboard() {
   const renderInstructorWidgets = () => (
     <Grid container spacing={3}>
       {/* 💰 Instructor Revenue Widget - NEW */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card
           sx={{
             height: '100%',
@@ -1813,7 +1813,7 @@ function AcademyDashboard() {
             </Typography>
 
             <Grid container spacing={2} sx={{ mb: 2 }}>
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <Typography variant="body2" sx={{ opacity: 0.9 }}>
                   Total Tjent
                 </Typography>
@@ -1825,7 +1825,7 @@ function AcademyDashboard() {
                 <Typography variant="caption">NOK</Typography>
               </Grid>
 
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <Typography variant="body2" sx={{ opacity: 0.9 }}>
                   Tilgjengelig
                 </Typography>
@@ -1837,7 +1837,7 @@ function AcademyDashboard() {
                 <Typography variant="caption">NOK</Typography>
               </Grid>
 
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <Typography variant="body2" sx={{ opacity: 0.9 }}>
                   Utbetalt
                 </Typography>
@@ -1847,7 +1847,7 @@ function AcademyDashboard() {
                 </Typography>
               </Grid>
 
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <Typography variant="body2" sx={{ opacity: 0.9 }}>
                   Denne Måned
                 </Typography>
@@ -1878,8 +1878,8 @@ function AcademyDashboard() {
                     sx={{
                       bgcolor: 'white',
                       color: '#2e7d32', '&:hover': { bgcolor: '#f1f1f1' }, '&:disabled': {
-                        bgcolor: 'rgba(255,255,255,0.3)',
-                        color: 'rgba(255,255,255,0.5)',
+                        bgcolor: 'rgba(255,255,255,0.6)',
+                        color: 'rgba(255,255,255,0.87)',
                       }}}
                   >
                     📄 Opprett Fiken Faktura
@@ -1887,7 +1887,7 @@ function AcademyDashboard() {
                   <Chip
                     label="✅ Fiken Integrert - Profesjonell Fakturering"
                     size="small"
-                    sx={{ bgcolor: 'rgba(255,255,255,0.3)', color: 'white', fontWeight: 600}}
+                    sx={{ bgcolor: 'rgba(255,255,255,0.6)', color: 'white', fontWeight: 600}}
                   />
                 </>
               ) : (
@@ -1902,8 +1902,8 @@ function AcademyDashboard() {
                   sx={{
                     bgcolor: 'white',
                     color: '#2e7d32','&:hover': { bgcolor: '#f1f1f1' }, '&:disabled': {
-                      bgcolor: 'rgba(255,255,255,0.3)',
-                      color: 'rgba(255,255,255,0.5)',
+                      bgcolor: 'rgba(255,255,255,0.6)',
+                      color: 'rgba(255,255,255,0.87)',
                     }}}
                 >
                   💸 Be om utbetaling
@@ -1934,7 +1934,7 @@ function AcademyDashboard() {
       </Grid>
 
       {/* Teaching Overview Widget */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card sx={{ height: '100%' }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -1986,7 +1986,7 @@ function AcademyDashboard() {
       </Grid>
 
       {/* Grading Queue Widget */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card sx={{ height: '100%' }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -2025,7 +2025,7 @@ function AcademyDashboard() {
       </Grid>
 
       {/* Q&A Widget */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card sx={{ height: '100%' }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -2054,7 +2054,7 @@ function AcademyDashboard() {
       </Grid>
 
       {/* Content Pipeline Widget */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card sx={{ height: '100%' }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -2130,12 +2130,12 @@ function AcademyDashboard() {
       </Grid>
 
       {/* Course Post Analytics Widget */}
-      <Grid item xs={12}>
+      <Grid size={12}>
         <CoursePostAnalyticsWidget />
       </Grid>
 
       {/* Engagement Radar Widget */}
-      <Grid item xs={12}>
+      <Grid size={12}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -2162,7 +2162,7 @@ function AcademyDashboard() {
       </Grid>
 
       {/* Video Editing Tools Widget */}
-      <Grid item xs={12} md={6}>
+      <Grid size={{ xs: 12, md: 6 }}>
         <Card sx={{ height: '100%' }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -2714,7 +2714,7 @@ function AcademyDashboard() {
               {auth.state.user?.role === 'admin' && (
                 <Grid container spacing={3}>
                   {/* Admin Visual Editor Integration Panel */}
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Card
                       sx={{
                         bgcolor: hasVisualEditorAccess ? 'success.light' : 'warning.light',
@@ -2808,7 +2808,7 @@ function AcademyDashboard() {
                     </Card>
                   </Grid>
 
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Typography variant="h4" gutterBottom>
                       Administrator Dashboard
                     </Typography>
@@ -2939,7 +2939,7 @@ function AcademyDashboard() {
               ) : (
                 <Grid container spacing={2}>
                   {publishedPosts.map((post) => (
-                    <Grid item xs={12} md={6} key={post.id}>
+                    <Grid size={{ xs: 12, md: 6 }} key={post.id}>
                       <Card>
                         <CardContent>
                           <Stack spacing={2}>
@@ -3495,10 +3495,10 @@ function AcademyDashboard() {
                       onClick={(result) => {
                         // Navigate to the result based on type
                         if (result.type === 'course') {
-                          setCurrentView('courses');
+                          setActiveNavItem('courses');
                           setSelectedCourse(result.courseId);
                         } else if (result.type === 'lesson') {
-                          setCurrentView('courses');
+                          setActiveNavItem('courses');
                           setSelectedCourse(result.courseId);
                         }
                         setGlobalSearchOpen(false);
@@ -3541,7 +3541,7 @@ function AcademyDashboard() {
                     data={communications}
                     itemContent={(index, comm) => (
                       <CommunicationItemCard
-                        key={comm.id}
+                        key={`${comm.id}-${index}`}
                         item={comm}
                         onClick={() => handleMarkAsRead(comm.id)}
                       />

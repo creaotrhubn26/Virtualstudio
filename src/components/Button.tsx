@@ -5,10 +5,9 @@
  * Based on design system tokens
  */
 
-import React from 'react';
+import type { CSSProperties, FC } from 'react';
 import { Button as MuiButton, ButtonProps as MuiButtonProps, CircularProgress } from '@mui/material';
 import { colors, spacing, borderRadius, transitions, shadows } from '../../styles/designTokens';
-import { interactiveStyles } from '../../styles/interactiveStates';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'icon';
 export type ButtonSize = 'small' | 'medium' | 'large';
@@ -37,7 +36,7 @@ const sizeStyles = {
   },
 } as const;
 
-export const Button: React.FC<ButtonProps> = ({
+export const Button: FC<ButtonProps> = ({
   variant = 'primary',
   size = 'medium',
   loading = false,
@@ -49,8 +48,8 @@ export const Button: React.FC<ButtonProps> = ({
   fullWidth,
   ...props
 }) => {
-  const getVariantStyles = (): React.CSSProperties => {
-    const baseStyles: React.CSSProperties = {
+  const getVariantStyles = (): CSSProperties => {
+    const baseStyles: CSSProperties = {
       borderRadius: borderRadius.md,
       textTransform: 'none',
       fontWeight: 500,

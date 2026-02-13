@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -12,7 +12,6 @@ import {
 import {
   PhotoCamera as PhotoCameraIcon,
   Videocam as VideocamIcon,
-  Groups as GroupsIcon,
   Settings as SettingsIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
@@ -23,6 +22,7 @@ import {
   Face as FaceIcon,
   Business as BusinessIcon,
 } from '@mui/icons-material';
+import { TeamIcon as GroupsIcon } from './icons/CastingIcons';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface CastingProfessionDialogProps {
@@ -179,7 +179,7 @@ export function CastingProfessionDialog({ open, onSelect }: CastingProfessionDia
                   marginBottom: 16,
                   filter: 'drop-shadow(0 0 25px rgba(139, 92, 246, 0.4))',
                 }}
-                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                onError={(e: SyntheticEvent<HTMLImageElement>) => {
                   e.currentTarget.style.display = 'none';
                 }}
               />
@@ -199,7 +199,7 @@ export function CastingProfessionDialog({ open, onSelect }: CastingProfessionDia
               <Typography 
                 variant="body1" 
                 sx={{ 
-                  color: 'rgba(255,255,255,0.6)',
+                  color: 'rgba(255,255,255,0.87)',
                   maxWidth: 400,
                   mx: 'auto',
                 }}
@@ -270,7 +270,7 @@ export function CastingProfessionDialog({ open, onSelect }: CastingProfessionDia
                                   objectFit: 'cover',
                                   filter: `drop-shadow(0 0 8px ${category.glowColor})`,
                                 }}
-                                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                                onError={(e: SyntheticEvent<HTMLImageElement>) => {
                                   e.currentTarget.style.display = 'none';
                                 }}
                               />
@@ -279,7 +279,7 @@ export function CastingProfessionDialog({ open, onSelect }: CastingProfessionDia
                               <Typography variant="h6" sx={{ fontWeight: 600, color: '#fff' }}>
                                 {category.name}
                               </Typography>
-                              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                                 {category.description}
                               </Typography>
                             </Box>
@@ -287,7 +287,7 @@ export function CastingProfessionDialog({ open, onSelect }: CastingProfessionDia
                           {isExpanded ? (
                             <ExpandLessIcon sx={{ color: category.color }} />
                           ) : (
-                            <ExpandMoreIcon sx={{ color: 'rgba(255,255,255,0.5)' }} />
+                            <ExpandMoreIcon sx={{ color: 'rgba(255,255,255,0.87)' }} />
                           )}
                         </CardActionArea>
                         
@@ -361,7 +361,7 @@ export function CastingProfessionDialog({ open, onSelect }: CastingProfessionDia
                                         <Typography 
                                           variant="caption" 
                                           sx={{ 
-                                            color: 'rgba(255,255,255,0.5)',
+                                            color: 'rgba(255,255,255,0.87)',
                                             display: 'block',
                                             lineHeight: 1.3,
                                           }}
@@ -394,7 +394,7 @@ export function CastingProfessionDialog({ open, onSelect }: CastingProfessionDia
             <Typography 
               variant="caption" 
               sx={{ 
-                color: 'rgba(255,255,255,0.4)',
+                color: 'rgba(255,255,255,0.7)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

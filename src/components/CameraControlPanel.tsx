@@ -5,7 +5,7 @@
  * Provides joystick-style controls for pan, tilt, dolly, truck, and zoom.
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, type FC, type ReactNode, type MouseEvent, type TouchEvent } from 'react';
 import {
   Box,
   Paper,
@@ -62,16 +62,16 @@ interface CameraControlPanelProps {
 // Joystick Component
 // ============================================================================
 
-const Joystick: React.FC<{
+const Joystick: FC<{
   onMove: (x: number, y: number) => void;
   label: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
 }> = ({ onMove, label, icon }) => {
   const joystickRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   
-  const handleStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  const handleStart = useCallback((e: MouseEvent | TouchEvent) => {
     setIsDragging(true);
     e.preventDefault();
   }, []);
@@ -155,7 +155,7 @@ const Joystick: React.FC<{
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            color: 'rgba(255,255,255,0.3)'}}
+            color: 'rgba(255,255,255,0.6)'}}
         >
           {icon}
         </Box>
@@ -183,7 +183,7 @@ const Joystick: React.FC<{
             left: '50%',
             transform: 'translateX(-50%)',
             fontSize: 16,
-            color: 'rgba(255,255,255,0.4)'}}
+            color: 'rgba(255,255,255,0.7)'}}
         />
         <KeyboardArrowDown
           sx={{
@@ -192,7 +192,7 @@ const Joystick: React.FC<{
             left: '50%',
             transform: 'translateX(-50%)',
             fontSize: 16,
-            color: 'rgba(255,255,255,0.4)'}}
+            color: 'rgba(255,255,255,0.7)'}}
         />
         <KeyboardArrowLeft
           sx={{
@@ -201,7 +201,7 @@ const Joystick: React.FC<{
             top: '50%',
             transform: 'translateY(-50%)',
             fontSize: 16,
-            color: 'rgba(255,255,255,0.4)'}}
+            color: 'rgba(255,255,255,0.7)'}}
         />
         <KeyboardArrowRight
           sx={{
@@ -210,7 +210,7 @@ const Joystick: React.FC<{
             top: '50%',
             transform: 'translateY(-50%)',
             fontSize: 16,
-            color: 'rgba(255,255,255,0.4)'}}
+            color: 'rgba(255,255,255,0.7)'}}
         />
       </Box>
     </Box>
@@ -221,7 +221,7 @@ const Joystick: React.FC<{
 // Main Component
 // ============================================================================
 
-export const CameraControlPanel: React.FC<CameraControlPanelProps> = ({
+export const CameraControlPanel: FC<CameraControlPanelProps> = ({
   cameraId,
   cameraName,
   isSelected,

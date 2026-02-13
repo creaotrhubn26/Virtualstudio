@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode, type SyntheticEvent } from 'react';
 import {
   Box,
   Typography,
@@ -48,7 +48,6 @@ import {
   Add as AddIcon,
   Person as PersonIcon,
   CalendarToday as CalendarIcon,
-  LocationOn as LocationIcon,
   AccessTime as TimeIcon,
   Movie as MovieIcon,
   Business as BusinessIcon,
@@ -57,6 +56,7 @@ import {
   Cancel as CancelIcon,
   Schedule as ScheduleIcon,
 } from '@mui/icons-material';
+import { LocationsIcon as LocationIcon } from './icons/CastingIcons';
 
 interface AdminUser {
   id: number;
@@ -309,7 +309,7 @@ Casting Planner Sikkerhetsteam`,
   },
 ];
 
-const templateTypeConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+const templateTypeConfig: Record<string, { label: string; color: string; icon: ReactNode }> = {
   invitation: { label: 'Invitasjon', color: '#00d4ff', icon: <EmailIcon /> },
   callback: { label: 'Callback', color: '#8b5cf6', icon: <ScheduleIcon /> },
   confirmation: { label: 'Bekreftelse', color: '#10b981', icon: <CheckCircleIcon /> },
@@ -321,7 +321,7 @@ const templateTypeConfig: Record<string, { label: string; color: string; icon: R
   owner_transfer: { label: 'Eieroverføring', color: '#ef4444', icon: <VpnKeyIcon /> },
 };
 
-const variableConfig: Record<string, { label: string; icon: React.ReactNode; example: string }> = {
+const variableConfig: Record<string, { label: string; icon: ReactNode; example: string }> = {
   candidateName: { label: 'Kandidatnavn', icon: <PersonIcon />, example: 'Ola Nordmann' },
   projectName: { label: 'Prosjektnavn', icon: <MovieIcon />, example: 'Sommerfilmen 2026' },
   roleName: { label: 'Rollenavn', icon: <PersonIcon />, example: 'Hovedrolle' },
@@ -616,7 +616,7 @@ export default function AdminDashboard({ open, onClose, projectName = 'Mitt Pros
       '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
       '&.Mui-focused fieldset': { borderColor: '#8b5cf6' },
     },
-    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.5)' },
+    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
     '& .MuiInputBase-input': { color: '#fff' },
   };
 
@@ -671,7 +671,7 @@ export default function AdminDashboard({ open, onClose, projectName = 'Mitt Pros
               <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600, fontSize: fontSize.title }}>
                 Admin Dashboard
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: fontSize.caption }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSize.caption }}>
                 Administrer brukere og e-postmaler
               </Typography>
             </Box>
@@ -679,7 +679,7 @@ export default function AdminDashboard({ open, onClose, projectName = 'Mitt Pros
           <IconButton 
             onClick={onClose} 
             sx={{ 
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               minWidth: iconButtonSize,
               minHeight: iconButtonSize,
             }}
@@ -691,11 +691,11 @@ export default function AdminDashboard({ open, onClose, projectName = 'Mitt Pros
         <Box sx={{ borderBottom: '1px solid rgba(255,255,255,0.08)', px: spacing, bgcolor: '#161b22' }}>
           <Tabs
             value={mainTab}
-            onChange={(_: React.SyntheticEvent, v: number) => setMainTab(v)}
+            onChange={(_: SyntheticEvent, v: number) => setMainTab(v)}
             sx={{
               minHeight: buttonMinHeight,
               '& .MuiTab-root': {
-                color: 'rgba(255,255,255,0.6)',
+                color: 'rgba(255,255,255,0.87)',
                 minHeight: buttonMinHeight,
                 textTransform: 'none',
                 fontSize: fontSize.body,
@@ -766,17 +766,17 @@ export default function AdminDashboard({ open, onClose, projectName = 'Mitt Pros
                   <Table>
                     <TableHead>
                       <TableRow sx={{ bgcolor: 'rgba(255,255,255,0.03)' }}>
-                        <TableCell sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: fontSize.body, py: spacing }}>Navn</TableCell>
-                        <TableCell sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: fontSize.body, py: spacing, display: { xs: 'none', sm: 'table-cell' } }}>E-post</TableCell>
-                        <TableCell sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: fontSize.body, py: spacing }}>Rolle</TableCell>
-                        <TableCell sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: fontSize.body, py: spacing, display: { xs: 'none', md: 'table-cell' } }}>Opprettet</TableCell>
-                        <TableCell sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: fontSize.body, py: spacing }} align="right">Handlinger</TableCell>
+                        <TableCell sx={{ color: 'rgba(255,255,255,0.87)', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: fontSize.body, py: spacing }}>Navn</TableCell>
+                        <TableCell sx={{ color: 'rgba(255,255,255,0.87)', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: fontSize.body, py: spacing, display: { xs: 'none', sm: 'table-cell' } }}>E-post</TableCell>
+                        <TableCell sx={{ color: 'rgba(255,255,255,0.87)', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: fontSize.body, py: spacing }}>Rolle</TableCell>
+                        <TableCell sx={{ color: 'rgba(255,255,255,0.87)', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: fontSize.body, py: spacing, display: { xs: 'none', md: 'table-cell' } }}>Opprettet</TableCell>
+                        <TableCell sx={{ color: 'rgba(255,255,255,0.87)', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: fontSize.body, py: spacing }} align="right">Handlinger</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {admins.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} sx={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', py: 4, borderBottom: 'none' }}>
+                          <TableCell colSpan={5} sx={{ color: 'rgba(255,255,255,0.87)', textAlign: 'center', py: 4, borderBottom: 'none' }}>
                             Ingen administratorer funnet. Klikk "Inviter Administrator" for å legge til.
                           </TableCell>
                         </TableRow>
@@ -803,7 +803,7 @@ export default function AdminDashboard({ open, onClose, projectName = 'Mitt Pros
                                 }}
                               />
                             </TableCell>
-                            <TableCell sx={{ color: 'rgba(255,255,255,0.6)', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: fontSize.caption, py: spacing, display: { xs: 'none', md: 'table-cell' } }}>
+                            <TableCell sx={{ color: 'rgba(255,255,255,0.87)', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: fontSize.caption, py: spacing, display: { xs: 'none', md: 'table-cell' } }}>
                               {admin.created_at ? new Date(admin.created_at).toLocaleDateString('nb-NO') : '-'}
                             </TableCell>
                             <TableCell align="right" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: spacing }}>
@@ -908,7 +908,7 @@ export default function AdminDashboard({ open, onClose, projectName = 'Mitt Pros
               InputLabelProps={{ sx: { fontSize: fontSize.body } }}
             />
             <FormControl fullWidth size={isMobile ? 'medium' : 'small'}>
-              <InputLabel sx={{ color: 'rgba(255,255,255,0.5)', fontSize: fontSize.body }}>Rolle</InputLabel>
+              <InputLabel sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body }}>Rolle</InputLabel>
               <Select
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value)}
@@ -920,7 +920,7 @@ export default function AdminDashboard({ open, onClose, projectName = 'Mitt Pros
                   '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.1)' },
                   '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
                   '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#8b5cf6' },
-                  '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.5)' },
+                  '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.87)' },
                 }}
               >
                 <MenuItem value="owner" sx={{ fontSize: fontSize.body, minHeight: buttonMinHeight }}>Eier</MenuItem>
@@ -934,7 +934,7 @@ export default function AdminDashboard({ open, onClose, projectName = 'Mitt Pros
         <DialogActions sx={{ p: spacing, borderTop: '1px solid rgba(255,255,255,0.08)', gap: 1 }}>
           <Button 
             onClick={() => setInviteDialogOpen(false)} 
-            sx={{ color: 'rgba(255,255,255,0.6)', minHeight: buttonMinHeight, fontSize: fontSize.button }}
+            sx={{ color: 'rgba(255,255,255,0.87)', minHeight: buttonMinHeight, fontSize: fontSize.button }}
           >
             Avbryt
           </Button>

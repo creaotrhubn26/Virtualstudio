@@ -5,7 +5,8 @@
  * and mood-based movement characteristics.
  */
 
-import React, { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
+import type { CSSProperties, FC } from 'react';
 import { Box, Card, CardContent, CardActions, Typography, Chip, Divider, Button, IconButton, Tooltip } from '@mui/material';
 import { Add, Delete } from '@mui/icons-material';
 import { CachedActor } from '../../core/services/actorModelCache';
@@ -35,7 +36,7 @@ function injectAnimationStyles() {
   stylesInjected = true;
 }
 
-export const AnimatedActorCard: React.FC<AnimatedActorCardProps> = ({ actor, onAddToScene, onDelete }) => {
+export const AnimatedActorCard: FC<AnimatedActorCardProps> = ({ actor, onAddToScene, onDelete }) => {
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Inject styles on first render
@@ -79,7 +80,7 @@ export const AnimatedActorCard: React.FC<AnimatedActorCardProps> = ({ actor, onA
       '--chest-size': `${chestSize}px`,
       '--waist-size': `${waistSize}px`,
       '--height-scale': heightScale,
-    } as React.CSSProperties;
+    } as CSSProperties;
   }, [actor.parameters]);
 
   // Get genre-specific color
@@ -188,7 +189,7 @@ export const AnimatedActorCard: React.FC<AnimatedActorCardProps> = ({ actor, onA
               bottom: 4,
               right: 4,
               fontSize: '0.6rem',
-              color: 'rgba(255,255,255,0.5)',
+              color: 'rgba(255,255,255,0.87)',
               textTransform: 'uppercase',
               letterSpacing: 1}}
           >

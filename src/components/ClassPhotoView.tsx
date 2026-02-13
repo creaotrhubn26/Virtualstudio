@@ -5,7 +5,7 @@
  * Shows students arranged in rows with visibility indicators.
  */
 
-import React, { useRef, useEffect, useMemo, useState } from 'react';
+import { useRef, useEffect, useMemo, useState, type FC } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Html, Line, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
@@ -51,7 +51,7 @@ interface StudentMeshProps {
 // Student Mesh Component
 // =============================================================================
 
-const StudentMesh: React.FC<StudentMeshProps> = ({
+const StudentMesh: FC<StudentMeshProps> = ({
   student,
   selected,
   onClick,
@@ -163,7 +163,7 @@ const StudentMesh: React.FC<StudentMeshProps> = ({
 // Prop Mesh Component
 // =============================================================================
 
-const PropMesh: React.FC<{
+const PropMesh: FC<{
   prop: ClassPhotoProp;
 }> = ({ prop }) => {
   const propModel = useMemo(() => {
@@ -202,7 +202,7 @@ const PropMesh: React.FC<{
 // Row Indicator Component
 // =============================================================================
 
-const RowIndicator: React.FC<{
+const RowIndicator: FC<{
   row: ClassPhotoRow;
   width: number;
   showLabel: boolean;
@@ -244,7 +244,7 @@ const RowIndicator: React.FC<{
 // Camera Lines (Visibility Check)
 // =============================================================================
 
-const VisibilityLines: React.FC<{
+const VisibilityLines: FC<{
   session: ClassPhotoSession;
   selectedStudentId: string | null;
 }> = ({ session, selectedStudentId }) => {
@@ -297,7 +297,7 @@ const DEFAULT_GUIDE_SETTINGS: ClassPhotoGuideSettings = {
   aspectRatio: '4x6',
 };
 
-const SceneContent: React.FC<ClassPhotoViewProps> = ({
+const SceneContent: FC<ClassPhotoViewProps> = ({
   session,
   selectedStudentId,
   onStudentClick,
@@ -412,7 +412,7 @@ const SceneContent: React.FC<ClassPhotoViewProps> = ({
 // Main Component
 // =============================================================================
 
-export const ClassPhotoView: React.FC<ClassPhotoViewProps> = (props) => {
+export const ClassPhotoView: FC<ClassPhotoViewProps> = (props) => {
   return (
     <Canvas
       shadows

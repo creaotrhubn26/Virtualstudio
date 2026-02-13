@@ -121,8 +121,8 @@ export function ProductionDayCardInfo({
   if (compact) {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-        <CalendarIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }} />
-        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+        <CalendarIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.87)' }} />
+        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
           {formatDate(productionDay.date)} • {productionDay.callTime} - {productionDay.wrapTime}
         </Typography>
         <Chip
@@ -159,7 +159,7 @@ export function ProductionDayCardInfo({
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <CalendarIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.7)' }} />
+          <CalendarIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.87)' }} />
           <Typography variant="caption" sx={{ color: '#fff', fontWeight: 600 }}>
             {formatDate(productionDay.date)}
           </Typography>
@@ -180,7 +180,7 @@ export function ProductionDayCardInfo({
 
       {/* Time Range */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-        <ScheduleIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }} />
+        <ScheduleIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.87)' }} />
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
           {productionDay.callTime} - {productionDay.wrapTime}
         </Typography>
@@ -192,10 +192,10 @@ export function ProductionDayCardInfo({
           {/* Progress Bar */}
           <Box sx={{ mb: 1 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px' }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '10px' }}>
                 Fremdrift
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px' }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '10px' }}>
                 {formatTimeMinutes(stats.actualTime)} / {formatTimeMinutes(stats.totalAvailable)}
               </Typography>
             </Box>
@@ -218,8 +218,8 @@ export function ProductionDayCardInfo({
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <TimeIcon sx={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }} />
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px' }}>
+                <TimeIcon sx={{ fontSize: 12, color: 'rgba(255,255,255,0.87)' }} />
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '10px' }}>
                   Estimert tid:
                 </Typography>
               </Box>
@@ -231,8 +231,8 @@ export function ProductionDayCardInfo({
             {stats.availableTime > 0 && (
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <TimeIcon sx={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }} />
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px' }}>
+                  <TimeIcon sx={{ fontSize: 12, color: 'rgba(255,255,255,0.87)' }} />
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '10px' }}>
                     Tilgjengelig tid:
                   </Typography>
                 </Box>
@@ -250,7 +250,7 @@ export function ProductionDayCardInfo({
             )}
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px' }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '10px' }}>
                 Shots igjen:
               </Typography>
               <Typography variant="caption" sx={{ color: '#fff', fontSize: '10px', fontWeight: 600 }}>
@@ -260,7 +260,7 @@ export function ProductionDayCardInfo({
 
             {stats.minutesToDeadline !== null && (
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '10px' }}>
                   Tid til wrap:
                 </Typography>
                 <Typography

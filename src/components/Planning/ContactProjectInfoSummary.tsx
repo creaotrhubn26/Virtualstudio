@@ -13,12 +13,12 @@ import {
   Folder,
   Email,
   Phone,
-  LocationOn,
   Event,
   People,
   Business,
   Label,
 } from '@mui/icons-material';
+import { LocationsIcon as LocationOn } from '../icons/CastingIcons';
 
 interface ContactProjectInfoSummaryProps {
   projectId?: string | number;

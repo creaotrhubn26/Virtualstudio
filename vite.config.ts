@@ -10,24 +10,43 @@ export default defineConfig({
       '@assets': '/attached_assets',
       '@shared': '/src/shared',
     },
+    dedupe: ['react', 'react-dom', '@emotion/react', '@emotion/styled'],
   },
   appType: 'mpa',
   optimizeDeps: {
-    // Exclude Babylon.js from pre-bundling - it uses dynamic imports that conflict with Vite's pre-bundling
-    // Babylon.js modules are already optimized and work better as ESM
-    exclude: ['@babylonjs/core', '@babylonjs/loaders', '@babylonjs/gui'],
+    // Include babylon packages in pre-bundling for better compatibility
+    include: [
+      '@babylonjs/core',
+      '@babylonjs/loaders',
+      '@babylonjs/gui',
+      '@emotion/react',
+      '@emotion/styled',
+      '@mui/material',
+      '@mui/icons-material',
+      'react',
+      'react-dom',
+    ],
     esbuildOptions: {
       target: 'esnext',
     },
+    force: true,
   },
   server: {
     host: '0.0.0.0',
-    port: 5001,
+    port: 5000,
+    strictPort: false,
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
+      },
+      // Proxy R2 CDN requests to avoid CORS issues in development
+      '/r2-assets': {
+        target: 'https://pub-957cc1572eca43cfb57af6fc3a8a4394.r2.dev',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/r2-assets/, ''),
+        secure: true,
       }
     },
     watch: {
@@ -43,8 +62,9 @@ export default defineConfig({
         '**/.cursor/**'  // Ignore Cursor IDE files
       ]
     },
-    // Disable HMR to avoid WebSocket issues in Replit environment
+    // Disable HMR in dev container/remote environment - can cause WebSocket connection issues
     hmr: false,
+    middlewareMode: false,
   },
   build: {
     outDir: 'dist',

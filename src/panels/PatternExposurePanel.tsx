@@ -61,8 +61,10 @@ import {
   patternExposureIntegration, 
   PatternExposureAnalysis, 
   EquipmentMatch,
+  type EquipmentSuggestion,
 } from '@/core/services/patternExposureIntegration';
 import { useNodes, useActions } from '@/state/selectors';
+import type { SceneNode } from '@/state/store';
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -79,7 +81,7 @@ function getFeasibilityColor(score: number): 'success' | 'warning' | 'error' {
   return 'error';
 }
 
-function getMoodIcon(mood: CinematographyPattern['mood,']): string {
+function getMoodIcon(mood: CinematographyPattern['mood']): string {
   switch (mood) {
     case 'bright': return '☀️';
     case 'high-key': return '🌟';
@@ -91,7 +93,7 @@ function getMoodIcon(mood: CinematographyPattern['mood,']): string {
   }
 }
 
-function getDifficultyColor(difficulty: CinematographyPattern['difficulty,']): 'success' | 'info' | 'warning' | 'error' {
+function getDifficultyColor(difficulty: CinematographyPattern['difficulty']): 'success' | 'info' | 'warning' | 'error' {
   switch (difficulty) {
     case 'beginner': return 'success';
     case 'intermediate': return 'info';
@@ -322,8 +324,8 @@ function PatternDetailsPanel({ analysis, onApply }: PatternDetailsPanelProps) {
       {analysis.warnings.length > 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>
           <AlertTitle>Attention</AlertTitle>
-          {analysis.warnings.map((w, i) => (
-            <Typography key={i} variant="body2">• {w}</Typography>
+          {analysis.warnings.map((warning: string, index: number) => (
+            <Typography key={`${warning}-${index}`} variant="body2">• {warning}</Typography>
           ))}
         </Alert>
       )}
@@ -416,8 +418,8 @@ function PatternDetailsPanel({ analysis, onApply }: PatternDetailsPanelProps) {
           </Stack>
         </AccordionSummary>
         <AccordionDetails>
-          {equipmentMatches.map((match, i) => (
-            <EquipmentMatchItem key={i} match={match} />
+          {equipmentMatches.map((match: EquipmentMatch, index: number) => (
+            <EquipmentMatchItem key={`${match.requirement.id}-${index}`} match={match} />
           ))}
         </AccordionDetails>
       </Accordion>
@@ -429,8 +431,8 @@ function PatternDetailsPanel({ analysis, onApply }: PatternDetailsPanelProps) {
             <LearnIcon sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'text-bottom' }} />
             Pro Tips
           </Typography>
-          {analysis.tips.map((tip, i) => (
-            <Alert key={i} severity="info" sx={{ mb: 1 }} icon={<InfoIcon />}>
+          {analysis.tips.map((tip: string, index: number) => (
+            <Alert key={`${tip}-${index}`} severity="info" sx={{ mb: 1 }} icon={<InfoIcon />}>
               {tip}
             </Alert>
           ))}
@@ -444,7 +446,7 @@ function PatternDetailsPanel({ analysis, onApply }: PatternDetailsPanelProps) {
         </Typography>
         {pattern.usedIn.length > 0 && (
           <Typography variant="caption" color="text.secondary" display="block">
-            <strong>Used in:</strong> {pattern.usedIn.join('')}
+            <strong>Used in:</strong> {pattern.usedIn.join(', ')}
           </Typography>
         )}
       </Box>
@@ -518,7 +520,7 @@ export function PatternExposurePanel() {
   }, [selectedPatternId, patternAnalyses]);
   
   // Get equipment suggestions
-  const equipmentSuggestions = useMemo(() => {
+  const equipmentSuggestions = useMemo<EquipmentSuggestion[]>(() => {
     if (!userInventory) return [];
     return patternExposureIntegration.suggestEquipmentForPatterns(userInventory);
   }, [userInventory]);
@@ -529,7 +531,7 @@ export function PatternExposurePanel() {
     if (!analysis) return;
     
     // Find camera node
-    const cameraNode = nodes.find(n => n.camera);
+    const cameraNode = nodes.find((node: SceneNode) => node.camera);
     if (cameraNode) {
       // Update camera with recommended settings
       updateNode(cameraNode.id, {
@@ -608,7 +610,7 @@ export function PatternExposurePanel() {
         {activeTab === 0 && (
           <Grid container spacing={2}>
             {/* Pattern List */}
-            <Grid item xs={selectedPatternId ? 5 : 12}>
+            <Grid size={selectedPatternId ? 5 : 12}>
               {categories.map(category => {
                 const categoryPatterns = getPatternsByCategory(category);
                 if (categoryPatterns.length === 0) return null;
@@ -642,7 +644,7 @@ export function PatternExposurePanel() {
             
             {/* Details Panel */}
             {selectedPatternId && selectedAnalysis && (
-              <Grid item xs={7}>
+              <Grid size={7}>
                 <PatternDetailsPanel
                   analysis={selectedAnalysis}
                   onApply={() => handleApplyPattern(selectedPatternId)}
@@ -693,8 +695,8 @@ export function PatternExposurePanel() {
               Equipment that would unlock more lighting patterns
             </Alert>
             <List>
-              {equipmentSuggestions.map((suggestion, i) => (
-                <ListItem key={i} sx={{ bgcolor: 'action.hover', mb: 1, borderRadius: 1 }}>
+              {equipmentSuggestions.map((suggestion: EquipmentSuggestion, index: number) => (
+                <ListItem key={`${suggestion.equipment}-${index}`} sx={{ bgcolor: 'action.hover', mb: 1, borderRadius: 1 }}>
                   <ListItemIcon>
                     {suggestion.priority === 'high' ? (
                       <StarIcon color="warning" />

@@ -144,6 +144,36 @@ function getDialogueFromStorage(manuscriptId: string): DialogueLine[] {
   }
 }
 
+function saveDialogueToStorage(dialogue: DialogueLine): void {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.DIALOGUE);
+    const allDialogue = data ? JSON.parse(data) as DialogueLine[] : [];
+    const existingIndex = allDialogue.findIndex(d => d.id === dialogue.id);
+    if (existingIndex >= 0) {
+      allDialogue[existingIndex] = dialogue;
+    } else {
+      allDialogue.push(dialogue);
+    }
+    localStorage.setItem(STORAGE_KEYS.DIALOGUE, JSON.stringify(allDialogue));
+  } catch (error) {
+    console.error('Error saving dialogue to storage:', error);
+    throw error;
+  }
+}
+
+function deleteDialogueFromStorage(dialogueId: string): void {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.DIALOGUE);
+    if (!data) return;
+    const allDialogue = JSON.parse(data) as DialogueLine[];
+    const filtered = allDialogue.filter(d => d.id !== dialogueId);
+    localStorage.setItem(STORAGE_KEYS.DIALOGUE, JSON.stringify(filtered));
+  } catch (error) {
+    console.error('Error deleting dialogue from storage:', error);
+    throw error;
+  }
+}
+
 function getRevisionsFromStorage(manuscriptId: string): ScriptRevision[] {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.REVISIONS);
@@ -169,6 +199,753 @@ function saveRevisionToStorage(revision: ScriptRevision): void {
 }
 
 /**
+ * Generate demo data for "TROLL" - Norwegian film by Roar Uthaug (2022)
+ * This provides realistic mock data for testing the Production Manuscript View
+ */
+function generateTrollDemoData(projectId: string): {
+  manuscript: Manuscript;
+  acts: Act[];
+  scenes: SceneBreakdown[];
+  dialogue: DialogueLine[];
+} {
+  const manuscriptId = `troll-demo-${projectId}`;
+  const now = new Date().toISOString();
+
+  // Full Fountain screenplay content for TROLL
+  const trollScreenplayContent = `Title: TROLL
+Credit: Skrevet av
+Author: Espen Aukan
+Source: Basert på norsk folketro
+Draft date: ${new Date().toLocaleDateString('nb-NO')}
+Contact:
+    Netflix / Motion Blur
+    Oslo, Norge
+
+= AKT 1 - OPPVÅKNINGEN =
+
+EXT. DOVRE FJELL - TUNNEL - NIGHT
+
+Vinden hyler over fjellet. Tungt maskineri arbeider i tunnelåpningen. Lys fra arbeidsbrakker kaster lange skygger.
+
+SUPER: "DOVRE, NORGE - NÅ"
+
+Inne i tunnelen: ARBEIDER 1 (50) og ARBEIDER 2 (35) betjener en boremaskin. Vibrasjonene er intense.
+
+ARBEIDER 1
+(roper over støyen)
+Vi er snart gjennom! Bare noen meter til!
+
+Plutselig - STILLHET. Boret går gjennom i tomrom.
+
+ARBEIDER 2
+Hva faen?
+
+De lyser inn med lommelyktene. Et enormt hulrom åpenbarer seg.
+
+FORMANN (40) kommer løpende.
+
+FORMANN
+Hva skjedde? Hvorfor stoppet dere?
+
+ARBEIDER 1
+Det er noe der inne, sjef. En slags... hule.
+
+De stirrer inn i mørket. Noe BEVEGER seg. Dypt inne i fjellet.
+
+INT. HULEN - INNE I FJELLET - NIGHT
+
+Arbeiderne går forsiktig inn. Lommelyktene avslører merkelige formasjoner. Ikke stein. Noe organisk.
+
+ARBEIDER 2
+(hvisker)
+Ser du det? Det ser ut som... bein.
+
+Et lavt DRØNN. Bakken rister. Steinene over dem begynner å falle.
+
+ARBEIDER 1
+UT! NÅ!
+
+De løper. Bak dem: to enorme ØYNE åpner seg i mørket.
+
+SMASH TO:
+
+INT. NORAS LEILIGHET - OSLO - DAY
+
+NORA TIDEMANN (35) - skarp, uredd, med et blikk som ser mer enn de fleste. Hun våkner til TV-nyhetene.
+
+NYHETSANKER (V.O.)
+...jordskjelv i Dovre-området. Flere tunnelarbeidere er savnet...
+
+Nora setter seg opp. Fossiler og fagbøker fyller leiligheten hennes.
+
+NORA
+(til seg selv)
+Det er ikke jordskjelv-aktivitet i Dovre...
+
+Telefonen ringer. Ukjent nummer.
+
+INT. UNIVERSITETET - KONTOR - DAY
+
+Nora sitter i et møterom. Foran henne: ANDREAS ISAKSEN (40), statlig rådgiver, nervøs. GENERAL LUND (55), militær, skeptisk.
+
+ANDREAS
+Dr. Tidemann, det du ser nå er klassifisert.
+
+Han viser bilder på en laptop. Enorme fotspor. Knuste trær.
+
+NORA
+Det der er... det er umulig.
+
+GENERAL LUND
+Vi trenger ikke noen som forteller oss hva som er umulig. Vi trenger noen som kan fortelle oss hva det ER.
+
+NORA
+(studerer bildene)
+Hvis jeg ikke visste bedre... ville jeg si det er et troll.
+
+Stillhet i rommet.
+
+ANDREAS
+Nettopp.
+
+EXT. DOVRE - RUINENE - DAY
+
+Helikopteret lander. Nora går ut, vindblaffen river i håret hennes.
+
+Foran henne: total ødeleggelse. Tunnelen er kollapset. Trær er knekt som fyrstikker i en linje mot skogen.
+
+NORA
+Fotspor...
+(måler med blikket)
+Tjue meter mellom hvert steg.
+
+ANDREAS
+Dr. Tidemann?
+
+NORA
+Dere vekket noe. Noe som har sovet i tusen år.
+
+= AKT 2 - JAKTEN =
+
+EXT. SKOG - ØSTERDALEN - NIGHT
+
+Månelys over trærne. Stillhet.
+
+Så: BRAK. Trær faller. Fugler flykter.
+
+En BONDE (60) står ved traktoren sin, lamslått.
+
+BONDENS KONE (58) roper fra huset.
+
+BONDENS KONE
+JOHAN! Kom inn! NÅ!
+
+Han kan ikke bevege seg. Foran ham, i månelyset: en silhuett høyere enn trærne. Et TROLL.
+
+Det stopper. Snur hodet. Ser rett på ham.
+
+Så går det videre. Mot sør. Mot Oslo.
+
+INT. KOMMANDOSENTRALEN - OSLO - DAY
+
+Kart på skjermene. Røde prikker markerer siktinger.
+
+GENERAL LUND
+Det beveger seg mot hovedstaden. Vi må slå til nå.
+
+NORA
+Nei! Vi vet ikke nok om det ennå.
+
+GENERAL LUND
+Det har drept folk, Dr. Tidemann.
+
+NORA
+Har det? Eller har folk bare vært i veien?
+
+Generalen ser på henne med forakt.
+
+ANDREAS
+Hva foreslår du?
+
+NORA
+La meg prøve å kommunisere med det.
+
+Latter fra generalene.
+
+GENERAL LUND
+Kommunisere? Med et monster?
+
+NORA
+Det er ikke et monster. Det er noe vi har glemt. Noe vi SKULLE husket.
+
+EXT. MOTORVEI E6 - NIGHT
+
+Kaos. Biler står strandet. Folk løper.
+
+TROLLET krysser veien. Enorme føtter knuser asfalten.
+
+En POLITIMANN skyter. Kulene preller av.
+
+Trollet ser ned. Trist. Forvirret.
+
+Det går videre.
+
+= AKT 3 - DET ENDELIGE VALGET =
+
+EXT. SLOTTSPLASSEN - OSLO - SUNRISE
+
+Trollet står foran Slottet. Solen er i ferd med å stå opp over Oslofjorden.
+
+Militære kjøretøy omringer det. Soldater sikter.
+
+Nora løper mot det.
+
+ANDREAS
+NORA! Ikke!
+
+Hun stopper foran trollet. Det ser ned på henne.
+
+NORA
+(på gammelnorsk)
+Du er langt hjemmefra.
+
+Trollet bøyer seg ned. Øynene - fulle av sorg, ikke raseri.
+
+NORA (CONT'D)
+Jeg vet hva du leter etter.
+
+Bak henne: TOBIAS (70), Noras far. Han har et urgammelt steinamulett.
+
+TOBIAS
+Han leter etter familien sin. De forsteinet ham for tusen år siden.
+
+Trollet strekker ut en hånd. Forsiktig.
+
+GENERAL LUND (V.O.)
+(på radio)
+Skyt.
+
+Nora snur seg.
+
+NORA
+NEI!
+
+Hun stiller seg mellom trollet og soldatene.
+
+NORA (CONT'D)
+Hvis dere dreper ham, dreper dere det siste av det vi en gang trodde på.
+
+Solen stiger høyere. Trollets hud begynner å sprekke.
+
+TROLLET
+(på gammelnorsk, sakte)
+...hjem...
+
+Nora tar farens hånd. De går mot trollet.
+
+NORA
+La oss ta deg hjem.
+
+Trollet løfter dem forsiktig opp. Det snur seg mot fjellet.
+
+Bak dem synker solen igjen bak skyene. De har tid.
+
+SMASH TO BLACK.
+
+SUPER: "Trollet ble ført tilbake til Dovre."
+
+SUPER: "Det sover fortsatt."
+
+SUPER: "Men noen passer på."
+
+EXT. DOVRE - UTSIKTSPUNKT - DAY
+
+Nora står på et fjell. Ser utover dalen.
+
+Bak henne, delvis skjult av fjellet: omrisset av et sovende troll.
+
+FADE OUT.
+
+THE END
+`;
+
+  const manuscript: Manuscript = {
+    id: manuscriptId,
+    projectId,
+    title: 'TROLL',
+    subtitle: 'En norsk eventyrfilm',
+    author: 'Espen Aukan',
+    format: 'fountain',
+    content: trollScreenplayContent,
+    createdAt: now,
+    updatedAt: now,
+    version: '1.0',
+    status: 'shooting',
+    pageCount: 98,
+    wordCount: 15000,
+  };
+
+  const acts: Act[] = [
+    {
+      id: `${manuscriptId}-act-1`,
+      manuscriptId,
+      projectId,
+      actNumber: 1,
+      title: 'OPPVÅKNINGEN',
+      description: 'Trollet våkner i Dovre etter tusen år. Nora oppdager sannheten.',
+      pageStart: 1,
+      pageEnd: 32,
+      estimatedRuntime: 30,
+      sortOrder: 1,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: `${manuscriptId}-act-2`,
+      manuscriptId,
+      projectId,
+      actNumber: 2,
+      title: 'JAKTEN',
+      description: 'Militæret jakter trollet. Nora prøver å forstå hvordan de kan stoppe det.',
+      pageStart: 33,
+      pageEnd: 68,
+      estimatedRuntime: 35,
+      sortOrder: 2,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: `${manuscriptId}-act-3`,
+      manuscriptId,
+      projectId,
+      actNumber: 3,
+      title: 'KONFRONTASJONEN',
+      description: 'Det endelige oppgjøret i Oslo. Nora må velge mellom å drepe eller redde trollet.',
+      pageStart: 69,
+      pageEnd: 98,
+      estimatedRuntime: 30,
+      sortOrder: 3,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+
+  const scenes: SceneBreakdown[] = [
+    // AKT 1 - Oppvåkningen
+    {
+      id: `${manuscriptId}-scene-1`,
+      manuscriptId,
+      projectId,
+      actId: acts[0].id,
+      sceneNumber: '1',
+      sceneHeading: 'EXT. DOVRE FJELL - TUNNEL - NIGHT',
+      intExt: 'EXT',
+      locationName: 'DOVRE FJELL - TUNNEL',
+      timeOfDay: 'NIGHT',
+      description: 'Sprengningsarbeid i fjellet. Arbeidere borer seg inn i en ukjent hule.',
+      pageLength: 3,
+      estimatedDuration: 180,
+      characters: ['ARBEIDER 1', 'ARBEIDER 2', 'FORMANN'],
+      propsNeeded: ['Boremaskin', 'Hjelmer', 'Lommelykter', 'Dynamitt'],
+      status: 'completed',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: `${manuscriptId}-scene-2`,
+      manuscriptId,
+      projectId,
+      actId: acts[0].id,
+      sceneNumber: '2',
+      sceneHeading: 'INT. HULEN - INNE I FJELLET - NIGHT',
+      intExt: 'INT',
+      locationName: 'HULEN - INNE I FJELLET',
+      timeOfDay: 'NIGHT',
+      description: 'Arbeiderne oppdager en enorm hule med merkelige bergformasjoner. Noe beveger seg i mørket.',
+      pageLength: 2.5,
+      estimatedDuration: 120,
+      characters: ['ARBEIDER 1', 'ARBEIDER 2'],
+      propsNeeded: ['Lommelykter', 'Radioutstyr'],
+      status: 'completed',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: `${manuscriptId}-scene-3`,
+      manuscriptId,
+      projectId,
+      actId: acts[0].id,
+      sceneNumber: '3',
+      sceneHeading: 'INT. NORAS LEILIGHET - OSLO - DAY',
+      intExt: 'INT',
+      locationName: 'NORAS LEILIGHET - OSLO',
+      timeOfDay: 'DAY',
+      description: 'Paleontolog Nora Tidemann våkner til nyheter om jordskjelv i Dovre.',
+      pageLength: 2,
+      estimatedDuration: 120,
+      characters: ['NORA TIDEMANN'],
+      propsNeeded: ['TV', 'Kaffe', 'Fossiler', 'Bøker'],
+      status: 'scheduled',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: `${manuscriptId}-scene-4`,
+      manuscriptId,
+      projectId,
+      actId: acts[0].id,
+      sceneNumber: '4',
+      sceneHeading: 'INT. UNIVERSITETET - KONTOR - DAY',
+      intExt: 'INT',
+      locationName: 'UNIVERSITETET - KONTOR',
+      timeOfDay: 'DAY',
+      description: 'Nora blir kontaktet av myndighetene. De viser henne bilder fra tunnelen.',
+      pageLength: 4,
+      estimatedDuration: 240,
+      characters: ['NORA TIDEMANN', 'ANDREAS ISAKSEN', 'GENERAL LUND'],
+      propsNeeded: ['Laptop', 'Bilder', 'Dokumenter'],
+      status: 'scheduled',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: `${manuscriptId}-scene-5`,
+      manuscriptId,
+      projectId,
+      actId: acts[0].id,
+      sceneNumber: '5',
+      sceneHeading: 'EXT. DOVRE - RUINENE - DAY',
+      intExt: 'EXT',
+      locationName: 'DOVRE - RUINENE',
+      timeOfDay: 'DAY',
+      description: 'Nora ankommer åstedet. Hun ser ødeleggelsene og forstår at dette ikke er naturlig.',
+      pageLength: 3,
+      estimatedDuration: 180,
+      characters: ['NORA TIDEMANN', 'ANDREAS ISAKSEN', 'SOLDATER'],
+      propsNeeded: ['Helikopter', 'Militærutstyr', 'Kamera'],
+      status: 'not-scheduled',
+      createdAt: now,
+      updatedAt: now,
+    },
+    // AKT 2 - Jakten
+    {
+      id: `${manuscriptId}-scene-6`,
+      manuscriptId,
+      projectId,
+      actId: acts[1].id,
+      sceneNumber: '6',
+      sceneHeading: 'EXT. SKOG - ØSTERDALEN - NIGHT',
+      intExt: 'EXT',
+      locationName: 'SKOG - ØSTERDALEN',
+      timeOfDay: 'NIGHT',
+      description: 'Trollet beveger seg gjennom skogen. Lokale ser det i måneskinn.',
+      pageLength: 3,
+      estimatedDuration: 180,
+      characters: ['TROLLET', 'BONDE', 'BONDENS KONE'],
+      propsNeeded: ['Traktor', 'Fjøslykt'],
+      status: 'not-scheduled',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: `${manuscriptId}-scene-7`,
+      manuscriptId,
+      projectId,
+      actId: acts[1].id,
+      sceneNumber: '7',
+      sceneHeading: 'INT. KOMMANDOSENTRALEN - OSLO - DAY',
+      intExt: 'INT',
+      locationName: 'KOMMANDOSENTRALEN - OSLO',
+      timeOfDay: 'DAY',
+      description: 'Militæret planlegger angrep. Nora advarer mot bruk av vold.',
+      pageLength: 5,
+      estimatedDuration: 300,
+      characters: ['NORA TIDEMANN', 'GENERAL LUND', 'STATSMINISTER', 'RÅDGIVERE'],
+      propsNeeded: ['Storskjermer', 'Kart', 'Radiosystemer'],
+      status: 'scheduled',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: `${manuscriptId}-scene-8`,
+      manuscriptId,
+      projectId,
+      actId: acts[1].id,
+      sceneNumber: '8',
+      sceneHeading: 'EXT. MOTORVEI E6 - NIGHT',
+      intExt: 'EXT',
+      locationName: 'MOTORVEI E6',
+      timeOfDay: 'NIGHT',
+      description: 'Trollet krysser E6. Biler krasjer. Kaos utfolder seg.',
+      pageLength: 5,
+      estimatedDuration: 300,
+      characters: ['TROLLET', 'BILISTER', 'POLITIMANN'],
+      propsNeeded: ['Biler', 'Politibil', 'Veisperring'],
+      specialEffects: 'VFX: Trollet, bilkrasj',
+      status: 'not-scheduled',
+      createdAt: now,
+      updatedAt: now,
+    },
+    // AKT 3 - Konfrontasjonen
+    {
+      id: `${manuscriptId}-scene-9`,
+      manuscriptId,
+      projectId,
+      actId: acts[2].id,
+      sceneNumber: '9',
+      sceneHeading: 'EXT. SLOTTSPLASSEN - OSLO - DAWN',
+      intExt: 'EXT',
+      locationName: 'SLOTTSPLASSEN - OSLO',
+      timeOfDay: 'DAWN',
+      description: 'Trollet nærmer seg Slottet. Solen er i ferd med å stå opp.',
+      pageLength: 6,
+      estimatedDuration: 360,
+      characters: ['TROLLET', 'NORA TIDEMANN', 'ANDREAS ISAKSEN', 'SOLDATER'],
+      propsNeeded: ['Militærkjøretøy', 'UV-lys', 'Megafon'],
+      specialEffects: 'VFX: Trollet, sollys-effekt',
+      status: 'not-scheduled',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: `${manuscriptId}-scene-10`,
+      manuscriptId,
+      projectId,
+      actId: acts[2].id,
+      sceneNumber: '10',
+      sceneHeading: 'EXT. KARL JOHANS GATE - OSLO - DAWN',
+      intExt: 'EXT',
+      locationName: 'KARL JOHANS GATE - OSLO',
+      timeOfDay: 'DAWN',
+      description: 'Klimaks. Nora må ta det endelige valget. Sollyset treffer trollet.',
+      pageLength: 9,
+      estimatedDuration: 540,
+      characters: ['TROLLET', 'NORA TIDEMANN', 'ANDREAS ISAKSEN', 'TOBIAS (FAR)'],
+      propsNeeded: ['Kirkeklokker', 'Speiler', 'UV-lamper'],
+      specialEffects: 'VFX: Trollet forsteines',
+      status: 'not-scheduled',
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+
+  const dialogue: DialogueLine[] = [
+    // Scene 3 - Noras leilighet
+    {
+      id: `${manuscriptId}-dial-1`,
+      manuscriptId,
+      sceneId: scenes[2].id,
+      characterName: 'TV-REPORTER',
+      dialogueText: 'Et kraftig jordskjelv har rammet Dovre-regionen i natt. Flere tunnelarbeidere er savnet.',
+      dialogueType: 'voice-over',
+      lineNumber: 1,
+      parenthetical: 'V.O.',
+      createdAt: now,
+      updatedAt: now,
+    },
+    // Scene 4 - Universitetet
+    {
+      id: `${manuscriptId}-dial-2`,
+      manuscriptId,
+      sceneId: scenes[3].id,
+      characterName: 'ANDREAS ISAKSEN',
+      dialogueText: 'Vi trenger din ekspertise, Nora. Du er den fremste på norrøn geologi i landet.',
+      dialogueType: 'dialogue',
+      lineNumber: 2,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: `${manuscriptId}-dial-3`,
+      manuscriptId,
+      sceneId: scenes[3].id,
+      characterName: 'NORA TIDEMANN',
+      dialogueText: 'Hva er det dere egentlig har funnet der inne?',
+      dialogueType: 'dialogue',
+      lineNumber: 3,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: `${manuscriptId}-dial-4`,
+      manuscriptId,
+      sceneId: scenes[3].id,
+      characterName: 'GENERAL LUND',
+      dialogueText: 'Noe som ikke burde eksistere.',
+      dialogueType: 'dialogue',
+      lineNumber: 4,
+      parenthetical: 'alvorlig',
+      createdAt: now,
+      updatedAt: now,
+    },
+    // Scene 7 - Kommandosentralen
+    {
+      id: `${manuscriptId}-dial-5`,
+      manuscriptId,
+      sceneId: scenes[6].id,
+      characterName: 'NORA TIDEMANN',
+      dialogueText: 'Dere kan ikke drepe det! Dette er en levende skapning som har eksistert i tusenvis av år!',
+      dialogueType: 'dialogue',
+      lineNumber: 5,
+      parenthetical: 'desperat',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: `${manuscriptId}-dial-6`,
+      manuscriptId,
+      sceneId: scenes[6].id,
+      characterName: 'GENERAL LUND',
+      dialogueText: 'Det har drept syv mennesker på to dager. Vi har ikke noe valg.',
+      dialogueType: 'dialogue',
+      lineNumber: 6,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: `${manuscriptId}-dial-7`,
+      manuscriptId,
+      sceneId: scenes[6].id,
+      characterName: 'STATSMINISTER',
+      dialogueText: 'Hva foreslår du, Tidemann? At vi bare lar det vandre inn i hovedstaden?',
+      dialogueType: 'dialogue',
+      lineNumber: 7,
+      createdAt: now,
+      updatedAt: now,
+    },
+    // Scene 10 - Karl Johan
+    {
+      id: `${manuscriptId}-dial-8`,
+      manuscriptId,
+      sceneId: scenes[9].id,
+      characterName: 'NORA TIDEMANN',
+      dialogueText: 'Det leter etter noe. Det leter etter... hjemmet sitt.',
+      dialogueType: 'dialogue',
+      lineNumber: 8,
+      parenthetical: 'forstår',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: `${manuscriptId}-dial-9`,
+      manuscriptId,
+      sceneId: scenes[9].id,
+      characterName: 'TOBIAS',
+      dialogueText: 'Nora... Jeg skulle ønske jeg hadde fortalt deg sannheten. Om alt.',
+      dialogueType: 'dialogue',
+      lineNumber: 9,
+      parenthetical: 'svak stemme',
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: `${manuscriptId}-dial-10`,
+      manuscriptId,
+      sceneId: scenes[9].id,
+      characterName: 'NORA TIDEMANN',
+      dialogueText: 'Jeg vet, pappa. Jeg vet.',
+      dialogueType: 'dialogue',
+      lineNumber: 10,
+      parenthetical: 'gråtkvalt',
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+
+  return { manuscript, acts, scenes, dialogue };
+}
+
+/**
+ * Initialize demo data for a project if no manuscripts exist
+ */
+async function initializeDemoDataIfNeeded(projectId: string): Promise<void> {
+  const key = `demo_initialized_v3_${projectId}`;
+  if (localStorage.getItem(key)) return;
+
+  const manuscripts = getManuscriptsFromStorage(projectId);
+  if (manuscripts.length === 0) {
+    console.log('🎬 Initializing TROLL demo data for project:', projectId);
+    const demoData = generateTrollDemoData(projectId);
+    
+    // Save manuscript to localStorage first
+    saveManuscriptToStorage(demoData.manuscript);
+    console.log('📝 Saved manuscript:', demoData.manuscript.title);
+    
+    // Save acts
+    const actsKey = `manuscript_${demoData.manuscript.id}_acts`;
+    localStorage.setItem(actsKey, JSON.stringify(demoData.acts));
+    console.log('🎭 Saved', demoData.acts.length, 'acts');
+    
+    // Save scenes
+    demoData.scenes.forEach(scene => saveSceneToStorage(scene));
+    console.log('🎬 Saved', demoData.scenes.length, 'scenes');
+    
+    // Save dialogue
+    localStorage.setItem(STORAGE_KEYS.DIALOGUE, JSON.stringify(demoData.dialogue));
+    console.log('💬 Saved', demoData.dialogue.length, 'dialogue lines');
+    
+    // Also sync to database if available
+    const isDbAvailable = await checkDatabaseAvailability();
+    if (isDbAvailable) {
+      try {
+        console.log('🔄 Syncing TROLL demo data to database...');
+        
+        // Create manuscript in DB
+        const manuscriptResponse = await fetch('/api/casting/manuscripts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(demoData.manuscript),
+        });
+        
+        if (manuscriptResponse.ok) {
+          console.log('✅ Manuscript synced to database');
+          
+          // Create acts in DB
+          for (const act of demoData.acts) {
+            await fetch('/api/casting/acts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(act),
+            });
+          }
+          console.log('✅ Acts synced to database');
+          
+          // Create scenes in DB
+          for (const scene of demoData.scenes) {
+            await fetch('/api/casting/scenes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(scene),
+            });
+          }
+          console.log('✅ Scenes synced to database');
+          
+          // Create dialogue in DB
+          for (const line of demoData.dialogue) {
+            await fetch('/api/casting/dialogue', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(line),
+            });
+          }
+          console.log('✅ Dialogue synced to database');
+        }
+      } catch (error) {
+        console.error('⚠️ Error syncing demo data to database:', error);
+        // Continue anyway - localStorage has the data
+      }
+    }
+    
+    // Mark as initialized
+    localStorage.setItem(key, 'true');
+    
+    console.log('✅ Demo data for "TROLL" initialized successfully');
+  } else {
+    console.log('📚 Found', manuscripts.length, 'existing manuscripts for project:', projectId);
+  }
+}
+
+/**
  * Manuscript Service
  */
 class ManuscriptService {
@@ -176,6 +953,9 @@ class ManuscriptService {
    * Get all manuscripts for a project
    */
   async getManuscripts(projectId: string): Promise<Manuscript[]> {
+    // Initialize demo data if needed
+    await initializeDemoDataIfNeeded(projectId);
+    
     const isDbAvailable = await checkDatabaseAvailability();
     
     if (isDbAvailable) {
@@ -376,6 +1156,62 @@ class ManuscriptService {
     }
     
     return getDialogueFromStorage(manuscriptId);
+  }
+
+  /**
+   * Save a dialogue line to database
+   */
+  async saveDialogue(dialogue: DialogueLine): Promise<DialogueLine> {
+    const isDbAvailable = await checkDatabaseAvailability();
+    
+    if (isDbAvailable) {
+      try {
+        const response = await fetch('/api/casting/dialogue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dialogue),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to save dialogue: ${response.statusText}`);
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error('Error saving dialogue to database:', error);
+      }
+    }
+    
+    // Fallback to localStorage
+    saveDialogueToStorage(dialogue);
+    return dialogue;
+  }
+
+  /**
+   * Delete a dialogue line from database
+   */
+  async deleteDialogue(dialogueId: string): Promise<boolean> {
+    const isDbAvailable = await checkDatabaseAvailability();
+    
+    if (isDbAvailable) {
+      try {
+        const response = await fetch(`/api/casting/dialogue/${dialogueId}`, {
+          method: 'DELETE',
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to delete dialogue: ${response.statusText}`);
+        }
+        
+        return true;
+      } catch (error) {
+        console.error('Error deleting dialogue from database:', error);
+      }
+    }
+    
+    // Fallback to localStorage
+    deleteDialogueFromStorage(dialogueId);
+    return true;
   }
 
   /**

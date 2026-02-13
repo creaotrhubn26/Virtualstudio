@@ -4,7 +4,7 @@
  * One-click scene optimization with AI suggestions
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Typography,

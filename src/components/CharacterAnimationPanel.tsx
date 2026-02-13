@@ -3,7 +3,7 @@
  * UI for skeletal animation, IK, and blend shapes control
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FC, type ReactNode, type ChangeEvent } from 'react';
 import {
   Box,
   Paper,
@@ -55,18 +55,18 @@ interface CharacterAnimationPanelProps {
 }
 
 interface TabPanelProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   index: number;
   value: number;
 }
 
-const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
+const TabPanel: FC<TabPanelProps> = ({ children, value, index }) => (
   <div hidden={value !== index} style={{ padding: value === index ? '16px 0' : 0 }}>
     {value === index && children}
   </div>
 );
 
-export const CharacterAnimationPanel: React.FC<CharacterAnimationPanelProps> = ({
+export const CharacterAnimationPanel: FC<CharacterAnimationPanelProps> = ({
   onRigSelect
 }) => {
   const {
@@ -119,7 +119,7 @@ export const CharacterAnimationPanel: React.FC<CharacterAnimationPanelProps> = (
     }
   };
   
-  const handleImportAnimation = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportAnimation = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && activeRigId) {
       await importAnimation(activeRigId, file);

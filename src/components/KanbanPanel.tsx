@@ -1,4 +1,4 @@
-import React, { useState, useId, useMemo, useEffect } from 'react';
+import { useState, useId, useMemo, useEffect, type DragEvent, type KeyboardEvent } from 'react';
 import {
   Box,
   Typography,
@@ -20,10 +20,10 @@ import {
   ExpandMore as ExpandIcon,
   ExpandLess as CollapseIcon,
   Search as SearchIcon,
-  BarChart as StatsIcon,
   FilterList as FilterIcon,
   Clear as ClearIcon,
 } from '@mui/icons-material';
+import { StatsIcon, CandidatesIcon } from './icons/CastingIcons';
 import { Candidate, Role, CastingProject } from '../core/models/casting';
 import { castingService } from '../services/castingService';
 
@@ -134,16 +134,22 @@ export function KanbanPanel({
     });
   };
 
-  const handleDrop = (targetStatus: CandidateStatus) => {
+  const handleDrop = async (targetStatus: CandidateStatus) => {
     if (draggedCandidate && project && draggedCandidate.status !== targetStatus) {
       const updated = {
         ...draggedCandidate,
         status: targetStatus,
         updatedAt: new Date().toISOString()
       };
-      castingService.saveCandidate(project.id, updated);
-      onCandidatesChange();
       setDraggedCandidate(null);
+      try {
+        await castingService.saveCandidate(project.id, updated);
+        onCandidatesChange();
+      } catch (error) {
+        console.error('Failed to save candidate status:', error);
+        // Revert UI by triggering refresh
+        onCandidatesChange();
+      }
     }
   };
 
@@ -179,7 +185,7 @@ export function KanbanPanel({
             >
               Kanban-tavle
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.85rem', lg: '0.9rem', xl: '1rem' } }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.85rem', lg: '0.9rem', xl: '1rem' } }}>
               Dra og slipp kandidater mellom kolonner
             </Typography>
           </Box>
@@ -244,10 +250,13 @@ export function KanbanPanel({
         >
           {KANBAN_COLUMNS.map(col => (
             <Box key={col.status} sx={{ textAlign: 'center', p: { xs: 1, sm: 1.25, md: 1.125, lg: 1.25, xl: 1.5 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mb: 0.5 }}>
+                <CandidatesIcon sx={{ fontSize: { xs: 14, sm: 16, md: 15, lg: 17, xl: 20 }, color: col.color }} />
+              </Box>
               <Typography variant="h4" sx={{ color: col.color, fontWeight: 700, fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.6rem', lg: '1.85rem', xl: '2.5rem' } }}>
                 {statistics[col.status]}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.7rem', lg: '0.72rem', xl: '0.875rem' } }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.7rem', lg: '0.72rem', xl: '0.875rem' } }}>
                 {col.label}
               </Typography>
             </Box>
@@ -264,7 +273,7 @@ export function KanbanPanel({
           size="small"
           slotProps={{
             input: {
-              startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)', mr: 1, fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />,
+              startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.87)', mr: 1, fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />,
               sx: { minHeight: TOUCH_TARGET_SIZE },
             },
             htmlInput: { 'aria-label': 'Søk i kandidater' },
@@ -284,7 +293,7 @@ export function KanbanPanel({
         />
         {searchQuery && (
           <Tooltip title="Nullstill søk">
-            <IconButton onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.5)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
+            <IconButton onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.87)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
               <ClearIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />
             </IconButton>
           </Tooltip>
@@ -295,7 +304,7 @@ export function KanbanPanel({
       {candidates.length > 0 && (
         <Box sx={{ mb: { xs: 2, sm: 2.5, md: 2.25, lg: 2.5, xl: 3 }, p: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 }, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2, border: '1px solid rgba(255,255,255,0.1)' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 }, flexWrap: 'wrap', gap: { xs: 0.5, sm: 1 } }}>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.85rem', lg: '0.88rem', xl: '1rem' } }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontWeight: 600, fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.85rem', lg: '0.88rem', xl: '1rem' } }}>
               Casting-fremdrift
             </Typography>
             <Typography variant="body2" sx={{ color: '#10b981', fontWeight: 600, fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.85rem', lg: '0.88rem', xl: '1rem' } }}>
@@ -346,7 +355,7 @@ export function KanbanPanel({
           <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600, mb: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 }, fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.15rem', lg: '1.35rem', xl: '1.5rem' } }}>
             Organiser kandidatene dine
           </Typography>
-          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.6)', mb: { xs: 3, sm: 4, md: 3.5, lg: 4, xl: 4.5 }, maxWidth: { xs: '100%', sm: 450, md: 420, lg: 480, xl: 540 }, mx: 'auto', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
+          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.87)', mb: { xs: 3, sm: 4, md: 3.5, lg: 4, xl: 4.5 }, maxWidth: { xs: '100%', sm: 450, md: 420, lg: 480, xl: 540 }, mx: 'auto', fontSize: { xs: '0.875rem', sm: '1rem', md: '0.95rem', lg: '1.05rem', xl: '1.125rem' } }}>
             Kanban-tavlen lar deg visuelt spore kandidater gjennom casting-prosessen ved å dra og slippe mellom kolonner.
           </Typography>
           <Box sx={{ display: 'flex', gap: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 }, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -399,7 +408,7 @@ export function KanbanPanel({
             pb: { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 2.5 },
             '&::-webkit-scrollbar': { height: { xs: 6, sm: 8, md: 7, lg: 8, xl: 10 } },
             '&::-webkit-scrollbar-track': { bgcolor: 'rgba(255,255,255,0.05)', borderRadius: { xs: 3, sm: 4, md: 3.5, lg: 4, xl: 5 } },
-            '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.2)', borderRadius: { xs: 3, sm: 4, md: 3.5, lg: 4, xl: 5 }, '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' } },
+            '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.2)', borderRadius: { xs: 3, sm: 4, md: 3.5, lg: 4, xl: 5 }, '&:hover': { bgcolor: 'rgba(255,255,255,0.6)' } },
           }}
         >
           {KANBAN_COLUMNS.map((column) => {
@@ -460,7 +469,7 @@ export function KanbanPanel({
                       <IconButton
                         size="small"
                         onClick={() => toggleColumnCollapse(column.status)}
-                        sx={{ color: 'rgba(255,255,255,0.5)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}
+                        sx={{ color: 'rgba(255,255,255,0.87)', minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}
                       >
                         {isCollapsed ? <ExpandIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} /> : <CollapseIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />}
                       </IconButton>
@@ -499,7 +508,7 @@ export function KanbanPanel({
                       '&::-webkit-scrollbar-track': { bgcolor: 'rgba(255,255,255,0.05)', borderRadius: { xs: 2.5, sm: 3, md: 2.75, lg: 3.5, xl: 4 } },
                       '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.2)', borderRadius: { xs: 2.5, sm: 3, md: 2.75, lg: 3.5, xl: 4 } },
                     }}
-                    onDragOver={(e: React.DragEvent<HTMLDivElement>) => {
+                    onDragOver={(e: DragEvent<HTMLDivElement>) => {
                       e.preventDefault();
                       e.stopPropagation();
                       if (draggedCandidate && draggedCandidate.status !== column.status) {
@@ -509,13 +518,13 @@ export function KanbanPanel({
                         target.style.outlineOffset = '-2px';
                       }
                     }}
-                    onDragLeave={(e: React.DragEvent<HTMLDivElement>) => {
+                    onDragLeave={(e: DragEvent<HTMLDivElement>) => {
                       e.preventDefault();
                       const target = e.currentTarget as HTMLElement;
                       target.style.backgroundColor = 'transparent';
                       target.style.outline = 'none';
                     }}
-                    onDrop={(e: React.DragEvent<HTMLDivElement>) => {
+                    onDrop={(e: DragEvent<HTMLDivElement>) => {
                       e.preventDefault();
                       e.stopPropagation();
                       const target = e.currentTarget as HTMLElement;
@@ -528,7 +537,7 @@ export function KanbanPanel({
                       <Card
                         key={candidate.id}
                         draggable
-                        onDragStart={(e: React.DragEvent<HTMLDivElement>) => {
+                        onDragStart={(e: DragEvent<HTMLDivElement>) => {
                           setDraggedCandidate(candidate);
                           if (e.dataTransfer) {
                             e.dataTransfer.effectAllowed = 'move';
@@ -537,14 +546,14 @@ export function KanbanPanel({
                           (e.currentTarget as HTMLElement).style.opacity = '0.6';
                           (e.currentTarget as HTMLElement).style.transform = 'scale(1.02) rotate(2deg)';
                         }}
-                        onDragEnd={(e: React.DragEvent<HTMLDivElement>) => {
+                        onDragEnd={(e: DragEvent<HTMLDivElement>) => {
                           setDraggedCandidate(null);
                           const target = e.currentTarget as HTMLElement;
                           target.style.opacity = '1';
                           target.style.transform = 'none';
                         }}
                         tabIndex={0}
-                        onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter') onEditCandidate(candidate); }}
+                        onKeyDown={(e: KeyboardEvent) => { if (e.key === 'Enter') onEditCandidate(candidate); }}
                         sx={{
                           bgcolor: 'rgba(255,255,255,0.06)',
                           border: '1px solid rgba(255,255,255,0.1)',
@@ -614,7 +623,7 @@ export function KanbanPanel({
                                 <Typography
                                   variant="caption"
                                   sx={{
-                                    color: 'rgba(255,255,255,0.5)',
+                                    color: 'rgba(255,255,255,0.87)',
                                     display: 'block',
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
@@ -648,7 +657,7 @@ export function KanbanPanel({
                                 <Chip
                                   label={`+${candidate.assignedRoles.length - 2}`}
                                   size="small"
-                                  sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', fontSize: { xs: '9px', sm: '10px', md: '9.5px', lg: '11px', xl: '13px' }, height: { xs: 18, sm: 20, md: 19, lg: 22, xl: 26 } }}
+                                  sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.87)', fontSize: { xs: '9px', sm: '10px', md: '9.5px', lg: '11px', xl: '13px' }, height: { xs: 18, sm: 20, md: 19, lg: 22, xl: 26 } }}
                                 />
                               )}
                             </Box>

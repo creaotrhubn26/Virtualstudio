@@ -5,14 +5,13 @@
  * color grading parameters with professional presets and XML export/import.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Typography,
   Slider,
   Switch,
   FormControlLabel,
-  Button,
   Select,
   MenuItem,
   FormControl,
@@ -20,7 +19,6 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Chip,
   Stack,
   IconButton,
   Tooltip,
@@ -33,7 +31,6 @@ import {
   Refresh as RefreshIcon,
   Info as InfoIcon,
 } from '@mui/icons-material';
-import * as THREE from 'three';
 import { ascCDLService, type ASCCDLParams, type ASCCDLPreset } from '../../core/services/ascCDLService';
 
 interface ASCCDLPanelProps {
@@ -63,7 +60,7 @@ export const ASCCDLPanel: React.FC<ASCCDLPanelProps> = ({
 
   // Reset to default
   const handleReset = () => {
-    setSelectedPreset('neutral, ');
+    setSelectedPreset('neutral');
     onParamsChange(ascCDLService.DEFAULT_PARAMS);
   };
 
@@ -76,10 +73,10 @@ export const ASCCDLPanel: React.FC<ASCCDLPanelProps> = ({
     
     const blob = new Blob([xml], { type: 'text/xml' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a,');
-    a.href = url;
-    a.download = `asc-cdl-${Date.now()}.cdl`;
-    a.click();
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `asc-cdl-${Date.now()}.cdl`;
+    anchor.click();
     URL.revokeObjectURL(url);
   };
 
@@ -92,10 +89,10 @@ export const ASCCDLPanel: React.FC<ASCCDLPanelProps> = ({
     
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `asc-cdl-${Date.now()}.json`;
-    a.click();
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `asc-cdl-${Date.now()}.json`;
+    anchor.click();
     URL.revokeObjectURL(url);
   };
 

@@ -12,7 +12,7 @@
  * - AnimatedBadge: Pop-in for notifications
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, Children, type FC, type MouseEvent, type ReactNode, type CSSProperties } from 'react';
 import {
   Box,
   Button,
@@ -68,7 +68,7 @@ export interface AnimatedButtonProps extends ButtonProps {
   enableRipple?: boolean;
 }
 
-export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
+export const AnimatedButton: FC<AnimatedButtonProps> = ({
   children,
   onClick,
   enableRipple = true,
@@ -77,7 +77,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   const [ripples, setRipples] = useState<Array<{ id: string; x: number; y: number; size: number }>>([]);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleClick = useCallback((e: MouseEvent<HTMLButtonElement>) => {
     if (enableRipple && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -132,7 +132,7 @@ export interface AnimatedIconButtonProps extends IconButtonProps {
   enableRipple?: boolean;
 }
 
-export const AnimatedIconButton: React.FC<AnimatedIconButtonProps> = ({
+export const AnimatedIconButton: FC<AnimatedIconButtonProps> = ({
   children,
   onClick,
   enableRipple = true,
@@ -141,7 +141,7 @@ export const AnimatedIconButton: React.FC<AnimatedIconButtonProps> = ({
   const [ripples, setRipples] = useState<Array<{ id: string; x: number; y: number; size: number }>>([]);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleClick = useCallback((e: MouseEvent<HTMLButtonElement>) => {
     if (enableRipple && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       const x = rect.width / 2;
@@ -200,7 +200,7 @@ const StyledAnimatedSwitch = styled(Switch)({
   },
 });
 
-export const AnimatedSwitch: React.FC<SwitchProps> = (props) => {
+export const AnimatedSwitch: FC<SwitchProps> = (props) => {
   return <StyledAnimatedSwitch {...props} />;
 };
 
@@ -212,7 +212,7 @@ const AnimatedTooltipContent = styled(Box)({
   animation: `${tooltipAppear} 0.2s ${animationEasings.easeOut} forwards`,
 });
 
-export const AnimatedTooltip: React.FC<TooltipProps> = ({ children, title, ...props }) => {
+export const AnimatedTooltip: FC<TooltipProps> = ({ children, title, ...props }) => {
   return (
     <Tooltip
       {...props}
@@ -281,7 +281,7 @@ interface AnimatedCheckmarkProps {
   onComplete?: () => void;
 }
 
-export const AnimatedCheckmark: React.FC<AnimatedCheckmarkProps> = ({
+export const AnimatedCheckmark: FC<AnimatedCheckmarkProps> = ({
   size = 48,
   color = '#4CAF50',
   show = true,
@@ -356,7 +356,7 @@ interface AnimatedSpinnerProps {
   thickness?: number;
 }
 
-export const AnimatedSpinner: React.FC<AnimatedSpinnerProps> = ({
+export const AnimatedSpinner: FC<AnimatedSpinnerProps> = ({
   size = 40,
   color = '#2196F3',
   thickness = 4,
@@ -415,7 +415,7 @@ interface SuccessBurstProps {
   onComplete?: () => void;
 }
 
-export const SuccessBurst: React.FC<SuccessBurstProps> = ({
+export const SuccessBurst: FC<SuccessBurstProps> = ({
   show = false,
   color = '#4CAF50',
   particleCount = 12,
@@ -450,7 +450,7 @@ export const SuccessBurst: React.FC<SuccessBurstProps> = ({
           bgcolor: color, '--tx': `${tx}px`, '--ty': `${ty}px`,
           animation: `${burstParticle} 0.5s ${animationEasings.easeOut} forwards`,
           animationDelay: `${i * 0.02}s`,
-        } as React.CSSProperties}
+        } as CSSProperties}
       />
     );
   });
@@ -486,7 +486,7 @@ const StyledAnimatedSlider = styled(Slider)({
   },
 });
 
-export const AnimatedSlider: React.FC<SliderProps> = (props) => {
+export const AnimatedSlider: FC<SliderProps> = (props) => {
   return <StyledAnimatedSlider {...props} />;
 };
 
@@ -516,7 +516,7 @@ export interface AnimatedBadgeProps extends BadgeProps {
   animate?: boolean;
 }
 
-export const AnimatedBadge: React.FC<AnimatedBadgeProps> = ({
+export const AnimatedBadge: FC<AnimatedBadgeProps> = ({
   animate = true,
   ...props
 }) => {
@@ -538,13 +538,13 @@ export const AnimatedBadge: React.FC<AnimatedBadgeProps> = ({
 // =============================================================================
 
 interface StaggerContainerProps {
-  children: React.ReactNode;
+  children: ReactNode;
   staggerDelay?: number;
   direction?: 'row' | 'column';
   gap?: number;
 }
 
-export const StaggerContainer: React.FC<StaggerContainerProps> = ({
+export const StaggerContainer: FC<StaggerContainerProps> = ({
   children,
   staggerDelay = 0.05,
   direction = 'column',
@@ -559,7 +559,7 @@ export const StaggerContainer: React.FC<StaggerContainerProps> = ({
           animation: `${staggerFadeIn} 0.3s ${animationEasings.easeOut} forwards`,
           opacity: 0,
         },
-        ...React.Children.toArray(children).reduce((acc, _, i) => ({
+        ...Children.toArray(children).reduce((acc, _, i) => ({
           ...acc,
           [`& > *:nth-of-type(${i + 1})`]: {
             animationDelay: `${i * staggerDelay}s`,

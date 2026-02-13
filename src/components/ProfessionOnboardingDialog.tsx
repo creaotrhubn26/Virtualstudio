@@ -22,15 +22,14 @@ import {
   Brush as ArtIcon,
   MusicNote as MusicIcon,
   Videocam as VideocamIcon,
-  Groups as GroupsIcon,
   Search as SearchIcon,
   Assignment as TaskIcon,
-  Share as ShareIcon,
   Timeline as TimelineIcon,
   CheckCircle as CheckIcon,
   Lightbulb as TipIcon,
   PlayArrow as PlayIcon,
 } from '@mui/icons-material';
+import { TeamIcon as GroupsIcon, ShareCustomIcon as ShareIcon } from './icons/CastingIcons';
 
 export type ProfessionType = 
   | 'director' 
@@ -983,7 +982,7 @@ export function ProfessionOnboardingDialog({
         <IconButton
           onClick={handleSkip}
           size="small"
-          sx={{ color: 'rgba(255,255,255,0.5)', '&:hover': { color: 'white' } }}
+          sx={{ color: 'rgba(255,255,255,0.87)', '&:hover': { color: 'white' } }}
         >
           <CloseIcon />
         </IconButton>
@@ -1025,7 +1024,7 @@ export function ProfessionOnboardingDialog({
               </Typography>
               <Typography
                 variant="subtitle1"
-                sx={{ color: 'rgba(255,255,255,0.7)' }}
+                sx={{ color: 'rgba(255,255,255,0.87)' }}
               >
                 {content.welcomeSubtitle}
               </Typography>
@@ -1118,7 +1117,7 @@ export function ProfessionOnboardingDialog({
                           </Typography>
                           <Typography
                             variant="body2"
-                            sx={{ color: 'rgba(255,255,255,0.7)' }}
+                            sx={{ color: 'rgba(255,255,255,0.87)' }}
                           >
                             {feature.description}
                           </Typography>

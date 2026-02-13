@@ -9,7 +9,8 @@ export const sceneEncryptionService = {
     // Simplified - in production would use proper encryption
     // This is just a placeholder
     const encoded = btoa(data);
-    return `encrypted:${encoded}`;
+    const salt = btoa(password).replace(/=+$/g, '').slice(0, 8);
+    return `encrypted:${salt}:${encoded}`;
   },
 
   /**
@@ -18,7 +19,12 @@ export const sceneEncryptionService = {
   decrypt(encrypted: string, password: string): string {
     // Simplified - in production would use proper decryption
     if (encrypted.startsWith('encrypted:')) {
-      return atob(encrypted.substring(10));
+      const [, salt, payload] = encrypted.split(':');
+      const expectedSalt = btoa(password).replace(/=+$/g, '').slice(0, 8);
+      if (salt !== expectedSalt || !payload) {
+        throw new Error('Invalid password for encrypted data');
+      }
+      return atob(payload);
     }
     throw new Error('Invalid encrypted data');
   },

@@ -10,7 +10,7 @@
  * - Export options
  */
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback, type FC } from 'react';
 import { logger } from '../../core/services/logger';
 
 const log = logger.module('FrameContextMenu, ');
@@ -128,7 +128,7 @@ interface MetadataEditorProps {
 // Metadata Editor Dialog
 // =============================================================================
 
-const MetadataEditorDialog: React.FC<MetadataEditorProps> = ({
+const MetadataEditorDialog: FC<MetadataEditorProps> = ({
   open,
   frame,
   onClose,
@@ -278,6 +278,9 @@ const MetadataEditorDialog: React.FC<MetadataEditorProps> = ({
               options={['establishing','closeup','action','dialogue','transition','vfx','insert']}
               value={tags}
               onChange={(_, newValue) => setTags(newValue)}
+              slotProps={{
+                popper: { sx: { zIndex: 1400 } }
+              }}
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
                   <Chip size="small" label={option} {...getTagProps({ index })} key={option} />
@@ -337,7 +340,7 @@ interface ImportFromSceneDialogProps {
   onImport: (data: any) => void;
 }
 
-const ImportFromSceneDialog: React.FC<ImportFromSceneDialogProps> = ({
+const ImportFromSceneDialog: FC<ImportFromSceneDialogProps> = ({
   open,
   type,
   onClose,
@@ -424,7 +427,7 @@ const ImportFromSceneDialog: React.FC<ImportFromSceneDialogProps> = ({
 // Main Context Menu Component
 // =============================================================================
 
-export const FrameContextMenu: React.FC<FrameContextMenuProps> = ({
+export const FrameContextMenu: FC<FrameContextMenuProps> = ({
   anchorPosition,
   frame,
   onClose,

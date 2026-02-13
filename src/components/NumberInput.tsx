@@ -5,7 +5,8 @@
  * Supports mouse wheel and keyboard shortcuts
  */
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import type { FC } from 'react';
 import { TextField, IconButton, Box, InputAdornment } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -26,7 +27,7 @@ export interface NumberInputProps {
   size?: 'small' | 'medium';
 }
 
-export const NumberInput: React.FC<NumberInputProps> = ({
+export const NumberInput: FC<NumberInputProps> = ({
   value,
   onChange,
   min,

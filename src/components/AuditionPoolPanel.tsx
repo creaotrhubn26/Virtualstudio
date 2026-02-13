@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FC } from 'react';
 import {
   Box,
   Typography,
@@ -24,10 +24,9 @@ import {
   Delete as DeleteIcon,
   Search as SearchIcon,
   Download as DownloadIcon,
-  Event as AuditionIcon,
   AccessTime as TimeIcon,
-  LocationOn as LocationIcon,
 } from '@mui/icons-material';
+import { AuditionsIcon as AuditionIcon, LocationsIcon as LocationIcon } from './icons/CastingIcons';
 import { auditionPoolService, PoolAudition } from '../services/auditionPoolService';
 import { CastingProject } from '../core/models/casting';
 
@@ -37,7 +36,7 @@ interface AuditionPoolPanelProps {
   onImport?: (scheduleId: string) => void;
 }
 
-export const AuditionPoolPanel: React.FC<AuditionPoolPanelProps> = ({
+export const AuditionPoolPanel: FC<AuditionPoolPanelProps> = ({
   projects,
   currentProjectId,
   onImport,
@@ -164,7 +163,7 @@ export const AuditionPoolPanel: React.FC<AuditionPoolPanelProps> = ({
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)' }} />
+                <SearchIcon sx={{ color: 'rgba(255,255,255,0.87)' }} />
               </InputAdornment>
             ),
           }}
@@ -177,19 +176,19 @@ export const AuditionPoolPanel: React.FC<AuditionPoolPanelProps> = ({
               '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
               '&.Mui-focused fieldset': { borderColor: '#10b981' },
             },
-            '& .MuiInputBase-input::placeholder': { color: 'rgba(255,255,255,0.5)' },
+            '& .MuiInputBase-input::placeholder': { color: 'rgba(255,255,255,0.87)' },
           }}
         />
       </Box>
 
-      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 3 }}>
+      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 3 }}>
         Global auditionpool - gjenbruk auditionmaler på tvers av prosjekter.
         Lagre auditions til poolen fra prosjekter, eller importer fra poolen til nye prosjekter.
       </Typography>
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Laster auditionmaler...</Typography>
+          <Typography sx={{ color: 'rgba(255,255,255,0.87)' }}>Laster auditionmaler...</Typography>
         </Box>
       ) : filteredAuditions.length === 0 ? (
         <Box sx={{ 
@@ -200,10 +199,10 @@ export const AuditionPoolPanel: React.FC<AuditionPoolPanelProps> = ({
           border: '1px dashed rgba(255,255,255,0.1)',
         }}>
           <AuditionIcon sx={{ fontSize: 48, color: 'rgba(255,255,255,0.2)', mb: 2 }} />
-          <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 1 }}>
+          <Typography sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
             {searchQuery ? 'Ingen auditionmaler matcher søket' : 'Ingen auditionmaler i poolen ennå'}
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.3)' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
             Lagre auditions fra prosjekter for å fylle poolen
           </Typography>
         </Box>
@@ -266,8 +265,8 @@ export const AuditionPoolPanel: React.FC<AuditionPoolPanelProps> = ({
                 <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                   {audition.durationMinutes && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <TimeIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.4)' }} />
-                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>
+                      <TimeIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.7)' }} />
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '0.75rem' }}>
                         {audition.durationMinutes} minutter
                       </Typography>
                     </Box>
@@ -275,9 +274,9 @@ export const AuditionPoolPanel: React.FC<AuditionPoolPanelProps> = ({
                   
                   {audition.location && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <LocationIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.4)' }} />
+                      <LocationIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.7)' }} />
                       <Typography variant="body2" sx={{ 
-                        color: 'rgba(255,255,255,0.5)', 
+                        color: 'rgba(255,255,255,0.87)', 
                         fontSize: '0.75rem',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -293,7 +292,7 @@ export const AuditionPoolPanel: React.FC<AuditionPoolPanelProps> = ({
                   <Typography 
                     variant="body2" 
                     sx={{ 
-                      color: 'rgba(255,255,255,0.5)',
+                      color: 'rgba(255,255,255,0.87)',
                       mt: 1,
                       fontSize: '0.8rem',
                       display: '-webkit-box',
@@ -329,7 +328,7 @@ export const AuditionPoolPanel: React.FC<AuditionPoolPanelProps> = ({
                           height: 20,
                           fontSize: '0.7rem',
                           bgcolor: 'rgba(255,255,255,0.1)',
-                          color: 'rgba(255,255,255,0.5)',
+                          color: 'rgba(255,255,255,0.87)',
                         }}
                       />
                     )}
@@ -362,7 +361,7 @@ export const AuditionPoolPanel: React.FC<AuditionPoolPanelProps> = ({
                     size="small"
                     onClick={() => handleDeleteFromPool(audition.id)}
                     sx={{
-                      color: 'rgba(255,255,255,0.4)',
+                      color: 'rgba(255,255,255,0.7)',
                       minWidth: TOUCH_TARGET,
                       minHeight: TOUCH_TARGET,
                       '&:hover': { 
@@ -414,7 +413,7 @@ export const AuditionPoolPanel: React.FC<AuditionPoolPanelProps> = ({
                     {selectedAudition.title}
                   </Typography>
                   {selectedAudition.auditionType && (
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                       {selectedAudition.auditionType}
                     </Typography>
                   )}
@@ -424,7 +423,7 @@ export const AuditionPoolPanel: React.FC<AuditionPoolPanelProps> = ({
           )}
           
           <FormControl fullWidth>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Velg prosjekt</InputLabel>
+            <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Velg prosjekt</InputLabel>
             <Select
               value={targetProjectId}
               onChange={(e) => setTargetProjectId(e.target.value)}
@@ -447,7 +446,7 @@ export const AuditionPoolPanel: React.FC<AuditionPoolPanelProps> = ({
         <DialogActions sx={{ borderTop: '1px solid rgba(255,255,255,0.1)', p: 2 }}>
           <Button 
             onClick={() => setImportDialogOpen(false)}
-            sx={{ color: 'rgba(255,255,255,0.6)' }}
+            sx={{ color: 'rgba(255,255,255,0.87)' }}
           >
             Avbryt
           </Button>
@@ -460,7 +459,7 @@ export const AuditionPoolPanel: React.FC<AuditionPoolPanelProps> = ({
               bgcolor: '#10b981',
               color: '#fff',
               '&:hover': { bgcolor: '#059669' },
-              '&.Mui-disabled': { bgcolor: 'rgba(16,185,129,0.3)', color: 'rgba(255,255,255,0.5)' },
+              '&.Mui-disabled': { bgcolor: 'rgba(16,185,129,0.3)', color: 'rgba(255,255,255,0.87)' },
             }}
           >
             Importer

@@ -248,7 +248,7 @@ export function LightsBrowser() {
           <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
             🌫️ Miljø-tilpassede anbefalinger
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
             Basert på aktivt miljø anbefaler vi disse lysene:
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -278,7 +278,7 @@ export function LightsBrowser() {
           <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
             🌫️ Miljø-tilpassede anbefalinger
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
             Basert på aktivt miljø anbefaler vi disse lysene:
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -344,7 +344,7 @@ export function LightsBrowser() {
           <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
             🌫️ Miljø-tilpassede anbefalinger
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
             Basert på aktivt miljø anbefaler vi disse lysene:
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -469,7 +469,7 @@ export function LightsBrowser() {
           <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
             🌫️ Miljø-tilpassede anbefalinger
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
             Basert på aktivt miljø anbefaler vi disse lysene:
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -531,7 +531,7 @@ export function LightsBrowser() {
           <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
             🌫️ Miljø-tilpassede anbefalinger
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
             Basert på aktivt miljø anbefaler vi disse lysene:
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -587,7 +587,7 @@ export function LightsBrowser() {
           <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
             🌫️ Miljø-tilpassede anbefalinger
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
             Basert på aktivt miljø anbefaler vi disse lysene:
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -653,7 +653,7 @@ export function LightsBrowser() {
           <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
             🌫️ Miljø-tilpassede anbefalinger
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
             Basert på aktivt miljø anbefaler vi disse lysene:
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -677,7 +677,7 @@ export function LightsBrowser() {
           <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
             🌫️ Miljø-tilpassede anbefalinger
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
             Basert på aktivt miljø anbefaler vi disse lysene:
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -777,7 +777,7 @@ export function LightsBrowser() {
           <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
             🌫️ Miljø-tilpassede anbefalinger
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
             Basert på aktivt miljø anbefaler vi disse lysene:
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -838,7 +838,7 @@ export function LightsBrowser() {
           <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
             🌫️ Miljø-tilpassede anbefalinger
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
             Basert på aktivt miljø anbefaler vi disse lysene:
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -893,7 +893,7 @@ export function LightsBrowser() {
           <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
             🌫️ Miljø-tilpassede anbefalinger
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
             Basert på aktivt miljø anbefaler vi disse lysene:
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -917,7 +917,7 @@ export function LightsBrowser() {
           <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
             🌫️ Miljø-tilpassede anbefalinger
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
             Basert på aktivt miljø anbefaler vi disse lysene:
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap">

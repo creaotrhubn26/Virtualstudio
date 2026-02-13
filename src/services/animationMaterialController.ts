@@ -561,3 +561,4 @@ export class AnimationMaterialController {
     const config = this.lodConfigs.get(rigId);
     return config ? config.emotionEffectsEnabled : true;
   }
+}

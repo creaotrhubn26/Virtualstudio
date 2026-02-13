@@ -8,7 +8,8 @@
  * - Background Height Coverage
  */
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
+import type { FC } from 'react';
 import { Html, Line } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -49,7 +50,7 @@ const LIGHT_HEIGHTS = [
 ];
 
 // Subject Height Markers
-const SubjectHeightMarkers: React.FC<{
+const SubjectHeightMarkers: FC<{
   position: [number, number, number];
 }> = ({ position }) => {
   return (
@@ -103,7 +104,7 @@ const SubjectHeightMarkers: React.FC<{
 };
 
 // Camera Height Markers
-const CameraHeightMarkers: React.FC<{
+const CameraHeightMarkers: FC<{
   position: [number, number, number];
 }> = ({ position }) => {
   return (
@@ -162,7 +163,7 @@ const CameraHeightMarkers: React.FC<{
 };
 
 // Light Height Markers
-const LightHeightMarkers: React.FC<{
+const LightHeightMarkers: FC<{
   position: [number, number, number];
 }> = ({ position }) => {
   return (
@@ -222,7 +223,7 @@ const LightHeightMarkers: React.FC<{
 };
 
 // Background Height Coverage
-const BackgroundHeightCoverage: React.FC<{
+const BackgroundHeightCoverage: FC<{
   position: [number, number, number];
   height: number;
   width: number;
@@ -310,7 +311,7 @@ const BackgroundHeightCoverage: React.FC<{
 };
 
 // Main Height Reference Guides Component
-export const HeightReferenceGuides: React.FC<HeightReferenceGuidesProps> = ({
+export const HeightReferenceGuides: FC<HeightReferenceGuidesProps> = ({
   showSubjectHeights = true,
   showCameraHeights = true,
   showLightHeights = true,

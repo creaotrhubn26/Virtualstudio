@@ -3,7 +3,7 @@
  * Browse, search, and play sounds from the sound library
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, type ReactNode } from 'react';
 import {
   Box,
   Paper,
@@ -51,7 +51,7 @@ import {
 } from '../data/soundDefinitions';
 import { audioService } from '../core/services/audioService';
 
-const CATEGORY_ICONS: Record<SoundCategory, React.ReactNode> = {
+const CATEGORY_ICONS: Record<SoundCategory, ReactNode> = {
   environment: <CloudIcon />,
   atmosphere: <NightlightIcon />,
   production: <MovieIcon />,
@@ -244,7 +244,7 @@ export function SoundBrowser({ songflowTrackId }: SoundBrowserProps = {}) {
           <Typography variant="h6" sx={{ fontWeight: 700, color: '#fff', fontSize: 18 }}>
             Lydbibliotek
           </Typography>
-          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
             {SOUND_LIBRARY.length} lyder tilgjengelig
           </Typography>
         </Box>

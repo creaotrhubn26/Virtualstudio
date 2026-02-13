@@ -5,7 +5,7 @@
  * Supports: parsing, landmarks, headpose, attributes
  */
 
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo, type ReactNode } from 'react';
 import {
   Box,
   Typography,
@@ -23,6 +23,7 @@ import {
   Chip,
   Stack,
   Divider,
+  Slider,
 } from '@mui/material';
 import {
   Face as FaceIcon,
@@ -54,7 +55,7 @@ import { faceAnalysisHistory, type AnalysisSnapshot } from '../../services/FaceA
 const log = logger.module('FaceAnalysisPanel, ');
 
 interface TabPanelProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   index: number;
   value: number;
 }
@@ -93,6 +94,13 @@ export function FaceAnalysisPanel() {
   const storeActions = useActions();
   const nodes = useNodes();
   
+  // Background analysis settings
+  const [backgroundAnalysis, setBackgroundAnalysis] = useState(false);
+  const [backgroundInterval, setBackgroundInterval] = useState(10000);
+  
+  // Face analysis context (shares data with viewport overlays)
+  const { setAnalysisData } = useFaceAnalysis();
+  
   // Composition guides state
   const [compositionGuides, setCompositionGuides] = useState<any>(null);
   
@@ -100,16 +108,16 @@ export function FaceAnalysisPanel() {
   const [historyStats, setHistoryStats] = useState(faceAnalysisHistory.getStats());
   
   // Real-time analysis
-  const realtimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const realtimeIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAnalysisTimeRef = useRef<number>(0);
   const REALTIME_INTERVAL_MS = 2000; // Analyze every 2 seconds when enabled
   
   // Background analysis
-  const backgroundIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const backgroundIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastBackgroundAnalysisRef = useRef<number>(0);
   const lastSceneHashRef = useRef<string>(', ');
   const isAnalyzingRef = useRef<boolean>(false);
-  const backgroundTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const backgroundTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const tasks: Array<{ value: FaceAnalysisTask; label: string; description: string }> = [
     { value: 'all', label: 'All Tasks', description: 'Run all analysis tasks' },
@@ -201,7 +209,7 @@ export function FaceAnalysisPanel() {
       pos: roundArray(n.transform?.position || [0, 0, 0]),
       rot: roundArray(n.transform?.rotation || [0, 0, 0]),
       power: round(n.light?.power || 0),
-    })).sort((a, b) => a.id.localeCompare(b.id)); // Sort for consistent hashing
+    })).sort((a: { id: string }, b: { id: string }) => a.id.localeCompare(b.id)); // Sort for consistent hashing
     
     return JSON.stringify({
       camera: { pos: roundArray(cameraPos), rot: roundArray(cameraRot) },
@@ -209,6 +217,21 @@ export function FaceAnalysisPanel() {
       lights: lights,
     });
   }, [nodes]);
+
+  /**
+   * Convert base64 data URL to File for API
+   */
+  const dataURLtoFile = useCallback((dataurl: string, filename: string): File => {
+    const arr = dataurl.split(', ');
+    const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  }, []);
 
   /**
    * Background auto-analysis effect
@@ -292,7 +315,7 @@ export function FaceAnalysisPanel() {
                 );
                 
                 setHistoryStats(faceAnalysisHistory.getStats());
-                log.debug('Background analysis completed (camera moved)', { cameraHash });
+                log.debug('Background analysis completed (camera moved)', { cameraHash: sceneHash });
               } else {
                 // Still save to history even if auto-adjust is off
                 faceAnalysisHistory.addSnapshot(
@@ -311,7 +334,7 @@ export function FaceAnalysisPanel() {
                   }
                 );
                 setHistoryStats(faceAnalysisHistory.getStats());
-                log.debug('Background analysis completed (camera moved, no auto-adjust)', { cameraHash });
+                log.debug('Background analysis completed (camera moved, no auto-adjust)', { cameraHash: sceneHash });
               }
             }
           } catch (err) {
@@ -330,12 +353,17 @@ export function FaceAnalysisPanel() {
         backgroundTimeoutRef.current = setTimeout(() => {
           runBackgroundAnalysis();
         }, 500); // 500ms debounce
+        backgroundIntervalRef.current = backgroundTimeoutRef.current;
       }
     } else {
       // Stop background analysis
       if (backgroundTimeoutRef.current) {
         clearTimeout(backgroundTimeoutRef.current);
         backgroundTimeoutRef.current = null;
+      }
+      if (backgroundIntervalRef.current) {
+        clearTimeout(backgroundIntervalRef.current);
+        backgroundIntervalRef.current = null;
       }
       lastSceneHashRef.current = ', ';
       isAnalyzingRef.current = false;
@@ -347,8 +375,12 @@ export function FaceAnalysisPanel() {
         clearTimeout(backgroundTimeoutRef.current);
         backgroundTimeoutRef.current = null;
       }
+      if (backgroundIntervalRef.current) {
+        clearTimeout(backgroundIntervalRef.current);
+        backgroundIntervalRef.current = null;
+      }
     };
-  }, [backgroundAnalysis, sceneHash, backgroundInterval, autoAdjustCamera, nodes, storeActions, dataURLtoFile, setAnalysisData]);
+  }, [backgroundAnalysis, sceneHash, backgroundInterval, autoAdjustCamera, nodes, storeActions, dataURLtoFile, setAnalysisData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * Real-time analysis effect
@@ -499,21 +531,6 @@ export function FaceAnalysisPanel() {
     }
   }, [autoAdjustCamera, faceAwareLighting, showCompositionGuides, realtimeAnalysis, nodes, storeActions]);
 
-  /**
-   * Convert base64 data URL to File for API
-   */
-  const dataURLtoFile = useCallback((dataurl: string, filename: string): File => {
-    const arr = dataurl.split(', ');
-    const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], filename, { type: mime });
-  }, []);
-
   const handleAnalyze = useCallback(async () => {
     if (!capturedImage) {
       setError('Please capture the scene first');
@@ -631,10 +648,12 @@ export function FaceAnalysisPanel() {
       </Typography>
 
       {/* Scene Capture */}
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Capture Current Scene
-        </Typography>
+      <Card sx={{ mb: 2 }}>
+        <CardContent>
+          <Typography variant="subtitle2" gutterBottom>
+            <ImageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+            Capture Current Scene
+          </Typography>
         <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
           Analyzes the 3D model/actor currently in the scene
         </Typography>
@@ -660,7 +679,10 @@ export function FaceAnalysisPanel() {
             </Typography>
           </Box>
         )}
-      </Paper>
+        </CardContent>
+      </Card>
+
+      <Divider sx={{ mb: 2 }} />
 
       {/* Enhancement Settings */}
       <Paper sx={{ p: 2, mb: 2 }}>
@@ -755,7 +777,7 @@ export function FaceAnalysisPanel() {
               </Typography>
               <Slider
                 value={backgroundInterval}
-                onChange={(_, value) => setBackgroundInterval(value as number)}
+                onChange={(_: Event, value: number | number[]) => setBackgroundInterval(value as number)}
                 min={2000}
                 max={30000}
                 step={1000}
@@ -766,7 +788,7 @@ export function FaceAnalysisPanel() {
                   { value: 30000, label: '30s' },
                 ]}
                 valueLabelDisplay="auto"
-                valueLabelFormat={(value) => `${value / 1000}s`}
+                valueLabelFormat={(value: number) => `${value / 1000}s`}
               />
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                 Analyzes automatically when camera, model, or lights change, or after interval
@@ -819,6 +841,7 @@ export function FaceAnalysisPanel() {
       {/* History Controls */}
       <Paper sx={{ p: 2, mb: 2 }}>
         <Typography variant="subtitle2" gutterBottom>
+          <HistoryIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
           Analysis History
         </Typography>
         <Stack direction="row" spacing={1}>
@@ -827,7 +850,7 @@ export function FaceAnalysisPanel() {
             size="small"
             startIcon={<UndoIcon />}
             onClick={() => {
-              const snapshot = faceAnalysisHistory.undo();
+              const snapshot: AnalysisSnapshot | null = faceAnalysisHistory.undo();
               if (snapshot) {
                 // Restore scene state from snapshot
                 if (snapshot.cameraAdjustment) {
@@ -868,7 +891,7 @@ export function FaceAnalysisPanel() {
             size="small"
             startIcon={<RedoIcon />}
             onClick={() => {
-              const snapshot = faceAnalysisHistory.redo();
+              const snapshot: AnalysisSnapshot | null = faceAnalysisHistory.redo();
               if (snapshot) {
                 // Restore scene state from snapshot
                 if (snapshot.cameraAdjustment) {
@@ -1110,7 +1133,7 @@ export function FaceAnalysisPanel() {
               </Typography>
               <Grid container spacing={1}>
                 {results.results.attributes.map((attr: number, idx: number) => (
-                  <Grid item key={idx}>
+                  <Grid key={idx} size="auto">
                     <Chip
                       label={`Attr ${idx + 1}: ${attr}`}
                       size="small"

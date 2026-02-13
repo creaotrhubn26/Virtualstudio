@@ -308,7 +308,7 @@ export const useExportStore = create<ExportStore>((set, get) => ({
   },
   
   exportScene: async (name, format) => {
-    const { scene, settings } = get();
+    const { scene } = get();
     if (!scene) return null;
     
     const jobId = `export-${Date.now()}`;
@@ -393,7 +393,7 @@ export const useExportStore = create<ExportStore>((set, get) => ({
   },
   
   exportSelected: async (name, format) => {
-    const { scene, settings } = get();
+    const { scene } = get();
     if (!scene) return null;
     
     // Store original visibility
@@ -426,13 +426,21 @@ export const useExportStore = create<ExportStore>((set, get) => ({
     if (!scene) return null;
     
     const { imageWidth, imageHeight, imageTransparent, imageSamples } = settings;
+    const sampleMultiplier = Math.max(1, imageSamples || 1);
+    const targetWidth = Math.round(imageWidth * sampleMultiplier);
+    const targetHeight = Math.round(imageHeight * sampleMultiplier);
+    const previousClearColor = scene.clearColor.clone();
+    if (imageTransparent) {
+      scene.clearColor.a = 0;
+    }
     
     return new Promise<Blob | null>((resolve) => {
       BABYLON.Tools.CreateScreenshot(
         scene.getEngine(),
         scene.activeCamera!,
-        { width: imageWidth, height: imageHeight, precision: 1 },
+        { width: targetWidth, height: targetHeight, precision: 1 },
         (data) => {
+          scene.clearColor = previousClearColor;
           // Convert base64 to blob
           const base64 = data.split(',')[1];
           const binary = atob(base64);

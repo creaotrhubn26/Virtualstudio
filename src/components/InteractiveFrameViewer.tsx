@@ -5,7 +5,7 @@
  * Supports context menu integration for adding annotations.
  */
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback, type FC, type MouseEvent } from 'react';
 import {
   Box,
   Paper,
@@ -50,7 +50,7 @@ interface InteractiveFrameViewerProps {
 // Main Component
 // =============================================================================
 
-export const InteractiveFrameViewer: React.FC<InteractiveFrameViewerProps> = ({
+export const InteractiveFrameViewer: FC<InteractiveFrameViewerProps> = ({
   frame,
   height = 400,
   showToolbar = true,
@@ -103,7 +103,7 @@ export const InteractiveFrameViewer: React.FC<InteractiveFrameViewerProps> = ({
 
   // Handle tool selection
   const handleToolChange = useCallback((
-    _event: React.MouseEvent<HTMLElement>,
+    _event: MouseEvent<HTMLElement>,
     newTool: AnnotationType | null
   ) => {
     setPlacementMode(newTool);

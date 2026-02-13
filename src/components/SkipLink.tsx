@@ -4,7 +4,7 @@
  * Accessibility skip link for keyboard navigation
  */
 
-import React from 'react';
+import type { FC } from 'react';
 import { Box } from '@mui/material';
 import { colors, spacing, borderRadius } from '../../styles/designTokens';
 
@@ -13,7 +13,7 @@ export interface SkipLinkProps {
   label?: string;
 }
 
-export const SkipLink: React.FC<SkipLinkProps> = ({
+export const SkipLink: FC<SkipLinkProps> = ({
   href,
   label = 'Skip to main content',
 }) => {

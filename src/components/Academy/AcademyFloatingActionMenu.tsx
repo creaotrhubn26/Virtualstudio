@@ -3,7 +3,7 @@ import { useAcademyContext } from '@/contexts/AcademyContext';
  * Academy Floating Action Menu
  * Quick access to Academy features and tools
  */
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   Box,
   Fab,
@@ -297,6 +297,12 @@ function AcademyFloatingActionMenu({
   const [showNotificationsMenu, setShowNotificationsMenu] = useState(false);
   const [showQuickActionsMenu, setShowQuickActionsMenu] = useState(false);
   const [showAutoSaveDialog, setShowAutoSaveDialog] = useState(false);
+  const [showUtilityActions, setShowUtilityActions] = useState(false);
+  const [quickNote, setQuickNote] = useState('');
+  const [quickCategory, setQuickCategory] = useState('general');
+  const [privacyMode, setPrivacyMode] = useState(false);
+  const [menuLocked, setMenuLocked] = useState(false);
+  const [playbackMode, setPlaybackMode] = useState<'play' | 'pause' | 'stop'>('pause');
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'saving' | 'saved' | 'error' | 'idle'>('idle',
@@ -309,6 +315,8 @@ function AcademyFloatingActionMenu({
 
   // Theming system
   const theming = useTheming('music_producer');
+  const theme = useTheme();
+  const isCompact = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
   
   // Track component usage with performance and debugging
@@ -461,7 +469,7 @@ function AcademyFloatingActionMenu({
           autoSave.forceSave();
           break;
         case 'restore':
-          autoSave.restoreFromBackup();
+          autoSave.restoreFromBackup('academy-floating-action');
           break;
       }
 
@@ -495,6 +503,33 @@ function AcademyFloatingActionMenu({
     );
     setUnreadCount((prev) => Math.max(0, prev - 1));
   }, []);
+
+  const utilityActions = useMemo(() => ([
+    { id: 'work', label: 'Workspace', icon: <Work /> },
+    { id: 'bookmark', label: 'Bookmark', icon: <Bookmark /> },
+    { id: 'bookmark-outline', label: 'Bookmark Outline', icon: <BookmarkBorder /> },
+    { id: 'star', label: 'Star', icon: <Star /> },
+    { id: 'copy', label: 'Copy Link', icon: <ContentCopy /> },
+    { id: 'download-cloud', label: 'Cloud Download', icon: <CloudDownload /> },
+    { id: 'trending', label: 'Trending', icon: <TrendingUp /> },
+    { id: 'people', label: 'People', icon: <People /> },
+    { id: 'group', label: 'Group', icon: <Group /> },
+    { id: 'person', label: 'Person', icon: <Person /> },
+    { id: 'business', label: 'Business', icon: <Business /> },
+    { id: 'business-center', label: 'Business Center', icon: <BusinessCenter /> },
+    { id: 'celebration', label: 'Celebration', icon: <Celebration /> },
+    { id: 'celebration-outline', label: 'Celebration Outline', icon: <CelebrationOutlined /> },
+    { id: 'security', label: 'Security', icon: <Security /> },
+    { id: 'speed', label: 'Performance', icon: <Speed /> },
+    { id: 'ai', label: 'AI Assist', icon: <AutoAwesome /> },
+    { id: 'lock', label: 'Lock', icon: <Lock /> },
+    { id: 'lock-open', label: 'Unlock', icon: <LockOpen /> },
+    { id: 'search-off', label: 'Search Off', icon: <SearchOff /> },
+    { id: 'edit', label: 'Edit', icon: <Edit /> },
+    { id: 'delete', label: 'Delete', icon: <Delete /> },
+    { id: 'visibility-off', label: 'Hide', icon: <VisibilityOff /> },
+    { id: 'text', label: 'Text Field', icon: <TextFields /> },
+  ]), []);
 
   // Get position styles
   const getPositionStyles = () => {
@@ -587,8 +622,9 @@ function AcademyFloatingActionMenu({
 
         <Fab
           color="primary"
+          size={isCompact ? 'small' : 'medium'}
           onClick={() => setShowQuickActionsMenu(true)}
-          sx={{ bgcolor: '#3fb950' }}
+          sx={{ bgcolor: academyTheme.colors.success }}
         >
           <Add />
         </Fab>
@@ -731,6 +767,27 @@ function AcademyFloatingActionMenu({
       ))}
       
       <Divider />
+
+      <MenuItem onClick={() => setShowUtilityActions((prev) => !prev)}>
+        <ListItemIcon>
+          {showUtilityActions ? <ExpandLess /> : <ExpandMore />}
+        </ListItemIcon>
+        <ListItemText primary="Utility Actions" />
+      </MenuItem>
+
+      {showUtilityActions && (
+        <Box sx={{ px: 1, pb: 1 }}>
+          {utilityActions.map((action) => (
+            <MenuItem
+              key={action.id}
+              onClick={() => analytics.trackEvent('utility_action_clicked', { actionId: action.id })}
+            >
+              <ListItemIcon>{action.icon}</ListItemIcon>
+              <ListItemText primary={action.label} />
+            </MenuItem>
+          ))}
+        </Box>
+      )}
       
       {/* Additional actions using unused icons */}
       <Box sx={{ p: 1 }}>
@@ -889,10 +946,101 @@ function AcademyFloatingActionMenu({
         {/* Quick actions for auto-save */}
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
           <Chip icon={<Backup />} label="Backup" onClick={() => autoSave.forceSave()} variant="outlined" />
-          <Chip icon={<Restore />} label="Restore" onClick={() => console.log('Restore')} variant="outlined" />
+          <Chip icon={<Restore />} label="Restore" onClick={() => autoSave.restoreFromBackup('academy-floating-action')} variant="outlined" />
           <Chip icon={<Refresh />} label="Refresh" onClick={() => queryClient.invalidateQueries()} variant="outlined" />
           <Chip icon={<SyncDisabled />} label="Pause Sync" variant="outlined" />
         </Stack>
+
+        <Divider sx={{ my: 2 }} />
+
+        <Typography variant="subtitle2" sx={{ mb: 1 }}>
+          Quick Settings
+        </Typography>
+        <Stack direction={isCompact ? 'column' : 'row'} spacing={2} sx={{ mb: 2 }}>
+          <TextField
+            fullWidth
+            size="small"
+            label="Quick note"
+            value={quickNote}
+            onChange={(e) => setQuickNote(e.target.value)}
+            InputProps={{ startAdornment: <TextFields fontSize="small" /> as any }}
+          />
+          <FormControl fullWidth size="small">
+            <InputLabel>Category</InputLabel>
+            <Select
+              value={quickCategory}
+              label="Category"
+              onChange={(e) => setQuickCategory(e.target.value)}
+            >
+              <MenuItem value="general">General</MenuItem>
+              <MenuItem value="learning">Learning</MenuItem>
+              <MenuItem value="business">Business</MenuItem>
+            </Select>
+          </FormControl>
+        </Stack>
+
+        <Stack direction="row" spacing={2} flexWrap="wrap">
+          <FormControlLabel
+            control={
+              <Switch
+                checked={privacyMode}
+                onChange={(e) => setPrivacyMode(e.target.checked)}
+              />
+            }
+            label={
+              <Stack direction="row" spacing={1} alignItems="center">
+                <VisibilityOff fontSize="small" />
+                <span>Privacy mode</span>
+              </Stack>
+            }
+          />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={menuLocked}
+                onChange={(e) => setMenuLocked(e.target.checked)}
+              />
+            }
+            label={
+              <Stack direction="row" spacing={1} alignItems="center">
+                {menuLocked ? <Lock fontSize="small" /> : <LockOpen fontSize="small" />}
+                <span>{menuLocked ? 'Locked' : 'Unlocked'}</span>
+              </Stack>
+            }
+          />
+        </Stack>
+
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+            Playback Controls
+          </Typography>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <IconButton
+              size="small"
+              color={playbackMode === 'play' ? 'primary' : 'default'}
+              onClick={() => setPlaybackMode('play')}
+            >
+              <PlayArrow fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              color={playbackMode === 'pause' ? 'primary' : 'default'}
+              onClick={() => setPlaybackMode('pause')}
+            >
+              <Pause fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              color={playbackMode === 'stop' ? 'primary' : 'default'}
+              onClick={() => setPlaybackMode('stop')}
+            >
+              <Stop fontSize="small" />
+            </IconButton>
+            <Typography variant="caption" color="text.secondary">
+              Mode: {playbackMode}
+            </Typography>
+          </Stack>
+        </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={() => setShowAutoSaveDialog(false)} startIcon={<Close />}>Close</Button>

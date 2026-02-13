@@ -176,6 +176,7 @@ export function VideoExportPanel({
   const [customWidth, setCustomWidth] = useState<number>(1920);
   const [customHeight, setCustomHeight] = useState<number>(1080);
   const [useCustomResolution, setUseCustomResolution] = useState(false);
+  const [bitrateOverride, setBitrateOverride] = useState<number | null>(null);
 
   // Export state
   const [isExporting, setIsExporting] = useState(false);
@@ -215,15 +216,28 @@ export function VideoExportPanel({
     : RESOLUTION_PRESETS[resolution];
 
   // Estimated file size
+  const effectiveBitrate = bitrateOverride ?? QUALITY_PRESETS[quality].bitrate;
+
   const estimatedSize = videoExportService.estimateFileSize({
     format,
     width: currentDimensions.width,
     height: currentDimensions.height,
     fps,
-    bitrate: QUALITY_PRESETS[quality].bitrate,
+    bitrate: effectiveBitrate,
     duration,
     quality,
   });
+
+  const handleResetSettings = useCallback(() => {
+    setFormat('webm');
+    setResolution('1080p');
+    setQuality('high');
+    setFps(30);
+    setCustomWidth(1920);
+    setCustomHeight(1080);
+    setUseCustomResolution(false);
+    setBitrateOverride(null);
+  }, []);
 
   // Handle export with preset or custom config
   const handleExport = useCallback(async () => {
@@ -248,7 +262,7 @@ export function VideoExportPanel({
           width: currentDimensions.width,
           height: currentDimensions.height,
           fps,
-          bitrate: QUALITY_PRESETS[quality].bitrate,
+          bitrate: effectiveBitrate,
           duration,
           quality,
         };
@@ -283,7 +297,7 @@ export function VideoExportPanel({
         handleDriveUpload(result);
       }
     }
-  }, [format, currentDimensions, fps, quality, duration, onFrameRender, onExportStart, onExportComplete, selectedPreset, uploadToDrive, userId, driveConnected]);
+  }, [format, currentDimensions, fps, quality, duration, onFrameRender, onExportStart, onExportComplete, selectedPreset, uploadToDrive, userId, driveConnected, effectiveBitrate]);
 
   // Handle Google Drive upload
   const handleDriveUpload = useCallback(async (exportResult: ExportResult) => {
@@ -368,10 +382,17 @@ export function VideoExportPanel({
 
   return (
     <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Typography variant="h6" fontWeight={700} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <VideoFile />
-        Video Export
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Typography variant="h6" fontWeight={700} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <VideoFile />
+          Video Export
+        </Typography>
+        <Tooltip title="Advanced settings">
+          <IconButton size="small" onClick={() => setShowSettings(true)}>
+            <Settings fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
 
       {/* Quick info */}
       <Alert severity="info" sx={{ mb: 2 }}>
@@ -401,6 +422,7 @@ export function VideoExportPanel({
                 value={platformFilter}
                 label="Platform"
                 onChange={(e) => setPlatformFilter(e.target.value)}
+                MenuProps={{ sx: { zIndex: 1400 } }}
               >
                 <MenuItem value="all">All Platforms</MenuItem>
                 {platforms.map((p) => (
@@ -491,6 +513,7 @@ export function VideoExportPanel({
                 label="Format"
                 onChange={(e) => setFormat(e.target.value as 'webm' | 'mp4')}
                 disabled={isExporting}
+                MenuProps={{ sx: { zIndex: 1400 } }}
               >
                 <MenuItem value="webm">WebM (VP9)</MenuItem>
                 <MenuItem value="mp4">MP4 (H.264)*</MenuItem>
@@ -514,6 +537,7 @@ export function VideoExportPanel({
                   setUseCustomResolution(false);
                 }}
                 disabled={isExporting}
+                MenuProps={{ sx: { zIndex: 1400 } }}
               >
                 {(Object.entries(RESOLUTION_PRESETS) as [string, { width: number; height: number }][]).map(([key, dims]) => (
                   <MenuItem key={key} value={key}>
@@ -538,6 +562,7 @@ export function VideoExportPanel({
                 label="Quality"
                 onChange={(e) => setQuality(e.target.value as QualityPreset)}
                 disabled={isExporting}
+                MenuProps={{ sx: { zIndex: 1400 } }}
               >
                 {(Object.entries(QUALITY_PRESETS) as [string, { description: string; bitrate: number }][]).map(([key, info]) => (
                   <MenuItem key={key} value={key}>
@@ -563,6 +588,7 @@ export function VideoExportPanel({
                 label="Frame Rate"
                 onChange={(e) => setFps(e.target.value as number)}
                 disabled={isExporting}
+                MenuProps={{ sx: { zIndex: 1400 } }}
               >
                 {FPS_PRESETS.map((f: number) => (
                   <MenuItem key={f} value={f}>
@@ -572,6 +598,42 @@ export function VideoExportPanel({
               </Select>
             </FormControl>
           </Box>
+        </Box>
+
+        <Box sx={{ mt: 2 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={useCustomResolution}
+                onChange={(e) => setUseCustomResolution(e.target.checked)}
+              />
+            }
+            label="Use custom resolution"
+          />
+          {useCustomResolution && (
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Width"
+                  type="number"
+                  value={customWidth}
+                  onChange={(e) => setCustomWidth(Number(e.target.value) || 0)}
+                />
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Height"
+                  type="number"
+                  value={customHeight}
+                  onChange={(e) => setCustomHeight(Number(e.target.value) || 0)}
+                />
+              </Grid>
+            </Grid>
+          )}
         </Box>
 
         {/* Estimated info */}
@@ -655,6 +717,7 @@ export function VideoExportPanel({
                       value={selectedFolderId}
                       label="Target Folder"
                       onChange={(e) => setSelectedFolderId(e.target.value)}
+                      MenuProps={{ sx: { zIndex: 1400 } }}
                     >
                       <MenuItem value="">
                         <em>Create new folder for {projectName || 'project'}</em>
@@ -827,6 +890,11 @@ export function VideoExportPanel({
             >
               Export Video
             </Button>
+            <Tooltip title="Preview current frame">
+              <IconButton onClick={handleExportFrame}>
+                <PlayArrow />
+              </IconButton>
+            </Tooltip>
             <Tooltip title="Export Current Frame">
               <IconButton onClick={handleExportFrame}>
                 <Image />
@@ -883,6 +951,47 @@ export function VideoExportPanel({
           </List>
         </>
       )}
+
+      <Dialog open={showSettings} onClose={() => setShowSettings(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <HighQuality fontSize="small" /> Advanced Export Settings
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Stack spacing={2}>
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Bitrate override (Mbps)
+              </Typography>
+              <Slider
+                min={1}
+                max={50}
+                step={1}
+                value={Math.round((bitrateOverride ?? QUALITY_PRESETS[quality].bitrate) / 1_000_000)}
+                onChange={(_, value) => {
+                  const val = Array.isArray(value) ? value[0] : value;
+                  setBitrateOverride(val * 1_000_000);
+                }}
+                valueLabelDisplay="auto"
+              />
+              <Typography variant="caption" color="text.secondary">
+                Current: {videoExportService.formatFileSize((bitrateOverride ?? QUALITY_PRESETS[quality].bitrate) / 8)}/s
+              </Typography>
+            </Box>
+
+            <Alert severity="info">
+              Adjusting bitrate affects quality and file size. Leave default for preset quality behavior.
+            </Alert>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button startIcon={<Refresh />} onClick={handleResetSettings}>
+            Reset
+          </Button>
+          <Button variant="contained" onClick={() => setShowSettings(false)}>
+            Done
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

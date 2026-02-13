@@ -109,8 +109,12 @@ export const useXRStore = create<XRState>((set, get) => ({
       // Configure teleportation
       if (teleportEnabled && xrHelper.teleportation) {
         xrHelper.teleportation.parabolicCheckRadius = 5;
-        xrHelper.teleportation.rotationAngle = BABYLON.Tools.ToRadians(snapTurnAngle);
+        xrHelper.teleportation.rotationAngle = snapTurnEnabled
+          ? BABYLON.Tools.ToRadians(snapTurnAngle)
+          : 0;
       }
+
+      xrHelper.baseExperience.camera.speed = movementSpeed;
       
       // Setup controller tracking
       xrHelper.input.onControllerAddedObservable.add((controller) => {

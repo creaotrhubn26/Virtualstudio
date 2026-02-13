@@ -5,7 +5,7 @@
  * Displays light diagrams, ratios, and tips for each setup.
  */
 
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState, type FC, type ReactElement } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -74,7 +74,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   practical: '#795548',
 };
 
-const CATEGORY_ICONS: Record<string, React.ReactElement> = {
+const CATEGORY_ICONS: Record<string, ReactElement> = {
   portrait: <Camera />,
   dramatic: <Brightness6 />,
   commercial: <Brightness7 />,
@@ -84,7 +84,7 @@ const CATEGORY_ICONS: Record<string, React.ReactElement> = {
 };
 
 // Simple light diagram component
-const LightDiagram: React.FC<{ lights: LightConfig[] }> = ({ lights }) => {
+const LightDiagram: FC<{ lights: LightConfig[] }> = ({ lights }) => {
   return (
     <Box
       sx={{
@@ -161,7 +161,7 @@ const LightDiagram: React.FC<{ lights: LightConfig[] }> = ({ lights }) => {
   );
 };
 
-export const LightSetupRecommendationDialog: React.FC<LightSetupRecommendationDialogProps> = ({
+export const LightSetupRecommendationDialog: FC<LightSetupRecommendationDialogProps> = ({
   open,
   onClose,
   actor,

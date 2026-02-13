@@ -37,6 +37,7 @@ export interface StreamConfig {
 export interface StreamStats {
   isStreaming: boolean;
   duration: number;
+  timecode: string;
   framesSent: number;
   bytesTransferred: number;
   currentBitrate: number;
@@ -119,6 +120,7 @@ export const useStreamingStore = create<StreamingState>((set, get) => ({
   stats: {
     isStreaming: false,
     duration: 0,
+    timecode: '00:00:00:00',
     framesSent: 0,
     bytesTransferred: 0,
     currentBitrate: 0,
@@ -245,6 +247,7 @@ export const useStreamingStore = create<StreamingState>((set, get) => ({
         stats: {
           ...state.stats,
           duration,
+          timecode: generateTimecode(duration),
           framesSent,
           bytesTransferred,
           currentBitrate: bytesTransferred / duration * 8,
@@ -299,6 +302,9 @@ export const useStreamingStore = create<StreamingState>((set, get) => ({
     
     // Stop NDI
     stopNDIOutput();
+
+    // Stop local preview if active
+    stopPreview();
     
     // Cleanup
     if ((window as any).__streamCleanup) {
@@ -312,6 +318,7 @@ export const useStreamingStore = create<StreamingState>((set, get) => ({
       stats: {
         isStreaming: false,
         duration: 0,
+        timecode: '00:00:00:00',
         framesSent: 0,
         bytesTransferred: 0,
         currentBitrate: 0,

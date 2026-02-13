@@ -49,7 +49,7 @@ export function RichTextEditor({
 
   // Responsive button style with larger touch targets for tablet/desktop
   const buttonStyle = {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.87)',
     minWidth: { xs: 40, sm: 44 },
     minHeight: { xs: 40, sm: 44 },
     touchAction: 'manipulation',
@@ -171,7 +171,7 @@ export function RichTextEditor({
           <IconButton
             onClick={() => editor.chain().focus().undo().run()}
             disabled={!editor.can().undo()}
-            sx={{ ...buttonStyle, '&.Mui-disabled': { color: 'rgba(255,255,255,0.3)' } }}
+            sx={{ ...buttonStyle, '&.Mui-disabled': { color: 'rgba(255,255,255,0.6)' } }}
           >
             <UndoIcon sx={{ fontSize: iconSize }} />
           </IconButton>
@@ -180,7 +180,7 @@ export function RichTextEditor({
           <IconButton
             onClick={() => editor.chain().focus().redo().run()}
             disabled={!editor.can().redo()}
-            sx={{ ...buttonStyle, '&.Mui-disabled': { color: 'rgba(255,255,255,0.3)' } }}
+            sx={{ ...buttonStyle, '&.Mui-disabled': { color: 'rgba(255,255,255,0.6)' } }}
           >
             <RedoIcon sx={{ fontSize: iconSize }} />
           </IconButton>
@@ -231,7 +231,7 @@ export function RichTextEditor({
             '& li': {
               marginBottom: '0.4em',
               '&::marker': {
-                color: 'rgba(255,255,255,0.6)',
+                color: 'rgba(255,255,255,0.87)',
               },
             },
             // Bold and italic styling

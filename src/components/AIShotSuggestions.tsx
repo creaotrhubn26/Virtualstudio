@@ -5,7 +5,7 @@
  * lighting setups, and composition variations
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Typography,
@@ -117,6 +117,14 @@ export function AIShotSuggestions({
 
         {imageUrl && (
           <>
+            <Card variant="outlined">
+              <CardMedia
+                component="img"
+                image={imageUrl}
+                alt="Reference frame"
+                sx={{ maxHeight: 240, objectFit: 'cover' }}
+              />
+            </Card>
             <Button
               variant="contained"
               startIcon={isGenerating ? <CircularProgress size={16} /> : <AutoAwesome />}

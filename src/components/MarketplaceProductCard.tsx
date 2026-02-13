@@ -120,7 +120,7 @@ export function MarketplaceProductCard({
       } else if (i === fullStars && hasHalfStar) {
         stars.push(<StarIcon key={i} sx={{ fontSize: 20, color: '#ffb800', opacity: 0.5 }} />);
       } else {
-        stars.push(<StarBorderIcon key={i} sx={{ fontSize: 20, color: 'rgba(255,255,255,0.5)' }} />);
+        stars.push(<StarBorderIcon key={i} sx={{ fontSize: 20, color: 'rgba(255,255,255,0.87)' }} />);
       }
     }
     return stars;
@@ -581,7 +581,7 @@ export function MarketplaceProductCard({
             onClick={handleCancel}
             size="small"
             sx={{
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.1)' },
             }}
             aria-label="Lukk"
@@ -603,7 +603,7 @@ export function MarketplaceProductCard({
                   '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                   '&.Mui-focused fieldset': { borderColor: '#00d4ff' },
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                 '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
               }}
             />
@@ -621,7 +621,7 @@ export function MarketplaceProductCard({
                   '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                   '&.Mui-focused fieldset': { borderColor: '#00d4ff' },
                 },
-                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                 '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
               }}
             />
@@ -639,12 +639,12 @@ export function MarketplaceProductCard({
                     '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                     '&.Mui-focused fieldset': { borderColor: '#00d4ff' },
                   },
-                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                   '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
                 }}
               />
               <FormControl sx={{ flex: 1 }}>
-                <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Kategori</InputLabel>
+                <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Kategori</InputLabel>
                 <Select
                   value={editData.category}
                   onChange={(e) => setEditData({ ...editData, category: e.target.value })}
@@ -654,7 +654,7 @@ export function MarketplaceProductCard({
                     '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
                     '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#00d4ff' },
-                    '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.7)' },
+                    '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.87)' },
                   }}
                 >
                   <MenuItem value="feature">Funksjon</MenuItem>
@@ -670,7 +670,7 @@ export function MarketplaceProductCard({
           <Button
             onClick={handleCancel}
             startIcon={<CancelIcon />}
-            sx={{ color: 'rgba(255,255,255,0.7)' }}
+            sx={{ color: 'rgba(255,255,255,0.87)' }}
           >
             Avbryt
           </Button>

@@ -8,11 +8,11 @@ import {
   Prop,
   ProductionDay,
   ShotList,
+  CastingShot,
   UserRole,
   Consent,
 } from '../core/models/casting';
 import { sceneComposerService } from './sceneComposerService';
-import { apiRequest } from '../lib/queryClient';
 
 // Database availability cache
 let dbAvailable: boolean | null = null;
@@ -79,20 +79,78 @@ async function checkDatabaseAvailability(): Promise<boolean> {
  * Get projects from database with fallback to storage
  */
 async function getProjectsFromDb(): Promise<CastingProject[]> {
+  // Get local storage data first
+  const localProjects = getProjectsFromStorage();
+  console.log('🎬 getProjectsFromDb: Local projects count:', localProjects.length);
+
+  const dbOk = await checkDatabaseAvailability();
+  if (!dbOk) {
+    console.warn('🎬 Database unavailable, using local projects');
+    return localProjects;
+  }
+  
   try {
+    console.log('🎬 Fetching from /api/casting/projects...');
     const response = await fetch('/api/casting/projects');
     if (!response.ok) {
       throw new Error(`Failed to fetch projects: ${response.statusText}`);
     }
     const data = await response.json();
-    const projects = Array.isArray(data) ? data : data.projects || [];
-    saveProjectsToStorage(projects); // Cache to storage
-    return projects;
+    console.log('🎬 API response:', data);
+    const dbProjects = Array.isArray(data) ? data : data.projects || [];
+
+    console.log('🎬 DB projects count:', dbProjects.length, 'Names:', dbProjects.map((p: any) => p.name));
+    
+    // Only use DB projects if they have richer data than local
+    // This prevents overwriting mock data with empty DB data
+    if (dbProjects.length > 0) {
+      // Check both arrays and counts (API may return counts instead of full arrays)
+      const dbHasData = dbProjects.some((p: any) => 
+        (p.candidates?.length > 0) || 
+        (p.roles?.length > 0) || 
+        (p.crew?.length > 0) ||
+        (p.candidatesCount > 0) ||
+        (p.rolesCount > 0) ||
+        (p.crewCount > 0)
+      );
+      
+      const localHasData = localProjects.some(p => 
+        (p.candidates?.length > 0) || 
+        (p.roles?.length > 0) || 
+        (p.crew?.length > 0) ||
+        ((p as any).candidatesCount > 0) ||
+        ((p as any).rolesCount > 0) ||
+        ((p as any).crewCount > 0)
+      );
+      
+      console.log('🎬 dbHasData:', dbHasData, 'localHasData:', localHasData);
+      
+      // Only overwrite local if DB actually has richer data, or if local is empty and DB has data
+      if (dbHasData) {
+        console.log('🎬 Returning DB projects (has data)');
+        saveProjectsToStorage(dbProjects); // Cache to storage
+        return dbProjects;
+      }
+      
+      // If local has data but DB doesn't, keep local data
+      if (localHasData) {
+        console.log('Using local storage data (richer than DB)');
+        return localProjects;
+      }
+      
+      // Both are empty, prefer DB
+      saveProjectsToStorage(dbProjects);
+      return dbProjects;
+    }
+    
+    // Return local data if it's richer
+    console.log('Using local storage data (richer than DB)');
+    return localProjects;
   } catch (error) {
     console.error('Error fetching projects from database:', error);
     // Fall back to local storage
     console.log('Using cached projects from local storage');
-    return getProjectsFromStorage();
+    return localProjects;
   }
 }
 
@@ -172,19 +230,51 @@ export const castingService = {
    * Get project by ID from database or storage
    */
   async getProject(id: string): Promise<CastingProject | null> {
+    console.log('🎬 getProject: Fetching project:', id);
+    // Check local storage first
+    const localProjects = getProjectsFromStorage();
+    const localProject = localProjects.find(p => p.id === id);
+    console.log('🎬 getProject: Local project found:', !!localProject);
+    
     try {
+      console.log('🎬 getProject: Fetching from /api/casting/projects/' + id);
       const response = await fetch(`/api/casting/projects/${id}`);
       if (!response.ok) {
         if (response.status === 404) {
-          return null;
+          console.log('🎬 getProject: 404 - returning local project');
+          return localProject || null;
         }
         throw new Error(`Failed to fetch project: ${response.statusText}`);
       }
-      return await response.json();
+      const dbProject = await response.json();
+      console.log('🎬 getProject: DB project received:', dbProject?.name, 'roles:', dbProject?.roles?.length, 'candidates:', dbProject?.candidates?.length);
+      
+      // Compare richness - prefer richer data (check both arrays and counts)
+      const dbHasData = (dbProject?.candidates?.length ?? 0) > 0 || 
+                        (dbProject?.roles?.length ?? 0) > 0 || 
+                        (dbProject?.crew?.length ?? 0) > 0 ||
+                        (dbProject?.candidatesCount ?? 0) > 0 ||
+                        (dbProject?.rolesCount ?? 0) > 0 ||
+                        (dbProject?.crewCount ?? 0) > 0;
+      const localHasData = (localProject?.candidates?.length ?? 0) > 0 || 
+                           (localProject?.roles?.length ?? 0) > 0 || 
+                           (localProject?.crew?.length ?? 0) > 0 ||
+                           ((localProject as any)?.candidatesCount ?? 0) > 0 ||
+                           ((localProject as any)?.rolesCount ?? 0) > 0 ||
+                           ((localProject as any)?.crewCount ?? 0) > 0;
+      
+      console.log('🎬 getProject: dbHasData:', dbHasData, 'localHasData:', localHasData);
+      
+      if (localHasData && !dbHasData) {
+        console.log('🎬 getProject: Using local project data (richer than DB)');
+        return localProject ?? null;
+      }
+      
+      console.log('🎬 getProject: Returning DB project');
+      return dbProject ?? null;
     } catch (error) {
       // Fall back to storage
-      const projects = getProjectsFromStorage();
-      return projects.find(p => p.id === id) || null;
+      return localProject || null;
     }
   },
 
@@ -649,9 +739,22 @@ export const castingService = {
   // ============================================================================
 
   /**
-   * Get shot lists for a project
+   * Get shot lists for a project from database
    */
   async getShotLists(projectId: string): Promise<ShotList[]> {
+    try {
+      // Try to fetch from database API first
+      const response = await fetch(`/api/casting/projects/${projectId}/shot-lists`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.shotLists) {
+          return data.shotLists;
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to fetch shot lists from API, falling back to local data:', error);
+    }
+    // Fallback to local project data
     const project = await this.getProject(projectId);
     return project?.shotLists || [];
   },
@@ -665,9 +768,27 @@ export const castingService = {
   },
 
   /**
-   * Save shot list to project
+   * Save shot list to project and database
    */
   async saveShotList(projectId: string, shotList: ShotList): Promise<void> {
+    try {
+      // Save to database API
+      const response = await fetch(`/api/casting/projects/${projectId}/shot-lists`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(shotList)
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to save shot list to API, saving locally:', error);
+    }
+    
+    // Fallback: save locally
     const project = await this.getProject(projectId);
     if (!project) {
       throw new Error(`Project ${projectId} not found`);
@@ -688,9 +809,25 @@ export const castingService = {
   },
 
   /**
-   * Delete shot list from project
+   * Delete shot list from project and database
    */
   async deleteShotList(projectId: string, shotListId: string): Promise<void> {
+    try {
+      // Delete from database API
+      const response = await fetch(`/api/casting/projects/${projectId}/shot-lists/${shotListId}`, {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to delete shot list from API, deleting locally:', error);
+    }
+    
+    // Fallback: delete locally
     const project = await this.getProject(projectId);
     if (!project) {
       throw new Error(`Project ${projectId} not found`);
@@ -808,7 +945,7 @@ export const castingService = {
   },
 
   /**
-   * Initialize mock data for testing
+   * Initialize mock data for testing - TROLL (2022) Norwegian Film
    */
   async initializeMockData(): Promise<void> {
     try {
@@ -823,361 +960,1144 @@ export const castingService = {
     }
 
     const now = new Date().toISOString();
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const nextWeek = new Date();
-    nextWeek.setDate(nextWeek.getDate() + 7);
+    
+    // Production dates for TROLL
+    const shootDay1 = new Date('2026-01-20');
+    const shootDay2 = new Date('2026-01-21');
+    const shootDay3 = new Date('2026-01-22');
+    const shootDay4 = new Date('2026-01-25');
+    const shootDay5 = new Date('2026-01-26');
+    const shootDay6 = new Date('2026-01-27');
 
     const mockProject: CastingProject = {
-      id: 'mock-project-1',
-      name: 'TV-reklame: Sommerkampanje 2025',
-      description: 'Produksjon av TV-reklame for Norsk Tipping sin sommerkampanje. Familievennlig konsept med fokus på utendørsaktiviteter og samhold. Sendes på TV2, NRK og sosiale medier.',
+      id: 'troll-project-2026',
+      name: 'TROLL',
+      description: 'Norsk eventyrfilm regissert av Roar Uthaug. Når en eksplosjon i de norske fjellene avslører et urgammelt troll, må paleontologen Nora samarbeide med myndighetene for å stoppe skapningen før den når hovedstaden. En spektakulær action-eventyrfilm med VFX og storslåtte locations.',
       roles: [
         {
-          id: 'role-1',
-          name: 'Hovedperson - Mor',
-          description: 'Mor i 30-årene, vennlig og varm personlighet',
+          id: 'role-nora',
+          name: 'Nora Tidemann',
+          description: 'Paleontolog, tidlig 30-årene. Intelligent, besluttsom og empatisk. Hovedpersonen som må overbevise myndighetene om trollets eksistens.',
           requirements: {
             age: { min: 28, max: 38 },
             gender: ['female'],
             appearance: ['nordisk', 'naturlig'],
-            skills: ['acting', 'natural'],
+            skills: ['acting', 'action', 'emotional_range'],
           },
-          status: 'casting',
-          sceneIds: [],
+          status: 'filled',
+          sceneIds: ['scene-3', 'scene-4', 'scene-5', 'scene-7', 'scene-9', 'scene-10'],
         },
         {
-          id: 'role-2',
-          name: 'Hovedperson - Far',
-          description: 'Far i 30-årene, aktiv og engasjert',
+          id: 'role-andreas',
+          name: 'Andreas Isaksen',
+          description: 'Rådgiver for Statsministerens kontor, 30-40 år. Pragmatisk og handlekraftig. Noras kontakt i myndighetene.',
           requirements: {
-            age: { min: 30, max: 40 },
+            age: { min: 32, max: 42 },
             gender: ['male'],
-            appearance: ['nordisk'],
+            appearance: ['nordisk', 'profesjonell'],
+            skills: ['acting', 'authority'],
+          },
+          status: 'filled',
+          sceneIds: ['scene-4', 'scene-5', 'scene-9', 'scene-10'],
+        },
+        {
+          id: 'role-tobias',
+          name: 'Tobias Tidemann',
+          description: 'Noras far, 60-70 år. Tidligere forsker med hemmeligheter om trollene. Visdom og sårbarhet.',
+          requirements: {
+            age: { min: 60, max: 72 },
+            gender: ['male'],
+            appearance: ['nordisk', 'elderly'],
+            skills: ['acting', 'emotional_range'],
+          },
+          status: 'filled',
+          sceneIds: ['scene-10'],
+        },
+        {
+          id: 'role-general',
+          name: 'General Lund',
+          description: 'Militær leder, 50-60 år. Autoritær og besluttsom. Vil bruke militær makt for å stoppe trollet.',
+          requirements: {
+            age: { min: 50, max: 62 },
+            gender: ['male'],
+            appearance: ['militær', 'streng'],
+            skills: ['acting', 'authority', 'presence'],
+          },
+          status: 'filled',
+          sceneIds: ['scene-4', 'scene-7'],
+        },
+        {
+          id: 'role-statsminister',
+          name: 'Statsminister Berit Moberg',
+          description: 'Norges statsminister, 50-55 år. Under enormt press. Må ta vanskelige beslutninger.',
+          requirements: {
+            age: { min: 48, max: 58 },
+            gender: ['female'],
+            appearance: ['profesjonell', 'nordisk'],
+            skills: ['acting', 'authority'],
+          },
+          status: 'filled',
+          sceneIds: ['scene-7'],
+        },
+        {
+          id: 'role-arbeider1',
+          name: 'Tunnelarbeider 1',
+          description: 'Erfaren tunnelarbeider, 35-50 år. Oppdager hulen.',
+          requirements: {
+            age: { min: 35, max: 50 },
+            gender: ['male'],
             skills: ['acting'],
           },
-          status: 'open',
-          sceneIds: [],
+          status: 'filled',
+          sceneIds: ['scene-1', 'scene-2'],
         },
         {
-          id: 'role-3',
-          name: 'Barn - 8 år',
-          description: 'Barn i 8-årsalderen, naturlig og spontan',
+          id: 'role-arbeider2',
+          name: 'Tunnelarbeider 2',
+          description: 'Yngre tunnelarbeider, 25-35 år.',
           requirements: {
-            age: { min: 7, max: 9 },
-            skills: ['natural'],
+            age: { min: 25, max: 35 },
+            gender: ['male'],
+            skills: ['acting'],
+          },
+          status: 'filled',
+          sceneIds: ['scene-1', 'scene-2'],
+        },
+        {
+          id: 'role-bonde',
+          name: 'Bonden i Østerdalen',
+          description: 'Lokal bonde, 50-65 år. Ser trollet i skogen.',
+          requirements: {
+            age: { min: 50, max: 65 },
+            gender: ['male'],
+            appearance: ['rural'],
+            skills: ['acting', 'dialect'],
           },
           status: 'casting',
-          sceneIds: [],
+          sceneIds: ['scene-6'],
         },
       ],
       candidates: [
         {
-          id: 'candidate-1',
-          name: 'Emma Hansen',
+          id: 'cand-ine',
+          name: 'Ine Marie Wilmann',
           contactInfo: {
-            email: 'emma.hansen@example.com',
-            phone: '+47 123 45 678',
-            address: 'Storgata 1, 0155 Oslo',
+            email: 'agent@inemarie.no',
+            phone: '+47 912 34 567',
+            address: 'Oslo',
           },
           photos: ['/attached_assets/generated_images/professional_female_headshot_portrait.png'],
-          videos: [],
-          auditionNotes: 'Sterk kandidat med god erfaring. Naturlig og varm fremtoning.',
-          status: 'shortlist',
-          assignedRoles: ['role-1'],
+          videos: ['https://vimeo.com/demo-reel-ine'],
+          auditionNotes: 'Perfekt for Nora. Sterk skuespiller med erfaring fra Wisting, Exit og internasjonale produksjoner. Fantastisk emosjonell rekkevidde.',
+          status: 'confirmed',
+          assignedRoles: ['role-nora'],
           createdAt: now,
           updatedAt: now,
         },
         {
-          id: 'candidate-2',
-          name: 'Lars Johansen',
+          id: 'cand-kim',
+          name: 'Kim Falck',
           contactInfo: {
-            email: 'lars.johansen@example.com',
-            phone: '+47 987 65 432',
-            address: 'Karl Johans gate 10, 0162 Oslo',
+            email: 'kim.falck@agent.no',
+            phone: '+47 923 45 678',
+            address: 'Oslo',
           },
           photos: ['/attached_assets/generated_images/professional_male_headshot_portrait.png'],
           videos: [],
-          auditionNotes: 'Profesjonell skuespiller med bred erfaring.',
-          status: 'requested',
-          assignedRoles: ['role-2'],
-          createdAt: now,
-          updatedAt: now,
-        },
-        {
-          id: 'candidate-3',
-          name: 'Sofie Olsen',
-          contactInfo: {
-            email: 'sofie.olsen@example.com',
-            phone: '+47 555 12 345',
-          },
-          photos: ['/attached_assets/generated_images/young_female_casting_headshot.png'],
-          videos: [],
-          auditionNotes: 'Ung og lovende kandidat.',
-          status: 'pending',
-          assignedRoles: [],
-          createdAt: now,
-          updatedAt: now,
-        },
-        {
-          id: 'candidate-4',
-          name: 'Ole Berg',
-          contactInfo: {
-            email: 'ole.berg@example.com',
-            phone: '+47 444 33 222',
-          },
-          photos: [],
-          videos: [],
-          auditionNotes: 'Naturlig og spontan. Perfekt for barnerolle.',
-          status: 'selected',
-          assignedRoles: ['role-3'],
-          createdAt: now,
-          updatedAt: now,
-        },
-        {
-          id: 'candidate-5',
-          name: 'Maria Svendsen',
-          contactInfo: {
-            email: 'maria.svendsen@example.com',
-            phone: '+47 666 77 888',
-          },
-          photos: [],
-          videos: [],
-          auditionNotes: 'Ikke passende for denne rollen.',
-          status: 'rejected',
-          assignedRoles: [],
-          createdAt: now,
-          updatedAt: now,
-        },
-        {
-          id: 'candidate-6',
-          name: 'Kari Nordmann',
-          contactInfo: {
-            email: 'kari.nordmann@example.com',
-            phone: '+47 111 22 333',
-          },
-          photos: [],
-          videos: [],
-          auditionNotes: 'Bekreftet deltakelse.',
+          auditionNotes: 'Overbevisende som Andreas. God kjemi med Ine i prøvescener.',
           status: 'confirmed',
-          assignedRoles: ['role-1'],
+          assignedRoles: ['role-andreas'],
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'cand-gard',
+          name: 'Gard B. Eidsvold',
+          contactInfo: {
+            email: 'gard@teater.no',
+            phone: '+47 934 56 789',
+            address: 'Oslo',
+          },
+          photos: [],
+          videos: [],
+          auditionNotes: 'Veteran skuespiller. Perfekt som Tobias med sin varme og dybde.',
+          status: 'confirmed',
+          assignedRoles: ['role-tobias'],
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'cand-fridtjov',
+          name: 'Fridtjov Såheim',
+          contactInfo: {
+            email: 'fridtjov@agent.no',
+            phone: '+47 945 67 890',
+            address: 'Lillehammer',
+          },
+          photos: [],
+          videos: [],
+          auditionNotes: 'Sterk tilstedeværelse. Perfekt for militær autoritet.',
+          status: 'confirmed',
+          assignedRoles: ['role-general'],
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'cand-anneke',
+          name: 'Anneke von der Lippe',
+          contactInfo: {
+            email: 'anneke@teater.no',
+            phone: '+47 956 78 901',
+            address: 'Oslo',
+          },
+          photos: [],
+          videos: [],
+          auditionNotes: 'Prisbelønt skuespiller. Troverdig og karismatisk som statsminister.',
+          status: 'confirmed',
+          assignedRoles: ['role-statsminister'],
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'cand-mads',
+          name: 'Mads Ousdal',
+          contactInfo: {
+            email: 'mads.ousdal@email.no',
+            phone: '+47 967 89 012',
+          },
+          photos: [],
+          videos: [],
+          auditionNotes: 'Erfaren karakterskuespiller. Troverdig som tunnelarbeider.',
+          status: 'selected',
+          assignedRoles: ['role-arbeider1'],
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'cand-eric',
+          name: 'Eric Vorenholt',
+          contactInfo: {
+            email: 'eric.v@actors.no',
+            phone: '+47 978 90 123',
+          },
+          photos: [],
+          videos: [],
+          auditionNotes: 'Ung og fysisk. God for action-scener.',
+          status: 'selected',
+          assignedRoles: ['role-arbeider2'],
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'cand-bonde1',
+          name: 'Bjørn Sundquist',
+          contactInfo: {
+            email: 'bjorn.s@agent.no',
+            phone: '+47 989 01 234',
+          },
+          photos: [],
+          videos: [],
+          auditionNotes: 'Sterk kandidat for bonden. Autentisk dialekt.',
+          status: 'shortlist',
+          assignedRoles: ['role-bonde'],
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'cand-bonde2',
+          name: 'Per Schaanning',
+          contactInfo: {
+            email: 'per.s@teater.no',
+            phone: '+47 990 12 345',
+          },
+          photos: [],
+          videos: [],
+          auditionNotes: 'Alternativ for bonderollen. God karakterskuespiller.',
+          status: 'requested',
+          assignedRoles: [],
           createdAt: now,
           updatedAt: now,
         },
       ],
       schedules: [
         {
-          id: 'schedule-1',
-          candidateId: 'candidate-1',
-          roleId: 'role-1',
-          date: tomorrow.toISOString().split('T')[0],
+          id: 'aud-1',
+          candidateId: 'cand-bonde1',
+          roleId: 'role-bonde',
+          date: '2026-01-15',
           time: '10:00',
-          location: 'Studio A, Filmbyen',
-          notes: 'Første audition',
+          location: 'Studio 1, Filmparken',
+          notes: 'Første audition for bonderollen. Forbered scene 6.',
           status: 'scheduled',
         },
         {
-          id: 'schedule-2',
-          candidateId: 'candidate-2',
-          roleId: 'role-2',
-          date: tomorrow.toISOString().split('T')[0],
-          time: '14:00',
-          location: 'Studio A, Filmbyen',
-          notes: 'Callback audition',
+          id: 'aud-2',
+          candidateId: 'cand-bonde2',
+          roleId: 'role-bonde',
+          date: '2026-01-15',
+          time: '11:30',
+          location: 'Studio 1, Filmparken',
+          notes: 'Callback audition.',
           status: 'scheduled',
+        },
+        {
+          id: 'aud-3',
+          candidateId: 'cand-ine',
+          roleId: 'role-nora',
+          date: '2025-12-10',
+          time: '14:00',
+          location: 'Nordisk Film, København',
+          notes: 'Kjemistry-test med Kim Falck.',
+          status: 'completed',
         },
       ],
       crew: [
         {
-          id: 'crew-1',
-          name: 'Anders Regissør',
+          id: 'crew-roar',
+          name: 'Roar Uthaug',
           role: 'director',
           contactInfo: {
-            email: 'anders@production.no',
-            phone: '+47 999 88 777',
-            address: 'Produksjonsveien 5, 0270 Oslo',
+            email: 'roar@motioncontent.no',
+            phone: '+47 901 23 456',
+            address: 'Oslo',
           },
           availability: {
-            startDate: new Date().toISOString().split('T')[0],
-            endDate: nextWeek.toISOString().split('T')[0],
+            startDate: '2026-01-15',
+            endDate: '2026-03-30',
           },
-          assignedScenes: [],
-          rate: 5000,
-          notes: 'Hovedregissør',
+          assignedScenes: ['scene-1', 'scene-2', 'scene-3', 'scene-4', 'scene-5', 'scene-6', 'scene-7', 'scene-8', 'scene-9', 'scene-10'],
+          rate: 25000,
+          notes: 'Hovedregissør. Erfaring fra Tomb Raider, Bølgen, Fritt Vilt.',
           createdAt: now,
           updatedAt: now,
         },
         {
-          id: 'crew-2',
-          name: 'Kari Produsent',
+          id: 'crew-espen',
+          name: 'Espen Sandberg',
           role: 'producer',
           contactInfo: {
-            email: 'kari@production.no',
-            phone: '+47 888 77 666',
+            email: 'espen@motioncontent.no',
+            phone: '+47 902 34 567',
           },
           availability: {
-            startDate: new Date().toISOString().split('T')[0],
-            endDate: nextWeek.toISOString().split('T')[0],
+            startDate: '2026-01-01',
+            endDate: '2026-06-30',
           },
           assignedScenes: [],
-          rate: 6000,
+          rate: 20000,
+          notes: 'Produsent. Erfaring fra Pirates of the Caribbean: Dead Men Tell No Tales.',
           createdAt: now,
           updatedAt: now,
         },
         {
-          id: 'crew-3',
-          name: 'Tom Kameramann',
-          role: 'camera_operator',
+          id: 'crew-jallo',
+          name: 'Jallo Faber',
+          role: 'cinematographer',
           contactInfo: {
-            email: 'tom@camera.no',
-            phone: '+47 777 66 555',
-            address: 'Kameragata 12, 0165 Oslo',
+            email: 'jallo@cinematography.dk',
+            phone: '+45 123 45 678',
+            address: 'København',
           },
           availability: {
-            startDate: new Date().toISOString().split('T')[0],
-            endDate: nextWeek.toISOString().split('T')[0],
+            startDate: '2026-01-18',
+            endDate: '2026-03-15',
+          },
+          assignedScenes: ['scene-1', 'scene-2', 'scene-3', 'scene-4', 'scene-5', 'scene-6', 'scene-7', 'scene-8', 'scene-9', 'scene-10'],
+          rate: 18000,
+          notes: 'Director of Photography. Erfaring fra Bølgen, Skjelvet.',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'crew-vfx',
+          name: 'Storm Studios VFX',
+          role: 'vfx_artist',
+          contactInfo: {
+            email: 'production@stormstudios.no',
+            phone: '+47 903 45 678',
+            address: 'Oslo',
+          },
+          availability: {
+            startDate: '2026-01-01',
+            endDate: '2026-09-30',
+          },
+          assignedScenes: ['scene-1', 'scene-2', 'scene-6', 'scene-8', 'scene-9', 'scene-10'],
+          rate: 50000,
+          notes: 'VFX supervisor og studio. Trollet og alle CGI-effekter.',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'crew-stunt',
+          name: 'Kai Kolstad Rødseth',
+          role: 'production_assistant',
+          contactInfo: {
+            email: 'kai@stunts.no',
+            phone: '+47 904 56 789',
+          },
+          availability: {
+            startDate: '2026-01-20',
+            endDate: '2026-02-28',
+          },
+          assignedScenes: ['scene-1', 'scene-8', 'scene-9', 'scene-10'],
+          rate: 12000,
+          notes: 'Stunt coordinator. Action-scener og sikkerhet.',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'crew-costume',
+          name: 'Karen Fabritius Gram',
+          role: 'wardrobe',
+          contactInfo: {
+            email: 'karen@costumes.no',
+            phone: '+47 905 67 890',
+          },
+          availability: {
+            startDate: '2026-01-10',
+            endDate: '2026-03-30',
           },
           assignedScenes: [],
-          rate: 4000,
+          rate: 8000,
+          notes: 'Kostymedesigner. Militæruniformer, dagligklær, periodevise elementer.',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'crew-sound',
+          name: 'Tormod Ringnes',
+          role: 'sound_engineer',
+          contactInfo: {
+            email: 'tormod@sound.no',
+            phone: '+47 906 78 901',
+          },
+          availability: {
+            startDate: '2026-01-20',
+            endDate: '2026-05-30',
+          },
+          assignedScenes: [],
+          rate: 10000,
+          notes: 'Lyddesign. Trollets lyder, eksplosjon, atmosfære.',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'crew-1ad',
+          name: 'Nina Widerberg',
+          role: 'production_assistant',
+          contactInfo: {
+            email: 'nina@ad.no',
+            phone: '+47 907 89 012',
+          },
+          availability: {
+            startDate: '2026-01-15',
+            endDate: '2026-03-30',
+          },
+          assignedScenes: [],
+          rate: 7000,
+          notes: '1st Assistant Director. Scheduling og on-set koordinering.',
           createdAt: now,
           updatedAt: now,
         },
       ],
       locations: [
         {
-          id: 'location-1',
-          name: 'Studio A - Filmbyen Jar',
-          address: 'Sandviksveien 26, 1363 Høvik, Oslo',
-          type: 'studio',
-          capacity: 80,
-          facilities: ['parking', 'restrooms', 'catering', 'wifi', 'power', 'dressing_rooms', 'makeup_area', 'loading_dock', 'green_room'],
-          availability: {
-            startDate: new Date().toISOString().split('T')[0],
-            endDate: nextWeek.toISOString().split('T')[0],
-          },
-          assignedScenes: [],
-          contactInfo: {
-            name: 'Erik Studiosjef',
-            phone: '+47 67 12 34 56',
-            email: 'booking@filmbyen.no',
-          },
-          coordinates: {
-            lat: 59.9139,
-            lng: 10.6200,
-          },
-          propertyId: '219/45/12',
-          notes: 'Profesjonelt studio med 600 kvm og 8m takhøyde. Greenscreen, lydstudio og redigeringsrom inkludert.',
-          createdAt: now,
-          updatedAt: now,
-        },
-        {
-          id: 'location-2',
-          name: 'Huk Strand - Bygdøy',
-          address: 'Huk Aveny 2, 0287 Oslo',
+          id: 'loc-dovre',
+          name: 'Dovre Tunnel - Sprengningssted',
+          address: 'Dombås, Dovre kommune',
           type: 'outdoor',
-          capacity: 150,
-          facilities: ['parking', 'restrooms', 'cafe_nearby', 'beach_access'],
+          capacity: 50,
+          facilities: ['parking', 'power', 'restrooms'],
           availability: {
-            startDate: new Date().toISOString().split('T')[0],
-            endDate: nextWeek.toISOString().split('T')[0],
+            startDate: '2026-01-20',
+            endDate: '2026-01-22',
           },
-          assignedScenes: [],
+          assignedScenes: ['scene-1', 'scene-2', 'scene-5'],
+          contactInfo: {
+            name: 'Statens vegvesen',
+            phone: '+47 22 07 30 00',
+            email: 'filming@vegvesen.no',
+          },
           coordinates: {
-            lat: 59.8975,
-            lng: 10.6745,
+            lat: 62.0759,
+            lng: 9.1104,
           },
-          propertyId: '301/89/3',
-          notes: 'Populær badestrand med panoramautsikt. Perfekt for sommerlige familiescener. Tillatelse fra Oslo kommune påkrevd.',
+          propertyId: 'DOVRE-TUNNEL-001',
+          notes: 'Ekte tunnelområde. Krever koordinering med Statens vegvesen. Pyroteknikk-tillatelse nødvendig.',
           createdAt: now,
           updatedAt: now,
         },
         {
-          id: 'location-3',
-          name: 'Frognerparken - Monolitten',
-          address: 'Nobels gate 32, 0268 Oslo',
+          id: 'loc-oslo-apartment',
+          name: 'Noras Leilighet - Grünerløkka',
+          address: 'Thorvald Meyers gate 45, Oslo',
+          type: 'indoor',
+          capacity: 20,
+          facilities: ['power', 'wifi', 'restrooms'],
+          availability: {
+            startDate: '2026-01-23',
+            endDate: '2026-01-24',
+          },
+          assignedScenes: ['scene-3'],
+          contactInfo: {
+            name: 'Location Manager Oslo',
+            phone: '+47 915 67 890',
+            email: 'locations@troll-film.no',
+          },
+          coordinates: {
+            lat: 59.9225,
+            lng: 10.7580,
+          },
+          propertyId: 'OSLO-APT-045',
+          notes: 'Autentisk Oslo-leilighet. Bohemsk stil. Fossiler og bøker som rekvisitter.',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'loc-university',
+          name: 'Universitetet i Oslo - Geologisk Museum',
+          address: 'Sars gate 1, Oslo',
+          type: 'indoor',
+          capacity: 30,
+          facilities: ['parking', 'power', 'wifi', 'restrooms'],
+          availability: {
+            startDate: '2026-01-25',
+            endDate: '2026-01-25',
+          },
+          assignedScenes: ['scene-4'],
+          contactInfo: {
+            name: 'UiO Filming',
+            phone: '+47 22 85 50 50',
+            email: 'filming@uio.no',
+          },
+          coordinates: {
+            lat: 59.9169,
+            lng: 10.7731,
+          },
+          propertyId: 'UIO-GEOL-001',
+          notes: 'Geologisk museum og kontorlokaler. Filming på kveldstid etter stengetid.',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'loc-kommando',
+          name: 'Forsvarets Operative Hovedkvarter',
+          address: 'Reitan, Bodø',
+          type: 'indoor',
+          capacity: 40,
+          facilities: ['parking', 'power', 'security', 'restrooms', 'catering'],
+          availability: {
+            startDate: '2026-02-01',
+            endDate: '2026-02-03',
+          },
+          assignedScenes: ['scene-7'],
+          contactInfo: {
+            name: 'Forsvaret Media',
+            phone: '+47 23 09 50 00',
+            email: 'media@forsvaret.no',
+          },
+          coordinates: {
+            lat: 67.2803,
+            lng: 14.4050,
+          },
+          propertyId: 'FOH-REITAN-001',
+          notes: 'Ekte kommandosentral. Alternativt: bygge sett på studio. Sikkerhetsgodkjenning påkrevd.',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'loc-osterdalen',
+          name: 'Skog - Østerdalen',
+          address: 'Koppang, Stor-Elvdal kommune',
+          type: 'outdoor',
+          capacity: 60,
+          facilities: ['parking'],
+          availability: {
+            startDate: '2026-02-05',
+            endDate: '2026-02-07',
+          },
+          assignedScenes: ['scene-6'],
+          contactInfo: {
+            name: 'Stor-Elvdal kommune',
+            phone: '+47 62 46 46 00',
+            email: 'filming@stor-elvdal.no',
+          },
+          coordinates: {
+            lat: 61.5681,
+            lng: 10.8206,
+          },
+          propertyId: 'OSTERD-SKOG-001',
+          notes: 'Tett granskog. Nattscenar. Generatorer og lys nødvendig. Trollet CGI legges inn i post.',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'loc-e6',
+          name: 'E6 Motorvei - Stunt Location',
+          address: 'E6 ved Minnesund, Eidsvoll',
+          type: 'outdoor',
+          capacity: 100,
+          facilities: ['parking', 'power'],
+          availability: {
+            startDate: '2026-02-10',
+            endDate: '2026-02-12',
+          },
+          assignedScenes: ['scene-8'],
+          contactInfo: {
+            name: 'Statens vegvesen / Politiet',
+            phone: '+47 22 07 30 00',
+            email: 'vegstengning@vegvesen.no',
+          },
+          coordinates: {
+            lat: 60.3962,
+            lng: 11.1667,
+          },
+          propertyId: 'E6-MINNESUND-001',
+          notes: 'Veistengning nødvendig. Stunt-biler og krasj. Natt-filming. Koordinering med politi.',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'loc-slottet',
+          name: 'Slottsplassen - Oslo',
+          address: 'Slottsplassen 1, Oslo',
           type: 'outdoor',
           capacity: 200,
-          facilities: ['parking', 'restrooms', 'cafe_nearby'],
+          facilities: ['parking', 'power', 'security'],
           availability: {
-            startDate: new Date().toISOString().split('T')[0],
-            endDate: nextWeek.toISOString().split('T')[0],
+            startDate: '2026-02-15',
+            endDate: '2026-02-17',
           },
-          assignedScenes: [],
+          assignedScenes: ['scene-9'],
+          contactInfo: {
+            name: 'Det kongelige hoff',
+            phone: '+47 22 04 87 00',
+            email: 'filming@slottet.no',
+          },
           coordinates: {
-            lat: 59.9271,
-            lng: 10.7016,
+            lat: 59.9170,
+            lng: 10.7275,
           },
-          propertyId: '301/156/1',
-          notes: 'Ikonisk skulpturpark. Tillatelse fra Oslo Bymiljøetaten påkrevd for filming. Tidlig morgen eller kveld anbefales.',
+          propertyId: 'SLOTTET-001',
+          notes: 'Filmtillatelse fra Slottet og Oslo kommune. Tidlig morgenskyting før publikum.',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'loc-karl-johan',
+          name: 'Karl Johans gate - Klimaks',
+          address: 'Karl Johans gate, Oslo',
+          type: 'outdoor',
+          capacity: 300,
+          facilities: ['parking', 'power', 'restrooms'],
+          availability: {
+            startDate: '2026-02-18',
+            endDate: '2026-02-22',
+          },
+          assignedScenes: ['scene-10'],
+          contactInfo: {
+            name: 'Oslo kommune Film',
+            phone: '+47 21 80 21 80',
+            email: 'film@oslo.kommune.no',
+          },
+          coordinates: {
+            lat: 59.9133,
+            lng: 10.7389,
+          },
+          propertyId: 'KARL-JOHAN-001',
+          notes: 'Hovedscene. Full veistengning. Masse statister. Trollet forsteines i sollyset. VFX-heavy.',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'loc-studio',
+          name: 'Filmparken Studio - Jar',
+          address: 'Sandviksveien 26, 1363 Høvik',
+          type: 'studio',
+          capacity: 150,
+          facilities: ['parking', 'power', 'wifi', 'restrooms', 'catering', 'dressing_rooms', 'makeup_area', 'loading_dock', 'green_room'],
+          availability: {
+            startDate: '2026-01-15',
+            endDate: '2026-03-30',
+          },
+          assignedScenes: ['scene-2', 'scene-7'],
+          contactInfo: {
+            name: 'Filmparken Booking',
+            phone: '+47 67 52 50 00',
+            email: 'booking@filmparken.no',
+          },
+          coordinates: {
+            lat: 59.9070,
+            lng: 10.5950,
+          },
+          propertyId: 'FILMPARKEN-A',
+          notes: 'Hovedstudio. Greenscreen for VFX-scener. Hulen interiør bygges her.',
           createdAt: now,
           updatedAt: now,
         },
       ],
       props: [
         {
-          id: 'prop-1',
-          name: 'Sykler - Familie',
+          id: 'prop-boremaskin',
+          name: 'Tunnelboremaskin',
           category: 'equipment',
-          description: '3 sykler i ulike størrelser',
+          description: 'Full-size tunnelboremaskin for åpningsscenen',
           availability: {
-            startDate: new Date().toISOString().split('T')[0],
-            endDate: nextWeek.toISOString().split('T')[0],
+            startDate: '2026-01-20',
+            endDate: '2026-01-22',
           },
-          assignedScenes: [],
-          quantity: 3,
-          location: 'Studio A - Lager',
+          assignedScenes: ['scene-1'],
+          quantity: 1,
+          location: 'Dovre - On location',
           createdAt: now,
           updatedAt: now,
         },
         {
-          id: 'prop-2',
-          name: 'Picknick-teppe',
-          category: 'decoration',
-          description: 'Rødt og hvitrutet picknick-teppe',
+          id: 'prop-hjelmer',
+          name: 'Arbeidshjelmer med lys',
+          category: 'costume',
+          description: 'Sikkerhetshjelmer med hodelykter for tunnelarbeidere',
           availability: {
-            startDate: new Date().toISOString().split('T')[0],
-            endDate: nextWeek.toISOString().split('T')[0],
+            startDate: '2026-01-20',
+            endDate: '2026-01-22',
           },
-          assignedScenes: [],
+          assignedScenes: ['scene-1', 'scene-2'],
+          quantity: 10,
+          location: 'Props-truck',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'prop-dynamitt',
+          name: 'Dynamitt (prop)',
+          category: 'prop',
+          description: 'Falsk dynamitt for tunnelscener',
+          availability: {
+            startDate: '2026-01-20',
+            endDate: '2026-01-22',
+          },
+          assignedScenes: ['scene-1'],
+          quantity: 20,
+          location: 'Pyro-avdeling',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'prop-fossiler',
+          name: 'Fossiler og geologiutstyr',
+          category: 'decoration',
+          description: 'Diverse fossiler, steiner og paleontologi-utstyr for Noras leilighet og kontor',
+          availability: {
+            startDate: '2026-01-23',
+            endDate: '2026-01-26',
+          },
+          assignedScenes: ['scene-3', 'scene-4'],
+          quantity: 50,
+          location: 'Props-lager',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'prop-militær',
+          name: 'Militærutstyr og våpen',
+          category: 'equipment',
+          description: 'Militære kjøretøy, våpen (deaktiverte), uniformer',
+          availability: {
+            startDate: '2026-02-01',
+            endDate: '2026-02-22',
+          },
+          assignedScenes: ['scene-5', 'scene-7', 'scene-8', 'scene-9', 'scene-10'],
+          quantity: 100,
+          location: 'Forsvaret utlån',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'prop-uvlys',
+          name: 'UV-lys/kunstig sollys',
+          category: 'equipment',
+          description: 'Store UV-lamper som simulerer sollys for klimaksscenen',
+          availability: {
+            startDate: '2026-02-15',
+            endDate: '2026-02-22',
+          },
+          assignedScenes: ['scene-9', 'scene-10'],
+          quantity: 20,
+          location: 'Lys-avdeling',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'prop-biler',
+          name: 'Stunt-biler for E6',
+          category: 'equipment',
+          description: 'Biler preparert for krasj og stunt på E6',
+          availability: {
+            startDate: '2026-02-10',
+            endDate: '2026-02-12',
+          },
+          assignedScenes: ['scene-8'],
+          quantity: 15,
+          location: 'Stunt-koordinator',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'prop-kirkeklokker',
+          name: 'Kirkeklokker (lydeffekt)',
+          category: 'sound',
+          description: 'Opptak av kirkeklokker for klimaksscenen',
+          availability: {
+            startDate: '2026-02-18',
+            endDate: '2026-02-22',
+          },
+          assignedScenes: ['scene-10'],
           quantity: 1,
+          location: 'Lydavdeling',
           createdAt: now,
           updatedAt: now,
         },
       ],
       productionDays: [
         {
-          id: 'prod-day-1',
-          projectId: 'mock-project-1',
-          date: tomorrow.toISOString().split('T')[0],
-          callTime: '08:00',
+          id: 'day-1',
+          projectId: 'troll-project-2026',
+          date: shootDay1.toISOString().split('T')[0],
+          callTime: '06:00',
           wrapTime: '18:00',
-          locationId: 'location-1',
-          scenes: [],
-          crew: ['crew-1', 'crew-2', 'crew-3'],
-          props: ['prop-1', 'prop-2'],
-          notes: 'Første produksjonsdag - Studio opptak',
+          locationId: 'loc-dovre',
+          scenes: ['scene-1'],
+          crew: ['crew-roar', 'crew-jallo', 'crew-stunt', 'crew-1ad'],
+          props: ['prop-boremaskin', 'prop-hjelmer', 'prop-dynamitt'],
+          notes: 'Dag 1: Tunnelsprengning. Pyroteknikk. Tidlig start for sollys.',
           status: 'planned',
           createdAt: now,
           updatedAt: now,
         },
         {
-          id: 'prod-day-2',
-          projectId: 'mock-project-1',
-          date: nextWeek.toISOString().split('T')[0],
-          callTime: '09:00',
+          id: 'day-2',
+          projectId: 'troll-project-2026',
+          date: shootDay2.toISOString().split('T')[0],
+          callTime: '14:00',
+          wrapTime: '02:00',
+          locationId: 'loc-dovre',
+          scenes: ['scene-2'],
+          crew: ['crew-roar', 'crew-jallo', 'crew-vfx', 'crew-1ad'],
+          props: ['prop-hjelmer'],
+          notes: 'Dag 2: Hulen interiør. Nattscene. VFX-markører for trollet.',
+          status: 'planned',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'day-3',
+          projectId: 'troll-project-2026',
+          date: shootDay3.toISOString().split('T')[0],
+          callTime: '08:00',
+          wrapTime: '16:00',
+          locationId: 'loc-oslo-apartment',
+          scenes: ['scene-3'],
+          crew: ['crew-roar', 'crew-jallo', 'crew-costume', 'crew-1ad'],
+          props: ['prop-fossiler'],
+          notes: 'Dag 3: Noras leilighet. Karakter-introduksjon.',
+          status: 'planned',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'day-4',
+          projectId: 'troll-project-2026',
+          date: shootDay4.toISOString().split('T')[0],
+          callTime: '18:00',
+          wrapTime: '06:00',
+          locationId: 'loc-university',
+          scenes: ['scene-4'],
+          crew: ['crew-roar', 'crew-jallo', 'crew-1ad'],
+          props: ['prop-fossiler'],
+          notes: 'Dag 4: Universitetet. Nattfilming etter stengetid.',
+          status: 'planned',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'day-5',
+          projectId: 'troll-project-2026',
+          date: shootDay5.toISOString().split('T')[0],
+          callTime: '07:00',
           wrapTime: '17:00',
-          locationId: 'location-2',
-          scenes: [],
-          crew: ['crew-1', 'crew-3'],
-          props: ['prop-2'],
-          notes: 'Utendørs opptak',
+          locationId: 'loc-dovre',
+          scenes: ['scene-5'],
+          crew: ['crew-roar', 'crew-jallo', 'crew-vfx', 'crew-1ad'],
+          props: ['prop-militær'],
+          notes: 'Dag 5: Ruinene etter trollet. VFX for ødeleggelser.',
+          status: 'planned',
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'day-6',
+          projectId: 'troll-project-2026',
+          date: shootDay6.toISOString().split('T')[0],
+          callTime: '20:00',
+          wrapTime: '06:00',
+          locationId: 'loc-osterdalen',
+          scenes: ['scene-6'],
+          crew: ['crew-roar', 'crew-jallo', 'crew-vfx', 'crew-1ad'],
+          props: [],
+          notes: 'Dag 6: Nattfilming i skogen. Trollet sees av bonden.',
           status: 'planned',
           createdAt: now,
           updatedAt: now,
         },
       ],
-      shotLists: [],
-      userRoles: [],
+      shotLists: [
+        {
+          id: 'shot-list-1',
+          projectId: 'troll',
+          sceneId: 'scene-1',
+          equipment: ['ARRI Alexa Mini LF', 'Zeiss Master Primes', 'Steadicam', 'Dolly'],
+          createdAt: now,
+          updatedAt: now,
+          shots: [
+            {
+              id: 'shot-1-1',
+              roleId: 'role-1',
+              sceneId: 'scene-1',
+              description: 'Establishing shot - Tunnel inngang med arbeidere (1A)',
+              shotType: 'Wide',
+              cameraAngle: 'Eye Level',
+              cameraMovement: 'Static',
+              focalLength: 24,
+              duration: 5,
+              notes: 'Drone-shot alternativ',
+              imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80',
+              createdAt: now,
+              updatedAt: now,
+            } as CastingShot,
+            {
+              id: 'shot-1-2',
+              roleId: 'role-1',
+              sceneId: 'scene-1',
+              description: 'Medium shot - Formann gir ordre (1B)',
+              shotType: 'Medium',
+              cameraAngle: 'Eye Level',
+              cameraMovement: 'Static',
+              focalLength: 50,
+              duration: 8,
+              notes: 'Fokus på dialog',
+              imageUrl: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=800&q=80',
+              createdAt: now,
+              updatedAt: now,
+            } as CastingShot,
+            {
+              id: 'shot-1-3',
+              roleId: 'role-1',
+              sceneId: 'scene-1',
+              description: 'Close-up - Dynamitt plasseres (1C)',
+              shotType: 'Close-up',
+              cameraAngle: 'Low Angle',
+              cameraMovement: 'Static',
+              focalLength: 85,
+              duration: 3,
+              notes: 'Insert shot',
+              imageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80',
+              createdAt: now,
+              updatedAt: now,
+            } as CastingShot,
+            {
+              id: 'shot-1-4',
+              roleId: 'role-1',
+              sceneId: 'scene-1',
+              description: 'Wide - Eksplosjon og tunnelåpning (1D)',
+              shotType: 'Wide',
+              cameraAngle: 'Eye Level',
+              cameraMovement: 'Static',
+              focalLength: 24,
+              duration: 6,
+              notes: 'Pyroteknikk. Flere kameraer.',
+              imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80',
+              createdAt: now,
+              updatedAt: now,
+            } as CastingShot,
+          ],
+        },
+        {
+          id: 'shot-list-2',
+          projectId: 'troll',
+          sceneId: 'scene-2',
+          equipment: ['RED Komodo', 'Sigma Cine Lenses', 'Gimbal', 'LED panels'],
+          createdAt: now,
+          updatedAt: now,
+          shots: [
+            {
+              id: 'shot-2-1',
+              roleId: 'role-1',
+              sceneId: 'scene-2',
+              description: 'POV - Arbeiderne går inn i hulen (2A)',
+              shotType: 'Medium',
+              cameraAngle: 'Eye Level',
+              cameraMovement: 'Dolly',
+              focalLength: 35,
+              duration: 15,
+              notes: 'Steadicam. Lommelykt som eneste lys. POV-stil.',
+              imageUrl: 'https://images.unsplash.com/photo-1519074069444-1ba4fff66d16?w=800&q=80',
+              createdAt: now,
+              updatedAt: now,
+            } as CastingShot,
+            {
+              id: 'shot-2-2',
+              roleId: 'role-1',
+              sceneId: 'scene-2',
+              description: 'Wide - Enorm hule avsløres (2B)',
+              shotType: 'Wide',
+              cameraAngle: 'Low Angle',
+              cameraMovement: 'Tilt',
+              focalLength: 16,
+              duration: 8,
+              notes: 'Reveal-shot. VFX for størrelse.',
+              imageUrl: 'https://images.unsplash.com/photo-1504699439244-edca3c77a02a?w=800&q=80',
+              createdAt: now,
+              updatedAt: now,
+            } as CastingShot,
+            {
+              id: 'shot-2-3',
+              roleId: 'role-1',
+              sceneId: 'scene-2',
+              description: 'ECU - Arbeiders ansikt, frykt (2C)',
+              shotType: 'Extreme Close-up',
+              cameraAngle: 'Eye Level',
+              cameraMovement: 'Static',
+              focalLength: 100,
+              duration: 3,
+              notes: 'Reaksjonsshot',
+              imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
+              createdAt: now,
+              updatedAt: now,
+            } as CastingShot,
+            {
+              id: 'shot-2-4',
+              roleId: 'role-1',
+              sceneId: 'scene-2',
+              description: 'Wide - Noe beveger seg i mørket (2D)',
+              shotType: 'Wide',
+              cameraAngle: 'Eye Level',
+              cameraMovement: 'Dolly',
+              focalLength: 35,
+              duration: 5,
+              notes: 'VFX: Trollets silhuett',
+              imageUrl: 'https://images.unsplash.com/photo-1518156677180-95a2893f3e9f?w=800&q=80',
+              createdAt: now,
+              updatedAt: now,
+            } as CastingShot,
+          ],
+        },
+        {
+          id: 'shot-list-10',
+          projectId: 'troll',
+          sceneId: 'scene-10',
+          equipment: ['ARRI Alexa LF', 'Signature Primes', 'Crane', 'Drone'],
+          createdAt: now,
+          updatedAt: now,
+          shots: [
+            {
+              id: 'shot-10-1',
+              roleId: 'role-1',
+              sceneId: 'scene-10',
+              description: 'Epic wide - Trollet på Karl Johan (10A)',
+              shotType: 'Wide',
+              cameraAngle: 'Low Angle',
+              cameraMovement: 'Crane',
+              focalLength: 18,
+              duration: 10,
+              notes: 'VFX: Full CG troll. Drone/crane combo.',
+              imageUrl: 'https://images.unsplash.com/photo-1559564484-e48b3e040ff4?w=800&q=80',
+              createdAt: now,
+              updatedAt: now,
+            } as CastingShot,
+            {
+              id: 'shot-10-2',
+              roleId: 'role-1',
+              sceneId: 'scene-10',
+              description: 'Medium - Nora konfronterer trollet (10B)',
+              shotType: 'Medium',
+              cameraAngle: 'Eye Level',
+              cameraMovement: 'Dolly',
+              focalLength: 50,
+              duration: 12,
+              notes: 'Emosjonelt klimaks. Over-shoulder stil.',
+              imageUrl: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=800&q=80',
+              createdAt: now,
+              updatedAt: now,
+            } as CastingShot,
+            {
+              id: 'shot-10-3',
+              roleId: 'role-1',
+              sceneId: 'scene-10',
+              description: 'CU - Nora og Tobias (10C)',
+              shotType: 'Close-up',
+              cameraAngle: 'Eye Level',
+              cameraMovement: 'Static',
+              focalLength: 85,
+              duration: 20,
+              notes: 'Far-datter øyeblikk',
+              imageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800&q=80',
+              createdAt: now,
+              updatedAt: now,
+            } as CastingShot,
+            {
+              id: 'shot-10-4',
+              roleId: 'role-1',
+              sceneId: 'scene-10',
+              description: 'Epic wide - Solen stiger, trollet forsteines (10D)',
+              shotType: 'Wide',
+              cameraAngle: 'High Angle',
+              cameraMovement: 'Crane',
+              focalLength: 24,
+              duration: 15,
+              notes: 'VFX: Trollet blir til stein. Sollys-effekt.',
+              imageUrl: 'https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=800&q=80',
+              createdAt: now,
+              updatedAt: now,
+            } as CastingShot,
+          ],
+        },
+      ],
+      userRoles: [
+        {
+          id: 'userrole-1',
+          userId: 'user-roar',
+          projectId: 'troll',
+          role: 'director',
+          permissions: {
+            canViewAll: true,
+            canEditCasting: true,
+            canEditProduction: true,
+            canEditShotLists: true,
+            canManageCrew: true,
+            canManageLocations: true,
+            canApprove: true,
+          },
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: 'userrole-2',
+          userId: 'user-espen',
+          projectId: 'troll',
+          role: 'producer',
+          permissions: {
+            canViewAll: true,
+            canEditCasting: true,
+            canEditProduction: true,
+            canEditShotLists: true,
+            canManageCrew: true,
+            canManageLocations: true,
+            canApprove: true,
+          },
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
       createdAt: now,
       updatedAt: now,
     };
@@ -1185,20 +2105,25 @@ export const castingService = {
     // Save to database
     try {
       await this.saveProject(mockProject);
-      console.log('Mock data initialized for Casting Planner in database');
-      console.log('Mock project ID:', mockProject.id);
-      console.log('Mock candidates count:', mockProject.candidates.length);
+      console.log('🎬 TROLL project initialized for Casting Planner');
+      console.log('Project ID:', mockProject.id);
+      console.log('Roles:', mockProject.roles.length);
+      console.log('Candidates:', mockProject.candidates.length);
+      console.log('Crew:', mockProject.crew.length);
+      console.log('Locations:', mockProject.locations.length);
+      console.log('Props:', mockProject.props.length);
+      console.log('Production Days:', mockProject.productionDays.length);
+      console.log('Shot Lists:', mockProject.shotLists.length);
       
       // Verify it was saved
       const saved = await this.getProject(mockProject.id);
       if (saved) {
-        console.log('Mock project verified in database, candidates:', saved.candidates?.length || 0);
+        console.log('✅ TROLL project verified in storage');
       } else {
-        console.error('Failed to verify mock project was saved!');
+        console.error('❌ Failed to verify TROLL project was saved!');
       }
     } catch (error) {
-      console.error('Failed to initialize mock data in database:', error);
-      throw error;
+      console.error('Failed to initialize TROLL project:', error);
     }
   },
 };

@@ -308,7 +308,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
     setIsLoading(true);
     try {
       const scene = await sceneComposerService.importSceneFromFile(file);
-      sceneComposerService.saveScene(scene);
+      await sceneComposerService.saveScene(scene);
       loadScenes();
     } catch (error) {
       console.error('Error importing scene:', error);
@@ -608,7 +608,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
             minHeight: '48px',
             fontSize: '14px',
             textTransform: 'none',
-            color: 'rgba(255,255,255,0.7)',
+            color: 'rgba(255,255,255,0.87)',
             '&.Mui-selected': {
               color: '#00d4ff',
             },
@@ -714,7 +714,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
               {selectedScenes.size > 0 && (
                 <>
                   <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.2)' }} />
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                     {selectedScenes.size} valgt
                   </Typography>
                   <Button
@@ -745,7 +745,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
                 onChange={(e) => setSearchQuery(e.target.value)}
                 size="small"
                 InputProps={{
-                  startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)', mr: 1 }} />,
+                  startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.87)', mr: 1 }} />,
                 }}
                 sx={{
                   flex: 1,
@@ -759,7 +759,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
               />
               
               <FormControl size="small" sx={{ minWidth: 150 }}>
-                <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Sorter</InputLabel>
+                <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Sorter</InputLabel>
                 <Select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as SortOption)}
@@ -795,7 +795,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
             {/* Tags filter */}
             {allTags.length > 0 && (
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mr: 1 }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mr: 1 }}>
                   Tags:
                 </Typography>
                 {allTags.map(tag => (
@@ -821,7 +821,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
                   <Button
                     size="small"
                     onClick={() => setFilterTags([])}
-                    sx={{ color: 'rgba(255,255,255,0.7)' }}
+                    sx={{ color: 'rgba(255,255,255,0.87)' }}
                   >
                     Nullstill
                   </Button>
@@ -838,7 +838,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
                 alignItems: 'center',
                 justifyContent: 'center',
                 py: 8,
-                color: 'rgba(255,255,255,0.5)',
+                color: 'rgba(255,255,255,0.87)',
               }}
             >
               <PhotoLibraryIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
@@ -857,9 +857,9 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
                   checked={selectedScenes.size === filteredScenes.length && filteredScenes.length > 0}
                   indeterminate={selectedScenes.size > 0 && selectedScenes.size < filteredScenes.length}
                   onChange={handleSelectAll}
-                  sx={{ color: 'rgba(255,255,255,0.7)' }}
+                  sx={{ color: 'rgba(255,255,255,0.87)' }}
                 />
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   Velg alle ({filteredScenes.length} scener)
                 </Typography>
               </Box>
@@ -921,7 +921,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
                           top: 8,
                           left: 8,
                           zIndex: 10,
-                          color: 'rgba(255,255,255,0.7)',
+                          color: 'rgba(255,255,255,0.87)',
                           '&.Mui-checked': { color: '#ffb800' },
                         }}
                       />
@@ -933,7 +933,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
                           top: 8,
                           left: 40,
                           zIndex: 10,
-                          color: 'rgba(255,255,255,0.5)',
+                          color: 'rgba(255,255,255,0.87)',
                           cursor: 'grab',
                           '&:active': { cursor: 'grabbing' },
                         }}
@@ -958,7 +958,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            color: 'rgba(255,255,255,0.3)',
+                            color: 'rgba(255,255,255,0.6)',
                           }}
                         >
                           <PhotoLibraryIcon sx={{ fontSize: 48 }} />
@@ -970,7 +970,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
                           {scene.name}
                         </Typography>
                         {scene.description && (
-                          <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255,255,255,0.7)', fontSize: '12px' }}>
+                          <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255,255,255,0.87)', fontSize: '12px' }}>
                             {scene.description}
                           </Typography>
                         )}
@@ -997,7 +997,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
                                 size="small"
                                 sx={{
                                   bgcolor: 'rgba(255,255,255,0.1)',
-                                  color: 'rgba(255,255,255,0.7)',
+                                  color: 'rgba(255,255,255,0.87)',
                                   fontSize: '10px',
                                   height: '20px',
                                 }}
@@ -1033,11 +1033,11 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
                         </Box>
 
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px' }}>
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '11px' }}>
                             {formatDate(scene.updatedAt)}
                           </Typography>
                           {scene.size && (
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px' }}>
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '11px' }}>
                               {formatSize(scene.size)}
                             </Typography>
                           )}
@@ -1080,7 +1080,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
                               e.stopPropagation();
                               setContextMenuAnchor({ x: e.clientX, y: e.clientY, sceneId: scene.id });
                             }}
-                            sx={{ color: 'rgba(255,255,255,0.7)', ml: 'auto' }}
+                            sx={{ color: 'rgba(255,255,255,0.87)', ml: 'auto' }}
                           >
                             <MoreVertIcon fontSize="small" />
                           </IconButton>
@@ -1117,7 +1117,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
               }}
             />
           ) : (
-            <Box sx={{ p: 2, textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>
+            <Box sx={{ p: 2, textAlign: 'center', color: 'rgba(255,255,255,0.87)' }}>
               <TimelineIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
               <Typography variant="h6" sx={{ mb: 1 }}>
                 Ingen scene valgt
@@ -1148,7 +1148,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
               }}
             />
           ) : (
-            <Box sx={{ p: 2, textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>
+            <Box sx={{ p: 2, textAlign: 'center', color: 'rgba(255,255,255,0.87)' }}>
               <LayersIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
               <Typography variant="h6" sx={{ mb: 1 }}>
                 Ingen scene valgt
@@ -1191,13 +1191,13 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
                     },
                   }}
                 />
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   Auto-save: {autoSaveEnabled ? 'På' : 'Av'}
                 </Typography>
               </Box>
               {autoSaveEnabled && (
                 <FormControl size="small" sx={{ minWidth: 200 }}>
-                  <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Auto-save Intervall</InputLabel>
+                  <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Auto-save Intervall</InputLabel>
                   <Select
                     value={autoSaveInterval}
                     onChange={(e) => handleAutoSaveIntervalChange(Number(e.target.value))}
@@ -1224,7 +1224,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
               <Typography variant="subtitle1" sx={{ mb: 1, color: 'rgba(255,255,255,0.9)' }}>
                 Backup og Gjenoppretting
               </Typography>
-              <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)' }}>
+              <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.87)' }}>
                 Lag backup av alle scener eller gjenopprett fra en tidligere backup.
               </Typography>
               <Box sx={{ display: 'flex', gap: 2 }}>
@@ -1272,7 +1272,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
               <Typography variant="subtitle1" sx={{ mb: 1, color: 'rgba(255,255,255,0.9)' }}>
                 Eksporter Scene
               </Typography>
-              <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)' }}>
+              <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.87)' }}>
                 Velg en scene fra Scener-fanen og klikk på "Eksporter" for å laste ned som JSON-fil.
               </Typography>
             </Box>
@@ -1281,7 +1281,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
               <Typography variant="subtitle1" sx={{ mb: 1, color: 'rgba(255,255,255,0.9)' }}>
                 Importer Scene
               </Typography>
-              <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)' }}>
+              <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.87)' }}>
                 Last opp en JSON-fil for å importere en scene.
               </Typography>
               <input
@@ -1370,7 +1370,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
                 >
                   Optimaliser Scene
                 </Button>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   Kompleksitetsscore: {sceneOptimizationService.getComplexityScore(selectedScene)}
                 </Typography>
               </Box>
@@ -1449,7 +1449,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
                   const variations = sceneVariationService.getVariations(selectedScene.id);
                   return variations.length > 0 ? (
                     <Box>
-                      <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255,255,255,0.7)' }}>
+                      <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255,255,255,0.87)' }}>
                         Eksisterende variasjoner:
                       </Typography>
                       {variations.map(variation => (
@@ -1478,7 +1478,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
               </Box>
             </Box>
           ) : (
-            <Box sx={{ p: 2, textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>
+            <Box sx={{ p: 2, textAlign: 'center', color: 'rgba(255,255,255,0.87)' }}>
               <LayersIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
               <Typography variant="h6" sx={{ mb: 1 }}>
                 Ingen scene valgt
@@ -1533,7 +1533,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
                   }}
                 />
               )}
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
                 {scene.description || 'Ingen beskrivelse'}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -1732,7 +1732,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setComparisonDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <Button onClick={() => setComparisonDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Lukk
           </Button>
         </DialogActions>
@@ -1790,14 +1790,14 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
                 ))}
               </List>
             ) : (
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                 Ingen versjoner lagret for denne scenen
               </Typography>
             );
           })() : null}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setVersionHistoryOpen(false)} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <Button onClick={() => setVersionHistoryOpen(false)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Lukk
           </Button>
         </DialogActions>
@@ -1818,7 +1818,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
         <DialogContent>
           {mergeScene1 && mergeScene2 && (
             <Box>
-              <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)' }}>
+              <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.87)' }}>
                 Slår sammen "{mergeScene1.name}" og "{mergeScene2.name}"
               </Typography>
               <TextField
@@ -1835,14 +1835,14 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
                     '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                     '&:hover fieldset': { borderColor: '#00d4ff' },
                   },
-                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                 }}
               />
             </Box>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setMergeDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <Button onClick={() => setMergeDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Avbryt
           </Button>
           <Button
@@ -1853,7 +1853,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
               bgcolor: '#00d4ff',
               color: '#000',
               '&:hover': { bgcolor: '#00b8e6' },
-              '&:disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' },
+              '&:disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' },
             }}
           >
             Slå sammen
@@ -1889,12 +1889,12 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
                 '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                 '&:hover fieldset': { borderColor: '#00d4ff' },
               },
-              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
             }}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setTemplateDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <Button onClick={() => setTemplateDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Avbryt
           </Button>
           <Button
@@ -1905,7 +1905,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
               bgcolor: '#00d4ff',
               color: '#000',
               '&:hover': { bgcolor: '#00b8e6' },
-              '&:disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' },
+              '&:disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' },
             }}
           >
             Lagre Template
@@ -1926,7 +1926,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
       >
         <DialogTitle>Del Scene</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.7)' }}>
+          <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.87)' }}>
             Kopier denne linken for å dele scenen:
           </Typography>
           <TextField
@@ -1946,7 +1946,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
           <Button onClick={handleCopyShareLink} variant="contained" sx={{ bgcolor: '#00d4ff', color: '#000' }}>
             Kopier Link
           </Button>
-          <Button onClick={() => setShareDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <Button onClick={() => setShareDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Lukk
           </Button>
         </DialogActions>
@@ -1968,7 +1968,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
         <DialogTitle>Papirkurv</DialogTitle>
         <DialogContent>
           {trashedScenes.length === 0 ? (
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
               Papirkurven er tom
             </Typography>
           ) : (
@@ -2010,7 +2010,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setTrashDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          <Button onClick={() => setTrashDialogOpen(false)} sx={{ color: 'rgba(255,255,255,0.87)' }}>
             Lukk
           </Button>
         </DialogActions>
@@ -2056,7 +2056,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
                 '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                 '&:hover fieldset': { borderColor: '#00d4ff' },
               },
-              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
             }}
           />
           <TextField
@@ -2074,14 +2074,14 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
                 '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
                 '&:hover fieldset': { borderColor: '#00d4ff' },
               },
-              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
             }}
           />
         </DialogContent>
         <DialogActions>
           <Button
             onClick={() => setSaveDialogOpen(false)}
-            sx={{ color: 'rgba(255,255,255,0.7)' }}
+            sx={{ color: 'rgba(255,255,255,0.87)' }}
           >
             Avbryt
           </Button>
@@ -2093,7 +2093,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
               bgcolor: '#00d4ff',
               color: '#000',
               '&:hover': { bgcolor: '#00b8e6' },
-              '&:disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' },
+              '&:disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' },
             }}
           >
             {isSaving ? 'Lagrer...' : 'Lagre'}

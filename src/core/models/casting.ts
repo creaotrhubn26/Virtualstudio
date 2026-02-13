@@ -176,12 +176,29 @@ export interface Location {
       windExposure: 'low' | 'moderate' | 'high';
       sunExposure: 'morning' | 'afternoon' | 'all-day';
       shelterOptions: string[];
+      windSpeedKmh?: number;
+      windSpeed?: number;
+      windDirection?: number;
+      droneSafety?: string;
+      droneSafetyDescription?: string;
+      sunrise?: string;
+      sunset?: string;
+      daylightHours?: number;
+      sunDescription?: string;
     };
     accessAnalysis: {
       parkingAvailable: boolean;
       publicTransport: string[];
       walkingDistance: number;
       accessibility: 'wheelchair-accessible' | 'limited' | 'not-accessible';
+      evParking?: {
+        distance: number;
+        description: string;
+      };
+      evCharging?: {
+        distance: number;
+        description: string;
+      };
       parkingSpots?: Array<{
         name: string;
         address: string;
@@ -565,7 +582,10 @@ export type UserRoleType =
   | 'casting_director' 
   | 'production_manager' 
   | 'camera_team' 
-  | 'agency';
+  | 'agency'
+  | 'writer'        // Screenplay writer - can edit script
+  | 'script_editor' // Script editor - can edit and approve script changes
+  | 'reader';       // Read-only access to screenplay
 
 export interface UserRole {
   id: string;
@@ -580,6 +600,10 @@ export interface UserRole {
     canManageCrew?: boolean;
     canManageLocations?: boolean;
     canApprove?: boolean;
+    // Screenplay-specific permissions
+    canEditScript?: boolean;
+    canLockScript?: boolean;
+    canRunTableRead?: boolean;
   };
   createdAt: string;
   updatedAt: string;
@@ -643,6 +667,13 @@ export interface CastingProject {
   productionPlanId?: string; // Fremtidig integrasjon
   createdAt: string;
   updatedAt: string;
+  // Optional count fields for backend optimization (when arrays are not fully loaded)
+  rolesCount?: number;
+  candidatesCount?: number;
+  crewCount?: number;
+  locationsCount?: number;
+  propsCount?: number;
+  schedulesCount?: number;
 }
 
 export type ActivityActionType = 
@@ -727,6 +758,7 @@ export interface Manuscript {
   wordCount: number;
   estimatedRuntime?: number; // in minutes (1 page ≈ 1 minute)
   status: 'draft' | 'review' | 'approved' | 'shooting' | 'completed';
+  coverImage?: string; // Base64 or URL to cover image
   notes?: string;
   metadata?: {
     copyright?: string;
@@ -817,7 +849,26 @@ export interface SceneBreakdown {
   priority?: number;
   status: 'not-scheduled' | 'scheduled' | 'shot' | 'in-post' | 'completed';
   
+  // Production metadata (synced from ProductionManuscriptView)
+  metadata?: {
+    camera?: string;
+    lens?: string;
+    rig?: string;
+    shotType?: string;
+    keyLight?: string;
+    sideLight?: string;
+    gel?: string;
+    mic?: string;
+    atmos?: string;
+    references?: string[];
+    [key: string]: unknown;
+  };
+  
   notes?: string;
+  
+  // Storyboard integration
+  storyboardFrames?: StoryboardFrame[]; // Linked storyboard frames for this scene
+  
   createdAt: string;
   updatedAt: string;
 }
@@ -922,6 +973,27 @@ export interface StoryboardFrame {
   movement: string;
   duration: number;
   notes?: string;
+  
+  // Script linking - connects frame to screenplay
+  sceneId?: string;                      // Links to SceneBreakdown.id
+  scriptLineRange?: [number, number];    // Start and end line numbers in script
+  dialogueCharacter?: string;            // Character speaking during this frame
+  dialogueText?: string;                 // Actual dialogue line if applicable
+  actionDescription?: string;            // Action line from script this frame covers
+  
+  // Drawing data for iPad sketching
+  drawingData?: {
+    strokes: any[];                      // PencilStroke data
+    layers: any[];                       // DrawingLayer data
+    template?: {
+      aspectRatio: string;
+      guides: string;
+    };
+  };
+  
+  // Image source tracking
+  imageSource?: 'ai' | 'captured' | 'drawn' | 'uploaded' | 'generated';
+  generatedFromScript?: boolean;         // Whether this was auto-generated from script analysis
 }
 
 /**

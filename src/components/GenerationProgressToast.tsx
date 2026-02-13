@@ -1,4 +1,4 @@
-import * as React from 'react';
+import { useEffect, useState } from 'react';
 import {
   Paper,
   Box,
@@ -35,11 +35,11 @@ export default function GenerationProgressToast({
   onCancel,
   onComplete,
 }: GenerationProgressToastProps) {
-  const [minimized, setMinimized] = React.useState(false);
-  const [visible, setVisible] = React.useState(true);
+  const [minimized, setMinimized] = useState(false);
+  const [visible, setVisible] = useState(true);
 
   // Auto-dismiss after 3 seconds on completion
-  React.useEffect(() => {
+  useEffect(() => {
     if (status === 'completed' || status === 'failed') {
       const timer = setTimeout(() => {
         setVisible(false);

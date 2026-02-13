@@ -588,7 +588,7 @@ export const crewConflictsApi = {
 // Equipment/Assets API (Utstyr)
 export interface Equipment {
   id: string;
-  project_id: string;
+  project_id: string | null;
   name: string;
   description?: string;
   category?: string;
@@ -602,6 +602,7 @@ export interface Equipment {
   notes?: string;
   image_url?: string;
   status: 'available' | 'in_use' | 'maintenance' | 'retired';
+  is_global?: boolean;
   assignees?: Array<{ crew_id: string; role: string }>;
   created_at?: string;
   updated_at?: string;
@@ -777,12 +778,13 @@ export interface EquipmentTemplateItem {
 
 export interface EquipmentTemplate {
   id: string;
-  project_id: string;
+  project_id: string | null;
   name: string;
   description?: string;
   category?: string;
   use_case?: string;
   is_default: boolean;
+  is_global?: boolean;
   created_by?: string;
   created_at?: string;
   updated_at?: string;
@@ -874,6 +876,225 @@ export const vendorLinksApi = {
   },
 };
 
+// Production Days API
+export interface ProductionDay {
+  id: string;
+  project_id: string;
+  date: string;
+  call_time: string;
+  wrap_time: string;
+  location_id?: string;
+  location_name?: string;
+  scenes?: string[];
+  crew?: string[];
+  props?: string[];
+  notes?: string;
+  status?: 'planned' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+  weather_forecast?: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const productionDaysApi = {
+  getAll: async (projectId: string): Promise<ProductionDay[]> => {
+    const result = await apiRequest<{ productionDays: ProductionDay[] }>(`/projects/${projectId}/production-days`);
+    return result.productionDays;
+  },
+  
+  save: async (productionDay: Partial<ProductionDay>): Promise<ProductionDay> => {
+    const result = await apiRequest<{ productionDay: ProductionDay }>('/production-days', {
+      method: 'POST',
+      body: JSON.stringify(productionDay),
+    });
+    return result.productionDay;
+  },
+  
+  delete: async (dayId: string): Promise<boolean> => {
+    await apiRequest(`/production-days/${dayId}`, { method: 'DELETE' });
+    return true;
+  },
+};
+
+// User Roles API (Sharing/Permissions)
+export interface UserRole {
+  id: string;
+  project_id: string;
+  user_id: string;
+  role: 'owner' | 'editor' | 'viewer';
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const userRolesApi = {
+  getAll: async (projectId: string): Promise<UserRole[]> => {
+    const result = await apiRequest<{ userRoles: UserRole[] }>(`/projects/${projectId}/user-roles`);
+    return result.userRoles;
+  },
+  
+  set: async (projectId: string, userId: string, role: string): Promise<UserRole> => {
+    const result = await apiRequest<{ userRole: UserRole }>('/user-roles', {
+      method: 'POST',
+      body: JSON.stringify({ projectId, userId, role }),
+    });
+    return result.userRole;
+  },
+  
+  remove: async (projectId: string, userId: string): Promise<boolean> => {
+    await apiRequest(`/user-roles/${projectId}/${userId}`, { method: 'DELETE' });
+    return true;
+  },
+};
+
+// Shot Production Details API
+export interface ShotCamera {
+  id: string;
+  shot_id: string;
+  scene_id?: string;
+  camera_type?: string;
+  lens?: string;
+  focal_length?: number;
+  aperture?: string;
+  iso?: number;
+  shutter_speed?: string;
+  frame_rate?: number;
+  resolution?: string;
+  aspect_ratio?: string;
+  camera_movement?: string;
+  gimbal_settings?: Record<string, unknown>;
+  focus_notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ShotLighting {
+  id: string;
+  shot_id: string;
+  scene_id?: string;
+  lighting_setup_name?: string;
+  key_light?: Record<string, unknown>;
+  fill_light?: Record<string, unknown>;
+  back_light?: Record<string, unknown>;
+  practical_lights?: Record<string, unknown>[];
+  light_diagram_url?: string;
+  color_temperature?: number;
+  lighting_style?: string;
+  special_effects?: Record<string, unknown>[];
+  power_requirements?: string;
+  setup_time?: number;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ShotAudio {
+  id: string;
+  shot_id: string;
+  scene_id?: string;
+  audio_type?: string;
+  microphone_setup?: Record<string, unknown>[];
+  boom_operator_needed?: boolean;
+  wireless_mics_count?: number;
+  sound_blankets_needed?: boolean;
+  ambient_sound_notes?: string;
+  dialogue_notes?: string;
+  music_cue?: string;
+  sound_effects_needed?: Record<string, unknown>[];
+  adr_required?: boolean;
+  audio_format?: string;
+  channels?: number;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ShotNote {
+  id: string;
+  shot_id: string;
+  scene_id?: string;
+  note_type?: 'general' | 'director' | 'cinematographer' | 'script' | 'continuity';
+  content: string;
+  author?: string;
+  priority?: 'low' | 'normal' | 'high' | 'critical';
+  tags?: string[];
+  attachments?: string[];
+  resolved?: boolean;
+  resolved_at?: string;
+  resolved_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const shotDetailsApi = {
+  // Camera
+  getCamera: async (shotId: string): Promise<ShotCamera | null> => {
+    const result = await apiRequest<{ camera: ShotCamera | null }>(`/shots/${shotId}/camera`);
+    return result.camera;
+  },
+  
+  saveCamera: async (shotId: string, camera: Partial<ShotCamera>): Promise<ShotCamera> => {
+    const result = await apiRequest<{ camera: ShotCamera }>(`/shots/${shotId}/camera`, {
+      method: 'POST',
+      body: JSON.stringify(camera),
+    });
+    return result.camera;
+  },
+  
+  // Lighting
+  getLighting: async (shotId: string): Promise<ShotLighting | null> => {
+    const result = await apiRequest<{ lighting: ShotLighting | null }>(`/shots/${shotId}/lighting`);
+    return result.lighting;
+  },
+  
+  saveLighting: async (shotId: string, lighting: Partial<ShotLighting>): Promise<ShotLighting> => {
+    const result = await apiRequest<{ lighting: ShotLighting }>(`/shots/${shotId}/lighting`, {
+      method: 'POST',
+      body: JSON.stringify(lighting),
+    });
+    return result.lighting;
+  },
+  
+  // Audio
+  getAudio: async (shotId: string): Promise<ShotAudio | null> => {
+    const result = await apiRequest<{ audio: ShotAudio | null }>(`/shots/${shotId}/audio`);
+    return result.audio;
+  },
+  
+  saveAudio: async (shotId: string, audio: Partial<ShotAudio>): Promise<ShotAudio> => {
+    const result = await apiRequest<{ audio: ShotAudio }>(`/shots/${shotId}/audio`, {
+      method: 'POST',
+      body: JSON.stringify(audio),
+    });
+    return result.audio;
+  },
+  
+  // Notes
+  getNotes: async (shotId: string): Promise<ShotNote[]> => {
+    const result = await apiRequest<{ notes: ShotNote[] }>(`/shots/${shotId}/notes`);
+    return result.notes;
+  },
+  
+  createNote: async (shotId: string, note: Partial<ShotNote>): Promise<ShotNote> => {
+    const result = await apiRequest<{ note: ShotNote }>(`/shots/${shotId}/notes`, {
+      method: 'POST',
+      body: JSON.stringify(note),
+    });
+    return result.note;
+  },
+  
+  resolveNote: async (noteId: string, resolvedBy?: string): Promise<ShotNote> => {
+    const result = await apiRequest<{ note: ShotNote }>(`/shot-notes/${noteId}/resolve`, {
+      method: 'PUT',
+      body: JSON.stringify({ resolvedBy }),
+    });
+    return result.note;
+  },
+  
+  deleteNote: async (noteId: string): Promise<boolean> => {
+    await apiRequest(`/shot-notes/${noteId}`, { method: 'DELETE' });
+    return true;
+  },
+};
+
 export const castingApi = {
   favorites: favoritesApi,
   projects: projectsApi,
@@ -896,6 +1117,9 @@ export const castingApi = {
   equipmentConflicts: equipmentConflictsApi,
   equipmentTemplates: equipmentTemplatesApi,
   vendorLinks: vendorLinksApi,
+  productionDays: productionDaysApi,
+  userRoles: userRolesApi,
+  shotDetails: shotDetailsApi,
 };
 
 export default castingApi;

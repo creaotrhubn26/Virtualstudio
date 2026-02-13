@@ -3,7 +3,6 @@ import { SceneComposition } from '../core/models/sceneComposer';
 export class SceneThumbnailService {
   private thumbnailQueue: string[] = [];
   private isProcessing: boolean = false;
-  private worker: Worker | null = null;
 
   /**
    * Generate thumbnail in background
@@ -19,7 +18,7 @@ export class SceneThumbnailService {
 
     // For now, return a placeholder
     // In production, this would capture actual scene screenshot
-    return this.generatePlaceholderThumbnail();
+    return this.generatePlaceholderThumbnail(scene.name);
   }
 
   /**
@@ -60,7 +59,7 @@ export class SceneThumbnailService {
   /**
    * Generate placeholder thumbnail
    */
-  private generatePlaceholderThumbnail(): string {
+  private generatePlaceholderThumbnail(label?: string): string {
     // Create a simple colored canvas as placeholder
     const canvas = document.createElement('canvas');
     canvas.width = 320;
@@ -73,6 +72,11 @@ export class SceneThumbnailService {
       ctx.font = '24px Arial';
       ctx.textAlign = 'center';
       ctx.fillText('Scene Preview', 160, 90);
+      if (label) {
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#9ddcff';
+        ctx.fillText(label.substring(0, 20), 160, 120);
+      }
     }
     return canvas.toDataURL('image/png');
   }

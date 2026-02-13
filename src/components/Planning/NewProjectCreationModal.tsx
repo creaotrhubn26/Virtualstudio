@@ -40,32 +40,69 @@ import {
   Chip,
   Avatar,
   Snackbar,
+  SvgIcon,
 } from '@mui/material';
 import {
-  Person as PersonIcon,
-  AccountBalance,
-  Groups,
-  Folder,
-  Email,
-  Phone,
-  LocationOn,
-  Event,
   Close as CloseIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
   Search as SearchIcon,
-  Business as BusinessIcon,
   InfoOutlined as InfoIcon,
   CheckCircle as CheckCircleIcon,
-  CalendarToday as CalendarIcon,
   CloudDone as CloudDoneIcon,
   CloudOff as CloudOffIcon,
   CloudQueue as CloudQueueIcon,
-  Description as ContractIcon,
+  MovieFilter as MovieFilterIcon,
+  PlayCircleOutline as PlayCircleIcon,
 } from '@mui/icons-material';
+
+// Custom SVG icons for consistent visual language
+import {
+  DashboardCustomIcon as DashboardIcon,
+  RolesIcon as TheaterComedyIcon,
+  CandidatesIcon as RecentActorsIcon,
+  AuditionsIcon as InterpreterModeIcon,
+  TeamIcon as GroupsIcon,
+  LocationsIcon as LocationIcon,
+  EquipmentIcon as PropIcon,
+  CalendarCustomIcon as CalendarIcon,
+  ShotListIcon,
+  StoryArcIcon,
+  ShareCustomIcon as ShareIcon,
+  OffersIcon as HandshakeIcon,
+  ContractsIcon,
+  ContractsIcon as ContractIcon,
+  ConsentsIcon as ConsentIcon,
+  ProjectIcon as CameraIcon,
+  ContactIcon,
+  SplitSheetIcon,
+  FolderProjectIcon,
+  EmailIcon,
+  EventIcon,
+  CompanyIcon,
+} from '../icons/CastingIcons';
+
 import { apiRequest } from '../../lib/api';
 import { useExternalData } from '../../services/ExternalDataService';
 import { ContactPicker } from './ContactPicker';
+
+// TROLL area configuration matching CastingPlannerPanel navigation colors/icons
+const TROLL_AREA_CONFIG: Record<string, { Icon: any; color: string; label: string }> = {
+  project: { Icon: DashboardIcon, color: '#8b5cf6', label: 'Prosjekt' },
+  roles: { Icon: TheaterComedyIcon, color: '#f48fb1', label: 'Roller' },
+  candidates: { Icon: RecentActorsIcon, color: '#10b981', label: 'Kandidater' },
+  crew: { Icon: GroupsIcon, color: '#00d4ff', label: 'Team' },
+  locations: { Icon: LocationIcon, color: '#4caf50', label: 'Steder' },
+  equipment: { Icon: PropIcon, color: '#ff9800', label: 'Utstyr' },
+  production_days: { Icon: CalendarIcon, color: '#9c27b0', label: 'Prod.dager' },
+  scenes: { Icon: ShotListIcon, color: '#e91e63', label: 'Scener' },
+  shot_lists: { Icon: ShotListIcon, color: '#e91e63', label: 'Shot Lists' },
+  split_sheets: { Icon: ShareIcon, color: '#06b6d4', label: 'Deling' },
+  offers: { Icon: HandshakeIcon, color: '#ffb800', label: 'Tilbud' },
+  contracts: { Icon: ContractsIcon, color: '#ff5722', label: 'Kontrakter' },
+  consents: { Icon: ConsentIcon, color: '#00bcd4', label: 'Samtykker' },
+};
+
 import { ContactProjectInfoSummary } from './ContactProjectInfoSummary';
 import { ProjectTypeSelector } from './ProjectTypeSelector';
 import ProjectCollaborators from './ProjectCollaborators';
@@ -109,8 +146,8 @@ interface NewProjectCreationModalProps {
 }
 
 const STEPS = [
-  { label: 'Grunndata', description: 'Kontakt, prosjektinfo og type', icon: PersonIcon },
-  { label: 'Produksjonsteam & Split Sheet', description: 'Fordeling og teammedlemmer', icon: AccountBalance },
+  { label: 'Grunndata', description: 'Kontakt, prosjektinfo og type', icon: ContactIcon },
+  { label: 'Produksjonsteam & Split Sheet', description: 'Fordeling og teammedlemmer', icon: SplitSheetIcon },
 ];
 
 // WCAG 2.2 minimum touch target size (44x44px)
@@ -140,6 +177,9 @@ export default function NewProjectCreationModal({
   const dialogDescId = useId();
   const { getBRREGCompanyData, searchBRREGCompanies } = useExternalData();
   const toast = useToast();
+  // Use React reference 
+  const isReactReady = typeof React !== 'undefined' && !!React.version;
+  void isReactReady;
 
   // MenuProps for Select components to ensure proper rendering within Dialog
   const selectMenuProps = {
@@ -186,6 +226,13 @@ export default function NewProjectCreationModal({
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [selectedDraftKey, setSelectedDraftKey] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  
+  // TROLL Demo State
+  const [loadingTrollDemo, setLoadingTrollDemo] = useState(false);
+  const [trollInitDialogOpen, setTrollInitDialogOpen] = useState(false);
+  const [trollInitStatus, setTrollInitStatus] = useState<'idle' | 'loading' | 'complete' | 'error'>('idle');
+  const [trollInitError, setTrollInitError] = useState<string | null>(null);
+  const [trollInitAreas, setTrollInitAreas] = useState<Record<string, any>>({});
   
   // Generate project ID based on project name
   const generateProjectIdFromName = (projectName: string, timestamp?: number): string => {
@@ -1302,6 +1349,118 @@ export default function NewProjectCreationModal({
     }
   };
 
+  // TROLL Demo Handler - Load demo project data from database
+  const handleLoadTrollDemo = async () => {
+    setLoadingTrollDemo(true);
+    setTrollInitDialogOpen(true);
+    setTrollInitStatus('loading');
+    setTrollInitError(null);
+    
+    try {
+      // Call the comprehensive TROLL initialization endpoint
+      const response = await fetch('/api/demo/troll/initialize-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.areas) {
+          setTrollInitAreas(data.areas);
+          
+          // Load project data into form from the TROLL project
+          const projectArea = data.areas.project;
+          if (projectArea?.status === 'loaded' && projectArea?.items?.[0]) {
+            const trollProject = projectArea.items[0];
+            
+            // Build collaborators from crew data
+            const crewArea = data.areas.crew;
+            const collaborators = (crewArea?.items || []).slice(0, 5).map((c: any, idx: number) => ({
+              id: `collab-${idx}`,
+              name: c.name,
+              email: `${c.name.toLowerCase().replace(/\s/g, '.')}@trollfilm.no`,
+              role: c.role || 'crew',
+            }));
+            
+            // Load split sheet contributors
+            let splitSheetContributors: Array<Partial<SplitSheetContributor> & Record<string, unknown>> = [];
+            const ssArea = data.areas.split_sheets;
+            if (ssArea?.status === 'loaded' && ssArea?.count > 0) {
+              try {
+                const ssResponse = await fetch('/api/split-sheets?project_id=troll-project-2026');
+                if (ssResponse.ok) {
+                  const ssData = await ssResponse.json();
+                  if (ssData.splitSheets?.[0]?.contributors) {
+                    splitSheetContributors = ssData.splitSheets[0].contributors.map((c: any, idx: number) => ({
+                      id: `ss-${idx}`,
+                      name: c.name,
+                      email: c.email,
+                      role: c.role,
+                      percentage: c.percentage,
+                    }));
+                  }
+                }
+              } catch (e) {
+                console.log('Could not load split sheet contributors');
+              }
+            }
+            
+            // Update form with TROLL data
+            const trollCollaborators: ProjectData['collaborators'] = collaborators.length > 0 
+              ? collaborators.map((c: Record<string, unknown>) => ({
+                  id: String(c.id || ''),
+                  name: String(c.name || ''),
+                  email: String(c.email || ''),
+                  role: (c.role || 'crew') as ContributorRole,
+                }))
+              : [{ id: 'collab-1', name: 'Regissør', email: 'regi@trollfilm.no', role: 'director' as ContributorRole }];
+            
+            const trollSplitSheet: SplitSheet | null = splitSheetContributors.length > 0 ? {
+              id: 'troll-project-2026',
+              project_id: 'troll-project-2026',
+              title: 'TROLL - Filmproduksjon Split Sheet',
+              description: 'Fordeling av inntekter for TROLL (2026)',
+              status: 'draft' as const,
+              contributors: splitSheetContributors as SplitSheet['contributors'],
+            } as SplitSheet : null;
+
+            setProjectData((prev) => ({
+              ...prev,
+              projectId: 'troll-project-2026',
+              projectName: String(trollProject.name || 'TROLL'),
+              projectType: 'documentary' as const,
+              description: 'Norsk eventyrfilm regissert av Roar Uthaug',
+              clientName: 'Netflix / Nordisk Film',
+              clientEmail: 'produksjon@troll-film.no',
+              location: String(data.areas.locations?.items?.[0]?.name || 'Dovre, Norge'),
+              eventDate: '2026-01-20',
+              enableSplitSheet: true,
+              collaborators: trollCollaborators,
+              splitSheetData: trollSplitSheet,
+            }));
+            
+            setTrollInitStatus('complete');
+            toast.showSuccess('TROLL demo-prosjekt lastet inn!');
+          } else {
+            throw new Error('TROLL prosjekt ikke funnet i database');
+          }
+        } else {
+          throw new Error(data.error || 'Kunne ikke laste TROLL data');
+        }
+      } else {
+        throw new Error('Serverfeil ved lasting av TROLL data');
+      }
+    } catch (error) {
+      console.error('Failed to load TROLL demo:', error);
+      setTrollInitError(error instanceof Error ? error.message : 'Ukjent feil');
+      setTrollInitStatus('error');
+      toast.showError('Kunne ikke laste TROLL demo: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    } finally {
+      setLoadingTrollDemo(false);
+    }
+  };
+
   const showSuccessToast = (message: string) => {
     toast.showSuccess(message);
   };
@@ -1309,17 +1468,105 @@ export default function NewProjectCreationModal({
   // Render Step 0 content
   const renderStep0 = () => (
     <Box sx={{ mt: { xs: 1, sm: 2 } }}>
+      {/* TROLL Demo Button - Only show when creating new project (not editing) */}
+      {!initialData?.id && isCastingPlanner && (
+        <Card sx={{ mb: { xs: 2, sm: 2.5, md: 3 }, borderRadius: 2, bgcolor: 'rgba(156, 39, 176, 0.08)', border: '1px solid rgba(156, 39, 176, 0.3)' }}>
+          <CardContent sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <MovieFilterIcon sx={{ color: '#ce93d8', fontSize: 28 }} />
+                <Box>
+                  <Typography variant="subtitle2" sx={{ color: '#ce93d8', fontWeight: 600 }}>
+                    TROLL Demo-prosjekt
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '0.8rem' }}>
+                    Prøv demo-prosjektet for å se hvordan alt fungerer
+                  </Typography>
+                </Box>
+              </Box>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleLoadTrollDemo}
+                disabled={loadingTrollDemo || trollInitStatus === 'complete'}
+                startIcon={
+                  loadingTrollDemo ? <CircularProgress size={16} color="inherit" /> : 
+                  trollInitStatus === 'complete' ? <CheckCircleIcon /> : 
+                  <PlayCircleIcon />
+                }
+                sx={{
+                  borderColor: trollInitStatus === 'complete' ? '#4caf50' : '#9c27b0',
+                  color: trollInitStatus === 'complete' ? '#81c784' : '#ce93d8',
+                  '&:hover': { 
+                    borderColor: trollInitStatus === 'complete' ? '#66bb6a' : '#ba68c8', 
+                    bgcolor: trollInitStatus === 'complete' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(156, 39, 176, 0.1)' 
+                  },
+                  minWidth: 160,
+                }}
+              >
+                {loadingTrollDemo ? 'Laster...' : trollInitStatus === 'complete' ? 'Lastet inn' : 'Last Demo'}
+              </Button>
+            </Box>
+            
+            {/* Show status when loading or complete */}
+            {(trollInitStatus === 'loading' || trollInitStatus === 'complete') && Object.keys(trollInitAreas).length > 0 && (
+              <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(156, 39, 176, 0.2)' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block', mb: 1 }}>
+                  Data lastet fra database:
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                  {Object.entries(trollInitAreas).map(([key, area]: [string, any]) => {
+                    const config = TROLL_AREA_CONFIG[key];
+                    if (!config || area?.status !== 'loaded' || area?.count <= 0) return null;
+                    const { Icon, color, label } = config;
+                    return (
+                      <Box
+                        key={key}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.5,
+                          px: 1,
+                          py: 0.25,
+                          borderRadius: 2,
+                          bgcolor: `${color}20`,
+                          color: color,
+                          fontSize: '0.7rem',
+                          height: 24,
+                        }}
+                      >
+                        <Icon sx={{ fontSize: '0.85rem' }} />
+                        <span>{label}: {area.count}</span>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </Box>
+            )}
+            
+            {/* Show error */}
+            {trollInitStatus === 'error' && trollInitError && (
+              <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(244, 67, 54, 0.2)' }}>
+                <Typography variant="caption" sx={{ color: '#f44336' }}>
+                  Feil: {trollInitError}
+                </Typography>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      )}
+      
       {/* Project Name */}
       <Card sx={{ mb: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 }, borderRadius: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 }, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
         <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 } }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: { xs: 1, sm: 1.25, md: 1.5, lg: 1.75, xl: 2 } }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, fontSize: { xs: '1rem', sm: '1.063rem', md: '1.125rem', lg: '1.188rem', xl: '1.25rem' }, display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5, xl: 1.75 }, mb: 0 }}>
-              <Folder sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: { xs: 1, sm: 1.25, md: 1.5, lg: 1.75, xl: 2 } }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, fontSize: { xs: '1rem', sm: '1.063rem', md: '1.125rem', lg: '1.188rem', xl: '1.25rem' }, display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5, xl: 1.75 }, mb: 0, flex: '1 1 auto', minWidth: 0 }}>
+              <FolderProjectIcon sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' }, flexShrink: 0 }} />
               Prosjektnavn
             </Typography>
             {initialData?.updatedAt && (
               <Chip
-                icon={<Event sx={{ fontSize: '1rem !important' }} />}
+                icon={<EventIcon sx={{ fontSize: '1rem !important' }} />}
                 label={`Sist endret: ${new Date(initialData.updatedAt).toLocaleDateString('nb-NO', {
                   day: '2-digit',
                   month: 'short',
@@ -1334,6 +1581,8 @@ export default function NewProjectCreationModal({
                   border: '1px solid rgba(0, 212, 255, 0.3)',
                   fontWeight: 600,
                   fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                  flexShrink: 0,
+                  ml: 'auto',
                   '& .MuiChip-icon': {
                     color: '#00b8e6',
                   },
@@ -1368,7 +1617,7 @@ export default function NewProjectCreationModal({
         <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: { xs: 1, sm: 1.25, md: 1.5, lg: 1.75, xl: 2 } }}>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, fontSize: { xs: '1rem', sm: '1.063rem', md: '1.125rem', lg: '1.188rem', xl: '1.25rem' }, display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5, xl: 1.75 } }}>
-              <PersonIcon sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
+              <ContactIcon sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
               {isCastingPlanner ? 'Prosjektansvarlig' : 'Kontakt'}
             </Typography>
             {isCastingPlanner && (
@@ -1495,7 +1744,7 @@ export default function NewProjectCreationModal({
         <Card sx={{ mb: { xs: 2, sm: 3 }, borderRadius: { xs: 2, sm: 3 }, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
           <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, fontSize: { xs: '1rem', sm: '1.125rem' }, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Folder sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.5rem' } }} />
+              <FolderProjectIcon sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.5rem' } }} />
               Prosjekttype
             </Typography>
             <Divider sx={{ mb: 2, mt: 1 }} />
@@ -1517,7 +1766,7 @@ export default function NewProjectCreationModal({
       <Card sx={{ mb: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 }, borderRadius: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 }, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
         <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 } }}>
           <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, fontSize: { xs: '1rem', sm: '1.063rem', md: '1.125rem', lg: '1.188rem', xl: '1.25rem' }, display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5, xl: 1.75 } }}>
-            <Groups sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
+            <GroupsIcon sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
             Produksjonsteam
           </Typography>
           <Divider sx={{ mb: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 }, mt: { xs: 1, sm: 1.25, md: 1.5, lg: 1.75, xl: 2 } }} />
@@ -1561,7 +1810,7 @@ export default function NewProjectCreationModal({
         <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: { xs: 1, sm: 1.25, md: 1.5, lg: 1.75, xl: 2 }, mb: { xs: 1, sm: 1.25, md: 1.5, lg: 1.75, xl: 2 } }}>
             <Typography variant="h6" gutterBottom={false} sx={{ fontWeight: 700, fontSize: { xs: '1rem', sm: '1.063rem', md: '1.125rem', lg: '1.188rem', xl: '1.25rem' }, display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5, xl: 1.75 } }}>
-              <AccountBalance sx={{ color: '#9f7aea', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
+              <SplitSheetIcon sx={{ color: '#9f7aea', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
               Split Sheet
             </Typography>
             {projectData.projectId && (
@@ -1575,7 +1824,7 @@ export default function NewProjectCreationModal({
                 bgcolor: 'rgba(0, 212, 255, 0.1)',
                 border: '1.5px solid rgba(0, 212, 255, 0.3)',
               }}>
-                <Folder sx={{ color: 'primary.main', fontSize: { xs: '0.813rem', sm: '0.875rem', md: '0.938rem', lg: '1rem', xl: '1.125rem' } }} />
+                <FolderProjectIcon sx={{ color: 'primary.main', fontSize: { xs: '0.813rem', sm: '0.875rem', md: '0.938rem', lg: '1rem', xl: '1.125rem' } }} />
                 <Box>
                   <Typography variant="caption" sx={{
                     fontWeight: 700,
@@ -1744,17 +1993,32 @@ export default function NewProjectCreationModal({
         {/* Title - only shown when not in casting planner (parent dialog has its own title) */}
         {!isCastingPlanner && (
           <Box sx={{ mb: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 } }}>
-            <Typography
-              variant="h4"
-              sx={{
-                fontWeight: 700,
-                fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' },
-                mb: projectData.projectId ? 1 : 0,
-                color: 'text.primary',
-              }}
-            >
-              Nytt Prosjekt
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography
+                variant="h4"
+                sx={{
+                  fontWeight: 700,
+                  fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' },
+                  mb: projectData.projectId ? 1 : 0,
+                  color: 'text.primary',
+                }}
+              >
+                {getTerm ? getTerm('newProject') : 'Nytt Prosjekt'}
+              </Typography>
+              {onClose && (
+                <IconButton onClick={onClose} size="small" aria-label="Lukk">
+                  <CloseIcon />
+                </IconButton>
+              )}
+            </Box>
+            {/* Contact Info Summary */}
+            <ContactProjectInfoSummary
+              projectType={projectData.projectType}
+              clientName={projectData.clientName}
+              clientEmail={projectData.clientEmail}
+              location={projectData.location}
+              eventDate={projectData.eventDate}
+            />
             {projectData.projectId && (
               <Box sx={{
                 display: 'flex',
@@ -1768,7 +2032,7 @@ export default function NewProjectCreationModal({
                 mt: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5, xl: 1.75 },
               }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5, xl: 1.75 } }}>
-                  <Folder sx={{ color: 'primary.main', fontSize: { xs: '1rem', sm: '1.125rem', md: '1.25rem', lg: '1.375rem', xl: '1.5rem' } }} />
+                  <FolderProjectIcon sx={{ color: 'primary.main', fontSize: { xs: '1rem', sm: '1.125rem', md: '1.25rem', lg: '1.375rem', xl: '1.5rem' } }} />
                   <Box>
                     <Typography variant="caption" sx={{
                       fontWeight: 700,
@@ -1834,7 +2098,7 @@ export default function NewProjectCreationModal({
               alignItems: 'center',
               gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5, xl: 1.75 },
             }}>
-              <Folder sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
+              <FolderProjectIcon sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
               Last inn utkast eller prosjekt
             </Typography>
             <Stack spacing={{ xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 }} direction={{ xs: 'column', sm: 'row' }}>
@@ -2282,7 +2546,7 @@ export default function NewProjectCreationModal({
                 setCompanySearchOptions([]);
               }}
               aria-label="Lukk dialog"
-              sx={{ color: 'rgba(255,255,255,0.7)', mr: -1 }}
+              sx={{ color: 'rgba(255,255,255,0.87)', mr: -1 }}
             >
               <CloseIcon />
             </IconButton>
@@ -2301,7 +2565,7 @@ export default function NewProjectCreationModal({
           <Typography
             id={dialogDescId}
             variant="body2"
-            sx={{ color: 'rgba(255,255,255,0.6)', mb: { xs: 2.5, sm: 3, md: 3.5, lg: 4, xl: 4.5 }, fontSize: { xs: '0.813rem', sm: '0.875rem', md: '0.938rem', lg: '1rem', xl: '1.063rem' } }}
+            sx={{ color: 'rgba(255,255,255,0.87)', mb: { xs: 2.5, sm: 3, md: 3.5, lg: 4, xl: 4.5 }, fontSize: { xs: '0.813rem', sm: '0.875rem', md: '0.938rem', lg: '1rem', xl: '1.063rem' } }}
           >
             Legg til et nytt medlem i produksjonsteamet. Felter merket med * er påkrevd.
           </Typography>
@@ -2323,11 +2587,11 @@ export default function NewProjectCreationModal({
                 gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5, xl: 1.75 },
                 color: '#fff',
               }}>
-                <BusinessIcon sx={{ color: '#00d4ff', fontSize: { xs: '1.125rem', sm: '1.25rem', md: '1.375rem', lg: '1.5rem', xl: '1.625rem' } }} />
+                <CompanyIcon sx={{ color: '#00d4ff', fontSize: { xs: '1.125rem', sm: '1.25rem', md: '1.375rem', lg: '1.5rem', xl: '1.625rem' } }} />
                 Bedriftssøk (valgfritt)
               </Typography>
               <Divider sx={{ mb: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 }, mt: { xs: 1, sm: 1.25, md: 1.5, lg: 1.75, xl: 2 }, borderColor: 'rgba(255,255,255,0.1)' }} />
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 }, fontSize: { xs: '0.813rem', sm: '0.875rem', md: '0.938rem', lg: '1rem', xl: '1.063rem' } }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 }, fontSize: { xs: '0.813rem', sm: '0.875rem', md: '0.938rem', lg: '1rem', xl: '1.063rem' } }}>
                 Søk i Brønnøysundregistrene for å fylle ut bedriftsinformasjon automatisk.
               </Typography>
               <Stack spacing={2}>
@@ -2360,7 +2624,7 @@ export default function NewProjectCreationModal({
                           '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
                           '&.Mui-focused fieldset': { borderColor: '#00d4ff', borderWidth: 2 },
                         },
-                        '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                        '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                         '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
                       }}
                     />
@@ -2415,7 +2679,7 @@ export default function NewProjectCreationModal({
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <BusinessIcon sx={{ color: 'rgba(255,255,255,0.5)', fontSize: 20 }} />
+                        <CompanyIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
                       </InputAdornment>
                     ),
                     endAdornment: brregLoading ? (
@@ -2447,9 +2711,9 @@ export default function NewProjectCreationModal({
                       '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
                       '&.Mui-focused fieldset': { borderColor: '#00d4ff', borderWidth: 2 },
                     },
-                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                     '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
-                    '& .MuiFormHelperText-root': { color: 'rgba(255,255,255,0.5)' },
+                    '& .MuiFormHelperText-root': { color: 'rgba(255,255,255,0.87)' },
                   }}
                 />
               </Stack>
@@ -2473,7 +2737,7 @@ export default function NewProjectCreationModal({
                 gap: 1,
                 color: '#fff',
               }}>
-                <PersonIcon sx={{ color: '#00d4ff' }} />
+                <ContactIcon sx={{ color: '#00d4ff' }} />
                 Teammedlem
               </Typography>
               <Divider sx={{ mb: 2, mt: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
@@ -2492,7 +2756,7 @@ export default function NewProjectCreationModal({
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <PersonIcon sx={{ color: 'rgba(255,255,255,0.5)', fontSize: 20 }} />
+                        <ContactIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
                       </InputAdornment>
                     ),
                   }}
@@ -2504,7 +2768,7 @@ export default function NewProjectCreationModal({
                       '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
                       '&.Mui-focused fieldset': { borderColor: '#00d4ff', borderWidth: 2 },
                     },
-                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                     '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
                   }}
                 />
@@ -2531,7 +2795,7 @@ export default function NewProjectCreationModal({
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <Email sx={{ color: 'rgba(255,255,255,0.5)', fontSize: 20 }} />
+                        <EmailIcon sx={{ color: 'rgba(255,255,255,0.87)', fontSize: 20 }} />
                       </InputAdornment>
                     ),
                   }}
@@ -2543,7 +2807,7 @@ export default function NewProjectCreationModal({
                       '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
                       '&.Mui-focused fieldset': { borderColor: '#00d4ff', borderWidth: 2 },
                     },
-                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                     '& .MuiInputLabel-root.Mui-focused': { color: '#00d4ff' },
                     '& .MuiFormHelperText-root.Mui-error': { color: '#f44336' },
                   }}
@@ -2568,7 +2832,7 @@ export default function NewProjectCreationModal({
                 gap: 1,
                 color: '#fff',
               }}>
-                <Groups sx={{ color: '#00d4ff' }} />
+                <GroupsIcon sx={{ color: '#00d4ff' }} />
                 Rolle i prosjektet
               </Typography>
               <Divider sx={{ mb: 2, mt: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
@@ -2576,7 +2840,7 @@ export default function NewProjectCreationModal({
                 <InputLabel
                   id="collaborator-role-label"
                   sx={{
-                    color: 'rgba(255,255,255,0.7)',
+                    color: 'rgba(255,255,255,0.87)',
                     '&.Mui-focused': { color: '#00d4ff' },
                   }}
                 >
@@ -2635,7 +2899,7 @@ export default function NewProjectCreationModal({
                 Tilgjengelighet
               </Typography>
               <Divider sx={{ mb: 2, mt: 1, borderColor: 'rgba(156,39,176,0.3)' }} />
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 2, fontSize: '0.875rem' }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 2, fontSize: '0.875rem' }}>
                 Angi når teammedlemmet er tilgjengelig for prosjektet.
               </Typography>
               <Stack spacing={2}>
@@ -2657,7 +2921,7 @@ export default function NewProjectCreationModal({
                       '&:hover fieldset': { borderColor: 'rgba(156,39,176,0.6)' },
                       '&.Mui-focused fieldset': { borderColor: '#9c27b0', borderWidth: 2 },
                     },
-                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                     '& .MuiInputLabel-root.Mui-focused': { color: '#9c27b0' },
                     '& input[type="date"]::-webkit-calendar-picker-indicator': {
                       filter: 'invert(1)',
@@ -2682,7 +2946,7 @@ export default function NewProjectCreationModal({
                       '&:hover fieldset': { borderColor: 'rgba(156,39,176,0.6)' },
                       '&.Mui-focused fieldset': { borderColor: '#9c27b0', borderWidth: 2 },
                     },
-                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+                    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
                     '& .MuiInputLabel-root.Mui-focused': { color: '#9c27b0' },
                     '& input[type="date"]::-webkit-calendar-picker-indicator': {
                       filter: 'invert(1)',
@@ -2724,7 +2988,7 @@ export default function NewProjectCreationModal({
             aria-label="Avbryt og lukk dialog"
             fullWidth={isMobile}
             sx={{
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               minHeight: TOUCH_TARGET_SIZE,
               minWidth: { xs: 'auto', sm: 100, md: 120, lg: 140, xl: 160 },
               fontSize: { xs: '0.938rem', sm: '1rem', md: '1.063rem', lg: '1.125rem', xl: '1.188rem' },
@@ -2798,7 +3062,7 @@ export default function NewProjectCreationModal({
             <IconButton
               onClick={() => setSummaryModalOpen(false)}
               aria-label="Lukk"
-              sx={{ color: 'rgba(255,255,255,0.7)', mr: -1 }}
+              sx={{ color: 'rgba(255,255,255,0.87)', mr: -1 }}
             >
               <CloseIcon />
             </IconButton>
@@ -2831,7 +3095,7 @@ export default function NewProjectCreationModal({
                     gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5, xl: 1.75 },
                     color: 'primary.main',
                   }}>
-                    <Folder sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
+                    <FolderProjectIcon sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
                     Prosjekt-ID
                   </Typography>
                   <Typography variant="body1" sx={{ 
@@ -2852,7 +3116,7 @@ export default function NewProjectCreationModal({
             <Card sx={{ borderRadius: { xs: 1.5, sm: 2, md: 2.5, lg: 3, xl: 3.5 }, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
               <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 } }}>
                 <Typography variant="h6" sx={{ fontWeight: 700, mb: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5 }, fontSize: { xs: '1rem', sm: '1.063rem', md: '1.125rem', lg: '1.188rem', xl: '1.25rem' }, display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5, xl: 1.75 } }}>
-                  <Folder sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
+                  <FolderProjectIcon sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
                   Prosjektnavn
                 </Typography>
                 <Typography variant="body1" sx={{ fontWeight: 600, fontSize: { xs: '0.875rem', sm: '0.938rem', md: '1rem', lg: '1.063rem', xl: '1.125rem' }, color: 'text.primary' }}>
@@ -2865,7 +3129,7 @@ export default function NewProjectCreationModal({
             <Card sx={{ borderRadius: { xs: 1.5, sm: 2, md: 2.5, lg: 3, xl: 3.5 }, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
               <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 } }}>
                 <Typography variant="h6" sx={{ fontWeight: 700, mb: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5 }, fontSize: { xs: '1rem', sm: '1.063rem', md: '1.125rem', lg: '1.188rem', xl: '1.25rem' }, display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5, xl: 1.75 } }}>
-                  <PersonIcon sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
+                  <ContactIcon sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
                   {isCastingPlanner ? 'Prosjektansvarlig' : 'Kontakt'}
                 </Typography>
                 <Stack spacing={1.5}>
@@ -2911,7 +3175,7 @@ export default function NewProjectCreationModal({
             <Card sx={{ borderRadius: { xs: 1.5, sm: 2, md: 2.5, lg: 3, xl: 3.5 }, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
               <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 } }}>
                 <Typography variant="h6" sx={{ fontWeight: 700, mb: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5 }, fontSize: { xs: '1rem', sm: '1.063rem', md: '1.125rem', lg: '1.188rem', xl: '1.25rem' }, display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5, xl: 1.75 } }}>
-                  <Groups sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
+                  <GroupsIcon sx={{ color: 'primary.main', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
                   Produksjonsteam
                 </Typography>
                 {projectData.collaborators.length > 0 ? (
@@ -2971,7 +3235,7 @@ export default function NewProjectCreationModal({
                               {collab.name || collab.email}
                             </Typography>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.375, sm: 0.5, md: 0.625, lg: 0.75, xl: 0.875 } }}>
-                              <Email sx={{ fontSize: { xs: 12, sm: 13, md: 14, lg: 15, xl: 16 }, color: 'text.secondary' }} />
+                              <EmailIcon sx={{ fontSize: { xs: 12, sm: 13, md: 14, lg: 15, xl: 16 }, color: 'text.secondary' }} />
                               <Typography
                                 variant="body2"
                                 sx={{
@@ -3014,7 +3278,7 @@ export default function NewProjectCreationModal({
             <Card sx={{ borderRadius: { xs: 1.5, sm: 2, md: 2.5, lg: 3, xl: 3.5 }, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
               <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 } }}>
                 <Typography variant="h6" sx={{ fontWeight: 700, mb: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 }, fontSize: { xs: '1rem', sm: '1.063rem', md: '1.125rem', lg: '1.188rem', xl: '1.25rem' }, display: 'flex', alignItems: 'center', gap: { xs: 0.75, sm: 1, md: 1.25, lg: 1.5, xl: 1.75 } }}>
-                  <AccountBalance sx={{ color: '#9f7aea', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
+                  <SplitSheetIcon sx={{ color: '#9f7aea', fontSize: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem', lg: '1.625rem', xl: '1.75rem' } }} />
                   Split Sheet
                 </Typography>
                 {projectData.enableSplitSheet ? (
@@ -3151,7 +3415,7 @@ export default function NewProjectCreationModal({
             startIcon={<CancelIcon />}
             fullWidth={isMobile}
             sx={{
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(255,255,255,0.87)',
               minHeight: TOUCH_TARGET_SIZE,
               minWidth: { xs: 'auto', sm: 100, md: 120, lg: 140, xl: 160 },
               fontSize: { xs: '0.938rem', sm: '1rem', md: '1.063rem', lg: '1.125rem', xl: '1.188rem' },
@@ -3283,7 +3547,7 @@ export default function NewProjectCreationModal({
               projectId={projectData.projectId}
               splitSheetData={projectData.splitSheetData}
               contractId={editingContractId}
-              onSave={(contract: Contract) => {
+              onSave={(_contract: Contract) => {
                 setShowContractEditor(false);
                 setEditingContractId(undefined);
                 toast.showSuccess('Kontrakt lagret');
@@ -3299,6 +3563,33 @@ export default function NewProjectCreationModal({
       )}
 
       {/* Success Snackbar */}
+
+      {/* TROLL Init Status Dialog */}
+      <Dialog open={trollInitDialogOpen} onClose={() => setTrollInitDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <SvgIcon sx={{ color: '#9c27b0' }}><InterpreterModeIcon /></SvgIcon>
+          TROLL Initialisering
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5}>
+            <Typography variant="body2" color="text.secondary">
+              {trollInitStatus === 'loading' ? 'Laster inn demo-data...' : 
+               trollInitStatus === 'complete' ? 'Demo-data er lastet inn!' :
+               trollInitStatus === 'error' ? `Feil: ${trollInitError || 'Ukjent feil'}` :
+               'Klar til å laste demo-data'}
+            </Typography>
+            {trollInitStatus === 'loading' && <CircularProgress size={24} />}
+            <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
+              <Tooltip title="Story Arc"><StoryArcIcon sx={{ fontSize: 20, color: '#e91e63' }} /></Tooltip>
+              <Tooltip title="Kamera"><CameraIcon sx={{ fontSize: 20, color: '#00d4ff' }} /></Tooltip>
+            </Stack>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTrollInitDialogOpen(false)}>Lukk</Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
         open={!!successMessage}
         autoHideDuration={4000}

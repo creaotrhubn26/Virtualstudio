@@ -22,12 +22,6 @@ import {
 } from '@mui/icons-material';
 import { SceneBreakdown } from '../core/models/casting';
 
-interface TimelineViewProps {
-  scenes: SceneBreakdown[];
-  onSceneSelect: (scene: SceneBreakdown) => void;
-  selectedScene?: SceneBreakdown;
-}
-
 interface ConflictWarning {
   type: 'lighting' | 'location' | 'time' | 'resource';
   severity: 'error' | 'warning' | 'info';
@@ -35,7 +29,21 @@ interface ConflictWarning {
   sceneNumbers: string[];
 }
 
-export const TimelineView: React.FC<TimelineViewProps> = ({ scenes, onSceneSelect, selectedScene }) => {
+interface TimelineViewProps {
+  scenes: SceneBreakdown[];
+  onSceneSelect: (scene: SceneBreakdown) => void;
+  selectedScene?: SceneBreakdown;
+  onConflictsDetected?: (conflicts: ConflictWarning[]) => void;
+  onRuntimeCalculated?: (runtime: number) => void;
+}
+
+export const TimelineView: React.FC<TimelineViewProps> = ({ 
+  scenes, 
+  onSceneSelect, 
+  selectedScene,
+  onConflictsDetected,
+  onRuntimeCalculated,
+}) => {
   const [zoom, setZoom] = useState(1);
   const [conflicts, setConflicts] = useState<ConflictWarning[]>([]);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -93,7 +101,11 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ scenes, onSceneSelec
     }
 
     setConflicts(detected);
-  }, [scenes, totalRuntime]);
+    
+    // Notify parent of conflicts and runtime
+    onConflictsDetected?.(detected);
+    onRuntimeCalculated?.(totalRuntime);
+  }, [scenes, totalRuntime, onConflictsDetected, onRuntimeCalculated]);
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

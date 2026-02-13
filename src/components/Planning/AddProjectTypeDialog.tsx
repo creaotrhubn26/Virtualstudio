@@ -57,7 +57,7 @@ const AddProjectTypeDialog: React.FC<AddProjectTypeDialogProps> = ({
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography variant="h6">Legg til prosjekttype</Typography>
-        <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+        <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.87)' }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
@@ -73,7 +73,7 @@ const AddProjectTypeDialog: React.FC<AddProjectTypeDialogProps> = ({
                 color: '#fff',
                 '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
               },
-              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
             }}
           />
           <TextField
@@ -88,11 +88,11 @@ const AddProjectTypeDialog: React.FC<AddProjectTypeDialogProps> = ({
                 color: '#fff',
                 '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
               },
-              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.7)' },
+              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.87)' },
             }}
           />
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
               Farge:
             </Typography>
             <input
@@ -105,7 +105,7 @@ const AddProjectTypeDialog: React.FC<AddProjectTypeDialogProps> = ({
         </Box>
       </DialogContent>
       <DialogActions sx={{ p: 2 }}>
-        <Button onClick={onClose} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+        <Button onClick={onClose} sx={{ color: 'rgba(255,255,255,0.87)' }}>
           Avbryt
         </Button>
         <Button

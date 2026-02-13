@@ -4,7 +4,7 @@
  * Uses SAM 2 to analyze background elements and detect distracting elements
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Typography,
@@ -16,7 +16,6 @@ import {
   Alert,
   CircularProgress,
   Chip,
-  Grid,
 } from '@mui/material';
 import {
   Landscape,

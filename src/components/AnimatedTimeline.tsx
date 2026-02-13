@@ -10,7 +10,8 @@
  * - Keyboard navigation feedback
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import type { FC, MouseEvent } from 'react';
 import {
   Box,
   IconButton,
@@ -297,7 +298,7 @@ const PlaybackButton = styled(IconButton)({
 const TimeDisplay = styled(Typography)({
   fontFamily: 'monospace',
   fontSize: 14,
-  color: 'rgba(255,255,255,0.7)',
+  color: 'rgba(255,255,255,0.87)',
   minWidth: 100,
   textAlign: 'center',
 });
@@ -306,7 +307,7 @@ const TimeDisplay = styled(Typography)({
 // Component
 // =============================================================================
 
-export const AnimatedTimeline: React.FC<AnimatedTimelineProps> = ({
+export const AnimatedTimeline: FC<AnimatedTimelineProps> = ({
   frames,
   currentFrameIndex,
   isPlaying,
@@ -362,7 +363,7 @@ export const AnimatedTimeline: React.FC<AnimatedTimelineProps> = ({
   };
 
   // Handle progress bar click/drag
-  const handleProgressClick = useCallback((e: React.MouseEvent) => {
+  const handleProgressClick = useCallback((e: MouseEvent) => {
     if (!progressRef.current) return;
     const rect = progressRef.current.getBoundingClientRect();
     const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));

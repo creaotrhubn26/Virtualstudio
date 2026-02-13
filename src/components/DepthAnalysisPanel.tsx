@@ -5,7 +5,7 @@
  * Uses SAM 2 to identify subjects for depth of field optimization
  */
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Box,
   Typography,

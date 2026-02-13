@@ -42,7 +42,7 @@ export const sceneValidationService = {
       if (count > 1) {
         issues.push({
           severity: 'info',
-          message: `${count} kameraer har samme posisjon`,
+          message: `${count} kameraer har samme posisjon (${pos})`,
           category: 'camera',
         });
       }

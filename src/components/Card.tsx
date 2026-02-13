@@ -4,17 +4,17 @@
  * Styled card with consistent styling and hover effects
  */
 
-import React from 'react';
+import type { FC } from 'react';
 import { Box, BoxProps } from '@mui/material';
 import { colors, borderRadius, shadows, transitions, spacing } from '../../styles/designTokens';
-import { interactiveStyles } from '../../styles/interactiveStates';
+import { hoverState } from '../../styles/interactiveStates';
 
 export interface CardProps extends BoxProps {
   hoverable?: boolean;
   selected?: boolean;
 }
 
-export const Card: React.FC<CardProps> = ({
+export const Card: FC<CardProps> = ({
   hoverable = false,
   selected = false,
   sx,
@@ -30,7 +30,7 @@ export const Card: React.FC<CardProps> = ({
         borderRadius: borderRadius.md,
         padding: spacing.md,
         transition: transitions.normal,
-        ...(hoverable && interactiveStyles.card),
+        ...(hoverable && { '&:hover': hoverState }),
         ...(selected && {
           borderColor: colors.border.focus,
           boxShadow: shadows.md,

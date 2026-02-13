@@ -386,7 +386,7 @@ export const LoadingOverlay: React.FC = () => {
       </Typography>
 
       {subMessage && (
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 3 }}>
+        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 3 }}>
           {subMessage}
         </Typography>
       )}
@@ -409,7 +409,7 @@ export const LoadingOverlay: React.FC = () => {
                 },
               }}
             />
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', mt: 1, display: 'block', textAlign: 'center' }}>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', mt: 1, display: 'block', textAlign: 'center' }}>
               {Math.round(displayProgress)}%
             </Typography>
           </>
@@ -431,10 +431,10 @@ export const LoadingOverlay: React.FC = () => {
           {tasks.map(task => (
             <Box key={task.id} sx={{ mb: 2 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   {task.label}
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)' }}>
                   {task.progress}%
                 </Typography>
               </Box>
