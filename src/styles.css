@@ -3752,8 +3752,8 @@ html, body {
   flex-shrink: 0;
 }
 
-/* Casting Planner title in panel tabs */
-#castingPlannerPanel .casting-planner-title {
+/* Virtual Studio title in panel tabs */
+#castingPlannerPanel .virtual-studio-title {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -3766,19 +3766,19 @@ html, body {
   white-space: nowrap;
 }
 
-#castingPlannerPanel .casting-planner-title-icon {
+#castingPlannerPanel .virtual-studio-title-icon {
   width: 24px;
   height: 24px;
   flex-shrink: 0;
 }
 
-#castingPlannerPanel .casting-planner-title-text {
+#castingPlannerPanel .virtual-studio-title-text {
   font-size: 16px;
   font-weight: 700;
   color: #00d4ff;
 }
 
-#castingPlannerPanel .casting-planner-project-name {
+#castingPlannerPanel .virtual-studio-project-name {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.7);
   margin-left: 8px;
@@ -4567,7 +4567,7 @@ html, body {
   max-width: 100%;
 }
 
-/* Ensure Casting Planner uses full width */
+/* Ensure Virtual Studio uses full width */
 #castingPlannerPanelContent {
   width: 100% !important;
   max-width: 100% !important;
@@ -12287,7 +12287,7 @@ html, body {
   stroke: currentColor;
 }
 
-.action-btn.casting-planner-btn {
+.action-btn.virtual-studio-btn {
   background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
   border-color: #9b59b6;
   color: #fff;
@@ -12295,7 +12295,7 @@ html, body {
   box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
 }
 
-.action-btn.casting-planner-btn:hover {
+.action-btn.virtual-studio-btn:hover {
   background: linear-gradient(135deg, #bb8fce 0%, #9b59b6 100%);
   border-color: #bb8fce;
   color: #fff;
@@ -12303,12 +12303,12 @@ html, body {
   box-shadow: 0 6px 16px rgba(155, 89, 182, 0.4);
 }
 
-.action-btn.casting-planner-btn:active {
+.action-btn.virtual-studio-btn:active {
   transform: scale(0.97);
   box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3);
 }
 
-.action-btn.casting-planner-btn svg {
+.action-btn.virtual-studio-btn svg {
   stroke: currentColor;
 }
 

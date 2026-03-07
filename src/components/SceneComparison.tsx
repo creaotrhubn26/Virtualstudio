@@ -52,6 +52,7 @@ import {
   PlayArrow,
 } from '@mui/icons-material';
 import { snapshotsApi } from '../../core/api/virtualStudioApi';
+import settingsService from '@/services/settingsService';
 
 // ============================================================================
 // Types
@@ -101,7 +102,9 @@ class SnapshotManager {
       const removed = this.snapshots.shift();
       // Delete from database if exists
       if (removed) {
-        snapshotsApi.delete(removed.id).catch(() => {});
+        if (this.currentSceneId) {
+          snapshotsApi.delete(removed.id, this.currentSceneId).catch(() => {});
+        }
       }
     }
 
@@ -135,7 +138,9 @@ class SnapshotManager {
     
     // Delete from database
     try {
-      await snapshotsApi.delete(id);
+      if (this.currentSceneId) {
+        await snapshotsApi.delete(id, this.currentSceneId);
+      }
     } catch (e) {
       log.warn('Failed to delete snapshot from database:', e);
     }
@@ -164,14 +169,16 @@ class SnapshotManager {
     this.listeners.forEach((l) => l(snapshots));
   }
 
-  // Persistence - localStorage as backup cache
+  // Persistence - settings cache backup
   // Note: Individual add/delete operations already sync to DB
-  // This method is for bulk localStorage backup
   save(): void {
+    if (!this.currentSceneId) return;
     try {
-      localStorage.setItem('vs_snapshots', JSON.stringify(this.snapshots));
+      void settingsService.setSetting('virtualStudio_sceneSnapshots', this.snapshots, {
+        projectId: this.currentSceneId,
+      });
     } catch (e) {
-      log.warn('Failed to save snapshots to localStorage:', e);
+      log.warn('Failed to save snapshots to settings cache:', e);
     }
   }
 
@@ -226,15 +233,18 @@ class SnapshotManager {
       }
     }
     
-    // Fallback to localStorage
+    // Fallback to settings cache
     try {
-      const data = localStorage.getItem('vs_snapshots');
-      if (data) {
-        this.snapshots = JSON.parse(data);
+      if (!this.currentSceneId) return;
+      const cached = await settingsService.getSetting<SceneSnapshot[]>('virtualStudio_sceneSnapshots', {
+        projectId: this.currentSceneId,
+      });
+      if (cached) {
+        this.snapshots = cached;
         this.notify();
       }
     } catch (e) {
-      log.warn('Failed to load snapshots:', e);
+      log.warn('Failed to load snapshots from settings cache:', e);
     }
   }
 }

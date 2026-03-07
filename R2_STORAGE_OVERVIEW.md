@@ -68,7 +68,7 @@ ml-models/
 **Struktur** (antatt):
 ```
 casting-assets/
-  └── [public assets for casting planner]
+  └── [public assets for virtual studio]
 ```
 
 **Public URL Format**:

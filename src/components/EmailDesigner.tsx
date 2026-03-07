@@ -284,7 +284,7 @@ const TEMPLATE_TYPE_CONFIG: Record<string, {
   },
 };
 
-const CASTING_PLANNER_LOGO_URL = '/casting-planner-logo.png';
+const STUDIO_LOGO_URL = '/creatorhub-virtual-studio-logo.svg';
 
 interface EmailHeaderConfig {
   logoUrl: string;
@@ -295,7 +295,7 @@ const generateEmailHTML = (
   subject: string, 
   body: string, 
   previewMode: 'desktop' | 'mobile',
-  headerConfig: EmailHeaderConfig = { logoUrl: CASTING_PLANNER_LOGO_URL, tagline: 'Profesjonell Casting Management' }
+  headerConfig: EmailHeaderConfig = { logoUrl: STUDIO_LOGO_URL, tagline: 'Profesjonell produksjonsstyring' }
 ) => {
   const width = previewMode === 'mobile' ? '375px' : '600px';
   
@@ -408,10 +408,10 @@ const generateEmailHTML = (
       <div class="email-body">${body}</div>
       <div class="email-footer">
         <div class="email-footer-logo">
-          <img src="${CASTING_PLANNER_LOGO_URL}" alt="Casting Planner" style="height: 32px; width: auto;" />
+          <img src="${STUDIO_LOGO_URL}" alt="Virtual Studio" style="height: 32px; width: auto;" />
         </div>
-        <p class="email-footer-brand">Casting Planner</p>
-        <p class="email-footer-text">Sendt via Casting Planner - Din profesjonelle castingpartner</p>
+        <p class="email-footer-brand">Virtual Studio</p>
+        <p class="email-footer-text">Sendt via Virtual Studio - Din profesjonelle produksjonspartner</p>
       </div>
     </div>
   </div>

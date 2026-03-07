@@ -1,3 +1,4 @@
+import settingsService, { getCurrentUserId } from './settingsService';
 export interface TutorialStep {
   id: string;
   title: string;
@@ -14,7 +15,7 @@ export interface Tutorial {
   id: string;
   name: string;
   description: string;
-  category: 'casting-planner' | 'studio' | 'academy' | 'general';
+  category: 'virtual-studio' | 'studio' | 'academy' | 'general';
   steps: TutorialStep[];
   isActive: boolean;
   createdAt: string;
@@ -25,18 +26,18 @@ export interface Tutorial {
 const STORAGE_KEY = 'virtual-studio-tutorials';
 
 const defaultCastingPlannerTutorial: Tutorial = {
-  id: 'default-casting-planner',
-  name: 'Casting Planner Veiledning',
-  description: 'Lær alle funksjonene i Casting Planner',
-  category: 'casting-planner',
+  id: 'default-virtual-studio',
+  name: 'Virtual Studio Veiledning',
+  description: 'Lær alle funksjonene i Virtual Studio',
+  category: 'virtual-studio',
   isActive: true,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   steps: [
     {
       id: 'welcome',
-      title: 'Velkommen til Casting Planner!',
-      description: 'Denne veiledningen tar deg gjennom alle funksjonene i Casting Planner. Du lærer hvordan du planlegger produksjoner, administrerer team, og organiserer opptak effektivt.',
+      title: 'Velkommen til Virtual Studio!',
+      description: 'Denne veiledningen tar deg gjennom alle funksjonene i Virtual Studio. Du lærer hvordan du planlegger produksjoner, administrerer team, og organiserer opptak effektivt.',
       panel: -1,
       duration: 8000,
       tips: [
@@ -238,7 +239,7 @@ const defaultCastingPlannerTutorial: Tutorial = {
     {
       id: 'complete',
       title: 'Gratulerer! Du har fullført veiledningen',
-      description: 'Du har nå lært alle hovedfunksjonene i Casting Planner. Klikk på "Nytt prosjekt"-knappen for å starte din første produksjon!',
+      description: 'Du har nå lært alle hovedfunksjonene i Virtual Studio. Klikk på "Nytt prosjekt"-knappen for å starte din første produksjon!',
       panel: -1,
       targetSelector: '[data-tutorial-target="create-project-button"]',
       action: 'click',
@@ -258,27 +259,35 @@ class TutorialService {
   private tutorials: Tutorial[] = [];
 
   constructor() {
-    this.loadFromStorage();
+    this.tutorials = [defaultCastingPlannerTutorial];
+    void this.loadFromStorage();
   }
 
-  private loadFromStorage(): void {
+  private applyDefaultTutorialUpdates(tutorials: Tutorial[]): Tutorial[] {
+    const updated = [...tutorials];
+    const existingCastingTutorial = updated.find(
+      (t: Tutorial) => t.id === 'default-virtual-studio'
+    );
+    if (existingCastingTutorial) {
+      existingCastingTutorial.steps = defaultCastingPlannerTutorial.steps;
+      existingCastingTutorial.updatedAt = new Date().toISOString();
+    } else {
+      updated.push(defaultCastingPlannerTutorial);
+    }
+    return updated;
+  }
+
+  private async loadFromStorage(): Promise<void> {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsedTutorials = JSON.parse(stored);
-        const existingCastingTutorial = parsedTutorials.find(
-          (t: Tutorial) => t.id === 'default-casting-planner'
-        );
-        if (existingCastingTutorial) {
-          existingCastingTutorial.steps = defaultCastingPlannerTutorial.steps;
-          existingCastingTutorial.updatedAt = new Date().toISOString();
-        }
-        this.tutorials = parsedTutorials;
-        this.saveToStorage();
-      } else {
-        this.tutorials = [defaultCastingPlannerTutorial];
-        this.saveToStorage();
+      const userId = getCurrentUserId();
+      const remote = await settingsService.getSetting<Tutorial[]>(STORAGE_KEY, { userId });
+      if (remote) {
+        this.tutorials = this.applyDefaultTutorialUpdates(remote);
+        return;
       }
+
+      this.tutorials = [defaultCastingPlannerTutorial];
+      await settingsService.setSetting(STORAGE_KEY, this.tutorials, { userId });
     } catch (error) {
       console.error('Failed to load tutorials from storage:', error);
       this.tutorials = [defaultCastingPlannerTutorial];
@@ -287,7 +296,7 @@ class TutorialService {
 
   private saveToStorage(): void {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.tutorials));
+      void settingsService.setSetting(STORAGE_KEY, this.tutorials, { userId: getCurrentUserId() });
     } catch (error) {
       console.error('Failed to save tutorials to storage:', error);
     }

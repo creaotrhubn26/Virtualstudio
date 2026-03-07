@@ -156,7 +156,7 @@ export function LightGroupsPanel() {
   // Get light nodes - defined early for use in callbacks
   const lightNodes = nodes.filter((n: any) => n.light);
 
-  // Load saved presets on mount (DB-first with localStorage fallback)
+  // Load saved presets on mount (DB-first with settings cache fallback)
   useEffect(() => {
     const loadPresets = async () => {
       try {
@@ -177,7 +177,7 @@ export function LightGroupsPanel() {
     loadPresets();
   }, []);
 
-  // Save current lighting setup (DB-first with localStorage fallback)
+  // Save current lighting setup (DB-first with settings cache fallback)
   const handleSavePreset = useCallback(async () => {
     const lightsData = lightNodes.map((n: any, idx: number) => ({
       id: `light_${idx}`,
@@ -267,7 +267,7 @@ export function LightGroupsPanel() {
     setLoadDialogOpen(false);
   };
 
-  // Delete a preset (DB-first with localStorage fallback)
+  // Delete a preset (DB-first with settings cache fallback)
   const handleDeletePreset = useCallback(async (presetId: string) => {
     await lightPresetsService.delete(presetId);
     setSavedPresets(prev => prev.filter((p) => p.id !== presetId));

@@ -144,6 +144,7 @@ import { useTheming } from '../../utils/theming-helper';
 import { getProfessionIcon } from '../../utils/profession-icons';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { PushNotificationSettings } from '../shared/PushNotificationSettings';
+import settingsService from '../src/services/settingsService';
 
 interface AcademySettings {
   // Course Display
@@ -591,6 +592,12 @@ export function AcademySettingsPanel({ onClose }: AcademySettingsPanelProps) {
 
   // Feature flags
   const aiAssistanceFlag = useFeatureFlag('ai-assistance');
+
+  const getAuthToken = async (): Promise<string | null> => {
+    const cached = await settingsService.getSetting<string>('academy_authToken');
+    if (cached) return cached;
+    return null;
+  };
   
   // Comprehensive Feature System - using feature flags and integration
   const isAIAssistanceEnabled = aiAssistanceFlag || features.checkFeatureAccess('ai-assistance');
@@ -616,17 +623,41 @@ export function AcademySettingsPanel({ onClose }: AcademySettingsPanelProps) {
     };
   }, [performance, debugging, pushEnabled, isSupported, isAIAssistanceEnabled, isVideoProcessingEnabled, isAnalyticsEnabled, isIntegrationEnabled]);
 
-  // Load settings from localStorage on mount
+  // Load settings from settings cache on mount
+  const SETTINGS_NAMESPACE = 'academy_settings';
+
   useEffect(() => {
-    const savedSettings =
-      localStorage.getItem('academy-settings');
-    if (savedSettings) {
-      try {
-        setSettings({ ...defaultSettings, ...JSON.parse(savedSettings) });
-      } catch (error) {
-        console.error('Failed to load academy settings: ', error);
+    const loadSettings = async () => {
+      // Try to load from server first if user is authenticated
+      if (user?.id) {
+        try {
+          const authToken = await getAuthToken();
+          const response = await fetch('/api/user/settings/academy', {
+            headers: {
+              ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+            },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.settings) {
+              setSettings({ ...defaultSettings, ...data.settings });
+              await settingsService.setSetting(SETTINGS_NAMESPACE, data.settings);
+              return;
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to load settings from server:', error);
+        }
       }
-    }
+
+      const cached = await settingsService.getSetting<AcademySettings>(SETTINGS_NAMESPACE);
+      if (cached) {
+        setSettings({ ...defaultSettings, ...cached });
+        return;
+      }
+    };
+
+    loadSettings();
 
     // Track feature usage
     analytics.trackEvent('academy_settings_opened', {
@@ -634,26 +665,27 @@ export function AcademySettingsPanel({ onClose }: AcademySettingsPanelProps) {
       userId: user?.id,
       component: 'AcademySettingsPanel',
     });
-  }, []);
+  }, [user?.id]);
 
   // Generic change handler for settings
   const handleChange = <K extends keyof AcademySettings>(key: K, value: AcademySettings[K]) => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
-  // Save settings to localStorage
+  // Save settings to cache + server
   const saveSettings = async () => {
     setLoading(true);
     try {
-      localStorage.setItem('academy-settings', JSON.stringify(settings));
+      await settingsService.setSetting(SETTINGS_NAMESPACE, settings);
 
       // Also save to server if user is authenticated
       if (user?.id) {
+        const authToken = await getAuthToken();
         await fetch('/api/user/settings/academy', {
           method: 'POST',
           headers: {
             'Content-Type' : 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
           },
           body: JSON.stringify({
             userId: user?.id,

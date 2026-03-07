@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { logger } from '../../core/services/logger';
+import settingsService, { getCurrentUserId } from '../../services/settingsService';
 
 const log = logger.module('ProjectManager, ');
 import {
@@ -764,7 +765,14 @@ export const ProjectManagerPanel: React.FC<ProjectManagerPanelProps> = ({
     return () => clearInterval(autoSaveInterval);
   }, [currentProject, nodes]);
 
-  // Load projects from API/localStorage
+  const loadCachedProjects = async (): Promise<VirtualStudioProject[]> => {
+    const userId = getCurrentUserId();
+    const cached = await settingsService.getSetting<VirtualStudioProject[]>('virtualStudio_projects', { userId });
+    if (cached) return cached;
+    return [];
+  };
+
+  // Load projects from API/settings cache
   const loadProjects = async () => {
     setIsLoading(true);
     try {
@@ -776,12 +784,10 @@ export const ProjectManagerPanel: React.FC<ProjectManagerPanelProps> = ({
       if (response.ok) {
         const data = await response.json();
         setProjects(data.projects || []);
+        void settingsService.setSetting('virtualStudio_projects', data.projects || [], { userId: getCurrentUserId() });
       } else {
-        // Fallback to localStorage
-        const saved = localStorage.getItem('virtualStudio_projects');
-        if (saved) {
-          setProjects(JSON.parse(saved));
-        }
+        const cached = await loadCachedProjects();
+        setProjects(cached);
       }
 
       // Load recent from preferences
@@ -791,11 +797,9 @@ export const ProjectManagerPanel: React.FC<ProjectManagerPanelProps> = ({
         // Merge recent project info
       }
     } catch (error) {
-      log.warn('Failed to load projects from API, using localStorage');
-      const saved = localStorage.getItem('virtualStudio_projects');
-      if (saved) {
-        setProjects(JSON.parse(saved));
-      }
+      log.warn('Failed to load projects from API, using settings cache');
+      const cached = await loadCachedProjects();
+      setProjects(cached);
     } finally {
       setIsLoading(false);
     }
@@ -847,12 +851,12 @@ export const ProjectManagerPanel: React.FC<ProjectManagerPanelProps> = ({
         }
       }
 
-      // Also save to localStorage as backup
+      // Cache in settings
       const updatedProjects = currentProject
         ? projects.map((p) => (p.id === projectData.id ? projectData : p))
         : [...projects, projectData];
       setProjects(updatedProjects);
-      localStorage.setItem('virtualStudio_projects', JSON.stringify(updatedProjects));
+      void settingsService.setSetting('virtualStudio_projects', updatedProjects, { userId: getCurrentUserId() });
 
       setCurrentProject(projectData);
       setAutoSaveStatus('saved');
@@ -921,11 +925,11 @@ export const ProjectManagerPanel: React.FC<ProjectManagerPanelProps> = ({
         isAutoSaved: true,
       };
 
-      // Save to localStorage
+      // Save to settings cache
       const updatedProjects = projects.map((p) =>
         p.id === projectData.id ? projectData : p
       );
-      localStorage.setItem('virtualStudio_projects', JSON.stringify(updatedProjects));
+      void settingsService.setSetting('virtualStudio_projects', updatedProjects, { userId: getCurrentUserId() });
 
       setAutoSaveStatus('saved');
       setLastSaved(new Date());
@@ -992,10 +996,10 @@ export const ProjectManagerPanel: React.FC<ProjectManagerPanelProps> = ({
         credentials: 'include',
       });
 
-      // Delete from localStorage
+      // Delete from settings cache
       const updatedProjects = projects.filter((p) => p.id !== projectId);
       setProjects(updatedProjects);
-      localStorage.setItem('virtualStudio_projects', JSON.stringify(updatedProjects));
+      void settingsService.setSetting('virtualStudio_projects', updatedProjects, { userId: getCurrentUserId() });
 
       if (currentProject?.id === projectId) {
         setCurrentProject(null);
@@ -1026,7 +1030,7 @@ export const ProjectManagerPanel: React.FC<ProjectManagerPanelProps> = ({
       p.id === projectId ? { ...p, isFavorite: !p.isFavorite } : p
     );
     setProjects(updatedProjects);
-    localStorage.setItem('virtualStudio_projects', JSON.stringify(updatedProjects));
+    void settingsService.setSetting('virtualStudio_projects', updatedProjects, { userId: getCurrentUserId() });
   };
 
   return (

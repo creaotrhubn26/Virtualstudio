@@ -1,6 +1,6 @@
 /**
  * CreatorHub Norge - Project Creation Modal
- * The modal is designed to be used in the CreatorHub Norge Virtual studio for creating new projects,but should be adaptable for other professions and also connected to the Casting Planner.
+ * The modal is designed to be used in the CreatorHub Norge Virtual studio for creating new projects,but should be adaptable for other professions and also connected to the Virtual Studio.
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -835,7 +835,7 @@ const LABELING_SCHEMES = {
 // Helper function for dynamic project type defaults
 const getDefaultProjectType = (profession: string, isCastingPlanner: boolean = false): string => {
   if (isCastingPlanner) {
-    // In casting planner, avoid wedding as default
+    // In virtual studio mode, avoid wedding as default
     const typeMap: Record<string, string> = {
       photographer: 'portrait',
       videographer: 'video',
@@ -1033,9 +1033,9 @@ interface ProjectCreationWithMemoryCardsProps {
   onProjectSelect?: (project: any) => void;
   // New: open Event Management with prefilled event
   onOpenEventManagement?: (eventData: any) => void;
-  // Casting Planner mode - simplifies UI and hides non-relevant features
+  // Virtual Studio mode - simplifies UI and hides non-relevant features
   isCastingPlanner?: boolean;
-  getTerm?: (key: string) => string; // Terminology helper from Casting Planner
+  getTerm?: (key: string) => string; // Terminology helper from Virtual Studio
 }
 
 // Local MemoryCardConfig, SelectedMemoryCard, and LabelingKey types imported from ./types
@@ -1380,7 +1380,7 @@ export default function ProjectCreationWithMemoryCards({
     detectedLogFormats: [] as string[]
   });
   
-// Load meeting preferences from server (replaces localStorage)
+// Load meeting preferences from server
 useEffect(() => {
   if (!user) return;
   const load = async () => {
@@ -2646,7 +2646,7 @@ useEffect(() => {
                     </CardContent>
                   </Card>
 
-                  {/* Add Project Type Dialog - Hidden in Casting Planner */}
+                  {/* Add Project Type Dialog - Hidden in Virtual Studio */}
                   {!isCastingPlanner && (
                     <AddProjectTypeDialog
                       open={addProjectTypeDialogOpen}
@@ -2957,7 +2957,7 @@ useEffect(() => {
         </DialogActions>
       </Dialog>
 
-      {/* Connect to Event Management prompt - Hidden in Casting Planner */}
+      {/* Connect to Event Management prompt - Hidden in Virtual Studio */}
       {!isCastingPlanner && (
         <Dialog open={connectDialogOpen} onClose={() => { setConnectDialogOpen(false); setAskedConnectEvent(true); }}>
           <DialogTitle sx={{ fontWeight: 700, fontSize: '1.25rem' }}>Koble til Event Management?</DialogTitle>

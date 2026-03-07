@@ -15,6 +15,8 @@
  * - Parallel corpora tracking (before → after)
  */
 
+import settingsService, { getCurrentUserId } from './settingsService';
+
 // ============================================================================
 // Types & Interfaces
 // ============================================================================
@@ -524,7 +526,7 @@ class PreferenceLearner {
   private learnedPatterns: Map<string, string> = new Map(); // original → corrected
 
   constructor() {
-    this.loadFromStorage();
+    void this.hydrateFromDb();
   }
 
   // Record a user correction
@@ -603,20 +605,20 @@ class PreferenceLearner {
       }));
   }
 
-  private loadFromStorage(): void {
+  private async hydrateFromDb(): Promise<void> {
     try {
-      const data = localStorage.getItem('grammarML_preferences');
-      if (data) {
-        const parsed = JSON.parse(data);
-        this.corrections = parsed.corrections || [];
-        this.ruleAcceptanceRates = new Map(Object.entries(parsed.ruleAcceptanceRates || {}));
-        this.typePreferences = new Map(
-          Object.entries(parsed.typePreferences || {}) as Array<[GrammarError['type'], number]>
-        );
-        this.learnedPatterns = new Map(Object.entries(parsed.learnedPatterns || {}));
-      }
+      const userId = getCurrentUserId();
+      const remote = await settingsService.getSetting<any>('grammarML_preferences', { userId });
+      if (!remote) return;
+      this.corrections = remote.corrections || [];
+      this.ruleAcceptanceRates = new Map(Object.entries(remote.ruleAcceptanceRates || {}));
+      this.typePreferences = new Map(
+        Object.entries(remote.typePreferences || {}) as Array<[GrammarError['type'], number]>
+      );
+      this.learnedPatterns = new Map(Object.entries(remote.learnedPatterns || {}));
+
     } catch (e) {
-      console.warn('Failed to load grammar preferences:', e);
+      console.warn('Failed to hydrate grammar preferences:', e);
     }
   }
 
@@ -633,7 +635,7 @@ class PreferenceLearner {
         typePreferences: Object.fromEntries(this.typePreferences),
         learnedPatterns: Object.fromEntries(this.learnedPatterns),
       };
-      localStorage.setItem('grammarML_preferences', JSON.stringify(data));
+      void settingsService.setSetting('grammarML_preferences', data, { userId: getCurrentUserId() });
     } catch (e) {
       console.warn('Failed to save grammar preferences:', e);
     }
@@ -782,8 +784,8 @@ class GrammarMLServiceClass {
     this.allRules = [...NORWEGIAN_GRAMMAR_RULES, ...ENGLISH_GRAMMAR_RULES];
     
     this.preferences = this.loadPreferences();
-    this.loadLanguageModel();
     this.initializeBaseTraining();
+    void this.hydrateFromDb();
   }
 
   // ============================================================================
@@ -1171,15 +1173,6 @@ class GrammarMLServiceClass {
   }
 
   private loadPreferences(): UserPreferences {
-    try {
-      const data = localStorage.getItem('grammarML_userPrefs');
-      if (data) {
-        return JSON.parse(data);
-      }
-    } catch (e) {
-      console.warn('Failed to load grammar preferences:', e);
-    }
-
     return {
       aggressiveness: 0.5,
       enabledCategories: {
@@ -1196,28 +1189,35 @@ class GrammarMLServiceClass {
     };
   }
 
+  private async hydrateFromDb(): Promise<void> {
+    try {
+      const userId = getCurrentUserId();
+      const prefs = await settingsService.getSetting<UserPreferences>('grammarML_userPrefs', { userId });
+      if (prefs) {
+        this.preferences = prefs;
+      }
+
+      const model = await settingsService.getSetting<any>('grammarML_languageModel', { userId });
+      if (model) {
+        this.languageModel.import(model);
+      }
+    } catch (e) {
+      console.warn('Failed to hydrate grammar settings:', e);
+    }
+  }
+
   private savePreferences(): void {
     try {
-      localStorage.setItem('grammarML_userPrefs', JSON.stringify(this.preferences));
+      void settingsService.setSetting('grammarML_userPrefs', this.preferences, { userId: getCurrentUserId() });
     } catch (e) {
       console.warn('Failed to save grammar preferences:', e);
     }
   }
 
-  private loadLanguageModel(): void {
-    try {
-      const data = localStorage.getItem('grammarML_languageModel');
-      if (data) {
-        this.languageModel.import(JSON.parse(data));
-      }
-    } catch (e) {
-      console.warn('Failed to load language model:', e);
-    }
-  }
-
   private saveLanguageModel(): void {
     try {
-      localStorage.setItem('grammarML_languageModel', JSON.stringify(this.languageModel.export()));
+      const exported = this.languageModel.export();
+      void settingsService.setSetting('grammarML_languageModel', exported, { userId: getCurrentUserId() });
     } catch (e) {
       console.warn('Failed to save language model:', e);
     }

@@ -477,7 +477,7 @@ export const ContinuityLogger: FC<ContinuityLoggerProps> = ({
               <InputLabel>Kategori</InputLabel>
               <Select
                 value={newEntry.category}
-                onChange={(e) => setNewEntry(prev => ({ ...prev, category: e.target.value as any }))}
+                onChange={(e) => setNewEntry(prev => ({ ...prev, category: e.target.value as ContinuityEntry['category'] }))}
                 label="Kategori"
               >
                 {Object.entries(categoryConfig).map(([key, config]) => (

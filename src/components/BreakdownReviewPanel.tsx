@@ -404,7 +404,7 @@ export const BreakdownReviewPanel: FC<BreakdownReviewPanelProps> = ({
                 <Select
                   value={editingScene.timeOfDay || 'DAY'}
                   onChange={e =>
-                    setEditingScene({ ...editingScene, timeOfDay: e.target.value as any })
+                    setEditingScene({ ...editingScene, timeOfDay: e.target.value as SceneBreakdown['timeOfDay'] })
                   }
                 >
                   <MenuItem value="DAY">DAY</MenuItem>

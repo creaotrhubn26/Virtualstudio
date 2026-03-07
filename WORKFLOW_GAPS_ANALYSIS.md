@@ -227,7 +227,7 @@ public async applyScenePreset(preset: SceneComposition): Promise<void> {
 
 ### Gap C: Casting to Scene Pipeline
 
-**Location**: Casting Planner → 3D Scene
+**Location**: Virtual Studio → 3D Scene
 
 **Current Flow**:
 ```

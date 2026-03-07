@@ -1,4 +1,4 @@
-import { useId, useMemo, useState, useEffect } from 'react';
+import { useId, useMemo, useState, useEffect, memo } from 'react';
 import {
   Box,
   Typography,
@@ -66,7 +66,7 @@ interface DashboardPanelProps {
   profession?: 'photographer' | 'videographer' | null;
 }
 
-export function DashboardPanel({
+function DashboardPanelInner({
   project,
   roles,
   candidates,
@@ -640,3 +640,5 @@ export function DashboardPanel({
     </Box>
   );
 }
+
+export const DashboardPanel = memo(DashboardPanelInner);

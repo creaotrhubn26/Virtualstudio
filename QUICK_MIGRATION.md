@@ -2,7 +2,7 @@
 
 ## Fasteste måte å migrere på:
 
-### 1. Åpne Browser Console (F12) i nettleseren hvor Casting Planner kjører
+### 1. Åpne Browser Console (F12) i nettleseren hvor Virtual Studio kjører
 
 ### 2. Lim inn og kjør dette scriptet:
 

@@ -77,7 +77,7 @@ const actionOptions = [
 ];
 
 const categoryOptions = [
-  { value: 'casting-planner', label: 'Casting Planner' },
+  { value: 'virtual-studio', label: 'Virtual Studio' },
   { value: 'studio', label: 'Studio' },
   { value: 'academy', label: 'Academy' },
   { value: 'general', label: 'Generell' },
@@ -138,7 +138,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
   const [tutorialForm, setTutorialForm] = useState({
     name: '',
     description: '',
-    category: 'casting-planner' as Tutorial['category'],
+    category: 'virtual-studio' as Tutorial['category'],
   });
 
   const [stepForm, setStepForm] = useState<Partial<TutorialStep>>({
@@ -183,7 +183,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
     setTutorials(tutorialService.getAllTutorials());
     setSelectedTutorial(newTutorial);
     setIsCreatingTutorial(false);
-    setTutorialForm({ name: '', description: '', category: 'casting-planner' });
+    setTutorialForm({ name: '', description: '', category: 'virtual-studio' });
     showSaveMessage('Veiledning opprettet');
   }, [tutorialForm, showSaveMessage]);
 
@@ -461,8 +461,8 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
           }}
         >
           <img
-            src="/casting-planner-logo.png"
-            alt="Casting Planner"
+            src="/creatorhub-virtual-studio-logo.svg"
+            alt="Virtual Studio"
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         </Box>

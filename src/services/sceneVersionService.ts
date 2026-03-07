@@ -1,7 +1,26 @@
 import { SceneComposition, SceneVersion } from '../core/models/sceneComposer';
+import settingsService, { getCurrentUserId } from './settingsService';
 
-const VERSION_STORAGE_KEY = 'virtualStudio_sceneVersions';
+const SETTINGS_NAMESPACE = 'virtualStudio_sceneVersions';
 const MAX_VERSIONS_PER_SCENE = 50;
+
+let versionsCache: Record<string, SceneVersion[]> = {};
+
+const hydrateVersionsCache = async () => {
+  try {
+    const userId = getCurrentUserId();
+    const cached = await settingsService.getSetting<Record<string, SceneVersion[]>>(SETTINGS_NAMESPACE, { userId });
+    if (cached) {
+      versionsCache = cached;
+      return;
+    }
+
+  } catch {
+    // Ignore hydration errors
+  }
+};
+
+void hydrateVersionsCache();
 
 export const sceneVersionService = {
   /**
@@ -44,13 +63,7 @@ export const sceneVersionService = {
    * Get all versions for a scene
    */
   getVersions(sceneId: string): SceneVersion[] {
-    try {
-      const stored = localStorage.getItem(VERSION_STORAGE_KEY);
-      const allVersions: Record<string, SceneVersion[]> = stored ? JSON.parse(stored) : {};
-      return allVersions[sceneId] || [];
-    } catch {
-      return [];
-    }
+    return versionsCache[sceneId] || [];
   },
 
   /**
@@ -91,10 +104,8 @@ export const sceneVersionService = {
    */
   saveVersions(sceneId: string, versions: SceneVersion[]): void {
     try {
-      const stored = localStorage.getItem(VERSION_STORAGE_KEY);
-      const allVersions: Record<string, SceneVersion[]> = stored ? JSON.parse(stored) : {};
-      allVersions[sceneId] = versions;
-      localStorage.setItem(VERSION_STORAGE_KEY, JSON.stringify(allVersions));
+      versionsCache = { ...versionsCache, [sceneId]: versions };
+      void settingsService.setSetting(SETTINGS_NAMESPACE, versionsCache, { userId: getCurrentUserId() });
     } catch (error) {
       console.error('Error saving versions:', error);
     }

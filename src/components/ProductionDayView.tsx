@@ -76,6 +76,7 @@ import {
   KeyboardArrowUp as ArrowUpIcon,
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
+import settingsService from '@/services/settingsService';
 import { LocationsIcon as LocationIcon, CalendarCustomIcon as CalendarMonthIcon, StatsIcon } from './icons/CastingIcons';
 import { ProductionDay } from '../core/models/casting';
 import { productionPlanningService } from '../services/productionPlanningService';
@@ -254,11 +255,24 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Favorites state with localStorage
-  const [favorites, setFavorites] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem(`prodday-favorites-${projectId}`);
-    return saved ? new Set(JSON.parse(saved)) : new Set();
-  });
+  // Favorites state with settings cache
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
+
+  const FAVORITES_NAMESPACE = 'virtualStudio_productionDayFavorites';
+
+  useEffect(() => {
+    const loadFavorites = async () => {
+      const cached = await settingsService.getSetting<string[]>(FAVORITES_NAMESPACE, { projectId });
+      if (cached && cached.length > 0) {
+        setFavorites(new Set(cached));
+        setFavoritesLoaded(true);
+        return;
+      }
+      setFavoritesLoaded(true);
+    };
+    loadFavorites();
+  }, [projectId]);
 
   // Undo delete state
   const [deletedDay, setDeletedDay] = useState<ProductionDay | null>(null);
@@ -505,10 +519,11 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
 
   const availableScenes = castingService.getAvailableScenes();
 
-  // Save favorites to localStorage
+  // Save favorites to settings cache
   useEffect(() => {
-    localStorage.setItem(`prodday-favorites-${projectId}`, JSON.stringify([...favorites]));
-  }, [favorites, projectId]);
+    if (!favoritesLoaded) return;
+    void settingsService.setSetting(FAVORITES_NAMESPACE, [...favorites], { projectId });
+  }, [favorites, projectId, favoritesLoaded]);
 
   // Load weather forecasts for production days that don't have them
   useEffect(() => {
@@ -722,8 +737,8 @@ export function ProductionDayView({ projectId, onUpdate, profession }: Productio
 
   // Get current user name (could be from auth context in a real app)
   const getCurrentUser = () => {
-    // For demo purposes, use a default user or get from localStorage
-    return localStorage.getItem('currentUser') || 'Demo Bruker';
+    // For demo purposes, use a default user until auth integration is available
+    return 'Demo Bruker';
   };
 
   const handleSave = async (skipTeamNotification = false) => {

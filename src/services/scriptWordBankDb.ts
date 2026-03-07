@@ -3,7 +3,7 @@
  * 
  * Database-backed vocabulary service for screenplay analysis.
  * Provides shared learning across all users with admin curation.
- * Falls back to localStorage when database unavailable.
+ * Falls back to settings-backed word bank when database unavailable.
  * 
  * Uses the existing FastAPI backend with Neon PostgreSQL.
  * API endpoints: /api/wordbank/*
@@ -127,7 +127,7 @@ class ScriptWordBankDbService {
 
   /**
    * Get all words for a category from database
-   * Falls back to localStorage service if db unavailable
+  * Falls back to settings-backed word bank if db unavailable
    */
   async getWordsForCategory(category: WordCategory): Promise<WordEntry[]> {
     // Check cache first
@@ -158,11 +158,11 @@ class ScriptWordBankDbService {
           return words;
         }
       } catch (e) {
-        console.warn('Database query failed, falling back to localStorage', e);
+        console.warn('Database query failed, falling back to settings cache', e);
       }
     }
 
-    // Fallback to localStorage service
+    // Fallback to settings-backed word bank
     return scriptWordBank.getWordsForCategory(category);
   }
 
@@ -177,11 +177,11 @@ class ScriptWordBankDbService {
     userId?: string
   ): Promise<{ success: boolean; wordId?: number; message: string }> {
     if (!(await this.checkDbAvailability())) {
-      // Fall back to localStorage
+      // Fall back to settings-backed word bank
       const success = scriptWordBank.addWord(category, word, language, weight);
       return {
         success,
-        message: success ? 'Added to local storage' : 'Word already exists locally'
+        message: success ? 'Added to local cache' : 'Word already exists locally'
       };
     }
 
@@ -212,11 +212,11 @@ class ScriptWordBankDbService {
       };
     } catch (e) {
       console.error('Failed to add word to database:', e);
-      // Fall back to localStorage
+      // Fall back to settings-backed word bank
       const success = scriptWordBank.addWord(category, word, language, weight);
       return {
         success,
-        message: success ? 'Added to local storage (db unavailable)' : 'Failed to add'
+        message: success ? 'Added to local cache (db unavailable)' : 'Failed to add'
       };
     }
   }

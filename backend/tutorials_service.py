@@ -36,7 +36,7 @@ def init_tutorials_table():
                     id VARCHAR(50) PRIMARY KEY,
                     name VARCHAR(255) NOT NULL,
                     description TEXT,
-                    category VARCHAR(50) NOT NULL DEFAULT 'casting-planner',
+                    category VARCHAR(50) NOT NULL DEFAULT 'virtual-studio',
                     steps JSONB NOT NULL DEFAULT '[]',
                     is_active BOOLEAN DEFAULT FALSE,
                     created_by VARCHAR(255),
@@ -68,7 +68,7 @@ def create_tutorial(tutorial: Dict[str, Any], created_by: Optional[str] = None) 
                 tutorial_id,
                 tutorial.get('name', 'Ny veiledning'),
                 tutorial.get('description', ''),
-                tutorial.get('category', 'casting-planner'),
+                tutorial.get('category', 'virtual-studio'),
                 json.dumps(tutorial.get('steps', [])),
                 tutorial.get('isActive', False),
                 created_by

@@ -1,7 +1,7 @@
 /**
  * Tutorial Modal for CreatorHub Academy
  * Comprehensive guide for instructors and students
- * Database-persistent with localStorage fallback
+ * Database-persistent with settings cache fallback
  * 
  * Features covered:
  * - Course creation and management
@@ -69,10 +69,12 @@ import {
 import { useTheming } from '../../utils/theming-helper';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '../../lib/queryClient';
+import settingsService from '../src/services/settingsService';
 
 type UserRole = 'instructor' | 'student';
 
 const TUTORIAL_ID = 'academy-guide';
+const TUTORIAL_SETTINGS_NAMESPACE = `academy_tutorial_${TUTORIAL_ID}`;
 
 interface TutorialPreference {
   tutorialId: string;
@@ -107,21 +109,20 @@ export const AcademyTutorial: React.FC<AcademyTutorialProps> = ({
   const theming = useTheming();
   const queryClient = useQueryClient();
 
-  // Fetch tutorial preferences from database
+  // Fetch tutorial preferences from database (with settings cache fallback)
   const { data: tutorialPrefs } = useQuery<TutorialPreference>({
     queryKey: ['tutorialPreferences', TUTORIAL_ID],
     queryFn: async () => {
       try {
         return await apiRequest(`/api/user/preferences/tutorial/${TUTORIAL_ID}`);
       } catch {
-        // Fallback to localStorage if API fails
-        const localDismissed = localStorage.getItem(`${TUTORIAL_ID}-tutorial-dismissed`);
-        const localSteps = localStorage.getItem(`${TUTORIAL_ID}-completed-steps`);
+        const cached = await settingsService.getSetting<TutorialPreference>(TUTORIAL_SETTINGS_NAMESPACE);
+        if (cached) return cached;
         return {
           tutorialId: TUTORIAL_ID,
-          dismissed: localDismissed === 'true',
+          dismissed: false,
           dismissedAt: null,
-          completedSteps: localSteps ? JSON.parse(localSteps) : [],
+          completedSteps: [],
           profession: null
         };
       }
@@ -176,8 +177,13 @@ export const AcademyTutorial: React.FC<AcademyTutorialProps> = ({
       });
     },
     onSuccess: (_, steps) => {
-      // Update localStorage as backup
-      localStorage.setItem(`${TUTORIAL_ID}-completed-steps`, JSON.stringify(steps));
+      void settingsService.setSetting(TUTORIAL_SETTINGS_NAMESPACE, {
+        tutorialId: TUTORIAL_ID,
+        dismissed: tutorialPrefs?.dismissed ?? false,
+        dismissedAt: tutorialPrefs?.dismissedAt ?? null,
+        completedSteps: steps,
+        profession: tutorialPrefs?.profession ?? null,
+      });
       // Update cache
       queryClient.setQueryData(['tutorialPreferences', TUTORIAL_ID], (old: TutorialPreference | undefined) => ({
         ...old,
@@ -185,8 +191,13 @@ export const AcademyTutorial: React.FC<AcademyTutorialProps> = ({
       }));
     },
     onError: (_, steps) => {
-      // Fallback to localStorage
-      localStorage.setItem(`${TUTORIAL_ID}-completed-steps`, JSON.stringify(steps));
+      void settingsService.setSetting(TUTORIAL_SETTINGS_NAMESPACE, {
+        tutorialId: TUTORIAL_ID,
+        dismissed: tutorialPrefs?.dismissed ?? false,
+        dismissedAt: tutorialPrefs?.dismissedAt ?? null,
+        completedSteps: steps,
+        profession: tutorialPrefs?.profession ?? null,
+      });
     }
   });
 
@@ -204,13 +215,25 @@ export const AcademyTutorial: React.FC<AcademyTutorialProps> = ({
       });
     },
     onSuccess: () => {
-      localStorage.setItem(`${TUTORIAL_ID}-tutorial-dismissed`, 'true');
+      void settingsService.setSetting(TUTORIAL_SETTINGS_NAMESPACE, {
+        tutorialId: TUTORIAL_ID,
+        dismissed: true,
+        dismissedAt: new Date().toISOString(),
+        completedSteps,
+        profession,
+      });
       queryClient.invalidateQueries({ queryKey: ['tutorialPreferences', TUTORIAL_ID] });
       queryClient.invalidateQueries({ queryKey: ['userPreferences'] });
       if (onDismiss) onDismiss();
     },
     onError: () => {
-      localStorage.setItem(`${TUTORIAL_ID}-tutorial-dismissed`, 'true');
+      void settingsService.setSetting(TUTORIAL_SETTINGS_NAMESPACE, {
+        tutorialId: TUTORIAL_ID,
+        dismissed: true,
+        dismissedAt: new Date().toISOString(),
+        completedSteps,
+        profession,
+      });
     }
   });
 
@@ -222,8 +245,7 @@ export const AcademyTutorial: React.FC<AcademyTutorialProps> = ({
       });
     },
     onSuccess: () => {
-      localStorage.removeItem(`${TUTORIAL_ID}-tutorial-dismissed`);
-      localStorage.removeItem(`${TUTORIAL_ID}-completed-steps`);
+      void settingsService.deleteSetting(TUTORIAL_SETTINGS_NAMESPACE);
       setCompletedSteps([]);
       setActiveStep(0);
       queryClient.invalidateQueries({ queryKey: ['tutorialPreferences', TUTORIAL_ID] });

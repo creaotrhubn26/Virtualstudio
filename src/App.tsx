@@ -334,7 +334,7 @@ export const MarketplacePanelApp: React.FC = () => {
               }
             }
             if (castingPlannerPanel && castingPlannerPanel.classList.contains('open')) {
-              window.dispatchEvent(new CustomEvent('toggle-plugin-casting-planner-panel'));
+              window.dispatchEvent(new CustomEvent('toggle-plugin-virtual-studio-panel'));
             }
             
             panel.style.display = 'flex';
@@ -487,7 +487,7 @@ export const AIAssistantApp: React.FC = () => {
               window.dispatchEvent(new CustomEvent('toggle-marketplace-panel'));
             }
             if (castingPlannerPanel && castingPlannerPanel.classList.contains('open')) {
-              window.dispatchEvent(new CustomEvent('toggle-plugin-casting-planner-panel'));
+              window.dispatchEvent(new CustomEvent('toggle-plugin-virtual-studio-panel'));
             }
             
             // Close help panel if open
@@ -612,7 +612,7 @@ export const CastingPlannerApp: React.FC = () => {
         const panel = document.getElementById('castingPlannerPanel');
         if (panel) {
           if (newState) {
-            // Close other panels when opening Casting Planner
+            // Close other panels when opening Virtual Studio
             const studioLibraryPanel = document.getElementById('actorBottomPanel');
             const marketplacePanel = document.getElementById('marketplacePanel');
             const aiAssistantPanel = document.getElementById('aiAssistantPanel');
@@ -662,8 +662,8 @@ export const CastingPlannerApp: React.FC = () => {
           }
         }
         
-        // Update button state - find the Casting Planner button
-        const button = document.getElementById('tool-trigger-plugin-casting-planner');
+        // Update button state - find the Virtual Studio button
+        const button = document.getElementById('tool-trigger-plugin-virtual-studio');
         const quickBtn = document.getElementById('castingPlannerQuickBtn');
         if (button) {
           if (newState) {
@@ -695,11 +695,11 @@ export const CastingPlannerApp: React.FC = () => {
       setIsFullscreen(customEvent.detail);
     };
     
-    window.addEventListener('toggle-plugin-casting-planner-panel', handleToggle);
-    window.addEventListener('casting-planner-toggle-fullscreen', handleFullscreenToggle);
+    window.addEventListener('toggle-plugin-virtual-studio-panel', handleToggle);
+    window.addEventListener('virtual-studio-toggle-fullscreen', handleFullscreenToggle);
     return () => {
-      window.removeEventListener('toggle-plugin-casting-planner-panel', handleToggle);
-      window.removeEventListener('casting-planner-toggle-fullscreen', handleFullscreenToggle);
+      window.removeEventListener('toggle-plugin-virtual-studio-panel', handleToggle);
+      window.removeEventListener('virtual-studio-toggle-fullscreen', handleFullscreenToggle);
     };
   }, [isOpen]);
 
@@ -713,7 +713,7 @@ export const CastingPlannerApp: React.FC = () => {
       panel.classList.remove('open');
       panel.classList.remove('fullscreen');
     }
-    const button = document.getElementById('tool-trigger-plugin-casting-planner');
+    const button = document.getElementById('tool-trigger-plugin-virtual-studio');
     const quickBtn = document.getElementById('castingPlannerQuickBtn');
     if (button) {
       button.classList.remove('active');
@@ -756,7 +756,7 @@ export const CastingPlannerApp: React.FC = () => {
       }
       
       // Dispatch event to sync with main.ts listeners
-      window.dispatchEvent(new CustomEvent('casting-planner-toggle-fullscreen', { detail: newFullscreen }));
+      window.dispatchEvent(new CustomEvent('virtual-studio-toggle-fullscreen', { detail: newFullscreen }));
     }
   };
 
@@ -1201,7 +1201,7 @@ export const CourseCreatorSidebarApp: React.FC = () => {
     // Listen for panel toggle events (but NOT toggle-help-panel, since sidebar is inside help panel)
     window.addEventListener('toggle-marketplace-panel', handlePanelToggle);
     window.addEventListener('toggle-ai-assistant-panel', handlePanelToggle);
-    window.addEventListener('toggle-plugin-casting-planner-panel', handlePanelToggle);
+    window.addEventListener('toggle-plugin-virtual-studio-panel', handlePanelToggle);
     window.addEventListener('close-course-creator-sidebar', handleCloseSidebar);
     
     // Check help panel state periodically (since it doesn't dispatch events)
@@ -1215,7 +1215,7 @@ export const CourseCreatorSidebarApp: React.FC = () => {
       window.removeEventListener('edit-video', handleEditVideo, true);
       window.removeEventListener('toggle-marketplace-panel', handlePanelToggle);
       window.removeEventListener('toggle-ai-assistant-panel', handlePanelToggle);
-      window.removeEventListener('toggle-plugin-casting-planner-panel', handlePanelToggle);
+      window.removeEventListener('toggle-plugin-virtual-studio-panel', handlePanelToggle);
       window.removeEventListener('close-course-creator-sidebar', handleCloseSidebar);
       clearInterval(checkHelpPanelInterval);
       console.log('CourseCreatorSidebarApp: Event listeners removed');

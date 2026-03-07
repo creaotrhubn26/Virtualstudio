@@ -689,7 +689,7 @@ const NotesTab: React.FC<{ notes: ShotNote[]; onChange: (notes: ShotNote[]) => v
                   <InputLabel>Prioritet</InputLabel>
                   <Select
                     value={newNote.priority}
-                    onChange={(e) => setNewNote({ ...newNote, priority: e.target.value as any })}
+                    onChange={(e) => setNewNote({ ...newNote, priority: e.target.value as 'low' | 'medium' | 'high' })}
                   >
                     <MenuItem value="low">Lav</MenuItem>
                     <MenuItem value="medium">Medium</MenuItem>

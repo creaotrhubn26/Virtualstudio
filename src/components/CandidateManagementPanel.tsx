@@ -1,4 +1,4 @@
-import { useState, useId, useMemo, useEffect } from 'react';
+import { useState, useId, useMemo, useEffect, memo } from 'react';
 import {
   Box,
   Typography,
@@ -71,6 +71,7 @@ import { CandidatesIcon as RecentActorsIcon, RolesIcon, StatsIcon } from './icon
 import { ConsentStatusBadge } from './ConsentStatusBadge';
 import { candidatePoolService } from '../services/candidatePoolService';
 import { GLB3DPreview, PERSONALITY_TRAITS } from './GLB3DPreview';
+import settingsService from '@/services/settingsService';
 
 interface LightingPreset {
   id: string;
@@ -222,7 +223,7 @@ interface CandidateManagementPanelProps {
   profession?: 'photographer' | 'videographer' | null;
 }
 
-export function CandidateManagementPanel({
+function CandidateManagementPanelInner({
   projectId,
   candidates,
   roles,
@@ -250,6 +251,7 @@ export function CandidateManagementPanel({
   const [showStats, setShowStats] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [undoSnackbarOpen, setUndoSnackbarOpen] = useState(false);
   const [lastDeleted, setLastDeleted] = useState<Candidate | null>(null);
@@ -262,7 +264,9 @@ export function CandidateManagementPanel({
 
   const containerPadding = { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 3 };
 
-  // Load favorites from database (with localStorage fallback)
+  const FAVORITES_NAMESPACE = 'virtualStudio_candidateFavorites';
+
+  // Load favorites from database (with settings cache fallback)
   useEffect(() => {
     const loadFavorites = async () => {
       try {
@@ -270,32 +274,39 @@ export function CandidateManagementPanel({
         const dbFavorites = await favoritesApi.get(projectId, 'candidate');
         if (dbFavorites.length > 0) {
           setFavorites(new Set(dbFavorites));
+          await settingsService.setSetting(FAVORITES_NAMESPACE, dbFavorites, { projectId });
+          setFavoritesLoaded(true);
           return;
         }
       } catch (error) {
-        console.warn('Database unavailable, using localStorage:', error);
+        console.warn('Database unavailable, using settings cache:', error);
       }
-      const saved = localStorage.getItem(`candidate-favorites-${projectId}`);
-      if (saved) setFavorites(new Set(JSON.parse(saved)));
+      const cached = await settingsService.getSetting<string[]>(FAVORITES_NAMESPACE, { projectId });
+      if (cached && cached.length > 0) {
+        setFavorites(new Set(cached));
+        setFavoritesLoaded(true);
+        return;
+      }
+      setFavoritesLoaded(true);
     };
     loadFavorites();
   }, [projectId]);
 
-  // Save favorites to database and localStorage
+  // Save favorites to database and settings cache
   useEffect(() => {
     const saveFavorites = async () => {
-      localStorage.setItem(`candidate-favorites-${projectId}`, JSON.stringify([...favorites]));
+      const values = [...favorites];
+      await settingsService.setSetting(FAVORITES_NAMESPACE, values, { projectId });
       try {
         const { favoritesApi } = await import('@/services/castingApiService');
-        await favoritesApi.set(projectId, 'candidate', [...favorites]);
+        await favoritesApi.set(projectId, 'candidate', values);
       } catch (error) {
         console.warn('Database save failed:', error);
       }
     };
-    if (favorites.size > 0 || localStorage.getItem(`candidate-favorites-${projectId}`)) {
-      saveFavorites();
-    }
-  }, [favorites, projectId]);
+    if (!favoritesLoaded) return;
+    saveFavorites();
+  }, [favorites, projectId, favoritesLoaded]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1631,7 +1642,7 @@ export function CandidateManagementPanel({
                         <Chip key={roleId} label={getRoleName(roleId)} size="small" sx={{ bgcolor: 'rgba(0,212,255,0.2)', color: '#00d4ff', fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.68rem', lg: '0.75rem', xl: '0.85rem' }, height: { xs: 20, sm: 22, md: 21, lg: 24, xl: 28 } }} />
                       ))}
                       {(candidate.assignedRoles?.length || 0) > 2 && (
-                        <Chip label={`+${candidate.assignedRoles.length - 2}`} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.68rem', lg: '0.75rem', xl: '0.85rem' }, height: { xs: 20, sm: 22, md: 21, lg: 24, xl: 28 } }} />
+                        <Chip label={`+${(candidate.assignedRoles?.length || 0) - 2}`} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.87)', fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.68rem', lg: '0.75rem', xl: '0.85rem' }, height: { xs: 20, sm: 22, md: 21, lg: 24, xl: 28 } }} />
                       )}
                     </Box>
                   </TableCell>
@@ -2004,7 +2015,7 @@ export function CandidateManagementPanel({
                               Tildelte roller
                             </Typography>
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 } }}>
-                              {candidate.assignedRoles.map(roleId => (
+                              {(candidate.assignedRoles || []).map(roleId => (
                                 <Chip
                                   key={roleId}
                                   label={getRoleName(roleId)}
@@ -2206,7 +2217,7 @@ export function CandidateManagementPanel({
           ) : (
             <Grid container spacing={{ xs: 1, sm: 2 }}>
               {poolCandidates.map((poolCandidate) => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={poolCandidate.id}>
+                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={poolCandidate.id}>
                   <Card
                     sx={{
                       bgcolor: 'rgba(156, 39, 176, 0.08)',
@@ -2480,7 +2491,7 @@ export function CandidateManagementPanel({
             pr: 1,
           }}>
             {candidatesToPreview.map((candidate) => {
-              const assignedRoles = roles.filter(r => candidate.assignedRoles.includes(r.id));
+              const assignedRoles = roles.filter(r => (candidate.assignedRoles || []).includes(r.id));
               return (
                 <Card
                   key={candidate.id}
@@ -2658,3 +2669,5 @@ export function CandidateManagementPanel({
     </Box>
   );
 }
+
+export const CandidateManagementPanel = memo(CandidateManagementPanelInner);

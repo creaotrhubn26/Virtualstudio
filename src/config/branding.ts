@@ -1,3 +1,5 @@
+import authSessionService from '../services/authSessionService';
+
 export type BrandingTextTokenKey =
   | 'casting'
   | 'roles'
@@ -48,6 +50,7 @@ export type BrandingTextTokenKey =
   | 'roleSaveError'
   | 'confirmDeleteRole'
   | 'roleDeleteError'
+  | 'roleDeleteSuccess'
   | 'candidateNameRequired'
   | 'candidateSaveError'
   | 'confirmDeleteCandidate'
@@ -55,6 +58,10 @@ export type BrandingTextTokenKey =
   | 'scheduleSaveError'
   | 'confirmDeleteSchedule'
   | 'scheduleDeleteError'
+  | 'scheduleLabel'
+  | 'removeUserLabel'
+  | 'confirmRemoveUserLabel'
+  | 'removeUserErrorLabel'
   | 'activeProjectLabel'
   | 'editProjectAriaLabel'
   | 'editProjectLabel'
@@ -1411,6 +1418,7 @@ const DEFAULT_TOKENS: BrandingTokens = {
     roleSaveError: 'Feil ved lagring av rolle',
     confirmDeleteRole: 'Er du sikker på at du vil slette denne rollen?',
     roleDeleteError: 'Feil ved sletting av rolle',
+    roleDeleteSuccess: 'Rolle slettet',
     candidateNameRequired: 'Kandidat må ha et navn',
     candidateSaveError: 'Feil ved lagring av kandidat',
     confirmDeleteCandidate: 'Er du sikker på at du vil slette denne kandidaten?',
@@ -1418,6 +1426,10 @@ const DEFAULT_TOKENS: BrandingTokens = {
     scheduleSaveError: 'Feil ved lagring av timeplan',
     confirmDeleteSchedule: 'Er du sikker på at du vil slette denne timeplanen?',
     scheduleDeleteError: 'Feil ved sletting av timeplan',
+    scheduleLabel: 'Timeplan',
+    removeUserLabel: 'Fjern bruker',
+    confirmRemoveUserLabel: 'Er du sikker på at du vil fjerne denne brukeren?',
+    removeUserErrorLabel: 'Feil ved fjerning av bruker',
     activeProjectLabel: 'Aktivt prosjekt',
     editProjectAriaLabel: 'Rediger {project}',
     editProjectLabel: 'Rediger prosjekt',
@@ -2618,7 +2630,6 @@ export const DEFAULT_BRANDING_SETTINGS: BrandingSettings = {
   ...DEFAULT_IDENTITY,
 };
 
-const STORAGE_KEY = 'virtualStudio_branding';
 const API_BASE = '/api/branding';
 
 const normalizeSettings = (settings?: Partial<BrandingSettings>): BrandingSettings => {
@@ -2707,32 +2718,21 @@ export const mergeBrandingSettings = (
     },
   });
 
-export const getBrandingSettings = (): BrandingSettings => {
-  if (typeof window === 'undefined') {
-    return DEFAULT_BRANDING_SETTINGS;
-  }
+let cachedBrandingSettings: BrandingSettings = DEFAULT_BRANDING_SETTINGS;
 
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (!stored) return DEFAULT_BRANDING_SETTINGS;
-    const parsed = JSON.parse(stored) as Partial<BrandingSettings>;
-    return normalizeSettings(parsed);
-  } catch (error) {
-    console.warn('Failed to load branding settings:', error);
-    return DEFAULT_BRANDING_SETTINGS;
-  }
-};
-
-export const saveBrandingSettings = (settings: BrandingSettings): BrandingSettings => {
+const setCachedBrandingSettings = (settings: BrandingSettings): BrandingSettings => {
   const normalized = normalizeSettings(settings);
-
+  cachedBrandingSettings = normalized;
   if (typeof window !== 'undefined') {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
     window.dispatchEvent(new CustomEvent('branding-updated', { detail: normalized }));
   }
-
   return normalized;
 };
+
+export const getBrandingSettings = (): BrandingSettings => cachedBrandingSettings;
+
+export const saveBrandingSettings = (settings: BrandingSettings): BrandingSettings =>
+  setCachedBrandingSettings(settings);
 
 export const subscribeBrandingSettings = (
   listener: (settings: BrandingSettings) => void
@@ -2746,29 +2746,19 @@ export const subscribeBrandingSettings = (
     listener(detail ? normalizeSettings(detail) : getBrandingSettings());
   };
 
-  const handleStorage = (event: StorageEvent) => {
-    if (event.key === STORAGE_KEY) {
-      listener(getBrandingSettings());
-    }
-  };
-
   window.addEventListener('branding-updated', handleCustomEvent);
-  window.addEventListener('storage', handleStorage);
 
   return () => {
     window.removeEventListener('branding-updated', handleCustomEvent);
-    window.removeEventListener('storage', handleStorage);
   };
 };
 
 const getAdminRole = (): string | undefined => {
   if (typeof window === 'undefined') return undefined;
-
   try {
-    const stored = window.localStorage.getItem('adminUser');
-    if (!stored) return undefined;
-    const parsed = JSON.parse(stored) as { role?: string };
-    return parsed.role ? String(parsed.role).toLowerCase() : undefined;
+    const session = authSessionService.getSessionSync();
+    const role = session.adminUser?.role;
+    return role ? String(role).toLowerCase() : undefined;
   } catch (error) {
     console.warn('Failed to read admin role:', error);
     return undefined;
@@ -2782,7 +2772,7 @@ export const fetchBrandingSettings = async (): Promise<BrandingSettings | null> 
   }
   const data = (await response.json()) as { settings?: BrandingSettings | null };
   if (!data.settings) return null;
-  return normalizeSettings(data.settings);
+  return setCachedBrandingSettings(data.settings);
 };
 
 export const updateBrandingSettings = async (
@@ -2802,5 +2792,5 @@ export const updateBrandingSettings = async (
     throw new Error('Failed to update branding settings');
   }
   const data = (await response.json()) as { settings?: BrandingSettings };
-  return normalizeSettings(data.settings);
+  return setCachedBrandingSettings(data.settings ?? normalized);
 };

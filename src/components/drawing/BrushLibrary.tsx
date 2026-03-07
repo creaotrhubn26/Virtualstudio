@@ -7,7 +7,7 @@
  * - Import/Export brush packs
  * - Favorite brushes
  * - Recently used brushes
- * - Database persistence with localStorage fallback
+ * - Database persistence with settings cache fallback
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -45,6 +45,7 @@ import {
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { BrushConfig, DEFAULT_BRUSH_CONFIG, AdvancedBrushType } from './AdvancedBrushEngine';
+import settingsService from '@/services/settingsService';
 
 // =============================================================================
 // Types
@@ -72,6 +73,7 @@ export interface BrushLibraryProps {
 // =============================================================================
 
 const STORAGE_KEY = 'virtualstudio-brush-library';
+const SETTINGS_NAMESPACE = 'virtualStudio_brushLibrary';
 
 const DEFAULT_PRESETS: BrushPreset[] = [
   {
@@ -215,7 +217,7 @@ function useBrushLibrary() {
   const [presets, setPresets] = useState<BrushPreset[]>([]);
   const [recentlyUsed, setRecentlyUsed] = useState<string[]>([]);
 
-  // Load from database with localStorage fallback
+  // Load from database with settings cache fallback
   useEffect(() => {
     const loadPresets = async () => {
       try {
@@ -226,8 +228,7 @@ function useBrushLibrary() {
             if (data.presets?.length > 0) {
               setPresets(data.presets);
               setRecentlyUsed(data.recentlyUsed || []);
-              // Cache to localStorage
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+              await settingsService.setSetting(SETTINGS_NAMESPACE, data);
               return;
             }
           }
@@ -235,34 +236,26 @@ function useBrushLibrary() {
       } catch (error) {
         console.warn('Failed to load from database:', error);
       }
-      
-      // Fallback to localStorage
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const data = JSON.parse(saved);
-          setPresets(data.presets || DEFAULT_PRESETS);
-          setRecentlyUsed(data.recentlyUsed || []);
-        } else {
-          setPresets(DEFAULT_PRESETS);
-        }
-      } catch {
-        setPresets(DEFAULT_PRESETS);
+
+      const cached = await settingsService.getSetting<{ presets: BrushPreset[]; recentlyUsed: string[] }>(
+        SETTINGS_NAMESPACE
+      );
+      if (cached?.presets?.length) {
+        setPresets(cached.presets);
+        setRecentlyUsed(cached.recentlyUsed || []);
+        return;
       }
+
+      setPresets(DEFAULT_PRESETS);
     };
     loadPresets();
   }, []);
 
-  // Save to database with localStorage backup
+  // Save to database with settings cache backup
   const save = useCallback(async () => {
     const data = { presets, recentlyUsed };
-    
-    // Always save to localStorage as backup
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch (e) {
-      console.warn('Failed to backup brush library to localStorage:', e);
-    }
+
+    await settingsService.setSetting(SETTINGS_NAMESPACE, data);
     
     // Try to save to database
     try {

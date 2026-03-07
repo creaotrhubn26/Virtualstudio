@@ -674,9 +674,10 @@ const ManuscriptPanelComponent: React.FC<ManuscriptPanelProps> = ({ projectId, o
           const intExt = parts[0].startsWith('INT') ? 'INT' : 'EXT';
           const location = parts[0].replace(/^(INT\.|EXT\.)\s*/i, '');
           const timeRaw = parts[1] || 'DAY';
+          const upperTimeRaw = timeRaw.toUpperCase();
           const timeOfDay: 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK' | 'CONTINUOUS' | 'LATER' | 'MORNING' | 'EVENING' = 
-            ['DAY', 'NIGHT', 'DAWN', 'DUSK', 'CONTINUOUS', 'LATER', 'MORNING', 'EVENING'].includes(timeRaw.toUpperCase()) 
-              ? timeRaw.toUpperCase() as any 
+            (['DAY', 'NIGHT', 'DAWN', 'DUSK', 'CONTINUOUS', 'LATER', 'MORNING', 'EVENING'] as const).includes(upperTimeRaw as 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK' | 'CONTINUOUS' | 'LATER' | 'MORNING' | 'EVENING') 
+              ? (upperTimeRaw as 'DAY' | 'NIGHT' | 'DAWN' | 'DUSK' | 'CONTINUOUS' | 'LATER' | 'MORNING' | 'EVENING') 
               : 'DAY';
 
           currentScene = {
@@ -993,7 +994,7 @@ const ManuscriptPanelComponent: React.FC<ManuscriptPanelProps> = ({ projectId, o
           sceneHeading: currentSceneData.heading,
           intExt: currentSceneData.intExt as 'INT' | 'EXT' | 'INT/EXT',
           locationName: currentSceneData.location,
-          timeOfDay: currentSceneData.timeOfDay as any,
+          timeOfDay: currentSceneData.timeOfDay as SceneBreakdown['timeOfDay'],
           description: currentSceneData.description.trim(),
           characters: [...new Set(currentSceneData.characters)],
           pageLength: Math.round(currentSceneData.lineCount / 55 * 10) / 10,
@@ -1283,7 +1284,7 @@ const ManuscriptPanelComponent: React.FC<ManuscriptPanelProps> = ({ projectId, o
                               const reader = new FileReader();
                               reader.onload = async (event) => {
                                 const coverImage = event.target?.result as string;
-                                const updatedManuscript = { ...manuscript, coverImage } as any;
+                                const updatedManuscript: Manuscript = { ...manuscript, coverImage };
                                 await manuscriptService.updateManuscript(updatedManuscript);
                                 loadManuscripts();
                                 showSuccess('Cover oppdatert');
@@ -2048,7 +2049,7 @@ const ManuscriptPanelComponent: React.FC<ManuscriptPanelProps> = ({ projectId, o
               <InputLabel>Format</InputLabel>
               <Select
                 value={newManuscript.format}
-                onChange={(e) => setNewManuscript({ ...newManuscript, format: e.target.value as any })}
+                onChange={(e) => setNewManuscript({ ...newManuscript, format: e.target.value as Manuscript['format'] })}
                 label="Format"
               >
                 <MenuItem value="fountain">Fountain (anbefalt)</MenuItem>
@@ -2625,7 +2626,7 @@ Anna går raskt gjennom regnet.
       {castingRoles.length > 0 && (
         <Alert severity="success" sx={{ mt: responsive.spacing }}>
           <Typography variant="body2" sx={{ fontSize: responsive.bodyFontSize }}>
-            <strong>{castingRoles.length}</strong> roller fra Casting Planner er tilgjengelig i autocomplete.
+            <strong>{castingRoles.length}</strong> roller fra Virtual Studio er tilgjengelig i autocomplete.
             {castingLocations.length > 0 && ` ${castingLocations.length} lokasjoner tilgjengelig.`}
           </Typography>
         </Alert>
@@ -3221,7 +3222,7 @@ const CharactersTab: React.FC<{
   const { tier, isMobile, isTablet, isDesktop, is4K } = useScreenTier();
   const responsive = getResponsiveValues(tier);
 
-  // Load character profiles from database/localStorage on mount
+  // Load character profiles from database/settings cache on mount
   useEffect(() => {
     if (!manuscriptId) {
       setIsLoading(false);
@@ -3434,7 +3435,7 @@ const CharactersTab: React.FC<{
                     </Box>
                     <Chip 
                       label={getRoleLabel(character.role || 'minor')} 
-                      color={getRoleColor(character.role || 'minor') as any}
+                      color={getRoleColor(character.role || 'minor') as 'error' | 'primary' | 'default'}
                       size={responsive.chipSize}
                       sx={{ fontSize: responsive.captionFontSize }}
                     />
@@ -3502,7 +3503,7 @@ const CharactersTab: React.FC<{
               <Select
                 value={formData.role}
                 label="Rolletype"
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value as 'lead' | 'supporting' | 'minor' | 'extra' })}
               >
                 <MenuItem value="lead">Hovedrolle</MenuItem>
                 <MenuItem value="supporting">Birolle</MenuItem>

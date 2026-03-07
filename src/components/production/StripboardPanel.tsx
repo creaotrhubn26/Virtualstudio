@@ -1216,14 +1216,14 @@ const StripboardPanel: FC<StripboardPanelProps> = ({
             ${printOptions.header ? `
               <div class="header">
                 <div class="header-logo">
-                  <img src="/casting-planner-logo.png" alt="Casting Planner" onerror="this.style.display='none'" />
+                  <img src="/creatorhub-virtual-studio-logo.svg" alt="Virtual Studio" onerror="this.style.display='none'" />
                   <div>
                     <h1>${projectTitle}</h1>
                     <h2>Stripboard / Opptaksplan</h2>
                   </div>
                 </div>
                 <div class="branding">
-                  Generert med <strong>Casting Planner</strong> • ${new Date().toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  Generert med <strong>Virtual Studio</strong> • ${new Date().toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </div>
               </div>
             ` : ''}
@@ -1233,7 +1233,7 @@ const StripboardPanel: FC<StripboardPanelProps> = ({
             ${daysHTML}
             
             <div class="footer">
-              Generert med Casting Planner • castingplanner.no
+              Generert med Virtual Studio • creatorhub.no
             </div>
           </body>
         </html>
@@ -1492,7 +1492,7 @@ const StripboardPanel: FC<StripboardPanelProps> = ({
               <Chip 
                 label={responsive.compactMode ? STATUS_CONFIG[strip.status].label.charAt(0) : STATUS_CONFIG[strip.status].label}
                 size="small"
-                color={STATUS_CONFIG[strip.status].color as any}
+                color={STATUS_CONFIG[strip.status].color as 'default' | 'primary' | 'success' | 'warning'}
                 sx={{ 
                   height: responsive.chipHeight, 
                   fontSize: responsive.fontSize.caption,
@@ -2240,7 +2240,7 @@ const StripboardPanel: FC<StripboardPanelProps> = ({
                 <Select
                   value={filterStatus}
                   label="Filter"
-                  onChange={(e) => setFilterStatus(e.target.value as any)}
+                  onChange={(e) => setFilterStatus(e.target.value as StripboardStrip['status'] | 'all')}
                   sx={{ fontSize: responsive.fontSize.body }}
                   MenuProps={{ sx: { zIndex: 1400 } }}
                 >
@@ -2902,7 +2902,7 @@ const StripboardPanel: FC<StripboardPanelProps> = ({
               label={
                 <Box>
                   <Typography variant="body2" fontWeight={500}>Topptekst med logo</Typography>
-                  <Typography variant="caption" color="text.secondary">Prosjektnavn og Casting Planner-branding</Typography>
+                  <Typography variant="caption" color="text.secondary">Prosjektnavn og Virtual Studio-branding</Typography>
                 </Box>
               }
             />
@@ -3185,8 +3185,8 @@ const StripboardPanel: FC<StripboardPanelProps> = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
           <Box
             component="img"
-            src="/casting-planner-logo.png"
-            alt="Casting Planner"
+            src="/creatorhub-virtual-studio-logo.svg"
+            alt="Virtual Studio"
             sx={{ 
               width: 48, 
               height: 48, 
@@ -3208,7 +3208,7 @@ const StripboardPanel: FC<StripboardPanelProps> = ({
             Generert med
           </Typography>
           <Typography variant="caption" sx={{ color: '#7C3AED', fontWeight: 600 }}>
-            Casting Planner
+            Virtual Studio
           </Typography>
           <Typography variant="caption" sx={{ color: '#666' }}>
             • {new Date().toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -3275,7 +3275,7 @@ const StripboardPanel: FC<StripboardPanelProps> = ({
           }
           /* Print footer on each page */
           .stripboard-print::after {
-            content: 'Generert med Casting Planner • castingplanner.no';
+            content: 'Generert med Virtual Studio • creatorhub.no';
             position: fixed;
             bottom: 5mm;
             left: 0;

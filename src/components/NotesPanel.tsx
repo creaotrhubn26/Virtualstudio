@@ -26,7 +26,7 @@ import {
   Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { RichTextEditor } from './RichTextEditor';
-import { noteApi } from '@/services/virtualStudioApiService';
+import { notesService } from '@/services/notesService';
 
 interface Note {
   id: string;
@@ -44,8 +44,6 @@ const CATEGORY_CONFIG = {
   model: { label: 'Modell', icon: PersonIcon, color: '#10b981' },
   setup: { label: 'Oppsett', icon: SettingsIcon, color: '#8b5cf6' },
 };
-
-const STORAGE_KEY = 'virtualstudio_notes';
 
 interface NotesPanelProps {
   onClose?: () => void;
@@ -84,44 +82,23 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
     };
   }, []);
 
-  // Load notes from database (with localStorage fallback)
+  // Load notes from database (with settings cache fallback)
   useEffect(() => {
     const loadNotes = async () => {
       setIsLoading(true);
       try {
-        const dbNotes = await noteApi.getAll();
-        if (dbNotes.length > 0) {
-          const mappedNotes: Note[] = dbNotes.map(n => ({
-            id: n.id,
-            title: n.title,
-            content: n.content || '',
-            category: (n.category as Note['category']) || 'general',
-            timestamp: n.updated_at ? new Date(n.updated_at).getTime() : Date.now(),
-            sceneId: n.project_id || undefined,
-          }));
-          setNotes(mappedNotes);
-        } else {
-          // Fallback to localStorage
-          const saved = localStorage.getItem(STORAGE_KEY);
-          if (saved) {
-            try {
-              setNotes(JSON.parse(saved));
-            } catch (e) {
-              console.error('Failed to load notes from localStorage:', e);
-            }
-          }
-        }
+        const dbNotes = await notesService.getNotes();
+        const mappedNotes: Note[] = dbNotes.map(n => ({
+          id: n.id,
+          title: n.title,
+          content: n.content || '',
+          category: (n.category as Note['category']) || 'general',
+          timestamp: n.timestamp || (n.updatedAt ? new Date(n.updatedAt).getTime() : Date.now()),
+          sceneId: n.sceneId || undefined,
+        }));
+        setNotes(mappedNotes);
       } catch (error) {
         console.error('Failed to load notes from database:', error);
-        // Fallback to localStorage
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          try {
-            setNotes(JSON.parse(saved));
-          } catch (e) {
-            console.error('Failed to load notes from localStorage:', e);
-          }
-        }
       } finally {
         setIsLoading(false);
       }
@@ -131,12 +108,6 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
 
   const saveNotes = useCallback((updatedNotes: Note[]) => {
     setNotes(updatedNotes);
-    // Only save to localStorage as backup - database is the primary source
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedNotes));
-    } catch (e) {
-      console.warn('Failed to backup notes to localStorage:', e);
-    }
   }, []);
 
   const handleCreate = () => {
@@ -162,11 +133,13 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
     try {
       if (editingNote) {
         // Update existing note in database
-        await noteApi.save({
+        await notesService.saveNote({
           id: editingNote.id,
           title,
           content,
           category,
+          timestamp: editingNote.timestamp,
+          sceneId: editingNote.sceneId,
         });
         const updated = notes.map(n =>
           n.id === editingNote.id
@@ -177,11 +150,12 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
       } else {
         // Create new note in database
         const newId = `note_${Date.now()}`;
-        await noteApi.save({
+        await notesService.saveNote({
           id: newId,
           title,
           content,
           category,
+          timestamp: Date.now(),
         });
         const newNote: Note = {
           id: newId,
@@ -224,7 +198,7 @@ export function NotesPanel({ onClose, isClosing = false }: NotesPanelProps) {
 
   const handleDelete = async (id: string) => {
     try {
-      await noteApi.delete(id);
+      await notesService.deleteNote(id);
     } catch (error) {
       console.error('Failed to delete note from database:', error);
     }

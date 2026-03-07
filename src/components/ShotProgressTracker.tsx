@@ -590,7 +590,7 @@ export const ShotProgressTracker: React.FC<ShotProgressTrackerProps> = ({
               <InputLabel>Status</InputLabel>
               <Select
                 value={newTakeStatus}
-                onChange={(e) => setNewTakeStatus(e.target.value as any)}
+                onChange={(e) => setNewTakeStatus(e.target.value as 'good' | 'ng' | 'print' | 'hold')}
                 label="Status"
               >
                 <MenuItem value="print">🎬 PRINT (Perfekt)</MenuItem>

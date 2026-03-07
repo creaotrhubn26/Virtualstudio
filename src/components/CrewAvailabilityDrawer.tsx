@@ -348,7 +348,7 @@ export default function CrewAvailabilityDrawer({
               <InputLabel sx={{ color: 'rgba(255,255,255,0.87)' }}>Status</InputLabel>
               <Select
                 value={newEntry.status}
-                onChange={(e) => setNewEntry({ ...newEntry, status: e.target.value as any })}
+                onChange={(e) => setNewEntry({ ...newEntry, status: e.target.value as 'available' | 'unavailable' | 'tentative' })}
                 label="Status"
                 sx={{
                   color: '#fff',

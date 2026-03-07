@@ -1,4 +1,4 @@
-import { useState, useId, useMemo, useEffect, type ReactNode } from 'react';
+import { useState, useId, useMemo, useEffect, type ReactNode, memo } from 'react';
 import {
   Box,
   Typography,
@@ -53,6 +53,7 @@ import {
   Inventory as InventoryIcon,
   FileDownload as DownloadIcon,
 } from '@mui/icons-material';
+import settingsService from '@/services/settingsService';
 import { RolesIcon as TheaterComedyIcon, AuditionsIcon, CandidatesIcon, CalendarCustomIcon as CalendarIcon, LocationsIcon as LocationIcon, StatsIcon } from './icons/CastingIcons';
 import { Schedule, Role, Candidate } from '../core/models/casting';
 import { castingService } from '../services/castingService';
@@ -88,7 +89,7 @@ interface AuditionSchedulePanelProps {
   profession?: 'photographer' | 'videographer' | null;
 }
 
-export function AuditionSchedulePanel({
+function AuditionSchedulePanelInner({
   projectId,
   schedules,
   candidates,
@@ -123,12 +124,15 @@ export function AuditionSchedulePanel({
   const [poolMode, setPoolMode] = useState<'project' | 'pool'>('project');
   const [poolAuditions, setPoolAuditions] = useState<PoolAudition[]>([]);
   const [poolLoading, setPoolLoading] = useState(false);
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
 
   const { showSuccess, showError } = useToast();
   
   const containerPadding = isMobile ? 2 : isTablet ? 3 : 4;
 
-  // Load favorites from database (with localStorage fallback)
+  const FAVORITES_NAMESPACE = 'virtualStudio_scheduleFavorites';
+
+  // Load favorites from database (with settings cache fallback)
   useEffect(() => {
     const loadFavorites = async () => {
       try {
@@ -136,32 +140,39 @@ export function AuditionSchedulePanel({
         const dbFavorites = await favoritesApi.get(projectId, 'schedule');
         if (dbFavorites.length > 0) {
           setFavorites(new Set(dbFavorites));
+          await settingsService.setSetting(FAVORITES_NAMESPACE, dbFavorites, { projectId });
+          setFavoritesLoaded(true);
           return;
         }
       } catch (error) {
-        console.warn('Database unavailable, using localStorage:', error);
+        console.warn('Database unavailable, using settings cache:', error);
       }
-      const saved = localStorage.getItem(`schedule-favorites-${projectId}`);
-      if (saved) setFavorites(new Set(JSON.parse(saved)));
+      const cached = await settingsService.getSetting<string[]>(FAVORITES_NAMESPACE, { projectId });
+      if (cached && cached.length > 0) {
+        setFavorites(new Set(cached));
+        setFavoritesLoaded(true);
+        return;
+      }
+      setFavoritesLoaded(true);
     };
     loadFavorites();
   }, [projectId]);
 
-  // Save favorites to database and localStorage
+  // Save favorites to database and settings cache
   useEffect(() => {
     const saveFavorites = async () => {
-      localStorage.setItem(`schedule-favorites-${projectId}`, JSON.stringify([...favorites]));
+      const values = [...favorites];
+      await settingsService.setSetting(FAVORITES_NAMESPACE, values, { projectId });
       try {
         const { favoritesApi } = await import('@/services/castingApiService');
-        await favoritesApi.set(projectId, 'schedule', [...favorites]);
+        await favoritesApi.set(projectId, 'schedule', values);
       } catch (error) {
         console.warn('Database save failed:', error);
       }
     };
-    if (favorites.size > 0 || localStorage.getItem(`schedule-favorites-${projectId}`)) {
-      saveFavorites();
-    }
-  }, [favorites, projectId]);
+    if (!favoritesLoaded) return;
+    saveFavorites();
+  }, [favorites, projectId, favoritesLoaded]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1945,7 +1956,7 @@ export function AuditionSchedulePanel({
           ) : (
             <Grid container spacing={{ xs: 1, sm: 2 }}>
               {poolAuditions.map((poolAudition) => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={poolAudition.id}>
+                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={poolAudition.id}>
                   <Card
                     sx={{
                       bgcolor: 'rgba(156, 39, 176, 0.08)',
@@ -2064,3 +2075,5 @@ export function AuditionSchedulePanel({
     </Box>
   );
 }
+
+export const AuditionSchedulePanel = memo(AuditionSchedulePanelInner);

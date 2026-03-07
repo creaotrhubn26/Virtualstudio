@@ -64,6 +64,7 @@ import {
   Explore as ExploreIcon,
   Group as GroupIcon,
 } from '@mui/icons-material';
+import settingsService from '@/services/settingsService';
 import { 
   LocationsIcon as LocationIcon, 
   StatsIcon, 
@@ -152,8 +153,11 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
 
   // Favorites with database sync
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
   
-  // Load favorites from database
+  const FAVORITES_NAMESPACE = 'virtualStudio_locationFavorites';
+
+  // Load favorites from database (with settings cache fallback)
   useEffect(() => {
     const loadFavorites = async () => {
       try {
@@ -161,13 +165,20 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
         const dbFavorites = await favoritesApi.get(projectId, 'location');
         if (dbFavorites.length > 0) {
           setFavorites(new Set(dbFavorites));
+          await settingsService.setSetting(FAVORITES_NAMESPACE, dbFavorites, { projectId });
+          setFavoritesLoaded(true);
           return;
         }
       } catch (error) {
-        console.warn('Database unavailable, using localStorage:', error);
+        console.warn('Database unavailable, using settings cache:', error);
       }
-      const stored = localStorage.getItem(`location-favorites-${projectId}`);
-      if (stored) setFavorites(new Set(JSON.parse(stored)));
+      const cached = await settingsService.getSetting<string[]>(FAVORITES_NAMESPACE, { projectId });
+      if (cached && cached.length > 0) {
+        setFavorites(new Set(cached));
+        setFavoritesLoaded(true);
+        return;
+      }
+      setFavoritesLoaded(true);
     };
     loadFavorites();
   }, [projectId]);
@@ -200,21 +211,21 @@ export function LocationManagementPanel({ projectId, onUpdate }: LocationManagem
   // Responsive padding
   const containerPadding = { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 3 };
 
-  // Save favorites to database and localStorage
+  // Save favorites to database and settings cache
   useEffect(() => {
     const saveFavorites = async () => {
-      localStorage.setItem(`location-favorites-${projectId}`, JSON.stringify([...favorites]));
+      const values = [...favorites];
+      await settingsService.setSetting(FAVORITES_NAMESPACE, values, { projectId });
       try {
         const { favoritesApi } = await import('@/services/castingApiService');
-        await favoritesApi.set(projectId, 'location', [...favorites]);
+        await favoritesApi.set(projectId, 'location', values);
       } catch (error) {
         console.warn('Database save failed:', error);
       }
     };
-    if (favorites.size > 0 || localStorage.getItem(`location-favorites-${projectId}`)) {
-      saveFavorites();
-    }
-  }, [favorites, projectId]);
+    if (!favoritesLoaded) return;
+    saveFavorites();
+  }, [favorites, projectId, favoritesLoaded]);
 
   const getTypeLabel = (type: Location['type']): string => {
     const labels: Record<Location['type'], string> = {

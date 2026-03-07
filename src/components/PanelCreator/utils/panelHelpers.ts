@@ -40,15 +40,27 @@ export const generateFunctionContent = (functionId: string): string => {
           function saveNotes() {
             const textarea = document.getElementById('notesTextarea');
             if (textarea) {
-              localStorage.setItem('panelNotes', textarea.value);
-              showSuccess('Notater lagret!');
+              const userId = (window.__currentUserId || 'default-user');
+              fetch('/api/settings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  userId,
+                  namespace: 'virtualStudio_panelNotes',
+                  data: textarea.value
+                })
+              }).then(() => showSuccess('Notater lagret!'));
             }
           }
           window.addEventListener('DOMContentLoaded', () => {
             const textarea = document.getElementById('notesTextarea');
             if (textarea) {
-              const saved = localStorage.getItem('panelNotes');
-              if (saved) textarea.value = saved;
+              const userId = (window.__currentUserId || 'default-user');
+              fetch('/api/settings?user_id=' + encodeURIComponent(userId) + '&namespace=virtualStudio_panelNotes')
+                .then(r => r.json())
+                .then(data => {
+                  if (data && typeof data.data === 'string') textarea.value = data.data;
+                });
             }
           });
         </script>
@@ -368,11 +380,11 @@ export const generateFunctionContent = (functionId: string): string => {
  */
 export const generateServiceContent = (serviceId: string): string => {
   const templates: Record<string, string> = {
-    'casting-planner': `
+    'virtual-studio': `
       <div class="custom-panel-content">
-        <h2>Casting Planner</h2>
+        <h2>Virtual Studio</h2>
         <p>Planlegg casting og rollebesetning for ditt prosjekt.</p>
-        <p><em>Denne tjenesten integreres med Casting Planner systemet.</em></p>
+        <p><em>Denne tjenesten integreres med Virtual Studio systemet.</em></p>
       </div>
     `,
     marketplace: `

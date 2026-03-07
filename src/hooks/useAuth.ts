@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import authSessionService from '@/services/authSessionService';
 
 export interface User {
   id: string;
@@ -11,24 +12,15 @@ export interface User {
 
 export function useAuth() {
   const getStoredUser = (): User | null => {
-    try {
-      const stored = localStorage.getItem('adminUser');
-      if (stored) {
-        const parsed = JSON.parse(stored) as {
-          id?: number | string;
-          email?: string;
-          display_name?: string;
-          role?: User['role'];
-        };
-        return {
-          id: parsed.id ? String(parsed.id) : 'unknown-user',
-          email: parsed.email || '',
-          name: parsed.display_name || parsed.email || 'Ukjent bruker',
-          role: parsed.role || 'user',
-        };
-      }
-    } catch (error) {
-      console.warn('[Auth] Failed to read adminUser:', error);
+    const session = authSessionService.getSessionSync();
+    const stored = session.adminUser;
+    if (stored) {
+      return {
+        id: stored.id ? String(stored.id) : 'unknown-user',
+        email: stored.email || '',
+        name: stored.display_name || stored.email || 'Ukjent bruker',
+        role: (stored.role as User['role']) || 'user',
+      };
     }
     return {
       id: 'guest',
@@ -39,20 +31,21 @@ export function useAuth() {
   };
 
   const [user, setUser] = useState<User | null>(getStoredUser);
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === 'adminUser') {
-        setUser(getStoredUser());
-      }
-    };
+    let isMounted = true;
+    authSessionService.loadSession().then(() => {
+      if (!isMounted) return;
+      setUser(getStoredUser());
+      setLoading(false);
+    });
+
     const handleAuthUpdate = () => setUser(getStoredUser());
-    window.addEventListener('storage', handleStorage);
-    window.addEventListener('auth-user-updated', handleAuthUpdate);
+    window.addEventListener('auth-session-updated', handleAuthUpdate);
     return () => {
-      window.removeEventListener('storage', handleStorage);
-      window.removeEventListener('auth-user-updated', handleAuthUpdate);
+      isMounted = false;
+      window.removeEventListener('auth-session-updated', handleAuthUpdate);
     };
   }, []);
 

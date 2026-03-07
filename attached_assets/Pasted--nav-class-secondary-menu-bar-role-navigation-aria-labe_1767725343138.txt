@@ -6,7 +6,7 @@
       <div class="menu-divider"></div>
       <button class="menu-item" id="menuCastingPlanner">
         <div class="menu-icon" style="background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27%3E%3Cpath d=%27M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2%27/%3E%3Ccircle cx=%279%27 cy=%277%27 r=%274%27/%3E%3Cpath d=%27M23 21v-2a4 4 0 0 0-3-3.87%27/%3E%3Cpath d=%27M16 3.13a4 4 0 0 1 0 7.75%27/%3E%3C/svg%3E');"></div>
-        Casting Planner
+        Virtual Studio
       </button>
       <button class="menu-item" id="menuHjelp">
         <div class="menu-icon" style="background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27%3E%3Ccircle cx=%2712%27 cy=%2712%27 r=%2710%27/%3E%3Cpath d=%27M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3%27/%3E%3Cline x1=%2712%27 y1=%2717%27 x2=%2712.01%27 y2=%2717%27/%3E%3C/svg%3E');"></div>

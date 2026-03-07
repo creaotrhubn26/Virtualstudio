@@ -1,8 +1,10 @@
 /**
  * Brush Library Service
  * 
- * Provides database persistence for custom brush presets with localStorage fallback.
+ * Provides database persistence for custom brush presets with settings cache fallback.
  */
+
+import settingsService, { getCurrentUserId } from './settingsService';
 
 export interface BrushPreset {
   id: string;
@@ -31,7 +33,9 @@ interface StoredLibrary {
 }
 
 const STORAGE_KEY = 'brush-library-data';
-const LEGACY_KEY = 'storyboard-brush-presets';
+const SETTINGS_NAMESPACE = 'virtualStudio_brushLibrary';
+
+let cachedLibrary: StoredLibrary | null = null;
 
 // Database availability cache
 let dbAvailable: boolean | null = null;
@@ -53,33 +57,38 @@ async function checkDatabaseAvailability(): Promise<boolean> {
   }
 }
 
-function getStorageData(): StoredLibrary {
-  try {
-    // Check legacy key first
-    const legacyData = localStorage.getItem(LEGACY_KEY);
-    if (legacyData) {
-      const parsed = JSON.parse(legacyData);
-      localStorage.removeItem(LEGACY_KEY);
-      return {
-        presets: parsed.presets || [],
-        recentlyUsed: parsed.recentlyUsed || [],
-        lastUpdated: new Date().toISOString(),
-      };
-    }
-    
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : { presets: [], recentlyUsed: [], lastUpdated: '' };
-  } catch (error) {
-    console.error('Error reading brush library from localStorage:', error);
-    return { presets: [], recentlyUsed: [], lastUpdated: '' };
-  }
+function normalizeLibrary(data?: Partial<StoredLibrary>): StoredLibrary {
+  return {
+    presets: data?.presets || [],
+    recentlyUsed: data?.recentlyUsed || [],
+    lastUpdated: data?.lastUpdated || '',
+  };
 }
 
-function saveStorageData(data: StoredLibrary): void {
+async function getStorageData(): Promise<StoredLibrary> {
+  if (cachedLibrary) return cachedLibrary;
+
+  const userId = getCurrentUserId();
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    const stored = await settingsService.getSetting<StoredLibrary>(SETTINGS_NAMESPACE, { userId });
+    if (stored) {
+      cachedLibrary = normalizeLibrary(stored);
+      return cachedLibrary;
+    }
   } catch (error) {
-    console.error('Error saving brush library to localStorage:', error);
+    console.warn('Failed to read brush library settings:', error);
+  }
+
+  cachedLibrary = normalizeLibrary();
+  return cachedLibrary;
+}
+
+async function saveStorageData(data: StoredLibrary): Promise<void> {
+  cachedLibrary = data;
+  try {
+    await settingsService.setSetting(SETTINGS_NAMESPACE, data, { userId: getCurrentUserId() });
+  } catch (error) {
+    console.error('Error saving brush library to settings:', error);
   }
 }
 
@@ -95,13 +104,12 @@ export const brushLibraryService = {
         if (response.ok) {
           const data = await response.json();
           const presets = data.presets || data || [];
-          
-          // Cache to localStorage
-          const storageData = getStorageData();
+
+          const storageData = await getStorageData();
           storageData.presets = presets;
           storageData.lastUpdated = new Date().toISOString();
-          saveStorageData(storageData);
-          
+          await saveStorageData(storageData);
+
           return presets;
         }
       }
@@ -109,8 +117,8 @@ export const brushLibraryService = {
       console.warn('Failed to fetch brush presets from API:', error);
     }
 
-    // Fallback to localStorage
-    return getStorageData().presets;
+    const storageData = await getStorageData();
+    return storageData.presets;
   },
 
   /**
@@ -123,14 +131,20 @@ export const brushLibraryService = {
         const response = await fetch('/api/user/brush-presets/recent');
         if (response.ok) {
           const data = await response.json();
-          return data.recentlyUsed || [];
+          const recentlyUsed = data.recentlyUsed || [];
+          const storageData = await getStorageData();
+          storageData.recentlyUsed = recentlyUsed;
+          storageData.lastUpdated = new Date().toISOString();
+          await saveStorageData(storageData);
+          return recentlyUsed;
         }
       }
     } catch (error) {
       console.warn('Failed to fetch recently used brushes:', error);
     }
 
-    return getStorageData().recentlyUsed;
+    const storageData = await getStorageData();
+    return storageData.recentlyUsed;
   },
 
   /**
@@ -144,8 +158,7 @@ export const brushLibraryService = {
       createdAt: preset.createdAt || now,
     };
 
-    // Save to localStorage first
-    const storageData = getStorageData();
+    const storageData = await getStorageData();
     const existingIndex = storageData.presets.findIndex(p => p.id === preset.id);
     if (existingIndex >= 0) {
       storageData.presets[existingIndex] = presetToSave;
@@ -153,7 +166,7 @@ export const brushLibraryService = {
       storageData.presets.push(presetToSave);
     }
     storageData.lastUpdated = now;
-    saveStorageData(storageData);
+    await saveStorageData(storageData);
 
     // Try to save to database
     try {
@@ -165,7 +178,16 @@ export const brushLibraryService = {
         });
         if (response.ok) {
           const saved = await response.json();
-          return { ...presetToSave, ...saved };
+          const merged = { ...presetToSave, ...saved };
+          if (merged.id !== preset.id) {
+            const refreshed = await getStorageData();
+            const index = refreshed.presets.findIndex(p => p.id === preset.id);
+            if (index >= 0) {
+              refreshed.presets[index] = merged;
+              await saveStorageData(refreshed);
+            }
+          }
+          return merged;
         }
       }
     } catch (error) {
@@ -179,12 +201,11 @@ export const brushLibraryService = {
    * Delete a brush preset
    */
   async deletePreset(presetId: string): Promise<void> {
-    // Remove from localStorage
-    const storageData = getStorageData();
+    const storageData = await getStorageData();
     storageData.presets = storageData.presets.filter(p => p.id !== presetId);
     storageData.recentlyUsed = storageData.recentlyUsed.filter(id => id !== presetId);
     storageData.lastUpdated = new Date().toISOString();
-    saveStorageData(storageData);
+    await saveStorageData(storageData);
 
     // Try to delete from database
     try {
@@ -200,14 +221,14 @@ export const brushLibraryService = {
    * Mark a brush as recently used
    */
   async markRecentlyUsed(presetId: string, maxRecent: number = 10): Promise<void> {
-    const storageData = getStorageData();
+    const storageData = await getStorageData();
     
     // Remove if exists, add to front
     storageData.recentlyUsed = storageData.recentlyUsed.filter(id => id !== presetId);
     storageData.recentlyUsed.unshift(presetId);
     storageData.recentlyUsed = storageData.recentlyUsed.slice(0, maxRecent);
     storageData.lastUpdated = new Date().toISOString();
-    saveStorageData(storageData);
+    await saveStorageData(storageData);
 
     // Try to sync to database
     try {

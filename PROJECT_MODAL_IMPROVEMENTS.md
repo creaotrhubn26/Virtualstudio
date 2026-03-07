@@ -185,7 +185,7 @@ export const PROJECT_CREATION_DEFAULTS = {
 } as const;
 ```
 
-### 8. Casting Planner spesifikk forbedring (Høy prioritet)
+### 8. Virtual Studio spesifikk forbedring (Høy prioritet)
 
 **Problem:**
 - Mye conditional rendering med `!isCastingPlanner`
@@ -193,7 +193,7 @@ export const PROJECT_CREATION_DEFAULTS = {
 
 **Løsning:**
 ```typescript
-// Lag separat Casting Planner versjon eller bedre abstraksjon
+// Lag separat Virtual Studio versjon eller bedre abstraksjon
 const ProjectCreationForm = ({ mode, ...props }) => {
   if (mode === 'casting') {
     return <CastingProjectCreationForm {...props} />;

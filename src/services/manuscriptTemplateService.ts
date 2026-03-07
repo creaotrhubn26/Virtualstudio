@@ -13,12 +13,39 @@ import {
   STRUCTURE_TEMPLATES,
   StructureTemplate
 } from '../core/models/manuscriptTemplates';
+import settingsService, { getCurrentUserId } from './settingsService';
 
 const STORAGE_KEY = 'virtualStudio_manuscriptTemplates';
 const RECENT_KEY = 'virtualStudio_recentTemplates';
 const MAX_RECENT = 10;
 
 class ManuscriptTemplateService {
+  private userTemplates: Template[] = [];
+  private recentTemplates: Template[] = [];
+
+  constructor() {
+    void this.hydrateFromDb();
+  }
+
+  private async hydrateFromDb(): Promise<void> {
+    if (typeof window === 'undefined') return;
+    try {
+      const userId = getCurrentUserId();
+      const [templates, recents] = await Promise.all([
+        settingsService.getSetting<Template[]>(STORAGE_KEY, { userId }),
+        settingsService.getSetting<Template[]>(RECENT_KEY, { userId }),
+      ]);
+
+      if (templates) {
+        this.userTemplates = templates;
+      }
+      if (recents) {
+        this.recentTemplates = recents;
+      }
+    } catch {
+      // Ignore hydration errors
+    }
+  }
   
   /**
    * Get all available templates
@@ -182,13 +209,7 @@ class ManuscriptTemplateService {
    * Get user templates from storage
    */
   private getUserTemplates(): Template[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch (error) {
-      console.error('Error loading user templates:', error);
-      return [];
-    }
+    return this.userTemplates;
   }
   
   /**
@@ -196,7 +217,8 @@ class ManuscriptTemplateService {
    */
   private saveUserTemplates(templates: Template[]): void {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
+      this.userTemplates = templates;
+      void settingsService.setSetting(STORAGE_KEY, templates, { userId: getCurrentUserId() });
     } catch (error) {
       console.error('Error saving user templates:', error);
     }
@@ -233,13 +255,7 @@ class ManuscriptTemplateService {
    * Get recently used templates
    */
   private getRecentTemplates(): Template[] {
-    try {
-      const stored = localStorage.getItem(RECENT_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch (error) {
-      console.error('Error loading recent templates:', error);
-      return [];
-    }
+    return this.recentTemplates;
   }
   
   /**
@@ -247,7 +263,8 @@ class ManuscriptTemplateService {
    */
   private saveRecentTemplates(templates: Template[]): void {
     try {
-      localStorage.setItem(RECENT_KEY, JSON.stringify(templates));
+      this.recentTemplates = templates;
+      void settingsService.setSetting(RECENT_KEY, templates, { userId: getCurrentUserId() });
     } catch (error) {
       console.error('Error saving recent templates:', error);
     }

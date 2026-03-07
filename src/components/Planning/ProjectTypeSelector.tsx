@@ -80,7 +80,7 @@ export const ProjectTypeSelector: React.FC<ProjectTypeSelectorProps> = ({
             );
           })}
 
-          {/* Dynamic custom types - Hidden in Casting Planner */}
+          {/* Dynamic custom types - Hidden in Virtual Studio */}
           {!isCastingPlanner && customTypes.filter((t) => !(t as any).isGlobal).length > 0 && (
             <MenuItem disabled sx={{ opacity: 0.6, fontWeight: 600 }}>
               — Custom Types —

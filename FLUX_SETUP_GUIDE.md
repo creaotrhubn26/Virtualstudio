@@ -187,7 +187,7 @@ Når FLUX er satt opp og testet:
 
 Du kan nå:
 - Generere storyboard frames fra tekstbeskrivelser
-- Bruke shot descriptions fra casting planner
+- Bruke shot descriptions fra virtual studio
 - Automatisk generere frames basert på shot lists
 
 ## Performance Tips

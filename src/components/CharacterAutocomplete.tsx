@@ -24,6 +24,7 @@ import {
   Star as StarIcon,
   TrendingUp as FrequentIcon,
 } from '@mui/icons-material';
+import settingsService, { getCurrentUserId } from '../services/settingsService';
 
 interface CharacterAutocompleteProps {
   characters: string[];
@@ -348,34 +349,31 @@ export const useCharacterAutocomplete = (characters: string[]) => {
   const [recentCharacters, setRecentCharacters] = useState<string[]>([]);
   const [characterCounts, setCharacterCounts] = useState<Map<string, number>>(new Map());
 
-  // Load from localStorage
+  // Load from settings cache
   useEffect(() => {
-    const stored = localStorage.getItem('screenplay_recent_characters');
-    if (stored) {
-      try {
-        setRecentCharacters(JSON.parse(stored));
-      } catch {
-        // Ignore parse errors
+    const loadData = async () => {
+      const resolvedUserId = getCurrentUserId();
+      const storedRecent = await settingsService.getSetting<string[]>('screenplay_recent_characters', { userId: resolvedUserId });
+      if (storedRecent) {
+        setRecentCharacters(storedRecent);
       }
-    }
-    
-    const counts = localStorage.getItem('screenplay_character_counts');
-    if (counts) {
-      try {
-        setCharacterCounts(new Map(Object.entries(JSON.parse(counts))));
-      } catch {
-        // Ignore parse errors
+
+      const storedCounts = await settingsService.getSetting<Record<string, number>>('screenplay_character_counts', { userId: resolvedUserId });
+      if (storedCounts) {
+        setCharacterCounts(new Map(Object.entries(storedCounts)));
       }
-    }
+    };
+    void loadData();
   }, []);
 
   // Track character usage
   const trackCharacterUsage = (name: string) => {
+    const resolvedUserId = getCurrentUserId();
     // Update recent
     setRecentCharacters(prev => {
       const filtered = prev.filter(c => c !== name);
       const updated = [name, ...filtered].slice(0, 10);
-      localStorage.setItem('screenplay_recent_characters', JSON.stringify(updated));
+      void settingsService.setSetting('screenplay_recent_characters', updated, { userId: resolvedUserId });
       return updated;
     });
     
@@ -383,8 +381,7 @@ export const useCharacterAutocomplete = (characters: string[]) => {
     setCharacterCounts(prev => {
       const newMap = new Map(prev);
       newMap.set(name, (newMap.get(name) || 0) + 1);
-      localStorage.setItem('screenplay_character_counts', 
-        JSON.stringify(Object.fromEntries(newMap)));
+      void settingsService.setSetting('screenplay_character_counts', Object.fromEntries(newMap), { userId: resolvedUserId });
       return newMap;
     });
   };

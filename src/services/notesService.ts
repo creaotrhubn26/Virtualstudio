@@ -1,8 +1,10 @@
 /**
  * Notes Service
  * 
- * Provides database persistence for notes with localStorage fallback.
+ * Provides database persistence for notes with settings-based fallback.
  */
+
+import { settingsService } from './settingsService';
 
 export interface Note {
   id: string;
@@ -16,58 +18,15 @@ export interface Note {
   updatedAt?: string;
 }
 
-interface StoredNotes {
-  notes: Note[];
-  lastUpdated: string;
-}
+const SETTINGS_NAMESPACE = 'virtualStudio_notes';
 
-const STORAGE_KEY = 'notes-data';
-
-// Database availability cache
-let dbAvailable: boolean | null = null;
-
-async function checkDatabaseAvailability(): Promise<boolean> {
-  if (dbAvailable !== null) {
-    return dbAvailable;
-  }
-  
+const cacheNotes = async (notes: Note[]) => {
   try {
-    const response = await fetch('/api/casting/health');
-    const result = await response.json();
-    dbAvailable = result.status === 'healthy';
-    return dbAvailable;
-  } catch (error) {
-    console.error('Database not available:', error);
-    dbAvailable = false;
-    return false;
+    await settingsService.setSetting(SETTINGS_NAMESPACE, notes);
+  } catch {
+    // Ignore cache failures
   }
-}
-
-function getStorageData(): StoredNotes {
-  try {
-    // Check legacy key first
-    const legacyData = localStorage.getItem('virtualstudio_notes');
-    if (legacyData) {
-      const parsed = JSON.parse(legacyData);
-      localStorage.removeItem('virtualstudio_notes');
-      return { notes: parsed, lastUpdated: new Date().toISOString() };
-    }
-    
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : { notes: [], lastUpdated: '' };
-  } catch (error) {
-    console.error('Error reading notes from localStorage:', error);
-    return { notes: [], lastUpdated: '' };
-  }
-}
-
-function saveStorageData(data: StoredNotes): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch (error) {
-    console.error('Error saving notes to localStorage:', error);
-  }
-}
+};
 
 export const notesService = {
   /**
@@ -76,36 +35,31 @@ export const notesService = {
   async getNotes(options?: { projectId?: string; sceneId?: string }): Promise<Note[]> {
     // Try database first
     try {
-      if (await checkDatabaseAvailability()) {
-        const params = new URLSearchParams();
-        if (options?.projectId) params.set('projectId', options.projectId);
-        if (options?.sceneId) params.set('sceneId', options.sceneId);
-        
-        const response = await fetch(`/api/notes?${params.toString()}`);
-        if (response.ok) {
-          const data = await response.json();
-          const notes = (data.notes || data || []).map((n: any) => ({
-            id: n.id,
-            title: n.title,
-            content: n.content,
-            category: n.category,
-            sceneId: n.sceneId || n.scene_id,
-            projectId: n.projectId || n.project_id,
-            timestamp: n.timestamp || new Date(n.createdAt || n.created_at).getTime(),
-          }));
-          
-          // Cache to localStorage
-          saveStorageData({ notes, lastUpdated: new Date().toISOString() });
-          return notes;
-        }
+      const params = new URLSearchParams();
+      if (options?.projectId) params.set('projectId', options.projectId);
+      if (options?.sceneId) params.set('sceneId', options.sceneId);
+
+      const response = await fetch(`/api/notes?${params.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        const notes = (data.notes || data || []).map((n: any) => ({
+          id: n.id,
+          title: n.title,
+          content: n.content,
+          category: n.category,
+          sceneId: n.sceneId || n.scene_id,
+          projectId: n.projectId || n.project_id,
+          timestamp: n.timestamp || new Date(n.createdAt || n.created_at).getTime(),
+        }));
+
+        await cacheNotes(notes);
+        return notes;
       }
     } catch (error) {
-      console.warn('Failed to fetch notes from API, using localStorage:', error);
+      console.warn('Failed to fetch notes from API, using settings cache:', error);
     }
 
-    // Fallback to localStorage
-    const storageData = getStorageData();
-    let notes = storageData.notes || [];
+    let notes = (await settingsService.getSetting<Note[]>(SETTINGS_NAMESPACE)) || [];
     
     // Filter if options provided
     if (options?.projectId) {
@@ -129,29 +83,25 @@ export const notesService = {
       timestamp: note.timestamp || Date.now(),
     };
 
-    // Save to localStorage first for immediate access
-    const storageData = getStorageData();
-    const existingIndex = storageData.notes.findIndex(n => n.id === note.id);
+    const cached = (await settingsService.getSetting<Note[]>(SETTINGS_NAMESPACE)) || [];
+    const existingIndex = cached.findIndex(n => n.id === note.id);
     if (existingIndex >= 0) {
-      storageData.notes[existingIndex] = noteToSave;
+      cached[existingIndex] = noteToSave;
     } else {
-      storageData.notes.push(noteToSave);
+      cached.push(noteToSave);
     }
-    storageData.lastUpdated = now;
-    saveStorageData(storageData);
+    await cacheNotes(cached);
 
     // Try to save to database
     try {
-      if (await checkDatabaseAvailability()) {
-        const response = await fetch('/api/notes', {
-          method: existingIndex >= 0 ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(noteToSave),
-        });
-        if (response.ok) {
-          const saved = await response.json();
-          return { ...noteToSave, ...saved };
-        }
+      const response = await fetch('/api/notes', {
+        method: existingIndex >= 0 ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(noteToSave),
+      });
+      if (response.ok) {
+        const saved = await response.json();
+        return { ...noteToSave, ...saved };
       }
     } catch (error) {
       console.warn('Failed to save note to database:', error);
@@ -164,17 +114,13 @@ export const notesService = {
    * Delete a note
    */
   async deleteNote(noteId: string): Promise<void> {
-    // Remove from localStorage
-    const storageData = getStorageData();
-    storageData.notes = storageData.notes.filter(n => n.id !== noteId);
-    storageData.lastUpdated = new Date().toISOString();
-    saveStorageData(storageData);
+    const cached = (await settingsService.getSetting<Note[]>(SETTINGS_NAMESPACE)) || [];
+    const filtered = cached.filter(n => n.id !== noteId);
+    await cacheNotes(filtered);
 
     // Try to delete from database
     try {
-      if (await checkDatabaseAvailability()) {
-        await fetch(`/api/notes/${noteId}`, { method: 'DELETE' });
-      }
+      await fetch(`/api/notes/${noteId}`, { method: 'DELETE' });
     } catch (error) {
       console.warn('Failed to delete note from database:', error);
     }
@@ -191,18 +137,15 @@ export const notesService = {
       timestamp: n.timestamp || Date.now(),
     }));
 
-    // Save to localStorage
-    saveStorageData({ notes: notesToSave, lastUpdated: now });
+    await cacheNotes(notesToSave);
 
     // Try to sync to database
     try {
-      if (await checkDatabaseAvailability()) {
-        await fetch('/api/notes/batch', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ notes: notesToSave }),
-        });
-      }
+      await fetch('/api/notes/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: notesToSave }),
+      });
     } catch (error) {
       console.warn('Failed to save notes to database:', error);
     }

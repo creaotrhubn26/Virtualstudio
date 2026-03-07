@@ -2445,7 +2445,7 @@ export default function SplitSheetEditor({
             {saveMutation.error && typeof saveMutation.error === 'object' &&'details' in saveMutation.error && (
               <Box sx={{ mt: 1 }}>
                 <Typography variant="caption">
-                  {(saveMutation.error as any).details?.message}
+                  {(saveMutation.error as { details?: { message?: string } }).details?.message}
                 </Typography>
               </Box>
             )}

@@ -1,4 +1,40 @@
 import { SceneComposition, SceneComment, ScenePermissions } from '../core/models/sceneComposer';
+import settingsService, { getCurrentUserId } from './settingsService';
+
+const COMMENTS_KEY = 'virtualStudio_sceneComments';
+const REVIEWS_KEY = 'virtualStudio_sceneReviews';
+const PERMISSIONS_KEY = 'virtualStudio_scenePermissions';
+const ACTIVITY_KEY = 'virtualStudio_activityLog';
+const NOTIFICATIONS_KEY = 'virtualStudio_notifications';
+let cachedComments: SceneComment[] = [];
+let cachedReviews: SceneReview[] = [];
+let cachedPermissions: Record<string, ScenePermissions> = {};
+let cachedActivity: ActivityLogEntry[] = [];
+let cachedNotifications: Notification[] = [];
+
+const hydrateCollaborationFromDb = async (): Promise<void> => {
+  if (typeof window === 'undefined') return;
+  try {
+    const userId = getCurrentUserId();
+    const [comments, reviews, permissions, activity, notifications] = await Promise.all([
+      settingsService.getSetting<SceneComment[]>(COMMENTS_KEY, { userId }),
+      settingsService.getSetting<SceneReview[]>(REVIEWS_KEY, { userId }),
+      settingsService.getSetting<Record<string, ScenePermissions>>(PERMISSIONS_KEY, { userId }),
+      settingsService.getSetting<ActivityLogEntry[]>(ACTIVITY_KEY, { userId }),
+      settingsService.getSetting<Notification[]>(NOTIFICATIONS_KEY, { userId }),
+    ]);
+
+    if (comments) cachedComments = comments;
+    if (reviews) cachedReviews = reviews;
+    if (permissions) cachedPermissions = permissions;
+    if (activity) cachedActivity = activity;
+    if (notifications) cachedNotifications = notifications;
+  } catch {
+    // Ignore hydration errors
+  }
+};
+
+void hydrateCollaborationFromDb();
 
 export interface SceneReview {
   id: string;
@@ -53,15 +89,9 @@ export const sceneCollaborationService = {
    * Get comments for scene
    */
   getComments(sceneId: string, elementId?: string): SceneComment[] {
-    try {
-      const stored = localStorage.getItem('virtualStudio_sceneComments');
-      const allComments: SceneComment[] = stored ? JSON.parse(stored) : [];
-      return allComments.filter(c => 
-        c.sceneId === sceneId && (!elementId || c.elementId === elementId)
-      );
-    } catch {
-      return [];
-    }
+    return cachedComments.filter(c => 
+      c.sceneId === sceneId && (!elementId || c.elementId === elementId)
+    );
   },
 
   /**
@@ -69,10 +99,8 @@ export const sceneCollaborationService = {
    */
   saveComment(comment: SceneComment): void {
     try {
-      const stored = localStorage.getItem('virtualStudio_sceneComments');
-      const allComments: SceneComment[] = stored ? JSON.parse(stored) : [];
-      allComments.push(comment);
-      localStorage.setItem('virtualStudio_sceneComments', JSON.stringify(allComments));
+      cachedComments.push(comment);
+      void settingsService.setSetting(COMMENTS_KEY, cachedComments, { userId: getCurrentUserId() });
     } catch (error) {
       console.error('Error saving comment:', error);
     }
@@ -98,13 +126,7 @@ export const sceneCollaborationService = {
    * Get reviews for scene
    */
   getReviews(sceneId: string): SceneReview[] {
-    try {
-      const stored = localStorage.getItem('virtualStudio_sceneReviews');
-      const allReviews: SceneReview[] = stored ? JSON.parse(stored) : [];
-      return allReviews.filter(r => r.sceneId === sceneId);
-    } catch {
-      return [];
-    }
+    return cachedReviews.filter(r => r.sceneId === sceneId);
   },
 
   /**
@@ -112,17 +134,15 @@ export const sceneCollaborationService = {
    */
   saveReview(review: SceneReview): void {
     try {
-      const stored = localStorage.getItem('virtualStudio_sceneReviews');
-      const allReviews: SceneReview[] = stored ? JSON.parse(stored) : [];
-      const existingIndex = allReviews.findIndex(r => r.id === review.id);
+      const existingIndex = cachedReviews.findIndex(r => r.id === review.id);
       
       if (existingIndex >= 0) {
-        allReviews[existingIndex] = { ...review, updatedAt: new Date().toISOString() };
+        cachedReviews[existingIndex] = { ...review, updatedAt: new Date().toISOString() };
       } else {
-        allReviews.push(review);
+        cachedReviews.push(review);
       }
       
-      localStorage.setItem('virtualStudio_sceneReviews', JSON.stringify(allReviews));
+      void settingsService.setSetting(REVIEWS_KEY, cachedReviews, { userId: getCurrentUserId() });
     } catch (error) {
       console.error('Error saving review:', error);
     }
@@ -133,10 +153,8 @@ export const sceneCollaborationService = {
    */
   setPermissions(sceneId: string, permissions: ScenePermissions): void {
     try {
-      const stored = localStorage.getItem('virtualStudio_scenePermissions');
-      const allPermissions: Record<string, ScenePermissions> = stored ? JSON.parse(stored) : {};
-      allPermissions[sceneId] = permissions;
-      localStorage.setItem('virtualStudio_scenePermissions', JSON.stringify(allPermissions));
+      cachedPermissions[sceneId] = permissions;
+      void settingsService.setSetting(PERMISSIONS_KEY, cachedPermissions, { userId: getCurrentUserId() });
     } catch (error) {
       console.error('Error saving permissions:', error);
     }
@@ -146,13 +164,7 @@ export const sceneCollaborationService = {
    * Get scene permissions
    */
   getPermissions(sceneId: string): ScenePermissions | null {
-    try {
-      const stored = localStorage.getItem('virtualStudio_scenePermissions');
-      const allPermissions: Record<string, ScenePermissions> = stored ? JSON.parse(stored) : {};
-      return allPermissions[sceneId] || null;
-    } catch {
-      return null;
-    }
+    return cachedPermissions[sceneId] || null;
   },
 
   /**
@@ -170,16 +182,14 @@ export const sceneCollaborationService = {
     };
 
     try {
-      const stored = localStorage.getItem('virtualStudio_activityLog');
-      const log: ActivityLogEntry[] = stored ? JSON.parse(stored) : [];
-      log.push(entry);
+      cachedActivity.push(entry);
       
       // Keep only last 1000 entries
-      if (log.length > 1000) {
-        log.shift();
+      if (cachedActivity.length > 1000) {
+        cachedActivity.shift();
       }
       
-      localStorage.setItem('virtualStudio_activityLog', JSON.stringify(log));
+      void settingsService.setSetting(ACTIVITY_KEY, cachedActivity, { userId: getCurrentUserId() });
     } catch (error) {
       console.error('Error logging activity:', error);
     }
@@ -189,16 +199,10 @@ export const sceneCollaborationService = {
    * Get activity log for scene
    */
   getActivityLog(sceneId: string, limit: number = 50): ActivityLogEntry[] {
-    try {
-      const stored = localStorage.getItem('virtualStudio_activityLog');
-      const log: ActivityLogEntry[] = stored ? JSON.parse(stored) : [];
-      return log
-        .filter(entry => entry.sceneId === sceneId)
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-        .slice(0, limit);
-    } catch {
-      return [];
-    }
+    return cachedActivity
+      .filter(entry => entry.sceneId === sceneId)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, limit);
   },
 
   /**
@@ -220,15 +224,9 @@ export const sceneCollaborationService = {
    * Get notifications for user
    */
   getNotifications(userId: string, unreadOnly: boolean = false): Notification[] {
-    try {
-      const stored = localStorage.getItem('virtualStudio_notifications');
-      const allNotifications: Notification[] = stored ? JSON.parse(stored) : [];
-      return allNotifications
-        .filter(n => n.userId === userId && (!unreadOnly || !n.read))
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    } catch {
-      return [];
-    }
+    return cachedNotifications
+      .filter(n => n.userId === userId && (!unreadOnly || !n.read))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
 
   /**
@@ -236,12 +234,10 @@ export const sceneCollaborationService = {
    */
   markAsRead(notificationId: string): void {
     try {
-      const stored = localStorage.getItem('virtualStudio_notifications');
-      const allNotifications: Notification[] = stored ? JSON.parse(stored) : [];
-      const notification = allNotifications.find(n => n.id === notificationId);
+      const notification = cachedNotifications.find(n => n.id === notificationId);
       if (notification) {
         notification.read = true;
-        localStorage.setItem('virtualStudio_notifications', JSON.stringify(allNotifications));
+        void settingsService.setSetting(NOTIFICATIONS_KEY, cachedNotifications, { userId: getCurrentUserId() });
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -253,16 +249,14 @@ export const sceneCollaborationService = {
    */
   saveNotification(notification: Notification): void {
     try {
-      const stored = localStorage.getItem('virtualStudio_notifications');
-      const allNotifications: Notification[] = stored ? JSON.parse(stored) : [];
-      allNotifications.push(notification);
+      cachedNotifications.push(notification);
       
       // Keep only last 500 notifications
-      if (allNotifications.length > 500) {
-        allNotifications.shift();
+      if (cachedNotifications.length > 500) {
+        cachedNotifications.shift();
       }
       
-      localStorage.setItem('virtualStudio_notifications', JSON.stringify(allNotifications));
+      void settingsService.setSetting(NOTIFICATIONS_KEY, cachedNotifications, { userId: getCurrentUserId() });
     } catch (error) {
       console.error('Error saving notification:', error);
     }

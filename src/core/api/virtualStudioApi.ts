@@ -1,4 +1,5 @@
 import virtualStudioApi from '../../services/virtualStudioApiService';
+import settingsService, { getCurrentUserId } from '../../services/settingsService';
 
 export interface RecentItem {
   id: string;
@@ -13,28 +14,22 @@ export interface PreferencesData {
 
 const PREFERENCES_KEY = 'virtualStudio_preferences';
 
-const readPreferences = (): PreferencesData => {
-  try {
-    const stored = localStorage.getItem(PREFERENCES_KEY);
-    if (!stored) {
-      return { favorites: {}, recent: {} };
-    }
-    const parsed = JSON.parse(stored) as PreferencesData;
+const readPreferences = async (): Promise<PreferencesData> => {
+  const userId = getCurrentUserId();
+  const remote = await settingsService.getSetting<PreferencesData>(PREFERENCES_KEY, { userId });
+  if (remote) {
     return {
-      favorites: parsed.favorites || {},
-      recent: parsed.recent || {},
+      favorites: remote.favorites || {},
+      recent: remote.recent || {},
     };
-  } catch {
-    return { favorites: {}, recent: {} };
   }
+
+  return { favorites: {}, recent: {} };
 };
 
-const writePreferences = (data: PreferencesData) => {
-  try {
-    localStorage.setItem(PREFERENCES_KEY, JSON.stringify(data));
-  } catch {
-    // Ignore storage errors
-  }
+const writePreferences = async (data: PreferencesData) => {
+  const userId = getCurrentUserId();
+  await settingsService.setSetting(PREFERENCES_KEY, data, { userId });
 };
 
 const tryRequest = async <T>(endpoint: string, options: RequestInit): Promise<T | null> => {
@@ -49,25 +44,27 @@ const tryRequest = async <T>(endpoint: string, options: RequestInit): Promise<T 
 
 export const preferencesApi = {
   async get(): Promise<PreferencesData> {
-    const remote = await tryRequest<PreferencesData>('/api/studio/preferences', {
+    const userId = getCurrentUserId();
+    const remote = await tryRequest<PreferencesData>(`/api/studio/preferences?user_id=${encodeURIComponent(userId)}` , {
       method: 'GET',
       credentials: 'include',
     });
 
     if (remote) {
-      writePreferences(remote);
+      void writePreferences(remote);
       return remote;
     }
 
-    return readPreferences();
+    return await readPreferences();
   },
 
   async updateFavorites(section: string, favorites: string[]): Promise<void> {
-    const data = readPreferences();
+    const userId = getCurrentUserId();
+    const data = await readPreferences();
     data.favorites[section] = favorites;
-    writePreferences(data);
+    await writePreferences(data);
 
-    await tryRequest('/api/studio/preferences/favorites', {
+    await tryRequest(`/api/studio/preferences/favorites?user_id=${encodeURIComponent(userId)}`, {
       method: 'PUT',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -76,7 +73,8 @@ export const preferencesApi = {
   },
 
   async addRecent(section: string, item: { id: string; name: string }): Promise<void> {
-    const data = readPreferences();
+    const userId = getCurrentUserId();
+    const data = await readPreferences();
     const updated: RecentItem = {
       id: item.id,
       name: item.name,
@@ -85,9 +83,9 @@ export const preferencesApi = {
     const existing = data.recent[section] || [];
     const filtered = existing.filter((entry) => entry.id !== item.id);
     data.recent[section] = [updated, ...filtered].slice(0, 10);
-    writePreferences(data);
+    await writePreferences(data);
 
-    await tryRequest('/api/studio/preferences/recent', {
+    await tryRequest(`/api/studio/preferences/recent?user_id=${encodeURIComponent(userId)}`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -111,39 +109,41 @@ export interface SnapshotRecord extends SnapshotPayload {
 
 const snapshotKey = (sceneId: string) => `virtualStudio_snapshots_${sceneId}`;
 
-const readSnapshots = (sceneId: string): SnapshotRecord[] => {
-  try {
-    const stored = localStorage.getItem(snapshotKey(sceneId));
-    return stored ? (JSON.parse(stored) as SnapshotRecord[]) : [];
-  } catch {
-    return [];
-  }
+const SNAPSHOT_NAMESPACE = 'virtualStudio_snapshots';
+
+const readSnapshots = async (sceneId: string): Promise<SnapshotRecord[]> => {
+  const userId = getCurrentUserId();
+  const remote = await settingsService.getSetting<SnapshotRecord[]>(SNAPSHOT_NAMESPACE, { userId, projectId: sceneId });
+  if (remote) return remote;
+
+  return [];
 };
 
-const writeSnapshots = (sceneId: string, snapshots: SnapshotRecord[]) => {
-  try {
-    localStorage.setItem(snapshotKey(sceneId), JSON.stringify(snapshots));
-  } catch {
-    // Ignore storage errors
-  }
+const writeSnapshots = async (sceneId: string, snapshots: SnapshotRecord[]) => {
+  await settingsService.setSetting(SNAPSHOT_NAMESPACE, snapshots, { userId: getCurrentUserId(), projectId: sceneId });
 };
 
 export const snapshotsApi = {
   async list(sceneId: string): Promise<SnapshotRecord[]> {
-    const remote = await tryRequest<{ snapshots: SnapshotRecord[] }>(`/api/studio/scenes/${sceneId}/snapshots`, {
+    const userId = getCurrentUserId();
+    const remote = await tryRequest<{ snapshots: SnapshotRecord[] }>(
+      `/api/studio/scenes/${sceneId}/snapshots?user_id=${encodeURIComponent(userId)}`,
+      {
       method: 'GET',
       credentials: 'include',
-    });
+      }
+    );
 
     if (remote?.snapshots) {
-      writeSnapshots(sceneId, remote.snapshots);
+      await writeSnapshots(sceneId, remote.snapshots);
       return remote.snapshots;
     }
 
-    return readSnapshots(sceneId);
+    return await readSnapshots(sceneId);
   },
 
   async create(payload: SnapshotPayload): Promise<SnapshotRecord> {
+    const userId = getCurrentUserId();
     const createdAt = new Date().toISOString();
     const record: SnapshotRecord = {
       ...payload,
@@ -151,41 +151,36 @@ export const snapshotsApi = {
       createdAt,
     };
 
-    const remote = await tryRequest<{ snapshot: SnapshotRecord }>('/api/studio/snapshots', {
+    const remote = await tryRequest<{ snapshot: SnapshotRecord }>(
+      `/api/studio/snapshots?user_id=${encodeURIComponent(userId)}`,
+      {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    });
+      }
+    );
 
     if (remote?.snapshot) {
       record.id = remote.snapshot.id;
       record.createdAt = remote.snapshot.createdAt || record.createdAt;
     }
 
-    const stored = readSnapshots(payload.sceneId);
-    writeSnapshots(payload.sceneId, [record, ...stored].slice(0, 10));
+    const stored = await readSnapshots(payload.sceneId);
+    await writeSnapshots(payload.sceneId, [record, ...stored].slice(0, 10));
 
     return record;
   },
 
-  async delete(snapshotId: string): Promise<void> {
-    await tryRequest(`/api/studio/snapshots/${snapshotId}`, {
+  async delete(snapshotId: string, sceneId: string): Promise<void> {
+    const userId = getCurrentUserId();
+    await tryRequest(`/api/studio/snapshots/${snapshotId}?sceneId=${encodeURIComponent(sceneId)}&user_id=${encodeURIComponent(userId)}`, {
       method: 'DELETE',
       credentials: 'include',
     });
 
-    Object.keys(localStorage)
-      .filter((key) => key.startsWith('virtualStudio_snapshots_'))
-      .forEach((key) => {
-        try {
-          const sceneId = key.replace('virtualStudio_snapshots_', '');
-          const snapshots = readSnapshots(sceneId).filter((snapshot) => snapshot.id !== snapshotId);
-          writeSnapshots(sceneId, snapshots);
-        } catch {
-          // Ignore cleanup errors
-        }
-      });
+    const stored = await readSnapshots(sceneId);
+    await writeSnapshots(sceneId, stored.filter((snapshot) => snapshot.id !== snapshotId));
   },
 };
 

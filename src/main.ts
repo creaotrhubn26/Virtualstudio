@@ -35,6 +35,8 @@ import { useCollaborationStore } from './services/collaborationService';
 import { AvatarMaterialService } from './services/avatarMaterialService';
 import { getAvatarById } from './data/avatarDefinitions';
 import { resolveModelPath, resolveAudioPath, resolveImagePath, resolveAssetPath } from './config/assetConfig';
+import settingsService, { getCurrentUserId } from './services/settingsService';
+import { notesService } from './services/notesService';
 
 declare global {
   interface Window {
@@ -81,7 +83,7 @@ declare global {
         window.dispatchEvent(new CustomEvent('toggle-ai-assistant-panel'));
       }
       if (castingPlannerPanel && castingPlannerPanel.classList.contains('open')) {
-        window.dispatchEvent(new CustomEvent('toggle-plugin-casting-planner-panel'));
+        window.dispatchEvent(new CustomEvent('toggle-plugin-virtual-studio-panel'));
       }
 
       panel.classList.add('open');
@@ -5779,6 +5781,8 @@ class VirtualStudio {
     // COLLAPSIBLE OVERLAY SECTIONS
     // ============================================
     const setupCollapsibleSections = () => {
+      const overlayUserId = getCurrentUserId();
+      const collapsedSections: Record<string, boolean> = {};
       // Individual section headers
       const sectionHeaders = overlayPanel.querySelectorAll('.overlay-section-header');
       sectionHeaders.forEach(header => {
@@ -5790,26 +5794,34 @@ class VirtualStudio {
           if (section) {
             section.classList.toggle('collapsed');
             
-            // Save state to localStorage
+            // Save state to settings
             const sectionId = section.querySelector('span:not(.material-icons-outlined)')?.textContent?.trim();
             if (sectionId) {
-              const collapsedSections = JSON.parse(localStorage.getItem('overlayCollapsedSections') || '{}');
               collapsedSections[sectionId] = section.classList.contains('collapsed');
-              localStorage.setItem('overlayCollapsedSections', JSON.stringify(collapsedSections));
+              void settingsService.setSetting('overlayCollapsedSections', collapsedSections, { userId: overlayUserId });
             }
           }
         });
       });
       
-      // Restore collapsed state from localStorage
-      const collapsedSections = JSON.parse(localStorage.getItem('overlayCollapsedSections') || '{}');
-      sectionHeaders.forEach(header => {
-        const section = header.closest('.overlay-section');
-        const sectionId = section?.querySelector('span:not(.material-icons-outlined)')?.textContent?.trim();
-        if (sectionId && collapsedSections[sectionId]) {
-          section?.classList.add('collapsed');
-        }
-      });
+      // Restore collapsed state from settings cache
+      const applyCollapsedSections = (collapsedSections: Record<string, boolean>) => {
+        sectionHeaders.forEach(header => {
+          const section = header.closest('.overlay-section');
+          const sectionId = section?.querySelector('span:not(.material-icons-outlined)')?.textContent?.trim();
+          if (sectionId && collapsedSections[sectionId]) {
+            section?.classList.add('collapsed');
+          }
+        });
+      };
+
+      void settingsService.getSetting<Record<string, boolean>>('overlayCollapsedSections', { userId: overlayUserId })
+        .then((remote) => {
+          if (remote) {
+            Object.assign(collapsedSections, remote);
+            applyCollapsedSections(remote);
+          }
+        });
     };
     setupCollapsibleSections();
     
@@ -5817,6 +5829,8 @@ class VirtualStudio {
     // COLLAPSIBLE SECTION GROUPS
     // ============================================
     const setupCollapsibleGroups = () => {
+      const overlayUserId = getCurrentUserId();
+      const collapsedGroups: Record<string, boolean> = {};
       const groupHeaders = overlayPanel.querySelectorAll('.overlay-section-group-header');
       groupHeaders.forEach(header => {
         header.addEventListener('click', () => {
@@ -5824,26 +5838,34 @@ class VirtualStudio {
           if (group) {
             group.classList.toggle('collapsed');
             
-            // Save state to localStorage
+            // Save state to settings
             const groupName = header.textContent?.trim();
             if (groupName) {
-              const collapsedGroups = JSON.parse(localStorage.getItem('overlayCollapsedGroups') || '{}');
               collapsedGroups[groupName] = group.classList.contains('collapsed');
-              localStorage.setItem('overlayCollapsedGroups', JSON.stringify(collapsedGroups));
+              void settingsService.setSetting('overlayCollapsedGroups', collapsedGroups, { userId: overlayUserId });
             }
           }
         });
       });
       
-      // Restore collapsed state from localStorage
-      const collapsedGroups = JSON.parse(localStorage.getItem('overlayCollapsedGroups') || '{}');
-      groupHeaders.forEach(header => {
-        const group = header.closest('.overlay-section-group');
-        const groupName = header.textContent?.trim();
-        if (groupName && collapsedGroups[groupName]) {
-          group?.classList.add('collapsed');
-        }
-      });
+      // Restore collapsed state from settings cache
+      const applyCollapsedGroups = (collapsedGroups: Record<string, boolean>) => {
+        groupHeaders.forEach(header => {
+          const group = header.closest('.overlay-section-group');
+          const groupName = header.textContent?.trim();
+          if (groupName && collapsedGroups[groupName]) {
+            group?.classList.add('collapsed');
+          }
+        });
+      };
+
+      void settingsService.getSetting<Record<string, boolean>>('overlayCollapsedGroups', { userId: overlayUserId })
+        .then((remote) => {
+          if (remote) {
+            Object.assign(collapsedGroups, remote);
+            applyCollapsedGroups(remote);
+          }
+        });
     };
     setupCollapsibleGroups();
     // ============================================
@@ -7332,9 +7354,9 @@ class VirtualStudio {
       }
     });
 
-    // Casting Planner panel
+    // Virtual Studio panel
     document.getElementById('castingPlannerCloseBtn')?.addEventListener('click', () => {
-      window.dispatchEvent(new CustomEvent('toggle-plugin-casting-planner-panel'));
+      window.dispatchEvent(new CustomEvent('toggle-plugin-virtual-studio-panel'));
     });
 
     document.getElementById('castingPlannerFullscreenBtn')?.addEventListener('click', () => {
@@ -7403,7 +7425,7 @@ class VirtualStudio {
           if (arrow) arrow.textContent = '+';
         }
         if (castingPanel?.classList.contains('open')) {
-          window.dispatchEvent(new CustomEvent('toggle-plugin-casting-planner-panel'));
+          window.dispatchEvent(new CustomEvent('toggle-plugin-virtual-studio-panel'));
         }
 
         helpPanel.style.display = 'flex';
@@ -8798,7 +8820,7 @@ class VirtualStudio {
     });
   }
 
-  private exportPdf(): void {
+  private async exportPdf(): Promise<void> {
     BABYLON.Tools.CreateScreenshot(
       this.engine,
       this.camera,
@@ -8821,7 +8843,7 @@ class VirtualStudio {
           shutter: '1/125'
         };
 
-        const notes = JSON.parse(localStorage.getItem('virtualstudio_notes') || '[]');
+        const notes = await notesService.getNotes();
         const notesHtml = notes.length > 0 
           ? notes.map((n: any) => `<div style="margin-bottom:8px;"><strong>${n.title}</strong><br/><span style="color:#666;">${n.content || ''}</span></div>`).join('')
           : '<p style="color:#888;">Ingen notater</p>';
@@ -21014,10 +21036,10 @@ class VirtualStudio {
             <div class="project-type-options">
               <button class="project-type-option" data-type="casting">
                 <div class="project-type-icon casting" style="background: transparent; padding: 0;">
-                  <img src="/casting-planner-logo.png" alt="Casting Planner" style="width: 56px; height: 56px; object-fit: contain; border-radius: 12px;">
+                  <img src="/creatorhub-virtual-studio-logo.svg" alt="Virtual Studio" style="width: 56px; height: 56px; object-fit: contain; border-radius: 12px;">
                 </div>
                 <div class="project-type-info">
-                  <h3>Casting Planner</h3>
+                  <h3>Virtual Studio</h3>
                   <p>Film- og TV-produksjon med roller, skuespillere, lokasjoner og tidsplaner</p>
                 </div>
                 <div class="project-type-arrow">→</div>
@@ -21109,8 +21131,8 @@ class VirtualStudio {
         dialog.close();
         
         if (type === 'casting') {
-          // Open Casting Planner with new project
-          window.dispatchEvent(new CustomEvent('toggle-plugin-casting-planner-panel'));
+          // Open Virtual Studio with new project
+          window.dispatchEvent(new CustomEvent('toggle-plugin-virtual-studio-panel'));
           window.dispatchEvent(new CustomEvent('casting-new-project'));
           this.currentProjectType = 'casting';
         } else if (type === 'studio') {
@@ -21242,8 +21264,8 @@ class VirtualStudio {
     this.currentProjectType = type;
     
     if (type === 'casting') {
-      // Open Casting Planner and load project
-      window.dispatchEvent(new CustomEvent('toggle-plugin-casting-planner-panel'));
+      // Open Virtual Studio and load project
+      window.dispatchEvent(new CustomEvent('toggle-plugin-virtual-studio-panel'));
       window.dispatchEvent(new CustomEvent('casting-load-project', { detail: { projectId } }));
     } else {
       // Load Virtual Studio project
@@ -23992,7 +24014,7 @@ window.addEventListener('DOMContentLoaded', () => {
       console.error('aiAssistantPanelRoot element not found!');
     }
 
-    // Mount Casting Planner Panel App
+    // Mount Virtual Studio Panel App
     const castingPlannerPanelRoot = document.getElementById('castingPlannerPanelRoot');
     if (castingPlannerPanelRoot) {
       const castingRoot = createRoot(castingPlannerPanelRoot);
@@ -24129,7 +24151,7 @@ window.addEventListener('DOMContentLoaded', () => {
           if (panelComponent === 'AIAssistantPanel') {
             window.dispatchEvent(new CustomEvent('toggle-ai-assistant-panel'));
           } else if (panelComponent === 'CastingPlannerPanel') {
-            window.dispatchEvent(new CustomEvent('toggle-plugin-casting-planner-panel'));
+            window.dispatchEvent(new CustomEvent('toggle-plugin-virtual-studio-panel'));
           } else {
             // Generic toggle for other panels
             window.dispatchEvent(new CustomEvent(`toggle-plugin-${tool.id}-panel`));
@@ -26802,7 +26824,7 @@ window.addEventListener('DOMContentLoaded', () => {
             window.dispatchEvent(new CustomEvent('toggle-ai-assistant-panel'));
           }
           if (castingPlannerPanel && castingPlannerPanel.classList.contains('open')) {
-            window.dispatchEvent(new CustomEvent('toggle-plugin-casting-planner-panel'));
+            window.dispatchEvent(new CustomEvent('toggle-plugin-virtual-studio-panel'));
           }
 
           actorBottomPanel.classList.add('open');
@@ -27319,7 +27341,7 @@ window.addEventListener('DOMContentLoaded', () => {
     
     if (menuCastingPlanner) {
       menuCastingPlanner.addEventListener('click', () => {
-        window.dispatchEvent(new CustomEvent('toggle-plugin-casting-planner-panel'));
+        window.dispatchEvent(new CustomEvent('toggle-plugin-virtual-studio-panel'));
       });
     }
     

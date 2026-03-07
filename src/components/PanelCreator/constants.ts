@@ -33,8 +33,8 @@ export const CREATORHUB_FUNCTIONS: CreatorHubFunction[] = [
 // Default marketplace services (these would normally come from marketplace API)
 export const MARKETPLACE_SERVICES: MarketplaceService[] = [
   { 
-    id: 'casting-planner', 
-    name: 'Casting Planner', 
+    id: 'virtual-studio', 
+    name: 'Virtual Studio', 
     description: 'Planlegg casting og rollebesetning for ditt prosjekt', 
     icon: 'TheaterComedy',
     installed: false,

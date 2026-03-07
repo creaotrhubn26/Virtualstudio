@@ -556,7 +556,7 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
               <Select
                 value={settings.colorProfile}
                 label="Color Profile"
-                onChange={(e) => updateSettings({ colorProfile: e.target.value as any })}
+                onChange={(e) => updateSettings({ colorProfile: e.target.value as ExportSettings['colorProfile'] })}
                 sx={{ fontSize: 12 }}
               >
                 <MenuItem value="sRGB">sRGB</MenuItem>

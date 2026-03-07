@@ -2161,7 +2161,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                               value={shot.status || 'not_started'}
                               onChange={async (e) => {
                                 if (onShotUpdate) {
-                                  await onShotUpdate(shotList, { ...shot, status: e.target.value as any });
+                                  await onShotUpdate(shotList, { ...shot, status: e.target.value as ShotStatus });
                                 }
                               }}
                               sx={{
@@ -2198,7 +2198,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                               value={shot.priority || 'important'}
                               onChange={async (e) => {
                                 if (onShotUpdate) {
-                                  await onShotUpdate(shotList, { ...shot, priority: e.target.value as any });
+                                  await onShotUpdate(shotList, { ...shot, priority: e.target.value as ShotPriority });
                                 }
                               }}
                               sx={{

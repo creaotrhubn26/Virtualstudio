@@ -1,4 +1,24 @@
 import { SceneComposition } from '../core/models/sceneComposer';
+import settingsService, { getCurrentUserId } from './settingsService';
+
+const TASKS_KEY = 'virtualStudio_scheduledTasks';
+let cachedTasks: ScheduledTask[] = [];
+
+const hydrateTasksFromDb = async (): Promise<void> => {
+  if (typeof window === 'undefined') return;
+  try {
+    const userId = getCurrentUserId();
+    const remote = await settingsService.getSetting<ScheduledTask[]>(TASKS_KEY, { userId });
+    if (remote) {
+      cachedTasks = remote;
+      return;
+    }
+  } catch {
+    // Ignore hydration errors
+  }
+};
+
+void hydrateTasksFromDb();
 
 export interface ScheduledTask {
   id: string;
@@ -38,12 +58,7 @@ export const sceneSchedulerService = {
    * Get all tasks
    */
   getTasks(): ScheduledTask[] {
-    try {
-      const stored = localStorage.getItem('virtualStudio_scheduledTasks');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
+    return cachedTasks;
   },
 
   /**
@@ -111,16 +126,15 @@ export const sceneSchedulerService = {
    */
   saveTask(task: ScheduledTask): void {
     try {
-      const tasks = this.getTasks();
-      const existingIndex = tasks.findIndex(t => t.id === task.id);
+      const existingIndex = cachedTasks.findIndex(t => t.id === task.id);
       
       if (existingIndex >= 0) {
-        tasks[existingIndex] = task;
+        cachedTasks[existingIndex] = task;
       } else {
-        tasks.push(task);
+        cachedTasks.push(task);
       }
       
-      localStorage.setItem('virtualStudio_scheduledTasks', JSON.stringify(tasks));
+      void settingsService.setSetting(TASKS_KEY, cachedTasks, { userId: getCurrentUserId() });
     } catch (error) {
       console.error('Error saving task:', error);
     }

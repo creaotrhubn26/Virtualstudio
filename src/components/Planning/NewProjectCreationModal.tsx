@@ -1,6 +1,6 @@
 /**
  * New Project Creation Modal
- * Clean, simplified project creation with Casting Planner and Split Sheet integration
+ * Clean, simplified project creation with Virtual Studio and Split Sheet integration
  */
 
 import React, { useState, useCallback, useMemo, useId, useEffect, useRef } from 'react';
@@ -83,6 +83,7 @@ import {
 } from '../icons/CastingIcons';
 
 import { apiRequest } from '../../lib/api';
+import settingsService, { getCurrentUserId } from '../../services/settingsService';
 import { useExternalData } from '../../services/ExternalDataService';
 import { ContactPicker } from './ContactPicker';
 
@@ -345,47 +346,34 @@ export default function NewProjectCreationModal({
     setDraftKey(key);
   }, [projectData.projectId, userId, profession]);
 
-  // Load all available drafts from localStorage
-  const loadAvailableDrafts = useCallback(() => {
+  // Load all available drafts from DB
+  const loadAvailableDrafts = useCallback(async () => {
     try {
       const drafts: Array<{ key: string; data: any; savedAt: number }> = [];
-      const prefix = userId 
-        ? `casting-project-draft-${userId}-${profession}`
-        : `casting-project-draft-${profession}`;
-      
-      // Check for drafts with projectId prefix
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.startsWith('casting-project-draft-') || key.startsWith(prefix))) {
-          try {
-            const draftData = JSON.parse(localStorage.getItem(key) || '{}');
-            if (draftData.savedAt) {
-              const draftAge = Date.now() - draftData.savedAt;
-              const sevenDays = 7 * 24 * 60 * 60 * 1000;
-              if (draftAge < sevenDays) {
-                drafts.push({
-                  key,
-                  data: draftData.data,
-                  savedAt: draftData.savedAt,
-                });
-              } else {
-                // Remove old draft
-                localStorage.removeItem(key);
-              }
-            }
-          } catch (e) {
-            // Skip invalid drafts
+      const resolvedUserId = userId || getCurrentUserId();
+
+      const remoteEntries = await settingsService.listSettings('casting-project-draft', { userId: resolvedUserId });
+      remoteEntries.forEach((entry) => {
+        const draftData = entry.data as any;
+        if (draftData?.savedAt) {
+          const draftAge = Date.now() - draftData.savedAt;
+          const sevenDays = 7 * 24 * 60 * 60 * 1000;
+          if (draftAge < sevenDays) {
+            drafts.push({
+              key: entry.projectId || entry.namespace,
+              data: draftData.data,
+              savedAt: draftData.savedAt,
+            });
           }
         }
-      }
-      
-      // Sort by savedAt (newest first)
+      });
+
       drafts.sort((a, b) => b.savedAt - a.savedAt);
       setAvailableDrafts(drafts);
     } catch (error) {
       console.error('Error loading drafts:', error);
     }
-  }, [userId, profession]);
+  }, [userId]);
 
   // Load available projects from API
   const loadAvailableProjects = useCallback(async () => {
@@ -417,7 +405,7 @@ export default function NewProjectCreationModal({
 
   // Load drafts and projects on mount
   useEffect(() => {
-    loadAvailableDrafts();
+    void loadAvailableDrafts();
     loadAvailableProjects();
   }, [loadAvailableDrafts, loadAvailableProjects]);
 
@@ -425,34 +413,34 @@ export default function NewProjectCreationModal({
   // This runs after draftKey is set
   useEffect(() => {
     if (!initialData && draftKey && !selectedDraftKey && !selectedProjectId) {
-      try {
-        const savedDraft = localStorage.getItem(draftKey);
-        if (savedDraft) {
-          const draftData = JSON.parse(savedDraft);
-          // Only load if draft is less than 7 days old
-          const draftAge = Date.now() - (draftData.savedAt || 0);
-          const sevenDays = 7 * 24 * 60 * 60 * 1000;
-          
-          if (draftAge < sevenDays) {
-            setProjectData((prev) => ({
-              ...prev,
-              ...draftData.data,
-              projectId: prev.projectId || draftData.data.projectId, // Preserve generated ID
-              // Ensure split sheet data is fully loaded
-              splitSheetData: draftData.data.splitSheetData ? JSON.parse(JSON.stringify(draftData.data.splitSheetData)) : null,
-            }));
-            setActiveStep(draftData.activeStep || 0);
-            setLastSavedAt(new Date(draftData.savedAt));
-            setDraftStatus('saved');
-            toast.showInfo('Utkast lastet inn automatisk');
-          } else {
-            // Remove old draft
-            localStorage.removeItem(draftKey);
+      const loadDraft = async () => {
+        try {
+          const resolvedUserId = userId || getCurrentUserId();
+          const draftData = await settingsService.getSetting<any>('casting-project-draft', { userId: resolvedUserId, projectId: draftKey });
+          if (draftData) {
+            const draftAge = Date.now() - (draftData.savedAt || 0);
+            const sevenDays = 7 * 24 * 60 * 60 * 1000;
+            
+            if (draftAge < sevenDays) {
+              setProjectData((prev) => ({
+                ...prev,
+                ...draftData.data,
+                projectId: prev.projectId || draftData.data.projectId,
+                splitSheetData: draftData.data.splitSheetData ? JSON.parse(JSON.stringify(draftData.data.splitSheetData)) : null,
+              }));
+              setActiveStep(draftData.activeStep || 0);
+              setLastSavedAt(new Date(draftData.savedAt));
+              setDraftStatus('saved');
+              toast.showInfo('Utkast lastet inn automatisk');
+            } else {
+              await settingsService.deleteSetting('casting-project-draft', { userId: resolvedUserId, projectId: draftKey });
+            }
           }
+        } catch (error) {
+          console.error('Error loading draft:', error);
         }
-      } catch (error) {
-        console.error('Error loading draft:', error);
-      }
+      };
+      void loadDraft();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftKey, initialData, selectedDraftKey, selectedProjectId]); // Run when draftKey is set or initialData changes
@@ -460,9 +448,9 @@ export default function NewProjectCreationModal({
   // Handle draft selection
   const handleDraftSelect = useCallback(async (draftKey: string) => {
     try {
-      const savedDraft = localStorage.getItem(draftKey);
-      if (savedDraft) {
-        const draftData = JSON.parse(savedDraft);
+      const resolvedUserId = userId || getCurrentUserId();
+      const draftData = await settingsService.getSetting<any>('casting-project-draft', { userId: resolvedUserId, projectId: draftKey });
+      if (draftData) {
         setProjectData((prev) => ({
           ...prev,
           ...draftData.data,
@@ -481,7 +469,7 @@ export default function NewProjectCreationModal({
       console.error('Error loading selected draft:', error);
       toast.showError('Kunne ikke laste utkast');
     }
-  }, [toast]);
+  }, [toast, userId]);
 
   // Handle project selection
   const handleProjectSelect = useCallback(async (projectId: string) => {
@@ -529,7 +517,7 @@ export default function NewProjectCreationModal({
     }
   }, [toast]);
 
-  // Save draft to localStorage
+  // Save draft to DB
   const saveDraft = useCallback(async (data: ProjectData, step: number, isManual = false) => {
     if (!draftKeyRef.current) return;
 
@@ -561,12 +549,16 @@ export default function NewProjectCreationModal({
         userId,
       };
 
-      localStorage.setItem(draftKeyRef.current, JSON.stringify(draftPayload));
+      const resolvedUserId = userId || getCurrentUserId();
+      await settingsService.setSetting('casting-project-draft', draftPayload, {
+        userId: resolvedUserId,
+        projectId: draftKeyRef.current,
+      });
       setLastSavedAt(new Date());
       setDraftStatus('saved');
       
       // Reload available drafts
-      loadAvailableDrafts();
+      void loadAvailableDrafts();
       
       if (isManual) {
         toast.showSuccess('Utkast lagret');
@@ -616,7 +608,10 @@ export default function NewProjectCreationModal({
   // Clear draft when project is successfully created
   const clearDraft = useCallback(() => {
     if (draftKeyRef.current) {
-      localStorage.removeItem(draftKeyRef.current);
+      void settingsService.deleteSetting('casting-project-draft', {
+        userId: userId || getCurrentUserId(),
+        projectId: draftKeyRef.current,
+      });
       setDraftStatus('idle');
       setLastSavedAt(null);
     }
@@ -1010,7 +1005,7 @@ export default function NewProjectCreationModal({
         return;
       }
       
-      // Validate prosjektansvarlig fields for Casting Planner
+      // Validate prosjektansvarlig fields for Virtual Studio
       if (isCastingPlanner) {
         let hasErrors = false;
         
@@ -1050,7 +1045,7 @@ export default function NewProjectCreationModal({
     console.log('[saveProjectToDatabase] CALLED! isCastingPlanner:', isCastingPlanner);
     
     if (!isCastingPlanner) {
-      console.log('[saveProjectToDatabase] Not a casting planner, skipping');
+      console.log('[saveProjectToDatabase] Not in virtual studio mode, skipping');
       return true;
     }
     
@@ -1133,7 +1128,7 @@ export default function NewProjectCreationModal({
         return;
       }
 
-      // Validate prosjektansvarlig fields for Casting Planner
+      // Validate prosjektansvarlig fields for Virtual Studio
       if (isCastingPlanner) {
         let hasErrors = false;
         
@@ -1213,7 +1208,7 @@ export default function NewProjectCreationModal({
       console.log('[NewProjectCreationModal] Save response:', JSON.stringify(response, null, 2));
 
       // Get project ID from response or use the one we generated
-      // For Casting Planner, always use the ID we sent (projectId) to ensure consistency
+      // For Virtual Studio, always use the ID we sent (projectId) to ensure consistency
       const finalProjectId = isCastingPlanner 
         ? ((response as any)?.data?.id || (response as any)?.id || projectId)
         : ((response as any)?.data?.id || (response as any)?.id || projectId);
@@ -1314,10 +1309,10 @@ export default function NewProjectCreationModal({
       // Clear draft after successful save
       clearDraft();
 
-      // Ensure the response includes the project ID for Casting Planner
+      // Ensure the response includes the project ID for Virtual Studio
       if (onProjectCreated) {
         const projectResponse = (response as any)?.data || response;
-        // For Casting Planner, ensure ID is always set (use the one we sent if backend didn't return it)
+        // For Virtual Studio, ensure ID is always set (use the one we sent if backend didn't return it)
         if (isCastingPlanner && finalProjectId) {
           onProjectCreated({
             ...projectResponse,
@@ -1990,7 +1985,7 @@ export default function NewProjectCreationModal({
   return (
     <>
       <Box sx={{ width: '100%', maxWidth: { xs: '100%', sm: 800, md: 900, lg: 1000, xl: 1200 }, mx: 'auto', p: { xs: 1.5, sm: 2, md: 2.5, lg: 3, xl: 3.5 } }}>
-        {/* Title - only shown when not in casting planner (parent dialog has its own title) */}
+        {/* Title - only shown when not in virtual studio mode (parent dialog has its own title) */}
         {!isCastingPlanner && (
           <Box sx={{ mb: { xs: 2, sm: 2.5, md: 3, lg: 3.5, xl: 4 } }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2166,7 +2161,7 @@ export default function NewProjectCreationModal({
                 </Select>
               </FormControl>
 
-              {/* Project Selector (only for Casting Planner) */}
+              {/* Project Selector (only for Virtual Studio) */}
               {isCastingPlanner && (
                 <FormControl fullWidth sx={{ flex: 1 }}>
                   <InputLabel

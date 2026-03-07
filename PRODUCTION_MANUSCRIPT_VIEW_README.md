@@ -255,7 +255,7 @@ Sjekk `SHOT_COLORS` mapping i `EnhancedTimelineView.tsx`.
 - React 18+
 - MUI v6
 - TypeScript 5+
-- Eksisterende Casting Planner infrastruktur
+- Eksisterende Virtual Studio infrastruktur
 
 ## Lisens
-Del av VirtualStudio Casting Planner systemet.
+Del av VirtualStudio Virtual Studio systemet.

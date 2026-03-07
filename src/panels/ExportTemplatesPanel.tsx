@@ -36,6 +36,7 @@ import {
   Alert,
   InputAdornment,
 } from '@mui/material';
+import settingsService, { getCurrentUserId } from '../services/settingsService';
 import {
   PlayArrow,
   Schedule,
@@ -634,7 +635,7 @@ export function ExportTemplatesPanel({
   useEffect(() => {
     setTemplates(exportTemplateService.getAllTemplates());
     
-    // Load favorites from database with localStorage fallback
+    // Load favorites from database with settings cache fallback
     const loadFavorites = async () => {
       try {
         const prefs = await preferencesApi.get();
@@ -643,17 +644,18 @@ export function ExportTemplatesPanel({
           return;
         }
       } catch {
-        // Database failed, try localStorage
+        // Database failed, try settings cache
       }
-      
-      // Fallback to localStorage
+
       try {
-        const saved = localStorage.getItem('virtualStudio_favoriteTemplates');
-        if (saved) {
-          setFavorites(new Set(JSON.parse(saved)));
+        const userId = getCurrentUserId();
+        const cached = await settingsService.getSetting<string[]>('virtualStudio_favoriteTemplates', { userId });
+        if (cached) {
+          setFavorites(new Set(cached));
+          return;
         }
       } catch {
-        // Ignore localStorage errors
+        // Ignore cache errors
       }
     };
     
@@ -710,11 +712,11 @@ export function ExportTemplatesPanel({
     }
     setFavorites(newFavorites);
     
-    // Save to database and localStorage
+    // Save to database and settings cache
     const favoritesArray = [...newFavorites];
-    localStorage.setItem('virtualStudio_favoriteTemplates', JSON.stringify(favoritesArray));
+    void settingsService.setSetting('virtualStudio_favoriteTemplates', favoritesArray, { userId: getCurrentUserId() });
     preferencesApi.updateFavorites('templates', favoritesArray).catch(() => {
-      // Ignore database errors, localStorage is backup
+      // Ignore database errors, settings cache is backup
     });
   }, [favorites]);
 

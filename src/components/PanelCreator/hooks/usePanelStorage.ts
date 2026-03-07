@@ -1,55 +1,58 @@
 /**
- * Custom hook for managing panel storage in localStorage
+ * Custom hook for managing panel storage in settings cache
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { PanelConfig, MarketplaceService } from '../types';
 import { MARKETPLACE_SERVICES } from '../constants';
+import settingsService from '@/services/settingsService';
 
 /**
- * Hook for managing panels in localStorage
+ * Hook for managing panels in settings cache
  */
 export const usePanelStorage = () => {
   const [panels, setPanels] = useState<PanelConfig[]>([]);
   const [marketplaceServices, setMarketplaceServices] = useState<MarketplaceService[]>(MARKETPLACE_SERVICES);
   const [loading, setLoading] = useState(true);
 
-  // Load panels from localStorage
-  useEffect(() => {
-    try {
-      const savedPanels = localStorage.getItem('customPanels');
-      if (savedPanels) {
-        const parsed = JSON.parse(savedPanels);
-        // Ensure all panels have type field (for backward compatibility)
-        const panelsWithType = parsed.map((p: PanelConfig) => ({
-          ...p,
-          type: p.type || 'function',
-        }));
-        setPanels(panelsWithType);
-      }
+  const PANELS_NAMESPACE = 'virtualStudio_customPanels';
+  const INSTALLED_NAMESPACE = 'virtualStudio_installedServices';
 
-      // Load installed services from localStorage
-      const installedServices = localStorage.getItem('installedServices');
-      if (installedServices) {
-        const installed = JSON.parse(installedServices);
-        setMarketplaceServices(prev => 
-          prev.map(service => ({
-            ...service,
-            installed: installed.includes(service.id)
-          }))
-        );
+  // Load panels from settings cache
+  useEffect(() => {
+    const loadPanels = async () => {
+      try {
+        const savedPanels = await settingsService.getSetting<PanelConfig[]>(PANELS_NAMESPACE);
+        if (savedPanels) {
+          const panelsWithType = savedPanels.map((p: PanelConfig) => ({
+            ...p,
+            type: p.type || 'function',
+          }));
+          setPanels(panelsWithType);
+        }
+
+        const installedServices = await settingsService.getSetting<string[]>(INSTALLED_NAMESPACE);
+        if (installedServices) {
+          setMarketplaceServices(prev =>
+            prev.map(service => ({
+              ...service,
+              installed: installedServices.includes(service.id)
+            }))
+          );
+        }
+      } catch (e) {
+        console.error('Error loading panels:', e);
+      } finally {
+        setLoading(false);
       }
-    } catch (e) {
-      console.error('Error loading panels:', e);
-    } finally {
-      setLoading(false);
-    }
+    };
+    loadPanels();
   }, []);
 
-  // Save panels to localStorage
+  // Save panels to settings cache
   const savePanels = useCallback(async (newPanels: PanelConfig[]) => {
     setPanels(newPanels);
-    localStorage.setItem('customPanels', JSON.stringify(newPanels));
+    await settingsService.setSetting(PANELS_NAMESPACE, newPanels);
     // Update DOM with new panels
     updatePanelsInDOM(newPanels);
     
@@ -181,11 +184,10 @@ export const usePanelStorage = () => {
     );
     setMarketplaceServices(updatedServices);
 
-    // Save to localStorage
-    const installedServices = JSON.parse(localStorage.getItem('installedServices') || '[]');
+    const installedServices = (await settingsService.getSetting<string[]>(INSTALLED_NAMESPACE)) || [];
     if (!installedServices.includes(serviceId)) {
       installedServices.push(serviceId);
-      localStorage.setItem('installedServices', JSON.stringify(installedServices));
+      await settingsService.setSetting(INSTALLED_NAMESPACE, installedServices);
     }
 
     return true;

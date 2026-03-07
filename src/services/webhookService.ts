@@ -1,3 +1,5 @@
+import { settingsService } from './settingsService';
+
 export interface Webhook {
   id: string;
   url: string;
@@ -13,18 +15,20 @@ export interface WebhookPayload {
   data: any;
 }
 
+const SETTINGS_NAMESPACE = 'virtualStudio_webhooks';
+
 export const webhookService = {
   /**
    * Register webhook
    */
-  register(webhook: Omit<Webhook, 'id' | 'createdAt'>): Webhook {
+  async register(webhook: Omit<Webhook, 'id' | 'createdAt'>): Promise<Webhook> {
     const newWebhook: Webhook = {
       ...webhook,
       id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       createdAt: new Date().toISOString(),
     };
 
-    this.saveWebhook(newWebhook);
+    await this.saveWebhook(newWebhook);
     return newWebhook;
   },
 
@@ -32,7 +36,7 @@ export const webhookService = {
    * Trigger webhook
    */
   async trigger(event: string, data: any): Promise<void> {
-    const webhooks = this.getWebhooks();
+    const webhooks = await this.getWebhooks();
     const relevantWebhooks = webhooks.filter(w => 
       w.enabled && (w.events.includes(event) || w.events.includes('*'))
     );
@@ -76,21 +80,23 @@ export const webhookService = {
   /**
    * Get all webhooks
    */
-  getWebhooks(): Webhook[] {
+  async getWebhooks(): Promise<Webhook[]> {
     try {
-      const stored = localStorage.getItem('virtualStudio_webhooks');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
+      const stored = await settingsService.getSetting<Webhook[]>(SETTINGS_NAMESPACE);
+      if (stored) return stored;
+    } catch (error) {
+      console.warn('Failed to fetch webhooks from settings API:', error);
     }
+
+    return [];
   },
 
   /**
    * Save webhook
    */
-  saveWebhook(webhook: Webhook): void {
+  async saveWebhook(webhook: Webhook): Promise<void> {
     try {
-      const webhooks = this.getWebhooks();
+      const webhooks = await this.getWebhooks();
       const existingIndex = webhooks.findIndex(w => w.id === webhook.id);
       
       if (existingIndex >= 0) {
@@ -98,8 +104,8 @@ export const webhookService = {
       } else {
         webhooks.push(webhook);
       }
-      
-      localStorage.setItem('virtualStudio_webhooks', JSON.stringify(webhooks));
+
+      await settingsService.setSetting(SETTINGS_NAMESPACE, webhooks);
     } catch (error) {
       console.error('Error saving webhook:', error);
     }

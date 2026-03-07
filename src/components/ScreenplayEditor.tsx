@@ -44,6 +44,7 @@ import {
   Fullscreen as FullscreenIcon,
   FullscreenExit as FullscreenExitIcon,
 } from '@mui/icons-material';
+import settingsService from '@/services/settingsService';
 
 // 7-Tier Responsive Hook
 type ScreenTier = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | '4k';
@@ -870,7 +871,7 @@ export const ScreenplayEditor: React.FC<ScreenplayEditorProps> = React.memo(({
     };
   }, []);
 
-  // Isolated auto-save to localStorage - NO state updates, side-effect only
+  // Isolated auto-save to settings cache - NO state updates, side-effect only
   useEffect(() => {
     // Clear any pending auto-save timer
     if (autoSaveTimerRef.current) {
@@ -885,16 +886,16 @@ export const ScreenplayEditor: React.FC<ScreenplayEditorProps> = React.memo(({
         return;
       }
       
-      // Save to localStorage without any state updates - purely side-effect
+      // Save to settings cache without any state updates - purely side-effect
       try {
-        localStorage.setItem('screenplay_autosave', JSON.stringify({
+        void settingsService.setSetting('virtualStudio_screenplayAutosave', {
           content: internalValue,
           timestamp: new Date().toISOString(),
-        }));
+        });
         lastSavedContentRef.current = internalValue;
         // Do NOT call setSaveStatus - let UI be independent of auto-save
       } catch (error) {
-        console.error('Error during auto-save to localStorage:', error);
+        console.error('Error during auto-save to settings cache:', error);
         // Silently fail - don't affect UI state
       }
     }, 2000);

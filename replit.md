@@ -85,7 +85,7 @@ PostgreSQL database with comprehensive table structure:
 - `studio_camera_presets` - Camera settings presets
 - `studio_export_templates` - PDF/image export templates
 
-**Casting Planner Tables (casting_*):**
+**Virtual Studio Tables (casting_*):**
 - `casting_favorites` - User favorites per project (candidates, roles, crew, etc.)
 - `casting_projects` - Casting projects with metadata
 - `casting_candidates` - Casting candidates with role assignments and workflow status
@@ -109,7 +109,7 @@ PostgreSQL database with comprehensive table structure:
 - `/api/studio/camera-presets` - Camera preset operations
 - `/api/studio/export-templates` - Export template management
 
-**Casting Planner API Endpoints:**
+**Virtual Studio API Endpoints:**
 - `/api/casting/projects` - Project CRUD operations
 - `/api/casting/favorites/{project_id}/{type}` - Favorites management
 - `/api/casting/candidates` - Candidate management
@@ -121,7 +121,7 @@ PostgreSQL database with comprehensive table structure:
 
 **Frontend Services:**
 - `src/services/virtualStudioApiService.ts` - Typed API client for Virtual Studio
-- `src/services/castingApiService.ts` - Typed API client for Casting Planner
+- `src/services/castingApiService.ts` - Typed API client for Virtual Studio
 
 ## External Dependencies
 - **@babylonjs/core, @babylonjs/loaders, @babylonjs/gui**: 3D engine and related components.

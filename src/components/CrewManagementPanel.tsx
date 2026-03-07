@@ -78,6 +78,7 @@ import {
   Badge as BadgeIcon,
   PieChart as PieChartIcon,
 } from '@mui/icons-material';
+import settingsService from '@/services/settingsService';
 import { 
   TeamIcon as GroupsIcon, 
   PersonNameIcon, 
@@ -202,8 +203,11 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
 
   // Favorites with database sync
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
+
+  const FAVORITES_NAMESPACE = 'virtualStudio_crewFavorites';
   
-  // Load favorites from database
+  // Load favorites from database (with settings cache fallback)
   useEffect(() => {
     const loadFavorites = async () => {
       try {
@@ -211,13 +215,20 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
         const dbFavorites = await favoritesApi.get(projectId, 'crew');
         if (dbFavorites.length > 0) {
           setFavorites(new Set(dbFavorites));
+          await settingsService.setSetting(FAVORITES_NAMESPACE, dbFavorites, { projectId });
+          setFavoritesLoaded(true);
           return;
         }
       } catch (error) {
-        console.warn('Database unavailable, using localStorage:', error);
+        console.warn('Database unavailable, using settings cache:', error);
       }
-      const saved = localStorage.getItem(`crew-favorites-${projectId}`);
-      if (saved) setFavorites(new Set(JSON.parse(saved)));
+      const cached = await settingsService.getSetting<string[]>(FAVORITES_NAMESPACE, { projectId });
+      if (cached && cached.length > 0) {
+        setFavorites(new Set(cached));
+        setFavoritesLoaded(true);
+        return;
+      }
+      setFavoritesLoaded(true);
     };
     loadFavorites();
   }, [projectId]);
@@ -518,7 +529,9 @@ export function CrewManagementPanel({ projectId, onUpdate, profession, totalBudg
       newFavorites.delete(id);
     }
     setFavorites(newFavorites);
-    localStorage.setItem(`crew-favorites-${projectId}`, JSON.stringify([...newFavorites]));
+    if (favoritesLoaded) {
+      await settingsService.setSetting(FAVORITES_NAMESPACE, [...newFavorites], { projectId });
+    }
     try {
       const { favoritesApi } = await import('@/services/castingApiService');
       if (isAdding) {

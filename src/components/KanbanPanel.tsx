@@ -1,4 +1,4 @@
-import { useState, useId, useMemo, useEffect, type DragEvent, type KeyboardEvent } from 'react';
+import { useState, useId, useMemo, useEffect, type DragEvent, memo } from 'react';
 import {
   Box,
   Typography,
@@ -65,7 +65,7 @@ const KANBAN_COLUMNS: KanbanColumn[] = [
   { status: 'rejected', label: 'Avvist', color: '#ef4444' },
 ];
 
-export function KanbanPanel({
+function KanbanPanelInner({
   project,
   candidates,
   roles,
@@ -88,16 +88,21 @@ export function KanbanPanel({
   
   const containerPadding = { xs: 1.5, sm: 2, md: 1.75, lg: 2, xl: 3 };
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts (scoped: skip when typing in inputs)
+  // Uses Ctrl+Shift+N to avoid conflict with browser's Ctrl+N (new tab/window)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'n') { e.preventDefault(); onCreateCandidate(); }
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) {
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
+        if (e.key === 'N') { e.preventDefault(); onCreateCandidate(); }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [onCreateCandidate]);
 
   // Filter candidates by search
   const filteredCandidates = useMemo(() => {
@@ -210,7 +215,7 @@ export function KanbanPanel({
               {!isMobile && 'Statistikk'}
             </Button>
           </Tooltip>
-          <Tooltip title="Ny kandidat (Ctrl+N)">
+          <Tooltip title="Ny kandidat (Ctrl+Shift+N)">
             <Button
               variant="contained"
               startIcon={<AddIcon sx={{ fontSize: { xs: 18, sm: 20, md: 19, lg: 21, xl: 24 } }} />}
@@ -553,7 +558,7 @@ export function KanbanPanel({
                           target.style.transform = 'none';
                         }}
                         tabIndex={0}
-                        onKeyDown={(e: KeyboardEvent) => { if (e.key === 'Enter') onEditCandidate(candidate); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') onEditCandidate(candidate); }}
                         sx={{
                           bgcolor: 'rgba(255,255,255,0.06)',
                           border: '1px solid rgba(255,255,255,0.1)',
@@ -574,7 +579,7 @@ export function KanbanPanel({
                       >
                         <CardContent sx={{ p: { xs: 1.25, sm: 1.5, md: 1.375, lg: 1.75, xl: 2 }, '&:last-child': { pb: { xs: 1.25, sm: 1.5, md: 1.375, lg: 1.75, xl: 2 } } }}>
                           <Box sx={{ display: 'flex', gap: { xs: 1.25, sm: 1.5, md: 1.375, lg: 1.75, xl: 2 }, alignItems: 'flex-start' }}>
-                            {candidate.photos.length > 0 ? (
+                            {(candidate.photos?.length ?? 0) > 0 ? (
                               <Box
                                 component="img"
                                 src={candidate.photos[0]}
@@ -636,9 +641,9 @@ export function KanbanPanel({
                               )}
                             </Box>
                           </Box>
-                          {candidate.assignedRoles.length > 0 && (
+                          {(candidate.assignedRoles?.length ?? 0) > 0 && (
                             <Box sx={{ mt: { xs: 0.75, sm: 1, md: 0.875, lg: 1, xl: 1.25 }, display: 'flex', flexWrap: 'wrap', gap: { xs: 0.5, sm: 0.75, md: 0.625, lg: 0.75, xl: 1 } }}>
-                              {candidate.assignedRoles.slice(0, 2).map((roleId) => (
+                              {(candidate.assignedRoles || []).slice(0, 2).map((roleId) => (
                                 <Chip
                                   key={roleId}
                                   label={getRoleName(roleId)}
@@ -653,9 +658,9 @@ export function KanbanPanel({
                                   }}
                                 />
                               ))}
-                              {candidate.assignedRoles.length > 2 && (
+                              {(candidate.assignedRoles?.length ?? 0) > 2 && (
                                 <Chip
-                                  label={`+${candidate.assignedRoles.length - 2}`}
+                                  label={`+${(candidate.assignedRoles?.length ?? 0) - 2}`}
                                   size="small"
                                   sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.87)', fontSize: { xs: '9px', sm: '10px', md: '9.5px', lg: '11px', xl: '13px' }, height: { xs: 18, sm: 20, md: 19, lg: 22, xl: 26 } }}
                                 />
@@ -692,3 +697,5 @@ export function KanbanPanel({
     </Box>
   );
 }
+
+export const KanbanPanel = memo(KanbanPanelInner);

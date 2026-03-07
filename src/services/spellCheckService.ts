@@ -9,6 +9,8 @@
  * - Integration with browser spell check
  */
 
+import settingsService, { getCurrentUserId } from './settingsService';
+
 // Spell check result types
 export interface SpellingError {
   word: string;
@@ -116,26 +118,6 @@ const ENGLISH_COMMON_WORDS = new Set([
   'gonna', 'gotta', 'lemme', 'gimme', 'dunno', 'ain\'t',
 ]);
 
-// Safe localStorage wrapper for SSR
-const safeStorage = {
-  getItem: (key: string): string | null => {
-    if (typeof window === 'undefined') return null;
-    try {
-      return localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  },
-  setItem: (key: string, value: string): void => {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(key, value);
-    } catch {
-      console.warn('localStorage not available');
-    }
-  }
-};
-
 // Custom dictionary storage
 const CUSTOM_DICT_KEY = 'screenplay_custom_dictionary';
 const PROJECT_TERMS_KEY = 'screenplay_project_terms';
@@ -150,23 +132,13 @@ class SpellCheckService {
   }
 
   /**
-   * Load custom dictionary from localStorage
+   * Load custom dictionary from settings cache
    */
   private loadCustomDictionary(): void {
     if (this.initialized) return;
     
     try {
-      const saved = safeStorage.getItem(CUSTOM_DICT_KEY);
-      if (saved) {
-        const words: DictionaryWord[] = JSON.parse(saved);
-        words.forEach(w => this.customDictionary.set(w.word.toLowerCase(), w));
-      }
-      
-      const projectTerms = safeStorage.getItem(PROJECT_TERMS_KEY);
-      if (projectTerms) {
-        const terms: string[] = JSON.parse(projectTerms);
-        terms.forEach(t => this.projectTerms.add(t.toLowerCase()));
-      }
+      void this.hydrateFromDb();
     } catch (e) {
       console.warn('Failed to load custom dictionary:', e);
     }
@@ -175,14 +147,33 @@ class SpellCheckService {
   }
 
   /**
-   * Save custom dictionary to localStorage
+   * Save custom dictionary to settings cache
    */
   private saveCustomDictionary(): void {
     try {
       const words = Array.from(this.customDictionary.values());
-      safeStorage.setItem(CUSTOM_DICT_KEY, JSON.stringify(words));
+      void settingsService.setSetting(CUSTOM_DICT_KEY, words, { userId: getCurrentUserId() });
     } catch (e) {
       console.warn('Failed to save custom dictionary:', e);
+    }
+  }
+
+  private async hydrateFromDb(): Promise<void> {
+    if (typeof window === 'undefined') return;
+    try {
+      const userId = getCurrentUserId();
+      const dict = await settingsService.getSetting<DictionaryWord[]>(CUSTOM_DICT_KEY, { userId });
+      if (dict) {
+        this.customDictionary.clear();
+        dict.forEach((word) => this.customDictionary.set(word.word.toLowerCase(), word));
+      }
+
+      const terms = await settingsService.getSetting<string[]>(PROJECT_TERMS_KEY, { userId });
+      if (terms) {
+        this.projectTerms = new Set(terms.map((term) => term.toLowerCase()));
+      }
+    } catch (e) {
+      console.warn('Failed to hydrate custom dictionary:', e);
     }
   }
 
@@ -244,6 +235,7 @@ class SpellCheckService {
     
     try {
       safeStorage.setItem(PROJECT_TERMS_KEY, JSON.stringify(terms));
+      void settingsService.setSetting(PROJECT_TERMS_KEY, terms, { userId: getCurrentUserId() });
     } catch (e) {
       console.warn('Failed to save project terms:', e);
     }
@@ -569,6 +561,7 @@ class SpellCheckService {
       if (data.projectTerms) {
         data.projectTerms.forEach((term: string) => this.projectTerms.add(term.toLowerCase()));
         safeStorage.setItem(PROJECT_TERMS_KEY, JSON.stringify(data.projectTerms));
+        void settingsService.setSetting(PROJECT_TERMS_KEY, data.projectTerms, { userId: getCurrentUserId() });
       }
     } catch (e) {
       console.error('Failed to import dictionary:', e);

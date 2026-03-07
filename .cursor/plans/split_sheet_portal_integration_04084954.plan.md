@@ -1,23 +1,23 @@
 ---
 name: Split Sheet Portal Integration
-overview: Integrere alle split sheet-komponenter i SplitSheetPortalView med en fullstendig kontrakt-editorkomponent som fungerer sammen med juridiske forslag og referanser. Alt skal synkroniseres med NewProjectCreationModal og SplitSheetEditor, og følge Casting Planner-design.
+overview: Integrere alle split sheet-komponenter i SplitSheetPortalView med en fullstendig kontrakt-editorkomponent som fungerer sammen med juridiske forslag og referanser. Alt skal synkroniseres med NewProjectCreationModal og SplitSheetEditor, og følge Virtual Studio-design.
 todos:
   - id: create-contract-interface
     content: Opprett ContractEditingInterface komponent med rich text editor, auto-fylling fra split sheet, og integrasjon med legal suggestions/references
     status: completed
   - id: refactor-split-sheet-viewer
-    content: Refaktorere SplitSheetViewer med tabs for Comments, Legal, Contracts, Export og oppdatere til Casting Planner design
+    content: Refaktorere SplitSheetViewer med tabs for Comments, Legal, Contracts, Export og oppdatere til Virtual Studio design
     status: completed
   - id: refactor-related-contracts
-    content: Refaktorere RelatedContractsSection med Casting Planner design og knapp for å åpne ContractEditingInterface
+    content: Refaktorere RelatedContractsSection med Virtual Studio design og knapp for å åpne ContractEditingInterface
     status: completed
     dependencies:
       - create-contract-interface
   - id: refactor-comments
-    content: Refaktorere SplitSheetComments med Casting Planner design og responsive styling
+    content: Refaktorere SplitSheetComments med Virtual Studio design og responsive styling
     status: completed
   - id: refactor-export
-    content: Refaktorere SplitSheetExport med Casting Planner design og responsive styling
+    content: Refaktorere SplitSheetExport med Virtual Studio design og responsive styling
     status: completed
   - id: enhance-legal-suggestions
     content: Legg til funksjonalitet i SplitSheetLegalSuggestions for å anvende forslag i kontrakt (auto-apply + manuell)
@@ -60,7 +60,7 @@ todos:
 
 ## Oversikt
 
-Integrere alle split sheet-komponenter i `SplitSheetPortalView` og opprette et fullstendig kontrakt-system hvor alle komponenter jobber sammen. Systemet skal synkronisere med `NewProjectCreationModal` og `SplitSheetEditor`, og følge Casting Planner-design.
+Integrere alle split sheet-komponenter i `SplitSheetPortalView` og opprette et fullstendig kontrakt-system hvor alle komponenter jobber sammen. Systemet skal synkronisere med `NewProjectCreationModal` og `SplitSheetEditor`, og følge Virtual Studio-design.
 
 ## Arkitektur
 
@@ -117,16 +117,16 @@ SplitSheetPortalView (Hovedkomponent)
 - Legal (SplitSheetLegalSuggestions + SplitSheetLegalReferences)
 - Contracts (RelatedContractsSection + ContractEditingInterface)
 - Export (SplitSheetExport)
-- Oppdater styling til Casting Planner design:
+- Oppdater styling til Virtual Studio design:
 - Responsive breakpoints (xs, sm, md, lg, xl)
-- Casting Planner farger og ikoner
+- Virtual Studio farger og ikoner
 - Konsistent spacing og typography
 
 ### 3. Refaktorere RelatedContractsSection
 
 **Fil**: `src/components/split-sheets/RelatedContractsSection.tsx`
 
-- Oppdater til Casting Planner design (erstatt useTheming med Casting Planner styling)
+- Oppdater til Virtual Studio design (erstatt useTheming med Virtual Studio styling)
 - Legg til knapp for å åpne ContractEditingInterface
 - Vis kontrakter med status, signatur-status, etc.
 - **Sørg for at komponenten vises når man åpner prosjektet i NewProjectCreationModal**
@@ -137,7 +137,7 @@ SplitSheetPortalView (Hovedkomponent)
 
 **Fil**: `src/components/split-sheets/SplitSheetComments.tsx`
 
-- Oppdater styling til Casting Planner design
+- Oppdater styling til Virtual Studio design
 - Responsive design
 - Forbedre UI/UX
 
@@ -145,7 +145,7 @@ SplitSheetPortalView (Hovedkomponent)
 
 **Fil**: `src/components/split-sheets/SplitSheetExport.tsx`
 
-- Oppdater styling til Casting Planner design
+- Oppdater styling til Virtual Studio design
 - Responsive design
 - Forbedre eksport-options
 
@@ -157,7 +157,7 @@ SplitSheetPortalView (Hovedkomponent)
 - "Anvend i kontrakt" knapp
 - Auto-apply for aksepterte forslag
 - Callback til ContractEditingInterface
-- Oppdater styling til Casting Planner design
+- Oppdater styling til Virtual Studio design
 - Responsive design
 
 ### 7. Refaktorere SplitSheetLegalReferences
@@ -169,7 +169,7 @@ SplitSheetPortalView (Hovedkomponent)
 - Legg til funksjonalitet for å legge til referanser i kontrakt:
 - "Legg til i kontrakt" knapp
 - Vis relevante referanser når man skriver kontrakt
-- Oppdater styling til Casting Planner design
+- Oppdater styling til Virtual Studio design
 - Responsive design
 
 ### 8. Integrere i SplitSheetPortalView
@@ -282,4 +282,4 @@ Alle komponenter skal støtte:
 
 - ContractEditingInterface skal være en standalone komponent som kan åpnes i en dialog
 - Juridiske forslag skal både auto-applies og tillate manuell valg
-- Alt skal følge Casting Planner design og ikoner
+- Alt skal følge Virtual Studio design og ikoner

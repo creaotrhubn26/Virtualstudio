@@ -1,4 +1,4 @@
-import { ProductionDay } from '../core/models/casting';
+import { ProductionDay, CastingShot } from '../core/models/casting';
 import { castingService } from './castingService';
 
 /**

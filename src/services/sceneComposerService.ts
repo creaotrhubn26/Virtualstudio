@@ -1,14 +1,51 @@
 import { SceneComposition, EnvironmentState, WallState, FloorState, AtmosphereSettings, GoboState } from '../core/models/sceneComposer';
 import { sceneApi } from './virtualStudioApiService';
+import settingsService, { getCurrentUserId } from './settingsService';
 
-const STORAGE_KEY = 'virtualStudio_sceneCompositions';
+const SCENES_NAMESPACE = 'virtualStudio_sceneCompositions';
+const TEMPLATES_NAMESPACE = 'virtualStudio_sceneTemplates';
+
+const templatesCache: SceneComposition[] = [];
+
+const setTemplatesCache = (templates: SceneComposition[]) => {
+  templatesCache.splice(0, templatesCache.length, ...templates);
+};
+
+const hydrateScenesFromSettings = async (): Promise<void> => {
+  try {
+    const userId = getCurrentUserId();
+    const remote = await settingsService.getSetting<SceneComposition[]>(SCENES_NAMESPACE, { userId });
+    if (remote) {
+      remote.forEach(scene => sceneCache.set(scene.id, scene));
+      return;
+    }
+  } catch {
+    // Ignore hydration errors
+  }
+};
+
+const hydrateTemplatesFromSettings = async (): Promise<void> => {
+  try {
+    const userId = getCurrentUserId();
+    const remote = await settingsService.getSetting<SceneComposition[]>(TEMPLATES_NAMESPACE, { userId });
+    if (remote) {
+      setTemplatesCache(remote);
+      return;
+    }
+  } catch {
+    // Ignore hydration errors
+  }
+};
+
+void hydrateScenesFromSettings();
+void hydrateTemplatesFromSettings();
 
 // Simple in-memory cache for scenes
 const sceneCache = new Map<string, SceneComposition>();
 
 export const sceneComposerService = {
   /**
-   * Get all saved scenes from database (with localStorage fallback)
+  * Get all saved scenes from database (with settings cache fallback)
    */
   async getAllScenesAsync(): Promise<SceneComposition[]> {
     try {
@@ -26,32 +63,27 @@ export const sceneComposerService = {
         return scenes;
       }
     } catch (error) {
-      console.warn('Database unavailable, falling back to localStorage:', error);
+      console.warn('Database unavailable, falling back to settings cache:', error);
+    }
+    try {
+      const userId = getCurrentUserId();
+      const cached = await settingsService.getSetting<SceneComposition[]>(SCENES_NAMESPACE, { userId });
+      if (cached) {
+        cached.forEach(scene => sceneCache.set(scene.id, scene));
+        return cached;
+      }
+    } catch {
+      // Ignore cache errors
     }
     return this.getAllScenes();
   },
 
   getAllScenes(): SceneComposition[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (!stored) return [];
-
-      const scenes = JSON.parse(stored);
-
-      // Update cache
-      scenes.forEach((scene: SceneComposition) => {
-        sceneCache.set(scene.id, scene);
-      });
-
-      return scenes;
-    } catch (error) {
-      console.error('Error loading scenes from localStorage:', error);
-      return [];
-    }
+    return Array.from(sceneCache.values());
   },
 
   /**
-   * Save a scene to database and localStorage
+  * Save a scene to database and settings cache
    */
   async saveSceneAsync(scene: SceneComposition, incremental: boolean = true): Promise<void> {
     const cached = sceneCache.get(scene.id);
@@ -71,7 +103,7 @@ export const sceneComposerService = {
         scene_data: updatedScene,
       });
     } catch (error) {
-      console.warn('Database save failed, using localStorage:', error);
+      console.warn('Database save failed, using settings cache:', error);
     }
 
     this.saveScene(updatedScene, false);
@@ -100,17 +132,16 @@ export const sceneComposerService = {
         scenes.push(updatedScene);
       }
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(scenes));
-
       sceneCache.set(updatedScene.id, updatedScene);
+      void settingsService.setSetting(SCENES_NAMESPACE, scenes, { userId: getCurrentUserId() });
     } catch (error) {
-      console.error('Error saving scene to localStorage:', error);
+      console.error('Error saving scene to settings cache:', error);
       throw error;
     }
   },
 
   /**
-   * Load a scene by ID from database or localStorage
+  * Load a scene by ID from database or settings cache
    */
   async loadSceneAsync(id: string): Promise<SceneComposition | null> {
     try {
@@ -126,7 +157,7 @@ export const sceneComposerService = {
         } as SceneComposition;
       }
     } catch (error) {
-      console.warn('Database load failed, using localStorage:', error);
+      console.warn('Database load failed, using settings cache:', error);
     }
     return this.loadScene(id);
   },
@@ -136,13 +167,13 @@ export const sceneComposerService = {
       const scenes = this.getAllScenes();
       return scenes.find(s => s.id === id) || null;
     } catch (error) {
-      console.error('Error loading scene from localStorage:', error);
+      console.error('Error loading scene from cache:', error);
       return null;
     }
   },
 
   /**
-   * Delete a scene by ID from database and localStorage
+  * Delete a scene by ID from database and settings cache
    */
   async deleteSceneAsync(id: string): Promise<void> {
     try {
@@ -156,10 +187,10 @@ export const sceneComposerService = {
   deleteScene(id: string): void {
     try {
       const scenes = this.getAllScenes().filter(s => s.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(scenes));
       sceneCache.delete(id);
+      void settingsService.setSetting(SCENES_NAMESPACE, scenes, { userId: getCurrentUserId() });
     } catch (error) {
-      console.error('Error deleting scene from localStorage:', error);
+      console.error('Error deleting scene from cache:', error);
       throw error;
     }
   },
@@ -449,19 +480,15 @@ export const sceneComposerService = {
     };
 
     templates.push(template);
-    localStorage.setItem('virtualStudio_sceneTemplates', JSON.stringify(templates));
+    setTemplatesCache(templates);
+    void settingsService.setSetting(TEMPLATES_NAMESPACE, templates, { userId: getCurrentUserId() });
   },
 
   /**
    * Get all templates
    */
   getTemplates(): SceneComposition[] {
-    try {
-      const stored = localStorage.getItem('virtualStudio_sceneTemplates');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
+    return [...templatesCache];
   },
 
   /**

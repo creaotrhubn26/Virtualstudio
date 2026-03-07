@@ -3,6 +3,7 @@
  */
 
 import { PanelConfig } from '../types';
+import settingsService, { getCurrentUserId } from '@/services/settingsService';
 
 export interface PanelVersion {
   id: string;
@@ -13,8 +14,25 @@ export interface PanelVersion {
   comment?: string;
 }
 
-const VERSION_HISTORY_KEY = 'panelVersionHistory';
+const SETTINGS_NAMESPACE = 'virtualStudio_panelVersionHistory';
 const MAX_VERSIONS_PER_PANEL = 50; // Keep last 50 versions per panel
+
+let historyCache: PanelVersion[] = [];
+
+const hydrateHistoryCache = async () => {
+  try {
+    const userId = getCurrentUserId();
+    const cached = await settingsService.getSetting<PanelVersion[]>(SETTINGS_NAMESPACE, { userId });
+    if (cached) {
+      historyCache = cached;
+      return;
+    }
+  } catch {
+    // Ignore hydration errors
+  }
+};
+
+void hydrateHistoryCache();
 
 /**
  * Save a version of a panel
@@ -50,7 +68,8 @@ export const savePanelVersion = (panel: PanelConfig, comment?: string): void => 
       trimmedHistory.push(...panelVersions);
     });
 
-    localStorage.setItem(VERSION_HISTORY_KEY, JSON.stringify(trimmedHistory));
+    historyCache = trimmedHistory;
+    void settingsService.setSetting(SETTINGS_NAMESPACE, trimmedHistory, { userId: getCurrentUserId() });
   } catch (error) {
     console.error('Error saving panel version:', error);
   }
@@ -75,14 +94,7 @@ export const getPanelVersions = (panelId: string): PanelVersion[] => {
  * Get all version history
  */
 export const getVersionHistory = (): PanelVersion[] => {
-  try {
-    const stored = localStorage.getItem(VERSION_HISTORY_KEY);
-    if (!stored) return [];
-    return JSON.parse(stored) as PanelVersion[];
-  } catch (error) {
-    console.error('Error getting version history:', error);
-    return [];
-  }
+  return historyCache;
 };
 
 /**
@@ -99,7 +111,8 @@ export const deletePanelVersions = (panelId: string): void => {
   try {
     const history = getVersionHistory();
     const filtered = history.filter(v => v.panelId !== panelId);
-    localStorage.setItem(VERSION_HISTORY_KEY, JSON.stringify(filtered));
+    historyCache = filtered;
+    void settingsService.setSetting(SETTINGS_NAMESPACE, filtered, { userId: getCurrentUserId() });
   } catch (error) {
     console.error('Error deleting panel versions:', error);
   }

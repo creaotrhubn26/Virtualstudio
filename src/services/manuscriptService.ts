@@ -11,6 +11,7 @@ import {
   ShotNote,
   StoryboardFrame,
 } from '../core/models/casting';
+import { settingsService } from './settingsService';
 
 // Database availability cache
 let dbAvailable: boolean | null = null;
@@ -46,156 +47,138 @@ async function checkDatabaseAvailability(): Promise<boolean> {
   return dbCheckPromise;
 }
 
-/**
- * LocalStorage fallback for manuscripts
- */
-const STORAGE_KEYS = {
-  MANUSCRIPTS: 'casting_manuscripts',
-  SCENES: 'casting_scenes',
-  DIALOGUE: 'casting_dialogue',
-  REVISIONS: 'casting_revisions',
+const SETTINGS_NAMESPACES = {
+  MANUSCRIPTS: 'virtualStudio_manuscripts',
+  SCENES: 'virtualStudio_manuscriptScenes',
+  DIALOGUE: 'virtualStudio_manuscriptDialogue',
+  REVISIONS: 'virtualStudio_manuscriptRevisions',
+  ACTS: 'virtualStudio_manuscriptActs',
+  DEMO_INIT: 'virtualStudio_manuscriptDemoInit',
 };
 
-function getManuscriptsFromStorage(projectId: string): Manuscript[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.MANUSCRIPTS);
-    if (!data) return [];
-    const allManuscripts = JSON.parse(data) as Manuscript[];
-    return allManuscripts.filter(m => m.projectId === projectId);
-  } catch (error) {
-    console.error('Error reading manuscripts from storage:', error);
-    return [];
-  }
+async function getManuscriptsFromStorage(projectId: string): Promise<Manuscript[]> {
+  const cached = await settingsService.getSetting<Manuscript[]>(SETTINGS_NAMESPACES.MANUSCRIPTS, { projectId });
+  if (cached) return cached;
+  return [];
 }
 
-function saveManuscriptToStorage(manuscript: Manuscript): void {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.MANUSCRIPTS);
-    const manuscripts = data ? JSON.parse(data) as Manuscript[] : [];
-    const index = manuscripts.findIndex(m => m.id === manuscript.id);
-    
-    if (index >= 0) {
-      manuscripts[index] = manuscript;
-    } else {
-      manuscripts.push(manuscript);
-    }
-    
-    localStorage.setItem(STORAGE_KEYS.MANUSCRIPTS, JSON.stringify(manuscripts));
-  } catch (error) {
-    console.error('Error saving manuscript to storage:', error);
-    throw error;
+async function saveManuscriptToStorage(manuscript: Manuscript): Promise<void> {
+  const projectId = manuscript.projectId;
+  const cached = (await settingsService.getSetting<Manuscript[]>(SETTINGS_NAMESPACES.MANUSCRIPTS, { projectId })) || [];
+  const index = cached.findIndex(m => m.id === manuscript.id);
+  if (index >= 0) {
+    cached[index] = manuscript;
+  } else {
+    cached.push(manuscript);
   }
+  await settingsService.setSetting(SETTINGS_NAMESPACES.MANUSCRIPTS, cached, { projectId });
 }
 
-function deleteManuscriptFromStorage(id: string): void {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.MANUSCRIPTS);
-    if (!data) return;
-    
-    const manuscripts = JSON.parse(data) as Manuscript[];
+async function deleteManuscriptFromStorage(id: string): Promise<void> {
+  const entries = await settingsService.listSettings(SETTINGS_NAMESPACES.MANUSCRIPTS);
+  for (const entry of entries) {
+    const manuscripts = Array.isArray(entry.data) ? (entry.data as Manuscript[]) : [];
     const filtered = manuscripts.filter(m => m.id !== id);
-    localStorage.setItem(STORAGE_KEYS.MANUSCRIPTS, JSON.stringify(filtered));
-  } catch (error) {
-    console.error('Error deleting manuscript from storage:', error);
-    throw error;
-  }
-}
-
-function getScenesFromStorage(manuscriptId: string): SceneBreakdown[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.SCENES);
-    if (!data) return [];
-    const allScenes = JSON.parse(data) as SceneBreakdown[];
-    return allScenes.filter(s => s.manuscriptId === manuscriptId);
-  } catch (error) {
-    console.error('Error reading scenes from storage:', error);
-    return [];
-  }
-}
-
-function saveSceneToStorage(scene: SceneBreakdown): void {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.SCENES);
-    const scenes = data ? JSON.parse(data) as SceneBreakdown[] : [];
-    const index = scenes.findIndex(s => s.id === scene.id);
-    
-    if (index >= 0) {
-      scenes[index] = scene;
-    } else {
-      scenes.push(scene);
+    if (filtered.length !== manuscripts.length) {
+      await settingsService.setSetting(SETTINGS_NAMESPACES.MANUSCRIPTS, filtered, {
+        projectId: entry.projectId,
+      });
     }
-    
-    localStorage.setItem(STORAGE_KEYS.SCENES, JSON.stringify(scenes));
-  } catch (error) {
-    console.error('Error saving scene to storage:', error);
-    throw error;
   }
 }
 
-function getDialogueFromStorage(manuscriptId: string): DialogueLine[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.DIALOGUE);
-    if (!data) return [];
-    const allDialogue = JSON.parse(data) as DialogueLine[];
-    return allDialogue.filter(d => d.manuscriptId === manuscriptId);
-  } catch (error) {
-    console.error('Error reading dialogue from storage:', error);
-    return [];
-  }
+async function getScenesFromStorage(manuscriptId: string): Promise<SceneBreakdown[]> {
+  const cached = await settingsService.getSetting<SceneBreakdown[]>(SETTINGS_NAMESPACES.SCENES, {
+    projectId: manuscriptId,
+  });
+  if (cached) return cached;
+  return [];
 }
 
-function saveDialogueToStorage(dialogue: DialogueLine): void {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.DIALOGUE);
-    const allDialogue = data ? JSON.parse(data) as DialogueLine[] : [];
-    const existingIndex = allDialogue.findIndex(d => d.id === dialogue.id);
-    if (existingIndex >= 0) {
-      allDialogue[existingIndex] = dialogue;
-    } else {
-      allDialogue.push(dialogue);
+async function saveSceneToStorage(scene: SceneBreakdown): Promise<void> {
+  const manuscriptId = scene.manuscriptId;
+  const cached = (await settingsService.getSetting<SceneBreakdown[]>(SETTINGS_NAMESPACES.SCENES, {
+    projectId: manuscriptId,
+  })) || [];
+  const index = cached.findIndex(s => s.id === scene.id);
+  if (index >= 0) {
+    cached[index] = scene;
+  } else {
+    cached.push(scene);
+  }
+  await settingsService.setSetting(SETTINGS_NAMESPACES.SCENES, cached, { projectId: manuscriptId });
+}
+
+async function getDialogueFromStorage(manuscriptId: string): Promise<DialogueLine[]> {
+  const cached = await settingsService.getSetting<DialogueLine[]>(SETTINGS_NAMESPACES.DIALOGUE, {
+    projectId: manuscriptId,
+  });
+  if (cached) return cached;
+  return [];
+}
+
+async function saveDialogueToStorage(dialogue: DialogueLine): Promise<void> {
+  const manuscriptId = dialogue.manuscriptId;
+  const cached = (await settingsService.getSetting<DialogueLine[]>(SETTINGS_NAMESPACES.DIALOGUE, {
+    projectId: manuscriptId,
+  })) || [];
+  const existingIndex = cached.findIndex(d => d.id === dialogue.id);
+  if (existingIndex >= 0) {
+    cached[existingIndex] = dialogue;
+  } else {
+    cached.push(dialogue);
+  }
+  await settingsService.setSetting(SETTINGS_NAMESPACES.DIALOGUE, cached, { projectId: manuscriptId });
+}
+
+async function deleteDialogueFromStorage(dialogueId: string): Promise<void> {
+  const entries = await settingsService.listSettings(SETTINGS_NAMESPACES.DIALOGUE);
+  for (const entry of entries) {
+    const dialogue = Array.isArray(entry.data) ? (entry.data as DialogueLine[]) : [];
+    const filtered = dialogue.filter(d => d.id !== dialogueId);
+    if (filtered.length !== dialogue.length) {
+      await settingsService.setSetting(SETTINGS_NAMESPACES.DIALOGUE, filtered, {
+        projectId: entry.projectId,
+      });
     }
-    localStorage.setItem(STORAGE_KEYS.DIALOGUE, JSON.stringify(allDialogue));
-  } catch (error) {
-    console.error('Error saving dialogue to storage:', error);
-    throw error;
   }
 }
 
-function deleteDialogueFromStorage(dialogueId: string): void {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.DIALOGUE);
-    if (!data) return;
-    const allDialogue = JSON.parse(data) as DialogueLine[];
-    const filtered = allDialogue.filter(d => d.id !== dialogueId);
-    localStorage.setItem(STORAGE_KEYS.DIALOGUE, JSON.stringify(filtered));
-  } catch (error) {
-    console.error('Error deleting dialogue from storage:', error);
-    throw error;
-  }
+async function getRevisionsFromStorage(manuscriptId: string): Promise<ScriptRevision[]> {
+  const cached = await settingsService.getSetting<ScriptRevision[]>(SETTINGS_NAMESPACES.REVISIONS, {
+    projectId: manuscriptId,
+  });
+  if (cached) return cached;
+  return [];
 }
 
-function getRevisionsFromStorage(manuscriptId: string): ScriptRevision[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.REVISIONS);
-    if (!data) return [];
-    const allRevisions = JSON.parse(data) as ScriptRevision[];
-    return allRevisions.filter(r => r.manuscriptId === manuscriptId);
-  } catch (error) {
-    console.error('Error reading revisions from storage:', error);
-    return [];
-  }
+async function saveRevisionToStorage(revision: ScriptRevision): Promise<void> {
+  const manuscriptId = revision.manuscriptId;
+  const cached = (await settingsService.getSetting<ScriptRevision[]>(SETTINGS_NAMESPACES.REVISIONS, {
+    projectId: manuscriptId,
+  })) || [];
+  cached.push(revision);
+  await settingsService.setSetting(SETTINGS_NAMESPACES.REVISIONS, cached, { projectId: manuscriptId });
 }
 
-function saveRevisionToStorage(revision: ScriptRevision): void {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.REVISIONS);
-    const revisions = data ? JSON.parse(data) as ScriptRevision[] : [];
-    revisions.push(revision);
-    localStorage.setItem(STORAGE_KEYS.REVISIONS, JSON.stringify(revisions));
-  } catch (error) {
-    console.error('Error saving revision to storage:', error);
-    throw error;
-  }
+async function getActsFromStorage(manuscriptId: string): Promise<Act[]> {
+  const cached = await settingsService.getSetting<Act[]>(SETTINGS_NAMESPACES.ACTS, { projectId: manuscriptId });
+  if (cached) return cached;
+  return [];
+}
+
+async function saveActsToStorage(manuscriptId: string, acts: Act[]): Promise<void> {
+  await settingsService.setSetting(SETTINGS_NAMESPACES.ACTS, acts, { projectId: manuscriptId });
+}
+
+async function hasDemoInit(projectId: string): Promise<boolean> {
+  const cached = await settingsService.getSetting<boolean>(SETTINGS_NAMESPACES.DEMO_INIT, { projectId });
+  if (cached) return true;
+  return false;
+}
+
+async function markDemoInit(projectId: string): Promise<void> {
+  await settingsService.setSetting(SETTINGS_NAMESPACES.DEMO_INIT, true, { projectId });
 }
 
 /**
@@ -859,29 +842,31 @@ THE END
  * Initialize demo data for a project if no manuscripts exist
  */
 async function initializeDemoDataIfNeeded(projectId: string): Promise<void> {
-  const key = `demo_initialized_v3_${projectId}`;
-  if (localStorage.getItem(key)) return;
+  if (await hasDemoInit(projectId)) return;
 
-  const manuscripts = getManuscriptsFromStorage(projectId);
+  const manuscripts = await getManuscriptsFromStorage(projectId);
   if (manuscripts.length === 0) {
     console.log('🎬 Initializing TROLL demo data for project:', projectId);
     const demoData = generateTrollDemoData(projectId);
     
-    // Save manuscript to localStorage first
-    saveManuscriptToStorage(demoData.manuscript);
+    // Cache demo data for offline access
+    await saveManuscriptToStorage(demoData.manuscript);
     console.log('📝 Saved manuscript:', demoData.manuscript.title);
     
     // Save acts
-    const actsKey = `manuscript_${demoData.manuscript.id}_acts`;
-    localStorage.setItem(actsKey, JSON.stringify(demoData.acts));
+    await saveActsToStorage(demoData.manuscript.id, demoData.acts);
     console.log('🎭 Saved', demoData.acts.length, 'acts');
     
     // Save scenes
-    demoData.scenes.forEach(scene => saveSceneToStorage(scene));
+    for (const scene of demoData.scenes) {
+      await saveSceneToStorage(scene);
+    }
     console.log('🎬 Saved', demoData.scenes.length, 'scenes');
     
     // Save dialogue
-    localStorage.setItem(STORAGE_KEYS.DIALOGUE, JSON.stringify(demoData.dialogue));
+    await settingsService.setSetting(SETTINGS_NAMESPACES.DIALOGUE, demoData.dialogue, {
+      projectId: demoData.manuscript.id,
+    });
     console.log('💬 Saved', demoData.dialogue.length, 'dialogue lines');
     
     // Also sync to database if available
@@ -932,12 +917,12 @@ async function initializeDemoDataIfNeeded(projectId: string): Promise<void> {
         }
       } catch (error) {
         console.error('⚠️ Error syncing demo data to database:', error);
-        // Continue anyway - localStorage has the data
+        // Continue anyway - settings cache has the data
       }
     }
     
     // Mark as initialized
-    localStorage.setItem(key, 'true');
+    await markDemoInit(projectId);
     
     console.log('✅ Demo data for "TROLL" initialized successfully');
   } else {
@@ -967,11 +952,11 @@ class ManuscriptService {
         return await response.json();
       } catch (error) {
         console.error('Error fetching manuscripts from database:', error);
-        return getManuscriptsFromStorage(projectId);
+        return await getManuscriptsFromStorage(projectId);
       }
     }
     
-    return getManuscriptsFromStorage(projectId);
+    return await getManuscriptsFromStorage(projectId);
   }
 
   /**
@@ -992,11 +977,13 @@ class ManuscriptService {
       }
     }
     
-    // Fallback to localStorage
-    const allManuscripts = localStorage.getItem(STORAGE_KEYS.MANUSCRIPTS);
-    if (!allManuscripts) return null;
-    const manuscripts = JSON.parse(allManuscripts) as Manuscript[];
-    return manuscripts.find(m => m.id === id) || null;
+    const entries = await settingsService.listSettings(SETTINGS_NAMESPACES.MANUSCRIPTS);
+    for (const entry of entries) {
+      const manuscripts = Array.isArray(entry.data) ? (entry.data as Manuscript[]) : [];
+      const found = manuscripts.find(m => m.id === id);
+      if (found) return found;
+    }
+    return null;
   }
 
   /**
@@ -1023,8 +1010,8 @@ class ManuscriptService {
       }
     }
     
-    // Fallback to localStorage
-    saveManuscriptToStorage(manuscript);
+    // Fallback to settings cache
+    await saveManuscriptToStorage(manuscript);
     return manuscript;
   }
 
@@ -1054,8 +1041,8 @@ class ManuscriptService {
       }
     }
     
-    // Fallback to localStorage
-    saveManuscriptToStorage(manuscript);
+    // Fallback to settings cache
+    await saveManuscriptToStorage(manuscript);
     return manuscript;
   }
 
@@ -1081,8 +1068,8 @@ class ManuscriptService {
       }
     }
     
-    // Fallback to localStorage
-    deleteManuscriptFromStorage(id);
+    // Fallback to settings cache
+    await deleteManuscriptFromStorage(id);
   }
 
   /**
@@ -1103,7 +1090,7 @@ class ManuscriptService {
       }
     }
     
-    return getScenesFromStorage(manuscriptId);
+    return await getScenesFromStorage(manuscriptId);
   }
 
   /**
@@ -1132,8 +1119,8 @@ class ManuscriptService {
       }
     }
     
-    // Fallback to localStorage
-    saveSceneToStorage(scene);
+    // Fallback to settings cache
+    await saveSceneToStorage(scene);
     return scene;
   }
 
@@ -1155,7 +1142,7 @@ class ManuscriptService {
       }
     }
     
-    return getDialogueFromStorage(manuscriptId);
+    return await getDialogueFromStorage(manuscriptId);
   }
 
   /**
@@ -1182,8 +1169,8 @@ class ManuscriptService {
       }
     }
     
-    // Fallback to localStorage
-    saveDialogueToStorage(dialogue);
+    // Fallback to settings cache
+    await saveDialogueToStorage(dialogue);
     return dialogue;
   }
 
@@ -1209,8 +1196,8 @@ class ManuscriptService {
       }
     }
     
-    // Fallback to localStorage
-    deleteDialogueFromStorage(dialogueId);
+    // Fallback to settings cache
+    await deleteDialogueFromStorage(dialogueId);
     return true;
   }
 
@@ -1232,7 +1219,7 @@ class ManuscriptService {
       }
     }
     
-    return getRevisionsFromStorage(manuscriptId);
+    return await getRevisionsFromStorage(manuscriptId);
   }
 
   /**
@@ -1259,8 +1246,8 @@ class ManuscriptService {
       }
     }
     
-    // Fallback to localStorage
-    saveRevisionToStorage(revision);
+    // Fallback to settings cache
+    await saveRevisionToStorage(revision);
     return revision;
   }
 
@@ -1637,10 +1624,7 @@ class ManuscriptService {
       }
     }
     
-    // Fallback to localStorage
-    const key = `manuscript_${manuscriptId}_acts`;
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : [];
+    return await getActsFromStorage(manuscriptId);
   }
 
   /**
@@ -1689,12 +1673,9 @@ class ManuscriptService {
       }
     }
     
-    // Fallback to localStorage
-    const key = `manuscript_${act.manuscriptId}_acts`;
-    const stored = localStorage.getItem(key);
-    const acts: Act[] = stored ? JSON.parse(stored) : [];
+    const acts = await getActsFromStorage(act.manuscriptId);
     acts.push(act);
-    localStorage.setItem(key, JSON.stringify(acts));
+    await saveActsToStorage(act.manuscriptId, acts);
     
     return act;
   }
@@ -1723,15 +1704,11 @@ class ManuscriptService {
       }
     }
     
-    // Fallback to localStorage
-    const key = `manuscript_${act.manuscriptId}_acts`;
-    const stored = localStorage.getItem(key);
-    const acts: Act[] = stored ? JSON.parse(stored) : [];
+    const acts = await getActsFromStorage(act.manuscriptId);
     const index = acts.findIndex(a => a.id === act.id);
-    
     if (index >= 0) {
       acts[index] = act;
-      localStorage.setItem(key, JSON.stringify(acts));
+      await saveActsToStorage(act.manuscriptId, acts);
     }
     
     return act;
@@ -1759,12 +1736,9 @@ class ManuscriptService {
       }
     }
     
-    // Fallback to localStorage
-    const key = `manuscript_${manuscriptId}_acts`;
-    const stored = localStorage.getItem(key);
-    const acts: Act[] = stored ? JSON.parse(stored) : [];
+    const acts = await getActsFromStorage(manuscriptId);
     const filtered = acts.filter(a => a.id !== actId);
-    localStorage.setItem(key, JSON.stringify(filtered));
+    await saveActsToStorage(manuscriptId, filtered);
   }
 
   /**

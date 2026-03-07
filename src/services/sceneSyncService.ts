@@ -1,4 +1,7 @@
 import { SceneComposition } from '../core/models/sceneComposer';
+import { settingsService } from './settingsService';
+
+const SETTINGS_NAMESPACE = 'virtualStudio_offlineMode';
 
 export const sceneSyncService = {
   /**
@@ -13,23 +16,23 @@ export const sceneSyncService = {
   /**
    * Enable offline mode
    */
-  enableOfflineMode(): void {
-    // Store flag in localStorage
-    localStorage.setItem('virtualStudio_offlineMode', 'true');
+  async enableOfflineMode(): Promise<void> {
+    await settingsService.setSetting(SETTINGS_NAMESPACE, true);
   },
 
   /**
    * Disable offline mode
    */
-  disableOfflineMode(): void {
-    localStorage.removeItem('virtualStudio_offlineMode');
+  async disableOfflineMode(): Promise<void> {
+    await settingsService.setSetting(SETTINGS_NAMESPACE, false);
   },
 
   /**
    * Check if offline mode is enabled
    */
-  isOfflineMode(): boolean {
-    return localStorage.getItem('virtualStudio_offlineMode') === 'true';
+  async isOfflineMode(): Promise<boolean> {
+    const stored = await settingsService.getSetting<boolean>(SETTINGS_NAMESPACE);
+    return stored === true;
   },
 };
 

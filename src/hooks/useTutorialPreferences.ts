@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import settingsService, { getCurrentUserId } from '../services/settingsService';
 
 interface TutorialPreferences {
   hasSeenTutorial: boolean;
@@ -13,21 +14,26 @@ const DEFAULT_PREFERENCES: TutorialPreferences = {
 };
 
 export function useTutorialPreferences(_tutorialId?: string) {
-  const [preferences, setPreferences] = useState<TutorialPreferences>(() => {
-    try {
+  const [preferences, setPreferences] = useState<TutorialPreferences>(DEFAULT_PREFERENCES);
+
+  useEffect(() => {
+    const loadPreferences = async () => {
       const storageKey = _tutorialId ? `tutorialPreferences_${_tutorialId}` : 'tutorialPreferences';
-      const stored = localStorage.getItem(storageKey);
-      return stored ? JSON.parse(stored) : DEFAULT_PREFERENCES;
-    } catch {
-      return DEFAULT_PREFERENCES;
-    }
-  });
+      const userId = getCurrentUserId();
+      const remote = await settingsService.getSetting<TutorialPreferences>(storageKey, { userId });
+      if (remote) {
+        setPreferences(remote);
+        return;
+      }
+    };
+    void loadPreferences();
+  }, [_tutorialId]);
 
   const updatePreferences = useCallback((updates: Partial<TutorialPreferences>) => {
     setPreferences((prev) => {
       const newPrefs = { ...prev, ...updates };
       const storageKey = _tutorialId ? `tutorialPreferences_${_tutorialId}` : 'tutorialPreferences';
-      localStorage.setItem(storageKey, JSON.stringify(newPrefs));
+      void settingsService.setSetting(storageKey, newPrefs, { userId: getCurrentUserId() });
       return newPrefs;
     });
   }, [_tutorialId]);

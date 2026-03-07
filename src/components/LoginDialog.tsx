@@ -17,6 +17,7 @@ import {
   ListSubheader,
 } from '@mui/material';
 import { Close as CloseIcon, Lock as LockIcon } from '@mui/icons-material';
+import authSessionService from '@/services/authSessionService';
 
 interface LoginDialogProps {
   open: boolean;
@@ -108,9 +109,8 @@ export default function LoginDialog({ open, onClose, onLoginSuccess, isLandingPa
     setLoading(true);
     setError('');
 
-    // Save profession FIRST before login attempt
     if (selectedRole) {
-      localStorage.setItem('selectedProfession', selectedRole);
+      await authSessionService.setSelectedProfession(selectedRole);
     }
 
     console.log('🔐 Attempting login with:', { email: email.trim(), role: selectedRole });
@@ -137,10 +137,9 @@ export default function LoginDialog({ open, onClose, onLoginSuccess, isLandingPa
       console.log('🔐 Backend response:', { ok: true, success: data.success, user: data.user });
 
       if (data.success) {
-        console.log('✅ Login successful, saving to localStorage and reloading...');
-        localStorage.setItem('adminUser', JSON.stringify(data.user));
-        localStorage.setItem('currentUserId', data.user.id.toString());
-        window.dispatchEvent(new Event('auth-user-updated'));
+        console.log('✅ Login successful, saving session and reloading...');
+        await authSessionService.setAdminUser(data.user);
+        await authSessionService.setCurrentUserId(String(data.user.id));
         onLoginSuccess(data.user);
         // Page will reload from onLoginSuccess, no need to clear form
       } else {
@@ -161,9 +160,8 @@ export default function LoginDialog({ open, onClose, onLoginSuccess, isLandingPa
       };
       
       console.log('🚀 Using mock auth with:', mockUser);
-      localStorage.setItem('adminUser', JSON.stringify(mockUser));
-      localStorage.setItem('currentUserId', mockUser.id.toString());
-      window.dispatchEvent(new Event('auth-user-updated'));
+      await authSessionService.setAdminUser(mockUser);
+      await authSessionService.setCurrentUserId(mockUser.id.toString());
       onLoginSuccess(mockUser);
       // Page will reload from onLoginSuccess, no need to clear form
     }
@@ -238,8 +236,8 @@ export default function LoginDialog({ open, onClose, onLoginSuccess, isLandingPa
       >
         <Box
           component="img"
-          src="/casting-planner-logo.png"
-          alt="Casting Planner"
+          src="/creatorhub-virtual-studio-logo.svg"
+          alt="Virtual Studio"
           sx={{
             width: 80,
             height: 80,
@@ -266,7 +264,7 @@ export default function LoginDialog({ open, onClose, onLoginSuccess, isLandingPa
         <Typography sx={{ color: 'rgba(255,255,255,0.87)', fontSize: '0.875rem' }}>
           {isLandingPage 
             ? 'Velg din rolle og logg inn for å starte'
-            : 'Logg inn for å administrere Casting Planner'}
+            : 'Logg inn for å administrere Virtual Studio'}
         </Typography>
 
         <IconButton 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Notification as AppNotification, ActivityLogEntry, ActivityActionType } from '../core/models/casting';
+import settingsService, { getCurrentUserId } from '../services/settingsService';
 
 interface UseNotificationsOptions {
   currentUserId?: string;
@@ -21,34 +22,35 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
     activityLog: [],
   });
 
-  const loadFromStorage = useCallback(() => {
-    const stored = localStorage.getItem('vs-notifications');
-    if (stored) {
-      const parsed = JSON.parse(stored);
+  const loadFromStorage = useCallback(async () => {
+    const userId = currentUserId || getCurrentUserId();
+    const stored = await settingsService.getSetting<{ notifications?: AppNotification[] }>('vs-notifications', { userId });
+    if (stored?.notifications) {
       setState(prev => ({
         ...prev,
-        notifications: parsed.notifications || [],
-        unreadCount: (parsed.notifications || []).filter((n: AppNotification) => !n.read).length,
+        notifications: stored.notifications || [],
+        unreadCount: (stored.notifications || []).filter((n: AppNotification) => !n.read).length,
       }));
     }
 
-    const activityStored = localStorage.getItem('vs-activity-log');
+    const activityStored = await settingsService.getSetting<ActivityLogEntry[]>('vs-activity-log', { userId });
     if (activityStored) {
       setState(prev => ({
         ...prev,
-        activityLog: JSON.parse(activityStored) || [],
+        activityLog: activityStored || [],
       }));
     }
-  }, []);
+  }, [currentUserId]);
 
   useEffect(() => {
-    loadFromStorage();
+    void loadFromStorage();
   }, [loadFromStorage]);
 
   const saveToStorage = useCallback((notifications: AppNotification[], activityLog: ActivityLogEntry[]) => {
-    localStorage.setItem('vs-notifications', JSON.stringify({ notifications }));
-    localStorage.setItem('vs-activity-log', JSON.stringify(activityLog));
-  }, []);
+    const userId = currentUserId || getCurrentUserId();
+    void settingsService.setSetting('vs-notifications', { notifications }, { userId });
+    void settingsService.setSetting('vs-activity-log', activityLog, { userId });
+  }, [currentUserId]);
 
   const addNotification = useCallback((notification: Omit<AppNotification, 'id' | 'createdAt' | 'read'>) => {
     const newNotification: AppNotification = {

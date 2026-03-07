@@ -8,7 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 import os
+from typing import Optional
 import uuid
+from datetime import datetime
 import base64
 import json
 from pathlib import Path
@@ -114,7 +116,7 @@ except ImportError as e:
     print(f"Warning: Virtual Studio service not available: {e}")
     VIRTUAL_STUDIO_SERVICE_AVAILABLE = False
 
-# Casting Planner service imports
+# Virtual Studio service imports
 try:
     from casting_favorites_service import (
         init_casting_favorites_tables,
@@ -133,6 +135,44 @@ try:
 except ImportError as e:
     print(f"Warning: Casting service not available: {e}")
     CASTING_SERVICE_AVAILABLE = False
+
+# User KV service imports
+try:
+    from user_kv_service import (
+        init_user_kv_tables,
+        set_user_kv as db_set_user_kv,
+        get_user_kv as db_get_user_kv
+    )
+    USER_KV_SERVICE_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: User KV service not available: {e}")
+    USER_KV_SERVICE_AVAILABLE = False
+
+# Branding settings service imports
+try:
+    from branding_service import (
+        init_branding_settings_table,
+        get_branding_settings as db_get_branding_settings,
+        set_branding_settings as db_set_branding_settings
+    )
+    BRANDING_SERVICE_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Branding service not available: {e}")
+    BRANDING_SERVICE_AVAILABLE = False
+
+# App settings service imports
+try:
+    from settings_service import (
+        init_settings_table,
+        get_settings as db_get_settings,
+        set_settings as db_set_settings,
+        delete_settings as db_delete_settings,
+        list_settings as db_list_settings
+    )
+    SETTINGS_SERVICE_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Settings service not available: {e}")
+    SETTINGS_SERVICE_AVAILABLE = False
 
 # Word Bank service imports
 try:
@@ -185,10 +225,10 @@ PUBLIC_DIR = ROOT_DIR / "public"
 if PUBLIC_DIR.exists():
     app.mount("/public", StaticFiles(directory=str(PUBLIC_DIR)), name="public")
     
-    # Also serve public files from root path (for /casting-planner-logo.png etc.)
-    @app.get("/casting-planner-logo.png")
-    async def serve_casting_logo():
-        return FileResponse(PUBLIC_DIR / "casting-planner-logo.png", media_type="image/png")
+    # Also serve public files from root path (for /creatorhub-virtual-studio-logo.svg etc.)
+    @app.get("/creatorhub-virtual-studio-logo.svg")
+    async def serve_virtual_studio_logo():
+        return FileResponse(PUBLIC_DIR / "creatorhub-virtual-studio-logo.svg", media_type="image/svg+xml")
     
     @app.get("/creatorhub-logo-amber.svg")
     async def serve_logo_amber():
@@ -313,13 +353,37 @@ async def startup_event():
         except Exception as e:
             print(f"Warning: Could not initialize Virtual Studio tables: {e}")
     
-    # Initialize Casting Planner tables
+    # Initialize Virtual Studio tables
     if CASTING_SERVICE_AVAILABLE:
         try:
             init_casting_favorites_tables()
-            print("Casting Planner tables initialized")
+            print("Virtual Studio tables initialized")
         except Exception as e:
             print(f"Warning: Could not initialize Casting tables: {e}")
+
+    # Initialize user KV table
+    if USER_KV_SERVICE_AVAILABLE:
+        try:
+            init_user_kv_tables()
+            print("User KV table initialized")
+        except Exception as e:
+            print(f"Warning: Could not initialize user KV table: {e}")
+
+    # Initialize branding settings table
+    if BRANDING_SERVICE_AVAILABLE:
+        try:
+            init_branding_settings_table()
+            print("Branding settings table initialized")
+        except Exception as e:
+            print(f"Warning: Could not initialize branding settings table: {e}")
+
+    # Initialize app settings table
+    if SETTINGS_SERVICE_AVAILABLE:
+        try:
+            init_settings_table()
+            print("App settings table initialized")
+        except Exception as e:
+            print(f"Warning: Could not initialize app settings table: {e}")
 
 @app.get("/")
 async def root():
@@ -544,12 +608,14 @@ async def ml_health_check():
     
     return response
 
-# In-memory user settings storage (for development)
-user_kv_store: dict = {}
-
 @app.post("/api/user/kv")
 async def store_user_kv(data: dict):
     """Store user key-value settings."""
+    if not USER_KV_SERVICE_AVAILABLE:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "User KV service not available"}
+        )
     try:
         key = data.get("key")
         value = data.get("value")
@@ -560,11 +626,8 @@ async def store_user_kv(data: dict):
                 status_code=400,
                 content={"error": "Missing 'key' in request body"}
             )
-        
-        if user_id not in user_kv_store:
-            user_kv_store[user_id] = {}
-        
-        user_kv_store[user_id][key] = value
+
+        db_set_user_kv(user_id, key, value)
         
         return {"success": True, "key": key, "user_id": user_id}
     except Exception as e:
@@ -576,9 +639,141 @@ async def store_user_kv(data: dict):
 @app.get("/api/user/kv/{key}")
 async def get_user_kv(key: str, user_id: str = "default"):
     """Get user key-value setting."""
-    if user_id in user_kv_store and key in user_kv_store[user_id]:
-        return {"key": key, "value": user_kv_store[user_id][key], "user_id": user_id}
-    return {"key": key, "value": None, "user_id": user_id}
+    if not USER_KV_SERVICE_AVAILABLE:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "User KV service not available"}
+        )
+    try:
+        value = db_get_user_kv(user_id, key)
+        return {"key": key, "value": value, "user_id": user_id}
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
+
+@app.get("/api/branding/settings")
+async def get_branding_settings():
+    """Get branding settings."""
+    if not BRANDING_SERVICE_AVAILABLE:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Branding service not available"}
+        )
+    try:
+        settings = db_get_branding_settings()
+        return {"settings": settings}
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
+
+@app.put("/api/branding/settings")
+async def update_branding_settings(data: dict):
+    """Update branding settings."""
+    if not BRANDING_SERVICE_AVAILABLE:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Branding service not available"}
+        )
+    settings = data.get("settings")
+    if settings is None:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Missing 'settings' in request body"}
+        )
+    try:
+        updated = db_set_branding_settings(settings)
+        return {"settings": updated}
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
+
+@app.get("/api/settings")
+async def get_app_settings(user_id: str, namespace: str, project_id: Optional[str] = None):
+    """Get app settings by namespace and optional project scope."""
+    if not SETTINGS_SERVICE_AVAILABLE:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Settings service not available"}
+        )
+    try:
+        data = db_get_settings(user_id, namespace, project_id)
+        return {"data": data}
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
+
+@app.get("/api/settings/list")
+async def list_app_settings(user_id: str, namespace_prefix: str, project_id: Optional[str] = None):
+    """List app settings by namespace prefix and optional project scope."""
+    if not SETTINGS_SERVICE_AVAILABLE:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Settings service not available"}
+        )
+    try:
+        entries = db_list_settings(user_id, namespace_prefix, project_id)
+        return {"entries": entries}
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
+
+@app.put("/api/settings")
+async def update_app_settings(data: dict):
+    """Upsert app settings."""
+    if not SETTINGS_SERVICE_AVAILABLE:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Settings service not available"}
+        )
+    user_id = data.get("userId")
+    namespace = data.get("namespace")
+    payload = data.get("data")
+    project_id = data.get("projectId")
+    if not user_id or not namespace:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Missing 'userId' or 'namespace' in request body"}
+        )
+    if payload is None:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Missing 'data' in request body"}
+        )
+    try:
+        updated = db_set_settings(user_id, namespace, payload, project_id)
+        return {"data": updated}
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
+
+@app.delete("/api/settings")
+async def delete_app_settings(user_id: str, namespace: str, project_id: Optional[str] = None):
+    """Delete app settings for a namespace."""
+    if not SETTINGS_SERVICE_AVAILABLE:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Settings service not available"}
+        )
+    try:
+        deleted = db_delete_settings(user_id, namespace, project_id)
+        return {"success": deleted}
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
 
 @app.post("/api/analytics")
 async def track_analytics(data: dict):
@@ -1175,7 +1370,7 @@ async def test_rodin_generate(request: dict):
 
 
 # ============================================================================
-# Casting Planner API Endpoints
+# Virtual Studio API Endpoints
 # ============================================================================
 
 @app.get("/api/casting/health")
@@ -1725,7 +1920,7 @@ async def activate_tutorial(tutorial_id: str, request: Request):
     
     try:
         data = await request.json()
-        category = data.get('category', 'casting-planner')
+        category = data.get('category', 'virtual-studio')
         success = db_set_active_tutorial(tutorial_id, category)
         if success:
             return JSONResponse({"success": True, "message": "Tutorial activated"})
@@ -1968,6 +2163,173 @@ async def api_delete_note(note_id: str):
         raise HTTPException(status_code=404, detail="Note not found")
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/notes")
+async def api_get_notes_alias(user_id: Optional[str] = None, projectId: Optional[str] = None, sceneId: Optional[str] = None):
+    """Alias for studio notes (supports legacy notes service)."""
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        notes = get_notes(user_id, projectId)
+        if sceneId:
+            notes = [note for note in notes if note.get("scene_id") == sceneId or note.get("sceneId") == sceneId]
+        return JSONResponse({"success": True, "notes": notes})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/notes")
+async def api_save_note_alias(request: Request):
+    """Alias for studio notes (supports legacy notes service)."""
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        data = await request.json()
+        user_id = data.pop("userId", None)
+        note = save_note(data, user_id)
+        return JSONResponse(note)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/notes")
+async def api_update_note_alias(request: Request):
+    """Alias for studio notes updates."""
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        data = await request.json()
+        user_id = data.pop("userId", None)
+        note = save_note(data, user_id)
+        return JSONResponse(note)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/notes/{note_id}")
+async def api_delete_note_alias(note_id: str):
+    """Alias for studio notes deletion."""
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        success = delete_note(note_id)
+        if success:
+            return JSONResponse({"success": True})
+        raise HTTPException(status_code=404, detail="Note not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/notes/batch")
+async def api_save_notes_batch_alias(request: Request):
+    """Alias for batch notes save."""
+    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
+    try:
+        data = await request.json()
+        notes = data.get("notes", [])
+        for note in notes:
+            user_id = note.pop("userId", None)
+            save_note(note, user_id)
+        return JSONResponse({"success": True})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/studio/preferences")
+async def api_get_studio_preferences(user_id: Optional[str] = None):
+    if not SETTINGS_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Settings service not available")
+    try:
+        data = db_get_settings(user_id or "default-user", "studio_preferences") or {"favorites": {}, "recent": {}}
+        return JSONResponse(data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/studio/preferences/favorites")
+async def api_update_studio_favorites(request: Request, user_id: Optional[str] = None):
+    if not SETTINGS_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Settings service not available")
+    try:
+        body = await request.json()
+        section = body.get("section")
+        favorites = body.get("favorites")
+        current = db_get_settings(user_id or "default-user", "studio_preferences") or {"favorites": {}, "recent": {}}
+        if section is None or favorites is None:
+            raise HTTPException(status_code=400, detail="section and favorites required")
+        current.setdefault("favorites", {})[section] = favorites
+        db_set_settings(user_id or "default-user", "studio_preferences", current)
+        return JSONResponse({"success": True})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/studio/preferences/recent")
+async def api_add_studio_recent(request: Request, user_id: Optional[str] = None):
+    if not SETTINGS_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Settings service not available")
+    try:
+        body = await request.json()
+        section = body.get("section")
+        item = body.get("item")
+        if section is None or item is None:
+            raise HTTPException(status_code=400, detail="section and item required")
+        current = db_get_settings(user_id or "default-user", "studio_preferences") or {"favorites": {}, "recent": {}}
+        recent = current.setdefault("recent", {}).get(section, [])
+        recent = [entry for entry in recent if entry.get("id") != item.get("id")]
+        recent = [item] + recent
+        current["recent"][section] = recent[:10]
+        db_set_settings(user_id or "default-user", "studio_preferences", current)
+        return JSONResponse({"success": True})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/studio/scenes/{scene_id}/snapshots")
+async def api_list_snapshots(scene_id: str, user_id: Optional[str] = None):
+    if not SETTINGS_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Settings service not available")
+    try:
+        data = db_get_settings(user_id or "default-user", "studio_snapshots", scene_id) or {"snapshots": []}
+        return JSONResponse({"snapshots": data.get("snapshots", [])})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/studio/snapshots")
+async def api_create_snapshot(request: Request, user_id: Optional[str] = None):
+    if not SETTINGS_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Settings service not available")
+    try:
+        payload = await request.json()
+        scene_id = payload.get("sceneId")
+        if not scene_id:
+            raise HTTPException(status_code=400, detail="sceneId required")
+        record = dict(payload)
+        if not record.get("id"):
+            record["id"] = f"snapshot_{uuid.uuid4().hex[:10]}"
+        if not record.get("createdAt"):
+            record["createdAt"] = datetime.utcnow().isoformat()
+        data = db_get_settings(user_id or "default-user", "studio_snapshots", scene_id) or {"snapshots": []}
+        snapshots = [record] + [s for s in data.get("snapshots", []) if s.get("id") != record["id"]]
+        db_set_settings(user_id or "default-user", "studio_snapshots", {"snapshots": snapshots[:10]}, scene_id)
+        return JSONResponse({"snapshot": record})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/studio/snapshots/{snapshot_id}")
+async def api_delete_snapshot(snapshot_id: str, sceneId: Optional[str] = None, user_id: Optional[str] = None):
+    if not SETTINGS_SERVICE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Settings service not available")
+    if not sceneId:
+        raise HTTPException(status_code=400, detail="sceneId required")
+    try:
+        data = db_get_settings(user_id or "default-user", "studio_snapshots", sceneId) or {"snapshots": []}
+        snapshots = [s for s in data.get("snapshots", []) if s.get("id") != snapshot_id]
+        db_set_settings(user_id or "default-user", "studio_snapshots", {"snapshots": snapshots}, sceneId)
+        return JSONResponse({"success": True})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -2943,7 +3305,7 @@ async def api_seed_troll_manuscript(project_id: str):
 
 
 # ============================================================================
-# Casting Planner API Endpoints
+# Virtual Studio API Endpoints
 # ============================================================================
 
 @app.get("/api/casting/favorites/{project_id}/{favorite_type}")

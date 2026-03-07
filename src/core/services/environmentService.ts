@@ -8,6 +8,7 @@ import { FloorMaterial, getFloorById, FLOOR_MATERIALS } from '../../data/floorDe
 import { EnvironmentPreset, getEnvironmentById, ENVIRONMENT_PRESETS } from '../../data/environmentPresets';
 import { audioService } from './audioService';
 import { undoRedoService } from './undoRedoService';
+import settingsService, { getCurrentUserId } from '../../services/settingsService';
 
 export interface EnvironmentState {
   walls: {
@@ -42,6 +43,23 @@ class EnvironmentService {
   };
 
   private listeners: Set<(state: EnvironmentState) => void> = new Set();
+  private customPresets: EnvironmentPreset[] = [];
+
+  constructor() {
+    void this.hydrateCustomPresets();
+  }
+
+  private async hydrateCustomPresets(): Promise<void> {
+    try {
+      const userId = getCurrentUserId();
+      const remote = await settingsService.getSetting<EnvironmentPreset[]>('virtualStudio_customEnvironments', { userId });
+      if (remote) {
+        this.customPresets = remote;
+      }
+    } catch {
+      // Ignore hydration errors
+    }
+  }
 
   // Subscribe to state changes
   subscribe(listener: (state: EnvironmentState) => void): () => void {
@@ -541,26 +559,23 @@ class EnvironmentService {
       tags: ['custom'],
     };
 
-    // Save to localStorage
+    // Save to settings cache
     const customPresets = this.getCustomPresets();
     customPresets.push(customPreset);
-    localStorage.setItem('virtualStudio_customEnvironments', JSON.stringify(customPresets));
+    this.customPresets = customPresets;
+    void settingsService.setSetting('virtualStudio_customEnvironments', customPresets, { userId: getCurrentUserId() });
 
     return customPreset;
   }
 
   getCustomPresets(): EnvironmentPreset[] {
-    try {
-      const stored = localStorage.getItem('virtualStudio_customEnvironments');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
+    return this.customPresets;
   }
 
   deleteCustomPreset(presetId: string): void {
     const customPresets = this.getCustomPresets().filter(p => p.id !== presetId);
-    localStorage.setItem('virtualStudio_customEnvironments', JSON.stringify(customPresets));
+    this.customPresets = customPresets;
+    void settingsService.setSetting('virtualStudio_customEnvironments', customPresets, { userId: getCurrentUserId() });
   }
 
   // Export/Import

@@ -321,7 +321,7 @@ Lagre versjonert:
 ### Use Case 4: Migrering
 ```
 Eksporter fra gammelt system
-Importer i ny Casting Planner
+Importer i ny Virtual Studio
 Full data integritet bevares
 ```
 

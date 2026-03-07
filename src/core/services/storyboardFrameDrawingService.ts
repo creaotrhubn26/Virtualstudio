@@ -11,6 +11,7 @@ import {
   useStoryboardStore 
 } from '../../state/storyboardStore';
 import { PencilStroke, PencilPoint } from '../../hooks/useApplePencil';
+import settingsService, { getCurrentUserId } from '../../services/settingsService';
 
 // =============================================================================
 // Types
@@ -197,8 +198,25 @@ export function getStrokeStats(strokes: PencilStroke[]) {
 // =============================================================================
 
 class StoryboardFrameDrawingService {
+  private cachedDrawings: StoredDrawing[] = [];
+
+  constructor() {
+    void this.hydrateFromSettings();
+  }
+
+  private async hydrateFromSettings(): Promise<void> {
+    try {
+      const userId = getCurrentUserId();
+      const remote = await settingsService.getSetting<StoredDrawing[]>('virtualStudio_storyboardDrawings', { userId });
+      if (remote) {
+        this.cachedDrawings = remote;
+      }
+    } catch {
+      // Ignore hydration errors
+    }
+  }
   /**
-   * Save drawing to localStorage
+   * Save drawing to settings cache
    */
   async saveDrawing(
     frameId: string,
@@ -229,14 +247,14 @@ class StoryboardFrameDrawingService {
       console.warn('Failed to create thumbnail:', error);
     }
 
-    // Save to localStorage
+    // Save to settings cache
     this.saveToStorage(storedDrawing);
 
     return storedDrawing;
   }
 
   /**
-   * Load drawing from localStorage
+   * Load drawing from settings cache
    */
   getDrawing(frameId: string): StoredDrawing | null {
     const drawings = this.getAllDrawings();
@@ -265,7 +283,8 @@ class StoryboardFrameDrawingService {
   deleteDrawing(drawingId: string): void {
     const drawings = this.getAllDrawings();
     const filtered = drawings.filter(d => d.id !== drawingId);
-    localStorage.setItem(STORAGE_KEYS.DRAWINGS, JSON.stringify(filtered));
+    this.cachedDrawings = filtered;
+    void settingsService.setSetting('virtualStudio_storyboardDrawings', filtered, { userId: getCurrentUserId() });
   }
 
   /**
@@ -274,7 +293,8 @@ class StoryboardFrameDrawingService {
   clearFrameDrawings(frameId: string): void {
     const drawings = this.getAllDrawings();
     const filtered = drawings.filter(d => d.metadata.frameId !== frameId);
-    localStorage.setItem(STORAGE_KEYS.DRAWINGS, JSON.stringify(filtered));
+    this.cachedDrawings = filtered;
+    void settingsService.setSetting('virtualStudio_storyboardDrawings', filtered, { userId: getCurrentUserId() });
   }
 
   /**
@@ -354,13 +374,7 @@ class StoryboardFrameDrawingService {
   // Private methods
 
   private getAllDrawings(): StoredDrawing[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.DRAWINGS);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      console.error('Failed to load drawings from storage');
-      return [];
-    }
+    return this.cachedDrawings;
   }
 
   private saveToStorage(drawing: StoredDrawing): void {
@@ -373,7 +387,8 @@ class StoryboardFrameDrawingService {
       } else {
         drawings.push(drawing);
       }
-      localStorage.setItem(STORAGE_KEYS.DRAWINGS, JSON.stringify(drawings));
+      this.cachedDrawings = drawings;
+      void settingsService.setSetting('virtualStudio_storyboardDrawings', drawings, { userId: getCurrentUserId() });
     } catch (error) {
       console.error('Failed to save drawing to storage:', error);
       throw error;

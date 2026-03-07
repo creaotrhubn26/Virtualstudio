@@ -295,7 +295,7 @@ export const WrapReport: React.FC<WrapReportProps> = ({
             <LinearProgress 
               variant="determinate" 
               value={progressPercentage}
-              color={getProgressColor(report.scenesCompleted, report.scenesPlanned) as any}
+              color={getProgressColor(report.scenesCompleted, report.scenesPlanned) as 'success' | 'warning' | 'error'}
               sx={{ mt: 1, height: 6, borderRadius: 1 }}
             />
           </Paper>

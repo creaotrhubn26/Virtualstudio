@@ -703,7 +703,7 @@ export function EquipmentManagementPanel({ projectId, onUpdate }: EquipmentManag
         notes: eq.notes || '',
         imageUrl: eq.image_url || '',
         status: eq.status || 'available',
-        isGlobal: (eq as any).is_global || !eq.project_id, // Global if no project_id or is_global flag
+        isGlobal: eq.is_global || !eq.project_id, // Global if no project_id or is_global flag
       });
     } else {
       setEditingEquipment(null);
@@ -749,7 +749,7 @@ export function EquipmentManagementPanel({ projectId, onUpdate }: EquipmentManag
       status: formData.status,
       project_id: formData.isGlobal ? undefined : projectId, // undefined = global equipment
       is_global: formData.isGlobal,
-    } as any; // Cast to any to allow is_global field
+    };
 
     try {
       if (editingEquipment) {
@@ -868,7 +868,7 @@ export function EquipmentManagementPanel({ projectId, onUpdate }: EquipmentManag
       notes: eq.notes || '',
       imageUrl: eq.image_url || '',
       status: 'available', // Reset status for new item
-      isGlobal: (eq as any).is_global || false, // Preserve global status
+      isGlobal: eq.is_global || false, // Preserve global status
     });
     setDialogOpen(true);
     showSuccess('Utstyr duplisert - rediger og lagre');
@@ -1867,7 +1867,7 @@ export function EquipmentManagementPanel({ projectId, onUpdate }: EquipmentManag
                   )}
                   
                   {/* Global equipment indicator */}
-                  {(eq as any).is_global && (
+                  {eq.is_global && (
                     <Tooltip title="Globalt utstyr - tilgjengelig i alle prosjekter">
                       <Chip
                         icon={<PublicIcon sx={{ fontSize: '14px !important' }} />}
@@ -2205,7 +2205,7 @@ export function EquipmentManagementPanel({ projectId, onUpdate }: EquipmentManag
                       <Box>
                         <Typography sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           {eq.name}
-                          {(eq as any).is_global && (
+                          {eq.is_global && (
                             <Tooltip title="Globalt utstyr - tilgjengelig i alle prosjekter">
                               <PublicIcon sx={{ fontSize: 16, color: '#2196f3' }} />
                             </Tooltip>

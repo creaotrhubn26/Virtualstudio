@@ -11,6 +11,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { logger } from '../../core/services/logger';
+import settingsService, { getCurrentUserId } from '../../services/settingsService';
 
 const log = logger.module('ShotListPanel, ');
 import {
@@ -241,7 +242,7 @@ class ShotTrainingService {
     this.loadAsync();
   }
 
-  // DB-first with localStorage fallback pattern
+  // DB-first with settings cache fallback pattern
   private async loadAsync(): Promise<void> {
     if (this.initialized) return;
     
@@ -255,35 +256,32 @@ class ShotTrainingService {
         const data = await response.json();
         if (data.success && Array.isArray(data.training)) {
           this.trainingData = data.training;
-          // Cache in localStorage
-          localStorage.setItem(this.storageKey, JSON.stringify(this.trainingData));
+          // Cache in settings
+          void settingsService.setSetting(this.storageKey, this.trainingData, { userId: getCurrentUserId() });
           this.initialized = true;
           return;
         }
       }
     } catch (e) {
-      log.warn('Failed to load training data from API, using localStorage: ', e);
+      log.warn('Failed to load training data from API, using settings cache: ', e);
     }
-    
-    // Fallback to localStorage
+
+    // Fallback to settings cache
     try {
-      const saved = localStorage.getItem(this.storageKey);
-      if (saved) {
-        this.trainingData = JSON.parse(saved);
+      const cached = await settingsService.getSetting<TrainingData[]>(this.storageKey, { userId: getCurrentUserId() });
+      if (cached) {
+        this.trainingData = cached;
+        this.initialized = true;
+        return;
       }
     } catch (e) {
-      log.warn('Failed to load shot training data from localStorage:', e);
+      log.warn('Failed to load shot training data from settings cache:', e);
     }
     this.initialized = true;
   }
 
   private save(): void {
-    // Save to localStorage first (fast)
-    try {
-      localStorage.setItem(this.storageKey, JSON.stringify(this.trainingData));
-    } catch (e) {
-      log.warn('Failed to save shot training data to localStorage:', e);
-    }
+    void settingsService.setSetting(this.storageKey, this.trainingData, { userId: getCurrentUserId() });
   }
 
   recordTraining(shot: Shot, presetId: string, customizations?: any): void {

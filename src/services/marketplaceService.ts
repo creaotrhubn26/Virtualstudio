@@ -1,58 +1,86 @@
 import { MarketplaceProduct, MarketplaceReview, MarketplaceFilters } from '../core/models/marketplace';
+import settingsService, { getCurrentUserId } from './settingsService';
 
 const STORAGE_KEY = 'virtualStudio_marketplaceProducts';
 const INSTALLED_KEY = 'virtualStudio_installedProducts';
 const FAVORITES_KEY = 'virtualStudio_marketplaceFavorites';
 const REVIEWS_KEY = 'virtualStudio_marketplaceReviews';
+let cachedProducts: MarketplaceProduct[] = [];
+let cachedInstalled: MarketplaceProduct[] = [];
+let cachedFavorites: string[] = [];
+let cachedReviews: MarketplaceReview[] = [];
+
+const setProducts = (products: MarketplaceProduct[]): void => {
+  cachedProducts = products;
+  void settingsService.setSetting(STORAGE_KEY, products, { userId: getCurrentUserId() });
+};
+
+const setInstalled = (installed: MarketplaceProduct[]): void => {
+  cachedInstalled = installed;
+  void settingsService.setSetting(INSTALLED_KEY, installed, { userId: getCurrentUserId() });
+};
+
+const setFavorites = (favorites: string[]): void => {
+  cachedFavorites = favorites;
+  void settingsService.setSetting(FAVORITES_KEY, favorites, { userId: getCurrentUserId() });
+};
+
+const setReviews = (reviews: MarketplaceReview[]): void => {
+  cachedReviews = reviews;
+  void settingsService.setSetting(REVIEWS_KEY, reviews, { userId: getCurrentUserId() });
+};
+
+const hydrateMarketplaceFromDb = async (): Promise<void> => {
+  if (typeof window === 'undefined') return;
+  try {
+    const userId = getCurrentUserId();
+    const [products, installed, favorites, reviews] = await Promise.all([
+      settingsService.getSetting<MarketplaceProduct[]>(STORAGE_KEY, { userId }),
+      settingsService.getSetting<MarketplaceProduct[]>(INSTALLED_KEY, { userId }),
+      settingsService.getSetting<string[]>(FAVORITES_KEY, { userId }),
+      settingsService.getSetting<MarketplaceReview[]>(REVIEWS_KEY, { userId }),
+    ]);
+
+    if (products) cachedProducts = products;
+    if (installed) cachedInstalled = installed;
+    if (favorites) cachedFavorites = favorites;
+    if (reviews) cachedReviews = reviews;
+  } catch {
+    // Ignore hydration errors
+  }
+};
+
+void hydrateMarketplaceFromDb();
 
 // Helper functions to avoid circular references
 const getAllProductsHelper = (): MarketplaceProduct[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const storedProducts: MarketplaceProduct[] = JSON.parse(stored);
-      // Merge with mock data to ensure we always have the latest versions
-      return storedProducts.map(storedProduct => {
-        const latestProduct = mockProducts.find(p => p.id === storedProduct.id);
-        if (latestProduct) {
-          // Preserve installation status but update other properties from mock data
-          return {
-            ...latestProduct,
-            isInstalled: storedProduct.isInstalled,
-            installedVersion: storedProduct.installedVersion,
-            hasUpdate: storedProduct.hasUpdate,
-            isFavorite: storedProduct.isFavorite
-          };
-        }
-        return storedProduct;
-      }).concat(
-        // Add any new products from mock data that aren't in stored
-        mockProducts.filter(mockProduct => !storedProducts.find(p => p.id === mockProduct.id))
-      );
+  if (cachedProducts.length === 0) return mockProducts;
+  // Merge with mock data to ensure we always have the latest versions
+  return cachedProducts.map(storedProduct => {
+    const latestProduct = mockProducts.find(p => p.id === storedProduct.id);
+    if (latestProduct) {
+      // Preserve installation status but update other properties from mock data
+      return {
+        ...latestProduct,
+        isInstalled: storedProduct.isInstalled,
+        installedVersion: storedProduct.installedVersion,
+        hasUpdate: storedProduct.hasUpdate,
+        isFavorite: storedProduct.isFavorite
+      };
     }
-    return mockProducts;
-  } catch {
-    return mockProducts;
-  }
+    return storedProduct;
+  }).concat(
+    // Add any new products from mock data that aren't in stored
+    mockProducts.filter(mockProduct => !cachedProducts.find(p => p.id === mockProduct.id))
+  );
 };
 
 const getInstalledProductsHelper = (): MarketplaceProduct[] => {
-  try {
-    const stored = localStorage.getItem(INSTALLED_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
+  return cachedInstalled;
 };
 
 const getReviewsHelper = (productId: string): MarketplaceReview[] => {
-  try {
-    const stored = localStorage.getItem(REVIEWS_KEY);
-    const allReviews: MarketplaceReview[] = stored ? JSON.parse(stored) : [];
-    return allReviews.filter(r => r.productId === productId);
-  } catch {
-    return [];
-  }
+  return cachedReviews.filter(r => r.productId === productId);
 };
 
 // Mock data for development
@@ -161,8 +189,8 @@ const mockProducts: MarketplaceProduct[] = [
     isFavorite: false,
   },
   {
-    id: 'plugin-casting-planner',
-    name: 'Casting Planner',
+    id: 'plugin-virtual-studio',
+    name: 'Virtual Studio',
     description: 'Operativt kontrollsenter for hele cast-prosessen – fra behovsdefinisjon til gjennomføring.',
     category: 'plugin',
     price: 0,
@@ -278,7 +306,7 @@ export const marketplaceService = {
    */
   initializeMockData(): void {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(mockProducts));
+      setProducts(mockProducts);
     } catch (error) {
       console.error('Error initializing mock data:', error);
     }
@@ -303,7 +331,7 @@ export const marketplaceService = {
         }
         return installedTool;
       });
-      localStorage.setItem(INSTALLED_KEY, JSON.stringify(updated));
+        setInstalled(updated);
       window.dispatchEvent(new CustomEvent('installed-tools-changed'));
     } catch (error) {
       console.error('Error forcing update of installed tools:', error);
@@ -353,17 +381,17 @@ export const marketplaceService = {
           installedVersion: latestProduct.version
         };
         installed.push(productToInstall);
-        localStorage.setItem(INSTALLED_KEY, JSON.stringify(installed));
+        setInstalled(installed);
         
         // Update product status in products list
         const index = products.findIndex(p => p.id === id);
         if (index >= 0) {
           products[index] = { ...latestProduct, ...products[index], isInstalled: true, installedVersion: latestProduct.version, hasUpdate: false };
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+          setProducts(products);
         } else {
           // If product doesn't exist in products list, add it
           products.push({ ...latestProduct, isInstalled: true, installedVersion: latestProduct.version, hasUpdate: false });
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+          setProducts(products);
         }
         
         // Dispatch event for installed tools change
@@ -387,7 +415,7 @@ export const marketplaceService = {
       const installed = getInstalledProductsHelper();
       const product = installed.find(p => p.id === id);
       const filtered = installed.filter(p => p.id !== id);
-      localStorage.setItem(INSTALLED_KEY, JSON.stringify(filtered));
+      setInstalled(filtered);
       
       // Update product status
       const products = getAllProductsHelper();
@@ -395,7 +423,7 @@ export const marketplaceService = {
       if (index >= 0) {
         products[index].isInstalled = false;
         products[index].installedVersion = undefined;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+        setProducts(products);
       }
       
       // Dispatch event for installed tools change
@@ -424,7 +452,7 @@ export const marketplaceService = {
       if (index >= 0) {
         installed[index].installedVersion = product.version;
         installed[index].hasUpdate = false;
-        localStorage.setItem(INSTALLED_KEY, JSON.stringify(installed));
+        setInstalled(installed);
       }
       
       // Update product status
@@ -433,7 +461,7 @@ export const marketplaceService = {
         products[productIndex].isInstalled = true;
         products[productIndex].installedVersion = product.version;
         products[productIndex].hasUpdate = false;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+        setProducts(products);
       }
       
       return true;
@@ -457,7 +485,7 @@ export const marketplaceService = {
           ...updatedProduct,
           lastUpdated: new Date().toISOString(),
         };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+        setProducts(products);
         return true;
       }
       return false;
@@ -478,14 +506,8 @@ export const marketplaceService = {
    * Get favorites
    */
   getFavorites(): MarketplaceProduct[] {
-    try {
-      const stored = localStorage.getItem(FAVORITES_KEY);
-      const favoriteIds: string[] = stored ? JSON.parse(stored) : [];
-      const products = getAllProductsHelper();
-      return products.filter(p => favoriteIds.includes(p.id));
-    } catch {
-      return [];
-    }
+    const products = getAllProductsHelper();
+    return products.filter(p => cachedFavorites.includes(p.id));
   },
 
   /**
@@ -493,8 +515,7 @@ export const marketplaceService = {
    */
   toggleFavorite(id: string): void {
     try {
-      const stored = localStorage.getItem(FAVORITES_KEY);
-      const favorites: string[] = stored ? JSON.parse(stored) : [];
+      const favorites = [...cachedFavorites];
       const index = favorites.indexOf(id);
       
       if (index >= 0) {
@@ -503,14 +524,14 @@ export const marketplaceService = {
         favorites.push(id);
       }
       
-      localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+      setFavorites(favorites);
       
       // Update product status
       const products = getAllProductsHelper();
       const productIndex = products.findIndex(p => p.id === id);
       if (productIndex >= 0) {
         products[productIndex].isFavorite = !products[productIndex].isFavorite;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+        setProducts(products);
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
@@ -536,10 +557,8 @@ export const marketplaceService = {
     };
     
     try {
-      const stored = localStorage.getItem(REVIEWS_KEY);
-      const allReviews: MarketplaceReview[] = stored ? JSON.parse(stored) : [];
-      allReviews.push(newReview);
-      localStorage.setItem(REVIEWS_KEY, JSON.stringify(allReviews));
+      cachedReviews.push(newReview);
+      setReviews(cachedReviews);
       
       // Update product rating
       const reviews = getReviewsHelper(productId);
@@ -550,7 +569,7 @@ export const marketplaceService = {
         if (index >= 0) {
           products[index].rating = Math.round(averageRating * 10) / 10;
           products[index].reviewCount = reviews.length;
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+          setProducts(products);
         }
       }
     } catch (error) {
@@ -574,7 +593,7 @@ export const marketplaceService = {
     if (index >= 0) {
       products[index].rating = Math.round(averageRating * 10) / 10;
       products[index].reviewCount = reviews.length;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+      setProducts(products);
     }
   },
 
@@ -641,16 +660,12 @@ export const marketplaceService = {
           isFavorite: installedTool.isFavorite
         };
         
-        // Update in localStorage if icon changed
+        // Update cached installed list if icon changed
         if (installedTool.toolConfig?.icon !== latestProduct.toolConfig.icon) {
           const index = installed.findIndex(p => p.id === installedTool.id);
           if (index >= 0) {
             installed[index] = updated;
-            try {
-              localStorage.setItem(INSTALLED_KEY, JSON.stringify(installed));
-            } catch (error) {
-              console.error('Error updating installed tools icon:', error);
-            }
+            setInstalled(installed);
           }
         }
         

@@ -340,7 +340,7 @@ const SceneListPanel: FC<SceneListPanelProps> = ({
           <InputLabel>Filter</InputLabel>
           <Select
             value={filter}
-            onChange={(e) => setFilter(e.target.value as any)}
+            onChange={(e) => setFilter(e.target.value as ScenePurpose | 'all')}
             label="Filter"
             MenuProps={{ sx: { zIndex: 1400 } }}
           >
@@ -993,7 +993,7 @@ const ShareDialog: FC<ShareDialogProps> = ({
             <InputLabel>Tilgangstype</InputLabel>
             <Select
               value={accessType}
-              onChange={(e) => setAccessType(e.target.value as any)}
+              onChange={(e) => setAccessType(e.target.value as 'read-only' | 'comment' | 'suggest')}
               label="Tilgangstype"
               MenuProps={{ sx: { zIndex: 1400 } }}
             >

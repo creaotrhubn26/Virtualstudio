@@ -51,6 +51,7 @@ import {
   Phone,
 } from '@mui/icons-material';
 import { LocationsIcon as LocationOn, TeamIcon as Groups } from '../icons/CastingIcons';
+import settingsService from '@/services/settingsService';
 
 interface SplitSheetPortalViewProps {
   contributorEmail?: string;
@@ -67,6 +68,11 @@ export default function SplitSheetPortalView({
   accessCode: propAccessCode,
   onSigned,
 }: SplitSheetPortalViewProps) {
+    const getPortalToken = async (): Promise<string> => {
+      const cached = await settingsService.getSetting<string>('virtualStudio_portalToken');
+      if (cached) return cached;
+      return '';
+    };
   const theme = useTheme();
   const brandColor = theme.palette.primary.main;
   const queryClient = useQueryClient();
@@ -283,10 +289,11 @@ export default function SplitSheetPortalView({
       // If download PDF is requested, trigger download
       if (downloadPdf && response.success) {
         try {
+          const authToken = await getPortalToken();
           const pdfResponse = await fetch(`/api/split-sheets/${splitSheetId}/pdf?signed=true`, {
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+              ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
             },
           });
           

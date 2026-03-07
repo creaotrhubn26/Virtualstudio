@@ -1,4 +1,4 @@
-import React, { useState, useId, useMemo, useEffect } from 'react';
+import React, { useState, useId, useMemo, useEffect, memo } from 'react';
 import {
   Box,
   Typography,
@@ -55,11 +55,13 @@ import {
   Assignment as AssignmentIcon,
   Inventory as InventoryIcon,
 } from '@mui/icons-material';
+import settingsService from '@/services/settingsService';
 import { RolesIcon as TheaterComedyIcon, StatsIcon } from './icons/CastingIcons';
 import { Role, CastingProject } from '../core/models/casting';
 import { castingService } from '../services/castingService';
 import { castingAuthService } from '../services/castingAuthService';
 import { useToast } from './ToastStack';
+import { useBrandingSettings } from '../hooks/useBrandingSettings';
 import { rolePoolService, PoolRole } from '../services/rolePoolService';
 
 // WCAG 2.2 - 2.5.5 Target Size: minimum 44x44px
@@ -87,7 +89,7 @@ interface RoleManagementPanelProps {
   profession?: 'photographer' | 'videographer' | null;
 }
 
-export function RoleManagementPanel({
+function RoleManagementPanelInner({
   projectId,
   roles,
   onRolesChange,
@@ -103,6 +105,7 @@ export function RoleManagementPanel({
 
   // Toast notifications
   const { showSuccess, showError, showInfo } = useToast();
+  const branding = useBrandingSettings();
 
   // Unique IDs for accessibility
   const panelTitleId = useId();
@@ -117,6 +120,8 @@ export function RoleManagementPanel({
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [showStats, setShowStats] = useState(true);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [confirmDeletePoolRole, setConfirmDeletePoolRole] = useState<PoolRole | null>(null);
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [undoSnackbarOpen, setUndoSnackbarOpen] = useState(false);
@@ -182,24 +187,31 @@ export function RoleManagementPanel({
     }
   };
 
-  const handleDeleteFromPool = async (poolRole: PoolRole) => {
-    if (window.confirm(`Er du sikker på at du vil fjerne "${poolRole.name}" fra poolen?`)) {
-      try {
-        const success = await rolePoolService.deleteFromPool(poolRole.id);
-        if (success) {
-          setPoolRoles(prev => prev.filter(r => r.id !== poolRole.id));
-          showSuccess('Rolle fjernet fra pool');
-        } else {
-          showError('Kunne ikke fjerne rolle fra pool');
-        }
-      } catch (error) {
-        console.error('Error deleting from pool:', error);
-        showError('Feil ved sletting fra pool');
+  const handleDeleteFromPool = (poolRole: PoolRole) => {
+    setConfirmDeletePoolRole(poolRole);
+  };
+
+  const executeDeleteFromPool = async () => {
+    if (!confirmDeletePoolRole) return;
+    const poolRole = confirmDeletePoolRole;
+    setConfirmDeletePoolRole(null);
+    try {
+      const success = await rolePoolService.deleteFromPool(poolRole.id);
+      if (success) {
+        setPoolRoles(prev => prev.filter(r => r.id !== poolRole.id));
+        showSuccess('Rolle fjernet fra pool');
+      } else {
+        showError('Kunne ikke fjerne rolle fra pool');
       }
+    } catch (error) {
+      console.error('Error deleting from pool:', error);
+      showError('Feil ved sletting fra pool');
     }
   };
 
-  // Load favorites from database (with localStorage fallback)
+  const FAVORITES_NAMESPACE = 'virtualStudio_roleFavorites';
+
+  // Load favorites from database (with settings cache fallback)
   useEffect(() => {
     const loadFavorites = async () => {
       try {
@@ -207,36 +219,39 @@ export function RoleManagementPanel({
         const dbFavorites = await favoritesApi.get(projectId, 'role');
         if (dbFavorites.length > 0) {
           setFavorites(new Set(dbFavorites));
+          await settingsService.setSetting(FAVORITES_NAMESPACE, dbFavorites, { projectId });
+          setFavoritesLoaded(true);
           return;
         }
       } catch (error) {
-        console.warn('Database unavailable, using localStorage:', error);
+        console.warn('Database unavailable, using settings cache:', error);
       }
-      const saved = localStorage.getItem(`ch-role-favorites-${projectId}`);
-      if (saved) {
-        try {
-          setFavorites(new Set(JSON.parse(saved)));
-        } catch { /* ignore */ }
+      const cached = await settingsService.getSetting<string[]>(FAVORITES_NAMESPACE, { projectId });
+      if (cached && cached.length > 0) {
+        setFavorites(new Set(cached));
+        setFavoritesLoaded(true);
+        return;
       }
+      setFavoritesLoaded(true);
     };
     loadFavorites();
   }, [projectId]);
 
-  // Save favorites to database and localStorage
+  // Save favorites to database and settings cache
   useEffect(() => {
     const saveFavorites = async () => {
-      localStorage.setItem(`ch-role-favorites-${projectId}`, JSON.stringify([...favorites]));
+      const values = [...favorites];
+      await settingsService.setSetting(FAVORITES_NAMESPACE, values, { projectId });
       try {
         const { favoritesApi } = await import('@/services/castingApiService');
-        await favoritesApi.set(projectId, 'role', [...favorites]);
+        await favoritesApi.set(projectId, 'role', values);
       } catch (error) {
         console.warn('Database save failed:', error);
       }
     };
-    if (favorites.size > 0 || localStorage.getItem(`ch-role-favorites-${projectId}`)) {
-      saveFavorites();
-    }
-  }, [favorites, projectId]);
+    if (!favoritesLoaded) return;
+    saveFavorites();
+  }, [favorites, projectId, favoritesLoaded]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -2134,7 +2149,7 @@ export function RoleManagementPanel({
           ) : (
             <Grid container spacing={{ xs: 1, sm: 2 }}>
               {poolRoles.map((poolRole) => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={poolRole.id}>
+                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={poolRole.id}>
                   <Card
                     sx={{
                       bgcolor: 'rgba(156, 39, 176, 0.08)',
@@ -2207,7 +2222,7 @@ export function RoleManagementPanel({
                         </Button>
                         <Tooltip title="Slett fra pool">
                           <IconButton
-                            onClick={() => handleDeleteFromPool(poolRole.id)}
+                            onClick={() => handleDeleteFromPool(poolRole)}
                             sx={{
                               minWidth: TOUCH_TARGET_SIZE,
                               minHeight: TOUCH_TARGET_SIZE,
@@ -2241,6 +2256,44 @@ export function RoleManagementPanel({
         }
         sx={{ '& .MuiSnackbarContent-root': { bgcolor: '#333' } }}
       />
+
+      {/* Delete Pool Role Confirmation Dialog */}
+      <Dialog
+        open={!!confirmDeletePoolRole}
+        onClose={() => setConfirmDeletePoolRole(null)}
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            bgcolor: '#1c2128',
+            color: '#fff',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 3,
+          },
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            {branding.tokens.labels.deleteProjectLabel || 'Slett'}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: 'rgba(255,255,255,0.85)' }}>
+            {`Er du sikker på at du vil fjerne "${confirmDeletePoolRole?.name}" fra poolen?`}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
+          <Button onClick={() => setConfirmDeletePoolRole(null)} variant="outlined"
+            sx={{ color: 'rgba(255,255,255,0.8)', borderColor: 'rgba(255,255,255,0.2)', textTransform: 'none' }}>
+            {branding.tokens.labels.cancelLabel || 'Avbryt'}
+          </Button>
+          <Button onClick={executeDeleteFromPool} variant="contained"
+            sx={{ bgcolor: '#ff4444', color: '#fff', textTransform: 'none', fontWeight: 600, '&:hover': { bgcolor: '#ff3333' } }}>
+            {branding.tokens.labels.deleteProjectLabel || 'Slett'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
+
+export const RoleManagementPanel = memo(RoleManagementPanelInner);

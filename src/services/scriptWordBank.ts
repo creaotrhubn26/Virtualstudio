@@ -6,6 +6,8 @@
  * Learns from user feedback to improve detection accuracy.
  */
 
+import settingsService, { getCurrentUserId } from './settingsService';
+
 export type WordCategory = 
   | 'conflict'
   | 'climax'
@@ -1289,41 +1291,6 @@ const STORAGE_KEY = 'virtualstudio_wordbank_custom';
 const USAGE_STORAGE_KEY = 'virtualstudio_wordbank_usage';
 const FEEDBACK_STORAGE_KEY = 'virtualstudio_wordbank_feedback';
 
-// Safe localStorage wrapper for SSR/Node environments
-const safeStorage = {
-  getItem(key: string): string | null {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        return window.localStorage.getItem(key);
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  },
-  setItem(key: string, value: string): boolean {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        window.localStorage.setItem(key, value);
-        return true;
-      } catch {
-        return false;
-      }
-    }
-    return false;
-  },
-  removeItem(key: string): boolean {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        window.localStorage.removeItem(key);
-        return true;
-      } catch {
-        return false;
-      }
-    }
-    return false;
-  }
-};
 
 export interface WordBankStats {
   totalWords: number;
@@ -1357,9 +1324,8 @@ class ScriptWordBankService {
   private saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
-    this.loadCustomWords();
-    this.loadUsageData();
-    this.loadFeedbackHistory();
+    void this.hydrateFromDb();
+    this.initialized = true;
     
     // Set up periodic save for usage data (debounced)
     if (typeof window !== 'undefined') {
@@ -1369,58 +1335,38 @@ class ScriptWordBankService {
     }
   }
 
-  /**
-   * Initialize the service (load from localStorage)
-   */
-  private loadCustomWords(): void {
+  private async hydrateFromDb(): Promise<void> {
+    if (typeof window === 'undefined') return;
     try {
-      const stored = safeStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const data = JSON.parse(stored) as Record<WordCategory, WordEntry[]>;
-        Object.entries(data).forEach(([category, words]) => {
+      const userId = getCurrentUserId();
+      const custom = await settingsService.getSetting<Record<WordCategory, WordEntry[]>>(STORAGE_KEY, { userId });
+      if (custom) {
+        this.customWords.clear();
+        Object.entries(custom).forEach(([category, words]) => {
           this.customWords.set(category as WordCategory, words);
         });
       }
-      this.initialized = true;
-    } catch (error) {
-      console.error('Failed to load custom words:', error);
-      this.initialized = true;
-    }
-  }
 
-  /**
-   * Load word usage statistics
-   */
-  private loadUsageData(): void {
-    try {
-      const stored = safeStorage.getItem(USAGE_STORAGE_KEY);
-      if (stored) {
-        const data = JSON.parse(stored) as Record<string, number>;
-        Object.entries(data).forEach(([word, count]) => {
+      const usage = await settingsService.getSetting<Record<string, number>>(USAGE_STORAGE_KEY, { userId });
+      if (usage) {
+        this.wordUsage.clear();
+        Object.entries(usage).forEach(([word, count]) => {
           this.wordUsage.set(word, count);
         });
       }
-    } catch (error) {
-      console.error('Failed to load usage data:', error);
-    }
-  }
 
-  /**
-   * Load feedback history for learning analysis
-   */
-  private loadFeedbackHistory(): void {
-    try {
-      const stored = safeStorage.getItem(FEEDBACK_STORAGE_KEY);
-      if (stored) {
-        this.feedbackHistory = JSON.parse(stored) as FeedbackEntry[];
+      const feedback = await settingsService.getSetting<FeedbackEntry[]>(FEEDBACK_STORAGE_KEY, { userId });
+      if (feedback) {
+        this.feedbackHistory = feedback;
       }
     } catch (error) {
-      console.error('Failed to load feedback history:', error);
+      console.warn('Failed to hydrate word bank:', error);
     }
   }
 
+
   /**
-   * Save custom words to localStorage
+   * Save custom words to settings
    */
   private saveCustomWords(): void {
     try {
@@ -1428,14 +1374,14 @@ class ScriptWordBankService {
       this.customWords.forEach((words, category) => {
         data[category] = words;
       });
-      safeStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      void settingsService.setSetting(STORAGE_KEY, data, { userId: getCurrentUserId() });
     } catch (error) {
       console.error('Failed to save custom words:', error);
     }
   }
 
   /**
-   * Save usage data to localStorage (debounced)
+   * Save usage data to settings (debounced)
    */
   private saveUsageData(): void {
     this.usageDirty = true;
@@ -1461,7 +1407,7 @@ class ScriptWordBankService {
       this.wordUsage.forEach((count, word) => {
         data[word] = count;
       });
-      safeStorage.setItem(USAGE_STORAGE_KEY, JSON.stringify(data));
+      void settingsService.setSetting(USAGE_STORAGE_KEY, data, { userId: getCurrentUserId() });
       this.usageDirty = false;
     } catch (error) {
       console.error('Failed to save usage data:', error);
@@ -1475,7 +1421,7 @@ class ScriptWordBankService {
     try {
       // Keep only last 100 feedback entries
       const recentFeedback = this.feedbackHistory.slice(-100);
-      safeStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify(recentFeedback));
+      void settingsService.setSetting(FEEDBACK_STORAGE_KEY, recentFeedback, { userId: getCurrentUserId() });
     } catch (error) {
       console.error('Failed to save feedback history:', error);
     }
@@ -1707,9 +1653,6 @@ class ScriptWordBankService {
    */
   getStats(): WordBankStats {
     if (!this.initialized) {
-      this.loadCustomWords();
-      this.loadUsageData();
-      this.loadFeedbackHistory();
       this.initialized = true;
     }
     let totalWords = 0;

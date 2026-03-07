@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { ThemeProvider, createTheme, Theme } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
+import settingsService, { getCurrentUserId } from '../services/settingsService';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -26,22 +27,28 @@ interface ThemeProviderProps {
 
 export const CustomThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [mode, setMode] = useState<ThemeMode>(() => {
-    // Sjekk localStorage først
-    const saved = localStorage.getItem('themeMode') as ThemeMode | null;
-    if (saved) return saved;
-    
-    // Sjekk system preferanse
     if (window.matchMedia?.('(prefers-color-scheme: light)').matches) {
       return 'light';
     }
-    
-    return 'dark'; // Default
+    return 'dark';
   });
+
+  useEffect(() => {
+    const loadTheme = async () => {
+      const userId = getCurrentUserId();
+      const remote = await settingsService.getSetting<ThemeMode>('themeMode', { userId });
+      if (remote) {
+        setMode(remote);
+        return;
+      }
+    };
+    void loadTheme();
+  }, []);
 
   const toggleTheme = () => {
     const newMode = mode === 'light' ? 'dark' : 'light';
     setMode(newMode);
-    localStorage.setItem('themeMode', newMode);
+    void settingsService.setSetting('themeMode', newMode, { userId: getCurrentUserId() });
   };
 
   const theme = useMemo(() => {

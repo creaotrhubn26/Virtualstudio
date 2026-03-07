@@ -66,6 +66,7 @@ import {
   VisibilityOff as VisibilityOffIcon,
   Category as CategoryIcon,
 } from '@mui/icons-material';
+import settingsService from '@/services/settingsService';
 import { 
   LocationsIcon as LocationIcon, 
   StatsIcon, 
@@ -167,8 +168,11 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
 
   // Favorites with database sync
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
   
-  // Load favorites from database
+  const FAVORITES_NAMESPACE = 'virtualStudio_propFavorites';
+
+  // Load favorites from database (with settings cache fallback)
   useEffect(() => {
     const loadFavorites = async () => {
       try {
@@ -176,32 +180,39 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
         const dbFavorites = await favoritesApi.get(projectId, 'prop');
         if (dbFavorites.length > 0) {
           setFavorites(new Set(dbFavorites));
+          await settingsService.setSetting(FAVORITES_NAMESPACE, dbFavorites, { projectId });
+          setFavoritesLoaded(true);
           return;
         }
       } catch (error) {
-        console.warn('Database unavailable, using localStorage:', error);
+        console.warn('Database unavailable, using settings cache:', error);
       }
-      const saved = localStorage.getItem(`prop-favorites-${projectId}`);
-      if (saved) setFavorites(new Set(JSON.parse(saved)));
+      const cached = await settingsService.getSetting<string[]>(FAVORITES_NAMESPACE, { projectId });
+      if (cached && cached.length > 0) {
+        setFavorites(new Set(cached));
+        setFavoritesLoaded(true);
+        return;
+      }
+      setFavoritesLoaded(true);
     };
     loadFavorites();
   }, [projectId]);
   
-  // Save favorites to database
+  // Save favorites to database and settings cache
   useEffect(() => {
     const saveFavorites = async () => {
-      localStorage.setItem(`prop-favorites-${projectId}`, JSON.stringify([...favorites]));
+      const values = [...favorites];
+      await settingsService.setSetting(FAVORITES_NAMESPACE, values, { projectId });
       try {
         const { favoritesApi } = await import('@/services/castingApiService');
-        await favoritesApi.set(projectId, 'prop', [...favorites]);
+        await favoritesApi.set(projectId, 'prop', values);
       } catch (error) {
         console.warn('Database save failed:', error);
       }
     };
-    if (favorites.size > 0 || localStorage.getItem(`prop-favorites-${projectId}`)) {
-      saveFavorites();
-    }
-  }, [favorites, projectId]);
+    if (!favoritesLoaded) return;
+    saveFavorites();
+  }, [favorites, projectId, favoritesLoaded]);
 
   // Undo delete state
   const [deletedProp, setDeletedProp] = useState<Prop | null>(null);
@@ -277,10 +288,7 @@ export function PropManagementPanel({ projectId, onUpdate }: PropManagementPanel
     return colors[category] || '#ff9800';
   };
 
-  // Save favorites to localStorage
-  useEffect(() => {
-    localStorage.setItem(`prop-favorites-${projectId}`, JSON.stringify([...favorites]));
-  }, [favorites, projectId]);
+  // Favorites are cached in settingsService
 
   // Keyboard shortcuts
   useEffect(() => {

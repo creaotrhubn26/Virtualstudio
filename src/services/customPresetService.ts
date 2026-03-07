@@ -1,7 +1,24 @@
 import { ScenarioPreset } from '../data/scenarioPresets';
 import { presetApi } from './virtualStudioApiService';
+import settingsService, { getCurrentUserId } from './settingsService';
 
 const STORAGE_KEY = 'virtualStudio_customPresets';
+let cachedPresets: CustomPreset[] = [];
+
+const hydratePresets = async (): Promise<void> => {
+  try {
+    const userId = getCurrentUserId();
+    const remote = await settingsService.getSetting<CustomPreset[]>(STORAGE_KEY, { userId });
+    if (remote) {
+      cachedPresets = remote;
+      return;
+    }
+  } catch {
+    // Ignore hydration errors
+  }
+};
+
+void hydratePresets();
 
 export interface CustomPreset extends Omit<ScenarioPreset, 'kategori'> {
   kategori: 'mine-oppsett';
@@ -14,27 +31,25 @@ export const customPresetService = {
     try {
       const dbPresets = await presetApi.getAll(undefined, 'custom');
       if (dbPresets.length > 0) {
-        return dbPresets.map(p => ({
+        const mapped = dbPresets.map(p => ({
           ...(p.preset_data as Partial<CustomPreset>),
           id: p.id,
           kategori: 'mine-oppsett' as const,
           createdAt: p.created_at || new Date().toISOString(),
           updatedAt: p.updated_at || new Date().toISOString(),
         })) as CustomPreset[];
+        cachedPresets = mapped;
+        void settingsService.setSetting(STORAGE_KEY, mapped, { userId: getCurrentUserId() });
+        return mapped;
       }
     } catch (error) {
-      console.warn('Database unavailable, falling back to localStorage:', error);
+      console.warn('Database unavailable, falling back to settings cache:', error);
     }
     return this.getAll();
   },
 
   getAll(): CustomPreset[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
+    return cachedPresets;
   },
 
   async saveAsync(preset: CustomPreset): Promise<void> {
@@ -52,14 +67,13 @@ export const customPresetService = {
   },
 
   save(preset: CustomPreset): void {
-    const presets = this.getAll();
-    const existingIndex = presets.findIndex(p => p.id === preset.id);
+    const existingIndex = cachedPresets.findIndex(p => p.id === preset.id);
     if (existingIndex >= 0) {
-      presets[existingIndex] = { ...preset, updatedAt: new Date().toISOString() };
+      cachedPresets[existingIndex] = { ...preset, updatedAt: new Date().toISOString() };
     } else {
-      presets.push(preset);
+      cachedPresets.push(preset);
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+    void settingsService.setSetting(STORAGE_KEY, cachedPresets, { userId: getCurrentUserId() });
   },
 
   async deleteAsync(id: string): Promise<void> {
@@ -72,8 +86,8 @@ export const customPresetService = {
   },
 
   delete(id: string): void {
-    const presets = this.getAll().filter(p => p.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+    cachedPresets = cachedPresets.filter(p => p.id !== id);
+    void settingsService.setSetting(STORAGE_KEY, cachedPresets, { userId: getCurrentUserId() });
   },
 
   createFromCurrentScene(
@@ -99,10 +113,9 @@ export const customPresetService = {
   },
 
   async updateAsync(id: string, updates: Partial<CustomPreset>): Promise<void> {
-    const presets = this.getAll();
-    const index = presets.findIndex(p => p.id === id);
+    const index = cachedPresets.findIndex(p => p.id === id);
     if (index >= 0) {
-      const updated = { ...presets[index], ...updates, updatedAt: new Date().toISOString() };
+      const updated = { ...cachedPresets[index], ...updates, updatedAt: new Date().toISOString() };
       try {
         await presetApi.save({
           id: updated.id,
@@ -118,15 +131,14 @@ export const customPresetService = {
   },
 
   update(id: string, updates: Partial<CustomPreset>): void {
-    const presets = this.getAll();
-    const index = presets.findIndex(p => p.id === id);
+    const index = cachedPresets.findIndex(p => p.id === id);
     if (index >= 0) {
-      presets[index] = { 
-        ...presets[index], 
+      cachedPresets[index] = { 
+        ...cachedPresets[index], 
         ...updates, 
         updatedAt: new Date().toISOString() 
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+      void settingsService.setSetting(STORAGE_KEY, cachedPresets, { userId: getCurrentUserId() });
     }
   }
 };

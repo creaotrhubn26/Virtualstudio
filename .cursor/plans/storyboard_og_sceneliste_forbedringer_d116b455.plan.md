@@ -1,6 +1,6 @@
 ---
 name: Storyboard og Sceneliste Forbedringer
-overview: Plan for å forbedre sceneliste-fanen i Casting Planner ved å gjenbruke eksisterende storyboard-komponenter og legge til bedre visualisering og integrasjon mellom shot lists og storyboards.
+overview: Plan for å forbedre sceneliste-fanen i Virtual Studio ved å gjenbruke eksisterende storyboard-komponenter og legge til bedre visualisering og integrasjon mellom shot lists og storyboards.
 todos:
   - id: shot-converter
     content: Implementer ShotListToStoryboardConverter for å konvertere CastingShot til StoryboardFrame

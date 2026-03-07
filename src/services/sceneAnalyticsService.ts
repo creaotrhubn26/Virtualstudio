@@ -1,4 +1,5 @@
 import { SceneComposition } from '../core/models/sceneComposer';
+import settingsService, { getCurrentUserId } from './settingsService';
 
 export interface SceneMetrics {
   sceneId: string;
@@ -15,6 +16,24 @@ export interface SceneMetrics {
     atmosphereChanges: number;
   };
 }
+
+const METRICS_KEY = 'virtualStudio_sceneMetrics';
+let cachedMetrics: Record<string, SceneMetrics> = {};
+
+const hydrateMetrics = async (): Promise<void> => {
+  try {
+    const userId = getCurrentUserId();
+    const remote = await settingsService.getSetting<Record<string, SceneMetrics>>(METRICS_KEY, { userId });
+    if (remote) {
+      cachedMetrics = remote;
+      return;
+    }
+  } catch {
+    // Ignore hydration errors
+  }
+};
+
+void hydrateMetrics();
 
 export const sceneAnalyticsService = {
   /**
@@ -92,29 +111,15 @@ export const sceneAnalyticsService = {
    * Get metrics for scene
    */
   getMetrics(sceneId: string): SceneMetrics {
-    try {
-      const stored = localStorage.getItem('virtualStudio_sceneMetrics');
-      const allMetrics: Record<string, SceneMetrics> = stored ? JSON.parse(stored) : {};
-      return allMetrics[sceneId] || {
-        sceneId,
-        views: 0,
-        edits: 0,
-        exports: 0,
-        shares: 0,
-        averageEditTime: 0,
-        lastAccessed: new Date().toISOString(),
-      };
-    } catch {
-      return {
-        sceneId,
-        views: 0,
-        edits: 0,
-        exports: 0,
-        shares: 0,
-        averageEditTime: 0,
-        lastAccessed: new Date().toISOString(),
-      };
-    }
+    return cachedMetrics[sceneId] || {
+      sceneId,
+      views: 0,
+      edits: 0,
+      exports: 0,
+      shares: 0,
+      averageEditTime: 0,
+      lastAccessed: new Date().toISOString(),
+    };
   },
 
   /**
@@ -122,10 +127,8 @@ export const sceneAnalyticsService = {
    */
   saveMetrics(metrics: SceneMetrics): void {
     try {
-      const stored = localStorage.getItem('virtualStudio_sceneMetrics');
-      const allMetrics: Record<string, SceneMetrics> = stored ? JSON.parse(stored) : {};
-      allMetrics[metrics.sceneId] = metrics;
-      localStorage.setItem('virtualStudio_sceneMetrics', JSON.stringify(allMetrics));
+      cachedMetrics[metrics.sceneId] = metrics;
+      void settingsService.setSetting(METRICS_KEY, cachedMetrics, { userId: getCurrentUserId() });
     } catch (error) {
       console.error('Error saving metrics:', error);
     }

@@ -1296,7 +1296,7 @@ export const ProductionManuscriptView: FC<ProductionManuscriptViewProps> = ({
   
   // Auto-save scene needs to database
   useEffect(() => {
-    // Save scene needs to database with localStorage fallback
+    // Save scene needs to database with settings cache fallback
     const saveNeeds = async () => {
       try {
         await sceneNeedsService.saveSceneNeeds(projectId, debouncedSceneNeeds);
@@ -2916,7 +2916,7 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
           }}>
             <Select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => setSortBy(e.target.value as 'number' | 'duration' | 'date' | 'name')}
               size="small"
               sx={{
                 height: 28,
@@ -3190,7 +3190,7 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
                 <Typography sx={{ fontSize: 12, color: '#9ca3af', fontWeight: 500 }}>Ny scene</Typography>
               </Box>
             </Tooltip>
-            <Tooltip title="Casting planner">
+            <Tooltip title="Virtual studio">
               <IconButton sx={{ 
                 color: '#6b7280', 
                 bgcolor: '#1a2230', 
@@ -3969,7 +3969,7 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
                             key={status.value}
                             label={status.label}
                             size="small"
-                            onClick={() => handleSetSceneStatus(selectedScene.id, status.value as any)}
+                            onClick={() => handleSetSceneStatus(selectedScene.id, status.value as 'not-started' | 'in-progress' | 'complete')}
                             sx={{
                               bgcolor: sceneStatuses[selectedScene.id] === status.value 
                                 ? `${status.color}30` 
@@ -5741,7 +5741,7 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
                                 ].map(source => (
                                   <Box
                                     key={source.id}
-                                    onClick={() => setSearchSource(source.id as any)}
+                                    onClick={() => setSearchSource(source.id as 'all' | 'shotcafe' | 'unsplash')}
                                     sx={{
                                       px: 1.5,
                                       py: 0.5,
@@ -6534,7 +6534,7 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
 
           <Stack spacing={2}>
             {sceneCandidates.map((candidate) => {
-              const assignedRole = projectRoles.find(r => candidate.assignedRoles.includes(r.id));
+              const assignedRole = projectRoles.find(r => (candidate.assignedRoles || []).includes(r.id));
               const isInSelectedScene = selectedScene?.characters?.includes(assignedRole?.name || '') || false;
 
               return (
@@ -6685,7 +6685,7 @@ NOTES: ${quickNotes[scene.id] || 'No notes'}
                 Ingen bekreftet cast ennå
               </Typography>
               <Typography sx={{ fontSize: 12, color: '#4b5563' }}>
-                Gå til Auditions i Casting Planner for å bekrefte kandidater
+                Gå til Auditions i Virtual Studio for å bekrefte kandidater
               </Typography>
             </Box>
           )}

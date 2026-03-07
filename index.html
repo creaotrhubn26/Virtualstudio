@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="VS Planner">
   <title>Virtual Studio - 3D Lysstudio Simulator</title>
-  <link rel="icon" type="image/png" href="/casting-planner-logo.png">
+  <link rel="icon" type="image/svg+xml" href="/creatorhub-virtual-studio-logo.svg">
   <link rel="stylesheet" href="/src/styles.css">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
@@ -199,7 +199,7 @@
       <div class="menu-divider"></div>
       <button class="menu-item" id="menuCastingPlanner">
         <div class="menu-icon" style="background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27%3E%3Cpath d=%27M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2%27/%3E%3Ccircle cx=%279%27 cy=%277%27 r=%274%27/%3E%3Cpath d=%27M23 21v-2a4 4 0 0 0-3-3.87%27/%3E%3Cpath d=%27M16 3.13a4 4 0 0 1 0 7.75%27/%3E%3C/svg%3E');"></div>
-        Casting Planner
+        Virtual Studio
       </button>
       <button class="menu-item" id="menuHjelp">
         <div class="menu-icon" style="background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27%3E%3Ccircle cx=%2712%27 cy=%2712%27 r=%2710%27/%3E%3Cpath d=%27M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3%27/%3E%3Cline x1=%2712%27 y1=%2717%27 x2=%2712.01%27 y2=%2717%27/%3E%3C/svg%3E');"></div>
@@ -3323,12 +3323,12 @@
       </div>
     </div>
 
-    <!-- Casting Planner Panel -->
+    <!-- Virtual Studio Panel -->
     <div class="actor-bottom-panel" id="castingPlannerPanel" style="display:none;">
       <div class="panel-resize-handle" id="castingPlannerResizeHandle" aria-label="Dra for å endre panelstørrelse"></div>
-      <div class="actor-panel-tabs" role="tablist" aria-label="Casting Planner panel">
-        <div class="casting-planner-title" id="castingPlannerTitle">
-          <svg class="casting-planner-title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <div class="actor-panel-tabs" role="tablist" aria-label="Virtual Studio panel">
+        <div class="virtual-studio-title" id="castingPlannerTitle">
+          <svg class="virtual-studio-title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="9" cy="7" r="3"/>
             <path d="M3 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
             <rect x="15" y="3" width="6" height="8" rx="1" fill="#ffffff33"/>
@@ -3337,14 +3337,14 @@
             <line x1="17" y1="9" x2="19" y2="9"/>
             <path d="M18 4.5l0.5 1 1 0.5-1 0.5L18 7.5l-0.5-1 1-0.5-1-0.5L18 4.5z" fill="#ffffff"/>
           </svg>
-          <span class="casting-planner-title-text">Casting Planner</span>
-          <span class="casting-planner-project-name" id="castingPlannerProjectName"></span>
+          <span class="virtual-studio-title-text">Virtual Studio</span>
+          <span class="virtual-studio-project-name" id="castingPlannerProjectName"></span>
         </div>
         <div class="actor-panel-actions">
           <button class="panel-fullscreen-btn" id="castingPlannerFullscreenBtn" title="Fullskjerm" aria-label="Veksle fullskjermmodus">
             <span aria-hidden="true">⛶</span>
           </button>
-          <button class="panel-close-btn" id="castingPlannerCloseBtn" title="Lukk panel" aria-label="Lukk Casting Planner panel">
+          <button class="panel-close-btn" id="castingPlannerCloseBtn" title="Lukk panel" aria-label="Lukk Virtual Studio panel">
             <span aria-hidden="true">✕</span>
           </button>
         </div>
@@ -3572,7 +3572,7 @@
           <div class="help-nav-section">
             <button class="help-nav-header" data-section="casting">
               <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              <span class="nav-title">Casting Planner</span>
+              <span class="nav-title">Virtual Studio</span>
               <span class="nav-arrow">▸</span>
             </button>
             <div class="help-nav-items">
@@ -6453,11 +6453,11 @@
             </div>
           </div>
 
-          <!-- Casting Planner Section -->
+          <!-- Virtual Studio Section -->
           <div class="help-section" data-section="casting">
             <div class="help-section-header">
               <div class="help-section-title-row">
-                <h2>Casting Planner</h2>
+                <h2>Virtual Studio</h2>
                 <button class="help-section-edit-btn" title="Rediger seksjon">
                   <svg class="edit-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
@@ -6496,7 +6496,7 @@
                   </button>
                 </div>
                 <div class="help-card-body">
-                  <p><strong>Casting Planner</strong> hjelper deg med a organisere casting-prosessen for film- og fotoproduksjoner.</p>
+                  <p><strong>Virtual Studio</strong> hjelper deg med a organisere casting-prosessen for film- og fotoproduksjoner.</p>
 
                   <h4 class="help-card-subtitle">Hovedfunksjoner</h4>
                   <div class="help-feature-grid">
@@ -6520,7 +6520,7 @@
 
                   <h4 class="help-card-subtitle">Slik kommer du i gang</h4>
                   <ul class="help-list">
-                    <li>Åpne Casting Planner fra hovedmenyen</li>
+                    <li>Åpne Virtual Studio fra hovedmenyen</li>
                     <li>Opprett et nytt prosjekt eller åpne eksisterende</li>
                     <li>Legg til roller og kandidater</li>
                   </ul>

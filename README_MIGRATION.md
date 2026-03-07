@@ -1,4 +1,4 @@
-# 🚀 Casting Planner - Database Migration
+# 🚀 Virtual Studio - Database Migration
 
 ## Quick Start
 

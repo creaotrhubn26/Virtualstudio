@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import settingsService, { getCurrentUserId } from '../services/settingsService';
 
 interface AutoSaveConfig {
   enableAutoSave?: boolean;
@@ -49,6 +50,7 @@ export const useAutoSave = (options: UseAutoSaveOptions = {}) => {
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const retryCountRef = useRef(0);
+  const cacheRef = useRef<Map<string, any>>(new Map());
 
   const save = useCallback(
     async (key: string, data: any) => {
@@ -70,14 +72,15 @@ export const useAutoSave = (options: UseAutoSaveOptions = {}) => {
         setError(null);
 
         try {
-          // Save to localStorage
+          // Save to settings
           const saveData = {
             ...data,
             _savedAt: Date.now(),
             _version: config.enableVersioning ? saveCount + 1 : undefined,
           };
 
-          localStorage.setItem(`autosave_${key}`, JSON.stringify(saveData));
+          await settingsService.setSetting(`autosave_${key}`, saveData, { userId: getCurrentUserId() });
+          cacheRef.current.set(key, saveData);
           setLastSave(Date.now());
           setSaveCount((prev) => prev + 1);
           setPendingChanges(false);
@@ -125,10 +128,8 @@ export const useAutoSave = (options: UseAutoSaveOptions = {}) => {
 
   const restoreFromBackup = useCallback((key: string) => {
     try {
-      const backup = localStorage.getItem(`autosave_${key}`);
-      if (backup) {
-        return JSON.parse(backup);
-      }
+      const cached = cacheRef.current.get(key);
+      if (cached) return cached;
     } catch (err) {
       console.error('Failed to restore backup:', err);
     }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ALL_LIGHTS, ALL_MODIFIERS, type LightEquipment, type ModifierEquipment } from '../core/data/EquipmentDatabase';
+import settingsService, { getCurrentUserId } from '../services/settingsService';
 
 export interface UserEquipmentInventory {
   lights: LightEquipment[];
@@ -13,28 +14,6 @@ const buildDefaultInventory = (): UserEquipmentInventory => ({
   modifiers: ALL_MODIFIERS,
 });
 
-const readStoredInventory = (): UserEquipmentInventory | null => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as UserEquipmentInventory;
-    if (!parsed || !Array.isArray(parsed.lights) || !Array.isArray(parsed.modifiers)) {
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
-};
-
-const storeInventory = (inventory: UserEquipmentInventory) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(inventory));
-  } catch {
-    // Ignore storage errors
-  }
-};
-
 const mergeUniqueById = <T extends { id: string }>(existing: T[], incoming: T[]): T[] => {
   const map = new Map(existing.map((item) => [item.id, item]));
   incoming.forEach((item) => map.set(item.id, item));
@@ -46,15 +25,19 @@ export const useUserEquipmentInventory = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const stored = readStoredInventory();
-    const initial = stored ?? buildDefaultInventory();
-    setInventory(initial);
-    setIsLoading(false);
+    const loadInventory = async () => {
+      const resolvedUserId = getCurrentUserId();
+      const remote = await settingsService.getSetting<UserEquipmentInventory>(STORAGE_KEY, { userId: resolvedUserId });
+      const initial = remote ?? buildDefaultInventory();
+      setInventory(initial);
+      setIsLoading(false);
+    };
+    void loadInventory();
   }, []);
 
   useEffect(() => {
     if (!inventory) return;
-    storeInventory(inventory);
+    void settingsService.setSetting(STORAGE_KEY, inventory, { userId: getCurrentUserId() });
   }, [inventory]);
 
   useEffect(() => {

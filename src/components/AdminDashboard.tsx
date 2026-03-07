@@ -66,7 +66,7 @@ import {
   saveBrandingSettings,
   updateBrandingSettings,
 } from '../config/branding';
-import { useBrandingSettings } from '../hooks/useBrandingSettings';
+import { useBrandingSettings } from '../hooks/useBrandingSettings.ts';
 
 interface AdminUser {
   id: number;

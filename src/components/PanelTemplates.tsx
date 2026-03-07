@@ -743,8 +743,8 @@ export const FUNCTION_TEMPLATES: PanelTemplate[] = [
     },
   },
   {
-    id: 'casting-planner',
-    name: 'Casting Planner',
+    id: 'virtual-studio',
+    name: 'Virtual Studio',
     description: 'Panel for casting-planlegging med roller og kandidater',
     category: 'function',
     html: `

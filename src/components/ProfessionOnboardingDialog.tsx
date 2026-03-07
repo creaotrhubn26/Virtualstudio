@@ -29,6 +29,7 @@ import {
   Lightbulb as TipIcon,
   PlayArrow as PlayIcon,
 } from '@mui/icons-material';
+import settingsService from '@/services/settingsService';
 import { TeamIcon as GroupsIcon, ShareCustomIcon as ShareIcon } from './icons/CastingIcons';
 
 export type ProfessionType = 
@@ -71,9 +72,9 @@ const professionContent: Record<ProfessionType, ProfessionOnboardingContent> = {
     professionColor: '#e91e63',
     slides: [
       {
-        title: 'Hva er Casting Planner?',
+        title: 'Hva er Virtual Studio?',
         subtitle: 'Din digitale produksjonsassistent',
-        content: 'Casting Planner er et komplett planleggingsverktøy designet for å hjelpe deg med å organisere, visualisere og gjennomføre produksjoner på en effektiv måte. Fra casting til ferdig shot list - alt på ett sted.',
+        content: 'Virtual Studio er et komplett planleggingsverktøy designet for å hjelpe deg med å organisere, visualisere og gjennomføre produksjoner på en effektiv måte. Fra casting til ferdig shot list - alt på ett sted.',
         illustration: (
           <Box sx={{ 
             display: 'flex', 
@@ -111,7 +112,7 @@ const professionContent: Record<ProfessionType, ProfessionOnboardingContent> = {
       {
         title: 'Som regissør får du...',
         subtitle: 'Verktøy skreddersydd for din arbeidsprosess',
-        content: 'Casting Planner gir deg full oversikt over produksjonen din, fra første idé til siste opptak.',
+        content: 'Virtual Studio gir deg full oversikt over produksjonen din, fra første idé til siste opptak.',
         features: [
           {
             icon: <VideocamIcon sx={{ color: '#e91e63' }} />,
@@ -132,7 +133,7 @@ const professionContent: Record<ProfessionType, ProfessionOnboardingContent> = {
       },
       {
         title: 'Hvordan finne ting',
-        subtitle: 'Navigasjon i Casting Planner',
+        subtitle: 'Navigasjon i Virtual Studio',
         content: 'Alt du trenger er organisert i logiske faner øverst i applikasjonen.',
         features: [
           {
@@ -193,9 +194,9 @@ const professionContent: Record<ProfessionType, ProfessionOnboardingContent> = {
     professionColor: '#10b981',
     slides: [
       {
-        title: 'Hva er Casting Planner?',
+        title: 'Hva er Virtual Studio?',
         subtitle: 'Ditt digitale planleggingsverktøy',
-        content: 'Casting Planner hjelper deg å organisere fotoshoots, holde oversikt over modeller og planlegge hver eneste shot før du trykker på utløseren.',
+        content: 'Virtual Studio hjelper deg å organisere fotoshoots, holde oversikt over modeller og planlegge hver eneste shot før du trykker på utløseren.',
         illustration: (
           <Box sx={{ 
             display: 'flex', 
@@ -310,9 +311,9 @@ const professionContent: Record<ProfessionType, ProfessionOnboardingContent> = {
     professionColor: '#f59e0b',
     slides: [
       {
-        title: 'Hva er Casting Planner?',
+        title: 'Hva er Virtual Studio?',
         subtitle: 'Profesjonell pre-produksjon',
-        content: 'Casting Planner er designet for å hjelpe filmfotografer med å planlegge kamerabevegelser, lyssetting og visuelle stilvalg før innspilling starter.',
+        content: 'Virtual Studio er designet for å hjelpe filmfotografer med å planlegge kamerabevegelser, lyssetting og visuelle stilvalg før innspilling starter.',
         illustration: (
           <Box sx={{ 
             display: 'flex', 
@@ -422,9 +423,9 @@ const professionContent: Record<ProfessionType, ProfessionOnboardingContent> = {
     professionColor: '#8b5cf6',
     slides: [
       {
-        title: 'Hva er Casting Planner?',
+        title: 'Hva er Virtual Studio?',
         subtitle: 'Produksjonsstyring på ett sted',
-        content: 'Casting Planner gir deg full oversikt over alle aspekter av produksjonen, fra casting til ferdig opptaksplan.',
+        content: 'Virtual Studio gir deg full oversikt over alle aspekter av produksjonen, fra casting til ferdig opptaksplan.',
         illustration: (
           <Box sx={{ 
             display: 'flex', 
@@ -534,9 +535,9 @@ const professionContent: Record<ProfessionType, ProfessionOnboardingContent> = {
     professionColor: '#ec4899',
     slides: [
       {
-        title: 'Hva er Casting Planner?',
+        title: 'Hva er Virtual Studio?',
         subtitle: 'Visuell planlegging',
-        content: 'Casting Planner hjelper deg å definere og kommunisere den visuelle retningen for produksjonen.',
+        content: 'Virtual Studio hjelper deg å definere og kommunisere den visuelle retningen for produksjonen.',
         features: [
           {
             icon: <ArtIcon sx={{ color: '#ec4899' }} />,
@@ -596,9 +597,9 @@ const professionContent: Record<ProfessionType, ProfessionOnboardingContent> = {
     professionColor: '#06b6d4',
     slides: [
       {
-        title: 'Hva er Casting Planner?',
+        title: 'Hva er Virtual Studio?',
         subtitle: 'Planlegging for musikkvideoer',
-        content: 'Casting Planner er perfekt for å synkronisere visuelle elementer med musikk og planlegge dynamiske sekvenser.',
+        content: 'Virtual Studio er perfekt for å synkronisere visuelle elementer med musikk og planlegge dynamiske sekvenser.',
         features: [
           {
             icon: <MusicIcon sx={{ color: '#06b6d4' }} />,
@@ -658,9 +659,9 @@ const professionContent: Record<ProfessionType, ProfessionOnboardingContent> = {
     professionColor: '#f97316',
     slides: [
       {
-        title: 'Hva er Casting Planner?',
+        title: 'Hva er Virtual Studio?',
         subtitle: 'Profesjonell reklameplanlegging',
-        content: 'Casting Planner hjelper deg å planlegge kommersielle produksjoner med fokus på budskap, merkevare og effektivitet.',
+        content: 'Virtual Studio hjelper deg å planlegge kommersielle produksjoner med fokus på budskap, merkevare og effektivitet.',
         features: [
           {
             icon: <PlayIcon sx={{ color: '#f97316' }} />,
@@ -720,9 +721,9 @@ const professionContent: Record<ProfessionType, ProfessionOnboardingContent> = {
     professionColor: '#84cc16',
     slides: [
       {
-        title: 'Hva er Casting Planner?',
+        title: 'Hva er Virtual Studio?',
         subtitle: 'Planlegging for dokumentar',
-        content: 'Casting Planner hjelper deg å strukturere research, intervjuer og opptak for dokumentarprosjekter.',
+        content: 'Virtual Studio hjelper deg å strukturere research, intervjuer og opptak for dokumentarprosjekter.',
         features: [
           {
             icon: <MovieIcon sx={{ color: '#84cc16' }} />,
@@ -743,7 +744,7 @@ const professionContent: Record<ProfessionType, ProfessionOnboardingContent> = {
       },
       {
         title: 'Fleksibel planlegging',
-        content: 'Dokumentar krever fleksibilitet - Casting Planner tilpasser seg.',
+        content: 'Dokumentar krever fleksibilitet - Virtual Studio tilpasser seg.',
         features: [
           {
             icon: <TaskIcon sx={{ color: '#84cc16' }} />,
@@ -776,15 +777,15 @@ const professionContent: Record<ProfessionType, ProfessionOnboardingContent> = {
     ],
   },
   general: {
-    welcomeTitle: 'Velkommen til Casting Planner!',
+    welcomeTitle: 'Velkommen til Virtual Studio!',
     welcomeSubtitle: 'Din komplette planleggingsløsning',
     professionIcon: <MovieIcon sx={{ fontSize: 48 }} />,
     professionColor: '#6366f1',
     slides: [
       {
-        title: 'Hva er Casting Planner?',
+        title: 'Hva er Virtual Studio?',
         subtitle: 'Alt-i-ett produksjonsplanlegging',
-        content: 'Casting Planner er et komplett verktøy for å planlegge, organisere og gjennomføre film-, foto- og videoproduksjoner.',
+        content: 'Virtual Studio er et komplett verktøy for å planlegge, organisere og gjennomføre film-, foto- og videoproduksjoner.',
         illustration: (
           <Box sx={{ 
             display: 'flex', 
@@ -822,7 +823,7 @@ const professionContent: Record<ProfessionType, ProfessionOnboardingContent> = {
       {
         title: 'Hovedfunksjoner',
         subtitle: 'Alt du trenger for produksjonen',
-        content: 'Fra første idé til ferdig opptak - Casting Planner følger deg hele veien.',
+        content: 'Fra første idé til ferdig opptak - Virtual Studio følger deg hele veien.',
         features: [
           {
             icon: <GroupsIcon sx={{ color: '#6366f1' }} />,
@@ -907,6 +908,7 @@ export function ProfessionOnboardingDialog({
   profession,
   userName,
 }: ProfessionOnboardingDialogProps) {
+  const ONBOARDING_NAMESPACE = 'virtualStudio_onboardingCompleted';
   const [currentSlide, setCurrentSlide] = useState(0);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('left');
   
@@ -937,13 +939,19 @@ export function ProfessionOnboardingDialog({
     }
   };
 
+  const markCompleted = async () => {
+    const cached = (await settingsService.getSetting<Record<string, boolean>>(ONBOARDING_NAMESPACE)) || {};
+    const updated = { ...cached, [profession]: true };
+    await settingsService.setSetting(ONBOARDING_NAMESPACE, updated);
+  };
+
   const handleComplete = () => {
-    localStorage.setItem(`onboarding_completed_${profession}`, 'true');
+    void markCompleted();
     onClose();
   };
 
   const handleSkip = () => {
-    localStorage.setItem(`onboarding_completed_${profession}`, 'true');
+    void markCompleted();
     onClose();
   };
 
@@ -1246,14 +1254,21 @@ export function useProfessionOnboarding(profession: ProfessionType | null) {
 
   useEffect(() => {
     if (profession) {
-      const hasCompleted = localStorage.getItem(`onboarding_completed_${profession}`);
-      if (!hasCompleted) {
-        const timer = setTimeout(() => {
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const checkStatus = async () => {
+        const cached = await settingsService.getSetting<Record<string, boolean>>(ONBOARDING_NAMESPACE);
+        if (cached?.[profession]) return;
+
+        timer = setTimeout(() => {
           setShowOnboarding(true);
         }, 500);
-        return () => clearTimeout(timer);
-      }
+      };
+      void checkStatus();
+      return () => {
+        if (timer) clearTimeout(timer);
+      };
     }
+    return undefined;
   }, [profession]);
 
   const triggerOnboarding = () => {
@@ -1265,11 +1280,17 @@ export function useProfessionOnboarding(profession: ProfessionType | null) {
   };
 
   const resetOnboarding = (prof?: ProfessionType) => {
-    if (prof) {
-      localStorage.removeItem(`onboarding_completed_${prof}`);
-    } else if (profession) {
-      localStorage.removeItem(`onboarding_completed_${profession}`);
-    }
+    const target = prof || profession;
+    if (!target) return;
+    const reset = async () => {
+      const cached = (await settingsService.getSetting<Record<string, boolean>>(ONBOARDING_NAMESPACE)) || {};
+      if (cached[target]) {
+        const updated = { ...cached };
+        delete updated[target];
+        await settingsService.setSetting(ONBOARDING_NAMESPACE, updated);
+      }
+    };
+    void reset();
   };
 
   return {

@@ -1,4 +1,24 @@
 import { SceneComposition } from '../core/models/sceneComposer';
+import settingsService, { getCurrentUserId } from './settingsService';
+
+const VARIATIONS_KEY = 'virtualStudio_sceneVariations';
+let cachedVariations: SceneVariation[] = [];
+
+const hydrateVariationsFromDb = async (): Promise<void> => {
+  if (typeof window === 'undefined') return;
+  try {
+    const userId = getCurrentUserId();
+    const remote = await settingsService.getSetting<SceneVariation[]>(VARIATIONS_KEY, { userId });
+    if (remote) {
+      cachedVariations = remote;
+      return;
+    }
+  } catch {
+    // Ignore hydration errors
+  }
+};
+
+void hydrateVariationsFromDb();
 import { sceneComposerService } from './sceneComposerService';
 
 export interface SceneVariation {
@@ -57,13 +77,7 @@ export const sceneVariationService = {
    * Get all variations for a scene
    */
   getVariations(sceneId: string): SceneVariation[] {
-    try {
-      const stored = localStorage.getItem('virtualStudio_sceneVariations');
-      const allVariations: SceneVariation[] = stored ? JSON.parse(stored) : [];
-      return allVariations.filter(v => v.sceneId === sceneId);
-    } catch {
-      return [];
-    }
+    return cachedVariations.filter(v => v.sceneId === sceneId);
   },
 
   /**
@@ -71,17 +85,15 @@ export const sceneVariationService = {
    */
   saveVariation(variation: SceneVariation): void {
     try {
-      const stored = localStorage.getItem('virtualStudio_sceneVariations');
-      const allVariations: SceneVariation[] = stored ? JSON.parse(stored) : [];
-      const existingIndex = allVariations.findIndex(v => v.id === variation.id);
+      const existingIndex = cachedVariations.findIndex(v => v.id === variation.id);
       
       if (existingIndex >= 0) {
-        allVariations[existingIndex] = variation;
+        cachedVariations[existingIndex] = variation;
       } else {
-        allVariations.push(variation);
+        cachedVariations.push(variation);
       }
       
-      localStorage.setItem('virtualStudio_sceneVariations', JSON.stringify(allVariations));
+      void settingsService.setSetting(VARIATIONS_KEY, cachedVariations, { userId: getCurrentUserId() });
     } catch (error) {
       console.error('Error saving variation:', error);
     }

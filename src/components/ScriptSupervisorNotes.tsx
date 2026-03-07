@@ -614,7 +614,7 @@ export const ScriptSupervisorNotes: React.FC<ScriptSupervisorNotesProps> = ({
                 <InputLabel>Status</InputLabel>
                 <Select
                   value={newLog.status || 'good'}
-                  onChange={(e) => setNewLog(prev => ({ ...prev, status: e.target.value as any }))}
+                  onChange={(e) => setNewLog(prev => ({ ...prev, status: e.target.value as TakeLog['status'] }))}
                   label="Status"
                 >
                   <MenuItem value="print">🌟 PRINT</MenuItem>

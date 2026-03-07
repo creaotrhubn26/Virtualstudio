@@ -1,4 +1,4 @@
-# Casting Planner Data Migration Guide
+# Virtual Studio Data Migration Guide
 
 ## Oversikt
 
@@ -85,7 +85,7 @@ Migration Summary:
 
 Etter at migrasjonen er fullført:
 1. Verifiser at data er korrekt migrert ved å sjekke tabellene
-2. Test at Casting Planner fungerer korrekt med den nye strukturen
+2. Test at Virtual Studio fungerer korrekt med den nye strukturen
 3. Du kan eventuelt fjerne data fra JSONB-feltet senere (men ikke nødvendig)
 
 ## Feilsøking
