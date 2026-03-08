@@ -5,7 +5,10 @@
  * Color harmony analysis and skin tone optimization
  */
 
-import { useState, useEffect } from 'react';
+import {
+  useState,
+  useEffect } from 'react';
+import Grid from '@mui/material/GridLegacy';
 import {
   Box,
   Typography,
@@ -15,7 +18,6 @@ import {
   Card,
   CardContent,
   Chip,
-  Grid,
   Alert,
   CircularProgress,
   LinearProgress,
@@ -32,7 +34,6 @@ import {
 } from '@mui/icons-material';
 import { sam2Service } from '@/services/SAM2Service';
 import { useMutation } from '@tanstack/react-query';
-
 interface ExposureMetrics {
   overall: number;
   subjectExposure: number;
@@ -275,7 +276,7 @@ export function ExposureColorAnalyzer({
                       Exposure Metrics
                     </Typography>
                     <Grid container spacing={2} sx={{ mt: 1 }}>
-                      <Grid item xs={6}>
+                      <Grid xs={6}>
                         <Typography variant="body2" color="text.secondary">
                           Subject Exposure
                         </Typography>
@@ -296,7 +297,7 @@ export function ExposureColorAnalyzer({
                           </Typography>
                         </Box>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid xs={6}>
                         <Typography variant="body2" color="text.secondary">
                           Background Exposure
                         </Typography>
@@ -318,7 +319,7 @@ export function ExposureColorAnalyzer({
                           </Typography>
                         </Box>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid xs={6}>
                         <Typography variant="body2" color="text.secondary">
                           Highlight Clipping
                         </Typography>
@@ -326,7 +327,7 @@ export function ExposureColorAnalyzer({
                           {analysis.exposure.highlightClipping}%
                         </Typography>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid xs={6}>
                         <Typography variant="body2" color="text.secondary">
                           Shadow Clipping
                         </Typography>
@@ -345,7 +346,7 @@ export function ExposureColorAnalyzer({
                       Color Metrics
                     </Typography>
                     <Grid container spacing={2} sx={{ mt: 1 }}>
-                      <Grid item xs={6}>
+                      <Grid xs={6}>
                         <Typography variant="body2" color="text.secondary">
                           Color Harmony
                         </Typography>
@@ -366,7 +367,7 @@ export function ExposureColorAnalyzer({
                           </Typography>
                         </Box>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid xs={6}>
                         <Typography variant="body2" color="text.secondary">
                           Skin Tone
                         </Typography>
@@ -388,7 +389,7 @@ export function ExposureColorAnalyzer({
                           </Typography>
                         </Box>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid xs={6}>
                         <Typography variant="body2" color="text.secondary">
                           Color Temperature
                         </Typography>
@@ -396,7 +397,7 @@ export function ExposureColorAnalyzer({
                           {analysis.color.temperature}K
                         </Typography>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid xs={6}>
                         <Typography variant="body2" color="text.secondary">
                           Saturation
                         </Typography>
@@ -440,29 +441,5 @@ export function ExposureColorAnalyzer({
     </Paper>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

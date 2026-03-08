@@ -44,7 +44,6 @@ import {
   ToggleButtonGroup,
   Badge,
   CircularProgress,
-  Grid,
   Card,
   CardContent,
   CardActionArea,
@@ -52,6 +51,7 @@ import {
   FormControlLabel,
   Alert,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   FlashOn as FlashIcon,
   FlashOff as FlashOffIcon,
@@ -75,7 +75,7 @@ import {
 } from '@mui/icons-material';
 import { useFlashController } from '../../hooks/useFlashController';
 import { useAnnounce } from '../../providers/AccessibilityProvider';
-import { useVirtualStudio } from '../../../VirtualStudioContext';
+import { useVirtualStudio } from '../VirtualStudioContext';
 import {
   FlashController,
   FlashGroup,
@@ -91,7 +91,6 @@ import {
 } from '../../core/data/FlashControllerData';
 import { useTabletSupport } from '../../providers/TabletSupportProvider';
 import { TouchSlider, TouchIconButton } from '../components/TabletAwarePanels';
-
 // ============================================================================
 // Controller Selector
 // ============================================================================
@@ -197,7 +196,7 @@ function ControllerSelectorContent({ controllers, selectedId, sceneLights = [], 
               const recommendation = recommendations.find(r => r.controller.id === ctrl.id);
               
               return (
-              <Grid item xs={6} key={ctrl.id}>
+              <Grid xs={6} key={ctrl.id}>
                 <Card
                   variant="outlined"
                   sx={{
@@ -1507,7 +1506,7 @@ export function FlashControllerPanel() {
                 {/* Group Controls */}
                 <Grid container spacing={1.5}>
                   {groups.map((group) => (
-                    <Grid item xs={6} sm={4} md={groups.length <= 4 ? 6 : 4} key={group.id}>
+                    <Grid xs={6} sm={4} md={groups.length <= 4 ? 6 : 4} key={group.id}>
                       <GroupPowerDial
                         group={group}
                         controller={controller}
@@ -1703,4 +1702,3 @@ export function FlashControllerWidget() {
 }
 
 export default FlashControllerPanel;
-

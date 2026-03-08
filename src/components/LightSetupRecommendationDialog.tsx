@@ -5,7 +5,12 @@
  * Displays light diagrams, ratios, and tips for each setup.
  */
 
-import { useMemo, useState, type FC, type ReactElement } from 'react';
+import {
+  useMemo,
+  useState,
+  type FC,
+  type ReactElement } from 'react';
+import Grid from '@mui/material/Grid';
 import {
   Dialog,
   DialogTitle,
@@ -55,7 +60,6 @@ import {
 } from '../../core/services/lightSetupRecommendationService';
 import { CachedActor } from '../../core/services/actorModelCache';
 import { HDRIRecommendation } from '../../core/services/hdriRecommendationService';
-
 interface LightSetupRecommendationDialogProps {
   open: boolean;
   onClose: () => void;

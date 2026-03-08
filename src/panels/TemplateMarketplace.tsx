@@ -9,7 +9,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
-  Grid,
   Card,
   CardContent,
   CardMedia,
@@ -18,10 +17,10 @@ import {
   Rating,
   Button,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import { Download, Share, Star } from '@mui/icons-material';
 import { projectSharingService, SharedProject } from '../core/services/projectSharing';
 import { logger } from '../core/services/logger';
-
 const log = logger.module('TemplateMarketplace');
 
 export const TemplateMarketplace: React.FC = () => {

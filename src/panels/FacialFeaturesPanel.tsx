@@ -15,7 +15,6 @@ import {
   Typography,
   Tabs,
   Tab,
-  Grid,
   Card,
   CardContent,
   CardActionArea,
@@ -32,6 +31,7 @@ import {
   Switch,
   FormControlLabel,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   Face,
   Mood,
@@ -196,7 +196,7 @@ export const FacialFeaturesPanel: React.FC<FacialFeaturesPanelProps> = ({
           
           <Grid container spacing={1} mb={2}>
             {Object.keys(EXPRESSION_PRESETS).map((expr) => (
-              <Grid item xs={4} key={expr}>
+              <Grid xs={4} key={expr}>
                 <Card 
                   variant={selectedExpression === expr ? 'elevation' : 'outlined'}
                   sx={{ 
@@ -356,7 +356,7 @@ export const FacialFeaturesPanel: React.FC<FacialFeaturesPanelProps> = ({
 
               <Grid container spacing={1}>
                 {MAKEUP_PRESETS.map((preset) => (
-                  <Grid item xs={6} key={preset.id}>
+                  <Grid xs={6} key={preset.id}>
                     <Card
                       variant={selectedMakeupPreset === preset.id ? 'elevation' : 'outlined'}
                       sx={{

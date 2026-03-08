@@ -5,9 +5,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { logger } from '../../core/services/logger';
+import {
+  logger } from '../../core/services/logger';
 
-const log = logger.module('ResearchPanel, ');
+const log = logger.module('');
 import {
   Box,
   Button,

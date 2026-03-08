@@ -1,5 +1,10 @@
-import { useTheming } from '../utils/theming-helper';
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  useTheming } from '../utils/theming-helper';
+import React,
+  { useState,
+  useRef,
+  useEffect,
+  useCallback } from 'react';
 import {
   Box,
   IconButton,
@@ -16,7 +21,7 @@ import {
   TextField,
   Avatar,
   InputAdornment,
-  styled
+  styled,
 } from '@mui/material';
 
 // Styled video element to avoid inline styles

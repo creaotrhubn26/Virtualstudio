@@ -15,7 +15,6 @@ import {
   Box,
   Paper,
   Typography,
-  Grid,
   Card,
   CardContent,
   CardActionArea,
@@ -31,6 +30,7 @@ import {
   IconButton,
   Alert,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   Face,
   PanTool,
@@ -158,7 +158,7 @@ export const BodyAnimationPanel: React.FC<BodyAnimationPanelProps> = ({
               </Typography>
               <Grid container spacing={1}>
                 {Object.keys(FULL_BODY_POSES).map((poseName) => (
-                  <Grid item xs={4} key={poseName}>
+                  <Grid xs={4} key={poseName}>
                     <Card
                       sx={{
                         bgcolor: fullBodyPose === poseName ? 'primary.dark' : '#2a2a2a',
@@ -182,7 +182,7 @@ export const BodyAnimationPanel: React.FC<BodyAnimationPanelProps> = ({
                 </Typography>
                 <Grid container spacing={1}>
                   {Object.keys(BODY_ANIMATION_PRESETS).map((presetName) => (
-                    <Grid item xs={3} key={presetName}>
+                    <Grid xs={3} key={presetName}>
                       <Chip
                         label={presetName}
                         onClick={() => onAnimationPresetChange(presetName)}
@@ -206,7 +206,7 @@ export const BodyAnimationPanel: React.FC<BodyAnimationPanelProps> = ({
               </Typography>
               <Grid container spacing={1}>
                 {Object.keys(HEAD_PRESETS).map((presetName) => (
-                  <Grid item xs={4} key={presetName}>
+                  <Grid xs={4} key={presetName}>
                     <Card
                       sx={{
                         bgcolor: headPreset === presetName ? 'primary.dark' : '#2a2a2a',
@@ -234,7 +234,7 @@ export const BodyAnimationPanel: React.FC<BodyAnimationPanelProps> = ({
               </Typography>
               <Grid container spacing={1} sx={{ mb: 2 }}>
                 {Object.keys(HAND_PRESETS).map((presetName) => (
-                  <Grid item xs={4} key={presetName}>
+                  <Grid xs={4} key={presetName}>
                     <Card
                       sx={{
                         bgcolor: handPreset === presetName ? 'primary.dark' : '#2a2a2a',
@@ -259,7 +259,7 @@ export const BodyAnimationPanel: React.FC<BodyAnimationPanelProps> = ({
               </Typography>
               <Grid container spacing={1}>
                 {(Object.keys(GESTURE_ICONS) as HandGesture[]).map((gestureName) => (
-                  <Grid item xs={4} key={gestureName}>
+                  <Grid xs={4} key={gestureName}>
                     <Card
                       sx={{
                         bgcolor: gesture === gestureName ? 'primary.dark' : '#2a2a2a',

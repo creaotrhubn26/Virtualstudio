@@ -11,7 +11,6 @@ import {
   Button,
   IconButton,
   Slider,
-  Grid,
   List,
   ListItem,
   ListItemButton,
@@ -35,7 +34,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Alert
+  Alert,
 } from '@mui/material';
 import {
   VolumeUp as VolumeIcon,

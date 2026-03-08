@@ -12,7 +12,6 @@ import React, { useState, useCallback } from 'react';
 import {
   Box,
   Typography,
-  Grid,
   Card,
   CardContent,
   CardMedia,
@@ -38,6 +37,7 @@ import {
   Menu,
   MenuItem,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   PhotoCamera,
   Videocam,
@@ -62,7 +62,6 @@ import {
 import { useTabletSupport } from '../../providers/TabletSupportProvider';
 import { TouchIconButton, TouchContextMenu } from '../components/TabletAwarePanels';
 import { useAccessibility, VisuallyHidden } from '../../providers/AccessibilityProvider';
-
 // ============================================================================
 // Scene Preset Types
 // ============================================================================
@@ -74,6 +73,7 @@ export interface SceneEquipmentItem {
   rotation?: [number, number, number];
   scale?: [number, number, number];
   name: string;
+  category?: string;
 }
 
 export interface ScenePreset {
@@ -1174,7 +1174,7 @@ export function ScenePresets({ onLoadPreset, onCaptureForComparison }: ScenePres
       <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
         <Grid container spacing={2}>
           {filteredPresets.map((preset) => (
-            <Grid item xs={12} sm={6} key={preset.id}>
+            <Grid xs={12} sm={6} key={preset.id}>
               <Card
                 sx={{
                   bgcolor: '#1e1e1e',
@@ -1283,7 +1283,7 @@ export function ScenePresets({ onLoadPreset, onCaptureForComparison }: ScenePres
               </Typography>
               <Grid container spacing={1} sx={{ mb: 2 }}>
                 {selectedPreset.equipment.map((item, index) => (
-                  <Grid item xs={6} sm={4} key={index}>
+                  <Grid xs={6} sm={4} key={index}>
                     <Box
                       sx={{
                         p: 1,
@@ -1340,4 +1340,3 @@ export function ScenePresets({ onLoadPreset, onCaptureForComparison }: ScenePres
 
 export { SCENE_PRESETS };
 export default ScenePresets;
-

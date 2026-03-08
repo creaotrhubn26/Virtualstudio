@@ -5,10 +5,11 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { logger } from '../../core/services/logger';
+import {
+  logger } from '../../core/services/logger';
 import { lightPresetsService } from '../../core/services/userDataService';
 
-const log = logger.module('LightGroupsPanel, ');
+const log = logger.module('');
 import {
   Box,
   Typography,

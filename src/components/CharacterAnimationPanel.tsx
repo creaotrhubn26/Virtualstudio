@@ -3,7 +3,12 @@
  * UI for skeletal animation, IK, and blend shapes control
  */
 
-import { useState, useEffect, type FC, type ReactNode, type ChangeEvent } from 'react';
+import {
+  useState,
+  useEffect,
+  type FC,
+  type ReactNode,
+  type ChangeEvent } from 'react';
 import {
   Box,
   Paper,
@@ -27,7 +32,7 @@ import {
   Tooltip,
   Switch,
   FormControlLabel,
-  TextField
+  TextField,
 } from '@mui/material';
 //
 import {

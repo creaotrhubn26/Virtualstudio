@@ -17,11 +17,11 @@ import {
   Alert,
   CircularProgress,
   Chip,
-  Grid,
   List,
   ListItem,
   ListItemText,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   Accessibility,
   AutoAwesome,
@@ -31,7 +31,6 @@ import {
 } from '@mui/icons-material';
 import { apiRequest } from '@/lib/queryClient';
 import { useMutation } from '@tanstack/react-query';
-
 interface PoseLandmark {
   name: string;
   x: number;
@@ -251,7 +250,7 @@ export function PoseDetectionPanel({
                       Pose Analysis
                     </Typography>
                     <Grid container spacing={2} sx={{ mt: 1 }}>
-                      <Grid item xs={6}>
+                      <Grid xs={6}>
                         <Typography variant="body2" color="text.secondary">
                           Posture
                         </Typography>
@@ -261,7 +260,7 @@ export function PoseDetectionPanel({
                           sx={{ bgcolor: getPostureColor(result.analysis.posture), color: 'white', mt: 0.5 }}
                         />
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid xs={6}>
                         <Typography variant="body2" color="text.secondary">
                           Stance
                         </Typography>
@@ -271,7 +270,7 @@ export function PoseDetectionPanel({
                           sx={{ mt: 0.5 }}
                         />
                       </Grid>
-                      <Grid item xs={12}>
+                      <Grid xs={12}>
                         <Typography variant="body2" color="text.secondary">
                           Symmetry Score
                         </Typography>
@@ -380,29 +379,5 @@ export function PoseDetectionPanel({
     </Paper>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

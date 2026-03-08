@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   Divider,
-  Grid,
   MenuItem,
   Select,
   Stack,
@@ -11,9 +10,9 @@ import {
   Typography,
   Tooltip,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import { useActions, useNodes, useMeasurements, useMeasureMode, useShowLightCones } from '@/state/selectors';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
-
 export default function MeasurementsPanel() {
   const nodes = useNodes();
   const measurements = useMeasurements();
@@ -39,12 +38,12 @@ export default function MeasurementsPanel() {
       </Typography>
       <Stack spacing={1.25}>
         <Grid container spacing={1}>
-          <Grid item xs={12}>
+          <Grid xs={12}>
             <Typography variant="caption" color="text.secondary">
               Custom pair
             </Typography>
           </Grid>
-          <Grid item xs={6}>
+          <Grid xs={6}>
             <Select
               size="small"
               fullWidth
@@ -63,7 +62,7 @@ export default function MeasurementsPanel() {
               ))}
             </Select>
           </Grid>
-          <Grid item xs={6}>
+          <Grid xs={6}>
             <Select
               size="small"
               fullWidth
@@ -82,7 +81,7 @@ export default function MeasurementsPanel() {
               ))}
             </Select>
           </Grid>
-          <Grid item xs={12}>
+          <Grid xs={12}>
             <Button 
               variant="outlined" 
               onClick={addPair} 

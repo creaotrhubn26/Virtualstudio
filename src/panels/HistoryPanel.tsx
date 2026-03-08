@@ -9,7 +9,8 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { logger } from '../../core/services/logger';
+import {
+  logger } from '../../core/services/logger';
 
 const log = logger.module('HistoryPanel');
 import {

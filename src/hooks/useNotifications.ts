@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Notification as AppNotification, ActivityLogEntry, ActivityActionType } from '../core/models/casting';
+import type { Notification as AppNotification, ActivityLogEntry, ActivityActionType } from '../core/models/production';
 import settingsService, { getCurrentUserId } from '../services/settingsService';
 
 interface UseNotificationsOptions {

@@ -3,11 +3,14 @@
  * UI for loading and applying 3D LUTs (.cube format)
  */
 
-import { useState, useRef } from 'react';
-import type { ChangeEvent, FC } from 'react';
+import {
+  useState,
+  useRef } from 'react';
+import type { ChangeEvent,
+  FC } from 'react';
 import { logger } from '../../core/services/logger';
 
-const log = logger.module('LUTPanel, ');
+const log = logger.module('');
 import {
   Box,
   Paper,

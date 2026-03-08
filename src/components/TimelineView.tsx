@@ -20,7 +20,7 @@ import {
   ZoomOut as ZoomOutIcon,
   Timeline as TimelineIcon,
 } from '@mui/icons-material';
-import { SceneBreakdown } from '../core/models/casting';
+import { SceneBreakdown } from '../core/models/production';
 
 interface ConflictWarning {
   type: 'lighting' | 'location' | 'time' | 'resource';

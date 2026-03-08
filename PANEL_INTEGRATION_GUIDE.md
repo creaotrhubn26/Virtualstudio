@@ -43,7 +43,6 @@ const panelIds = [
   'helpPanel',
   'marketplacePanel',
   'aiAssistantPanel',
-  'castingPlannerPanel',
   'actorBottomPanel',
   'myNewPanel' // ← Legg til her
 ];
@@ -216,7 +215,6 @@ export const MyNewPanelApp: React.FC = () => {
 - Sjekk at `setupPanelResizeHandle` er kalt med riktige parametere
 - Sjekk at resize handle elementet finnes i HTML
 - Sjekk at panel ID matcher mellom setup og HTML
-
 
 
 

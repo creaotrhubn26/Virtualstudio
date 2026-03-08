@@ -4,9 +4,14 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient } from '@tanstack/react-query';
+import Grid from '@mui/material/GridLegacy';
 import { apiRequest } from '@/lib/queryClient';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor,
+  EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import {
@@ -40,7 +45,6 @@ import {
   useTheme,
   useMediaQuery,
   CircularProgress,
-  Grid,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -67,7 +71,6 @@ import {
 } from '@mui/icons-material';
 import type { SplitSheet, Contract, ContractParty, ContractObligation, PaymentTerm } from './types';
 import { RichTextEditor } from '../RichTextEditor';
-
 interface ContractEditingInterfaceProps {
   splitSheetId: string;
   projectId?: string;
@@ -610,7 +613,7 @@ export default function ContractEditingInterface({
                     </IconButton>
                   </Box>
                   <Grid container spacing={{ xs: 1.5, sm: 2, md: 2.5, lg: 3, xl: 3.5 }}>
-                    <Grid item xs={12} sm={6}>
+                    <Grid xs={12} sm={6}>
                       <TextField
                         label="Beløp"
                         fullWidth
@@ -629,7 +632,7 @@ export default function ContractEditingInterface({
                         }}
                       />
                     </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <Grid xs={12} sm={6}>
                       <FormControl fullWidth>
                         <InputLabel
                           sx={{
@@ -653,7 +656,7 @@ export default function ContractEditingInterface({
                         </Select>
                       </FormControl>
                     </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <Grid xs={12} sm={6}>
                       <TextField
                         label="Forfallsdato (valgfritt)"
                         fullWidth
@@ -673,7 +676,7 @@ export default function ContractEditingInterface({
                         }}
                       />
                     </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <Grid xs={12} sm={6}>
                       <TextField
                         label="Prosentandel (valgfritt)"
                         fullWidth

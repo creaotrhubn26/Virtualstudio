@@ -8,14 +8,15 @@
  */
 
 import React, { useState } from 'react';
-import { logger } from '../core/services/logger';
+import {
+  logger } from '../core/services/logger';
+import Grid from '@mui/material/GridLegacy';
 import {
   Box,
   Paper,
   Typography,
   Tabs,
   Tab,
-  Grid,
   Card,
   CardContent,
   CardActions,
@@ -301,7 +302,7 @@ export const AccessoriesPanel: React.FC = () => {
       {/* Items Grid */}
       <Grid container spacing={2}>
         {currentItems.map((item) => (
-          <Grid item xs={12} sm={6} key={item.id}>
+          <Grid xs={12} sm={6} key={item.id}>
             <Card>
               <CardContent>
                 <Typography variant="subtitle2" gutterBottom>

@@ -1,4 +1,7 @@
-import { useState, useEffect, type FC } from 'react';
+import {
+  useState,
+  useEffect,
+  type FC } from 'react';
 import {
   Box,
   Typography,
@@ -28,7 +31,7 @@ import {
   Edit as EditIcon,
 } from '@mui/icons-material';
 import { rolePoolService, PoolRole } from '../services/rolePoolService';
-import { CastingProject } from '../core/models/casting';
+import { CastingProject } from '../core/models/production';
 
 interface RolePoolPanelProps {
   projects: CastingProject[];

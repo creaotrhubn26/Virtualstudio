@@ -10,7 +10,8 @@
  */
 
 import React, { useMemo } from 'react';
-import { logger } from '../../core/services/logger';
+import {
+  logger } from '../../core/services/logger';
 
 const log = logger.module('LightQualityPanel');
 import {

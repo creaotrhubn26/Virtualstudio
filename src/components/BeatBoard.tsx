@@ -5,7 +5,11 @@
  * Similar to index cards on a cork board for story structure.
  */
 
-import { useState, useCallback, useMemo, type FC } from 'react';
+import {
+  useState,
+  useCallback,
+  useMemo,
+  type FC } from 'react';
 import {
   Box,
   Card,

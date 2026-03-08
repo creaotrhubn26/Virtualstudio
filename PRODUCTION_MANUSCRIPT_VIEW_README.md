@@ -97,7 +97,7 @@ Legg til ny tab "Production View":
 
 ### Data Flow
 ```
-CastingPlannerPanel
+Legacy planner container (removed)
   ├── ManuscriptPanel
   │     └── ProductionManuscriptView
   │           ├── Scene Navigator (DraggableSceneList concepts)

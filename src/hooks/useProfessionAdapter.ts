@@ -35,9 +35,9 @@ export const useProfessionAdapter = (professionId?: string) => {
   }, [configs, professionId]);
 
   const adaptDashboardTitle = useCallback(() => {
-    if (!professionId) return 'Academy Dashboard';
+    if (!professionId) return 'Studio Dashboard';
     const config = getConfigById(professionId);
-    return config ? `${config.name} Academy` : 'Academy Dashboard';
+    return config ? `${config.name} Studio` : 'Studio Dashboard';
   }, [professionId, getConfigById]);
 
   const adaptTabLabels = useCallback(() => {

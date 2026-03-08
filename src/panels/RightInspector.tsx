@@ -1,11 +1,25 @@
 import * as React from 'react';
-import { Box, Divider, Grid, Slider, Stack, TextField, Typography, Button, Tooltip, Select, MenuItem, FormControl, InputLabel, IconButton } from '@mui/material';
+import {
+  Box,
+  Divider,
+  Slider,
+  Stack,
+  TextField,
+  Typography,
+  Button,
+  Tooltip,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  IconButton,
+} from '@mui/material';
+import Grid from '@mui/material/Grid';
 import { Delete } from '@mui/icons-material';
 import { useScene, useAppStore, SceneNode } from '@/state/store';
 import { colors, spacing, shadows } from '@/styles/designTokens';
 import { NumberInput } from '@/components/NumberInput';
 import { EnhancedTextField } from '@/components/EnhancedTextField';
-
 declare global {
   interface Window {
     studio?: {

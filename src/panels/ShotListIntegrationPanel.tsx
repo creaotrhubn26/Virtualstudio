@@ -10,10 +10,12 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { logger } from '../../core/services/logger';
-import settingsService, { getCurrentUserId } from '../../services/settingsService';
+import {
+  logger } from '../core/services/logger';
+import settingsService,
+  { getCurrentUserId } from '../services/settingsService';
 
-const log = logger.module('ShotListPanel, ');
+const log = logger.module('ShotListPanel');
 import {
   Box,
   Typography,
@@ -23,6 +25,7 @@ import {
   ListItemText,
   ListItemIcon,
   ListItemSecondaryAction,
+  ListItemButton,
   IconButton,
   Button,
   Chip,
@@ -76,9 +79,9 @@ import {
   School,
   Compare,
 } from '@mui/icons-material';
-import { useAppStore, SceneNode } from '../../state/store';
+import { useAppStore } from '../state/store';
 import { SCENE_PRESETS, ScenePreset } from './ScenePresets';
-import { equipmentIntegrationService } from '../../core/services/equipmentIntegrationService';
+import { equipmentIntegrationService } from '../core/services/equipmentIntegrationService';
 
 // ============================================================================
 // Types
@@ -366,8 +369,7 @@ export const ShotListIntegrationPanel: React.FC<ShotListIntegrationProps> = ({
   const [importedShots, setImportedShots] = useState<Shot[]>(shots);
 
   // Get current scene state
-  const nodes = useAppStore((state) => state.nodes);
-  const addNode = useAppStore((state) => state.addNode);
+  const nodes = useAppStore((state) => state.scene);
 
   // Training stats
   const trainingStats = useMemo(() => shotTrainingService.getTrainingStats(), []);
@@ -583,53 +585,53 @@ export const ShotListIntegrationPanel: React.FC<ShotListIntegrationProps> = ({
             const recommended = shotTrainingService.getRecommendedPreset(shot);
 
             return (
-              <ListItem
-                key={shot.id}
-                button
-                onClick={() => handleSelectShot(shot)}
-                sx={{
-                  border: selectedShot?.id === shot.id ? 2 : 1,
-                  borderColor: selectedShot?.id === shot.id ? 'primary.main' : 'divider',
-                  borderRadius: 1,
-                  mb: 1}}
-              >
-                <ListItemIcon>{getShotTypeIcon(shot.shotType)}</ListItemIcon>
-                <ListItemText
-                  primary={
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <Typography variant="subtitle2">{shot.title}</Typography>
-                      <Chip
-                        label={shot.priority}
-                        size="small"
-                        color={getPriorityColor(shot.priority)}
-                      />
-                      {recommended && (
-                        <Tooltip title="AI recommendation available">
-                          <AutoAwesome fontSize="small" color="secondary" />
-                        </Tooltip>
-                      )}
-                    </Stack>
-                  }
-                  secondary={
-                    <Stack>
-                      <Typography variant="caption" color="text.secondary">
-                        {shot.scene} • {shot.shotType} • {shot.duration}s
-                      </Typography>
-                      {!validation.valid && (
-                        <Typography variant="caption" color="error">
-                          Missing: {validation.missing.join(', ')}
+              <ListItem key={shot.id} disablePadding sx={{ mb: 1 }}>
+                <ListItemButton
+                  onClick={() => handleSelectShot(shot)}
+                  sx={{
+                    border: selectedShot?.id === shot.id ? 2 : 1,
+                    borderColor: selectedShot?.id === shot.id ? 'primary.main' : 'divider',
+                    borderRadius: 1,
+                  }}
+                >
+                  <ListItemIcon>{getShotTypeIcon(shot.shotType)}</ListItemIcon>
+                  <ListItemText
+                    primary={
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <Typography variant="subtitle2">{shot.title}</Typography>
+                        <Chip
+                          label={shot.priority}
+                          size="small"
+                          color={getPriorityColor(shot.priority)}
+                        />
+                        {recommended && (
+                          <Tooltip title="AI recommendation available">
+                            <AutoAwesome fontSize="small" color="secondary" />
+                          </Tooltip>
+                        )}
+                      </Stack>
+                    }
+                    secondary={
+                      <Stack>
+                        <Typography variant="caption" color="text.secondary">
+                          {shot.scene} • {shot.shotType} • {shot.duration}s
                         </Typography>
-                      )}
-                    </Stack>
-                  }
-                />
-                <ListItemSecondaryAction>
-                  {validation.valid ? (
-                    <CheckCircle color="success" />
-                  ) : (
-                    <Warning color="warning" />
-                  )}
-                </ListItemSecondaryAction>
+                        {!validation.valid && (
+                          <Typography variant="caption" color="error">
+                            Missing: {validation.missing.join(', ')}
+                          </Typography>
+                        )}
+                      </Stack>
+                    }
+                  />
+                  <ListItemSecondaryAction>
+                    {validation.valid ? (
+                      <CheckCircle color="success" />
+                    ) : (
+                      <Warning color="warning" />
+                    )}
+                  </ListItemSecondaryAction>
+                </ListItemButton>
               </ListItem>
             );
           })}
@@ -777,4 +779,3 @@ function mapShotType(type?: string): Shot['shotType'] {
 }
 
 export default ShotListIntegrationPanel;
-

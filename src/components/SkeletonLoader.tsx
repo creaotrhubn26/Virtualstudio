@@ -5,7 +5,10 @@
  */
 
 import type { FC, CSSProperties } from 'react';
-import { Box, BoxProps } from '@mui/material';
+import {
+  Box,
+  BoxProps,
+} from '@mui/material';
 import { colors, borderRadius } from '../../styles/designTokens';
 import { animations } from '../../styles/animations';
 

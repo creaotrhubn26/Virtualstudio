@@ -5,18 +5,19 @@
  */
 
 import React, { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import {
+  useQuery } from '@tanstack/react-query';
+import Grid from '@mui/material/GridLegacy';
 import { apiRequest } from '@/lib/queryClient';
 import {
   Box,
   Typography,
   Card,
   CardContent,
-  Grid,
   Stack,
   Chip,
   Paper,
-  alpha
+  alpha,
 } from '@mui/material';
 import {
   AttachMoney as MoneyIcon,
@@ -28,7 +29,6 @@ import {
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useDynamicProfessions } from '../hooks/useDynamicProfessions';
 import getProfessionIcon from '@/utils/profession-icons';
-
 interface SplitSheetAnalyticsProps {
   userId: string;
   currency?: string;
@@ -163,7 +163,7 @@ export default function SplitSheetAnalytics({
 
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
@@ -178,7 +178,7 @@ export default function SplitSheetAnalytics({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
@@ -193,7 +193,7 @@ export default function SplitSheetAnalytics({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
@@ -208,7 +208,7 @@ export default function SplitSheetAnalytics({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
@@ -227,7 +227,7 @@ export default function SplitSheetAnalytics({
 
       {/* Charts */}
       <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
+        <Grid xs={12} md={6}>
           <Card>
             <CardContent>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
@@ -255,7 +255,7 @@ export default function SplitSheetAnalytics({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid xs={12} md={6}>
           <Card>
             <CardContent>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
@@ -279,8 +279,5 @@ export default function SplitSheetAnalytics({
     </Box>
   );
 }
-
-
-
 
 

@@ -4,7 +4,11 @@
  */
 
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient } from '@tanstack/react-query';
+import Grid from '@mui/material/GridLegacy';
 import { apiRequest } from '@/lib/queryClient';
 import {
   Box,
@@ -17,7 +21,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Grid,
   Stack,
   Chip,
   IconButton,
@@ -33,7 +36,7 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Divider
+  Divider,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -48,7 +51,6 @@ import type {
   REVENUE_SOURCE_NAMES 
 } from './types';
 import { REVENUE_SOURCE_NAMES as REVENUE_NAMES } from './types';
-
 interface SplitSheetRevenueTrackerProps {
   splitSheetId: string;
   currency?: string;
@@ -132,7 +134,7 @@ export default function SplitSheetRevenueTracker({
     <Box>
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
+        <Grid xs={12} md={4}>
           <Card>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
@@ -147,7 +149,7 @@ export default function SplitSheetRevenueTracker({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid xs={12} md={4}>
           <Card>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
@@ -162,7 +164,7 @@ export default function SplitSheetRevenueTracker({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid xs={12} md={4}>
           <Card>
             <CardContent>
               <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -304,7 +306,7 @@ export default function SplitSheetRevenueTracker({
               placeholder="f.eks. Spotify, Apple Music"
             />
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid xs={6}>
                 <TextField
                   label="Periode start"
                   type="date"
@@ -315,7 +317,7 @@ export default function SplitSheetRevenueTracker({
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid xs={6}>
                 <TextField
                   label="Periode slutt"
                   type="date"
@@ -352,26 +354,5 @@ export default function SplitSheetRevenueTracker({
     </Box>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

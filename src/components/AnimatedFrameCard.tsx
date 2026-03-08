@@ -11,7 +11,11 @@
  * - Duration stretch animation
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import {
+  useState,
+  useCallback,
+  useRef,
+  useEffect } from 'react';
 import type { FC } from 'react';
 import {
   Box,

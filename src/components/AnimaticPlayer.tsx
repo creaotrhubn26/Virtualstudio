@@ -10,8 +10,13 @@
  * - Speed control
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import type { CSSProperties, FC } from 'react';
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback } from 'react';
+import type { CSSProperties,
+  FC } from 'react';
 import {
   Box,
   Paper,

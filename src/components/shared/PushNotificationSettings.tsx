@@ -1,5 +1,11 @@
 import React from 'react';
-import { Box, Typography, Switch, FormControlLabel, Paper } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Switch,
+  FormControlLabel,
+  Paper,
+} from '@mui/material';
 
 interface PushNotificationSettingsProps {
   enabled?: boolean;

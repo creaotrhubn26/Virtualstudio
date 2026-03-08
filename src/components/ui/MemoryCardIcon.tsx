@@ -1,5 +1,8 @@
 import React from 'react';
-import { SvgIcon, SvgIconProps } from '@mui/material';
+import {
+  SvgIcon,
+  SvgIconProps,
+} from '@mui/material';
 
 const MemoryCardIcon: React.FC<SvgIconProps> = (props) => {
   return (

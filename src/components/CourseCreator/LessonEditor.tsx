@@ -78,19 +78,3 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ lesson, modules, onC
 };
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

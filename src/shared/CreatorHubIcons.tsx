@@ -12,10 +12,6 @@ import {
   Create,
 } from '@mui/icons-material';
 
-export const AcademyIcon: React.FC<{ sx?: any }> = ({ sx }) => (
-  <School sx={sx} />
-);
-
 export const CourseIcon: React.FC<{ sx?: any }> = ({ sx }) => (
   <School sx={sx} />
 );
@@ -59,24 +55,5 @@ export const NoteIcon: React.FC<{ sx?: any }> = ({ sx }) => (
 export const ContentCreationIcon: React.FC<{ sx?: any }> = ({ sx }) => (
   <Create sx={sx} />
 );
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

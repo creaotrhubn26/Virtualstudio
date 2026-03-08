@@ -8,8 +8,8 @@ import {
   Stack,
   Alert,
   Divider,
-  Grid,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   WbSunny as SunIcon,
   Cloud as CloudIcon,
@@ -133,7 +133,7 @@ export function WeatherForecastCard({ forecast, alerts, date }: WeatherForecastC
             <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
 
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid xs={6}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <WindIcon sx={{ fontSize: 20, color: 'rgba(255,255,255,0.87)' }} />
                   <Box>
@@ -146,7 +146,7 @@ export function WeatherForecastCard({ forecast, alerts, date }: WeatherForecastC
                   </Box>
                 </Box>
               </Grid>
-              <Grid item xs={6}>
+              <Grid xs={6}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <UmbrellaIcon sx={{ fontSize: 20, color: 'rgba(255,255,255,0.87)' }} />
                   <Box>
@@ -159,7 +159,7 @@ export function WeatherForecastCard({ forecast, alerts, date }: WeatherForecastC
                   </Box>
                 </Box>
               </Grid>
-              <Grid item xs={6}>
+              <Grid xs={6}>
                 <Box>
                   <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.87)', display: 'block' }}>
                     Luftfuktighet

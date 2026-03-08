@@ -1,5 +1,7 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import {
+  useQuery } from '@tanstack/react-query';
+import Grid from '@mui/material/GridLegacy';
 import { apiRequest } from '@/lib/queryClient';
 import {
   Box,
@@ -9,7 +11,6 @@ import {
   Chip,
   CircularProgress,
   Alert,
-  Grid,
 } from '@mui/material';
 import {
   LocalOffer as PriceIcon,
@@ -17,7 +18,6 @@ import {
 } from '@mui/icons-material';
 import { useTheming } from '../../../utils/theming-helper';
 import { useClientServicePricing } from '../../../services/ClientServicePricingService';
-
 interface PricingInfoSectionProps {
   projectId: string;
 }
@@ -57,7 +57,7 @@ export default function PricingInfoSection({ projectId }: PricingInfoSectionProp
           </Alert>
         ) : (
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid xs={12} sm={6}>
               <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
                 <Typography variant="caption" color="text.secondary">
                   Total Kontraktverdi
@@ -67,7 +67,7 @@ export default function PricingInfoSection({ projectId }: PricingInfoSectionProp
                 </Typography>
               </Box>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid xs={12} sm={6}>
               <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
                 <Typography variant="caption" color="text.secondary">
                   Antall Kontrakter
@@ -78,7 +78,7 @@ export default function PricingInfoSection({ projectId }: PricingInfoSectionProp
               </Box>
             </Grid>
             {contracts.map((contract: any) => (
-              <Grid item xs={12} key={contract.id}>
+              <Grid xs={12} key={contract.id}>
                 <Box sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="body2">
@@ -97,8 +97,5 @@ export default function PricingInfoSection({ projectId }: PricingInfoSectionProp
     </Card>
   );
 }
-
-
-
 
 

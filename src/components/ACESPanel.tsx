@@ -1,11 +1,12 @@
 /**
  * ACES Panel Component
  * 
- * UI for controlling ACES (Academy Color Encoding System) color management
+ * UI for controlling ACES color management
  * with professional presets and configuration options.
  */
 
-import { useState } from 'react';
+import {
+  useState } from 'react';
 import {
   Box,
   Typography,
@@ -30,7 +31,7 @@ import {
   Info as InfoIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import { acesService, type ACESConfig, type ACESColorSpace, type ACESLMTPreset } from '../../core/services/acesService';
+import { acesService, type ACESConfig, type ACESColorSpace, type ACESLMTPreset } from '../core/services/acesService';
 
 interface ACESPanelProps {
   enabled: boolean;
@@ -280,4 +281,3 @@ export const ACESPanel: React.FC<ACESPanelProps> = ({
     </Box>
   );
 };
-

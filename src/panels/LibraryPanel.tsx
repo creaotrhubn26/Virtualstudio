@@ -1,5 +1,16 @@
 import * as React from 'react';
-import { Box, Stack, TextField, InputAdornment, Grid, Typography, Button, Tooltip, useMediaQuery, useTheme } from '@mui/material';
+import {
+  Box,
+  Stack,
+  TextField,
+  InputAdornment,
+  Typography,
+  Button,
+  Tooltip,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import SearchIcon from '@mui/icons-material/Search';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ViewInArIcon from '@mui/icons-material/ViewInAr';
@@ -11,7 +22,7 @@ import {
   type AssetType,
   type LibraryAsset,
 } from '@/core/services/library';
-import { saveUserAsset } from '@/core/services/userLibrary';
+import { getUserAssets, saveUserAsset } from '@/core/services/userLibrary';
 import Rodin3DGeneratorDialog from '@/components/Rodin3DGeneratorDialog';
 import { scanAndAddAllModels } from '@/scripts/scanAndAddHyper3DModels';
 
@@ -19,7 +30,21 @@ function useLibrary(type: AssetType) {
   const [q, setQ] = React.useState('');
   const [items, setItems] = React.useState<LibraryAsset[]>([]);
   const refresh = React.useCallback(async () => {
-    const list = await searchMergedLibrary(type, q);    setItems(list);
+    const query = q.trim();
+    const [systemAssets, userAssets] = await Promise.all([
+      query ? searchMergedLibrary(type, query) : listMergedLibrary(type),
+      getUserAssets(type),
+    ]);
+
+    const normalizedQuery = query.toLowerCase();
+    const filteredUserAssets = normalizedQuery
+      ? userAssets.filter((asset) =>
+          asset.title.toLowerCase().includes(normalizedQuery) ||
+          asset.id.toLowerCase().includes(normalizedQuery),
+        )
+      : userAssets;
+
+    setItems([...filteredUserAssets, ...systemAssets]);
   }, [type, q]);
   React.useEffect(() => {
     refresh();
@@ -503,7 +528,7 @@ export default function LibraryPanel() {
       />
       <Grid container spacing={spacing}>
         {items.map((a) => (
-          <Grid item xs={12 / gridColumns} key={a.id}>
+          <Grid xs={12 / gridColumns} key={a.id}>
             <Card a={a} isTablet={isIPadFriendly} />
           </Grid>
         ))}

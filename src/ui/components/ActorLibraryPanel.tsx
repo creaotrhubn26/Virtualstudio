@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Box,
   Typography,
-  Grid,
   Card,
   CardContent,
   CardActionArea,
@@ -12,8 +11,8 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import { Search, Person, ChildCare, Elderly, FitnessCenter } from '@mui/icons-material';
-
 interface LibraryActor {
   id: string;
   name: string;

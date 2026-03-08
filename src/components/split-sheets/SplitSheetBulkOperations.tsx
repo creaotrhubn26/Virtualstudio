@@ -4,7 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import {
   Box,
@@ -31,7 +33,7 @@ import {
   Alert,
   Stack,
   Chip,
-  LinearProgress
+  LinearProgress,
 } from '@mui/material';
 import {
   PlayArrow as StartIcon,
@@ -360,26 +362,5 @@ export default function SplitSheetBulkOperations({
     </Box>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

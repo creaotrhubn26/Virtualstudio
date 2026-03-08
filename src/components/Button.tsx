@@ -6,7 +6,11 @@
  */
 
 import type { CSSProperties, FC } from 'react';
-import { Button as MuiButton, ButtonProps as MuiButtonProps, CircularProgress } from '@mui/material';
+import {
+  Button as MuiButton,
+  ButtonProps as MuiButtonProps,
+  CircularProgress,
+} from '@mui/material';
 import { colors, spacing, borderRadius, transitions, shadows } from '../../styles/designTokens';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'icon';

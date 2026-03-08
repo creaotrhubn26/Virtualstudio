@@ -9,7 +9,6 @@ import {
   Card,
   CardMedia,
   CardContent,
-  Grid,
   IconButton,
   Divider,
   Table,
@@ -22,6 +21,7 @@ import {
   Tooltip,
   Alert,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   Description as DescriptionIcon,
   Image as ImageIcon,
@@ -37,12 +37,11 @@ import {
   Link as LinkIcon,
   Sync as SyncIcon,
 } from '@mui/icons-material';
-import { SceneBreakdown, StoryboardFrame as StoryboardFrameModel } from '../core/models/casting';
+import { SceneBreakdown, StoryboardFrame as StoryboardFrameModel } from '../core/models/production';
 import { FrameDrawingEditor, QuickDrawButton } from './FrameDrawingEditor';
 import { useDeviceDetection } from '../hooks/useDeviceDetection';
 import { FrameDrawingData } from '../state/storyboardStore';
 import { useScriptStoryboardOptional, SceneContext } from '../contexts/ScriptStoryboardContext';
-
 interface StoryboardIntegrationViewProps {
   scene: SceneBreakdown;
   onUpdate: (scene: SceneBreakdown) => void;

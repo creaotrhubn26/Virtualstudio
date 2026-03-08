@@ -19,7 +19,6 @@ import {
   ListItemText,
   Chip,
   Divider,
-  Grid,
   Tooltip,
   Collapse,
   Alert,
@@ -27,6 +26,7 @@ import {
   useTheme,
   SwipeableDrawer,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -46,7 +46,6 @@ import {
   ArrowBack as BackIcon,
 } from '@mui/icons-material';
 import { tutorialService, Tutorial, TutorialStep } from '../services/tutorialService';
-
 interface TutorialEditorPanelProps {
   open: boolean;
   onClose: () => void;
@@ -79,7 +78,7 @@ const actionOptions = [
 const categoryOptions = [
   { value: 'virtual-studio', label: 'Virtual Studio' },
   { value: 'studio', label: 'Studio' },
-  { value: 'academy', label: 'Academy' },
+  { value: 'learning', label: 'Læring' },
   { value: 'general', label: 'Generell' },
 ];
 
@@ -897,7 +896,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
         <DialogTitle sx={{ fontSize: fontSize.title, p: spacing }}>{editingStep ? 'Rediger steg' : 'Nytt steg'}</DialogTitle>
         <DialogContent sx={{ p: spacing }}>
           <Grid container spacing={spacing} sx={{ mt: 0.5 }}>
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <TextField
                 fullWidth
                 label="Tittel"
@@ -915,7 +914,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                 InputProps={{ sx: { color: '#fff' } }}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <TextField
                 fullWidth
                 label="Beskrivelse"
@@ -934,7 +933,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                 InputProps={{ sx: { color: '#fff' } }}
               />
             </Grid>
-            <Grid item xs={isMobile ? 12 : 6}>
+            <Grid xs={isMobile ? 12 : 6}>
               <FormControl fullWidth size={isMobile ? 'medium' : 'small'}>
                 <InputLabel sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body }}>Panel</InputLabel>
                 <Select
@@ -954,7 +953,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={isMobile ? 12 : 6}>
+            <Grid xs={isMobile ? 12 : 6}>
               <FormControl fullWidth size={isMobile ? 'medium' : 'small'}>
                 <InputLabel sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body }}>Handling</InputLabel>
                 <Select
@@ -974,7 +973,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <TextField
                 fullWidth
                 label="CSS Selector (valgfritt)"
@@ -993,7 +992,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                 InputProps={{ sx: { color: '#fff', fontFamily: 'monospace' } }}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <TextField
                 fullWidth
                 label="Handlingsbeskrivelse"
@@ -1012,7 +1011,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                 InputProps={{ sx: { color: '#fff' } }}
               />
             </Grid>
-            <Grid item xs={isMobile ? 12 : 6}>
+            <Grid xs={isMobile ? 12 : 6}>
               <TextField
                 fullWidth
                 label="Varighet (ms)"
@@ -1031,7 +1030,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                 InputProps={{ sx: { color: '#fff' } }}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <Typography sx={{ mb: 1, color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body }}>Tips</Typography>
               <Box sx={{ display: 'flex', gap: 1, mb: 1, flexDirection: isMobile ? 'column' : 'row' }}>
                 <TextField

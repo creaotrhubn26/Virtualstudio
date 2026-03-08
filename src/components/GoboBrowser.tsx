@@ -3,7 +3,11 @@
  * Supports both attaching to lights and placing as standalone assets
  */
 
-import { useState, useEffect, type FC } from 'react';
+import {
+  useState,
+  useEffect,
+  type FC } from 'react';
+import Grid from '@mui/material/GridLegacy';
 import {
   Box,
   Typography,
@@ -19,7 +23,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Grid,
   Slider,
   FormControl,
   InputLabel,
@@ -36,7 +39,6 @@ import PatternIcon from '@mui/icons-material/Pattern';
 
 import { GOBO_PATTERNS, GoboDefinition, GoboPattern, getGobosByCategory } from '../data/goboDefinitions';
 import { goboService } from '../core/services/goboService';
-
 interface GoboBrowserProps {
   selectedLightId?: string;
   onClose?: () => void;
@@ -171,7 +173,7 @@ export const GoboBrowser: FC<GoboBrowserProps> = ({ selectedLightId, onClose }) 
       <Box sx={{ flex: 1, overflow: 'auto' }}>
         <Grid container spacing={2}>
           {filteredGobos.map(gobo => (
-            <Grid item xs={6} sm={4} md={3} key={gobo.id}>
+            <Grid xs={6} sm={4} md={3} key={gobo.id}>
               <Card
                 onClick={() => handleGoboSelect(gobo)}
                 sx={{
@@ -342,24 +344,5 @@ export const GoboBrowser: FC<GoboBrowserProps> = ({ selectedLightId, onClose }) 
 };
 
 export default GoboBrowser;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

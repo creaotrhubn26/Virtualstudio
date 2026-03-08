@@ -5,7 +5,12 @@
  */
 
 import React from 'react';
-import { Box, Typography, LinearProgress, keyframes } from '@mui/material';
+import {
+  Box,
+  Typography,
+  LinearProgress,
+  keyframes,
+} from '@mui/material';
 import { useLoadingStore, LoadingStage } from '../state/loadingStore';
 
 // Animations

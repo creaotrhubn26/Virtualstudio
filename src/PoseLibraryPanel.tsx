@@ -4,16 +4,16 @@
  */
 
 import React, { useState } from 'react';
-import { logger } from '../../core/services/logger';
+import { logger } from './core/services/logger';
+import Grid from '@mui/material/GridLegacy';
 
-const log = logger.module('PoseLibraryPanel, ');
+const log = logger.module('PoseLibraryPanel');
 import {
   Box,
   Paper,
   Typography,
   Tabs,
   Tab,
-  Grid,
   Card,
   CardContent,
   CardActions,
@@ -40,9 +40,8 @@ import {
   getPosesByCategory,
   PosePreset,
   BONE_NAMES,
-} from '../../core/animation/PoseLibrary';
-import { IKSystem } from '../../core/animation/IKSystem';
-
+} from './core/animation/PoseLibrary';
+import { IKSystem } from './core/animation/IKSystem';
 interface PoseLibraryPanelProps {
   ikSystem: IKSystem | null;
   onApplyPose?: (pose: PosePreset) => void;
@@ -76,7 +75,7 @@ export const PoseLibraryPanel: React.FC<PoseLibraryPanelProps> = ({
 
   const handleApplyPose = (pose: PosePreset) => {
     if (!ikSystem) {
-      log.warn('IK System not available, ');
+      log.warn('IK System not available');
       return;
     }
 
@@ -160,7 +159,7 @@ export const PoseLibraryPanel: React.FC<PoseLibraryPanelProps> = ({
       <Box sx={{ maxHeight: 400, overflowY: 'auto', mb: 2 }}>
         <Grid container spacing={2}>
           {poses.map((pose) => (
-            <Grid item xs={12} sm={6} md={4} key={pose.id}>
+            <Grid xs={12} sm={6} md={4} key={pose.id}>
               <Card
                 sx={{
                   backgroundColor: '#2a2a2a', '&:hover': { backgroundColor: '#333' },
@@ -211,11 +210,11 @@ export const PoseLibraryPanel: React.FC<PoseLibraryPanelProps> = ({
           Pose Blending
         </Typography>
         <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid item xs={6}>
+          <Grid xs={6}>
             <FormControl fullWidth size="small">
               <InputLabel>Pose A</InputLabel>
               <Select
-                value={selectedPoseA?.id || ', '}
+                value={selectedPoseA?.id || ''}
                 label="Pose A"
                 onChange={(e) => {
                   const pose = ALL_POSES.find((p) => p.id === e.target.value);
@@ -230,11 +229,11 @@ export const PoseLibraryPanel: React.FC<PoseLibraryPanelProps> = ({
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={6}>
+          <Grid xs={6}>
             <FormControl fullWidth size="small">
               <InputLabel>Pose B</InputLabel>
               <Select
-                value={selectedPoseB?.id || ', '}
+                value={selectedPoseB?.id || ''}
                 label="Pose B"
                 onChange={(e) => {
                   const pose = ALL_POSES.find((p) => p.id === e.target.value);
@@ -297,7 +296,7 @@ export const PoseLibraryPanel: React.FC<PoseLibraryPanelProps> = ({
           Quick Actions
         </Typography>
         <Grid container spacing={1}>
-          <Grid item xs={6}>
+          <Grid xs={6}>
             <Button
               variant="outlined"
               fullWidth
@@ -307,14 +306,21 @@ export const PoseLibraryPanel: React.FC<PoseLibraryPanelProps> = ({
               Reset T-Pose
             </Button>
           </Grid>
-          <Grid item xs={6}>
+          <Grid xs={6}>
             <Button
               variant="outlined"
               fullWidth
               onClick={() => {
                 if (ikSystem) {
                   const currentPose = ikSystem.capturePose('custom');
-                  log.debug('Captured pose: ', currentPose);
+                  const allBoneNames = Object.values(BONE_NAMES);
+                  const capturedCount = allBoneNames.filter(
+                    (name) => name in currentPose,
+                  ).length;
+                  log.debug(
+                    `Captured pose (${capturedCount}/${allBoneNames.length} standard bones):`,
+                    currentPose,
+                  );
                 }
               }}
               disabled={!ikSystem}

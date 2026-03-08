@@ -26,7 +26,7 @@ import {
   DialogContent,
   DialogActions,
   Collapse,
-  Fab
+  Fab,
 } from '@mui/material';
 import {
   People as PeopleIcon,

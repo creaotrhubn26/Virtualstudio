@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { logger } from '../../core/services/logger';
+import {
+  logger } from '../../core/services/logger';
 
 const log = logger.module('CameraPathRecorder');
 import {
@@ -31,7 +32,7 @@ import {
   Timeline,
 } from '@mui/icons-material';
 import { useAnimationStore } from '../../state/animationStore';
-import { useVirtualStudio } from '../../../VirtualStudioContext';
+import { useVirtualStudio } from '../VirtualStudioContext';
 
 // Type for camera node
 interface CameraNode {

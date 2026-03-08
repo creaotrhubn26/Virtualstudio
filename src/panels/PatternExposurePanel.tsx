@@ -24,7 +24,6 @@ import {
   Card,
   CardContent,
   CardActions,
-  Grid,
   LinearProgress,
   Tooltip,
   IconButton,
@@ -39,6 +38,7 @@ import {
   AccordionSummary,
   AccordionDetails,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   Lightbulb as LightIcon,
   CameraAlt as CameraIcon,
@@ -65,7 +65,6 @@ import {
 } from '@/core/services/patternExposureIntegration';
 import { useNodes, useActions } from '@/state/selectors';
 import type { SceneNode } from '@/state/store';
-
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================

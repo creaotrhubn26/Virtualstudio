@@ -9,9 +9,11 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { logger } from '../../core/services/logger';
+import {
+  logger } from '../core/services/logger';
+import Grid from '@mui/material/GridLegacy';
 
-const log = logger.module('StoryboardPanel, ');
+const log = logger.module('StoryboardPanel');
 import {
   Box,
   Typography,
@@ -20,7 +22,6 @@ import {
   IconButton,
   Tooltip,
   Stack,
-  Grid,
   Card,
   CardMedia,
   CardContent,
@@ -103,7 +104,7 @@ import { StoryboardVersionHistory } from '../components/StoryboardVersionHistory
 import { FrameContextMenu, QuickAnnotationType } from '../components/FrameContextMenu';
 import { quickAnnotationService } from '../core/storyboard/QuickAnnotationService';
 import { useAccessibility, VisuallyHidden } from '../providers/AccessibilityProvider';
-import { useVirtualStudio } from '../../VirtualStudioContext';
+import { useVirtualStudio } from '../VirtualStudioContext';
 import { QuickDrawButton } from '../components/FrameDrawingEditor';
 import { useDeviceDetection } from '../hooks/useDeviceDetection';
 
@@ -327,6 +328,8 @@ export const StoryboardPanel: React.FC = () => {
 
   // Accessibility
   const { announce, settings: a11ySettings } = useAccessibility();
+  const deviceInfo = useDeviceDetection();
+  const compactControls = deviceInfo.hasTouchScreen || deviceInfo.isIPad;
 
   // Store state
   const currentStoryboard = useCurrentStoryboard();
@@ -395,14 +398,19 @@ export const StoryboardPanel: React.FC = () => {
   // Initialize capture service (would be connected to 3D scene in VirtualStudio.tsx)
   useEffect(() => {
     // Listen for scene ready event
-    const handleSceneReady = (e: CustomEvent) => {
-      const { renderer, scene, camera } = e.detail;
+    const handleSceneReady = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        renderer?: unknown;
+        scene?: unknown;
+        camera?: unknown;
+      }>;
+      const { renderer, scene, camera } = customEvent.detail || {};
       storyboardCaptureService.initialize(renderer, scene, camera);
     };
 
-    window.addEventListener('ch-scene-ready, ', handleSceneReady as EventListener);
+    window.addEventListener('ch-scene-ready', handleSceneReady);
     return () => {
-      window.removeEventListener('ch-scene-ready', handleSceneReady as EventListener);
+      window.removeEventListener('ch-scene-ready', handleSceneReady);
     };
   }, []);
 
@@ -547,7 +555,7 @@ export const StoryboardPanel: React.FC = () => {
     if (!newStoryboardName.trim()) return;
     createStoryboard(newStoryboardName.trim(), newStoryboardAspect);
     addToast({
-      message: `Storyboard "${newStoryboardName.trim()}," created`,
+      message: `Storyboard "${newStoryboardName.trim()}" created`,
       type: 'success',
       duration: 3000,
     });
@@ -609,6 +617,79 @@ export const StoryboardPanel: React.FC = () => {
     }
   }, [updateFrame]);
 
+  const handleAIGenerate = useCallback(async () => {
+    if (!currentStoryboard) {
+      announce('Select or create a storyboard before AI generation');
+      return;
+    }
+
+    const prompt = aiPrompt.trim();
+    if (!prompt) {
+      announce('Describe the frame before generating');
+      return;
+    }
+
+    setAiGenerating(true);
+    try {
+      const response = await storyboardAIGenerationService.generateFrame({
+        prompt,
+        storyboardId: currentStoryboard.id,
+        projectId: currentStoryboard.id,
+        size: currentStoryboard.aspectRatio === '9:16' ? '1024x1536' : '1536x1024',
+      });
+
+      if (!response.success || (!response.imageUrl && !response.imageBase64)) {
+        throw new Error(response.error || 'AI generation failed');
+      }
+
+      const imageUrl = response.imageUrl || `data:image/png;base64,${response.imageBase64 || ''}`;
+      const frameNumber = currentStoryboard.frames.length + 1;
+
+      addFrame({
+        imageUrl,
+        thumbnailUrl: imageUrl,
+        imageSource: 'ai',
+        title: `AI Shot ${frameNumber}`,
+        description: prompt,
+        shotType: settings.defaultShotType,
+        cameraAngle: 'Eye Level',
+        cameraMovement: 'Static',
+        duration: settings.defaultDuration,
+        sceneSnapshot: storyboardCaptureService.isReady()
+          ? (await storyboardCaptureService.capture({ width: 960, height: 540 })).sceneSnapshot
+          : undefined,
+        status: 'draft',
+      });
+
+      setAiGenerateDialogOpen(false);
+      setAiPrompt('');
+      addToast({
+        message: `AI frame ${frameNumber} generated`,
+        type: 'success',
+        duration: 2500,
+      });
+      announce(`AI frame ${frameNumber} generated`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'AI generation failed';
+      addToast({
+        message,
+        type: 'error',
+        duration: 4000,
+      });
+      announce(message, 'assertive');
+    } finally {
+      setAiGenerating(false);
+    }
+  }, [
+    currentStoryboard,
+    aiPrompt,
+    addFrame,
+    settings.defaultDuration,
+    settings.defaultShotType,
+    announce,
+    addToast,
+  ]);
+
   // Handle save frame edit
   const handleSaveFrameEdit = () => {
     if (editingFrame) {
@@ -622,7 +703,15 @@ export const StoryboardPanel: React.FC = () => {
   const totalDuration = currentStoryboard ? calculateTotalDuration(currentStoryboard.frames) : 0;
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#12121a' }}>
+    <Box
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        bgcolor: '#12121a',
+        transition: a11ySettings.reduceMotion ? 'none' : 'background-color 0.2s ease',
+      }}
+    >
       {/* Header */}
       <Paper
         elevation={0}
@@ -639,6 +728,11 @@ export const StoryboardPanel: React.FC = () => {
               <Typography variant="h6" sx={{ color: '#fff', fontWeight: 600}}>
                 Storyboard
               </Typography>
+              <VisuallyHidden>
+                {currentStoryboard
+                  ? `Storyboard ${currentStoryboard.name} with ${currentStoryboard.frames.length} frames.`
+                  : 'No storyboard selected.'}
+              </VisuallyHidden>
               {currentStoryboard && (
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                   {currentStoryboard.name} • {currentStoryboard.frames.length} frames • {formatDuration(totalDuration)}
@@ -717,6 +811,7 @@ export const StoryboardPanel: React.FC = () => {
             startIcon={aiGenerating ? <CircularProgress size={16} color="inherit" /> : <AutoAwesome />}
             onClick={() => setAiGenerateDialogOpen(true)}
             disabled={!currentStoryboard || aiGenerating}
+            size={compactControls ? 'medium' : 'small'}
             sx={{
               borderColor: 'primary.main',
               color: 'primary.main',
@@ -735,10 +830,32 @@ export const StoryboardPanel: React.FC = () => {
             startIcon={isCapturing ? <CircularProgress size={16} color="inherit" /> : <CameraAlt />}
             onClick={handleCapture}
             disabled={isCapturing}
+            size={compactControls ? 'medium' : 'small'}
             sx={{ fontWeight: 600}}
           >
             {isCapturing ? 'Capturing...' : 'Capture Frame'}
           </Button>
+
+          {currentStoryboard && selectedFrame && (
+            <QuickDrawButton
+              frameId={selectedFrame.id}
+              storyboardId={currentStoryboard.id}
+              aspectRatio={currentStoryboard.aspectRatio}
+              existingImage={selectedFrame.imageUrl}
+              onDrawingComplete={(drawingData, imageDataUrl) => {
+                updateFrame(selectedFrame.id, {
+                  drawingData,
+                  imageUrl: imageDataUrl,
+                  imageSource: 'drawn',
+                });
+                addToast({
+                  message: `Drawing saved on frame ${selectedFrame.index + 1}`,
+                  type: 'success',
+                  duration: 2000,
+                });
+              }}
+            />
+          )}
 
           <Divider orientation="vertical" flexItem />
 
@@ -775,7 +892,7 @@ export const StoryboardPanel: React.FC = () => {
             <Button
               variant="outlined"
               startIcon={<PlayArrow />}
-              onClick={() => setAnimaticOpen(true)}
+              onClick={handleAnimaticOpen}
               size="small"
               sx={{ mr: 2 }}
             >
@@ -948,13 +1065,13 @@ export const StoryboardPanel: React.FC = () => {
           // Grid View (default)
           <Grid container spacing={2}>
             {currentStoryboard.frames.map((frame) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={frame.id}>
+              <Grid xs={12} sm={6} md={4} lg={3} key={frame.id}>
                 <FrameCard
                   frame={frame}
                   isSelected={selectedFrame?.id === frame.id}
                   onSelect={() => selectFrame(frame.id)}
                   onEdit={() => handleEditFrame(frame)}
-                  onDelete={() => deleteFrame(frame.id)}
+                  onDelete={() => handleDeleteFrameWithToast(frame.id)}
                   onLoadToScene={() => handleLoadToScene(frame)}
                   onAnnotate={() => setAnnotatingFrame(frame)}
                   onContextMenu={(e) => handleContextMenu(e, frame)}
@@ -1060,7 +1177,17 @@ export const StoryboardPanel: React.FC = () => {
                     onChange={(e) => setEditingFrame({ ...editingFrame, shotType: e.target.value as ShotType })}
                     label="Shot Type"
                   >
-                    {(['ECU','CU','MCU','MS','MLS','LS','ELS','OTS','POV','Insert','Establishing'] as ShotType[]).map((type) => (
+                    {([
+                      'Wide',
+                      'Medium',
+                      'Close-up',
+                      'Extreme Close-up',
+                      'Establishing',
+                      'Detail',
+                      'Two Shot',
+                      'Over Shoulder',
+                      'Point of View',
+                    ] as ShotType[]).map((type) => (
                       <MenuItem key={type} value={type}>{getShotTypeLabel(type)}</MenuItem>
                     ))}
                   </Select>
@@ -1102,7 +1229,7 @@ export const StoryboardPanel: React.FC = () => {
                 fullWidth
                 multiline
                 rows={3}
-                value={editingFrame.description || ', '}
+                value={editingFrame.description || ''}
                 onChange={(e) => setEditingFrame({ ...editingFrame, description: e.target.value })}
                 placeholder="Add notes about this shot..."
               />

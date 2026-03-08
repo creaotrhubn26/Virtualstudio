@@ -16,13 +16,13 @@ import {
   Avatar,
   Divider,
   Tooltip,
-  Grid,
   List,
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
-  alpha
+  alpha,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
@@ -38,7 +38,6 @@ import { useDynamicProfessions } from '../hooks/useDynamicProfessions';
 import getProfessionIcon from '@/utils/profession-icons';
 import type { SplitSheet, STATUS_DISPLAY_NAMES, STATUS_COLORS } from './types';
 import { STATUS_DISPLAY_NAMES as STATUS_NAMES, STATUS_COLORS as STATUS_COL } from './types';
-
 interface SplitSheetListProps {
   splitSheets: SplitSheet[];
   onView: (splitSheet: SplitSheet) => void;
@@ -78,7 +77,7 @@ export default function SplitSheetList({
     return (
       <Grid container spacing={2}>
         {splitSheets.map((splitSheet) => (
-          <Grid item xs={12} sm={6} md={4} key={splitSheet.id}>
+          <Grid xs={12} sm={6} md={4} key={splitSheet.id}>
             <Card
               sx={{
                 height: '100%',
@@ -254,8 +253,5 @@ export default function SplitSheetList({
     </Card>
   );
 }
-
-
-
 
 

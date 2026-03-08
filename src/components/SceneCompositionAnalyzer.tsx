@@ -586,27 +586,3 @@ export function SceneCompositionAnalyzer({
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

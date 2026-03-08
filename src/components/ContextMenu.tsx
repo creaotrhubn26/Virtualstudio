@@ -4,9 +4,18 @@
  * Right-click context menu for objects
  */
 
-import { useState, Fragment } from 'react';
-import type { FC, ReactNode, MouseEvent } from 'react';
-import { Menu, MenuItem, Divider, ListItemIcon, ListItemText } from '@mui/material';
+import {
+  useState,
+  Fragment } from 'react';
+import type { FC,
+  ReactNode,
+  MouseEvent } from 'react';
+import { Menu,
+  MenuItem,
+  Divider,
+  ListItemIcon,
+  ListItemText,
+} from '@mui/material';
 import { colors, spacing } from '../../styles/designTokens';
 
 export interface ContextMenuItem {

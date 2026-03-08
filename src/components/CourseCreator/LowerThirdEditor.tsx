@@ -284,19 +284,3 @@ export const LowerThirdEditor: React.FC<LowerThirdEditorProps> = ({
 };
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

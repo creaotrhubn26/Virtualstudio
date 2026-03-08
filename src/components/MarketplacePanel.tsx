@@ -1,4 +1,7 @@
-import { useState, useEffect } from 'react';
+import {
+  useState,
+  useEffect } from 'react';
+import Grid from '@mui/material/GridLegacy';
 import {
   Box,
   Typography,
@@ -7,7 +10,6 @@ import {
   IconButton,
   Tabs,
   Tab,
-  Grid,
   Chip,
   Select,
   MenuItem,
@@ -30,7 +32,6 @@ import { MarketplaceProduct, MarketplaceFilters } from '../core/models/marketpla
 import { marketplaceService } from '../services/marketplaceService';
 import { MarketplaceProductCard } from './MarketplaceProductCard';
 import { MarketplaceProductDetail } from './MarketplaceProductDetail';
-
 interface MarketplacePanelProps {
   onClose?: () => void;
   isFullscreen?: boolean;

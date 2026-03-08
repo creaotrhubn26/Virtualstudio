@@ -19,7 +19,6 @@ import {
   Card,
   CardContent,
   CardActions,
-  Grid,
   Chip,
   Stack,
   TextField,
@@ -36,6 +35,7 @@ import {
   Alert,
   InputAdornment,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import settingsService, { getCurrentUserId } from '../services/settingsService';
 import {
   PlayArrow,
@@ -134,7 +134,6 @@ import { exportScheduler } from '../../core/animation/ExportScheduler';
 import { EXPORT_PRESETS } from '../../core/animation/GoogleDriveExportService';
 import { preferencesApi } from '../../core/api/virtualStudioApi';
 import { videoExportService } from '../../core/animation/VideoExportService';
-
 // ============================================================================
 // Types
 // ============================================================================
@@ -417,7 +416,7 @@ function TemplateDialog({ open, template, onClose, onSave }: TemplateDialogProps
       <DialogContent>
         <Grid container spacing={2} sx={{ mt: 0.5 }}>
           {/* Basic Info */}
-          <Grid item xs={12} md={6}>
+          <Grid xs={12} md={6}>
             <Typography variant="subtitle2" gutterBottom>
               Basic Info
             </Typography>
@@ -474,7 +473,7 @@ function TemplateDialog({ open, template, onClose, onSave }: TemplateDialogProps
           </Grid>
 
           {/* Schedule */}
-          <Grid item xs={12} md={6}>
+          <Grid xs={12} md={6}>
             <Typography variant="subtitle2" gutterBottom>
               Schedule & Priority
             </Typography>
@@ -528,7 +527,7 @@ function TemplateDialog({ open, template, onClose, onSave }: TemplateDialogProps
           </Grid>
 
           {/* Presets Selection */}
-          <Grid item xs={12}>
+          <Grid xs={12}>
             <Typography variant="subtitle2" gutterBottom>
               Export Presets
             </Typography>
@@ -558,7 +557,7 @@ function TemplateDialog({ open, template, onClose, onSave }: TemplateDialogProps
           </Grid>
 
           {/* Options */}
-          <Grid item xs={12}>
+          <Grid xs={12}>
             <Typography variant="subtitle2" gutterBottom>
               Options
             </Typography>
@@ -843,7 +842,7 @@ export function ExportTemplatesPanel({
       ) : (
         <Grid container spacing={2}>
           {filteredTemplates.map((template) => (
-            <Grid item xs={12} sm={6} md={4} key={template.id}>
+            <Grid xs={12} sm={6} md={4} key={template.id}>
               <TemplateCard
                 template={template}
                 duration={duration}

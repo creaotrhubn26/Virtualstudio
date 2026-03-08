@@ -5,7 +5,10 @@
  * shadow detection, and exposure balance
  */
 
-import { useState, useEffect } from 'react';
+import {
+  useState,
+  useEffect } from 'react';
+import Grid from '@mui/material/GridLegacy';
 import {
   Box,
   Typography,
@@ -17,7 +20,6 @@ import {
   Slider,
   Alert,
   CircularProgress,
-  Grid,
   LinearProgress,
 } from '@mui/material';
 import {
@@ -30,7 +32,6 @@ import {
 } from '@mui/icons-material';
 import { sam2Service } from '@/services/SAM2Service';
 import { useMutation } from '@tanstack/react-query';
-
 interface LightingQualityMetrics {
   overall: number;
   catchlight: number;
@@ -338,7 +339,7 @@ export function LightingQualityAnalyzer({
 
                 {/* Detailed Metrics */}
                 <Grid container spacing={2}>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="body2" gutterBottom>
@@ -366,7 +367,7 @@ export function LightingQualityAnalyzer({
                       </CardContent>
                     </Card>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="body2" gutterBottom>
@@ -395,7 +396,7 @@ export function LightingQualityAnalyzer({
                       </CardContent>
                     </Card>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="body2" gutterBottom>
@@ -420,7 +421,7 @@ export function LightingQualityAnalyzer({
                       </CardContent>
                     </Card>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="body2" gutterBottom>
@@ -480,29 +481,5 @@ export function LightingQualityAnalyzer({
     </Paper>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

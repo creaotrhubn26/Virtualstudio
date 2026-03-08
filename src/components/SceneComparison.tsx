@@ -9,9 +9,10 @@
  */
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { logger } from '../../core/services/logger';
+import {
+  logger } from '../../core/services/logger';
 
-const log = logger.module('SceneComparison, ');
+const log = logger.module('');
 import {
   Box,
   Typography,

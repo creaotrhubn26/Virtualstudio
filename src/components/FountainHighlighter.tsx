@@ -1,5 +1,16 @@
-import { useMemo, type FC, type CSSProperties, type ReactNode } from 'react';
-import { Box, Typography, Paper, Stack, Chip, Divider, Tooltip } from '@mui/material';
+import {
+  useMemo,
+  type FC,
+  type CSSProperties,
+  type ReactNode } from 'react';
+import { Box,
+  Typography,
+  Paper,
+  Stack,
+  Chip,
+  Divider,
+  Tooltip,
+} from '@mui/material';
 
 // Fountain element types
 type FountainElement = 

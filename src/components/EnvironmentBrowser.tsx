@@ -3,7 +3,12 @@
  * Includes walls, floors, and complete environment configurations
  */
 
-import { useState, useEffect, type FC, type ReactNode } from 'react';
+import {
+  useState,
+  useEffect,
+  type FC,
+  type ReactNode } from 'react';
+import Grid from '@mui/material/Grid';
 import {
   Box,
   Typography,
@@ -25,7 +30,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Grid,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -44,7 +48,6 @@ import { WALL_CATEGORIES, WALL_MATERIALS, WallMaterial, WallCategory } from '../
 import { FLOOR_CATEGORIES, FLOOR_MATERIALS, FloorMaterial, FloorCategory } from '../data/floorDefinitions';
 import { ENVIRONMENT_CATEGORIES, ENVIRONMENT_PRESETS, EnvironmentPreset, EnvironmentCategory } from '../data/environmentPresets';
 import { ambientSoundsService } from '../services/AmbientSoundsService';
-
 interface TabPanelProps {
   children?: ReactNode;
   index: number;

@@ -15,7 +15,9 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { logger } from '../../core/services/logger';
+import {
+  logger } from '../../core/services/logger';
+import Grid from '@mui/material/GridLegacy';
 
 const log = logger.module('ClothingPanel');
 import {
@@ -24,7 +26,6 @@ import {
   Typography,
   Tabs,
   Tab,
-  Grid,
   Card,
   CardContent,
   CardActions,
@@ -166,7 +167,7 @@ export const ClothingPanel: React.FC = () => {  const { addNode } = useAppStore(
         ) : (
           <Grid container spacing={2}>
             {clothingItems.map((clothing) => (
-              <Grid item xs={12} sm={6} key={clothing.id}>
+              <Grid xs={12} sm={6} key={clothing.id}>
                 <Card
                   sx={{
                     backgroundColor: selectedClothing === clothing.id ? '#333' : '#2a2a2a', '&:hover': { backgroundColor: '#333' },

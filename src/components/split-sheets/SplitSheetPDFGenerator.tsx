@@ -4,7 +4,8 @@
  */
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import {
+  useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import {
   Box,
@@ -26,7 +27,7 @@ import {
   FormLabel,
   Stack,
   Alert,
-  Divider
+  Divider,
 } from '@mui/material';
 import {
   PictureAsPdf as PdfIcon,
@@ -253,8 +254,5 @@ export default function SplitSheetPDFGenerator({
     </Box>
   );
 }
-
-
-
 
 

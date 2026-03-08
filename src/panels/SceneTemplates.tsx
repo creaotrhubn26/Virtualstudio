@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { logger } from '../../core/services/logger';
+import {
+  logger } from '../../core/services/logger';
+import Grid from '@mui/material/GridLegacy';
 
-const log = logger.module('SceneTemplates, ');
+const log = logger.module('');
 import {
   Box,
   Paper,
   Typography,
   Button,
-  Grid,
   Card,
   CardMedia,
   CardContent,
@@ -15,7 +16,6 @@ import {
   Divider,
 } from '@mui/material';
 import { ViewInAr, Portrait, Inventory2, Checkroom, FavoriteBorder, Nightlight } from '@mui/icons-material';
-
 interface AtmosphereSettings {
   fogEnabled: boolean;
   fogDensity: number;
@@ -62,7 +62,7 @@ const createLightingDiagramSVG = (template: string) => {
     editorial: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect fill="#222" width="200" height="200"/><path d="M85 55 Q100 45 115 55 L118 145 Q100 155 82 145 Z" fill="#444"/><circle cx="100" cy="40" r="12" fill="#555"/><circle cx="150" cy="50" r="10" fill="#ffd93d"/><circle cx="50" cy="70" r="8" fill="#88c8ff" opacity="0.7"/><circle cx="100" cy="20" r="6" fill="#ff8844" opacity="0.8"/><line x1="150" y1="60" x2="110" y2="80" stroke="#ffd93d" stroke-width="2" opacity="0.4"/><line x1="50" y1="78" x2="85" y2="100" stroke="#88c8ff" stroke-width="2" opacity="0.3"/><line x1="100" y1="26" x2="100" y2="55" stroke="#ff8844" stroke-width="2" opacity="0.3"/><text x="150" y="70" fill="#fff" font-size="8" text-anchor="middle">MAIN</text><text x="50" y="88" fill="#fff" font-size="8" text-anchor="middle">FILL</text><text x="100" y="14" fill="#fff" font-size="8" text-anchor="middle">HAIR</text></svg>`,
     wedding: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><linearGradient id="sunset" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#ff9966"/><stop offset="100%" style="stop-color:#ff5e62"/></linearGradient></defs><rect fill="url(#sunset)" width="200" height="200" opacity="0.3"/><rect fill="#2a1a1a" width="200" height="200" opacity="0.7"/><ellipse cx="80" cy="150" rx="25" ry="6" fill="#111"/><ellipse cx="120" cy="150" rx="25" ry="6" fill="#111"/><path d="M68 70 Q80 60 92 70 L95 145 Q80 155 65 145 Z" fill="#f5f5f5"/><path d="M108 65 Q120 55 132 65 L135 145 Q120 155 105 145 Z" fill="#333"/><circle cx="80" cy="55" r="10" fill="#ddd"/><circle cx="120" cy="52" r="11" fill="#444"/><circle cx="150" cy="60" r="10" fill="#ffeedd" opacity="0.8"/><circle cx="50" cy="80" r="8" fill="#ffddcc" opacity="0.6"/><text x="100" y="180" fill="#fff" font-size="10" text-anchor="middle">ROMANTIC</text></svg>`,
   };
-  return `data:image/svg+xml,${encodeURIComponent(diagrams[template] || diagrams['3point,'])}`;
+  return `data:image/svg+xml,${encodeURIComponent(diagrams[template] || diagrams['3point'])}`;
 };
 
 const SCENE_TEMPLATES: SceneTemplate[] = [
@@ -507,7 +507,7 @@ export const SceneTemplates: React.FC = () => {
       <Box sx={{ maxHeight: 450, overflowY: 'auto' }}>
         <Grid container spacing={2}>
           {filteredTemplates.map((template) => (
-            <Grid item xs={12} sm={6} md={4} key={template.id}>
+            <Grid xs={12} sm={6} md={4} key={template.id}>
               <Card
                 sx={{
                   cursor: 'pointer',

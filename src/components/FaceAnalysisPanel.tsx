@@ -5,7 +5,14 @@
  * Supports: parsing, landmarks, headpose, attributes
  */
 
-import { useState, useCallback, useEffect, useRef, useMemo, type ReactNode } from 'react';
+import {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  useMemo,
+  type ReactNode } from 'react';
+import Grid from '@mui/material/Grid';
 import {
   Box,
   Typography,
@@ -17,7 +24,6 @@ import {
   CircularProgress,
   Tabs,
   Tab,
-  Grid,
   Card,
   CardContent,
   Chip,
@@ -51,7 +57,6 @@ import {
   type FaceAnalysisResults,
 } from '../../services/FaceAnalysisEnhancements';
 import { faceAnalysisHistory, type AnalysisSnapshot } from '../../services/FaceAnalysisHistory';
-
 const log = logger.module('FaceAnalysisPanel, ');
 
 interface TabPanelProps {

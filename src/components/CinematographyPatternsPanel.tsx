@@ -4,7 +4,10 @@
  * Browse and apply 22+ Hollywood lighting patterns
  */
 
-import { useState, useMemo } from 'react';
+import {
+  useState,
+  useMemo } from 'react';
+import Grid from '@mui/material/Grid';
 import {
   Box,
   Typography,
@@ -22,7 +25,6 @@ import {
   CardMedia,
   Divider,
   Tooltip,
-  Grid,
 } from '@mui/material';
 import {
   Movie as FilmIcon,
@@ -32,7 +34,6 @@ import {
   CheckCircle as ApplyIcon,
 } from '@mui/icons-material';
 import { cinematographyPatternsService, type CinematographyPattern } from '@/core/services/cinematographyPatternsService';
-
 interface CinematographyPatternsPanelProps {
   onApplyPattern: (pattern: CinematographyPattern) => void;
 }

@@ -4,7 +4,10 @@
  */
 
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import {
   Box,
@@ -26,7 +29,7 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Divider,
-  Tooltip
+  Tooltip,
 } from '@mui/material';
 import {
   Link as LinkIcon,
@@ -261,26 +264,5 @@ export default function SplitSheetSongFlowIntegration({
     </Box>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

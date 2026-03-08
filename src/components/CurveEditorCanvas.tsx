@@ -9,7 +9,13 @@
  * - Grid and guides
  */
 
-import { useRef, useState, useCallback, useEffect, useMemo, type MouseEvent } from 'react';
+import {
+  useRef,
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  type MouseEvent } from 'react';
 import {
   Box,
   Typography,

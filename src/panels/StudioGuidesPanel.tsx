@@ -19,7 +19,6 @@ import {
   Divider,
   Card,
   CardContent,
-  Grid,
   Button,
   Chip,
   Stack,
@@ -34,6 +33,7 @@ import {
   Tooltip,
   IconButton,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   Straighten,
   GridOn,

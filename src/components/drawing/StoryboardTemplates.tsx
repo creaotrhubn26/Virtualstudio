@@ -37,8 +37,8 @@ import {
   ListItemIcon,
   ListItemText,
   Badge,
-  Grid,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   AspectRatio,
   Movie,
@@ -67,7 +67,6 @@ import {
   LockOpen,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
-
 // =============================================================================
 // Types
 // =============================================================================
@@ -144,7 +143,7 @@ export const ASPECT_RATIO_PRESETS: AspectRatioPreset[] = [
   },
   {
     id: 'film-185',
-    name: 'Academy Flat',
+    name: 'Flat 1.85',
     category: 'film',
     width: 1.85,
     height: 1,

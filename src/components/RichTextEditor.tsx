@@ -1,8 +1,14 @@
 import React from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import {
+  useEditor,
+  EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
-import { Box, IconButton, Tooltip, Divider } from '@mui/material';
+import { Box,
+  IconButton,
+  Tooltip,
+  Divider,
+} from '@mui/material';
 import {
   FormatBold as BoldIcon,
   FormatItalic as ItalicIcon,

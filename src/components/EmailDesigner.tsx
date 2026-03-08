@@ -1,5 +1,15 @@
-import { useState, useEffect, useCallback, useMemo, useRef, type ChangeEvent, type MouseEvent, type ReactNode } from 'react';
-import { useEditor, EditorContent, Extension } from '@tiptap/react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  type ChangeEvent,
+  type MouseEvent,
+  type ReactNode } from 'react';
+import { useEditor,
+  EditorContent,
+  Extension } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import {

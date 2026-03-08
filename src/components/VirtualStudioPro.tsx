@@ -5,7 +5,13 @@
  */
 
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
-import { ThemeProvider, createTheme, Box, Badge, CircularProgress } from '@mui/material';
+import {
+  ThemeProvider,
+  createTheme,
+  Box,
+  Badge,
+  CircularProgress,
+} from '@mui/material';
 import {
   Groups as CollabIcon,
   ViewInAr as XRIcon,

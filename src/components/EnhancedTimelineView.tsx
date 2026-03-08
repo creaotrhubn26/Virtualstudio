@@ -1,4 +1,9 @@
-import { useState, useRef, useEffect, useMemo, type FC } from 'react';
+import {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  type FC } from 'react';
 import {
   Box,
   Typography,
@@ -16,7 +21,7 @@ import {
   Mic as MicIcon,
   Videocam as VideocamIcon,
 } from '@mui/icons-material';
-import { SceneBreakdown, CastingShot, ShotList } from '../core/models/casting';
+import { SceneBreakdown, CastingShot, ShotList } from '../core/models/production';
 
 interface EnhancedTimelineViewProps {
   scenes: SceneBreakdown[];

@@ -1,5 +1,11 @@
 import React from 'react';
-import { Box, Skeleton, Card, CardContent, Stack } from '@mui/material';
+import {
+  Box,
+  Skeleton,
+  Card,
+  CardContent,
+  Stack,
+} from '@mui/material';
 
 export const CourseCardSkeleton: React.FC = () => (
   <Card sx={{ height: '100%', bgcolor: 'rgba(255,255,255,0.05)' }}>

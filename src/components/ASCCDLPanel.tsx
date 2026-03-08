@@ -5,7 +5,8 @@
  * color grading parameters with professional presets and XML export/import.
  */
 
-import { useState } from 'react';
+import {
+  useState } from 'react';
 import {
   Box,
   Typography,

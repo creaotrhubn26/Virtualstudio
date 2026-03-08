@@ -4,7 +4,11 @@
  */
 
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient } from '@tanstack/react-query';
+import Grid from '@mui/material/GridLegacy';
 import { apiRequest } from '@/lib/queryClient';
 import {
   Box,
@@ -21,12 +25,11 @@ import {
   DialogActions,
   TextField,
   Alert,
-  Grid,
   LinearProgress,
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction
+  ListItemSecondaryAction,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -137,7 +140,7 @@ export default function StreamingPlatformIntegration({
           const isConnected = connection?.connection_status === 'connected';
 
           return (
-            <Grid item xs={12} md={4} key={platform}>
+            <Grid xs={12} md={4} key={platform}>
               <Card>
                 <CardContent>
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
@@ -281,26 +284,5 @@ export default function StreamingPlatformIntegration({
     </Box>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

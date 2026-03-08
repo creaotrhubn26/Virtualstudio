@@ -17,9 +17,9 @@ import {
   Alert,
   CircularProgress,
   Chip,
-  Grid,
   Slider,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   Groups,
   AutoAwesome,
@@ -30,7 +30,6 @@ import {
 } from '@mui/icons-material';
 import { sam2Service } from '@/services/SAM2Service';
 import { useMutation } from '@tanstack/react-query';
-
 interface Subject {
   id: string;
   bbox: [number, number, number, number];
@@ -378,7 +377,7 @@ export function MultiSubjectAnalyzer({
               <>
                 {/* Scores */}
                 <Grid container spacing={2}>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="subtitle2" gutterBottom>
@@ -403,7 +402,7 @@ export function MultiSubjectAnalyzer({
                       </CardContent>
                     </Card>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="subtitle2" gutterBottom>
@@ -509,29 +508,5 @@ export function MultiSubjectAnalyzer({
     </Paper>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

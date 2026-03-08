@@ -1,5 +1,9 @@
 import * as React from 'react';
-import { Box, Stack, Typography } from '@mui/material';
+import {
+  Box,
+  Stack,
+  Typography,
+} from '@mui/material';
 import WbSunnyOutlinedIcon from '@mui/icons-material/WbSunnyOutlined';
 import HighlightOutlinedIcon from '@mui/icons-material/HighlightOutlined';
 import FlashOnOutlinedIcon from '@mui/icons-material/FlashOnOutlined';

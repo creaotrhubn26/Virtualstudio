@@ -1,17 +1,22 @@
 // @ts-nocheck
 // This file is in the unused directory and may have outdated imports
-import { useTheming } from '../../../utils/theming-helper';
-import React, { useState, useEffect } from 'react';
+import {
+  useTheming } from '../../../utils/theming-helper';
+import Grid from '@mui/material/GridLegacy';
+import React,
+  { useState,
+  useEffect } from 'react';
 import { getAuthHeader } from '@/lib/google/impersonation';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQuery,
+  useQueryClient,
+  useMutation } from '@tanstack/react-query';
 import { 
-  Box, 
-  Typography, 
-  Card as MuiCard, 
-  CardContent, 
-  Grid, 
-  Button, 
-  Chip, 
+  Box,
+  Typography,
+  Card as MuiCard,
+  CardContent,
+  Button,
+  Chip,
   IconButton,
   Tabs,
   Tab,
@@ -24,7 +29,7 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Alert
+  Alert,
 } from '@mui/material';
 import {
   LibraryMusic,
@@ -38,7 +43,6 @@ import {
 } from '@mui/icons-material';
 import { apiRequest } from '@/lib/queryClient';
 import { SoundBrowser } from '../SoundBrowser';
-
 interface Track {
   id: string;
   title: string;
@@ -148,20 +152,20 @@ export default function SongFlowPlatform() {
       <TabPanel value={activeTab} index={0}>
         <Grid container spacing={3}>
           {tracksLoading ? (
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <Box sx={{ display: 'flex', justifyContent: 'center', p:  3 }}>
                 <Typography>Laster tracks...</Typography>
               </Box>
             </Grid>
           ) : tracksData.length > 0 ? tracksData.map((track: Track) => (
-            <Grid item xs={12} key={track.id}>
+            <Grid xs={12} key={track.id}>
               <MuiCard sx={{ 
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 color: 'white'
           }}>
                 <CardContent sx={theming.getThemedCardSx()}>
                   <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} md={4}>
+                    <Grid xs={12} md={4}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap:  2 }}>
                         <IconButton 
                           sx={{ color: 'white'}}
@@ -185,7 +189,7 @@ export default function SongFlowPlatform() {
                       </Box>
                     </Grid>
                     
-                    <Grid item xs={12} md={3}>
+                    <Grid xs={12} md={3}>
                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap'}}>
                         <Chip 
                           label={track.status}
@@ -205,13 +209,13 @@ export default function SongFlowPlatform() {
                       </Box>
                     </Grid>
 
-                    <Grid item xs={12} md={3}>
+                    <Grid xs={12} md={3}>
                       <Typography variant="caption" sx={{ opacity: 0.8}}>
                         {track.stemFiles} stem files
                       </Typography>
                     </Grid>
 
-                    <Grid item xs={12} md={2}>
+                    <Grid xs={12} md={2}>
                       <Box sx={{ display: 'flex', gap:  1 }}>
                         <IconButton size="small" sx={{ color: 'white'}}>
                           <Equalizer />
@@ -234,7 +238,7 @@ export default function SongFlowPlatform() {
               </MuiCard>
             </Grid>
           )) : (
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <MuiCard>
                 <CardContent sx={theming.getThemedCardSx()}>
                   <Typography variant="h6" align="center" color="text.secondary" sx={{ color: theming.colors.primary }}>
@@ -268,7 +272,7 @@ export default function SongFlowPlatform() {
         <DialogTitle>Opprett Nytt Spor</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt:  1 }}>
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <TextField
                 label="Sporets tittel"
                 fullWidth
@@ -276,7 +280,7 @@ export default function SongFlowPlatform() {
                 onChange={(e) => setNewTrack({ ...newTrack, title: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <TextField
                 label="Artist"
                 fullWidth
@@ -284,7 +288,7 @@ export default function SongFlowPlatform() {
                 onChange={(e) => setNewTrack({ ...newTrack, artist: e.target.value })}
               />
             </Grid>
-            <Grid item xs={6}>
+            <Grid xs={6}>
               <FormControl fullWidth>
                 <InputLabel>Genre</InputLabel>
                 <Select
@@ -299,7 +303,7 @@ export default function SongFlowPlatform() {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={3}>
+            <Grid xs={3}>
               <TextField
                 label="BPM"
                 type="number"
@@ -308,7 +312,7 @@ export default function SongFlowPlatform() {
                 onChange={(e) => setNewTrack({ ...newTrack, bpm: parseInt(e.target.value, 10) || 120 })}
               />
             </Grid>
-            <Grid item xs={3}>
+            <Grid xs={3}>
               <FormControl fullWidth>
                 <InputLabel>Toneart</InputLabel>
                 <Select

@@ -6,7 +6,13 @@
  * Designed to feel like actually directing a scene.
  */
 
-import { useState, useEffect, useCallback, type FC, type MouseEvent } from 'react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  type FC,
+  type MouseEvent } from 'react';
+import Grid from '@mui/material/GridLegacy';
 import {
   Box,
   Paper,
@@ -20,7 +26,6 @@ import {
   Divider,
   ToggleButton,
   ToggleButtonGroup,
-  Grid,
   Card,
   CardActionArea,
   CardContent,
@@ -45,7 +50,6 @@ import { MonitorLayout, monitorFeedService } from '../../core/services/monitorFe
 import { multiCameraRecordingService } from '../../core/services/multiCameraRecordingService';
 import { CameraControlPanel } from './CameraControlPanel';
 import { logger } from '../../core/services/logger';
-
 const log = logger.module('DirectorModeOverlay, ');
 
 // ============================================================================
@@ -225,32 +229,32 @@ const DirectorGuidelines: FC<{ show: boolean; onDismiss: () => void }> = ({ show
               3. Keyboard Shortcuts
             </Typography>
             <Grid container spacing={1}>
-              <Grid item xs={6}>
+              <Grid xs={6}>
                 <Typography variant="caption" color="text.secondary">
                   Arrow Keys: Pan/Tilt
                 </Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid xs={6}>
                 <Typography variant="caption" color="text.secondary">
                   WASD: Dolly/Truck
                 </Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid xs={6}>
                 <Typography variant="caption" color="text.secondary">
                   Q/E: Roll
                 </Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid xs={6}>
                 <Typography variant="caption" color="text.secondary">
                   +/-: Zoom
                 </Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid xs={6}>
                 <Typography variant="caption" color="text.secondary">
                   ESC: Exit Director Mode
                 </Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid xs={6}>
                 <Typography variant="caption" color="text.secondary">
                   R: Start/Stop Recording
                 </Typography>

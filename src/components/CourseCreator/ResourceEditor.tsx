@@ -121,19 +121,3 @@ export const ResourceEditor: React.FC<ResourceEditorProps> = ({
 };
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -12,7 +12,6 @@ import {
   CardActions,
   Button,
   Typography,
-  Grid,
   Chip,
   TextField,
   Dialog,
@@ -23,13 +22,13 @@ import {
   CircularProgress,
   Stack,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   CheckCircle,
   Cancel,
   Visibility,
 } from '@mui/icons-material';
 import { apiRequest } from '@/lib/queryClient';
-
 interface Pattern {
   id: string;
   name: string;
@@ -148,7 +147,7 @@ export const AdminPatternModeration: React.FC = () => {
       ) : (
         <Grid container spacing={2}>
           {patterns.map((pattern) => (
-            <Grid item xs={12} sm={6} md={4} key={pattern.id}>
+            <Grid xs={12} sm={6} md={4} key={pattern.id}>
               <Card>
                 {pattern.thumbnail_url && (
                   <Box

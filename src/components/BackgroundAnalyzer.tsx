@@ -4,7 +4,8 @@
  * Uses SAM 2 to analyze background elements and detect distracting elements
  */
 
-import { useState } from 'react';
+import {
+  useState } from 'react';
 import {
   Box,
   Typography,
@@ -213,29 +214,5 @@ export function BackgroundAnalyzer({
     </Paper>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

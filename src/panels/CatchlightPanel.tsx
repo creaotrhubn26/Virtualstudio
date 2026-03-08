@@ -26,7 +26,6 @@ import {
   Chip,
   Switch,
   FormControlLabel,
-  Grid,
   Card,
   CardContent,
   IconButton,
@@ -36,6 +35,7 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   RemoveRedEye,
   Visibility,
@@ -51,7 +51,6 @@ import {
 } from '@mui/icons-material';
 import { useNodes, useStudioGuideSettings } from '../../state/selectors';
 import { EYE_COLORS, LightSourceData, useLightSourcesFromNodes, getModifierShape, cctToColor } from '../components/EyeSystem';
-
 interface CatchlightPanelProps {
   onSettingsChange?: (settings: CatchlightSettings) => void;
 }
@@ -174,7 +173,7 @@ export const CatchlightPanel: React.FC<CatchlightPanelProps> = ({ onSettingsChan
             </Typography>
             <Grid container spacing={1}>
               {EYE_COLOR_PRESETS.map((color) => (
-                <Grid item xs={4} key={color.name}>
+                <Grid xs={4} key={color.name}>
                   <Tooltip title={color.common}>
                     <Card
                       sx={{

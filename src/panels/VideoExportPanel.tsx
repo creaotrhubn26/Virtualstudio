@@ -47,8 +47,8 @@ import {
   Switch,
   FormControlLabel,
   Stack,
-  Grid,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   Download,
   VideoFile,

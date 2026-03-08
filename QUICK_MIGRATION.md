@@ -35,7 +35,3 @@ python3 migrate_casting_to_db.py casting_projects_backup.json --dry-run
 python3 migrate_casting_to_db.py casting_projects_backup.json
 ```
 
-### Alternativ: Bruk HTML-filen
-
-Åpne `export_localstorage_casting.html` i nettleseren og følg instruksjonene på siden.
-

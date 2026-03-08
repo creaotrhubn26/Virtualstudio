@@ -42,9 +42,9 @@ import {
   Tab,
   Card,
   CardActionArea,
-  Grid,
   Collapse,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   Edit,
   Timeline,
@@ -131,7 +131,6 @@ import {
 } from '../state/storyboardStore';
 import { FrameDrawingEditor } from '../components/FrameDrawingEditor';
 import { useDeviceDetection } from '../hooks/useDeviceDetection';
-
 // =============================================================================
 // Types
 // =============================================================================

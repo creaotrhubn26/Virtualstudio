@@ -9,7 +9,6 @@ import React, { useState, useCallback, useMemo } from 'react';
 import {
   Box,
   Typography,
-  Grid,
   Card,
   CardContent,
   CardActionArea,
@@ -31,6 +30,7 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   ExpandMore,
   Visibility,
@@ -193,7 +193,7 @@ export const GlassesSelector: React.FC<GlassesSelectorProps> = ({
             <AccordionDetails>
               <Grid container spacing={1}>
                 {presets.map((preset) => (
-                  <Grid item xs={6} sm={4} key={preset.id}>
+                  <Grid xs={6} sm={4} key={preset.id}>
                     <Card
                       sx={{
                         bgcolor: activePreset === preset.id ? 'primary.dark' : 'background.paper',
@@ -229,7 +229,7 @@ export const GlassesSelector: React.FC<GlassesSelectorProps> = ({
             <AccordionDetails>
               <Grid container spacing={1}>
                 {FRAME_STYLES.map((style) => (
-                  <Grid item xs={6} key={style.value}>
+                  <Grid xs={6} key={style.value}>
                     <Card
                       sx={{
                         bgcolor: options.frameStyle === style.value ? 'primary.dark' : 'background.paper',

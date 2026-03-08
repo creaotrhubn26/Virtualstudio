@@ -1,4 +1,4 @@
-export type AssetType = 'character' | 'prop' | 'light' | 'modifier' | 'environment';
+export type AssetType = 'character' | 'prop' | 'light' | 'modifier' | 'environment' | 'model';
 
 export interface LibraryAsset {
   id: string;

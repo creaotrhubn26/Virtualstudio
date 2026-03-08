@@ -9,7 +9,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
-  Grid,
   Card,
   CardContent,
   CardActions,
@@ -21,6 +20,7 @@ import {
   Alert,
   Divider,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   CameraAlt,
   Lightbulb,
@@ -31,7 +31,6 @@ import {
   ArrowForward,
 } from '@mui/icons-material';
 import { apiRequest } from '@/lib/api';
-
 interface PublishedStudio {
   id: string;
   title: string;
@@ -145,7 +144,7 @@ export const OnboardingSetupSelector: React.FC<OnboardingSetupSelectorProps> = (
         <>
           <Grid container spacing={3} sx={{ mb: 3 }}>
             {studios.map((studio) => (
-              <Grid item xs={12} md={6} key={studio.id}>
+              <Grid xs={12} md={6} key={studio.id}>
                 <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <CardContent sx={{ flexGrow: 1 }}>
                     {/* Badges */}

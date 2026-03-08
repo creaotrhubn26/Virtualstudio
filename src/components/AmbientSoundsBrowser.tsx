@@ -3,7 +3,11 @@
  * UI for managing environmental audio and soundscapes
  */
 
-import { useState, useEffect, type FC } from 'react';
+import {
+  useState,
+  useEffect,
+  type FC } from 'react';
+import Grid from '@mui/material/Grid';
 import {
   Box,
   Typography,
@@ -14,7 +18,6 @@ import {
   IconButton,
   Tooltip,
   Chip,
-  Grid,
   Slider,
   Switch,
   FormControlLabel,

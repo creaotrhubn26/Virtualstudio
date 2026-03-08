@@ -18,11 +18,11 @@ import {
   Chip,
   Divider,
   Paper,
-  Grid,
   Accordion,
   AccordionSummary,
   AccordionDetails,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   Videocam as VideocamIcon,
   Lightbulb as LightbulbIcon,
@@ -34,9 +34,8 @@ import {
   ExpandMore as ExpandMoreIcon,
   CameraAlt as CameraAltIcon,
 } from '@mui/icons-material';
-import { SceneBreakdown } from '../core/models/casting';
+import { SceneBreakdown } from '../core/models/production';
 import { useToast } from './ToastStack';
-
 interface ShotDetailPanelProps {
   scene: SceneBreakdown;
   onUpdate: (scene: SceneBreakdown) => void;

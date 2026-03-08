@@ -9,10 +9,26 @@
  * - Light height recommendations
  */
 
-import { useMemo, useState, useEffect, type FC } from 'react';
-import { Html, Line } from '@react-three/drei';
+import {
+  useMemo,
+  useState,
+  useEffect,
+  type FC } from 'react';
+import { Html,
+  Line } from '@react-three/drei';
 import * as THREE from 'three';
-import { Box, Typography, Slider, Switch, FormControlLabel, Alert, Chip, Stack, Card, CardContent, Divider } from '@mui/material';
+import { Box,
+  Typography,
+  Slider,
+  Switch,
+  FormControlLabel,
+  Alert,
+  Chip,
+  Stack,
+  Card,
+  CardContent,
+  Divider,
+} from '@mui/material';
 
 interface GlassesReflectionGuideProps {
   enabled?: boolean;

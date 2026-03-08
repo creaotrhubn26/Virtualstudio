@@ -15,7 +15,7 @@ export interface Tutorial {
   id: string;
   name: string;
   description: string;
-  category: 'virtual-studio' | 'studio' | 'academy' | 'general';
+  category: 'virtual-studio' | 'studio' | 'learning' | 'general';
   steps: TutorialStep[];
   isActive: boolean;
   createdAt: string;

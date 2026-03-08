@@ -1,4 +1,10 @@
-import { useState, useCallback, type FC, type MouseEvent, type ReactElement, type ReactNode } from 'react';
+import {
+  useState,
+  useCallback,
+  type FC,
+  type MouseEvent,
+  type ReactElement,
+  type ReactNode } from 'react';
 import {
   Box,
   Typography,
@@ -31,7 +37,7 @@ import {
   ShotStatus,
   MediaType,
   ShotPriority,
-} from '../core/models/casting';
+} from '../core/models/production';
 
 interface InteractiveShotCardProps {
   shot: CastingShot;

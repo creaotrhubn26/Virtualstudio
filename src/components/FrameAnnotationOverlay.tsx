@@ -12,10 +12,16 @@
  * - Arrow flow animation
  */
 
-import { useState, useCallback, useRef, useEffect, type FC, type MouseEvent } from 'react';
+import {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  type FC,
+  type MouseEvent } from 'react';
 import { logger } from '../../core/services/logger';
 
-const log = logger.module('FrameAnnotation, ');
+const log = logger.module('');
 import {
   Box,
   Paper,

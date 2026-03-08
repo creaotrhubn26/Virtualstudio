@@ -5,8 +5,38 @@
  */
 
 import { create } from 'zustand';
-import type { ShotType, CameraAngle, CameraMovement } from '../core/models/casting';
-export type { ShotType, CameraAngle, CameraMovement };
+
+export type ShotType =
+  | 'Wide'
+  | 'Medium'
+  | 'Close-up'
+  | 'Extreme Close-up'
+  | 'Establishing'
+  | 'Detail'
+  | 'Two Shot'
+  | 'Over Shoulder'
+  | 'Point of View';
+
+export type CameraAngle =
+  | 'Eye Level'
+  | 'High Angle'
+  | 'Low Angle'
+  | 'Birds Eye'
+  | 'Worms Eye'
+  | 'Dutch Angle'
+  | 'Overhead';
+
+export type CameraMovement =
+  | 'Static'
+  | 'Pan'
+  | 'Tilt'
+  | 'Dolly'
+  | 'Truck'
+  | 'Crane'
+  | 'Handheld'
+  | 'Steadicam'
+  | 'Zoom'
+  | 'Orbit';
 
 // Types
 export type FrameStatus = 'draft' | 'pending' | 'approved' | 'revision';
@@ -368,7 +398,6 @@ export function formatDuration(seconds: number): string {
   const secs = Math.floor(seconds % 60);
   return mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
 }
-
 
 
 

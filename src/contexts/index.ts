@@ -4,9 +4,6 @@
  * Central export for all React Contexts
  */
 
-// Academy context for learning features
-export * from './AcademyContext';
-
 // Demo mode context for showcase/demo features
 export * from './DemoModeContext';
 

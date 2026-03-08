@@ -385,6 +385,17 @@ export interface KartverketPlaceName {
   source: 'kartverket' | 'fallback';
 }
 
+export interface AccessAnalysisSpot {
+  name: string;
+  address: string;
+  distance: number;
+  spaces?: number;
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
+}
+
 export interface PropertyAnalysis {
   property: KartverketProperty;
   photographySpots: Array<{
@@ -428,6 +439,9 @@ export interface PropertyAnalysis {
       distance: number;
       description: string;
     };
+    parkingSpots?: AccessAnalysisSpot[];
+    evParkingSpots?: AccessAnalysisSpot[];
+    evChargingSpots?: AccessAnalysisSpot[];
   };
 }
 

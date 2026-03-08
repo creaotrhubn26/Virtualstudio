@@ -5,9 +5,15 @@
  * Supports mouse wheel and keyboard shortcuts
  */
 
-import { useState, useCallback } from 'react';
+import {
+  useState,
+  useCallback } from 'react';
 import type { FC } from 'react';
-import { TextField, IconButton, Box, InputAdornment } from '@mui/material';
+import { TextField,
+  IconButton,
+  Box,
+  InputAdornment,
+} from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { colors, spacing, borderRadius, transitions } from '../../styles/designTokens';

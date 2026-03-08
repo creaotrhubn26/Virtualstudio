@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { 
+import {
   Slide,
   Dialog,
   DialogTitle,
@@ -9,14 +9,11 @@ import {
   Typography,
   Button,
   IconButton,
-  CircularProgress
+  CircularProgress,
 } from '@mui/material';
 import { Close as CloseIcon, Movie as MovieIcon, CameraAlt as CameraIcon, Brightness4 as DarkModeIcon, Brightness7 as LightModeIcon } from '@mui/icons-material';
 import { ToastProvider } from './components/ToastStack';
 import { AccessibilityProvider } from './providers/AccessibilityProvider';
-import { AcademyProvider } from './contexts/AcademyContext';
-import { DemoModeProvider } from './contexts/DemoModeContext';
-import { EnhancedMasterIntegrationProvider } from './integration/EnhancedMasterIntegrationProvider';
 import { CustomThemeProvider, useCustomTheme } from './contexts/ThemeContext';
 import { CinematographyPattern } from './core/services/cinematographyPatternsService';
 import { ScenarioPreset } from './data/scenarioPresets';
@@ -33,8 +30,6 @@ const HDRIPanel = lazy(() => import('./panels/HDRIPanel').then(m => ({ default: 
 const EquipmentPanel = lazy(() => import('./panels/EquipmentPanel').then(m => ({ default: m.EquipmentPanel })));
 const NotesPanel = lazy(() => import('./components/NotesPanel').then(m => ({ default: m.NotesPanel })));
 const SceneComposerPanel = lazy(() => import('./components/SceneComposerPanel').then(m => ({ default: m.SceneComposerPanel })));
-const MarketplacePanel = lazy(() => import('./components/MarketplacePanel').then(m => ({ default: m.MarketplacePanel })));
-const CastingPlannerPanel = lazy(() => import('./components/CastingPlannerPanel').then(m => ({ default: m.CastingPlannerPanel })));
 const AIAssistantPanel = lazy(() => import('./components/AIAssistantPanel').then(m => ({ default: m.AIAssistantPanel })));
 const Accessible3DControls = lazy(() => import('./components/Accessible3DControls').then(m => ({ default: m.Accessible3DControls })));
 const CinematographyPatternsPanel = lazy(() => import('./components/CinematographyPatternsPanel').then(m => ({ default: m.CinematographyPatternsPanel })));
@@ -43,15 +38,11 @@ const AvatarGeneratorPanel = lazy(() => import('./panels/AvatarGeneratorPanel').
 const ScenerPanel = lazy(() => import('./panels/ScenerPanel').then(m => ({ default: m.ScenerPanel })));
 const TidslinjeLibraryPanel = lazy(() => import('./panels/TidslinjeLibraryPanel').then(m => ({ default: m.TidslinjeLibraryPanel })));
 const AnimationComposerPanel = lazy(() => import('./panels/AnimationComposerPanel').then(m => ({ default: m.AnimationComposerPanel })));
-const CourseCreatorSidebar = lazy(() => import('./components/CourseCreatorSidebar'));
-const SoundBrowser = lazy(() => import('./components/SoundBrowser').then(m => ({ default: m.SoundBrowser })));
 const EnvironmentBrowser = lazy(() => import('./components/EnvironmentBrowser').then(m => ({ default: m.EnvironmentBrowser })));
 const InteractiveElementsBrowser = lazy(() => import('./components/InteractiveElementsBrowser').then(m => ({ default: m.InteractiveElementsBrowser })));
 const AmbientSoundsBrowserFallback = lazy(() => import('./components/AmbientSoundsBrowser').then(m => ({ default: m.AmbientSoundsBrowser })));
-const PanelCreator = lazy(() => import('./components/PanelCreator'));
 const VirtualStudioPro = lazy(() => import('./components/VirtualStudioPro').then(m => ({ default: m.VirtualStudioPro })));
 const AccessoriesPanel = lazy(() => import('./panels/AccessoriesPanel').then(m => ({ default: m.AccessoriesPanel })));
-const ShotPlannerPanel = lazy(() => import('./core/shotPlanner').then(m => ({ default: m.ShotPlannerPanel })));
 
 // Loading fallback for lazy-loaded components
 const PanelLoadingFallback = () => (
@@ -232,18 +223,6 @@ export const EquipmentPanelApp: React.FC = () => {
   );
 };
 
-export const ShotPlannerApp: React.FC = () => {
-  return (
-    <CustomThemeProvider>
-      <ToastProvider>
-        <Suspense fallback={<PanelLoadingFallback />}>
-          <ShotPlannerPanel />
-        </Suspense>
-      </ToastProvider>
-    </CustomThemeProvider>
-  );
-};
-
 export const ScenerPanelApp: React.FC = () => {
   const handleApplyPreset = (preset: ScenarioPreset) => {
     window.dispatchEvent(new CustomEvent('applyScenarioPreset', { detail: preset }));
@@ -302,157 +281,6 @@ export const LibraryPanelApp: React.FC = () => {
   );
 };
 
-export const MarketplacePanelApp: React.FC = () => {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [isFullscreen, setIsFullscreen] = React.useState(false);
-
-  React.useEffect(() => {
-    const handleToggle = () => {
-      console.log('MarketplacePanelApp: toggle event received, current isOpen:', isOpen);
-      setIsOpen(prev => {
-        const newState = !prev;
-        console.log('MarketplacePanelApp: setting isOpen from', prev, 'to', newState);
-        
-        // Toggle panel visibility
-        const panel = document.getElementById('marketplacePanel');
-        if (panel) {
-          if (newState) {
-            // Close other panels when opening Marketplace
-            const studioLibraryPanel = document.getElementById('actorBottomPanel');
-            const castingPlannerPanel = document.getElementById('castingPlannerPanel');
-            
-            if (studioLibraryPanel && studioLibraryPanel.classList.contains('open')) {
-              const trigger = document.getElementById('actorPanelTrigger');
-              if (trigger) {
-                studioLibraryPanel.classList.remove('open');
-                trigger.classList.remove('active');
-                trigger.setAttribute('aria-expanded', 'false');
-                const arrow = trigger.querySelector('.library-arrow');
-                if (arrow) arrow.textContent = '+';
-                const actorTab = document.getElementById('actorTab');
-                if (actorTab) actorTab.classList.remove('panel-open');
-              }
-            }
-            if (castingPlannerPanel && castingPlannerPanel.classList.contains('open')) {
-              window.dispatchEvent(new CustomEvent('toggle-plugin-virtual-studio-panel'));
-            }
-            
-            panel.style.display = 'flex';
-            panel.classList.add('open');
-          } else {
-            panel.style.display = 'none';
-            panel.classList.remove('open');
-            panel.classList.remove('fullscreen');
-            setIsFullscreen(false);
-          }
-        }
-        
-        // Update button state
-        const trigger = document.getElementById('marketplaceTrigger');
-        const quickBtn = document.getElementById('marketplaceQuickBtn');
-        if (trigger) {
-          if (newState) {
-            trigger.classList.add('active');
-            trigger.setAttribute('aria-expanded', 'true');
-            const arrow = trigger.querySelector('.library-arrow');
-            if (arrow) arrow.textContent = '−';
-          } else {
-            trigger.classList.remove('active');
-            trigger.setAttribute('aria-expanded', 'false');
-            const arrow = trigger.querySelector('.library-arrow');
-            if (arrow) arrow.textContent = '+';
-          }
-        }
-        if (quickBtn) {
-          if (newState) {
-            quickBtn.classList.add('active');
-          } else {
-            quickBtn.classList.remove('active');
-          }
-        }
-        
-        return newState;
-      });
-    };
-    
-    const handleFullscreenToggle = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      setIsFullscreen(customEvent.detail);
-    };
-    
-    window.addEventListener('toggle-marketplace-panel', handleToggle);
-    window.addEventListener('marketplace-toggle-fullscreen', handleFullscreenToggle);
-    console.log('MarketplacePanelApp: Event listener registered');
-    return () => {
-      window.removeEventListener('toggle-marketplace-panel', handleToggle);
-      window.removeEventListener('marketplace-toggle-fullscreen', handleFullscreenToggle);
-    };
-  }, [isOpen]);
-
-  // Update button state when closing via onClose
-  const handleClose = () => {
-    setIsOpen(false);
-    setIsFullscreen(false);
-    const panel = document.getElementById('marketplacePanel');
-    if (panel) {
-      panel.style.display = 'none';
-      panel.classList.remove('open');
-      panel.classList.remove('fullscreen');
-    }
-    const trigger = document.getElementById('marketplaceTrigger');
-    const quickBtn = document.getElementById('marketplaceQuickBtn');
-    if (trigger) {
-      trigger.classList.remove('active');
-      trigger.setAttribute('aria-expanded', 'false');
-      const arrow = trigger.querySelector('.library-arrow');
-      if (arrow) arrow.textContent = '+';
-    }
-    if (quickBtn) {
-      quickBtn.classList.remove('active');
-    }
-  };
-
-  const handleToggleFullscreen = () => {
-    const panel = document.getElementById('marketplacePanel');
-    if (panel) {
-      const newFullscreen = !isFullscreen;
-      setIsFullscreen(newFullscreen);
-      if (newFullscreen) {
-        panel.classList.add('fullscreen');
-        panel.style.position = 'fixed';
-        panel.style.top = '0';
-        panel.style.left = '0';
-        panel.style.right = '0';
-        panel.style.bottom = '0';
-        panel.style.zIndex = '99999';
-      } else {
-        panel.classList.remove('fullscreen');
-        panel.style.position = '';
-        panel.style.top = '';
-        panel.style.left = '';
-        panel.style.right = '';
-        panel.style.bottom = '';
-        panel.style.zIndex = '';
-      }
-    }
-  };
-
-  console.log('MarketplacePanelApp: render, isOpen =', isOpen);
-  
-  if (!isOpen) return null;
-
-  return (
-    
-      
-      <ToastProvider>
-        <Suspense fallback={<PanelLoadingFallback />}>
-          <MarketplacePanel onClose={handleClose} isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} />
-        </Suspense>
-      </ToastProvider>
-    
-  );
-};
-
 export const AIAssistantApp: React.FC = () => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
@@ -471,7 +299,6 @@ export const AIAssistantApp: React.FC = () => {
             // Close other panels when opening AI Assistant
             const studioLibraryPanel = document.getElementById('actorBottomPanel');
             const marketplacePanel = document.getElementById('marketplacePanel');
-            const castingPlannerPanel = document.getElementById('castingPlannerPanel');
 
             if (studioLibraryPanel && studioLibraryPanel.classList.contains('open')) {
               const trigger = document.getElementById('actorPanelTrigger');
@@ -486,18 +313,11 @@ export const AIAssistantApp: React.FC = () => {
             if (marketplacePanel && marketplacePanel.classList.contains('open')) {
               window.dispatchEvent(new CustomEvent('toggle-marketplace-panel'));
             }
-            if (castingPlannerPanel && castingPlannerPanel.classList.contains('open')) {
-              window.dispatchEvent(new CustomEvent('toggle-plugin-virtual-studio-panel'));
-            }
-            
             // Close help panel if open
             const helpPanel = document.getElementById('helpPanel');
             if (helpPanel && helpPanel.classList.contains('open')) {
               window.dispatchEvent(new CustomEvent('toggle-help-panel'));
             }
-            
-            // Close CourseCreatorSidebar if open
-            window.dispatchEvent(new CustomEvent('close-course-creator-sidebar'));
             
             panel.style.display = 'flex';
             panel.classList.add('open');
@@ -595,181 +415,6 @@ export const AIAssistantApp: React.FC = () => {
           }}
         />
       </Suspense>
-    
-  );
-};
-
-export const CastingPlannerApp: React.FC = () => {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [isFullscreen, setIsFullscreen] = React.useState(false);
-
-  React.useEffect(() => {
-    const handleToggle = () => {
-      setIsOpen(prev => {
-        const newState = !prev;
-        
-        // Toggle panel visibility
-        const panel = document.getElementById('castingPlannerPanel');
-        if (panel) {
-          if (newState) {
-            // Close other panels when opening Virtual Studio
-            const studioLibraryPanel = document.getElementById('actorBottomPanel');
-            const marketplacePanel = document.getElementById('marketplacePanel');
-            const aiAssistantPanel = document.getElementById('aiAssistantPanel');
-
-            if (studioLibraryPanel && studioLibraryPanel.classList.contains('open')) {
-              const trigger = document.getElementById('actorPanelTrigger');
-              if (trigger) {
-                studioLibraryPanel.classList.remove('open');
-                trigger.classList.remove('active');
-                trigger.setAttribute('aria-expanded', 'false');
-                const arrow = trigger.querySelector('.library-arrow');
-                if (arrow) arrow.textContent = '+';
-                const actorTab = document.getElementById('actorTab');
-                if (actorTab) actorTab.classList.remove('panel-open');
-              }
-            }
-            if (marketplacePanel && marketplacePanel.classList.contains('open')) {
-              window.dispatchEvent(new CustomEvent('toggle-marketplace-panel'));
-            }
-            if (aiAssistantPanel && aiAssistantPanel.classList.contains('open')) {
-              window.dispatchEvent(new CustomEvent('toggle-ai-assistant-panel'));
-            }
-
-            // Close help panel if open
-            const helpPanel = document.getElementById('helpPanel');
-            if (helpPanel && helpPanel.classList.contains('open')) {
-              window.dispatchEvent(new CustomEvent('toggle-help-panel'));
-            }
-
-            // Close CourseCreatorSidebar if open
-            window.dispatchEvent(new CustomEvent('close-course-creator-sidebar'));
-
-            panel.style.display = 'flex';
-            panel.classList.add('open');
-            
-            // Check if any panel was at max height and set new panel to max height if so
-            const checkMaxHeight = (window as any).checkIfAnyPanelIsMaxHeight;
-            const setMaxHeight = (window as any).setPanelToMaxHeight;
-            if (checkMaxHeight && setMaxHeight && checkMaxHeight('aiAssistantPanel')) {
-              setMaxHeight('aiAssistantPanel', 'aiAssistantPanelHeight');
-            }
-          } else {
-            panel.style.display = 'none';
-            panel.classList.remove('open');
-            panel.classList.remove('fullscreen');
-            setIsFullscreen(false);
-          }
-        }
-        
-        // Update button state - find the Virtual Studio button
-        const button = document.getElementById('tool-trigger-plugin-virtual-studio');
-        const quickBtn = document.getElementById('castingPlannerQuickBtn');
-        if (button) {
-          if (newState) {
-            button.classList.add('active');
-            button.setAttribute('aria-expanded', 'true');
-            const arrow = button.querySelector('.library-arrow');
-            if (arrow) arrow.textContent = '−';
-          } else {
-            button.classList.remove('active');
-            button.setAttribute('aria-expanded', 'false');
-            const arrow = button.querySelector('.library-arrow');
-            if (arrow) arrow.textContent = '+';
-          }
-        }
-        if (quickBtn) {
-          if (newState) {
-            quickBtn.classList.add('active');
-          } else {
-            quickBtn.classList.remove('active');
-          }
-        }
-        
-        return newState;
-      });
-    };
-    
-    const handleFullscreenToggle = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      setIsFullscreen(customEvent.detail);
-    };
-    
-    window.addEventListener('toggle-plugin-virtual-studio-panel', handleToggle);
-    window.addEventListener('virtual-studio-toggle-fullscreen', handleFullscreenToggle);
-    return () => {
-      window.removeEventListener('toggle-plugin-virtual-studio-panel', handleToggle);
-      window.removeEventListener('virtual-studio-toggle-fullscreen', handleFullscreenToggle);
-    };
-  }, [isOpen]);
-
-  // Update button state when closing via onClose
-  const handleClose = () => {
-    setIsOpen(false);
-    setIsFullscreen(false);
-    const panel = document.getElementById('castingPlannerPanel');
-    if (panel) {
-      panel.style.display = 'none';
-      panel.classList.remove('open');
-      panel.classList.remove('fullscreen');
-    }
-    const button = document.getElementById('tool-trigger-plugin-virtual-studio');
-    const quickBtn = document.getElementById('castingPlannerQuickBtn');
-    if (button) {
-      button.classList.remove('active');
-      button.setAttribute('aria-expanded', 'false');
-      const arrow = button.querySelector('.library-arrow');
-      if (arrow) arrow.textContent = '+';
-    }
-    if (quickBtn) {
-      quickBtn.classList.remove('active');
-    }
-  };
-
-  const handleToggleFullscreen = () => {
-    const panel = document.getElementById('castingPlannerPanel');
-    if (panel) {
-      const newFullscreen = !isFullscreen;
-      setIsFullscreen(newFullscreen);
-      
-      // Match Marketplace fullscreen behavior exactly
-      if (newFullscreen) {
-        panel.classList.add('fullscreen');
-        panel.style.position = 'fixed';
-        panel.style.top = '0';
-        panel.style.left = '0';
-        panel.style.right = '0';
-        panel.style.bottom = '0';
-        panel.style.zIndex = '99999';
-        panel.style.borderRadius = '0';
-        panel.style.height = ''; // Let CSS handle height
-      } else {
-        panel.classList.remove('fullscreen');
-        panel.style.position = '';
-        panel.style.top = '';
-        panel.style.left = '';
-        panel.style.right = '';
-        panel.style.bottom = '';
-        panel.style.zIndex = '';
-        panel.style.borderRadius = '';
-        panel.style.height = '';
-      }
-      
-      // Dispatch event to sync with main.ts listeners
-      window.dispatchEvent(new CustomEvent('virtual-studio-toggle-fullscreen', { detail: newFullscreen }));
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    
-      
-      <ToastProvider>
-        <Suspense fallback={<PanelLoadingFallback />}>
-          <CastingPlannerPanel onClose={handleClose} isFullscreen={isFullscreen} onToggleFullscreen={handleToggleFullscreen} />
-        </Suspense>
-      </ToastProvider>
     
   );
 };
@@ -985,33 +630,6 @@ export const AvatarGeneratorApp: React.FC = () => {
   );
 };
 
-// Sound Browser App
-export const SoundBrowserApp: React.FC = () => {
-  const [isOpen, setIsOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    const handleOpen = () => setIsOpen(true);
-    const handleClose = () => setIsOpen(false);
-    window.addEventListener('openSoundBrowser', handleOpen);
-    window.addEventListener('closeSoundBrowser', handleClose);
-    return () => {
-      window.removeEventListener('openSoundBrowser', handleOpen);
-      window.removeEventListener('closeSoundBrowser', handleClose);
-    };
-  }, []);
-
-  if (!isOpen) return null;
-
-  return (
-    
-      
-      <Suspense fallback={<PanelLoadingFallback />}>
-        <SoundBrowser />
-      </Suspense>
-    
-  );
-};
-
 // Environment Browser App
 export const EnvironmentBrowserApp: React.FC = () => {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -1104,239 +722,6 @@ export const AmbientSoundsBrowserApp: React.FC = () => {
         <AmbientSoundsBrowserFallback />
       </Suspense>
     
-  );
-};
-
-// Course Creator Sidebar App - for video editing
-export const CourseCreatorSidebarApp: React.FC = () => {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState(0);
-  const [currentVideo, setCurrentVideo] = React.useState<any>(null);
-
-  React.useEffect(() => {
-    console.log('CourseCreatorSidebarApp: Setting up edit-video listener');
-    
-    const handleEditVideo = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      const videoData = customEvent.detail;
-      
-      console.log('CourseCreatorSidebarApp: Received edit-video event', videoData);
-      
-      if (!videoData) {
-        console.warn('CourseCreatorSidebarApp: No video data in event');
-        return;
-      }
-      
-      // Stop event propagation to prevent other handlers from running
-      if (e.stopImmediatePropagation) {
-        e.stopImmediatePropagation();
-      }
-      
-      // Ensure help panel is open (since sidebar is inside help panel)
-      const helpPanel = document.getElementById('helpPanel');
-      if (helpPanel && !helpPanel.classList.contains('open')) {
-        console.log('CourseCreatorSidebarApp: Opening help panel first');
-        window.dispatchEvent(new CustomEvent('toggle-help-panel'));
-        
-        // Wait for help panel to open, then open sidebar
-        setTimeout(() => {
-          setCurrentVideo(videoData);
-          setIsOpen(true);
-          setActiveTab(0); // Switch to video details tab
-          console.log('CourseCreatorSidebarApp: Sidebar opened with data:', videoData);
-        }, 600);
-      } else {
-        // Help panel is already open, open sidebar immediately (but with small delay to ensure DOM is ready)
-        setTimeout(() => {
-          setCurrentVideo(videoData);
-          setIsOpen(true);
-          setActiveTab(0); // Switch to video details tab
-          console.log('CourseCreatorSidebarApp: Sidebar opened with data:', videoData);
-        }, 100);
-      }
-    };
-
-    // Close sidebar when other panels open
-    const handlePanelToggle = () => {
-      setIsOpen((prevIsOpen) => {
-        if (prevIsOpen) {
-          console.log('CourseCreatorSidebarApp: Closing sidebar because another panel opened');
-          setCurrentVideo(null);
-          return false;
-        }
-        return prevIsOpen;
-      });
-    };
-
-    // Close sidebar when explicitly requested
-    const handleCloseSidebar = () => {
-      setIsOpen((prevIsOpen) => {
-        if (prevIsOpen) {
-          console.log('CourseCreatorSidebarApp: Closing sidebar via close event');
-          setCurrentVideo(null);
-          return false;
-        }
-        return prevIsOpen;
-      });
-    };
-
-    // Close sidebar when help panel closes (since sidebar is inside help panel)
-    const handleHelpPanelClose = () => {
-      const helpPanel = document.getElementById('helpPanel');
-      if (helpPanel && !helpPanel.classList.contains('open')) {
-        setIsOpen((prevIsOpen) => {
-          if (prevIsOpen) {
-            console.log('CourseCreatorSidebarApp: Closing sidebar because help panel closed');
-            setCurrentVideo(null);
-            return false;
-          }
-          return prevIsOpen;
-        });
-      }
-    };
-
-    // Use capture phase to handle event before other listeners
-    window.addEventListener('edit-video', handleEditVideo, true);
-    
-    // Listen for panel toggle events (but NOT toggle-help-panel, since sidebar is inside help panel)
-    window.addEventListener('toggle-marketplace-panel', handlePanelToggle);
-    window.addEventListener('toggle-ai-assistant-panel', handlePanelToggle);
-    window.addEventListener('toggle-plugin-virtual-studio-panel', handlePanelToggle);
-    window.addEventListener('close-course-creator-sidebar', handleCloseSidebar);
-    
-    // Check help panel state periodically (since it doesn't dispatch events)
-    const checkHelpPanelInterval = setInterval(() => {
-      handleHelpPanelClose();
-    }, 100);
-    
-    console.log('CourseCreatorSidebarApp: Event listeners registered');
-    
-    return () => {
-      window.removeEventListener('edit-video', handleEditVideo, true);
-      window.removeEventListener('toggle-marketplace-panel', handlePanelToggle);
-      window.removeEventListener('toggle-ai-assistant-panel', handlePanelToggle);
-      window.removeEventListener('toggle-plugin-virtual-studio-panel', handlePanelToggle);
-      window.removeEventListener('close-course-creator-sidebar', handleCloseSidebar);
-      clearInterval(checkHelpPanelInterval);
-      console.log('CourseCreatorSidebarApp: Event listeners removed');
-    };
-  }, []);
-
-  const handleClose = () => {
-    setIsOpen(false);
-    setCurrentVideo(null);
-  };
-
-  const handleCourseUpdate = (updatedCourse: any) => {
-    if (!currentVideo) return;
-    
-    // Update the video in the DOM
-    const placeholder = document.querySelector(
-      `.help-video-placeholder[data-video-id="${currentVideo.videoId}"], .help-video-player-container[data-video-id="${currentVideo.videoId}"]`
-    ) as HTMLElement;
-    
-    if (placeholder) {
-      // Update data attributes
-      if (updatedCourse.videoUrl) {
-        placeholder.setAttribute('data-video-url', updatedCourse.videoUrl);
-      }
-      if (updatedCourse.thumbnailUrl) {
-        placeholder.setAttribute('data-thumbnail-url', updatedCourse.thumbnailUrl);
-      }
-      
-      // If it's still a placeholder (not mounted), update HTML
-      if (placeholder.classList.contains('help-video-placeholder')) {
-        const titleEl = placeholder.querySelector('.video-info h4');
-        const descEl = placeholder.querySelector('.video-info p');
-        const durationEl = placeholder.querySelector('.video-duration');
-        
-        if (titleEl) titleEl.textContent = updatedCourse.title || currentVideo.title;
-        if (descEl) descEl.textContent = updatedCourse.description || currentVideo.description;
-        if (durationEl) durationEl.textContent = updatedCourse.duration || currentVideo.duration;
-      } else {
-        // Remount with new data
-        placeholder.setAttribute('data-video-url', updatedCourse.videoUrl || '');
-        placeholder.setAttribute('data-thumbnail-url', updatedCourse.thumbnailUrl || '');
-        placeholder.classList.add('help-video-placeholder');
-        placeholder.classList.remove('help-video-player-container');
-        placeholder.innerHTML = `
-          <div class="video-thumbnail">
-            <div class="video-gradient-overlay"></div>
-            <span class="video-play-icon">▶</span>
-            <span class="video-duration">${updatedCourse.duration || currentVideo.duration}</span>
-          </div>
-          <div class="video-info">
-            <h4>${updatedCourse.title || currentVideo.title}</h4>
-            <p>${updatedCourse.description || currentVideo.description}</p>
-            <span class="video-status">${updatedCourse.videoUrl ? 'Klikk for å spille av' : 'Video kommer snart'}</span>
-          </div>
-        `;
-        
-        // Remount video player
-        setTimeout(() => {
-          import('./components/HelpVideoPlayer').then(({ mountHelpVideoPlayers }) => {
-            mountHelpVideoPlayers();
-          });
-        }, 0);
-      }
-      
-      // Update current video state
-      setCurrentVideo({ ...currentVideo, ...updatedCourse });
-    }
-  };
-
-  // Always render the component (even when closed) so event listeners stay active
-  // But only render CourseCreatorSidebar when open
-  return (
-    <React.Fragment>
-      {isOpen && (
-        
-          
-          <DemoModeProvider>
-            <AcademyProvider>
-              <EnhancedMasterIntegrationProvider>
-                <Suspense fallback={<PanelLoadingFallback />}>
-                  <CourseCreatorSidebar
-                    open={isOpen}
-                    onClose={handleClose}
-                    course={currentVideo ? {
-                      id: currentVideo.videoId,
-                      title: currentVideo.title,
-                      description: currentVideo.description,
-                      status: 'draft',
-                      videoUrl: currentVideo.videoUrl,
-                      thumbnailUrl: currentVideo.thumbnailUrl,
-                      duration: currentVideo.duration,
-                    } : {
-                      id: 'new-video',
-                      title: 'Ny video',
-                      description: '',
-                      status: 'draft',
-                    }}
-                  onCourseUpdate={handleCourseUpdate}
-                  onPublish={() => {}}
-                  onSaveDraft={handleCourseUpdate}
-                  onPreview={() => {}}
-                  onShare={() => {}}
-                  onExport={() => {}}
-                  onImport={() => {}}
-                  onDelete={() => {}}
-                  onVersionRestore={() => {}}
-                  onVersionCreate={() => {}}
-                  activeTab={activeTab}
-                  onTabChange={setActiveTab}
-                  modules={[]}
-                  lessons={[]}
-                  resources={[]}
-                  lowerThirds={[]}
-                />
-                </Suspense>
-              </EnhancedMasterIntegrationProvider>
-            </AcademyProvider>
-          </DemoModeProvider>
-        
-      )}
-    </React.Fragment>
   );
 };
 
@@ -1458,18 +843,6 @@ export const AccessoriesPanelApp: React.FC = () => {
       
       <Suspense fallback={<PanelLoadingFallback />}>
         <AccessoriesPanel />
-      </Suspense>
-    
-  );
-};
-
-// Panel Creator App - Custom panel builder
-export const PanelCreatorApp: React.FC = () => {
-  return (
-    
-      
-      <Suspense fallback={<PanelLoadingFallback />}>
-        <PanelCreator />
       </Suspense>
     
   );

@@ -5,7 +5,9 @@
  */
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import {
+  useQuery } from '@tanstack/react-query';
+import Grid from '@mui/material/GridLegacy';
 import { apiRequest } from '@/lib/queryClient';
 import {
   Box,
@@ -25,13 +27,12 @@ import {
   Paper,
   LinearProgress,
   Alert,
-  Grid,
   IconButton,
   Tooltip,
   Avatar,
   Tabs,
   Tab,
-  alpha
+  alpha,
 } from '@mui/material';
 import {
   PictureAsPdf as PdfIcon,
@@ -65,7 +66,6 @@ import type {
   ROLE_DISPLAY_NAMES
 } from './types';
 import { STATUS_DISPLAY_NAMES as STATUS_NAMES, STATUS_COLORS as STATUS_COL, ROLE_DISPLAY_NAMES as ROLE_NAMES } from './types';
-
 interface SplitSheetViewerProps {
   splitSheet: SplitSheet;
   onClose?: () => void;
@@ -390,7 +390,7 @@ export default function SplitSheetViewer({
             </Typography>
             <Grid container spacing={2}>
               {fullSplitSheet.created_at && (
-                <Grid item xs={12} sm={6}>
+                <Grid xs={12} sm={6}>
                   <Typography variant="body2">
                     <strong>Opprettet:</strong>{' '}
                     {new Date(fullSplitSheet.created_at).toLocaleDateString('no-NO', {
@@ -404,7 +404,7 @@ export default function SplitSheetViewer({
                 </Grid>
               )}
               {fullSplitSheet.completed_at && (
-                <Grid item xs={12} sm={6}>
+                <Grid xs={12} sm={6}>
                   <Typography variant="body2">
                     <strong>Fullført:</strong>{', '}
                     {new Date(fullSplitSheet.completed_at).toLocaleDateString('no-NO', {

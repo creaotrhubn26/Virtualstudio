@@ -35,6 +35,7 @@ import {
   Badge,
   Tooltip,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   ViewInAr,
   Chair,
@@ -58,7 +59,6 @@ import {
 } from '../../core/services/pbrRecommendationService';
 import { CachedActor } from '../../core/services/actorModelCache';
 import { HDRIRecommendation } from '../../core/services/hdriRecommendationService';
-
 interface PBRRecommendationDialogProps {
   open: boolean;
   onClose: () => void;

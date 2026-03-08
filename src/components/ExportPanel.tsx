@@ -3,7 +3,11 @@
  * UI for scene export with format selection, presets, and progress tracking
  */
 
-import { useState, useEffect, type FC, type ReactNode } from 'react';
+import {
+  useState,
+  useEffect,
+  type FC,
+  type ReactNode } from 'react';
 import {
   Box,
   Paper,
@@ -26,7 +30,6 @@ import {
   Switch,
   FormControlLabel,
   TextField,
-  Grid,
   Tab,
   Tabs,
   Alert,
@@ -35,7 +38,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Slider
+  Slider,
 } from '@mui/material';
 import {
   Download as DownloadIcon,

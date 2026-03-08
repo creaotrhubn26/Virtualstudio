@@ -5,7 +5,10 @@
  */
 
 import type { FC } from 'react';
-import { TextField, TextFieldProps } from '@mui/material';
+import {
+  TextField,
+  TextFieldProps,
+} from '@mui/material';
 import { colors, borderRadius, transitions } from '../../styles/designTokens';
 
 export type EnhancedTextFieldProps = TextFieldProps & {

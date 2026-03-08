@@ -17,7 +17,7 @@ The app is not fully database-persistent. It currently mixes:
 ## Local-only persistence (not DB-backed)
 These features persist to localStorage without a guaranteed database write:
 - Branding settings defaults in [src/config/branding.ts](src/config/branding.ts)
-- Casting session/admin/profession state in [src/components/CastingPlannerPanel.tsx](src/components/CastingPlannerPanel.tsx)
+- Legacy casting planner session/admin/profession state (panel removed)
 - Draft project creation data in [src/components/Planning/NewProjectCreationModal.tsx](src/components/Planning/NewProjectCreationModal.tsx)
 - Overlay UI collapsed state in [src/main.ts](src/main.ts)
 - Grammar/ML preferences and models in [src/services/grammarMLService.ts](src/services/grammarMLService.ts)
@@ -57,7 +57,7 @@ These services write directly to backend endpoints without localStorage fallback
 - Studio API service in [src/services/virtualStudioApiService.ts](src/services/virtualStudioApiService.ts)
 
 ## In-memory only (no persistence unless wired elsewhere)
-- UI state such as tabs, filters, dialog open flags, and temporary selections, e.g. in [src/components/CastingPlannerPanel.tsx](src/components/CastingPlannerPanel.tsx)
+- UI state such as tabs, filters, dialog open flags, and temporary selections (legacy casting planner panel removed)
 
 ## Backend notes
 - Backend includes a localStorage export page for casting in [backend/main.py](backend/main.py)

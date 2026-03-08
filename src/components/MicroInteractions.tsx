@@ -12,7 +12,16 @@
  * - AnimatedBadge: Pop-in for notifications
  */
 
-import { useState, useCallback, useRef, useEffect, Children, type FC, type MouseEvent, type ReactNode, type CSSProperties } from 'react';
+import {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  Children,
+  type FC,
+  type MouseEvent,
+  type ReactNode,
+  type CSSProperties } from 'react';
 import {
   Box,
   Button,

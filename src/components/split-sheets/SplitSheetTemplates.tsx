@@ -5,14 +5,17 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient } from '@tanstack/react-query';
+import Grid from '@mui/material/GridLegacy';
 import { apiRequest } from '@/lib/queryClient';
 import {
   Box,
   Typography,
   Card,
   CardContent,
-  Grid,
   Button,
   Chip,
   Stack,
@@ -27,7 +30,7 @@ import {
   Alert,
   Tabs,
   Tab,
-  alpha
+  alpha,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -40,7 +43,6 @@ import {
 import { useDynamicProfessions } from '../hooks/useDynamicProfessions';
 import getProfessionIcon from '@/utils/profession-icons';
 import type { SplitSheetContributor, ContributorRole } from './types';
-
 interface SplitSheetTemplate {
   id?: string;
   user_id?: string | null;
@@ -334,12 +336,12 @@ export default function SplitSheetTemplates({
       {tabValue === 0 && (
         <Grid container spacing={2}>
           {systemTemplates.length === 0 ? (
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <Alert severity="info">Ingen systemmaler tilgjengelig</Alert>
             </Grid>
           ) : (
             systemTemplates.map(template => (
-              <Grid item xs={12} sm={6} md={4} key={template.id}>
+              <Grid xs={12} sm={6} md={4} key={template.id}>
                 {renderTemplateCard(template)}
               </Grid>
             ))
@@ -350,7 +352,7 @@ export default function SplitSheetTemplates({
       {tabValue === 1 && (
         <Grid container spacing={2}>
           {customTemplates.length === 0 ? (
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <Card>
                 <CardContent sx={{ textAlign: 'center', py: 4 }}>
                   <PersonIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
@@ -372,7 +374,7 @@ export default function SplitSheetTemplates({
             </Grid>
           ) : (
             customTemplates.map(template => (
-              <Grid item xs={12} sm={6} md={4} key={template.id}>
+              <Grid xs={12} sm={6} md={4} key={template.id}>
                 {renderTemplateCard(template)}
               </Grid>
             ))
@@ -436,8 +438,5 @@ export default function SplitSheetTemplates({
     </Box>
   );
 }
-
-
-
 
 

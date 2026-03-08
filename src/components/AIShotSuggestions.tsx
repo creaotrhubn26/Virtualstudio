@@ -5,7 +5,9 @@
  * lighting setups, and composition variations
  */
 
-import { useState } from 'react';
+import {
+  useState } from 'react';
+import Grid from '@mui/material/GridLegacy';
 import {
   Box,
   Typography,
@@ -17,7 +19,6 @@ import {
   Alert,
   CircularProgress,
   Chip,
-  Grid,
   CardMedia,
 } from '@mui/material';
 import {
@@ -28,7 +29,7 @@ import {
   CheckCircle,
   TrendingUp,
 } from '@mui/icons-material';
-import { aiShotSuggestionService, type ShotSuggestion } from '../../core/services/aiShotSuggestionService';
+import { aiShotSuggestionService, type ShotSuggestion } from '../core/services/aiShotSuggestionService';
 import { useMutation } from '@tanstack/react-query';
 
 interface AIShotSuggestionsProps {
@@ -61,7 +62,7 @@ export function AIShotSuggestions({
         setIsGenerating(false);
       }
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('Shot suggestion generation failed: ', error);
     },
   });
@@ -142,7 +143,7 @@ export function AIShotSuggestions({
                 </Typography>
                 <Grid container spacing={2}>
                   {suggestions.map((suggestion) => (
-                    <Grid item xs={12} sm={6} key={suggestion.id}>
+                    <Grid xs={12} sm={6} key={suggestion.id}>
                       <Card
                         variant="outlined"
                         sx={{
@@ -253,29 +254,5 @@ export function AIShotSuggestions({
     </Paper>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

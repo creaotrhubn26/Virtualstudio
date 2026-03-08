@@ -4,7 +4,11 @@
  */
 
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient } from '@tanstack/react-query';
+import Grid from '@mui/material/GridLegacy';
 import { apiRequest } from '@/lib/queryClient';
 import {
   Box,
@@ -31,8 +35,7 @@ import {
   MenuItem,
   Button,
   Stack,
-  Grid,
-  Alert
+  Alert,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -46,7 +49,6 @@ import type {
   PAYMENT_STATUS_COLORS
 } from './types';
 import { PAYMENT_STATUS_NAMES as PAYMENT_NAMES, PAYMENT_STATUS_COLORS as PAYMENT_COLORS } from './types';
-
 interface SplitSheetPaymentHistoryProps {
   splitSheetId: string;
   currency?: string;
@@ -157,7 +159,7 @@ export default function SplitSheetPaymentHistory({
     <Box>
       {/* Summary */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
+        <Grid xs={12} md={4}>
           <Card>
             <CardContent>
               <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -169,7 +171,7 @@ export default function SplitSheetPaymentHistory({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid xs={12} md={4}>
           <Card>
             <CardContent>
               <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -181,7 +183,7 @@ export default function SplitSheetPaymentHistory({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid xs={12} md={4}>
           <Card>
             <CardContent>
               <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -394,26 +396,5 @@ export default function SplitSheetPaymentHistory({
     </Box>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

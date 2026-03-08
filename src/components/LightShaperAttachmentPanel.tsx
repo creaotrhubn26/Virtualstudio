@@ -4,10 +4,12 @@
  * Allows attaching/detaching light shapers to selected lights
  */
 
-import { useState } from 'react';
+import {
+  useState } from 'react';
+import Grid from '@mui/material/GridLegacy';
 import { logger } from '../../core/services/logger';
 
-const log = logger.module('LightShaperPanel, ');
+const log = logger.module('');
 import {
   Box,
   Typography,
@@ -18,7 +20,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Grid,
   Card,
   CardMedia,
   CardContent,
@@ -33,7 +34,6 @@ import {
   Info as InfoIcon,
 } from '@mui/icons-material';
 import { lightShaperService, LightShaper } from '@/core/services/lightShaperService';
-
 interface LightShaperAttachmentPanelProps {
   lightNode: any; // SceneNode with light
   onAttachShaper: (shaper: LightShaper) => void;
@@ -168,7 +168,7 @@ export function LightShaperAttachmentPanel({
           ) : (
             <Grid container spacing={2}>
               {shapers.map((shaper) => (
-                <Grid item xs={12} sm={6} md={4} key={shaper.shaper_id}>
+                <Grid xs={12} sm={6} md={4} key={shaper.shaper_id}>
                   <ShaperCard shaper={shaper} onSelect={() => handleSelectShaper(shaper)} />
                 </Grid>
               ))}

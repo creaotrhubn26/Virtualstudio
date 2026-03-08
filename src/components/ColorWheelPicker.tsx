@@ -8,7 +8,11 @@
  * - Preset color swatches
  */
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import {
+  useRef,
+  useEffect,
+  useState,
+  useCallback } from 'react';
 import type { FC } from 'react';
 import {
   Box,

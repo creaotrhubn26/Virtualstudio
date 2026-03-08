@@ -157,7 +157,7 @@ const contentStats = useMemo(() => {
 
 ---
 
-## 5. CastingPlannerPanel.tsx Callback Analysis
+## 5. Legacy Planner Callback Analysis
 
 **Location**: Line 455-463, passed to ManuscriptPanel at line 2323
 
@@ -186,7 +186,7 @@ Evidence:
 ### Conclusion:
 - Even if `onManuscriptChange` were called, it would only happen on explicit saves
 - Never triggered by keystroke auto-save operations
-- Zero cascade risk from CastingPlannerPanel
+- Zero cascade risk from legacy planner integration
 
 ---
 
@@ -198,7 +198,7 @@ Evidence:
 |-----------|------|----------|-----------|--------|
 | ManuscriptPanel | Database | Lines 822-900 | Refs-only, no callbacks | ✅ ISOLATED |
 | ScreenplayEditor | localStorage | Lines 868-900 | Refs-only, no setState | ✅ ISOLATED |
-| CastingPlannerPanel | N/A | None (explicit saves only) | N/A | ✅ EXPLICIT |
+| Legacy planner panel (removed) | N/A | None (explicit saves only) | N/A | ✅ EXPLICIT |
 | ProductionManuscriptView | N/A | Handled by parent | N/A | ✅ DELEGATED |
 
 ### Debounce Patterns:
@@ -263,7 +263,7 @@ ref update (lastSavedContentRef)
 - ✅ EditorTab sync: Only on ID change
 - ✅ onManuscriptChange callback: Never called from auto-save
 - ✅ handleManuscriptChange callback: Dead code in ProductionManuscriptView
-- ✅ CastingPlannerPanel cascades: No keystroke-triggered cascades
+- ✅ Legacy planner cascades: No keystroke-triggered cascades
 - ✅ AbortController cleanup: All auto-saves have it
 - ✅ isMountedRef guards: All auto-saves check it
 - ✅ No setTimeout without cleanup: All timers tracked

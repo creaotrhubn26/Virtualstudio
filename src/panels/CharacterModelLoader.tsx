@@ -65,6 +65,16 @@ const createAvatarSVG = (type: 'child' | 'teenager' | 'woman' | 'man' | 'elderly
 
 const CHARACTER_MODELS: CharacterModel[] = [
   {
+    id: 'rigged_cesium_man',
+    name: 'Rigget Demo',
+    gender: 'male',
+    category: 'mote' as any,
+    modelUrl: 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/CesiumMan/glTF-Binary/CesiumMan.glb',
+    thumbnail: createAvatarSVG('man', '#6ef0c2'),
+    description: 'Rigget + animert modell (anbefalt for gåing)',
+    poses: 1,
+  },
+  {
     id: 'sam3d_child',
     name: 'Barn',
     gender: 'neutral',

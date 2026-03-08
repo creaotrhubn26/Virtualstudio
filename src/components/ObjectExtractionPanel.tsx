@@ -14,7 +14,6 @@ import {
   Stack,
   Alert,
   CircularProgress,
-  Grid,
   Card,
   CardContent,
   Chip,
@@ -29,6 +28,7 @@ import {
   Select,
   MenuItem,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   Close,
   Image as ImageIcon,
@@ -40,7 +40,6 @@ import {
 } from '@mui/icons-material';
 import { sam2Service, type SAM2SegmentationResult } from '@/services/SAM2Service';
 import { useMutation } from '@tanstack/react-query';
-
 interface ExtractedObject {
   id: string;
   name: string;
@@ -246,7 +245,7 @@ export function ObjectExtractionPanel({
               </Typography>
               <Grid container spacing={2}>
                 {extractedObjects.map((obj) => (
-                  <Grid item xs={12} sm={6} md={4} key={obj.id}>
+                  <Grid xs={12} sm={6} md={4} key={obj.id}>
                     <Card
                       variant="outlined"
                       sx={{

@@ -1,6 +1,11 @@
-import { createElement, type FC } from 'react';
+import {
+  createElement,
+  type FC } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Box, Typography, IconButton } from '@mui/material';
+import { Box,
+  Typography,
+  IconButton,
+} from '@mui/material';
 import { PlayArrow, Close, Edit } from '@mui/icons-material';
 import ElegantVideoPlayer from './ElegantVideoPlayer';
 

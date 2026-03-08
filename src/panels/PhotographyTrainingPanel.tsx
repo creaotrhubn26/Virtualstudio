@@ -18,7 +18,6 @@ import {
   Tab,
   Card,
   CardContent,
-  Grid,
   Slider,
   Chip,
   List,
@@ -45,6 +44,7 @@ import {
   FormControlLabel,
   FormControl,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   WbSunny,
   Cloud,

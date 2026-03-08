@@ -9,8 +9,11 @@
  * - Golden Triangle
  */
 
-import { useMemo, type FC } from 'react';
-import { Box } from '@mui/material';
+import {
+  useMemo,
+  type FC } from 'react';
+import { Box,
+} from '@mui/material';
 
 export type CompositionGuideType = 
   | 'rule_of_thirds'

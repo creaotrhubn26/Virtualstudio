@@ -15,7 +15,9 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { logger } from '../../core/services/logger';
+import {
+  logger } from '../../core/services/logger';
+import Grid from '@mui/material/Grid';
 
 const log = logger.module('PropsPanel');
 import {
@@ -24,7 +26,6 @@ import {
   Typography,
   Tabs,
   Tab,
-  Grid,
   Card,
   CardContent,
   Button,

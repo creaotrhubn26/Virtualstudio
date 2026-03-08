@@ -1,5 +1,8 @@
 import React from 'react';
-import { Button, Box } from '@mui/material';
+import {
+  Button,
+  Box,
+} from '@mui/material';
 
 interface GooglePayButtonProps {
   amount: number;

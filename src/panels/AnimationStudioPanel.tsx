@@ -39,7 +39,6 @@ import {
   FormControlLabel,
   Alert,
   Slider,
-  Grid,
   Card,
   CardContent,
   CardActions,
@@ -49,6 +48,7 @@ import {
   AccordionSummary,
   AccordionDetails,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   PlayArrow,
   Pause,
@@ -106,7 +106,6 @@ import {
 import { VideoExportPanel } from './VideoExportPanel';
 import { ExportSchedulerPanel } from './ExportSchedulerPanel';
 import { videoExportService, ExportResult } from '../../core/animation/VideoExportService';
-
 // ============================================================================
 // Types
 // ============================================================================
@@ -482,7 +481,7 @@ function TemplatesGallery({ nodes = [], onApplyTemplate }: TemplatesGalleryProps
       <Box sx={{ flex: 1, overflow: 'auto' }}>
         <Grid container spacing={1}>
           {filteredTemplates.map((template) => (
-            <Grid item xs={12} sm={6} key={template.id}>
+            <Grid xs={12} sm={6} key={template.id}>
               <Card
                 sx={{
                   cursor: 'pointer','&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' }}}

@@ -61,7 +61,7 @@ import {
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { useScriptStoryboard, SceneContext } from '../contexts/ScriptStoryboardContext';
-import { SceneBreakdown } from '../core/models/casting';
+import { SceneBreakdown } from '../core/models/production';
 
 // =============================================================================
 // Types

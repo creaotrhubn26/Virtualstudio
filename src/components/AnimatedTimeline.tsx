@@ -10,8 +10,13 @@
  * - Keyboard navigation feedback
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import type { FC, MouseEvent } from 'react';
+import {
+  useState,
+  useCallback,
+  useRef,
+  useEffect } from 'react';
+import type { FC,
+  MouseEvent } from 'react';
 import {
   Box,
   IconButton,

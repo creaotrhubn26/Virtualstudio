@@ -139,25 +139,59 @@ const generateId = () => `rig_${Date.now()}_${Math.random().toString(36).substr(
 
 // Standard humanoid bone mapping
 const HUMANOID_BONE_MAP: Record<string, string[]> = {
-  'hips': ['Hips', 'pelvis', 'hip', 'root'],
-  'spine': ['Spine', 'spine1', 'torso'],
-  'chest': ['Spine1', 'Spine2', 'chest', 'upper_torso'],
-  'neck': ['Neck', 'neck'],
-  'head': ['Head', 'head'],
-  'leftShoulder': ['LeftShoulder', 'shoulder_L', 'L_shoulder'],
-  'leftUpperArm': ['LeftArm', 'upperarm_L', 'L_upperarm'],
-  'leftLowerArm': ['LeftForeArm', 'forearm_L', 'L_forearm'],
-  'leftHand': ['LeftHand', 'hand_L', 'L_hand'],
-  'rightShoulder': ['RightShoulder', 'shoulder_R', 'R_shoulder'],
-  'rightUpperArm': ['RightArm', 'upperarm_R', 'R_upperarm'],
-  'rightLowerArm': ['RightForeArm', 'forearm_R', 'R_forearm'],
-  'rightHand': ['RightHand', 'hand_R', 'R_hand'],
-  'leftUpperLeg': ['LeftUpLeg', 'thigh_L', 'L_thigh'],
-  'leftLowerLeg': ['LeftLeg', 'calf_L', 'L_calf', 'shin_L'],
-  'leftFoot': ['LeftFoot', 'foot_L', 'L_foot'],
-  'rightUpperLeg': ['RightUpLeg', 'thigh_R', 'R_thigh'],
-  'rightLowerLeg': ['RightLeg', 'calf_R', 'R_calf', 'shin_R'],
-  'rightFoot': ['RightFoot', 'foot_R', 'R_foot']
+  'hips': ['Hips', 'pelvis', 'hip', 'root', 'mixamorigHips'],
+  'spine': ['Spine', 'spine1', 'torso', 'mixamorigSpine'],
+  'chest': ['Spine1', 'Spine2', 'chest', 'upper_torso', 'mixamorigSpine1', 'mixamorigSpine2'],
+  'neck': ['Neck', 'neck', 'mixamorigNeck'],
+  'head': ['Head', 'head', 'mixamorigHead'],
+  'leftShoulder': ['LeftShoulder', 'shoulder_L', 'L_shoulder', 'mixamorigLeftShoulder'],
+  'leftUpperArm': ['LeftArm', 'upperarm_L', 'L_upperarm', 'mixamorigLeftArm'],
+  'leftLowerArm': ['LeftForeArm', 'forearm_L', 'L_forearm', 'mixamorigLeftForeArm'],
+  'leftHand': ['LeftHand', 'hand_L', 'L_hand', 'mixamorigLeftHand'],
+  'rightShoulder': ['RightShoulder', 'shoulder_R', 'R_shoulder', 'mixamorigRightShoulder'],
+  'rightUpperArm': ['RightArm', 'upperarm_R', 'R_upperarm', 'mixamorigRightArm'],
+  'rightLowerArm': ['RightForeArm', 'forearm_R', 'R_forearm', 'mixamorigRightForeArm'],
+  'rightHand': ['RightHand', 'hand_R', 'R_hand', 'mixamorigRightHand'],
+  'leftUpperLeg': ['LeftUpLeg', 'thigh_L', 'L_thigh', 'mixamorigLeftUpLeg'],
+  'leftLowerLeg': ['LeftLeg', 'calf_L', 'L_calf', 'shin_L', 'mixamorigLeftLeg'],
+  'leftFoot': ['LeftFoot', 'foot_L', 'L_foot', 'mixamorigLeftFoot'],
+  'rightUpperLeg': ['RightUpLeg', 'thigh_R', 'R_thigh', 'mixamorigRightUpLeg'],
+  'rightLowerLeg': ['RightLeg', 'calf_R', 'R_calf', 'shin_R', 'mixamorigRightLeg'],
+  'rightFoot': ['RightFoot', 'foot_R', 'R_foot', 'mixamorigRightFoot']
+};
+
+const normalizeBoneToken = (value: string): string => value.trim().toLowerCase();
+const compactBoneToken = (value: string): string => normalizeBoneToken(value).replace(/[^a-z0-9]/g, '');
+const expandCompactSideVariants = (token: string): string[] => {
+  const variants = new Set<string>([token]);
+  if (!token) return Array.from(variants);
+
+  if (token.startsWith('left')) variants.add(token.replace(/^left/, 'l'));
+  if (token.startsWith('right')) variants.add(token.replace(/^right/, 'r'));
+  if (token.endsWith('left')) variants.add(token.replace(/left$/, 'l'));
+  if (token.endsWith('right')) variants.add(token.replace(/right$/, 'r'));
+
+  if (token.startsWith('l') && token.length > 1) variants.add(`${token.slice(1)}l`);
+  if (token.startsWith('r') && token.length > 1) variants.add(`${token.slice(1)}r`);
+  if (token.endsWith('l') && token.length > 1) variants.add(`l${token.slice(0, -1)}`);
+  if (token.endsWith('r') && token.length > 1) variants.add(`r${token.slice(0, -1)}`);
+
+  if (token.includes('left')) {
+    variants.add(token.replace(/left/g, 'l'));
+    variants.add(token.replace(/left/g, ''));
+  }
+  if (token.includes('right')) {
+    variants.add(token.replace(/right/g, 'r'));
+    variants.add(token.replace(/right/g, ''));
+  }
+
+  return Array.from(variants).filter((value) => value.length > 0);
+};
+
+const stripBoneNamespace = (value: string): string => {
+  const pathTrimmed = value.split('/').pop() || value;
+  const pipeTrimmed = pathTrimmed.split('|').pop() || pathTrimmed;
+  return pipeTrimmed.split(':').pop() || pipeTrimmed;
 };
 
 // IK Chain definitions
@@ -178,14 +212,51 @@ export const BLEND_SHAPE_PRESETS: Record<string, Record<string, number>> = {
 };
 
 const resolveBoneName = (skeleton: BABYLON.Skeleton, boneName: string): string | null => {
-  const directMatch = skeleton.bones.find(b => b.name === boneName);
-  if (directMatch) return directMatch.name;
+  const aliases = HUMANOID_BONE_MAP[boneName] || [];
+  const searchTokens = new Set<string>();
+  const compactSearchTokens = new Set<string>();
 
-  const aliases = HUMANOID_BONE_MAP[boneName];
-  if (!aliases) return null;
+  [boneName, ...aliases].forEach((token) => {
+    const normalized = normalizeBoneToken(token);
+    searchTokens.add(normalized);
+    searchTokens.add(normalizeBoneToken(stripBoneNamespace(token)));
 
-  const aliasMatch = skeleton.bones.find(b => aliases.includes(b.name));
-  return aliasMatch?.name || null;
+    const compact = compactBoneToken(token);
+    const compactStripped = compactBoneToken(stripBoneNamespace(token));
+    expandCompactSideVariants(compact).forEach((variant) => compactSearchTokens.add(variant));
+    expandCompactSideVariants(compactStripped).forEach((variant) => compactSearchTokens.add(variant));
+  });
+
+  const exactMatch = skeleton.bones.find((bone) => {
+    const boneNormalized = normalizeBoneToken(bone.name);
+    if (searchTokens.has(boneNormalized)) return true;
+
+    const stripped = normalizeBoneToken(stripBoneNamespace(bone.name));
+    return searchTokens.has(stripped);
+  });
+
+  if (exactMatch?.name) {
+    return exactMatch.name;
+  }
+
+  const tokens = Array.from(searchTokens);
+  const suffixMatch = skeleton.bones.find((bone) => {
+    const boneNormalized = normalizeBoneToken(bone.name);
+    const stripped = normalizeBoneToken(stripBoneNamespace(bone.name));
+    return tokens.some((token) => boneNormalized.endsWith(token) || stripped.endsWith(token));
+  });
+  if (suffixMatch?.name) {
+    return suffixMatch.name;
+  }
+
+  const compactTokens = Array.from(compactSearchTokens).filter((token) => token.length >= 4);
+  const containsMatch = skeleton.bones.find((bone) => {
+    const compactBoneName = compactBoneToken(bone.name);
+    const compactStripped = compactBoneToken(stripBoneNamespace(bone.name));
+    return compactTokens.some((token) => compactBoneName.includes(token) || compactStripped.includes(token));
+  });
+
+  return containsMatch?.name || null;
 };
 
 const getExertionIntensityForActivity = (activityType: ReturnType<typeof getActivityTypeFromAnimation>): number => {

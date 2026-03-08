@@ -4,8 +4,11 @@
  */
 
 import React from 'react';
-import { Box, Typography } from '@mui/material';
-import { FormData as FormDataType } from '../types';
+import {
+  Box,
+  Typography,
+} from '@mui/material';
+import { FormData as FormDataType } from './types';
 
 interface PanelPreviewProps {
   formData: Partial<FormDataType>;
@@ -187,4 +190,3 @@ export const PanelPreview: React.FC<PanelPreviewProps> = React.memo(({
 });
 
 PanelPreview.displayName = 'PanelPreview';
-

@@ -4,9 +4,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { logger } from '../../core/services/logger';
+import {
+  logger } from '../../core/services/logger';
+import Grid from '@mui/material/GridLegacy';
 
-const log = logger.module('ModifierBrowser, ');
+const log = logger.module('');
 import {
   Box,
   Card,
@@ -14,7 +16,6 @@ import {
   CardContent,
   CardActions,
   Typography,
-  Grid,
   Tabs,
   Tab,
   TextField,
@@ -38,7 +39,6 @@ import {
 } from '@/core/data/ModifierLibrary';
 import { AssetLoader } from '@/core/loaders/AssetLoader';
 import { useActions } from '@/state/selectors';
-
 export default function ModifierBrowser() {
   const { addNode } = useActions();
   const [modifiers, setModifiers] = useState<Modifier[]>([]);
@@ -170,7 +170,7 @@ export default function ModifierBrowser() {
       {/* Modifier Grid */}
       <Grid container spacing={2}>
         {filteredModifiers.map((modifier) => (
-          <Grid item xs={12} sm={6} md={4} key={modifier.id}>
+          <Grid xs={12} sm={6} md={4} key={modifier.id}>
             <Card
               sx={{
                 height: '100%',

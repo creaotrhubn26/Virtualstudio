@@ -4,7 +4,10 @@
  */
 
 import React, { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import {
   Box,
@@ -34,7 +37,7 @@ import {
   Chip,
   IconButton,
   Tooltip,
-  Paper
+  Paper,
 } from '@mui/material';
 import {
   Gavel as LegalIcon,
@@ -445,26 +448,5 @@ export default function SplitSheetLegalDocuments({
     </Box>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

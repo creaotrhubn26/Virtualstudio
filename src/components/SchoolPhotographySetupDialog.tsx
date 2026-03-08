@@ -42,6 +42,7 @@ import {
   Tooltip,
   LinearProgress,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   School,
   Groups,
@@ -66,7 +67,6 @@ import {
   AutoAwesome,
 } from '@mui/icons-material';
 import { logger } from '../../core/services/logger';
-
 const log = logger.module('SchoolPhotographySetup');
 
 // School photography types

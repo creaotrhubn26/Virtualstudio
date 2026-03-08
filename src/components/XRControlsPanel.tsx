@@ -18,7 +18,7 @@ import {
   CircularProgress,
   Tooltip,
   IconButton,
-  Collapse
+  Collapse,
 } from '@mui/material';
 import {
   Vrpano as VRIcon,

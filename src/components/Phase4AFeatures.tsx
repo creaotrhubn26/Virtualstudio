@@ -1,5 +1,8 @@
 import React from 'react';
-import { Box, Divider } from '@mui/material';
+import {
+  Box,
+  Divider,
+} from '@mui/material';
 import { ExposureVisualizationPanel } from './ExposureVisualizationPanel';
 import { LightContributionPanel } from './LightContributionPanel';
 import { HDRIBrowserPanel } from './HDRIBrowserPanel';

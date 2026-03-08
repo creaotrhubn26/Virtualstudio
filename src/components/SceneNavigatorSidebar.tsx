@@ -49,7 +49,7 @@ import {
   ViewList as ListIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
-import { SceneBreakdown } from '../core/models/casting';
+import { SceneBreakdown } from '../core/models/production';
 
 // Scene parsed from Fountain content
 export interface ParsedScene {

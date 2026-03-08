@@ -8,7 +8,6 @@ import {
   Chip,
   InputBase,
   IconButton,
-  Grid,
   useMediaQuery,
   Divider,
   ToggleButton,
@@ -18,6 +17,7 @@ import {
   Slider,
   Collapse,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   Timeline as TimelineIcon,
   ShowChart as ShowChartIcon,

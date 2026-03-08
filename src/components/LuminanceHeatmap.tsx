@@ -5,9 +5,13 @@
  * Helps with exposure analysis
  */
 
-import { useMemo } from 'react';
+import {
+  useMemo } from 'react';
 import type { FC } from 'react';
-import { Box, Typography, Paper } from '@mui/material';
+import { Box,
+  Typography,
+  Paper,
+} from '@mui/material';
 import * as THREE from 'three';
 import { photometricCalculator } from '../../core/services/photometric';
 import type { LightSourceConfig } from '../../core/services/photometric';

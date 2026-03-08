@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { logger } from '../../core/services/logger';
+import {
+  logger } from '../../core/services/logger';
+import Grid from '@mui/material/GridLegacy';
 import { useLoadingStore } from '../../state/loadingStore';
 import * as BABYLON from '@babylonjs/core';
 
@@ -14,7 +16,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Grid,
   Card,
   CardMedia,
   CardContent,
@@ -52,7 +53,6 @@ import {
 import LinearProgress from '@mui/material/LinearProgress';
 import { useVirtualStudio } from '../../../VirtualStudioContext';
 import { hdriCacheService, preCacheManager, PRE_CACHE_HDRIS, PreCacheProgress } from '../../core/services/hdriCacheService';
-
 // Helper to get Babylon.js scene from window.virtualStudio
 const getBabylonScene = (): BABYLON.Scene | null => {
   const studio = (window as any).virtualStudio;
@@ -1573,15 +1573,15 @@ export const HDRIEnvironmentLoader: React.FC = () => {
             <Typography variant="subtitle2">HDRI Cache</Typography>
           </Box>
           <Grid container spacing={2}>
-            <Grid item xs={4}>
+            <Grid xs={4}>
               <Typography variant="caption" color="text.secondary">Items</Typography>
               <Typography variant="body2">{cacheStats.itemCount}</Typography>
             </Grid>
-            <Grid item xs={4}>
+            <Grid xs={4}>
               <Typography variant="caption" color="text.secondary">Size</Typography>
               <Typography variant="body2">{hdriCacheService.formatSize(cacheStats.totalSize)}</Typography>
             </Grid>
-            <Grid item xs={4}>
+            <Grid xs={4}>
               <Typography variant="caption" color="text.secondary">Hit Rate</Typography>
               <Typography variant="body2">{cacheStats.hitRate.toFixed(0)}%</Typography>
             </Grid>
@@ -1734,7 +1734,7 @@ export const HDRIEnvironmentLoader: React.FC = () => {
             const isBlenderKit = hdri.url.startsWith('blenderkit://');
             const isCached = cachedIds.includes(hdri.id);
             return (
-              <Grid item xs={6} sm={4} md={3} key={hdri.id}>
+              <Grid xs={6} sm={4} md={3} key={hdri.id}>
                 <Card
                   sx={{
                     cursor: 'pointer',

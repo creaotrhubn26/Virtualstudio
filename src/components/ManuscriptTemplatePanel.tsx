@@ -11,7 +11,6 @@ import {
   InputAdornment,
   Tabs,
   Tab,
-  Grid,
   Card,
   CardContent,
   CardActionArea,
@@ -27,8 +26,9 @@ import {
   ListItemText,
   Divider,
   Tooltip,
-  Paper
+  Paper,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   Search as SearchIcon,
   Close as CloseIcon,
@@ -57,7 +57,6 @@ import {
 import { manuscriptTemplateService } from '../services/manuscriptTemplateService';
 import { Template, TemplateLibrary, StructureTemplate } from '../core/models/manuscriptTemplates';
 import { TemplateIcon } from './TemplateIcon';
-
 interface ManuscriptTemplatePanelProps {
   open: boolean;
   onClose: () => void;

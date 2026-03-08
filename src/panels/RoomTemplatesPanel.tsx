@@ -8,7 +8,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
-  Grid,
   Card,
   CardContent,
   CardActionArea,
@@ -21,10 +20,10 @@ import {
   DialogActions,
   Chip,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import { Home, Info } from '@mui/icons-material';
 import { roomLoader, RoomTemplate } from '../core/services/roomLoader';
 import { logger } from '../../core/services/logger';
-
 const log = logger.module('RoomTemplatesPanel');
 
 interface RoomTemplatesPanelProps {

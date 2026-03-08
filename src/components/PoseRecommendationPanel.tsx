@@ -13,7 +13,6 @@ import {
   Card,
   CardContent,
   Chip,
-  Grid,
   FormControl,
   InputLabel,
   Select,
@@ -26,6 +25,7 @@ import {
   ListItemText,
   ListItemIcon,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   AutoAwesome,
   Person,
@@ -35,7 +35,6 @@ import {
   WbSunny,
 } from '@mui/icons-material';
 import { poseRecommendationService, type PoseRecommendation } from '../../core/services/poseRecommendationService';
-
 interface PoseRecommendationPanelProps {
   photographyType?: 'portrait' | 'group' | 'action' | 'casual' | 'formal';
   subjectCount?: number;
@@ -120,7 +119,7 @@ export function PoseRecommendationPanel({
         {/* Recommendations */}
         <Grid container spacing={2}>
           {recommendations.map((pose, idx) => (
-            <Grid item xs={12} sm={6} key={idx}>
+            <Grid xs={12} sm={6} key={idx}>
               <Card
                 variant="outlined"
                 sx={{
@@ -243,29 +242,5 @@ export function PoseRecommendationPanel({
     </Paper>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

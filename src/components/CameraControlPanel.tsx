@@ -5,7 +5,15 @@
  * Provides joystick-style controls for pan, tilt, dolly, truck, and zoom.
  */
 
-import { useState, useCallback, useRef, useEffect, type FC, type ReactNode, type MouseEvent, type TouchEvent } from 'react';
+import {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  type FC,
+  type ReactNode,
+  type MouseEvent,
+  type TouchEvent } from 'react';
 import {
   Box,
   Paper,

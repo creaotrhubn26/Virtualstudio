@@ -10,17 +10,16 @@ import {
   Typography,
   Tabs,
   Tab,
-  Grid,
   Card,
   CardContent,
   CardActionArea,
   Button,
   Chip,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import { Person, SentimentSatisfied, DirectionsWalk } from '@mui/icons-material';
 import { presetLoader, PosePresetData, ExpressionPresetData } from '../../core/services/presetLoader';
 import { logger } from '../../core/services/logger';
-
 const log = logger.module('CharacterPresetsPanel');
 
 interface CharacterPresetsPanelProps {
@@ -114,7 +113,7 @@ export const CharacterPresetsPanel: React.FC<CharacterPresetsPanelProps> = ({
             </Typography>
             <Grid container spacing={2}>
               {poses.map((pose) => (
-                <Grid item xs={12} sm={6} key={pose.id}>
+                <Grid xs={12} sm={6} key={pose.id}>
                   <Card
                     sx={{
                       bgcolor: '#2a2a2a',
@@ -157,7 +156,7 @@ export const CharacterPresetsPanel: React.FC<CharacterPresetsPanelProps> = ({
             </Typography>
             <Grid container spacing={2}>
               {expressions.map((expression) => (
-                <Grid item xs={12} sm={6} key={expression.id}>
+                <Grid xs={12} sm={6} key={expression.id}>
                   <Card
                     sx={{
                       bgcolor: '#2a2a2a',

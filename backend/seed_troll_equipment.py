@@ -10,8 +10,8 @@ from psycopg2.extras import RealDictCursor
 from datetime import datetime
 import uuid
 
-# Import database connection from casting_service
-from casting_service import get_db_connection
+# Import database connection from shared backend DB helper
+from tutorials_service import get_db_connection
 
 def seed_troll_equipment():
     """Seed Troll project equipment from mock data"""

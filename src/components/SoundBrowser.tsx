@@ -3,7 +3,11 @@
  * Browse, search, and play sounds from the sound library
  */
 
-import { useState, useCallback, useMemo, type ReactNode } from 'react';
+import {
+  useState,
+  useCallback,
+  useMemo,
+  type ReactNode } from 'react';
 import {
   Box,
   Paper,

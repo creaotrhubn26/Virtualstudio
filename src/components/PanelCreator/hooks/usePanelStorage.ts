@@ -184,11 +184,13 @@ export const usePanelStorage = () => {
     );
     setMarketplaceServices(updatedServices);
 
-    const installedServices = (await settingsService.getSetting<string[]>(INSTALLED_NAMESPACE)) || [];
-    if (!installedServices.includes(serviceId)) {
-      installedServices.push(serviceId);
-      await settingsService.setSetting(INSTALLED_NAMESPACE, installedServices);
-    }
+    void (async () => {
+      const installedServices = (await settingsService.getSetting<string[]>(INSTALLED_NAMESPACE)) || [];
+      if (!installedServices.includes(serviceId)) {
+        installedServices.push(serviceId);
+        await settingsService.setSetting(INSTALLED_NAMESPACE, installedServices);
+      }
+    })();
 
     return true;
   }, [marketplaceServices]);
@@ -216,4 +218,3 @@ export const usePanelStorage = () => {
     updatePanelsInDOM,
   };
 };
-

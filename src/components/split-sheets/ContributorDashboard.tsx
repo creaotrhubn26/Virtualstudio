@@ -5,7 +5,9 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import {
+  useQuery } from '@tanstack/react-query';
+import Grid from '@mui/material/GridLegacy';
 import { apiRequest } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -13,7 +15,6 @@ import {
   Typography,
   Card,
   CardContent,
-  Grid,
   Stack,
   Chip,
   Table,
@@ -25,7 +26,7 @@ import {
   Paper,
   Tabs,
   Tab,
-  alpha
+  alpha,
 } from '@mui/material';
 import {
   AccountBalance as SplitSheetIcon,
@@ -37,7 +38,6 @@ import { useDynamicProfessions } from '../hooks/useDynamicProfessions';
 import getProfessionIcon from '@/utils/profession-icons';
 import type { SplitSheet, SplitSheetPayment, STATUS_DISPLAY_NAMES, STATUS_COLORS } from './types';
 import { STATUS_DISPLAY_NAMES as STATUS_NAMES, STATUS_COLORS as STATUS_COL } from './types';
-
 interface ContributorDashboardProps {
   contributorEmail?: string;
   contributorUserId?: string;
@@ -188,7 +188,7 @@ export default function ContributorDashboard({
 
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
@@ -203,7 +203,7 @@ export default function ContributorDashboard({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
@@ -218,7 +218,7 @@ export default function ContributorDashboard({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
@@ -233,7 +233,7 @@ export default function ContributorDashboard({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
@@ -355,26 +355,5 @@ export default function ContributorDashboard({
     </Box>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

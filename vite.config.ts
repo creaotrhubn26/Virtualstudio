@@ -73,7 +73,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: 'index.html',
-        casting: 'casting.html',
       },
       output: {
         // Manual chunk splitting for better caching

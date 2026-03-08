@@ -122,6 +122,31 @@ export const RENDERING_PRESETS: Record<string, Partial<RenderingPreset>> = {
     exposure: 1.1,
     contrast: 1.1,
     saturation: 0.95
+  },
+  'portrait-realistic': {
+    name: 'Portrait Realistic',
+    ssaoEnabled: true,
+    ssaoSamples: 24,
+    ssrEnabled: true,
+    ssrStrength: 0.35,
+    bloomEnabled: true,
+    bloomIntensity: 0.28,
+    dofEnabled: true,
+    dofFocalLength: 85,
+    dofAperture: 2.8,
+    motionBlurEnabled: false,
+    chromaticAberrationEnabled: false,
+    vignetteEnabled: true,
+    vignetteStrength: 0.18,
+    grainEnabled: false,
+    sharpenEnabled: true,
+    sharpenAmount: 0.16,
+    volumetricLightingEnabled: false,
+    fogEnabled: false,
+    tonemapping: 'aces',
+    exposure: 0.98,
+    contrast: 1.06,
+    saturation: 1.02
   }
 };
 

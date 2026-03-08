@@ -7,7 +7,6 @@ import {
   IconButton,
   Tabs,
   Tab,
-  Grid,
   Card,
   CardContent,
   CardMedia,
@@ -34,6 +33,7 @@ import {
   Menu,
   Badge,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   Save as SaveIcon,
   FolderOpen as FolderOpenIcon,
@@ -77,7 +77,6 @@ import { sceneOptimizationService } from '../services/sceneOptimizationService';
 import { sceneAnalysisService } from '../services/sceneAnalysisService';
 import { sceneVariationService } from '../services/sceneVariationService';
 import { EnvironmentBrowser } from './EnvironmentBrowser';
-
 interface SceneComposerPanelProps {
   onClose?: () => void;
   onSaveScene?: (scene: SceneComposition) => void;
@@ -866,7 +865,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
 
               <Grid container spacing={2}>
                 {filteredScenes.map((scene, index) => (
-                  <Grid item xs={12} sm={6} md={4} key={scene.id}>
+                  <Grid xs={12} sm={6} md={4} key={scene.id}>
                     <Card
                       draggable
                       onDragStart={(e) => handleDragStart(e, scene.id)}
@@ -1663,7 +1662,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
           {comparisonScene1 && comparisonScene2 && (
             <Box>
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid xs={6}>
                   <Typography variant="h6" sx={{ mb: 2, color: '#00d4ff' }}>
                     {comparisonScene1.name}
                   </Typography>
@@ -1682,7 +1681,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
                     />
                   )}
                 </Grid>
-                <Grid item xs={6}>
+                <Grid xs={6}>
                   <Typography variant="h6" sx={{ mb: 2, color: '#00d4ff' }}>
                     {comparisonScene2.name}
                   </Typography>

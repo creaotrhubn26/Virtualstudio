@@ -21,7 +21,6 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Grid,
   List,
   ListItem,
   ListItemText,
@@ -39,6 +38,7 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   PlayArrow as PlayIcon,
   Stop as StopIcon,

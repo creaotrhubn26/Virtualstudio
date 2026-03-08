@@ -1,5 +1,12 @@
 import React from 'react';
-import { Box, Stack, Slider, Typography, IconButton, Tooltip } from '@mui/material';
+import {
+  Box,
+  Stack,
+  Slider,
+  Typography,
+  IconButton,
+  Tooltip,
+} from '@mui/material';
 import { Refresh } from '@mui/icons-material';
 
 export interface CameraSettings {

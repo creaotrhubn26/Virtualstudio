@@ -5,7 +5,11 @@
  * Supports context menu integration for adding annotations.
  */
 
-import { useState, useCallback, type FC, type MouseEvent } from 'react';
+import {
+  useState,
+  useCallback,
+  type FC,
+  type MouseEvent } from 'react';
 import {
   Box,
   Paper,

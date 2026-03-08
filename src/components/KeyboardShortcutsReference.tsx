@@ -8,10 +8,15 @@
  * - Dark/Light themes
  */
 
-import { useRef, useCallback, useState, Fragment } from 'react';
+import {
+  useRef,
+  useCallback,
+  useState,
+  Fragment } from 'react';
+import Grid from '@mui/material/GridLegacy';
 import { logger } from '../../core/services/logger';
 
-const log = logger.module('KeyboardShortcuts, ');
+const log = logger.module('');
 import {
   Box,
   Typography,
@@ -25,7 +30,6 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Divider,
-  Grid,
   Chip,
   Tooltip,
 } from '@mui/material';
@@ -39,7 +43,6 @@ import {
   Keyboard,
 } from '@mui/icons-material';
 import { SHORTCUT_REFERENCE } from '../../hooks/useKeyboardShortcuts';
-
 // ============================================================================
 // Types
 // ============================================================================
@@ -253,7 +256,7 @@ export function ShortcutsReferenceCard({ theme, forExport = false }: ReferenceCa
       {/* Categories Grid */}
       <Grid container spacing={2}>
         {CATEGORIES.map((category) => (
-          <Grid item xs={12} sm={6} md={forExport ? 4 : 6} key={category.name}>
+          <Grid xs={12} sm={6} md={forExport ? 4 : 6} key={category.name}>
             <Paper
               elevation={0}
               sx={{

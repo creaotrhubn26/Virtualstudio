@@ -14,7 +14,6 @@ import {
   Button,
   Typography,
   Box,
-  Grid,
   Card,
   CardContent,
   CardActions,
@@ -34,6 +33,7 @@ import {
   TextField,
   InputAdornment,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   Close,
   Lightbulb,
@@ -46,7 +46,6 @@ import {
   Visibility,
 } from '@mui/icons-material';
 import { apiRequest } from '@/lib/api';
-
 interface LightPattern {
   id: string;
   name: string;

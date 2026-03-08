@@ -4,7 +4,14 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ThemeProvider, createTheme, CssBaseline, useMediaQuery, useTheme } from '@mui/material';
+import {
+  ThemeProvider,
+  createTheme,
+  CssBaseline,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   Box,
   Button,
@@ -32,7 +39,6 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Grid,
   InputAdornment,
 } from '@mui/material';
 import {
@@ -83,8 +89,9 @@ import {
   Backup,
   CloudDownload,
   CloudUpload,
+  TheaterComedy,
+  LocationOn,
 } from '@mui/icons-material';
-import { RolesIcon as TheaterComedy, LocationsIcon as LocationOn } from './icons/CastingIcons';
 import {
   DndContext,
   closestCenter,
@@ -154,7 +161,6 @@ import { usePanelValidation } from './PanelCreator/hooks/usePanelValidation';
 import { usePanelForm } from './PanelCreator/hooks/usePanelForm';
 import { PanelPreview } from './PanelCreator/PanelPreview';
 import { getTextFieldStyles, getInputLabelStyles, getSelectMenuProps } from './PanelCreator/styles';
-
 // Sortable Panel Item Component
 interface SortablePanelItemProps {
   panel: PanelConfig;
@@ -2195,7 +2201,7 @@ const PanelCreatorContent: React.FC = () => {
           
           <Grid container spacing={2}>
             {getTemplatesByCategory(formData.type || 'function').map((template) => (
-              <Grid item xs={12} sm={6} key={template.id}>
+              <Grid xs={12} sm={6} key={template.id}>
                 <Paper
                   sx={{
                     p: 2,
@@ -2747,4 +2753,3 @@ const PanelCreator: React.FC = () => {
 };
 
 export default PanelCreator;
-

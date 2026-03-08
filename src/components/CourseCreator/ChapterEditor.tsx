@@ -100,19 +100,3 @@ export const ChapterEditor: React.FC<ChapterEditorProps> = ({
 };
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,5 +1,12 @@
 import React, { ReactNode } from 'react';
-import { IconButton, IconButtonProps, Box, BoxProps, Menu, MenuItem } from '@mui/material';
+import {
+  IconButton,
+  IconButtonProps,
+  Box,
+  BoxProps,
+  Menu,
+  MenuItem,
+} from '@mui/material';
 
 // Touch-aware IconButton
 type TouchSizePreset = 'small' | 'medium' | 'large';

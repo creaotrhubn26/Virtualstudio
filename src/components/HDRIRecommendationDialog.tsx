@@ -5,7 +5,10 @@
  * Displays thumbnails, match scores, and reasons for each recommendation.
  */
 
-import { useMemo, useState } from 'react';
+import {
+  useMemo,
+  useState } from 'react';
+import Grid from '@mui/material/Grid';
 import type { ReactElement } from 'react';
 import {
   Dialog,
@@ -46,7 +49,6 @@ import {
   HDRIRecommendation,
 } from '../../core/services/hdriRecommendationService';
 import { CachedActor } from '../../core/services/actorModelCache';
-
 interface HDRIRecommendationDialogProps {
   open: boolean;
   onClose: () => void;

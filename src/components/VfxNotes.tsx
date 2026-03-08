@@ -9,7 +9,6 @@ import {
   Stack,
   Card,
   CardContent,
-  Grid,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -27,6 +26,7 @@ import {
   Divider,
   Badge,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   AutoFixHigh as VfxIcon,
   Add as AddIcon,
@@ -45,8 +45,7 @@ import {
   AttachMoney as BudgetIcon,
   Person as ArtistIcon,
 } from '@mui/icons-material';
-import { SceneBreakdown, CastingShot } from '../core/models/casting';
-
+import { SceneBreakdown, CastingShot } from '../core/models/production';
 type VfxCategory = 'greenscreen' | 'tracking' | 'composite' | 'cgi' | 'cleanup' | 'animation' | 'matte_painting' | 'particle' | 'other';
 type VfxComplexity = 'simple' | 'medium' | 'complex' | 'hero';
 type VfxStatus = 'identified' | 'planned' | 'in_progress' | 'review' | 'approved' | 'final';

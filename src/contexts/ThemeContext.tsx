@@ -1,6 +1,10 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
-import { ThemeProvider, createTheme, Theme } from '@mui/material/styles';
-import { CssBaseline } from '@mui/material';
+import {
+  ThemeProvider,
+  createTheme,
+  Theme } from '@mui/material/styles';
+import { CssBaseline,
+} from '@mui/material';
 import settingsService, { getCurrentUserId } from '../services/settingsService';
 
 type ThemeMode = 'light' | 'dark';

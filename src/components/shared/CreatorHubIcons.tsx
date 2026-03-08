@@ -1,7 +1,9 @@
 import React from 'react';
-import { SvgIcon, SvgIconProps } from '@mui/material';
 import {
-  School,
+  SvgIcon,
+  SvgIconProps,
+} from '@mui/material';
+import {
   MenuBook,
   PlayCircle,
   Person,
@@ -69,7 +71,6 @@ import {
   Cancel,
 } from '@mui/icons-material';
 
-export const AcademyIcon = (props: SvgIconProps) => <School {...props} />;
 export const CourseIcon = (props: SvgIconProps) => <MenuBook {...props} />;
 export const LessonIcon = (props: SvgIconProps) => <PlayCircle {...props} />;
 export const VideoPlayerIcon = (props: SvgIconProps) => <Videocam {...props} />;
@@ -141,7 +142,6 @@ export const SuccessIcon = (props: SvgIconProps) => <CheckCircle {...props} />;
 export const CancelIcon = (props: SvgIconProps) => <Cancel {...props} />;
 
 export default {
-  AcademyIcon,
   CourseIcon,
   LessonIcon,
   VideoPlayerIcon,

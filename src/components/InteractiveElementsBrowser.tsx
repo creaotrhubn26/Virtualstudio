@@ -3,7 +3,13 @@
  * UI for placing and managing interactive 3D elements
  */
 
-import { useState, useEffect, type FC, type ReactElement, type ReactNode } from 'react';
+import {
+  useState,
+  useEffect,
+  type FC,
+  type ReactElement,
+  type ReactNode } from 'react';
+import Grid from '@mui/material/Grid';
 import {
   Box,
   Typography,
@@ -16,7 +22,6 @@ import {
   IconButton,
   Tooltip,
   Chip,
-  Grid,
   Dialog,
   DialogTitle,
   DialogContent,

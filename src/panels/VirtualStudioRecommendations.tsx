@@ -20,8 +20,8 @@ import {
   Alert,
   Stack,
   Tooltip,
-  Grid,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   TrendingUp,
   CheckCircle,
@@ -30,7 +30,6 @@ import {
   Info,
 } from '@mui/icons-material';
 import { useVirtualStudioRecommendations, VirtualStudioRecommendation } from '@/hooks/useVirtualStudioRecommendations';
-
 interface VirtualStudioRecommendationsProps {
   projectType: string;
   onSelectRecommendation?: (recommendation: VirtualStudioRecommendation) => void;

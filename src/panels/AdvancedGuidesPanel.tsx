@@ -557,7 +557,7 @@ export const AdvancedGuidesPanel: React.FC<AdvancedGuidesPanelProps> = ({
                   <MenuItem value="4:3" sx={{ fontSize: { xs: 13, sm: 14, md: 15, xl: 16 } }}>4:3 (Classic)</MenuItem>
                   <MenuItem value="21:9" sx={{ fontSize: { xs: 13, sm: 14, md: 15, xl: 16 } }}>21:9 (Ultrawide)</MenuItem>
                   <MenuItem value="2.35:1" sx={{ fontSize: { xs: 13, sm: 14, md: 15, xl: 16 } }}>2.35:1 (Cinemascope)</MenuItem>
-                  <MenuItem value="1.85:1" sx={{ fontSize: { xs: 13, sm: 14, md: 15, xl: 16 } }}>1.85:1 (Academy Flat)</MenuItem>
+                  <MenuItem value="1.85:1" sx={{ fontSize: { xs: 13, sm: 14, md: 15, xl: 16 } }}>1.85:1 (Flat)</MenuItem>
                   <MenuItem value="1:1" sx={{ fontSize: { xs: 13, sm: 14, md: 15, xl: 16 } }}>1:1 (Square)</MenuItem>
                   <MenuItem value="9:16" sx={{ fontSize: { xs: 13, sm: 14, md: 15, xl: 16 } }}>9:16 (Vertical)</MenuItem>
                   <MenuItem value="4:5" sx={{ fontSize: { xs: 13, sm: 14, md: 15, xl: 16 } }}>4:5 (Instagram)</MenuItem>
@@ -759,4 +759,3 @@ export const AdvancedGuidesPanel: React.FC<AdvancedGuidesPanelProps> = ({
 };
 
 export default AdvancedGuidesPanel;
-

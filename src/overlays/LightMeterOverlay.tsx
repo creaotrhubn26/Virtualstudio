@@ -9,7 +9,16 @@
  */
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Box, ButtonGroup, Button, Tooltip, Paper, Typography, Stack, Chip } from '@mui/material';
+import {
+  Box,
+  ButtonGroup,
+  Button,
+  Tooltip,
+  Paper,
+  Typography,
+  Stack,
+  Chip,
+} from '@mui/material';
 import {
   BarChart as HistogramIcon,
   Straighten as ZebraIcon,

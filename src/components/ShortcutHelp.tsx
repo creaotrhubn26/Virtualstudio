@@ -4,7 +4,11 @@
  * Displays keyboard shortcuts in a help dialog
  */
 
-import { useState, useEffect, type FC } from 'react';
+import {
+  useState,
+  useEffect,
+  type FC } from 'react';
+import Grid from '@mui/material/GridLegacy';
 import {
   Dialog,
   DialogTitle,
@@ -14,13 +18,11 @@ import {
   Box,
   Typography,
   Divider,
-  Grid,
   Chip,
 } from '@mui/material';
 import KeyboardIcon from '@mui/icons-material/Keyboard';
 import { keyboardShortcutsService, Shortcut } from '../../core/services/keyboardShortcuts';
 import { colors, spacing } from '../../styles/designTokens';
-
 export interface ShortcutHelpProps {
   open: boolean;
   onClose: () => void;
@@ -94,7 +96,7 @@ export const ShortcutHelp: FC<ShortcutHelpProps> = ({ open, onClose }) => {
               </Typography>
               <Grid container spacing={2}>
                 {categoryShortcuts.map((shortcut) => (
-                  <Grid item xs={12} sm={6} key={shortcut.action}>
+                  <Grid xs={12} sm={6} key={shortcut.action}>
                     <Box
                       sx={{
                         display: 'flex',

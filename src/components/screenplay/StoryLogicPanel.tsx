@@ -37,10 +37,10 @@ import {
   Divider,
   Card,
   CardContent,
-  Grid,
   Fade,
   Collapse,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   ExpandMore as ExpandMoreIcon,
   Lightbulb as LightbulbIcon,
@@ -59,7 +59,6 @@ import {
   LockOpen as LockOpenIcon,
 } from '@mui/icons-material';
 import { storyLogicService } from '../../services/storyLogicService';
-
 // ============================================================================
 // Types & Interfaces
 // ============================================================================

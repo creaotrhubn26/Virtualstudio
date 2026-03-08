@@ -8,10 +8,14 @@
  * - Color Checker Position
  */
 
-import { useMemo } from 'react';
+import {
+  useMemo } from 'react';
 import type { FC } from 'react';
-import { Html, Line } from '@react-three/drei';
-import { Box, Typography } from '@mui/material';
+import { Html,
+  Line } from '@react-three/drei';
+import { Box,
+  Typography,
+} from '@mui/material';
 import * as THREE from 'three';
 
 interface ColorExposureGuidesProps {

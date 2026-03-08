@@ -1,4 +1,11 @@
-import { useState, useEffect, useRef, useCallback, type MouseEvent, type KeyboardEvent, type ChangeEvent } from 'react';
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  type MouseEvent,
+  type KeyboardEvent,
+  type ChangeEvent } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -19,7 +26,6 @@ import {
   ListItemText,
   ListItemAvatar,
   Avatar,
-  Grid,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -34,10 +40,14 @@ import {
   Edit as EditIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
-} from '@mui/icons-material';
+  } from '@mui/icons-material';
 import { MarketplaceProduct } from '../core/models/marketplace';
 import { marketplaceService } from '../services/marketplaceService';
-import { FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from '@mui/material';
 import { useToast } from './ToastStack';
 
 interface MarketplaceProductDetailProps {

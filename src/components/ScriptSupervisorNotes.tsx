@@ -9,7 +9,6 @@ import {
   Stack,
   Card,
   CardContent,
-  Grid,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -34,6 +33,7 @@ import {
   Badge,
   Rating,
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
   Assignment as ScriptIcon,
   Add as AddIcon,
@@ -53,8 +53,7 @@ import {
   Replay as RetakeIcon,
   Star as StarIcon,
 } from '@mui/icons-material';
-import { SceneBreakdown, CastingShot } from '../core/models/casting';
-
+import { SceneBreakdown, CastingShot } from '../core/models/production';
 interface TakeLog {
   id: string;
   sceneId: string;

@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import type { DragEvent, FC } from 'react';
+import {
+  useState } from 'react';
+import type { DragEvent,
+  FC } from 'react';
 import {
   Box,
   Typography,
@@ -17,7 +19,7 @@ import {
   Theaters as TheatersIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
-import { SceneBreakdown } from '../core/models/casting';
+import { SceneBreakdown } from '../core/models/production';
 
 interface DraggableSceneListProps {
   scenes: SceneBreakdown[];

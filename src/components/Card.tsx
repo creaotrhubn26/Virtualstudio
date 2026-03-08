@@ -5,7 +5,10 @@
  */
 
 import type { FC } from 'react';
-import { Box, BoxProps } from '@mui/material';
+import {
+  Box,
+  BoxProps,
+} from '@mui/material';
 import { colors, borderRadius, shadows, transitions, spacing } from '../../styles/designTokens';
 import { hoverState } from '../../styles/interactiveStates';
 

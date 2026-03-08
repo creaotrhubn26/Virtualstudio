@@ -4,7 +4,9 @@
  * Comprehensive AI-powered assistant for scene composition, lighting, and optimization
  */
 
-import { useState, useEffect } from 'react';
+import {
+  useState,
+  useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -31,8 +33,11 @@ import {
   School as LearnIcon,
   AutoAwesome as AIIcon,
   TrendingUp as ImprovementIcon,
-} from '@mui/icons-material';
-import { Tabs, Tab, IconButton } from '@mui/material';
+  } from '@mui/icons-material';
+import { Tabs,
+  Tab,
+  IconButton,
+} from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 
 interface AIRecommendation {

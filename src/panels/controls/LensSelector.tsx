@@ -1,5 +1,12 @@
 import React from 'react';
-import { Box, Stack, Slider, Typography, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import {
+  Box,
+  Stack,
+  Slider,
+  Typography,
+  ToggleButton,
+  ToggleButtonGroup,
+} from '@mui/material';
 
 export interface LensSettings {
   focalLength: number;

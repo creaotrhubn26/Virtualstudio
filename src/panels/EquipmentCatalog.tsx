@@ -15,7 +15,6 @@ import {
   Typography,
   TextField,
   InputAdornment,
-  Grid,
   Card,
   CardContent,
   CardMedia,
@@ -46,6 +45,7 @@ import {
   ListItemIcon,
   ListItemText,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   Search,
   FilterList,
@@ -76,7 +76,6 @@ import { TouchSlider, TouchIconButton, TouchContextMenu } from '../components/Ta
 import { useAccessibility, useAnnounce, VisuallyHidden } from '../../providers/AccessibilityProvider';
 import { AccessibleButton, AccessibleDialog, AccessibleSlider } from '../components/AccessibleComponents';
 import { useVirtualStudio } from '../../../VirtualStudioContext';
-
 // ============================================================================
 // Equipment Categories and Items
 // ============================================================================
@@ -1207,7 +1206,7 @@ export function EquipmentCatalog({ onAddToScene, compact = false }: EquipmentCat
             </Typography>
             <Grid container spacing={viewMode === 'grid' ? 1.5 : 1}>
               {items.map((item) => (
-                <Grid item xs={viewMode === 'grid' ? 6 : 12} sm={viewMode === 'grid' ? (isTouch ? 6 : 4) : 12} key={item.id}>
+                <Grid xs={viewMode === 'grid' ? 6 : 12} sm={viewMode === 'grid' ? (isTouch ? 6 : 4) : 12} key={item.id}>
                   <Card
                     sx={{
                       bgcolor: '#1e1e1e',

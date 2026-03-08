@@ -4,10 +4,13 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { logger } from '../../core/services/logger';
-import settingsService, { getCurrentUserId } from '../../services/settingsService';
+import {
+  logger } from '../../core/services/logger';
+import Grid from '@mui/material/Grid';
+import settingsService,
+  { getCurrentUserId } from '../../services/settingsService';
 
-const log = logger.module('ProjectManager, ');
+const log = logger.module('');
 import {
   Box,
   Typography,
@@ -36,7 +39,6 @@ import {
   FormControl,
   InputLabel,
   Select,
-  Grid,
   Card,
   CardContent,
   CardActions,
@@ -75,7 +77,6 @@ import {
 import { useAppStore, type SceneNode } from '../state/store';
 import { virtualStudioApi, preferencesApi } from '../core/api/virtualStudioApi';
 import { useVirtualStudio } from '../VirtualStudioContext';
-
 // ============================================================================
 // Types
 // ============================================================================

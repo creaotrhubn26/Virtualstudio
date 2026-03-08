@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { logger } from '../core/services/logger';
+import {
+  logger } from '../core/services/logger';
+import Grid from '@mui/material/GridLegacy';
 import {
   Box,
   Paper,
   Typography,
   Tabs,
   Tab,
-  Grid,
   Slider,
   Button,
   Card,
@@ -57,7 +58,6 @@ import { getHairStyles } from '../core/data/hairStyles';
 import { GlassesSelector } from '../ui/components/GlassesSelector';
 import { GlassesOptions } from '../core/models/GlassesModel';
 import { ActorLibraryPanel } from '../ui/components/ActorLibraryPanel';
-
 const log = logger.module('VirtualActorPanel');
 
 interface VirtualActorPanelProps {

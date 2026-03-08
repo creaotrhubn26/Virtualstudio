@@ -6,7 +6,16 @@
  */
 
 import React, { useCallback } from 'react';
-import { Box, Typography, Slider, Select, MenuItem, FormControl, InputLabel, SelectChangeEvent } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Slider,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  SelectChangeEvent,
+} from '@mui/material';
 import { PROP_DEFINITIONS, PropDefinition } from '../core/data/propDefinitions';
 
 interface PropMeshPanelProps {

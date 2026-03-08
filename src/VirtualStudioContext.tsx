@@ -1,6 +1,11 @@
-import { createContext, useCallback, useContext } from 'react';
-import type { FC, ReactNode } from 'react';
-import type { AlertColor } from '@mui/material';
+import {
+  createContext,
+  useCallback,
+  useContext } from 'react';
+import type { FC,
+  ReactNode } from 'react';
+import type { AlertColor,
+} from '@mui/material';
 import { ToastProvider, useToast } from './components/ToastStack';
 
 export interface VirtualStudioToast {

@@ -6,7 +6,11 @@
  */
 
 import React, { useCallback, useEffect } from 'react';
-import { Box, Typography, Slider } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Slider,
+} from '@mui/material';
 import { useAppStore } from '../state/store';
 
 const SKIN_TONES = ['#FFDAB9', '#F0C19F', '#D4A574', '#8D5524', '#4A2C2A'];

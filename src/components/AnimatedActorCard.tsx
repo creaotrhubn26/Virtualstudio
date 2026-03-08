@@ -5,9 +5,23 @@
  * and mood-based movement characteristics.
  */
 
-import { useEffect, useRef, useMemo } from 'react';
-import type { CSSProperties, FC } from 'react';
-import { Box, Card, CardContent, CardActions, Typography, Chip, Divider, Button, IconButton, Tooltip } from '@mui/material';
+import {
+  useEffect,
+  useRef,
+  useMemo } from 'react';
+import type { CSSProperties,
+  FC } from 'react';
+import { Box,
+  Card,
+  CardContent,
+  CardActions,
+  Typography,
+  Chip,
+  Divider,
+  Button,
+  IconButton,
+  Tooltip,
+} from '@mui/material';
 import { Add, Delete } from '@mui/icons-material';
 import { CachedActor } from '../../core/services/actorModelCache';
 import { SKIN_TONES } from '../../core/data/actorPresets';

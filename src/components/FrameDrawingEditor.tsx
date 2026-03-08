@@ -5,7 +5,12 @@
  * Integrates with StoryboardStore for persistence
  */
 
-import { useState, useCallback, useMemo, useRef, type FC } from 'react';
+import {
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  type FC } from 'react';
 import {
   Box,
   Paper,

@@ -16,7 +16,6 @@ import {
   Box,
   Paper,
   Typography,
-  Grid,
   Card,
   CardContent,
   Stack,
@@ -46,6 +45,7 @@ import {
   ToggleButtonGroup,
   CardMedia,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   Groups,
   Person,
@@ -89,7 +89,6 @@ import {
   TEACHER_ROLE_LABELS,
 } from '../../core/services/classPhotoService';
 import { classPhotoSceneService, SCHOOL_HDRI_PRESETS, SchoolHDRIPreset } from '../../core/services/classPhotoSceneService';
-
 // =============================================================================
 // Guide Settings Type
 // =============================================================================
@@ -623,7 +622,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                         
                         {/* Role and Position */}
                         <Grid container spacing={1}>
-                          <Grid item xs={6}>
+                          <Grid xs={6}>
                             <FormControl fullWidth size="small">
                               <InputLabel>Role</InputLabel>
                               <Select
@@ -639,7 +638,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                               </Select>
                             </FormControl>
                           </Grid>
-                          <Grid item xs={6}>
+                          <Grid xs={6}>
                             <FormControl fullWidth size="small">
                               <InputLabel>Position</InputLabel>
                               <Select
@@ -1004,7 +1003,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
             </Typography>
             <Grid container spacing={0.5}>
               {classPhotoSceneService.getRecommendedHDRIs().map((hdri) => (
-                <Grid item xs={6} key={hdri.id}>
+                <Grid xs={6} key={hdri.id}>
                   <Tooltip title={hdri.description}>
                     <Button
                       size="small"
@@ -1054,7 +1053,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                   </Typography>
                   <Grid container spacing={1} sx={{ mt: 0.5 }}>
                     {SCHOOL_HDRI_PRESETS.filter(h => h.recommended).map((hdri) => (
-                      <Grid item xs={6} key={hdri.id}>
+                      <Grid xs={6} key={hdri.id}>
                         <Card
                           sx={{
                             cursor: 'pointer',
@@ -1089,7 +1088,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                   </Typography>
                   <Grid container spacing={1} sx={{ mt: 0.5 }}>
                     {SCHOOL_HDRI_PRESETS.filter(h => !h.recommended).map((hdri) => (
-                      <Grid item xs={6} key={hdri.id}>
+                      <Grid xs={6} key={hdri.id}>
                         <Card
                           sx={{
                             cursor: 'pointer',
@@ -1141,7 +1140,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                   Essential Guides
                 </Typography>
                 <Grid container spacing={1}>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <FormControlLabel
                       control={
                         <Switch
@@ -1153,7 +1152,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                       label={<Typography variant="caption">Head Lines</Typography>}
                     />
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <FormControlLabel
                       control={
                         <Switch
@@ -1165,7 +1164,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                       label={<Typography variant="caption">Camera FOV</Typography>}
                     />
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <FormControlLabel
                       control={
                         <Switch
@@ -1177,7 +1176,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                       label={<Typography variant="caption">Edge Zones</Typography>}
                     />
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <FormControlLabel
                       control={
                         <Switch
@@ -1189,7 +1188,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                       label={<Typography variant="caption">Spacing</Typography>}
                     />
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <FormControlLabel
                       control={
                         <Switch
@@ -1208,7 +1207,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                   Advanced Guides
                 </Typography>
                 <Grid container spacing={1}>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <FormControlLabel
                       control={
                         <Switch
@@ -1220,7 +1219,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                       label={<Typography variant="caption">Height Gaps</Typography>}
                     />
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <FormControlLabel
                       control={
                         <Switch
@@ -1232,7 +1231,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                       label={<Typography variant="caption">Eye Line</Typography>}
                     />
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <FormControlLabel
                       control={
                         <Switch
@@ -1244,7 +1243,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                       label={<Typography variant="caption">DOF Preview</Typography>}
                     />
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid xs={6}>
                     <FormControlLabel
                       control={
                         <Switch

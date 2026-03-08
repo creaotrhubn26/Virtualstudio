@@ -8,7 +8,12 @@
  * - Start a new project
  */
 
-import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  type ReactNode } from 'react';
+import Grid from '@mui/material/GridLegacy';
 import {
   Dialog,
   DialogTitle,
@@ -17,7 +22,6 @@ import {
   Box,
   Typography,
   Button,
-  Grid,
   Paper,
   Stack,
   Divider,
@@ -77,7 +81,6 @@ import {
 } from '@mui/icons-material';
 import { formatDistanceToNow, format } from 'date-fns';
 import { logger } from '../../core/services/logger';
-
 const log = logger.module('ContinueSession, ');
 
 // =============================================================================
@@ -363,7 +366,7 @@ export function ContinueSessionDialog({
             ) : (
               <Grid container spacing={3}>
                 {/* Session Overview Card */}
-                <Grid item xs={12}>
+                <Grid xs={12}>
                   <Paper 
                     elevation={0} 
                     sx={{ 
@@ -441,7 +444,7 @@ export function ContinueSessionDialog({
                 </Grid>
 
                 {/* Scene Stats */}
-                <Grid item xs={12} md={6}>
+                <Grid xs={12} md={6}>
                   <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                     Scene Overview
                   </Typography>
@@ -454,7 +457,7 @@ export function ContinueSessionDialog({
                       borderRadius: 2}}
                   >
                     <Grid container spacing={2}>
-                      <Grid item xs={6}>
+                      <Grid xs={6}>
                         <Stack direction="row" alignItems="center" spacing={1}>
                           <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
                             <Lightbulb fontSize="small" />
@@ -465,7 +468,7 @@ export function ContinueSessionDialog({
                           </Box>
                         </Stack>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid xs={6}>
                         <Stack direction="row" alignItems="center" spacing={1}>
                           <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
                             <CameraAlt fontSize="small" />
@@ -476,7 +479,7 @@ export function ContinueSessionDialog({
                           </Box>
                         </Stack>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid xs={6}>
                         <Stack direction="row" alignItems="center" spacing={1}>
                           <Avatar sx={{ width: 32, height: 32, bgcolor: 'info.main' }}>
                             <Person fontSize="small" />
@@ -487,7 +490,7 @@ export function ContinueSessionDialog({
                           </Box>
                         </Stack>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid xs={6}>
                         <Stack direction="row" alignItems="center" spacing={1}>
                           <Avatar sx={{ width: 32, height: 32, bgcolor: 'warning.main' }}>
                             <Extension fontSize="small" />
@@ -543,7 +546,7 @@ export function ContinueSessionDialog({
                 </Grid>
 
                 {/* Recent Activity */}
-                <Grid item xs={12} md={6}>
+                <Grid xs={12} md={6}>
                   <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                     Recent Activity
                   </Typography>
@@ -647,7 +650,7 @@ export function ContinueSessionDialog({
             ) : (
               <Grid container spacing={2}>
                 {sortedProjects.map((project) => (
-                  <Grid item xs={12} sm={6} md={4} key={project.id}>
+                  <Grid xs={12} sm={6} md={4} key={project.id}>
                     <Card 
                       sx={{ 
                         bgcolor: 'rgba(255,255,255,0.05)',

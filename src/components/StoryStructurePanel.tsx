@@ -12,7 +12,12 @@
  * - Script sharing
  */
 
-import { useState, useMemo, useCallback, type FC, type ReactNode } from 'react';
+import {
+  useState,
+  useMemo,
+  useCallback,
+  type FC,
+  type ReactNode } from 'react';
 import {
   Box,
   Paper,

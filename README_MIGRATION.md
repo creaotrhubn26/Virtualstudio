@@ -4,13 +4,7 @@
 
 ### Steg 1: Eksporter localStorage-data
 
-**Enklest metode - HTML-fil:**
-1. Åpne `export_localstorage_casting.html` i nettleseren
-2. Klikk "Eksporter localStorage Data"
-3. Klikk "Last ned som fil"
-4. Lagre som `casting_projects_backup.json`
-
-**Alternativ - Browser Console:**
+**Metode - Browser Console:**
 ```javascript
 copy(localStorage.getItem('virtualStudio_castingProjects'))
 ```
@@ -35,7 +29,6 @@ python3 psql_wrapper.py 'YOUR_CONNECTION_STRING' -c "SELECT COUNT(*) FROM castin
 ## Detaljert guide
 
 Se `MIGRATION_GUIDE.md` for full dokumentasjon.
-
 
 
 

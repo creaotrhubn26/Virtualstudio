@@ -23,7 +23,7 @@ import {
   IconButton,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
 } from '@mui/material';
 //
 import {
@@ -44,7 +44,8 @@ import {
   Speed as PerformanceIcon,
   Movie as CinematicIcon,
   Star as QualityIcon,
-  Balance as BalancedIcon
+  Balance as BalancedIcon,
+  Portrait as PortraitIcon
 } from '@mui/icons-material';
 import { useRenderingStore, RENDERING_PRESETS, RenderingPreset } from '../services/renderingService';
 import * as BABYLON from '@babylonjs/core';
@@ -101,12 +102,28 @@ export const RenderingPanel: React.FC<RenderingPanelProps> = ({ scene, camera })
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
+
+  const handleApplyPreset = (presetKey: string) => {
+    const studio = (window as {
+      virtualStudio?: {
+        applyRenderingPreset?: (name: string) => void;
+      };
+    }).virtualStudio;
+
+    if (studio?.applyRenderingPreset) {
+      studio.applyRenderingPreset(presetKey);
+      return;
+    }
+
+    applyPreset(presetKey);
+  };
   
   const presetIcons: Record<string, React.ReactNode> = {
     'performance': <PerformanceIcon />,
     'balanced': <BalancedIcon />,
     'quality': <QualityIcon />,
-    'cinematic': <CinematicIcon />
+    'cinematic': <CinematicIcon />,
+    'portrait-realistic': <PortraitIcon />
   };
   
   return (
@@ -166,7 +183,7 @@ export const RenderingPanel: React.FC<RenderingPanelProps> = ({ scene, camera })
                   key={key}
                   icon={presetIcons[key] as any}
                   label={preset.name}
-                  onClick={() => applyPreset(key)}
+                  onClick={() => handleApplyPreset(key)}
                   color={activePreset === key ? 'primary' : 'default'}
                   variant={activePreset === key ? 'filled' : 'outlined'}
                   size="small"

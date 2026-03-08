@@ -1,5 +1,26 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Box, Typography, Button, Card, CardContent, CardMedia, Stack, Chip, InputBase, Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton, Tabs, Tab, Slider, useMediaQuery, useTheme } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  CardMedia,
+  Stack,
+  Chip,
+  InputBase,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  IconButton,
+  Tabs,
+  Tab,
+  Slider,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
 import { Palette, Person, BusinessCenter, Favorite, Movie, Star, Lightbulb, CameraAlt, Search as SearchIcon, School, Add, Folder, Edit, Delete, Close, Save, Build, PhotoCamera, Wallpaper, Tune, Landscape, Videocam, FlashOn, ShowChart, CameraEnhance } from '@mui/icons-material';
 import { scenarioPresets, ScenarioPreset } from '../data/scenarioPresets';
 import { customPresetService, CustomPreset } from '../services/customPresetService';

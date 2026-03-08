@@ -16,54 +16,6 @@ import json
 from pathlib import Path
 from psycopg2.extras import RealDictCursor, Json as PgJson
 
-# Casting service imports
-try:
-    from casting_service import (
-        get_projects as db_get_projects,
-        get_project as db_get_project,
-        save_project as db_save_project,
-        delete_project as db_delete_project,
-        health_check as db_health_check,
-        # Manuscript functions
-        get_manuscripts as db_get_manuscripts,
-        get_manuscript as db_get_manuscript,
-        create_manuscript as db_create_manuscript,
-        update_manuscript as db_update_manuscript,
-        delete_manuscript as db_delete_manuscript,
-        get_scenes as db_get_scenes,
-        save_scene as db_save_scene,
-        get_dialogue as db_get_dialogue,
-        save_dialogue as db_save_dialogue,
-        delete_dialogue as db_delete_dialogue,
-        get_revisions as db_get_revisions,
-        create_revision as db_create_revision,
-        # Acts functions
-        get_acts as db_get_acts,
-        get_act as db_get_act,
-        create_act as db_create_act,
-        update_act as db_update_act,
-        delete_act as db_delete_act
-    )
-    CASTING_SERVICE_AVAILABLE = True
-except ImportError as e:
-    print(f"Warning: Casting service not available: {e}")
-    CASTING_SERVICE_AVAILABLE = False
-
-# Shot Planner service imports
-try:
-    from shot_planner_service import (
-        get_all_scenes,
-        get_scene_by_id,
-        save_scene as sp_save_scene,
-        delete_scene as sp_delete_scene,
-        get_scenes_by_manuscript,
-        link_to_manuscript_scene
-    )
-    SHOT_PLANNER_SERVICE_AVAILABLE = True
-except ImportError as e:
-    print(f"Warning: Shot planner service not available: {e}")
-    SHOT_PLANNER_SERVICE_AVAILABLE = False
-
 # Auth service imports
 try:
     from auth_service import (
@@ -115,26 +67,6 @@ try:
 except ImportError as e:
     print(f"Warning: Virtual Studio service not available: {e}")
     VIRTUAL_STUDIO_SERVICE_AVAILABLE = False
-
-# Virtual Studio service imports
-try:
-    from casting_favorites_service import (
-        init_casting_favorites_tables,
-        get_favorites, add_favorite, remove_favorite, set_favorites,
-        save_project as save_casting_project, get_projects as get_casting_projects,
-        get_project as get_casting_project, delete_project as delete_casting_project,
-        save_candidate, get_candidates, delete_candidate,
-        save_role, get_roles, delete_role,
-        save_crew_member, get_crew, delete_crew_member,
-        save_location, get_locations, delete_location,
-        save_prop, get_props, delete_prop,
-        save_schedule, get_schedules, delete_schedule,
-        get_db_connection
-    )
-    CASTING_SERVICE_AVAILABLE = True
-except ImportError as e:
-    print(f"Warning: Casting service not available: {e}")
-    CASTING_SERVICE_AVAILABLE = False
 
 # User KV service imports
 try:
@@ -238,34 +170,6 @@ if PUBLIC_DIR.exists():
     async def serve_manifest():
         return FileResponse(PUBLIC_DIR / "manifest.json", media_type="application/json")
 
-# For casting.html - redirect to Vite dev server in development
-# The casting.html requires Vite to compile TSX files
-from fastapi.responses import RedirectResponse
-
-# Vite dev server port (may be 5001 if 5000 is taken by backend)
-VITE_DEV_PORT = os.environ.get("VITE_PORT", "5001")
-
-@app.get("/casting.html")
-async def serve_casting_html(request: Request):
-    # In development, redirect to Vite dev server
-    # Get the host and replace backend port with Vite port
-    host = request.headers.get("host", "localhost:5000")
-    if ":5000" in host:
-        vite_host = host.replace(":5000", f":{VITE_DEV_PORT}")
-    elif "-5000." in host:
-        # GitHub Codespaces URL pattern
-        vite_host = host.replace("-5000.", f"-{VITE_DEV_PORT}.")
-    else:
-        vite_host = host
-    
-    # Use same protocol
-    protocol = "https" if request.url.scheme == "https" or "github.dev" in host else "http"
-    return RedirectResponse(url=f"{protocol}://{vite_host}/casting.html", status_code=302)
-
-@app.get("/export_localstorage_casting.html")
-async def serve_export_html():
-    return FileResponse(ROOT_DIR / "export_localstorage_casting.html", media_type="text/html")
-
 # Serve favicon if it exists
 FAVICON_PATHS = [
     PUBLIC_DIR / "favicon.ico",
@@ -353,14 +257,6 @@ async def startup_event():
         except Exception as e:
             print(f"Warning: Could not initialize Virtual Studio tables: {e}")
     
-    # Initialize Virtual Studio tables
-    if CASTING_SERVICE_AVAILABLE:
-        try:
-            init_casting_favorites_tables()
-            print("Virtual Studio tables initialized")
-        except Exception as e:
-            print(f"Warning: Could not initialize Casting tables: {e}")
-
     # Initialize user KV table
     if USER_KV_SERVICE_AVAILABLE:
         try:
@@ -388,23 +284,6 @@ async def startup_event():
 @app.get("/")
 async def root():
     return {"status": "ok", "message": "Virtual Studio Avatar API"}
-
-# Conditional import of casting_service functions for shot.cafe proxy
-if CASTING_SERVICE_AVAILABLE:
-    from casting_service import (
-        get_projects as db_get_projects,
-        get_project as db_get_project,
-        save_project as db_save_project,
-        delete_project as db_delete_project,
-        health_check as db_health_check
-    )
-else:
-    # Provide stub functions when casting_service is not available
-    async def db_get_projects(): return []
-    async def db_get_project(project_id): return None
-    async def db_save_project(project): return None
-    async def db_delete_project(project_id): return False
-    async def db_health_check(): return {"status": "unavailable"}
 
 # HTTP client for external API proxying
 import httpx
@@ -1373,446 +1252,54 @@ async def test_rodin_generate(request: dict):
 # Virtual Studio API Endpoints
 # ============================================================================
 
-@app.get("/api/casting/health")
-async def casting_health_check():
-    """Check if casting database is accessible"""
-    if not CASTING_SERVICE_AVAILABLE:
-        return JSONResponse({"status": "unavailable", "error": "Casting service not available"})
-    
-    try:
-        is_healthy = db_health_check()
-        return JSONResponse({
-            "status": "healthy" if is_healthy else "unhealthy",
-            "database": "connected" if is_healthy else "disconnected"
-        })
-    except Exception as e:
-        return JSONResponse({"status": "unhealthy", "error": str(e)})
 
 
-@app.get("/api/casting/projects")
-async def get_casting_projects():
-    """Get all casting projects"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        projects = db_get_projects()
-        return JSONResponse(projects)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/casting/projects/{project_id}")
-async def get_casting_project(project_id: str):
-    """Get a single casting project by ID"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        project = db_get_project(project_id)
-        if project:
-            return JSONResponse(project)
-        else:
-            raise HTTPException(status_code=404, detail="Project not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/casting/projects")
-async def create_or_update_casting_project(request: Request):
-    """Create or update a casting project"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        # Parse request body
-        try:
-            project = await request.json()
-        except Exception as e:
-            print(f"Error parsing JSON body: {e}")
-            raise HTTPException(status_code=400, detail=f"Invalid JSON in request body: {str(e)}")
-        
-        # Log incoming request for debugging
-        print(f"Received project data: {json.dumps(project, indent=2, default=str)}")
-        
-        # Validate required fields
-        if not isinstance(project, dict):
-            raise HTTPException(status_code=400, detail="Request body must be a JSON object")
-        
-        # Generate ID if not provided
-        if not project.get('id'):
-            import uuid
-            project['id'] = str(uuid.uuid4())
-        
-        # Log crew data specifically
-        if 'crew' in project:
-            print(f"Crew data in request: {len(project.get('crew', []))} members")
-            print(f"Crew members: {json.dumps(project.get('crew', []), indent=2, default=str)}")
-        
-        # Log the project data for debugging
-        print(f"Creating/updating casting project: {project.get('id')}, name: {project.get('name')}")
-        
-        success = db_save_project(project)
-        if success:
-            # Wait a moment for database commit to complete
-            import time
-            time.sleep(0.1)
-            
-            # Return the saved project - try multiple times if needed
-            saved_project = None
-            max_retries = 3
-            for attempt in range(max_retries):
-                saved_project = db_get_project(project['id'])
-                if saved_project:
-                    break
-                if attempt < max_retries - 1:
-                    time.sleep(0.2 * (attempt + 1))  # Exponential backoff
-            
-            if saved_project:
-                # Log project data in saved project
-                print(f"Project successfully saved and retrieved: id={saved_project.get('id')}, name={saved_project.get('name')}")
-                print(f"Project has clientName: {bool(saved_project.get('clientName'))}")
-                print(f"Project has clientEmail: {bool(saved_project.get('clientEmail'))}")
-                print(f"Project has clientPhone: {bool(saved_project.get('clientPhone'))}")
-                print(f"Project has location: {bool(saved_project.get('location'))}")
-                print(f"Project has eventDate: {bool(saved_project.get('eventDate'))}")
-                
-                # Log crew data in saved project
-                if 'crew' in saved_project:
-                    print(f"Crew data in saved project: {len(saved_project.get('crew', []))} members")
-                else:
-                    print(f"WARNING: No crew data in saved project!")
-                
-                # Convert Decimal to float for JSON serialization
-                from decimal import Decimal
-                def convert_decimals(obj):
-                    if isinstance(obj, dict):
-                        return {k: convert_decimals(v) for k, v in obj.items()}
-                    elif isinstance(obj, list):
-                        return [convert_decimals(i) for i in obj]
-                    elif isinstance(obj, Decimal):
-                        return float(obj)
-                    return obj
-                
-                return JSONResponse(convert_decimals(saved_project))
-            else:
-                error_msg = f"Project saved but could not be retrieved after {max_retries} attempts. Project ID: {project['id']}"
-                print(f"ERROR: {error_msg}")
-                raise HTTPException(status_code=500, detail=error_msg)
-        else:
-            error_msg = f"Failed to save project to database. Project ID: {project.get('id', 'unknown')}, Name: {project.get('name', 'unknown')}"
-            print(f"ERROR: {error_msg}")
-            raise HTTPException(status_code=500, detail=error_msg)
-    except HTTPException:
-        raise
-    except Exception as e:
-        import traceback
-        error_msg = f"Error creating/updating casting project: {str(e)}"
-        print(error_msg)
-        print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=error_msg)
 
 
-@app.delete("/api/casting/projects/{project_id}")
-async def delete_casting_project(project_id: str):
-    """Delete a casting project"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        success = db_delete_project(project_id)
-        if success:
-            return JSONResponse({"success": True, "message": "Project deleted"})
-        else:
-            raise HTTPException(status_code=404, detail="Project not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================
 # Manuscript API Endpoints
 # ============================================================================
 
-@app.get("/api/casting/manuscripts")
-async def get_manuscripts(projectId: str):
-    """Get all manuscripts for a project"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        manuscripts = db_get_manuscripts(projectId)
-        return JSONResponse(manuscripts)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/casting/manuscripts/{manuscript_id}")
-async def get_manuscript(manuscript_id: str):
-    """Get a single manuscript by ID"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        manuscript = db_get_manuscript(manuscript_id)
-        if manuscript:
-            return JSONResponse(manuscript)
-        else:
-            raise HTTPException(status_code=404, detail="Manuscript not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/casting/manuscripts")
-async def create_manuscript(request: Request):
-    """Create a new manuscript"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        manuscript = await request.json()
-        success = db_create_manuscript(manuscript)
-        if success:
-            return JSONResponse(manuscript)
-        else:
-            raise HTTPException(status_code=500, detail="Failed to create manuscript")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.put("/api/casting/manuscripts/{manuscript_id}")
-async def update_manuscript(manuscript_id: str, request: Request):
-    """Update a manuscript"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        manuscript = await request.json()
-        success = db_update_manuscript(manuscript_id, manuscript)
-        if success:
-            return JSONResponse(manuscript)
-        else:
-            raise HTTPException(status_code=404, detail="Manuscript not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.delete("/api/casting/manuscripts/{manuscript_id}")
-async def delete_manuscript(manuscript_id: str):
-    """Delete a manuscript"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        success = db_delete_manuscript(manuscript_id)
-        if success:
-            return JSONResponse({"success": True, "message": "Manuscript deleted"})
-        else:
-            raise HTTPException(status_code=404, detail="Manuscript not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/casting/manuscripts/{manuscript_id}/scenes")
-async def get_manuscript_scenes(manuscript_id: str):
-    """Get all scenes for a manuscript"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        scenes = db_get_scenes(manuscript_id)
-        return JSONResponse(scenes)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/casting/scenes")
-async def save_scene(request: Request):
-    """Create or update a scene"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        scene = await request.json()
-        success = db_save_scene(scene)
-        if success:
-            return JSONResponse(scene)
-        else:
-            raise HTTPException(status_code=500, detail="Failed to save scene")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/casting/manuscripts/{manuscript_id}/dialogue")
-async def get_manuscript_dialogue(manuscript_id: str):
-    """Get all dialogue for a manuscript"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        dialogue = db_get_dialogue(manuscript_id)
-        return JSONResponse(dialogue)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/casting/dialogue")
-async def save_dialogue(request: Request):
-    """Create or update a dialogue line"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        dialogue = await request.json()
-        success = db_save_dialogue(dialogue)
-        if success:
-            return JSONResponse(dialogue)
-        else:
-            raise HTTPException(status_code=500, detail="Failed to save dialogue")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.delete("/api/casting/dialogue/{dialogue_id}")
-async def delete_dialogue(dialogue_id: str):
-    """Delete a dialogue line"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        success = db_delete_dialogue(dialogue_id)
-        if success:
-            return JSONResponse({"success": True})
-        else:
-            raise HTTPException(status_code=404, detail="Dialogue not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/casting/manuscripts/{manuscript_id}/revisions")
-async def get_manuscript_revisions(manuscript_id: str):
-    """Get all revisions for a manuscript"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        revisions = db_get_revisions(manuscript_id)
-        return JSONResponse(revisions)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/casting/revisions")
-async def create_revision(request: Request):
-    """Create a new script revision"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        revision = await request.json()
-        success = db_create_revision(revision)
-        if success:
-            return JSONResponse(revision)
-        raise HTTPException(status_code=500, detail="Failed to create revision")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ==================== Acts Endpoints ====================
 
-@app.get("/api/casting/manuscripts/{manuscript_id}/acts")
-async def get_manuscript_acts(manuscript_id: str):
-    """Get all acts for a manuscript"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        acts = db_get_acts(manuscript_id)
-        return JSONResponse(acts)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/casting/acts/{act_id}")
-async def get_act_by_id(act_id: str):
-    """Get a single act by ID"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        act = db_get_act(act_id)
-        if act:
-            return JSONResponse(act)
-        raise HTTPException(status_code=404, detail="Act not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/casting/acts")
-async def create_new_act(request: Request):
-    """Create a new act"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        act = await request.json()
-        success = db_create_act(act)
-        if success:
-            return JSONResponse(act)
-        raise HTTPException(status_code=500, detail="Failed to create act")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.put("/api/casting/acts/{act_id}")
-async def update_existing_act(act_id: str, request: Request):
-    """Update an existing act"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        act = await request.json()
-        success = db_update_act(act_id, act)
-        if success:
-            return JSONResponse(act)
-        raise HTTPException(status_code=404, detail="Act not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.delete("/api/casting/acts/{act_id}")
-async def delete_existing_act(act_id: str):
-    """Delete an act"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    
-    try:
-        success = db_delete_act(act_id)
-        if success:
-            return JSONResponse({"success": True})
-        else:
-            raise HTTPException(status_code=404, detail="Act not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================
@@ -2410,346 +1897,9 @@ async def api_delete_export_template(template_id: str):
 # Shot List API Endpoints
 # ============================================================================
 
-@app.get("/api/casting/projects/{project_id}/shot-lists")
-async def api_get_shot_lists(project_id: str):
-    """Get all shot lists for a project."""
-    try:
-        from casting_service import get_db_connection
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-    except ImportError:
-        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
-    
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                "SELECT * FROM casting_shot_lists WHERE project_id = %s ORDER BY created_at",
-                (project_id,)
-            )
-            rows = cur.fetchall()
-            shot_lists = []
-            for row in rows:
-                shot_lists.append({
-                    "id": row["id"],
-                    "projectId": row["project_id"],
-                    "sceneId": row["scene_id"],
-                    "shots": row["shots"] if row["shots"] else [],
-                    "cameraSettings": row["camera_settings"] if row["camera_settings"] else {},
-                    "equipment": row["equipment"] if row["equipment"] else [],
-                    "notes": row["notes"],
-                    "createdAt": row["created_at"].isoformat() if row["created_at"] else None,
-                    "updatedAt": row["updated_at"].isoformat() if row["updated_at"] else None,
-                })
-            return JSONResponse({"success": True, "shotLists": shot_lists})
-    except psycopg2.Error as e:
-        print(f"Error getting shot lists: {e}")
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
-@app.post("/api/casting/projects/{project_id}/shot-lists")
-async def api_save_shot_list(project_id: str, request: Request):
-    """Save or update a shot list."""
-    try:
-        from casting_service import get_db_connection
-        import psycopg2
-        from datetime import datetime
-    except ImportError:
-        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
-    
-    conn = None
-    try:
-        data = await request.json()
-        shot_list_id = data.get("id", f"shot-list-{int(datetime.now().timestamp() * 1000)}")
-        scene_id = data.get("sceneId", "")
-        shots = data.get("shots", [])
-        camera_settings = data.get("cameraSettings", {})
-        equipment = data.get("equipment", [])
-        notes = data.get("notes", "")
-        
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO casting_shot_lists (id, project_id, scene_id, shots, camera_settings, equipment, notes)
-                VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s)
-                ON CONFLICT (id) DO UPDATE SET
-                    scene_id = EXCLUDED.scene_id,
-                    shots = EXCLUDED.shots,
-                    camera_settings = EXCLUDED.camera_settings,
-                    equipment = EXCLUDED.equipment,
-                    notes = EXCLUDED.notes,
-                    updated_at = CURRENT_TIMESTAMP
-            """, (shot_list_id, project_id, scene_id, 
-                  json.dumps(shots), json.dumps(camera_settings), json.dumps(equipment), notes))
-            conn.commit()
-            return JSONResponse({"success": True, "id": shot_list_id})
-    except psycopg2.Error as e:
-        print(f"Error saving shot list: {e}")
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
-@app.delete("/api/casting/projects/{project_id}/shot-lists/{shot_list_id}")
-async def api_delete_shot_list(project_id: str, shot_list_id: str):
-    """Delete a shot list."""
-    try:
-        from casting_service import get_db_connection
-        import psycopg2
-    except ImportError:
-        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
-    
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute(
-                "DELETE FROM casting_shot_lists WHERE id = %s AND project_id = %s",
-                (shot_list_id, project_id)
-            )
-            conn.commit()
-            return JSONResponse({"success": True})
-    except psycopg2.Error as e:
-        print(f"Error deleting shot list: {e}")
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
-@app.post("/api/casting/projects/{project_id}/shot-lists/seed-troll")
-async def api_seed_troll_shot_lists(project_id: str):
-    """Seed Troll mock data with storyboard images into the database."""
-    try:
-        from casting_service import get_db_connection
-        import psycopg2
-        from datetime import datetime
-    except ImportError:
-        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
-    
-    conn = None
-    try:
-        now = datetime.now().isoformat()
-        
-        # Troll storyboard data with Unsplash images
-        troll_shot_lists = [
-            {
-                "id": "shot-list-troll-1",
-                "sceneId": "scene-1",
-                "shots": [
-                    {
-                        "id": "shot-1-1",
-                        "sceneId": "scene-1",
-                        "description": "Establishing shot - Tunnel inngang med arbeidere (1A)",
-                        "shotType": "Wide",
-                        "cameraAngle": "Eye Level",
-                        "cameraMovement": "Static",
-                        "focalLength": 24,
-                        "duration": 5,
-                        "notes": "Drone-shot alternativ",
-                        "imageUrl": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
-                        "createdAt": now,
-                        "updatedAt": now
-                    },
-                    {
-                        "id": "shot-1-2",
-                        "sceneId": "scene-1",
-                        "description": "Medium shot - Formann gir ordre (1B)",
-                        "shotType": "Medium",
-                        "cameraAngle": "Eye Level",
-                        "cameraMovement": "Static",
-                        "focalLength": 50,
-                        "duration": 8,
-                        "notes": "Fokus på dialog",
-                        "imageUrl": "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=800&q=80",
-                        "createdAt": now,
-                        "updatedAt": now
-                    },
-                    {
-                        "id": "shot-1-3",
-                        "sceneId": "scene-1",
-                        "description": "Close-up - Dynamitt plasseres (1C)",
-                        "shotType": "Close-up",
-                        "cameraAngle": "Low Angle",
-                        "cameraMovement": "Static",
-                        "focalLength": 85,
-                        "duration": 3,
-                        "notes": "Insert shot",
-                        "imageUrl": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80",
-                        "createdAt": now,
-                        "updatedAt": now
-                    },
-                    {
-                        "id": "shot-1-4",
-                        "sceneId": "scene-1",
-                        "description": "Wide - Eksplosjon og tunnelåpning (1D)",
-                        "shotType": "Wide",
-                        "cameraAngle": "Eye Level",
-                        "cameraMovement": "Static",
-                        "focalLength": 24,
-                        "duration": 6,
-                        "notes": "Pyroteknikk. Flere kameraer.",
-                        "imageUrl": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80",
-                        "createdAt": now,
-                        "updatedAt": now
-                    }
-                ],
-                "equipment": ["ARRI Alexa Mini LF", "Zeiss Master Primes", "Steadicam", "Dolly"]
-            },
-            {
-                "id": "shot-list-troll-2",
-                "sceneId": "scene-2",
-                "shots": [
-                    {
-                        "id": "shot-2-1",
-                        "sceneId": "scene-2",
-                        "description": "POV - Arbeiderne går inn i hulen (2A)",
-                        "shotType": "Medium",
-                        "cameraAngle": "Eye Level",
-                        "cameraMovement": "Dolly",
-                        "focalLength": 35,
-                        "duration": 15,
-                        "notes": "Steadicam. Lommelykt som eneste lys. POV-stil.",
-                        "imageUrl": "https://images.unsplash.com/photo-1519074069444-1ba4fff66d16?w=800&q=80",
-                        "createdAt": now,
-                        "updatedAt": now
-                    },
-                    {
-                        "id": "shot-2-2",
-                        "sceneId": "scene-2",
-                        "description": "Wide - Enorm hule avsløres (2B)",
-                        "shotType": "Wide",
-                        "cameraAngle": "Low Angle",
-                        "cameraMovement": "Tilt",
-                        "focalLength": 16,
-                        "duration": 8,
-                        "notes": "Reveal-shot. VFX for størrelse.",
-                        "imageUrl": "https://images.unsplash.com/photo-1504699439244-edca3c77a02a?w=800&q=80",
-                        "createdAt": now,
-                        "updatedAt": now
-                    },
-                    {
-                        "id": "shot-2-3",
-                        "sceneId": "scene-2",
-                        "description": "ECU - Arbeiders ansikt, frykt (2C)",
-                        "shotType": "Extreme Close-up",
-                        "cameraAngle": "Eye Level",
-                        "cameraMovement": "Static",
-                        "focalLength": 100,
-                        "duration": 3,
-                        "notes": "Reaksjonsshot",
-                        "imageUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80",
-                        "createdAt": now,
-                        "updatedAt": now
-                    },
-                    {
-                        "id": "shot-2-4",
-                        "sceneId": "scene-2",
-                        "description": "Wide - Noe beveger seg i mørket (2D)",
-                        "shotType": "Wide",
-                        "cameraAngle": "Eye Level",
-                        "cameraMovement": "Dolly",
-                        "focalLength": 35,
-                        "duration": 5,
-                        "notes": "VFX: Trollets silhuett",
-                        "imageUrl": "https://images.unsplash.com/photo-1518156677180-95a2893f3e9f?w=800&q=80",
-                        "createdAt": now,
-                        "updatedAt": now
-                    }
-                ],
-                "equipment": ["RED Komodo", "Sigma Cine Lenses", "Gimbal", "LED panels"]
-            },
-            {
-                "id": "shot-list-troll-10",
-                "sceneId": "scene-10",
-                "shots": [
-                    {
-                        "id": "shot-10-1",
-                        "sceneId": "scene-10",
-                        "description": "Epic wide - Trollet på Karl Johan (10A)",
-                        "shotType": "Wide",
-                        "cameraAngle": "Low Angle",
-                        "cameraMovement": "Crane",
-                        "focalLength": 18,
-                        "duration": 10,
-                        "notes": "VFX: Full CG troll. Drone/crane combo.",
-                        "imageUrl": "https://images.unsplash.com/photo-1559564484-e48b3e040ff4?w=800&q=80",
-                        "createdAt": now,
-                        "updatedAt": now
-                    },
-                    {
-                        "id": "shot-10-2",
-                        "sceneId": "scene-10",
-                        "description": "Medium - Nora konfronterer trollet (10B)",
-                        "shotType": "Medium",
-                        "cameraAngle": "Eye Level",
-                        "cameraMovement": "Dolly",
-                        "focalLength": 50,
-                        "duration": 12,
-                        "notes": "Emosjonelt klimaks. Over-shoulder stil.",
-                        "imageUrl": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=800&q=80",
-                        "createdAt": now,
-                        "updatedAt": now
-                    },
-                    {
-                        "id": "shot-10-3",
-                        "sceneId": "scene-10",
-                        "description": "CU - Nora og Tobias (10C)",
-                        "shotType": "Close-up",
-                        "cameraAngle": "Eye Level",
-                        "cameraMovement": "Static",
-                        "focalLength": 85,
-                        "duration": 20,
-                        "notes": "Far-datter øyeblikk",
-                        "imageUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800&q=80",
-                        "createdAt": now,
-                        "updatedAt": now
-                    },
-                    {
-                        "id": "shot-10-4",
-                        "sceneId": "scene-10",
-                        "description": "Epic wide - Solen stiger, trollet forsteines (10D)",
-                        "shotType": "Wide",
-                        "cameraAngle": "High Angle",
-                        "cameraMovement": "Crane",
-                        "focalLength": 24,
-                        "duration": 15,
-                        "notes": "VFX: Trollet blir til stein. Sollys-effekt.",
-                        "imageUrl": "https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=800&q=80",
-                        "createdAt": now,
-                        "updatedAt": now
-                    }
-                ],
-                "equipment": ["ARRI Alexa LF", "Signature Primes", "Crane", "Drone"]
-            }
-        ]
-        
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            for sl in troll_shot_lists:
-                cur.execute("""
-                    INSERT INTO casting_shot_lists (id, project_id, scene_id, shots, equipment)
-                    VALUES (%s, %s, %s, %s::jsonb, %s::jsonb)
-                    ON CONFLICT (id) DO UPDATE SET
-                        shots = EXCLUDED.shots,
-                        equipment = EXCLUDED.equipment,
-                        updated_at = CURRENT_TIMESTAMP
-                """, (sl["id"], project_id, sl["sceneId"], 
-                      json.dumps(sl["shots"]), json.dumps(sl["equipment"])))
-            conn.commit()
-                
-        return JSONResponse({
-            "success": True, 
-            "message": f"Seeded {len(troll_shot_lists)} shot lists with storyboard images for Troll project"
-        })
-    except psycopg2.Error as e:
-        print(f"Error seeding Troll shot lists: {e}")
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
 
 # =============================================================================
@@ -2760,7 +1910,7 @@ async def api_seed_troll_shot_lists(project_id: str):
 async def get_shot_planner_scenes():
     """Get all shot planner 2D scenes from database."""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -2798,7 +1948,7 @@ async def get_shot_planner_scenes():
 async def get_shot_planner_scene(scene_id: str):
     """Get a specific shot planner 2D scene."""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -2833,7 +1983,7 @@ async def get_shot_planner_scene(scene_id: str):
 async def save_shot_planner_scene(request: Request):
     """Save or update a shot planner 2D scene."""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import Json as PgJson
         from datetime import datetime
@@ -2917,7 +2067,7 @@ async def save_shot_planner_scene(request: Request):
 async def delete_shot_planner_scene(scene_id: str):
     """Delete a shot planner 2D scene."""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
     except ImportError:
         return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
@@ -2939,3699 +2089,173 @@ async def delete_shot_planner_scene(scene_id: str):
             conn.close()
 
 
-@app.post("/api/casting/projects/{project_id}/seed-troll-manuscript")
-async def api_seed_troll_manuscript(project_id: str):
-    """Seed Troll manuscript with all scenes and acts into the database."""
-    try:
-        from casting_service import get_db_connection, save_scene
-        import psycopg2
-        from psycopg2.extras import Json
-        from datetime import datetime
-    except ImportError:
-        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
-    
-    conn = None
-    try:
-        now = datetime.now().isoformat()
-        manuscript_id = f"troll-demo-{project_id}"
-        
-        # Troll scenes - matching castingService mock data scene IDs
-        troll_scenes = [
-            {
-                "id": "scene-1",
-                "manuscriptId": manuscript_id,
-                "projectId": project_id,
-                "sceneNumber": "1",
-                "sceneHeading": "EXT. DOVRE FJELL - TUNNEL - NIGHT",
-                "intExt": "EXT",
-                "locationName": "DOVRE FJELL - TUNNEL",
-                "timeOfDay": "NIGHT",
-                "description": "Sprengningsarbeid i fjellet. Arbeidere borer seg inn i en ukjent hule.",
-                "pageLength": 3,
-                "estimatedDuration": 180,
-                "characters": ["ARBEIDER 1", "ARBEIDER 2", "FORMANN"],
-                "propsNeeded": ["Boremaskin", "Hjelmer", "Lommelykter", "Dynamitt"],
-                "status": "completed"
-            },
-            {
-                "id": "scene-2",
-                "manuscriptId": manuscript_id,
-                "projectId": project_id,
-                "sceneNumber": "2",
-                "sceneHeading": "INT. HULEN - INNE I FJELLET - NIGHT",
-                "intExt": "INT",
-                "locationName": "HULEN - INNE I FJELLET",
-                "timeOfDay": "NIGHT",
-                "description": "Arbeiderne oppdager en enorm hule med merkelige bergformasjoner. Noe beveger seg i mørket.",
-                "pageLength": 2.5,
-                "estimatedDuration": 120,
-                "characters": ["ARBEIDER 1", "ARBEIDER 2"],
-                "propsNeeded": ["Lommelykter", "Radioutstyr"],
-                "status": "completed"
-            },
-            {
-                "id": "scene-3",
-                "manuscriptId": manuscript_id,
-                "projectId": project_id,
-                "sceneNumber": "3",
-                "sceneHeading": "INT. NORAS LEILIGHET - OSLO - DAY",
-                "intExt": "INT",
-                "locationName": "NORAS LEILIGHET - OSLO",
-                "timeOfDay": "DAY",
-                "description": "Paleontolog Nora Tidemann våkner til nyheter om jordskjelv i Dovre.",
-                "pageLength": 2,
-                "estimatedDuration": 120,
-                "characters": ["NORA TIDEMANN"],
-                "propsNeeded": ["TV", "Kaffe", "Fossiler", "Bøker"],
-                "status": "scheduled"
-            },
-            {
-                "id": "scene-4",
-                "manuscriptId": manuscript_id,
-                "projectId": project_id,
-                "sceneNumber": "4",
-                "sceneHeading": "INT. UNIVERSITETET - KONTOR - DAY",
-                "intExt": "INT",
-                "locationName": "UNIVERSITETET - KONTOR",
-                "timeOfDay": "DAY",
-                "description": "Nora blir kontaktet av myndighetene. De viser henne bilder fra tunnelen.",
-                "pageLength": 4,
-                "estimatedDuration": 240,
-                "characters": ["NORA TIDEMANN", "ANDREAS ISAKSEN", "GENERAL LUND"],
-                "propsNeeded": ["Laptop", "Bilder", "Dokumenter"],
-                "status": "scheduled"
-            },
-            {
-                "id": "scene-5",
-                "manuscriptId": manuscript_id,
-                "projectId": project_id,
-                "sceneNumber": "5",
-                "sceneHeading": "EXT. DOVRE - RUINENE - DAY",
-                "intExt": "EXT",
-                "locationName": "DOVRE - RUINENE",
-                "timeOfDay": "DAY",
-                "description": "Nora ankommer åstedet. Hun ser ødeleggelsene og forstår at dette ikke er naturlig.",
-                "pageLength": 3,
-                "estimatedDuration": 180,
-                "characters": ["NORA TIDEMANN", "ANDREAS ISAKSEN", "SOLDATER"],
-                "propsNeeded": ["Helikopter", "Militærutstyr", "Kamera"],
-                "status": "not-scheduled"
-            },
-            {
-                "id": "scene-6",
-                "manuscriptId": manuscript_id,
-                "projectId": project_id,
-                "sceneNumber": "6",
-                "sceneHeading": "EXT. SKOG - ØSTERDALEN - NIGHT",
-                "intExt": "EXT",
-                "locationName": "SKOG - ØSTERDALEN",
-                "timeOfDay": "NIGHT",
-                "description": "Trollet beveger seg gjennom skogen. Lokale ser det i måneskinn.",
-                "pageLength": 3,
-                "estimatedDuration": 180,
-                "characters": ["TROLLET", "BONDE", "BONDENS KONE"],
-                "propsNeeded": ["Traktor", "Fjøslykt"],
-                "status": "not-scheduled"
-            },
-            {
-                "id": "scene-7",
-                "manuscriptId": manuscript_id,
-                "projectId": project_id,
-                "sceneNumber": "7",
-                "sceneHeading": "INT. KOMMANDOSENTRALEN - OSLO - DAY",
-                "intExt": "INT",
-                "locationName": "KOMMANDOSENTRALEN - OSLO",
-                "timeOfDay": "DAY",
-                "description": "Militæret planlegger angrep. Nora advarer mot bruk av vold.",
-                "pageLength": 5,
-                "estimatedDuration": 300,
-                "characters": ["NORA TIDEMANN", "GENERAL LUND", "STATSMINISTER", "RÅDGIVERE"],
-                "propsNeeded": ["Storskjermer", "Kart", "Radiosystemer"],
-                "status": "scheduled"
-            },
-            {
-                "id": "scene-8",
-                "manuscriptId": manuscript_id,
-                "projectId": project_id,
-                "sceneNumber": "8",
-                "sceneHeading": "EXT. MOTORVEI E6 - NIGHT",
-                "intExt": "EXT",
-                "locationName": "MOTORVEI E6",
-                "timeOfDay": "NIGHT",
-                "description": "Trollet krysser E6. Biler krasjer. Kaos utfolder seg.",
-                "pageLength": 5,
-                "estimatedDuration": 300,
-                "characters": ["TROLLET", "BILISTER", "POLITIMANN"],
-                "propsNeeded": ["Biler", "Politibil", "Veisperring"],
-                "specialEffects": "VFX: Trollet, bilkrasj",
-                "status": "not-scheduled"
-            },
-            {
-                "id": "scene-9",
-                "manuscriptId": manuscript_id,
-                "projectId": project_id,
-                "sceneNumber": "9",
-                "sceneHeading": "INT. TOBIAS HJEM - NIGHT",
-                "intExt": "INT",
-                "locationName": "TOBIAS HJEM",
-                "timeOfDay": "NIGHT",
-                "description": "Nora besøker sin far Tobias. Han forteller om gamle eventyr og trollmyter.",
-                "pageLength": 4,
-                "estimatedDuration": 240,
-                "characters": ["NORA TIDEMANN", "TOBIAS"],
-                "propsNeeded": ["Gamle bøker", "Fotografier", "Kaffe"],
-                "status": "scheduled"
-            },
-            {
-                "id": "scene-10",
-                "manuscriptId": manuscript_id,
-                "projectId": project_id,
-                "sceneNumber": "10",
-                "sceneHeading": "EXT. OSLO - KARL JOHAN - DAY",
-                "intExt": "EXT",
-                "locationName": "OSLO - KARL JOHAN",
-                "timeOfDay": "DAY",
-                "description": "Klimaks. Trollet når hovedstaden. Nora konfronterer trollet ved soloppgang.",
-                "pageLength": 8,
-                "estimatedDuration": 480,
-                "characters": ["NORA TIDEMANN", "TROLLET", "ANDREAS ISAKSEN", "SOLDATER", "PUBLIKUM"],
-                "propsNeeded": ["Militærkjøretøy", "Våpen", "Barrikader"],
-                "specialEffects": "VFX: Full CG troll, ødeleggelse, sollys-effekt",
-                "status": "not-scheduled"
-            }
-        ]
-        
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            # First delete existing scenes for this manuscript
-            cur.execute("DELETE FROM casting_scenes WHERE manuscript_id = %s", (manuscript_id,))
-            
-            # Insert all Troll scenes
-            for scene in troll_scenes:
-                cur.execute("""
-                    INSERT INTO casting_scenes (
-                        id, manuscript_id, project_id, scene_number, scene_heading,
-                        int_ext, location_name, time_of_day, page_length,
-                        estimated_screen_time, description, characters, props_needed,
-                        special_effects, status, created_at, updated_at
-                    ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-                    )
-                """, (
-                    scene["id"],
-                    scene["manuscriptId"],
-                    scene["projectId"],
-                    scene["sceneNumber"],
-                    scene["sceneHeading"],
-                    scene["intExt"],
-                    scene["locationName"],
-                    scene["timeOfDay"],
-                    scene.get("pageLength"),
-                    scene.get("estimatedDuration"),
-                    scene.get("description"),
-                    Json(scene.get("characters", [])),
-                    Json(scene.get("propsNeeded", [])),
-                    scene.get("specialEffects"),
-                    scene.get("status", "not-scheduled"),
-                    now,
-                    now
-                ))
-            
-            conn.commit()
-        
-        # Now seed acts
-        troll_acts = [
-            {
-                "id": f"{manuscript_id}-act-1",
-                "manuscriptId": manuscript_id,
-                "projectId": project_id,
-                "actNumber": 1,
-                "title": "OPPVÅKNINGEN",
-                "description": "Trollet våkner i Dovre etter tusen år. Nora oppdager sannheten.",
-                "pageStart": 1,
-                "pageEnd": 32,
-                "estimatedRuntime": 30,
-                "sortOrder": 1
-            },
-            {
-                "id": f"{manuscript_id}-act-2",
-                "manuscriptId": manuscript_id,
-                "projectId": project_id,
-                "actNumber": 2,
-                "title": "JAKTEN",
-                "description": "Militæret jakter trollet. Nora prøver å forstå hvordan de kan stoppe det.",
-                "pageStart": 33,
-                "pageEnd": 68,
-                "estimatedRuntime": 35,
-                "sortOrder": 2
-            },
-            {
-                "id": f"{manuscript_id}-act-3",
-                "manuscriptId": manuscript_id,
-                "projectId": project_id,
-                "actNumber": 3,
-                "title": "KONFRONTASJONEN",
-                "description": "Det endelige oppgjøret i Oslo. Nora må velge mellom å drepe eller redde trollet.",
-                "pageStart": 69,
-                "pageEnd": 98,
-                "estimatedRuntime": 30,
-                "sortOrder": 3
-            }
-        ]
-        
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            # Delete existing acts
-            cur.execute("DELETE FROM casting_acts WHERE manuscript_id = %s", (manuscript_id,))
-            
-            # Insert acts
-            for act in troll_acts:
-                cur.execute("""
-                    INSERT INTO casting_acts (
-                        id, manuscript_id, project_id, act_number, title,
-                        description, page_start, page_end, estimated_runtime,
-                        sort_order, created_at, updated_at
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (
-                    act["id"],
-                    act["manuscriptId"],
-                    act["projectId"],
-                    act["actNumber"],
-                    act["title"],
-                    act["description"],
-                    act["pageStart"],
-                    act["pageEnd"],
-                    act["estimatedRuntime"],
-                    act["sortOrder"],
-                    now,
-                    now
-                ))
-            
-            conn.commit()
-        conn.close()
-        
-        # Seed dialogue
-        troll_dialogue = [
-            # Scene 1 - Tunnel
-            {"id": "dial-1-1", "sceneId": "scene-1", "characterName": "FORMANN", "dialogueText": "Klart for sprengning! Alle tilbake!", "lineNumber": 1, "emotionTag": "authoritative"},
-            {"id": "dial-1-2", "sceneId": "scene-1", "characterName": "ARBEIDER 1", "dialogueText": "Hva var det?! Hørte du det?", "lineNumber": 2, "emotionTag": "frightened"},
-            {"id": "dial-1-3", "sceneId": "scene-1", "characterName": "ARBEIDER 2", "dialogueText": "Det er bare ekkoet fra eksplosjonen.", "lineNumber": 3, "emotionTag": "dismissive"},
-            
-            # Scene 2 - Cave
-            {"id": "dial-2-1", "sceneId": "scene-2", "characterName": "ARBEIDER 1", "dialogueText": "Se på størrelsen på denne hulen... Det er umulig.", "lineNumber": 1, "emotionTag": "awe"},
-            {"id": "dial-2-2", "sceneId": "scene-2", "characterName": "ARBEIDER 2", "dialogueText": "Vi må varsle sjefen. Dette er ikke naturlig.", "lineNumber": 2, "emotionTag": "nervous"},
-            
-            # Scene 3 - Nora's apartment
-            {"id": "dial-3-1", "sceneId": "scene-3", "characterName": "NORA TIDEMANN", "dialogueText": "Jordskjelv i Dovre? Det gir ingen mening geologisk sett.", "lineNumber": 1, "emotionTag": "curious"},
-            
-            # Scene 4 - University
-            {"id": "dial-4-1", "sceneId": "scene-4", "characterName": "ANDREAS ISAKSEN", "dialogueText": "Dr. Tidemann, vi trenger din ekspertise. Umiddelbart.", "lineNumber": 1, "emotionTag": "urgent"},
-            {"id": "dial-4-2", "sceneId": "scene-4", "characterName": "NORA TIDEMANN", "dialogueText": "Hva handler dette om?", "lineNumber": 2, "emotionTag": "confused"},
-            {"id": "dial-4-3", "sceneId": "scene-4", "characterName": "GENERAL LUND", "dialogueText": "Noe vi ikke kan forklare. Men du kan kanskje hjelpe oss.", "lineNumber": 3, "emotionTag": "stern"},
-            
-            # Scene 7 - Command center
-            {"id": "dial-7-1", "sceneId": "scene-7", "characterName": "GENERAL LUND", "dialogueText": "Vi går inn med full styrke. Ingen overlevende.", "lineNumber": 1, "emotionTag": "determined"},
-            {"id": "dial-7-2", "sceneId": "scene-7", "characterName": "NORA TIDEMANN", "dialogueText": "Dere kan ikke drepe det! Det er det siste av sitt slag!", "lineNumber": 2, "emotionTag": "desperate"},
-            {"id": "dial-7-3", "sceneId": "scene-7", "characterName": "STATSMINISTER", "dialogueText": "Det er på vei mot Oslo. Millioner av mennesker.", "lineNumber": 3, "emotionTag": "grave"},
-            
-            # Scene 9 - Tobias home
-            {"id": "dial-9-1", "sceneId": "scene-9", "characterName": "TOBIAS", "dialogueText": "Trollene... de var ikke bare eventyr, Nora.", "lineNumber": 1, "emotionTag": "wistful"},
-            {"id": "dial-9-2", "sceneId": "scene-9", "characterName": "NORA TIDEMANN", "dialogueText": "Hva mener du, pappa?", "lineNumber": 2, "emotionTag": "curious"},
-            {"id": "dial-9-3", "sceneId": "scene-9", "characterName": "TOBIAS", "dialogueText": "De levde i fjellene. Og de flyktet fra... solen.", "lineNumber": 3, "emotionTag": "mysterious"},
-            
-            # Scene 10 - Oslo climax
-            {"id": "dial-10-1", "sceneId": "scene-10", "characterName": "ANDREAS ISAKSEN", "dialogueText": "Rakettene er klare. Vi må stoppe det nå!", "lineNumber": 1, "emotionTag": "urgent"},
-            {"id": "dial-10-2", "sceneId": "scene-10", "characterName": "NORA TIDEMANN", "dialogueText": "Nei! Vent! Se på himmelen!", "lineNumber": 2, "emotionTag": "hopeful"},
-            {"id": "dial-10-3", "sceneId": "scene-10", "characterName": "NORA TIDEMANN", "dialogueText": "Solen kommer opp. Det er det eneste som kan stoppe det.", "lineNumber": 3, "emotionTag": "realizing"}
-        ]
-        
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            # Delete existing dialogue
-            cur.execute("DELETE FROM casting_dialogue WHERE manuscript_id = %s", (manuscript_id,))
-            
-            # Insert dialogue
-            for dial in troll_dialogue:
-                cur.execute("""
-                    INSERT INTO casting_dialogue (
-                        id, scene_id, manuscript_id, character_name, dialogue_text,
-                        line_number, emotion_tag, created_at, updated_at
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (
-                    dial["id"],
-                    dial["sceneId"],
-                    manuscript_id,
-                    dial["characterName"],
-                    dial["dialogueText"],
-                    dial["lineNumber"],
-                    dial.get("emotionTag"),
-                    now,
-                    now
-                ))
-            
-            conn.commit()
-        conn.close()
-        
-        return JSONResponse({
-            "success": True,
-            "message": f"Seeded {len(troll_scenes)} scenes, {len(troll_acts)} acts, and {len(troll_dialogue)} dialogue lines for Troll manuscript"
-        })
-    except psycopg2.Error as e:
-        print(f"Error seeding Troll manuscript: {e}")
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
 
 # ============================================================================
 # Virtual Studio API Endpoints
 # ============================================================================
 
-@app.get("/api/casting/favorites/{project_id}/{favorite_type}")
-async def api_get_favorites(project_id: str, favorite_type: str, user_id: Optional[str] = None):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        favorites = get_favorites(project_id, favorite_type, user_id)
-        return JSONResponse({"success": True, "favorites": favorites})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/favorites/{project_id}/{favorite_type}")
-async def api_set_favorites(project_id: str, favorite_type: str, request: Request):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        data = await request.json()
-        item_ids = data.get('itemIds', data.get('favorites', []))
-        user_id = data.get('userId')
-        set_favorites(project_id, favorite_type, item_ids, user_id)
-        return JSONResponse({"success": True})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/favorites/{project_id}/{favorite_type}/add")
-async def api_add_favorite(project_id: str, favorite_type: str, request: Request):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        data = await request.json()
-        item_id = data.get('itemId')
-        user_id = data.get('userId')
-        add_favorite(project_id, favorite_type, item_id, user_id)
-        return JSONResponse({"success": True})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/favorites/{project_id}/{favorite_type}/remove")
-async def api_remove_favorite(project_id: str, favorite_type: str, request: Request):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        data = await request.json()
-        item_id = data.get('itemId')
-        user_id = data.get('userId')
-        remove_favorite(project_id, favorite_type, item_id, user_id)
-        return JSONResponse({"success": True})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/projects")
-async def api_get_casting_projects(user_id: Optional[str] = None):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        projects = get_casting_projects(user_id)
-        return JSONResponse({"success": True, "projects": projects})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/projects/{project_id}")
-async def api_get_casting_project(project_id: str):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        project = get_casting_project(project_id)
-        if project:
-            return JSONResponse({"success": True, "project": project})
-        raise HTTPException(status_code=404, detail="Project not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/projects")
-async def api_save_casting_project(request: Request):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        data = await request.json()
-        user_id = data.pop('userId', None)
-        project = save_casting_project(data, user_id)
-        return JSONResponse({"success": True, "project": project})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/projects/{project_id}")
-async def api_delete_casting_project(project_id: str):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        success = delete_casting_project(project_id)
-        if success:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Project not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/projects/{project_id}/candidates")
-async def api_get_candidates(project_id: str):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        candidates = get_candidates(project_id)
-        return JSONResponse({"success": True, "candidates": candidates})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/candidates")
-async def api_save_candidate(request: Request):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        data = await request.json()
-        candidate = save_candidate(data)
-        return JSONResponse({"success": True, "candidate": candidate})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/candidates/{candidate_id}")
-async def api_delete_candidate(candidate_id: str):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        success = delete_candidate(candidate_id)
-        if success:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Candidate not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ==================== CONSENT CRUD API ====================
 
-@app.get("/api/casting/projects/{project_id}/candidates/{candidate_id}/consents")
-async def api_get_consents(project_id: str, candidate_id: str):
-    """Get all consents for a candidate"""
-    try:
-        from casting_service import get_db_connection
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-    except ImportError:
-        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
-    
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT id, project_id, candidate_id, type, title, description,
-                       signed, date, document, notes, access_code, invitation_status,
-                       invitation_sent_at, signature_data, expires_at, template_id,
-                       created_at, updated_at
-                FROM casting_consents
-                WHERE project_id = %s AND candidate_id = %s
-                ORDER BY created_at DESC
-            """, (project_id, candidate_id))
-            rows = cur.fetchall()
-            
-            consents = []
-            for row in rows:
-                consent = {
-                    'id': row['id'],
-                    'projectId': row['project_id'],
-                    'candidateId': row['candidate_id'],
-                    'type': row['type'],
-                    'title': row['title'],
-                    'description': row['description'],
-                    'signed': row['signed'] or row.get('granted', False),
-                    'date': row['date'].isoformat() if row['date'] else None,
-                    'document': row['document'],
-                    'notes': row['notes'],
-                    'accessCode': row['access_code'],
-                    'invitationStatus': row['invitation_status'],
-                    'invitationSentAt': row['invitation_sent_at'].isoformat() if row['invitation_sent_at'] else None,
-                    'signatureData': row['signature_data'],
-                    'expiresAt': row['expires_at'].isoformat() if row['expires_at'] else None,
-                    'createdAt': row['created_at'].isoformat() if row['created_at'] else None,
-                    'updatedAt': row['updated_at'].isoformat() if row['updated_at'] else None,
-                }
-                consents.append(consent)
-            
-            return JSONResponse({"success": True, "consents": consents})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
 
-@app.post("/api/casting/consents")
-async def api_save_consent(request: Request):
-    """Create or update a consent (upsert)"""
-    try:
-        from casting_service import get_db_connection
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-        import json
-        import uuid
-    except ImportError:
-        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
-    
-    body = await request.json()
-    consent_id = body.get('id')
-    project_id = body.get('projectId')
-    candidate_id = body.get('candidateId')
-    consent_type = body.get('type')
-    
-    if not project_id or not candidate_id or not consent_type:
-        return JSONResponse({"success": False, "error": "Missing required fields"}, status_code=400)
-    
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            if consent_id:
-                cur.execute("SELECT id FROM casting_consents WHERE id = %s", (consent_id,))
-                exists = cur.fetchone() is not None
-                
-                if exists:
-                    cur.execute("""
-                        UPDATE casting_consents 
-                        SET type = %s, title = %s, description = %s, signed = %s,
-                            date = %s, document = %s, notes = %s, 
-                            signature_data = %s, updated_at = CURRENT_TIMESTAMP
-                        WHERE id = %s
-                        RETURNING id
-                    """, (
-                        consent_type,
-                        body.get('title'),
-                        body.get('description'),
-                        body.get('signed', False),
-                        body.get('date'),
-                        body.get('document'),
-                        body.get('notes'),
-                        json.dumps(body.get('signatureData')) if body.get('signatureData') else None,
-                        consent_id
-                    ))
-                else:
-                    cur.execute("""
-                        INSERT INTO casting_consents 
-                        (id, project_id, candidate_id, type, title, description, signed, notes, created_at, updated_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                        RETURNING id
-                    """, (
-                        consent_id,
-                        project_id,
-                        candidate_id,
-                        consent_type,
-                        body.get('title'),
-                        body.get('description'),
-                        body.get('signed', False),
-                        body.get('notes')
-                    ))
-            else:
-                consent_id = f"consent-{uuid.uuid4().hex[:12]}"
-                cur.execute("""
-                    INSERT INTO casting_consents 
-                    (id, project_id, candidate_id, type, title, description, signed, notes, created_at, updated_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    RETURNING id
-                """, (
-                    consent_id,
-                    project_id,
-                    candidate_id,
-                    consent_type,
-                    body.get('title'),
-                    body.get('description'),
-                    body.get('signed', False),
-                    body.get('notes')
-                ))
-            
-            conn.commit()
-            return JSONResponse({"success": True, "consentId": consent_id})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
 
-@app.delete("/api/casting/consents/{consent_id}")
-async def api_delete_consent(consent_id: str):
-    """Delete a consent"""
-    try:
-        from casting_service import get_db_connection
-        import psycopg2
-    except ImportError:
-        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
-    
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM casting_consents WHERE id = %s", (consent_id,))
-            deleted = cur.rowcount > 0
-            conn.commit()
-            
-            if deleted:
-                return JSONResponse({"success": True})
-            return JSONResponse({"success": False, "error": "Consent not found"}, status_code=404)
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
 
 # ==================== CANDIDATE POOL API ====================
 
-@app.get("/api/casting/candidate-pool")
-async def api_get_candidate_pool():
-    """Get all candidates from the global pool"""
-    try:
-        from casting_service import get_db_connection
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-    except ImportError:
-        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
-    
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT id, name, contact_info, photos, videos, model_url, 
-                       personality, notes, tags, created_at, updated_at
-                FROM casting_candidate_pool
-                ORDER BY name ASC
-            """)
-            rows = cur.fetchall()
-            
-            candidates = []
-            for row in rows:
-                candidates.append({
-                    'id': row['id'],
-                    'name': row['name'],
-                    'contactInfo': row['contact_info'] or {},
-                    'photos': row['photos'] or [],
-                    'videos': row['videos'] or [],
-                    'modelUrl': row['model_url'],
-                    'personality': row['personality'],
-                    'notes': row['notes'],
-                    'tags': row['tags'] or [],
-                    'createdAt': row['created_at'].isoformat() if row['created_at'] else None,
-                    'updatedAt': row['updated_at'].isoformat() if row['updated_at'] else None,
-                })
-            
-            return JSONResponse({"success": True, "candidates": candidates})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
 
-@app.post("/api/casting/candidate-pool")
-async def api_save_to_candidate_pool(request: Request):
-    """Save a candidate to the global pool"""
-    try:
-        from casting_service import get_db_connection
-        import psycopg2
-        from psycopg2.extras import RealDictCursor, Json
-        import uuid
-    except ImportError:
-        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
-    
-    body = await request.json()
-    candidate_id = body.get('id') or f"pool-{uuid.uuid4().hex[:12]}"
-    
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT id FROM casting_candidate_pool WHERE id = %s", (candidate_id,))
-            exists = cur.fetchone() is not None
-            
-            if exists:
-                cur.execute("""
-                    UPDATE casting_candidate_pool 
-                    SET name = %s, contact_info = %s, photos = %s, videos = %s,
-                        model_url = %s, personality = %s, notes = %s, tags = %s,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE id = %s
-                """, (
-                    body.get('name'),
-                    Json(body.get('contactInfo', {})),
-                    Json(body.get('photos', [])),
-                    Json(body.get('videos', [])),
-                    body.get('modelUrl'),
-                    body.get('personality'),
-                    body.get('notes'),
-                    Json(body.get('tags', [])),
-                    candidate_id
-                ))
-            else:
-                cur.execute("""
-                    INSERT INTO casting_candidate_pool 
-                    (id, name, contact_info, photos, videos, model_url, personality, notes, tags)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (
-                    candidate_id,
-                    body.get('name'),
-                    Json(body.get('contactInfo', {})),
-                    Json(body.get('photos', [])),
-                    Json(body.get('videos', [])),
-                    body.get('modelUrl'),
-                    body.get('personality'),
-                    body.get('notes'),
-                    Json(body.get('tags', []))
-                ))
-            
-            conn.commit()
-            return JSONResponse({"success": True, "candidateId": candidate_id})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
 
-@app.delete("/api/casting/candidate-pool/{candidate_id}")
-async def api_delete_from_candidate_pool(candidate_id: str):
-    """Delete a candidate from the global pool"""
-    try:
-        from casting_service import get_db_connection
-        import psycopg2
-    except ImportError:
-        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
-    
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM casting_candidate_pool WHERE id = %s", (candidate_id,))
-            deleted = cur.rowcount > 0
-            conn.commit()
-            
-            if deleted:
-                return JSONResponse({"success": True})
-            return JSONResponse({"success": False, "error": "Candidate not found"}, status_code=404)
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
 
-@app.post("/api/casting/candidate-pool/import-to-project")
-async def api_import_candidate_to_project(request: Request):
-    """Import a candidate from the pool to a specific project"""
-    try:
-        from casting_service import get_db_connection
-        import psycopg2
-        from psycopg2.extras import RealDictCursor, Json
-        import uuid
-    except ImportError:
-        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
-    
-    body = await request.json()
-    pool_candidate_id = body.get('poolCandidateId')
-    target_project_id = body.get('targetProjectId')
-    
-    if not pool_candidate_id or not target_project_id:
-        return JSONResponse({"success": False, "error": "Missing required fields"}, status_code=400)
-    
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT * FROM casting_candidate_pool WHERE id = %s", (pool_candidate_id,))
-            pool_candidate = cur.fetchone()
-            
-            if not pool_candidate:
-                return JSONResponse({"success": False, "error": "Pool candidate not found"}, status_code=404)
-            
-            new_id = f"candidate-{uuid.uuid4().hex[:12]}"
-            cur.execute("""
-                INSERT INTO casting_candidates 
-                (id, project_id, name, contact_info, photos, videos, model_url, 
-                 personality, audition_notes, status, assigned_roles, emergency_contact)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id
-            """, (
-                new_id,
-                target_project_id,
-                pool_candidate['name'],
-                pool_candidate['contact_info'],
-                pool_candidate['photos'],
-                pool_candidate['videos'],
-                pool_candidate['model_url'],
-                pool_candidate['personality'],
-                pool_candidate['notes'] or '',
-                'pending',
-                Json([]),
-                Json({})
-            ))
-            
-            conn.commit()
-            return JSONResponse({"success": True, "candidateId": new_id})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
 
-@app.post("/api/casting/candidates/copy-to-project")
-async def api_copy_candidate_to_project(request: Request):
-    """Copy a candidate from one project to another"""
-    try:
-        from casting_service import get_db_connection
-        import psycopg2
-        from psycopg2.extras import RealDictCursor, Json
-        import uuid
-    except ImportError:
-        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
-    
-    body = await request.json()
-    candidate_id = body.get('candidateId')
-    target_project_id = body.get('targetProjectId')
-    
-    if not candidate_id or not target_project_id:
-        return JSONResponse({"success": False, "error": "Missing required fields"}, status_code=400)
-    
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT * FROM casting_candidates WHERE id = %s", (candidate_id,))
-            source_candidate = cur.fetchone()
-            
-            if not source_candidate:
-                return JSONResponse({"success": False, "error": "Candidate not found"}, status_code=404)
-            
-            new_id = f"candidate-{uuid.uuid4().hex[:12]}"
-            cur.execute("""
-                INSERT INTO casting_candidates 
-                (id, project_id, name, contact_info, photos, videos, model_url, 
-                 personality, audition_notes, status, assigned_roles, emergency_contact)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id
-            """, (
-                new_id,
-                target_project_id,
-                source_candidate['name'],
-                source_candidate['contact_info'],
-                source_candidate['photos'],
-                source_candidate['videos'],
-                source_candidate['model_url'],
-                source_candidate['personality'],
-                source_candidate['audition_notes'] or '',
-                'pending',
-                Json([]),
-                source_candidate['emergency_contact']
-            ))
-            
-            conn.commit()
-            return JSONResponse({"success": True, "candidateId": new_id})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
 
-@app.post("/api/casting/candidates/save-to-pool")
-async def api_save_candidate_to_pool(request: Request):
-    """Save a project candidate to the global pool"""
-    try:
-        from casting_service import get_db_connection
-        import psycopg2
-        from psycopg2.extras import RealDictCursor, Json
-        import uuid
-    except ImportError:
-        return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
-    
-    body = await request.json()
-    candidate_id = body.get('candidateId')
-    
-    if not candidate_id:
-        return JSONResponse({"success": False, "error": "Missing candidateId"}, status_code=400)
-    
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT * FROM casting_candidates WHERE id = %s", (candidate_id,))
-            source_candidate = cur.fetchone()
-            
-            if not source_candidate:
-                return JSONResponse({"success": False, "error": "Candidate not found"}, status_code=404)
-            
-            pool_id = f"pool-{uuid.uuid4().hex[:12]}"
-            cur.execute("""
-                INSERT INTO casting_candidate_pool 
-                (id, name, contact_info, photos, videos, model_url, personality, notes, tags)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (
-                pool_id,
-                source_candidate['name'],
-                source_candidate['contact_info'],
-                source_candidate['photos'],
-                source_candidate['videos'],
-                source_candidate['model_url'],
-                source_candidate['personality'],
-                source_candidate['audition_notes'],
-                Json([])
-            ))
-            
-            conn.commit()
-            return JSONResponse({"success": True, "poolCandidateId": pool_id})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
 
 # ========== Role Pool API Endpoints ==========
 
-@app.get("/api/casting/role-pool")
-async def get_role_pool():
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT id, name, description, role_type, requirements, tags, notes, 
-                       created_at, updated_at
-                FROM casting_role_pool
-                ORDER BY name ASC
-            """)
-            rows = cur.fetchall()
-            roles = []
-            for row in rows:
-                role = {
-                    'id': row['id'],
-                    'name': row['name'],
-                    'description': row['description'],
-                    'roleType': row['role_type'],
-                    'requirements': row['requirements'] if row['requirements'] else {},
-                    'tags': row['tags'] if row['tags'] else [],
-                    'notes': row['notes'],
-                    'createdAt': row['created_at'].isoformat() if row['created_at'] else None,
-                    'updatedAt': row['updated_at'].isoformat() if row['updated_at'] else None,
-                }
-                roles.append(role)
-            return JSONResponse({"success": True, "roles": roles})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
-@app.post("/api/casting/role-pool")
-async def save_to_role_pool(request: Request):
-    conn = None
-    try:
-        body = await request.json()
-        role_id = body.get('id') or f"pool_role_{uuid.uuid4().hex[:12]}"
-        
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("SELECT id FROM casting_role_pool WHERE id = %s", (role_id,))
-            exists = cur.fetchone() is not None
-            
-            if exists:
-                cur.execute("""
-                    UPDATE casting_role_pool 
-                    SET name = %s, description = %s, role_type = %s, requirements = %s,
-                        tags = %s, notes = %s, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = %s
-                """, (
-                    body.get('name'),
-                    body.get('description'),
-                    body.get('roleType'),
-                    Json(body.get('requirements', {})),
-                    Json(body.get('tags', [])),
-                    body.get('notes'),
-                    role_id
-                ))
-            else:
-                cur.execute("""
-                    INSERT INTO casting_role_pool 
-                    (id, name, description, role_type, requirements, tags, notes)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """, (
-                    role_id,
-                    body.get('name'),
-                    body.get('description'),
-                    body.get('roleType'),
-                    Json(body.get('requirements', {})),
-                    Json(body.get('tags', [])),
-                    body.get('notes')
-                ))
-            
-            conn.commit()
-            return JSONResponse({"success": True, "roleId": role_id})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
-@app.delete("/api/casting/role-pool/{role_id}")
-async def delete_from_role_pool(role_id: str):
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM casting_role_pool WHERE id = %s", (role_id,))
-            deleted = cur.rowcount > 0
-            conn.commit()
-            
-            if deleted:
-                return JSONResponse({"success": True})
-            return JSONResponse({"success": False, "error": "Role not found"}, status_code=404)
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
-@app.post("/api/casting/role-pool/import-to-project")
-async def import_role_to_project(request: Request):
-    conn = None
-    try:
-        body = await request.json()
-        pool_role_id = body.get('poolRoleId')
-        target_project_id = body.get('targetProjectId')
-        
-        if not pool_role_id or not target_project_id:
-            return JSONResponse({"success": False, "error": "Missing required fields"}, status_code=400)
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT * FROM casting_role_pool WHERE id = %s", (pool_role_id,))
-            pool_role = cur.fetchone()
-            
-            if not pool_role:
-                return JSONResponse({"success": False, "error": "Pool role not found"}, status_code=404)
-            
-            new_role_id = f"role_{uuid.uuid4().hex[:12]}"
-            role_data = {
-                'roleType': pool_role['role_type'],
-                'requirements': pool_role['requirements'] if pool_role['requirements'] else {},
-                'tags': pool_role['tags'] if pool_role['tags'] else [],
-                'notes': pool_role['notes'],
-                'importedFromPool': pool_role_id,
-            }
-            
-            cur.execute("""
-                INSERT INTO casting_roles (id, project_id, name, description, role_data)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (
-                new_role_id,
-                target_project_id,
-                pool_role['name'],
-                pool_role['description'],
-                Json(role_data)
-            ))
-            
-            conn.commit()
-            return JSONResponse({"success": True, "roleId": new_role_id})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
-@app.post("/api/casting/roles/save-to-pool")
-async def save_role_to_pool(request: Request):
-    conn = None
-    try:
-        body = await request.json()
-        role_id = body.get('roleId')
-        
-        if not role_id:
-            return JSONResponse({"success": False, "error": "Missing roleId"}, status_code=400)
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT * FROM casting_roles WHERE id = %s", (role_id,))
-            source_role = cur.fetchone()
-            
-            if not source_role:
-                return JSONResponse({"success": False, "error": "Role not found"}, status_code=404)
-            
-            pool_id = f"pool_role_{uuid.uuid4().hex[:12]}"
-            role_data = source_role['role_data'] if source_role['role_data'] else {}
-            
-            cur.execute("""
-                INSERT INTO casting_role_pool 
-                (id, name, description, role_type, requirements, tags, notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (
-                pool_id,
-                source_role['name'],
-                source_role['description'],
-                role_data.get('roleType'),
-                Json(role_data.get('requirements', {})),
-                Json(role_data.get('tags', [])),
-                role_data.get('notes')
-            ))
-            
-            conn.commit()
-            return JSONResponse({"success": True, "poolRoleId": pool_id})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
 
 # ========== Audition Pool API Endpoints ==========
 
-@app.get("/api/casting/audition-pool")
-async def get_audition_pool():
-    conn = None
-    try:
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-        
-        database_url = os.environ.get("DATABASE_URL")
-        if not database_url:
-            return JSONResponse({"success": True, "auditions": []})
-        
-        conn = psycopg2.connect(database_url)
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT id, title, description, audition_type, duration_minutes, location,
-                       requirements, tags, notes, created_at, updated_at
-                FROM casting_audition_pool
-                ORDER BY title ASC
-            """)
-            rows = cur.fetchall()
-            auditions = []
-            for row in rows:
-                audition = {
-                    'id': row['id'],
-                    'title': row['title'],
-                    'description': row['description'],
-                    'auditionType': row['audition_type'],
-                    'durationMinutes': row['duration_minutes'],
-                    'location': row['location'],
-                    'requirements': row['requirements'] if row['requirements'] else {},
-                    'tags': row['tags'] if row['tags'] else [],
-                    'notes': row['notes'],
-                    'createdAt': row['created_at'].isoformat() if row['created_at'] else None,
-                    'updatedAt': row['updated_at'].isoformat() if row['updated_at'] else None,
-                }
-                auditions.append(audition)
-            return JSONResponse({"success": True, "auditions": auditions})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
-@app.post("/api/casting/audition-pool")
-async def save_to_audition_pool(request: Request):
-    conn = None
-    try:
-        import psycopg2
-        from psycopg2.extras import Json
-        
-        body = await request.json()
-        audition_id = body.get('id') or f"pool_audition_{uuid.uuid4().hex[:12]}"
-        
-        database_url = os.environ.get("DATABASE_URL")
-        if not database_url:
-            return JSONResponse({"success": False, "error": "Database not configured"}, status_code=500)
-        
-        conn = psycopg2.connect(database_url)
-        with conn.cursor() as cur:
-            cur.execute("SELECT id FROM casting_audition_pool WHERE id = %s", (audition_id,))
-            exists = cur.fetchone() is not None
-            
-            if exists:
-                cur.execute("""
-                    UPDATE casting_audition_pool 
-                    SET title = %s, description = %s, audition_type = %s, duration_minutes = %s,
-                        location = %s, requirements = %s, tags = %s, notes = %s, 
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE id = %s
-                """, (
-                    body.get('title'),
-                    body.get('description'),
-                    body.get('auditionType'),
-                    body.get('durationMinutes', 30),
-                    body.get('location'),
-                    Json(body.get('requirements', {})),
-                    Json(body.get('tags', [])),
-                    body.get('notes'),
-                    audition_id
-                ))
-            else:
-                cur.execute("""
-                    INSERT INTO casting_audition_pool 
-                    (id, title, description, audition_type, duration_minutes, location, requirements, tags, notes)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (
-                    audition_id,
-                    body.get('title'),
-                    body.get('description'),
-                    body.get('auditionType'),
-                    body.get('durationMinutes', 30),
-                    body.get('location'),
-                    Json(body.get('requirements', {})),
-                    Json(body.get('tags', [])),
-                    body.get('notes')
-                ))
-            
-            conn.commit()
-            return JSONResponse({"success": True, "auditionId": audition_id})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
-@app.delete("/api/casting/audition-pool/{audition_id}")
-async def delete_from_audition_pool(audition_id: str):
-    conn = None
-    try:
-        import psycopg2
-        
-        database_url = os.environ.get("DATABASE_URL")
-        if not database_url:
-            return JSONResponse({"success": False, "error": "Database not configured"}, status_code=500)
-        
-        conn = psycopg2.connect(database_url)
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM casting_audition_pool WHERE id = %s", (audition_id,))
-            deleted = cur.rowcount > 0
-            conn.commit()
-            
-            if deleted:
-                return JSONResponse({"success": True})
-            return JSONResponse({"success": False, "error": "Audition not found"}, status_code=404)
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
-@app.post("/api/casting/audition-pool/import-to-project")
-async def import_audition_to_project(request: Request):
-    conn = None
-    try:
-        import psycopg2
-        from psycopg2.extras import RealDictCursor, Json
-        
-        body = await request.json()
-        pool_audition_id = body.get('poolAuditionId')
-        target_project_id = body.get('targetProjectId')
-        
-        if not pool_audition_id or not target_project_id:
-            return JSONResponse({"success": False, "error": "Missing required fields"}, status_code=400)
-        
-        database_url = os.environ.get("DATABASE_URL")
-        if not database_url:
-            return JSONResponse({"success": False, "error": "Database not configured"}, status_code=500)
-        
-        conn = psycopg2.connect(database_url)
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT * FROM casting_audition_pool WHERE id = %s", (pool_audition_id,))
-            pool_audition = cur.fetchone()
-            
-            if not pool_audition:
-                return JSONResponse({"success": False, "error": "Pool audition not found"}, status_code=404)
-            
-            new_schedule_id = f"schedule_{uuid.uuid4().hex[:12]}"
-            schedule_data = {
-                'auditionType': pool_audition['audition_type'],
-                'durationMinutes': pool_audition['duration_minutes'],
-                'location': pool_audition['location'],
-                'requirements': pool_audition['requirements'] if pool_audition['requirements'] else {},
-                'tags': pool_audition['tags'] if pool_audition['tags'] else [],
-                'notes': pool_audition['notes'],
-                'importedFromPool': pool_audition_id,
-            }
-            
-            cur.execute("""
-                INSERT INTO casting_schedules (id, project_id, title, schedule_data)
-                VALUES (%s, %s, %s, %s)
-            """, (
-                new_schedule_id,
-                target_project_id,
-                pool_audition['title'],
-                Json(schedule_data)
-            ))
-            
-            conn.commit()
-            return JSONResponse({"success": True, "scheduleId": new_schedule_id})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
-@app.post("/api/casting/schedules/save-to-pool")
-async def save_schedule_to_pool(request: Request):
-    conn = None
-    try:
-        import psycopg2
-        from psycopg2.extras import RealDictCursor, Json
-        
-        body = await request.json()
-        schedule_id = body.get('scheduleId')
-        
-        if not schedule_id:
-            return JSONResponse({"success": False, "error": "Missing scheduleId"}, status_code=400)
-        
-        database_url = os.environ.get("DATABASE_URL")
-        if not database_url:
-            return JSONResponse({"success": False, "error": "Database not configured"}, status_code=500)
-        
-        conn = psycopg2.connect(database_url)
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT * FROM casting_schedules WHERE id = %s", (schedule_id,))
-            source_schedule = cur.fetchone()
-            
-            if not source_schedule:
-                return JSONResponse({"success": False, "error": "Schedule not found"}, status_code=404)
-            
-            pool_id = f"pool_audition_{uuid.uuid4().hex[:12]}"
-            schedule_data = source_schedule['schedule_data'] if source_schedule['schedule_data'] else {}
-            
-            cur.execute("""
-                INSERT INTO casting_audition_pool 
-                (id, title, description, audition_type, duration_minutes, location, requirements, tags, notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (
-                pool_id,
-                source_schedule['title'],
-                schedule_data.get('description', ''),
-                schedule_data.get('auditionType'),
-                schedule_data.get('durationMinutes', 30),
-                schedule_data.get('location'),
-                Json(schedule_data.get('requirements', {})),
-                Json(schedule_data.get('tags', [])),
-                schedule_data.get('notes')
-            ))
-            
-            conn.commit()
-            return JSONResponse({"success": True, "poolAuditionId": pool_id})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
 
 # ========== Post-Audition Workflow API Endpoints ==========
 
-@app.put("/api/casting/candidates/{candidate_id}/workflow-status")
-async def update_candidate_workflow_status(candidate_id: str, request: Request):
-    """Update candidate workflow status"""
-    conn = None
-    try:
-        body = await request.json()
-        workflow_status = body.get('workflowStatus')
-        
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("""
-                UPDATE casting_candidates 
-                SET workflow_status = %s, updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s
-            """, (workflow_status, candidate_id))
-            conn.commit()
-            return JSONResponse({"success": True})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
-@app.put("/api/casting/candidates/{candidate_id}/audition-result")
-async def update_candidate_audition_result(candidate_id: str, request: Request):
-    """Update candidate audition rating and notes"""
-    conn = None
-    try:
-        body = await request.json()
-        
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("""
-                UPDATE casting_candidates 
-                SET audition_rating = %s, 
-                    audition_notes = %s,
-                    audition_date = %s,
-                    workflow_status = CASE WHEN workflow_status = 'pending' THEN 'auditioned' ELSE workflow_status END,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s
-            """, (
-                body.get('rating'),
-                body.get('notes'),
-                body.get('auditionDate'),
-                candidate_id
-            ))
-            conn.commit()
-            return JSONResponse({"success": True})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
 # ========== Offers API Endpoints ==========
 
-@app.get("/api/casting/projects/{project_id}/offers")
-async def get_project_offers(project_id: str):
-    """Get all offers for a project"""
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT o.*, c.name as candidate_name, r.name as role_name
-                FROM casting_offers o
-                LEFT JOIN casting_candidates c ON o.candidate_id = c.id
-                LEFT JOIN casting_roles r ON o.role_id = r.id
-                WHERE o.project_id = %s
-                ORDER BY o.created_at DESC
-            """, (project_id,))
-            rows = cur.fetchall()
-            offers = []
-            for row in rows:
-                offer = dict(row)
-                for key in ['offer_date', 'response_deadline', 'response_date', 'created_at', 'updated_at']:
-                    if offer.get(key):
-                        offer[key] = offer[key].isoformat()
-                offers.append(offer)
-            return JSONResponse({"success": True, "offers": offers})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
-@app.post("/api/casting/offers")
-async def create_offer(request: Request):
-    """Create a new offer"""
-    conn = None
-    try:
-        body = await request.json()
-        offer_id = f"offer_{uuid.uuid4().hex[:12]}"
-        
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO casting_offers 
-                (id, project_id, candidate_id, role_id, response_deadline, compensation, terms, notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """, (
-                offer_id,
-                body.get('projectId'),
-                body.get('candidateId'),
-                body.get('roleId'),
-                body.get('responseDeadline'),
-                body.get('compensation'),
-                body.get('terms'),
-                body.get('notes')
-            ))
-            
-            # Update candidate workflow status
-            cur.execute("""
-                UPDATE casting_candidates 
-                SET workflow_status = 'offer_sent', offer_sent_date = CURRENT_TIMESTAMP
-                WHERE id = %s
-            """, (body.get('candidateId'),))
-            
-            conn.commit()
-            return JSONResponse({"success": True, "offerId": offer_id})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
-@app.put("/api/casting/offers/{offer_id}/respond")
-async def respond_to_offer(offer_id: str, request: Request):
-    """Record response to offer (accepted/declined)"""
-    conn = None
-    try:
-        body = await request.json()
-        status = body.get('status')  # 'accepted' or 'declined'
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                UPDATE casting_offers 
-                SET status = %s, response_date = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s
-                RETURNING candidate_id
-            """, (status, offer_id))
-            result = cur.fetchone()
-            
-            if result and status == 'accepted':
-                cur.execute("""
-                    UPDATE casting_candidates 
-                    SET workflow_status = 'confirmed', offer_accepted_date = CURRENT_TIMESTAMP
-                    WHERE id = %s
-                """, (result['candidate_id'],))
-            elif result and status == 'declined':
-                cur.execute("""
-                    UPDATE casting_candidates 
-                    SET workflow_status = 'declined'
-                    WHERE id = %s
-                """, (result['candidate_id'],))
-            
-            conn.commit()
-            return JSONResponse({"success": True})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
 # ========== Contracts API Endpoints ==========
 
-@app.get("/api/casting/projects/{project_id}/contracts")
-async def get_project_contracts(project_id: str):
-    """Get all contracts for a project"""
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT ct.*, c.name as candidate_name, r.name as role_name
-                FROM casting_contracts ct
-                LEFT JOIN casting_candidates c ON ct.candidate_id = c.id
-                LEFT JOIN casting_roles r ON ct.role_id = r.id
-                WHERE ct.project_id = %s
-                ORDER BY ct.created_at DESC
-            """, (project_id,))
-            rows = cur.fetchall()
-            contracts = []
-            for row in rows:
-                contract = dict(row)
-                for key in ['start_date', 'end_date', 'signed_date', 'created_at', 'updated_at']:
-                    if contract.get(key):
-                        contract[key] = contract[key].isoformat() if hasattr(contract[key], 'isoformat') else str(contract[key])
-                contracts.append(contract)
-            return JSONResponse({"success": True, "contracts": contracts})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
-@app.post("/api/casting/contracts")
-async def create_contract(request: Request):
-    """Create a new contract"""
-    conn = None
-    try:
-        body = await request.json()
-        contract_id = f"contract_{uuid.uuid4().hex[:12]}"
-        
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO casting_contracts 
-                (id, project_id, candidate_id, offer_id, role_id, contract_type, 
-                 start_date, end_date, compensation, terms)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (
-                contract_id,
-                body.get('projectId'),
-                body.get('candidateId'),
-                body.get('offerId'),
-                body.get('roleId'),
-                body.get('contractType'),
-                body.get('startDate'),
-                body.get('endDate'),
-                body.get('compensation'),
-                body.get('terms')
-            ))
-            
-            # Update candidate contract status
-            cur.execute("""
-                UPDATE casting_candidates 
-                SET contract_status = 'pending'
-                WHERE id = %s
-            """, (body.get('candidateId'),))
-            
-            conn.commit()
-            return JSONResponse({"success": True, "contractId": contract_id})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
-@app.put("/api/casting/contracts/{contract_id}/sign")
-async def sign_contract(contract_id: str, request: Request):
-    """Mark contract as signed"""
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                UPDATE casting_contracts 
-                SET status = 'signed', signed_date = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s
-                RETURNING candidate_id
-            """, (contract_id,))
-            result = cur.fetchone()
-            
-            if result:
-                cur.execute("""
-                    UPDATE casting_candidates 
-                    SET contract_status = 'signed', contract_signed_date = CURRENT_TIMESTAMP, workflow_status = 'contracted'
-                    WHERE id = %s
-                """, (result['candidate_id'],))
-            
-            conn.commit()
-            return JSONResponse({"success": True})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
 # ========== Calendar Events API Endpoints ==========
 
-@app.get("/api/casting/projects/{project_id}/calendar-events")
-async def get_calendar_events(project_id: str):
-    """Get all calendar events for a project"""
-    import psycopg2
-    from psycopg2.extras import RealDictCursor
-    
-    conn = None
-    try:
-        conn = psycopg2.connect(os.environ.get("DATABASE_URL"))
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT * FROM casting_calendar_events
-                WHERE project_id = %s
-                ORDER BY start_time ASC
-            """, (project_id,))
-            rows = cur.fetchall()
-            events = []
-            for row in rows:
-                event = dict(row)
-                for key in ['start_time', 'end_time', 'created_at', 'updated_at']:
-                    if event.get(key):
-                        event[key] = event[key].isoformat()
-                events.append(event)
-            return JSONResponse({"success": True, "events": events})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
-
-@app.post("/api/casting/calendar-events")
-async def create_calendar_event(request: Request):
-    """Create a new calendar event"""
-    import psycopg2
-    from psycopg2.extras import Json
-    
-    conn = None
-    try:
-        body = await request.json()
-        event_id = f"event_{uuid.uuid4().hex[:12]}"
-        
-        conn = psycopg2.connect(os.environ.get("DATABASE_URL"))
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO casting_calendar_events 
-                (id, project_id, title, description, event_type, start_time, end_time, 
-                 location_id, all_day, candidate_ids, crew_ids, shot_list_ids, notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (
-                event_id,
-                body.get('projectId'),
-                body.get('title'),
-                body.get('description'),
-                body.get('eventType', 'general'),
-                body.get('startTime'),
-                body.get('endTime'),
-                body.get('locationId'),
-                body.get('allDay', False),
-                Json(body.get('candidateIds', [])),
-                Json(body.get('crewIds', [])),
-                Json(body.get('shotListIds', [])),
-                body.get('notes')
-            ))
-            conn.commit()
-            return JSONResponse({"success": True, "eventId": event_id})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
-
-@app.put("/api/casting/calendar-events/{event_id}")
-async def update_calendar_event(event_id: str, request: Request):
-    """Update a calendar event"""
-    import psycopg2
-    from psycopg2.extras import Json
-    
-    conn = None
-    try:
-        body = await request.json()
-        
-        conn = psycopg2.connect(os.environ.get("DATABASE_URL"))
-        with conn.cursor() as cur:
-            cur.execute("""
-                UPDATE casting_calendar_events 
-                SET title = %s, description = %s, event_type = %s, start_time = %s, end_time = %s,
-                    location_id = %s, all_day = %s, candidate_ids = %s, crew_ids = %s, 
-                    shot_list_ids = %s, notes = %s, status = %s, updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s
-            """, (
-                body.get('title'),
-                body.get('description'),
-                body.get('eventType'),
-                body.get('startTime'),
-                body.get('endTime'),
-                body.get('locationId'),
-                body.get('allDay', False),
-                Json(body.get('candidateIds', [])),
-                Json(body.get('crewIds', [])),
-                Json(body.get('shotListIds', [])),
-                body.get('notes'),
-                body.get('status', 'scheduled'),
-                event_id
-            ))
-            conn.commit()
-            return JSONResponse({"success": True})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
-
-@app.delete("/api/casting/calendar-events/{event_id}")
-async def delete_calendar_event(event_id: str):
-    """Delete a calendar event"""
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM casting_calendar_events WHERE id = %s", (event_id,))
-            conn.commit()
-            return JSONResponse({"success": True})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
-
-@app.put("/api/casting/candidates/{candidate_id}/shot-assignments")
-async def update_candidate_shot_assignments(candidate_id: str, request: Request):
-    """Assign candidate to shots"""
-    conn = None
-    try:
-        body = await request.json()
-        
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("""
-                UPDATE casting_candidates 
-                SET shot_assignments = %s, updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s
-            """, (Json(body.get('shotAssignments', [])), candidate_id))
-            conn.commit()
-            return JSONResponse({"success": True})
-    except psycopg2.Error as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-    finally:
-        if conn:
-            conn.close()
 
 
-@app.get("/api/casting/projects/{project_id}/roles")
-async def api_get_roles(project_id: str):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        roles = get_roles(project_id)
-        return JSONResponse({"success": True, "roles": roles})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/roles")
-async def api_save_role(request: Request):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        data = await request.json()
-        role = save_role(data)
-        return JSONResponse({"success": True, "role": role})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/roles/{role_id}")
-async def api_delete_role(role_id: str):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        success = delete_role(role_id)
-        if success:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Role not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/projects/{project_id}/crew")
-async def api_get_crew(project_id: str):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        crew = get_crew(project_id)
-        return JSONResponse({"success": True, "crew": crew})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/crew")
-async def api_save_crew(request: Request):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        data = await request.json()
-        crew = save_crew_member(data)
-        return JSONResponse({"success": True, "crew": crew})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/crew/{crew_id}")
-async def api_delete_crew(crew_id: str):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        success = delete_crew_member(crew_id)
-        if success:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Crew member not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/crew/{crew_id}/availability")
-async def api_get_crew_availability(crew_id: str, start_date: str = None, end_date: str = None):
-    """Get availability records for a crew member"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            query = "SELECT * FROM crew_availability WHERE crew_id = %s"
-            params = [crew_id]
-            if start_date and end_date:
-                query += " AND start_date <= %s AND end_date >= %s"
-                params.extend([end_date, start_date])
-            query += " ORDER BY start_date"
-            cur.execute(query, params)
-            availability = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "availability": [dict(a) for a in availability]})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/crew/{crew_id}/availability")
-async def api_save_crew_availability(crew_id: str, request: Request):
-    """Save availability record for a crew member"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        data = await request.json()
-        import uuid
-        availability_id = data.get('id') or str(uuid.uuid4())
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO crew_availability (id, crew_id, project_id, start_date, end_date, status, is_recurring, recurrence_pattern, notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (id) DO UPDATE SET
-                    start_date = EXCLUDED.start_date,
-                    end_date = EXCLUDED.end_date,
-                    status = EXCLUDED.status,
-                    is_recurring = EXCLUDED.is_recurring,
-                    recurrence_pattern = EXCLUDED.recurrence_pattern,
-                    notes = EXCLUDED.notes,
-                    updated_at = CURRENT_TIMESTAMP
-                RETURNING *
-            """, (
-                availability_id,
-                crew_id,
-                data.get('project_id'),
-                data.get('start_date'),
-                data.get('end_date'),
-                data.get('status', 'available'),
-                data.get('is_recurring', False),
-                data.get('recurrence_pattern'),
-                data.get('notes')
-            ))
-            result = cur.fetchone()
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "availability": dict(result)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/crew/{crew_id}/availability/{availability_id}")
-async def api_delete_crew_availability(crew_id: str, availability_id: str):
-    """Delete an availability record"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM crew_availability WHERE id = %s AND crew_id = %s", (availability_id, crew_id))
-            conn.commit()
-            deleted = cur.rowcount > 0
-        conn.close()
-        if deleted:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Availability record not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/crew/{crew_id}/notifications")
-async def api_get_crew_notifications(crew_id: str, status: str = None):
-    """Get notifications for a crew member"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            query = "SELECT * FROM crew_notifications WHERE crew_id = %s"
-            params = [crew_id]
-            if status:
-                query += " AND status = %s"
-                params.append(status)
-            query += " ORDER BY created_at DESC LIMIT 50"
-            cur.execute(query, params)
-            notifications = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "notifications": [dict(n) for n in notifications]})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/crew/{crew_id}/notifications")
-async def api_create_crew_notification(crew_id: str, request: Request):
-    """Create a notification for a crew member"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        data = await request.json()
-        import uuid
-        import json
-        notification_id = str(uuid.uuid4())
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO crew_notifications (id, crew_id, project_id, event_id, notification_type, channel, title, message, payload, status)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING *
-            """, (
-                notification_id,
-                crew_id,
-                data.get('project_id'),
-                data.get('event_id'),
-                data.get('notification_type', 'assignment'),
-                data.get('channel', 'in_app'),
-                data.get('title', 'Ny tildeling'),
-                data.get('message'),
-                json.dumps(data.get('payload', {})),
-                'pending'
-            ))
-            result = cur.fetchone()
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "notification": dict(result)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/api/casting/notifications/{notification_id}/read")
-async def api_mark_notification_read(notification_id: str):
-    """Mark a notification as read"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                UPDATE crew_notifications SET status = 'read', read_at = CURRENT_TIMESTAMP
-                WHERE id = %s RETURNING *
-            """, (notification_id,))
-            result = cur.fetchone()
-            conn.commit()
-        conn.close()
-        if result:
-            return JSONResponse({"success": True, "notification": dict(result)})
-        raise HTTPException(status_code=404, detail="Notification not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/crew/{crew_id}/conflicts")
-async def api_check_crew_conflicts(crew_id: str, start_date: str, end_date: str):
-    """Check for scheduling conflicts for a crew member"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        import json
-        conn = get_db_connection()
-        conflicts = []
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT * FROM casting_calendar_events 
-                WHERE crew_ids::jsonb @> %s::jsonb
-                AND start_time::date <= %s AND (end_time::date >= %s OR end_time IS NULL)
-                ORDER BY start_time
-            """, (json.dumps([crew_id]), end_date, start_date))
-            events = cur.fetchall()
-            
-            cur.execute("""
-                SELECT * FROM crew_availability 
-                WHERE crew_id = %s AND status = 'unavailable'
-                AND start_date <= %s AND end_date >= %s
-            """, (crew_id, end_date, start_date))
-            unavailable = cur.fetchall()
-        conn.close()
-        
-        for event in events:
-            conflicts.append({
-                "type": "event",
-                "id": event['id'],
-                "title": event['title'],
-                "start_time": str(event['start_time']),
-                "end_time": str(event['end_time']) if event['end_time'] else None
-            })
-        
-        for block in unavailable:
-            conflicts.append({
-                "type": "unavailable",
-                "id": block['id'],
-                "start_date": str(block['start_date']),
-                "end_date": str(block['end_date']),
-                "notes": block['notes']
-            })
-        
-        return JSONResponse({"success": True, "conflicts": conflicts, "has_conflicts": len(conflicts) > 0})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/projects/{project_id}/locations")
-async def api_get_locations(project_id: str):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        locations = get_locations(project_id)
-        return JSONResponse({"success": True, "locations": locations})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/locations")
-async def api_save_location(request: Request):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        data = await request.json()
-        location = save_location(data)
-        return JSONResponse({"success": True, "location": location})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/locations/{location_id}")
-async def api_delete_location(location_id: str):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        success = delete_location(location_id)
-        if success:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Location not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/projects/{project_id}/props")
-async def api_get_props(project_id: str):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        props = get_props(project_id)
-        return JSONResponse({"success": True, "props": props})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/props")
-async def api_save_prop(request: Request):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        data = await request.json()
-        prop = save_prop(data)
-        return JSONResponse({"success": True, "prop": prop})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/props/{prop_id}")
-async def api_delete_prop(prop_id: str):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        success = delete_prop(prop_id)
-        if success:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Prop not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
 
 # ============================================================================
 # Equipment/Assets API Endpoints (Utstyr)
 # ============================================================================
 
-@app.get("/api/casting/projects/{project_id}/equipment")
-async def api_get_equipment(project_id: str):
-    """Get all equipment for a project (including global equipment)"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Get project-specific AND global equipment
-            cur.execute("""
-                SELECT e.*, 
-                    COALESCE(
-                        (SELECT json_agg(json_build_object('crew_id', a.crew_id, 'role', a.role))
-                         FROM casting_equipment_assignments a WHERE a.equipment_id = e.id), '[]'
-                    ) as assignees,
-                    l.name as location_name
-                FROM casting_equipment e
-                LEFT JOIN casting_locations l ON e.primary_location_id = l.id
-                WHERE e.project_id = %s OR e.is_global = TRUE OR e.project_id IS NULL
-                ORDER BY e.is_global DESC, e.name
-            """, (project_id,))
-            equipment = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "equipment": [serialize_row(e) for e in equipment]})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/equipment")
-async def api_create_equipment(request: Request):
-    """Create new equipment"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        import uuid
-        data = await request.json()
-        equipment_id = f"equipment_{uuid.uuid4().hex[:12]}"
-        is_global = data.get('is_global', False)
-        project_id = None if is_global else data.get('project_id')
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO casting_equipment 
-                (id, project_id, name, description, category, brand, model, serial_number, 
-                 quantity, condition, primary_location_id, notes, image_url, status, is_global)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING *
-            """, (
-                equipment_id,
-                project_id,
-                data.get('name'),
-                data.get('description'),
-                data.get('category'),
-                data.get('brand'),
-                data.get('model'),
-                data.get('serial_number'),
-                data.get('quantity', 1),
-                data.get('condition', 'good'),
-                data.get('primary_location_id'),
-                data.get('notes'),
-                data.get('image_url'),
-                data.get('status', 'available'),
-                is_global
-            ))
-            equipment = cur.fetchone()
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "equipment": serialize_row(equipment)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/api/casting/equipment/{equipment_id}")
-async def api_update_equipment(equipment_id: str, request: Request):
-    """Update equipment"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        data = await request.json()
-        is_global = data.get('is_global', False)
-        project_id = None if is_global else data.get('project_id')
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                UPDATE casting_equipment SET
-                    name = COALESCE(%s, name),
-                    description = %s,
-                    category = %s,
-                    brand = %s,
-                    model = %s,
-                    serial_number = %s,
-                    quantity = COALESCE(%s, quantity),
-                    condition = COALESCE(%s, condition),
-                    primary_location_id = %s,
-                    notes = %s,
-                    image_url = %s,
-                    status = COALESCE(%s, status),
-                    project_id = %s,
-                    is_global = %s,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s RETURNING *
-            """, (
-                data.get('name'),
-                data.get('description'),
-                data.get('category'),
-                data.get('brand'),
-                data.get('model'),
-                data.get('serial_number'),
-                data.get('quantity'),
-                data.get('condition'),
-                data.get('primary_location_id'),
-                data.get('notes'),
-                data.get('image_url'),
-                data.get('status'),
-                project_id,
-                is_global,
-                equipment_id
-            ))
-            equipment = cur.fetchone()
-            conn.commit()
-        conn.close()
-        if equipment:
-            return JSONResponse({"success": True, "equipment": serialize_row(equipment)})
-        raise HTTPException(status_code=404, detail="Equipment not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/equipment/{equipment_id}")
-async def api_delete_equipment(equipment_id: str):
-    """Delete equipment"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM casting_equipment_assignments WHERE equipment_id = %s", (equipment_id,))
-            cur.execute("DELETE FROM casting_equipment_bookings WHERE equipment_id = %s", (equipment_id,))
-            cur.execute("DELETE FROM casting_equipment_availability WHERE equipment_id = %s", (equipment_id,))
-            cur.execute("DELETE FROM casting_equipment WHERE id = %s RETURNING id", (equipment_id,))
-            deleted = cur.fetchone()
-            conn.commit()
-        conn.close()
-        if deleted:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Equipment not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/equipment/{equipment_id}/assign")
-async def api_assign_equipment(equipment_id: str, request: Request):
-    """Assign crew member to equipment"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        import uuid
-        data = await request.json()
-        assignment_id = f"equip_assign_{uuid.uuid4().hex[:12]}"
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO casting_equipment_assignments (id, equipment_id, crew_id, role, notes)
-                VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (equipment_id, crew_id) DO UPDATE SET role = EXCLUDED.role, notes = EXCLUDED.notes
-                RETURNING *
-            """, (
-                assignment_id,
-                equipment_id,
-                data.get('crewId'),
-                data.get('role', 'responsible'),
-                data.get('notes')
-            ))
-            assignment = cur.fetchone()
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "assignment": dict(assignment)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/equipment/{equipment_id}/assign/{crew_id}")
-async def api_unassign_equipment(equipment_id: str, crew_id: str):
-    """Remove crew member assignment from equipment"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("""
-                DELETE FROM casting_equipment_assignments 
-                WHERE equipment_id = %s AND crew_id = %s RETURNING id
-            """, (equipment_id, crew_id))
-            deleted = cur.fetchone()
-            conn.commit()
-        conn.close()
-        if deleted:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Assignment not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/equipment/{equipment_id}/bookings")
-async def api_get_equipment_bookings(equipment_id: str):
-    """Get all bookings for equipment"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT * FROM casting_equipment_bookings 
-                WHERE equipment_id = %s ORDER BY start_date
-            """, (equipment_id,))
-            bookings = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "bookings": [dict(b) for b in bookings]})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/equipment/{equipment_id}/bookings")
-async def api_create_equipment_booking(equipment_id: str, request: Request):
-    """Create equipment booking"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        import uuid
-        data = await request.json()
-        booking_id = f"equip_book_{uuid.uuid4().hex[:12]}"
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO casting_equipment_bookings 
-                (id, equipment_id, event_id, project_id, booked_by, start_date, end_date, 
-                 start_time, end_time, quantity, purpose, status, notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING *
-            """, (
-                booking_id,
-                equipment_id,
-                data.get('eventId'),
-                data.get('projectId'),
-                data.get('bookedBy'),
-                data.get('startDate'),
-                data.get('endDate'),
-                data.get('startTime'),
-                data.get('endTime'),
-                data.get('quantity', 1),
-                data.get('purpose'),
-                data.get('status', 'confirmed'),
-                data.get('notes')
-            ))
-            booking = cur.fetchone()
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "booking": dict(booking)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/equipment/bookings/{booking_id}")
-async def api_delete_equipment_booking(booking_id: str):
-    """Delete equipment booking"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM casting_equipment_bookings WHERE id = %s RETURNING id", (booking_id,))
-            deleted = cur.fetchone()
-            conn.commit()
-        conn.close()
-        if deleted:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Booking not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/api/casting/equipment/bookings/{booking_id}")
-async def api_update_equipment_booking(booking_id: str, request: Request):
-    """Update equipment booking"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        data = await request.json()
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                UPDATE casting_equipment_bookings 
-                SET start_date = COALESCE(%s, start_date),
-                    end_date = COALESCE(%s, end_date),
-                    start_time = COALESCE(%s, start_time),
-                    end_time = COALESCE(%s, end_time),
-                    purpose = COALESCE(%s, purpose),
-                    status = COALESCE(%s, status),
-                    notes = COALESCE(%s, notes),
-                    quantity = COALESCE(%s, quantity),
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s
-                RETURNING *
-            """, (
-                data.get('start_date'),
-                data.get('end_date'),
-                data.get('start_time'),
-                data.get('end_time'),
-                data.get('purpose'),
-                data.get('status'),
-                data.get('notes'),
-                data.get('quantity'),
-                booking_id
-            ))
-            booking = cur.fetchone()
-            conn.commit()
-        conn.close()
-        if booking:
-            return JSONResponse({"success": True, "booking": dict(booking)})
-        raise HTTPException(status_code=404, detail="Booking not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/events/{event_id}/equipment-bookings")
-async def api_get_event_equipment_bookings(event_id: str):
-    """Get all equipment bookings for a calendar event"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT project_id FROM casting_calendar_events WHERE id = %s", (event_id,))
-            event = cur.fetchone()
-            if not event:
-                raise HTTPException(status_code=404, detail="Event not found")
-            
-            cur.execute("""
-                SELECT b.*, e.name as equipment_name 
-                FROM casting_equipment_bookings b
-                LEFT JOIN casting_equipment e ON b.equipment_id = e.id
-                WHERE b.event_id = %s
-                ORDER BY b.created_at
-            """, (event_id,))
-            bookings = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "bookings": [dict(b) for b in bookings]})
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/equipment/{equipment_id}/availability")
-async def api_get_equipment_availability(equipment_id: str):
-    """Get availability blocks for equipment"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT * FROM casting_equipment_availability 
-                WHERE equipment_id = %s ORDER BY start_date
-            """, (equipment_id,))
-            availability = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "availability": [dict(a) for a in availability]})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/equipment/{equipment_id}/availability")
-async def api_create_equipment_availability(equipment_id: str, request: Request):
-    """Create equipment availability block (service, unavailable)"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        import uuid
-        data = await request.json()
-        availability_id = f"equip_avail_{uuid.uuid4().hex[:12]}"
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO casting_equipment_availability 
-                (id, equipment_id, start_date, end_date, status, reason, notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                RETURNING *
-            """, (
-                availability_id,
-                equipment_id,
-                data.get('startDate'),
-                data.get('endDate'),
-                data.get('status', 'unavailable'),
-                data.get('reason'),
-                data.get('notes')
-            ))
-            availability = cur.fetchone()
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "availability": dict(availability)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/equipment/availability/{availability_id}")
-async def api_delete_equipment_availability(availability_id: str):
-    """Delete equipment availability block"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM casting_equipment_availability WHERE id = %s RETURNING id", (availability_id,))
-            deleted = cur.fetchone()
-            conn.commit()
-        conn.close()
-        if deleted:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Availability block not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/equipment/{equipment_id}/conflicts")
-async def api_check_equipment_conflicts(equipment_id: str, start_date: str, end_date: str):
-    """Check for booking conflicts for equipment"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        conflicts = []
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT * FROM casting_equipment_bookings 
-                WHERE equipment_id = %s AND status != 'cancelled'
-                AND start_date <= %s AND end_date >= %s
-                ORDER BY start_date
-            """, (equipment_id, end_date, start_date))
-            bookings = cur.fetchall()
-            
-            cur.execute("""
-                SELECT * FROM casting_equipment_availability 
-                WHERE equipment_id = %s AND status IN ('unavailable', 'service')
-                AND start_date <= %s AND end_date >= %s
-            """, (equipment_id, end_date, start_date))
-            unavailable = cur.fetchall()
-        conn.close()
-        
-        for booking in bookings:
-            conflicts.append({
-                "type": "booking",
-                "id": booking['id'],
-                "start_date": str(booking['start_date']),
-                "end_date": str(booking['end_date']),
-                "purpose": booking['purpose'],
-                "status": booking['status']
-            })
-        
-        for block in unavailable:
-            conflicts.append({
-                "type": block['status'],
-                "id": block['id'],
-                "start_date": str(block['start_date']),
-                "end_date": str(block['end_date']),
-                "reason": block['reason']
-            })
-        
-        return JSONResponse({
-            "success": True, 
-            "conflicts": conflicts, 
-            "has_conflicts": len(conflicts) > 0
-        })
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 # ============ Equipment Templates API ============
 
-@app.get("/api/casting/projects/{project_id}/equipment-templates")
-async def api_get_equipment_templates(project_id: str):
-    """Get all equipment templates for a project (including global templates)"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Get project-specific templates AND global templates
-            cur.execute("""
-                SELECT t.*, 
-                    (SELECT COUNT(*) FROM casting_equipment_template_items WHERE template_id = t.id) as item_count
-                FROM casting_equipment_templates t
-                WHERE t.project_id = %s OR t.is_global = TRUE OR t.project_id IS NULL
-                ORDER BY t.is_global DESC, t.is_default DESC, t.name
-            """, (project_id,))
-            templates = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "templates": [serialize_row(t) for t in templates]})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/equipment-templates/{template_id}")
-async def api_get_equipment_template(template_id: str):
-    """Get a single equipment template with items"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT * FROM casting_equipment_templates WHERE id = %s", (template_id,))
-            template = cur.fetchone()
-            if not template:
-                raise HTTPException(status_code=404, detail="Template not found")
-            
-            cur.execute("""
-                SELECT * FROM casting_equipment_template_items 
-                WHERE template_id = %s ORDER BY sort_order, name
-            """, (template_id,))
-            items = cur.fetchall()
-        conn.close()
-        result = dict(template)
-        result['items'] = [dict(i) for i in items]
-        return JSONResponse({"success": True, "template": result})
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/projects/{project_id}/equipment-templates")
-async def api_create_equipment_template(project_id: str, request: Request):
-    """Create a new equipment template"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        import uuid
-        data = await request.json()
-        template_id = f"equip_tmpl_{uuid.uuid4().hex[:12]}"
-        
-        # Handle global templates (no project association)
-        is_global = data.get('is_global', False)
-        effective_project_id = None if is_global else project_id
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO casting_equipment_templates 
-                (id, project_id, name, description, category, use_case, is_default, is_global, created_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING *
-            """, (
-                template_id,
-                effective_project_id,
-                data.get('name'),
-                data.get('description'),
-                data.get('category'),
-                data.get('use_case'),
-                data.get('is_default', False),
-                is_global,
-                data.get('created_by')
-            ))
-            template = cur.fetchone()
-            
-            items = data.get('items', [])
-            created_items = []
-            for idx, item in enumerate(items):
-                item_id = f"equip_tmpl_item_{uuid.uuid4().hex[:12]}"
-                cur.execute("""
-                    INSERT INTO casting_equipment_template_items 
-                    (id, template_id, name, description, category, brand, model, quantity, 
-                     is_required, external_url, estimated_price, notes, sort_order)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    RETURNING *
-                """, (
-                    item_id,
-                    template_id,
-                    item.get('name'),
-                    item.get('description'),
-                    item.get('category'),
-                    item.get('brand'),
-                    item.get('model'),
-                    item.get('quantity', 1),
-                    item.get('is_required', True),
-                    item.get('external_url'),
-                    item.get('estimated_price'),
-                    item.get('notes'),
-                    idx
-                ))
-                created_items.append(dict(cur.fetchone()))
-            
-            conn.commit()
-        conn.close()
-        result = dict(template)
-        result['items'] = created_items
-        return JSONResponse({"success": True, "template": result})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/api/casting/equipment-templates/{template_id}")
-async def api_update_equipment_template(template_id: str, request: Request):
-    """Update an equipment template"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        import uuid
-        data = await request.json()
-        
-        # Handle is_global update - if global, set project_id to NULL
-        is_global = data.get('is_global')
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Build dynamic update for is_global and project_id
-            if is_global is not None:
-                cur.execute("""
-                    UPDATE casting_equipment_templates 
-                    SET name = COALESCE(%s, name),
-                        description = COALESCE(%s, description),
-                        category = COALESCE(%s, category),
-                        use_case = COALESCE(%s, use_case),
-                        is_default = COALESCE(%s, is_default),
-                        is_global = %s,
-                        project_id = CASE WHEN %s THEN NULL ELSE project_id END,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE id = %s
-                    RETURNING *
-                """, (
-                    data.get('name'),
-                    data.get('description'),
-                    data.get('category'),
-                    data.get('use_case'),
-                    data.get('is_default'),
-                    is_global,
-                    is_global,
-                    template_id
-                ))
-            else:
-                cur.execute("""
-                    UPDATE casting_equipment_templates 
-                    SET name = COALESCE(%s, name),
-                        description = COALESCE(%s, description),
-                        category = COALESCE(%s, category),
-                        use_case = COALESCE(%s, use_case),
-                        is_default = COALESCE(%s, is_default),
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE id = %s
-                    RETURNING *
-                """, (
-                    data.get('name'),
-                    data.get('description'),
-                    data.get('category'),
-                    data.get('use_case'),
-                    data.get('is_default'),
-                    template_id
-                ))
-            template = cur.fetchone()
-            if not template:
-                raise HTTPException(status_code=404, detail="Template not found")
-            
-            if 'items' in data:
-                cur.execute("DELETE FROM casting_equipment_template_items WHERE template_id = %s", (template_id,))
-                created_items = []
-                for idx, item in enumerate(data['items']):
-                    item_id = f"equip_tmpl_item_{uuid.uuid4().hex[:12]}"
-                    cur.execute("""
-                        INSERT INTO casting_equipment_template_items 
-                        (id, template_id, name, description, category, brand, model, quantity, 
-                         is_required, external_url, estimated_price, notes, sort_order)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        RETURNING *
-                    """, (
-                        item_id,
-                        template_id,
-                        item.get('name'),
-                        item.get('description'),
-                        item.get('category'),
-                        item.get('brand'),
-                        item.get('model'),
-                        item.get('quantity', 1),
-                        item.get('is_required', True),
-                        item.get('external_url'),
-                        item.get('estimated_price'),
-                        item.get('notes'),
-                        idx
-                    ))
-                    created_items.append(dict(cur.fetchone()))
-                result = dict(template)
-                result['items'] = created_items
-            else:
-                cur.execute("SELECT * FROM casting_equipment_template_items WHERE template_id = %s ORDER BY sort_order", (template_id,))
-                items = cur.fetchall()
-                result = dict(template)
-                result['items'] = [dict(i) for i in items]
-            
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "template": result})
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/equipment-templates/{template_id}")
-async def api_delete_equipment_template(template_id: str):
-    """Delete an equipment template"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM casting_equipment_templates WHERE id = %s RETURNING id", (template_id,))
-            deleted = cur.fetchone()
-            conn.commit()
-        conn.close()
-        if deleted:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Template not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/equipment-templates/{template_id}/apply")
-async def api_apply_equipment_template(template_id: str, request: Request):
-    """Apply template to create equipment items in project"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        import uuid
-        data = await request.json()
-        project_id = data.get('project_id')
-        
-        conn = get_db_connection()
-        created_equipment = []
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT * FROM casting_equipment_template_items WHERE template_id = %s ORDER BY sort_order", (template_id,))
-            items = cur.fetchall()
-            
-            for item in items:
-                equip_id = f"equip_{uuid.uuid4().hex[:12]}"
-                cur.execute("""
-                    INSERT INTO casting_equipment 
-                    (id, project_id, name, description, category, brand, model, quantity, status)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'available')
-                    RETURNING *
-                """, (
-                    equip_id,
-                    project_id,
-                    item['name'],
-                    item.get('description'),
-                    item.get('category'),
-                    item.get('brand'),
-                    item.get('model'),
-                    item.get('quantity', 1)
-                ))
-                created_equipment.append(dict(cur.fetchone()))
-            
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "equipment": created_equipment, "count": len(created_equipment)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 # ============ Equipment Categories API ============
 
-@app.get("/api/projects/{project_id}/equipment-categories")
-async def api_get_equipment_categories(project_id: str):
-    """Get custom equipment categories for a project"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Check if equipment_categories column exists in projects table
-            cur.execute("""
-                SELECT equipment_categories 
-                FROM casting_projects 
-                WHERE id = %s
-            """, (project_id,))
-            result = cur.fetchone()
-            
-        conn.close()
-        
-        if result and result.get('equipment_categories'):
-            return JSONResponse({
-                "success": True,
-                "categories": result['equipment_categories']
-            })
-        else:
-            # Return empty array if no custom categories
-            return JSONResponse({
-                "success": True,
-                "categories": []
-            })
-    except Exception as e:
-        # If column doesn't exist, return empty array
-        return JSONResponse({"success": True, "categories": []})
-
-@app.put("/api/projects/{project_id}/equipment-categories")
-async def api_update_equipment_categories(project_id: str, request: Request):
-    """Update custom equipment categories for a project"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        data = await request.json()
-        categories = data.get('categories', [])
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Try to update equipment_categories column
-            try:
-                cur.execute("""
-                    UPDATE casting_projects 
-                    SET equipment_categories = %s
-                    WHERE id = %s
-                    RETURNING equipment_categories
-                """, (PgJson(categories), project_id))
-                conn.commit()
-                result = cur.fetchone()
-            except Exception as col_error:
-                # If column doesn't exist, add it first
-                cur.execute("""
-                    ALTER TABLE casting_projects 
-                    ADD COLUMN IF NOT EXISTS equipment_categories JSONB DEFAULT '[]'::jsonb
-                """)
-                cur.execute("""
-                    UPDATE casting_projects 
-                    SET equipment_categories = %s
-                    WHERE id = %s
-                    RETURNING equipment_categories
-                """, (PgJson(categories), project_id))
-                conn.commit()
-                result = cur.fetchone()
-                
-        conn.close()
-        return JSONResponse({
-            "success": True,
-            "categories": result['equipment_categories'] if result else categories
-        })
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 # ============ Vendor Links API (foto.no) ============
 
-@app.get("/api/casting/vendor-links")
-async def api_get_vendor_links(category: str = None):
-    """Get vendor product links, optionally filtered by category"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            if category:
-                cur.execute("""
-                    SELECT * FROM casting_equipment_vendor_links 
-                    WHERE category = %s ORDER BY is_recommended DESC, sort_order, product_name
-                """, (category,))
-            else:
-                cur.execute("""
-                    SELECT * FROM casting_equipment_vendor_links 
-                    ORDER BY category, is_recommended DESC, sort_order, product_name
-                """)
-            links = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "links": [dict(l) for l in links]})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/vendor-links/categories")
-async def api_get_vendor_categories():
-    """Get all vendor link categories with counts"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT category, COUNT(*) as count 
-                FROM casting_equipment_vendor_links 
-                GROUP BY category ORDER BY category
-            """)
-            categories = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "categories": [dict(c) for c in categories]})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/vendor-links")
-async def api_create_vendor_link(request: Request):
-    """Create a vendor product link"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        import uuid
-        data = await request.json()
-        link_id = f"vendor_link_{uuid.uuid4().hex[:12]}"
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO casting_equipment_vendor_links 
-                (id, category, subcategory, vendor_name, product_name, product_url, affiliate_url, 
-                 price, image_url, description, is_recommended, sort_order)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING *
-            """, (
-                link_id,
-                data.get('category'),
-                data.get('subcategory'),
-                data.get('vendor_name', 'foto.no'),
-                data.get('product_name'),
-                data.get('product_url'),
-                data.get('affiliate_url'),
-                data.get('price'),
-                data.get('image_url'),
-                data.get('description'),
-                data.get('is_recommended', False),
-                data.get('sort_order', 0)
-            ))
-            link = cur.fetchone()
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "link": dict(link)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/vendor-links/{link_id}")
-async def api_delete_vendor_link(link_id: str):
-    """Delete a vendor link"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM casting_equipment_vendor_links WHERE id = %s RETURNING id", (link_id,))
-            deleted = cur.fetchone()
-            conn.commit()
-        conn.close()
-        if deleted:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Vendor link not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/locations/{location_id}/equipment")
-async def api_get_equipment_at_location(location_id: str):
-    """Get all equipment stored at a location"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT * FROM casting_equipment 
-                WHERE primary_location_id = %s
-                ORDER BY name
-            """, (location_id,))
-            equipment = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "equipment": [dict(e) for e in equipment]})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/crew/{crew_id}/equipment")
-async def api_get_crew_equipment(crew_id: str):
-    """Get all equipment assigned to a crew member"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT e.*, a.role as assignment_role
-                FROM casting_equipment e
-                JOIN casting_equipment_assignments a ON e.id = a.equipment_id
-                WHERE a.crew_id = %s
-                ORDER BY e.name
-            """, (crew_id,))
-            equipment = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "equipment": [dict(e) for e in equipment]})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/projects/{project_id}/schedules")
-async def api_get_schedules(project_id: str):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        schedules = get_schedules(project_id)
-        return JSONResponse({"success": True, "schedules": schedules})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/schedules")
-async def api_save_schedule(request: Request):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        data = await request.json()
-        schedule = save_schedule(data)
-        return JSONResponse({"success": True, "schedule": schedule})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/schedules/{schedule_id}")
-async def api_delete_schedule(schedule_id: str):
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        success = delete_schedule(schedule_id)
-        if success:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Schedule not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================
 # Production Days API (Normalized Table Support)
 # ============================================================================
 
-@app.get("/api/casting/projects/{project_id}/production-days")
-async def api_get_production_days(project_id: str):
-    """Get all production days for a project"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT pd.*, l.name as location_name 
-                FROM casting_production_days pd
-                LEFT JOIN casting_locations l ON pd.location_id = l.id
-                WHERE pd.project_id = %s 
-                ORDER BY pd.date
-            """, (project_id,))
-            production_days = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "productionDays": [serialize_row(pd) for pd in production_days]})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/production-days")
-async def api_create_production_day(request: Request):
-    """Create a new production day"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        import uuid
-        data = await request.json()
-        day_id = data.get('id') or f"prod_day_{uuid.uuid4().hex[:12]}"
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO casting_production_days 
-                (id, project_id, date, call_time, wrap_time, location_id, scenes, crew, props, notes, status, weather_forecast)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (id) DO UPDATE SET
-                    date = EXCLUDED.date,
-                    call_time = EXCLUDED.call_time,
-                    wrap_time = EXCLUDED.wrap_time,
-                    location_id = EXCLUDED.location_id,
-                    scenes = EXCLUDED.scenes,
-                    crew = EXCLUDED.crew,
-                    props = EXCLUDED.props,
-                    notes = EXCLUDED.notes,
-                    status = EXCLUDED.status,
-                    weather_forecast = EXCLUDED.weather_forecast,
-                    updated_at = CURRENT_TIMESTAMP
-                RETURNING *
-            """, (
-                day_id,
-                data.get('projectId') or data.get('project_id'),
-                data.get('date'),
-                data.get('callTime') or data.get('call_time'),
-                data.get('wrapTime') or data.get('wrap_time'),
-                data.get('locationId') or data.get('location_id'),
-                json.dumps(data.get('scenes', [])),
-                json.dumps(data.get('crew', [])),
-                json.dumps(data.get('props', [])),
-                data.get('notes'),
-                data.get('status', 'planned'),
-                json.dumps(data.get('weatherForecast', data.get('weather_forecast', {})))
-            ))
-            production_day = cur.fetchone()
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "productionDay": serialize_row(production_day)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/production-days/{day_id}")
-async def api_delete_production_day(day_id: str):
-    """Delete a production day"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM casting_production_days WHERE id = %s RETURNING id", (day_id,))
-            deleted = cur.fetchone()
-            conn.commit()
-        conn.close()
-        if deleted:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Production day not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================
 # User Roles API (Sharing/Permissions)
 # ============================================================================
 
-@app.get("/api/casting/projects/{project_id}/user-roles")
-async def api_get_user_roles(project_id: str):
-    """Get all user roles/permissions for a project"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT * FROM casting_user_roles 
-                WHERE project_id = %s 
-                ORDER BY created_at
-            """, (project_id,))
-            user_roles = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "userRoles": [serialize_row(ur) for ur in user_roles]})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/user-roles")
-async def api_set_user_role(request: Request):
-    """Set user role/permission for a project"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        import uuid
-        data = await request.json()
-        role_id = f"user_role_{uuid.uuid4().hex[:12]}"
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO casting_user_roles (id, project_id, user_id, role)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (project_id, user_id) DO UPDATE SET
-                    role = EXCLUDED.role,
-                    updated_at = CURRENT_TIMESTAMP
-                RETURNING *
-            """, (
-                role_id,
-                data.get('projectId') or data.get('project_id'),
-                data.get('userId') or data.get('user_id'),
-                data.get('role', 'viewer')
-            ))
-            user_role = cur.fetchone()
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "userRole": serialize_row(user_role)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/user-roles/{project_id}/{user_id}")
-async def api_remove_user_role(project_id: str, user_id: str):
-    """Remove user role/permission from a project"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("""
-                DELETE FROM casting_user_roles 
-                WHERE project_id = %s AND user_id = %s 
-                RETURNING id
-            """, (project_id, user_id))
-            deleted = cur.fetchone()
-            conn.commit()
-        conn.close()
-        if deleted:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="User role not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================
 # Shot Production Details API (Camera, Lighting, Audio, Notes)
 # ============================================================================
 
-@app.get("/api/casting/shots/{shot_id}/camera")
-async def api_get_shot_camera(shot_id: str):
-    """Get camera settings for a shot"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT * FROM casting_shot_camera WHERE shot_id = %s", (shot_id,))
-            camera = cur.fetchone()
-        conn.close()
-        return JSONResponse({"success": True, "camera": serialize_row(camera) if camera else None})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/shots/{shot_id}/camera")
-async def api_save_shot_camera(shot_id: str, request: Request):
-    """Save camera settings for a shot"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        import uuid
-        data = await request.json()
-        camera_id = data.get('id') or f"shot_cam_{uuid.uuid4().hex[:12]}"
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO casting_shot_camera 
-                (id, shot_id, scene_id, camera_type, lens, focal_length, aperture, iso, 
-                 shutter_speed, frame_rate, resolution, aspect_ratio, camera_movement, gimbal_settings, focus_notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (id) DO UPDATE SET
-                    camera_type = EXCLUDED.camera_type,
-                    lens = EXCLUDED.lens,
-                    focal_length = EXCLUDED.focal_length,
-                    aperture = EXCLUDED.aperture,
-                    iso = EXCLUDED.iso,
-                    shutter_speed = EXCLUDED.shutter_speed,
-                    frame_rate = EXCLUDED.frame_rate,
-                    resolution = EXCLUDED.resolution,
-                    aspect_ratio = EXCLUDED.aspect_ratio,
-                    camera_movement = EXCLUDED.camera_movement,
-                    gimbal_settings = EXCLUDED.gimbal_settings,
-                    focus_notes = EXCLUDED.focus_notes,
-                    updated_at = CURRENT_TIMESTAMP
-                RETURNING *
-            """, (
-                camera_id, shot_id, data.get('sceneId'),
-                data.get('cameraType'), data.get('lens'), data.get('focalLength'),
-                data.get('aperture'), data.get('iso'), data.get('shutterSpeed'),
-                data.get('frameRate'), data.get('resolution'), data.get('aspectRatio'),
-                data.get('cameraMovement'), json.dumps(data.get('gimbalSettings', {})),
-                data.get('focusNotes')
-            ))
-            camera = cur.fetchone()
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "camera": serialize_row(camera)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/shots/{shot_id}/lighting")
-async def api_get_shot_lighting(shot_id: str):
-    """Get lighting setup for a shot"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT * FROM casting_shot_lighting WHERE shot_id = %s", (shot_id,))
-            lighting = cur.fetchone()
-        conn.close()
-        return JSONResponse({"success": True, "lighting": serialize_row(lighting) if lighting else None})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/shots/{shot_id}/lighting")
-async def api_save_shot_lighting(shot_id: str, request: Request):
-    """Save lighting setup for a shot"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        import uuid
-        data = await request.json()
-        lighting_id = data.get('id') or f"shot_light_{uuid.uuid4().hex[:12]}"
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO casting_shot_lighting 
-                (id, shot_id, scene_id, lighting_setup_name, key_light, fill_light, back_light, 
-                 practical_lights, light_diagram_url, color_temperature, lighting_style, 
-                 special_effects, power_requirements, setup_time, notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (id) DO UPDATE SET
-                    lighting_setup_name = EXCLUDED.lighting_setup_name,
-                    key_light = EXCLUDED.key_light,
-                    fill_light = EXCLUDED.fill_light,
-                    back_light = EXCLUDED.back_light,
-                    practical_lights = EXCLUDED.practical_lights,
-                    light_diagram_url = EXCLUDED.light_diagram_url,
-                    color_temperature = EXCLUDED.color_temperature,
-                    lighting_style = EXCLUDED.lighting_style,
-                    special_effects = EXCLUDED.special_effects,
-                    power_requirements = EXCLUDED.power_requirements,
-                    setup_time = EXCLUDED.setup_time,
-                    notes = EXCLUDED.notes,
-                    updated_at = CURRENT_TIMESTAMP
-                RETURNING *
-            """, (
-                lighting_id, shot_id, data.get('sceneId'),
-                data.get('lightingSetupName'), json.dumps(data.get('keyLight', {})),
-                json.dumps(data.get('fillLight', {})), json.dumps(data.get('backLight', {})),
-                json.dumps(data.get('practicalLights', [])), data.get('lightDiagramUrl'),
-                data.get('colorTemperature'), data.get('lightingStyle'),
-                json.dumps(data.get('specialEffects', [])), data.get('powerRequirements'),
-                data.get('setupTime'), data.get('notes')
-            ))
-            lighting = cur.fetchone()
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "lighting": serialize_row(lighting)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/shots/{shot_id}/audio")
-async def api_get_shot_audio(shot_id: str):
-    """Get audio setup for a shot"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT * FROM casting_shot_audio WHERE shot_id = %s", (shot_id,))
-            audio = cur.fetchone()
-        conn.close()
-        return JSONResponse({"success": True, "audio": serialize_row(audio) if audio else None})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/shots/{shot_id}/audio")
-async def api_save_shot_audio(shot_id: str, request: Request):
-    """Save audio setup for a shot"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        import uuid
-        data = await request.json()
-        audio_id = data.get('id') or f"shot_audio_{uuid.uuid4().hex[:12]}"
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO casting_shot_audio 
-                (id, shot_id, scene_id, audio_type, microphone_setup, boom_operator_needed,
-                 wireless_mics_count, sound_blankets_needed, ambient_sound_notes, dialogue_notes,
-                 music_cue, sound_effects_needed, adr_required, audio_format, channels, notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (id) DO UPDATE SET
-                    audio_type = EXCLUDED.audio_type,
-                    microphone_setup = EXCLUDED.microphone_setup,
-                    boom_operator_needed = EXCLUDED.boom_operator_needed,
-                    wireless_mics_count = EXCLUDED.wireless_mics_count,
-                    sound_blankets_needed = EXCLUDED.sound_blankets_needed,
-                    ambient_sound_notes = EXCLUDED.ambient_sound_notes,
-                    dialogue_notes = EXCLUDED.dialogue_notes,
-                    music_cue = EXCLUDED.music_cue,
-                    sound_effects_needed = EXCLUDED.sound_effects_needed,
-                    adr_required = EXCLUDED.adr_required,
-                    audio_format = EXCLUDED.audio_format,
-                    channels = EXCLUDED.channels,
-                    notes = EXCLUDED.notes,
-                    updated_at = CURRENT_TIMESTAMP
-                RETURNING *
-            """, (
-                audio_id, shot_id, data.get('sceneId'),
-                data.get('audioType'), json.dumps(data.get('microphoneSetup', [])),
-                data.get('boomOperatorNeeded', False), data.get('wirelessMicsCount', 0),
-                data.get('soundBlanketsNeeded', False), data.get('ambientSoundNotes'),
-                data.get('dialogueNotes'), data.get('musicCue'),
-                json.dumps(data.get('soundEffectsNeeded', [])), data.get('adrRequired', False),
-                data.get('audioFormat'), data.get('channels', 2), data.get('notes')
-            ))
-            audio = cur.fetchone()
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "audio": serialize_row(audio)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/casting/shots/{shot_id}/notes")
-async def api_get_shot_notes(shot_id: str):
-    """Get all notes for a shot"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT * FROM casting_shot_notes 
-                WHERE shot_id = %s 
-                ORDER BY priority DESC, created_at DESC
-            """, (shot_id,))
-            notes = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "notes": [serialize_row(n) for n in notes]})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/shots/{shot_id}/notes")
-async def api_create_shot_note(shot_id: str, request: Request):
-    """Create a note for a shot"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        import uuid
-        data = await request.json()
-        note_id = f"shot_note_{uuid.uuid4().hex[:12]}"
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO casting_shot_notes 
-                (id, shot_id, scene_id, note_type, content, author, priority, tags, attachments)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING *
-            """, (
-                note_id, shot_id, data.get('sceneId'),
-                data.get('noteType', 'general'), data.get('content'),
-                data.get('author'), data.get('priority', 'normal'),
-                json.dumps(data.get('tags', [])), json.dumps(data.get('attachments', []))
-            ))
-            note = cur.fetchone()
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "note": serialize_row(note)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/api/casting/shot-notes/{note_id}/resolve")
-async def api_resolve_shot_note(note_id: str, request: Request):
-    """Mark a shot note as resolved"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        data = await request.json()
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                UPDATE casting_shot_notes 
-                SET resolved = TRUE, resolved_at = CURRENT_TIMESTAMP, resolved_by = %s
-                WHERE id = %s
-                RETURNING *
-            """, (data.get('resolvedBy'), note_id))
-            note = cur.fetchone()
-            conn.commit()
-        conn.close()
-        if note:
-            return JSONResponse({"success": True, "note": serialize_row(note)})
-        raise HTTPException(status_code=404, detail="Note not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/shot-notes/{note_id}")
-async def api_delete_shot_note(note_id: str):
-    """Delete a shot note"""
-    if not CASTING_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Casting service not available")
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM casting_shot_notes WHERE id = %s RETURNING id", (note_id,))
-            deleted = cur.fetchone()
-            conn.commit()
-        conn.close()
-        if deleted:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Note not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================
@@ -6988,559 +2612,33 @@ async def api_delete_story_logic(project_id: str):
 # Storyboard Frames API (Link storyboard frames to script scenes)
 # ============================================================================
 
-@app.get("/api/casting/scenes/{scene_id}/storyboard-frames")
-async def api_get_scene_storyboard_frames(scene_id: str):
-    """Get all storyboard frames linked to a scene"""
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS storyboard_frames (
-                    id VARCHAR(255) PRIMARY KEY,
-                    scene_id VARCHAR(255),
-                    manuscript_id VARCHAR(255),
-                    project_id VARCHAR(255),
-                    shot_number INTEGER,
-                    image_url TEXT,
-                    sketch TEXT,
-                    description TEXT,
-                    camera_angle VARCHAR(100),
-                    camera_movement VARCHAR(100),
-                    duration DECIMAL(10,2),
-                    notes TEXT,
-                    script_line_start INTEGER,
-                    script_line_end INTEGER,
-                    dialogue_character VARCHAR(255),
-                    dialogue_text TEXT,
-                    action_description TEXT,
-                    drawing_data JSONB,
-                    sort_order INTEGER DEFAULT 0,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            conn.commit()
-            
-            cur.execute("""
-                SELECT * FROM storyboard_frames 
-                WHERE scene_id = %s 
-                ORDER BY sort_order, shot_number
-            """, (scene_id,))
-            frames = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "frames": [serialize_row(f) for f in frames]})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/storyboard-frames")
-async def api_save_storyboard_frame(request: Request):
-    """Save a storyboard frame"""
-    try:
-        import uuid
-        data = await request.json()
-        frame_id = data.get('id') or f"frame_{uuid.uuid4().hex[:12]}"
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO storyboard_frames 
-                (id, scene_id, manuscript_id, project_id, shot_number, image_url, sketch,
-                 description, camera_angle, camera_movement, duration, notes,
-                 script_line_start, script_line_end, dialogue_character, dialogue_text,
-                 action_description, drawing_data, sort_order)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (id) DO UPDATE SET
-                    scene_id = EXCLUDED.scene_id,
-                    shot_number = EXCLUDED.shot_number,
-                    image_url = EXCLUDED.image_url,
-                    sketch = EXCLUDED.sketch,
-                    description = EXCLUDED.description,
-                    camera_angle = EXCLUDED.camera_angle,
-                    camera_movement = EXCLUDED.camera_movement,
-                    duration = EXCLUDED.duration,
-                    notes = EXCLUDED.notes,
-                    script_line_start = EXCLUDED.script_line_start,
-                    script_line_end = EXCLUDED.script_line_end,
-                    dialogue_character = EXCLUDED.dialogue_character,
-                    dialogue_text = EXCLUDED.dialogue_text,
-                    action_description = EXCLUDED.action_description,
-                    drawing_data = EXCLUDED.drawing_data,
-                    sort_order = EXCLUDED.sort_order,
-                    updated_at = CURRENT_TIMESTAMP
-                RETURNING *
-            """, (
-                frame_id,
-                data.get('sceneId'),
-                data.get('manuscriptId'),
-                data.get('projectId'),
-                data.get('shotNumber'),
-                data.get('imageUrl'),
-                data.get('sketch'),
-                data.get('description'),
-                data.get('cameraAngle'),
-                data.get('cameraMovement'),
-                data.get('duration'),
-                data.get('notes'),
-                data.get('scriptLineStart'),
-                data.get('scriptLineEnd'),
-                data.get('dialogueCharacter'),
-                data.get('dialogueText'),
-                data.get('actionDescription'),
-                json.dumps(data.get('drawingData')) if data.get('drawingData') else None,
-                data.get('sortOrder', 0)
-            ))
-            frame = cur.fetchone()
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "frame": serialize_row(frame)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/storyboard-frames/{frame_id}")
-async def api_delete_storyboard_frame(frame_id: str):
-    """Delete a storyboard frame"""
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM storyboard_frames WHERE id = %s RETURNING id", (frame_id,))
-            deleted = cur.fetchone()
-            conn.commit()
-        conn.close()
-        if deleted:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Frame not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================
 # Script Supervisor Notes API (Take Logs, Continuity)
 # ============================================================================
 
-@app.get("/api/casting/scenes/{scene_id}/supervisor-notes")
-async def api_get_supervisor_notes(scene_id: str):
-    """Get script supervisor notes for a scene"""
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS script_supervisor_notes (
-                    id VARCHAR(255) PRIMARY KEY,
-                    scene_id VARCHAR(255) NOT NULL,
-                    manuscript_id VARCHAR(255),
-                    project_id VARCHAR(255),
-                    note_type VARCHAR(50) DEFAULT 'general',
-                    take_number INTEGER,
-                    is_circled BOOLEAN DEFAULT FALSE,
-                    timecode_start VARCHAR(50),
-                    timecode_end VARCHAR(50),
-                    duration_seconds DECIMAL(10,2),
-                    camera VARCHAR(50),
-                    lens VARCHAR(100),
-                    sound_roll VARCHAR(50),
-                    continuity_notes TEXT,
-                    director_notes TEXT,
-                    performance_notes TEXT,
-                    technical_notes TEXT,
-                    wardrobe_notes TEXT,
-                    props_notes TEXT,
-                    hair_makeup_notes TEXT,
-                    rating INTEGER,
-                    status VARCHAR(50) DEFAULT 'pending',
-                    logged_by VARCHAR(255),
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            conn.commit()
-            
-            cur.execute("""
-                SELECT * FROM script_supervisor_notes 
-                WHERE scene_id = %s 
-                ORDER BY take_number, created_at
-            """, (scene_id,))
-            notes = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "notes": [serialize_row(n) for n in notes]})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/supervisor-notes")
-async def api_save_supervisor_note(request: Request):
-    """Save a script supervisor note"""
-    try:
-        import uuid
-        data = await request.json()
-        note_id = data.get('id') or f"supnote_{uuid.uuid4().hex[:12]}"
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO script_supervisor_notes 
-                (id, scene_id, manuscript_id, project_id, note_type, take_number, is_circled,
-                 timecode_start, timecode_end, duration_seconds, camera, lens, sound_roll,
-                 continuity_notes, director_notes, performance_notes, technical_notes,
-                 wardrobe_notes, props_notes, hair_makeup_notes, rating, status, logged_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (id) DO UPDATE SET
-                    note_type = EXCLUDED.note_type,
-                    take_number = EXCLUDED.take_number,
-                    is_circled = EXCLUDED.is_circled,
-                    timecode_start = EXCLUDED.timecode_start,
-                    timecode_end = EXCLUDED.timecode_end,
-                    duration_seconds = EXCLUDED.duration_seconds,
-                    camera = EXCLUDED.camera,
-                    lens = EXCLUDED.lens,
-                    sound_roll = EXCLUDED.sound_roll,
-                    continuity_notes = EXCLUDED.continuity_notes,
-                    director_notes = EXCLUDED.director_notes,
-                    performance_notes = EXCLUDED.performance_notes,
-                    technical_notes = EXCLUDED.technical_notes,
-                    wardrobe_notes = EXCLUDED.wardrobe_notes,
-                    props_notes = EXCLUDED.props_notes,
-                    hair_makeup_notes = EXCLUDED.hair_makeup_notes,
-                    rating = EXCLUDED.rating,
-                    status = EXCLUDED.status,
-                    logged_by = EXCLUDED.logged_by,
-                    updated_at = CURRENT_TIMESTAMP
-                RETURNING *
-            """, (
-                note_id,
-                data.get('sceneId'),
-                data.get('manuscriptId'),
-                data.get('projectId'),
-                data.get('noteType', 'general'),
-                data.get('takeNumber'),
-                data.get('isCircled', False),
-                data.get('timecodeStart'),
-                data.get('timecodeEnd'),
-                data.get('durationSeconds'),
-                data.get('camera'),
-                data.get('lens'),
-                data.get('soundRoll'),
-                data.get('continuityNotes'),
-                data.get('directorNotes'),
-                data.get('performanceNotes'),
-                data.get('technicalNotes'),
-                data.get('wardrobeNotes'),
-                data.get('propsNotes'),
-                data.get('hairMakeupNotes'),
-                data.get('rating'),
-                data.get('status', 'pending'),
-                data.get('loggedBy')
-            ))
-            note = cur.fetchone()
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "note": serialize_row(note)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/supervisor-notes/{note_id}")
-async def api_delete_supervisor_note(note_id: str):
-    """Delete a script supervisor note"""
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM script_supervisor_notes WHERE id = %s RETURNING id", (note_id,))
-            deleted = cur.fetchone()
-            conn.commit()
-        conn.close()
-        if deleted:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Note not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================
 # Character Arc Tracking API
 # ============================================================================
 
-@app.get("/api/casting/manuscripts/{manuscript_id}/character-arcs")
-async def api_get_character_arcs(manuscript_id: str):
-    """Get character arcs for a manuscript"""
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS character_arcs (
-                    id VARCHAR(255) PRIMARY KEY,
-                    manuscript_id VARCHAR(255) NOT NULL,
-                    project_id VARCHAR(255),
-                    character_name VARCHAR(255) NOT NULL,
-                    role_id VARCHAR(255),
-                    arc_type VARCHAR(100),
-                    starting_state TEXT,
-                    ending_state TEXT,
-                    key_moments JSONB DEFAULT '[]',
-                    transformation_trigger TEXT,
-                    internal_conflict TEXT,
-                    external_conflict TEXT,
-                    character_want TEXT,
-                    character_need TEXT,
-                    ghost_wound TEXT,
-                    lie_believed TEXT,
-                    truth_learned TEXT,
-                    notes TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            conn.commit()
-            
-            cur.execute("""
-                SELECT * FROM character_arcs 
-                WHERE manuscript_id = %s 
-                ORDER BY character_name
-            """, (manuscript_id,))
-            arcs = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "characterArcs": [serialize_row(a) for a in arcs]})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/character-arcs")
-async def api_save_character_arc(request: Request):
-    """Save a character arc"""
-    try:
-        import uuid
-        data = await request.json()
-        arc_id = data.get('id') or f"arc_{uuid.uuid4().hex[:12]}"
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO character_arcs 
-                (id, manuscript_id, project_id, character_name, role_id, arc_type,
-                 starting_state, ending_state, key_moments, transformation_trigger,
-                 internal_conflict, external_conflict, character_want, character_need,
-                 ghost_wound, lie_believed, truth_learned, notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (id) DO UPDATE SET
-                    character_name = EXCLUDED.character_name,
-                    role_id = EXCLUDED.role_id,
-                    arc_type = EXCLUDED.arc_type,
-                    starting_state = EXCLUDED.starting_state,
-                    ending_state = EXCLUDED.ending_state,
-                    key_moments = EXCLUDED.key_moments,
-                    transformation_trigger = EXCLUDED.transformation_trigger,
-                    internal_conflict = EXCLUDED.internal_conflict,
-                    external_conflict = EXCLUDED.external_conflict,
-                    character_want = EXCLUDED.character_want,
-                    character_need = EXCLUDED.character_need,
-                    ghost_wound = EXCLUDED.ghost_wound,
-                    lie_believed = EXCLUDED.lie_believed,
-                    truth_learned = EXCLUDED.truth_learned,
-                    notes = EXCLUDED.notes,
-                    updated_at = CURRENT_TIMESTAMP
-                RETURNING *
-            """, (
-                arc_id,
-                data.get('manuscriptId'),
-                data.get('projectId'),
-                data.get('characterName'),
-                data.get('roleId'),
-                data.get('arcType'),
-                data.get('startingState'),
-                data.get('endingState'),
-                json.dumps(data.get('keyMoments', [])),
-                data.get('transformationTrigger'),
-                data.get('internalConflict'),
-                data.get('externalConflict'),
-                data.get('characterWant'),
-                data.get('characterNeed'),
-                data.get('ghostWound'),
-                data.get('lieBelieved'),
-                data.get('truthLearned'),
-                data.get('notes')
-            ))
-            arc = cur.fetchone()
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "characterArc": serialize_row(arc)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/character-arcs/{arc_id}")
-async def api_delete_character_arc(arc_id: str):
-    """Delete a character arc"""
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM character_arcs WHERE id = %s RETURNING id", (arc_id,))
-            deleted = cur.fetchone()
-            conn.commit()
-        conn.close()
-        if deleted:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Character arc not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================
 # Story Beat Tracking API
 # ============================================================================
 
-@app.get("/api/casting/manuscripts/{manuscript_id}/story-beats")
-async def api_get_story_beats(manuscript_id: str):
-    """Get story beats for a manuscript"""
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS story_beats (
-                    id VARCHAR(255) PRIMARY KEY,
-                    manuscript_id VARCHAR(255) NOT NULL,
-                    project_id VARCHAR(255),
-                    beat_type VARCHAR(100) NOT NULL,
-                    beat_name VARCHAR(255) NOT NULL,
-                    description TEXT,
-                    page_number DECIMAL(10,2),
-                    scene_id VARCHAR(255),
-                    act_id VARCHAR(255),
-                    sequence VARCHAR(100),
-                    is_completed BOOLEAN DEFAULT FALSE,
-                    notes TEXT,
-                    sort_order INTEGER DEFAULT 0,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            conn.commit()
-            
-            cur.execute("""
-                SELECT * FROM story_beats 
-                WHERE manuscript_id = %s 
-                ORDER BY sort_order, page_number
-            """, (manuscript_id,))
-            beats = cur.fetchall()
-        conn.close()
-        return JSONResponse({"success": True, "storyBeats": [serialize_row(b) for b in beats]})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/story-beats")
-async def api_save_story_beat(request: Request):
-    """Save a story beat"""
-    try:
-        import uuid
-        data = await request.json()
-        beat_id = data.get('id') or f"beat_{uuid.uuid4().hex[:12]}"
-        
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO story_beats 
-                (id, manuscript_id, project_id, beat_type, beat_name, description,
-                 page_number, scene_id, act_id, sequence, is_completed, notes, sort_order)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (id) DO UPDATE SET
-                    beat_type = EXCLUDED.beat_type,
-                    beat_name = EXCLUDED.beat_name,
-                    description = EXCLUDED.description,
-                    page_number = EXCLUDED.page_number,
-                    scene_id = EXCLUDED.scene_id,
-                    act_id = EXCLUDED.act_id,
-                    sequence = EXCLUDED.sequence,
-                    is_completed = EXCLUDED.is_completed,
-                    notes = EXCLUDED.notes,
-                    sort_order = EXCLUDED.sort_order,
-                    updated_at = CURRENT_TIMESTAMP
-                RETURNING *
-            """, (
-                beat_id,
-                data.get('manuscriptId'),
-                data.get('projectId'),
-                data.get('beatType'),
-                data.get('beatName'),
-                data.get('description'),
-                data.get('pageNumber'),
-                data.get('sceneId'),
-                data.get('actId'),
-                data.get('sequence'),
-                data.get('isCompleted', False),
-                data.get('notes'),
-                data.get('sortOrder', 0)
-            ))
-            beat = cur.fetchone()
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "storyBeat": serialize_row(beat)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/casting/story-beats/{beat_id}")
-async def api_delete_story_beat(beat_id: str):
-    """Delete a story beat"""
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM story_beats WHERE id = %s RETURNING id", (beat_id,))
-            deleted = cur.fetchone()
-            conn.commit()
-        conn.close()
-        if deleted:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Story beat not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/casting/manuscripts/{manuscript_id}/story-beats/batch")
-async def api_batch_save_story_beats(manuscript_id: str, request: Request):
-    """Batch save story beats for a manuscript (e.g., from a template)"""
-    try:
-        import uuid
-        data = await request.json()
-        beats = data.get('beats', [])
-        
-        conn = get_db_connection()
-        saved = []
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            for idx, beat in enumerate(beats):
-                beat_id = beat.get('id') or f"beat_{uuid.uuid4().hex[:12]}"
-                cur.execute("""
-                    INSERT INTO story_beats 
-                    (id, manuscript_id, project_id, beat_type, beat_name, description,
-                     page_number, scene_id, act_id, sequence, is_completed, notes, sort_order)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (id) DO UPDATE SET
-                        beat_name = EXCLUDED.beat_name,
-                        description = EXCLUDED.description,
-                        page_number = EXCLUDED.page_number,
-                        sort_order = EXCLUDED.sort_order,
-                        updated_at = CURRENT_TIMESTAMP
-                    RETURNING *
-                """, (
-                    beat_id,
-                    manuscript_id,
-                    beat.get('projectId'),
-                    beat.get('beatType', 'structure'),
-                    beat.get('beatName') or beat.get('name'),
-                    beat.get('description'),
-                    beat.get('pageNumber') or beat.get('page'),
-                    beat.get('sceneId'),
-                    beat.get('actId'),
-                    beat.get('sequence'),
-                    beat.get('isCompleted', False),
-                    beat.get('notes'),
-                    idx
-                ))
-                saved.append(serialize_row(cur.fetchone()))
-            conn.commit()
-        conn.close()
-        return JSONResponse({"success": True, "count": len(saved), "storyBeats": saved})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================
@@ -8130,7 +3228,7 @@ async def create_split_sheet(request: dict):
     try:
         # Import database connection
         try:
-            from casting_service import get_db_connection
+            from tutorials_service import get_db_connection
             import psycopg2
             from psycopg2.extras import RealDictCursor, Json
         except ImportError:
@@ -8344,7 +3442,7 @@ async def update_split_sheet(split_sheet_id: str, request: dict):
     try:
         # Import database connection
         try:
-            from casting_service import get_db_connection
+            from tutorials_service import get_db_connection
             import psycopg2
             from psycopg2.extras import RealDictCursor, Json
         except ImportError:
@@ -8541,7 +3639,7 @@ async def get_split_sheet(split_sheet_id: str):
     try:
         # Import database connection
         try:
-            from casting_service import get_db_connection
+            from tutorials_service import get_db_connection
             import psycopg2
             from psycopg2.extras import RealDictCursor
         except ImportError:
@@ -8641,7 +3739,7 @@ async def get_split_sheet_by_access_code(
     try:
         # Import database connection
         try:
-            from casting_service import get_db_connection
+            from tutorials_service import get_db_connection
             import psycopg2
             from psycopg2.extras import RealDictCursor
         except ImportError:
@@ -8781,7 +3879,7 @@ async def validate_consent_access(
     Validate consent portal access code
     """
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -8892,7 +3990,7 @@ async def sign_consent_portal(request: Request):
     Sign a consent via portal
     """
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
         import json
@@ -8984,7 +4082,7 @@ async def generate_consent_access_code(request: Request):
     import string
     
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -9061,7 +4159,7 @@ async def get_split_sheets_by_contributor(contributor_id: str, token: str = None
         JSONResponse with success status and list of split sheets
     """
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -9139,7 +4237,7 @@ async def get_split_sheets_by_email(email: str, token: str = None, access_code: 
         JSONResponse with success status and list of split sheets
     """
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -9224,7 +4322,7 @@ async def get_split_sheet_by_songflow_track(songflow_track_id: str):
     try:
         # Import database connection
         try:
-            from casting_service import get_db_connection
+            from tutorials_service import get_db_connection
             import psycopg2
             from psycopg2.extras import RealDictCursor
         except ImportError:
@@ -9347,7 +4445,7 @@ async def get_split_sheet_songflow_links(split_sheet_id: str):
     try:
         # Import database connection
         try:
-            from casting_service import get_db_connection
+            from tutorials_service import get_db_connection
             import psycopg2
             from psycopg2.extras import RealDictCursor
         except ImportError:
@@ -9447,7 +4545,7 @@ async def sign_split_sheet_contributor(split_sheet_id: str, request: dict):
     from decimal import Decimal
     try:
         try:
-            from casting_service import get_db_connection
+            from tutorials_service import get_db_connection
             import psycopg2
             from psycopg2.extras import RealDictCursor, Json
         except ImportError:
@@ -9576,7 +4674,7 @@ async def link_split_sheet_to_songflow(split_sheet_id: str, request: dict):
     try:
         # Import database connection
         try:
-            from casting_service import get_db_connection
+            from tutorials_service import get_db_connection
             import psycopg2
             from psycopg2.extras import RealDictCursor, Json
         except ImportError:
@@ -9737,7 +4835,7 @@ async def unlink_split_sheet_from_songflow(
     try:
         # Import database connection
         try:
-            from casting_service import get_db_connection
+            from tutorials_service import get_db_connection
             import psycopg2
         except ImportError:
             return JSONResponse({
@@ -10056,7 +5154,7 @@ async def serve_model_file(filename: str):
 async def get_split_sheet_revenue(split_sheet_id: str):
     """Get revenue history for a split sheet"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -10112,7 +5210,7 @@ async def create_split_sheet_revenue(split_sheet_id: str, request: Request):
     """Add revenue entry for a split sheet"""
     import uuid
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -10193,7 +5291,7 @@ async def create_split_sheet_revenue(split_sheet_id: str, request: Request):
 async def get_split_sheet_payments(split_sheet_id: str):
     """Get payment history for a split sheet"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -10257,7 +5355,7 @@ async def get_split_sheet_payments(split_sheet_id: str):
 async def update_split_sheet_payment(payment_id: str, request: Request):
     """Update payment status and details"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -10314,7 +5412,7 @@ async def update_split_sheet_payment(payment_id: str, request: Request):
 async def get_split_sheet_invoices(userId: str = Query(None)):
     """Get invoices for a user"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -10393,7 +5491,7 @@ async def send_invoice_email(invoice_id: str, request: Request):
     
     # For now, simulate success and update status
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -10455,7 +5553,7 @@ async def get_fiken_status():
 async def get_pro_connections(userId: str = Query(None)):
     """Get PRO (TONO/STIM) connections for a user"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -10511,7 +5609,7 @@ async def get_pro_connections(userId: str = Query(None)):
 async def delete_pro_connection(connection_id: str):
     """Disconnect from a PRO"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
     except ImportError:
         return JSONResponse({"success": False, "error": "Database service not available"}, status_code=503)
@@ -10538,7 +5636,7 @@ async def delete_pro_connection(connection_id: str):
 async def get_contract(contract_id: str):
     """Get a contract by ID"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
         import json
@@ -10593,7 +5691,7 @@ async def get_contract(contract_id: str):
 async def list_contracts(split_sheet_id: str = Query(None), project_id: str = Query(None)):
     """List contracts with optional filters"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -10640,7 +5738,7 @@ async def create_contract(request: Request):
     import uuid
     import json
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -10694,7 +5792,7 @@ async def update_contract(contract_id: str, request: Request):
     """Update a contract"""
     import json
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -10757,7 +5855,7 @@ async def update_contract(contract_id: str, request: Request):
 async def get_legal_suggestions(split_sheet_id: str):
     """Get AI-generated legal suggestions for a split sheet"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -10817,7 +5915,7 @@ async def get_legal_suggestions(split_sheet_id: str):
 async def update_legal_suggestion(split_sheet_id: str, suggestion_id: str, request: Request):
     """Update suggestion status (accept/reject)"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -10860,7 +5958,7 @@ async def update_legal_suggestion(split_sheet_id: str, suggestion_id: str, reque
 async def get_legal_references(split_sheet_id: str):
     """Get legal references for a split sheet"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -10918,7 +6016,7 @@ async def add_legal_reference(split_sheet_id: str, request: Request):
     """Add a legal reference to a split sheet"""
     import uuid
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -10972,7 +6070,7 @@ async def add_legal_reference(split_sheet_id: str, request: Request):
 async def search_norwegian_laws(query: str = Query(...), category: str = Query(None)):
     """Search Norwegian laws database"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -11037,7 +6135,7 @@ async def search_norwegian_laws(query: str = Query(...), category: str = Query(N
 async def get_split_sheet_comments(split_sheet_id: str):
     """Get comments for a split sheet"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -11094,7 +6192,7 @@ async def create_split_sheet_comment(split_sheet_id: str, request: Request):
     import uuid
     import json
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -11145,7 +6243,7 @@ async def update_split_sheet_comment(comment_id: str, request: Request):
     """Update a comment (edit or resolve)"""
     import json
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -11196,7 +6294,7 @@ async def update_split_sheet_comment(comment_id: str, request: Request):
 async def delete_split_sheet_comment(comment_id: str):
     """Delete a comment"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
     except ImportError:
         return JSONResponse({"success": False, "error": "Database service not available"}, status_code=503)
@@ -11223,7 +6321,7 @@ async def delete_split_sheet_comment(comment_id: str):
 async def get_split_sheet_templates(userId: str = Query(None), include_public: bool = Query(True)):
     """Get split sheet templates"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -11295,7 +6393,7 @@ async def create_split_sheet_template(request: Request):
     import uuid
     import json
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -11344,7 +6442,7 @@ async def create_split_sheet_template(request: Request):
 async def delete_split_sheet_template(template_id: str):
     """Delete a template"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
     except ImportError:
         return JSONResponse({"success": False, "error": "Database service not available"}, status_code=503)
@@ -11369,7 +6467,7 @@ async def delete_split_sheet_template(template_id: str):
 async def use_split_sheet_template(template_id: str):
     """Track template usage"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -11412,7 +6510,7 @@ async def use_split_sheet_template(template_id: str):
 async def get_split_sheet_reports(userId: str = Query(...)):
     """Get generated reports for a user"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -11468,7 +6566,7 @@ async def generate_split_sheet_report(request: Request):
     import uuid
     import json
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -11522,7 +6620,7 @@ async def generate_split_sheet_report(request: Request):
 async def get_split_sheet_statistics(userId: str = Query(...)):
     """Get aggregated statistics for a user's split sheets"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -11607,7 +6705,7 @@ async def initialize_troll_demo_all(request: Request):
     import json
     from datetime import datetime
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -11804,7 +6902,7 @@ async def initialize_troll_demo_split_sheet(request: Request):
     import uuid
     import json
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor, Json
     except ImportError:
@@ -12027,363 +7125,6 @@ async def initialize_troll_demo_split_sheet(request: Request):
 
 # ==================== TROLL DEMO OFFERS, CONTRACTS & CONSENTS ====================
 
-@app.post("/api/casting/demo/troll/offers-contracts")
-async def initialize_troll_demo_offers_contracts(request: Request):
-    """
-    Initialize TROLL demo project with offers, contracts and consents.
-    Creates realistic film production workflow data for the TROLL (2026) Norwegian film.
-    """
-    import uuid
-    import json
-    from datetime import datetime, timedelta
-    try:
-        from casting_service import get_db_connection
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-    except ImportError:
-        return JSONResponse({"success": False, "error": "Database service not available"}, status_code=503)
-    
-    project_id = 'troll-project-2026'
-    
-    # TROLL Cast Offers
-    troll_offers = [
-        {
-            'id': 'offer-troll-nora-001',
-            'project_id': project_id,
-            'candidate_id': 'candidate-troll-001',  # Ine Marie Wilmann
-            'role_id': 'role-troll-nora',
-            'status': 'accepted',
-            'compensation': '2 500 000 NOK + 3% backend',
-            'terms': 'Hovedrolle Nora Tidemann. 45 opptaksdager over 3 måneder. Inkluderer stunts og grønn skjerm.',
-            'notes': 'Tilbudt 15. august 2025. Akseptert 20. august 2025.',
-            'response_deadline': '2025-08-25',
-            'response_date': '2025-08-20'
-        },
-        {
-            'id': 'offer-troll-andreas-002',
-            'project_id': project_id,
-            'candidate_id': 'candidate-troll-002',  # Kim Falck
-            'role_id': 'role-troll-andreas',
-            'status': 'accepted',
-            'compensation': '1 200 000 NOK + 2% backend',
-            'terms': 'Rolle Andreas Isaksen. 30 opptaksdager. Bilkjøring og actionscener.',
-            'notes': 'Tilbudt 18. august 2025. Akseptert 22. august 2025.',
-            'response_deadline': '2025-08-28',
-            'response_date': '2025-08-22'
-        },
-        {
-            'id': 'offer-troll-general-003',
-            'project_id': project_id,
-            'candidate_id': 'candidate-troll-003',  # Mads Ousdal
-            'role_id': 'role-troll-general',
-            'status': 'accepted',
-            'compensation': '800 000 NOK',
-            'terms': 'Rolle General Fredrik. 20 opptaksdager. Militærscener.',
-            'notes': 'Akseptert etter forhandling om opptak i oktober.',
-            'response_deadline': '2025-09-01',
-            'response_date': '2025-08-28'
-        },
-        {
-            'id': 'offer-troll-statsminister-004',
-            'project_id': project_id,
-            'candidate_id': 'candidate-troll-004',  # Anneke von der Lippe
-            'role_id': 'role-troll-statsminister',
-            'status': 'pending',
-            'compensation': '600 000 NOK',
-            'terms': 'Rolle Statsminister Berit Moberg. 15 opptaksdager. Pressekonferanser og krisescener.',
-            'notes': 'Venter på bekreftelse. Alternativ: Pia Tjelta.',
-            'response_deadline': '2025-09-15',
-            'response_date': None
-        }
-    ]
-    
-    # TROLL Contracts
-    troll_contracts = [
-        {
-            'id': 'contract-troll-nora-001',
-            'project_id': project_id,
-            'candidate_id': 'candidate-troll-001',
-            'offer_id': 'offer-troll-nora-001',
-            'role_id': 'role-troll-nora',
-            'contract_type': 'hovedrolle',
-            'status': 'signed',
-            'start_date': '2025-09-15',
-            'end_date': '2025-12-20',
-            'compensation': '2 500 000 NOK + 3% backend av nettoinntekter',
-            'terms': '''KONTRAKT FOR HOVEDROLLE - TROLL (2026)
-            
-Skuespiller: Ine Marie Wilmann
-Rolle: Nora Tidemann (Paleontolog)
-
-1. VARIGHET: 45 opptaksdager mellom 15. september og 20. desember 2025
-2. HONORAR: NOK 2.500.000 (brutto) + 3% av netto backend
-3. STUNT: Skuespiller godtar stuntarbeid med godkjent koordinator
-4. GRØNN SKJERM: Minimum 15 dager VFX-opptak inkludert
-5. EKSKLUSIVITET: Ingen konkurrerende prosjekter i opptaksperioden
-6. KREDITERING: Øverst på rollelisten, navn i tittelen
-7. REISE: Første klasse transport, 4-stjerners hotell
-8. GARDEROBE: Full garderobeprøve inkludert
-
-Signert av begge parter 25. august 2025.''',
-            'signed_date': '2025-08-25'
-        },
-        {
-            'id': 'contract-troll-andreas-002',
-            'project_id': project_id,
-            'candidate_id': 'candidate-troll-002',
-            'offer_id': 'offer-troll-andreas-002',
-            'role_id': 'role-troll-andreas',
-            'contract_type': 'birolle',
-            'status': 'signed',
-            'start_date': '2025-09-20',
-            'end_date': '2025-11-30',
-            'compensation': '1 200 000 NOK + 2% backend',
-            'terms': '''KONTRAKT FOR BIROLLE - TROLL (2026)
-
-Skuespiller: Kim Falck
-Rolle: Andreas Isaksen
-
-1. VARIGHET: 30 opptaksdager
-2. HONORAR: NOK 1.200.000 (brutto) + 2% backend
-3. ACTIONSCENER: Bilkjøring og fysisk action inkludert
-4. KREDITERING: Andre posisjon på rollelisten''',
-            'signed_date': '2025-08-28'
-        },
-        {
-            'id': 'contract-troll-general-003',
-            'project_id': project_id,
-            'candidate_id': 'candidate-troll-003',
-            'offer_id': 'offer-troll-general-003',
-            'role_id': 'role-troll-general',
-            'contract_type': 'birolle',
-            'status': 'pending',
-            'start_date': '2025-10-01',
-            'end_date': '2025-11-15',
-            'compensation': '800 000 NOK',
-            'terms': '''KONTRAKT FOR BIROLLE - TROLL (2026)
-
-Skuespiller: Mads Ousdal
-Rolle: General Fredrik
-
-1. VARIGHET: 20 opptaksdager i oktober-november 2025
-2. HONORAR: NOK 800.000 (brutto)
-3. UNIFORM: Militæruniform tilpasset''',
-            'signed_date': None
-        }
-    ]
-    
-    # TROLL Consents (Samtykker)
-    troll_consents = [
-        {
-            'id': 'consent-troll-gdpr-001',
-            'project_id': project_id,
-            'candidate_id': 'candidate-troll-001',
-            'type': 'gdpr',
-            'title': 'GDPR Samtykke - Personopplysninger',
-            'description': 'Samtykke til behandling av personopplysninger i henhold til GDPR for TROLL produksjon.',
-            'signed': True,
-            'date': '2025-08-20',
-            'notes': 'Signert elektronisk via BankID'
-        },
-        {
-            'id': 'consent-troll-image-001',
-            'project_id': project_id,
-            'candidate_id': 'candidate-troll-001',
-            'type': 'image_release',
-            'title': 'Bilderettigheter - Global Distribusjon',
-            'description': 'Samtykke til bruk av bilde og likeness i all markedsføring og distribusjon av TROLL globalt.',
-            'signed': True,
-            'date': '2025-08-25',
-            'notes': 'Inkluderer Netflix, kino, VOD og merchandise'
-        },
-        {
-            'id': 'consent-troll-stunt-001',
-            'project_id': project_id,
-            'candidate_id': 'candidate-troll-001',
-            'type': 'stunt_waiver',
-            'title': 'Stunt Samtykke - Action Scener',
-            'description': 'Samtykke til deltakelse i stuntscener med godkjent koordinator og sikkerhetsutstyr.',
-            'signed': True,
-            'date': '2025-09-10',
-            'notes': 'Forsikring bekreftet. Stunt koordinator: Kai Lie'
-        },
-        {
-            'id': 'consent-troll-gdpr-002',
-            'project_id': project_id,
-            'candidate_id': 'candidate-troll-002',
-            'type': 'gdpr',
-            'title': 'GDPR Samtykke - Personopplysninger',
-            'description': 'Samtykke til behandling av personopplysninger for TROLL produksjon.',
-            'signed': True,
-            'date': '2025-08-22',
-            'notes': 'Signert'
-        },
-        {
-            'id': 'consent-troll-image-002',
-            'project_id': project_id,
-            'candidate_id': 'candidate-troll-002',
-            'type': 'image_release',
-            'title': 'Bilderettigheter - Markedsføring',
-            'description': 'Samtykke til bruk av bilde i markedsføring.',
-            'signed': True,
-            'date': '2025-08-28',
-            'notes': 'Global rettigheter'
-        },
-        {
-            'id': 'consent-troll-driving-002',
-            'project_id': project_id,
-            'candidate_id': 'candidate-troll-002',
-            'type': 'driving',
-            'title': 'Kjøretillatelse - Action Kjørescener',
-            'description': 'Samtykke til utførelse av bilkjøringsscener under kontrollerte forhold.',
-            'signed': True,
-            'date': '2025-09-05',
-            'notes': 'Førerkort verifisert. Stunt driving kurs fullført.'
-        },
-        {
-            'id': 'consent-troll-gdpr-003',
-            'project_id': project_id,
-            'candidate_id': 'candidate-troll-003',
-            'type': 'gdpr',
-            'title': 'GDPR Samtykke',
-            'description': 'Samtykke til personopplysninger.',
-            'signed': True,
-            'date': '2025-08-28',
-            'notes': ''
-        },
-        {
-            'id': 'consent-troll-image-003',
-            'project_id': project_id,
-            'candidate_id': 'candidate-troll-003',
-            'type': 'image_release',
-            'title': 'Bilderettigheter',
-            'description': 'Samtykke til bildebruk.',
-            'signed': False,
-            'date': None,
-            'notes': 'Venter på signatur'
-        },
-        {
-            'id': 'consent-troll-gdpr-004',
-            'project_id': project_id,
-            'candidate_id': 'candidate-troll-004',
-            'type': 'gdpr',
-            'title': 'GDPR Samtykke',
-            'description': 'Samtykke til behandling av personopplysninger.',
-            'signed': False,
-            'date': None,
-            'notes': 'Sendt 10. september - venter på tilbudsaksept først'
-        }
-    ]
-    
-    conn = None
-    created_offers = 0
-    created_contracts = 0
-    created_consents = 0
-    
-    try:
-        conn = get_db_connection()
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            
-            # Insert/Update Offers
-            for offer in troll_offers:
-                cur.execute("SELECT id FROM casting_offers WHERE id = %s", (offer['id'],))
-                if cur.fetchone():
-                    cur.execute("""
-                        UPDATE casting_offers SET
-                            status = %s, compensation = %s, terms = %s, notes = %s,
-                            response_deadline = %s, response_date = %s, updated_at = CURRENT_TIMESTAMP
-                        WHERE id = %s
-                    """, (
-                        offer['status'], offer['compensation'], offer['terms'], offer['notes'],
-                        offer['response_deadline'], offer['response_date'], offer['id']
-                    ))
-                else:
-                    cur.execute("""
-                        INSERT INTO casting_offers 
-                        (id, project_id, candidate_id, role_id, status, compensation, terms, notes, response_deadline, response_date)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (
-                        offer['id'], offer['project_id'], offer['candidate_id'], offer['role_id'],
-                        offer['status'], offer['compensation'], offer['terms'], offer['notes'],
-                        offer['response_deadline'], offer['response_date']
-                    ))
-                created_offers += 1
-            
-            # Insert/Update Contracts
-            for contract in troll_contracts:
-                cur.execute("SELECT id FROM casting_contracts WHERE id = %s", (contract['id'],))
-                if cur.fetchone():
-                    cur.execute("""
-                        UPDATE casting_contracts SET
-                            status = %s, contract_type = %s, start_date = %s, end_date = %s,
-                            compensation = %s, terms = %s, signed_date = %s, updated_at = CURRENT_TIMESTAMP
-                        WHERE id = %s
-                    """, (
-                        contract['status'], contract['contract_type'], contract['start_date'], contract['end_date'],
-                        contract['compensation'], contract['terms'], contract['signed_date'], contract['id']
-                    ))
-                else:
-                    cur.execute("""
-                        INSERT INTO casting_contracts 
-                        (id, project_id, candidate_id, offer_id, role_id, contract_type, status, start_date, end_date, compensation, terms, signed_date)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (
-                        contract['id'], contract['project_id'], contract['candidate_id'], contract['offer_id'],
-                        contract['role_id'], contract['contract_type'], contract['status'], contract['start_date'],
-                        contract['end_date'], contract['compensation'], contract['terms'], contract['signed_date']
-                    ))
-                created_contracts += 1
-            
-            # Insert/Update Consents
-            for consent in troll_consents:
-                cur.execute("SELECT id FROM casting_consents WHERE id = %s", (consent['id'],))
-                if cur.fetchone():
-                    cur.execute("""
-                        UPDATE casting_consents SET
-                            type = %s, title = %s, description = %s, signed = %s,
-                            date = %s, notes = %s, updated_at = CURRENT_TIMESTAMP
-                        WHERE id = %s
-                    """, (
-                        consent['type'], consent['title'], consent['description'], consent['signed'],
-                        consent['date'], consent['notes'], consent['id']
-                    ))
-                else:
-                    cur.execute("""
-                        INSERT INTO casting_consents 
-                        (id, project_id, candidate_id, type, title, description, signed, date, notes)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (
-                        consent['id'], consent['project_id'], consent['candidate_id'],
-                        consent['type'], consent['title'], consent['description'],
-                        consent['signed'], consent['date'], consent['notes']
-                    ))
-                created_consents += 1
-            
-            conn.commit()
-            
-            return JSONResponse({
-                "success": True,
-                "message": "TROLL demo offers, contracts and consents initialized successfully",
-                "data": {
-                    "project_id": project_id,
-                    "offers_count": created_offers,
-                    "contracts_count": created_contracts,
-                    "consents_count": created_consents,
-                    "offers": [{"id": o['id'], "status": o['status']} for o in troll_offers],
-                    "contracts": [{"id": c['id'], "status": c['status']} for c in troll_contracts],
-                    "consents_summary": {
-                        "signed": len([c for c in troll_consents if c['signed']]),
-                        "pending": len([c for c in troll_consents if not c['signed']])
-                    }
-                }
-            })
-    except psycopg2.Error as e:
-        if conn:
-            conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-    finally:
-        if conn:
-            conn.close()
 
 
 # ==================== SPLIT SHEET EXPORT API ====================
@@ -12394,7 +7135,7 @@ async def export_split_sheet_csv(split_sheet_id: str):
     import csv
     import io
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -12461,7 +7202,7 @@ async def export_split_sheet_csv(split_sheet_id: str):
 async def export_split_sheet_json(split_sheet_id: str):
     """Export split sheet to JSON"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -12525,7 +7266,7 @@ async def export_split_sheet_json(split_sheet_id: str):
 async def get_split_sheet_security(split_sheet_id: str):
     """Get security settings for a split sheet"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -12567,7 +7308,7 @@ async def get_split_sheet_security(split_sheet_id: str):
 async def update_split_sheet_security(split_sheet_id: str, request: Request):
     """Update security settings for a split sheet"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -12618,7 +7359,7 @@ async def update_split_sheet_security(split_sheet_id: str, request: Request):
 async def delete_split_sheet(split_sheet_id: str):
     """Delete a split sheet and all related data"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
     except ImportError:
         return JSONResponse({"success": False, "error": "Database service not available"}, status_code=503)
@@ -12671,7 +7412,7 @@ def serialize_db_row(row):
 async def get_production_shooting_days(project_id: str):
     """Get all shooting days for a project"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -12702,7 +7443,7 @@ async def get_production_shooting_days(project_id: str):
 async def create_production_shooting_day(project_id: str, request: Request):
     """Create a new shooting day"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor, Json
     except ImportError:
@@ -12781,7 +7522,7 @@ async def create_production_shooting_day(project_id: str, request: Request):
 async def update_production_shooting_day(day_id: str, request: Request):
     """Update a shooting day"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor, Json
     except ImportError:
@@ -12869,7 +7610,7 @@ async def update_production_shooting_day(day_id: str, request: Request):
 async def delete_production_shooting_day(day_id: str):
     """Delete a shooting day"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
     except ImportError:
         return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
@@ -12896,7 +7637,7 @@ async def delete_production_shooting_day(day_id: str):
 async def get_production_stripboard(project_id: str):
     """Get stripboard strips for a project"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -12924,7 +7665,7 @@ async def get_production_stripboard(project_id: str):
 async def create_production_stripboard_strip(project_id: str, request: Request):
     """Create a stripboard strip"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor, Json
     except ImportError:
@@ -12990,7 +7731,7 @@ async def create_production_stripboard_strip(project_id: str, request: Request):
 async def update_production_stripboard_strip(strip_id: str, request: Request):
     """Update a stripboard strip"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor, Json
     except ImportError:
@@ -13061,7 +7802,7 @@ async def update_production_stripboard_strip(strip_id: str, request: Request):
 async def delete_production_stripboard_strip(strip_id: str):
     """Delete a stripboard strip"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
     except ImportError:
         return JSONResponse({"success": False, "error": "Database not available"}, status_code=503)
@@ -13088,7 +7829,7 @@ async def delete_production_stripboard_strip(strip_id: str):
 async def get_production_cast(project_id: str):
     """Get cast members for a project"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -13116,7 +7857,7 @@ async def get_production_cast(project_id: str):
 async def create_production_cast_member(project_id: str, request: Request):
     """Create a cast member"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor, Json
     except ImportError:
@@ -13173,7 +7914,7 @@ async def create_production_cast_member(project_id: str, request: Request):
 async def get_production_crew(project_id: str):
     """Get crew members for a project"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -13201,7 +7942,7 @@ async def get_production_crew(project_id: str):
 async def create_production_crew_member(project_id: str, request: Request):
     """Create a crew member"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor, Json
     except ImportError:
@@ -13264,7 +8005,7 @@ async def create_production_crew_member(project_id: str, request: Request):
 async def get_production_call_sheets(project_id: str):
     """Get call sheets for a project"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -13302,7 +8043,7 @@ async def get_production_call_sheets(project_id: str):
 async def create_production_call_sheet(project_id: str, request: Request):
     """Create a call sheet"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor, Json
     except ImportError:
@@ -13399,7 +8140,7 @@ async def create_production_call_sheet(project_id: str, request: Request):
 async def get_production_live_set_status(project_id: str):
     """Get live set status for a project"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -13433,7 +8174,7 @@ async def get_production_live_set_status(project_id: str):
 async def update_production_live_set_status(project_id: str, request: Request):
     """Update live set status"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor, Json
     except ImportError:
@@ -13509,7 +8250,7 @@ async def update_production_live_set_status(project_id: str, request: Request):
 async def seed_troll_production_data(project_id: str):
     """Seed Troll production workflow data into the database"""
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor, Json
         from datetime import datetime, timedelta
@@ -14039,7 +8780,7 @@ async def generate_legal_document(split_sheet_id: str, request: Request):
     from datetime import datetime
     
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -14168,7 +8909,7 @@ async def get_legal_documents(split_sheet_id: str):
     import json
     
     try:
-        from casting_service import get_db_connection
+        from tutorials_service import get_db_connection
         import psycopg2
         from psycopg2.extras import RealDictCursor
     except ImportError:
@@ -14200,106 +8941,6 @@ async def get_legal_documents(split_sheet_id: str):
     finally:
         if conn:
             conn.close()
-
-
-# ============ SHOT PLANNER 2D ENDPOINTS ============
-@app.get("/api/shot-planner/scenes")
-async def get_shot_planner_scenes():
-    """Get all shot planner scenes"""
-    if not SHOT_PLANNER_SERVICE_AVAILABLE:
-        return JSONResponse({"scenes": []})
-    
-    try:
-        scenes = get_all_scenes()
-        return JSONResponse({"success": True, "scenes": scenes})
-    except Exception as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-
-
-@app.get("/api/shot-planner/scenes/{scene_id}")
-async def get_shot_planner_scene(scene_id: str):
-    """Get a specific shot planner scene"""
-    if not SHOT_PLANNER_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Shot planner service not available")
-    
-    try:
-        scene = get_scene_by_id(scene_id)
-        if not scene:
-            raise HTTPException(status_code=404, detail="Scene not found")
-        return JSONResponse({"success": True, "scene": scene})
-    except HTTPException:
-        raise
-    except Exception as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-
-
-@app.post("/api/shot-planner/scenes")
-async def save_shot_planner_scene(request: Request):
-    """Save or update a shot planner scene"""
-    if not SHOT_PLANNER_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Shot planner service not available")
-    
-    try:
-        scene_data = await request.json()
-        success = sp_save_scene(scene_data)
-        if success:
-            return JSONResponse({"success": True, "message": "Scene saved successfully"})
-        else:
-            return JSONResponse({"success": False, "error": "Failed to save scene"}, status_code=500)
-    except Exception as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-
-
-@app.delete("/api/shot-planner/scenes/{scene_id}")
-async def delete_shot_planner_scene(scene_id: str):
-    """Delete a shot planner scene"""
-    if not SHOT_PLANNER_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Shot planner service not available")
-    
-    try:
-        success = sp_delete_scene(scene_id)
-        if success:
-            return JSONResponse({"success": True, "message": "Scene deleted successfully"})
-        else:
-            return JSONResponse({"success": False, "error": "Failed to delete scene"}, status_code=500)
-    except Exception as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-
-
-@app.get("/api/shot-planner/scenes/manuscript/{manuscript_scene_id}")
-async def get_scenes_for_manuscript(manuscript_scene_id: str):
-    """Get shot planner scenes linked to a manuscript scene"""
-    if not SHOT_PLANNER_SERVICE_AVAILABLE:
-        return JSONResponse({"scenes": []})
-    
-    try:
-        scenes = get_scenes_by_manuscript(manuscript_scene_id)
-        return JSONResponse({"success": True, "scenes": scenes})
-    except Exception as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-
-
-@app.post("/api/shot-planner/scenes/{scene_id}/link-manuscript")
-async def link_scene_to_manuscript(scene_id: str, request: Request):
-    """Link a shot planner scene to a manuscript scene"""
-    if not SHOT_PLANNER_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Shot planner service not available")
-    
-    try:
-        data = await request.json()
-        manuscript_scene_id = data.get('manuscriptSceneId')
-        if not manuscript_scene_id:
-            raise HTTPException(status_code=400, detail="manuscriptSceneId required")
-        
-        success = link_to_manuscript_scene(scene_id, manuscript_scene_id)
-        if success:
-            return JSONResponse({"success": True, "message": "Scene linked to manuscript"})
-        else:
-            return JSONResponse({"success": False, "error": "Failed to link scene"}, status_code=500)
-    except HTTPException:
-        raise
-    except Exception as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
 if __name__ == "__main__":

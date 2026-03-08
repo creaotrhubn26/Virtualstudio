@@ -4,7 +4,8 @@
  * One-click scene optimization with AI suggestions
  */
 
-import { useState } from 'react';
+import {
+  useState } from 'react';
 import {
   Box,
   Typography,
@@ -286,29 +287,5 @@ export function AutoSceneOptimizer({
     </Paper>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

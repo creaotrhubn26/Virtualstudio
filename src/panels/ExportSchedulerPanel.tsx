@@ -41,11 +41,11 @@ import {
   Badge,
   Tabs,
   Tab,
-  Grid,
   Card,
   CardContent,
   CardActionArea,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   Queue,
   Schedule,
@@ -82,7 +82,6 @@ import {
 } from '../../core/animation/ExportScheduler';
 import { EXPORT_PRESETS, ExportPreset } from '../../core/animation/GoogleDriveExportService';
 import { videoExportService } from '../../core/animation/VideoExportService';
-
 // ============================================================================
 // Types
 // ============================================================================
@@ -720,7 +719,7 @@ export function ExportSchedulerPanel({
             <Typography variant="subtitle2">Select Presets</Typography>
             <Grid container spacing={1}>
               {Object.entries(presetsByPlatform).map(([platform, presets]) => (
-                <Grid item xs={12} key={platform}>
+                <Grid xs={12} key={platform}>
                   <Typography variant="caption" color="text.secondary" gutterBottom display="block">
                     {platform}
                   </Typography>

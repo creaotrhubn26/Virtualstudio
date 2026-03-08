@@ -14,7 +14,7 @@ import {
   Typography,
   Box,
   Paper,
-  Alert
+  Alert,
 } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
@@ -124,26 +124,5 @@ export default function SplitSheetSignatureDialog({
     </Dialog>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

@@ -4,10 +4,17 @@
  * Displays a 3D preview of generated GLB models using Babylon.js
  */
 
-import { useEffect, useRef, useState, type FC } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FC } from 'react';
 import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box,
+  CircularProgress,
+  Typography,
+} from '@mui/material';
 
 interface ModelPreviewProps {
   modelUrl?: string | null;

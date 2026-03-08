@@ -17,7 +17,6 @@ import {
   Alert,
   CircularProgress,
   Chip,
-  Grid,
   Slider,
   FormControlLabel,
   Switch,
@@ -261,29 +260,5 @@ export function ShadowAnalysisPanel({
     </Paper>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
