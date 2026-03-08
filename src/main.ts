@@ -304,11 +304,16 @@ interface CharacterLocomotionState {
   lastGroundSnapAt: number;
   cachedGroundY: number | null;
   groundOffsetY: number | null;
+  groundSurfaceYBase: number | null;
   proceduralWalk: boolean;
   proceduralWalkPhase: number;
   animationLibrary: CharacterAnimationLibrary | null;
   activeAnimation: string | null;
+  animationAuthority: CharacterAnimationAuthority | null;
+  locomotionMode: CharacterLocomotionMode;
+  modelProfileKey: string | null;
   lastAnimationSwitchAt: number;
+  lastModeChangeAt: number;
 }
 
 interface CharacterWalkOptions {
@@ -320,8 +325,41 @@ interface CharacterWalkOptions {
 interface CharacterAnimationLibrary {
   idle: string | null;
   walk: string | null;
+  backward: string | null;
+  strafeLeft: string | null;
+  strafeRight: string | null;
   turnLeft: string | null;
   turnRight: string | null;
+}
+
+type CharacterAnimationAuthority = 'rig' | 'group';
+type CharacterRootMotionPolicy = 'off' | 'on';
+type CharacterLocomotionMode = 'idle' | 'walk' | 'strafe' | 'turn' | 'pose';
+type CharacterForwardAxis = 'positiveZ' | 'negativeZ' | 'positiveX' | 'negativeX';
+
+interface CharacterClipAliasProfile {
+  idle: string[];
+  walk: string[];
+  backward: string[];
+  strafeLeft: string[];
+  strafeRight: string[];
+  turnLeft: string[];
+  turnRight: string[];
+}
+
+interface CharacterModelProfile {
+  key: string;
+  label: string;
+  matchers: RegExp[];
+  motionNodeNames: string[];
+  forwardAxis: CharacterForwardAxis;
+  forwardYawOffset?: number;
+  rootMotion: CharacterRootMotionPolicy;
+  footBones: {
+    left: string[];
+    right: string[];
+  };
+  clipAliases: CharacterClipAliasProfile;
 }
 
 interface CharacterKeyboardControlState {
@@ -336,13 +374,86 @@ interface CharacterKeyboardControlState {
   rigId: string | null;
   animationLibrary: CharacterAnimationLibrary | null;
   activeAnimation: string | null;
+  animationAuthority: CharacterAnimationAuthority | null;
   proceduralWalk: boolean;
   proceduralWalkPhase: number;
+  locomotionMode: CharacterLocomotionMode;
+  modelProfileKey: string | null;
   lastAnimationSwitchAt: number;
+  lastModeChangeAt: number;
   lastGroundSnapAt: number;
   cachedGroundY: number | null;
   groundOffsetY: number | null;
+  groundSurfaceYBase: number | null;
 }
+
+const CHARACTER_STATE_BLEND_TIMINGS: Record<string, number> = {
+  'idle->walk': 0.12,
+  'idle->strafe': 0.12,
+  'idle->turn': 0.1,
+  'walk->idle': 0.14,
+  'strafe->idle': 0.14,
+  'turn->idle': 0.12,
+  'walk->strafe': 0.12,
+  'strafe->walk': 0.12,
+  'walk->turn': 0.1,
+  'turn->walk': 0.1,
+  'pose->walk': 0.08,
+  'pose->strafe': 0.08,
+  'pose->turn': 0.08,
+  'walk->pose': 0.08,
+  'strafe->pose': 0.08,
+  'turn->pose': 0.08,
+  'idle->pose': 0.08,
+  'pose->idle': 0.08
+};
+
+const CHARACTER_MODEL_PROFILES: CharacterModelProfile[] = [
+  {
+    key: 'cesium-man',
+    label: 'CesiumMan',
+    matchers: [/cesiumman/i, /cesium_man/i, /cesium/i],
+    motionNodeNames: ['default_avatar', 'armature', 'root'],
+    forwardAxis: 'positiveZ',
+    forwardYawOffset: 0,
+    rootMotion: 'off',
+    footBones: {
+      left: ['leftFoot', 'leg_joint_L_5', 'left_foot'],
+      right: ['rightFoot', 'leg_joint_R_5', 'right_foot']
+    },
+    clipAliases: {
+      idle: ['idle', 'stand', 'rest', 'breath'],
+      walk: ['walk', 'locomotion', 'move', 'animation0'],
+      backward: ['backward', 'walk_back', 'back_walk', 'reverse'],
+      strafeLeft: ['strafe_left', 'left_strafe', 'walk_left'],
+      strafeRight: ['strafe_right', 'right_strafe', 'walk_right'],
+      turnLeft: ['turn_left', 'rotate_left', 'pivot_left', 'spin_left'],
+      turnRight: ['turn_right', 'rotate_right', 'pivot_right', 'spin_right']
+    }
+  },
+  {
+    key: 'fallback-humanoid',
+    label: 'Fallback Humanoid',
+    matchers: [/./],
+    motionNodeNames: ['default_avatar', 'armature', 'root'],
+    forwardAxis: 'positiveZ',
+    forwardYawOffset: 0,
+    rootMotion: 'off',
+    footBones: {
+      left: ['leftFoot', 'left_foot', 'foot_l', 'l_foot'],
+      right: ['rightFoot', 'right_foot', 'foot_r', 'r_foot']
+    },
+    clipAliases: {
+      idle: ['idle', 'stand', 'rest', 'breath', 'pose'],
+      walk: ['walk', 'locomotion', 'stride', 'move', 'run', 'jog'],
+      backward: ['backward', 'walk_back', 'back_walk', 'reverse'],
+      strafeLeft: ['strafe_left', 'left_strafe', 'walk_left', 'left'],
+      strafeRight: ['strafe_right', 'right_strafe', 'walk_right', 'right'],
+      turnLeft: ['turn_left', 'rotate_left', 'pivot_left', 'spin_left'],
+      turnRight: ['turn_right', 'rotate_right', 'pivot_right', 'spin_right']
+    }
+  }
+];
 
 interface QuickCharacterPose {
   name: string;
@@ -410,8 +521,10 @@ const QUICK_CHARACTER_POSES: QuickCharacterPose[] = [
   }
 ];
 
+type CharacterIKChainName = 'leftLeg' | 'rightLeg';
+
 interface CharacterIKEffector {
-  chainName: 'leftLeg' | 'rightLeg' | 'leftArm' | 'rightArm';
+  chainName: CharacterIKChainName;
   controller: BABYLON.BoneIKController;
   target: BABYLON.TransformNode;
   pole: BABYLON.TransformNode;
@@ -448,6 +561,7 @@ const HUMANOID_BONE_ALIASES: Record<string, string[]> = {
 };
 
 const normalizeBoneToken = (value: string): string => value.trim().toLowerCase();
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const stripBoneNamespace = (value: string): string => {
   const pathTrimmed = value.split('/').pop() || value;
@@ -771,6 +885,7 @@ class VirtualStudio {
       this.updateCharacterKeyboardLocomotion();
       this.updateCharacterLocomotion();
       this.scene.render();
+      this.applyCharacterMotionNodeLocks();
       renderCount++;
       if (renderCount === 1) {
         console.log('[RenderLoop] First frame rendered. Scene meshes:', this.scene.meshes.length);
@@ -11217,6 +11332,9 @@ class VirtualStudio {
   private activeCharacterLocomotion: CharacterLocomotionState | null = null;
   private characterAnimationGroupsByMeshUniqueId: Map<number, BABYLON.AnimationGroup[]> = new Map();
   private characterRootMotionLocksByMeshUniqueId: Map<number, { node: BABYLON.TransformNode; position: BABYLON.Vector3 }[]> = new Map();
+  private characterMotionNodeLocksByNodeUniqueId: Map<number, { node: BABYLON.TransformNode; position: BABYLON.Vector3 }> = new Map();
+  private characterFacingAxisByNodeUniqueId: Map<number, BABYLON.Vector3> = new Map();
+  private characterProfileByMeshUniqueId: Map<number, CharacterModelProfile> = new Map();
   private lastCharacterNodeSyncMs: number = 0;
   private lastCharacterWalkDiagnosticAt: number = 0;
   private characterKeyboardControlsEnabled: boolean = true;
@@ -11232,12 +11350,17 @@ class VirtualStudio {
     rigId: null,
     animationLibrary: null,
     activeAnimation: null,
+    animationAuthority: null,
     proceduralWalk: false,
     proceduralWalkPhase: 0,
+    locomotionMode: 'idle',
+    modelProfileKey: null,
     lastAnimationSwitchAt: 0,
+    lastModeChangeAt: 0,
     lastGroundSnapAt: 0,
     cachedGroundY: null,
-    groundOffsetY: null
+    groundOffsetY: null,
+    groundSurfaceYBase: null
   };
 
   private resolveRootMesh(mesh: BABYLON.AbstractMesh | null): BABYLON.AbstractMesh | null {
@@ -11426,21 +11549,364 @@ class VirtualStudio {
     );
   }
 
-  private sampleWalkSurfaceYAt(x: number, z: number, fallbackY = 0): number {
+  private getDefaultCharacterProfile(): CharacterModelProfile {
+    return CHARACTER_MODEL_PROFILES[CHARACTER_MODEL_PROFILES.length - 1];
+  }
+
+  private getProfileForwardAxisVector(profile: CharacterModelProfile): BABYLON.Vector3 {
+    switch (profile.forwardAxis) {
+      case 'positiveX':
+        return BABYLON.Axis.X.clone();
+      case 'negativeX':
+        return BABYLON.Axis.X.scale(-1);
+      case 'negativeZ':
+        return BABYLON.Axis.Z.scale(-1);
+      case 'positiveZ':
+      default:
+        return BABYLON.Axis.Z.clone();
+    }
+  }
+
+  private resolveFacingAxisForNode(
+    motionNode: BABYLON.TransformNode,
+    profile: CharacterModelProfile
+  ): BABYLON.Vector3 {
+    const cachedAxis = this.characterFacingAxisByNodeUniqueId.get(motionNode.uniqueId);
+    if (cachedAxis) {
+      return cachedAxis.clone();
+    }
+
+    const preferredAxis = this.getProfileForwardAxisVector(profile);
+    const candidates = [
+      preferredAxis,
+      BABYLON.Axis.Z.clone(),
+      BABYLON.Axis.Z.scale(-1),
+      BABYLON.Axis.X.clone(),
+      BABYLON.Axis.X.scale(-1)
+    ];
+
+    const worldMatrix = motionNode.getWorldMatrix();
+    let bestAxis = preferredAxis;
+    let bestHorizontalMagnitude = -1;
+    for (const candidate of candidates) {
+      const worldDirection = BABYLON.Vector3.TransformNormal(candidate, worldMatrix);
+      const horizontalMagnitude = Math.hypot(worldDirection.x, worldDirection.z);
+      if (horizontalMagnitude > bestHorizontalMagnitude) {
+        bestHorizontalMagnitude = horizontalMagnitude;
+        bestAxis = candidate;
+      }
+    }
+
+    this.characterFacingAxisByNodeUniqueId.set(motionNode.uniqueId, bestAxis.clone());
+    return bestAxis.clone();
+  }
+
+  private scoreCharacterProfileByClips(
+    profile: CharacterModelProfile,
+    animationGroupNames: string[]
+  ): number {
+    if (animationGroupNames.length === 0) return 0;
+    const aliases = profile.clipAliases;
+    const scoreAliasList = (values: string[], points: number): number => (
+      values.some((alias) => animationGroupNames.some((name) => name.includes(alias.toLowerCase())))
+        ? points
+        : 0
+    );
+
+    let score = 0;
+    score += scoreAliasList(aliases.walk, 4);
+    score += scoreAliasList(aliases.idle, 3);
+    score += scoreAliasList(aliases.turnLeft, 2);
+    score += scoreAliasList(aliases.turnRight, 2);
+    score += scoreAliasList(aliases.strafeLeft, 2);
+    score += scoreAliasList(aliases.strafeRight, 2);
+    score += scoreAliasList(aliases.backward, 2);
+    return score;
+  }
+
+  private scoreCharacterProfileByFeet(
+    profile: CharacterModelProfile,
+    skeleton: BABYLON.Skeleton | null
+  ): number {
+    if (!skeleton) return 0;
+
+    const leftMatch = profile.footBones.left.some((candidate) => !!this.resolveSkeletonBone(skeleton, candidate));
+    const rightMatch = profile.footBones.right.some((candidate) => !!this.resolveSkeletonBone(skeleton, candidate));
+    return (leftMatch ? 3 : 0) + (rightMatch ? 3 : 0);
+  }
+
+  private resolveCharacterModelProfile(mesh: BABYLON.AbstractMesh | null): CharacterModelProfile {
+    if (!mesh || mesh.isDisposed()) return this.getDefaultCharacterProfile();
+
+    const cached = this.characterProfileByMeshUniqueId.get(mesh.uniqueId);
+    if (cached) return cached;
+
+    const metadata = mesh.metadata as {
+      sourceModelUrl?: string;
+      avatarSourceUrl?: string;
+      pbrKey?: string;
+      modelId?: string;
+      parentModelId?: string;
+      characterProfileKey?: string;
+      profileKey?: string;
+      characterRootMotion?: CharacterRootMotionPolicy;
+      rootMotion?: CharacterRootMotionPolicy;
+    } | undefined;
+
+    const explicitProfileKey = (
+      (typeof metadata?.characterProfileKey === 'string' && metadata.characterProfileKey) ||
+      (typeof metadata?.profileKey === 'string' && metadata.profileKey) ||
+      ''
+    ).trim().toLowerCase();
+    if (explicitProfileKey) {
+      const explicitProfile = CHARACTER_MODEL_PROFILES.find((candidate) => candidate.key.toLowerCase() === explicitProfileKey);
+      if (explicitProfile) {
+        const rootMotionOverride = metadata?.characterRootMotion || metadata?.rootMotion;
+        const resolvedExplicitProfile = (
+          rootMotionOverride === 'on' || rootMotionOverride === 'off'
+            ? { ...explicitProfile, rootMotion: rootMotionOverride }
+            : explicitProfile
+        );
+        this.characterProfileByMeshUniqueId.set(mesh.uniqueId, resolvedExplicitProfile);
+        return resolvedExplicitProfile;
+      }
+    }
+
+    const candidateValues: string[] = [];
+    const pushCandidate = (value: unknown): void => {
+      if (typeof value === 'string' && value.trim().length > 0) {
+        candidateValues.push(value.trim());
+      }
+    };
+
+    pushCandidate(mesh.name);
+    pushCandidate(metadata?.sourceModelUrl);
+    pushCandidate(metadata?.avatarSourceUrl);
+    pushCandidate(metadata?.pbrKey);
+    pushCandidate(metadata?.modelId);
+    pushCandidate(metadata?.parentModelId);
+
+    let cursor: BABYLON.TransformNode | null = mesh;
+    while (cursor) {
+      pushCandidate(cursor.name);
+      cursor = cursor.parent instanceof BABYLON.TransformNode ? cursor.parent : null;
+    }
+
+    const childTransformNodes = mesh.getChildTransformNodes(true).slice(0, 48);
+    childTransformNodes.forEach((node) => pushCandidate(node.name));
+    mesh.getChildMeshes(true).slice(0, 48).forEach((child) => pushCandidate(child.name));
+
+    const loweredCandidates = candidateValues.map((value) => value.toLowerCase());
+    const skeletonCarrier = this.findSkeletonCarrierMesh(mesh);
+    const skeleton = skeletonCarrier?.skeleton || null;
+    const animationGroupNames = (this.getAnimationGroupsForMesh(mesh) || []).map((group) => group.name.toLowerCase());
+
+    let bestProfile = this.getDefaultCharacterProfile();
+    let bestScore = Number.NEGATIVE_INFINITY;
+    for (const profile of CHARACTER_MODEL_PROFILES) {
+      let score = profile.key === bestProfile.key ? 1 : 0;
+      const matcherHits = profile.matchers.reduce((acc, matcher) => (
+        acc + (loweredCandidates.some((value) => matcher.test(value)) ? 1 : 0)
+      ), 0);
+      if (matcherHits > 0) {
+        score += 12 + (matcherHits - 1) * 2;
+      }
+
+      score += this.scoreCharacterProfileByClips(profile, animationGroupNames);
+      score += this.scoreCharacterProfileByFeet(profile, skeleton);
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestProfile = profile;
+      }
+    }
+
+    const rootMotionOverride = metadata?.characterRootMotion || metadata?.rootMotion;
+    const resolvedProfile = (
+      rootMotionOverride === 'on' || rootMotionOverride === 'off'
+        ? { ...bestProfile, rootMotion: rootMotionOverride }
+        : bestProfile
+    );
+
+    this.characterProfileByMeshUniqueId.set(mesh.uniqueId, resolvedProfile);
+    return resolvedProfile;
+  }
+
+  private getLocomotionBlendTime(
+    from: CharacterLocomotionMode,
+    to: CharacterLocomotionMode
+  ): number {
+    if (from === to) return 0.12;
+    return CHARACTER_STATE_BLEND_TIMINGS[`${from}->${to}`] ?? 0.12;
+  }
+
+  private transitionLocomotionMode(
+    holder: { locomotionMode: CharacterLocomotionMode; lastModeChangeAt: number },
+    nextMode: CharacterLocomotionMode
+  ): { changed: boolean; blendTime: number; from: CharacterLocomotionMode } {
+    const from = holder.locomotionMode;
+    const blendTime = this.getLocomotionBlendTime(from, nextMode);
+    if (from === nextMode) {
+      return { changed: false, blendTime, from };
+    }
+    holder.locomotionMode = nextMode;
+    holder.lastModeChangeAt = performance.now();
+    return { changed: true, blendTime, from };
+  }
+
+  private determineKeyboardLocomotionMode(
+    input: { forwardAxis: number; strafeAxis: number },
+    yawDeltaAbs: number,
+    poseLocked: boolean
+  ): CharacterLocomotionMode {
+    if (poseLocked) return 'pose';
+    if (Math.abs(input.forwardAxis) < 0.001 && Math.abs(input.strafeAxis) < 0.001) return 'idle';
+    if (Math.abs(input.strafeAxis) > 0.001 && Math.abs(input.forwardAxis) < 0.001) return 'strafe';
+    if (yawDeltaAbs > 0.65) return 'turn';
+    return 'walk';
+  }
+
+  private determinePathLocomotionMode(
+    desiredFacingYaw: number,
+    motionNode: BABYLON.TransformNode,
+    profile: CharacterModelProfile
+  ): CharacterLocomotionMode {
+    const currentYaw = this.getMeshYaw(motionNode, profile);
+    const yawDeltaAbs = Math.abs(this.normalizeRadians(desiredFacingYaw - currentYaw));
+    if (yawDeltaAbs > 0.65) return 'turn';
+    return 'walk';
+  }
+
+  private resolveClipForLocomotionMode(
+    mode: CharacterLocomotionMode,
+    library: CharacterAnimationLibrary | null,
+    rootMesh: BABYLON.AbstractMesh,
+    profile: CharacterModelProfile,
+    context: {
+      forwardAxis?: number;
+      strafeAxis?: number;
+      yawDeltaSigned?: number;
+    } = {}
+  ): string | null {
+    const fallbackByAliases = (aliases: string[]): string | null => (
+      this.findAnimationGroupNameByAliases(rootMesh, aliases) ||
+      this.findAnimationGroupForMesh(rootMesh)?.name ||
+      null
+    );
+
+    if (mode === 'pose') return null;
+    if (mode === 'idle') {
+      return library?.idle || fallbackByAliases(profile.clipAliases.idle);
+    }
+
+    if (mode === 'walk') {
+      const useBackward = (context.forwardAxis || 0) < -0.001;
+      if (useBackward) {
+        return (
+          library?.backward ||
+          fallbackByAliases(profile.clipAliases.backward) ||
+          library?.walk ||
+          fallbackByAliases(profile.clipAliases.walk)
+        );
+      }
+      return library?.walk || fallbackByAliases(profile.clipAliases.walk);
+    }
+
+    if (mode === 'strafe') {
+      const isLeft = (context.strafeAxis || 0) < 0;
+      if (isLeft) {
+        return (
+          library?.strafeLeft ||
+          fallbackByAliases(profile.clipAliases.strafeLeft) ||
+          library?.walk ||
+          fallbackByAliases(profile.clipAliases.walk)
+        );
+      }
+      return (
+        library?.strafeRight ||
+        fallbackByAliases(profile.clipAliases.strafeRight) ||
+        library?.walk ||
+        fallbackByAliases(profile.clipAliases.walk)
+      );
+    }
+
+    if (mode === 'turn') {
+      const turnLeft = (context.yawDeltaSigned || 0) >= 0;
+      if (turnLeft) {
+        return (
+          library?.turnLeft ||
+          fallbackByAliases(profile.clipAliases.turnLeft) ||
+          library?.walk ||
+          fallbackByAliases(profile.clipAliases.walk)
+        );
+      }
+      return (
+        library?.turnRight ||
+        fallbackByAliases(profile.clipAliases.turnRight) ||
+        library?.walk ||
+        fallbackByAliases(profile.clipAliases.walk)
+      );
+    }
+
+    return library?.walk || fallbackByAliases(profile.clipAliases.walk);
+  }
+
+  private resolveAnimationAuthorityForClip(
+    rootMesh: BABYLON.AbstractMesh,
+    rigId: string | null,
+    clipName: string
+  ): CharacterAnimationAuthority | null {
+    const profile = this.resolveCharacterModelProfile(rootMesh);
+    const hasGroupClip = !!this.findAnimationGroupForMesh(rootMesh, clipName);
+    if (hasGroupClip && profile.rootMotion === 'off') {
+      return 'group';
+    }
+
+    if (rigId) {
+      const store = useSkeletalAnimationStore.getState();
+      const rig = store.rigs.get(rigId);
+      if (rig?.animations.has(clipName)) {
+        return 'rig';
+      }
+    }
+    return hasGroupClip ? 'group' : null;
+  }
+
+  private sampleWalkSurfaceYAt(
+    x: number,
+    z: number,
+    fallbackY = 0,
+    excludeRootMesh?: BABYLON.AbstractMesh | null
+  ): number {
     const rayOrigin = new BABYLON.Vector3(x, 256, z);
     const ray = new BABYLON.Ray(rayOrigin, BABYLON.Vector3.Down(), 1024);
-    let bestDistance = Number.POSITIVE_INFINITY;
+    let bestScore = Number.POSITIVE_INFINITY;
     let bestY: number | null = null;
+    const excludedHierarchyIds = new Set<number>();
+    if (excludeRootMesh && !excludeRootMesh.isDisposed()) {
+      this.getMeshHierarchyUniqueIds(excludeRootMesh).forEach((meshUniqueId) => excludedHierarchyIds.add(meshUniqueId));
+    }
+    const maxVerticalDelta = 0.65;
 
     for (const sceneMesh of this.scene.meshes) {
       if (!sceneMesh || sceneMesh.isDisposed() || !sceneMesh.isEnabled() || !sceneMesh.isVisible) continue;
       if (!this.isWalkSurfaceMesh(sceneMesh)) continue;
+      if (excludedHierarchyIds.has(sceneMesh.uniqueId)) continue;
+      if (sceneMesh.skeleton) continue;
 
       const pick = ray.intersectsMesh(sceneMesh, false);
       if (!pick.hit || !pick.pickedPoint) continue;
-      if (pick.distance < bestDistance) {
-        bestDistance = pick.distance;
-        bestY = pick.pickedPoint.y;
+      const normal = pick.getNormal?.(true);
+      if (normal && Math.abs(normal.y) < 0.45) continue;
+
+      const y = pick.pickedPoint.y;
+      const verticalDelta = Math.abs(y - fallbackY);
+      // Guard against accidental jumps to unrelated elevated meshes.
+      if (verticalDelta > maxVerticalDelta) continue;
+      const score = verticalDelta + (pick.distance * 0.001);
+      if (score < bestScore) {
+        bestScore = score;
+        bestY = y;
       }
     }
 
@@ -11456,12 +11922,27 @@ class VirtualStudio {
     return fallbackY;
   }
 
-  private resolveCharacterMotionNode(mesh: BABYLON.AbstractMesh): BABYLON.TransformNode {
-    let node: BABYLON.TransformNode = mesh;
-    while (node.parent && node.parent instanceof BABYLON.TransformNode) {
-      node = node.parent;
+  private resolveCharacterMotionNode(
+    mesh: BABYLON.AbstractMesh,
+    profileOverride?: CharacterModelProfile | null
+  ): BABYLON.TransformNode {
+    const profile = profileOverride || this.resolveCharacterModelProfile(mesh);
+    const preferredNames = profile.motionNodeNames.map((name) => name.trim().toLowerCase());
+
+    const ancestry: BABYLON.TransformNode[] = [];
+    let cursor: BABYLON.TransformNode | null = mesh;
+    while (cursor) {
+      ancestry.push(cursor);
+      cursor = cursor.parent instanceof BABYLON.TransformNode ? cursor.parent : null;
     }
-    return node;
+
+    const byPreferredName = ancestry.find((node) => {
+      const lowered = node.name.toLowerCase();
+      return preferredNames.some((preferred) => lowered === preferred || lowered.includes(preferred));
+    });
+    if (byPreferredName) return byPreferredName;
+
+    return ancestry[ancestry.length - 1] || mesh;
   }
 
   private alignMeshBottomToY(
@@ -11489,7 +11970,7 @@ class VirtualStudio {
     basePosition?: BABYLON.Vector3
   ): { position: BABYLON.Vector3; surfaceY: number } {
     const anchor = (basePosition || mesh.position).clone();
-    const surfaceY = this.sampleWalkSurfaceYAt(anchor.x, anchor.z, anchor.y);
+    const surfaceY = this.sampleWalkSurfaceYAt(anchor.x, anchor.z, anchor.y, mesh);
     const position = this.alignMeshBottomToY(mesh, surfaceY + 0.001, anchor);
     return { position, surfaceY };
   }
@@ -11503,7 +11984,7 @@ class VirtualStudio {
     motionNode.position.copyFrom(anchor);
     referenceMesh.computeWorldMatrix(true);
 
-    const surfaceY = this.sampleWalkSurfaceYAt(anchor.x, anchor.z, anchor.y);
+    const surfaceY = this.sampleWalkSurfaceYAt(anchor.x, anchor.z, anchor.y, referenceMesh);
     const desiredBottomY = surfaceY + 0.001;
     const bounds = referenceMesh.getHierarchyBoundingVectors(true);
     const bottomY = bounds.min.y;
@@ -11516,14 +11997,38 @@ class VirtualStudio {
     return { position: anchor, surfaceY };
   }
 
-  private getCharacterFootAnchorY(mesh: BABYLON.AbstractMesh): number | null {
+  private getMotionNodeWorldPosition(motionNode: BABYLON.TransformNode): BABYLON.Vector3 {
+    const absolute = motionNode.getAbsolutePosition();
+    return new BABYLON.Vector3(absolute.x, absolute.y, absolute.z);
+  }
+
+  private setMotionNodeWorldPosition(motionNode: BABYLON.TransformNode, worldPosition: BABYLON.Vector3): void {
+    motionNode.setAbsolutePosition(worldPosition);
+    motionNode.computeWorldMatrix(true);
+  }
+
+  private getCharacterFootAnchorY(
+    mesh: BABYLON.AbstractMesh,
+    profileOverride?: CharacterModelProfile | null
+  ): number | null {
     const skeletonCarrier = this.findSkeletonCarrierMesh(mesh);
     const skeleton = skeletonCarrier?.skeleton;
     if (!skeleton || !skeletonCarrier) return null;
+    const profile = profileOverride || this.resolveCharacterModelProfile(mesh);
+    const leftCandidates = profile.footBones.left.length > 0 ? profile.footBones.left : ['leftFoot'];
+    const rightCandidates = profile.footBones.right.length > 0 ? profile.footBones.right : ['rightFoot'];
+
+    const resolveFirstExisting = (candidates: string[]): BABYLON.Bone | null => {
+      for (const candidate of candidates) {
+        const bone = this.resolveSkeletonBone(skeleton, candidate);
+        if (bone) return bone;
+      }
+      return null;
+    };
 
     const candidateBones = [
-      this.resolveSkeletonBone(skeleton, 'leftFoot'),
-      this.resolveSkeletonBone(skeleton, 'rightFoot')
+      resolveFirstExisting(leftCandidates),
+      resolveFirstExisting(rightCandidates)
     ].filter((bone): bone is BABYLON.Bone => !!bone);
 
     if (candidateBones.length === 0) return null;
@@ -11677,6 +12182,12 @@ class VirtualStudio {
     rootMesh: BABYLON.AbstractMesh,
     group: BABYLON.AnimationGroup
   ): void {
+    const profile = this.resolveCharacterModelProfile(rootMesh);
+    if (profile.rootMotion === 'on') {
+      this.clearRootMotionLocksForMesh(rootMesh);
+      return;
+    }
+
     const locks: { node: BABYLON.TransformNode; position: BABYLON.Vector3 }[] = [];
     const seenNodeIds = new Set<number>();
 
@@ -11714,6 +12225,12 @@ class VirtualStudio {
   }
 
   private applyRootMotionLocksForMesh(rootMesh: BABYLON.AbstractMesh): void {
+    const profile = this.resolveCharacterModelProfile(rootMesh);
+    if (profile.rootMotion === 'on') {
+      this.clearRootMotionLocksForMesh(rootMesh);
+      return;
+    }
+
     const locks = this.characterRootMotionLocksByMeshUniqueId.get(rootMesh.uniqueId);
     if (!locks || locks.length === 0) return;
 
@@ -11725,6 +12242,39 @@ class VirtualStudio {
 
   private clearRootMotionLocksForMesh(rootMesh: BABYLON.AbstractMesh): void {
     this.characterRootMotionLocksByMeshUniqueId.delete(rootMesh.uniqueId);
+  }
+
+  private setCharacterMotionNodeLock(
+    motionNode: BABYLON.TransformNode,
+    profile: CharacterModelProfile
+  ): void {
+    if (!motionNode || motionNode.isDisposed()) return;
+    if (profile.rootMotion === 'on') {
+      this.characterMotionNodeLocksByNodeUniqueId.delete(motionNode.uniqueId);
+      return;
+    }
+
+    this.characterMotionNodeLocksByNodeUniqueId.set(motionNode.uniqueId, {
+      node: motionNode,
+      position: motionNode.position.clone()
+    });
+  }
+
+  private clearCharacterMotionNodeLock(motionNode: BABYLON.TransformNode | null | undefined): void {
+    if (!motionNode) return;
+    this.characterMotionNodeLocksByNodeUniqueId.delete(motionNode.uniqueId);
+    this.characterFacingAxisByNodeUniqueId.delete(motionNode.uniqueId);
+  }
+
+  private applyCharacterMotionNodeLocks(): void {
+    for (const [nodeUniqueId, entry] of this.characterMotionNodeLocksByNodeUniqueId.entries()) {
+      if (!entry.node || entry.node.isDisposed()) {
+        this.characterMotionNodeLocksByNodeUniqueId.delete(nodeUniqueId);
+        this.characterFacingAxisByNodeUniqueId.delete(nodeUniqueId);
+        continue;
+      }
+      entry.node.position.copyFrom(entry.position);
+    }
   }
 
   private findSkeletonCarrierMesh(rootMesh: BABYLON.AbstractMesh): BABYLON.AbstractMesh | null {
@@ -11823,7 +12373,7 @@ class VirtualStudio {
       if (rig.skeleton === skeleton) {
         this.characterRigByMeshUniqueId.set(rootMesh.uniqueId, rigId);
         this.characterRigByMeshUniqueId.set(skeletonCarrier.uniqueId, rigId);
-        this.buildCharacterAnimationLibrary(rigId);
+        this.buildCharacterAnimationLibrary(rigId, rootMesh);
         return rigId;
       }
     }
@@ -11832,7 +12382,7 @@ class VirtualStudio {
       const rigId = await store.loadRig(skeletonCarrier, rigName);
       this.characterRigByMeshUniqueId.set(rootMesh.uniqueId, rigId);
       this.characterRigByMeshUniqueId.set(skeletonCarrier.uniqueId, rigId);
-      this.buildCharacterAnimationLibrary(rigId);
+      this.buildCharacterAnimationLibrary(rigId, rootMesh);
       console.log(`[CharacterWalk] Rig registered for "${rigName}" (${rigId})`);
       return rigId;
     } catch (error) {
@@ -11975,11 +12525,21 @@ class VirtualStudio {
     clipName: string,
     loop = true,
     blendTime = 0.15
-  ): void {
-    if (rigId) {
+  ): CharacterAnimationAuthority | null {
+    const authority = this.resolveAnimationAuthorityForClip(rootMesh, rigId, clipName);
+    if (!authority) return null;
+
+    if (authority === 'rig' && rigId) {
       useSkeletalAnimationStore.getState().playAnimation(rigId, clipName, loop, blendTime);
+      this.stopAnimationGroupsForMesh(rootMesh);
+      return 'rig';
     }
-    this.playAnimationGroupForMesh(rootMesh, clipName, loop);
+
+    if (rigId) {
+      useSkeletalAnimationStore.getState().stopAnimation(rigId);
+    }
+    const groupPlayed = this.playAnimationGroupForMesh(rootMesh, clipName, loop);
+    return groupPlayed ? 'group' : null;
   }
 
   private forceStopCharacterAnimations(
@@ -12045,38 +12605,105 @@ class VirtualStudio {
     return null;
   }
 
-  private buildCharacterAnimationLibrary(rigId: string): CharacterAnimationLibrary {
-    const walk = this.findWalkAnimationName(rigId);
-    const detectedIdle = this.findIdleAnimationName(rigId);
-    const idle = detectedIdle && detectedIdle !== walk ? detectedIdle : null;
+  private buildAliasPatterns(aliases: string[], defaults: RegExp[]): RegExp[] {
+    const sanitized = aliases
+      .map((alias) => alias.trim())
+      .filter((alias) => alias.length > 0)
+      .map((alias) => escapeRegExp(alias));
+    const aliasPatterns = sanitized.flatMap((alias) => [
+      new RegExp(`\\b${alias}\\b`, 'i'),
+      new RegExp(alias, 'i')
+    ]);
+    return [...aliasPatterns, ...defaults];
+  }
 
-    const turnLeft = this.pickRigAnimationName(
-      rigId,
-      [/\bturn[\s_-]*left\b/i, /\bleft[\s_-]*turn\b/i, /\bpivot[\s_-]*left\b/i, /\brotate[\s_-]*left\b/i, /\bspin[\s_-]*left\b/i],
-      false
+  private findAnimationGroupNameByAliases(
+    rootMesh: BABYLON.AbstractMesh | null,
+    aliases: string[]
+  ): string | null {
+    if (!rootMesh || aliases.length === 0) return null;
+    const groups = this.getAnimationGroupsForMesh(rootMesh);
+    if (!groups || groups.length === 0) return null;
+    const patterns = this.buildAliasPatterns(aliases, []);
+    const matched = groups.find((group) => patterns.some((pattern) => pattern.test(group.name)));
+    return matched?.name || null;
+  }
+
+  private buildCharacterAnimationLibrary(
+    rigId: string,
+    meshOverride?: BABYLON.AbstractMesh | null
+  ): CharacterAnimationLibrary {
+    const profile = this.resolveCharacterModelProfile(meshOverride || this.getPrimaryCharacterMesh());
+    const aliases = profile.clipAliases;
+
+    const walkPatterns = this.buildAliasPatterns(
+      aliases.walk,
+      [/\bwalk\b/i, /walk/i, /locom/i, /stride/i, /run/i, /jog/i, /move/i]
+    );
+    const idlePatterns = this.buildAliasPatterns(
+      aliases.idle,
+      [/\bidle\b/i, /idle/i, /stand/i, /breath/i, /rest/i, /pose/i]
+    );
+    const backwardPatterns = this.buildAliasPatterns(
+      aliases.backward,
+      [/\bbackward\b/i, /\bwalk[\s_-]*back\b/i, /\bback[\s_-]*walk\b/i, /\breverse\b/i]
+    );
+    const strafeLeftPatterns = this.buildAliasPatterns(
+      aliases.strafeLeft,
+      [/\bstrafe[\s_-]*left\b/i, /\bleft[\s_-]*strafe\b/i, /\bwalk[\s_-]*left\b/i]
+    );
+    const strafeRightPatterns = this.buildAliasPatterns(
+      aliases.strafeRight,
+      [/\bstrafe[\s_-]*right\b/i, /\bright[\s_-]*strafe\b/i, /\bwalk[\s_-]*right\b/i]
+    );
+    const turnLeftPatterns = this.buildAliasPatterns(
+      aliases.turnLeft,
+      [/\bturn[\s_-]*left\b/i, /\bleft[\s_-]*turn\b/i, /\bpivot[\s_-]*left\b/i, /\brotate[\s_-]*left\b/i, /\bspin[\s_-]*left\b/i]
+    );
+    const turnRightPatterns = this.buildAliasPatterns(
+      aliases.turnRight,
+      [/\bturn[\s_-]*right\b/i, /\bright[\s_-]*turn\b/i, /\bpivot[\s_-]*right\b/i, /\brotate[\s_-]*right\b/i, /\bspin[\s_-]*right\b/i]
     );
 
-    const turnRight = this.pickRigAnimationName(
-      rigId,
-      [/\bturn[\s_-]*right\b/i, /\bright[\s_-]*turn\b/i, /\bpivot[\s_-]*right\b/i, /\brotate[\s_-]*right\b/i, /\bspin[\s_-]*right\b/i],
-      false
-    );
+    const walk = this.pickRigAnimationName(rigId, walkPatterns, false) || this.findWalkAnimationName(rigId);
+    const detectedIdle = this.pickRigAnimationName(rigId, idlePatterns, true) || this.findIdleAnimationName(rigId);
+    const backward = this.pickRigAnimationName(rigId, backwardPatterns, false);
+    const strafeLeft = this.pickRigAnimationName(rigId, strafeLeftPatterns, false);
+    const strafeRight = this.pickRigAnimationName(rigId, strafeRightPatterns, false);
+    const turnLeft = this.pickRigAnimationName(rigId, turnLeftPatterns, false);
+    const turnRight = this.pickRigAnimationName(rigId, turnRightPatterns, false);
+
+    const idle = detectedIdle && detectedIdle !== walk ? detectedIdle : detectedIdle || null;
+    const fallbackMesh = meshOverride || this.getPrimaryCharacterMesh();
+
+    const walkGroupFallback = this.findAnimationGroupNameByAliases(fallbackMesh, aliases.walk);
+    const backwardGroupFallback = this.findAnimationGroupNameByAliases(fallbackMesh, aliases.backward);
+    const strafeLeftGroupFallback = this.findAnimationGroupNameByAliases(fallbackMesh, aliases.strafeLeft);
+    const strafeRightGroupFallback = this.findAnimationGroupNameByAliases(fallbackMesh, aliases.strafeRight);
+    const turnLeftGroupFallback = this.findAnimationGroupNameByAliases(fallbackMesh, aliases.turnLeft);
+    const turnRightGroupFallback = this.findAnimationGroupNameByAliases(fallbackMesh, aliases.turnRight);
 
     const library: CharacterAnimationLibrary = {
-      idle: idle || null,
-      walk: walk || null,
-      turnLeft: turnLeft || walk || idle || null,
-      turnRight: turnRight || walk || idle || null
+      idle: idle || this.findAnimationGroupNameByAliases(fallbackMesh, aliases.idle) || null,
+      walk: walk || walkGroupFallback || null,
+      backward: backward || backwardGroupFallback || walk || walkGroupFallback || null,
+      strafeLeft: strafeLeft || strafeLeftGroupFallback || walk || walkGroupFallback || null,
+      strafeRight: strafeRight || strafeRightGroupFallback || walk || walkGroupFallback || null,
+      turnLeft: turnLeft || turnLeftGroupFallback || walk || walkGroupFallback || idle || null,
+      turnRight: turnRight || turnRightGroupFallback || walk || walkGroupFallback || idle || null
     };
 
     this.characterAnimationLibraryByRigId.set(rigId, library);
     return library;
   }
 
-  private getCharacterAnimationLibrary(rigId: string): CharacterAnimationLibrary {
+  private getCharacterAnimationLibrary(
+    rigId: string,
+    meshOverride?: BABYLON.AbstractMesh | null
+  ): CharacterAnimationLibrary {
     // Rebuild on access so runtime/hot-updates and newly detected clip names
     // are applied immediately without requiring a character reload.
-    return this.buildCharacterAnimationLibrary(rigId);
+    return this.buildCharacterAnimationLibrary(rigId, meshOverride);
   }
 
   private disposeCharacterIK(rigId: string): void {
@@ -12094,9 +12721,9 @@ class VirtualStudio {
     rigId: string,
     mesh: BABYLON.AbstractMesh,
     skeleton: BABYLON.Skeleton,
-    chainName: 'leftLeg' | 'rightLeg' | 'leftArm' | 'rightArm'
+    chainName: CharacterIKChainName
   ): CharacterIKEffector | null {
-    const chainMap: Record<'leftLeg' | 'rightLeg' | 'leftArm' | 'rightArm', {
+    const chainMap: Record<CharacterIKChainName, {
       solverBone: string;
       endBone: string;
       poleDirection: BABYLON.Vector3;
@@ -12122,24 +12749,6 @@ class VirtualStudio {
         poleAngle: 0,
         maxAngle: Math.PI * 0.95,
         slerp: 0.55
-      },
-      leftArm: {
-        solverBone: 'leftLowerArm',
-        endBone: 'leftHand',
-        poleDirection: new BABYLON.Vector3(-0.28, 0.15, 0.2),
-        bendAxis: new BABYLON.Vector3(0, 0, -1),
-        poleAngle: -Math.PI * 0.08,
-        maxAngle: Math.PI * 0.9,
-        slerp: 0.6
-      },
-      rightArm: {
-        solverBone: 'rightLowerArm',
-        endBone: 'rightHand',
-        poleDirection: new BABYLON.Vector3(0.28, 0.15, 0.2),
-        bendAxis: new BABYLON.Vector3(0, 0, 1),
-        poleAngle: Math.PI * 0.08,
-        maxAngle: Math.PI * 0.9,
-        slerp: 0.6
       }
     };
 
@@ -12205,7 +12814,7 @@ class VirtualStudio {
     }
 
     const effectors: CharacterIKEffector[] = [];
-    (['leftLeg', 'rightLeg', 'leftArm', 'rightArm'] as const).forEach((chain) => {
+    (['leftLeg', 'rightLeg'] as const).forEach((chain) => {
       const effector = this.createCharacterIKEffector(rigId, mesh, skeleton, chain);
       if (effector) effectors.push(effector);
     });
@@ -12248,7 +12857,6 @@ class VirtualStudio {
     const rightFootLift = Math.max(0, rightPhase) * (0.075 * stride);
     const leftFootTravel = leftPhase * (0.11 * stride);
     const rightFootTravel = rightPhase * (0.11 * stride);
-    const handSwing = Math.sin(phase + Math.PI) * (0.14 * stride);
 
     const computeWorld = (local: BABYLON.Vector3): BABYLON.Vector3 => {
       return BABYLON.Vector3.TransformCoordinates(local, rootMatrix);
@@ -12268,16 +12876,6 @@ class VirtualStudio {
         targetLocal.y += rightFootLift;
         poleLocal.y += 0.02 * stride;
         poleLocal.z += 0.03;
-      } else if (effector.chainName === 'leftArm') {
-        targetLocal.z += handSwing * 0.55;
-        targetLocal.x += 0.015 + direction.x * 0.02;
-        targetLocal.y += 0.01 * stride;
-        poleLocal.x -= 0.03;
-      } else if (effector.chainName === 'rightArm') {
-        targetLocal.z -= handSwing * 0.55;
-        targetLocal.x -= 0.015 - direction.x * 0.02;
-        targetLocal.y += 0.01 * stride;
-        poleLocal.x += 0.03;
       }
 
       effector.target.position.copyFrom(computeWorld(targetLocal));
@@ -12403,24 +13001,36 @@ class VirtualStudio {
     return from + delta * clampedT;
   }
 
-  private getMeshYaw(mesh: BABYLON.TransformNode): number {
-    if (mesh.rotationQuaternion) {
-      return mesh.rotationQuaternion.toEulerAngles().y;
+  private getMeshYaw(mesh: BABYLON.TransformNode, profile: CharacterModelProfile): number {
+    const forwardAxis = this.resolveFacingAxisForNode(mesh, profile);
+    const worldMatrix = mesh.getWorldMatrix();
+    const worldForward = BABYLON.Vector3.TransformNormal(forwardAxis, worldMatrix);
+    worldForward.y = 0;
+
+    if (worldForward.lengthSquared() < 1e-8) {
+      if (mesh.rotationQuaternion) {
+        return mesh.rotationQuaternion.toEulerAngles().y;
+      }
+      return mesh.rotation.y;
     }
-    return mesh.rotation.y;
+
+    worldForward.normalize();
+    return Math.atan2(worldForward.x, worldForward.z);
   }
 
-  private setMeshYaw(mesh: BABYLON.TransformNode, targetYaw: number, interpolation: number): void {
-    const currentYaw = this.getMeshYaw(mesh);
+  private setMeshYaw(
+    mesh: BABYLON.TransformNode,
+    profile: CharacterModelProfile,
+    targetYaw: number,
+    interpolation: number
+  ): void {
+    const currentYaw = this.getMeshYaw(mesh, profile);
     const nextYaw = this.lerpAngle(currentYaw, targetYaw, interpolation);
+    const deltaYaw = this.normalizeRadians(nextYaw - currentYaw);
+    if (Math.abs(deltaYaw) < 1e-5) return;
 
-    if (mesh.rotationQuaternion) {
-      const euler = mesh.rotationQuaternion.toEulerAngles();
-      mesh.rotationQuaternion = BABYLON.Quaternion.FromEulerAngles(euler.x, nextYaw, euler.z);
-      return;
-    }
-
-    mesh.rotation.y = nextYaw;
+    mesh.rotate(BABYLON.Axis.Y, deltaYaw, BABYLON.Space.WORLD);
+    mesh.computeWorldMatrix(true);
   }
 
   private syncCharacterNodeTransform(mesh: BABYLON.TransformNode, force = false): void {
@@ -12454,10 +13064,14 @@ class VirtualStudio {
     const node = store.getNode(nodeId);
     if (!node) return;
 
-    const yaw = this.getMeshYaw(mesh);
+    const profileFromState = this.characterKeyboardState.modelProfileKey
+      ? CHARACTER_MODEL_PROFILES.find((candidate) => candidate.key === this.characterKeyboardState.modelProfileKey)
+      : null;
+    const yaw = this.getMeshYaw(mesh, profileFromState || this.getDefaultCharacterProfile());
+    const absolutePosition = mesh.getAbsolutePosition();
     store.updateNode(nodeId, {
       transform: {
-        position: [mesh.position.x, mesh.position.y, mesh.position.z],
+        position: [absolutePosition.x, absolutePosition.y, absolutePosition.z],
         rotation: [node.transform.rotation[0], yaw, node.transform.rotation[2]],
         scale: [node.transform.scale[0], node.transform.scale[1], node.transform.scale[2]]
       }
@@ -12579,13 +13193,16 @@ class VirtualStudio {
       });
 
       this.characterKeyboardState.rigId = rigId;
-      this.characterKeyboardState.animationLibrary = this.getCharacterAnimationLibrary(rigId);
+      this.characterKeyboardState.animationLibrary = this.getCharacterAnimationLibrary(rigId, mesh);
       this.characterKeyboardState.proceduralWalk = this.shouldUseProceduralWalk(
         this.characterKeyboardState.animationLibrary,
         mesh
       );
       this.characterKeyboardState.poseLocked = true;
       this.characterKeyboardState.activeAnimation = null;
+      this.characterKeyboardState.animationAuthority = null;
+      this.characterKeyboardState.locomotionMode = 'pose';
+      this.characterKeyboardState.lastModeChangeAt = performance.now();
 
       this.showNotification(`Pose ${slot}: ${pose.name}`, 'info');
       window.dispatchEvent(new CustomEvent('ch-character-quick-pose-applied', {
@@ -12631,6 +13248,11 @@ class VirtualStudio {
     const state = this.characterKeyboardState;
     const wasActive = state.active;
     const keyboardMesh = this.getMeshByUniqueId(state.meshUniqueId);
+    const keyboardProfile = keyboardMesh ? this.resolveCharacterModelProfile(keyboardMesh) : null;
+    const keyboardMotionMesh = keyboardMesh ? this.resolveCharacterMotionNode(keyboardMesh, keyboardProfile) : null;
+    const lockedMotionPosition = keyboardMotionMesh && !keyboardMotionMesh.isDisposed()
+      ? this.getMotionNodeWorldPosition(keyboardMotionMesh)
+      : null;
 
     if (state.rigId) {
       const idleAnimation = state.animationLibrary?.idle || null;
@@ -12639,9 +13261,10 @@ class VirtualStudio {
 
       if (canPlayIdle && idleAnimation) {
         if (keyboardMesh) {
-          this.playCharacterAnimationClip(keyboardMesh, state.rigId, idleAnimation, true, 0.15);
+          state.animationAuthority = this.playCharacterAnimationClip(keyboardMesh, state.rigId, idleAnimation, true, 0.15);
         } else {
           useSkeletalAnimationStore.getState().playAnimation(state.rigId, idleAnimation, true, 0.15);
+          state.animationAuthority = 'rig';
         }
         state.activeAnimation = idleAnimation;
       } else {
@@ -12651,6 +13274,7 @@ class VirtualStudio {
           useSkeletalAnimationStore.getState().stopAnimation(state.rigId);
         }
         state.activeAnimation = null;
+        state.animationAuthority = null;
       }
     }
 
@@ -12661,9 +13285,22 @@ class VirtualStudio {
     state.poseLocked = false;
     state.active = false;
     state.proceduralWalkPhase = 0;
+    state.locomotionMode = 'idle';
+    state.lastModeChangeAt = performance.now();
     state.cachedGroundY = null;
     state.groundOffsetY = null;
-
+    state.groundSurfaceYBase = null;
+    if (keyboardMotionMesh && lockedMotionPosition && !keyboardMotionMesh.isDisposed()) {
+      this.setMotionNodeWorldPosition(keyboardMotionMesh, lockedMotionPosition);
+      if (keyboardMesh && !keyboardMesh.isDisposed()) {
+        keyboardMesh.computeWorldMatrix(true);
+      }
+      if (keyboardMesh) {
+        this.syncCharacterNodeTransform(keyboardMotionMesh, true);
+      }
+    } else if (keyboardMesh && keyboardMotionMesh && !keyboardMesh.isDisposed() && !keyboardMotionMesh.isDisposed()) {
+      this.syncCharacterNodeTransform(keyboardMotionMesh, true);
+    }
     if (wasActive) {
       window.dispatchEvent(new CustomEvent('ch-character-keyboard-control-stopped'));
     }
@@ -12672,15 +13309,19 @@ class VirtualStudio {
   private tryResolveCharacterKeyboardRig(mesh: BABYLON.AbstractMesh): void {
     const state = this.characterKeyboardState;
     if (state.rigResolvePending || state.rigId) return;
+    const profile = this.resolveCharacterModelProfile(mesh);
+    state.modelProfileKey = profile.key;
 
     const immediateRigId = this.getTrackedRigForMesh(mesh);
     if (immediateRigId) {
       state.rigId = immediateRigId;
-      state.animationLibrary = this.getCharacterAnimationLibrary(immediateRigId);
+      state.animationLibrary = this.getCharacterAnimationLibrary(immediateRigId, mesh);
       state.proceduralWalk = this.shouldUseProceduralWalk(state.animationLibrary, mesh);
       if (!state.activeAnimation) {
+        const rig = useSkeletalAnimationStore.getState().rigs.get(immediateRigId);
         const playingGroup = (this.getAnimationGroupsForMesh(mesh) || []).find((group) => group.isPlaying);
-        state.activeAnimation = playingGroup?.name || null;
+        state.activeAnimation = rig?.currentAnimation || playingGroup?.name || null;
+        state.animationAuthority = rig?.currentAnimation ? 'rig' : (playingGroup ? 'group' : null);
       }
       return;
     }
@@ -12697,11 +13338,13 @@ class VirtualStudio {
         }
 
         state.rigId = rigId;
-        state.animationLibrary = rigId ? this.getCharacterAnimationLibrary(rigId) : null;
+        state.animationLibrary = rigId ? this.getCharacterAnimationLibrary(rigId, mesh) : null;
         state.proceduralWalk = this.shouldUseProceduralWalk(state.animationLibrary, mesh);
         if (!state.activeAnimation) {
+          const rig = rigId ? useSkeletalAnimationStore.getState().rigs.get(rigId) : null;
           const playingGroup = (this.getAnimationGroupsForMesh(mesh) || []).find((group) => group.isPlaying);
-          state.activeAnimation = playingGroup?.name || null;
+          state.activeAnimation = rig?.currentAnimation || playingGroup?.name || null;
+          state.animationAuthority = rig?.currentAnimation ? 'rig' : (playingGroup ? 'group' : null);
         }
       })
       .catch((error) => {
@@ -12744,11 +13387,13 @@ class VirtualStudio {
       this.stopCharacterKeyboardControl(false);
       return;
     }
-    const motionMesh = this.resolveCharacterMotionNode(mesh);
+    const profile = this.resolveCharacterModelProfile(mesh);
+    const motionMesh = this.resolveCharacterMotionNode(mesh, profile);
     if (!motionMesh || motionMesh.isDisposed()) {
       this.stopCharacterKeyboardControl(false);
       return;
     }
+    let motionWorldPosition = this.getMotionNodeWorldPosition(motionMesh);
 
     if (this.activeCharacterLocomotion) {
       this.stopCharacterWalk(false);
@@ -12760,18 +13405,28 @@ class VirtualStudio {
       state.rigId = null;
       state.animationLibrary = null;
       state.activeAnimation = null;
+      state.animationAuthority = null;
       state.proceduralWalk = false;
       state.poseLocked = false;
+      state.locomotionMode = 'idle';
       state.rigResolvePending = false;
+      state.modelProfileKey = profile.key;
       state.lastGroundSnapAt = 0;
-      const groundedOnMeshSwitch = this.groundMotionNodeOnWalkSurface(motionMesh, mesh, motionMesh.position.clone());
-      state.cachedGroundY = groundedOnMeshSwitch.position.y;
-      state.groundOffsetY = groundedOnMeshSwitch.position.y - groundedOnMeshSwitch.surfaceY;
+      state.lastModeChangeAt = performance.now();
+      const surfaceOnMeshSwitch = this.sampleWalkSurfaceYAt(
+        motionWorldPosition.x,
+        motionWorldPosition.z,
+        motionWorldPosition.y,
+        mesh
+      );
+      state.groundOffsetY = BABYLON.Scalar.Clamp(motionWorldPosition.y - surfaceOnMeshSwitch, -2, 2);
+      state.cachedGroundY = surfaceOnMeshSwitch + state.groundOffsetY;
+      state.groundSurfaceYBase = surfaceOnMeshSwitch;
     }
 
     this.tryResolveCharacterKeyboardRig(mesh);
     if (state.rigId) {
-      const refreshedLibrary = this.getCharacterAnimationLibrary(state.rigId);
+      const refreshedLibrary = this.getCharacterAnimationLibrary(state.rigId, mesh);
       state.animationLibrary = refreshedLibrary;
       state.proceduralWalk = this.shouldUseProceduralWalk(refreshedLibrary, mesh);
     }
@@ -12792,6 +13447,7 @@ class VirtualStudio {
       store.stopAnimation(state.rigId);
       store.resetAllBones(state.rigId);
       state.activeAnimation = null;
+      state.animationAuthority = null;
       state.proceduralWalkPhase = 0;
       state.lastAnimationSwitchAt = 0;
       state.poseLocked = false;
@@ -12800,10 +13456,16 @@ class VirtualStudio {
     if (!state.active) {
       state.active = true;
       state.lastGroundSnapAt = performance.now();
-      const groundedAtKeyboardStart = this.groundMotionNodeOnWalkSurface(motionMesh, mesh, motionMesh.position.clone());
-      state.cachedGroundY = groundedAtKeyboardStart.position.y;
-      state.groundOffsetY = groundedAtKeyboardStart.position.y - groundedAtKeyboardStart.surfaceY;
-      motionMesh.position.y = groundedAtKeyboardStart.position.y;
+      const surfaceAtKeyboardStart = this.sampleWalkSurfaceYAt(
+        motionWorldPosition.x,
+        motionWorldPosition.z,
+        motionWorldPosition.y,
+        mesh
+      );
+      const baselineOffset = state.groundOffsetY ?? (motionWorldPosition.y - surfaceAtKeyboardStart);
+      state.groundOffsetY = BABYLON.Scalar.Clamp(baselineOffset, -2, 2);
+      state.cachedGroundY = surfaceAtKeyboardStart + state.groundOffsetY;
+      state.groundSurfaceYBase = surfaceAtKeyboardStart;
       window.dispatchEvent(new CustomEvent('ch-character-keyboard-control-started', {
         detail: { meshName: mesh.name }
       }));
@@ -12837,51 +13499,59 @@ class VirtualStudio {
     }
 
     const travel = speedMetersPerSecond * dt;
+    const currentYawBeforeMove = this.getMeshYaw(motionMesh, profile);
+    const desiredFacingYaw = Math.atan2(movementDirection.x, movementDirection.z) + (profile.forwardYawOffset || 0);
+    const yawDeltaSigned = this.normalizeRadians(desiredFacingYaw - currentYawBeforeMove);
+    const yawDeltaAbs = Math.abs(yawDeltaSigned);
     if (isMoving) {
-      motionMesh.position.x += movementDirection.x * travel;
-      motionMesh.position.z += movementDirection.z * travel;
-      const targetYaw = Math.atan2(movementDirection.x, movementDirection.z);
-      this.setMeshYaw(motionMesh, targetYaw, Math.min(1, dt * 9));
+      motionWorldPosition.x += movementDirection.x * travel;
+      motionWorldPosition.z += movementDirection.z * travel;
+      this.setMeshYaw(motionMesh, profile, desiredFacingYaw, Math.min(1, dt * 9));
     }
-    const facingYaw = this.getMeshYaw(motionMesh);
+    const facingYaw = this.getMeshYaw(motionMesh, profile);
     const facingDirection = new BABYLON.Vector3(Math.sin(facingYaw), 0, Math.cos(facingYaw));
+
+    const desiredMode = this.determineKeyboardLocomotionMode(
+      { forwardAxis, strafeAxis },
+      yawDeltaAbs,
+      state.poseLocked
+    );
+    const modeTransition = this.transitionLocomotionMode(state, desiredMode);
 
     const now = performance.now();
     const shouldResampleGround = now - state.lastGroundSnapAt >= 120;
     if (shouldResampleGround) {
-      const sampledSurfaceY = this.sampleWalkSurfaceYAt(
-        motionMesh.position.x,
-        motionMesh.position.z,
-        state.cachedGroundY ?? motionMesh.position.y
+      let sampledSurfaceY = this.sampleWalkSurfaceYAt(
+        motionWorldPosition.x,
+        motionWorldPosition.z,
+        state.cachedGroundY ?? motionWorldPosition.y,
+        mesh
       );
-      const desiredBottomY = sampledSurfaceY + 0.001;
-      const currentBottomY = mesh.getHierarchyBoundingVectors(true).min.y;
-      const footAnchorY = this.getCharacterFootAnchorY(mesh);
-      const desiredAnchorY = footAnchorY !== null ? sampledSurfaceY + 0.015 : desiredBottomY;
-      const currentAnchorY = footAnchorY !== null ? footAnchorY : currentBottomY;
-
-      if (isFinite(currentAnchorY)) {
-        const deltaAnchor = desiredAnchorY - currentAnchorY;
-        const maxCorrection = Math.abs(deltaAnchor) > 0.12 ? 0.35 : 0.08;
-        const correction = BABYLON.Scalar.Clamp(deltaAnchor, -maxCorrection, maxCorrection);
-        state.cachedGroundY = motionMesh.position.y + correction;
-        state.groundOffsetY = state.cachedGroundY - sampledSurfaceY;
-      } else {
-        if (state.groundOffsetY === null) {
-          state.groundOffsetY = motionMesh.position.y - sampledSurfaceY;
-        }
-        state.cachedGroundY = sampledSurfaceY + state.groundOffsetY;
+      if (state.groundSurfaceYBase !== null) {
+        sampledSurfaceY = BABYLON.Scalar.Clamp(sampledSurfaceY, state.groundSurfaceYBase - 0.25, state.groundSurfaceYBase + 0.25);
+      }
+      if (state.groundOffsetY === null || !isFinite(state.groundOffsetY)) {
+        state.groundOffsetY = motionWorldPosition.y - sampledSurfaceY;
+      }
+      state.groundOffsetY = BABYLON.Scalar.Clamp(state.groundOffsetY, -2, 2);
+      state.cachedGroundY = sampledSurfaceY + state.groundOffsetY;
+      if (Math.abs(motionWorldPosition.y - state.cachedGroundY) > 0.45) {
+        motionWorldPosition.y = state.cachedGroundY;
       }
       state.lastGroundSnapAt = now;
     }
     if (state.cachedGroundY !== null) {
-      motionMesh.position.y = BABYLON.Scalar.Lerp(motionMesh.position.y, state.cachedGroundY, 0.35);
+      motionWorldPosition.y = BABYLON.Scalar.Lerp(motionWorldPosition.y, state.cachedGroundY, 0.45);
     }
+    this.setMotionNodeWorldPosition(motionMesh, motionWorldPosition);
 
-    const fallbackMovingGroupName =
-      this.findAnimationGroupForMesh(mesh, state.animationLibrary?.walk || null)?.name ||
-      this.findAnimationGroupForMesh(mesh)?.name ||
-      null;
+    const fallbackMovingGroupName = this.resolveClipForLocomotionMode(
+      desiredMode,
+      state.animationLibrary,
+      mesh,
+      profile,
+      { forwardAxis, strafeAxis, yawDeltaSigned }
+    );
 
     // If rig registration is still resolving, start a matching animation group immediately
     // so the first movement input does not show a frozen pose.
@@ -12892,39 +13562,52 @@ class VirtualStudio {
       );
       if (shouldStartFallbackGroup && this.playAnimationGroupForMesh(mesh, fallbackMovingGroupName, true)) {
         state.activeAnimation = fallbackMovingGroupName;
+        state.animationAuthority = 'group';
         state.lastAnimationSwitchAt = now;
       }
     }
 
     if (state.rigId) {
-      const liveLibrary = state.animationLibrary || this.getCharacterAnimationLibrary(state.rigId);
+      const liveLibrary = state.animationLibrary || this.getCharacterAnimationLibrary(state.rigId, mesh);
       state.animationLibrary = liveLibrary;
-      const liveWalk = liveLibrary?.walk || null;
-      const liveIdle = liveLibrary?.idle || null;
-      const fallbackWalkGroupName =
-        this.findAnimationGroupForMesh(mesh, liveWalk)?.name ||
-        fallbackMovingGroupName;
-      let desiredClip: string | null;
-      if (state.proceduralWalk) {
-        // Never run idle clip while moving in procedural mode; it overrides limb motion.
-        desiredClip = isMoving ? null : liveIdle;
-      } else {
-        desiredClip = isMoving
-          ? (liveWalk || liveIdle || fallbackWalkGroupName)
-          : liveIdle;
-      }
-      if (!desiredClip && isMoving) {
-        desiredClip = this.findAnimationGroupForMesh(mesh)?.name || null;
-      }
+      const desiredClip = state.proceduralWalk
+        ? (isMoving ? null : (liveLibrary?.idle || fallbackMovingGroupName))
+        : this.resolveClipForLocomotionMode(
+            desiredMode,
+            liveLibrary,
+            mesh,
+            profile,
+            { forwardAxis, strafeAxis, yawDeltaSigned }
+          );
 
       if (!desiredClip && state.activeAnimation) {
         useSkeletalAnimationStore.getState().stopAnimation(state.rigId);
         this.stopAnimationGroupsForMesh(mesh);
         state.activeAnimation = null;
-      } else if (desiredClip && desiredClip !== state.activeAnimation && now - state.lastAnimationSwitchAt > 120) {
-        this.playCharacterAnimationClip(mesh, state.rigId, desiredClip, true, 0.12);
-        state.activeAnimation = desiredClip;
-        state.lastAnimationSwitchAt = now;
+        state.animationAuthority = null;
+      } else if (
+        desiredClip &&
+        (
+          desiredClip !== state.activeAnimation ||
+          modeTransition.changed
+        ) &&
+        now - state.lastAnimationSwitchAt > 100
+      ) {
+        const authority = this.playCharacterAnimationClip(
+          mesh,
+          state.rigId,
+          desiredClip,
+          true,
+          modeTransition.blendTime
+        );
+        if (authority) {
+          state.activeAnimation = desiredClip;
+          state.animationAuthority = authority;
+          state.lastAnimationSwitchAt = now;
+        } else {
+          state.activeAnimation = null;
+          state.animationAuthority = null;
+        }
       }
     }
 
@@ -12942,9 +13625,18 @@ class VirtualStudio {
       this.clearProceduralWalkPose(state.rigId);
     }
 
-    // IK updates are limited to procedural fallback mode.
-    // Running IK on top of clip animations can lock limbs into a static frame.
-    if (state.rigId && state.proceduralWalk) {
+    const needsDirectionalIK = !!(
+      state.rigId &&
+      !state.proceduralWalk &&
+      desiredMode === 'walk' &&
+      (
+        (forwardAxis < 0 && !state.animationLibrary?.backward) ||
+        (strafeAxis < 0 && !state.animationLibrary?.strafeLeft) ||
+        (strafeAxis > 0 && !state.animationLibrary?.strafeRight)
+      )
+    );
+
+    if (state.rigId && (state.proceduralWalk || needsDirectionalIK)) {
       const strideScale = isMoving
         ? BABYLON.Scalar.Clamp(speedMetersPerSecond / 1.35, 0.35, 1.25)
         : 0.35;
@@ -12958,6 +13650,7 @@ class VirtualStudio {
     }
 
     this.applyRootMotionLocksForMesh(mesh);
+    this.setCharacterMotionNodeLock(motionMesh, profile);
 
     this.syncCharacterNodeTransform(motionMesh, false);
   }
@@ -13083,12 +13776,14 @@ class VirtualStudio {
       console.warn('[CharacterWalk] Cannot walk: mesh is missing/disposed');
       return false;
     }
-    const motionMesh = this.resolveCharacterMotionNode(mesh);
+    const profile = this.resolveCharacterModelProfile(mesh);
+    const motionMesh = this.resolveCharacterMotionNode(mesh, profile);
 
     const speedMetersPerSecond = options?.speed && options.speed > 0 ? options.speed : 1.35;
     const arrivalThreshold = options?.arrivalThreshold && options.arrivalThreshold > 0 ? options.arrivalThreshold : 0.08;
     const snapToGround = options?.snapToGround ?? false;
-    const targetVector = this.toWalkTargetVector(target, motionMesh.position.y);
+    const motionWorldPosition = this.getMotionNodeWorldPosition(motionMesh);
+    const targetVector = this.toWalkTargetVector(target, motionWorldPosition.y);
 
     const currentWalk = this.activeCharacterLocomotion;
     if (currentWalk && currentWalk.mesh === mesh) {
@@ -13104,21 +13799,29 @@ class VirtualStudio {
       }
     }
 
-    const distanceXZ = Math.hypot(targetVector.x - motionMesh.position.x, targetVector.z - motionMesh.position.z);
+    const distanceXZ = Math.hypot(targetVector.x - motionWorldPosition.x, targetVector.z - motionWorldPosition.z);
     if (distanceXZ <= arrivalThreshold) {
-      motionMesh.position.x = targetVector.x;
-      motionMesh.position.z = targetVector.z;
+      const settledPosition = this.getMotionNodeWorldPosition(motionMesh);
+      settledPosition.x = targetVector.x;
+      settledPosition.z = targetVector.z;
       if (snapToGround) {
-        const grounded = this.groundMotionNodeOnWalkSurface(motionMesh, mesh, motionMesh.position.clone());
-        motionMesh.position = grounded.position;
+        const surfaceY = this.sampleWalkSurfaceYAt(
+          settledPosition.x,
+          settledPosition.z,
+          settledPosition.y,
+          mesh
+        );
+        const offset = settledPosition.y - surfaceY;
+        settledPosition.y = surfaceY + BABYLON.Scalar.Clamp(offset, -2, 2);
       }
+      this.setMotionNodeWorldPosition(motionMesh, settledPosition);
       this.syncCharacterNodeTransform(motionMesh, true);
       return true;
     }
 
     const trackedGroups = this.getAnimationGroupsForMesh(mesh) || undefined;
     const rigId = await this.ensureRigRegisteredForMesh(mesh, rigName, trackedGroups);
-    const animationLibrary = rigId ? this.getCharacterAnimationLibrary(rigId) : null;
+    const animationLibrary = rigId ? this.getCharacterAnimationLibrary(rigId, mesh) : null;
     const fallbackWalkGroupName = this.findAnimationGroupForMesh(mesh, animationLibrary?.walk)?.name || null;
     const walkAnimation = animationLibrary?.walk || fallbackWalkGroupName || null;
     const idleAnimation = animationLibrary?.idle || null;
@@ -13141,17 +13844,53 @@ class VirtualStudio {
     // Replace any ongoing walk path immediately.
     this.stopCharacterWalk(false);
 
-    if (rigId && walkAnimation) {
-      this.playCharacterAnimationClip(mesh, rigId, walkAnimation, true, 0.2);
+    let initialGroundY = motionWorldPosition.y;
+    let initialGroundOffsetY: number | null = null;
+    let initialGroundSurfaceYBase: number | null = null;
+    if (snapToGround) {
+      const surfaceAtStart = this.sampleWalkSurfaceYAt(
+        motionWorldPosition.x,
+        motionWorldPosition.z,
+        motionWorldPosition.y,
+        mesh
+      );
+      initialGroundSurfaceYBase = surfaceAtStart;
+      initialGroundOffsetY = BABYLON.Scalar.Clamp(motionWorldPosition.y - surfaceAtStart, -2, 2);
+      initialGroundY = surfaceAtStart + initialGroundOffsetY;
+      const groundedPosition = motionWorldPosition.clone();
+      groundedPosition.y = initialGroundY;
+      this.setMotionNodeWorldPosition(motionMesh, groundedPosition);
     }
 
-    let initialGroundY = motionMesh.position.y;
-    let initialGroundOffsetY: number | null = null;
-    if (snapToGround) {
-      const groundedStartPosition = this.groundMotionNodeOnWalkSurface(motionMesh, mesh, motionMesh.position.clone());
-      initialGroundY = groundedStartPosition.position.y;
-      initialGroundOffsetY = groundedStartPosition.position.y - groundedStartPosition.surfaceY;
-      motionMesh.position.y = groundedStartPosition.position.y;
+    const currentPathStart = this.getMotionNodeWorldPosition(motionMesh);
+    const pathDirection = targetVector.subtract(currentPathStart);
+    pathDirection.y = 0;
+    if (pathDirection.lengthSquared() > 1e-6) {
+      pathDirection.normalize();
+    } else {
+      pathDirection.set(0, 0, 1);
+    }
+    const desiredFacingYaw = Math.atan2(pathDirection.x, pathDirection.z) + (profile.forwardYawOffset || 0);
+    const currentYaw = this.getMeshYaw(motionMesh, profile);
+    const yawDeltaSigned = this.normalizeRadians(desiredFacingYaw - currentYaw);
+    const initialMode = this.determinePathLocomotionMode(desiredFacingYaw, motionMesh, profile);
+    const initialClip = proceduralWalk
+      ? null
+      : this.resolveClipForLocomotionMode(
+          initialMode,
+          animationLibrary,
+          mesh,
+          profile,
+          { forwardAxis: 1, strafeAxis: 0, yawDeltaSigned }
+        );
+
+    let initialAnimationAuthority: CharacterAnimationAuthority | null = null;
+    if (initialClip) {
+      if (rigId) {
+        initialAnimationAuthority = this.playCharacterAnimationClip(mesh, rigId, initialClip, true, 0.2);
+      } else if (this.playAnimationGroupForMesh(mesh, initialClip, true)) {
+        initialAnimationAuthority = 'group';
+      }
     }
 
     this.activeCharacterLocomotion = {
@@ -13168,11 +13907,16 @@ class VirtualStudio {
       lastGroundSnapAt: performance.now(),
       cachedGroundY: initialGroundY,
       groundOffsetY: initialGroundOffsetY,
+      groundSurfaceYBase: initialGroundSurfaceYBase,
       proceduralWalk,
       proceduralWalkPhase: 0,
       animationLibrary,
-      activeAnimation: walkAnimation,
-      lastAnimationSwitchAt: performance.now()
+      activeAnimation: initialAnimationAuthority ? initialClip : null,
+      animationAuthority: initialAnimationAuthority,
+      locomotionMode: initialMode,
+      modelProfileKey: profile.key,
+      lastAnimationSwitchAt: performance.now(),
+      lastModeChangeAt: performance.now()
     };
 
     window.dispatchEvent(new CustomEvent('ch-character-walk-started', {
@@ -13217,6 +13961,9 @@ class VirtualStudio {
   public stopCharacterWalk(playIdle = true): void {
     const locomotion = this.activeCharacterLocomotion;
     if (!locomotion) return;
+    const lockedMotionPosition = locomotion.motionMesh && !locomotion.motionMesh.isDisposed()
+      ? this.getMotionNodeWorldPosition(locomotion.motionMesh)
+      : null;
 
     this.activeCharacterLocomotion = null;
 
@@ -13229,7 +13976,7 @@ class VirtualStudio {
       );
 
       if (canPlayIdle && locomotion.idleAnimation) {
-        this.playCharacterAnimationClip(
+        locomotion.animationAuthority = this.playCharacterAnimationClip(
           locomotion.mesh,
           locomotion.rigId,
           locomotion.idleAnimation,
@@ -13241,13 +13988,20 @@ class VirtualStudio {
         useSkeletalAnimationStore.getState().stopAnimation(locomotion.rigId);
         this.stopAnimationGroupsForMesh(locomotion.mesh);
         locomotion.activeAnimation = null;
+        locomotion.animationAuthority = null;
       }
     }
 
     if (locomotion.proceduralWalk && locomotion.rigId) {
       this.clearProceduralWalkPose(locomotion.rigId);
     }
-
+    if (locomotion.motionMesh && lockedMotionPosition && !locomotion.motionMesh.isDisposed()) {
+      this.setMotionNodeWorldPosition(locomotion.motionMesh, lockedMotionPosition);
+      if (!locomotion.mesh.isDisposed()) {
+        locomotion.mesh.computeWorldMatrix(true);
+      }
+      this.syncCharacterNodeTransform(locomotion.motionMesh, true);
+    }
     window.dispatchEvent(new CustomEvent('ch-character-walk-stopped', {
       detail: { meshName: locomotion.mesh.name }
     }));
@@ -13258,8 +14012,10 @@ class VirtualStudio {
     if (!locomotion) return;
 
     const mesh = locomotion.mesh;
+    const profile = this.resolveCharacterModelProfile(mesh);
+    locomotion.modelProfileKey = profile.key;
     const motionMesh = (!locomotion.motionMesh || locomotion.motionMesh.isDisposed())
-      ? this.resolveCharacterMotionNode(mesh)
+      ? this.resolveCharacterMotionNode(mesh, profile)
       : locomotion.motionMesh;
     locomotion.motionMesh = motionMesh;
     if (!mesh || mesh.isDisposed() || !motionMesh || motionMesh.isDisposed()) {
@@ -13267,19 +14023,29 @@ class VirtualStudio {
       return;
     }
 
+    let motionWorldPosition = this.getMotionNodeWorldPosition(motionMesh);
     const dt = Math.max(0.001, Math.min(0.1, this.engine.getDeltaTime() / 1000));
-    const toTarget = locomotion.target.subtract(motionMesh.position);
+    const toTarget = locomotion.target.subtract(motionWorldPosition);
     toTarget.y = 0;
     const distance = toTarget.length();
 
     if (distance <= locomotion.arrivalThreshold) {
-      motionMesh.position.x = locomotion.target.x;
-      motionMesh.position.z = locomotion.target.z;
+      motionWorldPosition.x = locomotion.target.x;
+      motionWorldPosition.z = locomotion.target.z;
       if (locomotion.snapToGround) {
-        const groundedPosition = this.groundMotionNodeOnWalkSurface(motionMesh, mesh, motionMesh.position.clone());
-        motionMesh.position.y = groundedPosition.position.y;
+        const surfaceY = this.sampleWalkSurfaceYAt(
+          motionWorldPosition.x,
+          motionWorldPosition.z,
+          motionWorldPosition.y,
+          mesh
+        );
+        const offset = locomotion.groundOffsetY ?? (motionWorldPosition.y - surfaceY);
+        locomotion.groundOffsetY = BABYLON.Scalar.Clamp(offset, -2, 2);
+        motionWorldPosition.y = surfaceY + locomotion.groundOffsetY;
       }
 
+      this.setMotionNodeWorldPosition(motionMesh, motionWorldPosition);
+      this.transitionLocomotionMode(locomotion, 'idle');
       this.syncCharacterNodeTransform(motionMesh, true);
       const durationMs = Math.round(performance.now() - locomotion.startedAt);
       this.stopCharacterWalk(true);
@@ -13296,8 +14062,8 @@ class VirtualStudio {
     const direction = toTarget.scale(1 / distance);
     const travel = Math.min(distance, locomotion.speedMetersPerSecond * dt);
 
-    motionMesh.position.x += direction.x * travel;
-    motionMesh.position.z += direction.z * travel;
+    motionWorldPosition.x += direction.x * travel;
+    motionWorldPosition.z += direction.z * travel;
 
     if (locomotion.snapToGround) {
       const now = performance.now();
@@ -13306,81 +14072,111 @@ class VirtualStudio {
         distance <= Math.max(locomotion.arrivalThreshold * 3, 0.24)
       );
       if (shouldResampleGround) {
-        const sampledSurfaceY = this.sampleWalkSurfaceYAt(
-          motionMesh.position.x,
-          motionMesh.position.z,
-          locomotion.cachedGroundY ?? motionMesh.position.y
+        let sampledSurfaceY = this.sampleWalkSurfaceYAt(
+          motionWorldPosition.x,
+          motionWorldPosition.z,
+          locomotion.cachedGroundY ?? motionWorldPosition.y,
+          mesh
         );
-        const desiredBottomY = sampledSurfaceY + 0.001;
-        const currentBottomY = mesh.getHierarchyBoundingVectors(true).min.y;
-        const footAnchorY = this.getCharacterFootAnchorY(mesh);
-        const desiredAnchorY = footAnchorY !== null ? sampledSurfaceY + 0.015 : desiredBottomY;
-        const currentAnchorY = footAnchorY !== null ? footAnchorY : currentBottomY;
-        if (isFinite(currentAnchorY)) {
-          const deltaAnchor = desiredAnchorY - currentAnchorY;
-          const maxCorrection = Math.abs(deltaAnchor) > 0.12 ? 0.35 : 0.08;
-          const correction = BABYLON.Scalar.Clamp(deltaAnchor, -maxCorrection, maxCorrection);
-          locomotion.cachedGroundY = motionMesh.position.y + correction;
-          locomotion.groundOffsetY = locomotion.cachedGroundY - sampledSurfaceY;
-        } else {
-          if (locomotion.groundOffsetY === null) {
-            locomotion.groundOffsetY = motionMesh.position.y - sampledSurfaceY;
-          }
-          locomotion.cachedGroundY = sampledSurfaceY + locomotion.groundOffsetY;
+        if (locomotion.groundSurfaceYBase !== null) {
+          sampledSurfaceY = BABYLON.Scalar.Clamp(
+            sampledSurfaceY,
+            locomotion.groundSurfaceYBase - 0.25,
+            locomotion.groundSurfaceYBase + 0.25
+          );
+        }
+        if (locomotion.groundOffsetY === null || !isFinite(locomotion.groundOffsetY)) {
+          locomotion.groundOffsetY = motionWorldPosition.y - sampledSurfaceY;
+        }
+        locomotion.groundOffsetY = BABYLON.Scalar.Clamp(locomotion.groundOffsetY, -2, 2);
+        locomotion.cachedGroundY = sampledSurfaceY + locomotion.groundOffsetY;
+        if (Math.abs(motionWorldPosition.y - locomotion.cachedGroundY) > 0.45) {
+          motionWorldPosition.y = locomotion.cachedGroundY;
         }
         locomotion.lastGroundSnapAt = now;
       }
 
       if (locomotion.cachedGroundY !== null) {
         const nearArrival = distance <= Math.max(locomotion.arrivalThreshold * 3, 0.24);
-        const yLerp = nearArrival ? 0.7 : 0.25;
-        motionMesh.position.y = BABYLON.Scalar.Lerp(motionMesh.position.y, locomotion.cachedGroundY, yLerp);
+        const yLerp = nearArrival ? 0.75 : 0.45;
+        motionWorldPosition.y = BABYLON.Scalar.Lerp(motionWorldPosition.y, locomotion.cachedGroundY, yLerp);
       }
     }
+    this.setMotionNodeWorldPosition(motionMesh, motionWorldPosition);
 
-    const targetYaw = Math.atan2(direction.x, direction.z);
-    this.setMeshYaw(motionMesh, targetYaw, Math.min(1, dt * 8));
+    const desiredFacingYaw = Math.atan2(direction.x, direction.z) + (profile.forwardYawOffset || 0);
+    const currentYawBeforeTurn = this.getMeshYaw(motionMesh, profile);
+    const yawDeltaSigned = this.normalizeRadians(desiredFacingYaw - currentYawBeforeTurn);
+    const desiredMode = this.determinePathLocomotionMode(desiredFacingYaw, motionMesh, profile);
+    const modeTransition = this.transitionLocomotionMode(locomotion, desiredMode);
+    this.setMeshYaw(motionMesh, profile, desiredFacingYaw, Math.min(1, dt * 8));
 
     const cadence = BABYLON.Scalar.Clamp(locomotion.speedMetersPerSecond * 1.8, 1.0, 3.2);
     locomotion.proceduralWalkPhase += dt * cadence * Math.PI * 2;
     const strideScale = BABYLON.Scalar.Clamp(locomotion.speedMetersPerSecond / 1.35, 0.35, 1.25);
     if (locomotion.rigId) {
-      const refreshedLibrary = this.getCharacterAnimationLibrary(locomotion.rigId);
+      const refreshedLibrary = this.getCharacterAnimationLibrary(locomotion.rigId, mesh);
       locomotion.animationLibrary = refreshedLibrary;
       locomotion.proceduralWalk = this.shouldUseProceduralWalk(refreshedLibrary, mesh);
     }
 
+    const liveLibrary = locomotion.animationLibrary;
+    const desiredClip = locomotion.proceduralWalk
+      ? null
+      : this.resolveClipForLocomotionMode(
+          desiredMode,
+          liveLibrary,
+          mesh,
+          profile,
+          { forwardAxis: 1, strafeAxis: 0, yawDeltaSigned }
+        );
+    const now = performance.now();
+
     if (locomotion.rigId && !locomotion.proceduralWalk) {
-      const liveLibrary = locomotion.animationLibrary || this.getCharacterAnimationLibrary(locomotion.rigId);
-      locomotion.animationLibrary = liveLibrary;
-      const now = performance.now();
-      const currentYaw = this.getMeshYaw(motionMesh);
-      const yawDeltaSigned = this.normalizeRadians(targetYaw - currentYaw);
-      const yawDeltaAbs = Math.abs(yawDeltaSigned);
-
-      let desiredClip = liveLibrary?.walk || this.findAnimationGroupForMesh(mesh, liveLibrary?.walk)?.name || null;
-      if (yawDeltaAbs > 0.45) {
-        if (yawDeltaSigned > 0 && liveLibrary?.turnLeft) {
-          desiredClip = liveLibrary.turnLeft;
-        } else if (yawDeltaSigned < 0 && liveLibrary?.turnRight) {
-          desiredClip = liveLibrary.turnRight;
-        }
-      }
-      if (!desiredClip) {
-        desiredClip = this.findAnimationGroupForMesh(mesh, liveLibrary?.walk)?.name || this.findAnimationGroupForMesh(mesh)?.name || null;
-      }
-      if (!desiredClip && distance > locomotion.arrivalThreshold) {
-        desiredClip = this.findAnimationGroupForMesh(mesh)?.name || null;
-      }
-
       if (
         desiredClip &&
-        desiredClip !== locomotion.activeAnimation &&
-        now - locomotion.lastAnimationSwitchAt > 220
+        (
+          desiredClip !== locomotion.activeAnimation ||
+          modeTransition.changed
+        ) &&
+        now - locomotion.lastAnimationSwitchAt > 100
       ) {
-        this.playCharacterAnimationClip(mesh, locomotion.rigId, desiredClip, true, 0.18);
-        locomotion.activeAnimation = desiredClip;
-        locomotion.lastAnimationSwitchAt = now;
+        const authority = this.playCharacterAnimationClip(
+          mesh,
+          locomotion.rigId,
+          desiredClip,
+          true,
+          modeTransition.blendTime
+        );
+        if (authority) {
+          locomotion.activeAnimation = desiredClip;
+          locomotion.animationAuthority = authority;
+          locomotion.lastAnimationSwitchAt = now;
+        }
+      } else if (!desiredClip && locomotion.activeAnimation) {
+        useSkeletalAnimationStore.getState().stopAnimation(locomotion.rigId);
+        this.stopAnimationGroupsForMesh(mesh);
+        locomotion.activeAnimation = null;
+        locomotion.animationAuthority = null;
+      }
+    } else if (!locomotion.rigId) {
+      if (
+        desiredClip &&
+        (
+          desiredClip !== locomotion.activeAnimation ||
+          modeTransition.changed
+        ) &&
+        now - locomotion.lastAnimationSwitchAt > 100
+      ) {
+        if (this.playAnimationGroupForMesh(mesh, desiredClip, true)) {
+          locomotion.activeAnimation = desiredClip;
+          locomotion.animationAuthority = 'group';
+          locomotion.lastAnimationSwitchAt = now;
+        }
+      } else if (!desiredClip && locomotion.activeAnimation) {
+        this.stopAnimationGroupsForMesh(mesh);
+        locomotion.activeAnimation = null;
+        locomotion.animationAuthority = null;
       }
     }
 
@@ -13389,6 +14185,7 @@ class VirtualStudio {
         useSkeletalAnimationStore.getState().stopAnimation(locomotion.rigId);
         this.stopAnimationGroupsForMesh(mesh);
         locomotion.activeAnimation = null;
+        locomotion.animationAuthority = null;
       }
       this.applyProceduralWalkPose(locomotion.rigId, locomotion.proceduralWalkPhase, strideScale);
     } else if (locomotion.rigId && locomotion.proceduralWalkPhase !== 0) {
@@ -13396,7 +14193,14 @@ class VirtualStudio {
       this.clearProceduralWalkPose(locomotion.rigId);
     }
 
-    if (locomotion.rigId && locomotion.proceduralWalk) {
+    const needsFootPlantIK = !!(
+      locomotion.rigId &&
+      (
+        locomotion.proceduralWalk ||
+        (desiredMode === 'walk' && !locomotion.animationLibrary?.walk)
+      )
+    );
+    if (locomotion.rigId && needsFootPlantIK) {
       this.updateCharacterIKTargets(
         locomotion.rigId,
         mesh,
@@ -13404,9 +14208,12 @@ class VirtualStudio {
         locomotion.proceduralWalkPhase,
         strideScale
       );
+    } else if (locomotion.rigId) {
+      this.disposeCharacterIK(locomotion.rigId);
     }
 
     this.applyRootMotionLocksForMesh(mesh);
+    this.setCharacterMotionNodeLock(motionMesh, profile);
 
     this.syncCharacterNodeTransform(motionMesh, false);
   }
