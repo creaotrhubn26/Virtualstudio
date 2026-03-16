@@ -11013,6 +11013,27 @@ html, body {
   color: #00d4ff;
 }
 
+.topview-collapse-btn {
+  background: rgba(0, 212, 255, 0.16);
+  color: #00d4ff;
+}
+
+.topview-collapse-btn .collapse-icon {
+  transition: transform 0.2s ease;
+}
+
+.topview-toolbar.collapsed .topview-collapse-btn .collapse-icon {
+  transform: rotate(180deg);
+}
+
+.topview-toolbar.collapsed [data-topview-collapsible="true"] {
+  display: none;
+}
+
+.topview-toolbar.collapsed .topview-btn[data-topview-collapsible="true"].topview-visible-when-active {
+  display: flex;
+}
+
 .topview-btn svg {
   width: 22px;
   height: 22px;

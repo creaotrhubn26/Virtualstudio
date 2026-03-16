@@ -73,34 +73,52 @@ export const PoseLibraryPanel: React.FC<PoseLibraryPanelProps> = ({
 
   const poses = getPosesByCategory(activeCategory);
 
-  const handleApplyPose = (pose: PosePreset) => {
-    if (!ikSystem) {
-      log.warn('IK System not available');
-      return;
-    }
+  const dispatchPoseToStudio = (pose: PosePreset) => {
+    window.dispatchEvent(new CustomEvent('ch-apply-pose', {
+      detail: { poseId: pose.id, poseName: pose.name },
+    }));
+  };
 
-    ikSystem.applyPose(pose.pose);
+  const handleApplyPose = (pose: PosePreset) => {
+    if (ikSystem) {
+      ikSystem.applyPose(pose.pose);
+    } else {
+      log.warn('IK System not available, using Studio pose event fallback');
+    }
+    dispatchPoseToStudio(pose);
     onApplyPose?.(pose);
   };
 
   const handleBlendPoses = () => {
-    if (!ikSystem || !selectedPoseA || !selectedPoseB) {
-      log.warn('IK System or poses not available');
+    if (!selectedPoseA || !selectedPoseB) {
+      log.warn('Poses not available');
       return;
     }
 
-    const alpha = blendAmount / 100;
-    const blendedPose = ikSystem.blendPoses(selectedPoseA.pose, selectedPoseB.pose, alpha);
-    ikSystem.applyPose(blendedPose);
+    if (ikSystem) {
+      const alpha = blendAmount / 100;
+      const blendedPose = ikSystem.blendPoses(selectedPoseA.pose, selectedPoseB.pose, alpha);
+      ikSystem.applyPose(blendedPose);
+      return;
+    }
+
+    // Fallback without IK: apply nearest preset so blend action still works for users.
+    const fallbackPose = blendAmount < 50 ? selectedPoseA : selectedPoseB;
+    dispatchPoseToStudio(fallbackPose);
+    onApplyPose?.(fallbackPose);
   };
 
   const handleResetTPose = () => {
-    if (!ikSystem) {
-      log.warn('IK System not available');
+    if (ikSystem) {
+      ikSystem.resetToTPose();
       return;
     }
 
-    ikSystem.resetToTPose();
+    const fallbackPose = ALL_POSES.find((pose) => pose.id === 'portrait_classic_stand') || ALL_POSES[0];
+    if (fallbackPose) {
+      dispatchPoseToStudio(fallbackPose);
+      onApplyPose?.(fallbackPose);
+    }
   };
 
   return (
@@ -279,7 +297,7 @@ export const PoseLibraryPanel: React.FC<PoseLibraryPanelProps> = ({
               variant="contained"
               fullWidth
               onClick={handleBlendPoses}
-              disabled={!selectedPoseA || !selectedPoseB || !ikSystem}
+              disabled={!selectedPoseA || !selectedPoseB}
               sx={{ mt: 1 }}
             >
               Apply Blended Pose
@@ -301,7 +319,6 @@ export const PoseLibraryPanel: React.FC<PoseLibraryPanelProps> = ({
               variant="outlined"
               fullWidth
               onClick={handleResetTPose}
-              disabled={!ikSystem}
             >
               Reset T-Pose
             </Button>
@@ -350,4 +367,3 @@ export const PoseLibraryPanel: React.FC<PoseLibraryPanelProps> = ({
 };
 
 export default PoseLibraryPanel;
-

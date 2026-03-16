@@ -62,6 +62,7 @@ export interface CharacterRig {
   name: string;
   skeleton: BABYLON.Skeleton | null;
   mesh: BABYLON.AbstractMesh | null;
+  restBoneRotations: Map<string, BABYLON.Quaternion>;
   animations: Map<string, AnimationClip>;
   blendShapes: Map<string, BlendShape>;
   ikTargets: Map<string, IKTarget>;
@@ -139,25 +140,76 @@ const generateId = () => `rig_${Date.now()}_${Math.random().toString(36).substr(
 
 // Standard humanoid bone mapping
 const HUMANOID_BONE_MAP: Record<string, string[]> = {
-  'hips': ['Hips', 'pelvis', 'hip', 'root', 'mixamorigHips'],
-  'spine': ['Spine', 'spine1', 'torso', 'mixamorigSpine'],
-  'chest': ['Spine1', 'Spine2', 'chest', 'upper_torso', 'mixamorigSpine1', 'mixamorigSpine2'],
-  'neck': ['Neck', 'neck', 'mixamorigNeck'],
-  'head': ['Head', 'head', 'mixamorigHead'],
+  'hips': [
+    'Hips', 'pelvis', 'hip', 'root', 'mixamorigHips',
+    'torso_joint_1', 'Skeleton_torso_joint_1'
+  ],
+  'spine': [
+    'Spine', 'spine1', 'torso', 'mixamorigSpine',
+    'torso_joint_1', 'torso_joint_2', 'Skeleton_torso_joint_1', 'Skeleton_torso_joint_2'
+  ],
+  'chest': [
+    'Spine1', 'Spine2', 'chest', 'upper_torso', 'mixamorigSpine1', 'mixamorigSpine2',
+    'torso_joint_2', 'torso_joint_3', 'Skeleton_torso_joint_2', 'Skeleton_torso_joint_3'
+  ],
+  'neck': [
+    'Neck', 'neck', 'mixamorigNeck',
+    'neck_joint_1', 'Skeleton_neck_joint_1'
+  ],
+  'head': [
+    'Head', 'head', 'mixamorigHead',
+    'neck_joint_2', 'Skeleton_neck_joint_2'
+  ],
   'leftShoulder': ['LeftShoulder', 'shoulder_L', 'L_shoulder', 'mixamorigLeftShoulder'],
-  'leftUpperArm': ['LeftArm', 'upperarm_L', 'L_upperarm', 'mixamorigLeftArm'],
-  'leftLowerArm': ['LeftForeArm', 'forearm_L', 'L_forearm', 'mixamorigLeftForeArm'],
-  'leftHand': ['LeftHand', 'hand_L', 'L_hand', 'mixamorigLeftHand'],
+  'leftUpperArm': [
+    'LeftArm', 'upperarm_L', 'L_upperarm', 'mixamorigLeftArm',
+    'arm_joint_L_4', 'Skeleton_arm_joint_L__4_'
+  ],
+  'leftLowerArm': [
+    'LeftForeArm', 'forearm_L', 'L_forearm', 'mixamorigLeftForeArm',
+    'arm_joint_L_3', 'Skeleton_arm_joint_L__3_'
+  ],
+  'leftHand': [
+    'LeftHand', 'hand_L', 'L_hand', 'mixamorigLeftHand',
+    'arm_joint_L_2', 'Skeleton_arm_joint_L__2_'
+  ],
   'rightShoulder': ['RightShoulder', 'shoulder_R', 'R_shoulder', 'mixamorigRightShoulder'],
-  'rightUpperArm': ['RightArm', 'upperarm_R', 'R_upperarm', 'mixamorigRightArm'],
-  'rightLowerArm': ['RightForeArm', 'forearm_R', 'R_forearm', 'mixamorigRightForeArm'],
-  'rightHand': ['RightHand', 'hand_R', 'R_hand', 'mixamorigRightHand'],
-  'leftUpperLeg': ['LeftUpLeg', 'thigh_L', 'L_thigh', 'mixamorigLeftUpLeg'],
-  'leftLowerLeg': ['LeftLeg', 'calf_L', 'L_calf', 'shin_L', 'mixamorigLeftLeg'],
-  'leftFoot': ['LeftFoot', 'foot_L', 'L_foot', 'mixamorigLeftFoot'],
-  'rightUpperLeg': ['RightUpLeg', 'thigh_R', 'R_thigh', 'mixamorigRightUpLeg'],
-  'rightLowerLeg': ['RightLeg', 'calf_R', 'R_calf', 'shin_R', 'mixamorigRightLeg'],
-  'rightFoot': ['RightFoot', 'foot_R', 'R_foot', 'mixamorigRightFoot']
+  'rightUpperArm': [
+    'RightArm', 'upperarm_R', 'R_upperarm', 'mixamorigRightArm',
+    'arm_joint_R', 'Skeleton_arm_joint_R'
+  ],
+  'rightLowerArm': [
+    'RightForeArm', 'forearm_R', 'R_forearm', 'mixamorigRightForeArm',
+    'arm_joint_R_2', 'Skeleton_arm_joint_R__2_'
+  ],
+  'rightHand': [
+    'RightHand', 'hand_R', 'R_hand', 'mixamorigRightHand',
+    'arm_joint_R_3', 'Skeleton_arm_joint_R__3_'
+  ],
+  'leftUpperLeg': [
+    'LeftUpLeg', 'thigh_L', 'L_thigh', 'mixamorigLeftUpLeg',
+    'leg_joint_L_1', 'Skeleton_leg_joint_L_1'
+  ],
+  'leftLowerLeg': [
+    'LeftLeg', 'calf_L', 'L_calf', 'shin_L', 'mixamorigLeftLeg',
+    'leg_joint_L_2', 'leg_joint_L_3', 'Skeleton_leg_joint_L_2', 'Skeleton_leg_joint_L_3'
+  ],
+  'leftFoot': [
+    'LeftFoot', 'foot_L', 'L_foot', 'mixamorigLeftFoot',
+    'leg_joint_L_5', 'Skeleton_leg_joint_L_5'
+  ],
+  'rightUpperLeg': [
+    'RightUpLeg', 'thigh_R', 'R_thigh', 'mixamorigRightUpLeg',
+    'leg_joint_R_1', 'Skeleton_leg_joint_R_1'
+  ],
+  'rightLowerLeg': [
+    'RightLeg', 'calf_R', 'R_calf', 'shin_R', 'mixamorigRightLeg',
+    'leg_joint_R_2', 'leg_joint_R_3', 'Skeleton_leg_joint_R_2', 'Skeleton_leg_joint_R_3'
+  ],
+  'rightFoot': [
+    'RightFoot', 'foot_R', 'R_foot', 'mixamorigRightFoot',
+    'leg_joint_R_5', 'Skeleton_leg_joint_R_5'
+  ]
 };
 
 const normalizeBoneToken = (value: string): string => value.trim().toLowerCase();
@@ -192,6 +244,12 @@ const stripBoneNamespace = (value: string): string => {
   const pathTrimmed = value.split('/').pop() || value;
   const pipeTrimmed = pathTrimmed.split('|').pop() || pathTrimmed;
   return pipeTrimmed.split(':').pop() || pipeTrimmed;
+};
+
+const getBoneLinkedTransformNode = (bone: BABYLON.Bone): BABYLON.TransformNode | null => {
+  const withGetter = bone as BABYLON.Bone & { getTransformNode?: () => BABYLON.TransformNode | null };
+  const withPrivate = bone as BABYLON.Bone & { _linkedTransformNode?: BABYLON.TransformNode | null };
+  return withGetter.getTransformNode?.() || withPrivate._linkedTransformNode || null;
 };
 
 // IK Chain definitions
@@ -350,12 +408,47 @@ export const useSkeletalAnimationStore = create<SkeletalAnimationState>((set, ge
         iterations: 10
       });
     });
+
+    const restBoneRotations = new Map<string, BABYLON.Quaternion>();
+    skeleton.bones.forEach((bone) => {
+      const linkedNode = getBoneLinkedTransformNode(bone);
+      if (linkedNode) {
+        if (linkedNode.rotationQuaternion) {
+          restBoneRotations.set(bone.name, linkedNode.rotationQuaternion.clone());
+        } else {
+          restBoneRotations.set(
+            bone.name,
+            BABYLON.Quaternion.FromEulerAngles(
+              linkedNode.rotation.x,
+              linkedNode.rotation.y,
+              linkedNode.rotation.z
+            )
+          );
+        }
+        return;
+      }
+
+      if (bone.rotationQuaternion) {
+        restBoneRotations.set(bone.name, bone.rotationQuaternion.clone());
+        return;
+      }
+
+      restBoneRotations.set(
+        bone.name,
+        BABYLON.Quaternion.FromEulerAngles(
+          bone.rotation?.x ?? 0,
+          bone.rotation?.y ?? 0,
+          bone.rotation?.z ?? 0
+        )
+      );
+    });
     
     const rig: CharacterRig = {
       id: rigId,
       name: name || mesh.name || 'Unnamed Rig',
       skeleton,
       mesh,
+      restBoneRotations,
       animations,
       blendShapes,
       ikTargets,
@@ -494,7 +587,22 @@ export const useSkeletalAnimationStore = create<SkeletalAnimationState>((set, ge
     const resolvedName = resolveBoneName(rig.skeleton, boneName);
     const bone = resolvedName ? rig.skeleton.bones.find(b => b.name === resolvedName) : null;
     if (bone) {
-      bone.setRotation(new BABYLON.Vector3(rotation.x, rotation.y, rotation.z));
+      const baseRotation = rig.restBoneRotations.get(bone.name) || BABYLON.Quaternion.Identity();
+      const deltaRotation = BABYLON.Quaternion.FromEulerAngles(rotation.x, rotation.y, rotation.z);
+      const targetRotation = baseRotation.multiply(deltaRotation);
+      const linkedNode = getBoneLinkedTransformNode(bone);
+
+      if (linkedNode) {
+        if (!linkedNode.rotationQuaternion) {
+          linkedNode.rotationQuaternion = BABYLON.Quaternion.Identity();
+        }
+        linkedNode.rotationQuaternion.copyFrom(targetRotation);
+        linkedNode.computeWorldMatrix(true);
+      } else if (bone.rotationQuaternion) {
+        bone.setRotationQuaternion(targetRotation);
+      } else {
+        bone.setRotation(targetRotation.toEulerAngles());
+      }
     }
   },
   
@@ -507,7 +615,13 @@ export const useSkeletalAnimationStore = create<SkeletalAnimationState>((set, ge
     const resolvedName = resolveBoneName(rig.skeleton, boneName);
     const bone = resolvedName ? rig.skeleton.bones.find(b => b.name === resolvedName) : null;
     if (bone) {
-      bone.setPosition(new BABYLON.Vector3(position.x, position.y, position.z));
+      const linkedNode = getBoneLinkedTransformNode(bone);
+      if (linkedNode) {
+        linkedNode.position.set(position.x, position.y, position.z);
+        linkedNode.computeWorldMatrix(true);
+      } else {
+        bone.setPosition(new BABYLON.Vector3(position.x, position.y, position.z));
+      }
     }
   },
   
@@ -520,6 +634,15 @@ export const useSkeletalAnimationStore = create<SkeletalAnimationState>((set, ge
     const resolvedName = resolveBoneName(rig.skeleton, boneName);
     const bone = resolvedName ? rig.skeleton.bones.find(b => b.name === resolvedName) : null;
     if (bone) {
+      const linkedNode = getBoneLinkedTransformNode(bone);
+      const restRotation = rig.restBoneRotations.get(bone.name);
+      if (linkedNode && restRotation) {
+        if (!linkedNode.rotationQuaternion) {
+          linkedNode.rotationQuaternion = BABYLON.Quaternion.Identity();
+        }
+        linkedNode.rotationQuaternion.copyFrom(restRotation);
+        linkedNode.computeWorldMatrix(true);
+      }
       bone.returnToRest();
     }
   },
@@ -531,6 +654,17 @@ export const useSkeletalAnimationStore = create<SkeletalAnimationState>((set, ge
     if (!rig?.skeleton) return;
     
     rig.skeleton.returnToRest();
+    rig.skeleton.bones.forEach((bone) => {
+      const restRotation = rig.restBoneRotations.get(bone.name);
+      if (!restRotation) return;
+      const linkedNode = getBoneLinkedTransformNode(bone);
+      if (!linkedNode) return;
+      if (!linkedNode.rotationQuaternion) {
+        linkedNode.rotationQuaternion = BABYLON.Quaternion.Identity();
+      }
+      linkedNode.rotationQuaternion.copyFrom(restRotation);
+      linkedNode.computeWorldMatrix(true);
+    });
   },
   
   setIKTarget: (rigId: string, chainName: string, target: Partial<IKTarget>) => {

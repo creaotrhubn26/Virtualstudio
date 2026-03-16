@@ -17,6 +17,8 @@ import {
 } from '@mui/material';
 import { Person, Delete, Refresh, Add, Search, Male, Female, ChildCare, Face, BusinessCenter, Checkroom, Accessibility } from '@mui/icons-material';
 import { logger } from '../core/services/logger';
+import { ALL_POSES } from '../core/animation/PoseLibrary';
+import type { PosePreset } from '../core/animation/PoseLibrary';
 
 const log = logger.module('CharacterLoader');
 
@@ -34,9 +36,10 @@ interface CharacterModel {
 interface Pose {
   id: string;
   name: string;
-  category: 'standing' | 'sitting' | 'action' | 'couple';
+  category: string;
   thumbnail: string;
   description: string;
+  difficulty: PosePreset['difficulty'];
 }
 
 const createCharacterSVG = (type: 'female' | 'male' | 'couple', color = '#666') => {
@@ -161,18 +164,32 @@ const createPoseSVG = (pose: string, color = '#666') => {
     stand: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 100" fill="${color}"><circle cx="30" cy="12" r="10"/><line x1="30" y1="22" x2="30" y2="55" stroke="${color}" stroke-width="6"/><line x1="30" y1="55" x2="20" y2="90" stroke="${color}" stroke-width="5"/><line x1="30" y1="55" x2="40" y2="90" stroke="${color}" stroke-width="5"/><line x1="30" y1="30" x2="15" y2="50" stroke="${color}" stroke-width="4"/><line x1="30" y1="30" x2="45" y2="50" stroke="${color}" stroke-width="4"/></svg>`,
     confident: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 100" fill="${color}"><circle cx="30" cy="12" r="10"/><line x1="30" y1="22" x2="30" y2="55" stroke="${color}" stroke-width="6"/><line x1="30" y1="55" x2="18" y2="90" stroke="${color}" stroke-width="5"/><line x1="30" y1="55" x2="42" y2="90" stroke="${color}" stroke-width="5"/><line x1="30" y1="32" x2="10" y2="45" stroke="${color}" stroke-width="4"/><line x1="30" y1="32" x2="50" y2="45" stroke="${color}" stroke-width="4"/></svg>`,
     sit: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 80" fill="${color}"><circle cx="35" cy="10" r="9"/><line x1="35" y1="19" x2="35" y2="45" stroke="${color}" stroke-width="6"/><line x1="35" y1="45" x2="55" y2="48" stroke="${color}" stroke-width="5"/><line x1="55" y1="48" x2="55" y2="75" stroke="${color}" stroke-width="5"/><line x1="35" y1="45" x2="15" y2="48" stroke="${color}" stroke-width="5"/><line x1="15" y1="48" x2="15" y2="75" stroke="${color}" stroke-width="5"/></svg>`,
+    action: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 100" fill="${color}"><circle cx="35" cy="12" r="9"/><line x1="35" y1="21" x2="35" y2="50" stroke="${color}" stroke-width="6"/><line x1="35" y1="50" x2="20" y2="88" stroke="${color}" stroke-width="5"/><line x1="35" y1="50" x2="50" y2="74" stroke="${color}" stroke-width="5"/><line x1="35" y1="30" x2="18" y2="22" stroke="${color}" stroke-width="4"/><line x1="35" y1="30" x2="56" y2="40" stroke="${color}" stroke-width="4"/></svg>`,
+    dance: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 100" fill="${color}"><circle cx="40" cy="12" r="9"/><line x1="40" y1="21" x2="40" y2="52" stroke="${color}" stroke-width="6"/><line x1="40" y1="52" x2="26" y2="90" stroke="${color}" stroke-width="5"/><line x1="40" y1="52" x2="62" y2="84" stroke="${color}" stroke-width="5"/><line x1="40" y1="30" x2="12" y2="20" stroke="${color}" stroke-width="4"/><line x1="40" y1="30" x2="68" y2="16" stroke="${color}" stroke-width="4"/></svg>`,
   };
   return `data:image/svg+xml,${encodeURIComponent(poses[pose] || poses.stand)}`;
 };
 
-const POSE_LIBRARY: Pose[] = [
-  { id: 'stand_neutral', name: 'Nøytral', category: 'standing', thumbnail: createPoseSVG('stand', '#666'), description: 'Avslappet stående pose' },
-  { id: 'stand_confident', name: 'Selvsikker', category: 'standing', thumbnail: createPoseSVG('confident', '#666'), description: 'Kraftig selvsikker pose' },
-  { id: 'sit_chair', name: 'Sittende', category: 'sitting', thumbnail: createPoseSVG('sit', '#666'), description: 'Sittende på stol' },
-  { id: 'stand_relaxed', name: 'Avslappet', category: 'standing', thumbnail: createPoseSVG('stand', '#888'), description: 'Naturlig avslappet stående' },
-  { id: 'stand_formal', name: 'Formell', category: 'standing', thumbnail: createPoseSVG('confident', '#555'), description: 'Formell stående positur' },
-  { id: 'sit_casual', name: 'Uformell sittende', category: 'sitting', thumbnail: createPoseSVG('sit', '#888'), description: 'Avslappet sittende pose' },
-];
+const POSE_CATEGORY_STYLE: Record<PosePreset['category'], { icon: string; color: string }> = {
+  portrait: { icon: 'stand', color: '#7dd3fc' },
+  fashion: { icon: 'confident', color: '#f9a8d4' },
+  commercial: { icon: 'action', color: '#86efac' },
+  editorial: { icon: 'confident', color: '#c4b5fd' },
+  fitness: { icon: 'action', color: '#fca5a5' },
+  dance: { icon: 'dance', color: '#fcd34d' },
+};
+
+const POSE_LIBRARY: Pose[] = ALL_POSES.map((pose) => {
+  const style = POSE_CATEGORY_STYLE[pose.category];
+  return {
+    id: pose.id,
+    name: pose.name,
+    category: pose.category,
+    thumbnail: createPoseSVG(style.icon, style.color),
+    description: pose.description,
+    difficulty: pose.difficulty,
+  };
+});
 
 interface CharacterModelLoaderProps {
   onLoadCharacter?: (modelUrl: string, position?: [number, number, number]) => void;
@@ -654,6 +671,18 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
                 <CardContent sx={{ p: shouldUseTabletMode ? 1 : 0.5, '&:last-child': { pb: shouldUseTabletMode ? 1 : 0.5 } }}>
                   <Typography variant="caption" noWrap sx={{ color: '#fff', fontSize: shouldUseTabletMode ? 12 : 10 }}>
                     {pose.name}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    noWrap
+                    sx={{
+                      color: '#9ca3af',
+                      display: 'block',
+                      fontSize: shouldUseTabletMode ? 10 : 9,
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {pose.category} · {pose.difficulty}
                   </Typography>
                   <Button
                     size="small"

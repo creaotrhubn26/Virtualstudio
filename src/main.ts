@@ -36,6 +36,8 @@ import { getAvatarById } from './data/avatarDefinitions';
 import { resolveModelPath, resolveAudioPath, resolveImagePath, resolveAssetPath } from './config/assetConfig';
 import settingsService, { getCurrentUserId } from './services/settingsService';
 import { notesService } from './services/notesService';
+import { ALL_POSES } from './core/animation/PoseLibrary';
+import type { PosePreset } from './core/animation/PoseLibrary';
 
 declare global {
   interface Window {
@@ -521,6 +523,38 @@ const QUICK_CHARACTER_POSES: QuickCharacterPose[] = [
   }
 ];
 
+const LEGACY_POSE_ID_TO_LIBRARY_ID: Record<string, string> = {
+  stand_neutral: 'portrait_classic_stand',
+  stand_confident: 'portrait_hands_on_hips',
+  sit_chair: 'portrait_contemplative',
+  stand_relaxed: 'portrait_classic_stand',
+  stand_formal: 'portrait_cross_arms',
+  sit_casual: 'portrait_contemplative'
+};
+
+const POSE_LIBRARY_BONE_TO_HUMANOID: Record<string, string> = {
+  mixamorigHips: 'hips',
+  mixamorigSpine: 'spine',
+  mixamorigSpine1: 'chest',
+  mixamorigSpine2: 'chest',
+  mixamorigNeck: 'neck',
+  mixamorigHead: 'head',
+  mixamorigLeftShoulder: 'leftShoulder',
+  mixamorigLeftArm: 'leftUpperArm',
+  mixamorigLeftForeArm: 'leftLowerArm',
+  mixamorigLeftHand: 'leftHand',
+  mixamorigRightShoulder: 'rightShoulder',
+  mixamorigRightArm: 'rightUpperArm',
+  mixamorigRightForeArm: 'rightLowerArm',
+  mixamorigRightHand: 'rightHand',
+  mixamorigLeftUpLeg: 'leftUpperLeg',
+  mixamorigLeftLeg: 'leftLowerLeg',
+  mixamorigLeftFoot: 'leftFoot',
+  mixamorigRightUpLeg: 'rightUpperLeg',
+  mixamorigRightLeg: 'rightLowerLeg',
+  mixamorigRightFoot: 'rightFoot'
+};
+
 type CharacterIKChainName = 'leftLeg' | 'rightLeg';
 
 interface CharacterIKEffector {
@@ -539,25 +573,76 @@ interface CharacterIKRigState {
 }
 
 const HUMANOID_BONE_ALIASES: Record<string, string[]> = {
-  hips: ['Hips', 'pelvis', 'hip', 'root', 'mixamorigHips'],
-  spine: ['Spine', 'spine1', 'torso', 'mixamorigSpine'],
-  chest: ['Spine1', 'Spine2', 'chest', 'upper_torso', 'mixamorigSpine1', 'mixamorigSpine2'],
-  neck: ['Neck', 'mixamorigNeck'],
-  head: ['Head', 'mixamorigHead'],
+  hips: [
+    'Hips', 'pelvis', 'hip', 'root', 'mixamorigHips',
+    'torso_joint_1', 'Skeleton_torso_joint_1'
+  ],
+  spine: [
+    'Spine', 'spine1', 'torso', 'mixamorigSpine',
+    'torso_joint_1', 'torso_joint_2', 'Skeleton_torso_joint_1', 'Skeleton_torso_joint_2'
+  ],
+  chest: [
+    'Spine1', 'Spine2', 'chest', 'upper_torso', 'mixamorigSpine1', 'mixamorigSpine2',
+    'torso_joint_2', 'torso_joint_3', 'Skeleton_torso_joint_2', 'Skeleton_torso_joint_3'
+  ],
+  neck: [
+    'Neck', 'mixamorigNeck',
+    'neck_joint_1', 'Skeleton_neck_joint_1'
+  ],
+  head: [
+    'Head', 'mixamorigHead',
+    'neck_joint_2', 'Skeleton_neck_joint_2'
+  ],
   leftShoulder: ['LeftShoulder', 'shoulder_L', 'L_shoulder', 'mixamorigLeftShoulder'],
-  leftUpperArm: ['LeftArm', 'upperarm_L', 'L_upperarm', 'mixamorigLeftArm'],
-  leftLowerArm: ['LeftForeArm', 'forearm_L', 'L_forearm', 'mixamorigLeftForeArm'],
-  leftHand: ['LeftHand', 'hand_L', 'L_hand', 'mixamorigLeftHand'],
+  leftUpperArm: [
+    'LeftArm', 'upperarm_L', 'L_upperarm', 'mixamorigLeftArm',
+    'arm_joint_L_4', 'Skeleton_arm_joint_L__4_'
+  ],
+  leftLowerArm: [
+    'LeftForeArm', 'forearm_L', 'L_forearm', 'mixamorigLeftForeArm',
+    'arm_joint_L_3', 'Skeleton_arm_joint_L__3_'
+  ],
+  leftHand: [
+    'LeftHand', 'hand_L', 'L_hand', 'mixamorigLeftHand',
+    'arm_joint_L_2', 'Skeleton_arm_joint_L__2_'
+  ],
   rightShoulder: ['RightShoulder', 'shoulder_R', 'R_shoulder', 'mixamorigRightShoulder'],
-  rightUpperArm: ['RightArm', 'upperarm_R', 'R_upperarm', 'mixamorigRightArm'],
-  rightLowerArm: ['RightForeArm', 'forearm_R', 'R_forearm', 'mixamorigRightForeArm'],
-  rightHand: ['RightHand', 'hand_R', 'R_hand', 'mixamorigRightHand'],
-  leftUpperLeg: ['LeftUpLeg', 'thigh_L', 'L_thigh', 'mixamorigLeftUpLeg'],
-  leftLowerLeg: ['LeftLeg', 'calf_L', 'L_calf', 'shin_L', 'mixamorigLeftLeg'],
-  leftFoot: ['LeftFoot', 'foot_L', 'L_foot', 'mixamorigLeftFoot'],
-  rightUpperLeg: ['RightUpLeg', 'thigh_R', 'R_thigh', 'mixamorigRightUpLeg'],
-  rightLowerLeg: ['RightLeg', 'calf_R', 'R_calf', 'shin_R', 'mixamorigRightLeg'],
-  rightFoot: ['RightFoot', 'foot_R', 'R_foot', 'mixamorigRightFoot']
+  rightUpperArm: [
+    'RightArm', 'upperarm_R', 'R_upperarm', 'mixamorigRightArm',
+    'arm_joint_R', 'Skeleton_arm_joint_R'
+  ],
+  rightLowerArm: [
+    'RightForeArm', 'forearm_R', 'R_forearm', 'mixamorigRightForeArm',
+    'arm_joint_R_2', 'Skeleton_arm_joint_R__2_'
+  ],
+  rightHand: [
+    'RightHand', 'hand_R', 'R_hand', 'mixamorigRightHand',
+    'arm_joint_R_3', 'Skeleton_arm_joint_R__3_'
+  ],
+  leftUpperLeg: [
+    'LeftUpLeg', 'thigh_L', 'L_thigh', 'mixamorigLeftUpLeg',
+    'leg_joint_L_1', 'Skeleton_leg_joint_L_1'
+  ],
+  leftLowerLeg: [
+    'LeftLeg', 'calf_L', 'L_calf', 'shin_L', 'mixamorigLeftLeg',
+    'leg_joint_L_2', 'leg_joint_L_3', 'Skeleton_leg_joint_L_2', 'Skeleton_leg_joint_L_3'
+  ],
+  leftFoot: [
+    'LeftFoot', 'foot_L', 'L_foot', 'mixamorigLeftFoot',
+    'leg_joint_L_5', 'Skeleton_leg_joint_L_5'
+  ],
+  rightUpperLeg: [
+    'RightUpLeg', 'thigh_R', 'R_thigh', 'mixamorigRightUpLeg',
+    'leg_joint_R_1', 'Skeleton_leg_joint_R_1'
+  ],
+  rightLowerLeg: [
+    'RightLeg', 'calf_R', 'R_calf', 'shin_R', 'mixamorigRightLeg',
+    'leg_joint_R_2', 'leg_joint_R_3', 'Skeleton_leg_joint_R_2', 'Skeleton_leg_joint_R_3'
+  ],
+  rightFoot: [
+    'RightFoot', 'foot_R', 'R_foot', 'mixamorigRightFoot',
+    'leg_joint_R_5', 'Skeleton_leg_joint_R_5'
+  ]
 };
 
 const normalizeBoneToken = (value: string): string => value.trim().toLowerCase();
@@ -9799,9 +9884,14 @@ class VirtualStudio {
     }) as EventListener);
 
     window.addEventListener('ch-apply-pose', ((e: CustomEvent) => {
-      const { poseId: _poseId, poseName } = e.detail;
-      void _poseId;
-      console.log('Applying pose:', poseName);
+      const detail = (e.detail || {}) as { poseId?: string; poseName?: string };
+      const preset = this.getPosePresetByIdOrName(detail.poseId, detail.poseName);
+      if (!preset) {
+        console.warn('[PoseLibrary] Unknown pose id/name from event:', detail.poseId, detail.poseName);
+        this.showNotification('Pose ikke funnet', 'warning');
+        return;
+      }
+      void this.applyPosePreset(preset);
     }) as EventListener);
 
     window.addEventListener('ch-actor-params-changed', ((e: CustomEvent) => {
@@ -13139,22 +13229,183 @@ class VirtualStudio {
   private getQuickPoseSlotFromKeyCode(code: string): number | null {
     switch (code) {
       case 'Digit1':
+      case 'NumPad1':
       case 'Numpad1':
         return 1;
       case 'Digit2':
+      case 'NumPad2':
       case 'Numpad2':
         return 2;
       case 'Digit3':
+      case 'NumPad3':
       case 'Numpad3':
         return 3;
       case 'Digit4':
+      case 'NumPad4':
       case 'Numpad4':
         return 4;
       case 'Digit5':
+      case 'NumPad5':
       case 'Numpad5':
         return 5;
       default:
         return null;
+    }
+  }
+
+  private getQuickPoseSlotFromKeyboardEvent(event: KeyboardEvent): number | null {
+    const byCode = this.getQuickPoseSlotFromKeyCode(event.code || '');
+    if (byCode !== null) return byCode;
+
+    const key = (event.key || '').trim();
+    const keyCode = (event as KeyboardEvent & { keyCode?: number; which?: number }).keyCode
+      ?? (event as KeyboardEvent & { keyCode?: number; which?: number }).which
+      ?? 0;
+    const isNumpad = (
+      event.location === KeyboardEvent.DOM_KEY_LOCATION_NUMPAD ||
+      /numpad/i.test(event.code || '') ||
+      /^numpad/i.test(key)
+    );
+
+    if (isNumpad) {
+      switch (key) {
+        case '1':
+        case 'End':
+          return 1;
+        case '2':
+        case 'ArrowDown':
+          return 2;
+        case '3':
+        case 'PageDown':
+          return 3;
+        case '4':
+        case 'ArrowLeft':
+          return 4;
+        case '5':
+        case 'Clear':
+          return 5;
+        default:
+          break;
+      }
+
+      switch (keyCode) {
+        case 97: // Numpad1
+          return 1;
+        case 98: // Numpad2
+          return 2;
+        case 99: // Numpad3
+          return 3;
+        case 100: // Numpad4
+          return 4;
+        case 101: // Numpad5
+          return 5;
+        default:
+          break;
+      }
+    }
+
+    switch (key) {
+      case '1':
+        return 1;
+      case '2':
+        return 2;
+      case '3':
+        return 3;
+      case '4':
+        return 4;
+      case '5':
+        return 5;
+      default:
+        return null;
+    }
+  }
+
+  private getPosePresetByIdOrName(poseId?: string | null, poseName?: string | null): PosePreset | null {
+    const normalizedId = (poseId || '').trim().toLowerCase();
+    if (normalizedId) {
+      const direct = ALL_POSES.find((pose) => pose.id.toLowerCase() === normalizedId);
+      if (direct) return direct;
+
+      const legacyMappedId = LEGACY_POSE_ID_TO_LIBRARY_ID[normalizedId];
+      if (legacyMappedId) {
+        const legacyMatch = ALL_POSES.find((pose) => pose.id.toLowerCase() === legacyMappedId.toLowerCase());
+        if (legacyMatch) return legacyMatch;
+      }
+    }
+
+    const normalizedName = (poseName || '').trim().toLowerCase();
+    if (normalizedName) {
+      const byName = ALL_POSES.find((pose) => pose.name.trim().toLowerCase() === normalizedName);
+      if (byName) return byName;
+    }
+
+    return null;
+  }
+
+  private mapPoseLibraryBoneNameToHumanoidKey(boneName: string): string {
+    const direct = POSE_LIBRARY_BONE_TO_HUMANOID[boneName];
+    if (direct) return direct;
+
+    const stripped = stripBoneNamespace(boneName);
+    return POSE_LIBRARY_BONE_TO_HUMANOID[stripped] || boneName;
+  }
+
+  private async applyPosePreset(preset: PosePreset): Promise<void> {
+    const mesh = this.getPrimaryCharacterMesh();
+    if (!mesh) {
+      this.showNotification('Ingen aktiv modell funnet for pose', 'warning');
+      return;
+    }
+
+    this.stopCharacterWalk(false);
+    this.clearCharacterKeyboardInput();
+    this.stopCharacterKeyboardControl(false);
+
+    try {
+      const trackedGroups = this.getAnimationGroupsForMesh(mesh) || undefined;
+      const rigId = await this.ensureRigRegisteredForMesh(
+        mesh,
+        this.characterModelId || mesh.name || 'Character',
+        trackedGroups
+      );
+      if (!rigId) {
+        this.showNotification('Modellen mangler rigg/skeleton for pose', 'warning');
+        return;
+      }
+
+      const store = useSkeletalAnimationStore.getState();
+      this.forceStopCharacterAnimations(mesh, rigId);
+      store.resetAllBones(rigId);
+
+      Object.entries(preset.pose).forEach(([boneName, rotation]) => {
+        if (!rotation) return;
+        const mappedBoneName = this.mapPoseLibraryBoneNameToHumanoidKey(boneName);
+        store.setBoneRotation(rigId, mappedBoneName, rotation);
+      });
+
+      this.characterKeyboardState.rigId = rigId;
+      this.characterKeyboardState.animationLibrary = this.getCharacterAnimationLibrary(rigId, mesh);
+      this.characterKeyboardState.proceduralWalk = this.shouldUseProceduralWalk(
+        this.characterKeyboardState.animationLibrary,
+        mesh
+      );
+      this.characterKeyboardState.poseLocked = true;
+      this.characterKeyboardState.activeAnimation = null;
+      this.characterKeyboardState.animationAuthority = null;
+      this.characterKeyboardState.locomotionMode = 'pose';
+      this.characterKeyboardState.lastModeChangeAt = performance.now();
+
+      this.showNotification(`Pose: ${preset.name}`, 'info');
+      window.dispatchEvent(new CustomEvent('ch-character-pose-applied', {
+        detail: {
+          id: preset.id,
+          name: preset.name,
+          description: preset.description
+        }
+      }));
+    } catch (error) {
+      console.warn('[PoseLibrary] Failed to apply pose preset:', error);
+      this.showNotification('Kunne ikke aktivere pose', 'error');
     }
   }
 
@@ -13367,7 +13618,14 @@ class VirtualStudio {
     }
 
     if (!this.hasCharacterKeyboardInput()) {
-      if (state.active || state.activeAnimation || state.poseLocked || this.activeCharacterLocomotion) {
+      if (state.poseLocked) {
+        if (this.activeCharacterLocomotion) {
+          this.stopCharacterWalk(false);
+        }
+        return;
+      }
+
+      if (state.active || state.activeAnimation || this.activeCharacterLocomotion) {
         const meshAtRest = this.getPrimaryCharacterMesh();
         if (meshAtRest) {
           this.forceStopCharacterAnimations(meshAtRest, state.rigId);
@@ -13663,7 +13921,7 @@ class VirtualStudio {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (this.isEditableKeyboardTarget(e.target)) return;
 
-      const poseSlot = this.getQuickPoseSlotFromKeyCode(e.code);
+      const poseSlot = this.getQuickPoseSlotFromKeyboardEvent(e);
       if (poseSlot !== null) {
         if (!e.repeat) {
           void this.applyQuickCharacterPose(poseSlot);
@@ -15270,6 +15528,8 @@ class VirtualStudio {
   private topViewTouchStartDist: number = 0;
   private topViewTouchStartZoom: number = 1.0;
   private topViewIsFullscreen: boolean = false;
+  private topViewToolbarCollapsed: boolean = true;
+  private topViewToolbarObserver: MutationObserver | null = null;
   private topViewMeasurementMode: boolean = false;
   private topViewMeasurements: Array<{ id: string; start: { x: number; z: number }; end: { x: number; z: number } }> = [];
   private topViewCurrentMeasurement: { start: { x: number; z: number } | null; end: { x: number; z: number } | null } = { start: null, end: null };
@@ -18092,7 +18352,51 @@ class VirtualStudio {
     this.topViewContextMenuTarget = null;
   }
 
+  private syncTopViewToolbarCollapsedVisibility(): void {
+    const toolbar = document.getElementById('topviewToolbar');
+    if (!toolbar) return;
+    const collapseBtn = document.getElementById('topviewCollapse');
+    if (collapseBtn) {
+      collapseBtn.setAttribute('aria-pressed', String(this.topViewToolbarCollapsed));
+      collapseBtn.setAttribute('title', this.topViewToolbarCollapsed ? 'Utvid verktøylinje' : 'Kollaps verktøylinje');
+    }
+
+    toolbar.classList.toggle('collapsed', this.topViewToolbarCollapsed);
+
+    const collapsibleButtons = toolbar.querySelectorAll<HTMLButtonElement>('.topview-btn[data-topview-collapsible="true"]');
+    collapsibleButtons.forEach((button) => {
+      const isActive = button.classList.contains('active') || button.getAttribute('aria-expanded') === 'true';
+      button.classList.toggle('topview-visible-when-active', this.topViewToolbarCollapsed && isActive);
+    });
+  }
+
+  private setupTopViewToolbarCollapsible(): void {
+    const toolbar = document.getElementById('topviewToolbar');
+    const collapseBtn = document.getElementById('topviewCollapse');
+    if (!toolbar || !collapseBtn) return;
+
+    collapseBtn.addEventListener('click', () => {
+      this.topViewToolbarCollapsed = !this.topViewToolbarCollapsed;
+      this.syncTopViewToolbarCollapsedVisibility();
+    });
+
+    this.topViewToolbarObserver?.disconnect();
+    this.topViewToolbarObserver = new MutationObserver(() => {
+      this.syncTopViewToolbarCollapsedVisibility();
+    });
+
+    this.topViewToolbarObserver.observe(toolbar, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'aria-expanded']
+    });
+
+    this.syncTopViewToolbarCollapsedVisibility();
+  }
+
   private setupTopViewToolbarButtons(): void {
+    this.setupTopViewToolbarCollapsible();
+
     // Zoom In
     document.getElementById('topviewZoomIn')?.addEventListener('click', () => {
       this.topViewZoom = Math.min(4, this.topViewZoom * 1.2);
