@@ -89,6 +89,36 @@ interface TabPanelProps {
   value: number;
 }
 
+type SceneComposerTabKey =
+  | 'scenes'
+  | 'timeline'
+  | 'layers'
+  | 'environment'
+  | 'export'
+  | 'advanced';
+
+const SCENE_COMPOSER_TAB_INDEX: Record<SceneComposerTabKey, number> = {
+  scenes: 0,
+  timeline: 1,
+  layers: 2,
+  environment: 3,
+  export: 4,
+  advanced: 5,
+};
+
+function resolveSceneComposerTabIndex(tab: unknown): number | null {
+  if (typeof tab === 'number' && Number.isInteger(tab) && tab >= 0 && tab <= 5) {
+    return tab;
+  }
+
+  if (typeof tab !== 'string') {
+    return null;
+  }
+
+  const normalizedTab = tab.trim().toLowerCase() as SceneComposerTabKey;
+  return SCENE_COMPOSER_TAB_INDEX[normalizedTab] ?? null;
+}
+
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
   return (
@@ -166,6 +196,21 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
       sceneAutoSaveService.updateScene(selectedScene);
     }
   }, [selectedScene, autoSaveEnabled]);
+
+  useEffect(() => {
+    const handleOpenSceneComposer = (event: Event) => {
+      const customEvent = event as CustomEvent<{ tab?: SceneComposerTabKey | number }>;
+      const nextTabValue = resolveSceneComposerTabIndex(customEvent.detail?.tab);
+      if (nextTabValue !== null) {
+        setTabValue(nextTabValue);
+      }
+    };
+
+    window.addEventListener('ch-open-scene-composer', handleOpenSceneComposer as EventListener);
+    return () => {
+      window.removeEventListener('ch-open-scene-composer', handleOpenSceneComposer as EventListener);
+    };
+  }, []);
 
   const loadScenes = () => {
     const allScenes = sceneComposerService.getAllScenes().filter(s => !s.deletedAt);
@@ -1161,7 +1206,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
 
         {/* Miljø Tab */}
         <TabPanel value={tabValue} index={3}>
-          <EnvironmentBrowser />
+          <EnvironmentBrowser isActive={tabValue === 3} />
         </TabPanel>
 
         {/* Eksport Tab */}

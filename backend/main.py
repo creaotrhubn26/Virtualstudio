@@ -8,13 +8,35 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 import os
-from typing import Optional
+from typing import Any, Dict, List, Optional
 import uuid
 from datetime import datetime
 import base64
 import json
 from pathlib import Path
 from psycopg2.extras import RealDictCursor, Json as PgJson
+
+
+def load_local_env_file() -> None:
+    env_path = Path(__file__).resolve().parents[1] / ".env"
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if not key or key in os.environ:
+            continue
+
+        value = value.strip().strip('"').strip("'")
+        os.environ[key] = value
+
+
+load_local_env_file()
 
 # Auth service imports
 try:
@@ -209,26 +231,47 @@ face_analysis = None
 facexformer = None
 flux_service = None
 storyboard_service = None
+environment_planner_service = None
+asset_retrieval_service = None
+
+
+def get_or_create_environment_planner():
+    global environment_planner_service
+    if environment_planner_service is None:
+        from environment_planner_service import EnvironmentPlannerService
+        environment_planner_service = EnvironmentPlannerService()
+    return environment_planner_service
+
+
+def get_or_create_asset_retrieval_service():
+    global asset_retrieval_service
+    if asset_retrieval_service is None:
+        from asset_retrieval_service import AssetRetrievalService
+        asset_retrieval_service = AssetRetrievalService()
+    return asset_retrieval_service
 
 @app.on_event("startup")
 async def startup_event():
-    global sam3d_service, face_analysis, facexformer, flux_service, storyboard_service
+    global sam3d_service, face_analysis, facexformer, flux_service, storyboard_service, environment_planner_service
     try:
         from sam3d_service import SAM3DService
         from face_analysis_service import face_analysis_service
         from facexformer_service import facexformer_service
         from flux_service import flux_service as flux_svc
         from storyboard_image_service import storyboard_image_service
+        from environment_planner_service import EnvironmentPlannerService
         sam3d_service = SAM3DService()
         face_analysis = face_analysis_service
         facexformer = facexformer_service
         flux_service = flux_svc
         storyboard_service = storyboard_image_service
+        environment_planner_service = EnvironmentPlannerService()
         print("SAM 3D Body service initialized")
         print("Face analysis service initialized")
         print(f"FaceXFormer service initialized (enabled: {facexformer.is_enabled()})")
         print(f"FLUX service initialized (enabled: {flux_service.is_enabled()})")
         print(f"Storyboard Image Service initialized (enabled: {storyboard_service.enabled})")
+        print(f"Environment Planner Service initialized (enabled: {environment_planner_service.enabled})")
     except Exception as e:
         print(f"Warning: ML services failed to initialize: {e}")
         print("Server will continue with basic functionality only")
@@ -1050,7 +1093,6 @@ except ImportError as e:
     rodin_service = None
 
 from pydantic import BaseModel
-from typing import List, Optional
 
 # External data routes (Kartverket property analysis)
 try:
@@ -1077,6 +1119,29 @@ class RodinGenerateRequest(BaseModel):
 class RodinBatchRequest(BaseModel):
     items: List[dict]
     quality: str = "low"
+
+
+class EnvironmentPlanRequest(BaseModel):
+    prompt: str
+    referenceImages: List[str] = []
+    roomConstraints: Optional[Dict[str, Any]] = None
+    preferFallback: bool = False
+    preferredPresetId: Optional[str] = None
+    worldModelProvider: str = "none"
+    worldModelReference: Optional[Dict[str, Any]] = None
+
+
+class EnvironmentAssetRetrievalRequest(BaseModel):
+    text: str
+    placementHint: Optional[str] = None
+    contextText: Optional[str] = None
+    assetTypes: List[str] = []
+    preferredPlacementMode: Optional[str] = None
+    preferredRoomTypes: List[str] = []
+    surfaceAnchor: Optional[str] = None
+    categoryHint: Optional[str] = None
+    limit: int = 5
+    minScore: float = 0.75
 
 @app.post("/api/rodin/generate")
 async def rodin_generate(request: RodinGenerateRequest):
@@ -4980,6 +5045,59 @@ async def get_storyboard_templates():
     if not storyboard_service:
         raise HTTPException(status_code=503, detail="Storyboard service not initialized")
     return storyboard_service.get_templates()
+
+
+@app.get("/api/environment/planner/status")
+async def get_environment_planner_status():
+    planner = get_or_create_environment_planner()
+    return planner.get_status()
+
+
+@app.post("/api/environment/plan")
+async def generate_environment_plan(request: EnvironmentPlanRequest):
+    if not request.prompt.strip() and not request.referenceImages:
+        raise HTTPException(status_code=400, detail="Prompt or reference image is required")
+
+    planner = get_or_create_environment_planner()
+
+    result = await planner.generate_plan(
+        prompt=request.prompt,
+        reference_images=request.referenceImages,
+        room_constraints=request.roomConstraints,
+        prefer_fallback=request.preferFallback,
+        preferred_preset_id=request.preferredPresetId,
+        world_model_provider=request.worldModelProvider,
+        world_model_reference=request.worldModelReference,
+    )
+
+    return JSONResponse(result)
+
+
+@app.get("/api/environment/retrieve-assets/status")
+async def get_environment_asset_retrieval_status():
+    retrieval = get_or_create_asset_retrieval_service()
+    return retrieval.get_status()
+
+
+@app.post("/api/environment/retrieve-assets")
+async def retrieve_environment_assets(request: EnvironmentAssetRetrievalRequest):
+    if not request.text.strip():
+        raise HTTPException(status_code=400, detail="Query text is required")
+
+    retrieval = get_or_create_asset_retrieval_service()
+    result = retrieval.search(
+        text=request.text,
+        placement_hint=request.placementHint or "",
+        context_text=request.contextText or "",
+        asset_types=request.assetTypes or None,
+        preferred_placement_mode=request.preferredPlacementMode,
+        preferred_room_types=request.preferredRoomTypes or None,
+        surface_anchor=request.surfaceAnchor,
+        category_hint=request.categoryHint,
+        limit=request.limit,
+        min_score=request.minScore,
+    )
+    return JSONResponse(result)
 
 @app.get("/api/storyboards/camera-angles")
 async def get_camera_angles():

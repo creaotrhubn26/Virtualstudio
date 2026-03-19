@@ -1,8 +1,22 @@
 import { logger } from './logger';
+import { assetBrainService } from './assetBrain';
 import { WALL_MATERIALS, type WallMaterial } from '../../data/wallDefinitions';
 import { FLOOR_MATERIALS, type FloorMaterial } from '../../data/floorDefinitions';
+import { getAllProps, type PropCategory, type PropDefinition } from '../data/propDefinitions';
 
 const log = logger.module('AssetLibrary');
+
+function mapPropCategoryToAssetCategory(category: PropCategory): AssetLibraryItem['category'] {
+  if (category === 'furniture') {
+    return 'furniture';
+  }
+
+  if (category === 'lighting') {
+    return 'accessory';
+  }
+
+  return 'prop';
+}
 
 export interface AssetLibraryItem {
   id: string;
@@ -25,6 +39,55 @@ export interface AssetQueryOptions {
   is_system?: boolean;
   limit?: number;
 }
+
+function mapAssetLibraryCategoryToAssetTypes(
+  category?: string,
+): Array<'prop' | 'wall' | 'floor'> | undefined {
+  if (!category) {
+    return undefined;
+  }
+
+  if (category === 'wall') {
+    return ['wall'];
+  }
+
+  if (category === 'floor') {
+    return ['floor'];
+  }
+
+  return ['prop'];
+}
+
+function mapAssetBrainEntryIdToLibraryId(
+  entryId: string,
+  assetType: 'prop' | 'wall' | 'floor',
+): string {
+  if (assetType === 'wall') {
+    return `wall-${entryId}`;
+  }
+  if (assetType === 'floor') {
+    return `floor-${entryId}`;
+  }
+  return entryId;
+}
+
+const ENVIRONMENT_PROP_ASSETS: AssetLibraryItem[] = getAllProps().map((prop: PropDefinition) => ({
+  id: prop.id,
+  name: prop.name,
+  category: mapPropCategoryToAssetCategory(prop.category),
+  thumbnail_url: prop.thumbnailUrl,
+  model_url: prop.modelUrl,
+  is_system: true,
+  metadata: {
+    ...prop.metadata,
+    propCategory: prop.category,
+    propSize: prop.size,
+    propComplexity: prop.complexity,
+    supportsLOD: prop.supportsLOD,
+    supportsInstancing: prop.supportsInstancing,
+    description: prop.description,
+  },
+}));
 
 const DEFAULT_ASSETS: AssetLibraryItem[] = [
   {
@@ -49,22 +112,6 @@ const DEFAULT_ASSETS: AssetLibraryItem[] = [
     category: 'accessory',
     thumbnail_url: null,
     model_url: '/models/accessories/reflector.glb',
-    is_system: true,
-  },
-  {
-    id: 'stool_wooden',
-    name: 'Trekrakk',
-    category: 'furniture',
-    thumbnail_url: null,
-    model_url: '/models/props/stool.glb',
-    is_system: true,
-  },
-  {
-    id: 'chair_posing',
-    name: 'Posestol',
-    category: 'furniture',
-    thumbnail_url: null,
-    model_url: '/models/props/chair.glb',
     is_system: true,
   },
   {
@@ -230,6 +277,7 @@ const DEFAULT_ASSETS: AssetLibraryItem[] = [
       isDefault: floor.id === 'gray-dark',
     },
   })),
+  ...ENVIRONMENT_PROP_ASSETS,
 ];
 
 class AssetLibraryService {
@@ -246,7 +294,32 @@ class AssetLibraryService {
 
     if (options?.search) {
       const search = options.search.toLowerCase();
-      filtered = filtered.filter((a) => a.name.toLowerCase().includes(search));
+      const semanticMatches = assetBrainService.search({
+        text: options.search,
+        assetTypes: mapAssetLibraryCategoryToAssetTypes(options.category),
+        limit: Math.max(filtered.length, 24),
+        minScore: 0.75,
+      });
+      const semanticRank = new Map(
+        semanticMatches.map((match, index) => [
+          mapAssetBrainEntryIdToLibraryId(match.entry.id, match.entry.assetType),
+          index,
+        ]),
+      );
+      const semanticallyFiltered = filtered.filter((asset) => semanticRank.has(asset.id));
+
+      if (semanticallyFiltered.length > 0) {
+        filtered = semanticallyFiltered.sort((left, right) => {
+          const leftRank = semanticRank.get(left.id) ?? Number.MAX_SAFE_INTEGER;
+          const rightRank = semanticRank.get(right.id) ?? Number.MAX_SAFE_INTEGER;
+          if (leftRank !== rightRank) {
+            return leftRank - rightRank;
+          }
+          return left.name.localeCompare(right.name);
+        });
+      } else {
+        filtered = filtered.filter((a) => a.name.toLowerCase().includes(search));
+      }
     }
 
     if (options?.is_system !== undefined) {

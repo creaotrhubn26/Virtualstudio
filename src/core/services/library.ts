@@ -1,3 +1,5 @@
+import { getAllProps, type PropDefinition } from '../data/propDefinitions';
+
 export type AssetType = 'character' | 'prop' | 'light' | 'modifier' | 'environment' | 'model';
 
 export interface LibraryAsset {
@@ -103,22 +105,17 @@ const AVATAR_ASSETS: LibraryAsset[] = [
   }
 ];
 
-const PROP_ASSETS: LibraryAsset[] = [
-  {
-    id: 'stool_wooden',
-    title: 'Trekrakk',
-    type: 'prop',
-    thumbUrl: null,
-    data: { modelUrl: '/models/props/stool.glb', category: 'furniture' }
+const PROP_ASSETS: LibraryAsset[] = getAllProps().map((prop: PropDefinition) => ({
+  id: prop.id,
+  title: prop.name,
+  type: 'prop',
+  thumbUrl: prop.thumbnailUrl,
+  data: {
+    modelUrl: prop.modelUrl || undefined,
+    category: prop.category,
+    metadata: prop.metadata,
   },
-  {
-    id: 'chair_posing',
-    title: 'Posestol',
-    type: 'prop',
-    thumbUrl: null,
-    data: { modelUrl: '/models/props/chair.glb', category: 'furniture' }
-  }
-];
+}));
 
 const ALL_ASSETS: LibraryAsset[] = [...AVATAR_ASSETS, ...PROP_ASSETS];
 

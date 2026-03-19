@@ -13,6 +13,7 @@ import { LoadingOverlay } from './components/LoadingOverlay';
 import { virtualActorService } from './core/services/virtualActorService';
 import { propRenderingService } from './core/services/propRenderingService';
 import { environmentService } from './core/services/environmentService';
+import { assetBrainService } from './core/services/assetBrain';
 import { useRenderingStore, RENDERING_PRESETS } from './services/renderingService';
 import { getWallById } from './data/wallDefinitions';
 import { getFloorById } from './data/floorDefinitions';
@@ -43,6 +44,21 @@ declare global {
   interface Window {
     virtualStudio: VirtualStudio | undefined;
   }
+}
+
+interface EnvironmentRuntimePropRequest {
+  assetId: string;
+  name: string;
+  description?: string;
+  priority?: 'high' | 'medium' | 'low';
+  placementHint?: string;
+  metadata?: Record<string, unknown>;
+}
+
+interface EnvironmentRuntimePropResult {
+  applied: string[];
+  skipped: string[];
+  nodeIds: string[];
 }
 
 // Early initialization of Studio Library button - runs immediately
@@ -1077,6 +1093,114 @@ class VirtualStudio {
   public setCameraFov(fov: number): void {
     this.camera.fov = fov;
   }
+
+  public applySimpleCameraPreset(
+    position?: [number, number, number],
+    target?: [number, number, number],
+    fov?: number,
+  ): void {
+    if (Array.isArray(position) && position.length >= 3) {
+      this.camera.position = new BABYLON.Vector3(position[0], position[1], position[2]);
+    }
+
+    if (Array.isArray(target) && target.length >= 3) {
+      this.camera.setTarget(new BABYLON.Vector3(target[0], target[1], target[2]));
+    }
+
+    if (typeof fov === 'number') {
+      this.camera.fov = fov;
+    }
+
+    this.publishEnvironmentDiagnostics('camera-preset-applied');
+  }
+
+  private parseSceneMaterialId(materialName: string | null | undefined, prefix: string): string | null {
+    if (!materialName || !materialName.startsWith(prefix)) {
+      return null;
+    }
+
+    return materialName.slice(prefix.length);
+  }
+
+  private buildEnvironmentDiagnostics(reason: string): any {
+    const serializeWall = (wallId: 'backWall' | 'leftWall' | 'rightWall' | 'rearWall') => {
+      const mesh = this.scene.getMeshByName(wallId);
+      const materialName = mesh?.material?.name ?? null;
+
+      return {
+        visible: mesh?.isVisible ?? null,
+        materialName,
+        materialId: this.parseSceneMaterialId(materialName, `${wallId}_`),
+      };
+    };
+
+    const ground = this.scene.getMeshByName('ground');
+    const floorMaterialName = ground?.material?.name ?? null;
+    const cameraTarget = typeof (this.camera as any).getTarget === 'function'
+      ? (this.camera as any).getTarget()
+      : null;
+
+    return {
+      reason,
+      updatedAt: new Date().toISOString(),
+      serviceState: environmentService.getState(),
+      sceneState: {
+        walls: {
+          backWall: serializeWall('backWall'),
+          leftWall: serializeWall('leftWall'),
+          rightWall: serializeWall('rightWall'),
+          rearWall: serializeWall('rearWall'),
+        },
+        floor: {
+          visible: ground?.isVisible ?? null,
+          materialName: floorMaterialName,
+          materialId: this.parseSceneMaterialId(floorMaterialName, 'floor_'),
+        },
+        atmosphere: {
+          fogEnabled: this.scene.fogMode !== BABYLON.Scene.FOGMODE_NONE,
+          fogDensity: this.scene.fogDensity ?? 0,
+          fogColor: this.scene.fogColor?.toHexString?.() ?? null,
+          clearColor: this.scene.clearColor?.toHexString?.() ?? null,
+          ambientLightIntensity: this.ambientLight?.intensity ?? null,
+          ambientLightColor: this.ambientLight?.diffuse?.toHexString?.() ?? null,
+        },
+        camera: {
+          position: [this.camera.position.x, this.camera.position.y, this.camera.position.z],
+          target: cameraTarget ? [cameraTarget.x, cameraTarget.y, cameraTarget.z] : null,
+          fov: this.camera.fov,
+        },
+        props: Array.from(this.sceneState.props.values()).map((prop) => ({
+          id: prop.id,
+          assetId: prop.assetId,
+          name: prop.name,
+          position: [
+            prop.mesh.position.x,
+            prop.mesh.position.y,
+            prop.mesh.position.z,
+          ],
+          environmentGenerated: Boolean(prop.metadata?.environmentGenerated),
+          placementHint: prop.metadata?.placementHint ?? null,
+          placementMode: prop.metadata?.placementMode ?? null,
+          surfaceAnchorId: prop.metadata?.surfaceAnchorId ?? null,
+        })),
+      },
+    };
+  }
+
+  private publishEnvironmentDiagnostics(reason: string): void {
+    const diagnostics = this.buildEnvironmentDiagnostics(reason);
+    const globalWindow = window as any;
+    const previousDiagnostics = globalWindow.__virtualStudioDiagnostics || {};
+
+    globalWindow.__virtualStudioDiagnostics = {
+      ...previousDiagnostics,
+      environment: diagnostics,
+    };
+
+    window.dispatchEvent(new CustomEvent('vs-environment-diagnostics', {
+      detail: diagnostics,
+    }));
+  }
   
   public resetCamera(): void {
     this.camera.position = new BABYLON.Vector3(0, 2.5, -8);
@@ -1907,10 +2031,9 @@ class VirtualStudio {
       console.log('[Scene] Clearing scene');
       
       // Remove all props
-      this.sceneState.props.forEach((prop, _id) => {
-        prop.mesh.dispose();
+      Array.from(this.sceneState.props.keys()).forEach((id) => {
+        this.removePropNodeById(id, false);
       });
-      this.sceneState.props.clear();
       
       // Remove all characters
       this.sceneState.characters.forEach((char, _id) => {
@@ -2230,6 +2353,61 @@ class VirtualStudio {
     if (ground && ground.material) {
       (ground.material as BABYLON.StandardMaterial).diffuseColor = color;
     }
+  }
+
+  public applyAtmosphereSettings(settings: {
+    fogEnabled?: boolean;
+    fogDensity?: number;
+    fogColor?: string;
+    clearColor?: string;
+    ambientColor?: string;
+    ambientIntensity?: number;
+  }): void {
+    const normalizeHex = (value: unknown, fallback: string): string => {
+      if (typeof value !== 'string') return fallback;
+      const trimmed = value.trim();
+      if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) return trimmed;
+      if (/^#[0-9a-fA-F]{8}$/.test(trimmed)) return trimmed.slice(0, 7);
+      return fallback;
+    };
+
+    const fogEnabled = settings.fogEnabled === true;
+    if (fogEnabled) {
+      this.scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
+      this.scene.fogDensity = typeof settings.fogDensity === 'number' ? settings.fogDensity : 0.01;
+      this.scene.fogColor = BABYLON.Color3.FromHexString(normalizeHex(settings.fogColor, '#101820'));
+    } else {
+      this.scene.fogMode = BABYLON.Scene.FOGMODE_NONE;
+    }
+
+    this.scene.clearColor = BABYLON.Color4.FromHexString(`${normalizeHex(settings.clearColor, '#101820')}FF`);
+
+    if (this.ambientLight) {
+      this.ambientLight.diffuse = BABYLON.Color3.FromHexString(normalizeHex(settings.ambientColor, '#ffffff'));
+      if (typeof settings.ambientIntensity === 'number') {
+        this.ambientLight.intensity = settings.ambientIntensity;
+      }
+    }
+
+    this.publishEnvironmentDiagnostics('atmosphere-updated');
+  }
+
+  public resetEnvironmentShell(): void {
+    this.toggleWall('backWall', false);
+    this.toggleWall('leftWall', true);
+    this.toggleWall('rightWall', true);
+    this.toggleWall('rearWall', true);
+    this.toggleFloor(true);
+    this.toggleGrid(true);
+    this.setWallColor('#404040');
+    this.setFloorColor('#404040');
+    this.applyAtmosphereSettings({
+      fogEnabled: false,
+      clearColor: '#101820',
+      ambientColor: '#ffffff',
+      ambientIntensity: this.ambientLightBaseIntensity,
+    });
+    this.publishEnvironmentDiagnostics('environment-shell-reset');
   }
 
   // Current backdrop mesh reference
@@ -4981,6 +5159,7 @@ class VirtualStudio {
         // Update scene walls, floors, and lighting when environment changes
         this.updateSceneEnvironment(state);
       });
+      this.updateSceneEnvironment(environmentService.getState());
       console.log('[VirtualStudio] Environment service initialized and subscribed');
   }
 
@@ -5010,7 +5189,10 @@ class VirtualStudio {
       }
 
       this.recalculateAmbientLighting();
-      window.dispatchEvent(new CustomEvent('vs-environment-changed'));
+      this.publishEnvironmentDiagnostics('scene-environment-updated');
+      window.dispatchEvent(new CustomEvent('vs-environment-changed', {
+        detail: (window as any).__virtualStudioDiagnostics?.environment,
+      }));
       console.log('[Scene] Environment updated from service state');
     } catch (err) {
       console.error('[Scene] Error updating environment:', err);
@@ -5038,13 +5220,21 @@ class VirtualStudio {
 
     // Textures
     if (wallMaterial.textureUrl) {
-      const albedoTex = new BABYLON.Texture(wallMaterial.textureUrl, this.scene);
+      const albedoTex = this.createSceneTexture(
+        `${wallId}_${materialId}_albedo`,
+        wallMaterial.textureUrl,
+        wallMaterial.color ?? '#808080',
+        materialId,
+      );
       albedoTex.uScale = 2;
       albedoTex.vScale = 2;
       mat.albedoTexture = albedoTex;
     }
     if (wallMaterial.normalMapUrl) {
-      const normalTex = new BABYLON.Texture(wallMaterial.normalMapUrl, this.scene);
+      const normalTex = this.createSceneNormalTexture(
+        `${wallId}_${materialId}_normal`,
+        wallMaterial.normalMapUrl,
+      );
       normalTex.uScale = 2;
       normalTex.vScale = 2;
       mat.bumpTexture = normalTex;
@@ -5092,14 +5282,22 @@ class VirtualStudio {
 
     // Textures
     if (floorMaterial.textureUrl) {
-      const albedoTex = new BABYLON.Texture(floorMaterial.textureUrl, this.scene);
+      const albedoTex = this.createSceneTexture(
+        `floor_${materialId}_albedo`,
+        floorMaterial.textureUrl,
+        floorMaterial.color ?? '#808080',
+        materialId,
+      );
       const scale = floorMaterial.tileScale ?? 4;
       albedoTex.uScale = scale;
       albedoTex.vScale = scale;
       mat.albedoTexture = albedoTex;
     }
     if (floorMaterial.normalMapUrl) {
-      const normalTex = new BABYLON.Texture(floorMaterial.normalMapUrl, this.scene);
+      const normalTex = this.createSceneNormalTexture(
+        `floor_${materialId}_normal`,
+        floorMaterial.normalMapUrl,
+      );
       const scale = floorMaterial.tileScale ?? 4;
       normalTex.uScale = scale;
       normalTex.vScale = scale;
@@ -5138,6 +5336,213 @@ class VirtualStudio {
     const g = parseInt(cleaned.substring(2, 4), 16) / 255;
     const b = parseInt(cleaned.substring(4, 6), 16) / 255;
     return { r, g, b };
+  }
+
+  private shouldUseProceduralTexture(textureUrl: string): boolean {
+    return textureUrl.startsWith('/textures/');
+  }
+
+  private createSeededRandom(seed: string): () => number {
+    let state = 2166136261;
+    for (let i = 0; i < seed.length; i += 1) {
+      state ^= seed.charCodeAt(i);
+      state = Math.imul(state, 16777619);
+    }
+
+    return () => {
+      state = Math.imul(state, 1664525) + 1013904223;
+      return (state >>> 0) / 0x100000000;
+    };
+  }
+
+  private adjustHexColor(hex: string, amount: number): string {
+    const cleaned = hex.replace('#', '');
+    const channel = (index: number) => {
+      const value = parseInt(cleaned.substring(index, index + 2), 16);
+      return Math.max(0, Math.min(255, Math.round(value + amount * 255)));
+    };
+
+    const toHex = (value: number) => value.toString(16).padStart(2, '0');
+    return `#${toHex(channel(0))}${toHex(channel(2))}${toHex(channel(4))}`;
+  }
+
+  private createProceduralSurfaceTexture(name: string, baseHex: string, materialId: string): BABYLON.DynamicTexture {
+    const size = 1024;
+    const texture = new BABYLON.DynamicTexture(name, { width: size, height: size }, this.scene, false);
+    texture.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
+    texture.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
+
+    const ctx = texture.getContext();
+    const random = this.createSeededRandom(materialId);
+    const light = this.adjustHexColor(baseHex, 0.12);
+    const dark = this.adjustHexColor(baseHex, -0.12);
+
+    ctx.fillStyle = baseHex;
+    ctx.fillRect(0, 0, size, size);
+
+    if (materialId.includes('checker')) {
+      const tileSize = size / 8;
+      for (let y = 0; y < 8; y += 1) {
+        for (let x = 0; x < 8; x += 1) {
+          ctx.fillStyle = (x + y) % 2 === 0 ? '#f4f0e8' : '#232323';
+          ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+        }
+      }
+    } else if (materialId.includes('brick')) {
+      const rowHeight = size / 8;
+      const brickWidth = size / 4;
+      ctx.lineWidth = 10;
+      ctx.strokeStyle = 'rgba(235, 228, 215, 0.8)';
+      for (let row = 0; row < 8; row += 1) {
+        const offset = row % 2 === 0 ? 0 : brickWidth / 2;
+        for (let col = -1; col < 5; col += 1) {
+          const x = col * brickWidth + offset;
+          ctx.fillStyle = row % 2 === 0 ? light : dark;
+          ctx.fillRect(x, row * rowHeight, brickWidth, rowHeight);
+          ctx.strokeRect(x, row * rowHeight, brickWidth, rowHeight);
+        }
+      }
+    } else if (
+      materialId.includes('wood') ||
+      materialId.includes('oak') ||
+      materialId.includes('walnut') ||
+      materialId.includes('pine') ||
+      materialId.includes('reclaimed') ||
+      materialId.includes('herringbone')
+    ) {
+      ctx.globalAlpha = 0.55;
+      for (let i = 0; i < 140; i += 1) {
+        ctx.strokeStyle = i % 2 === 0 ? light : dark;
+        ctx.lineWidth = 3 + random() * 5;
+        ctx.beginPath();
+        const y = (i / 140) * size;
+        ctx.moveTo(0, y + random() * 10);
+        ctx.bezierCurveTo(size * 0.25, y + random() * 18, size * 0.75, y - random() * 18, size, y + random() * 10);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      if (materialId.includes('herringbone')) {
+        ctx.strokeStyle = 'rgba(40, 30, 20, 0.35)';
+        ctx.lineWidth = 6;
+        const step = size / 8;
+        for (let i = -size; i < size * 2; i += step) {
+          ctx.beginPath();
+          ctx.moveTo(i, 0);
+          ctx.lineTo(i + size / 2, size / 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(i, size);
+          ctx.lineTo(i + size / 2, size / 2);
+          ctx.stroke();
+        }
+      }
+    } else if (
+      materialId.includes('plaster') ||
+      materialId.includes('stucco') ||
+      materialId.includes('concrete') ||
+      materialId.includes('stone')
+    ) {
+      for (let i = 0; i < 2600; i += 1) {
+        const x = random() * size;
+        const y = random() * size;
+        const radius = 1 + random() * 4;
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (materialId.includes('stone')) {
+        ctx.strokeStyle = 'rgba(35, 35, 35, 0.18)';
+        ctx.lineWidth = 5;
+        for (let i = 0; i < 18; i += 1) {
+          const x = (i % 6) * (size / 5);
+          const y = Math.floor(i / 6) * (size / 3);
+          ctx.strokeRect(x, y, size / 4, size / 3);
+        }
+      }
+    } else if (materialId.includes('marble')) {
+      ctx.globalAlpha = 0.55;
+      for (let i = 0; i < 20; i += 1) {
+        ctx.strokeStyle = i % 2 === 0 ? 'rgba(255,255,255,0.55)' : 'rgba(90,90,90,0.25)';
+        ctx.lineWidth = 2 + random() * 6;
+        ctx.beginPath();
+        const startY = random() * size;
+        ctx.moveTo(0, startY);
+        ctx.bezierCurveTo(size * 0.3, startY + random() * 180, size * 0.7, startY - random() * 180, size, startY + random() * 120);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    } else if (materialId.includes('terrazzo')) {
+      for (let i = 0; i < 220; i += 1) {
+        const x = random() * size;
+        const y = random() * size;
+        const width = 10 + random() * 30;
+        const height = 8 + random() * 24;
+        const palette = ['#c46f5e', '#3e5567', '#f4f0e8', '#7d8c69', '#1f2833'];
+        ctx.fillStyle = palette[i % palette.length];
+        ctx.fillRect(x, y, width, height);
+      }
+    } else if (materialId.includes('tentacle')) {
+      ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = this.adjustHexColor(baseHex, 0.18);
+      ctx.lineWidth = 18;
+      for (let i = 0; i < 12; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo((i / 12) * size, size);
+        ctx.bezierCurveTo(random() * size, size * 0.8, random() * size, size * 0.3, random() * size, 0);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    } else if (materialId.includes('grating')) {
+      ctx.strokeStyle = 'rgba(220, 220, 220, 0.28)';
+      ctx.lineWidth = 10;
+      const step = size / 12;
+      for (let i = 0; i <= 12; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(i * step, 0);
+        ctx.lineTo(i * step, size);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i * step);
+        ctx.lineTo(size, i * step);
+        ctx.stroke();
+      }
+    } else {
+      for (let i = 0; i < 120; i += 1) {
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+        ctx.fillRect(random() * size, random() * size, 10 + random() * 40, 10 + random() * 40);
+      }
+    }
+
+    texture.update(false);
+    return texture;
+  }
+
+  private createFlatNormalTexture(name: string): BABYLON.DynamicTexture {
+    const texture = new BABYLON.DynamicTexture(name, { width: 64, height: 64 }, this.scene, false);
+    texture.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
+    texture.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
+    const ctx = texture.getContext();
+    ctx.fillStyle = 'rgb(128, 128, 255)';
+    ctx.fillRect(0, 0, 64, 64);
+    texture.update(false);
+    return texture;
+  }
+
+  private createSceneTexture(name: string, textureUrl: string, baseHex: string, materialId: string): BABYLON.Texture {
+    if (this.shouldUseProceduralTexture(textureUrl)) {
+      return this.createProceduralSurfaceTexture(name, baseHex, materialId);
+    }
+
+    return new BABYLON.Texture(textureUrl, this.scene);
+  }
+
+  private createSceneNormalTexture(name: string, textureUrl: string): BABYLON.Texture {
+    if (this.shouldUseProceduralTexture(textureUrl)) {
+      return this.createFlatNormalTexture(name);
+    }
+
+    return new BABYLON.Texture(textureUrl, this.scene);
   }
 
   // Helper: Add a light model to the scene
@@ -7666,6 +8071,20 @@ class VirtualStudio {
       }
     });
 
+    window.addEventListener('ch-open-scene-composer', (() => {
+      if (sceneComposerPanel) {
+        sceneComposerPanel.style.display = 'block';
+        sceneComposerBtn?.classList.add('active');
+      }
+    }) as EventListener);
+
+    window.addEventListener('ch-close-scene-composer', (() => {
+      if (sceneComposerPanel) {
+        sceneComposerPanel.style.display = 'none';
+        sceneComposerBtn?.classList.remove('active');
+      }
+    }) as EventListener);
+
     sceneComposerCloseBtn?.addEventListener('click', () => {
       if (sceneComposerPanel) {
         sceneComposerPanel.style.display = 'none';
@@ -9783,6 +10202,28 @@ class VirtualStudio {
       }
     }) as EventListener);
 
+    window.addEventListener('vs-add-prop', ((e: CustomEvent) => {
+      const { propId, position, metadata } = e.detail || {};
+      if (typeof propId !== 'string' || !propId) {
+        return;
+      }
+
+      const propDef = getPropById(propId);
+      const pos = Array.isArray(position) && position.length >= 3
+        ? new BABYLON.Vector3(Number(position[0]) || 0, Number(position[1]) || 0, Number(position[2]) || 0)
+        : undefined;
+
+      void this.loadAssetFromLibrary(
+        propId,
+        propDef?.name || propId,
+        {
+          modelUrl: propDef?.modelUrl || undefined,
+          metadata,
+        },
+        pos,
+      );
+    }) as EventListener);
+
     // Listen for scene node selection changes
     window.addEventListener('ch-scene-node-selected', ((e: CustomEvent) => {
       const { nodeId } = e.detail;
@@ -9954,7 +10395,8 @@ class VirtualStudio {
 
     window.addEventListener('applyScenarioPreset', ((e: CustomEvent) => {
       const preset = e.detail;
-      console.log('Applying scenario preset:', preset.id, preset.title);
+      const presetLabel = preset?.title || preset?.navn || preset?.name || preset?.id || 'unknown';
+      console.log('Applying scenario preset:', preset?.id, presetLabel);
       this.applyScenarioPreset(preset);
     }) as EventListener);
 
@@ -10014,6 +10456,23 @@ class VirtualStudio {
       window.dispatchEvent(new CustomEvent('ch-floor-visibility-changed', { detail: { visible: isVisible } }));
     }) as EventListener);
 
+    window.addEventListener('ch-set-wall-material', ((e: CustomEvent) => {
+      const { wallId, material } = e.detail || {};
+      const materialId = material?.id;
+      if (wallId && materialId) {
+        this.applyWallTexture(wallId, materialId);
+        this.publishEnvironmentDiagnostics('wall-material-updated');
+      }
+    }) as EventListener);
+
+    window.addEventListener('ch-set-floor-material', ((e: CustomEvent) => {
+      const materialId = e.detail?.material?.id;
+      if (materialId) {
+        this.updateFloorProperties(materialId);
+        this.publishEnvironmentDiagnostics('floor-material-updated');
+      }
+    }) as EventListener);
+
     window.addEventListener('ch-set-wall-color', ((e: CustomEvent) => {
       const { color, wallId } = e.detail || {};
       if (color) this.setWallColor(color, wallId);
@@ -10027,6 +10486,19 @@ class VirtualStudio {
     window.addEventListener('ch-toggle-grid', ((e: CustomEvent) => {
       const visible = e.detail?.visible;
       this.toggleGrid(visible);
+    }) as EventListener);
+
+    window.addEventListener('ch-apply-atmosphere', ((e: CustomEvent) => {
+      this.applyAtmosphereSettings(e.detail || {});
+    }) as EventListener);
+
+    window.addEventListener('ch-clear-environment', (() => {
+      this.resetEnvironmentShell();
+    }) as EventListener);
+
+    window.addEventListener('ch-set-camera-preset', ((e: CustomEvent) => {
+      const { position, target, fov } = e.detail || {};
+      this.applySimpleCameraPreset(position, target, fov);
     }) as EventListener);
 
     // Backdrop loading event handlers
@@ -11235,14 +11707,647 @@ class VirtualStudio {
     }
   }
 
+  private getEnvironmentShellBounds(): {
+    minX: number;
+    maxX: number;
+    minZ: number;
+    maxZ: number;
+    wallMinY: number;
+    wallMaxY: number;
+  } {
+    const ground = this.scene.getMeshByName('ground');
+    const backWall = this.scene.getMeshByName('backWall');
+
+    let minX = -9.2;
+    let maxX = 9.2;
+    let minZ = -9.2;
+    let maxZ = 9.2;
+
+    if (ground) {
+      const bounds = ground.getHierarchyBoundingVectors(true);
+      minX = bounds.min.x + 0.5;
+      maxX = bounds.max.x - 0.5;
+      minZ = bounds.min.z + 0.5;
+      maxZ = bounds.max.z - 0.5;
+    }
+
+    let wallMinY = 0.6;
+    let wallMaxY = 4.8;
+    if (backWall) {
+      const wallBounds = backWall.getHierarchyBoundingVectors(true);
+      wallMinY = wallBounds.min.y + 0.25;
+      wallMaxY = wallBounds.max.y - 0.25;
+    }
+
+    return {
+      minX,
+      maxX,
+      minZ,
+      maxZ,
+      wallMinY,
+      wallMaxY,
+    };
+  }
+
+  private getPlacementSizing(
+    request: EnvironmentRuntimePropRequest,
+  ): {
+    placementMode: 'ground' | 'wall' | 'surface';
+    surfaceAnchorTypes: string[];
+    anchorRole: string;
+    footprintWidth: number;
+    footprintDepth: number;
+    height: number;
+    minClearance: number;
+    wallYOffset: number;
+  } {
+    const profile = assetBrainService.getPlacementProfile(request.assetId);
+    const metadata = (request.metadata || {}) as Record<string, unknown>;
+    const assetBrainDimensions = metadata.assetBrainDimensions as Record<string, unknown> | undefined;
+    const explicitPlacementMode = metadata.placementMode === 'wall'
+      || metadata.placementMode === 'surface'
+      || metadata.placementMode === 'ground'
+      ? metadata.placementMode
+      : null;
+    const placementMode = explicitPlacementMode
+      || profile?.defaultPlacementMode
+      || 'ground';
+    const footprintWidth = typeof assetBrainDimensions?.footprintWidth === 'number'
+      ? assetBrainDimensions.footprintWidth
+      : profile?.dimensions.footprintWidth
+        || 0.8;
+    const footprintDepth = typeof assetBrainDimensions?.footprintDepth === 'number'
+      ? assetBrainDimensions.footprintDepth
+      : profile?.dimensions.footprintDepth
+        || 0.8;
+    const height = typeof assetBrainDimensions?.height === 'number'
+      ? assetBrainDimensions.height
+      : profile?.dimensions.height
+        || 0.8;
+    const minClearance = typeof metadata.assetBrainMinClearance === 'number'
+      ? metadata.assetBrainMinClearance
+      : profile?.minClearance
+        || 0.24;
+    const wallYOffset = typeof metadata.assetBrainWallYOffset === 'number'
+      ? metadata.assetBrainWallYOffset
+      : profile?.wallYOffset
+        || 1.6;
+    const surfaceAnchorTypes = Array.from(new Set([
+      typeof metadata.surfaceHint === 'string' ? metadata.surfaceHint : undefined,
+      ...(profile?.surfaceAnchorTypes || []),
+    ].filter((value): value is string => Boolean(value))));
+    const anchorRole = typeof metadata.assetBrainAnchorRole === 'string'
+      ? metadata.assetBrainAnchorRole
+      : profile?.anchorRole
+        || 'none';
+
+    return {
+      placementMode,
+      surfaceAnchorTypes,
+      anchorRole,
+      footprintWidth,
+      footprintDepth,
+      height,
+      minClearance,
+      wallYOffset,
+    };
+  }
+
+  private clampEnvironmentPosition(
+    position: BABYLON.Vector3,
+    footprintWidth: number,
+    footprintDepth: number,
+  ): BABYLON.Vector3 {
+    const bounds = this.getEnvironmentShellBounds();
+    const halfWidth = footprintWidth / 2;
+    const halfDepth = footprintDepth / 2;
+
+    return new BABYLON.Vector3(
+      BABYLON.Scalar.Clamp(position.x, bounds.minX + halfWidth, bounds.maxX - halfWidth),
+      position.y,
+      BABYLON.Scalar.Clamp(position.z, bounds.minZ + halfDepth, bounds.maxZ - halfDepth),
+    );
+  }
+
+  private isGroundPlacementOccupied(
+    position: BABYLON.Vector3,
+    footprintWidth: number,
+    footprintDepth: number,
+    minClearance: number,
+  ): boolean {
+    return Array.from(this.sceneState.props.values()).some((prop) => {
+      if (!prop.mesh || prop.mesh.isDisposed()) {
+        return false;
+      }
+
+      const propMetadata = (prop.metadata || {}) as Record<string, unknown>;
+      if (propMetadata.placementMode === 'wall' || propMetadata.placementMode === 'surface') {
+        return false;
+      }
+
+      const propProfile = assetBrainService.getPlacementProfile(prop.assetId);
+      const propDimensions = propMetadata.assetBrainDimensions as Record<string, unknown> | undefined;
+      const otherWidth = typeof propDimensions?.footprintWidth === 'number'
+        ? propDimensions.footprintWidth
+        : propProfile?.dimensions.footprintWidth
+          || 0.8;
+      const otherDepth = typeof propDimensions?.footprintDepth === 'number'
+        ? propDimensions.footprintDepth
+        : propProfile?.dimensions.footprintDepth
+          || 0.8;
+      const otherClearance = typeof propMetadata.assetBrainMinClearance === 'number'
+        ? propMetadata.assetBrainMinClearance
+        : propProfile?.minClearance
+          || 0.24;
+      const minDeltaX = (footprintWidth + otherWidth) / 2 + Math.max(minClearance, otherClearance);
+      const minDeltaZ = (footprintDepth + otherDepth) / 2 + Math.max(minClearance, otherClearance);
+
+      return Math.abs(prop.mesh.position.x - position.x) < minDeltaX
+        && Math.abs(prop.mesh.position.z - position.z) < minDeltaZ;
+    });
+  }
+
+  private findFreeGroundPosition(
+    desiredPosition: BABYLON.Vector3,
+    footprintWidth: number,
+    footprintDepth: number,
+    minClearance: number,
+  ): BABYLON.Vector3 {
+    const clampedDesired = this.clampEnvironmentPosition(desiredPosition, footprintWidth, footprintDepth);
+    if (!this.isGroundPlacementOccupied(clampedDesired, footprintWidth, footprintDepth, minClearance)) {
+      return clampedDesired;
+    }
+
+    const stepX = footprintWidth + minClearance + 0.18;
+    const stepZ = footprintDepth + minClearance + 0.18;
+    const offsets: Array<[number, number]> = [
+      [stepX, 0],
+      [-stepX, 0],
+      [0, stepZ],
+      [0, -stepZ],
+      [stepX, stepZ],
+      [-stepX, stepZ],
+      [stepX, -stepZ],
+      [-stepX, -stepZ],
+      [stepX * 2, 0],
+      [-stepX * 2, 0],
+      [0, stepZ * 2],
+      [0, -stepZ * 2],
+    ];
+
+    for (const [offsetX, offsetZ] of offsets) {
+      const candidate = this.clampEnvironmentPosition(
+        new BABYLON.Vector3(
+          clampedDesired.x + offsetX,
+          clampedDesired.y,
+          clampedDesired.z + offsetZ,
+        ),
+        footprintWidth,
+        footprintDepth,
+      );
+
+      if (!this.isGroundPlacementOccupied(candidate, footprintWidth, footprintDepth, minClearance)) {
+        return candidate;
+      }
+    }
+
+    return clampedDesired;
+  }
+
+  private findSurfaceAnchor(
+    surfaceAnchorTypes: string[],
+  ): {
+    id: string;
+    mesh: BABYLON.AbstractMesh;
+  } | null {
+    const preferredTypes = new Set(surfaceAnchorTypes.map((value) => value.toLowerCase()));
+    const anchors = Array.from(this.sceneState.props.entries())
+      .filter(([, prop]) => {
+        if (!prop.mesh || prop.mesh.isDisposed()) {
+          return false;
+        }
+
+        const profile = assetBrainService.getPlacementProfile(prop.assetId);
+        return profile?.anchorRole === 'surface_anchor';
+      })
+      .map(([id, prop]) => ({
+        id,
+        mesh: prop.mesh as BABYLON.AbstractMesh,
+        profile: assetBrainService.getPlacementProfile(prop.assetId),
+      }));
+
+    if (anchors.length === 0) {
+      return null;
+    }
+
+    if (preferredTypes.size === 0) {
+      return { id: anchors[0].id, mesh: anchors[0].mesh };
+    }
+
+    const preferredAnchor = anchors.find((anchor) => (
+      anchor.profile?.surfaceAnchorTypes.some((value) => preferredTypes.has(value.toLowerCase()))
+    ));
+
+    if (preferredAnchor) {
+      return { id: preferredAnchor.id, mesh: preferredAnchor.mesh };
+    }
+
+    return { id: anchors[0].id, mesh: anchors[0].mesh };
+  }
+
+  private isSurfacePlacementOccupied(
+    anchorId: string,
+    position: BABYLON.Vector3,
+    footprintWidth: number,
+    footprintDepth: number,
+    minClearance: number,
+  ): boolean {
+    return Array.from(this.sceneState.props.values()).some((prop) => {
+      if (!prop.mesh || prop.mesh.isDisposed()) {
+        return false;
+      }
+
+      const propMetadata = (prop.metadata || {}) as Record<string, unknown>;
+      if (propMetadata.placementMode !== 'surface' || propMetadata.surfaceAnchorId !== anchorId) {
+        return false;
+      }
+
+      const propProfile = assetBrainService.getPlacementProfile(prop.assetId);
+      const propDimensions = propMetadata.assetBrainDimensions as Record<string, unknown> | undefined;
+      const otherWidth = typeof propDimensions?.footprintWidth === 'number'
+        ? propDimensions.footprintWidth
+        : propProfile?.dimensions.footprintWidth
+          || 0.4;
+      const otherDepth = typeof propDimensions?.footprintDepth === 'number'
+        ? propDimensions.footprintDepth
+        : propProfile?.dimensions.footprintDepth
+          || 0.4;
+      const minDeltaX = (footprintWidth + otherWidth) / 2 + minClearance;
+      const minDeltaZ = (footprintDepth + otherDepth) / 2 + minClearance;
+
+      return Math.abs(prop.mesh.position.x - position.x) < minDeltaX
+        && Math.abs(prop.mesh.position.z - position.z) < minDeltaZ;
+    });
+  }
+
+  private findSurfacePlacement(
+    request: EnvironmentRuntimePropRequest,
+    footprintWidth: number,
+    footprintDepth: number,
+    minClearance: number,
+    surfaceAnchorTypes: string[],
+  ): {
+    position: BABYLON.Vector3;
+    rotationY?: number;
+    surfaceAnchorId?: string;
+  } | null {
+    const anchor = this.findSurfaceAnchor(surfaceAnchorTypes);
+    if (!anchor) {
+      return null;
+    }
+
+    const hint = (request.placementHint || '').toLowerCase();
+    const bounds = anchor.mesh.getHierarchyBoundingVectors(true);
+    const center = bounds.min.add(bounds.max).scale(0.5);
+    const anchorRotationY = anchor.mesh.rotation.y || 0;
+    const availableHalfWidth = Math.max(
+      0.12,
+      (bounds.max.x - bounds.min.x) / 2 - footprintWidth / 2 - minClearance,
+    );
+    const availableHalfDepth = Math.max(
+      0.12,
+      (bounds.max.z - bounds.min.z) / 2 - footprintDepth / 2 - minClearance,
+    );
+
+    const localOffsets: Array<[number, number]> = [];
+    if (hint.includes('center')) {
+      localOffsets.push([0, 0]);
+    }
+    if (hint.includes('left')) {
+      localOffsets.push([-availableHalfWidth, 0]);
+    }
+    if (hint.includes('right') || hint.includes('next to')) {
+      localOffsets.push([availableHalfWidth * 0.7, 0]);
+    }
+    if (hint.includes('front')) {
+      localOffsets.push([0, availableHalfDepth * 0.55]);
+    }
+    if (hint.includes('back')) {
+      localOffsets.push([0, -availableHalfDepth * 0.55]);
+    }
+
+    localOffsets.push(
+      [0, 0],
+      [-availableHalfWidth * 0.45, 0],
+      [availableHalfWidth * 0.45, 0],
+      [0, availableHalfDepth * 0.45],
+      [0, -availableHalfDepth * 0.45],
+      [-availableHalfWidth * 0.3, availableHalfDepth * 0.3],
+      [availableHalfWidth * 0.3, -availableHalfDepth * 0.3],
+    );
+
+    const seenOffsets = new Set<string>();
+    const uniqueOffsets = localOffsets.filter(([offsetX, offsetZ]) => {
+      const key = `${offsetX.toFixed(3)}:${offsetZ.toFixed(3)}`;
+      if (seenOffsets.has(key)) {
+        return false;
+      }
+      seenOffsets.add(key);
+      return true;
+    });
+
+    for (const [localOffsetX, localOffsetZ] of uniqueOffsets) {
+      const worldOffset = BABYLON.Vector3.TransformCoordinates(
+        new BABYLON.Vector3(localOffsetX, 0, localOffsetZ),
+        BABYLON.Matrix.RotationY(anchorRotationY),
+      );
+      const candidate = new BABYLON.Vector3(
+        center.x + worldOffset.x,
+        bounds.max.y + 0.03,
+        center.z + worldOffset.z,
+      );
+
+      if (!this.isSurfacePlacementOccupied(anchor.id, candidate, footprintWidth, footprintDepth, minClearance)) {
+        return {
+          position: candidate,
+          rotationY: anchorRotationY,
+          surfaceAnchorId: anchor.id,
+        };
+      }
+    }
+
+    return {
+      position: new BABYLON.Vector3(center.x, bounds.max.y + 0.03, center.z),
+      rotationY: anchorRotationY,
+      surfaceAnchorId: anchor.id,
+    };
+  }
+
+  private resolveEnvironmentPropPlacement(
+    request: EnvironmentRuntimePropRequest,
+    index: number,
+  ): {
+    position: BABYLON.Vector3;
+    rotationY?: number;
+    placementMode: 'ground' | 'wall' | 'surface';
+    surfaceAnchorId?: string;
+  } {
+    const hint = (request.placementHint || '').toLowerCase();
+    const sizing = this.getPlacementSizing(request);
+    const bounds = this.getEnvironmentShellBounds();
+
+    if (sizing.placementMode === 'wall' || hint.includes('wall') || hint.includes('shelf')) {
+      const slotStep = Math.max(sizing.footprintWidth + sizing.minClearance, 1.1);
+      const shelfYOffset = (index % 2) * 0.28;
+      const wallY = BABYLON.Scalar.Clamp(
+        sizing.wallYOffset + shelfYOffset,
+        bounds.wallMinY,
+        bounds.wallMaxY,
+      );
+
+      if (hint.includes('left')) {
+        return {
+          position: new BABYLON.Vector3(
+            bounds.minX + 0.12,
+            wallY,
+            BABYLON.Scalar.Clamp(bounds.minZ + 1.6 + (index % 4) * slotStep, bounds.minZ + 0.8, bounds.maxZ - 0.8),
+          ),
+          rotationY: Math.PI / 2,
+          placementMode: 'wall',
+        };
+      }
+      if (hint.includes('right') || hint.includes('side')) {
+        return {
+          position: new BABYLON.Vector3(
+            bounds.maxX - 0.12,
+            wallY,
+            BABYLON.Scalar.Clamp(bounds.minZ + 1.6 + (index % 4) * slotStep, bounds.minZ + 0.8, bounds.maxZ - 0.8),
+          ),
+          rotationY: -Math.PI / 2,
+          placementMode: 'wall',
+        };
+      }
+      return {
+        position: new BABYLON.Vector3(
+          BABYLON.Scalar.Clamp(bounds.minX + 1.4 + (index % 5) * slotStep, bounds.minX + 0.8, bounds.maxX - 0.8),
+          wallY,
+          bounds.minZ + 0.12,
+        ),
+        rotationY: Math.PI,
+        placementMode: 'wall',
+      };
+    }
+
+    if (sizing.placementMode === 'surface') {
+      const surfacePlacement = this.findSurfacePlacement(
+        request,
+        sizing.footprintWidth,
+        sizing.footprintDepth,
+        sizing.minClearance,
+        sizing.surfaceAnchorTypes,
+      );
+
+      if (surfacePlacement) {
+        return {
+          position: surfacePlacement.position,
+          rotationY: surfacePlacement.rotationY,
+          placementMode: 'surface',
+          surfaceAnchorId: surfacePlacement.surfaceAnchorId,
+        };
+      }
+    }
+
+    let x = 0;
+    let z = 0;
+
+    if (hint.includes('foreground') || hint.includes('front')) {
+      z = 2.4;
+    } else if (hint.includes('back wall') || hint.includes('background')) {
+      z = -6.4;
+    } else if (hint.includes('center')) {
+      z = -0.4;
+    } else {
+      z = -1.4;
+    }
+
+    if (hint.includes('left')) {
+      x = -3.4;
+    } else if (hint.includes('right')) {
+      x = 3.4;
+    } else {
+      x = ((index % 3) - 1) * 1.5;
+    }
+
+    if (hint.includes('shelves')) {
+      x = index % 2 === 0 ? -4.2 : 4.2;
+      z = -3.6 + Math.floor(index / 2) * 1.1;
+    }
+
+    const normalizedX = x >= 0
+      ? x / 4.5
+      : x / 4.5;
+    const desiredX = normalizedX >= 0
+      ? BABYLON.Scalar.Lerp(0, bounds.maxX - 1.4, normalizedX)
+      : BABYLON.Scalar.Lerp(0, bounds.minX + 1.4, -normalizedX);
+
+    return {
+      position: this.findFreeGroundPosition(
+        new BABYLON.Vector3(
+          desiredX,
+          0,
+          BABYLON.Scalar.Clamp(z, bounds.minZ + 1.2, bounds.maxZ - 1.2),
+        ),
+        sizing.footprintWidth,
+        sizing.footprintDepth,
+        sizing.minClearance,
+      ),
+      placementMode: 'ground',
+    };
+  }
+
+  private removePropNodeById(nodeId: string, publishDiagnostics = true): void {
+    const propState = this.sceneState.props.get(nodeId);
+    const mesh = propState?.mesh ?? this.scene.getMeshByName(nodeId);
+
+    let rootMesh: BABYLON.Nullable<BABYLON.AbstractMesh> = mesh ?? null;
+    while (rootMesh && rootMesh.parent instanceof BABYLON.AbstractMesh) {
+      rootMesh = rootMesh.parent;
+    }
+
+    if (rootMesh && !rootMesh.isDisposed()) {
+      rootMesh.dispose();
+    }
+
+    this.sceneState.props.delete(nodeId);
+    const store = useAppStore.getState();
+    if (store.getNode(nodeId)) {
+      store.removeNode(nodeId);
+    }
+
+    window.dispatchEvent(new CustomEvent('vs-prop-removed', {
+      detail: { propId: nodeId },
+    }));
+
+    window.dispatchEvent(new CustomEvent('ch-scene-node-removed', {
+      detail: { nodeId },
+    }));
+
+    if (publishDiagnostics) {
+      this.publishEnvironmentDiagnostics('environment-prop-removed');
+    }
+  }
+
+  public clearEnvironmentGeneratedProps(): string[] {
+    const removableIds = Array.from(this.sceneState.props.entries())
+      .filter(([, prop]) => Boolean(prop.metadata?.environmentGenerated))
+      .map(([id]) => id);
+
+    removableIds.forEach((id) => {
+      this.removePropNodeById(id, false);
+    });
+
+    if (removableIds.length > 0) {
+      this.updateTopView();
+      this.updateShadowMaps();
+      this.recalculateAmbientLighting();
+      this.publishEnvironmentDiagnostics('environment-props-cleared');
+    }
+
+    return removableIds;
+  }
+
+  public async addEnvironmentProps(
+    props: EnvironmentRuntimePropRequest[],
+    options: {
+      clearExisting?: boolean;
+      planId?: string;
+    } = {},
+  ): Promise<EnvironmentRuntimePropResult> {
+    const applied: string[] = [];
+    const skipped: string[] = [];
+    const nodeIds: string[] = [];
+
+    if (options.clearExisting) {
+      this.clearEnvironmentGeneratedProps();
+    }
+
+    for (let index = 0; index < props.length; index += 1) {
+      const request = props[index];
+      const propDef = getPropById(request.assetId);
+      const placementProfile = assetBrainService.getPlacementProfile(request.assetId);
+
+      if (!propDef) {
+        skipped.push(`Mangler prop-definisjon for ${request.assetId}`);
+        continue;
+      }
+
+      const placement = this.resolveEnvironmentPropPlacement(request, index);
+      const mergedMetadata: Record<string, unknown> = {
+        ...(request.metadata || {}),
+        environmentGenerated: true,
+        environmentPlanId: options.planId || null,
+        placementHint: request.placementHint || null,
+        priority: request.priority || 'medium',
+        description: request.description || null,
+        placementMode: placement.placementMode,
+        assetBrainDimensions: request.metadata?.assetBrainDimensions || placementProfile?.dimensions || null,
+        assetBrainMinClearance: request.metadata?.assetBrainMinClearance || placementProfile?.minClearance || null,
+        assetBrainWallYOffset: request.metadata?.assetBrainWallYOffset || placementProfile?.wallYOffset || null,
+      };
+      if (typeof placement.rotationY === 'number') {
+        mergedMetadata.rotationY = placement.rotationY;
+      }
+      if (placement.surfaceAnchorId) {
+        mergedMetadata.surfaceAnchorId = placement.surfaceAnchorId;
+      }
+
+      try {
+        const nodeId = await this.loadAssetFromLibrary(
+          request.assetId,
+          request.name || propDef.name,
+          {
+            modelUrl: propDef.modelUrl || undefined,
+            metadata: mergedMetadata,
+          },
+          placement.position,
+        );
+
+        if (nodeId) {
+          applied.push(request.name || propDef.name);
+          nodeIds.push(nodeId);
+        } else {
+          skipped.push(`Kunne ikke plassere ${request.name || propDef.name}`);
+        }
+      } catch (error) {
+        console.warn('[Environment Props] Failed to add prop:', request.assetId, error);
+        skipped.push(`Kunne ikke plassere ${request.name || propDef.name}`);
+      }
+    }
+
+    if (nodeIds.length > 0) {
+      this.updateTopView();
+      this.publishEnvironmentDiagnostics('environment-props-applied');
+    }
+
+    return { applied, skipped, nodeIds };
+  }
+
   private async loadAssetFromLibrary(
     assetId: string,
     name: string,
     data?: { modelUrl?: string; metadata?: Record<string, unknown> },
     position?: BABYLON.Vector3
-  ): Promise<void> {
+  ): Promise<string | null> {
     const propDef = getPropById(assetId);
     let pos = position || new BABYLON.Vector3(0, 0, 0);
+    const placementMode = data?.metadata?.placementMode === 'wall'
+      ? 'wall'
+      : data?.metadata?.placementMode === 'surface'
+        ? 'surface'
+        : 'ground';
+    const rotationY = typeof data?.metadata?.rotationY === 'number'
+      ? data.metadata.rotationY
+      : null;
     
     // Create a node ID for this asset
     const nodeId = `prop-${Date.now()}-${assetId}`;
@@ -11260,12 +12365,16 @@ class VirtualStudio {
           rootMesh = rootMesh.parent as BABYLON.AbstractMesh;
         }
         
-        // Position mesh on ground
-        pos = this.positionMeshOnGround(rootMesh, pos);
+        if (placementMode === 'ground') {
+          pos = this.positionMeshOnGround(rootMesh, pos);
+        }
         rootMesh.position = pos;
         
-        // Rotate mesh toward camera
-        this.rotateMeshTowardCamera(rootMesh);
+        if (rotationY !== null) {
+          rootMesh.rotation.y = rotationY;
+        } else if (placementMode === 'ground') {
+          this.rotateMeshTowardCamera(rootMesh);
+        }
         
         // Set mesh name to node ID so we can find it later
         rootMesh.name = nodeId;
@@ -11305,11 +12414,22 @@ class VirtualStudio {
         if (this.gizmoManager) {
           this.gizmoManager.attachToMesh(mesh as BABYLON.AbstractMesh);
         }
+        window.dispatchEvent(new CustomEvent('vs-prop-added', {
+          detail: {
+            propId: nodeId,
+            data: {
+              assetId,
+              name: propDef.name || name,
+              metadata: data?.metadata,
+              position: [pos.x, pos.y, pos.z],
+            },
+          },
+        }));
         console.log(`Loaded prop via service: ${propDef.name}`);
           // Update shadows and lighting for new geometry (Phase 3: Shadow/Lighting Auto-Update)
           this.regenerateShadowMaps();
           this.recalculateAmbientLighting();
-        return;
+        return nodeId;
       } catch (error) {
         console.warn(`propRenderingService failed for ${assetId}, using fallback`);
       }
@@ -11319,20 +12439,27 @@ class VirtualStudio {
       try {
         const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', data.modelUrl, this.scene);
         const mesh = result.meshes[0];
-        mesh.name = nodeId;
         
         // Find root mesh (in case mesh is a child)
         let rootMesh = mesh;
         while (rootMesh.parent) {
           rootMesh = rootMesh.parent as BABYLON.AbstractMesh;
         }
+        rootMesh.name = nodeId;
+        if (mesh !== rootMesh) {
+          mesh.name = nodeId;
+        }
         
-        // Position mesh on ground
-        pos = this.positionMeshOnGround(rootMesh, pos);
+        if (placementMode === 'ground') {
+          pos = this.positionMeshOnGround(rootMesh, pos);
+        }
         rootMesh.position = pos;
         
-        // Rotate mesh toward camera
-        this.rotateMeshTowardCamera(rootMesh);
+        if (rotationY !== null) {
+          rootMesh.rotation.y = rotationY;
+        } else if (placementMode === 'ground') {
+          this.rotateMeshTowardCamera(rootMesh);
+        }
         
         // Apply proper PBR shading to all meshes
         this.applyPBRShadingToMeshes(result.meshes);
@@ -11358,30 +12485,56 @@ class VirtualStudio {
             ...data?.metadata,
           },
         });
+        this.sceneState.props.set(nodeId, {
+          id: nodeId,
+          mesh: rootMesh as BABYLON.Mesh,
+          assetId: assetId,
+          name: name,
+          metadata: data?.metadata,
+        });
         
         if (this.gizmoManager) {
           this.gizmoManager.attachToMesh(mesh as BABYLON.AbstractMesh);
         }
+        window.dispatchEvent(new CustomEvent('vs-prop-added', {
+          detail: {
+            propId: nodeId,
+            data: {
+              assetId,
+              name,
+              metadata: data?.metadata,
+              position: [pos.x, pos.y, pos.z],
+            },
+          },
+        }));
         console.log(`Loaded asset model: ${name}`);
           // Update shadows and lighting for new geometry
           this.updateShadowMaps();
           this.recalculateAmbientLighting();
-        return;
+        return nodeId;
       } catch (error) {
         console.warn(`Model not found: ${data.modelUrl}`);
       }
     }
 
-    this.createPlaceholderAsset(name, data?.metadata, pos);
+    return this.createPlaceholderAsset(nodeId, assetId, name, data?.metadata, pos);
   }
 
   private createPlaceholderAsset(
+    nodeId: string,
+    assetId: string,
     name: string,
     metadata?: Record<string, unknown>,
     position?: BABYLON.Vector3
-  ): void {
+  ): string {
     let pos = position || new BABYLON.Vector3(0, 0, 0);
     let mesh: BABYLON.Mesh;
+    const placementMode = metadata?.placementMode === 'wall'
+      ? 'wall'
+      : metadata?.placementMode === 'surface'
+        ? 'surface'
+        : 'ground';
+    const rotationY = typeof metadata?.rotationY === 'number' ? metadata.rotationY : null;
 
     if (metadata?.width && metadata?.height) {
       mesh = BABYLON.MeshBuilder.CreatePlane(name, {
@@ -11393,12 +12546,16 @@ class VirtualStudio {
       mesh = BABYLON.MeshBuilder.CreateBox(name, { size: 0.5 }, this.scene);
     }
 
-    // Position mesh on ground
-    pos = this.positionMeshOnGround(mesh, pos);
+    if (placementMode === 'ground') {
+      pos = this.positionMeshOnGround(mesh, pos);
+    }
     mesh.position = pos;
     
-    // Rotate mesh toward camera
-    this.rotateMeshTowardCamera(mesh);
+    if (rotationY !== null) {
+      mesh.rotation.y = rotationY;
+    } else if (placementMode === 'ground') {
+      this.rotateMeshTowardCamera(mesh);
+    }
 
     const mat = new BABYLON.StandardMaterial(`${name}_mat`, this.scene);
     if (metadata?.color) {
@@ -11407,11 +12564,51 @@ class VirtualStudio {
       mat.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);
     }
     mesh.material = mat;
+    mesh.name = nodeId;
+
+    useAppStore.getState().addNode({
+      id: nodeId,
+      type: 'model',
+      name,
+      transform: {
+        position: [pos.x, pos.y, pos.z],
+        rotation: [mesh.rotation.x, mesh.rotation.y, mesh.rotation.z],
+        scale: [mesh.scaling.x, mesh.scaling.y, mesh.scaling.z],
+      },
+      visible: true,
+      userData: {
+        assetId,
+        propId: assetId,
+        meshName: nodeId,
+        ...metadata,
+      },
+    });
+    this.sceneState.props.set(nodeId, {
+      id: nodeId,
+      mesh,
+      assetId,
+      name,
+      metadata,
+    });
 
     if (this.gizmoManager) {
       this.gizmoManager.attachToMesh(mesh);
     }
+    window.dispatchEvent(new CustomEvent('vs-prop-added', {
+      detail: {
+        propId: nodeId,
+        data: {
+          assetId,
+          name,
+          metadata,
+          position: [pos.x, pos.y, pos.z],
+        },
+      },
+    }));
     console.log(`Created placeholder asset: ${name}`);
+    this.updateShadowMaps();
+    this.recalculateAmbientLighting();
+    return nodeId;
   }
 
   private characterMesh: BABYLON.AbstractMesh | null = null;
@@ -18113,18 +19310,21 @@ class VirtualStudio {
         this.removeLight(id);
       } else if (type === 'model') {
         const store = useAppStore.getState();
-        store.removeNode(id);
-        // Also remove from 3D scene if it's a mesh
-        const mesh = this.scene.getMeshByName(id);
-        if (mesh) {
-          mesh.dispose();
+        const node = store.getNode(id);
+        if (this.sceneState.props.has(id) || node?.userData?.propId) {
+          this.removePropNodeById(id);
+        } else {
+          store.removeNode(id);
+          const mesh = this.scene.getMeshByName(id);
+          if (mesh) {
+            mesh.dispose();
+          }
+          if (this.selectedActorId === id) {
+            this.selectedActorId = null;
+            this.updateTopViewInfoPanel();
+          }
+          window.dispatchEvent(new CustomEvent('ch-scene-node-removed', { detail: { nodeId: id } }));
         }
-        // Clear actor selection if this was the selected actor
-        if (this.selectedActorId === id) {
-          this.selectedActorId = null;
-          this.updateTopViewInfoPanel();
-        }
-        window.dispatchEvent(new CustomEvent('ch-scene-node-removed', { detail: { nodeId: id } }));
       } else if (type === 'camera') {
         this.cameraPresets.delete(id);
         window.dispatchEvent(new CustomEvent('ch-camera-preset-removed', { detail: { presetId: id } }));

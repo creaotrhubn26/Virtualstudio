@@ -110,30 +110,138 @@ class PropRenderingService {
       throw new Error('Scene not set');
     }
 
+    const metadata = (prop.metadata || {}) as Record<string, unknown>;
+    const primitive = typeof metadata.primitive === 'string' ? metadata.primitive : null;
     let mesh: Mesh;
 
-    switch (prop.category) {
-      case 'furniture':
-        mesh = MeshBuilder.CreateBox(prop.id, { width: 0.5, height: 0.8, depth: 0.5 }, this.scene);
-        break;
-      case 'backdrop':
-        const metadata = prop.metadata as { width?: number; height?: number } | undefined;
-        mesh = MeshBuilder.CreatePlane(prop.id, {
-          width: metadata?.width || 3,
-          height: metadata?.height || 3,
+    switch (primitive) {
+      case 'stool':
+        mesh = MeshBuilder.CreateCylinder(prop.id, {
+          diameter: Number(metadata.diameter) || 0.42,
+          height: Number(metadata.height) || 0.52,
+          tessellation: 20,
         }, this.scene);
-        mesh.rotation.x = Math.PI / 2;
         break;
-      case 'decoration':
-        mesh = MeshBuilder.CreateCylinder(prop.id, { diameter: 0.2, height: 0.4 }, this.scene);
+      case 'chair':
+        mesh = MeshBuilder.CreateBox(prop.id, {
+          width: Number(metadata.width) || 0.7,
+          height: Number(metadata.height) || 0.95,
+          depth: Number(metadata.depth) || 0.7,
+        }, this.scene);
+        break;
+      case 'table-small':
+      case 'rustic-table':
+      case 'counter':
+      case 'beauty-table':
+        mesh = MeshBuilder.CreateBox(prop.id, {
+          width: Number(metadata.width) || 1.8,
+          height: Number(metadata.height) || 0.9,
+          depth: Number(metadata.depth) || 0.7,
+        }, this.scene);
+        break;
+      case 'oven-facade':
+        mesh = MeshBuilder.CreateBox(prop.id, {
+          width: Number(metadata.width) || 2.2,
+          height: Number(metadata.height) || 2.0,
+          depth: Number(metadata.depth) || 1.0,
+        }, this.scene);
+        break;
+      case 'podium-round':
+        mesh = MeshBuilder.CreateCylinder(prop.id, {
+          diameter: Number(metadata.diameter) || 1.0,
+          height: Number(metadata.height) || 1.0,
+          tessellation: 40,
+        }, this.scene);
+        break;
+      case 'pizza-display':
+        mesh = MeshBuilder.CreateCylinder(prop.id, {
+          diameter: Number(metadata.diameter) || 0.42,
+          height: Number(metadata.height) || 0.04,
+          tessellation: 28,
+        }, this.scene);
+        break;
+      case 'wine-bottle':
+        mesh = MeshBuilder.CreateCylinder(prop.id, {
+          diameterTop: 0.06,
+          diameterBottom: 0.1,
+          height: Number(metadata.height) || 0.34,
+          tessellation: 18,
+        }, this.scene);
+        break;
+      case 'wine-glass':
+        mesh = MeshBuilder.CreateCylinder(prop.id, {
+          diameterTop: 0.12,
+          diameterBottom: 0.05,
+          height: Number(metadata.height) || 0.22,
+          tessellation: 18,
+        }, this.scene);
+        break;
+      case 'pizza-peel':
+        mesh = MeshBuilder.CreateBox(prop.id, {
+          width: Number(metadata.width) || 0.42,
+          height: Number(metadata.height) || 1.25,
+          depth: 0.04,
+        }, this.scene);
+        break;
+      case 'menu-board':
+      case 'neon-sign':
+      case 'reflector-panel':
+        mesh = MeshBuilder.CreatePlane(prop.id, {
+          width: Number(metadata.width) || 1.2,
+          height: Number(metadata.height) || 1.2,
+        }, this.scene);
+        break;
+      case 'display-shelf':
+        mesh = MeshBuilder.CreateBox(prop.id, {
+          width: Number(metadata.width) || 1.4,
+          height: Number(metadata.height) || 0.12,
+          depth: Number(metadata.depth) || 0.25,
+        }, this.scene);
+        break;
+      case 'props-cluster':
+      case 'herb-pots':
+      case 'vase':
+      case 'plant':
+        mesh = MeshBuilder.CreateCylinder(prop.id, {
+          diameterTop: Number(metadata.width) || 0.6,
+          diameterBottom: Number(metadata.depth) || 0.7,
+          height: Number(metadata.height) || 0.4,
+          tessellation: 6,
+        }, this.scene);
         break;
       default:
-        mesh = MeshBuilder.CreateBox(prop.id, { size: 0.3 }, this.scene);
+        switch (prop.category) {
+          case 'furniture':
+            mesh = MeshBuilder.CreateBox(prop.id, { width: 0.5, height: 0.8, depth: 0.5 }, this.scene);
+            break;
+          case 'architecture':
+            mesh = MeshBuilder.CreatePlane(prop.id, {
+              width: Number(metadata.width) || 3,
+              height: Number(metadata.height) || 3,
+            }, this.scene);
+            break;
+          case 'decorations':
+            mesh = MeshBuilder.CreateCylinder(prop.id, { diameter: 0.2, height: 0.4 }, this.scene);
+            break;
+          default:
+            mesh = MeshBuilder.CreateBox(prop.id, { size: 0.3 }, this.scene);
+        }
     }
 
     const material = new StandardMaterial(`${prop.id}_mat`, this.scene);
-    material.diffuseColor = new Color3(0.6, 0.6, 0.6);
-    material.specularColor = new Color3(0.2, 0.2, 0.2);
+    material.diffuseColor = typeof metadata.color === 'string'
+      ? Color3.FromHexString(metadata.color)
+      : new Color3(0.6, 0.6, 0.6);
+    material.specularColor = typeof metadata.accentColor === 'string'
+      ? Color3.FromHexString(metadata.accentColor)
+      : new Color3(0.2, 0.2, 0.2);
+    material.backFaceCulling = primitive !== 'menu-board' && primitive !== 'neon-sign' && primitive !== 'reflector-panel';
+    if (typeof metadata.emissiveColor === 'string') {
+      material.emissiveColor = Color3.FromHexString(metadata.emissiveColor);
+    }
+    if (primitive === 'wine-glass') {
+      material.alpha = 0.55;
+    }
     mesh.material = material;
 
     log.debug(`Created placeholder prop: ${prop.name}`);

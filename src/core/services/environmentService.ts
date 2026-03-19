@@ -6,6 +6,7 @@
 import { WallMaterial, getWallById, WALL_MATERIALS } from '../../data/wallDefinitions';
 import { FloorMaterial, getFloorById, FLOOR_MATERIALS } from '../../data/floorDefinitions';
 import { EnvironmentPreset, getEnvironmentById, ENVIRONMENT_PRESETS } from '../../data/environmentPresets';
+import { getPresetById } from '../../data/scenarioPresets';
 import { audioService } from './audioService';
 import { undoRedoService } from './undoRedoService';
 import settingsService, { getCurrentUserId } from '../../services/settingsService';
@@ -46,6 +47,9 @@ class EnvironmentService {
   private customPresets: EnvironmentPreset[] = [];
 
   constructor() {
+    if (typeof window !== 'undefined') {
+      (window as any).environmentService = this;
+    }
     void this.hydrateCustomPresets();
   }
 
@@ -72,7 +76,7 @@ class EnvironmentService {
   }
 
   getState(): EnvironmentState {
-    return { ...this.state };
+    return JSON.parse(JSON.stringify(this.state));
   }
 
   /**
@@ -384,9 +388,12 @@ class EnvironmentService {
     
     // Apply lighting preset if specified
     if (preset.lightingPreset) {
-      window.dispatchEvent(new CustomEvent('applyScenarioPreset', {
-        detail: { presetId: preset.lightingPreset }
-      }));
+      const lightingPreset = getPresetById(preset.lightingPreset);
+      if (lightingPreset) {
+        window.dispatchEvent(new CustomEvent('applyScenarioPreset', {
+          detail: lightingPreset
+        }));
+      }
     }
 
     // Apply suggested lights
@@ -429,6 +436,17 @@ class EnvironmentService {
       }
     });
     this.state.ambientSounds = [];
+  }
+
+  setAmbientSounds(soundIds: string[]): void {
+    this.stopAllAmbientSounds();
+
+    soundIds.forEach(soundId => {
+      audioService.playSound(soundId, { loop: true });
+    });
+
+    this.state.ambientSounds = [...soundIds];
+    this.notify();
   }
 
   /**
@@ -614,4 +632,3 @@ class EnvironmentService {
 
 // Singleton export
 export const environmentService = new EnvironmentService();
-

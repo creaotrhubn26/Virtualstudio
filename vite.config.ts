@@ -1,9 +1,136 @@
 /// <reference types="vitest" />
+import { createReadStream, existsSync } from 'node:fs';
+import { basename, extname, resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+function escapeSvgText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function buildPlaceholderSvg(pathname: string): string {
+  const fileName = basename(pathname).replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || 'Missing asset';
+  const label = escapeSvgText(fileName.slice(0, 32));
+  const isTexture = pathname.startsWith('/textures/');
+  const accent = isTexture ? '#d97706' : pathname.startsWith('/images/presets/') ? '#0f766e' : '#1d4ed8';
+  const subtitle = isTexture ? 'procedural fallback' : 'placeholder preview';
+  const pattern = isTexture
+    ? `
+      <rect width="100%" height="100%" fill="url(#grid)" opacity="0.35" />
+      <circle cx="76" cy="76" r="34" fill="${accent}" opacity="0.18" />
+      <circle cx="436" cy="436" r="64" fill="${accent}" opacity="0.12" />
+    `
+    : `
+      <rect x="42" y="48" width="428" height="252" rx="22" fill="${accent}" opacity="0.14" />
+      <rect x="68" y="80" width="376" height="120" rx="16" fill="${accent}" opacity="0.18" />
+      <rect x="68" y="222" width="218" height="20" rx="10" fill="${accent}" opacity="0.22" />
+      <rect x="68" y="256" width="160" height="16" rx="8" fill="${accent}" opacity="0.12" />
+    `;
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#111827" />
+      <stop offset="100%" stop-color="#1f2937" />
+    </linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#f8fafc" stroke-opacity="0.12" stroke-width="1" />
+    </pattern>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)" />
+  ${pattern}
+  <rect x="32" y="360" width="448" height="120" rx="24" fill="#020617" opacity="0.84" />
+  <text x="52" y="412" fill="#f8fafc" font-size="28" font-family="Arial, sans-serif" font-weight="700">${label}</text>
+  <text x="52" y="446" fill="#cbd5e1" font-size="18" font-family="Arial, sans-serif">${subtitle}</text>
+</svg>`;
+}
+
+function devAssetFallbackPlugin() {
+  const publicDir = resolve(process.cwd(), 'public');
+  const attachedAssetsDir = resolve(process.cwd(), 'attached_assets');
+
+  const getContentType = (pathname: string): string => {
+    const extension = extname(pathname).toLowerCase();
+    switch (extension) {
+      case '.png':
+        return 'image/png';
+      case '.jpg':
+      case '.jpeg':
+        return 'image/jpeg';
+      case '.webp':
+        return 'image/webp';
+      case '.gif':
+        return 'image/gif';
+      case '.svg':
+        return 'image/svg+xml';
+      case '.json':
+        return 'application/json';
+      default:
+        return 'application/octet-stream';
+    }
+  };
+
+  return {
+    name: 'virtualstudio-dev-asset-fallbacks',
+    configureServer(server: any) {
+      server.middlewares.use((req, res, next) => {
+        if (req.method !== 'GET' || !req.url) {
+          next();
+          return;
+        }
+
+        const pathname = req.url.split('?')[0];
+        const shouldHandle = pathname.startsWith('/images/') || pathname.startsWith('/textures/');
+        if (!shouldHandle) {
+          next();
+          return;
+        }
+
+        const localPath = resolve(publicDir, `.${pathname}`);
+        if (existsSync(localPath)) {
+          next();
+          return;
+        }
+
+        res.setHeader('Content-Type', 'image/svg+xml');
+        res.setHeader('Cache-Control', 'no-store');
+        res.end(buildPlaceholderSvg(pathname));
+      });
+
+      server.middlewares.use((req, res, next) => {
+        if (req.method !== 'GET' || !req.url) {
+          next();
+          return;
+        }
+
+        const pathname = req.url.split('?')[0];
+        if (!pathname.startsWith('/attached_assets/')) {
+          next();
+          return;
+        }
+
+        const localPath = resolve(attachedAssetsDir, `.${pathname.slice('/attached_assets'.length)}`);
+        if (!existsSync(localPath)) {
+          next();
+          return;
+        }
+
+        res.setHeader('Content-Type', getContentType(localPath));
+        res.setHeader('Cache-Control', 'no-store');
+        createReadStream(localPath).pipe(res);
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), devAssetFallbackPlugin()],
   resolve: {
     alias: {
       '@': '/src',

@@ -48,6 +48,7 @@ import { WALL_CATEGORIES, WALL_MATERIALS, WallMaterial, WallCategory } from '../
 import { FLOOR_CATEGORIES, FLOOR_MATERIALS, FloorMaterial, FloorCategory } from '../data/floorDefinitions';
 import { ENVIRONMENT_CATEGORIES, ENVIRONMENT_PRESETS, EnvironmentPreset, EnvironmentCategory } from '../data/environmentPresets';
 import { ambientSoundsService } from '../services/AmbientSoundsService';
+import { AIEnvironmentPlannerDialog } from './AIEnvironmentPlannerDialog';
 interface TabPanelProps {
   children?: ReactNode;
   index: number;
@@ -154,7 +155,14 @@ const PresetCard: FC<{
   </Card>
 );
 
-export const EnvironmentBrowser: FC = () => {
+interface EnvironmentBrowserProps {
+  isActive?: boolean;
+}
+
+export const EnvironmentBrowser: FC<EnvironmentBrowserProps> = ({
+  isActive = true,
+}) => {
+  const AI_PLANNER_WELCOME_KEY = 'virtualstudio-ai-planner-welcome-seen';
   const [tabValue, setTabValue] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedWallCategory, setSelectedWallCategory] = useState<WallCategory | 'all'>('all');
@@ -163,11 +171,26 @@ export const EnvironmentBrowser: FC = () => {
   const [envState, setEnvState] = useState<EnvironmentState>(environmentService.getState());
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [customName, setCustomName] = useState('');
+  const [aiPlannerOpen, setAiPlannerOpen] = useState(false);
 
   useEffect(() => {
     const unsubscribe = environmentService.subscribe(setEnvState);
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!isActive) return;
+    const hasSeenWelcome = window.sessionStorage.getItem(AI_PLANNER_WELCOME_KEY) === 'true';
+    if (hasSeenWelcome) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setAiPlannerOpen(true);
+      window.sessionStorage.setItem(AI_PLANNER_WELCOME_KEY, 'true');
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isActive]);
 
   // Filter materials based on search and category
   const filteredWalls = WALL_MATERIALS.filter(w => {
@@ -225,6 +248,11 @@ export const EnvironmentBrowser: FC = () => {
           <AutoAwesomeIcon sx={{ color: '#7c3aed' }} />
           <Typography variant="h6" sx={{ fontWeight: 600 }}>Miljø</Typography>
           <Box sx={{ flex: 1 }} />
+          <Tooltip title="AI miljøplan">
+            <IconButton size="small" onClick={() => setAiPlannerOpen(true)}>
+              <AutoAwesomeIcon sx={{ color: '#7c3aed' }} />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Lagre som preset">
             <IconButton size="small" onClick={() => setSaveDialogOpen(true)}>
               <SaveIcon sx={{ color: '#888' }} />
@@ -437,7 +465,11 @@ export const EnvironmentBrowser: FC = () => {
           <Button variant="contained" onClick={handleSaveCustom}>Lagre</Button>
         </DialogActions>
       </Dialog>
+
+      <AIEnvironmentPlannerDialog
+        open={aiPlannerOpen}
+        onClose={() => setAiPlannerOpen(false)}
+      />
     </Box>
   );
 };
-
