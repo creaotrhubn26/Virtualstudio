@@ -360,6 +360,7 @@ class AssetLibraryService {
   async trackUsage(assetId: string): Promise<void> {
     const count = this.usageCount.get(assetId) || 0;
     this.usageCount.set(assetId, count + 1);
+    assetBrainService.recordUsage({ assetIds: [assetId] });
     log.debug(`Asset usage tracked: ${assetId} (${count + 1} times)`);
   }
 

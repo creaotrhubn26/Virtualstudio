@@ -4,6 +4,15 @@ export type AssetBrainPlacementMode = 'ground' | 'wall' | 'surface';
 
 export type AssetBrainAnchorRole = 'none' | 'surface_anchor' | 'wall_display';
 
+export type AssetBrainRelationshipType =
+  | 'supported_by'
+  | 'supports'
+  | 'paired_with'
+  | 'styled_with'
+  | 'co_occurs_with';
+
+export type AssetBrainRelationshipDirection = 'outgoing' | 'incoming' | 'any';
+
 export interface AssetBrainDimensions {
   width?: number;
   height?: number;
@@ -50,6 +59,8 @@ export interface AssetBrainSearchQuery {
   preferredPlacementMode?: AssetBrainPlacementMode;
   preferredRoomTypes?: string[];
   surfaceAnchor?: string;
+  relatedToAssetIds?: string[];
+  relationshipTypes?: AssetBrainRelationshipType[];
   limit?: number;
   minScore?: number;
 }
@@ -59,4 +70,40 @@ export interface AssetBrainMatch {
   score: number;
   reasons: string[];
   matchedTokens: string[];
+}
+
+export interface AssetBrainRelationship {
+  sourceAssetId: string;
+  targetAssetId: string;
+  type: AssetBrainRelationshipType;
+  strength: number;
+  source: 'seed' | 'inferred' | 'usage';
+  reasons: string[];
+  sharedRoomTypes: string[];
+}
+
+export interface AssetBrainRelatedAssetQuery {
+  assetId: string;
+  assetTypes?: AssetBrainAssetType[];
+  direction?: AssetBrainRelationshipDirection;
+  relationTypes?: AssetBrainRelationshipType[];
+  preferredRoomTypes?: string[];
+  limit?: number;
+  minScore?: number;
+}
+
+export interface AssetBrainRelatedAssetMatch {
+  entry: AssetBrainEntry;
+  score: number;
+  relationshipTypes: AssetBrainRelationshipType[];
+  reasons: string[];
+}
+
+export interface AssetBrainUsageSignal {
+  assetIds: string[];
+  roomTypes?: string[];
+  styles?: string[];
+  prompt?: string;
+  planId?: string;
+  source?: string;
 }

@@ -10,11 +10,15 @@ import { environmentService } from '../core/services/environmentService';
 import { getEnvironmentById } from '../data/environmentPresets';
 import { getFloorById } from '../data/floorDefinitions';
 import { getWallById } from '../data/wallDefinitions';
+import type { EnvironmentScenegraphAssembly } from '../core/models/environmentScenegraph';
+import { assetBrainService } from '../core/services/assetBrain';
 import { buildEnvironmentRuntimeProps } from './environmentPropMapper';
+import { assembleEnvironmentScenegraph } from './environmentScenegraphAssembly';
 
 export interface EnvironmentPlanApplyResult {
   applied: string[];
   skipped: string[];
+  assembly?: EnvironmentScenegraphAssembly;
 }
 
 const WALL_TARGETS = new Set(['backWall', 'leftWall', 'rightWall', 'rearWall']);
@@ -35,6 +39,7 @@ type EnvironmentPlannerWindow = Window & {
   __virtualStudioEnvironmentPlannerStatusMock?: PlannerStatusMock;
   __virtualStudioEnvironmentPlannerMock?: PlannerResponseMock;
   __virtualStudioEnvironmentPlannerRequests?: EnvironmentPlanRequest[];
+  __virtualStudioLastEnvironmentAssembly?: EnvironmentScenegraphAssembly;
 };
 
 class EnvironmentPlannerService {
@@ -85,6 +90,8 @@ class EnvironmentPlannerService {
   async applyPlanToCurrentStudio(plan: EnvironmentPlan): Promise<EnvironmentPlanApplyResult> {
     const applied: string[] = [];
     const skipped: string[] = [];
+    const assemblyResult = assembleEnvironmentScenegraph(plan);
+    this.publishAssemblySnapshot(assemblyResult.assembly);
     const recommendedPreset = plan.recommendedPresetId
       ? getEnvironmentById(plan.recommendedPresetId)
       : null;
@@ -123,12 +130,12 @@ class EnvironmentPlannerService {
       applied.push('Kameraforslag');
     }
 
-    const runtimeProps = buildEnvironmentRuntimeProps(plan);
+    const runtimeProps = assemblyResult.runtimeProps;
     const studioRuntime = (window as any).virtualStudio as {
       addEnvironmentProps?: (
         props: ReturnType<typeof buildEnvironmentRuntimeProps>,
         options?: { clearExisting?: boolean; planId?: string },
-      ) => Promise<{ applied: string[]; skipped: string[] }>;
+      ) => Promise<{ applied: string[]; skipped: string[]; appliedAssetIds?: string[] }>;
     } | undefined;
 
     if (runtimeProps.length > 0) {
@@ -143,6 +150,18 @@ class EnvironmentPlannerService {
         }
         if (propResult.skipped.length > 0) {
           skipped.push(...propResult.skipped);
+        }
+
+        if (propResult.appliedAssetIds && propResult.appliedAssetIds.length > 0) {
+          const context = assetBrainService.inferPlanContext(plan);
+          assetBrainService.recordUsage({
+            assetIds: propResult.appliedAssetIds,
+            roomTypes: context.roomTypes,
+            styles: context.styles,
+            prompt: [plan.prompt, plan.summary, plan.concept].filter(Boolean).join(' '),
+            planId: plan.planId,
+            source: plan.source,
+          });
         }
       } else {
         skipped.push('Prop-byggeren er ikke tilgjengelig i runtime enda');
@@ -159,7 +178,11 @@ class EnvironmentPlannerService {
       skipped.push(...plan.compatibility.gaps);
     }
 
-    return { applied, skipped };
+    return {
+      applied,
+      skipped,
+      assembly: assemblyResult.assembly,
+    };
   }
 
   private applySurface(
@@ -217,6 +240,15 @@ class EnvironmentPlannerService {
     }
 
     return window as EnvironmentPlannerWindow;
+  }
+
+  private publishAssemblySnapshot(assembly: EnvironmentScenegraphAssembly): void {
+    const plannerWindow = this.getPlannerWindow();
+    if (!plannerWindow) {
+      return;
+    }
+
+    plannerWindow.__virtualStudioLastEnvironmentAssembly = assembly;
   }
 
   private getStatusMock(): PlannerStatusMock | null {

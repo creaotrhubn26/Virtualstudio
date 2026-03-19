@@ -12,7 +12,12 @@ import type {
   AssetBrainMatch,
   AssetBrainPlacementMode,
   AssetBrainPlacementProfile,
+  AssetBrainRelatedAssetMatch,
+  AssetBrainRelatedAssetQuery,
+  AssetBrainRelationship,
+  AssetBrainRelationshipType,
   AssetBrainSearchQuery,
+  AssetBrainUsageSignal,
 } from '../models/assetBrain';
 import type { PropDefinition } from '../data/propDefinitions';
 import { getAllProps, getPropById } from '../data/propDefinitions';
@@ -90,6 +95,96 @@ const PROP_SYNONYMS_BY_ID: Record<string, string[]> = {
   wine_bottle_red: ['wine bottle', 'red bottle'],
   wine_glass_clear: ['wine glass', 'glass stemware'],
 };
+
+const ASSET_BRAIN_MEMORY_STORAGE_KEY = 'virtualstudio.asset-brain-memory.v1';
+
+interface AssetBrainRelationshipSeed {
+  sourceAssetId: string;
+  targetAssetId: string;
+  type: AssetBrainRelationshipType;
+  strength: number;
+  reasons: string[];
+}
+
+interface AssetBrainMemoryPayload {
+  version: 1;
+  usageCounts: Record<string, number>;
+  contextCounts: Record<string, number>;
+  coOccurrenceCounts: Record<string, number>;
+}
+
+const EXPLICIT_RELATIONSHIP_SEEDS: AssetBrainRelationshipSeed[] = [
+  {
+    sourceAssetId: 'pizza_hero_display',
+    targetAssetId: 'table_rustic',
+    type: 'supported_by',
+    strength: 0.98,
+    reasons: ['hero pizza needs a primary tabletop anchor'],
+  },
+  {
+    sourceAssetId: 'wine_bottle_red',
+    targetAssetId: 'table_rustic',
+    type: 'supported_by',
+    strength: 0.88,
+    reasons: ['wine bottle is staged on the rustic dining table'],
+  },
+  {
+    sourceAssetId: 'wine_glass_clear',
+    targetAssetId: 'table_rustic',
+    type: 'supported_by',
+    strength: 0.86,
+    reasons: ['wine glass is staged on the rustic dining table'],
+  },
+  {
+    sourceAssetId: 'herb_pots_cluster',
+    targetAssetId: 'table_rustic',
+    type: 'supported_by',
+    strength: 0.82,
+    reasons: ['herb cluster belongs on the main restaurant table'],
+  },
+  {
+    sourceAssetId: 'restaurant_props_cluster',
+    targetAssetId: 'table_rustic',
+    type: 'supported_by',
+    strength: 0.76,
+    reasons: ['restaurant dressing cues sit best on the anchor table'],
+  },
+  {
+    sourceAssetId: 'wine_bottle_red',
+    targetAssetId: 'wine_glass_clear',
+    type: 'paired_with',
+    strength: 0.9,
+    reasons: ['wine bottle is commonly dressed with a matching glass'],
+  },
+  {
+    sourceAssetId: 'beauty_table',
+    targetAssetId: 'reflective_panel',
+    type: 'styled_with',
+    strength: 0.78,
+    reasons: ['beauty sets benefit from reflective fill surfaces'],
+  },
+  {
+    sourceAssetId: 'product_podium_round',
+    targetAssetId: 'reflective_panel',
+    type: 'styled_with',
+    strength: 0.7,
+    reasons: ['hero podium shots often use reflective shaping nearby'],
+  },
+  {
+    sourceAssetId: 'display_shelf_wall',
+    targetAssetId: 'neon_sign_cyan',
+    type: 'styled_with',
+    strength: 0.72,
+    reasons: ['display shelves and cyan signage reinforce cyberpunk layering'],
+  },
+  {
+    sourceAssetId: 'display_shelf_wall',
+    targetAssetId: 'neon_sign_magenta',
+    type: 'styled_with',
+    strength: 0.72,
+    reasons: ['display shelves and magenta signage reinforce cyberpunk layering'],
+  },
+];
 
 function normalizeText(text: string): string {
   return text
@@ -434,10 +529,24 @@ function buildFloorEntry(floor: FloorMaterial): AssetBrainEntry {
   };
 }
 
+function createCoOccurrenceKey(leftAssetId: string, rightAssetId: string): string {
+  return [leftAssetId, rightAssetId].sort().join('::');
+}
+
+function createContextKey(assetId: string, contextType: 'room' | 'style', contextValue: string): string {
+  return `${assetId}::${contextType}::${contextValue}`;
+}
+
 class AssetBrainService {
   private readonly entries: AssetBrainEntry[];
   private readonly entriesById: Map<string, AssetBrainEntry>;
   private readonly embeddingsById: Map<string, Float32Array>;
+  private readonly relationships: AssetBrainRelationship[] = [];
+  private readonly outgoingRelationshipsById: Map<string, AssetBrainRelationship[]> = new Map();
+  private readonly incomingRelationshipsById: Map<string, AssetBrainRelationship[]> = new Map();
+  private readonly usageCounts: Map<string, number> = new Map();
+  private readonly contextCounts: Map<string, number> = new Map();
+  private readonly coOccurrenceCounts: Map<string, number> = new Map();
 
   constructor() {
     this.entries = [
@@ -459,6 +568,8 @@ class AssetBrainService {
         ]),
       ]),
     );
+    this.buildRelationships();
+    this.loadMemory();
   }
 
   getEntryById(id: string): AssetBrainEntry | undefined {
@@ -475,6 +586,17 @@ class AssetBrainService {
     }
 
     return this.entries.filter((entry) => entry.assetType === assetType);
+  }
+
+  inferPlanContext(plan: Pick<EnvironmentPlan, 'prompt' | 'summary' | 'concept'>): {
+    roomTypes: string[];
+    styles: string[];
+  } {
+    const tokens = tokenize([plan.prompt, plan.summary, plan.concept].filter(Boolean).join(' '));
+    return {
+      roomTypes: inferRoomTypes(tokens, []),
+      styles: inferStyles(tokens, []),
+    };
   }
 
   search(query: AssetBrainSearchQuery): AssetBrainMatch[] {
@@ -536,6 +658,112 @@ class AssetBrainService {
       limit: options.limit ?? 3,
       minScore: options.minScore ?? 2.2,
     });
+  }
+
+  getUsageCount(assetId: string): number {
+    return this.usageCounts.get(assetId) || 0;
+  }
+
+  resetLearnedSignals(): void {
+    this.usageCounts.clear();
+    this.contextCounts.clear();
+    this.coOccurrenceCounts.clear();
+
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem(ASSET_BRAIN_MEMORY_STORAGE_KEY);
+    }
+  }
+
+  recordUsage(signal: AssetBrainUsageSignal): void {
+    const assetIds = unique(signal.assetIds).filter((assetId) => this.entriesById.has(assetId));
+    if (assetIds.length === 0) {
+      return;
+    }
+
+    const promptTokens = tokenize(signal.prompt || '');
+    const roomTypes = unique([
+      ...(signal.roomTypes || []),
+      ...inferRoomTypes(promptTokens, []),
+    ]);
+    const styles = unique([
+      ...(signal.styles || []),
+      ...inferStyles(promptTokens, []),
+    ]);
+
+    assetIds.forEach((assetId) => {
+      this.usageCounts.set(assetId, (this.usageCounts.get(assetId) || 0) + 1);
+
+      roomTypes.forEach((roomType) => {
+        const key = createContextKey(assetId, 'room', roomType);
+        this.contextCounts.set(key, (this.contextCounts.get(key) || 0) + 1);
+      });
+
+      styles.forEach((style) => {
+        const key = createContextKey(assetId, 'style', style);
+        this.contextCounts.set(key, (this.contextCounts.get(key) || 0) + 1);
+      });
+    });
+
+    for (let leftIndex = 0; leftIndex < assetIds.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < assetIds.length; rightIndex += 1) {
+        const pairKey = createCoOccurrenceKey(assetIds[leftIndex], assetIds[rightIndex]);
+        this.coOccurrenceCounts.set(pairKey, (this.coOccurrenceCounts.get(pairKey) || 0) + 1);
+      }
+    }
+
+    this.persistMemory();
+  }
+
+  getRelatedAssets(query: AssetBrainRelatedAssetQuery): AssetBrainRelatedAssetMatch[] {
+    const sourceEntry = this.entriesById.get(query.assetId);
+    if (!sourceEntry) {
+      return [];
+    }
+
+    const preferredRoomTypes = unique([
+      ...(query.preferredRoomTypes || []),
+      ...sourceEntry.roomTypes,
+    ]);
+
+    const matches = this.entries
+      .filter((entry) => entry.id !== query.assetId)
+      .filter((entry) => !query.assetTypes || query.assetTypes.includes(entry.assetType))
+      .map((entry) => {
+        const relationshipSignal = this.collectRelationshipSignal(query.assetId, entry.id, {
+          relationTypes: query.relationTypes,
+          direction: query.direction,
+          preferredRoomTypes,
+        });
+
+        if (relationshipSignal.score <= 0) {
+          return null;
+        }
+
+        let score = relationshipSignal.score;
+        const reasons = [...relationshipSignal.reasons];
+        const sharedRoomTypes = entry.roomTypes.filter((roomType) => preferredRoomTypes.includes(roomType));
+        if (sharedRoomTypes.length > 0) {
+          score += sharedRoomTypes.length * 0.32;
+          reasons.push(`deler romtype: ${sharedRoomTypes.join(', ')}`);
+        }
+
+        return {
+          entry,
+          score: Number(score.toFixed(3)),
+          relationshipTypes: relationshipSignal.relationshipTypes,
+          reasons: reasons.slice(0, 4),
+        } satisfies AssetBrainRelatedAssetMatch;
+      })
+      .filter((match): match is AssetBrainRelatedAssetMatch => Boolean(match))
+      .filter((match) => match.score >= (query.minScore ?? 0.55))
+      .sort((left, right) => {
+        if (right.score !== left.score) {
+          return right.score - left.score;
+        }
+        return left.entry.name.localeCompare(right.entry.name);
+      });
+
+    return matches.slice(0, query.limit ?? 5);
   }
 
   private inferPreferredPlacementMode(
@@ -627,6 +855,31 @@ class AssetBrainService {
       }
     }
 
+    const usageBoost = this.getUsageBoost(entry.id);
+    if (usageBoost > 0) {
+      score += usageBoost;
+      reasons.push(`bruk: ${usageBoost.toFixed(2)}`);
+    }
+
+    const contextUsageBoost = this.getContextUsageBoost(entry.id, roomTypeTokens);
+    if (contextUsageBoost > 0) {
+      score += contextUsageBoost;
+      reasons.push(`scene-læring: ${contextUsageBoost.toFixed(2)}`);
+    }
+
+    if (query.relatedToAssetIds && query.relatedToAssetIds.length > 0) {
+      const relationshipSignal = this.getStrongestRelationshipBoost(
+        entry.id,
+        query.relatedToAssetIds,
+        query.relationshipTypes,
+        query.preferredRoomTypes || roomTypeTokens,
+      );
+      if (relationshipSignal.score > 0) {
+        score += relationshipSignal.score;
+        reasons.push(...relationshipSignal.reasons);
+      }
+    }
+
     if (query.preferredPlacementMode && entry.placementProfile) {
       if (entry.placementProfile.supportedModes.includes(query.preferredPlacementMode)) {
         score += 2.6;
@@ -668,6 +921,264 @@ class AssetBrainService {
       reasons,
       matchedTokens: Array.from(matchedTokens),
     };
+  }
+
+  private buildRelationships(): void {
+    EXPLICIT_RELATIONSHIP_SEEDS.forEach((seed) => {
+      if (seed.type === 'supported_by') {
+        this.registerRelationship(seed.sourceAssetId, seed.targetAssetId, seed.type, seed.strength, 'seed', seed.reasons);
+        this.registerRelationship(seed.targetAssetId, seed.sourceAssetId, 'supports', Math.max(0.4, seed.strength - 0.06), 'seed', seed.reasons);
+        return;
+      }
+
+      this.registerRelationship(seed.sourceAssetId, seed.targetAssetId, seed.type, seed.strength, 'seed', seed.reasons);
+      this.registerRelationship(seed.targetAssetId, seed.sourceAssetId, seed.type, seed.strength, 'seed', seed.reasons);
+    });
+
+    const propEntries = this.entries.filter((entry) => entry.assetType === 'prop');
+    const anchorEntries = propEntries.filter((entry) => entry.placementProfile?.anchorRole === 'surface_anchor');
+    const surfaceEntries = propEntries.filter((entry) => entry.placementProfile?.defaultPlacementMode === 'surface');
+
+    surfaceEntries.forEach((surfaceEntry) => {
+      anchorEntries.forEach((anchorEntry) => {
+        const surfaceTypes = new Set(surfaceEntry.placementProfile?.surfaceAnchorTypes || []);
+        const anchorTypes = anchorEntry.placementProfile?.surfaceAnchorTypes || [];
+        const sharedAnchorTypes = anchorTypes.filter((anchorType) => surfaceTypes.has(anchorType));
+        if (sharedAnchorTypes.length === 0) {
+          return;
+        }
+
+        const sharedRoomTypes = surfaceEntry.roomTypes.filter((roomType) => anchorEntry.roomTypes.includes(roomType));
+        const strength = Number((0.42 + sharedAnchorTypes.length * 0.18 + sharedRoomTypes.length * 0.07).toFixed(3));
+        this.registerRelationship(
+          surfaceEntry.id,
+          anchorEntry.id,
+          'supported_by',
+          strength,
+          'inferred',
+          [`shared anchor: ${sharedAnchorTypes.join(', ')}`],
+        );
+        this.registerRelationship(
+          anchorEntry.id,
+          surfaceEntry.id,
+          'supports',
+          Math.max(0.35, strength - 0.04),
+          'inferred',
+          [`shared anchor: ${sharedAnchorTypes.join(', ')}`],
+        );
+      });
+    });
+  }
+
+  private registerRelationship(
+    sourceAssetId: string,
+    targetAssetId: string,
+    type: AssetBrainRelationshipType,
+    strength: number,
+    source: AssetBrainRelationship['source'],
+    reasons: string[],
+  ): void {
+    const sourceEntry = this.entriesById.get(sourceAssetId);
+    const targetEntry = this.entriesById.get(targetAssetId);
+    if (!sourceEntry || !targetEntry) {
+      return;
+    }
+
+    const relationship: AssetBrainRelationship = {
+      sourceAssetId,
+      targetAssetId,
+      type,
+      strength: Number(strength.toFixed(3)),
+      source,
+      reasons,
+      sharedRoomTypes: sourceEntry.roomTypes.filter((roomType) => targetEntry.roomTypes.includes(roomType)),
+    };
+
+    this.relationships.push(relationship);
+    const outgoing = this.outgoingRelationshipsById.get(sourceAssetId) || [];
+    outgoing.push(relationship);
+    this.outgoingRelationshipsById.set(sourceAssetId, outgoing);
+    const incoming = this.incomingRelationshipsById.get(targetAssetId) || [];
+    incoming.push(relationship);
+    this.incomingRelationshipsById.set(targetAssetId, incoming);
+  }
+
+  private getUsageBoost(assetId: string): number {
+    const count = this.usageCounts.get(assetId) || 0;
+    if (count <= 0) {
+      return 0;
+    }
+
+    return Number(Math.min(1.35, Math.log1p(count) * 0.28).toFixed(3));
+  }
+
+  private getContextUsageBoost(assetId: string, roomTypeTokens: string[]): number {
+    const relevantRoomTypes = unique(roomTypeTokens);
+    if (relevantRoomTypes.length === 0) {
+      return 0;
+    }
+
+    const total = relevantRoomTypes.reduce((sum, roomType) => (
+      sum + (this.contextCounts.get(createContextKey(assetId, 'room', roomType)) || 0)
+    ), 0);
+
+    if (total <= 0) {
+      return 0;
+    }
+
+    return Number(Math.min(1.6, Math.log1p(total) * 0.34).toFixed(3));
+  }
+
+  private getStrongestRelationshipBoost(
+    candidateAssetId: string,
+    relatedToAssetIds: string[],
+    relationshipTypes: AssetBrainRelationshipType[] | undefined,
+    preferredRoomTypes: string[],
+  ): {
+    score: number;
+    reasons: string[];
+  } {
+    const signals = relatedToAssetIds.map((relatedAssetId) => this.collectRelationshipSignal(
+      relatedAssetId,
+      candidateAssetId,
+      {
+        relationTypes: relationshipTypes,
+        direction: 'any',
+        preferredRoomTypes,
+      },
+    ));
+
+    const strongest = signals.sort((left, right) => right.score - left.score)[0];
+    if (!strongest || strongest.score <= 0) {
+      return { score: 0, reasons: [] };
+    }
+
+    return {
+      score: Number(Math.min(2.2, strongest.score * 0.55).toFixed(3)),
+      reasons: strongest.reasons.slice(0, 2),
+    };
+  }
+
+  private collectRelationshipSignal(
+    sourceAssetId: string,
+    candidateAssetId: string,
+    options: {
+      relationTypes?: AssetBrainRelationshipType[];
+      direction?: 'outgoing' | 'incoming' | 'any';
+      preferredRoomTypes?: string[];
+    },
+  ): {
+    score: number;
+    reasons: string[];
+    relationshipTypes: AssetBrainRelationshipType[];
+  } {
+    const allowedTypes = options.relationTypes ? new Set(options.relationTypes) : null;
+    const preferredRoomTypes = new Set(options.preferredRoomTypes || []);
+    const relationships: AssetBrainRelationship[] = [];
+
+    if (options.direction !== 'incoming') {
+      (this.outgoingRelationshipsById.get(sourceAssetId) || [])
+        .filter((relationship) => relationship.targetAssetId === candidateAssetId)
+        .forEach((relationship) => relationships.push(relationship));
+    }
+
+    if (options.direction !== 'outgoing') {
+      (this.incomingRelationshipsById.get(sourceAssetId) || [])
+        .filter((relationship) => relationship.sourceAssetId === candidateAssetId)
+        .forEach((relationship) => relationships.push(relationship));
+    }
+
+    let score = 0;
+    const reasons: string[] = [];
+    const relationshipTypes = new Set<AssetBrainRelationshipType>();
+
+    relationships.forEach((relationship) => {
+      if (allowedTypes && !allowedTypes.has(relationship.type)) {
+        return;
+      }
+
+      let relationshipScore = relationship.strength * 2.8;
+      if (relationship.source === 'seed') {
+        relationshipScore += 0.45;
+      }
+      if (
+        preferredRoomTypes.size > 0
+        && relationship.sharedRoomTypes.some((roomType) => preferredRoomTypes.has(roomType))
+      ) {
+        relationshipScore += 0.18;
+      }
+
+      score += relationshipScore;
+      relationshipTypes.add(relationship.type);
+      reasons.push(`${relationship.type}: ${relationship.reasons[0] || 'seeded relation'}`);
+    });
+
+    const allowsCoOccurrence = !allowedTypes || allowedTypes.has('co_occurs_with');
+    if (allowsCoOccurrence) {
+      const coOccurrenceCount = this.coOccurrenceCounts.get(createCoOccurrenceKey(sourceAssetId, candidateAssetId)) || 0;
+      if (coOccurrenceCount > 0) {
+        score += Math.min(1.75, Math.log1p(coOccurrenceCount) * 0.52);
+        relationshipTypes.add('co_occurs_with');
+        reasons.push(`co-occurs: brukt sammen ${coOccurrenceCount}x`);
+      }
+    }
+
+    return {
+      score: Number(score.toFixed(3)),
+      reasons: reasons.slice(0, 4),
+      relationshipTypes: Array.from(relationshipTypes),
+    };
+  }
+
+  private loadMemory(): void {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(ASSET_BRAIN_MEMORY_STORAGE_KEY);
+      if (!raw) {
+        return;
+      }
+
+      const payload = JSON.parse(raw) as Partial<AssetBrainMemoryPayload>;
+      Object.entries(payload.usageCounts || {}).forEach(([assetId, count]) => {
+        if (typeof count === 'number') {
+          this.usageCounts.set(assetId, count);
+        }
+      });
+      Object.entries(payload.contextCounts || {}).forEach(([contextKey, count]) => {
+        if (typeof count === 'number') {
+          this.contextCounts.set(contextKey, count);
+        }
+      });
+      Object.entries(payload.coOccurrenceCounts || {}).forEach(([pairKey, count]) => {
+        if (typeof count === 'number') {
+          this.coOccurrenceCounts.set(pairKey, count);
+        }
+      });
+    } catch (error) {
+      console.warn('[AssetBrain] Could not load persisted memory', error);
+    }
+  }
+
+  private persistMemory(): void {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return;
+    }
+
+    const payload: AssetBrainMemoryPayload = {
+      version: 1,
+      usageCounts: Object.fromEntries(this.usageCounts.entries()),
+      contextCounts: Object.fromEntries(this.contextCounts.entries()),
+      coOccurrenceCounts: Object.fromEntries(this.coOccurrenceCounts.entries()),
+    };
+
+    try {
+      window.localStorage.setItem(ASSET_BRAIN_MEMORY_STORAGE_KEY, JSON.stringify(payload));
+    } catch (error) {
+      console.warn('[AssetBrain] Could not persist memory', error);
+    }
   }
 }
 

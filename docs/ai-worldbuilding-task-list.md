@@ -11,7 +11,7 @@ Brukeren skal kunne beskrive en scene med tekst, referansebilde eller Genie-lign
 - [x] Eksponere `placementProfile` for hver prop med `ground | wall | surface`, clearance og anchor-rolle.
 - [x] Koble `Asset Brain` inn i `environmentPropMapper` som robust fallback.
 - [x] Legge inn lokal embedding-index for assets, ikke bare token-søk.
-- [ ] Lagre bruksscore, scene-kontekstscore og “assets that work well together”.
+- [x] Lagre bruksscore, scene-kontekstscore og “assets that work well together”.
 - [ ] Støtte aktiv læring: når bruker flytter, bytter eller sletter props, bruk det som signal tilbake til `Asset Brain`.
 - [x] Bygge et retrieval-endepunkt: `POST /api/environment/retrieve-assets`.
 
@@ -89,7 +89,7 @@ Brukeren skal kunne beskrive en scene med tekst, referansebilde eller Genie-lign
 ## Immediate Next Sprint
 
 - [ ] Erstatte token-søk i `Asset Brain` med embedding-basert retrieval.
-- [ ] Lage en egen `scenegraph assembly`-modell som placement engine skriver til.
+- [x] Lage en egen `scenegraph assembly`-modell som placement engine skriver til.
 - [ ] Gjøre lysrigg om fra forslag til faktisk runtime-rigg.
 - [ ] Bruke `roomShell`-data til å bygge ekte parametrisk geometri.
 - [ ] Legge på en Playwright-regresjon for “AI -> shell -> props -> lys -> kamera -> diagnostics”.

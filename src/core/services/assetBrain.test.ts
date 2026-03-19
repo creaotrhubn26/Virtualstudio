@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import type { EnvironmentPlan } from '../models/environmentPlan';
 import { assetBrainService } from './assetBrain';
 
@@ -37,6 +37,10 @@ function createPlan(overrides: Partial<EnvironmentPlan> = {}): EnvironmentPlan {
 }
 
 describe('assetBrainService', () => {
+  beforeEach(() => {
+    assetBrainService.resetLearnedSignals();
+  });
+
   it('finds the expected pizzeria wall prop from a generic description', () => {
     const matches = assetBrainService.search({
       text: 'wall mounted menu board for a pizzeria set',
@@ -84,5 +88,38 @@ describe('assetBrainService', () => {
 
     expect(wallMatches[0]?.entry.id).toBe('urban-neon-cyan');
     expect(floorMatches[0]?.entry.id).toBe('blade-runner-wet');
+  });
+
+  it('returns anchor relationships for surface props that need a supporting asset', () => {
+    const related = assetBrainService.getRelatedAssets({
+      assetId: 'pizza_hero_display',
+      assetTypes: ['prop'],
+      relationTypes: ['supported_by'],
+      preferredRoomTypes: ['restaurant'],
+      limit: 3,
+    });
+
+    expect(related[0]?.entry.id).toBe('table_rustic');
+    expect(related[0]?.relationshipTypes).toContain('supported_by');
+  });
+
+  it('learns co-occurrence from successful assemblies and can retrieve the pair later', () => {
+    assetBrainService.recordUsage({
+      assetIds: ['chair_posing', 'plant_potted'],
+      roomTypes: ['editorial'],
+      styles: ['warm'],
+      prompt: 'Editorial portrait corner with a chair and a plant',
+    });
+
+    const related = assetBrainService.getRelatedAssets({
+      assetId: 'chair_posing',
+      assetTypes: ['prop'],
+      relationTypes: ['co_occurs_with'],
+      preferredRoomTypes: ['editorial'],
+      limit: 5,
+    });
+
+    expect(related[0]?.entry.id).toBe('plant_potted');
+    expect(assetBrainService.getUsageCount('chair_posing')).toBe(1);
   });
 });

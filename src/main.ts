@@ -59,6 +59,7 @@ interface EnvironmentRuntimePropResult {
   applied: string[];
   skipped: string[];
   nodeIds: string[];
+  appliedAssetIds: string[];
 }
 
 // Early initialization of Studio Library button - runs immediately
@@ -11916,6 +11917,7 @@ class VirtualStudio {
 
   private findSurfaceAnchor(
     surfaceAnchorTypes: string[],
+    preferredAssetId?: string,
   ): {
     id: string;
     mesh: BABYLON.AbstractMesh;
@@ -11941,7 +11943,25 @@ class VirtualStudio {
     }
 
     if (preferredTypes.size === 0) {
+      if (preferredAssetId) {
+        const preferredByAsset = anchors.find((anchor) => (
+          this.sceneState.props.get(anchor.id)?.assetId === preferredAssetId
+        ));
+        if (preferredByAsset) {
+          return { id: preferredByAsset.id, mesh: preferredByAsset.mesh };
+        }
+      }
       return { id: anchors[0].id, mesh: anchors[0].mesh };
+    }
+
+    if (preferredAssetId) {
+      const preferredByAsset = anchors.find((anchor) => (
+        this.sceneState.props.get(anchor.id)?.assetId === preferredAssetId
+        && anchor.profile?.surfaceAnchorTypes.some((value) => preferredTypes.has(value.toLowerCase()))
+      ));
+      if (preferredByAsset) {
+        return { id: preferredByAsset.id, mesh: preferredByAsset.mesh };
+      }
     }
 
     const preferredAnchor = anchors.find((anchor) => (
@@ -12001,7 +12021,10 @@ class VirtualStudio {
     rotationY?: number;
     surfaceAnchorId?: string;
   } | null {
-    const anchor = this.findSurfaceAnchor(surfaceAnchorTypes);
+    const preferredAnchorAssetId = typeof request.metadata?.preferredAnchorAssetId === 'string'
+      ? request.metadata.preferredAnchorAssetId
+      : undefined;
+    const anchor = this.findSurfaceAnchor(surfaceAnchorTypes, preferredAnchorAssetId);
     if (!anchor) {
       return null;
     }
@@ -12266,6 +12289,7 @@ class VirtualStudio {
     const applied: string[] = [];
     const skipped: string[] = [];
     const nodeIds: string[] = [];
+    const appliedAssetIds: string[] = [];
 
     if (options.clearExisting) {
       this.clearEnvironmentGeneratedProps();
@@ -12315,6 +12339,7 @@ class VirtualStudio {
         if (nodeId) {
           applied.push(request.name || propDef.name);
           nodeIds.push(nodeId);
+          appliedAssetIds.push(request.assetId);
         } else {
           skipped.push(`Kunne ikke plassere ${request.name || propDef.name}`);
         }
@@ -12329,7 +12354,7 @@ class VirtualStudio {
       this.publishEnvironmentDiagnostics('environment-props-applied');
     }
 
-    return { applied, skipped, nodeIds };
+    return { applied, skipped, nodeIds, appliedAssetIds };
   }
 
   private async loadAssetFromLibrary(
