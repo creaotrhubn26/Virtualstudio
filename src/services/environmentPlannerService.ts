@@ -40,6 +40,13 @@ type EnvironmentPlannerWindow = Window & {
   __virtualStudioEnvironmentPlannerMock?: PlannerResponseMock;
   __virtualStudioEnvironmentPlannerRequests?: EnvironmentPlanRequest[];
   __virtualStudioLastEnvironmentAssembly?: EnvironmentScenegraphAssembly;
+  __virtualStudioLastEnvironmentLearningContext?: {
+    planId: string;
+    prompt: string;
+    roomTypes: string[];
+    styles: string[];
+    source: string;
+  };
 };
 
 class EnvironmentPlannerService {
@@ -92,6 +99,7 @@ class EnvironmentPlannerService {
     const skipped: string[] = [];
     const assemblyResult = assembleEnvironmentScenegraph(plan);
     this.publishAssemblySnapshot(assemblyResult.assembly);
+    this.publishLearningContext(plan);
     const recommendedPreset = plan.recommendedPresetId
       ? getEnvironmentById(plan.recommendedPresetId)
       : null;
@@ -249,6 +257,22 @@ class EnvironmentPlannerService {
     }
 
     plannerWindow.__virtualStudioLastEnvironmentAssembly = assembly;
+  }
+
+  private publishLearningContext(plan: EnvironmentPlan): void {
+    const plannerWindow = this.getPlannerWindow();
+    if (!plannerWindow) {
+      return;
+    }
+
+    const context = assetBrainService.inferPlanContext(plan);
+    plannerWindow.__virtualStudioLastEnvironmentLearningContext = {
+      planId: plan.planId,
+      prompt: [plan.prompt, plan.summary, plan.concept].filter(Boolean).join(' '),
+      roomTypes: context.roomTypes,
+      styles: context.styles,
+      source: plan.source,
+    };
   }
 
   private getStatusMock(): PlannerStatusMock | null {

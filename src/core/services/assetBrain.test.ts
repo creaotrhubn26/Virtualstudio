@@ -122,4 +122,29 @@ describe('assetBrainService', () => {
     expect(related[0]?.entry.id).toBe('plant_potted');
     expect(assetBrainService.getUsageCount('chair_posing')).toBe(1);
   });
+
+  it('downranks assets that users repeatedly remove in the same scene context', () => {
+    assetBrainService.recordRejection({
+      assetId: 'table_rustic',
+      roomTypes: ['restaurant'],
+      prompt: 'Warm pizzeria interior with tabletop styling',
+      source: 'manual_remove',
+    });
+    assetBrainService.recordRejection({
+      assetId: 'table_rustic',
+      roomTypes: ['restaurant'],
+      prompt: 'Warm pizzeria interior with tabletop styling',
+      source: 'manual_remove',
+    });
+
+    const matches = assetBrainService.getRelatedAssets({
+      assetId: 'pizza_hero_display',
+      assetTypes: ['prop'],
+      relationTypes: ['supported_by'],
+      preferredRoomTypes: ['restaurant'],
+      limit: 3,
+    });
+
+    expect(matches[0]?.entry.id).toBe('counter_pizza_prep');
+  });
 });

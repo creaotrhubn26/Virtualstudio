@@ -9,6 +9,7 @@ import type {
 import type {
   AssetBrainDimensions,
   AssetBrainEntry,
+  AssetBrainFeedbackSignal,
   AssetBrainMatch,
   AssetBrainPlacementMode,
   AssetBrainPlacementProfile,
@@ -111,6 +112,8 @@ interface AssetBrainMemoryPayload {
   usageCounts: Record<string, number>;
   contextCounts: Record<string, number>;
   coOccurrenceCounts: Record<string, number>;
+  rejectionCounts: Record<string, number>;
+  rejectionContextCounts: Record<string, number>;
 }
 
 const EXPLICIT_RELATIONSHIP_SEEDS: AssetBrainRelationshipSeed[] = [
@@ -547,6 +550,8 @@ class AssetBrainService {
   private readonly usageCounts: Map<string, number> = new Map();
   private readonly contextCounts: Map<string, number> = new Map();
   private readonly coOccurrenceCounts: Map<string, number> = new Map();
+  private readonly rejectionCounts: Map<string, number> = new Map();
+  private readonly rejectionContextCounts: Map<string, number> = new Map();
 
   constructor() {
     this.entries = [
@@ -668,6 +673,8 @@ class AssetBrainService {
     this.usageCounts.clear();
     this.contextCounts.clear();
     this.coOccurrenceCounts.clear();
+    this.rejectionCounts.clear();
+    this.rejectionContextCounts.clear();
 
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.removeItem(ASSET_BRAIN_MEMORY_STORAGE_KEY);
@@ -714,6 +721,36 @@ class AssetBrainService {
     this.persistMemory();
   }
 
+  recordRejection(signal: AssetBrainFeedbackSignal): void {
+    if (!this.entriesById.has(signal.assetId)) {
+      return;
+    }
+
+    this.rejectionCounts.set(signal.assetId, (this.rejectionCounts.get(signal.assetId) || 0) + 1);
+
+    const promptTokens = tokenize(signal.prompt || '');
+    const roomTypes = unique([
+      ...(signal.roomTypes || []),
+      ...inferRoomTypes(promptTokens, []),
+    ]);
+    const styles = unique([
+      ...(signal.styles || []),
+      ...inferStyles(promptTokens, []),
+    ]);
+
+    roomTypes.forEach((roomType) => {
+      const key = createContextKey(signal.assetId, 'room', roomType);
+      this.rejectionContextCounts.set(key, (this.rejectionContextCounts.get(key) || 0) + 1);
+    });
+
+    styles.forEach((style) => {
+      const key = createContextKey(signal.assetId, 'style', style);
+      this.rejectionContextCounts.set(key, (this.rejectionContextCounts.get(key) || 0) + 1);
+    });
+
+    this.persistMemory();
+  }
+
   getRelatedAssets(query: AssetBrainRelatedAssetQuery): AssetBrainRelatedAssetMatch[] {
     const sourceEntry = this.entriesById.get(query.assetId);
     if (!sourceEntry) {
@@ -745,6 +782,16 @@ class AssetBrainService {
         if (sharedRoomTypes.length > 0) {
           score += sharedRoomTypes.length * 0.32;
           reasons.push(`deler romtype: ${sharedRoomTypes.join(', ')}`);
+        }
+
+        const rejectionPenalty = this.getRejectionPenalty(entry.id, preferredRoomTypes);
+        if (rejectionPenalty > 0) {
+          score -= rejectionPenalty;
+          reasons.push(`fravalgt: -${rejectionPenalty.toFixed(2)}`);
+        }
+
+        if (score <= 0) {
+          return null;
         }
 
         return {
@@ -878,6 +925,12 @@ class AssetBrainService {
         score += relationshipSignal.score;
         reasons.push(...relationshipSignal.reasons);
       }
+    }
+
+    const rejectionPenalty = this.getRejectionPenalty(entry.id, roomTypeTokens);
+    if (rejectionPenalty > 0) {
+      score -= rejectionPenalty;
+      reasons.push(`fravalgt: -${rejectionPenalty.toFixed(2)}`);
     }
 
     if (query.preferredPlacementMode && entry.placementProfile) {
@@ -1059,6 +1112,23 @@ class AssetBrainService {
     };
   }
 
+  private getRejectionPenalty(assetId: string, roomTypeTokens: string[]): number {
+    const globalCount = this.rejectionCounts.get(assetId) || 0;
+    const globalPenalty = globalCount > 0
+      ? Math.min(0.85, Math.log1p(globalCount) * 0.2)
+      : 0;
+
+    const relevantRoomTypes = unique(roomTypeTokens);
+    const contextualCount = relevantRoomTypes.reduce((sum, roomType) => (
+      sum + (this.rejectionContextCounts.get(createContextKey(assetId, 'room', roomType)) || 0)
+    ), 0);
+    const contextualPenalty = contextualCount > 0
+      ? Math.min(1.4, Math.log1p(contextualCount) * 0.34)
+      : 0;
+
+    return Number((globalPenalty + contextualPenalty).toFixed(3));
+  }
+
   private collectRelationshipSignal(
     sourceAssetId: string,
     candidateAssetId: string,
@@ -1157,6 +1227,16 @@ class AssetBrainService {
           this.coOccurrenceCounts.set(pairKey, count);
         }
       });
+      Object.entries(payload.rejectionCounts || {}).forEach(([assetId, count]) => {
+        if (typeof count === 'number') {
+          this.rejectionCounts.set(assetId, count);
+        }
+      });
+      Object.entries(payload.rejectionContextCounts || {}).forEach(([contextKey, count]) => {
+        if (typeof count === 'number') {
+          this.rejectionContextCounts.set(contextKey, count);
+        }
+      });
     } catch (error) {
       console.warn('[AssetBrain] Could not load persisted memory', error);
     }
@@ -1172,6 +1252,8 @@ class AssetBrainService {
       usageCounts: Object.fromEntries(this.usageCounts.entries()),
       contextCounts: Object.fromEntries(this.contextCounts.entries()),
       coOccurrenceCounts: Object.fromEntries(this.coOccurrenceCounts.entries()),
+      rejectionCounts: Object.fromEntries(this.rejectionCounts.entries()),
+      rejectionContextCounts: Object.fromEntries(this.rejectionContextCounts.entries()),
     };
 
     try {

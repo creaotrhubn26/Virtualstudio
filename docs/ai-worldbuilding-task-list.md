@@ -12,7 +12,7 @@ Brukeren skal kunne beskrive en scene med tekst, referansebilde eller Genie-lign
 - [x] Koble `Asset Brain` inn i `environmentPropMapper` som robust fallback.
 - [x] Legge inn lokal embedding-index for assets, ikke bare token-søk.
 - [x] Lagre bruksscore, scene-kontekstscore og “assets that work well together”.
-- [ ] Støtte aktiv læring: når bruker flytter, bytter eller sletter props, bruk det som signal tilbake til `Asset Brain`.
+- [x] Støtte aktiv læring: når bruker flytter, bytter eller sletter props, bruk det som signal tilbake til `Asset Brain`.
 - [x] Bygge et retrieval-endepunkt: `POST /api/environment/retrieve-assets`.
 
 ## Phase 2: Placement Engine v2

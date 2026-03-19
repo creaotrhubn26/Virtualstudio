@@ -37,6 +37,7 @@ import { getAvatarById } from './data/avatarDefinitions';
 import { resolveModelPath, resolveAudioPath, resolveImagePath, resolveAssetPath } from './config/assetConfig';
 import settingsService, { getCurrentUserId } from './services/settingsService';
 import { notesService } from './services/notesService';
+import { environmentLearningService } from './services/environmentLearningService';
 import { ALL_POSES } from './core/animation/PoseLibrary';
 import type { PosePreset } from './core/animation/PoseLibrary';
 
@@ -28884,6 +28885,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     
     window.virtualStudio = studio;
+    environmentLearningService.start();
     
     // Expose model geometry registration helpers on window for debugging/external access
     (window as any).getRegisteredModelGeometries = () => studio.getRegisteredModelGeometries();

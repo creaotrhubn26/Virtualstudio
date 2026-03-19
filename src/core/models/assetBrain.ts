@@ -107,3 +107,13 @@ export interface AssetBrainUsageSignal {
   planId?: string;
   source?: string;
 }
+
+export interface AssetBrainFeedbackSignal {
+  assetId: string;
+  roomTypes?: string[];
+  styles?: string[];
+  prompt?: string;
+  planId?: string;
+  source?: string;
+  reason?: string;
+}
