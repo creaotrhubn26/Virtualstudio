@@ -24,6 +24,13 @@ export interface Toast {
   onClose?: () => void;
 }
 
+interface GlobalToastDetail {
+  message?: string;
+  type?: AlertColor;
+  severity?: AlertColor;
+  duration?: number | null;
+}
+
 interface ToastContextType {
   showToast: (toast: Omit<Toast, 'id'>) => void;
   showSuccess: (message: string, duration?: number) => void;
@@ -116,6 +123,29 @@ export const ToastProvider: FC<ToastProviderProps> = ({
     },
     [showToast]
   );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const handleGlobalToast = (event: Event) => {
+      const detail = (event as CustomEvent<GlobalToastDetail>).detail;
+      if (!detail?.message) {
+        return;
+      }
+      showToast({
+        message: detail.message,
+        severity: detail.severity || detail.type || 'info',
+        duration: detail.duration ?? 8000,
+      });
+    };
+
+    window.addEventListener('vs-toast', handleGlobalToast as EventListener);
+    return () => {
+      window.removeEventListener('vs-toast', handleGlobalToast as EventListener);
+    };
+  }, [showToast]);
 
   const getPositionStyles = () => {
     const baseStyles = {

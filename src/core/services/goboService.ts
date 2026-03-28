@@ -9,7 +9,7 @@ export interface GoboAttachment {
   goboId: string;
   lightId: string;
   options: GoboOptions;
-  projectionTexture?: BABYLON.ProjectionTexture;
+  projectionTexture?: BABYLON.BaseTexture;
   shadowGenerator?: BABYLON.ShadowGenerator;
 }
 
@@ -17,7 +17,7 @@ class GoboService {
   private attachments: Map<string, GoboAttachment> = new Map(); // lightId -> attachment
   private standaloneGobos: Map<string, BABYLON.Mesh> = new Map(); // goboId -> mesh
   private scene: BABYLON.Scene | null = null;
-  private textureCache: Map<string, BABYLON.Texture> = new Map();
+  private textureCache: Map<string, BABYLON.BaseTexture> = new Map();
 
   /**
    * Initialize service with scene
@@ -29,7 +29,7 @@ class GoboService {
   /**
    * Generate or get cached gobo texture
    */
-  private getGoboTexture(pattern: string, size: number = 512): BABYLON.Texture {
+  private getGoboTexture(pattern: string, size: number = 512): BABYLON.BaseTexture {
     const cacheKey = `${pattern}_${size}`;
     
     if (this.textureCache.has(cacheKey)) {
@@ -49,42 +49,31 @@ class GoboService {
    * Create projection texture for light
    */
   createProjectionTexture(
-    goboTexture: BABYLON.Texture,
+    goboTexture: BABYLON.BaseTexture,
     light: BABYLON.Light,
     options: GoboOptions
-  ): BABYLON.ProjectionTexture {
-    if (!this.scene) {
-      throw new Error('GoboService: Scene not initialized');
-    }
+  ): BABYLON.BaseTexture {
+    const projectionTexture = goboTexture;
 
-    const projectionTexture = new BABYLON.ProjectionTexture(
-      `gobo_projection_${light.name}`,
-      this.scene
-    );
-
-    projectionTexture.texture = goboTexture;
-    
     // Configure projection based on light type
     if (light instanceof BABYLON.SpotLight) {
-      // For spot lights, use the light's angle
-      const angle = light.angle || Math.PI / 4;
-      projectionTexture.setProjectionMatrix(
-        BABYLON.Matrix.PerspectiveProjection(angle, 1, 0.1, 100)
-      );
+      light.projectionTextureLightNear = 0.1;
+      light.projectionTextureLightFar = 100;
     } else if (light instanceof BABYLON.DirectionalLight) {
-      // For directional lights, use orthographic projection
       const size = options.size || 10;
-      projectionTexture.setProjectionMatrix(
-        BABYLON.Matrix.OrthogonalProjection(-size, size, -size, size, 0.1, 100)
+      light.projectionTextureProjectionLightMatrix = BABYLON.Matrix.OrthoOffCenterLH(
+        -size,
+        size,
+        -size,
+        size,
+        0.1,
+        100,
       );
     }
 
     // Apply rotation
     if (options.rotation) {
-      const rotationMatrix = BABYLON.Matrix.RotationY((options.rotation * Math.PI) / 180);
-      projectionTexture.setProjectionMatrix(
-        projectionTexture.getProjectionMatrix().multiply(rotationMatrix)
-      );
+      projectionTexture.wAng = (options.rotation * Math.PI) / 180;
     }
 
     // Apply intensity/opacity
@@ -168,7 +157,7 @@ class GoboService {
    */
   private applyGoboToShadowMap(
     shadowGenerator: BABYLON.ShadowGenerator,
-    goboTexture: BABYLON.Texture,
+    goboTexture: BABYLON.BaseTexture,
     options: GoboOptions
   ): void {
     // Use custom shader or post-process to apply gobo pattern to shadows
@@ -305,8 +294,6 @@ class GoboService {
 }
 
 export const goboService = new GoboService();
-
-
 
 
 

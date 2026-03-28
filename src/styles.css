@@ -334,6 +334,7 @@ textarea:focus-visible {
   height: 100%;
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(4px);
+  z-index: 0;
 }
 
 .light-recommendation-content {
@@ -351,6 +352,7 @@ textarea:focus-visible {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  z-index: 1;
 }
 
 .light-recommendation-header {
@@ -2624,6 +2626,41 @@ html, body {
   touch-action: manipulation;
 }
 
+.marketplace-update-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+  color: #fff8eb;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(255, 248, 235, 0.18);
+}
+
+.marketplace-update-badge[hidden] {
+  display: none !important;
+}
+
+.menu-marketplace-update-badge {
+  margin-left: 2px;
+}
+
+.user-menu-btn-update-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 10px;
+}
+
 /* 6-tier responsive menu-item: Mobile */
 @media (max-width: 599px) {
   .secondary-menu-bar .menu-item {
@@ -2642,7 +2679,7 @@ html, body {
     width: 20px;
     height: 20px;
   }
-  .secondary-menu-bar .menu-item span:not(.menu-icon) {
+  .secondary-menu-bar .menu-item span:not(.menu-icon):not(.marketplace-update-badge) {
     font-size: 9px;
     white-space: nowrap;
     overflow: hidden;
@@ -2670,7 +2707,7 @@ html, body {
     width: 22px;
     height: 22px;
   }
-  .secondary-menu-bar .menu-item span:not(.menu-icon) {
+  .secondary-menu-bar .menu-item span:not(.menu-icon):not(.marketplace-update-badge) {
     font-size: 10px;
     white-space: nowrap;
     overflow: hidden;
@@ -2753,6 +2790,11 @@ html, body {
   border-color: rgba(0, 212, 255, 0.6);
   color: var(--accent-cyan);
   box-shadow: 0 2px 8px rgba(0, 212, 255, 0.2);
+}
+
+.secondary-menu-bar .menu-item[data-has-updates] {
+  border-color: rgba(245, 158, 11, 0.45);
+  box-shadow: 0 2px 12px rgba(245, 158, 11, 0.12);
 }
 
 .secondary-menu-bar .menu-item:active {
@@ -6103,6 +6145,10 @@ html, body {
   pointer-events: none; /* Let clicks pass through to parent button */
 }
 
+.library-marketplace-update-badge {
+  margin-left: auto;
+}
+
 .library-trigger-content * {
   pointer-events: none; /* Ensure all children also pass clicks through */
 }
@@ -6110,6 +6156,10 @@ html, body {
 /* Hover effect on parent button instead of content div */
 .actor-panel-trigger:hover .library-trigger-content {
   background: var(--bg-hover);
+}
+
+.actor-panel-trigger[data-has-updates] .library-trigger-content {
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.22);
 }
 
 .library-icon {
@@ -6145,7 +6195,7 @@ html, body {
 }
 
 .library-arrow {
-  margin-left: auto;
+  margin-left: 10px;
   font-size: 14px;
 }
 
@@ -10944,6 +10994,32 @@ html, body {
   touch-action: manipulation;
 }
 
+.topview-mode-btn {
+  width: auto;
+  min-width: 44px;
+  gap: 6px;
+  padding: 0 10px;
+}
+
+.topview-btn-label {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.topview-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.topview-btn:disabled:hover,
+.topview-btn:disabled:active {
+  background: transparent;
+  color: var(--text-secondary);
+  transform: none;
+}
+
 /* 6-tier responsive topview toolbar: Mobile */
 @media (max-width: 599px) {
   .topview-toolbar {
@@ -10960,9 +11036,18 @@ html, body {
     border-radius: 6px;
   }
 
+  .topview-mode-btn {
+    min-width: 36px;
+    padding: 0;
+  }
+
   .topview-btn svg {
     width: 16px;
     height: 16px;
+  }
+
+  .topview-btn-label {
+    display: none;
   }
 
   .topview-separator {
@@ -10987,9 +11072,18 @@ html, body {
     border-radius: 7px;
   }
 
+  .topview-mode-btn {
+    min-width: 40px;
+    padding: 0;
+  }
+
   .topview-btn svg {
     width: 18px;
     height: 18px;
+  }
+
+  .topview-btn-label {
+    display: none;
   }
 
   .topview-separator {
@@ -11580,6 +11674,52 @@ html, body {
   color: var(--text-primary);
   font-weight: 500;
   font-family: 'JetBrains Mono', monospace;
+}
+
+.topview-info-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.topview-info-action {
+  flex: 1;
+  min-height: 34px;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.14);
+  color: #d1fae5;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+}
+
+.topview-info-action:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(52, 211, 153, 0.6);
+}
+
+.topview-info-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.topview-info-action-secondary {
+  border-color: rgba(96, 165, 250, 0.35);
+  background: rgba(59, 130, 246, 0.12);
+  color: #dbeafe;
+}
+
+.topview-info-action-secondary:hover {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(96, 165, 250, 0.55);
+}
+
+.topview-info-action-compact {
+  flex: 1 1 calc(50% - 4px);
+  min-width: calc(50% - 4px);
 }
 
 /* Fullscreen legend */
@@ -15500,6 +15640,20 @@ html, body {
   cursor: pointer !important;
   transition: all 0.15s ease !important;
   text-align: left !important;
+}
+
+.user-menu-marketplace-badge {
+  margin-left: auto;
+}
+
+.user-icon[data-has-updates] {
+  border-color: rgba(245,158,11,0.7) !important;
+  box-shadow: 0 4px 16px rgba(245,158,11,0.2) !important;
+}
+
+.user-menu-item[data-has-updates] {
+  background: rgba(245,158,11,0.08) !important;
+  color: #fcd34d !important;
 }
 
 .user-menu-item:hover {

@@ -176,7 +176,7 @@ const HelpVideoPlayer: FC<HelpVideoPlayerProps> = ({
           if (helpPanel && !helpPanel.classList.contains('open')) {
             // Open help panel first
             console.log('HelpVideoPlayer (modal): Opening help panel first');
-            window.dispatchEvent(new CustomEvent('toggle-help-panel'));
+            window.dispatchEvent(new CustomEvent('vs-open-help-panel'));
           }
           
           // Close video modal
@@ -249,7 +249,7 @@ const HelpVideoPlayer: FC<HelpVideoPlayerProps> = ({
           if (helpPanel && !helpPanel.classList.contains('open')) {
             // Open help panel first
             console.log('HelpVideoPlayer (placeholder): Opening help panel first');
-            window.dispatchEvent(new CustomEvent('toggle-help-panel'));
+            window.dispatchEvent(new CustomEvent('vs-open-help-panel'));
             
             // Wait a bit for panel to open, then dispatch edit event
             setTimeout(() => {
@@ -437,4 +437,3 @@ export function mountHelpVideoPlayers(): void {
 }
 
 export default HelpVideoPlayer;
-

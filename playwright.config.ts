@@ -2,6 +2,10 @@ import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:5173';
 const managedServerEnabled = process.env.PLAYWRIGHT_MANAGED_SERVER !== '0';
+const apiProxyTarget = process.env.PLAYWRIGHT_API_PROXY_TARGET || 'http://127.0.0.1:8001';
+const viteUrl = new URL(baseURL);
+const viteHost = process.env.PLAYWRIGHT_VITE_HOST || viteUrl.hostname || '127.0.0.1';
+const vitePort = process.env.PLAYWRIGHT_VITE_PORT || viteUrl.port || '5173';
 
 export default defineConfig({
   testDir: './e2e',
@@ -29,11 +33,19 @@ export default defineConfig({
     },
   ],
   webServer: managedServerEnabled
-    ? {
-        command: 'npm run dev -- --port 5173 --strictPort',
-        url: baseURL,
-        timeout: 180_000,
-        reuseExistingServer: !process.env.CI,
-      }
+    ? [
+        {
+          command: `python -m uvicorn backend.main:app --host 127.0.0.1 --port ${new URL(apiProxyTarget).port || '8001'}`,
+          url: apiProxyTarget,
+          timeout: 180_000,
+          reuseExistingServer: !process.env.CI,
+        },
+        {
+          command: `VITE_API_PROXY_TARGET=${apiProxyTarget} VITE_E2E_EAGER_PANELS=1 VITE_PLAYWRIGHT_LIGHT_MODE=1 VITE_FORCE_OPTIMIZE_DEPS=1 PLAYWRIGHT_VITE_HOST=${viteHost} PLAYWRIGHT_VITE_PORT=${vitePort} node scripts/start-playwright-vite.mjs`,
+          url: baseURL,
+          timeout: 180_000,
+          reuseExistingServer: !process.env.CI,
+        },
+      ]
     : undefined,
 });

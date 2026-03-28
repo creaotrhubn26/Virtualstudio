@@ -269,8 +269,8 @@ function ControlPoint({
       setIsDragging(false);
     };
 
-    window.addEventListener('mousemove, ', handleMouseMove);
-    window.addEventListener('mouseup,', handleMouseUp);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
@@ -675,4 +675,3 @@ export function CurveEditorCanvas({
 }
 
 export default CurveEditorCanvas;
-

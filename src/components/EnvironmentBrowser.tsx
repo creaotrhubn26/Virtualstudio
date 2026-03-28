@@ -10,6 +10,7 @@ import {
   type ReactNode } from 'react';
 import Grid from '@mui/material/Grid';
 import {
+  Alert,
   Box,
   Typography,
   TextField,
@@ -49,6 +50,18 @@ import { FLOOR_CATEGORIES, FLOOR_MATERIALS, FloorMaterial, FloorCategory } from 
 import { ENVIRONMENT_CATEGORIES, ENVIRONMENT_PRESETS, EnvironmentPreset, EnvironmentCategory } from '../data/environmentPresets';
 import { ambientSoundsService } from '../services/AmbientSoundsService';
 import { AIEnvironmentPlannerDialog } from './AIEnvironmentPlannerDialog';
+import type { EnvironmentAssemblyValidationSummary } from '../services/environmentAssemblyValidation';
+import type { EnvironmentPlanEvaluationSummary } from '../core/models/environmentPlan';
+import { getEnvironmentEvaluationPresentation } from '../services/environmentEvaluationPresentation';
+import type { EnvironmentPlanInsightPresentation } from '../services/environmentPlanInsightPresentation';
+import {
+  marketplaceEnvironmentService,
+  type InstalledMarketplaceEnvironmentPackage,
+} from '../services/marketplaceEnvironmentService';
+import { marketplaceEnvironmentPackService } from '../services/marketplaceEnvironmentPackService';
+import { marketplaceService } from '../services/marketplaceService';
+import type { MarketplaceEnvironmentRegistryPublishMode } from '../services/marketplaceRegistryService';
+import type { MarketplaceEnvironmentPackQualityReport } from '../core/models/marketplace';
 interface TabPanelProps {
   children?: ReactNode;
   index: number;
@@ -155,6 +168,63 @@ const PresetCard: FC<{
   </Card>
 );
 
+const MarketplaceEnvironmentCard: FC<{
+  environmentPackage: InstalledMarketplaceEnvironmentPackage;
+  onApply: () => void;
+}> = ({ environmentPackage, onApply }) => (
+  <Card
+    data-testid={`marketplace-environment-package-${environmentPackage.packageId}`}
+    sx={{
+      border: '1px solid rgba(124,58,237,0.45)',
+      bgcolor: 'rgba(30, 22, 46, 0.92)',
+    }}
+  >
+    <CardContent sx={{ p: 1.5 }}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+        <CardMedia
+          component="img"
+          image={environmentPackage.thumbnail}
+          alt={environmentPackage.name}
+          sx={{ width: 84, height: 60, borderRadius: 1, objectFit: 'cover', flexShrink: 0 }}
+        />
+        <Box sx={{ flex: 1 }}>
+          <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 0.75 }}>
+            <Chip label="Marketplace" size="small" sx={{ bgcolor: '#7c3aed', color: '#fff' }} />
+            {environmentPackage.environmentCategory && (
+              <Chip label={environmentPackage.environmentCategory} size="small" sx={{ bgcolor: '#2d3748', color: '#e2e8f0' }} />
+            )}
+            {environmentPackage.familyId && (
+              <Chip label={environmentPackage.familyId} size="small" sx={{ bgcolor: '#1f2937', color: '#cbd5e1' }} />
+            )}
+          </Box>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#fff' }}>
+            {environmentPackage.name}
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#a1a1aa', display: 'block', mb: 1 }}>
+            {environmentPackage.summary || environmentPackage.description}
+          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+              {environmentPackage.tags.slice(0, 4).map((tag) => (
+                <Chip key={tag} label={tag} size="small" sx={{ height: 18, fontSize: 10, bgcolor: '#312e81', color: '#e0e7ff' }} />
+              ))}
+            </Box>
+            <Button
+              size="small"
+              variant="contained"
+              data-testid={`apply-marketplace-environment-package-${environmentPackage.packageId}`}
+              onClick={onApply}
+              sx={{ bgcolor: '#7c3aed', '&:hover': { bgcolor: '#6d28d9' } }}
+            >
+              Bruk miljø
+            </Button>
+          </Box>
+        </Box>
+      </Box>
+    </CardContent>
+  </Card>
+);
+
 interface EnvironmentBrowserProps {
   isActive?: boolean;
 }
@@ -172,10 +242,56 @@ export const EnvironmentBrowser: FC<EnvironmentBrowserProps> = ({
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [customName, setCustomName] = useState('');
   const [aiPlannerOpen, setAiPlannerOpen] = useState(false);
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [publishName, setPublishName] = useState('');
+  const [publishDescription, setPublishDescription] = useState('');
+  const [publishTags, setPublishTags] = useState('');
+  const [publishWarnings, setPublishWarnings] = useState<string[]>([]);
+  const [publishBlockingIssues, setPublishBlockingIssues] = useState<string[]>([]);
+  const [publishQualityReport, setPublishQualityReport] = useState<MarketplaceEnvironmentPackQualityReport | null>(null);
+  const [publishLoading, setPublishLoading] = useState(false);
+  const [publishSubmitting, setPublishSubmitting] = useState(false);
+  const [publishFeedback, setPublishFeedback] = useState<string | null>(null);
+  const [publishMode, setPublishMode] = useState<MarketplaceEnvironmentRegistryPublishMode>('save_copy');
+  const [publishCanPublishShared, setPublishCanPublishShared] = useState(false);
+  const [publishCanUpdateSource, setPublishCanUpdateSource] = useState(false);
+  const [publishNotice, setPublishNotice] = useState<string | null>(null);
+  const [publishSourceProductName, setPublishSourceProductName] = useState<string | null>(null);
+  const [marketplacePackages, setMarketplacePackages] = useState<InstalledMarketplaceEnvironmentPackage[]>(
+    () => marketplaceEnvironmentService.getInstalledPackages(),
+  );
+  const [assemblyValidation, setAssemblyValidation] = useState<EnvironmentAssemblyValidationSummary | null>(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    return (window as Window & {
+      __virtualStudioLastEnvironmentAssemblyValidation?: EnvironmentAssemblyValidationSummary;
+    }).__virtualStudioLastEnvironmentAssemblyValidation ?? null;
+  });
+  const [environmentEvaluation, setEnvironmentEvaluation] = useState<EnvironmentPlanEvaluationSummary | null>(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    return (window as Window & {
+      __virtualStudioLastEnvironmentEvaluation?: EnvironmentPlanEvaluationSummary;
+    }).__virtualStudioLastEnvironmentEvaluation ?? null;
+  });
+  const [environmentInsights, setEnvironmentInsights] = useState<EnvironmentPlanInsightPresentation | null>(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    return (window as Window & {
+      __virtualStudioLastEnvironmentPlanInsights?: EnvironmentPlanInsightPresentation;
+    }).__virtualStudioLastEnvironmentPlanInsights ?? null;
+  });
 
   useEffect(() => {
     const unsubscribe = environmentService.subscribe(setEnvState);
     return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    return marketplaceEnvironmentService.subscribe(setMarketplacePackages);
   }, []);
 
   useEffect(() => {
@@ -191,6 +307,34 @@ export const EnvironmentBrowser: FC<EnvironmentBrowserProps> = ({
 
     return () => window.clearTimeout(timeoutId);
   }, [isActive]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleValidationUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<EnvironmentAssemblyValidationSummary>;
+      setAssemblyValidation(customEvent.detail || null);
+    };
+    const handleEvaluationUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<EnvironmentPlanEvaluationSummary>;
+      setEnvironmentEvaluation(customEvent.detail || null);
+    };
+    const handleInsightsUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<EnvironmentPlanInsightPresentation>;
+      setEnvironmentInsights(customEvent.detail || null);
+    };
+
+    window.addEventListener('vs-environment-assembly-validation-updated', handleValidationUpdate as EventListener);
+    window.addEventListener('vs-environment-evaluation-updated', handleEvaluationUpdate as EventListener);
+    window.addEventListener('vs-environment-plan-insights-updated', handleInsightsUpdate as EventListener);
+    return () => {
+      window.removeEventListener('vs-environment-assembly-validation-updated', handleValidationUpdate as EventListener);
+      window.removeEventListener('vs-environment-evaluation-updated', handleEvaluationUpdate as EventListener);
+      window.removeEventListener('vs-environment-plan-insights-updated', handleInsightsUpdate as EventListener);
+    };
+  }, []);
+
+  const environmentEvaluationPresentation = getEnvironmentEvaluationPresentation(environmentEvaluation);
 
   // Filter materials based on search and category
   const filteredWalls = WALL_MATERIALS.filter(w => {
@@ -220,6 +364,17 @@ export const EnvironmentBrowser: FC<EnvironmentBrowserProps> = ({
     return matchesCategory && matchesSearch;
   });
 
+  const filteredMarketplacePackages = marketplacePackages.filter((entry) => {
+    const matchesCategory = selectedEnvCategory === 'all' || entry.environmentCategory === selectedEnvCategory;
+    const lowerSearch = searchQuery.toLowerCase();
+    const matchesSearch = !searchQuery
+      || entry.name.toLowerCase().includes(lowerSearch)
+      || entry.description.toLowerCase().includes(lowerSearch)
+      || (entry.summary || '').toLowerCase().includes(lowerSearch)
+      || entry.tags.some((tag) => tag.toLowerCase().includes(lowerSearch));
+    return matchesCategory && matchesSearch;
+  });
+
   const handleSaveCustom = () => {
     if (customName.trim()) {
       environmentService.saveAsCustomPreset(customName.trim());
@@ -240,8 +395,62 @@ export const EnvironmentBrowser: FC<EnvironmentBrowserProps> = ({
     }
   };
 
+  const handleOpenPublishDialog = async () => {
+    setPublishLoading(true);
+    setPublishFeedback(null);
+    setPublishWarnings([]);
+    setPublishBlockingIssues([]);
+    try {
+      const draft = await marketplaceEnvironmentPackService.buildDraft();
+      setPublishName(draft.product.name);
+      setPublishDescription(draft.product.description);
+      setPublishTags(draft.product.tags.join(', '));
+      setPublishWarnings(draft.qualityReport.warnings || draft.validation.warnings || []);
+      setPublishBlockingIssues(draft.qualityReport.blockingIssues || draft.validation.blockingIssues || []);
+      setPublishQualityReport(draft.qualityReport);
+      setPublishMode(draft.publishMode);
+      setPublishCanPublishShared(draft.publishContext.canPublishShared);
+      setPublishCanUpdateSource(draft.publishContext.canUpdateSource);
+      setPublishNotice(draft.publishContext.notice);
+      setPublishSourceProductName(draft.publishContext.sourceProductName);
+      setPublishDialogOpen(true);
+    } catch (error) {
+      setPublishFeedback(error instanceof Error ? error.message : 'Kunne ikke forberede miljøpakken.');
+    } finally {
+      setPublishLoading(false);
+    }
+  };
+
+  const handlePublishEnvironmentPack = async () => {
+    setPublishSubmitting(true);
+    setPublishFeedback(null);
+    try {
+      const publishedProduct = await marketplaceService.publishCurrentEnvironmentPack({
+        name: publishName,
+        description: publishDescription,
+        tags: publishTags.split(',').map((tag) => tag.trim()).filter(Boolean),
+        mode: publishMode,
+      });
+      setPublishDialogOpen(false);
+      setPublishFeedback(`Publiserte miljøpakken "${publishedProduct.name}" til Marketplace.`);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('vs-open-marketplace-panel'));
+      }
+    } catch (error) {
+      setPublishFeedback(error instanceof Error ? error.message : 'Kunne ikke publisere miljøpakken.');
+    } finally {
+      setPublishSubmitting(false);
+    }
+  };
+
+  const publishActionLabel = publishMode === 'update_shared'
+    ? 'Oppdater delt pack'
+    : publishMode === 'create_shared'
+      ? 'Publiser delt pack'
+      : 'Lagre egen kopi';
+
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#141414', color: '#fff' }}>
+    <Box data-testid="environment-browser-panel" sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#141414', color: '#fff' }}>
       {/* Header */}
       <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -257,6 +466,18 @@ export const EnvironmentBrowser: FC<EnvironmentBrowserProps> = ({
             <IconButton size="small" onClick={() => setSaveDialogOpen(true)}>
               <SaveIcon sx={{ color: '#888' }} />
             </IconButton>
+          </Tooltip>
+          <Tooltip title="Publiser aktivt miljø som Marketplace-pack">
+            <span>
+              <IconButton
+                size="small"
+                data-testid="publish-environment-pack-button"
+                onClick={() => { void handleOpenPublishDialog(); }}
+                disabled={publishLoading}
+              >
+                <ColorLensIcon sx={{ color: '#f59e0b' }} />
+              </IconButton>
+            </span>
           </Tooltip>
         </Box>
 
@@ -277,6 +498,67 @@ export const EnvironmentBrowser: FC<EnvironmentBrowserProps> = ({
             },
           }}
         />
+
+        {assemblyValidation && (
+          <Alert
+            severity={assemblyValidation.backendValidated && assemblyValidation.differences.length === 0 ? 'success' : assemblyValidation.backendValidated ? 'warning' : 'info'}
+            sx={{ mt: 1.5, py: 0.75 }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+              {assemblyValidation.backendValidated
+                ? assemblyValidation.differences.length === 0
+                  ? 'Siste AI-miljø ble backend-validert'
+                  : 'Siste AI-miljø har assembly-avvik'
+                : 'Siste AI-miljø brukte lokal assembly'}
+            </Typography>
+            <Typography variant="caption" sx={{ display: 'block', opacity: 0.9 }}>
+              Props: {assemblyValidation.backendRuntimePropCount ?? assemblyValidation.localRuntimePropCount}
+              {' · '}
+              Relasjoner: {assemblyValidation.backendRelationshipCount ?? assemblyValidation.localRelationshipCount}
+              {assemblyValidation.backendValidated && assemblyValidation.differences.length > 0
+                ? ` · Avvik: ${assemblyValidation.differences.length}`
+                : ''}
+            </Typography>
+          </Alert>
+        )}
+
+        {environmentEvaluationPresentation && (
+          <Alert severity={environmentEvaluationPresentation.severity} sx={{ mt: 1.5, py: 0.75 }}>
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+              {environmentEvaluationPresentation.title}
+            </Typography>
+            <Typography variant="caption" sx={{ display: 'block', opacity: 0.9 }}>
+              {environmentEvaluationPresentation.summary}
+            </Typography>
+          </Alert>
+        )}
+
+        {environmentInsights && (
+          <Alert severity="info" sx={{ mt: 1.5, py: 0.75 }}>
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+              AI-retning: {environmentInsights.familyLabel}
+            </Typography>
+            <Typography variant="caption" sx={{ display: 'block', opacity: 0.9 }}>
+              {environmentInsights.summary}
+            </Typography>
+            {environmentInsights.validationModeLabel && (
+              <Typography variant="caption" sx={{ display: 'block', opacity: 0.9 }}>
+                Validering: {environmentInsights.validationModeLabel}
+              </Typography>
+            )}
+            {environmentInsights.lightingDetails.slice(0, 2).map((detail) => (
+              <Typography key={detail} variant="caption" sx={{ display: 'block', opacity: 0.9 }}>
+                {detail}
+              </Typography>
+            ))}
+          </Alert>
+        )}
+
+        {publishFeedback && (
+          <Alert severity={publishFeedback.startsWith('Publiserte') ? 'success' : 'warning'} sx={{ mt: 1.5, py: 0.75 }}>
+            <Typography variant="body2">{publishFeedback}</Typography>
+          </Alert>
+        )}
       </Box>
 
       {/* Tabs */}
@@ -314,6 +596,26 @@ export const EnvironmentBrowser: FC<EnvironmentBrowserProps> = ({
           </Box>
 
           {/* Presets Grid */}
+          {filteredMarketplacePackages.length > 0 && (
+            <Box sx={{ mb: 2.5 }}>
+              <Typography variant="caption" sx={{ color: '#c4b5fd', fontWeight: 700, letterSpacing: 0.2, display: 'block', mb: 1 }}>
+                Installerte miljøpakker fra Marketplace
+              </Typography>
+              <Grid container spacing={1}>
+                {filteredMarketplacePackages.map((entry) => (
+                  <Grid size={12} key={entry.packageId}>
+                    <MarketplaceEnvironmentCard
+                      environmentPackage={entry}
+                      onApply={() => {
+                        void marketplaceEnvironmentService.applyInstalledPackage(entry.packageId);
+                      }}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          )}
+
           <Grid container spacing={1}>
             {filteredPresets.map(preset => (
               <Grid size={12} key={preset.id}>
@@ -463,6 +765,104 @@ export const EnvironmentBrowser: FC<EnvironmentBrowserProps> = ({
         <DialogActions>
           <Button onClick={() => setSaveDialogOpen(false)}>Avbryt</Button>
           <Button variant="contained" onClick={handleSaveCustom}>Lagre</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={publishDialogOpen}
+        onClose={() => !publishSubmitting && setPublishDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+        data-testid="publish-environment-pack-dialog"
+      >
+        <DialogTitle>Publiser miljøpakke</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '12px !important' }}>
+          {publishBlockingIssues.length > 0 && (
+            <Alert severity="warning">
+              {publishBlockingIssues.join(' ')}
+            </Alert>
+          )}
+          {publishWarnings.length > 0 && (
+            <Alert severity="info">
+              {publishWarnings.join(' ')}
+            </Alert>
+          )}
+          {publishQualityReport && (
+            <Alert severity={publishQualityReport.ready ? 'success' : 'warning'}>
+              Kvalitetsrapport: {publishQualityReport.ready ? 'klar for release' : 'krever arbeid'}
+              {typeof publishQualityReport.score === 'number' ? ` · score ${publishQualityReport.score.toFixed(2)}` : ''}
+            </Alert>
+          )}
+          {publishNotice && (
+            <Alert severity={publishMode === 'save_copy' ? 'info' : 'success'}>
+              {publishNotice}
+            </Alert>
+          )}
+          {publishCanPublishShared && (
+            <FormControlLabel
+              control={(
+                <Switch
+                  checked={publishMode !== 'save_copy'}
+                  onChange={(_, checked) => {
+                    if (checked) {
+                      setPublishMode(publishCanUpdateSource ? 'update_shared' : 'create_shared');
+                      if (
+                        publishSourceProductName
+                        && /\(kopi\)$/i.test(publishName.trim())
+                      ) {
+                        setPublishName(publishSourceProductName);
+                      }
+                    } else {
+                      setPublishMode('save_copy');
+                      if (
+                        publishSourceProductName
+                        && publishName.trim() === publishSourceProductName.trim()
+                      ) {
+                        setPublishName(`${publishSourceProductName} (kopi)`);
+                      }
+                    }
+                  }}
+                />
+              )}
+              label={
+                publishCanUpdateSource
+                  ? 'Oppdater den delte Marketplace-pakken'
+                  : 'Publiser som delt Marketplace-pack'
+              }
+            />
+          )}
+          <TextField
+            fullWidth
+            label="Navn"
+            value={publishName}
+            onChange={(event) => setPublishName(event.target.value)}
+          />
+          <TextField
+            fullWidth
+            label="Beskrivelse"
+            value={publishDescription}
+            onChange={(event) => setPublishDescription(event.target.value)}
+            multiline
+            minRows={3}
+          />
+          <TextField
+            fullWidth
+            label="Tags"
+            helperText="Kommaseparerte tags"
+            value={publishTags}
+            onChange={(event) => setPublishTags(event.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPublishDialogOpen(false)} disabled={publishSubmitting}>Avbryt</Button>
+          <Button
+            variant="contained"
+            onClick={() => { void handlePublishEnvironmentPack(); }}
+            disabled={publishSubmitting || publishBlockingIssues.length > 0 || !publishName.trim()}
+            data-testid="confirm-publish-environment-pack"
+          >
+            {publishActionLabel}
+          </Button>
         </DialogActions>
       </Dialog>
 

@@ -34,8 +34,22 @@ export default function RightInspector() {
   const scene = useScene();
   const updateNode = useAppStore(state => state.updateNode);
   const deleteNode = useAppStore(state => state.removeNode);
+  const selectNode = useAppStore(state => state.selectNode);
   const id = scene.selection[0];
   const node = scene.nodes.find((n: SceneNode) => n.id === id);
+
+  React.useEffect(() => {
+    const handleSceneSelectionSync = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const selection = customEvent.detail?.selection;
+      const nextSelectedNodeId = selection?.selectedNodeId || selection?.selectedActorId || null;
+      selectNode(nextSelectedNodeId);
+    };
+
+    window.addEventListener('vs-scene-selection-sync', handleSceneSelectionSync as EventListener);
+    return () => window.removeEventListener('vs-scene-selection-sync', handleSceneSelectionSync as EventListener);
+  }, [selectNode]);
+
   if (!node)
     return (
       <Box sx={{ p: spacing.md, bgcolor: colors.background.panel, color: colors.text.primary, height: '100%' }}>
@@ -63,11 +77,15 @@ export default function RightInspector() {
               onClick={() => {
                 if (confirm(`Are you sure you want to delete "${node.name || node.type}"?`)) {
                   deleteNode(node.id);
+                  selectNode(null);
                   // Also remove from 3D scene if it's a mesh
                   const mesh = window.studio?.scene?.getMeshByName(node.id);
                   if (mesh) {
                     mesh.dispose();
                   }
+                  window.dispatchEvent(new CustomEvent('ch-scene-node-selected', {
+                    detail: { nodeId: null }
+                  }));
                   // Dispatch event for cleanup
                   window.dispatchEvent(new CustomEvent('ch-scene-node-removed', {
                     detail: { nodeId: node.id }

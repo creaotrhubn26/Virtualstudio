@@ -411,16 +411,38 @@ export function EquipmentHierarchyPanel({
   const [linkSourceId, setLinkSourceId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [advancedMenuAnchor, setAdvancedMenuAnchor] = useState<null | HTMLElement>(null);
+  const [runtimeSelectedNodeId, setRuntimeSelectedNodeId] = useState<string | null>(null);
 
   // Sync with external selection if provided
-  const selectedNodeId = externalSelectedNodeId ?? selection.selectedIds[0] ?? null;
+  const selectedNodeId = externalSelectedNodeId ?? runtimeSelectedNodeId ?? selection.selectedIds[0] ?? null;
   const onSelectNode = externalOnSelectNode ?? ((id: string | null) => {
     if (id) {
       selection.select(id);
+      window.dispatchEvent(new CustomEvent('ch-scene-node-selected', {
+        detail: { nodeId: id }
+      }));
     } else {
       selection.clear();
+      window.dispatchEvent(new CustomEvent('ch-scene-node-selected', {
+        detail: { nodeId: null }
+      }));
     }
   });
+
+  React.useEffect(() => {
+    const handleSceneSelectionSync = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const selectionState = customEvent.detail?.selection;
+      const nextSelectedId = selectionState?.selectedLightId
+        || selectionState?.selectedActorId
+        || selectionState?.selectedNodeId
+        || null;
+      setRuntimeSelectedNodeId(nextSelectedId);
+    };
+
+    window.addEventListener('vs-scene-selection-sync', handleSceneSelectionSync as EventListener);
+    return () => window.removeEventListener('vs-scene-selection-sync', handleSceneSelectionSync as EventListener);
+  }, []);
 
   // Get all nodes and groups
   const allNodes = useMemo(() => equipmentGroupingService.getAllNodes(), [refreshKey]);
@@ -445,7 +467,7 @@ export function EquipmentHierarchyPanel({
     if (selectedNodes.length > 0) {
       equipmentGroupingService.createGroup(newGroupName, selectedNodes.map((n) => n.id));
     }
-    setNewGroupName(', ');
+    setNewGroupName('');
     setCreateGroupDialogOpen(false);
     setRefreshKey((k) => k + 1);
   }, [newGroupName, selectedNodeId, allNodes]);
@@ -492,8 +514,11 @@ export function EquipmentHierarchyPanel({
 
   const handleDeleteNode = useCallback((nodeId: string) => {
     equipmentGroupingService.unregisterNode(nodeId);
+    if (selectedNodeId === nodeId) {
+      onSelectNode(null);
+    }
     setRefreshKey((k) => k + 1);
-  }, []);
+  }, [onSelectNode, selectedNodeId]);
 
   const handleAcceptSuggestion = useCallback((sourceId: string, targetId: string) => {
     equipmentGroupingService.linkNodes(sourceId, targetId);
@@ -534,7 +559,7 @@ export function EquipmentHierarchyPanel({
               label={`${selection.selectedIds.length} selected`} 
               size="small" 
               color="primary"
-              onDelete={() => selection.clear()}
+              onDelete={() => onSelectNode(null)}
             />
           )}
         </Box>
@@ -575,6 +600,16 @@ export function EquipmentHierarchyPanel({
           <MenuItem onClick={() => {
             const duplicated = equipmentGroupingService.duplicateNodes(selection.selectedIds);
             selection.select(duplicated);
+            const duplicatedIds = Array.isArray(duplicated)
+              ? duplicated
+              : duplicated
+                ? [duplicated]
+                : [];
+            if (duplicatedIds.length > 0) {
+              window.dispatchEvent(new CustomEvent('ch-scene-node-selected', {
+                detail: { nodeId: duplicatedIds[0] }
+              }));
+            }
             setRefreshKey((k) => k + 1);
             setAdvancedMenuAnchor(null);
           }} disabled={selection.selectedIds.length === 0}>
@@ -719,4 +754,3 @@ export function EquipmentHierarchyPanel({
 }
 
 export default EquipmentHierarchyPanel;
-

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Box,
   Typography,
@@ -12,6 +12,7 @@ import {
   Tabs,
   Tab,
   InputBase,
+  Chip,
 } from '@mui/material';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import CameraIcon from '@mui/icons-material/Camera';
@@ -20,6 +21,7 @@ import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import CameraRollIcon from '@mui/icons-material/CameraRoll';
+import { useCameraLightingSyncStore } from '../state/cameraLightingSyncStore';
 
 interface CameraBody {
   id: string;
@@ -296,16 +298,26 @@ export function CameraGearPanel() {
   const [lensBrandFilter, setLensBrandFilter] = useState('all');
   const [cameraSearch, setCameraSearch] = useState('');
   const [lensSearch, setLensSearch] = useState('');
-  const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
-  const [selectedLens, setSelectedLens] = useState<string | null>(null);
+  const selection = useCameraLightingSyncStore((state) => state.selection);
+  const syncedCamera = useCameraLightingSyncStore((state) => state.camera);
+  const setSelectedCameraBody = useCameraLightingSyncStore((state) => state.setSelectedCameraBody);
+  const setSelectedLens = useCameraLightingSyncStore((state) => state.setSelectedLens);
+  const activeCameraBody = useMemo(
+    () => CAMERA_BODIES.find((camera) => camera.id === selection.selectedCameraBodyId) || null,
+    [selection.selectedCameraBodyId],
+  );
+  const activeLens = useMemo(
+    () => LENSES.find((lens) => lens.id === selection.selectedLensId) || null,
+    [selection.selectedLensId],
+  );
 
   const selectCamera = (camera: CameraBody) => {
-    setSelectedCamera(camera.id);
+    setSelectedCameraBody(camera.id, 'camera-gear-panel');
     window.dispatchEvent(new CustomEvent('ch-select-camera', { detail: camera }));
   };
 
   const selectLens = (lens: Lens) => {
-    setSelectedLens(lens.id);
+    setSelectedLens(lens.id, 'camera-gear-panel');
     const focalMatch = lens.focalLength.match(/(\d+)/);
     const apertureMatch = lens.aperture.match(/f\/([\d.]+)/);
     window.dispatchEvent(new CustomEvent('ch-select-lens', {
@@ -404,6 +416,44 @@ export function CameraGearPanel() {
           }}>
             Kameraer og objektiver
           </Typography>
+        </Box>
+      </Box>
+      <Box
+        sx={{
+          mx: 2,
+          mb: 1.5,
+          px: 2,
+          py: 1.5,
+          borderRadius: '12px',
+          bgcolor: 'rgba(0, 168, 255, 0.08)',
+          border: '1px solid rgba(0, 168, 255, 0.18)',
+        }}
+      >
+        <Typography sx={{ color: '#9bdcff', fontSize: 12, fontWeight: 700, mb: 0.75 }}>
+          Live synk med scenen
+        </Typography>
+        <Typography sx={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>
+          {activeCameraBody?.name || 'Ingen kamerabody valgt'} · {activeLens?.name || 'Ingen linse valgt'}
+        </Typography>
+        <Typography sx={{ color: '#9aa3ad', fontSize: 12, mt: 0.5 }}>
+          {syncedCamera.focalLength}mm · f/{syncedCamera.aperture} · ISO {syncedCamera.iso} · {syncedCamera.shutter}
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+          <Chip
+            size="small"
+            label={syncedCamera.autoRig ? `AI-rigget ${syncedCamera.shotType || 'shot'}` : 'Manuell kamerastyring'}
+            sx={{
+              bgcolor: syncedCamera.autoRig ? 'rgba(0, 168, 255, 0.18)' : 'rgba(255,255,255,0.08)',
+              color: '#fff',
+            }}
+          />
+          {selection.lastSource && (
+            <Chip
+              size="small"
+              label={`Kilde: ${selection.lastSource}`}
+              sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: '#d1d8de' }}
+            />
+          )}
         </Box>
       </Box>
       <Tabs 
@@ -539,8 +589,8 @@ export function CameraGearPanel() {
                   key={camera.id}
                   onClick={() => selectCamera(camera)}
                   sx={{
-                    bgcolor: selectedCamera === camera.id ? '#00a8ff22' : '#252525',
-                    border: selectedCamera === camera.id ? '2px solid #00a8ff' : '1px solid #333',
+                    bgcolor: selection.selectedCameraBodyId === camera.id ? '#00a8ff22' : '#252525',
+                    border: selection.selectedCameraBodyId === camera.id ? '2px solid #00a8ff' : '1px solid #333',
                     borderRadius: 2,
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
@@ -702,8 +752,8 @@ export function CameraGearPanel() {
                   key={lens.id}
                   onClick={() => selectLens(lens)}
                   sx={{
-                    bgcolor: selectedLens === lens.id ? '#00a8ff22' : '#252525',
-                    border: selectedLens === lens.id ? '2px solid #00a8ff' : '1px solid #333',
+                    bgcolor: selection.selectedLensId === lens.id ? '#00a8ff22' : '#252525',
+                    border: selection.selectedLensId === lens.id ? '2px solid #00a8ff' : '1px solid #333',
                     borderRadius: 2,
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',

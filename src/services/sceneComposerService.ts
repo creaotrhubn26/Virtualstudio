@@ -1,6 +1,18 @@
-import { SceneComposition, EnvironmentState, WallState, FloorState, AtmosphereSettings, GoboState } from '../core/models/sceneComposer';
+import {
+  SceneComposition,
+  EnvironmentState,
+  WallState,
+  FloorState,
+  AtmosphereSettings,
+  GoboState,
+  SceneEnvironmentAssemblyValidation,
+} from '../core/models/sceneComposer';
 import { sceneApi } from './virtualStudioApiService';
 import settingsService, { getCurrentUserId } from './settingsService';
+import { sceneAssetStorageService } from './sceneAssetStorageService';
+import { sceneExportService } from './sceneExportService';
+import { environmentShellBuilderService } from './environmentShellBuilderService';
+import { getSceneAssemblyValidationSortRank } from './sceneAssemblyValidationPresentation';
 
 const SCENES_NAMESPACE = 'virtualStudio_sceneCompositions';
 const TEMPLATES_NAMESPACE = 'virtualStudio_sceneTemplates';
@@ -43,6 +55,37 @@ void hydrateTemplatesFromSettings();
 // Simple in-memory cache for scenes
 const sceneCache = new Map<string, SceneComposition>();
 
+const normalizeSceneThumbnail = async (scene: SceneComposition): Promise<SceneComposition> => {
+  const storedThumbnail = await sceneAssetStorageService.maybeStoreThumbnail(scene.id, scene.thumbnail);
+  if (!storedThumbnail || storedThumbnail === scene.thumbnail) {
+    return scene;
+  }
+
+  return {
+    ...scene,
+    thumbnail: storedThumbnail,
+  };
+};
+
+const readEnvironmentAssemblyValidationSnapshot = (): SceneEnvironmentAssemblyValidation | undefined => {
+  if (typeof window === 'undefined') {
+    return undefined;
+  }
+
+  const summary = (window as Window & {
+    __virtualStudioLastEnvironmentAssemblyValidation?: SceneEnvironmentAssemblyValidation;
+  }).__virtualStudioLastEnvironmentAssemblyValidation;
+
+  if (!summary) {
+    return undefined;
+  }
+
+  return {
+    ...JSON.parse(JSON.stringify(summary)) as SceneEnvironmentAssemblyValidation,
+    validatedAt: summary.validatedAt || new Date().toISOString(),
+  };
+};
+
 export const sceneComposerService = {
   /**
   * Get all saved scenes from database (with settings cache fallback)
@@ -56,6 +99,7 @@ export const sceneComposerService = {
           id: s.id,
           name: s.name,
           description: s.description,
+          thumbnail: (s.scene_data as Partial<SceneComposition>)?.thumbnail ?? s.thumbnail,
           createdAt: s.created_at,
           updatedAt: s.updated_at,
         } as SceneComposition));
@@ -94,19 +138,21 @@ export const sceneComposerService = {
     }
 
     const updatedScene = { ...scene, updatedAt: new Date().toISOString() };
+    const normalizedScene = await normalizeSceneThumbnail(updatedScene);
 
     try {
       await sceneApi.save({
-        id: updatedScene.id,
-        name: updatedScene.name,
-        description: updatedScene.description,
-        scene_data: updatedScene,
+        id: normalizedScene.id,
+        name: normalizedScene.name,
+        description: normalizedScene.description,
+        thumbnail: normalizedScene.thumbnail,
+        scene_data: normalizedScene,
       });
     } catch (error) {
       console.warn('Database save failed, using settings cache:', error);
     }
 
-    this.saveScene(updatedScene, false);
+    this.saveScene(normalizedScene, false);
   },
 
   saveScene(scene: SceneComposition, incremental: boolean = true): void {
@@ -134,6 +180,25 @@ export const sceneComposerService = {
 
       sceneCache.set(updatedScene.id, updatedScene);
       void settingsService.setSetting(SCENES_NAMESPACE, scenes, { userId: getCurrentUserId() });
+
+      if (updatedScene.thumbnail) {
+        void normalizeSceneThumbnail(updatedScene)
+          .then((normalizedScene) => {
+            if (normalizedScene.thumbnail === updatedScene.thumbnail) {
+              return;
+            }
+
+            const latestScene = sceneCache.get(updatedScene.id);
+            if (!latestScene || latestScene.thumbnail !== updatedScene.thumbnail) {
+              return;
+            }
+
+            this.saveScene({ ...latestScene, thumbnail: normalizedScene.thumbnail }, false);
+          })
+          .catch((error) => {
+            console.warn(`Error storing remote thumbnail for scene ${updatedScene.id}:`, error);
+          });
+      }
     } catch (error) {
       console.error('Error saving scene to settings cache:', error);
       throw error;
@@ -152,6 +217,7 @@ export const sceneComposerService = {
           id: dbScene.id,
           name: dbScene.name,
           description: dbScene.description,
+          thumbnail: (dbScene.scene_data as Partial<SceneComposition>)?.thumbnail ?? dbScene.thumbnail,
           createdAt: dbScene.created_at,
           updatedAt: dbScene.updated_at,
         } as SceneComposition;
@@ -234,18 +300,9 @@ export const sceneComposerService = {
   /**
    * Download scene as JSON file
    */
-  downloadScene(scene: SceneComposition): void {
+  async downloadScene(scene: SceneComposition): Promise<void> {
     try {
-      const json = this.exportScene(scene);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${scene.name.replace(/[^a-z0-9]/gi, '_')}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      await sceneExportService.downloadScene(scene, 'json');
     } catch (error) {
       console.error('Error downloading scene:', error);
       throw error;
@@ -308,7 +365,7 @@ export const sceneComposerService = {
   /**
    * Sort scenes
    */
-  sortScenes(scenes: SceneComposition[], sortBy: 'name' | 'createdAt' | 'updatedAt' | 'size'): SceneComposition[] {
+  sortScenes(scenes: SceneComposition[], sortBy: 'name' | 'createdAt' | 'updatedAt' | 'size' | 'validationStatus'): SceneComposition[] {
     const sorted = [...scenes];
     sorted.sort((a, b) => {
       switch (sortBy) {
@@ -322,6 +379,12 @@ export const sceneComposerService = {
           const sizeA = a.size || this.calculateSceneSize(a);
           const sizeB = b.size || this.calculateSceneSize(b);
           return sizeB - sizeA;
+        case 'validationStatus':
+          const validationRankDelta = getSceneAssemblyValidationSortRank(a) - getSceneAssemblyValidationSortRank(b);
+          if (validationRankDelta !== 0) {
+            return validationRankDelta;
+          }
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
         default:
           return 0;
       }
@@ -600,6 +663,7 @@ export const sceneComposerService = {
   captureEnvironmentState(): EnvironmentState {
     const walls: WallState[] = [];
     const floors: FloorState[] = [];
+    const environmentState = (window as any).environmentService?.getState?.();
     
     // Hent alle vegger fra Babylon.js scene
     const scene = (window as any).virtualStudio?.scene;
@@ -637,16 +701,36 @@ export const sceneComposerService = {
       ambientIntensity: 0.5,
     };
     
-    return { walls, floors, atmosphere };
+    return {
+      walls,
+      floors,
+      atmosphere,
+      roomShell: environmentState?.roomShell,
+    };
+  },
+
+  captureEnvironmentAssemblyValidation(): SceneEnvironmentAssemblyValidation | undefined {
+    return readEnvironmentAssemblyValidationSnapshot();
   },
 
   /**
    * Restore environment from saved state
    */
-  restoreEnvironment(environment: EnvironmentState): void {
+  async restoreEnvironment(environment: EnvironmentState): Promise<void> {
     const environmentService = (window as any).environmentService;
+    const resolvedRoomShell = environment.roomShell
+      ? (await environmentShellBuilderService.buildShell({
+        shell: environment.roomShell,
+      })).shell
+      : null;
     if (!environmentService) {
       // Fallback: dispatch events directly
+      if (resolvedRoomShell) {
+        window.dispatchEvent(new CustomEvent('ch-apply-room-shell', {
+          detail: { shell: resolvedRoomShell }
+        }));
+      }
+
       // Restore walls
       environment.walls.forEach(wall => {
         window.dispatchEvent(new CustomEvent('ch-add-environment-wall', {
@@ -683,6 +767,9 @@ export const sceneComposerService = {
     
     // Clear existing environment
     environmentService.clearEnvironment?.();
+    if (resolvedRoomShell) {
+      environmentService.applyRoomShell?.(resolvedRoomShell);
+    }
     
     // Restore walls
     environment.walls.forEach(wall => {
@@ -748,12 +835,12 @@ export const sceneComposerService = {
     });
     
     // Capture standalone gobos
-    const standaloneGobos = goboService.getAllStandaloneGobos() as Map<string, any>;
-    standaloneGobos.forEach((mesh: any, goboId: string) => {
+    const standaloneGobos = goboService.getAllStandaloneGobos() as any[];
+    standaloneGobos.forEach((mesh: any, index: number) => {
       const metadata = mesh.metadata;
       if (metadata?.type === 'gobo') {
         gobos.push({
-          id: goboId,
+          id: metadata.attachmentId || `standalone_gobo_${index}`,
           goboId: metadata.goboId || 'unknown',
           pattern: metadata.options?.pattern || 'window',
           position: [mesh.position.x, mesh.position.y, mesh.position.z],
@@ -802,4 +889,3 @@ export const sceneComposerService = {
     });
   }
 };
-

@@ -1,9 +1,15 @@
+import {
+  resolveLightingPatternThumbnail,
+  type LightingPatternGoboRecommendation,
+} from './lightingPatternIntelligence';
+
 export interface LightSetup {
   type: 'key' | 'fill' | 'rim' | 'back' | 'hair' | 'kicker' | 'accent' | 'background' | 'practical';
   position: { x: number; y: number; z: number };
   intensity: number;
   colorTemp: number;
   modifier?: string;
+  gobo?: LightingPatternGoboRecommendation;
 }
 
 export interface CinematographyPattern {
@@ -35,7 +41,7 @@ const patterns: CinematographyPattern[] = [
     ],
     usedIn: ['The Godfather', 'Girl with a Pearl Earring'],
     reference: 'Light Science & Magic, Ch. 9',
-    thumbnail: '/pattern-thumbnails/rembrandt_lighting_pattern_diagram.png'
+    thumbnail: resolveLightingPatternThumbnail('rembrandt')
   },
   {
     id: 'butterfly',
@@ -51,7 +57,7 @@ const patterns: CinematographyPattern[] = [
     ],
     usedIn: ['Marlene Dietrich films', 'Vogue covers'],
     reference: 'Hollywood Lighting, Paramount era',
-    thumbnail: '/pattern-thumbnails/butterfly_lighting_pattern_diagram.png'
+    thumbnail: resolveLightingPatternThumbnail('butterfly')
   },
   {
     id: 'split',
@@ -66,7 +72,7 @@ const patterns: CinematographyPattern[] = [
     ],
     usedIn: ['The Dark Knight', 'Breaking Bad'],
     reference: 'Cinematography Theory and Practice',
-    thumbnail: '/pattern-thumbnails/split_lighting_pattern_diagram.png'
+    thumbnail: resolveLightingPatternThumbnail('split')
   },
   {
     id: 'loop',
@@ -82,7 +88,7 @@ const patterns: CinematographyPattern[] = [
     ],
     usedIn: ['Corporate headshots', 'Magazine portraits'],
     reference: 'Portrait Photography Guide',
-    thumbnail: '/pattern-thumbnails/loop_lighting_pattern_diagram.png'
+    thumbnail: resolveLightingPatternThumbnail('loop')
   },
   {
     id: 'broad',
@@ -98,7 +104,7 @@ const patterns: CinematographyPattern[] = [
     ],
     usedIn: ['Character portraits', 'Environmental portraits'],
     reference: 'Light Science & Magic',
-    thumbnail: '/pattern-thumbnails/broad_lighting_pattern_diagram.png'
+    thumbnail: resolveLightingPatternThumbnail('broad')
   },
   {
     id: 'short',
@@ -114,7 +120,7 @@ const patterns: CinematographyPattern[] = [
     ],
     usedIn: ['Fashion portraits', 'Fine art photography'],
     reference: 'Dramatic Portraits Guide',
-    thumbnail: '/pattern-thumbnails/short_lighting_pattern_diagram.png'
+    thumbnail: resolveLightingPatternThumbnail('short')
   },
   {
     id: 'clamshell',
@@ -130,7 +136,7 @@ const patterns: CinematographyPattern[] = [
     ],
     usedIn: ['Beauty campaigns', 'Cosmetics advertising'],
     reference: 'Beauty Photography Masterclass',
-    thumbnail: '/pattern-thumbnails/clamshell_lighting_pattern_diagram.png'
+    thumbnail: resolveLightingPatternThumbnail('clamshell')
   },
   {
     id: 'three-point',
@@ -147,7 +153,7 @@ const patterns: CinematographyPattern[] = [
     ],
     usedIn: ['Interviews', 'Corporate videos', 'News broadcasts'],
     reference: 'Film Lighting 101',
-    thumbnail: '/pattern-thumbnails/three-point_lighting_diagram.png'
+    thumbnail: resolveLightingPatternThumbnail('three-point')
   },
   {
     id: 'high-key',
@@ -165,7 +171,7 @@ const patterns: CinematographyPattern[] = [
     ],
     usedIn: ['Product photography', 'Medical imaging', 'Comedy films'],
     reference: 'Commercial Photography Techniques',
-    thumbnail: '/pattern-thumbnails/high-key_lighting_diagram.png'
+    thumbnail: resolveLightingPatternThumbnail('high-key')
   },
   {
     id: 'low-key',
@@ -180,7 +186,7 @@ const patterns: CinematographyPattern[] = [
     ],
     usedIn: ['Film noir', 'Thriller films', 'Sin City'],
     reference: 'Film Noir Cinematography',
-    thumbnail: '/pattern-thumbnails/film_noir_lighting_diagram.png'
+    thumbnail: resolveLightingPatternThumbnail('low-key')
   },
   {
     id: 'chiaroscuro',
@@ -225,7 +231,7 @@ const patterns: CinematographyPattern[] = [
     ],
     usedIn: ['Music performances', 'Sports photography', 'Dramatic portraits'],
     reference: 'Backlight Mastery',
-    thumbnail: '/pattern-thumbnails/rim_lighting_pattern_diagram.png'
+    thumbnail: resolveLightingPatternThumbnail('rim-light')
   },
   {
     id: 'horror',
@@ -250,7 +256,20 @@ const patterns: CinematographyPattern[] = [
     mood: 'realistic',
     keyToFillRatio: '3',
     lights: [
-      { type: 'key', position: { x: -3, y: 2, z: 0 }, intensity: 100, colorTemp: 4000, modifier: 'window frame' },
+      {
+        type: 'key',
+        position: { x: -3, y: 2, z: 0 },
+        intensity: 100,
+        colorTemp: 4000,
+        modifier: 'window frame',
+        gobo: {
+          goboId: 'window',
+          size: 1.1,
+          rotation: 0,
+          intensity: 0.85,
+          rationale: 'Window breakup reinforces motivated source lighting.',
+        },
+      },
       { type: 'practical', position: { x: 1, y: 1, z: 1 }, intensity: 30, colorTemp: 2700 }
     ],
     usedIn: ['Blade Runner', 'Natural light films'],
@@ -354,9 +373,35 @@ const patterns: CinematographyPattern[] = [
     mood: 'futuristic',
     keyToFillRatio: '3',
     lights: [
-      { type: 'key', position: { x: -2, y: 1.5, z: 1 }, intensity: 100, colorTemp: 4000, modifier: 'magenta gel' },
+      {
+        type: 'key',
+        position: { x: -2, y: 1.5, z: 1 },
+        intensity: 100,
+        colorTemp: 4000,
+        modifier: 'magenta gel',
+        gobo: {
+          goboId: 'lines',
+          size: 1,
+          rotation: 90,
+          intensity: 0.68,
+          rationale: 'Linear breakup helps cyberpunk signage feel directional.',
+        },
+      },
       { type: 'rim', position: { x: 2, y: 2, z: -1 }, intensity: 80, colorTemp: 6500, modifier: 'cyan gel' },
-      { type: 'accent', position: { x: 0, y: 0.5, z: 2 }, intensity: 40, colorTemp: 3200, modifier: 'purple gel' }
+      {
+        type: 'accent',
+        position: { x: 0, y: 0.5, z: 2 },
+        intensity: 40,
+        colorTemp: 3200,
+        modifier: 'purple gel',
+        gobo: {
+          goboId: 'dots',
+          size: 0.9,
+          rotation: 0,
+          intensity: 0.55,
+          rationale: 'Dot breakup creates a lively reflected neon texture.',
+        },
+      }
     ],
     usedIn: ['Blade Runner 2049', 'Cyberpunk 2077', 'Music videos'],
     reference: 'Neon Noir Cinematography'

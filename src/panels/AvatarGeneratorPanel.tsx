@@ -1,7 +1,8 @@
 /**
  * 3D Generator Panel
  * 
- * Generate 3D avatars from images using Meta SAM 3D Body, or generate 3D models from text using Hyper3D Rodin.
+ * Generate 3D avatars from images using a quality-first avatar provider pipeline,
+ * or generate 3D models from text using Hyper3D Rodin.
  * The generated GLB meshes can be loaded directly into the Babylon.js scene.
  */
 
@@ -33,6 +34,8 @@ import {
   List,
   ListItem,
   ListItemText,
+  FormControlLabel,
+  Switch,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -60,6 +63,45 @@ interface AvatarGeneratorPanelProps {
 
 type GenerationStatus = 'idle' | 'uploading' | 'processing' | 'success' | 'error';
 type GeneratorTab = 'avatar' | 'model';
+type AvatarProviderSelection = 'auto' | 'didimo' | 'avaturn' | 'in3d' | 'local';
+type AvatarCharacterTier = 'hero_talent' | 'staff_branded' | 'scan_subject';
+
+interface AvatarProviderHealthEntry {
+  id?: string;
+  name?: string;
+  configured?: boolean;
+  generationReady?: boolean;
+  qualityCeiling?: string;
+  probe?: {
+    healthy?: boolean;
+    reachable?: boolean;
+    statusCode?: number;
+    status?: string;
+  } | null;
+}
+
+interface AvatarProviderRecommendation {
+  provider: string;
+  fallbackProvider?: string | null;
+  qualityMode?: string;
+  blockedProvider?: string;
+}
+
+interface AvatarProviderHealthResponse {
+  providers: Record<string, AvatarProviderHealthEntry>;
+  recommendations?: Record<string, AvatarProviderRecommendation>;
+}
+
+interface AvatarQualityReport {
+  providerUsed?: string;
+  requestedProvider?: string;
+  recommendedProvider?: string;
+  characterTier?: string;
+  qualityTarget?: string;
+  premiumReady?: boolean;
+  usedFallback?: boolean;
+  issues?: string[];
+}
 
 const AVATAR_CATEGORIES = [
   { id: 'voksen', label: 'Voksen' },
@@ -69,6 +111,40 @@ const AVATAR_CATEGORIES = [
   { id: 'atlet', label: 'Atlet' },
   { id: 'modell', label: 'Modell' },
   { id: 'annet', label: 'Annet' },
+];
+
+const AVATAR_TIER_OPTIONS: Array<{ value: AvatarCharacterTier; label: string; description: string }> = [
+  { value: 'hero_talent', label: 'Hero', description: 'Close-ups og kampanjebilder' },
+  { value: 'staff_branded', label: 'Staff', description: 'Brandede ansatte og NPC-er' },
+  { value: 'scan_subject', label: 'Scan', description: 'Telefonscan / likeness' },
+];
+
+const AVATAR_PROVIDER_OPTIONS: Array<{ value: AvatarProviderSelection; label: string }> = [
+  { value: 'auto', label: 'Auto (anbefalt)' },
+  { value: 'didimo', label: 'Didimo' },
+  { value: 'avaturn', label: 'Avaturn' },
+  { value: 'in3d', label: 'in3D' },
+  { value: 'local', label: 'Lokal fallback' },
+];
+
+const AVATAR_QUALITY_OPTIONS = [
+  { value: 'production', label: 'Production' },
+  { value: 'hero_closeup', label: 'Hero close-up' },
+  { value: 'draft', label: 'Draft' },
+];
+
+const BRANDING_MODE_OPTIONS = [
+  { value: 'none', label: 'Ingen branding' },
+  { value: 'branded_uniform', label: 'Brandet uniform' },
+  { value: 'hero_styling', label: 'Hero styling' },
+];
+
+const BODY_TYPE_OPTIONS = [
+  { value: 'average', label: 'Average' },
+  { value: 'slim', label: 'Slim' },
+  { value: 'curvy', label: 'Curvy' },
+  { value: 'plus-size', label: 'Plus-size' },
+  { value: 'muscular', label: 'Muscular' },
 ];
 
 // Rodin 3D Generator constants
@@ -347,6 +423,23 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
   const [avatarName, setAvatarName] = useState<string>('');
   const [avatarCategory, setAvatarCategory] = useState<string>('voksen');
   const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
+  const [avatarProvider, setAvatarProvider] = useState<AvatarProviderSelection>('auto');
+  const [characterTier, setCharacterTier] = useState<AvatarCharacterTier>('staff_branded');
+  const [qualityTarget, setQualityTarget] = useState<string>('production');
+  const [brandingMode, setBrandingMode] = useState<string>('none');
+  const [bodyType, setBodyType] = useState<string>('average');
+  const [telephotoCapture, setTelephotoCapture] = useState<boolean>(false);
+  const [allowFallback, setAllowFallback] = useState<boolean>(false);
+  const [providerHealth, setProviderHealth] = useState<AvatarProviderHealthResponse | null>(null);
+  const [providerHealthLoading, setProviderHealthLoading] = useState<boolean>(false);
+  const [qualityReport, setQualityReport] = useState<AvatarQualityReport | null>(null);
+  const [providerNameUsed, setProviderNameUsed] = useState<string | null>(null);
+  const [sidePreviewOneName, setSidePreviewOneName] = useState<string | null>(null);
+  const [sidePreviewTwoName, setSidePreviewTwoName] = useState<string | null>(null);
+  const [depthPreviewName, setDepthPreviewName] = useState<string | null>(null);
+  const [sideFileOne, setSideFileOne] = useState<File | null>(null);
+  const [sideFileTwo, setSideFileTwo] = useState<File | null>(null);
+  const [depthFile, setDepthFile] = useState<File | null>(null);
   const [faceAnalysis, setFaceAnalysis] = useState<{
     gender?: string;
     gender_confidence?: number;
@@ -355,6 +448,9 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
     category?: string;
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sideFileInputOneRef = useRef<HTMLInputElement>(null);
+  const sideFileInputTwoRef = useRef<HTMLInputElement>(null);
+  const depthFileInputRef = useRef<HTMLInputElement>(null);
 
   // Rodin 3D model generation state
   const [modelPrompt, setModelPrompt] = useState('');
@@ -369,6 +465,80 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [generatedModelUrl, setGeneratedModelUrl] = useState<string | null>(null);
 
+  const fetchAvatarProviderHealth = useCallback(async () => {
+    setProviderHealthLoading(true);
+    try {
+      const response = await fetch('/api/avatar/providers/health');
+      if (!response.ok) {
+        throw new Error(`Kunne ikke hente provider-status (${response.status})`);
+      }
+      const result = await response.json();
+      setProviderHealth({
+        providers: result.providers || {},
+        recommendations: result.recommendations || {},
+      });
+    } catch (error) {
+      console.error('Failed to fetch avatar provider health:', error);
+      setProviderHealth(null);
+    } finally {
+      setProviderHealthLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open && activeTab === 'avatar') {
+      void fetchAvatarProviderHealth();
+    }
+  }, [activeTab, fetchAvatarProviderHealth, open]);
+
+  const tierRecommendation = providerHealth?.recommendations?.[characterTier];
+  const effectiveProviderId = avatarProvider === 'auto'
+    ? (tierRecommendation?.provider as AvatarProviderSelection | undefined) || 'local'
+    : avatarProvider;
+  const effectiveProviderHealth = providerHealth?.providers?.[effectiveProviderId];
+  const blockedPremiumProvider = avatarProvider === 'auto'
+    ? tierRecommendation?.blockedProvider
+    : undefined;
+  const explicitPremiumNotReady = avatarProvider !== 'auto'
+    && avatarProvider !== 'local'
+    && effectiveProviderHealth?.generationReady === false;
+  const qualityBlocked = !allowFallback
+    && (explicitPremiumNotReady || (
+      effectiveProviderId === 'local'
+      && ((avatarProvider !== 'local' && avatarProvider !== 'auto') || Boolean(blockedPremiumProvider))
+    ));
+  const characterTierLabel = AVATAR_TIER_OPTIONS.find((option) => option.value === characterTier)?.label || characterTier;
+  const requiresSideCaptures = effectiveProviderId === 'avaturn' || characterTier === 'staff_branded';
+  const requiresDepthCapture = effectiveProviderId === 'didimo' || characterTier === 'hero_talent';
+  const missingRequiredCaptures = [
+    !selectedFile ? 'frontbilde' : null,
+    requiresSideCaptures && !sideFileOne ? 'sidebilde 1' : null,
+    requiresSideCaptures && !sideFileTwo ? 'sidebilde 2' : null,
+  ].filter(Boolean) as string[];
+
+  const applySelectedImage = useCallback(
+    (file: File | null, setter: (file: File | null) => void, nameSetter?: (name: string | null) => void) => {
+      if (!file) {
+        setter(null);
+        if (nameSetter) {
+          nameSetter(null);
+        }
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        setErrorMessage('Vennligst velg en bildefil');
+        return;
+      }
+      setter(file);
+      if (nameSetter) {
+        nameSetter(file.name);
+      }
+      setStatus('idle');
+      setErrorMessage(null);
+    },
+    [],
+  );
+
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -382,6 +552,18 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
       setErrorMessage(null);
     }
   }, []);
+
+  const handleSideFileOneSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    applySelectedImage(event.target.files?.[0] || null, setSideFileOne, setSidePreviewOneName);
+  }, [applySelectedImage]);
+
+  const handleSideFileTwoSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    applySelectedImage(event.target.files?.[0] || null, setSideFileTwo, setSidePreviewTwoName);
+  }, [applySelectedImage]);
+
+  const handleDepthFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    applySelectedImage(event.target.files?.[0] || null, setDepthFile, setDepthPreviewName);
+  }, [applySelectedImage]);
 
   const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -400,20 +582,45 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
 
   const handleGenerate = async () => {
     if (!selectedFile) return;
+    if (missingRequiredCaptures.length > 0) {
+      setErrorMessage(`Mangler påkrevde opptak for ${characterTierLabel.toLowerCase()}: ${missingRequiredCaptures.join(', ')}`);
+      return;
+    }
 
     setStatus('uploading');
     setProgress(10);
     setErrorMessage(null);
     setFaceAnalysis(null);
+    setQualityReport(null);
+    setProviderNameUsed(null);
 
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
+      formData.append('provider', avatarProvider);
+      formData.append('character_tier', characterTier);
+      formData.append('quality_target', qualityTarget);
+      formData.append('branding_mode', brandingMode);
+      formData.append('body_type', bodyType);
+      formData.append('telephoto', telephotoCapture ? 'true' : 'false');
+      formData.append('allow_fallback', allowFallback ? 'true' : 'false');
+      if (sideFileOne) {
+        formData.append('side_file_1', sideFileOne);
+      }
+      if (sideFileTwo) {
+        formData.append('side_file_2', sideFileTwo);
+      }
+      if (depthFile) {
+        formData.append('depth_file', depthFile);
+      }
+      if (avatarName.trim()) {
+        formData.append('avatar_name', avatarName.trim());
+      }
 
       setStatus('processing');
       setProgress(30);
 
-      const response = await fetch('/api/generate-avatar-with-analysis', {
+      const response = await fetch('/api/avatar/generate', {
         method: 'POST',
         body: formData,
       });
@@ -421,8 +628,14 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
       setProgress(70);
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Generering feilet');
+        let detail = 'Generering feilet';
+        try {
+          const error = await response.json();
+          detail = error.detail || detail;
+        } catch {
+          // Keep default detail
+        }
+        throw new Error(detail);
       }
 
       const result = await response.json();
@@ -430,6 +643,8 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
       setStatus('success');
       setGeneratedMetadata(result.metadata);
       setGeneratedUrl(result.glb_url);
+      setQualityReport(result.qualityReport || null);
+      setProviderNameUsed(result.providerName || result.provider || null);
 
       if (result.face_analysis) {
         setFaceAnalysis(result.face_analysis);
@@ -458,6 +673,8 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
         ...generatedMetadata,
         name: avatarName,
         category: avatarCategory,
+        providerName: providerNameUsed,
+        qualityReport,
       });
       onClose();
     }
@@ -472,10 +689,27 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
     setGeneratedMetadata(null);
     setGeneratedUrl(null);
     setAvatarName('');
+    setQualityReport(null);
+    setProviderNameUsed(null);
+    setSideFileOne(null);
+    setSideFileTwo(null);
+    setDepthFile(null);
+    setSidePreviewOneName(null);
+    setSidePreviewTwoName(null);
+    setDepthPreviewName(null);
     setFaceAnalysis(null);
     setGeneratedModelUrl(null); // Clear model preview too
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+    if (sideFileInputOneRef.current) {
+      sideFileInputOneRef.current.value = '';
+    }
+    if (sideFileInputTwoRef.current) {
+      sideFileInputTwoRef.current.value = '';
+    }
+    if (depthFileInputRef.current) {
+      depthFileInputRef.current.value = '';
     }
   };
 
@@ -758,7 +992,7 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
             </Typography>
             {activeTab === 'avatar' && (
               <Chip 
-                label="SAM 3D" 
+                label="Photoreal Pipeline" 
                 size="small" 
                 sx={{ 
                   bgcolor: 'rgba(0,212,255,0.15)', 
@@ -839,7 +1073,7 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
           }}
         >
           <Tab 
-            label="Avatar (SAM 3D)" 
+            label="Avatar (Kvalitet)" 
             value="avatar"
             icon={<Person sx={{ fontSize: 22 }} />}
             iconPosition="start"
@@ -890,10 +1124,294 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
               }}
             >
               <Typography variant="body1" sx={{ fontSize: fontSizeBody, lineHeight: 1.7, fontWeight: 400 }}>
-              Last opp et bilde av en person for å generere en 3D-avatar.
-              Avataren kan brukes som modell i lysoppsettet ditt.
+              Last opp et portrett eller referansebilde for å generere en ny GLB-karakter med
+              kvalitet-først pipeline. Hero-karakterer, brandede ansatte og scan-subjekter bruker
+              ulike providers, og lokal fallback er blokkert som standard.
             </Typography>
           </Alert>
+
+            <Box
+              sx={{
+                p: 2.5,
+                bgcolor: 'rgba(255,255,255,0.04)',
+                borderRadius: 3,
+                border: '1px solid rgba(255,255,255,0.1)',
+              }}
+            >
+              <Stack spacing={2}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                  <Typography variant="subtitle1" sx={{ color: '#ffffff', fontWeight: 600, fontSize: '1.05rem' }}>
+                    Kvalitetspipeline
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => void fetchAvatarProviderHealth()}
+                    sx={{
+                      minHeight: 40,
+                      fontSize: '0.95rem',
+                      borderColor: 'rgba(255,255,255,0.2)',
+                      color: '#ffffff',
+                    }}
+                  >
+                    Oppdater status
+                  </Button>
+                </Box>
+
+                <Stack direction={isLandscape ? 'row' : 'column'} spacing={2}>
+                  <FormControl fullWidth>
+                    <InputLabel sx={{ fontSize: fontSizeSmall, fontWeight: 500 }}>Karaktertype</InputLabel>
+                    <Select
+                      value={characterTier}
+                      label="Karaktertype"
+                      onChange={(event) => setCharacterTier(event.target.value as AvatarCharacterTier)}
+                      sx={{
+                        bgcolor: 'rgba(0,0,0,0.25)',
+                        minHeight: inputHeight,
+                        borderRadius: 3,
+                        '& fieldset': {
+                          borderWidth: 2,
+                          borderColor: 'rgba(255,255,255,0.2)',
+                        },
+                      }}
+                    >
+                      {AVATAR_TIER_OPTIONS.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <FormControl fullWidth>
+                    <InputLabel sx={{ fontSize: fontSizeSmall, fontWeight: 500 }}>Provider</InputLabel>
+                    <Select
+                      value={avatarProvider}
+                      label="Provider"
+                      onChange={(event) => setAvatarProvider(event.target.value as AvatarProviderSelection)}
+                      sx={{
+                        bgcolor: 'rgba(0,0,0,0.25)',
+                        minHeight: inputHeight,
+                        borderRadius: 3,
+                        '& fieldset': {
+                          borderWidth: 2,
+                          borderColor: 'rgba(255,255,255,0.2)',
+                        },
+                      }}
+                    >
+                      {AVATAR_PROVIDER_OPTIONS.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Stack>
+
+                <Stack direction={isLandscape ? 'row' : 'column'} spacing={2}>
+                  <FormControl fullWidth>
+                    <InputLabel sx={{ fontSize: fontSizeSmall, fontWeight: 500 }}>Kvalitetsmål</InputLabel>
+                    <Select
+                      value={qualityTarget}
+                      label="Kvalitetsmål"
+                      onChange={(event) => setQualityTarget(event.target.value)}
+                      sx={{
+                        bgcolor: 'rgba(0,0,0,0.25)',
+                        minHeight: inputHeight,
+                        borderRadius: 3,
+                        '& fieldset': {
+                          borderWidth: 2,
+                          borderColor: 'rgba(255,255,255,0.2)',
+                        },
+                      }}
+                    >
+                      {AVATAR_QUALITY_OPTIONS.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <FormControl fullWidth>
+                    <InputLabel sx={{ fontSize: fontSizeSmall, fontWeight: 500 }}>Body type</InputLabel>
+                    <Select
+                      value={bodyType}
+                      label="Body type"
+                      onChange={(event) => setBodyType(event.target.value)}
+                      sx={{
+                        bgcolor: 'rgba(0,0,0,0.25)',
+                        minHeight: inputHeight,
+                        borderRadius: 3,
+                        '& fieldset': {
+                          borderWidth: 2,
+                          borderColor: 'rgba(255,255,255,0.2)',
+                        },
+                      }}
+                    >
+                      {BODY_TYPE_OPTIONS.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Stack>
+
+                <Stack direction={isLandscape ? 'row' : 'column'} spacing={2}>
+                  <FormControl fullWidth>
+                    <InputLabel sx={{ fontSize: fontSizeSmall, fontWeight: 500 }}>Branding</InputLabel>
+                    <Select
+                      value={brandingMode}
+                      label="Branding"
+                      onChange={(event) => setBrandingMode(event.target.value)}
+                      sx={{
+                        bgcolor: 'rgba(0,0,0,0.25)',
+                        minHeight: inputHeight,
+                        borderRadius: 3,
+                        '& fieldset': {
+                          borderWidth: 2,
+                          borderColor: 'rgba(255,255,255,0.2)',
+                        },
+                      }}
+                    >
+                      {BRANDING_MODE_OPTIONS.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <FormControlLabel
+                    control={(
+                      <Switch
+                        checked={telephotoCapture}
+                        onChange={(event) => setTelephotoCapture(event.target.checked)}
+                        color="info"
+                      />
+                    )}
+                    label="Bildet er tatt med tele-lignende kompresjon"
+                    sx={{
+                      justifyContent: 'space-between',
+                      mx: 0,
+                      px: 1,
+                      py: 1,
+                      minHeight: inputHeight,
+                      borderRadius: 3,
+                      bgcolor: 'rgba(0,0,0,0.25)',
+                      border: '2px solid rgba(255,255,255,0.2)',
+                      '.MuiFormControlLabel-label': {
+                        fontSize: '1rem',
+                        color: '#e0e0e0',
+                      },
+                    }}
+                  />
+                </Stack>
+
+                <Alert severity={requiresSideCaptures ? 'warning' : 'info'} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }}>
+                  {requiresSideCaptures
+                    ? 'Denne ruten bør bruke front + to sidebilder for å få en staff-karakter med bedre ansikt, klær og silhuett.'
+                    : requiresDepthCapture
+                      ? 'Hero-ruten fungerer best med et rent frontbilde og valgfritt depth-bilde for bedre likeness.'
+                      : 'Denne ruten kan starte med ett frontbilde.'}
+                </Alert>
+
+                <Stack direction={isLandscape ? 'row' : 'column'} spacing={1.5}>
+                  <Button variant="outlined" onClick={() => fileInputRef.current?.click()}>
+                    Frontbilde{selectedFile ? `: ${selectedFile.name}` : ''}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color={requiresSideCaptures && !sideFileOne ? 'warning' : 'inherit'}
+                    onClick={() => sideFileInputOneRef.current?.click()}
+                  >
+                    Sidebilde 1{sidePreviewOneName ? `: ${sidePreviewOneName}` : ''}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color={requiresSideCaptures && !sideFileTwo ? 'warning' : 'inherit'}
+                    onClick={() => sideFileInputTwoRef.current?.click()}
+                  >
+                    Sidebilde 2{sidePreviewTwoName ? `: ${sidePreviewTwoName}` : ''}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color={requiresDepthCapture && !depthFile ? 'info' : 'inherit'}
+                    onClick={() => depthFileInputRef.current?.click()}
+                  >
+                    Dybdebilde{depthPreviewName ? `: ${depthPreviewName}` : ' (valgfritt)'}
+                  </Button>
+                </Stack>
+
+                <FormControlLabel
+                  control={(
+                    <Switch
+                      checked={allowFallback}
+                      onChange={(event) => setAllowFallback(event.target.checked)}
+                      color="warning"
+                    />
+                  )}
+                  label="Tillat lokal fallback hvis premium-provider ikke er klar"
+                  sx={{
+                    '.MuiFormControlLabel-label': {
+                      fontSize: '1rem',
+                      color: '#e0e0e0',
+                    },
+                  }}
+                />
+
+                {providerHealthLoading && (
+                  <LinearProgress
+                    sx={{
+                      height: 8,
+                      borderRadius: 999,
+                      bgcolor: 'rgba(255,255,255,0.08)',
+                    }}
+                  />
+                )}
+
+                {providerHealth && (
+                  <Stack spacing={1.5}>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      {Object.entries(providerHealth.providers).map(([providerId, health]) => (
+                        <Chip
+                          key={providerId}
+                          label={`${health.name || providerId}: ${health.generationReady ? 'klar' : 'ikke klar'}`}
+                          sx={{
+                            bgcolor: health.generationReady ? 'rgba(76,175,80,0.18)' : 'rgba(255,152,0,0.16)',
+                            color: '#ffffff',
+                            border: `1px solid ${health.generationReady ? 'rgba(76,175,80,0.38)' : 'rgba(255,152,0,0.32)'}`,
+                          }}
+                        />
+                      ))}
+                    </Box>
+
+                    {tierRecommendation && (
+                      <Typography variant="body2" sx={{ color: '#d0d0d0', fontSize: '1rem', lineHeight: 1.6 }}>
+                        Anbefalt for {characterTierLabel.toLowerCase()}:
+                        {' '}
+                        <strong>{tierRecommendation.provider}</strong>
+                        {tierRecommendation.qualityMode ? ` · ${tierRecommendation.qualityMode}` : ''}
+                      </Typography>
+                    )}
+
+                    {qualityBlocked ? (
+                      <Alert severity="warning" sx={{ bgcolor: 'rgba(255,152,0,0.12)' }}>
+                        Premium-provideren er ikke klar akkurat nå.
+                        {blockedPremiumProvider ? ` Mangler ${blockedPremiumProvider}.` : ''}
+                        {' '}Fallback er blokkert for å beskytte kvaliteten.
+                      </Alert>
+                    ) : (
+                      <Alert severity={effectiveProviderId === 'local' ? 'warning' : 'success'} sx={{ bgcolor: effectiveProviderId === 'local' ? 'rgba(255,152,0,0.12)' : 'rgba(76,175,80,0.12)' }}>
+                        Aktiv rute: <strong>{providerNameUsed || effectiveProviderHealth?.name || effectiveProviderId}</strong>
+                        {effectiveProviderHealth?.qualityCeiling ? ` · ${effectiveProviderHealth.qualityCeiling}` : ''}
+                      </Alert>
+                    )}
+                  </Stack>
+                )}
+              </Stack>
+            </Box>
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1rem', fontWeight: 500, mb: 0.5 }}>
@@ -932,6 +1450,27 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
             accept="image/*"
             onChange={handleFileSelect}
             ref={fileInputRef}
+            style={{ display: 'none' }}
+          />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleSideFileOneSelect}
+            ref={sideFileInputOneRef}
+            style={{ display: 'none' }}
+          />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleSideFileTwoSelect}
+            ref={sideFileInputTwoRef}
+            style={{ display: 'none' }}
+          />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleDepthFileSelect}
+            ref={depthFileInputRef}
             style={{ display: 'none' }}
           />
 
@@ -1019,7 +1558,7 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
                   showWaiting={status === 'uploading' || status === 'processing' || status === 'idle'}
                   waitingMessage={
                     status === 'uploading' ? 'Laster opp bilde...' :
-                    status === 'processing' ? 'Genererer 3D-avatar...' :
+                    status === 'processing' ? 'Genererer kvalitetssikret 3D-avatar...' :
                     status === 'idle' ? 'Last opp et bilde for å generere avatar' :
                     'Venter på generering...'
                   }
@@ -1035,7 +1574,7 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                   <Typography variant="body2" sx={{ color: '#ffffff', fontWeight: 500, fontSize: '1rem' }}>
                   {status === 'uploading' && 'Laster opp bilde...'}
-                  {status === 'processing' && 'Genererer 3D-avatar...'}
+                  {status === 'processing' && 'Genererer kvalitetssikret 3D-avatar...'}
                   {status === 'success' && 'Avatar generert!'}
                 </Typography>
                   <Typography variant="body2" sx={{ color: '#00d4ff', fontWeight: 600, fontSize: '1rem', lineHeight: 1.6 }}>
@@ -1069,12 +1608,43 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
           {status === 'success' && generatedMetadata && (
               <Alert severity="success" icon={<CheckCircle />}>
                 <Typography variant="body2" sx={{ fontSize: '1rem', lineHeight: 1.6 }}>
-                  Avatar generert! {generatedMetadata.type === 'placeholder' 
-                    ? 'Placeholder-mannequin opprettet.' 
-                    : `${generatedMetadata.vertices} vertices, ${generatedMetadata.faces} faces.`}
+                  Avatar generert via {providerNameUsed || qualityReport?.providerUsed || 'ukjent provider'}.
+                  {' '}
+                  {qualityReport?.usedFallback
+                    ? 'Lokal fallback ble brukt, så dette er ikke hero-kvalitet.'
+                    : generatedMetadata.type === 'placeholder'
+                      ? 'Placeholder-mannequin opprettet.'
+                      : (generatedMetadata.vertices && generatedMetadata.faces)
+                        ? `${generatedMetadata.vertices} vertices, ${generatedMetadata.faces} faces.`
+                        : 'GLB-filen er klar for scene og videre quality-gating.'}
                 </Typography>
               </Alert>
             )}
+
+              {status === 'success' && qualityReport && (
+                <Box
+                  sx={{
+                    p: 2,
+                    bgcolor: qualityReport.premiumReady ? 'rgba(76,175,80,0.12)' : 'rgba(255,152,0,0.12)',
+                    borderRadius: 2,
+                    border: `1px solid ${qualityReport.premiumReady ? 'rgba(76,175,80,0.3)' : 'rgba(255,152,0,0.3)'}`,
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ mb: 1, color: qualityReport.premiumReady ? '#81c784' : '#ffb74d' }}>
+                    Kvalitetsrapport
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
+                    <Chip label={`Provider: ${providerNameUsed || qualityReport.providerUsed || 'ukjent'}`} size="small" />
+                    <Chip label={`Tier: ${qualityReport.characterTier || characterTier}`} size="small" />
+                    <Chip label={qualityReport.premiumReady ? 'Premium-klar' : 'Fallback / blokkerbar'} size="small" color={qualityReport.premiumReady ? 'success' : 'warning'} />
+                  </Box>
+                  {qualityReport.issues && qualityReport.issues.length > 0 && (
+                    <Typography variant="body2" sx={{ color: '#d0d0d0', fontSize: '1rem', lineHeight: 1.6 }}>
+                      {qualityReport.issues.join(' ')}
+                    </Typography>
+                  )}
+                </Box>
+              )}
 
               {faceAnalysis && (
                 <Box sx={{ 
@@ -1981,7 +2551,7 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
               onClick={handleGenerate}
               variant="contained"
               color="primary"
-              disabled={!selectedFile || status === 'uploading' || status === 'processing'}
+              disabled={!selectedFile || status === 'uploading' || status === 'processing' || qualityBlocked || providerHealthLoading || missingRequiredCaptures.length > 0}
                 startIcon={<Person sx={{ fontSize: isLandscape ? 22 : 20 }} />}
               sx={{ 
                   minHeight: buttonHeight, 
@@ -2007,7 +2577,7 @@ export const AvatarGeneratorPanel: React.FC<AvatarGeneratorPanelProps> = ({
                   transition: 'all 0.2s',
               }}
             >
-              Generer Avatar
+              Generer Kvalitetsavatar
               </Button>
             </>
           )

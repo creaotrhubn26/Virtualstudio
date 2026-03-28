@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -13,6 +14,7 @@ import {
 } from '@mui/material';
 import { SceneComposition } from '../core/models/sceneComposer';
 import { sceneComposerService } from '../services/sceneComposerService';
+import { getSceneAssemblyValidationPresentation } from '../services/sceneAssemblyValidationPresentation';
 
 interface SceneMetadataEditorProps {
   open: boolean;
@@ -64,6 +66,8 @@ export function SceneMetadataEditor({ open, scene, onClose, onSave }: SceneMetad
 
   if (!scene) return null;
 
+  const assemblyValidation = getSceneAssemblyValidationPresentation(scene.environmentAssemblyValidation);
+
   return (
     <Dialog
       open={open}
@@ -79,6 +83,22 @@ export function SceneMetadataEditor({ open, scene, onClose, onSave }: SceneMetad
     >
       <DialogTitle>Rediger Metadata</DialogTitle>
       <DialogContent>
+        {assemblyValidation && (
+          <Alert severity={assemblyValidation.severity} sx={{ mb: 2, mt: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+              {assemblyValidation.label}
+            </Typography>
+            <Typography variant="caption" sx={{ display: 'block', mb: assemblyValidation.details.length > 0 ? 0.5 : 0 }}>
+              {assemblyValidation.summary}
+            </Typography>
+            {assemblyValidation.details.map((detail) => (
+              <Typography key={detail} variant="caption" sx={{ display: 'block' }}>
+                {detail}
+              </Typography>
+            ))}
+          </Alert>
+        )}
+
         <TextField
           autoFocus
           margin="dense"
@@ -188,4 +208,3 @@ export function SceneMetadataEditor({ open, scene, onClose, onSave }: SceneMetad
     </Dialog>
   );
 }
-

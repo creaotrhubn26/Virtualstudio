@@ -264,24 +264,36 @@ export function SceneAnimationPanel({ sceneNodes = [] }: SceneAnimationPanelProp
   const [customAnimDialogOpen, setCustomAnimDialogOpen] = useState(false);
   const [speedMenuAnchor, setSpeedMenuAnchor] = useState<null | HTMLElement>(null);
   const [globalLoop, setGlobalLoop] = useState(false);
+  const externallySelectedObjectId = selection.selectedIds[0] ?? null;
+  const resolvedSelectedObjectId = selectedObjectId ?? externallySelectedObjectId;
+
+  useEffect(() => {
+    if (selectedObjectId && animation.states.has(selectedObjectId)) {
+      return;
+    }
+
+    if (externallySelectedObjectId !== selectedObjectId) {
+      setSelectedObjectId(externallySelectedObjectId);
+    }
+  }, [animation.states, externallySelectedObjectId, selectedObjectId]);
 
   // Get current state
-  const selectedState = selectedObjectId ? animation.states.get(selectedObjectId) ?? null : null;
+  const selectedState = resolvedSelectedObjectId ? animation.states.get(resolvedSelectedObjectId) ?? null : null;
   const maxDuration = Math.max(1, ...Array.from(animation.states.values()).map((s) => s.duration));
 
   // Get current time from selected or first playing
   const currentTime = selectedState?.currentTime ?? 0;
 
   const handleSeek = useCallback((time: number) => {
-    if (selectedObjectId) {
-      animation.setTime(selectedObjectId, time);
+    if (resolvedSelectedObjectId) {
+      animation.setTime(resolvedSelectedObjectId, time);
     } else {
       animation.setGlobalTime(time);
     }
-  }, [animation, selectedObjectId]);
+  }, [animation, resolvedSelectedObjectId]);
 
   const handleApplyPreset = useCallback((preset: keyof typeof ANIMATION_PRESETS) => {
-    const targetId = selectedObjectId || selection.selectedIds[0];
+    const targetId = resolvedSelectedObjectId;
     if (!targetId) return;
 
     const action = animation.applyPreset(targetId, preset);
@@ -289,7 +301,7 @@ export function SceneAnimationPanel({ sceneNodes = [] }: SceneAnimationPanelProp
       action.play();
     }
     setPresetDialogOpen(false);
-  }, [animation, selectedObjectId, selection.selectedIds]);
+  }, [animation, resolvedSelectedObjectId]);
 
   const handleSpeedChange = useCallback((speed: number) => {
     animation.setGlobalSpeed(speed);
@@ -411,8 +423,11 @@ export function SceneAnimationPanel({ sceneNodes = [] }: SceneAnimationPanelProp
                   objectId={id}
                   objectName={node?.name || id}
                   state={state}
-                  isSelected={selectedObjectId === id}
-                  onSelect={() => setSelectedObjectId(id)}
+                  isSelected={resolvedSelectedObjectId === id}
+                  onSelect={() => {
+                    setSelectedObjectId(id);
+                    selection.select(id);
+                  }}
                   onPlay={() => animation.play(id)}
                   onPause={() => animation.pause(id)}
                   onStop={() => animation.stop(id)}
@@ -436,7 +451,7 @@ export function SceneAnimationPanel({ sceneNodes = [] }: SceneAnimationPanelProp
               label={PRESET_INFO[preset].label}
               size="small"
               onClick={() => handleApplyPreset(preset)}
-              disabled={!selectedObjectId && selection.selectedIds.length === 0}
+              disabled={!resolvedSelectedObjectId}
             />
           ))}
         </Box>
@@ -463,7 +478,7 @@ export function SceneAnimationPanel({ sceneNodes = [] }: SceneAnimationPanelProp
       <Dialog open={presetDialogOpen} onClose={() => setPresetDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Add Animation Preset</DialogTitle>
         <DialogContent>
-          {!selectedObjectId && selection.selectedIds.length === 0 ? (
+          {!resolvedSelectedObjectId ? (
             <Alert severity="warning" sx={{ mb: 2 }}>
               Please select an object in the scene first
             </Alert>
@@ -477,7 +492,7 @@ export function SceneAnimationPanel({ sceneNodes = [] }: SceneAnimationPanelProp
               <ListItem key={preset} disablePadding>
                 <ListItemButton
                   onClick={() => handleApplyPreset(preset)}
-                  disabled={!selectedObjectId && selection.selectedIds.length === 0}
+                  disabled={!resolvedSelectedObjectId}
                 >
                   <ListItemIcon>{PRESET_INFO[preset].icon}</ListItemIcon>
                   <ListItemText
@@ -498,4 +513,3 @@ export function SceneAnimationPanel({ sceneNodes = [] }: SceneAnimationPanelProp
 }
 
 export default SceneAnimationPanel;
-

@@ -102,6 +102,8 @@ export const sceneImportService = {
         timeline: data.timeline,
         thumbnail: data.thumbnail,
         tags: data.tags || [],
+        environment: data.environment,
+        environmentAssemblyValidation: data.environmentAssemblyValidation,
       };
 
       return { valid: true, errors, warnings, scene };
@@ -215,4 +217,3 @@ export const sceneImportService = {
     };
   },
 };
-

@@ -78,13 +78,15 @@ export const generateFunctionContent = (functionId: string): string => {
         </div>
         <script>
           function loadSceneBrowser() {
-            const event = new CustomEvent('open-scene-library');
-            window.dispatchEvent(event);
+            window.dispatchEvent(new CustomEvent('vs-open-studio-library-tab', {
+              detail: { tab: 'scener' }
+            }));
             if (typeof showInfo === 'function') showInfo('Scene Browser vil åpnes i hovedvinduet');
           }
           function createNewScene() {
-            const event = new CustomEvent('create-new-scene');
-            window.dispatchEvent(event);
+            window.dispatchEvent(new CustomEvent('ch-open-scene-composer', {
+              detail: { tab: 'scenes' }
+            }));
           }
           window.addEventListener('scene-loaded', (e) => {
             const sceneList = document.getElementById('sceneList');
@@ -107,8 +109,9 @@ export const generateFunctionContent = (functionId: string): string => {
         </div>
         <script>
           function loadAssetLibrary() {
-            const event = new CustomEvent('open-asset-library');
-            window.dispatchEvent(event);
+            window.dispatchEvent(new CustomEvent('vs-open-studio-library-tab', {
+              detail: { tab: 'assets' }
+            }));
           }
           document.getElementById('assetSearch')?.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase();
@@ -189,12 +192,14 @@ export const generateFunctionContent = (functionId: string): string => {
         </div>
         <script>
           function openLightBrowser() {
-            const event = new CustomEvent('open-light-browser');
-            window.dispatchEvent(event);
+            window.dispatchEvent(new CustomEvent('vs-open-studio-library-tab', {
+              detail: { tab: 'lights' }
+            }));
           }
           function openLightControl() {
-            const event = new CustomEvent('open-light-control');
-            window.dispatchEvent(event);
+            window.dispatchEvent(new CustomEvent('vs-open-camera-controls-tab', {
+              detail: { tab: 'light' }
+            }));
           }
           function toggleLight(lightId, enabled) {
             const event = new CustomEvent('light-toggle', { detail: { id: lightId, enabled } });
@@ -259,12 +264,14 @@ export const generateFunctionContent = (functionId: string): string => {
         </div>
         <script>
           function openCameraGear() {
-            const event = new CustomEvent('open-camera-gear');
-            window.dispatchEvent(event);
+            window.dispatchEvent(new CustomEvent('vs-open-studio-library-tab', {
+              detail: { tab: 'camera' }
+            }));
           }
           function openCameraControl() {
-            const event = new CustomEvent('open-camera-control');
-            window.dispatchEvent(event);
+            window.dispatchEvent(new CustomEvent('vs-open-camera-controls-tab', {
+              detail: { tab: 'camera' }
+            }));
           }
           function updateCameraSetting(setting, value) {
             const event = new CustomEvent('camera-setting-change', { detail: { setting, value } });
@@ -285,8 +292,9 @@ export const generateFunctionContent = (functionId: string): string => {
         </div>
         <script>
           function loadCharacterLibrary() {
-            const event = new CustomEvent('open-character-library');
-            window.dispatchEvent(event);
+            window.dispatchEvent(new CustomEvent('vs-open-studio-library-tab', {
+              detail: { tab: 'models' }
+            }));
           }
           document.getElementById('characterSearch')?.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase();
@@ -311,8 +319,9 @@ export const generateFunctionContent = (functionId: string): string => {
         </div>
         <script>
           function loadEquipmentLibrary() {
-            const event = new CustomEvent('open-equipment-library');
-            window.dispatchEvent(event);
+            window.dispatchEvent(new CustomEvent('vs-open-studio-library-tab', {
+              detail: { tab: 'equipment' }
+            }));
           }
           function addEquipment() {
             const event = new CustomEvent('add-equipment');
@@ -342,8 +351,9 @@ export const generateFunctionContent = (functionId: string): string => {
         </div>
         <script>
           function loadHDRILibrary() {
-            const event = new CustomEvent('open-hdri-library');
-            window.dispatchEvent(event);
+            window.dispatchEvent(new CustomEvent('vs-open-studio-library-tab', {
+              detail: { tab: 'hdri' }
+            }));
           }
           document.getElementById('hdriSearch')?.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase();
@@ -810,4 +820,3 @@ export const togglePanelVisibility = (panel: PanelConfig): boolean => {
   
   return !isOpen;
 };
-

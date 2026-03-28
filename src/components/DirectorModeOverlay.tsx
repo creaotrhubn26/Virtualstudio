@@ -332,6 +332,25 @@ export const DirectorModeOverlay: FC<DirectorModeOverlayProps> = ({
       }
     }
   }, [propCameras, cameraCount]);
+
+  useEffect(() => {
+    const handleSelectionSync = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const presetId = customEvent.detail?.selection?.selectedCameraPresetId;
+      if (!presetId || !cameras.some((camera) => camera.id === presetId)) {
+        return;
+      }
+
+      setSelectedCameraId(presetId);
+      setCameras((prev) => prev.map((camera) => ({
+        ...camera,
+        isLive: camera.id === presetId,
+      })));
+    };
+
+    window.addEventListener('vs-scene-selection-sync', handleSelectionSync as EventListener);
+    return () => window.removeEventListener('vs-scene-selection-sync', handleSelectionSync as EventListener);
+  }, [cameras]);
   
   // Subscribe to recording state
   useEffect(() => {
@@ -369,10 +388,10 @@ export const DirectorModeOverlay: FC<DirectorModeOverlayProps> = ({
       switch (key) {
         // Movement (WASD)
         case 'w':
-          handleCameraMove('forward,', 0.5);
+          handleCameraMove('forward', 0.5);
           break;
         case 's':
-          handleCameraMove('backward,', 0.5);
+          handleCameraMove('backward', 0.5);
           break;
         case 'a':
           handleCameraMove('left', 0.5);
@@ -380,7 +399,7 @@ export const DirectorModeOverlay: FC<DirectorModeOverlayProps> = ({
         case 'd':
           handleCameraMove('right', 0.5);
           break;
-        case ', ': // Space for up
+        case ' ': // Space for up
           handleCameraMove('up', 0.5);
           e.preventDefault();
           break;
@@ -484,6 +503,10 @@ export const DirectorModeOverlay: FC<DirectorModeOverlayProps> = ({
     if (renderer) {
       renderer.setActiveCamera(cameraId);
     }
+
+    window.dispatchEvent(new CustomEvent('ch-camera-preset-selected', {
+      detail: { presetId: cameraId },
+    }));
     
     log.info('Selected camera: ', cameraId);
   }, []);

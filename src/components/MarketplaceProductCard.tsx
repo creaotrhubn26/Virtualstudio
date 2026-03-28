@@ -40,6 +40,7 @@ interface MarketplaceProductCardProps {
   onInstall: (id: string) => void;
   onUninstall: (id: string) => void;
   onUpdate: (id: string) => void;
+  onApplyEnvironment?: (id: string) => void;
   onToggleFavorite: (id: string) => void;
   onProductUpdated?: (product: MarketplaceProduct) => void;
   viewMode?: 'grid' | 'list';
@@ -52,12 +53,20 @@ export function MarketplaceProductCard({
   onInstall,
   onUninstall,
   onUpdate,
+  onApplyEnvironment,
   onToggleFavorite,
   onProductUpdated,
   viewMode = 'grid',
   onEditStart,
 }: MarketplaceProductCardProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const canEditMarketplaceProduct = !(product.source === 'registry' && product.environmentPackage)
+    || Boolean(product.registryPermissions?.canUpdate);
+  const releaseStatus = product.registryMetadata?.releaseStatus || 'stable';
+  const latestStableVersion = product.registryMetadata?.latestStableVersion || product.version;
+  const installBlockedByCandidate = product.source === 'registry'
+    && product.registryMetadata?.visibility === 'shared'
+    && releaseStatus === 'candidate';
   const [editData, setEditData] = useState({
     name: product.name,
     description: product.description,
@@ -130,6 +139,7 @@ export function MarketplaceProductCard({
     if (product.hasUpdate) {
       return (
         <Button
+          data-testid={`marketplace-product-action-${product.id}`}
           size="small"
           variant="contained"
           startIcon={<UpdateIcon />}
@@ -151,6 +161,7 @@ export function MarketplaceProductCard({
     if (product.isInstalled) {
       return (
         <Button
+          data-testid={`marketplace-product-action-${product.id}`}
           size="small"
           variant="outlined"
           startIcon={<DeleteIcon />}
@@ -171,10 +182,12 @@ export function MarketplaceProductCard({
     }
     return (
       <Button
+        data-testid={`marketplace-product-action-${product.id}`}
         size="small"
         variant="contained"
         startIcon={<DownloadIcon />}
         onClick={handleActionClick}
+        disabled={installBlockedByCandidate}
           sx={{
             bgcolor: '#00d4ff',
             color: '#000',
@@ -185,7 +198,11 @@ export function MarketplaceProductCard({
             '&:hover': { bgcolor: '#00b8e6' },
           }}
       >
-        {product.price === 0 ? 'Installer' : `Kjøp ${product.price} ${product.currency || 'NOK'}`}
+        {installBlockedByCandidate
+          ? 'Avventer stable'
+          : product.price === 0
+            ? 'Installer'
+            : `Kjøp ${product.price} ${product.currency || 'NOK'}`}
       </Button>
     );
   };
@@ -193,6 +210,7 @@ export function MarketplaceProductCard({
   if (viewMode === 'list') {
     return (
       <Card
+        data-testid={`marketplace-product-card-${product.id}`}
         sx={{
           display: 'flex',
           mb: 2,
@@ -215,26 +233,28 @@ export function MarketplaceProductCard({
             alt={product.name}
           />
           <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 0.5, zIndex: 10 }}>
-            <Tooltip title="Rediger">
-              <IconButton
-                size="small"
-                onClick={handleEdit}
-                sx={{
-                  bgcolor: 'rgba(0,0,0,0.5)',
-                  color: '#00d4ff',
-                  minWidth: '40px',
-                  minHeight: '40px',
-                  '&:hover': { bgcolor: 'rgba(0,212,255,0.3)' },
-                  '&:focus-visible': {
-                    outline: '2px solid #00d4ff',
-                    outlineOffset: '2px',
-                  },
-                }}
-                aria-label="Rediger produkt"
-              >
-                <EditIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            {canEditMarketplaceProduct && (
+              <Tooltip title="Rediger">
+                <IconButton
+                  size="small"
+                  onClick={handleEdit}
+                  sx={{
+                    bgcolor: 'rgba(0,0,0,0.5)',
+                    color: '#00d4ff',
+                    minWidth: '40px',
+                    minHeight: '40px',
+                    '&:hover': { bgcolor: 'rgba(0,212,255,0.3)' },
+                    '&:focus-visible': {
+                      outline: '2px solid #00d4ff',
+                      outlineOffset: '2px',
+                    },
+                  }}
+                  aria-label="Rediger produkt"
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
             <Tooltip title={product.isFavorite ? 'Fjern fra favoritter' : 'Legg til favoritter'}>
               <IconButton
                 size="small"
@@ -313,13 +333,55 @@ export function MarketplaceProductCard({
                     }}
                   />
                 )}
+                {product.source === 'registry' && product.environmentPackage && (
+                  <Chip
+                    label={releaseStatus === 'candidate' ? 'Candidate' : 'Stable'}
+                    size="small"
+                    sx={{
+                      bgcolor: releaseStatus === 'candidate' ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.18)',
+                      color: releaseStatus === 'candidate' ? '#fbbf24' : '#6ee7b7',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      height: '26px',
+                    }}
+                  />
+                )}
+                {product.hasUpdate && (
+                  <Chip
+                    label={`Ny stable ${latestStableVersion}`}
+                    size="small"
+                    sx={{
+                      bgcolor: 'rgba(245,158,11,0.18)',
+                      color: '#fbbf24',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      height: '26px',
+                    }}
+                  />
+                )}
               </Box>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', fontWeight: 500 }}>
                 av {product.author.name}
               </Typography>
-              {getActionButton()}
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                {product.environmentPackage && product.isInstalled && onApplyEnvironment && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    data-testid={`marketplace-product-apply-environment-${product.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onApplyEnvironment(product.id);
+                    }}
+                    sx={{ borderColor: '#7c3aed', color: '#c4b5fd' }}
+                  >
+                    Bruk miljø
+                  </Button>
+                )}
+                {getActionButton()}
+              </Box>
             </Box>
           </CardContent>
         </Box>
@@ -330,6 +392,7 @@ export function MarketplaceProductCard({
   // Grid view
   return (
     <Card
+      data-testid={`marketplace-product-card-${product.id}`}
         sx={{
           bgcolor: 'rgba(255,255,255,0.05)',
           border: '1px solid rgba(255,255,255,0.1)',
@@ -379,36 +442,38 @@ export function MarketplaceProductCard({
             pointerEvents: 'auto',
           }}
         >
-          <Tooltip title="Rediger">
-            <IconButton
-              size="small"
-              onClick={handleEdit}
-              sx={{
-                bgcolor: 'rgba(0,0,0,0.85)',
-                color: '#00d4ff',
-                minWidth: '44px',
-                minHeight: '44px',
-                width: '44px',
-                height: '44px',
-                border: '1px solid rgba(0,212,255,0.3)',
-                '&:hover': { 
-                  bgcolor: 'rgba(0,212,255,0.7)',
-                  color: '#000',
-                  transform: 'scale(1.05)',
-                  borderColor: '#00d4ff',
-                },
-                '&:focus-visible': {
-                  outline: '3px solid #00d4ff',
-                  outlineOffset: '2px',
-                },
-                transition: 'all 0.2s',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-              }}
-              aria-label="Rediger produkt"
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          {canEditMarketplaceProduct && (
+            <Tooltip title="Rediger">
+              <IconButton
+                size="small"
+                onClick={handleEdit}
+                sx={{
+                  bgcolor: 'rgba(0,0,0,0.85)',
+                  color: '#00d4ff',
+                  minWidth: '44px',
+                  minHeight: '44px',
+                  width: '44px',
+                  height: '44px',
+                  border: '1px solid rgba(0,212,255,0.3)',
+                  '&:hover': { 
+                    bgcolor: 'rgba(0,212,255,0.7)',
+                    color: '#000',
+                    transform: 'scale(1.05)',
+                    borderColor: '#00d4ff',
+                  },
+                  '&:focus-visible': {
+                    outline: '3px solid #00d4ff',
+                    outlineOffset: '2px',
+                  },
+                  transition: 'all 0.2s',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                }}
+                aria-label="Rediger produkt"
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
           <Tooltip title={product.isFavorite ? 'Fjern fra favoritter' : 'Legg til favoritter'}>
             <IconButton
               size="small"
@@ -450,6 +515,22 @@ export function MarketplaceProductCard({
               fontWeight: 600,
               height: '28px',
               border: '1px solid rgba(16,185,129,0.5)',
+            }}
+          />
+        )}
+        {product.source === 'registry' && product.environmentPackage && (
+          <Chip
+            label={releaseStatus === 'candidate' ? 'Candidate' : 'Stable'}
+            size="small"
+            sx={{
+              position: 'absolute',
+              top: product.hasUpdate || product.isInstalled ? 42 : 8,
+              left: 8,
+              bgcolor: releaseStatus === 'candidate' ? 'rgba(245,158,11,0.95)' : 'rgba(16,185,129,0.95)',
+              color: releaseStatus === 'candidate' ? '#111827' : '#052e16',
+              fontSize: '13px',
+              fontWeight: 700,
+              height: '28px',
             }}
           />
         )}
@@ -538,8 +619,38 @@ export function MarketplaceProductCard({
             {product.rating} ({product.reviewCount})
           </Typography>
         </Box>
+        {product.hasUpdate && (
+          <Typography
+            variant="caption"
+            sx={{
+              display: 'block',
+              mb: 1,
+              color: '#fbbf24',
+              fontSize: '13px',
+              fontWeight: 700,
+            }}
+          >
+            Installert {product.installedVersion || 'ukjent'} • Siste stable {latestStableVersion}
+          </Typography>
+        )}
         <Box sx={{ mt: 'auto', pt: 1 }}>
-          {getActionButton()}
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {product.environmentPackage && product.isInstalled && onApplyEnvironment && (
+              <Button
+                size="small"
+                variant="outlined"
+                data-testid={`marketplace-product-apply-environment-${product.id}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onApplyEnvironment(product.id);
+                }}
+                sx={{ borderColor: '#7c3aed', color: '#c4b5fd' }}
+              >
+                Bruk miljø
+              </Button>
+            )}
+            {getActionButton()}
+          </Box>
         </Box>
       </CardContent>
 
@@ -691,4 +802,3 @@ export function MarketplaceProductCard({
     </Card>
   );
 }
-

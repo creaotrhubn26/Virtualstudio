@@ -100,6 +100,8 @@ export interface SnapshotPayload {
   description?: string;
   thumbnailUrl: string;
   sceneState: unknown;
+  thumbnailAssetId?: string;
+  thumbnailStorage?: string;
 }
 
 export interface SnapshotRecord extends SnapshotPayload {
@@ -145,7 +147,7 @@ export const snapshotsApi = {
   async create(payload: SnapshotPayload): Promise<SnapshotRecord> {
     const userId = getCurrentUserId();
     const createdAt = new Date().toISOString();
-    const record: SnapshotRecord = {
+    let record: SnapshotRecord = {
       ...payload,
       id: `snapshot_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       createdAt,
@@ -162,8 +164,13 @@ export const snapshotsApi = {
     );
 
     if (remote?.snapshot) {
-      record.id = remote.snapshot.id;
-      record.createdAt = remote.snapshot.createdAt || record.createdAt;
+      record = {
+        ...record,
+        ...remote.snapshot,
+        id: remote.snapshot.id || record.id,
+        createdAt: remote.snapshot.createdAt || record.createdAt,
+        thumbnailUrl: remote.snapshot.thumbnailUrl || record.thumbnailUrl,
+      };
     }
 
     const stored = await readSnapshots(payload.sceneId);

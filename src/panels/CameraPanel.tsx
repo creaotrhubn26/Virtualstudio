@@ -25,15 +25,19 @@ import { AtmosphereSettings } from '../core/models/sceneComposer';
 
 export function CameraPanel() {
   const scene = useAppStore((state) => state.scene);
+  const selectedNodeId = useAppStore((state) => state.selectedNodeId);
   const updateNode = useAppStore((state) => state.updateNode);
   const [activeTab, setActiveTab] = useState(0);
   const [atmosphereActive, setAtmosphereActive] = useState(false);
+  const [runtimeActiveCameraId, setRuntimeActiveCameraId] = useState<string | null>(() => getActiveCameraId());
 
-  // Find active camera node
-  const activeCameraId = getActiveCameraId();
-  const cameraNode = activeCameraId
-    ? scene.find((n) => n.id === activeCameraId)
-    : scene.find((n) => n.camera);
+  const selectedCameraNode = selectedNodeId
+    ? scene.find((node) => node.id === selectedNodeId && node.camera)
+    : undefined;
+  const runtimeCameraNode = runtimeActiveCameraId
+    ? scene.find((node) => node.id === runtimeActiveCameraId && node.camera)
+    : undefined;
+  const cameraNode = selectedCameraNode || runtimeCameraNode || scene.find((n) => n.camera);
 
   // Initialize settings from camera node
   const [cameraSettings, setCameraSettings] = useState<CameraSettings>(() => {
@@ -86,6 +90,54 @@ export function CameraPanel() {
     }
   }, [cameraNode]);
 
+  useEffect(() => {
+    const handleActiveCameraChanged = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const nextCameraId = typeof customEvent.detail?.activeCameraId === 'string'
+        ? customEvent.detail.activeCameraId
+        : null;
+      if (!nextCameraId) {
+        return;
+      }
+
+      const matchingCameraNode = scene.find((node) => node.id === nextCameraId && node.camera);
+      if (matchingCameraNode) {
+        setRuntimeActiveCameraId(matchingCameraNode.id);
+      }
+    };
+
+    const handleSceneSelectionSync = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const nextSelectedNodeId = customEvent.detail?.selection?.selectedNodeId;
+      if (typeof nextSelectedNodeId !== 'string') {
+        return;
+      }
+
+      const matchingCameraNode = scene.find((node) => node.id === nextSelectedNodeId && node.camera);
+      if (matchingCameraNode) {
+        setRuntimeActiveCameraId(matchingCameraNode.id);
+      }
+    };
+
+    window.addEventListener('active-camera-changed', handleActiveCameraChanged as EventListener);
+    window.addEventListener('vs-scene-selection-sync', handleSceneSelectionSync as EventListener);
+    return () => {
+      window.removeEventListener('active-camera-changed', handleActiveCameraChanged as EventListener);
+      window.removeEventListener('vs-scene-selection-sync', handleSceneSelectionSync as EventListener);
+    };
+  }, [scene]);
+
+  const publishCameraSettingsChange = (settings: CameraSettings) => {
+    window.dispatchEvent(new CustomEvent('camera-settings-changed', {
+      detail: {
+        aperture: settings.aperture,
+        iso: settings.iso,
+        shutter: settings.shutter,
+        focalLength: settings.focalLength,
+      },
+    }));
+  };
+
   // Listen to atmosphere changes
   useEffect(() => {
     const handleAtmosphereChange = (e: CustomEvent) => {
@@ -137,6 +189,7 @@ export function CameraPanel() {
         shutter: newSettings.shutter,
         focusDistance: newSettings.focusDistance,
       });
+      publishCameraSettingsChange(newSettings);
     }
   };
 
@@ -163,6 +216,10 @@ export function CameraPanel() {
       log.debug('Lens settings updated:', {
         focalLength: newSettings.focalLength,
         sensor: newSettings.sensor,
+      });
+      publishCameraSettingsChange({
+        ...cameraSettings,
+        focalLength: newSettings.focalLength,
       });
     }
   };
@@ -200,6 +257,7 @@ export function CameraPanel() {
           focusDistance: defaultSettings.focusDistance,
         },
       });
+      publishCameraSettingsChange(defaultSettings);
     }
   };
 

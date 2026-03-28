@@ -1,5 +1,13 @@
 import { MarketplaceProduct, MarketplaceReview, MarketplaceFilters } from '../core/models/marketplace';
+import type { MarketplaceReleaseDashboard } from '../core/models/marketplace';
 import settingsService, { getCurrentUserId } from './settingsService';
+import { marketplaceEnvironmentService } from './marketplaceEnvironmentService';
+import { MARKETPLACE_ENVIRONMENT_PRODUCTS } from '../data/marketplaceEnvironmentProducts';
+import { marketplaceRegistryService } from './marketplaceRegistryService';
+import {
+  marketplaceEnvironmentPackService,
+  type BuildMarketplaceEnvironmentPackDraftInput,
+} from './marketplaceEnvironmentPackService';
 
 const STORAGE_KEY = 'virtualStudio_marketplaceProducts';
 const INSTALLED_KEY = 'virtualStudio_installedProducts';
@@ -9,20 +17,141 @@ let cachedProducts: MarketplaceProduct[] = [];
 let cachedInstalled: MarketplaceProduct[] = [];
 let cachedFavorites: string[] = [];
 let cachedReviews: MarketplaceReview[] = [];
+let cachedRegistryProducts: MarketplaceProduct[] = [];
+
+export interface MarketplaceReleaseQueueSummary {
+  totalSharedPacks: number;
+  candidateCount: number;
+  stableCount: number;
+  readyCandidateCount: number;
+  blockedCandidateCount: number;
+  warningCandidateCount: number;
+}
+
+const broadcastMarketplaceProductsChanged = (): void => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('vs-marketplace-products-updated'));
+};
+
+function compareVersions(left?: string, right?: string): number {
+  const normalize = (value?: string): number[] => String(value || '0.0.0')
+    .split('.')
+    .slice(0, 3)
+    .map((segment) => Number.parseInt(segment, 10) || 0);
+  const [leftMajor, leftMinor, leftPatch] = normalize(left);
+  const [rightMajor, rightMinor, rightPatch] = normalize(right);
+  if (leftMajor !== rightMajor) return leftMajor - rightMajor;
+  if (leftMinor !== rightMinor) return leftMinor - rightMinor;
+  return leftPatch - rightPatch;
+}
+
+function isStableRegistryProduct(product: MarketplaceProduct): boolean {
+  return product.source === 'registry'
+    && product.registryMetadata?.visibility === 'shared'
+    && (product.registryMetadata?.releaseStatus || 'stable') === 'stable';
+}
+
+function isSharedRegistryProduct(product: MarketplaceProduct): boolean {
+  return product.source === 'registry' && product.registryMetadata?.visibility === 'shared';
+}
+
+function isCandidateRegistryProduct(product: MarketplaceProduct): boolean {
+  return isSharedRegistryProduct(product)
+    && (product.registryMetadata?.releaseStatus || 'stable') === 'candidate';
+}
+
+function getQualityScore(product: MarketplaceProduct): number {
+  const rawScore = product.environmentPackage?.qualityReport?.score;
+  return typeof rawScore === 'number' ? rawScore : -1;
+}
+
+function hasQualityWarnings(product: MarketplaceProduct): boolean {
+  const report = product.environmentPackage?.qualityReport;
+  if (!report) {
+    return false;
+  }
+  return Array.isArray(report.warnings) && report.warnings.length > 0;
+}
+
+function sortReleaseCandidates(products: MarketplaceProduct[]): MarketplaceProduct[] {
+  return [...products].sort((left, right) => {
+    const leftReady = left.environmentPackage?.qualityReport?.ready ? 1 : 0;
+    const rightReady = right.environmentPackage?.qualityReport?.ready ? 1 : 0;
+    if (leftReady !== rightReady) {
+      return rightReady - leftReady;
+    }
+
+    const scoreDelta = getQualityScore(right) - getQualityScore(left);
+    if (scoreDelta !== 0) {
+      return scoreDelta;
+    }
+
+    const leftUpdated = new Date(left.registryMetadata?.updatedAt || left.lastUpdated || left.releaseDate).getTime();
+    const rightUpdated = new Date(right.registryMetadata?.updatedAt || right.lastUpdated || right.releaseDate).getTime();
+    return rightUpdated - leftUpdated;
+  });
+}
+
+function decorateProductStatuses(products: MarketplaceProduct[]): MarketplaceProduct[] {
+  const installedProducts = cachedInstalled;
+  const installedPackages = marketplaceEnvironmentService.getInstalledPackages();
+  const stableByLineage = new Map<string, MarketplaceProduct>();
+
+  for (const product of products) {
+    if (!isStableRegistryProduct(product)) {
+      continue;
+    }
+    const lineageId = product.registryMetadata?.lineageId || product.id;
+    const previous = stableByLineage.get(lineageId);
+    if (!previous || compareVersions(product.version, previous.version) > 0) {
+      stableByLineage.set(lineageId, product);
+    }
+  }
+
+  return products.map((product) => {
+    const nextProduct: MarketplaceProduct = { ...product };
+    const installedProduct = installedProducts.find((entry) => entry.id === product.id);
+    const lineageId = product.registryMetadata?.lineageId || product.id;
+    const installedPackage = installedPackages.find((entry) => (entry.lineageId || entry.productId) === lineageId);
+    const installedVersion = installedProduct?.installedVersion || installedPackage?.version;
+    const isInstalled = Boolean(installedProduct?.isInstalled || installedPackage);
+
+    nextProduct.isInstalled = isInstalled;
+    nextProduct.installedVersion = installedVersion;
+    nextProduct.isFavorite = cachedFavorites.includes(product.id);
+
+    if (product.source === 'registry' && product.registryMetadata?.visibility === 'shared') {
+      const latestStable = stableByLineage.get(lineageId);
+      nextProduct.hasUpdate = Boolean(
+        isInstalled
+        && latestStable
+        && installedVersion
+        && compareVersions(latestStable.version, installedVersion) > 0,
+      );
+    } else {
+      nextProduct.hasUpdate = Boolean(installedProduct?.hasUpdate);
+    }
+
+    return nextProduct;
+  });
+}
 
 const setProducts = (products: MarketplaceProduct[]): void => {
   cachedProducts = products;
   void settingsService.setSetting(STORAGE_KEY, products, { userId: getCurrentUserId() });
+  broadcastMarketplaceProductsChanged();
 };
 
 const setInstalled = (installed: MarketplaceProduct[]): void => {
   cachedInstalled = installed;
   void settingsService.setSetting(INSTALLED_KEY, installed, { userId: getCurrentUserId() });
+  broadcastMarketplaceProductsChanged();
 };
 
 const setFavorites = (favorites: string[]): void => {
   cachedFavorites = favorites;
   void settingsService.setSetting(FAVORITES_KEY, favorites, { userId: getCurrentUserId() });
+  broadcastMarketplaceProductsChanged();
 };
 
 const setReviews = (reviews: MarketplaceReview[]): void => {
@@ -52,12 +181,22 @@ const hydrateMarketplaceFromDb = async (): Promise<void> => {
 
 void hydrateMarketplaceFromDb();
 
+const getCatalogProducts = (): MarketplaceProduct[] => {
+  const combined = [...baseMockProducts, ...MARKETPLACE_ENVIRONMENT_PRODUCTS, ...cachedRegistryProducts];
+  const deduped = new Map<string, MarketplaceProduct>();
+  for (const product of combined) {
+    deduped.set(product.id, product);
+  }
+  return Array.from(deduped.values());
+};
+
 // Helper functions to avoid circular references
 const getAllProductsHelper = (): MarketplaceProduct[] => {
-  if (cachedProducts.length === 0) return mockProducts;
+  const catalog = getCatalogProducts();
+  if (cachedProducts.length === 0) return decorateProductStatuses(catalog);
   // Merge with mock data to ensure we always have the latest versions
-  return cachedProducts.map(storedProduct => {
-    const latestProduct = mockProducts.find(p => p.id === storedProduct.id);
+  const merged = cachedProducts.map(storedProduct => {
+    const latestProduct = catalog.find(p => p.id === storedProduct.id);
     if (latestProduct) {
       // Preserve installation status but update other properties from mock data
       return {
@@ -68,11 +207,15 @@ const getAllProductsHelper = (): MarketplaceProduct[] => {
         isFavorite: storedProduct.isFavorite
       };
     }
+    if (storedProduct.source === 'registry') {
+      return null;
+    }
     return storedProduct;
-  }).concat(
+  }).filter((product): product is MarketplaceProduct => Boolean(product)).concat(
     // Add any new products from mock data that aren't in stored
-    mockProducts.filter(mockProduct => !cachedProducts.find(p => p.id === mockProduct.id))
+    catalog.filter(mockProduct => !cachedProducts.find(p => p.id === mockProduct.id))
   );
+  return decorateProductStatuses(merged);
 };
 
 const getInstalledProductsHelper = (): MarketplaceProduct[] => {
@@ -84,7 +227,7 @@ const getReviewsHelper = (productId: string): MarketplaceReview[] => {
 };
 
 // Mock data for development
-const mockProducts: MarketplaceProduct[] = [
+const baseMockProducts: MarketplaceProduct[] = [
   {
     id: 'feature-advanced-rendering',
     name: 'Avansert Rendering Engine',
@@ -185,6 +328,9 @@ const mockProducts: MarketplaceProduct[] = [
       panelComponent: 'AIAssistantPanel',
       icon: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23fff\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M12 2L2 7l10 5 10-5-10-5z\'/%3E%3Cpath d=\'M2 17l10 5 10-5\'/%3E%3Cpath d=\'M2 12l10 5 10-5\'/%3E%3Ccircle cx=\'12\' cy=\'12\' r=\'1\' fill=\'%23fff\'/%3E%3C/svg%3E',
       order: 0,
+      openEvent: 'vs-open-ai-assistant-panel',
+      closeEvent: 'vs-close-ai-assistant-panel',
+      toggleEvent: 'toggle-ai-assistant-panel',
     },
     isFavorite: false,
   },
@@ -269,7 +415,7 @@ export const marketplaceService = {
    */
   initializeMockData(): void {
     try {
-      setProducts(mockProducts);
+      setProducts(getCatalogProducts());
     } catch (error) {
       console.error('Error initializing mock data:', error);
     }
@@ -282,7 +428,7 @@ export const marketplaceService = {
     try {
       const installed = getInstalledProductsHelper();
       const updated = installed.map(installedTool => {
-        const latestProduct = mockProducts.find(p => p.id === installedTool.id);
+        const latestProduct = getCatalogProducts().find(p => p.id === installedTool.id);
         if (latestProduct && latestProduct.toolConfig) {
           return {
             ...latestProduct,
@@ -325,13 +471,70 @@ export const marketplaceService = {
   },
 
   /**
+   * Get installed products with pending stable updates
+   */
+  getPendingUpdates(): MarketplaceProduct[] {
+    return getAllProductsHelper().filter((product) => product.hasUpdate);
+  },
+
+  getPendingUpdateCount(): number {
+    return this.getPendingUpdates().length;
+  },
+
+  getReleaseCandidateProducts(options?: {
+    readyOnly?: boolean;
+    blockedOnly?: boolean;
+    warningOnly?: boolean;
+  }): MarketplaceProduct[] {
+    let candidates = sortReleaseCandidates(getAllProductsHelper().filter(isCandidateRegistryProduct));
+
+    if (options?.readyOnly) {
+      candidates = candidates.filter((product) => product.environmentPackage?.qualityReport?.ready);
+    }
+
+    if (options?.blockedOnly) {
+      candidates = candidates.filter((product) => !product.environmentPackage?.qualityReport?.ready);
+    }
+
+    if (options?.warningOnly) {
+      candidates = candidates.filter(hasQualityWarnings);
+    }
+
+    return candidates;
+  },
+
+  getReleaseQueueSummary(): MarketplaceReleaseQueueSummary {
+    const sharedProducts = getAllProductsHelper().filter(isSharedRegistryProduct);
+    const candidateProducts = sharedProducts.filter(isCandidateRegistryProduct);
+    const readyCandidateCount = candidateProducts.filter((product) => product.environmentPackage?.qualityReport?.ready).length;
+    const blockedCandidateCount = candidateProducts.filter((product) => !product.environmentPackage?.qualityReport?.ready).length;
+    const warningCandidateCount = candidateProducts.filter(hasQualityWarnings).length;
+
+    return {
+      totalSharedPacks: sharedProducts.length,
+      candidateCount: candidateProducts.length,
+      stableCount: sharedProducts.length - candidateProducts.length,
+      readyCandidateCount,
+      blockedCandidateCount,
+      warningCandidateCount,
+    };
+  },
+
+  /**
    * Install product
    */
   async installProduct(id: string): Promise<boolean> {
     try {
       // Always get the latest version from mock data first
-      const latestProduct = mockProducts.find(p => p.id === id);
+      const latestProduct = getCatalogProducts().find(p => p.id === id);
       if (!latestProduct) return false;
+      if (
+        latestProduct.source === 'registry'
+        && latestProduct.registryMetadata?.visibility === 'shared'
+        && latestProduct.registryMetadata?.releaseStatus === 'candidate'
+      ) {
+        return false;
+      }
       
       const products = getAllProductsHelper();
       const installed = getInstalledProductsHelper();
@@ -360,6 +563,13 @@ export const marketplaceService = {
         // Dispatch event for installed tools change
         if (latestProduct.toolConfig) {
           window.dispatchEvent(new CustomEvent('installed-tools-changed'));
+        }
+
+        if (latestProduct.environmentPackage) {
+          marketplaceEnvironmentService.installFromProduct(productToInstall);
+          if (latestProduct.source === 'registry') {
+            void marketplaceRegistryService.recordInstall(id).catch(() => undefined);
+          }
         }
       }
       
@@ -392,6 +602,10 @@ export const marketplaceService = {
       // Dispatch event for installed tools change
       if (product?.toolConfig) {
         window.dispatchEvent(new CustomEvent('installed-tools-changed'));
+      }
+
+      if (product?.environmentPackage) {
+        marketplaceEnvironmentService.uninstallByProductId(product.id);
       }
       
       return true;
@@ -426,12 +640,38 @@ export const marketplaceService = {
         products[productIndex].hasUpdate = false;
         setProducts(products);
       }
+
+      if (product.environmentPackage) {
+        marketplaceEnvironmentService.installFromProduct(product);
+      }
       
       return true;
     } catch (error) {
       console.error('Error updating product:', error);
       return false;
     }
+  },
+
+  /**
+   * Update all installed products that currently have a newer stable version
+   */
+  async updateAllProducts(productIds?: string[]): Promise<{ updated: number; failed: string[] }> {
+    const targets = this.getPendingUpdates()
+      .filter((product) => !productIds || productIds.includes(product.id));
+
+    let updated = 0;
+    const failed: string[] = [];
+
+    for (const product of targets) {
+      const success = await this.updateProduct(product.id);
+      if (success) {
+        updated += 1;
+      } else {
+        failed.push(product.id);
+      }
+    }
+
+    return { updated, failed };
   },
 
   /**
@@ -612,7 +852,7 @@ export const marketplaceService = {
     
     // Always use latest version from mock data to ensure we have the newest icons
     const updatedInstalled = installed.map(installedTool => {
-      const latestProduct = mockProducts.find(p => p.id === installedTool.id);
+      const latestProduct = getCatalogProducts().find(p => p.id === installedTool.id);
       if (latestProduct && latestProduct.toolConfig) {
         // Always use the latest version from mock data, but preserve installation status
         const updated = {
@@ -654,5 +894,97 @@ export const marketplaceService = {
     const tool = installed.find(p => p.id === toolId);
     return tool?.isInstalled === true && tool?.toolConfig !== undefined;
   },
-};
 
+  getInstalledTool(toolId: string): MarketplaceProduct | null {
+    const installedTool = this.getInstalledTools().find(tool => tool.id === toolId);
+    if (installedTool) {
+      return installedTool;
+    }
+
+    const fallbackProduct = this.getProduct(toolId);
+    if (fallbackProduct?.toolConfig) {
+      return fallbackProduct;
+    }
+
+    return null;
+  },
+
+  async refreshRemoteProducts(): Promise<MarketplaceProduct[]> {
+    try {
+      const remoteProducts = await marketplaceRegistryService.listEnvironmentPacks();
+      cachedRegistryProducts = remoteProducts.map((product) => ({
+        ...product,
+        source: 'registry',
+      }));
+      setProducts(getAllProductsHelper());
+      return getAllProductsHelper();
+    } catch (error) {
+      console.warn('Could not refresh remote marketplace packs:', error);
+      return getAllProductsHelper();
+    }
+  },
+
+  async promoteEnvironmentPack(productId: string): Promise<MarketplaceProduct> {
+    const promotedProduct = await marketplaceRegistryService.promoteEnvironmentPack(productId);
+    await this.refreshRemoteProducts();
+    return {
+      ...promotedProduct,
+      source: 'registry',
+    };
+  },
+
+  async rollbackEnvironmentPack(lineageId: string, targetVersion?: string | null): Promise<MarketplaceProduct> {
+    const rolledBackProduct = await marketplaceRegistryService.rollbackEnvironmentPack(lineageId, targetVersion);
+    await this.refreshRemoteProducts();
+    return {
+      ...rolledBackProduct,
+      source: 'registry',
+    };
+  },
+
+  async getReleaseDashboard(): Promise<MarketplaceReleaseDashboard> {
+    return marketplaceRegistryService.getReleaseDashboard();
+  },
+
+  async publishCurrentEnvironmentPack(input: BuildMarketplaceEnvironmentPackDraftInput = {}): Promise<MarketplaceProduct> {
+    const publishedDraft = await marketplaceEnvironmentPackService.publishCurrentEnvironmentPack(input);
+    const publishedProduct = {
+      ...publishedDraft.product,
+      source: 'registry' as const,
+      isInstalled: publishedDraft.publishContext.releaseStatus === 'stable',
+      installedVersion: publishedDraft.publishContext.releaseStatus === 'stable' ? publishedDraft.product.version : undefined,
+    };
+
+    cachedRegistryProducts = [
+      publishedProduct,
+      ...cachedRegistryProducts.filter((product) => product.id !== publishedProduct.id),
+    ];
+
+    const products = getAllProductsHelper();
+    const existingProductIndex = products.findIndex((product) => product.id === publishedProduct.id);
+    if (existingProductIndex >= 0) {
+      products[existingProductIndex] = publishedProduct;
+    } else {
+      products.push(publishedProduct);
+    }
+    setProducts(products);
+
+    if (publishedDraft.publishContext.releaseStatus === 'stable') {
+      const installed = getInstalledProductsHelper();
+      const existingInstalledIndex = installed.findIndex((product) => product.id === publishedProduct.id);
+      if (existingInstalledIndex >= 0) {
+        installed[existingInstalledIndex] = publishedProduct;
+      } else {
+        installed.push(publishedProduct);
+      }
+      setInstalled(installed);
+
+      if (publishedProduct.environmentPackage) {
+        marketplaceEnvironmentService.installFromProduct(publishedProduct);
+        void marketplaceRegistryService.recordInstall(publishedProduct.id).catch(() => undefined);
+      }
+    }
+
+    return publishedProduct;
+  },
+};

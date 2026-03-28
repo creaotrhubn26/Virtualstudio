@@ -68,7 +68,7 @@ import { multiCameraRecordingService, CameraRecording, RECORDING_QUALITY } from 
 import { monitorRecordingManager, RecordingResult } from '../core/services/monitorRecordingManager';
 import { logger } from '../core/services/logger';
 
-const log = logger.module('MonitorFeedPanel, ');
+const log = logger.module('MonitorFeedPanel');
 
 // ============================================================================
 // Types
@@ -275,11 +275,35 @@ export const MonitorFeedPanel: React.FC = () => {
       setIsCameraPathRecording(isRecording);
       log.info('CameraPathRecorder state changed:', isRecording);
     };
+
+    const handleSceneSelectionSync = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const selection = customEvent.detail?.selection;
+      const presetId = selection?.activeCameraPresetId || selection?.selectedCameraPresetId || null;
+      if (!presetId) {
+        return;
+      }
+      monitorFeedService.getRenderer()?.setActiveCamera(presetId);
+      setActiveCameraId(presetId);
+    };
+
+    const handleActiveCameraChanged = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const presetId = typeof customEvent.detail?.activeCameraId === 'string'
+        ? customEvent.detail.activeCameraId
+        : null;
+      if (presetId) {
+        monitorFeedService.getRenderer()?.setActiveCamera(presetId);
+      }
+      setActiveCameraId(presetId);
+    };
     
     window.addEventListener('camera-preset-changed', handlePresetChange);
     window.addEventListener('camera-settings-changed', handleCameraSettingsChange);
     window.addEventListener('ch-recording-camera-changed', handleRecordingCameraChange);
     window.addEventListener('ch-camera-path-recording-changed', handleCameraPathRecordingChange);
+    window.addEventListener('vs-scene-selection-sync', handleSceneSelectionSync as EventListener);
+    window.addEventListener('active-camera-changed', handleActiveCameraChanged as EventListener);
     
     // Check for existing presets on mount
     MONITOR_PRESETS.forEach(presetId => {
@@ -298,6 +322,8 @@ export const MonitorFeedPanel: React.FC = () => {
       window.removeEventListener('camera-settings-changed', handleCameraSettingsChange);
       window.removeEventListener('ch-recording-camera-changed', handleRecordingCameraChange);
       window.removeEventListener('ch-camera-path-recording-changed', handleCameraPathRecordingChange);
+      window.removeEventListener('vs-scene-selection-sync', handleSceneSelectionSync as EventListener);
+      window.removeEventListener('active-camera-changed', handleActiveCameraChanged as EventListener);
     };
   }, []);
   
@@ -391,6 +417,10 @@ export const MonitorFeedPanel: React.FC = () => {
       renderer.setActiveCamera(cameraId);
       setActiveCameraId(cameraId);
     }
+
+    window.dispatchEvent(new CustomEvent('ch-camera-preset-selected', {
+      detail: { presetId: cameraId }
+    }));
     
     // Sync with recording arc
     window.dispatchEvent(new CustomEvent('ch-panel-camera-selected', {
@@ -526,65 +556,85 @@ export const MonitorFeedPanel: React.FC = () => {
                   <Card 
                     key={presetId}
                     sx={{ 
-                      border: recordingCameras.has(presetId) ? '2px solid #ef4444' : '1px solid #333',
-                      bgcolor: recordingCameras.has(presetId) ? 'rgba(239, 68, 68, 0.1)' : 'background.paper'
+                      border: activeCameraId === presetId
+                        ? '2px solid #4a9eff'
+                        : recordingCameras.has(presetId)
+                          ? '2px solid #ef4444'
+                          : '1px solid #333',
+                      bgcolor: activeCameraId === presetId
+                        ? 'rgba(74, 158, 255, 0.12)'
+                        : recordingCameras.has(presetId)
+                          ? 'rgba(239, 68, 68, 0.1)'
+                          : 'background.paper'
                     }}
                   >
-                    <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                      <Stack direction="row" alignItems="center" spacing={1}>
-                        <Videocam sx={{ color: recordingCameras.has(presetId) ? '#ef4444' : 'text.secondary' }} />
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="body2" fontWeight={recordingCameras.has(presetId) ? 600 : 400}>
-                            Kamera {presetId.replace('cam', '').toUpperCase()}
-                          </Typography>
-                          {showCameraInfo && (
-                            <Typography 
-                              variant="caption" 
-                              sx={{ 
-                                color: 'text.secondary',
-                                fontFamily: 'monospace',
-                                fontSize: '0.65rem',
-                                display: 'block',
-                                mt: 0.5
-                              }}
-                            >
-                              {focalLen}mm | f/{cameraSettings.aperture} | {cameraSettings.shutter} | ISO {cameraSettings.iso}
+                    <CardActionArea onClick={() => handleSetLive(presetId)}>
+                      <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                          <Videocam sx={{ color: activeCameraId === presetId ? '#4a9eff' : recordingCameras.has(presetId) ? '#ef4444' : 'text.secondary' }} />
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="body2" fontWeight={activeCameraId === presetId || recordingCameras.has(presetId) ? 600 : 400}>
+                              Kamera {presetId.replace('cam', '').toUpperCase()}
                             </Typography>
+                            {showCameraInfo && (
+                              <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                  color: 'text.secondary',
+                                  fontFamily: 'monospace',
+                                  fontSize: '0.65rem',
+                                  display: 'block',
+                                  mt: 0.5
+                                }}
+                              >
+                                {focalLen}mm | f/{cameraSettings.aperture} | {cameraSettings.shutter} | ISO {cameraSettings.iso}
+                              </Typography>
+                            )}
+                            {showCameraInfo && (
+                              <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                  color: 'text.secondary',
+                                  fontFamily: 'monospace',
+                                  fontSize: '0.6rem',
+                                  display: 'block'
+                                }}
+                              >
+                                Avstand: {distance.toFixed(1)}m | Høyde: {height.toFixed(2)}m | WB: {cameraSettings.whiteBalance}K
+                              </Typography>
+                            )}
+                          </Box>
+                          {recordingCameras.has(presetId) && (
+                            <Chip 
+                              label="REC" 
+                              size="small" 
+                              sx={{ bgcolor: '#dc2626', color: 'white' }}
+                              icon={<FiberManualRecord sx={{ fontSize: 12, color: 'white' }} />}
+                            />
                           )}
-                          {showCameraInfo && (
-                            <Typography 
-                              variant="caption" 
-                              sx={{ 
-                                color: 'text.secondary',
-                                fontFamily: 'monospace',
-                                fontSize: '0.6rem',
-                                display: 'block'
-                              }}
-                            >
-                              Avstand: {distance.toFixed(1)}m | Høyde: {height.toFixed(2)}m | WB: {cameraSettings.whiteBalance}K
-                            </Typography>
+                          {activeCameraId === presetId && !recordingCameras.has(presetId) && (
+                            <Chip
+                              label="LIVE"
+                              size="small"
+                              sx={{ bgcolor: '#4a9eff', color: 'white' }}
+                            />
                           )}
-                        </Box>
-                        {recordingCameras.has(presetId) && (
-                          <Chip 
-                            label="REC" 
+                          <IconButton 
                             size="small" 
-                            sx={{ bgcolor: '#dc2626', color: 'white' }}
-                            icon={<FiberManualRecord sx={{ fontSize: 12, color: 'white' }} />}
-                          />
-                        )}
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handleTogglePresetRecording(presetId)}
-                          sx={{ 
-                            color: recordingCameras.has(presetId) ? '#ef4444' : 'text.secondary',
-                            '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.1)' }
-                          }}
-                        >
-                          {recordingCameras.has(presetId) ? <Stop /> : <RadioButtonChecked />}
-                        </IconButton>
-                      </Stack>
-                    </CardContent>
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleTogglePresetRecording(presetId);
+                            }}
+                            sx={{ 
+                              color: recordingCameras.has(presetId) ? '#ef4444' : 'text.secondary',
+                              '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.1)' }
+                            }}
+                          >
+                            {recordingCameras.has(presetId) ? <Stop /> : <RadioButtonChecked />}
+                          </IconButton>
+                        </Stack>
+                      </CardContent>
+                    </CardActionArea>
                   </Card>
                 );
               })}
@@ -892,4 +942,3 @@ export const MonitorFeedPanel: React.FC = () => {
 };
 
 export default MonitorFeedPanel;
-

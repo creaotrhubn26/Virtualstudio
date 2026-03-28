@@ -57,6 +57,7 @@ interface MarketplaceProductDetailProps {
   onInstall: (id: string) => void;
   onUninstall: (id: string) => void;
   onUpdate: (id: string) => void;
+  onApplyEnvironment?: (id: string) => void;
   onToggleFavorite: (id: string) => void;
   onProductUpdated?: (product: MarketplaceProduct) => void;
 }
@@ -68,6 +69,7 @@ export function MarketplaceProductDetail({
   onInstall,
   onUninstall,
   onUpdate,
+  onApplyEnvironment,
   onToggleFavorite,
   onProductUpdated,
 }: MarketplaceProductDetailProps) {
@@ -83,6 +85,7 @@ export function MarketplaceProductDetail({
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const dialogRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
@@ -254,6 +257,63 @@ export function MarketplaceProductDetail({
       screenshots: [...product.screenshots],
     });
     setIsEditing(false);
+  };
+
+  const isRegistryEnvironmentPack = Boolean(product.environmentPackage && product.source === 'registry');
+  const canEditMarketplaceProduct = !(product.source === 'registry' && product.environmentPackage)
+    || Boolean(product.registryPermissions?.canUpdate);
+  const canAdminUpdatePack = Boolean(isRegistryEnvironmentPack && product.registryPermissions?.canUpdate);
+  const canSaveCopy = Boolean(product.environmentPackage && product.registryPermissions?.canSaveCopy !== false);
+  const canPromotePack = Boolean(isRegistryEnvironmentPack && product.registryPermissions?.canPromote);
+  const releaseStatus = product.registryMetadata?.releaseStatus || 'stable';
+  const latestStableVersion = product.registryMetadata?.latestStableVersion || product.version;
+  const qualityReport = product.environmentPackage?.qualityReport ?? null;
+  const installBlockedByCandidate = product.source === 'registry'
+    && product.registryMetadata?.visibility === 'shared'
+    && releaseStatus === 'candidate';
+
+  const handlePublishFromDetail = async (mode: 'update_shared' | 'save_copy') => {
+    if (!product.environmentPackage) {
+      return;
+    }
+
+    setPublishing(true);
+    try {
+      const result = await marketplaceService.publishCurrentEnvironmentPack({
+        targetProduct: product,
+        mode,
+      });
+      onProductUpdated?.(result);
+      toast.showSuccess(
+        mode === 'update_shared'
+          ? `Oppdaterte "${result.name}" i Marketplace.`
+          : `Lagret "${result.name}" som din egen kopi.`,
+      );
+      if (mode === 'save_copy') {
+        onClose();
+      }
+    } catch (error) {
+      toast.showError(
+        error instanceof Error ? error.message : 'Kunne ikke publisere miljøpakken.',
+      );
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handlePromoteFromDetail = async () => {
+    setPublishing(true);
+    try {
+      const result = await marketplaceService.promoteEnvironmentPack(product.id);
+      onProductUpdated?.(result);
+      toast.showSuccess(`Promoterte "${result.name}" til stable.`);
+    } catch (error) {
+      toast.showError(
+        error instanceof Error ? error.message : 'Kunne ikke promotere miljøpakken.',
+      );
+    } finally {
+      setPublishing(false);
+    }
   };
 
   const handleAddTag = () => {
@@ -552,6 +612,17 @@ export function MarketplaceProductDetail({
               >
                 {product.name}
               </Typography>
+              {isRegistryEnvironmentPack && (
+                <Chip
+                  label={releaseStatus === 'candidate' ? 'Candidate' : 'Stable'}
+                  size="small"
+                  sx={{
+                    bgcolor: releaseStatus === 'candidate' ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)',
+                    color: releaseStatus === 'candidate' ? '#fbbf24' : '#6ee7b7',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                  }}
+                />
+              )}
             </Box>
           )}
           <Box sx={{ display: 'flex', gap: { xs: 0.5, sm: 1 }, alignItems: 'center', flexShrink: 0 }}>
@@ -588,38 +659,42 @@ export function MarketplaceProductDetail({
               </>
             ) : (
               <>
-                <IconButton
-                  onClick={handleEdit}
-                  aria-label="Rediger produkt"
-                  aria-describedby="edit-product-description"
-                  sx={{
-                    color: '#00d4ff',
-                    minWidth: { xs: '56px', sm: '48px', md: '44px' },
-                    minHeight: { xs: '56px', sm: '48px', md: '44px' },
-                    width: { xs: '56px', sm: '48px', md: '44px' },
-                    height: { xs: '56px', sm: '48px', md: '44px' },
-                    fontSize: { xs: '28px', sm: '24px', md: '22px' },
-                    touchAction: 'manipulation',
-                    '&:hover': { bgcolor: 'rgba(0,212,255,0.15)' },
-                    '&:focus-visible': { 
-                      outline: '3px solid #00d4ff', 
-                      outlineOffset: '2px',
-                      bgcolor: 'rgba(0,212,255,0.2)',
-                    },
-                    '@media (min-width: 768px) and (max-width: 1024px), (pointer: coarse)': {
-                      minWidth: '56px',
-                      minHeight: '56px',
-                      width: '56px',
-                      height: '56px',
-                      fontSize: '28px',
-                    },
-                  }}
-                >
-                  <EditIcon fontSize="inherit" />
-                </IconButton>
-                <span id="edit-product-description" className="sr-only">
-                  Åpner redigeringsmodus for produktet
-                </span>
+                {canEditMarketplaceProduct && (
+                  <>
+                    <IconButton
+                      onClick={handleEdit}
+                      aria-label="Rediger produkt"
+                      aria-describedby="edit-product-description"
+                      sx={{
+                        color: '#00d4ff',
+                        minWidth: { xs: '56px', sm: '48px', md: '44px' },
+                        minHeight: { xs: '56px', sm: '48px', md: '44px' },
+                        width: { xs: '56px', sm: '48px', md: '44px' },
+                        height: { xs: '56px', sm: '48px', md: '44px' },
+                        fontSize: { xs: '28px', sm: '24px', md: '22px' },
+                        touchAction: 'manipulation',
+                        '&:hover': { bgcolor: 'rgba(0,212,255,0.15)' },
+                        '&:focus-visible': { 
+                          outline: '3px solid #00d4ff', 
+                          outlineOffset: '2px',
+                          bgcolor: 'rgba(0,212,255,0.2)',
+                        },
+                        '@media (min-width: 768px) and (max-width: 1024px), (pointer: coarse)': {
+                          minWidth: '56px',
+                          minHeight: '56px',
+                          width: '56px',
+                          height: '56px',
+                          fontSize: '28px',
+                        },
+                      }}
+                    >
+                      <EditIcon fontSize="inherit" />
+                    </IconButton>
+                    <span id="edit-product-description" className="sr-only">
+                      Åpner redigeringsmodus for produktet
+                    </span>
+                  </>
+                )}
                 <IconButton
                   onClick={() => onToggleFavorite(product.id)}
                   aria-label={product.isFavorite ? 'Fjern fra favoritter' : 'Legg til favoritter'}
@@ -706,6 +781,25 @@ export function MarketplaceProductDetail({
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: { xs: 3, sm: 4 } }}>
           {/* Image Gallery Section */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
+            {qualityReport && (
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                <Chip
+                  label={qualityReport.ready ? 'Kvalitet godkjent' : 'Krever forbedringer'}
+                  size="small"
+                  sx={{
+                    bgcolor: qualityReport.ready ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.18)',
+                    color: qualityReport.ready ? '#6ee7b7' : '#fbbf24',
+                  }}
+                />
+                {typeof qualityReport.score === 'number' && (
+                  <Chip
+                    label={`Score ${qualityReport.score.toFixed(2)}`}
+                    size="small"
+                    sx={{ bgcolor: 'rgba(59,130,246,0.18)', color: '#93c5fd' }}
+                  />
+                )}
+              </Box>
+            )}
             <Box
               component="img"
               src={isEditing ? editData.thumbnail : product.thumbnail}
@@ -1061,6 +1155,19 @@ export function MarketplaceProductDetail({
                         sx={{
                           bgcolor: '#ffb800',
                           color: '#000',
+                          fontSize: { xs: '15px', sm: '13px' },
+                          fontWeight: 700,
+                          height: { xs: '40px', sm: '32px' },
+                          px: { xs: 2, sm: 1.5 },
+                        }}
+                      />
+                    )}
+                    {product.hasUpdate && (
+                      <Chip
+                        label={`Installert ${product.installedVersion || 'ukjent'} -> Stable ${latestStableVersion}`}
+                        sx={{
+                          bgcolor: 'rgba(245,158,11,0.18)',
+                          color: '#fbbf24',
                           fontSize: { xs: '15px', sm: '13px' },
                           fontWeight: 700,
                           height: { xs: '40px', sm: '32px' },
@@ -2238,9 +2345,97 @@ export function MarketplaceProductDetail({
           Lukk
         </Button>
         <Button
+          data-testid={`marketplace-detail-apply-environment-${product.id}`}
+          variant="outlined"
+          onClick={() => onApplyEnvironment?.(product.id)}
+          sx={{
+            display: product.environmentPackage && product.isInstalled ? 'inline-flex' : 'none',
+            borderColor: '#7c3aed',
+            color: '#c4b5fd',
+            minHeight: { xs: '64px', sm: '56px' },
+            px: { xs: 3, sm: 2.5 },
+            borderRadius: { xs: 3, sm: 2 },
+            textTransform: 'none',
+            '&:hover': {
+              borderColor: '#8b5cf6',
+              bgcolor: 'rgba(124,58,237,0.12)',
+            },
+          }}
+        >
+          Bruk miljø
+        </Button>
+        {canSaveCopy && (
+          <Button
+            variant="outlined"
+            onClick={() => { void handlePublishFromDetail('save_copy'); }}
+            disabled={publishing}
+            data-testid={`marketplace-detail-save-copy-${product.id}`}
+            sx={{
+              borderColor: '#60a5fa',
+              color: '#bfdbfe',
+              minHeight: { xs: '64px', sm: '56px' },
+              px: { xs: 3, sm: 2.5 },
+              borderRadius: { xs: 3, sm: 2 },
+              textTransform: 'none',
+              '&:hover': {
+                borderColor: '#93c5fd',
+                bgcolor: 'rgba(96,165,250,0.12)',
+              },
+            }}
+          >
+            Lagre egen kopi
+          </Button>
+        )}
+        {canAdminUpdatePack && (
+          <Button
+            variant="outlined"
+            onClick={() => { void handlePublishFromDetail('update_shared'); }}
+            disabled={publishing}
+            data-testid={`marketplace-detail-update-shared-${product.id}`}
+            sx={{
+              borderColor: '#f59e0b',
+              color: '#fde68a',
+              minHeight: { xs: '64px', sm: '56px' },
+              px: { xs: 3, sm: 2.5 },
+              borderRadius: { xs: 3, sm: 2 },
+              textTransform: 'none',
+              '&:hover': {
+                borderColor: '#fbbf24',
+                bgcolor: 'rgba(245,158,11,0.12)',
+              },
+            }}
+          >
+            Oppdater delt pack
+          </Button>
+        )}
+        {canPromotePack && (
+          <Button
+            variant="outlined"
+            onClick={() => { void handlePromoteFromDetail(); }}
+            disabled={publishing}
+            data-testid={`marketplace-detail-promote-stable-${product.id}`}
+            sx={{
+              borderColor: '#10b981',
+              color: '#6ee7b7',
+              minHeight: { xs: '64px', sm: '56px' },
+              px: { xs: 3, sm: 2.5 },
+              borderRadius: { xs: 3, sm: 2 },
+              textTransform: 'none',
+              '&:hover': {
+                borderColor: '#34d399',
+                bgcolor: 'rgba(16,185,129,0.12)',
+              },
+            }}
+          >
+            Promoter til stable
+          </Button>
+        )}
+        <Button
           variant="contained"
           startIcon={
-            product.hasUpdate ? (
+            installBlockedByCandidate ? (
+              <CheckCircleIcon sx={{ fontSize: { xs: '24px', sm: '20px' } }} />
+            ) : product.hasUpdate ? (
               <UpdateIcon sx={{ fontSize: { xs: '24px', sm: '20px' } }} />
             ) : product.isInstalled ? (
               <DeleteIcon sx={{ fontSize: { xs: '24px', sm: '20px' } }} />
@@ -2249,14 +2444,17 @@ export function MarketplaceProductDetail({
             )
           }
           onClick={handleAction}
+          disabled={installBlockedByCandidate}
           aria-label={
-            product.hasUpdate
-              ? 'Oppdater produkt'
-              : product.isInstalled
-              ? 'Avinstaller produkt'
-              : product.price === 0
-              ? 'Installer produkt'
-              : `Kjøp produkt for ${product.price} ${product.currency || 'NOK'}`
+            installBlockedByCandidate
+              ? 'Candidate-pack kan ikke installeres før den er promotert til stable'
+              : product.hasUpdate
+                ? 'Oppdater produkt'
+                : product.isInstalled
+                  ? 'Avinstaller produkt'
+                  : product.price === 0
+                    ? 'Installer produkt'
+                    : `Kjøp produkt for ${product.price} ${product.currency || 'NOK'}`
           }
           fullWidth={false}
           sx={{
@@ -2300,16 +2498,17 @@ export function MarketplaceProductDetail({
             },
           }}
         >
-          {product.hasUpdate
-            ? 'Oppdater'
-            : product.isInstalled
-            ? 'Avinstaller'
-            : product.price === 0
-            ? 'Installer'
-            : `Kjøp ${product.price} ${product.currency || 'NOK'}`}
+          {installBlockedByCandidate
+            ? 'Avventer stable'
+            : product.hasUpdate
+              ? 'Oppdater'
+              : product.isInstalled
+                ? 'Avinstaller'
+                : product.price === 0
+                  ? 'Installer'
+                  : `Kjøp ${product.price} ${product.currency || 'NOK'}`}
         </Button>
       </DialogActions>
     </Dialog>
   );
 }
-

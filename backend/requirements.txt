@@ -2,6 +2,7 @@ fastapi>=0.100.0
 uvicorn>=0.20.0
 python-multipart>=0.0.6
 httpx>=0.24.0
+boto3>=1.34.0
 huggingface-hub>=0.16.0
 diffusers>=0.21.0  # For FLUX and other diffusion models
 transformers>=4.30.0  # For FLUX text encoders

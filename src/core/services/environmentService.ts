@@ -3,6 +3,7 @@
  * Integrates with VirtualStudio via events
  */
 
+import type { EnvironmentPlanRoomShell } from '../models/environmentPlan';
 import { WallMaterial, getWallById, WALL_MATERIALS } from '../../data/wallDefinitions';
 import { FloorMaterial, getFloorById, FLOOR_MATERIALS } from '../../data/floorDefinitions';
 import { EnvironmentPreset, getEnvironmentById, ENVIRONMENT_PRESETS } from '../../data/environmentPresets';
@@ -12,6 +13,7 @@ import { undoRedoService } from './undoRedoService';
 import settingsService, { getCurrentUserId } from '../../services/settingsService';
 
 export interface EnvironmentState {
+  roomShell: EnvironmentPlanRoomShell;
   walls: {
     backWall: { materialId: string; visible: boolean };
     leftWall: { materialId: string; visible: boolean };
@@ -29,6 +31,20 @@ export interface EnvironmentState {
 
 class EnvironmentService {
   private state: EnvironmentState = {
+    roomShell: {
+      type: 'studio_shell',
+      width: 20,
+      depth: 20,
+      height: 8,
+      openCeiling: true,
+      ceilingStyle: 'flat',
+      openings: [],
+      zones: [],
+      fixtures: [],
+      niches: [],
+      wallSegments: [],
+      notes: ['Default virtual studio shell'],
+    },
     walls: {
       backWall: { materialId: 'gray-medium', visible: false },
       leftWall: { materialId: 'gray-dark', visible: true },
@@ -79,6 +95,83 @@ class EnvironmentService {
     return JSON.parse(JSON.stringify(this.state));
   }
 
+  syncRoomShellState(shell: Partial<EnvironmentPlanRoomShell>): EnvironmentPlanRoomShell {
+    this.state.roomShell = this.normalizeRoomShell(shell);
+    this.notify();
+    return this.state.roomShell;
+  }
+
+  private normalizeRoomShell(shell: Partial<EnvironmentPlanRoomShell>): EnvironmentPlanRoomShell {
+    const clamp = (value: unknown, min: number, max: number, fallback: number): number => {
+      if (typeof value !== 'number' || Number.isNaN(value)) {
+        return fallback;
+      }
+      return Math.min(max, Math.max(min, value));
+    };
+
+    return {
+      type: shell.type ?? this.state.roomShell.type,
+      width: clamp(shell.width, 4, 60, this.state.roomShell.width),
+      depth: clamp(shell.depth, 4, 60, this.state.roomShell.depth),
+      height: clamp(shell.height, 2.5, 20, this.state.roomShell.height),
+      openCeiling: shell.openCeiling ?? this.state.roomShell.openCeiling,
+      ceilingStyle: typeof shell.ceilingStyle === 'string' ? shell.ceilingStyle : this.state.roomShell.ceilingStyle,
+      openings: Array.isArray(shell.openings)
+        ? shell.openings.map((opening) => ({
+          ...opening,
+          widthRatio: clamp((opening as any)?.widthRatio, 0.08, 0.95, 0.24),
+          heightRatio: clamp((opening as any)?.heightRatio, 0.12, 0.95, 0.5),
+          sillHeight: clamp(
+            (opening as any)?.sillHeight,
+            0,
+            4,
+            ['window', 'service_window', 'pass_through'].includes(String((opening as any)?.kind || ''))
+              ? 1.1
+              : 0,
+          ),
+        }))
+        : (Array.isArray(this.state.roomShell.openings) ? [...this.state.roomShell.openings] : []),
+      zones: Array.isArray(shell.zones)
+        ? shell.zones.map((zone) => ({
+          ...zone,
+          xBias: clamp((zone as any)?.xBias, -1, 1, 0),
+          zBias: clamp((zone as any)?.zBias, -1, 1, 0),
+          widthRatio: clamp((zone as any)?.widthRatio, 0.08, 1, 0.24),
+          depthRatio: clamp((zone as any)?.depthRatio, 0.08, 1, 0.24),
+        }))
+        : (Array.isArray(this.state.roomShell.zones) ? [...this.state.roomShell.zones] : []),
+      fixtures: Array.isArray(shell.fixtures)
+        ? shell.fixtures.map((fixture) => ({
+          ...fixture,
+          xBias: clamp((fixture as any)?.xBias, -1, 1, 0),
+          zBias: clamp((fixture as any)?.zBias, -1, 1, 0),
+          widthRatio: clamp((fixture as any)?.widthRatio, 0.08, 1, 0.24),
+          depthRatio: clamp((fixture as any)?.depthRatio, 0.08, 1, 0.16),
+          height: clamp((fixture as any)?.height, 0.2, 4.5, 1.0),
+        }))
+        : (Array.isArray(this.state.roomShell.fixtures) ? [...this.state.roomShell.fixtures] : []),
+      niches: Array.isArray(shell.niches)
+        ? shell.niches.map((niche) => ({
+          ...niche,
+          widthRatio: clamp((niche as any)?.widthRatio, 0.08, 0.9, 0.22),
+          heightRatio: clamp((niche as any)?.heightRatio, 0.12, 0.8, 0.32),
+          sillHeight: clamp((niche as any)?.sillHeight, 0, 4, 0.4),
+          depth: clamp((niche as any)?.depth, 0.08, 1.2, 0.24),
+        }))
+        : (Array.isArray(this.state.roomShell.niches) ? [...this.state.roomShell.niches] : []),
+      wallSegments: Array.isArray(shell.wallSegments)
+        ? shell.wallSegments.map((segment) => ({
+          ...segment,
+          widthRatio: clamp((segment as any)?.widthRatio, 0.08, 0.9, 0.2),
+          heightRatio: clamp((segment as any)?.heightRatio, 0.12, 0.9, 0.42),
+          sillHeight: clamp((segment as any)?.sillHeight, 0, 4, 0.18),
+          depth: clamp((segment as any)?.depth, 0.03, 0.8, 0.12),
+        }))
+        : (Array.isArray(this.state.roomShell.wallSegments) ? [...this.state.roomShell.wallSegments] : []),
+      notes: Array.isArray(shell.notes) ? [...shell.notes] : this.state.roomShell.notes,
+    };
+  }
+
   /**
    * Initialize default materials for walls and floor
    * Should be called when VirtualStudio starts
@@ -94,6 +187,18 @@ class EnvironmentService {
     this.setFloorMaterial(this.state.floor.materialId);
     this.toggleFloor(this.state.floor.visible);
     this.toggleGrid(this.state.floor.gridVisible);
+  }
+
+  applyRoomShell(shell: Partial<EnvironmentPlanRoomShell>): void {
+    this.state.roomShell = this.normalizeRoomShell(shell);
+
+    window.dispatchEvent(new CustomEvent('ch-apply-room-shell', {
+      detail: {
+        shell: this.state.roomShell,
+      },
+    }));
+
+    this.notify();
   }
 
   // Wall methods
@@ -494,6 +599,9 @@ class EnvironmentService {
       undo: () => {
         // Restore old state directly
         this.state = JSON.parse(JSON.stringify(oldState));
+        if (oldState.roomShell) {
+          this.applyRoomShell(oldState.roomShell);
+        }
         // Restore walls and floor
         Object.entries(oldState.walls).forEach(([wallId, config]) => {
           const wallKey = wallId as keyof typeof this.state.walls;
@@ -604,6 +712,10 @@ class EnvironmentService {
   importState(json: string): void {
     try {
       const imported = JSON.parse(json) as EnvironmentState;
+
+      if (imported.roomShell) {
+        this.applyRoomShell(imported.roomShell);
+      }
 
       // Apply imported state
       Object.entries(imported.walls).forEach(([wallId, config]) => {

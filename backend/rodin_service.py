@@ -11,6 +11,18 @@ import json
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 try:
+    from utils.generated_asset_storage import (
+        get_storage_metadata_path,
+        store_generated_file,
+        write_storage_metadata,
+    )
+except ImportError:
+    from backend.utils.generated_asset_storage import (
+        get_storage_metadata_path,
+        store_generated_file,
+        write_storage_metadata,
+    )
+try:
     from prompt_enhancer import prompt_enhancer
     print("Prompt enhancer imported successfully")
 except ImportError as e:
@@ -247,13 +259,21 @@ class RodinService:
             with open(output_path, "wb") as f:
                 f.write(model_response.content)
             
-            # Return URL path that frontend can access via static files mount
-            url_path = f"/api/models/{filename}.glb"
+            storage_metadata = store_generated_file(
+                output_path,
+                category="rodin-models",
+                storage_id=filename,
+                filename=f"{filename}.glb",
+                content_type="model/gltf-binary",
+                fallback_url=f"/api/models/{filename}.glb",
+            )
+            write_storage_metadata(get_storage_metadata_path(output_path), storage_metadata)
             
             return {
                 "success": True,
-                "path": url_path,
-                "filename": f"{filename}.glb"
+                "path": storage_metadata.get("url") or f"/api/models/{filename}.glb",
+                "filename": f"{filename}.glb",
+                "storage": storage_metadata.get("storage", "local"),
             }
     
     async def generate_and_wait(

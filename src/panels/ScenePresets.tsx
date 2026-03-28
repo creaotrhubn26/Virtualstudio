@@ -59,6 +59,7 @@ import {
   Preview,
   Download,
 } from '@mui/icons-material';
+import { inferLightingPatternIntent, resolveLightingPatternThumbnail } from '../core/services/lightingPatternIntelligence';
 import { useTabletSupport } from '../../providers/TabletSupportProvider';
 import { TouchIconButton, TouchContextMenu } from '../components/TabletAwarePanels';
 import { useAccessibility, VisuallyHidden } from '../../providers/AccessibilityProvider';
@@ -178,6 +179,25 @@ const generatePreviewSVG = (type: string): string => {
   return `data:image/svg+xml,${encodeURIComponent(templates[type] || templates.portrait_1)}`;
 };
 
+const resolveScenePresetThumbnail = (
+  preset: Pick<ScenePreset, 'id' | 'name' | 'category' | 'description' | 'lightingStyle' | 'tags'>,
+  fallback: string,
+): string => {
+  const patternIntent = inferLightingPatternIntent({
+    id: preset.id,
+    name: `${preset.name} ${preset.lightingStyle}`,
+    category: preset.category,
+    description: `${preset.description} ${(preset.tags || []).join(' ')}`,
+    tags: preset.tags,
+  });
+
+  if (patternIntent) {
+    return resolveLightingPatternThumbnail(patternIntent.id);
+  }
+
+  return fallback;
+};
+
 // ============================================================================
 // Scene Presets Data
 // ============================================================================
@@ -189,7 +209,14 @@ const SCENE_PRESETS: ScenePreset[] = [
     name: 'Classic Portrait Studio',
     category: 'portrait',
     description: 'Traditional three-point lighting setup for professional headshots and portraits',
-    thumbnail: generatePreviewSVG('portrait_1, '),
+    thumbnail: resolveScenePresetThumbnail({
+      id: 'classic_portrait',
+      name: 'Classic Portrait Studio',
+      category: 'portrait',
+      description: 'Traditional three-point lighting setup for professional headshots and portraits',
+      lightingStyle: 'Rembrandt / Loop',
+      tags: ['headshot','portrait','rembrandt','three-point'],
+    }, generatePreviewSVG('portrait_1')),
     difficulty: 'beginner',
     lightingStyle: 'Rembrandt / Loop',
     equipment: [
@@ -215,7 +242,14 @@ const SCENE_PRESETS: ScenePreset[] = [
     name: 'Beauty/Fashion Portrait',
     category: 'portrait',
     description: 'High-key beauty setup with clamshell lighting and beauty dish',
-    thumbnail: generatePreviewSVG('portrait_2,'),
+    thumbnail: resolveScenePresetThumbnail({
+      id: 'beauty_portrait',
+      name: 'Beauty/Fashion Portrait',
+      category: 'portrait',
+      description: 'High-key beauty setup with clamshell lighting and beauty dish',
+      lightingStyle: 'Butterfly / Clamshell',
+      tags: ['beauty','fashion','glamour','butterfly','clamshell'],
+    }, generatePreviewSVG('portrait_2')),
     difficulty: 'intermediate',
     lightingStyle: 'Butterfly / Clamshell',
     equipment: [

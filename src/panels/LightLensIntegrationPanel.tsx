@@ -270,6 +270,7 @@ function QuickSettingsSummary() {
   );
 }
 
+
 // =============================================================================
 // LIGHT LIST
 // =============================================================================
@@ -532,4 +533,3 @@ export function CompactExposureWidget() {
 }
 
 export default LightLensIntegrationPanel;
-

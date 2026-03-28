@@ -1,3 +1,5 @@
+import { resolveScenarioPresetPreview } from '@/core/services/lightingPatternIntelligence';
+
 export interface ScenarioPreset {
   id: string;
   navn: string;
@@ -45,7 +47,7 @@ export interface ScenarioPreset {
   };
 }
 
-export const scenarioPresets: ScenarioPreset[] = [
+const RAW_SCENARIO_PRESETS: ScenarioPreset[] = [
   {
     id: 'bryllup-klassisk',
     navn: 'Bryllup - Klassisk',
@@ -525,6 +527,11 @@ export const scenarioPresets: ScenarioPreset[] = [
     recommendedAssets: { lights: ['godox-ad400-pro'], modifiers: ['octabox-150', 'reflector-white-42'], backdrops: ['seamless-blue', 'seamless-grey'] }
   }
 ];
+
+export const scenarioPresets: ScenarioPreset[] = RAW_SCENARIO_PRESETS.map((preset) => ({
+  ...preset,
+  previewImage: resolveScenarioPresetPreview(preset.id, preset.previewImage, preset.kategori),
+}));
 
 export const getPresetsByKategori = (kategori: string): ScenarioPreset[] => {
   if (kategori === 'alle') return scenarioPresets;

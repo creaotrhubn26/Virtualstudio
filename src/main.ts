@@ -4,6 +4,7 @@ import { GLTFFileLoader, GLTFLoaderAnimationStartMode } from '@babylonjs/loaders
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, AIAssistantApp, SceneComposerPanelApp, AnimationComposerApp, VirtualStudioProApp, InteractiveElementsBrowserApp, AmbientSoundsBrowserApp, AccessoriesPanelApp } from './App';
+import PanelCreator from './components/PanelCreator';
 import { useAppStore, useFocusStore, useAutoFocusStore, useFocusPeakingStore, SceneNode } from './state/store';
 import { AutoFocusSystem } from './core/AutoFocusSystem';
 import { FocusPeakingEffect } from './core/FocusPeakingEffect';
@@ -25,6 +26,20 @@ import { zipSync, strToU8 } from 'fflate';
 import MP4Box from 'mp4box';
 import { LightingPhysics } from './core/LightingPhysics';
 import type { SceneComposition } from './core/models/sceneComposer';
+import type {
+  EnvironmentBrandApplicationTarget,
+  EnvironmentPlanBranding,
+  EnvironmentPlanRoomCeilingStyle,
+  EnvironmentPlanCharacterSuggestion,
+  EnvironmentPlanLayoutGuidance,
+  EnvironmentPlanLightingCue,
+  EnvironmentPlanRoomShell,
+  EnvironmentPlanRoomShellFixture,
+  EnvironmentPlanRoomShellNiche,
+  EnvironmentPlanRoomShellOpening,
+  EnvironmentPlanRoomWallSegment,
+  EnvironmentPlanRoomShellZone,
+} from './core/models/environmentPlan';
 import type { ShotList, CastingShot } from './core/models/production';
 import { useStreamingStore } from './services/streamingService';
 import type { StreamConfig } from './services/streamingService';
@@ -34,12 +49,51 @@ import { useCollaborationStore } from './services/collaborationService';
 import { AvatarMaterialService } from './services/avatarMaterialService';
 import { useSkeletalAnimationStore } from './services/skeletalAnimationService';
 import { getAvatarById } from './data/avatarDefinitions';
+import {
+  getCharacterCatalogEntry,
+  inferCharacterCatalogEntry,
+  type CharacterCatalogEntry,
+} from './data/characterCatalog';
 import { resolveModelPath, resolveAudioPath, resolveImagePath, resolveAssetPath } from './config/assetConfig';
 import settingsService, { getCurrentUserId } from './services/settingsService';
 import { notesService } from './services/notesService';
 import { environmentLearningService } from './services/environmentLearningService';
 import { ALL_POSES } from './core/animation/PoseLibrary';
 import type { PosePreset } from './core/animation/PoseLibrary';
+import { useCameraLightingSyncStore, type CameraLightingSyncSnapshot } from './state/cameraLightingSyncStore';
+import { getGoboById } from './data/goboDefinitions';
+import { goboService } from './core/services/goboService';
+import { createGoboModel } from './core/models/goboModel';
+import {
+  formatLightingPatternLabel,
+  getRecommendedLightingPatternIdsForSceneFamily,
+  getRecommendedLightingPatternLabelsForSceneFamily,
+  inferEnvironmentLightingRecipe,
+  inferEnvironmentLightingGobo,
+  getLightingPatternGobo,
+  getTopViewGuideForPattern,
+  inferLightingPatternIntent,
+  type LightingPatternGuideId,
+} from './core/services/lightingPatternIntelligence';
+import { cinematographyPatternsService } from './core/services/cinematographyPatternsService';
+import { findLocalLightPatternById } from './panels/LightPatternLibrary';
+import {
+  findBestBehaviorLayoutAnchor,
+  findBestCharacterLayoutAnchor,
+  findLayoutObjectAnchorById,
+  mapLayoutAnchorToRoomPosition,
+  mapLayoutAnchorToBehaviorPosition,
+  type ResolvedLayoutObjectAnchor,
+} from './services/environmentLayoutAnchorGuidance';
+import {
+  getLightingInsightForRole,
+  inferRecommendedBeamAngle,
+  inferRecommendedGoboId,
+  inferRecommendedModifier,
+} from './services/lightingInsightRecommendations';
+import { MarketplacePanel } from './components/MarketplacePanel';
+
+const PLAYWRIGHT_LIGHT_MODE = import.meta.env.VITE_PLAYWRIGHT_LIGHT_MODE === '1';
 
 declare global {
   interface Window {
@@ -62,6 +116,78 @@ interface EnvironmentRuntimePropResult {
   nodeIds: string[];
   appliedAssetIds: string[];
 }
+
+interface CharacterAppearanceConfig {
+  skinTone?: string | null;
+  hairColor?: string | null;
+  hairStyle?: 'short' | 'medium' | 'long' | 'bun' | 'covered' | null;
+  facialHair?: 'none' | 'stubble' | 'mustache' | 'beard' | null;
+  ageGroup?: 'teen' | 'young_adult' | 'adult' | 'senior' | null;
+  genderPresentation?: 'male' | 'female' | 'neutral' | null;
+}
+
+interface CharacterBehaviorConfig {
+  type: 'stationary' | 'work_loop' | 'patrol' | 'counter_service' | 'serve_route' | 'hero_idle';
+  homeZoneId?: string | null;
+  routeZoneIds?: string[];
+  customRoutePoints?: Array<{ x: number; z: number }>;
+  lookAtTarget?: 'camera' | 'hero_prop' | 'counter' | 'oven' | 'guests' | null;
+  pace?: 'still' | 'subtle' | 'active';
+  radius?: number;
+}
+
+type CharacterBehaviorPhase =
+  | 'idle'
+  | 'prep'
+  | 'carry_to_oven'
+  | 'oven_check'
+  | 'finish_pass'
+  | 'greet'
+  | 'register'
+  | 'handover'
+  | 'pickup'
+  | 'carry_service'
+  | 'serve'
+  | 'return'
+  | 'present'
+  | 'queue'
+  | 'dine'
+  | 'patrol';
+
+type CharacterBehaviorCarryKind =
+  | 'dough_tray'
+  | 'pizza_peel'
+  | 'pizza_box'
+  | 'serving_tray'
+  | 'order_pad'
+  | 'menu_card';
+
+const DEFAULT_ROOM_SHELL: EnvironmentPlanRoomShell = {
+  type: 'studio_shell',
+  width: 20,
+  depth: 20,
+  height: 8,
+  openCeiling: true,
+  ceilingStyle: 'flat',
+  openings: [],
+  zones: [],
+  fixtures: [],
+  niches: [],
+  wallSegments: [],
+  notes: ['Default virtual studio shell'],
+};
+
+const TOP_VIEW_LIGHTING_PATTERN_SEQUENCE: Array<LightingPatternGuideId | 'none'> = [
+  'rembrandt',
+  'butterfly',
+  'loop',
+  'split',
+  'clamshell',
+  'three-point',
+  'high-key',
+  'low-key',
+  'none',
+];
 
 // Early initialization of Studio Library button - runs immediately
 (function initStudioLibraryButton() {
@@ -95,10 +221,10 @@ interface EnvironmentRuntimePropResult {
       const aiAssistantPanel = document.getElementById('aiAssistantPanel');
 
       if (marketplacePanel && marketplacePanel.classList.contains('open')) {
-        window.dispatchEvent(new CustomEvent('toggle-marketplace-panel'));
+        window.dispatchEvent(new CustomEvent('vs-close-marketplace-panel'));
       }
       if (aiAssistantPanel && aiAssistantPanel.classList.contains('open')) {
-        window.dispatchEvent(new CustomEvent('toggle-ai-assistant-panel'));
+        window.dispatchEvent(new CustomEvent('vs-close-ai-assistant-panel'));
       }
       panel.classList.add('open');
       trigger.classList.add('active');
@@ -289,6 +415,87 @@ interface LightData {
   shadowsEnabled?: boolean;
   directionHelper?: BABYLON.LinesMesh;
   originalDiffuse?: BABYLON.Color3;
+  metadata?: Record<string, unknown>;
+}
+
+interface TopViewSyncSnapshot {
+  reason: string;
+  updatedAt: string;
+  selection: {
+    selectedIds: string[];
+    primarySelectedId: string | null;
+    selectionAnchorId: string | null;
+    selectedNodeId: string | null;
+    selectedActorId: string | null;
+    selectedLightId: string | null;
+    selectedCameraPresetId: string | null;
+    activeCameraPresetId: string | null;
+    source: string | null;
+  };
+  interaction: {
+    hoveredLightId: string | null;
+    hoveredPropId: string | null;
+    hoveredActorId: string | null;
+    hoveredCameraId: string | null;
+    hoveredZoneId: string | null;
+    draggingLightId: string | null;
+    draggingPropId: string | null;
+    draggingActorId: string | null;
+    draggingCameraId: string | null;
+    isPanning: boolean;
+    measurementMode: boolean;
+    behaviorZoneAssignmentMode: 'home-zone' | 'look-target' | null;
+  };
+  viewport: {
+    zoom: number;
+    pan: {
+      x: number;
+      y: number;
+    };
+    showGrid: boolean;
+    showLabels: boolean;
+    showLightCones: boolean;
+  };
+  patterns: {
+    selectedPatternId: LightingPatternGuideId | 'none';
+    selectedPatternLabel: string | null;
+    showGuides: boolean;
+    availablePatternIds: Array<LightingPatternGuideId | 'none'>;
+    aiRecommendedPatternLabel: string | null;
+  };
+  behaviors: {
+    characters: Array<{
+      id: string;
+      name: string;
+      role: string | null;
+      behaviorType: CharacterBehaviorConfig['type'];
+      pace: CharacterBehaviorConfig['pace'];
+      phase: CharacterBehaviorPhase;
+      homeZoneId: string | null;
+      routeZoneIds: string[];
+      lookAtTarget: CharacterBehaviorConfig['lookAtTarget'] | null;
+      layoutAnchorId: string | null;
+      layoutAnchorKind: string | null;
+      targetKind: string | null;
+      targetId: string | null;
+      blockingOffset: number;
+      currentPosition: {
+        x: number;
+        y: number;
+        z: number;
+      } | null;
+      targetPosition: {
+        x: number;
+        y: number;
+        z: number;
+      } | null;
+      routePoints: Array<{
+        x: number;
+        y: number;
+        z: number;
+      }>;
+    }>;
+  };
 }
 
 interface Keyframe {
@@ -678,6 +885,7 @@ class VirtualStudio {
   public camera: BABYLON.ArcRotateCamera;
   public lights: Map<string, LightData> = new Map();
   public selectedLightId: string | null = null;
+  private lastRuntimeLightId: string | null = null;
   private lightCounter = 0;
   private selectedPosAxes: Set<string> = new Set(['x', 'y', 'z']);
   private glowLayer: BABYLON.GlowLayer | null = null;
@@ -690,6 +898,7 @@ class VirtualStudio {
   private gridMesh: BABYLON.Mesh | null = null;
   private gizmoManager: BABYLON.GizmoManager | null = null;
   private wallsVisible: boolean = true;
+  private currentRoomShell: EnvironmentPlanRoomShell = { ...DEFAULT_ROOM_SHELL };
   
   // Undo/Redo system
   private undoStack: UndoAction[] = [];
@@ -717,7 +926,7 @@ class VirtualStudio {
   private monitorTextureHandles: Map<string, WebGLTexture | null> = new Map();
   
   // Casting candidates in scene
-  private castingCandidates: Map<string, { mesh: BABYLON.Mesh; name: string; avatarUrl?: string }> = new Map();
+  private castingCandidates: Map<string, { mesh: BABYLON.AbstractMesh; name: string; avatarUrl?: string }> = new Map();
   
   // Scene banner system
   private sceneBanner: {
@@ -733,6 +942,91 @@ class VirtualStudio {
     animationObserver: null,
     originalPositions: null,
   };
+  private environmentAutoRigState: {
+    planId: string | null;
+    lightIds: Set<string>;
+    animationObserver: BABYLON.Nullable<BABYLON.Observer<BABYLON.Scene>>;
+    elapsedSeconds: number;
+    lastTickAtMs: number | null;
+    animatedLights: Map<string, {
+      behaviorType: 'pulse' | 'flicker' | 'orbit' | 'pan_sweep';
+      speed: number;
+      amplitude: number;
+      radius: number;
+      seed: number;
+      basePosition: BABYLON.Vector3;
+      baseIntensity: number;
+      brightnessFactor: number;
+      target: BABYLON.Vector3;
+    }>;
+  } = {
+    planId: null,
+    lightIds: new Set(),
+    animationObserver: null,
+    elapsedSeconds: 0,
+    lastTickAtMs: null,
+    animatedLights: new Map(),
+  };
+  private resolveRuntimeReadyPromise: (() => void) | null = null;
+  private runtimeReadyPromise: Promise<void> = new Promise((resolve) => {
+    this.resolveRuntimeReadyPromise = resolve;
+  });
+  private runtimeReadyState: {
+    ready: boolean;
+    reason: string | null;
+    at: string | null;
+  } = {
+    ready: false,
+    reason: null,
+    at: null,
+  };
+  private environmentCameraRigState: {
+    planId: string | null;
+    shotType: string | null;
+    mood: string | null;
+    focalLength: number | null;
+    autoRig: boolean;
+  } = {
+    planId: null,
+    shotType: null,
+    mood: null,
+    focalLength: null,
+    autoRig: false,
+  };
+  private environmentBrandingState: {
+    planId: string | null;
+    brandName: string | null;
+    profileName: string | null;
+    palette: string[];
+    logoImage: string | null;
+    signageText: string | null;
+    applyToEnvironment: boolean;
+    applyToWardrobe: boolean;
+    applyToSignage: boolean;
+    applicationTargets: EnvironmentBrandApplicationTarget[];
+    uniformPolicy: string | null;
+    signageStyle: string | null;
+    packagingStyle: string | null;
+    interiorStyle: string | null;
+    notes: string[];
+  } = {
+    planId: null,
+    brandName: null,
+    profileName: null,
+    palette: [],
+    logoImage: null,
+    signageText: null,
+    applyToEnvironment: false,
+    applyToWardrobe: false,
+    applyToSignage: false,
+    applicationTargets: [],
+    uniformPolicy: null,
+    signageStyle: null,
+    packagingStyle: null,
+    interiorStyle: null,
+    notes: [],
+  };
+  private currentEnvironmentLayoutGuidance: EnvironmentPlanLayoutGuidance | null = null;
   private monitorTempFramebuffers: Map<string, WebGLFramebuffer | null> = new Map();
   // Track if callbacks are already registered to avoid duplicates
   private monitorCallbacksRegistered: Map<string, boolean> = new Map();
@@ -740,9 +1034,45 @@ class VirtualStudio {
   // Scene state tracking for assets (Phase 3: Asset Pipeline)
   private sceneState = {
     props: new Map<string, { id: string; mesh: BABYLON.Mesh; assetId: string; name: string; metadata?: any }>(),
-    characters: new Map<string, { id: string; mesh: BABYLON.Mesh; name: string; avatarUrl?: string }>(),
+    characters: new Map<string, {
+      id: string;
+      mesh: BABYLON.AbstractMesh;
+      name: string;
+      avatarUrl?: string;
+      avatarId?: string;
+      role?: string;
+      metadata?: {
+        wardrobeStyle?: string;
+        wardrobeVariantId?: string | null;
+        logoPlacement?: string;
+        outfitColors?: string[];
+        actionHint?: string | null;
+        wardrobeNotes?: string[];
+        environmentGenerated?: boolean;
+        appearance?: CharacterAppearanceConfig | null;
+        behaviorPlan?: CharacterBehaviorConfig | null;
+        layoutAnchorId?: string | null;
+        layoutAnchorKind?: string | null;
+        visualKind?: 'catalog-glb' | 'procedural-mannequin' | 'manual-glb';
+        sourceModelUrl?: string | null;
+      } | null;
+    }>(),
     backdrops: new Map<string, { id: string; mesh: BABYLON.Mesh; backdropId: string }>()
   };
+  private environmentCharacterBehaviors: Map<string, {
+    mesh: BABYLON.AbstractMesh;
+    plan: CharacterBehaviorConfig;
+    basePosition: BABYLON.Vector3;
+    routePoints: BABYLON.Vector3[];
+    seed: number;
+    phase: CharacterBehaviorPhase;
+    carryKind: CharacterBehaviorCarryKind | null;
+    targetKind: string | null;
+    targetId: string | null;
+    blockingOffset: number;
+    lastPhaseChangeAtMs: number;
+  }> = new Map();
+  private environmentCharacterBehaviorLastTickAtMs: number | null = null;
   
   // Getter to access lights via sceneState for consistency
   private get sceneLights() { return this.lights; }
@@ -937,6 +1267,8 @@ class VirtualStudio {
     console.log('[Constructor] Creating scene...');
     this.scene = new BABYLON.Scene(this.engine);
     this.scene.clearColor = new BABYLON.Color4(0.08, 0.09, 0.11, 1);
+    goboService.setScene(this.scene);
+    (window as any).goboService = goboService;
     this.configureGltfLoaderDefaults();
     console.log('[Constructor] Scene created, loading environment texture...');
     
@@ -987,6 +1319,7 @@ class VirtualStudio {
     this.engine.runRenderLoop(() => {
       this.updateCharacterKeyboardLocomotion();
       this.updateCharacterLocomotion();
+      this.updateEnvironmentCharacterBehaviors();
       this.scene.render();
       this.applyCharacterMotionNodeLocks();
       renderCount++;
@@ -997,8 +1330,12 @@ class VirtualStudio {
         console.log('[RenderLoop] 60 frames rendered. Meshes:', this.scene.meshes.length, ', Lights:', this.scene.lights.length);
       }
       this.updateTopView();
-      this.updateHistogram();
-      this.updateMonitorCanvases();
+      if (this.shouldUpdateHistogramScopes()) {
+        this.updateHistogram();
+      }
+      if (this.shouldUpdateMonitorCanvases()) {
+        this.updateMonitorCanvases();
+      }
       this.updateSelectedLightProperties();
       if (this.topViewIsFullscreen) {
         this.updateTopViewInfoPanel();
@@ -1037,8 +1374,10 @@ class VirtualStudio {
       console.log('[VirtualStudio] Starting setupStudio...');
       this.setupStudio().then(() => {
         console.log('[VirtualStudio] setupStudio complete. Meshes:', this.scene.meshes.length, 'Lights:', this.lights.size);
+        this.markRuntimeReady('setupStudio-complete');
       }).catch(err => {
         console.error('[VirtualStudio] setupStudio error:', err);
+        this.markRuntimeReady('setupStudio-error');
       });
       
       this.setup2DViews();
@@ -1048,7 +1387,9 @@ class VirtualStudio {
       
       this.autoFocusSystem = new AutoFocusSystem(this.scene, this.camera);
       this.focusPeakingEffect = new FocusPeakingEffect(this.scene, this.camera);
-      this.physicsBasedDOF = new PhysicsBasedDOF(this.scene, this.camera);
+      if (!PLAYWRIGHT_LIGHT_MODE) {
+        this.physicsBasedDOF = new PhysicsBasedDOF(this.scene, this.camera);
+      }
       this.setupAutoFocusUI();
       this.setupFocusPeakingUI();
       
@@ -1061,6 +1402,55 @@ class VirtualStudio {
     
     this.engine.resize();
     this.resizeCanvases();
+  }
+
+  private markRuntimeReady(reason: string): void {
+    const timestamp = new Date().toISOString();
+    this.runtimeReadyState = {
+      ready: true,
+      reason,
+      at: timestamp,
+    };
+
+    const globalWindow = window as any;
+    globalWindow.__virtualStudioRuntimeReady = {
+      ready: true,
+      reason,
+      at: timestamp,
+    };
+    window.dispatchEvent(new CustomEvent('vs-runtime-ready', {
+      detail: globalWindow.__virtualStudioRuntimeReady,
+    }));
+
+    if (this.resolveRuntimeReadyPromise) {
+      const resolve = this.resolveRuntimeReadyPromise;
+      this.resolveRuntimeReadyPromise = null;
+      resolve();
+    }
+  }
+
+  private async waitForRuntimeReady(timeoutMs: number = 20000): Promise<void> {
+    if (this.runtimeReadyState.ready) {
+      return;
+    }
+
+    let timedOut = false;
+    let timeoutHandle: number | null = null;
+    const timeoutPromise = new Promise<void>((resolve) => {
+      timeoutHandle = window.setTimeout(() => {
+        timedOut = true;
+        resolve();
+      }, timeoutMs);
+    });
+
+    await Promise.race([this.runtimeReadyPromise, timeoutPromise]);
+    if (timeoutHandle !== null) {
+      window.clearTimeout(timeoutHandle);
+    }
+
+    if (!this.runtimeReadyState.ready && timedOut) {
+      console.warn('[VirtualStudio] Runtime ready timeout elapsed; continuing with current scene state');
+    }
   }
 
   // Public camera accessors for 3D controls integration
@@ -1096,6 +1486,215 @@ class VirtualStudio {
     this.camera.fov = fov;
   }
 
+  private getEnvironmentCameraSubjectBounds(
+    fallbackTarget?: BABYLON.Vector3 | null,
+  ): {
+    center: BABYLON.Vector3;
+    extents: BABYLON.Vector3;
+    radius: number;
+  } {
+    const environmentProps = Array.from(this.sceneState.props.values())
+      .filter((prop) => Boolean(prop.metadata?.environmentGenerated));
+
+    const priorityRank: Record<string, number> = {
+      high: 0,
+      medium: 1,
+      low: 2,
+    };
+
+    environmentProps.sort((left, right) => {
+      const leftPriority = priorityRank[String(left.metadata?.priority ?? 'medium')] ?? 1;
+      const rightPriority = priorityRank[String(right.metadata?.priority ?? 'medium')] ?? 1;
+      return leftPriority - rightPriority;
+    });
+
+    const heroProp = environmentProps[0];
+    if (heroProp) {
+      const bounds = heroProp.mesh.getHierarchyBoundingVectors(true);
+      const extents = bounds.max.subtract(bounds.min).scale(0.5);
+      return {
+        center: bounds.min.add(bounds.max).scale(0.5),
+        extents,
+        radius: Math.max(0.8, extents.length()),
+      };
+    }
+
+    const center = fallbackTarget?.clone() || new BABYLON.Vector3(0, 1.4, 0);
+    const extents = new BABYLON.Vector3(0.6, 0.8, 0.6);
+    return {
+      center,
+      extents,
+      radius: 1.2,
+    };
+  }
+
+  private selectEnvironmentCameraFocalLength(shotType: string, mood?: string): number {
+    const normalized = `${shotType} ${mood || ''}`.toLowerCase();
+
+    if (normalized.includes('establish') || normalized.includes('wide')) {
+      return normalized.includes('dramatic') ? 35 : 28;
+    }
+    if (normalized.includes('close') || normalized.includes('beauty') || normalized.includes('detail')) {
+      return 85;
+    }
+    if (normalized.includes('interview')) {
+      return 70;
+    }
+    if (normalized.includes('hero') || normalized.includes('product')) {
+      return 65;
+    }
+    return 50;
+  }
+
+  private clampEnvironmentCameraPosition(position: BABYLON.Vector3, target: BABYLON.Vector3): BABYLON.Vector3 {
+    const halfWidth = this.currentRoomShell.width / 2;
+    const halfDepth = this.currentRoomShell.depth / 2;
+    const clamped = position.clone();
+
+    clamped.x = BABYLON.Scalar.Clamp(clamped.x, -halfWidth + 0.9, halfWidth - 0.9);
+    clamped.z = BABYLON.Scalar.Clamp(clamped.z, -halfDepth + 0.9, halfDepth - 0.9);
+    clamped.y = BABYLON.Scalar.Clamp(
+      clamped.y,
+      0.9,
+      Math.max(1.6, this.currentRoomShell.height - (this.currentRoomShell.openCeiling ? 0.4 : 0.9)),
+    );
+
+    if (clamped.subtract(target).lengthSquared() < 0.25) {
+      clamped.z += 1.2;
+    }
+
+    return clamped;
+  }
+
+  public applyEnvironmentCameraRig(
+    options: {
+      planId?: string;
+      shotType?: string;
+      mood?: string;
+      target?: [number, number, number];
+      positionHint?: [number, number, number];
+      fov?: number;
+    },
+  ): {
+    position: [number, number, number];
+    target: [number, number, number];
+    focalLength: number;
+    shotType: string;
+  } {
+    const fallbackTarget = Array.isArray(options.target) && options.target.length >= 3
+      ? new BABYLON.Vector3(options.target[0], options.target[1], options.target[2])
+      : null;
+    const subject = this.getEnvironmentCameraSubjectBounds(fallbackTarget);
+    const shotType = options.shotType || 'medium shot';
+    const normalizedShotType = shotType.toLowerCase();
+    const target = fallbackTarget?.clone() || subject.center.clone();
+    const hintPosition = Array.isArray(options.positionHint) && options.positionHint.length >= 3
+      ? new BABYLON.Vector3(options.positionHint[0], options.positionHint[1], options.positionHint[2])
+      : null;
+
+    let direction = hintPosition
+      ? hintPosition.subtract(target)
+      : this.camera.position.clone().subtract(target);
+    direction.y = 0;
+    if (direction.lengthSquared() < 0.0001) {
+      direction.copyFromFloats(0, 0, 1);
+    } else {
+      direction.normalize();
+    }
+
+    const right = BABYLON.Vector3.Cross(direction, BABYLON.Axis.Y);
+    if (right.lengthSquared() >= 0.0001) {
+      right.normalize();
+    } else {
+      right.copyFromFloats(1, 0, 0);
+    }
+
+    const focalLength = this.selectEnvironmentCameraFocalLength(shotType, options.mood);
+    const framingMultiplier = normalizedShotType.includes('establish')
+      ? 4.8
+      : normalizedShotType.includes('wide')
+        ? 4.2
+        : normalizedShotType.includes('close') || normalizedShotType.includes('beauty')
+          ? 2.2
+          : normalizedShotType.includes('hero') || normalizedShotType.includes('product')
+            ? 2.8
+            : normalizedShotType.includes('interview')
+              ? 3.0
+              : 3.4;
+    const subjectScale = Math.max(
+      subject.radius,
+      subject.extents.x * 2.4,
+      subject.extents.y * 2.1,
+      subject.extents.z * 2.4,
+      1.2,
+    );
+    const desiredDistance = BABYLON.Scalar.Clamp(
+      subjectScale * framingMultiplier,
+      2.4,
+      Math.max(3.2, this.currentRoomShell.depth * 0.78),
+    );
+    const heightOffset = normalizedShotType.includes('wide')
+      ? Math.max(0.9, subject.extents.y * 0.55)
+      : normalizedShotType.includes('close') || normalizedShotType.includes('beauty')
+        ? Math.max(0.15, subject.extents.y * 0.18)
+        : normalizedShotType.includes('interview')
+          ? Math.max(0.25, subject.extents.y * 0.22)
+          : Math.max(0.45, subject.extents.y * 0.3);
+    const lateralOffset = normalizedShotType.includes('beauty')
+      ? 0.45
+      : normalizedShotType.includes('hero') || normalizedShotType.includes('product')
+        ? 0.25
+        : 0;
+
+    target.y = normalizedShotType.includes('close') || normalizedShotType.includes('beauty')
+      ? target.y + Math.max(0.05, subject.extents.y * 0.18)
+      : target.y;
+
+    const desiredPosition = this.clampEnvironmentCameraPosition(
+      target
+        .add(direction.scale(desiredDistance))
+        .add(right.scale(lateralOffset)),
+      target,
+    );
+    desiredPosition.y = BABYLON.Scalar.Clamp(
+      target.y + heightOffset,
+      0.9,
+      Math.max(1.6, this.currentRoomShell.height - (this.currentRoomShell.openCeiling ? 0.4 : 0.9)),
+    );
+
+    const offset = desiredPosition.subtract(target);
+    const radius = Math.max(0.5, offset.length());
+    const alpha = Math.atan2(offset.x, offset.z);
+    const beta = Math.acos(BABYLON.Scalar.Clamp(offset.y / radius, -0.999, 0.999));
+
+    this.camera.setTarget(target);
+    this.camera.alpha = alpha;
+    this.camera.beta = BABYLON.Scalar.Clamp(beta, 0.2, Math.PI - 0.2);
+    this.camera.radius = radius;
+    this.setFocalLength(focalLength);
+
+    if (typeof options.fov === 'number') {
+      this.camera.fov = options.fov;
+    }
+
+    this.environmentCameraRigState = {
+      planId: options.planId || null,
+      shotType,
+      mood: options.mood || null,
+      focalLength,
+      autoRig: true,
+    };
+    this.publishCameraLightingSync('environment-camera-rig-applied', 'environment-auto-rig');
+    this.publishEnvironmentDiagnostics('environment-camera-rig-applied');
+
+    return {
+      position: [this.camera.position.x, this.camera.position.y, this.camera.position.z],
+      target: [target.x, target.y, target.z],
+      focalLength,
+      shotType,
+    };
+  }
+
   public applySimpleCameraPreset(
     position?: [number, number, number],
     target?: [number, number, number],
@@ -1113,6 +1712,13 @@ class VirtualStudio {
       this.camera.fov = fov;
     }
 
+    this.environmentCameraRigState = {
+      planId: null,
+      shotType: null,
+      mood: null,
+      focalLength: this.cameraSettings.focalLength,
+      autoRig: false,
+    };
     this.publishEnvironmentDiagnostics('camera-preset-applied');
   }
 
@@ -1137,10 +1743,30 @@ class VirtualStudio {
     };
 
     const ground = this.scene.getMeshByName('ground');
+    const ceiling = this.scene.getMeshByName('ceiling');
     const floorMaterialName = ground?.material?.name ?? null;
     const cameraTarget = typeof (this.camera as any).getTarget === 'function'
       ? (this.camera as any).getTarget()
       : null;
+
+    if (
+      this.environmentAutoRigState.animatedLights.size > 0
+      && this.environmentAutoRigState.lastTickAtMs !== null
+    ) {
+      const now = performance.now();
+      const idleSeconds = Math.min(
+        Math.max(0, (now - this.environmentAutoRigState.lastTickAtMs) * 0.001),
+        0.25,
+      );
+      if (idleSeconds > 0.08) {
+        this.environmentAutoRigState.lastTickAtMs = now;
+        this.updateEnvironmentAutoRigAnimations(idleSeconds);
+      }
+    }
+
+    if (this.environmentCharacterBehaviors.size > 0) {
+      this.updateEnvironmentCharacterBehaviors();
+    }
 
     return {
       reason,
@@ -1158,6 +1784,129 @@ class VirtualStudio {
           materialName: floorMaterialName,
           materialId: this.parseSceneMaterialId(floorMaterialName, 'floor_'),
         },
+        roomShell: {
+          type: this.currentRoomShell.type,
+          width: this.currentRoomShell.width,
+          depth: this.currentRoomShell.depth,
+          height: this.currentRoomShell.height,
+          openCeiling: this.currentRoomShell.openCeiling,
+          ceilingStyle: this.currentRoomShell.ceilingStyle ?? 'flat',
+          openings: Array.isArray(this.currentRoomShell.openings)
+            ? this.currentRoomShell.openings.map((opening) => ({ ...opening }))
+            : [],
+          renderedOpenings: this.scene.meshes
+            .filter((mesh) => Boolean((mesh.metadata as { roomShellAccessory?: boolean; openingId?: string } | undefined)?.roomShellAccessory))
+            .map((mesh) => (mesh.metadata as { openingId?: string } | undefined)?.openingId)
+            .filter((openingId): openingId is string => typeof openingId === 'string')
+            .filter((value, index, array) => array.indexOf(value) === index),
+          typeAccessoryKinds: this.scene.meshes
+            .filter((mesh) => Boolean((mesh.metadata as { roomShellAccessory?: boolean; typeAccessoryKind?: string } | undefined)?.roomShellAccessory))
+            .map((mesh) => (mesh.metadata as { typeAccessoryKind?: string } | undefined)?.typeAccessoryKind)
+            .filter((kind): kind is string => typeof kind === 'string' && kind.length > 0)
+            .filter((value, index, array) => array.indexOf(value) === index),
+          brandAccessoryKinds: this.scene.meshes
+            .filter((mesh) => {
+              const metadata = (mesh.metadata as {
+                roomShellAccessory?: boolean;
+                environmentBrandAccessory?: boolean;
+                typeAccessoryKind?: string;
+              } | undefined);
+              return Boolean(metadata?.roomShellAccessory && metadata?.environmentBrandAccessory);
+            })
+            .map((mesh) => (mesh.metadata as { typeAccessoryKind?: string } | undefined)?.typeAccessoryKind)
+            .filter((kind): kind is string => typeof kind === 'string' && kind.length > 0)
+            .filter((value, index, array) => array.indexOf(value) === index),
+          brandDecorationKinds: this.scene.meshes
+            .filter((mesh) => {
+              const metadata = (mesh.metadata as {
+                roomShellAccessory?: boolean;
+                environmentBrandAccessory?: boolean;
+                environmentBrandDecorationKind?: string;
+              } | undefined);
+              return Boolean(metadata?.roomShellAccessory && metadata?.environmentBrandAccessory);
+            })
+            .map((mesh) => (mesh.metadata as { environmentBrandDecorationKind?: string } | undefined)?.environmentBrandDecorationKind)
+            .filter((kind): kind is string => typeof kind === 'string' && kind.length > 0)
+            .filter((value, index, array) => array.indexOf(value) === index),
+          fixtures: Array.isArray(this.currentRoomShell.fixtures)
+            ? this.currentRoomShell.fixtures.map((fixture) => ({ ...fixture }))
+            : [],
+          niches: Array.isArray(this.currentRoomShell.niches)
+            ? this.currentRoomShell.niches.map((niche) => ({ ...niche }))
+            : [],
+          renderedNiches: (Array.isArray(this.currentRoomShell.niches) ? this.currentRoomShell.niches : [])
+            .filter((niche) => this.scene.meshes.some((mesh) => {
+              const metadata = (mesh.metadata || {}) as {
+                roomShellAccessory?: boolean;
+                nicheId?: string;
+                nicheKind?: string;
+              };
+              return Boolean(
+                metadata.roomShellAccessory
+                && (
+                  metadata.nicheId === niche.id
+                  || metadata.nicheKind === niche.kind
+                )
+              );
+            }))
+            .map((niche) => niche.id),
+          wallSegments: Array.isArray(this.currentRoomShell.wallSegments)
+            ? this.currentRoomShell.wallSegments.map((segment) => ({ ...segment }))
+            : [],
+          renderedWallSegments: (Array.isArray(this.currentRoomShell.wallSegments) ? this.currentRoomShell.wallSegments : [])
+            .filter((segment) => this.scene.meshes.some((mesh) => {
+              const metadata = (mesh.metadata || {}) as {
+                roomShellAccessory?: boolean;
+                wallSegmentId?: string;
+                wallSegmentKind?: string;
+              };
+              return Boolean(
+                metadata.roomShellAccessory
+                && (
+                  metadata.wallSegmentId === segment.id
+                  || metadata.wallSegmentKind === segment.kind
+                )
+              );
+            }))
+            .map((segment) => segment.id),
+          renderedFixtures: (Array.isArray(this.currentRoomShell.fixtures) ? this.currentRoomShell.fixtures : [])
+            .filter((fixture) => this.scene.meshes.some((mesh) => {
+              const metadata = (mesh.metadata || {}) as {
+                roomShellAccessory?: boolean;
+                fixtureId?: string;
+                fixtureKind?: string;
+                typeAccessoryKind?: string;
+              };
+              if (!metadata.roomShellAccessory) {
+                return false;
+              }
+              return metadata.fixtureId === fixture.id
+                || metadata.fixtureKind === fixture.kind
+                || metadata.typeAccessoryKind === fixture.kind;
+            }))
+            .map((fixture) => fixture.id),
+          zones: Array.isArray(this.currentRoomShell.zones)
+            ? this.currentRoomShell.zones.map((zone) => ({ ...zone }))
+            : [],
+          ceilingVisible: ceiling?.isVisible ?? !this.currentRoomShell.openCeiling,
+        },
+        branding: {
+          planId: this.environmentBrandingState.planId,
+          brandName: this.environmentBrandingState.brandName,
+          profileName: this.environmentBrandingState.profileName,
+          palette: [...this.environmentBrandingState.palette],
+          signageText: this.environmentBrandingState.signageText,
+          hasLogo: Boolean(this.environmentBrandingState.logoImage),
+          applyToEnvironment: this.environmentBrandingState.applyToEnvironment,
+          applyToWardrobe: this.environmentBrandingState.applyToWardrobe,
+          applyToSignage: this.environmentBrandingState.applyToSignage,
+          applicationTargets: [...this.environmentBrandingState.applicationTargets],
+          uniformPolicy: this.environmentBrandingState.uniformPolicy,
+          signageStyle: this.environmentBrandingState.signageStyle,
+          packagingStyle: this.environmentBrandingState.packagingStyle,
+          interiorStyle: this.environmentBrandingState.interiorStyle,
+          notes: [...this.environmentBrandingState.notes],
+        },
         atmosphere: {
           fogEnabled: this.scene.fogMode !== BABYLON.Scene.FOGMODE_NONE,
           fogDensity: this.scene.fogDensity ?? 0,
@@ -1170,7 +1919,55 @@ class VirtualStudio {
           position: [this.camera.position.x, this.camera.position.y, this.camera.position.z],
           target: cameraTarget ? [cameraTarget.x, cameraTarget.y, cameraTarget.z] : null,
           fov: this.camera.fov,
+          focalLength: this.environmentCameraRigState.focalLength ?? this.cameraSettings.focalLength,
+          shotType: this.environmentCameraRigState.shotType,
+          mood: this.environmentCameraRigState.mood,
+          autoRig: this.environmentCameraRigState.autoRig,
+          planId: this.environmentCameraRigState.planId,
         },
+        lights: Array.from(this.lights.entries()).map(([id, data]) => {
+          const lightPosition = (data.light as any)?.position as BABYLON.Vector3 | undefined;
+          const animatedState = this.environmentAutoRigState.animatedLights.get(id);
+          const goboAttachment = goboService.getGoboAttachment(id);
+          const fallbackGobo = data.metadata || {};
+
+          return {
+            id,
+            name: data.name,
+            type: data.type,
+            role: data.metadata?.role ?? null,
+            purpose: data.metadata?.purpose ?? null,
+            position: lightPosition
+              ? [lightPosition.x, lightPosition.y, lightPosition.z]
+              : [data.mesh.position.x, data.mesh.position.y, data.mesh.position.z],
+            meshPosition: [data.mesh.position.x, data.mesh.position.y, data.mesh.position.z],
+            intensity: data.light.intensity,
+            cct: data.cct,
+            environmentAutoRig: Boolean(data.metadata?.environmentAutoRig),
+            intent: typeof data.metadata?.lightingIntent === 'string' ? data.metadata.lightingIntent : null,
+            modifier: typeof data.metadata?.lightingModifier === 'string' ? data.metadata.lightingModifier : null,
+            beamAngle: typeof data.specs?.beamAngle === 'number' ? data.specs.beamAngle : null,
+            rationale: typeof data.metadata?.lightingRationale === 'string' ? data.metadata.lightingRationale : null,
+            hazeEnabled: Boolean((data.metadata as any)?.environmentAutoRigHaze?.enabled),
+            hazeDensity: typeof (data.metadata as any)?.environmentAutoRigHaze?.density === 'number'
+              ? (data.metadata as any).environmentAutoRigHaze.density
+              : null,
+            behaviorType: data.metadata?.behaviorType ?? animatedState?.behaviorType ?? null,
+            target: Array.isArray(data.metadata?.environmentAutoRigTarget)
+              ? data.metadata?.environmentAutoRigTarget
+              : animatedState
+                ? [animatedState.target.x, animatedState.target.y, animatedState.target.z]
+                : null,
+            goboId: goboAttachment?.goboId ?? (typeof fallbackGobo.goboId === 'string' ? fallbackGobo.goboId : null),
+            goboPattern: goboAttachment?.options.pattern ?? (typeof fallbackGobo.goboId === 'string' ? fallbackGobo.goboId : null),
+            goboRotation: goboAttachment?.options.rotation ?? (typeof fallbackGobo.goboRotation === 'number' ? fallbackGobo.goboRotation : null),
+            goboSize: goboAttachment?.options.size ?? (typeof fallbackGobo.goboSize === 'number' ? fallbackGobo.goboSize : null),
+            goboIntensity: goboAttachment?.options.intensity ?? (typeof fallbackGobo.goboIntensity === 'number' ? fallbackGobo.goboIntensity : null),
+            goboProjectionApplied: typeof fallbackGobo.goboProjectionApplied === 'boolean'
+              ? fallbackGobo.goboProjectionApplied
+              : Boolean(goboAttachment),
+          };
+        }),
         props: Array.from(this.sceneState.props.values()).map((prop) => ({
           id: prop.id,
           assetId: prop.assetId,
@@ -1180,11 +1977,79 @@ class VirtualStudio {
             prop.mesh.position.y,
             prop.mesh.position.z,
           ],
+          rotationY: prop.mesh.rotation.y,
           environmentGenerated: Boolean(prop.metadata?.environmentGenerated),
           placementHint: prop.metadata?.placementHint ?? null,
           placementMode: prop.metadata?.placementMode ?? null,
           surfaceAnchorId: prop.metadata?.surfaceAnchorId ?? null,
+          relativePlacementType: prop.metadata?.relativePlacementType ?? null,
+          relativePlacementTargetAssetId: prop.metadata?.relativePlacementTargetAssetId ?? null,
+          faceTarget: prop.metadata?.faceTarget ?? null,
+          preferredWallTarget: typeof prop.metadata?.preferredWallTarget === 'string' ? prop.metadata.preferredWallTarget : null,
+          preferredZonePurpose: typeof prop.metadata?.preferredZonePurpose === 'string' ? prop.metadata.preferredZonePurpose : null,
+          layoutAnchorId: typeof prop.metadata?.layoutAnchorId === 'string' ? prop.metadata.layoutAnchorId : null,
+          layoutAnchorKind: typeof prop.metadata?.layoutAnchorKind === 'string' ? prop.metadata.layoutAnchorKind : null,
+          shotZoneX: typeof prop.metadata?.shotZoneX === 'number' ? prop.metadata.shotZoneX : null,
+          shotDepthZone: typeof prop.metadata?.shotDepthZone === 'string' ? prop.metadata.shotDepthZone : null,
+          brandDecorationKinds: Array.isArray(prop.metadata?.brandDecorationKinds) ? [...prop.metadata.brandDecorationKinds] : [],
         })),
+        characters: Array.from(this.sceneState.characters.values()).map((character) => {
+          const runtimeBehaviorState = this.environmentCharacterBehaviors.get(character.id);
+          const profile = this.resolveCharacterModelProfile(character.mesh);
+          const motionNode = this.resolveCharacterMotionNode(character.mesh, profile);
+          const visiblePosition = motionNode && !motionNode.isDisposed()
+            ? this.getMotionNodeWorldPosition(motionNode)
+            : character.mesh.position.clone();
+          const visibleRotationY = motionNode && !motionNode.isDisposed()
+            ? this.getMeshYaw(motionNode, profile)
+            : character.mesh.rotation.y;
+          const wardrobeAccessories = character.mesh.getChildMeshes(true)
+            .filter((mesh) => Boolean((mesh.metadata as { characterWardrobeAccessory?: boolean } | undefined)?.characterWardrobeAccessory));
+          const appearanceAccessories = character.mesh.getChildMeshes(true)
+            .filter((mesh) => Boolean((mesh.metadata as { characterAppearanceAccessory?: boolean } | undefined)?.characterAppearanceAccessory));
+
+          return {
+            id: character.id,
+            name: character.name,
+            role: typeof character.role === 'string' ? character.role : null,
+            avatarUrl: character.avatarUrl ?? null,
+            avatarId: character.avatarId ?? null,
+            position: [
+              visiblePosition.x,
+              visiblePosition.y,
+              visiblePosition.z,
+            ],
+            rotationY: visibleRotationY,
+            wardrobeStyle: typeof character.metadata?.wardrobeStyle === 'string' ? character.metadata.wardrobeStyle : null,
+            wardrobeVariantId: typeof character.metadata?.wardrobeVariantId === 'string' ? character.metadata.wardrobeVariantId : null,
+            logoPlacement: typeof character.metadata?.logoPlacement === 'string' ? character.metadata.logoPlacement : null,
+            outfitColors: Array.isArray(character.metadata?.outfitColors) ? [...character.metadata.outfitColors] : [],
+            placementHint: typeof character.metadata?.placementHint === 'string' ? character.metadata.placementHint : null,
+            actionHint: typeof character.metadata?.actionHint === 'string' ? character.metadata.actionHint : null,
+            wardrobeNotes: Array.isArray(character.metadata?.wardrobeNotes) ? [...character.metadata.wardrobeNotes] : [],
+            appearance: character.metadata?.appearance ?? null,
+            layoutAnchorId: typeof character.metadata?.layoutAnchorId === 'string' ? character.metadata.layoutAnchorId : null,
+            layoutAnchorKind: typeof character.metadata?.layoutAnchorKind === 'string' ? character.metadata.layoutAnchorKind : null,
+            behaviorPlan: character.metadata?.behaviorPlan ?? null,
+            behaviorState: runtimeBehaviorState
+              ? {
+                phase: runtimeBehaviorState.phase,
+                carryKind: runtimeBehaviorState.carryKind,
+                targetKind: runtimeBehaviorState.targetKind,
+                targetId: runtimeBehaviorState.targetId,
+                blockingOffset: runtimeBehaviorState.blockingOffset,
+                lastPhaseChangeAtMs: runtimeBehaviorState.lastPhaseChangeAtMs,
+              }
+              : null,
+            environmentGenerated: Boolean(character.metadata?.environmentGenerated),
+            visualKind: typeof character.metadata?.visualKind === 'string' ? character.metadata.visualKind : null,
+            sourceModelUrl: typeof character.metadata?.sourceModelUrl === 'string' ? character.metadata.sourceModelUrl : null,
+            wardrobeAccessoryCount: wardrobeAccessories.length,
+            appearanceAccessoryCount: appearanceAccessories.length,
+            wardrobeAccessoryNames: wardrobeAccessories.map((mesh) => mesh.name),
+            appearanceAccessoryNames: appearanceAccessories.map((mesh) => mesh.name),
+          };
+        }),
       },
     };
   }
@@ -1202,6 +2067,2127 @@ class VirtualStudio {
     window.dispatchEvent(new CustomEvent('vs-environment-diagnostics', {
       detail: diagnostics,
     }));
+
+    this.publishCameraLightingSync(reason, 'environment');
+  }
+
+  private buildCameraLightingSyncSnapshot(
+    reason: string,
+    source: string = 'runtime',
+  ): CameraLightingSyncSnapshot {
+    const cameraTarget = typeof (this.camera as any).getTarget === 'function'
+      ? (this.camera as any).getTarget()
+      : this.camera.target;
+    const selection = useCameraLightingSyncStore.getState().selection;
+
+    return {
+      reason,
+      updatedAt: new Date().toISOString(),
+      camera: {
+        position: [this.camera.position.x, this.camera.position.y, this.camera.position.z],
+        target: cameraTarget ? [cameraTarget.x, cameraTarget.y, cameraTarget.z] : null,
+        fov: this.camera.fov,
+        focalLength: this.environmentCameraRigState.focalLength ?? this.cameraSettings.focalLength,
+        aperture: this.cameraSettings.aperture,
+        shutter: this.cameraSettings.shutter,
+        iso: this.cameraSettings.iso,
+        nd: this.cameraSettings.nd,
+        whiteBalance: this.cameraSettings.whiteBalance ?? null,
+        autoRig: this.environmentCameraRigState.autoRig,
+        planId: this.environmentCameraRigState.planId,
+        shotType: this.environmentCameraRigState.shotType,
+        mood: this.environmentCameraRigState.mood,
+        lastSource: source,
+      },
+      lighting: {
+        lights: Array.from(this.lights.entries()).map(([id, data]) => {
+          const lightPosition = (data.light as any)?.position as BABYLON.Vector3 | undefined;
+          const goboAttachment = goboService.getGoboAttachment(id);
+          const fallbackGobo = data.metadata || {};
+          return {
+            id,
+            name: data.name,
+            type: data.type,
+            enabled: data.enabled !== false && data.light.isEnabled(),
+            intensity: data.light.intensity,
+            cct: data.cct ?? null,
+            role: typeof data.metadata?.role === 'string' ? data.metadata.role : null,
+            purpose: typeof data.metadata?.purpose === 'string' ? data.metadata.purpose : null,
+            intent: typeof data.metadata?.lightingIntent === 'string' ? data.metadata.lightingIntent : null,
+            modifier: typeof data.metadata?.lightingModifier === 'string' ? data.metadata.lightingModifier : null,
+            beamAngle: typeof data.specs?.beamAngle === 'number' ? data.specs.beamAngle : null,
+            rationale: typeof data.metadata?.lightingRationale === 'string' ? data.metadata.lightingRationale : null,
+            hazeEnabled: Boolean((data.metadata as any)?.environmentAutoRigHaze?.enabled),
+            hazeDensity: typeof (data.metadata as any)?.environmentAutoRigHaze?.density === 'number'
+              ? (data.metadata as any).environmentAutoRigHaze.density
+              : null,
+            behaviorType: typeof data.metadata?.behaviorType === 'string' ? data.metadata.behaviorType : null,
+            environmentAutoRig: Boolean(data.metadata?.environmentAutoRig),
+            position: lightPosition
+              ? [lightPosition.x, lightPosition.y, lightPosition.z]
+              : [data.mesh.position.x, data.mesh.position.y, data.mesh.position.z],
+            target: Array.isArray(data.metadata?.environmentAutoRigTarget)
+              ? data.metadata.environmentAutoRigTarget as [number, number, number]
+              : null,
+            goboId: goboAttachment?.goboId ?? (typeof fallbackGobo.goboId === 'string' ? fallbackGobo.goboId : null),
+            goboPattern: goboAttachment?.options.pattern ?? (typeof fallbackGobo.goboId === 'string' ? fallbackGobo.goboId : null),
+            goboRotation: goboAttachment?.options.rotation ?? (typeof fallbackGobo.goboRotation === 'number' ? fallbackGobo.goboRotation : null),
+            goboSize: goboAttachment?.options.size ?? (typeof fallbackGobo.goboSize === 'number' ? fallbackGobo.goboSize : null),
+            goboIntensity: goboAttachment?.options.intensity ?? (typeof fallbackGobo.goboIntensity === 'number' ? fallbackGobo.goboIntensity : null),
+            goboProjectionApplied: typeof fallbackGobo.goboProjectionApplied === 'boolean'
+              ? fallbackGobo.goboProjectionApplied
+              : Boolean(goboAttachment),
+          };
+        }),
+        autoRigPlanId: this.environmentAutoRigState.planId,
+        selectedLightId: this.selectedLightId,
+        lastSource: source,
+      },
+      selection: {
+        ...selection,
+        selectedLightId: this.selectedLightId,
+      },
+    };
+  }
+
+  private publishCameraLightingSync(reason: string, source: string = 'runtime'): void {
+    const snapshot = this.buildCameraLightingSyncSnapshot(reason, source);
+    const syncStore = useCameraLightingSyncStore.getState();
+    syncStore.publishRuntimeSnapshot(snapshot);
+    syncStore.setSelectedLightId(this.selectedLightId, source);
+
+    const globalWindow = window as any;
+    globalWindow.__virtualStudioCameraLightingSync = snapshot;
+
+    window.dispatchEvent(new CustomEvent('vs-camera-lighting-sync', {
+      detail: snapshot,
+    }));
+
+    if (document.getElementById('topviewInfoTitle')) {
+      this.updateTopViewInfoPanel();
+    }
+  }
+
+  private getPrimarySceneSelectionId(): string | null {
+    const store = useAppStore.getState();
+    return this.selectedLightId
+      || this.selectedCameraPresetId
+      || this.selectedActorId
+      || store.selectedNodeId
+      || null;
+  }
+
+  private syncLegacyHierarchySelection(selectedId: string | null = this.getPrimarySceneSelectionId()): void {
+    const hierarchyItems = Array.from(document.querySelectorAll('.hierarchy-item[data-id]'));
+    hierarchyItems.forEach((item) => {
+      const element = item as HTMLElement;
+      const isSelected = selectedId !== null && element.getAttribute('data-id') === selectedId;
+      element.classList.toggle('selected', isSelected);
+      element.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+    });
+  }
+
+  private syncTopViewSelectionState(source: string = 'runtime'): string[] {
+    const store = useAppStore.getState();
+    const selectedIds = [
+      store.selectedNodeId ?? null,
+      this.selectedActorId,
+      this.selectedLightId,
+      this.selectedCameraPresetId,
+    ].filter((value, index, items): value is string => Boolean(value) && items.indexOf(value) === index);
+
+    this.topViewSelectedIds = new Set(selectedIds);
+    this.topViewSelectionAnchorId = this.getPrimarySceneSelectionId();
+
+    if (source !== 'topview-render') {
+      this.updateTopViewInfoPanel();
+    }
+
+    return selectedIds;
+  }
+
+  private roundTopViewCoordinate(value: number): number {
+    return Number(value.toFixed(3));
+  }
+
+  private serializeTopViewVector(
+    value: BABYLON.Vector3 | null | undefined,
+  ): { x: number; y: number; z: number } | null {
+    if (!value) {
+      return null;
+    }
+    return {
+      x: this.roundTopViewCoordinate(value.x),
+      y: this.roundTopViewCoordinate(value.y),
+      z: this.roundTopViewCoordinate(value.z),
+    };
+  }
+
+  private buildTopViewBehaviorCharacterSnapshots(): TopViewSyncSnapshot['behaviors']['characters'] {
+    return Array.from(this.environmentCharacterBehaviors.entries())
+      .map(([nodeId, state]) => {
+        const mesh = state.mesh;
+        if (!mesh || mesh.isDisposed()) {
+          return null;
+        }
+
+        const sceneCharacter = this.sceneState.characters.get(nodeId);
+        const metadata = (mesh.metadata || {}) as Record<string, unknown>;
+        const behaviorPaused = this.selectedActorId === nodeId || this.activeCharacterLocomotion?.mesh === mesh;
+        const phaseTarget = behaviorPaused
+          ? { position: null, targetKind: null, targetId: null }
+          : this.resolveEnvironmentBehaviorPhaseTarget(nodeId, state, state.phase);
+        const profile = this.resolveCharacterModelProfile(mesh);
+        const motionMesh = this.resolveCharacterMotionNode(mesh, profile);
+        const currentPosition = motionMesh && !motionMesh.isDisposed()
+          ? this.getMotionNodeWorldPosition(motionMesh)
+          : mesh.position.clone();
+
+        return {
+          id: nodeId,
+          name: sceneCharacter?.name || String(metadata.characterName || mesh.name || nodeId),
+          role: sceneCharacter?.role || (typeof metadata.characterRole === 'string' ? metadata.characterRole : null),
+          behaviorType: state.plan.type,
+          pace: state.plan.pace || 'subtle',
+          phase: state.phase,
+          homeZoneId: state.plan.homeZoneId || null,
+          routeZoneIds: Array.isArray(state.plan.routeZoneIds) ? state.plan.routeZoneIds.filter(Boolean) : [],
+          lookAtTarget: state.plan.lookAtTarget || null,
+          layoutAnchorId: typeof metadata.layoutAnchorId === 'string' ? metadata.layoutAnchorId : null,
+          layoutAnchorKind: typeof metadata.layoutAnchorKind === 'string' ? metadata.layoutAnchorKind : null,
+          targetKind: phaseTarget.targetKind ?? (behaviorPaused ? null : state.targetKind),
+          targetId: phaseTarget.targetId ?? (behaviorPaused ? null : state.targetId),
+          blockingOffset: this.roundTopViewCoordinate(state.blockingOffset || 0),
+          currentPosition: this.serializeTopViewVector(currentPosition),
+          targetPosition: this.serializeTopViewVector(phaseTarget.position),
+          routePoints: state.routePoints.map((routePoint) => this.serializeTopViewVector(routePoint)).filter((point): point is NonNullable<typeof point> => Boolean(point)),
+        };
+      })
+      .filter((value): value is TopViewSyncSnapshot['behaviors']['characters'][number] => Boolean(value));
+  }
+
+  private serializeBehaviorRoutePointsForPlan(routePoints: BABYLON.Vector3[]): Array<{ x: number; z: number }> {
+    return routePoints
+      .map((point) => ({
+        x: this.roundTopViewCoordinate(point.x),
+        z: this.roundTopViewCoordinate(point.z),
+      }))
+      .filter((point, index, points) => points.findIndex((candidate) => Math.abs(candidate.x - point.x) < 0.0001 && Math.abs(candidate.z - point.z) < 0.0001) === index);
+  }
+
+  private getTopViewBehaviorHandleAtPoint(
+    mouseX: number,
+    mouseY: number,
+    scale: number,
+    cx: number,
+    cy: number,
+  ): { actorId: string; pointIndex: number } | null {
+    const actorId = this.selectedActorId || useAppStore.getState().selectedNodeId;
+    if (!actorId) {
+      return null;
+    }
+
+    const state = this.environmentCharacterBehaviors.get(actorId);
+    if (!state || state.routePoints.length < 2) {
+      return null;
+    }
+
+    let bestMatch: { actorId: string; pointIndex: number; dist: number } | null = null;
+    state.routePoints.forEach((point, pointIndex) => {
+      if (pointIndex === 0) {
+        return;
+      }
+      const pointX = cx + point.x * scale;
+      const pointZ = cy - point.z * scale;
+      const dist = Math.hypot(mouseX - pointX, mouseY - pointZ);
+      const threshold = Math.max(10, 8 + (scale * 0.08));
+      if (dist <= threshold && (!bestMatch || dist < bestMatch.dist)) {
+        bestMatch = { actorId, pointIndex, dist };
+      }
+    });
+
+    return bestMatch
+      ? { actorId: bestMatch.actorId, pointIndex: bestMatch.pointIndex }
+      : null;
+  }
+
+  private updateEnvironmentBehaviorRoutePoint(
+    actorId: string,
+    pointIndex: number,
+    worldX: number,
+    worldZ: number,
+  ): boolean {
+    const state = this.environmentCharacterBehaviors.get(actorId);
+    const characterState = this.sceneState.characters.get(actorId);
+    if (!state || !characterState || pointIndex < 0 || pointIndex >= state.routePoints.length) {
+      return false;
+    }
+
+    const clamped = new BABYLON.Vector3(
+      BABYLON.Scalar.Clamp(worldX, -(this.currentRoomShell.width * 0.46), this.currentRoomShell.width * 0.46),
+      state.routePoints[pointIndex].y,
+      BABYLON.Scalar.Clamp(worldZ, -(this.currentRoomShell.depth * 0.46), this.currentRoomShell.depth * 0.46),
+    );
+    state.routePoints[pointIndex] = clamped;
+
+    const serializedRoutePoints = this.serializeBehaviorRoutePointsForPlan(state.routePoints);
+    const nextBehaviorPlan = this.normalizeCharacterBehaviorConfig({
+      ...(characterState.metadata?.behaviorPlan || state.plan),
+      customRoutePoints: serializedRoutePoints,
+    });
+
+    if (nextBehaviorPlan) {
+      state.plan = nextBehaviorPlan;
+      characterState.metadata = {
+        ...(characterState.metadata || {}),
+        behaviorPlan: nextBehaviorPlan,
+      };
+      characterState.mesh.metadata = {
+        ...(characterState.mesh.metadata || {}),
+        behaviorPlan: nextBehaviorPlan,
+      };
+
+      const store = useAppStore.getState();
+      const node = store.getNode(actorId);
+      if (node) {
+        store.updateNode(actorId, {
+          userData: {
+            ...(node.userData || {}),
+            behaviorPlan: nextBehaviorPlan,
+          },
+        });
+      }
+    }
+
+    this.publishTopViewSync('topview-behavior-route-preview', 'topview');
+    this.updateTopView();
+    return true;
+  }
+
+  private async persistEnvironmentBehaviorRouteEdit(actorId: string): Promise<boolean> {
+    const state = this.environmentCharacterBehaviors.get(actorId);
+    if (!state) {
+      return false;
+    }
+
+    return this.updateCharacterConfiguration(actorId, {
+      behaviorPlan: {
+        customRoutePoints: this.serializeBehaviorRoutePointsForPlan(state.routePoints),
+      },
+    });
+  }
+
+  public getTopViewCanvasTransform(): {
+    width: number;
+    height: number;
+    scale: number;
+    cx: number;
+    cy: number;
+  } | null {
+    if (!this.topViewCanvas) {
+      return null;
+    }
+
+    const scale = this.getTopViewScale();
+    const { cx, cy } = this.getTopViewCenter();
+    return {
+      width: this.topViewCanvas.width,
+      height: this.topViewCanvas.height,
+      scale,
+      cx,
+      cy,
+    };
+  }
+
+  public getTopViewBehaviorHandleAtCanvasPoint(
+    mouseX: number,
+    mouseY: number,
+  ): { actorId: string; pointIndex: number } | null {
+    const transform = this.getTopViewCanvasTransform();
+    if (!transform) {
+      return null;
+    }
+    return this.getTopViewBehaviorHandleAtPoint(mouseX, mouseY, transform.scale, transform.cx, transform.cy);
+  }
+
+  public async editTopViewBehaviorRoutePoint(
+    actorId: string,
+    pointIndex: number,
+    nextPoint: {
+      x: number;
+      z: number;
+    },
+    options: {
+      persist?: boolean;
+      snapToGrid?: boolean;
+    } = {},
+  ): Promise<boolean> {
+    const nextX = Number(nextPoint.x);
+    const nextZ = Number(nextPoint.z);
+    if (!Number.isFinite(nextX) || !Number.isFinite(nextZ)) {
+      return false;
+    }
+
+    const worldX = options.snapToGrid ? this.snapToGrid(nextX) : nextX;
+    const worldZ = options.snapToGrid ? this.snapToGrid(nextZ) : nextZ;
+    const updated = this.updateEnvironmentBehaviorRoutePoint(actorId, pointIndex, worldX, worldZ);
+    if (!updated) {
+      return false;
+    }
+    if (options.persist === false) {
+      return true;
+    }
+    return this.persistEnvironmentBehaviorRouteEdit(actorId);
+  }
+
+  private syncTopViewPatternButtonState(): void {
+    const patternButton = document.getElementById('topviewPatterns');
+    if (!patternButton) {
+      this.syncTopViewPatternActionState();
+      return;
+    }
+
+    patternButton.classList.toggle('active', this.topViewShowPatternGuides);
+    const activePatternLabel =
+      this.topViewSelectedPattern === 'none'
+        ? 'Pattern guides'
+        : `Pattern guides: ${this.topViewSelectedPattern}`;
+    patternButton.setAttribute('title', activePatternLabel);
+    patternButton.setAttribute('aria-pressed', this.topViewShowPatternGuides ? 'true' : 'false');
+    this.syncTopViewPatternActionState();
+  }
+
+  private getTopViewBehaviorZoneModeLabel(
+    mode: 'home-zone' | 'look-target' | null,
+  ): string {
+    switch (mode) {
+      case 'home-zone':
+        return 'Hjemmesone';
+      case 'look-target':
+        return 'Se mot';
+      default:
+        return 'Ingen aktiv';
+    }
+  }
+
+  private getTopViewBehaviorPaceLabel(
+    pace: CharacterBehaviorConfig['pace'] | null | undefined,
+  ): string {
+    switch (pace) {
+      case 'still':
+        return 'Rolig';
+      case 'active':
+        return 'Aktiv';
+      case 'subtle':
+      default:
+        return 'Flyt';
+    }
+  }
+
+  private getSelectedCharacterBehaviorPlan(): CharacterBehaviorConfig | null {
+    if (!this.selectedActorId) {
+      return null;
+    }
+
+    const liveState = this.environmentCharacterBehaviors.get(this.selectedActorId);
+    if (liveState?.plan) {
+      return liveState.plan;
+    }
+
+    const characterState = this.sceneState.characters.get(this.selectedActorId);
+    return this.normalizeCharacterBehaviorConfig(characterState?.metadata?.behaviorPlan || null);
+  }
+
+  private syncTopViewBehaviorZoneButtonState(): void {
+    const homeButton = document.getElementById('topviewAssignHomeZone') as HTMLButtonElement | null;
+    const lookButton = document.getElementById('topviewAssignLookTarget') as HTMLButtonElement | null;
+    if (!homeButton && !lookButton) {
+      return;
+    }
+
+    const hasActorSelection = Boolean(this.selectedActorId);
+    if (!hasActorSelection && this.topViewBehaviorZoneAssignmentMode !== null) {
+      this.topViewBehaviorZoneAssignmentMode = null;
+    }
+    const activeMode = hasActorSelection ? this.topViewBehaviorZoneAssignmentMode : null;
+
+    const syncButton = (
+      button: HTMLButtonElement | null,
+      mode: 'home-zone' | 'look-target',
+      idleTitle: string,
+      activeTitle: string,
+    ): void => {
+      if (!button) {
+        return;
+      }
+
+      const isActive = activeMode === mode;
+      button.disabled = !hasActorSelection;
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      button.setAttribute('title', hasActorSelection ? (isActive ? activeTitle : idleTitle) : 'Velg karakter først for å bruke soneverktøy');
+    };
+
+    syncButton(
+      homeButton,
+      'home-zone',
+      'Sett hjemmesone for valgt karakter',
+      'Klikk en sone i toppvisningen for å sette hjemmesone',
+    );
+    syncButton(
+      lookButton,
+      'look-target',
+      'Sett blikkretning for valgt karakter',
+      'Klikk en sone i toppvisningen for å sette blikkretning',
+    );
+  }
+
+  private syncTopViewBehaviorPaceButtonState(): void {
+    const stillButton = document.getElementById('topviewBehaviorPaceStill') as HTMLButtonElement | null;
+    const subtleButton = document.getElementById('topviewBehaviorPaceSubtle') as HTMLButtonElement | null;
+    const activeButton = document.getElementById('topviewBehaviorPaceActive') as HTMLButtonElement | null;
+    if (!stillButton && !subtleButton && !activeButton) {
+      return;
+    }
+
+    const hasActorSelection = Boolean(this.selectedActorId);
+    const activePace = hasActorSelection
+      ? (this.getSelectedCharacterBehaviorPlan()?.pace || 'subtle')
+      : null;
+
+    const syncButton = (
+      button: HTMLButtonElement | null,
+      pace: CharacterBehaviorConfig['pace'],
+      idleTitle: string,
+    ): void => {
+      if (!button) {
+        return;
+      }
+
+      const isActive = activePace === pace;
+      button.disabled = !hasActorSelection;
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      button.setAttribute(
+        'title',
+        hasActorSelection
+          ? (isActive ? `${this.getTopViewBehaviorPaceLabel(pace)} tempo valgt` : idleTitle)
+          : 'Velg karakter først for å bruke tempoverktøy',
+      );
+    };
+
+    syncButton(stillButton, 'still', 'Sett rolig tempo for valgt karakter');
+    syncButton(subtleButton, 'subtle', 'Sett flytende tempo for valgt karakter');
+    syncButton(activeButton, 'active', 'Sett aktivt tempo for valgt karakter');
+  }
+
+  private setTopViewPatternGuide(
+    patternId: LightingPatternGuideId | 'none',
+    options: {
+      source?: string;
+      sync?: boolean;
+      showGuides?: boolean;
+    } = {},
+  ): void {
+    this.topViewSelectedPattern = patternId;
+    this.topViewShowPatternGuides = options.showGuides ?? patternId !== 'none';
+    this.syncTopViewPatternButtonState();
+
+    if (options.sync !== false) {
+      this.publishTopViewSync('topview-pattern-updated', options.source || 'runtime');
+    }
+  }
+
+  private cycleTopViewPatternGuide(source: string = 'topview'): void {
+    const currentIndex = TOP_VIEW_LIGHTING_PATTERN_SEQUENCE.indexOf(this.topViewSelectedPattern);
+    const nextIndex = (currentIndex + 1) % TOP_VIEW_LIGHTING_PATTERN_SEQUENCE.length;
+    this.setTopViewPatternGuide(TOP_VIEW_LIGHTING_PATTERN_SEQUENCE[nextIndex], { source });
+  }
+
+  private getRecommendedTopViewPatternId(): LightingPatternGuideId | null {
+    const environmentInsights = ((window as Window & {
+      __virtualStudioLastEnvironmentPlanInsights?: { familyId?: string };
+    }).__virtualStudioLastEnvironmentPlanInsights) || null;
+    const recommendedPatternId = getRecommendedLightingPatternIdsForSceneFamily(environmentInsights?.familyId || null)[0];
+    return recommendedPatternId && recommendedPatternId !== 'none'
+      ? (recommendedPatternId as LightingPatternGuideId)
+      : null;
+  }
+
+  private getSelectedLightAiRecommendations(): {
+    lightId: string;
+    light: LightData;
+    selectedLightInsight: string | null;
+    selectedLightRationale: string | null;
+    recommendedModifier: string | null;
+    recommendedBeamAngle: number | null;
+    recommendedGoboId: string | null;
+    hazeDensity: number | null;
+  } | null {
+    const syncState = useCameraLightingSyncStore.getState();
+    const fallbackLightId = this.selectedLightId
+      || syncState.lighting.selectedLightId
+      || this.lastRuntimeLightId
+      || (this.lights.size === 1 ? Array.from(this.lights.keys())[0] : null);
+
+    if (!fallbackLightId) {
+      return null;
+    }
+
+    const light = this.lights.get(fallbackLightId);
+    if (!light) {
+      return null;
+    }
+
+    const environmentInsights = ((window as Window & {
+      __virtualStudioLastEnvironmentPlanInsights?: {
+        familyId?: string;
+        familyLabel?: string;
+        summary?: string;
+        lightingDetails?: string[];
+      };
+    }).__virtualStudioLastEnvironmentPlanInsights) || null;
+
+    const lightRole = typeof light.metadata?.role === 'string' ? light.metadata.role : null;
+    const selectedLightInsight = getLightingInsightForRole(environmentInsights || null, lightRole);
+    const selectedLightRationale = typeof light.metadata?.lightingRationale === 'string'
+      ? light.metadata.lightingRationale
+      : selectedLightInsight;
+
+    return {
+      lightId: fallbackLightId,
+      light,
+      selectedLightInsight,
+      selectedLightRationale,
+      recommendedModifier: inferRecommendedModifier(selectedLightRationale),
+      recommendedBeamAngle: inferRecommendedBeamAngle(selectedLightRationale),
+      recommendedGoboId: inferRecommendedGoboId(lightRole, selectedLightRationale, environmentInsights || null),
+      hazeDensity: light.metadata?.hazeEnabled && typeof light.metadata?.hazeDensity === 'number'
+        ? light.metadata.hazeDensity
+        : null,
+    };
+  }
+
+  private syncTopViewPatternActionState(): void {
+    const applyBtn = document.getElementById('topviewApplyAiPattern') as HTMLButtonElement | null;
+    const openBtn = document.getElementById('topviewOpenPatternLibrary') as HTMLButtonElement | null;
+    const recommendedPatternId = this.getRecommendedTopViewPatternId();
+    const recommendedPatternLabel = recommendedPatternId ? formatLightingPatternLabel(recommendedPatternId) : null;
+
+    if (applyBtn) {
+      applyBtn.disabled = !recommendedPatternId;
+      applyBtn.title = recommendedPatternLabel
+        ? `Bruk AI-pattern: ${recommendedPatternLabel}`
+        : 'Ingen AI-pattern tilgjengelig';
+    }
+
+    if (openBtn) {
+      openBtn.disabled = false;
+    }
+  }
+
+  private syncTopViewAiLightActionState(): void {
+    const recommendation = this.getSelectedLightAiRecommendations();
+    const hasSelectedLight = Boolean(recommendation);
+    const modifierButton = document.getElementById('topviewApplyAiModifier') as HTMLButtonElement | null;
+    const beamButton = document.getElementById('topviewApplyAiBeam') as HTMLButtonElement | null;
+    const goboButton = document.getElementById('topviewApplyAiGobo') as HTMLButtonElement | null;
+    const hazeButton = document.getElementById('topviewApplyAiHaze') as HTMLButtonElement | null;
+    const actionsRow = document.getElementById('topviewInfoAiLightActions') as HTMLElement | null;
+
+    if (actionsRow) {
+      actionsRow.style.display = 'flex';
+    }
+
+    if (modifierButton) {
+      const recommendedModifier = recommendation?.recommendedModifier || null;
+      modifierButton.disabled = false;
+      modifierButton.textContent = recommendedModifier ? `AI-mod: ${recommendedModifier}` : 'AI-mod';
+      modifierButton.title = recommendedModifier
+        ? `Bruk anbefalt modifier: ${recommendedModifier}`
+        : (hasSelectedLight ? 'Prøv AI-modifier for valgt lys' : 'Velg lys først');
+    }
+
+    if (beamButton) {
+      const recommendedBeamAngle = recommendation?.recommendedBeamAngle;
+      const currentBeamAngle = recommendation?.light.light.getClassName() === 'SpotLight'
+        ? BABYLON.Tools.ToDegrees((recommendation.light.light as BABYLON.SpotLight).angle)
+        : recommendation?.light.metadata?.beamAngle;
+      beamButton.disabled = false;
+      beamButton.textContent = typeof recommendedBeamAngle === 'number' ? `AI-beam: ${Math.round(recommendedBeamAngle)}°` : 'AI-beam';
+      beamButton.title = typeof recommendedBeamAngle === 'number'
+        ? `Bruk anbefalt beam: ${Math.round(recommendedBeamAngle)}°`
+        : (hasSelectedLight ? 'Prøv AI-beam for valgt lys' : 'Velg lys først');
+    }
+
+    if (goboButton) {
+      const recommendedGoboId = recommendation?.recommendedGoboId || null;
+      const currentGoboId = typeof recommendation?.light.metadata?.goboId === 'string'
+        ? recommendation.light.metadata.goboId
+        : null;
+      const label = recommendedGoboId ? (getGoboById(recommendedGoboId)?.nameNo || recommendedGoboId) : null;
+      void currentGoboId;
+      goboButton.disabled = false;
+      goboButton.textContent = label ? `AI-gobo: ${label}` : 'AI-gobo';
+      goboButton.title = label
+        ? `Bruk anbefalt gobo: ${label}`
+        : (hasSelectedLight ? 'Prøv AI-gobo for valgt lys' : 'Velg lys først');
+    }
+
+    if (hazeButton) {
+      const hazeDensity = recommendation?.hazeDensity;
+      hazeButton.disabled = false;
+      hazeButton.textContent = typeof hazeDensity === 'number' ? `AI-haze: ${hazeDensity.toFixed(3)}` : 'AI-haze';
+      hazeButton.title = typeof hazeDensity === 'number'
+        ? `Bruk anbefalt haze: ${hazeDensity.toFixed(3)}`
+        : (hasSelectedLight ? 'Prøv AI-haze for valgt lys' : 'Velg lys først');
+    }
+  }
+
+  private async applyRecommendedTopViewPattern(): Promise<void> {
+    const recommendedPatternId = this.getRecommendedTopViewPatternId();
+    if (!recommendedPatternId) {
+      this.showNotification('Ingen AI-pattern tilgjengelig for denne scenen ennå', 'info');
+      return;
+    }
+
+    const pattern = cinematographyPatternsService.getPatternById(recommendedPatternId);
+    if (!pattern) {
+      this.setTopViewPatternGuide(recommendedPatternId, {
+        source: 'topview-ai-pattern',
+        showGuides: true,
+      });
+      this.showNotification(`Viser pattern-guide for ${formatLightingPatternLabel(recommendedPatternId)}`, 'info');
+      return;
+    }
+
+    await this.applyLightPattern(pattern);
+    this.showNotification(`AI-pattern brukt: ${pattern.name}`, 'success');
+  }
+
+  private applySelectedLightRecommendedModifier(): void {
+    const recommendation = this.getSelectedLightAiRecommendations();
+    if (!recommendation?.recommendedModifier || recommendation.light.modifier === recommendation.recommendedModifier) {
+      this.showNotification('Ingen ny AI-modifier tilgjengelig for valgt lys', 'info');
+      return;
+    }
+    this.applyModifierToRuntimeLight(recommendation.lightId, recommendation.recommendedModifier, 'topview-ai');
+    this.updateTopViewInfoPanel();
+    this.showNotification(`AI-modifier brukt: ${recommendation.recommendedModifier}`, 'success');
+  }
+
+  private applySelectedLightRecommendedBeamAngle(): void {
+    const recommendation = this.getSelectedLightAiRecommendations();
+    if (typeof recommendation?.recommendedBeamAngle !== 'number') {
+      this.showNotification('Ingen AI-beam tilgjengelig for valgt lys', 'info');
+      return;
+    }
+    this.applyBeamAngleToRuntimeLight(recommendation.lightId, recommendation.recommendedBeamAngle, 'topview-ai');
+    this.updateTopViewInfoPanel();
+    this.showNotification(`AI-beam brukt: ${Math.round(recommendation.recommendedBeamAngle)}°`, 'success');
+  }
+
+  private applySelectedLightRecommendedGobo(): void {
+    const recommendation = this.getSelectedLightAiRecommendations();
+    if (!recommendation?.recommendedGoboId) {
+      this.showNotification('Ingen AI-gobo tilgjengelig for valgt lys', 'info');
+      return;
+    }
+    this.applyGoboToRuntimeLight(recommendation.lightId, {
+      goboId: recommendation.recommendedGoboId,
+    }, 'topview-ai');
+    this.updateTopViewInfoPanel();
+    const label = getGoboById(recommendation.recommendedGoboId)?.nameNo || recommendation.recommendedGoboId;
+    this.showNotification(`AI-gobo brukt: ${label}`, 'success');
+  }
+
+  private applySelectedLightRecommendedHaze(): void {
+    const recommendation = this.getSelectedLightAiRecommendations();
+    if (typeof recommendation?.hazeDensity !== 'number') {
+      this.showNotification('Ingen AI-haze tilgjengelig for valgt lys', 'info');
+      return;
+    }
+    this.applyAtmosphereSettings({
+      fogEnabled: true,
+      fogDensity: recommendation.hazeDensity,
+    });
+    this.updateTopViewInfoPanel();
+    this.showNotification(`AI-haze brukt: ${recommendation.hazeDensity.toFixed(3)}`, 'success');
+  }
+
+  private buildTopViewSyncSnapshot(
+    reason: string,
+    source: string = 'runtime',
+  ): TopViewSyncSnapshot {
+    const store = useAppStore.getState();
+    const selectedIds = this.syncTopViewSelectionState(source);
+
+    return {
+      reason,
+      updatedAt: new Date().toISOString(),
+      selection: {
+        selectedIds,
+        primarySelectedId: this.getPrimarySceneSelectionId(),
+        selectionAnchorId: this.topViewSelectionAnchorId,
+        selectedNodeId: store.selectedNodeId ?? null,
+        selectedActorId: this.selectedActorId,
+        selectedLightId: this.selectedLightId,
+        selectedCameraPresetId: this.selectedCameraPresetId,
+        activeCameraPresetId: this.activeCameraPresetId,
+        source,
+      },
+      interaction: {
+        hoveredLightId: this.topViewHoveredLightId,
+        hoveredPropId: this.topViewHoveredPropId,
+        hoveredActorId: this.topViewHoveredActorId,
+        hoveredCameraId: this.topViewHoveredCameraId,
+        hoveredZoneId: this.topViewHoveredZoneId,
+        draggingLightId: this.topViewDraggingLightId,
+        draggingPropId: this.topViewDraggingPropId,
+        draggingActorId: this.topViewDraggingActorId,
+        draggingCameraId: this.topViewDraggingCameraId,
+        isPanning: this.topViewIsPanning,
+        measurementMode: this.topViewMeasurementMode,
+        behaviorZoneAssignmentMode: this.topViewBehaviorZoneAssignmentMode,
+      },
+      viewport: {
+        zoom: this.topViewZoom,
+        pan: {
+          x: this.topViewPan.x,
+          y: this.topViewPan.y,
+        },
+        showGrid: this.topViewShowGrid,
+        showLabels: this.topViewShowLabels,
+        showLightCones: this.topViewShowLightCones,
+      },
+      patterns: {
+        selectedPatternId: this.topViewSelectedPattern,
+        selectedPatternLabel: this.topViewSelectedPattern !== 'none'
+          ? formatLightingPatternLabel(this.topViewSelectedPattern)
+          : null,
+        showGuides: this.topViewShowPatternGuides,
+        availablePatternIds: [...TOP_VIEW_LIGHTING_PATTERN_SEQUENCE],
+        aiRecommendedPatternLabel: getRecommendedLightingPatternLabelsForSceneFamily(
+          (((window as Window & {
+            __virtualStudioLastEnvironmentPlanInsights?: { familyId?: string };
+          }).__virtualStudioLastEnvironmentPlanInsights)?.familyId) || null,
+        )[0] || null,
+      },
+      behaviors: {
+        characters: this.buildTopViewBehaviorCharacterSnapshots(),
+      },
+    };
+  }
+
+  private publishTopViewSync(reason: string, source: string = 'runtime'): void {
+    const snapshot = this.buildTopViewSyncSnapshot(reason, source);
+    const globalWindow = window as any;
+    globalWindow.__virtualStudioTopViewSync = snapshot;
+
+    window.dispatchEvent(new CustomEvent('vs-topview-sync', {
+      detail: snapshot,
+    }));
+  }
+
+  private publishSceneSelectionSync(reason: string, source: string = 'runtime'): void {
+    const store = useAppStore.getState();
+    const snapshot = {
+      reason,
+      updatedAt: new Date().toISOString(),
+      selection: {
+        selectedNodeId: store.selectedNodeId ?? null,
+        selectedActorId: this.selectedActorId,
+        selectedLightId: this.selectedLightId,
+        selectedCameraPresetId: this.selectedCameraPresetId,
+        activeCameraPresetId: this.activeCameraPresetId,
+        source,
+      },
+    };
+
+    this.syncLegacyHierarchySelection(
+      snapshot.selection.selectedLightId
+      || snapshot.selection.selectedCameraPresetId
+      || snapshot.selection.selectedActorId
+      || snapshot.selection.selectedNodeId,
+    );
+
+    const globalWindow = window as any;
+    globalWindow.__virtualStudioSceneSelectionSync = snapshot;
+
+    window.dispatchEvent(new CustomEvent('vs-scene-selection-sync', {
+      detail: snapshot,
+    }));
+
+    this.publishTopViewSync(reason, source);
+  }
+
+  private normalizeRoomShell(shell: Partial<EnvironmentPlanRoomShell> | undefined): EnvironmentPlanRoomShell {
+    const clamp = (value: unknown, min: number, max: number, fallback: number): number => {
+      if (typeof value !== 'number' || Number.isNaN(value)) {
+        return fallback;
+      }
+      return Math.min(max, Math.max(min, value));
+    };
+
+    return {
+      type: shell?.type ?? this.currentRoomShell.type,
+      width: clamp(shell?.width, 4, 60, this.currentRoomShell.width),
+      depth: clamp(shell?.depth, 4, 60, this.currentRoomShell.depth),
+      height: clamp(shell?.height, 2.5, 20, this.currentRoomShell.height),
+      openCeiling: shell?.openCeiling ?? this.currentRoomShell.openCeiling,
+      ceilingStyle: (['flat', 'coffered', 'exposed_beams', 'open_truss', 'canopy'] as const).includes(
+        shell?.ceilingStyle as EnvironmentPlanRoomCeilingStyle,
+      )
+        ? shell?.ceilingStyle as EnvironmentPlanRoomCeilingStyle
+        : (this.currentRoomShell.ceilingStyle ?? 'flat'),
+      openings: Array.isArray(shell?.openings)
+        ? shell.openings.map((opening) => ({
+          ...opening,
+          widthRatio: clamp((opening as any)?.widthRatio, 0.08, 0.95, 0.24),
+          heightRatio: clamp((opening as any)?.heightRatio, 0.12, 0.95, 0.5),
+          sillHeight: clamp(
+            (opening as any)?.sillHeight,
+            0,
+            4,
+            ['window', 'service_window', 'pass_through'].includes(String((opening as any)?.kind || ''))
+              ? 1.1
+              : 0,
+          ),
+        }))
+        : (Array.isArray(this.currentRoomShell.openings) ? [...this.currentRoomShell.openings] : []),
+      zones: Array.isArray(shell?.zones)
+        ? shell.zones.map((zone) => ({
+          ...zone,
+          xBias: clamp((zone as any)?.xBias, -1, 1, 0),
+          zBias: clamp((zone as any)?.zBias, -1, 1, 0),
+          widthRatio: clamp((zone as any)?.widthRatio, 0.08, 1, 0.24),
+          depthRatio: clamp((zone as any)?.depthRatio, 0.08, 1, 0.24),
+        }))
+        : (Array.isArray(this.currentRoomShell.zones) ? [...this.currentRoomShell.zones] : []),
+      fixtures: Array.isArray(shell?.fixtures)
+        ? shell.fixtures.map((fixture) => ({
+          ...fixture,
+          xBias: clamp((fixture as any)?.xBias, -1, 1, 0),
+          zBias: clamp((fixture as any)?.zBias, -1, 1, 0),
+          widthRatio: clamp((fixture as any)?.widthRatio, 0.08, 1, 0.24),
+          depthRatio: clamp((fixture as any)?.depthRatio, 0.08, 1, 0.14),
+          height: clamp((fixture as any)?.height, 0.2, 4.5, 1.0),
+        }))
+        : (Array.isArray(this.currentRoomShell.fixtures) ? [...this.currentRoomShell.fixtures] : []),
+      niches: Array.isArray(shell?.niches)
+        ? shell.niches.map((niche) => ({
+          ...niche,
+          widthRatio: clamp((niche as any)?.widthRatio, 0.08, 0.9, 0.22),
+          heightRatio: clamp((niche as any)?.heightRatio, 0.12, 0.8, 0.32),
+          sillHeight: clamp((niche as any)?.sillHeight, 0, 4, 0.4),
+          depth: clamp((niche as any)?.depth, 0.08, 1.2, 0.24),
+        }))
+        : (Array.isArray(this.currentRoomShell.niches) ? [...this.currentRoomShell.niches] : []),
+      wallSegments: Array.isArray(shell?.wallSegments)
+        ? shell.wallSegments.map((segment) => ({
+          ...segment,
+          widthRatio: clamp((segment as any)?.widthRatio, 0.08, 0.9, 0.2),
+          heightRatio: clamp((segment as any)?.heightRatio, 0.12, 0.9, 0.42),
+          sillHeight: clamp((segment as any)?.sillHeight, 0, 4, 0.18),
+          depth: clamp((segment as any)?.depth, 0.03, 0.8, 0.12),
+        }))
+        : (Array.isArray(this.currentRoomShell.wallSegments) ? [...this.currentRoomShell.wallSegments] : []),
+      notes: Array.isArray(shell?.notes) ? [...shell.notes] : this.currentRoomShell.notes,
+    };
+  }
+
+  private roomShellsEqual(a: EnvironmentPlanRoomShell, b: EnvironmentPlanRoomShell): boolean {
+    return (
+      a.type === b.type
+      && a.width === b.width
+      && a.depth === b.depth
+      && a.height === b.height
+      && a.openCeiling === b.openCeiling
+      && (a.ceilingStyle ?? 'flat') === (b.ceilingStyle ?? 'flat')
+      && JSON.stringify(a.openings || []) === JSON.stringify(b.openings || [])
+      && JSON.stringify(a.zones || []) === JSON.stringify(b.zones || [])
+      && JSON.stringify(a.fixtures || []) === JSON.stringify(b.fixtures || [])
+      && JSON.stringify(a.niches || []) === JSON.stringify(b.niches || [])
+      && JSON.stringify(a.wallSegments || []) === JSON.stringify(b.wallSegments || [])
+    );
+  }
+
+  private disposeRoomShellAccessories(): void {
+    this.scene.meshes
+      .filter((mesh) => Boolean((mesh.metadata as { roomShellAccessory?: boolean } | undefined)?.roomShellAccessory))
+      .forEach((mesh) => mesh.dispose(false, true));
+  }
+
+  private getRoomShellWallDimensions(
+    wallId: 'backWall' | 'leftWall' | 'rightWall' | 'rearWall',
+    shell: EnvironmentPlanRoomShell = this.currentRoomShell,
+  ): { width: number; height: number } {
+    return {
+      width: wallId === 'leftWall' || wallId === 'rightWall' ? shell.depth : shell.width,
+      height: shell.height,
+    };
+  }
+
+  private resolveRoomShellOpeningBottom(
+    opening: EnvironmentPlanRoomShellOpening,
+    wallHeight: number,
+  ): number {
+    if (typeof opening.sillHeight === 'number' && Number.isFinite(opening.sillHeight)) {
+      return BABYLON.Scalar.Clamp(opening.sillHeight, 0, Math.max(0, wallHeight - 0.2));
+    }
+
+    if (opening.kind === 'window' || opening.kind === 'service_window' || opening.kind === 'pass_through') {
+      return Math.max(0.9, wallHeight * 0.24);
+    }
+
+    return 0;
+  }
+
+  private resolveRoomShellOpeningRect(
+    opening: EnvironmentPlanRoomShellOpening,
+    wallWidth: number,
+    wallHeight: number,
+  ): { centerX: number; bottomY: number; width: number; height: number } {
+    const openingWidth = BABYLON.Scalar.Clamp(opening.widthRatio || 0.24, 0.08, 0.95) * wallWidth;
+    const openingHeight = BABYLON.Scalar.Clamp(opening.heightRatio || 0.5, 0.12, 0.95) * wallHeight;
+    const safeMargin = Math.max(wallWidth * 0.08, 0.35);
+    const leftCenter = (-wallWidth * 0.5) + safeMargin + (openingWidth * 0.5);
+    const rightCenter = (wallWidth * 0.5) - safeMargin - (openingWidth * 0.5);
+    const centerX = opening.xAlign === 'left'
+      ? leftCenter
+      : opening.xAlign === 'right'
+        ? rightCenter
+        : 0;
+    const bottomY = this.resolveRoomShellOpeningBottom(opening, wallHeight);
+    return {
+      centerX: BABYLON.Scalar.Clamp(centerX, (-wallWidth * 0.5) + (openingWidth * 0.5), (wallWidth * 0.5) - (openingWidth * 0.5)),
+      bottomY: BABYLON.Scalar.Clamp(bottomY, 0, Math.max(0, wallHeight - openingHeight)),
+      width: openingWidth,
+      height: openingHeight,
+    };
+  }
+
+  private drawRoomShellRoundedRect(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    radius: number,
+  ): void {
+    const cappedRadius = Math.min(radius, width * 0.5, height * 0.5);
+    ctx.beginPath();
+    ctx.moveTo(x + cappedRadius, y);
+    ctx.lineTo(x + width - cappedRadius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + cappedRadius);
+    ctx.lineTo(x + width, y + height - cappedRadius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - cappedRadius, y + height);
+    ctx.lineTo(x + cappedRadius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - cappedRadius);
+    ctx.lineTo(x, y + cappedRadius);
+    ctx.quadraticCurveTo(x, y, x + cappedRadius, y);
+    ctx.closePath();
+  }
+
+  private applyRoomShellOpeningMasks(shell: EnvironmentPlanRoomShell): void {
+    const wallIds: Array<'backWall' | 'leftWall' | 'rightWall' | 'rearWall'> = ['backWall', 'leftWall', 'rightWall', 'rearWall'];
+    wallIds.forEach((wallId) => {
+      const wall = this.scene.getMeshByName(wallId) as BABYLON.Mesh | null;
+      if (!wall || !wall.material) {
+        return;
+      }
+
+      const relevantOpenings = (shell.openings || []).filter((opening) => opening.wallTarget === wallId);
+      const material = wall.material as BABYLON.PBRMaterial | BABYLON.StandardMaterial;
+      if (relevantOpenings.length === 0) {
+        if ('opacityTexture' in material) {
+          material.opacityTexture = null;
+        }
+        material.transparencyMode = material.alpha < 1
+          ? BABYLON.Material.MATERIAL_ALPHABLEND
+          : BABYLON.Material.MATERIAL_OPAQUE;
+        return;
+      }
+
+      const dimensions = this.getRoomShellWallDimensions(wallId, shell);
+      const textureWidth = 1024;
+      const textureHeight = 1024;
+      const maskTexture = new BABYLON.DynamicTexture(`${wallId}_openingMask`, { width: textureWidth, height: textureHeight }, this.scene, true);
+      const ctx = maskTexture.getContext() as unknown as CanvasRenderingContext2D;
+
+      ctx.clearRect(0, 0, textureWidth, textureHeight);
+      ctx.fillStyle = 'rgba(255,255,255,1)';
+      ctx.fillRect(0, 0, textureWidth, textureHeight);
+
+      relevantOpenings.forEach((opening) => {
+        const rect = this.resolveRoomShellOpeningRect(opening, dimensions.width, dimensions.height);
+        const x = ((rect.centerX - (rect.width * 0.5)) + (dimensions.width * 0.5)) / dimensions.width * textureWidth;
+        const y = (dimensions.height - (rect.bottomY + rect.height)) / dimensions.height * textureHeight;
+        const width = (rect.width / dimensions.width) * textureWidth;
+        const height = (rect.height / dimensions.height) * textureHeight;
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        if (opening.kind === 'archway') {
+          this.drawRoomShellRoundedRect(ctx, x, y, width, height, Math.min(width * 0.18, 90));
+          ctx.fill();
+        } else {
+          ctx.clearRect(x, y, width, height);
+        }
+        ctx.restore();
+      });
+
+      maskTexture.hasAlpha = true;
+      maskTexture.update();
+      material.opacityTexture = maskTexture;
+      material.useAlphaFromAlbedoTexture = false;
+      material.transparencyMode = BABYLON.Material.MATERIAL_ALPHATESTANDBLEND;
+      material.backFaceCulling = false;
+    });
+  }
+
+  private createRoomShellOpeningAccessories(shell: EnvironmentPlanRoomShell): void {
+    this.disposeRoomShellAccessories();
+
+    const wallIds: Array<'backWall' | 'leftWall' | 'rightWall' | 'rearWall'> = ['backWall', 'leftWall', 'rightWall', 'rearWall'];
+    wallIds.forEach((wallId) => {
+      const wall = this.scene.getMeshByName(wallId) as BABYLON.Mesh | null;
+      if (!wall) {
+        return;
+      }
+      const dimensions = this.getRoomShellWallDimensions(wallId, shell);
+      const wallOpenings = (shell.openings || []).filter((opening) => opening.wallTarget === wallId);
+      wallOpenings.forEach((opening) => {
+        const rect = this.resolveRoomShellOpeningRect(opening, dimensions.width, dimensions.height);
+        const trimDepth = 0.06;
+        const trimThickness = Math.max(0.05, Math.min(0.16, dimensions.width * 0.018));
+        const trimMaterial = this.createCharacterBehaviorMaterial(
+          `${wallId}_${opening.id}_trimMat`,
+          this.getEnvironmentBrandColor(2, '#111827'),
+          this.getEnvironmentBrandColor(0, '#c0392b'),
+        );
+        const makeTrim = (name: string, size: { width: number; height: number; depth: number }, x: number, y: number) => {
+          const trim = BABYLON.MeshBuilder.CreateBox(name, size, this.scene);
+          trim.parent = wall;
+          trim.position = new BABYLON.Vector3(x, y, trimDepth * 0.5);
+          trim.material = trimMaterial;
+          trim.metadata = {
+            ...(trim.metadata || {}),
+            roomShellAccessory: true,
+            openingId: opening.id,
+          };
+          trim.receiveShadows = true;
+        };
+
+        const leftX = rect.centerX - (rect.width * 0.5) - (trimThickness * 0.5);
+        const rightX = rect.centerX + (rect.width * 0.5) + (trimThickness * 0.5);
+        const centerY = rect.bottomY + (rect.height * 0.5) - (dimensions.height * 0.5);
+        const topY = rect.bottomY + rect.height - (dimensions.height * 0.5) + (trimThickness * 0.5);
+        const bottomY = rect.bottomY - (dimensions.height * 0.5) - (trimThickness * 0.5);
+
+        makeTrim(`${wallId}_${opening.id}_trim_left`, { width: trimThickness, height: rect.height + trimThickness * 1.4, depth: trimDepth }, leftX, centerY);
+        makeTrim(`${wallId}_${opening.id}_trim_right`, { width: trimThickness, height: rect.height + trimThickness * 1.4, depth: trimDepth }, rightX, centerY);
+        makeTrim(`${wallId}_${opening.id}_trim_top`, { width: rect.width + trimThickness * 2.2, height: trimThickness, depth: trimDepth }, rect.centerX, topY);
+        if (opening.kind !== 'door' && opening.kind !== 'archway') {
+          makeTrim(`${wallId}_${opening.id}_trim_bottom`, { width: rect.width + trimThickness * 2.2, height: trimThickness, depth: trimDepth }, rect.centerX, bottomY);
+        }
+
+        if (opening.kind === 'window' || opening.kind === 'service_window' || opening.kind === 'pass_through') {
+          const glass = BABYLON.MeshBuilder.CreatePlane(`${wallId}_${opening.id}_glass`, {
+            width: Math.max(0.12, rect.width - trimThickness * 1.4),
+            height: Math.max(0.12, rect.height - trimThickness * 1.4),
+            sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+          }, this.scene);
+          glass.parent = wall;
+          glass.position = new BABYLON.Vector3(rect.centerX, centerY, 0);
+          const glassMat = new BABYLON.StandardMaterial(`${wallId}_${opening.id}_glassMat`, this.scene);
+          glassMat.diffuseColor = BABYLON.Color3.FromHexString('#dbeafe');
+          glassMat.emissiveColor = BABYLON.Color3.FromHexString(this.getEnvironmentBrandColor(1, '#f4e7d3')).scale(0.05);
+          glassMat.alpha = opening.kind === 'pass_through' ? 0.12 : 0.22;
+          glassMat.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+          glass.material = glassMat;
+          glass.metadata = {
+            ...(glass.metadata || {}),
+            roomShellAccessory: true,
+            openingId: opening.id,
+          };
+        }
+      });
+    });
+  }
+
+  private createRoomShellNiches(shell: EnvironmentPlanRoomShell): void {
+    const wallIds: Array<'backWall' | 'leftWall' | 'rightWall' | 'rearWall'> = ['backWall', 'leftWall', 'rightWall', 'rearWall'];
+    const trimColor = this.getEnvironmentBrandColor(2, '#111827');
+    const fillColor = this.getEnvironmentBrandColor(1, '#e5e7eb');
+
+    wallIds.forEach((wallId) => {
+      const wall = this.scene.getMeshByName(wallId) as BABYLON.Mesh | null;
+      if (!wall) {
+        return;
+      }
+
+      const dimensions = this.getRoomShellWallDimensions(wallId, shell);
+      const wallNiches = ((shell.niches || []).filter((niche) => niche.wallTarget === wallId)) as EnvironmentPlanRoomShellNiche[];
+      wallNiches.forEach((niche) => {
+        const rect = this.resolveRoomShellOpeningRect(
+          {
+            id: niche.id,
+            wallTarget: niche.wallTarget,
+            kind: 'window',
+            widthRatio: niche.widthRatio,
+            heightRatio: niche.heightRatio,
+            xAlign: niche.xAlign,
+            sillHeight: niche.sillHeight,
+          },
+          dimensions.width,
+          dimensions.height,
+        );
+        const depth = BABYLON.Scalar.Clamp(typeof niche.depth === 'number' ? niche.depth : 0.24, 0.08, 1.2);
+        const centerY = rect.bottomY + (rect.height * 0.5) - (dimensions.height * 0.5);
+        const trimThickness = Math.max(0.04, Math.min(0.12, dimensions.width * 0.014));
+        const backPlane = BABYLON.MeshBuilder.CreatePlane(`${wallId}_${niche.id}_back`, {
+          width: Math.max(0.12, rect.width - trimThickness * 1.6),
+          height: Math.max(0.12, rect.height - trimThickness * 1.6),
+          sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+        }, this.scene);
+        backPlane.parent = wall;
+        backPlane.position = new BABYLON.Vector3(rect.centerX, centerY, -depth);
+        const backMaterial = new BABYLON.StandardMaterial(`${wallId}_${niche.id}_back_mat`, this.scene);
+        backMaterial.diffuseColor = BABYLON.Color3.FromHexString(fillColor);
+        backMaterial.emissiveColor = BABYLON.Color3.FromHexString(trimColor).scale(0.04);
+        backMaterial.specularColor = new BABYLON.Color3(0.05, 0.05, 0.05);
+        backPlane.material = backMaterial;
+        this.markRoomShellAccessory(backPlane, { typeAccessoryKind: `niche_${niche.kind}` });
+        backPlane.metadata = {
+          ...(backPlane.metadata || {}),
+          nicheId: niche.id,
+          nicheKind: niche.kind,
+        };
+
+        const sideMaterial = new BABYLON.StandardMaterial(`${wallId}_${niche.id}_trim_mat`, this.scene);
+        sideMaterial.diffuseColor = BABYLON.Color3.FromHexString(trimColor);
+        sideMaterial.emissiveColor = BABYLON.Color3.FromHexString(fillColor).scale(0.02);
+        sideMaterial.specularColor = new BABYLON.Color3(0.03, 0.03, 0.03);
+        const markTrim = (mesh: BABYLON.AbstractMesh) => {
+          this.markRoomShellAccessory(mesh, { typeAccessoryKind: `niche_${niche.kind}` });
+          mesh.metadata = {
+            ...(mesh.metadata || {}),
+            nicheId: niche.id,
+            nicheKind: niche.kind,
+          };
+        };
+
+        const left = BABYLON.MeshBuilder.CreateBox(`${wallId}_${niche.id}_left`, {
+          width: trimThickness,
+          height: rect.height,
+          depth,
+        }, this.scene);
+        left.parent = wall;
+        left.position = new BABYLON.Vector3(rect.centerX - (rect.width * 0.5) + (trimThickness * 0.5), centerY, -(depth * 0.5));
+        left.material = sideMaterial;
+        markTrim(left);
+
+        const right = BABYLON.MeshBuilder.CreateBox(`${wallId}_${niche.id}_right`, {
+          width: trimThickness,
+          height: rect.height,
+          depth,
+        }, this.scene);
+        right.parent = wall;
+        right.position = new BABYLON.Vector3(rect.centerX + (rect.width * 0.5) - (trimThickness * 0.5), centerY, -(depth * 0.5));
+        right.material = sideMaterial;
+        markTrim(right);
+
+        const top = BABYLON.MeshBuilder.CreateBox(`${wallId}_${niche.id}_top`, {
+          width: rect.width,
+          height: trimThickness,
+          depth,
+        }, this.scene);
+        top.parent = wall;
+        top.position = new BABYLON.Vector3(rect.centerX, centerY + (rect.height * 0.5) - (trimThickness * 0.5), -(depth * 0.5));
+        top.material = sideMaterial;
+        markTrim(top);
+
+        const bottom = BABYLON.MeshBuilder.CreateBox(`${wallId}_${niche.id}_bottom`, {
+          width: rect.width,
+          height: trimThickness,
+          depth,
+        }, this.scene);
+        bottom.parent = wall;
+        bottom.position = new BABYLON.Vector3(rect.centerX, centerY - (rect.height * 0.5) + (trimThickness * 0.5), -(depth * 0.5));
+        bottom.material = sideMaterial;
+        markTrim(bottom);
+
+        if (niche.kind === 'display' || niche.kind === 'shelf') {
+          const ledge = BABYLON.MeshBuilder.CreateBox(`${wallId}_${niche.id}_ledge`, {
+            width: Math.max(0.14, rect.width - trimThickness * 2.2),
+            height: Math.max(0.03, trimThickness * 0.75),
+            depth: Math.max(0.12, depth * 0.72),
+          }, this.scene);
+          ledge.parent = wall;
+          ledge.position = new BABYLON.Vector3(
+            rect.centerX,
+            centerY - (rect.height * 0.28),
+            -(depth * 0.38),
+          );
+          ledge.material = sideMaterial;
+          markTrim(ledge);
+        }
+      });
+    });
+  }
+
+  private createRoomShellWallSegments(shell: EnvironmentPlanRoomShell): void {
+    const wallIds: Array<'backWall' | 'leftWall' | 'rightWall' | 'rearWall'> = ['backWall', 'leftWall', 'rightWall', 'rearWall'];
+    const faceColor = this.getEnvironmentBrandColor(1, '#d6d3d1');
+    const trimColor = this.getEnvironmentBrandColor(2, '#292524');
+    const accentColor = this.getEnvironmentBrandColor(0, '#c2410c');
+
+    wallIds.forEach((wallId) => {
+      const wall = this.scene.getMeshByName(wallId) as BABYLON.Mesh | null;
+      if (!wall) {
+        return;
+      }
+
+      const dimensions = this.getRoomShellWallDimensions(wallId, shell);
+      const wallSegments = ((shell.wallSegments || []).filter((segment) => segment.wallTarget === wallId)) as EnvironmentPlanRoomWallSegment[];
+      wallSegments.forEach((segment) => {
+        const rect = this.resolveRoomShellOpeningRect(
+          {
+            id: segment.id,
+            wallTarget: segment.wallTarget,
+            kind: 'window',
+            widthRatio: segment.widthRatio,
+            heightRatio: segment.heightRatio,
+            xAlign: segment.xAlign,
+            sillHeight: segment.sillHeight,
+          },
+          dimensions.width,
+          dimensions.height,
+        );
+        const depth = BABYLON.Scalar.Clamp(typeof segment.depth === 'number' ? segment.depth : 0.12, 0.03, 0.8);
+        const centerY = rect.bottomY + (rect.height * 0.5) - (dimensions.height * 0.5);
+        const segmentMaterial = new BABYLON.StandardMaterial(`${wallId}_${segment.id}_segment_mat`, this.scene);
+        segmentMaterial.diffuseColor = BABYLON.Color3.FromHexString(segment.kind === 'bay' ? accentColor : faceColor);
+        segmentMaterial.emissiveColor = BABYLON.Color3.FromHexString(trimColor).scale(0.04);
+        segmentMaterial.specularColor = new BABYLON.Color3(0.05, 0.05, 0.05);
+
+        const markSegmentMesh = (mesh: BABYLON.AbstractMesh, typeAccessoryKind = `wall_segment_${segment.kind}`): void => {
+          this.markRoomShellAccessory(mesh, { typeAccessoryKind });
+          mesh.metadata = {
+            ...(mesh.metadata || {}),
+            wallSegmentId: segment.id,
+            wallSegmentKind: segment.kind,
+          };
+        };
+
+        if (segment.kind === 'panel' || segment.kind === 'bay') {
+          const panel = BABYLON.MeshBuilder.CreateBox(`${wallId}_${segment.id}_panel`, {
+            width: Math.max(0.12, rect.width),
+            height: Math.max(0.12, rect.height),
+            depth,
+          }, this.scene);
+          panel.parent = wall;
+          panel.position = new BABYLON.Vector3(rect.centerX, centerY, (depth * 0.5) + 0.01);
+          panel.material = segmentMaterial;
+          markSegmentMesh(panel);
+
+          if (segment.kind === 'bay') {
+            const cap = BABYLON.MeshBuilder.CreateBox(`${wallId}_${segment.id}_cap`, {
+              width: Math.max(0.16, rect.width * 1.04),
+              height: Math.max(0.04, rect.height * 0.08),
+              depth: Math.max(0.05, depth * 0.7),
+            }, this.scene);
+            cap.parent = wall;
+            cap.position = new BABYLON.Vector3(
+              rect.centerX,
+              centerY + (rect.height * 0.5) + Math.max(0.03, rect.height * 0.04),
+              (depth * 0.5) + 0.02,
+            );
+            cap.material = segmentMaterial;
+            markSegmentMesh(cap, 'wall_segment_bay_cap');
+          }
+          return;
+        }
+
+        const pilaster = BABYLON.MeshBuilder.CreateBox(`${wallId}_${segment.id}_pilaster`, {
+          width: Math.max(0.08, rect.width),
+          height: Math.max(0.18, rect.height),
+          depth,
+        }, this.scene);
+        pilaster.parent = wall;
+        pilaster.position = new BABYLON.Vector3(rect.centerX, centerY, (depth * 0.5) + 0.01);
+        pilaster.material = segmentMaterial;
+        markSegmentMesh(pilaster);
+
+        const crown = BABYLON.MeshBuilder.CreateBox(`${wallId}_${segment.id}_crown`, {
+          width: Math.max(0.12, rect.width * 1.2),
+          height: Math.max(0.04, rect.height * 0.08),
+          depth: Math.max(0.05, depth * 0.72),
+        }, this.scene);
+        crown.parent = wall;
+        crown.position = new BABYLON.Vector3(
+          rect.centerX,
+          centerY + (rect.height * 0.5) - Math.max(0.02, rect.height * 0.04),
+          (depth * 0.5) + 0.02,
+        );
+        crown.material = segmentMaterial;
+        markSegmentMesh(crown, 'wall_segment_pilaster_crown');
+      });
+    });
+  }
+
+  private createRoomShellCeilingAccessories(shell: EnvironmentPlanRoomShell): void {
+    const ceilingStyle = shell.ceilingStyle ?? 'flat';
+    if (ceilingStyle === 'flat') {
+      return;
+    }
+
+    const halfWidth = shell.width / 2;
+    const halfDepth = shell.depth / 2;
+    const ceilingY = shell.height - 0.06;
+    const primary = this.getEnvironmentBrandColor(0, '#b45309');
+    const secondary = this.getEnvironmentBrandColor(1, '#f3f0ea');
+    const trim = this.getEnvironmentBrandColor(2, '#292524');
+
+    const createMaterial = (name: string, diffuseHex: string): BABYLON.StandardMaterial => {
+      const material = new BABYLON.StandardMaterial(name, this.scene);
+      material.diffuseColor = BABYLON.Color3.FromHexString(diffuseHex);
+      material.emissiveColor = BABYLON.Color3.FromHexString(trim).scale(0.03);
+      material.specularColor = new BABYLON.Color3(0.04, 0.04, 0.04);
+      return material;
+    };
+
+    if (ceilingStyle === 'coffered') {
+      const cofferMaterial = createMaterial('roomShell_ceiling_coffered_mat', secondary);
+      const rows = Math.max(2, Math.round(shell.depth / 3.6));
+      const cols = Math.max(2, Math.round(shell.width / 3.6));
+      for (let row = 0; row <= rows; row += 1) {
+        const z = -halfDepth + (row / rows) * shell.depth;
+        const beam = BABYLON.MeshBuilder.CreateBox(`ceiling_coffered_row_${row}`, {
+          width: Math.max(1.2, shell.width * 0.94),
+          height: 0.12,
+          depth: 0.14,
+        }, this.scene);
+        beam.position = new BABYLON.Vector3(0, ceilingY, z);
+        beam.material = cofferMaterial;
+        this.markRoomShellAccessory(beam, { typeAccessoryKind: 'ceiling_coffered' });
+      }
+      for (let col = 0; col <= cols; col += 1) {
+        const x = -halfWidth + (col / cols) * shell.width;
+        const beam = BABYLON.MeshBuilder.CreateBox(`ceiling_coffered_col_${col}`, {
+          width: 0.14,
+          height: 0.12,
+          depth: Math.max(1.2, shell.depth * 0.94),
+        }, this.scene);
+        beam.position = new BABYLON.Vector3(x, ceilingY, 0);
+        beam.material = cofferMaterial;
+        this.markRoomShellAccessory(beam, { typeAccessoryKind: 'ceiling_coffered' });
+      }
+      return;
+    }
+
+    if (ceilingStyle === 'exposed_beams' || ceilingStyle === 'open_truss') {
+      const beamMaterial = createMaterial(
+        `roomShell_${ceilingStyle}_mat`,
+        ceilingStyle === 'open_truss' ? trim : primary,
+      );
+      const beamCount = Math.max(3, Math.round(shell.depth / (ceilingStyle === 'open_truss' ? 2.8 : 3.4)));
+      for (let index = 0; index < beamCount; index += 1) {
+        const z = -halfDepth + ((index + 0.5) / beamCount) * shell.depth;
+        const beam = BABYLON.MeshBuilder.CreateBox(`ceiling_${ceilingStyle}_${index}`, {
+          width: Math.max(1.6, shell.width * 0.92),
+          height: ceilingStyle === 'open_truss' ? 0.16 : 0.12,
+          depth: ceilingStyle === 'open_truss' ? 0.22 : 0.18,
+        }, this.scene);
+        beam.position = new BABYLON.Vector3(0, ceilingY, z);
+        beam.material = beamMaterial;
+        this.markRoomShellAccessory(beam, {
+          typeAccessoryKind: ceilingStyle === 'open_truss' ? 'ceiling_open_truss' : 'ceiling_exposed_beams',
+        });
+
+        if (ceilingStyle === 'open_truss') {
+          const braceLeft = BABYLON.MeshBuilder.CreateBox(`ceiling_open_truss_brace_left_${index}`, {
+            width: Math.max(1.8, shell.width * 0.44),
+            height: 0.06,
+            depth: 0.08,
+          }, this.scene);
+          braceLeft.position = new BABYLON.Vector3(-shell.width * 0.24, shell.height - 0.28, z);
+          braceLeft.rotation.z = Math.PI / 12;
+          braceLeft.material = beamMaterial;
+          this.markRoomShellAccessory(braceLeft, { typeAccessoryKind: 'ceiling_open_truss' });
+
+          const braceRight = braceLeft.clone(`ceiling_open_truss_brace_right_${index}`);
+          if (braceRight) {
+            braceRight.position.x = shell.width * 0.24;
+            braceRight.rotation.z = -Math.PI / 12;
+            this.markRoomShellAccessory(braceRight, { typeAccessoryKind: 'ceiling_open_truss' });
+          }
+        }
+      }
+      return;
+    }
+
+    if (ceilingStyle === 'canopy') {
+      const canopyMaterial = createMaterial('roomShell_ceiling_canopy_mat', primary);
+      const slatCount = Math.max(3, Math.round(shell.width / 2.8));
+      for (let index = 0; index < slatCount; index += 1) {
+        const x = -halfWidth + ((index + 0.5) / slatCount) * shell.width;
+        const slat = BABYLON.MeshBuilder.CreateBox(`ceiling_canopy_slat_${index}`, {
+          width: Math.max(0.16, shell.width / (slatCount * 3)),
+          height: 0.1,
+          depth: Math.max(1.1, shell.depth * 0.36),
+        }, this.scene);
+        slat.position = new BABYLON.Vector3(x, ceilingY, halfDepth - (shell.depth * 0.22));
+        slat.material = canopyMaterial;
+        this.markRoomShellAccessory(slat, { typeAccessoryKind: 'ceiling_canopy' });
+      }
+    }
+  }
+
+  private markRoomShellAccessory(
+    mesh: BABYLON.AbstractMesh,
+    metadata: {
+      openingId?: string;
+      typeAccessoryKind?: string;
+    } = {},
+  ): void {
+    mesh.metadata = {
+      ...(mesh.metadata || {}),
+      roomShellAccessory: true,
+      openingId: metadata.openingId,
+      typeAccessoryKind: metadata.typeAccessoryKind,
+    };
+    mesh.receiveShadows = true;
+    this.lights.forEach((lightData) => {
+      if (lightData.shadowGenerator) {
+        lightData.shadowGenerator.addShadowCaster(mesh);
+      }
+    });
+  }
+
+  private markRoomShellBrandAccessory(
+    mesh: BABYLON.AbstractMesh,
+    decorationKind: 'signage' | 'packaging' | 'interior_trim',
+    typeAccessoryKind: string,
+  ): void {
+    this.markRoomShellAccessory(mesh, { typeAccessoryKind });
+    this.markEnvironmentBrandAccessory(mesh, decorationKind);
+    mesh.metadata = {
+      ...(mesh.metadata || {}),
+      typeAccessoryKind,
+    };
+  }
+
+  private createRoomShellTypeAccessories(shell: EnvironmentPlanRoomShell): void {
+    const halfWidth = shell.width / 2;
+    const halfDepth = shell.depth / 2;
+    const wallIds: Array<'backWall' | 'leftWall' | 'rightWall' | 'rearWall'> = ['backWall', 'leftWall', 'rightWall', 'rearWall'];
+    const accentPrimary = this.getEnvironmentBrandColor(0, '#c0392b');
+    const accentSecondary = this.getEnvironmentBrandColor(1, '#f4e7d3');
+    const accentTertiary = this.getEnvironmentBrandColor(2, '#1f2937');
+
+    const createAccessoryMaterial = (
+      name: string,
+      diffuseHex: string,
+      emissiveHex: string,
+      alpha = 1,
+    ): BABYLON.StandardMaterial => {
+      const material = new BABYLON.StandardMaterial(name, this.scene);
+      material.diffuseColor = BABYLON.Color3.FromHexString(diffuseHex);
+      material.emissiveColor = BABYLON.Color3.FromHexString(emissiveHex).scale(alpha < 1 ? 0.06 : 0.03);
+      material.specularColor = new BABYLON.Color3(0.08, 0.08, 0.08);
+      material.alpha = alpha;
+      material.backFaceCulling = false;
+      return material;
+    };
+
+    const createSkyBackdropMaterial = (name: string): BABYLON.StandardMaterial => {
+      const material = new BABYLON.StandardMaterial(name, this.scene);
+      const dynamicTexture = new BABYLON.DynamicTexture(`${name}_texture`, { width: 1024, height: 768 }, this.scene, true);
+      const ctx = dynamicTexture.getContext() as unknown as CanvasRenderingContext2D;
+      const gradient = ctx.createLinearGradient(0, 0, 0, 768);
+      gradient.addColorStop(0, '#0b1220');
+      gradient.addColorStop(0.45, '#1f4f7a');
+      gradient.addColorStop(0.8, '#b7d3f2');
+      gradient.addColorStop(1, '#eef5ff');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 1024, 768);
+      ctx.fillStyle = 'rgba(255,255,255,0.14)';
+      ctx.beginPath();
+      ctx.arc(820, 140, 84, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      ctx.beginPath();
+      ctx.arc(220, 210, 58, 0, Math.PI * 2);
+      ctx.fill();
+      dynamicTexture.update();
+      material.diffuseTexture = dynamicTexture;
+      material.emissiveTexture = dynamicTexture;
+      material.specularColor = new BABYLON.Color3(0, 0, 0);
+      material.disableLighting = false;
+      return material;
+    };
+
+    if (shell.type === 'interior_room') {
+      const baseboardMaterial = createAccessoryMaterial('roomShell_baseboard_mat', accentSecondary, accentTertiary);
+      const crownMaterial = createAccessoryMaterial('roomShell_crown_mat', accentPrimary, accentTertiary);
+      wallIds.forEach((wallId) => {
+        const wall = this.scene.getMeshByName(wallId) as BABYLON.Mesh | null;
+        if (!wall) {
+          return;
+        }
+        const dimensions = this.getRoomShellWallDimensions(wallId, shell);
+        const baseboard = BABYLON.MeshBuilder.CreateBox(`${wallId}_baseboard`, {
+          width: Math.max(0.35, dimensions.width * 0.98),
+          height: 0.08,
+          depth: 0.05,
+        }, this.scene);
+        baseboard.parent = wall;
+        baseboard.position = new BABYLON.Vector3(0, (-dimensions.height * 0.5) + 0.04, 0.03);
+        baseboard.material = baseboardMaterial;
+        this.markRoomShellAccessory(baseboard, { typeAccessoryKind: 'baseboard' });
+
+        if (!shell.openCeiling) {
+          const crown = BABYLON.MeshBuilder.CreateBox(`${wallId}_crown`, {
+            width: Math.max(0.35, dimensions.width * 0.98),
+            height: 0.07,
+            depth: 0.07,
+          }, this.scene);
+          crown.parent = wall;
+          crown.position = new BABYLON.Vector3(0, (dimensions.height * 0.5) - 0.05, 0.04);
+          crown.material = crownMaterial;
+          this.markRoomShellAccessory(crown, { typeAccessoryKind: 'crown_molding' });
+        }
+      });
+    }
+
+    if (shell.type === 'warehouse') {
+      const beamMaterial = createAccessoryMaterial('roomShell_warehouse_beam_mat', '#374151', '#0f172a');
+      const columnMaterial = createAccessoryMaterial('roomShell_warehouse_column_mat', '#4b5563', '#111827');
+      const beamCount = Math.max(3, Math.round(shell.depth / 3.2));
+      for (let index = 0; index < beamCount; index += 1) {
+        const z = -halfDepth + ((index + 0.5) / beamCount) * shell.depth;
+        const beam = BABYLON.MeshBuilder.CreateBox(`warehouse_beam_${index}`, {
+          width: Math.max(1.6, shell.width * 0.92),
+          height: 0.12,
+          depth: 0.2,
+        }, this.scene);
+        beam.position = new BABYLON.Vector3(0, Math.max(2.4, shell.height - 0.32), z);
+        beam.material = beamMaterial;
+        this.markRoomShellAccessory(beam, { typeAccessoryKind: 'warehouse_beam' });
+      }
+
+      [
+        new BABYLON.Vector3(-(halfWidth - 0.18), shell.height * 0.5, -(halfDepth - 0.18)),
+        new BABYLON.Vector3(halfWidth - 0.18, shell.height * 0.5, -(halfDepth - 0.18)),
+        new BABYLON.Vector3(-(halfWidth - 0.18), shell.height * 0.5, halfDepth - 0.18),
+        new BABYLON.Vector3(halfWidth - 0.18, shell.height * 0.5, halfDepth - 0.18),
+      ].forEach((position, index) => {
+        const column = BABYLON.MeshBuilder.CreateBox(`warehouse_column_${index}`, {
+          width: 0.22,
+          height: Math.max(2.4, shell.height),
+          depth: 0.22,
+        }, this.scene);
+        column.position = position;
+        column.material = columnMaterial;
+        this.markRoomShellAccessory(column, { typeAccessoryKind: 'warehouse_column' });
+      });
+    }
+
+    if (shell.type === 'storefront') {
+      const awning = BABYLON.MeshBuilder.CreateBox('storefront_awning', {
+        width: Math.max(3.2, shell.width * 0.68),
+        height: 0.18,
+        depth: Math.max(0.9, shell.depth * 0.08),
+      }, this.scene);
+      awning.position = new BABYLON.Vector3(0, Math.max(2.4, shell.height * 0.78), halfDepth - Math.max(0.32, shell.depth * 0.06));
+      const awningMaterial = createAccessoryMaterial('storefront_awning_mat', accentPrimary, accentTertiary);
+      awning.material = awningMaterial;
+      this.markRoomShellAccessory(awning, { typeAccessoryKind: 'storefront_awning' });
+
+      const header = BABYLON.MeshBuilder.CreatePlane('storefront_header', {
+        width: Math.max(2.8, shell.width * 0.56),
+        height: Math.max(0.5, shell.height * 0.12),
+      }, this.scene);
+      header.position = new BABYLON.Vector3(0, Math.max(2.1, shell.height * 0.66), halfDepth - 0.02);
+      header.material = this.createBrandedCardMaterial('storefront_header_mat', {
+        title: this.environmentBrandingState.brandName || 'BRAND FRONT',
+        subtitle: this.environmentBrandingState.signageText || 'Open kitchen',
+        style: this.environmentBrandingState.signageStyle,
+        decorationKind: 'signage',
+      });
+      this.markRoomShellAccessory(header, { typeAccessoryKind: 'storefront_header' });
+
+      const ledge = BABYLON.MeshBuilder.CreateBox('storefront_display_ledge', {
+        width: Math.max(2.2, shell.width * 0.52),
+        height: 0.08,
+        depth: 0.22,
+      }, this.scene);
+      ledge.position = new BABYLON.Vector3(0, Math.max(0.9, shell.height * 0.22), halfDepth - 0.18);
+      ledge.material = createAccessoryMaterial('storefront_ledge_mat', accentSecondary, accentTertiary);
+      this.markRoomShellAccessory(ledge, { typeAccessoryKind: 'display_ledge' });
+    }
+
+    if (shell.type === 'abstract_stage') {
+      const coveRadius = Math.max(0.9, Math.min(shell.height * 0.45, shell.depth * 0.24));
+      const cycMaterial = createAccessoryMaterial('abstract_stage_cyc_mat', '#f3efe5', '#ffffff');
+      const cycloramaCurve = BABYLON.MeshBuilder.CreateCylinder('abstract_stage_cyclorama_curve', {
+        height: Math.max(2.8, shell.width * 0.96),
+        diameter: coveRadius * 2,
+        tessellation: 40,
+        arc: 0.25,
+        sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+      }, this.scene);
+      cycloramaCurve.rotation.z = Math.PI / 2;
+      cycloramaCurve.position = new BABYLON.Vector3(0, coveRadius, halfDepth - coveRadius + 0.04);
+      cycloramaCurve.material = cycMaterial;
+      this.markRoomShellAccessory(cycloramaCurve, { typeAccessoryKind: 'cyclorama_curve' });
+
+      const stageEdge = BABYLON.MeshBuilder.CreateBox('abstract_stage_edge', {
+        width: Math.max(2.4, shell.width * 0.82),
+        height: 0.09,
+        depth: 0.14,
+      }, this.scene);
+      stageEdge.position = new BABYLON.Vector3(0, 0.045, -(halfDepth - 0.42));
+      stageEdge.material = createAccessoryMaterial('abstract_stage_edge_mat', accentTertiary, accentPrimary);
+      this.markRoomShellAccessory(stageEdge, { typeAccessoryKind: 'stage_edge' });
+    }
+
+    if (shell.type === 'outdoor_illusion') {
+      const skyBackdrop = BABYLON.MeshBuilder.CreatePlane('outdoor_illusion_sky_backdrop', {
+        width: Math.max(8, shell.width * 1.6),
+        height: Math.max(4.5, shell.height * 1.45),
+        sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+      }, this.scene);
+      skyBackdrop.position = new BABYLON.Vector3(0, shell.height * 0.62, halfDepth + Math.max(0.8, shell.depth * 0.16));
+      skyBackdrop.material = createSkyBackdropMaterial('outdoor_illusion_sky_mat');
+      this.markRoomShellAccessory(skyBackdrop, { typeAccessoryKind: 'sky_backdrop' });
+
+      const groundExtension = BABYLON.MeshBuilder.CreateGround('outdoor_illusion_ground_extension', {
+        width: Math.max(6, shell.width * 1.35),
+        height: Math.max(6, shell.depth * 1.4),
+      }, this.scene);
+      groundExtension.position = new BABYLON.Vector3(0, -0.012, halfDepth + (shell.depth * 0.35));
+      const groundMaterial = createAccessoryMaterial('outdoor_illusion_ground_extension_mat', '#6b7c4a', '#243018');
+      groundMaterial.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
+      groundExtension.material = groundMaterial;
+      this.markRoomShellAccessory(groundExtension, { typeAccessoryKind: 'ground_extension' });
+    }
+  }
+
+  private createRoomShellFixtureAccessories(shell: EnvironmentPlanRoomShell): void {
+    const fixtures = Array.isArray(shell.fixtures) ? shell.fixtures : [];
+    if (fixtures.length === 0) {
+      return;
+    }
+
+    const primary = this.getEnvironmentBrandColor(0, '#c0392b');
+    const secondary = this.getEnvironmentBrandColor(1, '#f4e7d3');
+    const accent = this.getEnvironmentBrandColor(2, '#1f2937');
+    const trimColor = this.environmentBrandingState.interiorStyle === 'full_palette'
+      ? this.getEnvironmentBrandColor(3, '#f97316')
+      : accent;
+
+    const createMaterial = (name: string, diffuseHex: string, emissiveHex: string, alpha = 1): BABYLON.StandardMaterial => {
+      const material = new BABYLON.StandardMaterial(name, this.scene);
+      material.diffuseColor = BABYLON.Color3.FromHexString(diffuseHex);
+      material.emissiveColor = BABYLON.Color3.FromHexString(emissiveHex).scale(alpha < 1 ? 0.06 : 0.03);
+      material.specularColor = new BABYLON.Color3(0.06, 0.06, 0.06);
+      material.alpha = alpha;
+      material.backFaceCulling = false;
+      return material;
+    };
+
+    fixtures.forEach((fixture) => {
+      const basePosition = this.resolveRoomShellFixturePosition(fixture);
+      if (!basePosition) {
+        return;
+      }
+
+      const width = Math.max(0.35, shell.width * fixture.widthRatio);
+      const depth = Math.max(0.2, shell.depth * fixture.depthRatio);
+      const height = Math.max(0.2, fixture.height);
+      const bodyMaterial = createMaterial(`roomShell_${fixture.id}_body`, secondary, accent);
+      const topMaterial = createMaterial(`roomShell_${fixture.id}_top`, primary, trimColor);
+
+      const markFixtureMesh = (mesh: BABYLON.AbstractMesh, kindSuffix?: string): void => {
+        this.markRoomShellAccessory(mesh, { typeAccessoryKind: fixture.kind });
+        mesh.metadata = {
+          ...(mesh.metadata || {}),
+          fixtureId: fixture.id,
+          fixtureKind: fixture.kind,
+          fixtureZoneId: fixture.zoneId || null,
+          typeAccessoryKind: kindSuffix || fixture.kind,
+        };
+      };
+
+      if (fixture.kind === 'counter_block' || fixture.kind === 'prep_island') {
+        const body = BABYLON.MeshBuilder.CreateBox(`roomShell_${fixture.id}`, {
+          width,
+          height,
+          depth,
+        }, this.scene);
+        body.position = new BABYLON.Vector3(basePosition.x, height * 0.5, basePosition.z);
+        body.material = bodyMaterial;
+        markFixtureMesh(body);
+
+        const top = BABYLON.MeshBuilder.CreateBox(`roomShell_${fixture.id}_top`, {
+          width: width * 1.02,
+          height: Math.max(0.04, height * 0.06),
+          depth: depth * 1.04,
+        }, this.scene);
+        top.position = new BABYLON.Vector3(basePosition.x, height + Math.max(0.02, height * 0.03), basePosition.z);
+        top.material = topMaterial;
+        markFixtureMesh(top, `${fixture.kind}_top`);
+        return;
+      }
+
+      if (fixture.kind === 'banquette') {
+        const seatHeight = Math.min(0.52, height * 0.42);
+        const seat = BABYLON.MeshBuilder.CreateBox(`roomShell_${fixture.id}_seat`, {
+          width,
+          height: seatHeight,
+          depth,
+        }, this.scene);
+        seat.position = new BABYLON.Vector3(basePosition.x, seatHeight * 0.5, basePosition.z);
+        seat.material = bodyMaterial;
+        markFixtureMesh(seat);
+
+        const back = BABYLON.MeshBuilder.CreateBox(`roomShell_${fixture.id}_back`, {
+          width,
+          height: Math.max(0.45, height - seatHeight * 0.25),
+          depth: Math.max(0.08, depth * 0.18),
+        }, this.scene);
+        back.position = new BABYLON.Vector3(basePosition.x, seatHeight + (height * 0.26), basePosition.z + (depth * 0.36));
+        back.material = topMaterial;
+        markFixtureMesh(back, 'banquette_back');
+        return;
+      }
+
+      if (fixture.kind === 'host_stand' || fixture.kind === 'display_plinth') {
+        const plinth = BABYLON.MeshBuilder.CreateBox(`roomShell_${fixture.id}`, {
+          width,
+          height,
+          depth,
+        }, this.scene);
+        plinth.position = new BABYLON.Vector3(basePosition.x, height * 0.5, basePosition.z);
+        plinth.material = fixture.kind === 'host_stand' ? topMaterial : bodyMaterial;
+        markFixtureMesh(plinth);
+
+        if (fixture.kind === 'host_stand' && this.environmentBrandingState.brandName) {
+          const sign = BABYLON.MeshBuilder.CreatePlane(`roomShell_${fixture.id}_sign`, {
+            width: Math.max(0.24, width * 0.9),
+            height: Math.max(0.16, height * 0.22),
+          }, this.scene);
+          sign.position = new BABYLON.Vector3(basePosition.x, height * 0.82, basePosition.z + (depth * 0.52));
+          sign.material = this.createBrandedCardMaterial(`roomShell_${fixture.id}_sign_mat`, {
+            title: this.environmentBrandingState.brandName,
+            subtitle: this.environmentBrandingState.signageText || 'Welcome',
+            style: this.environmentBrandingState.signageStyle,
+            decorationKind: 'signage',
+          });
+          markFixtureMesh(sign, 'host_stand_sign');
+        }
+        return;
+      }
+
+      if (fixture.kind === 'partition') {
+        const panel = BABYLON.MeshBuilder.CreateBox(`roomShell_${fixture.id}`, {
+          width,
+          height,
+          depth: Math.max(0.05, depth * 0.18),
+        }, this.scene);
+        panel.position = new BABYLON.Vector3(basePosition.x, height * 0.5, basePosition.z);
+        panel.material = createMaterial(`roomShell_${fixture.id}_mat`, trimColor, accent, 0.96);
+        markFixtureMesh(panel);
+        return;
+      }
+
+      if (fixture.kind === 'planter_line') {
+        const planter = BABYLON.MeshBuilder.CreateBox(`roomShell_${fixture.id}`, {
+          width,
+          height: Math.max(0.28, height * 0.55),
+          depth,
+        }, this.scene);
+        planter.position = new BABYLON.Vector3(basePosition.x, Math.max(0.14, height * 0.275), basePosition.z);
+        planter.material = createMaterial(`roomShell_${fixture.id}_planter_mat`, '#374151', accent);
+        markFixtureMesh(planter);
+
+        const foliage = BABYLON.MeshBuilder.CreateCylinder(`roomShell_${fixture.id}_foliage`, {
+          diameter: Math.max(0.26, Math.min(width, depth) * 0.64),
+          height: Math.max(0.3, height * 0.7),
+          tessellation: 8,
+        }, this.scene);
+        foliage.position = new BABYLON.Vector3(basePosition.x, height * 0.65, basePosition.z);
+        foliage.material = createMaterial(`roomShell_${fixture.id}_foliage_mat`, '#3f6d3d', '#1f3f20');
+        markFixtureMesh(foliage, 'planter_foliage');
+        return;
+      }
+
+      if (fixture.kind === 'pass_shelf') {
+        const shelf = BABYLON.MeshBuilder.CreateBox(`roomShell_${fixture.id}`, {
+          width,
+          height: Math.max(0.05, height * 0.08),
+          depth,
+        }, this.scene);
+        shelf.position = new BABYLON.Vector3(basePosition.x, height, basePosition.z);
+        shelf.material = topMaterial;
+        markFixtureMesh(shelf);
+      }
+    });
+  }
+
+  private createRoomShellBrandAccessories(shell: EnvironmentPlanRoomShell): void {
+    const targets = this.getEnvironmentBrandTargets();
+    const hasBranding = this.environmentBrandingState.palette.length > 0
+      || Boolean(this.environmentBrandingState.brandName)
+      || Boolean(this.environmentBrandingState.signageText)
+      || Boolean(this.environmentBrandingState.logoImage);
+    if (!hasBranding) {
+      return;
+    }
+
+    const wantsEnvironmentDetails = targets.has('environment') || targets.has('interior_details');
+    const wantsSignage = targets.has('signage') || this.environmentBrandingState.applyToSignage;
+    if (!wantsEnvironmentDetails && !wantsSignage) {
+      return;
+    }
+
+    const primary = this.getEnvironmentBrandColor(0, '#c0392b');
+    const secondary = this.getEnvironmentBrandColor(1, '#f4e7d3');
+    const accent = this.getEnvironmentBrandColor(2, '#1f2937');
+
+    if (wantsEnvironmentDetails) {
+      const wallIds: Array<'backWall' | 'leftWall' | 'rightWall' | 'rearWall'> = ['backWall', 'leftWall', 'rightWall', 'rearWall'];
+      wallIds.forEach((wallId) => {
+        const wall = this.scene.getMeshByName(wallId) as BABYLON.Mesh | null;
+        if (!wall || !wall.isVisible) {
+          return;
+        }
+        const dimensions = this.getRoomShellWallDimensions(wallId, shell);
+        const band = BABYLON.MeshBuilder.CreateBox(`${wallId}_brand_wall_band`, {
+          width: Math.max(0.45, dimensions.width * 0.78),
+          height: Math.max(0.05, Math.min(0.12, dimensions.height * 0.05)),
+          depth: 0.05,
+        }, this.scene);
+        band.parent = wall;
+        band.position = new BABYLON.Vector3(0, (-dimensions.height * 0.5) + Math.max(0.5, dimensions.height * 0.22), 0.035);
+        const bandMaterial = new BABYLON.StandardMaterial(`${wallId}_brand_wall_band_mat`, this.scene);
+        bandMaterial.diffuseColor = BABYLON.Color3.FromHexString(primary);
+        bandMaterial.emissiveColor = BABYLON.Color3.FromHexString(accent).scale(0.08);
+        bandMaterial.specularColor = new BABYLON.Color3(0.04, 0.04, 0.04);
+        band.material = bandMaterial;
+        this.markRoomShellBrandAccessory(band, 'interior_trim', 'brand_wall_band');
+      });
+
+      const runner = BABYLON.MeshBuilder.CreateGround('brand_floor_runner', {
+        width: Math.max(1.4, shell.width * 0.24),
+        height: Math.max(1.6, shell.depth * 0.18),
+      }, this.scene);
+      runner.position = new BABYLON.Vector3(0, 0.014, (shell.depth * 0.5) - Math.max(1.2, shell.depth * 0.16));
+      const runnerMaterial = new BABYLON.StandardMaterial('brand_floor_runner_mat', this.scene);
+      runnerMaterial.diffuseColor = BABYLON.Color3.FromHexString(secondary);
+      runnerMaterial.emissiveColor = BABYLON.Color3.FromHexString(primary).scale(0.06);
+      runnerMaterial.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
+      runner.material = runnerMaterial;
+      this.markRoomShellBrandAccessory(runner, 'interior_trim', 'brand_floor_runner');
+    }
+
+    if (wantsSignage && (shell.type === 'storefront' || shell.type === 'interior_room')) {
+      const decal = BABYLON.MeshBuilder.CreatePlane('brand_window_decal', {
+        width: Math.max(1.2, shell.width * 0.24),
+        height: Math.max(0.36, shell.height * 0.12),
+      }, this.scene);
+      decal.position = new BABYLON.Vector3(
+        0,
+        Math.max(1.3, shell.height * 0.42),
+        (shell.depth * 0.5) - 0.04,
+      );
+      decal.rotation = new BABYLON.Vector3(0, Math.PI, 0);
+      decal.material = this.createBrandedCardMaterial('brand_window_decal_mat', {
+        title: this.environmentBrandingState.brandName || 'Brand',
+        subtitle: this.environmentBrandingState.signageText || this.environmentBrandingState.profileName || 'Welcome',
+        style: this.environmentBrandingState.signageStyle,
+        decorationKind: 'signage',
+      });
+      this.markRoomShellBrandAccessory(decal, 'signage', 'brand_window_decal');
+    }
+  }
+
+  private rebuildRoomShellAccessories(shell: EnvironmentPlanRoomShell): void {
+    this.createRoomShellOpeningAccessories(shell);
+    this.createRoomShellNiches(shell);
+    this.createRoomShellWallSegments(shell);
+    this.createRoomShellCeilingAccessories(shell);
+    this.createRoomShellTypeAccessories(shell);
+    this.createRoomShellFixtureAccessories(shell);
+    this.createRoomShellBrandAccessories(shell);
+  }
+
+  private applyRoomShellConfiguration(
+    shell: Partial<EnvironmentPlanRoomShell> | undefined,
+    options: { skipDiagnostics?: boolean } = {},
+  ): void {
+    const normalizedShell = this.normalizeRoomShell(shell);
+    const meshNames = ['ground', 'grid', 'backWall', 'leftWall', 'rightWall', 'rearWall', 'ceiling'] as const;
+    const existingMeshes = Object.fromEntries(
+      meshNames.map((name) => [name, this.scene.getMeshByName(name)]),
+    ) as Record<(typeof meshNames)[number], BABYLON.AbstractMesh | null>;
+
+    const shellExists = Boolean(
+      existingMeshes.ground
+      && existingMeshes.backWall
+      && existingMeshes.leftWall
+      && existingMeshes.rightWall
+      && existingMeshes.rearWall,
+    );
+
+    if (shellExists && this.roomShellsEqual(this.currentRoomShell, normalizedShell)) {
+      return;
+    }
+
+    const environmentState = environmentService.getState();
+    const wallDefaults = environmentState.walls;
+    const floorDefaults = environmentState.floor;
+    const existingWallState = {
+      backWall: {
+        visible: existingMeshes.backWall?.isVisible ?? wallDefaults.backWall.visible,
+        material: existingMeshes.backWall?.material ?? null,
+      },
+      leftWall: {
+        visible: existingMeshes.leftWall?.isVisible ?? wallDefaults.leftWall.visible,
+        material: existingMeshes.leftWall?.material ?? null,
+      },
+      rightWall: {
+        visible: existingMeshes.rightWall?.isVisible ?? wallDefaults.rightWall.visible,
+        material: existingMeshes.rightWall?.material ?? null,
+      },
+      rearWall: {
+        visible: existingMeshes.rearWall?.isVisible ?? wallDefaults.rearWall.visible,
+        material: existingMeshes.rearWall?.material ?? null,
+      },
+    };
+    const floorMaterial = existingMeshes.ground?.material ?? null;
+    const floorVisible = existingMeshes.ground?.isVisible ?? floorDefaults.visible;
+    const gridVisible = existingMeshes.grid?.isVisible ?? floorDefaults.gridVisible;
+    const ceilingMaterial = existingMeshes.ceiling?.material ?? null;
+
+    meshNames.forEach((name) => {
+      existingMeshes[name]?.dispose(false, true);
+    });
+
+    const defaultGroundMaterial = new BABYLON.StandardMaterial('groundMat', this.scene);
+    defaultGroundMaterial.diffuseColor = new BABYLON.Color3(0.18, 0.18, 0.22);
+    defaultGroundMaterial.specularColor = new BABYLON.Color3(0.05, 0.05, 0.05);
+
+    const ground = BABYLON.MeshBuilder.CreateGround('ground', {
+      width: normalizedShell.width,
+      height: normalizedShell.depth,
+    }, this.scene);
+    ground.material = floorMaterial ?? defaultGroundMaterial;
+    ground.receiveShadows = true;
+    ground.isVisible = floorVisible;
+    ground.metadata = {
+      dimensions: {
+        width: normalizedShell.width,
+        height: normalizedShell.depth,
+      },
+      roomShell: normalizedShell,
+    };
+
+    const gridSubdivisions = Math.max(8, Math.round(Math.max(normalizedShell.width, normalizedShell.depth)));
+    this.gridMesh = BABYLON.MeshBuilder.CreateGround('grid', {
+      width: normalizedShell.width,
+      height: normalizedShell.depth,
+      subdivisions: gridSubdivisions,
+    }, this.scene);
+    const gridMat = new BABYLON.StandardMaterial('gridMat', this.scene);
+    gridMat.wireframe = true;
+    gridMat.emissiveColor = new BABYLON.Color3(0.2, 0.25, 0.35);
+    gridMat.alpha = 0.5;
+    gridMat.zOffset = -1;
+    this.gridMesh.material = gridMat;
+    this.gridMesh.position.y = 0.01;
+    this.gridMesh.isVisible = gridVisible;
+
+    const defaultWallMaterial = new BABYLON.StandardMaterial('wallMat', this.scene);
+    defaultWallMaterial.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.18);
+    defaultWallMaterial.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
+    defaultWallMaterial.backFaceCulling = false;
+
+    const halfWidth = normalizedShell.width / 2;
+    const halfDepth = normalizedShell.depth / 2;
+    const halfHeight = normalizedShell.height / 2;
+
+    const backWall = BABYLON.MeshBuilder.CreatePlane('backWall', {
+      width: normalizedShell.width,
+      height: normalizedShell.height,
+      sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+    }, this.scene);
+    backWall.position.set(0, halfHeight, -halfDepth);
+    backWall.material = existingWallState.backWall.material ?? defaultWallMaterial;
+    backWall.isVisible = existingWallState.backWall.visible;
+
+    const leftWall = BABYLON.MeshBuilder.CreatePlane('leftWall', {
+      width: normalizedShell.depth,
+      height: normalizedShell.height,
+      sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+    }, this.scene);
+    leftWall.position.set(-halfWidth, halfHeight, 0);
+    leftWall.rotation.y = Math.PI / 2;
+    leftWall.material = existingWallState.leftWall.material ?? defaultWallMaterial.clone('leftWallMat');
+    leftWall.isVisible = existingWallState.leftWall.visible;
+
+    const rightWall = BABYLON.MeshBuilder.CreatePlane('rightWall', {
+      width: normalizedShell.depth,
+      height: normalizedShell.height,
+      sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+    }, this.scene);
+    rightWall.position.set(halfWidth, halfHeight, 0);
+    rightWall.rotation.y = -Math.PI / 2;
+    rightWall.material = existingWallState.rightWall.material ?? defaultWallMaterial.clone('rightWallMat');
+    rightWall.isVisible = existingWallState.rightWall.visible;
+
+    const rearWall = BABYLON.MeshBuilder.CreatePlane('rearWall', {
+      width: normalizedShell.width,
+      height: normalizedShell.height,
+      sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+    }, this.scene);
+    rearWall.position.set(0, halfHeight, halfDepth);
+    rearWall.rotation.y = Math.PI;
+    rearWall.material = existingWallState.rearWall.material ?? defaultWallMaterial.clone('rearWallMat');
+    rearWall.isVisible = existingWallState.rearWall.visible;
+
+    const ceiling = BABYLON.MeshBuilder.CreatePlane('ceiling', {
+      width: normalizedShell.width,
+      height: normalizedShell.depth,
+      sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+    }, this.scene);
+    ceiling.position.set(0, normalizedShell.height, 0);
+    ceiling.rotation.x = Math.PI / 2;
+    ceiling.material = ceilingMaterial ?? defaultWallMaterial.clone('ceilingMat');
+    ceiling.isVisible = !(normalizedShell.openCeiling || normalizedShell.type === 'outdoor_illusion');
+
+    if (normalizedShell.type === 'outdoor_illusion') {
+      rearWall.isVisible = false;
+    }
+
+    [backWall, leftWall, rightWall, rearWall, ceiling].forEach((mesh) => {
+      mesh.metadata = {
+        roomShell: normalizedShell,
+      };
+    });
+
+    this.currentRoomShell = normalizedShell;
+    this.wallsVisible = [backWall, leftWall, rightWall, rearWall].some((wall) => wall.isVisible);
+    this.applyRoomShellOpeningMasks(normalizedShell);
+    this.rebuildRoomShellAccessories(normalizedShell);
+    this.addWallLogos();
+
+    if (!options.skipDiagnostics) {
+      this.publishEnvironmentDiagnostics('room-shell-applied');
+    }
   }
   
   public resetCamera(): void {
@@ -2038,8 +5024,8 @@ class VirtualStudio {
       });
       
       // Remove all characters
-      this.sceneState.characters.forEach((char, _id) => {
-        char.mesh.dispose();
+      Array.from(this.sceneState.characters.keys()).forEach((id) => {
+        this.removeCharacterNodeById(id, false);
       });
       this.sceneState.characters.clear();
       
@@ -2373,19 +5359,39 @@ class VirtualStudio {
       return fallback;
     };
 
-    const fogEnabled = settings.fogEnabled === true;
-    if (fogEnabled) {
+    const colorToHex = (color: BABYLON.Color3 | BABYLON.Color4 | null | undefined, fallback: string): string => {
+      if (!color) {
+        return fallback;
+      }
+      const source = 'a' in color
+        ? new BABYLON.Color3(color.r, color.g, color.b)
+        : color;
+      const clamp = (value: number) => Math.max(0, Math.min(255, Math.round(value * 255)));
+      const toHex = (value: number) => clamp(value).toString(16).padStart(2, '0');
+      return `#${toHex(source.r)}${toHex(source.g)}${toHex(source.b)}`;
+    };
+
+    const currentFogColor = colorToHex(this.scene.fogColor, '#101820');
+    const currentClearColor = colorToHex(this.scene.clearColor, '#101820');
+    const currentAmbientColor = colorToHex(this.ambientLight?.diffuse, '#ffffff');
+    const fogCurrentlyEnabled = this.scene.fogMode !== BABYLON.Scene.FOGMODE_NONE;
+    const shouldEnableFog = settings.fogEnabled === true
+      || (fogCurrentlyEnabled && (typeof settings.fogDensity === 'number' || typeof settings.fogColor === 'string'));
+
+    if (shouldEnableFog) {
       this.scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
-      this.scene.fogDensity = typeof settings.fogDensity === 'number' ? settings.fogDensity : 0.01;
-      this.scene.fogColor = BABYLON.Color3.FromHexString(normalizeHex(settings.fogColor, '#101820'));
-    } else {
+      this.scene.fogDensity = typeof settings.fogDensity === 'number'
+        ? settings.fogDensity
+        : (fogCurrentlyEnabled ? (this.scene.fogDensity || 0.01) : 0.01);
+      this.scene.fogColor = BABYLON.Color3.FromHexString(normalizeHex(settings.fogColor, currentFogColor));
+    } else if (settings.fogEnabled === false) {
       this.scene.fogMode = BABYLON.Scene.FOGMODE_NONE;
     }
 
-    this.scene.clearColor = BABYLON.Color4.FromHexString(`${normalizeHex(settings.clearColor, '#101820')}FF`);
+    this.scene.clearColor = BABYLON.Color4.FromHexString(`${normalizeHex(settings.clearColor, currentClearColor)}FF`);
 
     if (this.ambientLight) {
-      this.ambientLight.diffuse = BABYLON.Color3.FromHexString(normalizeHex(settings.ambientColor, '#ffffff'));
+      this.ambientLight.diffuse = BABYLON.Color3.FromHexString(normalizeHex(settings.ambientColor, currentAmbientColor));
       if (typeof settings.ambientIntensity === 'number') {
         this.ambientLight.intensity = settings.ambientIntensity;
       }
@@ -2395,6 +5401,7 @@ class VirtualStudio {
   }
 
   public resetEnvironmentShell(): void {
+    environmentService.applyRoomShell(DEFAULT_ROOM_SHELL);
     this.toggleWall('backWall', false);
     this.toggleWall('leftWall', true);
     this.toggleWall('rightWall', true);
@@ -2667,10 +5674,10 @@ class VirtualStudio {
     
     // Enable high-quality anti-aliasing (FXAA + MSAA)
     this.renderingPipeline.fxaaEnabled = true;
-    this.renderingPipeline.samples = 4; // MSAA samples
+    this.renderingPipeline.samples = PLAYWRIGHT_LIGHT_MODE ? 1 : 4; // MSAA samples
     
     // Subtle bloom for emissive materials (light bulbs, screens)
-    this.renderingPipeline.bloomEnabled = true;
+    this.renderingPipeline.bloomEnabled = !PLAYWRIGHT_LIGHT_MODE;
     this.renderingPipeline.bloomThreshold = 0.7;
     this.renderingPipeline.bloomWeight = 0.35;
     this.renderingPipeline.bloomKernel = 64;
@@ -2690,11 +5697,12 @@ class VirtualStudio {
     this.renderingPipeline.chromaticAberration.aberrationAmount = 30;
     
     // Sharpen (subtle)
-    this.renderingPipeline.sharpenEnabled = true;
+    this.renderingPipeline.sharpenEnabled = !PLAYWRIGHT_LIGHT_MODE;
     this.renderingPipeline.sharpen.edgeAmount = 0.2;
     
     // Setup SSR (Screen-Space Reflections) for realistic reflections
-    try {
+    if (!PLAYWRIGHT_LIGHT_MODE) {
+      try {
       this.ssrPipeline = new BABYLON.SSRRenderingPipeline(
         'ssrPipeline',
         this.scene,
@@ -2717,8 +5725,9 @@ class VirtualStudio {
       this.ssrPipeline.enableAutomaticThicknessComputation = false;
       
       console.log('SSR pipeline enabled');
-    } catch (e) {
-      console.warn('SSR not available:', e);
+      } catch (e) {
+        console.warn('SSR not available:', e);
+      }
     }
     
     // Dispatch event to notify UI about rendering pipeline
@@ -2726,7 +5735,7 @@ class VirtualStudio {
       detail: { pipeline: this.renderingPipeline, ssr: this.ssrPipeline }
     }));
     
-    console.log('Professional rendering pipeline initialized (Work Mode)');
+    console.log(`Professional rendering pipeline initialized (Work Mode${PLAYWRIGHT_LIGHT_MODE ? ', Playwright light mode' : ''})`);
   }
 
   /**
@@ -5100,54 +8109,7 @@ class VirtualStudio {
     this.ambientLight = new BABYLON.HemisphericLight('ambient', new BABYLON.Vector3(0, 1, 0), this.scene);
     this.ambientLight.intensity = this.ambientLightBaseIntensity;
     this.ambientLight.groundColor = new BABYLON.Color3(0.15, 0.15, 0.18);
-
-    const ground = BABYLON.MeshBuilder.CreateGround('ground', { width: 20, height: 20 }, this.scene);
-    const groundMat = new BABYLON.StandardMaterial('groundMat', this.scene);
-    groundMat.diffuseColor = new BABYLON.Color3(0.18, 0.18, 0.22);
-    groundMat.specularColor = new BABYLON.Color3(0.05, 0.05, 0.05);
-    ground.material = groundMat;
-    ground.receiveShadows = true;
-
-    this.gridMesh = BABYLON.MeshBuilder.CreateGround('grid', { width: 20, height: 20, subdivisions: 20 }, this.scene);
-    const gridMat = new BABYLON.StandardMaterial('gridMat', this.scene);
-    gridMat.wireframe = true;
-    gridMat.emissiveColor = new BABYLON.Color3(0.2, 0.25, 0.35);
-    gridMat.alpha = 0.5;
-    gridMat.zOffset = -1; // Prevent z-fighting with ground
-    this.gridMesh.material = gridMat;
-    this.gridMesh.position.y = 0.01;
-
-    const wallMat = new BABYLON.StandardMaterial('wallMat', this.scene);
-    wallMat.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.18);
-    wallMat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
-    wallMat.backFaceCulling = false;
-
-    // Front wall (facing camera)
-    const backWall = BABYLON.MeshBuilder.CreatePlane('backWall', { width: 20, height: 8, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, this.scene);
-    backWall.position.set(0, 4, -10);
-    backWall.material = wallMat;
-    backWall.isVisible = false; // Hidden by default
-
-    // Left wall
-    const leftWall = BABYLON.MeshBuilder.CreatePlane('leftWall', { width: 20, height: 8, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, this.scene);
-    leftWall.position.set(-10, 4, 0);
-    leftWall.rotation.y = Math.PI / 2;
-    leftWall.material = wallMat.clone('leftWallMat');
-
-    // Right wall
-    const rightWall = BABYLON.MeshBuilder.CreatePlane('rightWall', { width: 20, height: 8, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, this.scene);
-    rightWall.position.set(10, 4, 0);
-    rightWall.rotation.y = -Math.PI / 2;
-    rightWall.material = wallMat.clone('rightWallMat');
-
-    // Rear wall (behind camera)
-    const rearWall = BABYLON.MeshBuilder.CreatePlane('rearWall', { width: 20, height: 8, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, this.scene);
-    rearWall.position.set(0, 4, 10);
-    rearWall.rotation.y = Math.PI;
-    rearWall.material = wallMat.clone('rearWallMat');
-
-    // Add CreatorHub Virtual Studio logo on backside of walls
-    this.addWallLogos();
+    this.applyRoomShellConfiguration(DEFAULT_ROOM_SHELL, { skipDiagnostics: true });
 
     // Default 3-point lighting setup with Aputure 300D lights
     // IMPORTANT: Must await this to ensure lights are fully loaded before continuing
@@ -5168,6 +8130,10 @@ class VirtualStudio {
   // Apply environment service state to scene walls/floor
   private updateSceneEnvironment(state: any): void {
     try {
+      if (state?.roomShell) {
+        this.applyRoomShellConfiguration(state.roomShell, { skipDiagnostics: true });
+      }
+
       if (state?.walls) {
         Object.entries(state.walls).forEach(([wallId, config]: [string, any]) => {
           const wall = this.scene.getMeshByName(wallId);
@@ -5260,6 +8226,8 @@ class VirtualStudio {
     }
 
     wall.material = mat;
+    this.applyRoomShellOpeningMasks(this.currentRoomShell);
+    this.rebuildRoomShellAccessories(this.currentRoomShell);
     console.log(`[Scene] Applied wall material: ${wallMaterial.nameNo} to ${wallId}`);
   }
 
@@ -5682,6 +8650,7 @@ class VirtualStudio {
       
       // Store light in lights map
       this.lights.set(lightId, lightData);
+      this.lastRuntimeLightId = lightId;
       
       // Add mesh to gizmo manager for selection
       if (this.gizmoManager?.attachableMeshes) {
@@ -5692,6 +8661,7 @@ class VirtualStudio {
       window.dispatchEvent(new CustomEvent('lights-updated', { 
         detail: { action: 'added', lightId, lightCount: this.lights.size } 
       }));
+      this.publishCameraLightingSync('light-added', 'light-controls');
       
       console.log(`[addLight] Light created successfully: ${lightId}`);
       return lightId;
@@ -5765,6 +8735,7 @@ class VirtualStudio {
     // Clear azimuth/elevation to stay in automatic mode
     lightData.azimuth = undefined;
     lightData.elevation = undefined;
+    this.publishCameraLightingSync('light-aim-updated', 'light-controls');
   }
   
   public async setupDefaultLighting(): Promise<void> {
@@ -5777,7 +8748,7 @@ class VirtualStudio {
     // === KEY LIGHT ===
     // Position: 45° to the right, elevated, slightly in front
     // This is the main modeling light that creates depth and dimension
-    const keyLightId = await this.addLight('aputure-300d', new BABYLON.Vector3(3.5, 3, -2.5));
+    const keyLightId = await this.addProceduralLightFixture('aputure-300d', new BABYLON.Vector3(3.5, 3, -2.5));
     const keyLight = this.lights.get(keyLightId);
     if (keyLight) {
       keyLight.name = 'Key Light (Aputure 300D)';
@@ -5796,7 +8767,7 @@ class VirtualStudio {
     // === FILL LIGHT ===
     // Position: 45° to the left, lower than key, slightly further back
     // Fills in shadows from key light without creating competing shadows
-    const fillLightId = await this.addLight('aputure-300d', new BABYLON.Vector3(-3, 2, -3.5));
+    const fillLightId = await this.addProceduralLightFixture('aputure-300d', new BABYLON.Vector3(-3, 2, -3.5));
     const fillLight = this.lights.get(fillLightId);
     if (fillLight) {
       fillLight.name = 'Fill Light (Aputure 300D)';
@@ -5815,7 +8786,7 @@ class VirtualStudio {
     // === RIM/BACK LIGHT ===
     // Position: Behind and to the opposite side of key, elevated
     // Creates edge definition and separation from background
-    const rimLightId = await this.addLight('aputure-300d', new BABYLON.Vector3(-2.5, 4, 3.5));
+    const rimLightId = await this.addProceduralLightFixture('aputure-300d', new BABYLON.Vector3(-2.5, 4, 3.5));
     const rimLight = this.lights.get(rimLightId);
     if (rimLight) {
       rimLight.name = 'Rim Light (Aputure 300D)';
@@ -5898,108 +8869,1403 @@ class VirtualStudio {
     }
   }
 
-  private addWallLogos(): void {
-    // Create dynamic texture for logo
-    const createLogoTexture = () => {
-      const textureWidth = 512;
-      const textureHeight = 128;
-      const dynamicTexture = new BABYLON.DynamicTexture('logoTexture', { width: textureWidth, height: textureHeight }, this.scene, true);
-      const ctx = dynamicTexture.getContext() as unknown as CanvasRenderingContext2D;
+  private disposeLightData(data: LightData): void {
+    const lightId = String((data.light as any).id || data.light.name || data.mesh.name);
+    goboService.removeGoboFromLight(lightId);
+    data.light.dispose();
+    data.mesh.dispose();
+    data.modelingLight?.dispose();
+    data.shadowGenerator?.dispose();
+    data.beamVisualization?.dispose();
+    data.directionHelper?.dispose();
+  }
 
-      // Clear with transparent background
-      ctx.clearRect(0, 0, textureWidth, textureHeight);
+  private stopEnvironmentAutoRigAnimations(clearAnimatedLights: boolean = true): void {
+    if (this.environmentAutoRigState.animationObserver) {
+      this.scene.onBeforeRenderObservable.remove(this.environmentAutoRigState.animationObserver);
+      this.environmentAutoRigState.animationObserver = null;
+    }
+    this.environmentAutoRigState.lastTickAtMs = null;
+    if (clearAnimatedLights) {
+      this.environmentAutoRigState.elapsedSeconds = 0;
+    }
+    if (clearAnimatedLights) {
+      this.environmentAutoRigState.animatedLights.clear();
+    }
+  }
 
-      // Draw background with subtle gradient
-      const bgGradient = ctx.createLinearGradient(0, 0, textureWidth, textureHeight);
-      bgGradient.addColorStop(0, 'rgba(20, 20, 25, 0.8)');
-      bgGradient.addColorStop(1, 'rgba(15, 15, 20, 0.8)');
-      ctx.fillStyle = bgGradient;
-      this.drawRoundedRect(ctx, 10, 10, textureWidth - 20, textureHeight - 20, 8);
-      ctx.fill();
+  private clearEnvironmentAutoRigLights(): void {
+    const autoRigLightIds = Array.from(this.environmentAutoRigState.lightIds);
+    this.stopEnvironmentAutoRigAnimations();
 
-      // Draw border
-      const borderGradient = ctx.createLinearGradient(0, 0, textureWidth, 0);
-      borderGradient.addColorStop(0, '#f59e0b');
-      borderGradient.addColorStop(0.5, '#f97316');
-      borderGradient.addColorStop(1, '#ea580c');
-      ctx.strokeStyle = borderGradient;
-      ctx.lineWidth = 3;
-      this.drawRoundedRect(ctx, 10, 10, textureWidth - 20, textureHeight - 20, 8);
-      ctx.stroke();
+    autoRigLightIds.forEach((lightId) => {
+      const data = this.lights.get(lightId);
+      if (!data) {
+        return;
+      }
 
-      // Draw "CREATORHUB" text
-      ctx.font = 'bold 36px Arial, sans-serif';
-      const textGradient = ctx.createLinearGradient(80, 0, 400, 0);
-      textGradient.addColorStop(0, '#f59e0b');
-      textGradient.addColorStop(0.5, '#f97316');
-      textGradient.addColorStop(1, '#ea580c');
-      ctx.fillStyle = textGradient;
-      ctx.textAlign = 'center';
-      ctx.fillText('CREATORHUB', textureWidth / 2, 55);
+      this.disposeLightData(data);
+      this.lights.delete(lightId);
 
-      // Draw "VIRTUAL STUDIO" subtitle
-      ctx.font = 'bold 20px Arial, sans-serif';
-      const subtitleGradient = ctx.createLinearGradient(100, 0, 400, 0);
-      subtitleGradient.addColorStop(0, '#00d4ff');
-      subtitleGradient.addColorStop(1, '#0891b2');
-      ctx.fillStyle = subtitleGradient;
-      ctx.fillText('VIRTUAL STUDIO', textureWidth / 2, 85);
+      if (this.selectedLightId === lightId) {
+        this.selectedLightId = null;
+        this.gizmoManager?.attachToMesh(null);
+        this.disposeStudioGizmos();
+      }
+    });
 
-      // Draw small tagline
-      ctx.font = '12px Arial, sans-serif';
-      ctx.fillStyle = 'rgba(180, 83, 9, 0.8)';
-      ctx.fillText('3D Fotostudio Simulator', textureWidth / 2, 108);
+    this.environmentAutoRigState.lightIds.clear();
+    this.environmentAutoRigState.planId = null;
+    this.updateSceneList();
+    this.updateLightMeterReading();
+    this.updateAmbientLightIntensity();
+  }
 
-      dynamicTexture.update();
-      return dynamicTexture;
+  private getEnvironmentHeroPropCenter(): BABYLON.Vector3 | null {
+    const environmentProps = Array.from(this.sceneState.props.values())
+      .filter((prop) => Boolean(prop.metadata?.environmentGenerated));
+
+    if (environmentProps.length === 0) {
+      return null;
+    }
+
+    const priorityRank: Record<string, number> = {
+      high: 0,
+      medium: 1,
+      low: 2,
     };
 
-    // Create logo material
-    const logoMat = new BABYLON.StandardMaterial('logoMat', this.scene);
-    logoMat.diffuseTexture = createLogoTexture();
-    logoMat.diffuseTexture.hasAlpha = true;
-    logoMat.useAlphaFromDiffuseTexture = true;
-    logoMat.emissiveTexture = logoMat.diffuseTexture;
-    logoMat.emissiveColor = new BABYLON.Color3(0.3, 0.25, 0.15);
-    logoMat.specularColor = new BABYLON.Color3(0, 0, 0);
-    logoMat.backFaceCulling = true;
+    environmentProps.sort((left, right) => {
+      const leftPriority = priorityRank[String(left.metadata?.priority ?? 'medium')] ?? 1;
+      const rightPriority = priorityRank[String(right.metadata?.priority ?? 'medium')] ?? 1;
+      return leftPriority - rightPriority;
+    });
+
+    const heroProp = environmentProps[0];
+    const bounds = heroProp.mesh.getHierarchyBoundingVectors(true);
+    return bounds.min.add(bounds.max).scale(0.5);
+  }
+
+  private inferEnvironmentLightingTarget(fallbackTarget?: [number, number, number]): BABYLON.Vector3 {
+    if (Array.isArray(fallbackTarget) && fallbackTarget.length >= 3) {
+      return new BABYLON.Vector3(fallbackTarget[0], fallbackTarget[1], fallbackTarget[2]);
+    }
+
+    const liveCameraTarget = typeof (this.camera as any).getTarget === 'function'
+      ? (this.camera as any).getTarget()
+      : this.camera.target;
+    if (liveCameraTarget) {
+      return liveCameraTarget.clone();
+    }
+
+    const heroCenter = this.getEnvironmentHeroPropCenter();
+    if (heroCenter) {
+      return heroCenter;
+    }
+
+    return new BABYLON.Vector3(0, 1.4, 0);
+  }
+
+  private resolveEnvironmentDepthZoneZ(
+    depthZone: 'foreground' | 'midground' | 'background' | null | undefined,
+  ): number {
+    const bounds = this.getEnvironmentShellBounds();
+    if (depthZone === 'foreground') {
+      return Math.min(bounds.maxZ - 1.4, Math.max(1.4, bounds.maxZ * 0.28));
+    }
+    if (depthZone === 'background') {
+      return bounds.minZ + 1.8;
+    }
+    return BABYLON.Scalar.Lerp(bounds.minZ + 1.8, bounds.maxZ - 1.8, 0.5);
+  }
+
+  private getLayoutGuidanceZonePoint(
+    layoutGuidance: EnvironmentPlanLayoutGuidance | null | undefined,
+    zone: 'hero' | 'supporting' | 'background',
+    fallbackTarget: BABYLON.Vector3,
+  ): BABYLON.Vector3 {
+    if (!layoutGuidance) {
+      return fallbackTarget.clone();
+    }
+
+    const bounds = this.getEnvironmentShellBounds();
+    const baseY = fallbackTarget.y;
+
+    if (zone === 'hero') {
+      const xBias = BABYLON.Scalar.Clamp(layoutGuidance.suggestedZones.hero.xBias ?? 0, -1, 1);
+      return new BABYLON.Vector3(
+        BABYLON.Scalar.Lerp(bounds.minX + 1.4, bounds.maxX - 1.4, (xBias + 1) / 2),
+        baseY,
+        this.resolveEnvironmentDepthZoneZ(layoutGuidance.suggestedZones.hero.depthZone),
+      );
+    }
+
+    if (zone === 'supporting') {
+      const side = layoutGuidance.suggestedZones.supporting.side;
+      const xBias = side === 'left' ? -0.68 : side === 'right' ? 0.68 : 0;
+      return new BABYLON.Vector3(
+        BABYLON.Scalar.Lerp(bounds.minX + 1.4, bounds.maxX - 1.4, (xBias + 1) / 2),
+        baseY,
+        this.resolveEnvironmentDepthZoneZ(layoutGuidance.suggestedZones.supporting.depthZone),
+      );
+    }
+
+    const background = layoutGuidance.suggestedZones.background;
+    const backgroundDepthZ = this.resolveEnvironmentDepthZoneZ(background.depthZone);
+    const wallOffset = 0.6;
+    switch (background.wallTarget) {
+      case 'leftWall':
+        return new BABYLON.Vector3(bounds.minX + wallOffset, baseY + 0.3, backgroundDepthZ);
+      case 'rightWall':
+        return new BABYLON.Vector3(bounds.maxX - wallOffset, baseY + 0.3, backgroundDepthZ);
+      case 'rearWall':
+        return new BABYLON.Vector3(0, baseY + 0.3, bounds.maxZ - wallOffset);
+      case 'backWall':
+      default:
+        return new BABYLON.Vector3(0, baseY + 0.3, bounds.minZ + wallOffset);
+    }
+  }
+
+  private getEnvironmentLightLayoutSide(
+    layoutGuidance: EnvironmentPlanLayoutGuidance | null | undefined,
+    fallbackPosition: BABYLON.Vector3,
+    subjectTarget: BABYLON.Vector3,
+  ): number {
+    const xBias = layoutGuidance?.suggestedZones.hero?.xBias;
+    if (typeof xBias === 'number' && Math.abs(xBias) > 0.08) {
+      return xBias >= 0 ? 1 : -1;
+    }
+
+    return fallbackPosition.x >= subjectTarget.x ? 1 : -1;
+  }
+
+  private resolveEnvironmentLightPlacement(
+    cue: EnvironmentPlanLightingCue,
+    fallbackPosition: BABYLON.Vector3,
+    subjectTarget: BABYLON.Vector3,
+    layoutGuidance?: EnvironmentPlanLayoutGuidance | null,
+  ): {
+    position: BABYLON.Vector3;
+    target: BABYLON.Vector3;
+  } {
+    if (!layoutGuidance) {
+      return {
+        position: fallbackPosition.clone(),
+        target: subjectTarget.clone(),
+      };
+    }
+
+    const role = cue.role.toLowerCase();
+    const purposeText = `${cue.role} ${cue.purpose || ''}`.toLowerCase();
+    const heroPoint = this.getLayoutGuidanceZonePoint(layoutGuidance, 'hero', subjectTarget);
+    const supportingPoint = this.getLayoutGuidanceZonePoint(layoutGuidance, 'supporting', subjectTarget);
+    const backgroundPoint = this.getLayoutGuidanceZonePoint(layoutGuidance, 'background', subjectTarget);
+    const { forward, right } = this.getCameraPlanarBasis(heroPoint.clone());
+    const fallbackOffset = fallbackPosition.subtract(subjectTarget);
+    const sideDistance = Math.max(0.9, Math.abs(BABYLON.Vector3.Dot(fallbackOffset, right)));
+    const depthDistance = Math.max(1.1, Math.abs(BABYLON.Vector3.Dot(fallbackOffset, forward)));
+    const heroSide = this.getEnvironmentLightLayoutSide(layoutGuidance, fallbackPosition, subjectTarget);
+    const keySide = heroSide >= 0 ? -1 : 1;
+    const fallbackHeight = Math.max(1.8, fallbackPosition.y);
+
+    if (role.includes('key')) {
+      const position = heroPoint
+        .add(right.scale(keySide * Math.max(1.2, sideDistance)))
+        .subtract(forward.scale(Math.max(0.8, depthDistance * 0.55)));
+      position.y = fallbackHeight;
+      return { position, target: heroPoint };
+    }
+
+    if (role.includes('fill')) {
+      const position = heroPoint
+        .add(right.scale(heroSide * Math.max(0.8, sideDistance * 0.72)))
+        .subtract(forward.scale(Math.max(0.5, depthDistance * 0.35)));
+      position.y = Math.max(1.6, fallbackHeight * 0.88);
+      return { position, target: heroPoint };
+    }
+
+    if (role.includes('rim') || role.includes('back') || role.includes('hair')) {
+      const position = heroPoint
+        .add(right.scale(heroSide * Math.max(0.8, sideDistance * 0.68)))
+        .add(forward.scale(Math.max(0.9, depthDistance * 0.82)));
+      position.y = Math.max(1.9, fallbackHeight);
+      return { position, target: heroPoint };
+    }
+
+    const shouldFavorBackground = role.includes('practical')
+      || purposeText.includes('background')
+      || purposeText.includes('wall')
+      || purposeText.includes('signage')
+      || purposeText.includes('set dressing')
+      || purposeText.includes('ambient');
+    if (shouldFavorBackground) {
+      const backgroundOffset = backgroundPoint.subtract(heroPoint);
+      const sideSign = backgroundOffset.x === 0 ? heroSide : backgroundOffset.x >= 0 ? 1 : -1;
+      const position = backgroundPoint
+        .add(right.scale(sideSign * Math.max(0.6, sideDistance * 0.4)))
+        .subtract(forward.scale(Math.max(0.2, depthDistance * 0.2)));
+      position.y = Math.max(1.8, fallbackHeight * 0.9);
+      return { position, target: backgroundPoint };
+    }
+
+    if (role.includes('accent') || role.includes('kicker')) {
+      const position = supportingPoint
+        .add(right.scale(heroSide * Math.max(0.85, sideDistance * 0.75)))
+        .add(forward.scale(Math.max(0.45, depthDistance * 0.4)));
+      position.y = Math.max(1.8, fallbackHeight);
+      return { position, target: heroPoint };
+    }
+
+    return {
+      position: fallbackPosition.clone(),
+      target: heroPoint,
+    };
+  }
+
+  private resolveEnvironmentLightingCuePosition(
+    cue: EnvironmentPlanLightingCue,
+    subjectTarget: BABYLON.Vector3,
+  ): BABYLON.Vector3 {
+    const explicitPosition = Array.isArray(cue.position) && cue.position.length >= 3
+      ? cue.position
+      : Array.isArray((cue as { positionHint?: unknown }).positionHint)
+        && ((cue as { positionHint?: unknown[] }).positionHint?.length ?? 0) >= 3
+        ? ((cue as { positionHint?: [number, number, number] }).positionHint as [number, number, number])
+        : null;
+
+    if (explicitPosition) {
+      return new BABYLON.Vector3(
+        Number(explicitPosition[0]) || subjectTarget.x,
+        Number(explicitPosition[1]) || Math.max(1.8, subjectTarget.y + 1.6),
+        Number(explicitPosition[2]) || Math.max(1.2, subjectTarget.z - 2.8),
+      );
+    }
+
+    const role = (cue.role || '').toLowerCase();
+    if (role.includes('rim') || role.includes('back') || role.includes('hair')) {
+      return new BABYLON.Vector3(subjectTarget.x - 2.2, Math.max(2.4, subjectTarget.y + 2.1), subjectTarget.z + 2.6);
+    }
+    if (role.includes('fill')) {
+      return new BABYLON.Vector3(subjectTarget.x - 2.0, Math.max(2.1, subjectTarget.y + 1.5), subjectTarget.z - 1.6);
+    }
+    if (role.includes('accent') || role.includes('kicker') || role.includes('practical')) {
+      return new BABYLON.Vector3(subjectTarget.x + 1.9, Math.max(2.2, subjectTarget.y + 1.8), subjectTarget.z + 1.3);
+    }
+    return new BABYLON.Vector3(subjectTarget.x + 2.3, Math.max(2.5, subjectTarget.y + 1.9), subjectTarget.z - 2.2);
+  }
+
+  private pickEnvironmentLightModel(
+    cue: EnvironmentPlanLightingCue,
+    mood?: string,
+    contextText?: string | null,
+  ): string {
+    const role = cue.role.toLowerCase();
+    const inferredRecipe = inferEnvironmentLightingRecipe({
+      role: cue.role,
+      purpose: cue.purpose || null,
+      mood: mood || null,
+      contextText: contextText || null,
+    });
+    const modifier = cue.modifier || inferredRecipe.modifier;
+    const intent = cue.intent || inferredRecipe.intent;
+
+    if (modifier === 'lantern') return 'godox-ad200pro';
+    if (modifier === 'practical_shade') return 'godox-ad200pro';
+    if (intent === 'beauty' && role.includes('key')) return 'aputure-600d';
+    if (intent === 'nightclub' && role.includes('practical')) return 'profoto-b10';
+    if (intent === 'luxury_retail' && (role.includes('accent') || role.includes('rim'))) return 'profoto-b10';
+    if (intent === 'warehouse' && role.includes('key')) return 'aputure-600d';
+    if (role.includes('key')) return 'aputure-300d';
+    if (role.includes('fill')) return 'aputure-120d';
+    if (role.includes('rim') || role.includes('back') || role.includes('hair')) return 'godox-ad200pro';
+    if (role.includes('practical')) return 'godox-ad200pro';
+    if (role.includes('accent') || role.includes('kicker')) return 'profoto-b10';
+    return 'aputure-300d';
+  }
+
+  private async addProceduralLightFixture(
+    modelId: string,
+    position: BABYLON.Vector3,
+    metadata: Record<string, unknown> = {},
+  ): Promise<string> {
+    const lightId = `light_${this.lightCounter++}`;
+    const lightSpecs: Record<string, { intensity: number; name: string; cct: number; beamAngle: number }> = {
+      'aputure-300d': { intensity: 2.0, name: 'Aputure 300D', cct: 5600, beamAngle: Math.PI / 5 },
+      'aputure-120d': { intensity: 1.5, name: 'Aputure 120D', cct: 5600, beamAngle: Math.PI / 5 },
+      'aputure-600d': { intensity: 3.0, name: 'Aputure 600D Pro', cct: 5600, beamAngle: Math.PI / 6 },
+      'godox-ad200pro': { intensity: 0.8, name: 'Godox AD200Pro', cct: 5600, beamAngle: Math.PI / 3 },
+      'profoto-b10': { intensity: 1.3, name: 'Profoto B10', cct: 5600, beamAngle: Math.PI / 3.5 },
+    };
+    const lightConfig = lightSpecs[modelId] || lightSpecs['aputure-300d'];
+
+    const root = new BABYLON.Mesh(lightId, this.scene);
+    root.position = new BABYLON.Vector3(position.x, 0, position.z);
+    root.name = lightId;
+
+    const stand = BABYLON.MeshBuilder.CreateCylinder(`${lightId}_stand`, {
+      height: Math.max(1.6, position.y),
+      diameterTop: 0.05,
+      diameterBottom: 0.09,
+      tessellation: 12,
+    }, this.scene);
+    stand.parent = root;
+    stand.position.y = Math.max(0.8, position.y * 0.5);
+
+    const head = BABYLON.MeshBuilder.CreateBox(`${lightId}_head`, {
+      width: 0.32,
+      height: 0.2,
+      depth: 0.24,
+    }, this.scene);
+    head.parent = root;
+    head.position.y = Math.max(1.55, position.y - 0.18);
+    head.position.z = -0.12;
+
+    const housingMaterial = new BABYLON.StandardMaterial(`${lightId}_housing_mat`, this.scene);
+    housingMaterial.diffuseColor = new BABYLON.Color3(0.12, 0.12, 0.14);
+    housingMaterial.specularColor = new BABYLON.Color3(0.05, 0.05, 0.05);
+    stand.material = housingMaterial;
+    head.material = housingMaterial;
+
+    const lightColor = this.cctToColor(lightConfig.cct);
+    const indicator = BABYLON.MeshBuilder.CreateDisc(`${lightId}_emitter`, {
+      radius: 0.08,
+      tessellation: 24,
+    }, this.scene);
+    indicator.parent = head;
+    indicator.position.z = -0.13;
+    indicator.rotation.x = Math.PI / 2;
+    const indicatorMaterial = new BABYLON.StandardMaterial(`${lightId}_emitter_mat`, this.scene);
+    indicatorMaterial.emissiveColor = lightColor.scale(1.2);
+    indicatorMaterial.diffuseColor = BABYLON.Color3.Black();
+    indicatorMaterial.disableLighting = true;
+    indicator.material = indicatorMaterial;
+
+    const light = new BABYLON.SpotLight(
+      lightId,
+      new BABYLON.Vector3(position.x, position.y, position.z),
+      new BABYLON.Vector3(0, -1, 0),
+      lightConfig.beamAngle,
+      2,
+      this.scene,
+    );
+    light.intensity = lightConfig.intensity;
+    light.diffuse = lightColor;
+    light.range = 50;
+
+    const lightData: LightData = {
+      light,
+      mesh: root,
+      type: 'spotlight',
+      name: lightConfig.name,
+      cct: lightConfig.cct,
+      modifier: 'Ingen',
+      specs: {
+        power: lightConfig.intensity * 600,
+        powerUnit: 'Ws',
+        beamAngle: lightConfig.beamAngle * 180 / Math.PI,
+      },
+      intensity: lightConfig.intensity,
+      metadata: {
+        proceduralFixture: true,
+        ...metadata,
+      },
+    };
+
+    this.lights.set(lightId, lightData);
+    if (this.gizmoManager?.attachableMeshes) {
+      this.gizmoManager.attachableMeshes.push(root);
+    }
+
+    return lightId;
+  }
+
+  private applyGoboToRuntimeLight(
+    lightId: string,
+    gobo: {
+      goboId: string;
+      size?: number;
+      rotation?: number;
+      intensity?: number;
+    } | null | undefined,
+    source: string = 'gobo',
+  ): boolean {
+    if (!gobo?.goboId) {
+      return false;
+    }
+
+    const lightData = this.lights.get(lightId);
+    if (!lightData) {
+      return false;
+    }
+
+    if (!(lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.DirectionalLight)) {
+      return false;
+    }
+
+    let projectionApplied = false;
+    try {
+      goboService.applyGoboToLight(lightId, gobo.goboId, {
+        size: typeof gobo.size === 'number' ? gobo.size : undefined,
+        rotation: typeof gobo.rotation === 'number' ? gobo.rotation : undefined,
+        intensity: typeof gobo.intensity === 'number' ? gobo.intensity : undefined,
+      }, lightData.light);
+      projectionApplied = true;
+    } catch (error) {
+      console.warn('[Gobo] Projection texture path failed, falling back to metadata-only attachment:', error);
+    }
+
+    if (lightData.light instanceof BABYLON.SpotLight) {
+      lightData.light.angle = Math.min(lightData.light.angle || (Math.PI / 4), Math.PI / 4);
+      lightData.light.exponent = Math.max(lightData.light.exponent || 24, 32);
+    }
+
+    lightData.modifier = 'gobo';
+    lightData.metadata = {
+      ...(lightData.metadata || {}),
+      goboId: gobo.goboId,
+      goboRotation: typeof gobo.rotation === 'number' ? gobo.rotation : null,
+      goboSize: typeof gobo.size === 'number' ? gobo.size : null,
+      goboIntensity: typeof gobo.intensity === 'number' ? gobo.intensity : null,
+      goboLastSource: source,
+      goboProjectionApplied: projectionApplied,
+    };
+
+    this.publishCameraLightingSync('gobo-applied', source);
+    this.publishEnvironmentDiagnostics('gobo-applied');
+    return true;
+  }
+
+  private removeGoboFromRuntimeLight(lightId: string, source: string = 'gobo'): void {
+    const lightData = this.lights.get(lightId);
+    if (!lightData) {
+      return;
+    }
+
+    goboService.removeGoboFromLight(lightId);
+    if (lightData.metadata) {
+      delete lightData.metadata.goboId;
+      delete lightData.metadata.goboRotation;
+      delete lightData.metadata.goboSize;
+      delete lightData.metadata.goboIntensity;
+      lightData.metadata.goboLastSource = source;
+    }
+    if (lightData.modifier === 'gobo') {
+      lightData.modifier = 'Ingen';
+    }
+
+    this.publishCameraLightingSync('gobo-removed', source);
+    this.publishEnvironmentDiagnostics('gobo-removed');
+  }
+
+  private refreshRuntimeLightBeamVisualization(lightId: string, lightData: LightData): void {
+    if (!(lightData.light instanceof BABYLON.SpotLight) || !lightData.beamVisualization) {
+      return;
+    }
+
+    const beamLength = 5;
+    const beamRadius = Math.tan(lightData.light.angle) * beamLength;
+    const oldMesh = lightData.beamVisualization;
+    const oldMat = oldMesh.material;
+    oldMesh.dispose();
+
+    lightData.beamVisualization = BABYLON.MeshBuilder.CreateCylinder(
+      `beam_${lightId}`,
+      {
+        height: beamLength,
+        diameterTop: 0,
+        diameterBottom: beamRadius * 2,
+        tessellation: 16,
+      },
+      this.scene,
+    );
+
+    if (oldMat) {
+      lightData.beamVisualization.material = oldMat;
+    } else {
+      const beamMat = new BABYLON.StandardMaterial(`beamMat_${lightId}`, this.scene);
+      beamMat.emissiveColor = lightData.light.diffuse;
+      beamMat.diffuseColor = lightData.light.diffuse;
+      beamMat.alpha = 0.2;
+      beamMat.disableLighting = true;
+      beamMat.sideOrientation = BABYLON.Mesh.DOUBLESIDE;
+      lightData.beamVisualization.material = beamMat;
+    }
+
+    lightData.beamVisualization.parent = lightData.mesh;
+    lightData.beamVisualization.isVisible = this.selectedLightId === lightId;
+    lightData.beamVisualization.isPickable = false;
+  }
+
+  private applyModifierToRuntimeLight(lightId: string, modifier: string, source: string = 'light-controls'): boolean {
+    const lightData = this.lights.get(lightId);
+    if (!lightData) {
+      return false;
+    }
+
+    const normalizedModifier = String(modifier || 'none').trim().toLowerCase();
+    lightData.modifier = normalizedModifier;
+
+    if (!lightData.metadata) {
+      lightData.metadata = {};
+    }
+    lightData.metadata.lightingModifier = normalizedModifier;
+
+    if (lightData.light instanceof BABYLON.SpotLight) {
+      switch (normalizedModifier) {
+        case 'snoot':
+          lightData.light.angle = Math.PI / 12;
+          lightData.light.exponent = 80;
+          break;
+        case 'grid':
+          lightData.light.angle = Math.PI / 8;
+          lightData.light.exponent = 64;
+          break;
+        case 'barndoors':
+          lightData.light.angle = Math.PI / 5;
+          lightData.light.exponent = 48;
+          break;
+        case 'fresnel':
+          lightData.light.angle = Math.PI / 6;
+          lightData.light.exponent = 40;
+          break;
+        case 'gobo':
+          lightData.light.angle = Math.PI / 10;
+          lightData.light.exponent = 64;
+          break;
+        case 'softbox':
+        case 'stripbox':
+          lightData.light.angle = Math.PI / 3;
+          lightData.light.exponent = 16;
+          break;
+        case 'octabox':
+          lightData.light.angle = Math.PI / 2.5;
+          lightData.light.exponent = 12;
+          break;
+        case 'umbrella':
+        case 'umbrella-reflective':
+          lightData.light.angle = Math.PI / 2;
+          lightData.light.exponent = 8;
+          break;
+        case 'beautydish':
+        case 'beauty-dish':
+          lightData.light.angle = Math.PI / 4;
+          lightData.light.exponent = 24;
+          break;
+        case 'silkframe':
+          lightData.light.angle = Math.PI / 2;
+          lightData.light.exponent = 4;
+          break;
+        case 'reflector-silver':
+          lightData.light.angle = Math.PI / 4;
+          lightData.light.exponent = 32;
+          break;
+        case 'reflector-gold':
+          lightData.light.angle = Math.PI / 4;
+          lightData.light.exponent = 32;
+          lightData.light.diffuse = new BABYLON.Color3(1.0, 0.92, 0.8);
+          break;
+        case 'reflector-white':
+          lightData.light.angle = Math.PI / 3;
+          lightData.light.exponent = 20;
+          break;
+        default:
+          lightData.light.angle = Math.PI / 4;
+          lightData.light.exponent = 32;
+          if (!lightData.useCustomColor) {
+            lightData.light.diffuse = this.cctToColor(lightData.cct);
+          }
+      }
+      this.refreshRuntimeLightBeamVisualization(lightId, lightData);
+    } else if (lightData.light instanceof BABYLON.PointLight) {
+      const rangeMap: Record<string, number> = {
+        umbrella: 22,
+        'umbrella-reflective': 20,
+        octabox: 18,
+        softbox: 16,
+        stripbox: 16,
+        silkframe: 20,
+        beautydish: 14,
+        'beauty-dish': 14,
+        snoot: 10,
+        grid: 12,
+        barndoors: 14,
+        fresnel: 12,
+        gobo: 10,
+        'reflector-silver': 15,
+        'reflector-gold': 15,
+        'reflector-white': 16,
+        none: 15,
+      };
+      lightData.light.range = rangeMap[normalizedModifier] || 15;
+    }
+
+    if (lightData.specs) {
+      lightData.specs.beamAngle = lightData.light instanceof BABYLON.SpotLight
+        ? (lightData.light.angle * 180) / Math.PI
+        : lightData.specs.beamAngle;
+    }
+
+    this.publishCameraLightingSync('light-modifier-applied', source);
+    this.publishEnvironmentDiagnostics('light-modifier-applied');
+    this.updateLightMeterReading();
+    this.updateSceneBrightness();
+    return true;
+  }
+
+  private applyBeamAngleToRuntimeLight(lightId: string, beamAngleDegrees: number, source: string = 'light-controls'): boolean {
+    const lightData = this.lights.get(lightId);
+    if (!lightData || !Number.isFinite(beamAngleDegrees)) {
+      return false;
+    }
+
+    const clampedAngle = BABYLON.Scalar.Clamp(beamAngleDegrees, 10, 140);
+
+    if (lightData.light instanceof BABYLON.SpotLight) {
+      lightData.light.angle = (clampedAngle * Math.PI) / 180;
+      this.refreshRuntimeLightBeamVisualization(lightId, lightData);
+    } else if (lightData.light instanceof BABYLON.PointLight) {
+      const rangeMap: Record<number, number> = {
+        15: 8,
+        30: 10,
+        45: 12,
+        60: 15,
+        90: 18,
+        120: 20,
+      };
+      const nearestStep = [15, 30, 45, 60, 90, 120].reduce((closest, candidate) => (
+        Math.abs(candidate - clampedAngle) < Math.abs(closest - clampedAngle) ? candidate : closest
+      ), 45);
+      lightData.light.range = rangeMap[nearestStep] || 15;
+    }
+
+    if (!lightData.specs) {
+      lightData.specs = {
+        power: lightData.intensity,
+        powerUnit: 'Ws',
+        beamAngle: clampedAngle,
+      } as LightSpecs;
+    } else {
+      lightData.specs.beamAngle = clampedAngle;
+    }
+
+    this.publishCameraLightingSync('light-beam-angle-applied', source);
+    this.publishEnvironmentDiagnostics('light-beam-angle-applied');
+    this.updateLightMeterReading();
+    this.updateSceneBrightness();
+    return true;
+  }
+
+  private addStandaloneGoboToScene(
+    goboId: string,
+    position?: [number, number, number],
+    options: {
+      pattern?: 'window' | 'blinds' | 'leaves' | 'breakup' | 'dots' | 'lines' | 'custom';
+      size?: number;
+      rotation?: number;
+      intensity?: number;
+      customTextureUrl?: string;
+    } = {},
+  ): BABYLON.Mesh | null {
+    const model = createGoboModel(this.scene, {
+      pattern: options.pattern,
+      size: options.size,
+      rotation: options.rotation,
+      intensity: options.intensity,
+      customTextureUrl: options.customTextureUrl,
+    });
+    const parent = model.frame.parent;
+    if (!(parent instanceof BABYLON.Mesh)) {
+      return null;
+    }
+
+    if (Array.isArray(position) && position.length >= 3) {
+      parent.position = new BABYLON.Vector3(position[0], position[1], position[2]);
+    } else {
+      parent.position = new BABYLON.Vector3(0, 2, -4);
+    }
+
+    const attachmentId = `${goboId}_${Date.now()}`;
+    parent.metadata = {
+      ...(parent.metadata || {}),
+      type: 'gobo',
+      attachmentId,
+      goboId,
+      options: {
+        pattern: options.pattern || 'window',
+        size: options.size ?? 1,
+        rotation: options.rotation ?? 0,
+        intensity: options.intensity ?? 1,
+        customTextureUrl: options.customTextureUrl,
+      },
+    };
+
+    goboService.addStandaloneGobo(attachmentId, parent);
+    this.publishEnvironmentDiagnostics('standalone-gobo-added');
+    return parent;
+  }
+
+  private resolveEnvironmentLightBehavior(
+    cue: EnvironmentPlanLightingCue,
+    mood?: string,
+  ): {
+    type: 'none' | 'pulse' | 'flicker' | 'orbit' | 'pan_sweep';
+    speed: number;
+    amplitude: number;
+    radius: number;
+  } {
+    const explicitType = cue.behavior?.type;
+    if (
+      explicitType === 'pulse'
+      || explicitType === 'flicker'
+      || explicitType === 'orbit'
+      || explicitType === 'pan_sweep'
+      || explicitType === 'none'
+    ) {
+      return {
+        type: explicitType,
+        speed: BABYLON.Scalar.Clamp(cue.behavior?.speed ?? 1, 0.05, 8),
+        amplitude: BABYLON.Scalar.Clamp(cue.behavior?.amplitude ?? 0.2, 0, 2),
+        radius: BABYLON.Scalar.Clamp(cue.behavior?.radius ?? 0.8, 0, 6),
+      };
+    }
+
+    const behaviorText = `${cue.role} ${cue.purpose || ''} ${mood || ''}`.toLowerCase();
+    if (
+      behaviorText.includes('flicker')
+      || behaviorText.includes('neon')
+      || behaviorText.includes('buzz')
+      || (behaviorText.includes('cyberpunk') && cue.role.toLowerCase().includes('practical'))
+    ) {
+      return { type: 'flicker', speed: 2.1, amplitude: 0.22, radius: 0.4 };
+    }
+    if (behaviorText.includes('pulse') || behaviorText.includes('heartbeat')) {
+      return { type: 'pulse', speed: 1.2, amplitude: 0.2, radius: 0.4 };
+    }
+    if (behaviorText.includes('orbit') || behaviorText.includes('circle') || behaviorText.includes('wrap')) {
+      return { type: 'orbit', speed: 0.55, amplitude: 0.18, radius: 1.1 };
+    }
+    if (behaviorText.includes('sweep') || behaviorText.includes('scan') || behaviorText.includes('pan')) {
+      return { type: 'pan_sweep', speed: 0.8, amplitude: 0.16, radius: 1.1 };
+    }
+
+    return { type: 'none', speed: 1, amplitude: 0.16, radius: 0.8 };
+  }
+
+  private resolveEnvironmentLightingCueGobo(
+    cue: EnvironmentPlanLightingCue,
+    mood?: string,
+    contextText?: string | null,
+  ) {
+    const inferredRecipe = inferEnvironmentLightingRecipe({
+      role: cue.role,
+      purpose: cue.purpose || null,
+      mood: mood || null,
+      contextText: contextText || null,
+    });
+    const inferredGobo = cue.gobo || inferredRecipe.gobo || inferEnvironmentLightingGobo({
+      role: cue.role,
+      purpose: cue.purpose || null,
+      mood: mood || null,
+      contextText: contextText || null,
+    });
+    if (inferredGobo) {
+      return inferredGobo;
+    }
+
+    const role = cue.role.toLowerCase();
+    const text = [cue.role, cue.purpose || '', mood || '', contextText || '']
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    const texturedSupportRole = ['accent', 'background', 'rim', 'back', 'hair', 'practical']
+      .some((token) => role.includes(token));
+
+    if (texturedSupportRole && ['warehouse', 'industrial', 'garage', 'factory'].some((token) => text.includes(token))) {
+      return {
+        goboId: 'breakup' as const,
+        size: 1.25,
+        rotation: 0,
+        intensity: 0.78,
+        rationale: 'Industrial breakup adds dusty warehouse texture and layered depth.',
+      };
+    }
+
+    if (texturedSupportRole && ['pizza', 'pizzeria', 'restaurant', 'trattoria', 'food'].some((token) => text.includes(token))) {
+      return {
+        goboId: 'window' as const,
+        size: 1.0,
+        rotation: 0,
+        intensity: 0.45,
+        rationale: 'Warm window breakup supports appetizing restaurant depth cues.',
+      };
+    }
+
+    if (['noir', 'detective', 'venetian'].some((token) => text.includes(token)) && ['key', 'accent', 'rim', 'back'].some((token) => role.includes(token))) {
+      return {
+        goboId: 'blinds' as const,
+        size: 1.2,
+        rotation: 0,
+        intensity: 0.9,
+        rationale: 'Venetian blinds reinforce noir contrast.',
+      };
+    }
+
+    if (texturedSupportRole && ['cyberpunk', 'blade runner', 'neon'].some((token) => text.includes(token))) {
+      return {
+        goboId: role.includes('accent') ? 'dots' as const : 'lines' as const,
+        size: 1.0,
+        rotation: role.includes('rim') ? 90 : 0,
+        intensity: role.includes('accent') ? 0.55 : 0.72,
+        rationale: 'Graphic breakup reinforces synthetic neon reflections.',
+      };
+    }
+
+    return null;
+  }
+
+  private configureEnvironmentAutoRigLight(
+    lightId: string,
+    cue: EnvironmentPlanLightingCue,
+    subjectTarget: BABYLON.Vector3,
+    behavior: {
+      type: 'none' | 'pulse' | 'flicker' | 'orbit' | 'pan_sweep';
+      speed: number;
+      amplitude: number;
+      radius: number;
+    },
+    planId?: string,
+    mood?: string,
+    contextText?: string | null,
+  ): void {
+    const lightData = this.lights.get(lightId);
+    if (!lightData) {
+      return;
+    }
+
+    const role = cue.role.toLowerCase();
+    const roleIntensityMultiplier = role.includes('key')
+      ? 1.8
+      : role.includes('fill')
+        ? 1.0
+        : role.includes('rim') || role.includes('back')
+          ? 1.2
+          : role.includes('accent')
+            ? 1.1
+            : 0.9;
+    const baseIntensity = BABYLON.Scalar.Clamp(cue.intensity * roleIntensityMultiplier, 0.08, 5);
+    const defaultCct = role.includes('practical')
+      ? 3200
+      : mood?.toLowerCase().includes('noir') || mood?.toLowerCase().includes('cyber')
+        ? 4800
+        : 5600;
+    const inferredRecipe = inferEnvironmentLightingRecipe({
+      role: cue.role,
+      purpose: cue.purpose || null,
+      mood: mood || null,
+      contextText: contextText || null,
+    });
+    const effectiveIntent = cue.intent || inferredRecipe.intent;
+    const effectiveModifier = cue.modifier || inferredRecipe.modifier;
+    const effectiveBeamAngle = typeof cue.beamAngle === 'number'
+      ? cue.beamAngle
+      : inferredRecipe.beamAngle;
+    const effectiveRationale = cue.rationale || inferredRecipe.rationale;
+    const effectiveHaze = cue.haze || inferredRecipe.haze;
+    const cct = cue.cct ?? defaultCct;
+    const color = cue.color
+      ? BABYLON.Color3.FromHexString(cue.color)
+      : this.cctToColor(cct);
+
+    lightData.name = `${cue.role.charAt(0).toUpperCase()}${cue.role.slice(1)} Light (AI)`;
+    lightData.cct = cct;
+    lightData.intensity = cue.intensity;
+    lightData.baseIntensity = baseIntensity;
+    lightData.powerMultiplier = 1;
+    lightData.originalDiffuse = color.clone();
+    lightData.useCustomColor = Boolean(cue.color);
+    lightData.customColor = cue.color;
+    lightData.specs = {
+      ...(lightData.specs || {}),
+      beamAngle: effectiveBeamAngle,
+    };
+    lightData.metadata = {
+      ...(lightData.metadata || {}),
+      environmentAutoRig: true,
+      environmentAutoRigPlanId: planId || null,
+      environmentAutoRigMood: mood || null,
+      role: cue.role,
+      purpose: cue.purpose || null,
+      lightingIntent: effectiveIntent,
+      lightingModifier: effectiveModifier,
+      lightingRationale: effectiveRationale,
+      behaviorType: behavior.type,
+      environmentAutoRigTarget: [subjectTarget.x, subjectTarget.y, subjectTarget.z],
+    };
+
+    if (
+      lightData.light instanceof BABYLON.SpotLight
+      || lightData.light instanceof BABYLON.PointLight
+      || lightData.light instanceof BABYLON.HemisphericLight
+    ) {
+      lightData.light.diffuse = color;
+    }
+    lightData.light.intensity = baseIntensity;
+
+    if (lightData.light instanceof BABYLON.SpotLight) {
+      const spotLight = lightData.light;
+      if (typeof effectiveBeamAngle === 'number' && Number.isFinite(effectiveBeamAngle)) {
+        spotLight.angle = BABYLON.Scalar.Clamp((effectiveBeamAngle * Math.PI) / 180, Math.PI / 12, Math.PI / 1.8);
+      } else if (role.includes('fill')) {
+        spotLight.angle = Math.PI / 2.7;
+        spotLight.exponent = 0.8;
+      } else if (role.includes('rim') || role.includes('back')) {
+        spotLight.angle = Math.PI / 5.2;
+        spotLight.exponent = 2.5;
+      } else if (role.includes('practical')) {
+        spotLight.angle = Math.PI / 2.3;
+        spotLight.exponent = 1.1;
+      } else if (role.includes('accent')) {
+        spotLight.angle = Math.PI / 4.4;
+        spotLight.exponent = 1.9;
+      } else {
+        spotLight.angle = Math.PI / 4.1;
+        spotLight.exponent = 1.4;
+      }
+      spotLight.range = 50;
+    }
+
+    if (effectiveModifier === 'softbox' || effectiveModifier === 'lantern') {
+      lightData.metadata.softSource = true;
+    }
+    if (effectiveModifier === 'gobo_projector') {
+      lightData.metadata.projectedTexturePreferred = true;
+    }
+    if (effectiveHaze?.enabled) {
+      const requestedFogDensity = BABYLON.Scalar.Clamp(
+        typeof effectiveHaze.density === 'number' ? effectiveHaze.density : 0.014,
+        0.004,
+        0.06,
+      );
+      if (this.scene.fogMode === BABYLON.Scene.FOGMODE_NONE) {
+        this.scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
+        const sceneClearColor = this.scene.clearColor as BABYLON.Color4 | BABYLON.Color3 | undefined;
+        this.scene.fogColor = sceneClearColor && typeof (sceneClearColor as any).toColor3 === 'function'
+          ? (sceneClearColor as any).toColor3()
+          : new BABYLON.Color3(
+            typeof (sceneClearColor as any)?.r === 'number' ? (sceneClearColor as any).r : 0,
+            typeof (sceneClearColor as any)?.g === 'number' ? (sceneClearColor as any).g : 0,
+            typeof (sceneClearColor as any)?.b === 'number' ? (sceneClearColor as any).b : 0,
+          );
+      }
+      this.scene.fogDensity = Math.max(this.scene.fogDensity || 0, requestedFogDensity);
+      lightData.metadata.environmentAutoRigHaze = {
+        enabled: true,
+        density: requestedFogDensity,
+        rationale: effectiveHaze.rationale || null,
+      };
+    }
+
+    this.aimLightAt(lightId, subjectTarget);
+
+    if (behavior.type !== 'none') {
+      const initialTarget = subjectTarget.clone();
+      this.environmentAutoRigState.animatedLights.set(lightId, {
+        behaviorType: behavior.type,
+        speed: behavior.speed,
+        amplitude: behavior.amplitude,
+        radius: behavior.radius,
+        seed: lightId.length * 0.37 + lightData.mesh.position.x * 0.23 + lightData.mesh.position.z * 0.17,
+        basePosition: lightData.light instanceof BABYLON.SpotLight
+          ? lightData.light.position.clone()
+          : lightData.mesh.position.clone(),
+        baseIntensity,
+        brightnessFactor: roleIntensityMultiplier,
+        target: initialTarget,
+      });
+    }
+  }
+
+  private updateEnvironmentAutoRigAnimations(deltaSeconds: number): void {
+    if (this.environmentAutoRigState.animatedLights.size === 0) {
+      return;
+    }
+
+    this.environmentAutoRigState.elapsedSeconds += Math.max(0, deltaSeconds);
+    const elapsedSeconds = this.environmentAutoRigState.elapsedSeconds;
+
+    this.environmentAutoRigState.animatedLights.forEach((state, lightId) => {
+      const lightData = this.lights.get(lightId);
+      if (!lightData) {
+        return;
+      }
+
+      const phase = elapsedSeconds * state.speed + state.seed;
+      const lightPosition = (lightData.light as any).position as BABYLON.Vector3 | undefined;
+
+      if (state.behaviorType === 'pulse') {
+        const pulse = 1 + Math.sin(phase * Math.PI * 2) * state.amplitude;
+        lightData.light.intensity = BABYLON.Scalar.Clamp(state.baseIntensity * pulse, 0.05, 6);
+      } else if (state.behaviorType === 'flicker') {
+        const flickerWave = (
+          Math.sin(phase * 11.7)
+          + Math.sin(phase * 23.1 + state.seed * 2.4) * 0.55
+          + Math.sin(phase * 41.9 + state.seed) * 0.25
+        ) / 1.8;
+        const flicker = 1 + flickerWave * state.amplitude;
+        lightData.light.intensity = BABYLON.Scalar.Clamp(state.baseIntensity * flicker, 0.03, 6);
+      } else if (state.behaviorType === 'orbit' && lightPosition) {
+        const baseOffset = state.basePosition.subtract(state.target);
+        const horizontal = new BABYLON.Vector3(baseOffset.x, 0, baseOffset.z);
+        const fallbackRadius = Math.max(0.4, horizontal.length());
+        const orbitRadius = Math.max(0.25, state.radius || fallbackRadius);
+        const normalized = horizontal.lengthSquared() > 0.0001
+          ? horizontal.normalize()
+          : new BABYLON.Vector3(0, 0, -1);
+        const cosTheta = Math.cos(phase);
+        const sinTheta = Math.sin(phase);
+        const rotated = new BABYLON.Vector3(
+          normalized.x * cosTheta - normalized.z * sinTheta,
+          0,
+          normalized.x * sinTheta + normalized.z * cosTheta,
+        ).scale(orbitRadius);
+        const nextLightPosition = state.target.add(rotated);
+        nextLightPosition.y = state.basePosition.y;
+
+        lightPosition.copyFrom(nextLightPosition);
+        lightData.mesh.position.x = nextLightPosition.x;
+        lightData.mesh.position.z = nextLightPosition.z;
+        this.aimLightAt(lightId, state.target);
+      } else if (state.behaviorType === 'pan_sweep') {
+        const { right } = this.getCameraPlanarBasis(state.target.clone());
+        const sweepDistance = Math.max(0.4, state.radius || 1);
+        const sweepTarget = state.target.add(right.scale(Math.sin(phase) * sweepDistance));
+        this.aimLightAt(lightId, sweepTarget);
+        if (lightData.metadata) {
+          lightData.metadata.environmentAutoRigTarget = [sweepTarget.x, sweepTarget.y, sweepTarget.z];
+        }
+      }
+    });
+  }
+
+  private startEnvironmentAutoRigAnimations(): void {
+    this.stopEnvironmentAutoRigAnimations(false);
+    if (this.environmentAutoRigState.animatedLights.size === 0) {
+      return;
+    }
+    this.environmentAutoRigState.elapsedSeconds = 0;
+    this.environmentAutoRigState.lastTickAtMs = performance.now();
+    this.environmentAutoRigState.animationObserver = this.scene.onBeforeRenderObservable.add(() => {
+      const deltaSeconds = this.scene.getEngine().getDeltaTime() * 0.001;
+      this.environmentAutoRigState.lastTickAtMs = performance.now();
+      this.updateEnvironmentAutoRigAnimations(deltaSeconds);
+    });
+  }
+
+  public async applyEnvironmentLightingPlan(
+    options: {
+      planId?: string;
+      lighting: EnvironmentPlanLightingCue[];
+      target?: [number, number, number];
+      mood?: string;
+      contextText?: string | null;
+      layoutGuidance?: EnvironmentPlanLayoutGuidance | null;
+      clearExisting?: boolean;
+    },
+  ): Promise<{ applied: string[]; skipped: string[]; lightIds: string[] }> {
+    await this.waitForRuntimeReady();
+
+    const applied: string[] = [];
+    const skipped: string[] = [];
+    const lightIds: string[] = [];
+
+    if (options.clearExisting) {
+      this.clearAllLights();
+    } else {
+      this.clearEnvironmentAutoRigLights();
+    }
+
+    this.environmentAutoRigState.planId = options.planId || null;
+    const subjectTarget = this.inferEnvironmentLightingTarget(options.target);
+
+    for (let index = 0; index < options.lighting.length; index += 1) {
+      const cue = options.lighting[index];
+      const modelId = this.pickEnvironmentLightModel(cue, options.mood, options.contextText);
+      const fallbackPosition = this.resolveEnvironmentLightingCuePosition(cue, subjectTarget);
+      const resolvedPlacement = this.resolveEnvironmentLightPlacement(
+        cue,
+        fallbackPosition,
+        subjectTarget,
+        options.layoutGuidance,
+      );
+
+      try {
+        const lightId = await this.addProceduralLightFixture(modelId, resolvedPlacement.position, {
+          environmentAutoRig: true,
+        });
+        const behavior = this.resolveEnvironmentLightBehavior(cue, options.mood);
+        this.configureEnvironmentAutoRigLight(
+          lightId,
+          cue,
+          resolvedPlacement.target,
+          behavior,
+          options.planId,
+          options.mood,
+          options.contextText,
+        );
+        const resolvedGobo = this.resolveEnvironmentLightingCueGobo(
+          cue,
+          options.mood,
+          options.contextText,
+        );
+        if (resolvedGobo && !this.applyGoboToRuntimeLight(lightId, resolvedGobo, 'environment-auto-rig')) {
+          skipped.push(`Kunne ikke feste gobo ${resolvedGobo.goboId} til ${cue.role}-lys`);
+        }
+        this.environmentAutoRigState.lightIds.add(lightId);
+        lightIds.push(lightId);
+        applied.push(`${cue.role}: ${modelId}`);
+      } catch (error) {
+        console.warn('[Environment Lighting] Failed to add light:', cue.role, error);
+        skipped.push(`Kunne ikke rigge ${cue.role}-lys`);
+      }
+    }
+
+    this.startEnvironmentAutoRigAnimations();
+    this.publishCameraLightingSync('environment-lighting-applied', 'environment-auto-rig');
+    this.updateSceneList();
+    this.updateLightMeterReading();
+    this.updateAmbientLightIntensity();
+    this.publishEnvironmentDiagnostics('environment-lighting-applied');
+    window.dispatchEvent(new CustomEvent('lights-updated', {
+      detail: {
+        action: 'environment-auto-rig',
+        planId: options.planId || null,
+        lightCount: lightIds.length,
+      },
+    }));
+
+    return {
+      applied,
+      skipped,
+      lightIds,
+    };
+  }
+
+  public applyEnvironmentBranding(
+    options: {
+      planId?: string;
+      branding?: EnvironmentPlanBranding | null;
+    },
+  ): { applied: string[]; skipped: string[] } {
+    const applied: string[] = [];
+    const skipped: string[] = [];
+    const branding = options.branding;
+
+    if (!branding || !branding.enabled) {
+      this.environmentBrandingState = {
+        planId: options.planId || null,
+        brandName: null,
+        profileName: null,
+        palette: [],
+        logoImage: null,
+        signageText: null,
+        applyToEnvironment: false,
+        applyToWardrobe: false,
+        applyToSignage: false,
+        applicationTargets: [],
+        uniformPolicy: null,
+        signageStyle: null,
+        packagingStyle: null,
+        interiorStyle: null,
+        notes: [],
+      };
+      this.rebuildRoomShellAccessories(this.currentRoomShell);
+      this.addWallLogos();
+      this.refreshEnvironmentPropBranding();
+      this.publishEnvironmentDiagnostics('environment-branding-cleared');
+      return { applied, skipped };
+    }
+
+    const explicitTargets = Array.isArray(branding.applicationTargets)
+      ? branding.applicationTargets.filter((target): target is EnvironmentBrandApplicationTarget => (
+        target === 'environment'
+        || target === 'wardrobe'
+        || target === 'signage'
+        || target === 'packaging'
+        || target === 'interior_details'
+      ))
+      : [];
+    const applyToEnvironment = typeof branding.applyToEnvironment === 'boolean'
+      ? branding.applyToEnvironment
+      : explicitTargets.length > 0
+        ? explicitTargets.includes('environment') || explicitTargets.includes('interior_details')
+        : true;
+    const applyToWardrobe = typeof branding.applyToWardrobe === 'boolean'
+      ? branding.applyToWardrobe
+      : explicitTargets.length > 0
+        ? explicitTargets.includes('wardrobe')
+        : true;
+    const applyToSignage = typeof branding.applyToSignage === 'boolean'
+      ? branding.applyToSignage
+      : explicitTargets.length > 0
+        ? explicitTargets.includes('signage')
+        : true;
+    const applicationTargets = explicitTargets.length > 0
+      ? [...explicitTargets]
+      : [
+        ...(applyToEnvironment ? ['environment'] as EnvironmentBrandApplicationTarget[] : []),
+        ...(applyToWardrobe ? ['wardrobe'] as EnvironmentBrandApplicationTarget[] : []),
+        ...(applyToSignage ? ['signage'] as EnvironmentBrandApplicationTarget[] : []),
+        ...(branding.packagingStyle ? ['packaging'] as EnvironmentBrandApplicationTarget[] : []),
+        ...(branding.interiorStyle ? ['interior_details'] as EnvironmentBrandApplicationTarget[] : []),
+      ];
+
+    this.environmentBrandingState = {
+      planId: options.planId || null,
+      brandName: branding.brandName?.trim() || null,
+      profileName: branding.profileName?.trim() || null,
+      palette: [...(branding.palette || [])].slice(0, 5),
+      logoImage: branding.logoImage || null,
+      signageText: branding.signageText?.trim() || null,
+      applyToEnvironment,
+      applyToWardrobe,
+      applyToSignage,
+      applicationTargets,
+      uniformPolicy: branding.uniformPolicy || null,
+      signageStyle: branding.signageStyle || null,
+      packagingStyle: branding.packagingStyle || null,
+      interiorStyle: branding.interiorStyle || null,
+      notes: [...(branding.notes || [])].slice(0, 6),
+    };
+
+    this.rebuildRoomShellAccessories(this.currentRoomShell);
+
+    if (this.environmentBrandingState.applyToEnvironment || this.environmentBrandingState.applyToSignage) {
+      this.addWallLogos();
+      applied.push('Brand-logo på vegger');
+    }
+    if (this.environmentBrandingState.applyToWardrobe) {
+      this.refreshEnvironmentCharacterBranding();
+      applied.push('Branding på uniformer');
+    }
+    this.refreshEnvironmentPropBranding();
+    if (
+      this.environmentBrandingState.applicationTargets.includes('signage')
+      || this.environmentBrandingState.applicationTargets.includes('packaging')
+      || this.environmentBrandingState.applicationTargets.includes('interior_details')
+    ) {
+      applied.push('Branding på sceneprops');
+    }
+    if (this.environmentBrandingState.palette.length > 0) {
+      applied.push(`Brand-palett (${this.environmentBrandingState.palette.length})`);
+    }
+    this.publishEnvironmentDiagnostics('environment-branding-applied');
+    return { applied, skipped };
+  }
+
+  private addWallLogos(): void {
+    ['logoBackWall', 'logoLeftWall', 'logoRightWall', 'logoRearWall'].forEach((name) => {
+      this.scene.getMeshByName(name)?.dispose(false, true);
+    });
+
+    const palette = this.environmentBrandingState.palette;
+    const primaryColor = palette[0] || '#f59e0b';
+    const secondaryColor = palette[1] || '#f97316';
+    const accentColor = palette[2] || '#00d4ff';
+    const titleText = this.environmentBrandingState.brandName || 'CREATORHUB';
+    const subtitleText = this.environmentBrandingState.signageText || 'VIRTUAL STUDIO';
+
+    const createLogoMaterial = (name: string): BABYLON.StandardMaterial => {
+      const logoMat = new BABYLON.StandardMaterial(name, this.scene);
+      if (this.environmentBrandingState.logoImage) {
+        const texture = new BABYLON.Texture(this.environmentBrandingState.logoImage, this.scene, true, false);
+        texture.hasAlpha = true;
+        logoMat.diffuseTexture = texture;
+        logoMat.useAlphaFromDiffuseTexture = true;
+        logoMat.emissiveTexture = texture;
+        logoMat.emissiveColor = BABYLON.Color3.FromHexString(primaryColor).scale(0.25).add(BABYLON.Color3.FromHexString(accentColor).scale(0.1));
+      } else {
+        const textureWidth = 512;
+        const textureHeight = 128;
+        const dynamicTexture = new BABYLON.DynamicTexture(`${name}_texture`, { width: textureWidth, height: textureHeight }, this.scene, true);
+        const ctx = dynamicTexture.getContext() as unknown as CanvasRenderingContext2D;
+
+        ctx.clearRect(0, 0, textureWidth, textureHeight);
+        const bgGradient = ctx.createLinearGradient(0, 0, textureWidth, textureHeight);
+        bgGradient.addColorStop(0, 'rgba(20, 20, 25, 0.86)');
+        bgGradient.addColorStop(1, 'rgba(15, 15, 20, 0.86)');
+        ctx.fillStyle = bgGradient;
+        this.drawRoundedRect(ctx, 10, 10, textureWidth - 20, textureHeight - 20, 8);
+        ctx.fill();
+
+        const borderGradient = ctx.createLinearGradient(0, 0, textureWidth, 0);
+        borderGradient.addColorStop(0, primaryColor);
+        borderGradient.addColorStop(0.5, secondaryColor);
+        borderGradient.addColorStop(1, accentColor);
+        ctx.strokeStyle = borderGradient;
+        ctx.lineWidth = 3;
+        this.drawRoundedRect(ctx, 10, 10, textureWidth - 20, textureHeight - 20, 8);
+        ctx.stroke();
+
+        ctx.font = 'bold 34px Arial, sans-serif';
+        const textGradient = ctx.createLinearGradient(80, 0, 420, 0);
+        textGradient.addColorStop(0, primaryColor);
+        textGradient.addColorStop(0.5, secondaryColor);
+        textGradient.addColorStop(1, accentColor);
+        ctx.fillStyle = textGradient;
+        ctx.textAlign = 'center';
+        ctx.fillText(titleText.slice(0, 28), textureWidth / 2, 52);
+
+        ctx.font = 'bold 18px Arial, sans-serif';
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillText(subtitleText.slice(0, 36), textureWidth / 2, 82);
+
+        ctx.font = '12px Arial, sans-serif';
+        ctx.fillStyle = 'rgba(226, 232, 240, 0.78)';
+        ctx.fillText('Brand-ready environment', textureWidth / 2, 106);
+
+        dynamicTexture.update();
+        logoMat.diffuseTexture = dynamicTexture;
+        logoMat.diffuseTexture.hasAlpha = true;
+        logoMat.useAlphaFromDiffuseTexture = true;
+        logoMat.emissiveTexture = dynamicTexture;
+        logoMat.emissiveColor = BABYLON.Color3.FromHexString(primaryColor).scale(0.22);
+      }
+
+      logoMat.specularColor = new BABYLON.Color3(0, 0, 0);
+      logoMat.backFaceCulling = true;
+      return logoMat;
+    };
 
     // Logo dimensions
-    const logoWidth = 5;
-    const logoHeight = 1.25;
+    const halfWidth = this.currentRoomShell.width / 2;
+    const halfDepth = this.currentRoomShell.depth / 2;
+    const logoWidth = Math.min(5, Math.max(2.4, this.currentRoomShell.width * 0.25));
+    const logoHeight = logoWidth * 0.25;
+    const logoY = Math.max(this.currentRoomShell.height - 1, this.currentRoomShell.height * 0.8);
 
     // Logo on backside of front wall (backWall) - visible from outside/behind
     const logoBackWall = BABYLON.MeshBuilder.CreatePlane('logoBackWall', { width: logoWidth, height: logoHeight }, this.scene);
-    logoBackWall.position.set(0, 6.5, -9.99);
+    logoBackWall.position.set(0, logoY, -(halfDepth - 0.01));
     logoBackWall.rotation.y = Math.PI;
-    logoBackWall.material = logoMat;
+    logoBackWall.material = createLogoMaterial('logoMatBack');
 
     // Logo on backside of left wall - visible from outside
-    const logoLeftWallMat = logoMat.clone('logoMatLeft');
-    logoLeftWallMat.diffuseTexture = createLogoTexture();
-    logoLeftWallMat.emissiveTexture = logoLeftWallMat.diffuseTexture;
     const logoLeftWall = BABYLON.MeshBuilder.CreatePlane('logoLeftWall', { width: logoWidth, height: logoHeight }, this.scene);
-    logoLeftWall.position.set(-9.99, 6.5, 0);
+    logoLeftWall.position.set(-(halfWidth - 0.01), logoY, 0);
     logoLeftWall.rotation.y = -Math.PI / 2;
-    logoLeftWall.material = logoLeftWallMat;
+    logoLeftWall.material = createLogoMaterial('logoMatLeft');
 
     // Logo on backside of right wall - visible from outside
-    const logoRightWallMat = logoMat.clone('logoMatRight');
-    logoRightWallMat.diffuseTexture = createLogoTexture();
-    logoRightWallMat.emissiveTexture = logoRightWallMat.diffuseTexture;
     const logoRightWall = BABYLON.MeshBuilder.CreatePlane('logoRightWall', { width: logoWidth, height: logoHeight }, this.scene);
-    logoRightWall.position.set(9.99, 6.5, 0);
+    logoRightWall.position.set(halfWidth - 0.01, logoY, 0);
     logoRightWall.rotation.y = Math.PI / 2;
-    logoRightWall.material = logoRightWallMat;
+    logoRightWall.material = createLogoMaterial('logoMatRight');
 
     // Logo on backside of rear wall - visible from inside studio
-    const logoRearWallMat = logoMat.clone('logoMatRear');
-    logoRearWallMat.diffuseTexture = createLogoTexture();
-    logoRearWallMat.emissiveTexture = logoRearWallMat.diffuseTexture;
     const logoRearWall = BABYLON.MeshBuilder.CreatePlane('logoRearWall', { width: logoWidth, height: logoHeight }, this.scene);
-    logoRearWall.position.set(0, 6.5, 9.99);
+    logoRearWall.position.set(0, logoY, halfDepth - 0.01);
     logoRearWall.rotation.y = 0;
-    logoRearWall.material = logoRearWallMat;
+    logoRearWall.material = createLogoMaterial('logoMatRear');
   }
 
   private setupUI(): void {
@@ -6775,6 +11041,7 @@ class VirtualStudio {
     window.dispatchEvent(new CustomEvent('camera-settings-changed', {
       detail: { ...this.cameraSettings }
     }));
+    this.publishCameraLightingSync('camera-exposure-updated', 'camera-settings');
   }
 
   public updateSceneBrightness(): void {
@@ -8114,7 +12381,7 @@ class VirtualStudio {
       }
     });
 
-    // Marketplace trigger
+    // Marketplace trigger is a user-facing launcher and intentionally keeps toggle semantics.
     const marketplaceTrigger = document.getElementById('marketplaceTrigger');
     console.log('Marketplace trigger element:', marketplaceTrigger);
     if (marketplaceTrigger) {
@@ -8321,6 +12588,70 @@ class VirtualStudio {
       }
     });
 
+    const ensureGlobalNotificationStyles = () => {
+      if (document.getElementById('vs-global-notification-style')) {
+        return;
+      }
+      const style = document.createElement('style');
+      style.id = 'vs-global-notification-style';
+      style.textContent = `
+        @keyframes vsGlobalNotificationIn {
+          0% { opacity: 0; transform: translateY(12px) scale(0.98); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `;
+      document.head.appendChild(style);
+    };
+
+    const showGlobalNotification = (
+      message: string,
+      type: 'success' | 'error' | 'warning' | 'info' = 'info',
+      duration = 7000,
+    ) => {
+      ensureGlobalNotificationStyles();
+      const toast = document.createElement('div');
+      toast.className = 'vs-global-notification-toast';
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
+      const accent = type === 'success'
+        ? '#10b981'
+        : type === 'error'
+          ? '#ef4444'
+          : type === 'warning'
+            ? '#f59e0b'
+            : '#38bdf8';
+      toast.style.cssText = `
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        max-width: min(420px, calc(100vw - 32px));
+        background: rgba(17, 24, 39, 0.96);
+        border: 1px solid ${accent};
+        border-radius: 12px;
+        padding: 14px 16px;
+        color: #f8fafc;
+        font-size: 14px;
+        line-height: 1.4;
+        box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+        z-index: 200001;
+        animation: vsGlobalNotificationIn 0.18s ease-out;
+      `;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      window.setTimeout(() => {
+        toast.remove();
+      }, duration);
+    };
+
+    window.addEventListener('show-notification', ((event: Event) => {
+      const detail = (event as CustomEvent<{ message?: string; type?: 'success' | 'error' | 'warning' | 'info'; duration?: number }>).detail;
+      if (!detail?.message) {
+        return;
+      }
+      showGlobalNotification(detail.message, detail.type || 'info', detail.duration ?? 7000);
+    }) as EventListener);
+
     // User menu button
     const userMenuBtn = document.getElementById('userMenuBtn');
     const userMenu = document.getElementById('userMenu');
@@ -8352,6 +12683,16 @@ class VirtualStudio {
         userMenuBtn?.setAttribute('aria-expanded', 'false');
         userMenuBtn?.focus();
       }
+    });
+
+    document.getElementById('userMenuMarketplace')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (userMenu) {
+        userMenu.style.display = 'none';
+      }
+      userMenuBtn?.setAttribute('aria-expanded', 'false');
+      window.dispatchEvent(new CustomEvent('vs-open-marketplace-panel'));
     });
 
     // Photographic angles toggle
@@ -8450,7 +12791,7 @@ class VirtualStudio {
   private setupPanelButtons(): void {
     // AI Assistant panel
     document.getElementById('aiAssistantCloseBtn')?.addEventListener('click', () => {
-      window.dispatchEvent(new CustomEvent('toggle-ai-assistant-panel'));
+      window.dispatchEvent(new CustomEvent('vs-close-ai-assistant-panel'));
     });
 
     document.getElementById('aiAssistantFullscreenBtn')?.addEventListener('click', () => {
@@ -8467,8 +12808,208 @@ class VirtualStudio {
     });
 
     // Marketplace panel
+    const marketplacePanel = document.getElementById('marketplacePanel');
+    const marketplaceTrigger = document.getElementById('marketplaceTrigger');
+    const menuMarketplace = document.getElementById('menuMarketplace');
+    const userMenuMarketplaceTrigger = document.getElementById('userMenuMarketplace');
+    const userMenuMarketplaceButton = document.getElementById('userMenuBtn');
+    let lastMarketplaceUpdateToastFingerprint = '';
+    const marketplaceUpdateBadges = [
+      document.getElementById('marketplaceTriggerUpdateBadge'),
+      document.getElementById('menuMarketplaceUpdateBadge'),
+      document.getElementById('userMenuMarketplaceUpdateBadge'),
+      document.getElementById('userMenuMarketplaceItemBadge'),
+    ].filter((entry): entry is HTMLElement => Boolean(entry));
+
+    const renderMarketplaceUpdateBadges = () => {
+      const updateCount = marketplaceService.getPendingUpdateCount();
+      const label = updateCount > 9 ? '9+' : String(updateCount);
+
+      marketplaceUpdateBadges.forEach((badge) => {
+        badge.hidden = updateCount <= 0;
+        badge.textContent = label;
+        badge.setAttribute(
+          'aria-label',
+          updateCount === 1
+            ? '1 Marketplace-oppdatering tilgjengelig'
+            : `${updateCount} Marketplace-oppdateringer tilgjengelig`,
+        );
+      });
+
+      [marketplaceTrigger, menuMarketplace, userMenuMarketplaceTrigger, userMenuMarketplaceButton].forEach((target) => {
+        if (!target) {
+          return;
+        }
+        target.toggleAttribute('data-has-updates', updateCount > 0);
+        const isUserButton = target.id === 'userMenuBtn';
+        const title = isUserButton
+          ? (
+            updateCount > 0
+              ? `Min profil · ${updateCount} nye stable-oppdateringer tilgjengelig i Marketplace`
+              : 'Min profil'
+          )
+          : (
+            updateCount > 0
+              ? `${updateCount} nye stable-oppdateringer tilgjengelig i Marketplace`
+              : 'Marketplace'
+          );
+        target.setAttribute('title', title);
+      });
+    };
+
+    const refreshMarketplaceUpdateBadges = () => {
+      renderMarketplaceUpdateBadges();
+      void marketplaceService.refreshRemoteProducts()
+        .then(() => {
+          renderMarketplaceUpdateBadges();
+          maybeNotifyMarketplaceUpdates();
+        })
+        .catch(() => {
+          renderMarketplaceUpdateBadges();
+        });
+    };
+
+    const maybeNotifyMarketplaceUpdates = () => {
+      const pendingUpdates = marketplaceService.getPendingUpdates();
+      const fingerprint = pendingUpdates
+        .map((product) => `${product.registryMetadata?.lineageId || product.id}:${product.registryMetadata?.latestStableVersion || product.version}`)
+        .sort()
+        .join('|');
+
+      if (!fingerprint) {
+        lastMarketplaceUpdateToastFingerprint = '';
+        return;
+      }
+
+      const sessionKey = 'vs-marketplace-last-update-toast-fingerprint';
+      const previousSessionFingerprint = (() => {
+        try {
+          return window.sessionStorage.getItem(sessionKey) || '';
+        } catch {
+          return '';
+        }
+      })();
+
+      if (fingerprint === lastMarketplaceUpdateToastFingerprint || fingerprint === previousSessionFingerprint) {
+        return;
+      }
+
+      lastMarketplaceUpdateToastFingerprint = fingerprint;
+      try {
+        window.sessionStorage.setItem(sessionKey, fingerprint);
+      } catch {
+        // Ignore storage failures.
+      }
+
+      const names = pendingUpdates.slice(0, 2).map((product) => product.name).join(', ');
+      const extraCount = Math.max(0, pendingUpdates.length - 2);
+      const suffix = extraCount > 0 ? ` og ${extraCount} til` : '';
+      const message = pendingUpdates.length === 1
+        ? `Ny stable-oppdatering tilgjengelig i Marketplace for ${names}.`
+        : `Nye stable-oppdateringer tilgjengelig i Marketplace for ${names}${suffix}.`;
+
+      window.dispatchEvent(new CustomEvent('show-notification', {
+        detail: {
+          message,
+          type: 'info',
+          duration: 9000,
+        },
+      }));
+    };
+
+    const applyMarketplacePanelOpenState = (isOpen: boolean) => {
+      if (!marketplacePanel) {
+        return;
+      }
+
+      if (isOpen) {
+        const aiPanel = document.getElementById('aiAssistantPanel');
+        const helpPanel = document.getElementById('helpPanel');
+        const studioLibraryPanel = document.getElementById('actorBottomPanel');
+
+        if (aiPanel?.classList.contains('open')) {
+          window.dispatchEvent(new CustomEvent('vs-close-ai-assistant-panel'));
+        }
+        if (helpPanel?.classList.contains('open')) {
+          window.dispatchEvent(new CustomEvent('vs-close-help-panel'));
+        }
+        if (studioLibraryPanel?.classList.contains('open')) {
+          const trigger = document.getElementById('actorPanelTrigger');
+          studioLibraryPanel.classList.remove('open');
+          trigger?.classList.remove('active');
+          trigger?.setAttribute('aria-expanded', 'false');
+          const arrow = trigger?.querySelector('.library-arrow');
+          if (arrow) arrow.textContent = '+';
+        }
+
+        marketplacePanel.style.display = 'flex';
+        marketplacePanel.classList.add('open');
+      } else {
+        marketplacePanel.style.display = 'none';
+        marketplacePanel.classList.remove('open');
+        marketplacePanel.classList.remove('fullscreen');
+      }
+
+      if (marketplaceTrigger) {
+        marketplaceTrigger.classList.toggle('active', isOpen);
+        marketplaceTrigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        const arrow = marketplaceTrigger.querySelector('.library-arrow');
+        if (arrow) {
+          arrow.textContent = isOpen ? '−' : '+';
+        }
+      }
+    };
+
+    const openMarketplacePanel = () => {
+      if (marketplacePanel?.classList.contains('open')) {
+        return;
+      }
+      applyMarketplacePanelOpenState(true);
+    };
+
+    const closeMarketplacePanel = () => {
+      if (!marketplacePanel?.classList.contains('open') && marketplacePanel?.style.display === 'none') {
+        return;
+      }
+      applyMarketplacePanelOpenState(false);
+    };
+
+    const toggleMarketplacePanel = () => {
+      if (marketplacePanel?.classList.contains('open')) {
+        closeMarketplacePanel();
+      } else {
+        openMarketplacePanel();
+      }
+    };
+
+    window.addEventListener('toggle-marketplace-panel', toggleMarketplacePanel);
+    window.addEventListener('vs-open-marketplace-panel', openMarketplacePanel);
+    window.addEventListener('vs-close-marketplace-panel', closeMarketplacePanel);
+    window.addEventListener('vs-marketplace-products-updated', (() => {
+      renderMarketplaceUpdateBadges();
+      maybeNotifyMarketplaceUpdates();
+    }) as EventListener);
+    window.addEventListener('focus', refreshMarketplaceUpdateBadges as EventListener);
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        refreshMarketplaceUpdateBadges();
+      }
+    });
+
+    renderMarketplaceUpdateBadges();
+    maybeNotifyMarketplaceUpdates();
+    void marketplaceService.refreshRemoteProducts()
+      .then(() => {
+        renderMarketplaceUpdateBadges();
+        maybeNotifyMarketplaceUpdates();
+      })
+      .catch(() => {
+        renderMarketplaceUpdateBadges();
+      });
+
     document.getElementById('marketplaceCloseBtn')?.addEventListener('click', () => {
-      window.dispatchEvent(new CustomEvent('toggle-marketplace-panel'));
+      window.dispatchEvent(new CustomEvent('vs-close-marketplace-panel'));
     });
 
     document.getElementById('marketplaceFullscreenBtn')?.addEventListener('click', () => {
@@ -8494,45 +13035,60 @@ class VirtualStudio {
     const helpCardHeaders = document.querySelectorAll('.help-card-header');
     let savedHelpPanelHeight = '';
 
+    const openHelpPanel = () => {
+      if (!helpPanel || !helpTrigger) return;
+      if (helpPanel.classList.contains('open')) {
+        return;
+      }
+
+      // Close other panels first
+      const aiPanel = document.getElementById('aiAssistantPanel');
+      const marketplacePanel = document.getElementById('marketplacePanel');
+      const studioLibraryPanel = document.getElementById('actorBottomPanel');
+
+      if (aiPanel?.classList.contains('open')) {
+        window.dispatchEvent(new CustomEvent('vs-close-ai-assistant-panel'));
+      }
+      if (marketplacePanel?.classList.contains('open')) {
+        window.dispatchEvent(new CustomEvent('vs-close-marketplace-panel'));
+      }
+      if (studioLibraryPanel?.classList.contains('open')) {
+        const trigger = document.getElementById('actorPanelTrigger');
+        studioLibraryPanel.classList.remove('open');
+        trigger?.classList.remove('active');
+        trigger?.setAttribute('aria-expanded', 'false');
+        const arrow = trigger?.querySelector('.library-arrow');
+        if (arrow) arrow.textContent = '+';
+      }
+
+      helpPanel.style.display = 'flex';
+      helpPanel.classList.add('open');
+      helpTrigger.classList.add('active');
+      helpTrigger.setAttribute('aria-expanded', 'true');
+      const arrow = helpTrigger.querySelector('.library-arrow');
+      if (arrow) arrow.textContent = '−';
+    };
+
+    const closeHelpPanel = () => {
+      if (!helpPanel || !helpTrigger) return;
+      if (!helpPanel.classList.contains('open') && helpPanel.style.display === 'none') {
+        return;
+      }
+      helpPanel.style.display = 'none';
+      helpPanel.classList.remove('open');
+      helpPanel.classList.remove('fullscreen');
+      helpTrigger.classList.remove('active');
+      helpTrigger.setAttribute('aria-expanded', 'false');
+      const arrow = helpTrigger.querySelector('.library-arrow');
+      if (arrow) arrow.textContent = '+';
+    };
+
     // Toggle help panel
     const toggleHelpPanel = () => {
-      if (!helpPanel || !helpTrigger) return;
-
-      const isOpen = helpPanel.classList.contains('open');
-
-      if (isOpen) {
-        helpPanel.style.display = 'none';
-        helpPanel.classList.remove('open');
-        helpTrigger.classList.remove('active');
-        helpTrigger.setAttribute('aria-expanded', 'false');
-        const arrow = helpTrigger.querySelector('.library-arrow');
-        if (arrow) arrow.textContent = '+';
+      if (helpPanel?.classList.contains('open')) {
+        closeHelpPanel();
       } else {
-        // Close other panels first
-        const aiPanel = document.getElementById('aiAssistantPanel');
-        const marketplacePanel = document.getElementById('marketplacePanel');
-        const studioLibraryPanel = document.getElementById('actorBottomPanel');
-
-        if (aiPanel?.classList.contains('open')) {
-          window.dispatchEvent(new CustomEvent('toggle-ai-assistant-panel'));
-        }
-        if (marketplacePanel?.classList.contains('open')) {
-          window.dispatchEvent(new CustomEvent('toggle-marketplace-panel'));
-        }
-        if (studioLibraryPanel?.classList.contains('open')) {
-          const trigger = document.getElementById('actorPanelTrigger');
-          studioLibraryPanel.classList.remove('open');
-          trigger?.classList.remove('active');
-          trigger?.setAttribute('aria-expanded', 'false');
-          const arrow = trigger?.querySelector('.library-arrow');
-          if (arrow) arrow.textContent = '+';
-        }
-        helpPanel.style.display = 'flex';
-        helpPanel.classList.add('open');
-        helpTrigger.classList.add('active');
-        helpTrigger.setAttribute('aria-expanded', 'true');
-        const arrow = helpTrigger.querySelector('.library-arrow');
-        if (arrow) arrow.textContent = '−';
+        openHelpPanel();
       }
     };
 
@@ -8541,9 +13097,7 @@ class VirtualStudio {
 
     // Close button
     helpCloseBtn?.addEventListener('click', () => {
-      if (helpPanel?.classList.contains('open')) {
-        toggleHelpPanel();
-      }
+      closeHelpPanel();
     });
 
     // Fullscreen button
@@ -8786,8 +13340,10 @@ class VirtualStudio {
       });
     });
 
-    // Listen for toggle event
+    // Listen for toggle/open/close events
     window.addEventListener('toggle-help-panel', toggleHelpPanel);
+    window.addEventListener('vs-open-help-panel', openHelpPanel);
+    window.addEventListener('vs-close-help-panel', closeHelpPanel);
 
     // Setup help content editing
     this.setupHelpContentEditing();
@@ -10248,6 +14804,7 @@ class VirtualStudio {
         this.selectedActorId = null;
         this.updateTopViewInfoPanel();
       }
+      this.publishSceneSelectionSync('scene-node-selected', 'scene-selection');
     }) as EventListener);
 
     // Listen for scene node removal
@@ -10257,17 +14814,181 @@ class VirtualStudio {
         this.selectedActorId = null;
         this.updateTopViewInfoPanel();
       }
+      this.publishSceneSelectionSync('scene-node-removed', 'scene-selection');
+    }) as EventListener);
+
+    window.addEventListener('ch-camera-preset-selected', ((e: CustomEvent) => {
+      const presetId = typeof e.detail?.presetId === 'string' ? e.detail.presetId : null;
+      if (!presetId) {
+        return;
+      }
+      this.selectCameraPreset(presetId);
+      this.publishSceneSelectionSync('camera-preset-selected', 'camera-preset');
     }) as EventListener);
 
     window.addEventListener('ch-load-character', ((e: CustomEvent) => {
-      const { modelUrl, name, skinTone, height } = e.detail;
+      const {
+        modelUrl,
+        name,
+        skinTone,
+        height,
+        appearance,
+      } = e.detail;
       console.log('Loading character:', name);
-      this.loadCharacterModel(modelUrl, name, skinTone, height);
+      this.loadCharacterModel(modelUrl, name, skinTone, height, appearance || null);
     }) as EventListener);
 
     window.addEventListener('ch-remove-character', (() => {
       console.log('Removing character');
       this.removeCharacterModel();
+    }) as EventListener);
+
+    window.addEventListener('ch-update-character', ((e: CustomEvent) => {
+      const {
+        nodeId,
+        appearance,
+        ...updates
+      } = (e.detail || {}) as {
+        nodeId?: string;
+        name?: string;
+        role?: string;
+        characterCatalogId?: string;
+        wardrobeStyle?: string;
+        wardrobeVariantId?: string | null;
+        logoPlacement?: string;
+        outfitColors?: string[];
+        actionHint?: string | null;
+        wardrobeNotes?: string[];
+        appearance?: Partial<CharacterAppearanceConfig> | null;
+        behaviorPlan?: Partial<CharacterBehaviorConfig> | null;
+      };
+
+      if (!nodeId) {
+        return;
+      }
+
+      void this.updateCharacterConfiguration(nodeId, {
+        ...updates,
+        appearance: appearance || null,
+      });
+    }) as EventListener);
+
+    window.addEventListener('ch-edit-topview-behavior-route-point', ((e: CustomEvent) => {
+      const {
+        nodeId,
+        actorId,
+        pointIndex,
+        x,
+        z,
+        persist,
+        snapToGrid,
+      } = (e.detail || {}) as {
+        nodeId?: string;
+        actorId?: string;
+        pointIndex?: number;
+        x?: number;
+        z?: number;
+        persist?: boolean;
+        snapToGrid?: boolean;
+      };
+
+      const resolvedActorId = typeof nodeId === 'string' && nodeId.trim().length > 0
+        ? nodeId
+        : (typeof actorId === 'string' && actorId.trim().length > 0 ? actorId : null);
+      if (!resolvedActorId || !Number.isFinite(pointIndex) || !Number.isFinite(x) || !Number.isFinite(z)) {
+        return;
+      }
+
+      void this.editTopViewBehaviorRoutePoint(
+        resolvedActorId,
+        Number(pointIndex),
+        {
+          x: Number(x),
+          z: Number(z),
+        },
+        {
+          persist: persist !== false,
+          snapToGrid: Boolean(snapToGrid),
+        },
+      );
+    }) as EventListener);
+
+    window.addEventListener('ch-update-character-behavior-home-zone', ((e: CustomEvent) => {
+      const {
+        nodeId,
+        actorId,
+        homeZoneId,
+      } = (e.detail || {}) as {
+        nodeId?: string;
+        actorId?: string;
+        homeZoneId?: string | null;
+      };
+
+      const resolvedActorId = typeof nodeId === 'string' && nodeId.trim().length > 0
+        ? nodeId
+        : (typeof actorId === 'string' && actorId.trim().length > 0 ? actorId : null);
+      if (!resolvedActorId) {
+        return;
+      }
+
+      void this.updateCharacterBehaviorHomeZone(
+        resolvedActorId,
+        typeof homeZoneId === 'string' && homeZoneId.trim().length > 0 ? homeZoneId : null,
+      );
+    }) as EventListener);
+
+    window.addEventListener('ch-update-character-behavior-look-target', ((e: CustomEvent) => {
+      const {
+        nodeId,
+        actorId,
+        lookAtTarget,
+      } = (e.detail || {}) as {
+        nodeId?: string;
+        actorId?: string;
+        lookAtTarget?: CharacterBehaviorConfig['lookAtTarget'] | null;
+      };
+
+      const resolvedActorId = typeof nodeId === 'string' && nodeId.trim().length > 0
+        ? nodeId
+        : (typeof actorId === 'string' && actorId.trim().length > 0 ? actorId : null);
+      if (!resolvedActorId) {
+        return;
+      }
+
+      void this.updateCharacterBehaviorLookAtTarget(
+        resolvedActorId,
+        lookAtTarget || null,
+      );
+    }) as EventListener);
+
+    window.addEventListener('ch-update-character-behavior-pace', ((e: CustomEvent) => {
+      const {
+        nodeId,
+        actorId,
+        pace,
+      } = (e.detail || {}) as {
+        nodeId?: string;
+        actorId?: string;
+        pace?: CharacterBehaviorConfig['pace'];
+      };
+
+      const resolvedActorId = typeof nodeId === 'string' && nodeId.trim().length > 0
+        ? nodeId
+        : (typeof actorId === 'string' && actorId.trim().length > 0 ? actorId : null);
+      if (!resolvedActorId || (pace !== 'still' && pace !== 'subtle' && pace !== 'active')) {
+        return;
+      }
+
+      void this.updateCharacterBehaviorPace(resolvedActorId, pace);
+    }) as EventListener);
+
+    window.addEventListener('ch-set-topview-behavior-zone-mode', ((e: CustomEvent) => {
+      const { mode } = (e.detail || {}) as {
+        mode?: 'home-zone' | 'look-target' | null;
+      };
+      if (mode === 'home-zone' || mode === 'look-target' || mode === null) {
+        this.setTopViewBehaviorZoneAssignmentMode(mode);
+      }
     }) as EventListener);
 
     const handleWalkCharacterEvent = (event: CustomEvent) => {
@@ -10416,6 +15137,15 @@ class VirtualStudio {
       await this.applyLightPattern(pattern);
     }) as unknown as EventListener);
 
+    window.addEventListener('ch-apply-lighting-pattern', (async (e: CustomEvent) => {
+      const pattern = e.detail?.pattern || e.detail;
+      if (!pattern) {
+        return;
+      }
+      console.log('Applying equipment-aware lighting pattern:', pattern.name || pattern.id);
+      await this.applyLightPattern(pattern);
+    }) as unknown as EventListener);
+
     window.addEventListener('showRecommendedAssets', ((e: CustomEvent) => {
       const preset = e.detail;
       console.log('Showing recommended assets for:', preset.id);
@@ -10490,6 +15220,21 @@ class VirtualStudio {
       this.toggleGrid(visible);
     }) as EventListener);
 
+    window.addEventListener('ch-apply-room-shell', ((e: CustomEvent) => {
+      const shell = e.detail?.shell;
+      if (shell) {
+        const nextRoomShell = this.normalizeRoomShell(shell);
+        if (typeof (environmentService as { syncRoomShellState?: (value: Partial<EnvironmentPlanRoomShell>) => EnvironmentPlanRoomShell }).syncRoomShellState === 'function') {
+          (environmentService as { syncRoomShellState: (value: Partial<EnvironmentPlanRoomShell>) => EnvironmentPlanRoomShell }).syncRoomShellState(nextRoomShell);
+        }
+        this.applyRoomShellConfiguration(nextRoomShell);
+        this.updateSceneEnvironment({
+          ...environmentService.getState(),
+          roomShell: nextRoomShell,
+        });
+      }
+    }) as EventListener);
+
     window.addEventListener('ch-apply-atmosphere', ((e: CustomEvent) => {
       this.applyAtmosphereSettings(e.detail || {});
     }) as EventListener);
@@ -10501,6 +15246,130 @@ class VirtualStudio {
     window.addEventListener('ch-set-camera-preset', ((e: CustomEvent) => {
       const { position, target, fov } = e.detail || {};
       this.applySimpleCameraPreset(position, target, fov);
+    }) as EventListener);
+
+    window.addEventListener('ch-auto-rig-environment-camera', ((e: CustomEvent) => {
+      this.applyEnvironmentCameraRig(e.detail || {});
+    }) as EventListener);
+
+    window.addEventListener('ch-auto-rig-environment-lighting', ((e: CustomEvent) => {
+      void this.applyEnvironmentLightingPlan(e.detail || {});
+    }) as EventListener);
+
+    window.addEventListener('ch-attach-gobo', ((e: CustomEvent) => {
+      const lightId = typeof e.detail?.lightId === 'string' ? e.detail.lightId : null;
+      const goboId = typeof e.detail?.goboId === 'string' ? e.detail.goboId : null;
+      if (!lightId || !goboId) {
+        return;
+      }
+
+      this.applyGoboToRuntimeLight(lightId, {
+        goboId,
+        size: typeof e.detail?.options?.size === 'number' ? e.detail.options.size : undefined,
+        rotation: typeof e.detail?.options?.rotation === 'number' ? e.detail.options.rotation : undefined,
+        intensity: typeof e.detail?.options?.intensity === 'number' ? e.detail.options.intensity : undefined,
+      }, 'gobo-browser');
+    }) as EventListener);
+
+    window.addEventListener('ch-remove-gobo', ((e: CustomEvent) => {
+      const lightId = typeof e.detail?.lightId === 'string' ? e.detail.lightId : null;
+      if (!lightId) {
+        return;
+      }
+      this.removeGoboFromRuntimeLight(lightId, 'gobo-browser');
+    }) as EventListener);
+
+    window.addEventListener('ch-set-light-modifier', ((e: CustomEvent) => {
+      const lightId = typeof e.detail?.lightId === 'string' ? e.detail.lightId : null;
+      const modifier = typeof e.detail?.modifier === 'string' ? e.detail.modifier : null;
+      if (!lightId || !modifier) {
+        return;
+      }
+      this.applyModifierToRuntimeLight(lightId, modifier, 'lights-browser');
+    }) as EventListener);
+
+    window.addEventListener('ch-set-light-beam-angle', ((e: CustomEvent) => {
+      const lightId = typeof e.detail?.lightId === 'string' ? e.detail.lightId : null;
+      const beamAngle = typeof e.detail?.beamAngle === 'number' ? e.detail.beamAngle : null;
+      if (!lightId || beamAngle === null) {
+        return;
+      }
+      this.applyBeamAngleToRuntimeLight(lightId, beamAngle, 'lights-browser');
+    }) as EventListener);
+
+    window.addEventListener('ch-add-standalone-gobo', ((e: CustomEvent) => {
+      const goboId = typeof e.detail?.goboId === 'string' ? e.detail.goboId : null;
+      if (!goboId) {
+        return;
+      }
+
+      this.addStandaloneGoboToScene(goboId, e.detail?.position, {
+        pattern: e.detail?.options?.pattern,
+        size: typeof e.detail?.options?.size === 'number' ? e.detail.options.size : undefined,
+        rotation: typeof e.detail?.options?.rotation === 'number' ? e.detail.options.rotation : undefined,
+        intensity: typeof e.detail?.options?.intensity === 'number' ? e.detail.options.intensity : undefined,
+        customTextureUrl: typeof e.detail?.options?.customTextureUrl === 'string' ? e.detail.options.customTextureUrl : undefined,
+      });
+    }) as EventListener);
+
+    window.addEventListener('ch-select-camera', ((e: CustomEvent) => {
+      const cameraBodyId = typeof e.detail?.id === 'string' ? e.detail.id : null;
+      useCameraLightingSyncStore.getState().setSelectedCameraBody(cameraBodyId, 'camera-gear-panel');
+      this.publishCameraLightingSync('camera-body-selected', 'camera-gear-panel');
+    }) as EventListener);
+
+    window.addEventListener('ch-select-lens', ((e: CustomEvent) => {
+      const lensId = typeof e.detail?.id === 'string' ? e.detail.id : null;
+      const focalValue = typeof e.detail?.focalValue === 'number' ? e.detail.focalValue : null;
+      const apertureValue = typeof e.detail?.apertureValue === 'number' ? e.detail.apertureValue : null;
+
+      useCameraLightingSyncStore.getState().setSelectedLens(lensId, 'camera-gear-panel');
+
+      if (focalValue) {
+        this.setFocalLength(focalValue);
+      }
+      if (apertureValue) {
+        this.setCameraAperture(apertureValue);
+      }
+
+      this.publishCameraLightingSync('lens-selected', 'camera-gear-panel');
+    }) as EventListener);
+
+    window.addEventListener('vs-camera-move', ((e: CustomEvent) => {
+      const cameraId = typeof e.detail?.cameraId === 'string' ? e.detail.cameraId : null;
+      const direction = e.detail?.direction;
+      const speed = typeof e.detail?.speed === 'number' ? e.detail.speed : 0.5;
+      if (!cameraId || !['forward', 'backward', 'left', 'right', 'up', 'down'].includes(direction)) {
+        return;
+      }
+      this.nudgeCameraPreset(cameraId, direction, speed);
+    }) as EventListener);
+
+    window.addEventListener('vs-camera-rotate', ((e: CustomEvent) => {
+      const cameraId = typeof e.detail?.cameraId === 'string' ? e.detail.cameraId : null;
+      const axis = e.detail?.axis;
+      const amount = typeof e.detail?.amount === 'number' ? e.detail.amount : 0;
+      if (!cameraId || !['pan', 'tilt', 'roll'].includes(axis) || !amount) {
+        return;
+      }
+      this.rotateCameraPreset(cameraId, axis, amount);
+    }) as EventListener);
+
+    window.addEventListener('vs-camera-zoom', ((e: CustomEvent) => {
+      const cameraId = typeof e.detail?.cameraId === 'string' ? e.detail.cameraId : null;
+      const amount = typeof e.detail?.amount === 'number' ? e.detail.amount : 0;
+      if (!cameraId || !amount) {
+        return;
+      }
+      this.zoomCameraPreset(cameraId, amount);
+    }) as EventListener);
+
+    window.addEventListener('vs-camera-reset', ((e: CustomEvent) => {
+      const cameraId = typeof e.detail?.cameraId === 'string' ? e.detail.cameraId : null;
+      if (!cameraId) {
+        return;
+      }
+      this.resetDirectedCameraPreset(cameraId);
     }) as EventListener);
 
     // Backdrop loading event handlers
@@ -11815,6 +16684,235 @@ class VirtualStudio {
     };
   }
 
+  private getPlacedPropSizing(
+    prop: {
+      mesh?: BABYLON.AbstractMesh | null;
+      assetId: string;
+      metadata?: Record<string, unknown>;
+    },
+  ): {
+    placementMode: 'ground' | 'wall' | 'surface';
+    footprintWidth: number;
+    footprintDepth: number;
+    height: number;
+    minClearance: number;
+  } {
+    const profile = assetBrainService.getPlacementProfile(prop.assetId);
+    const metadata = (prop.metadata || {}) as Record<string, unknown>;
+    const assetBrainDimensions = metadata.assetBrainDimensions as Record<string, unknown> | undefined;
+    const placementMode = metadata.placementMode === 'wall'
+      || metadata.placementMode === 'surface'
+      || metadata.placementMode === 'ground'
+      ? metadata.placementMode
+      : profile?.defaultPlacementMode
+        || 'ground';
+    const bounds = prop.mesh && !prop.mesh.isDisposed()
+      ? prop.mesh.getHierarchyBoundingVectors(true)
+      : null;
+
+    return {
+      placementMode,
+      footprintWidth: bounds
+        ? Math.max(0.05, bounds.max.x - bounds.min.x)
+        : (typeof assetBrainDimensions?.footprintWidth === 'number'
+          ? assetBrainDimensions.footprintWidth
+          : profile?.dimensions.footprintWidth)
+          || 0.8,
+      footprintDepth: bounds
+        ? Math.max(0.05, bounds.max.z - bounds.min.z)
+        : (typeof assetBrainDimensions?.footprintDepth === 'number'
+          ? assetBrainDimensions.footprintDepth
+          : profile?.dimensions.footprintDepth)
+          || 0.8,
+      height: bounds
+        ? Math.max(0.05, bounds.max.y - bounds.min.y)
+        : (typeof assetBrainDimensions?.height === 'number'
+          ? assetBrainDimensions.height
+          : profile?.dimensions.height)
+          || 0.8,
+      minClearance: typeof metadata.assetBrainMinClearance === 'number'
+        ? metadata.assetBrainMinClearance
+        : profile?.minClearance
+          || 0.24,
+    };
+  }
+
+  private getRelativePlacementMetadata(
+    request: EnvironmentRuntimePropRequest,
+  ): {
+    type: 'next_to' | 'behind' | 'centered_on' | null;
+    side: 'left' | 'right' | 'center' | null;
+    targetAssemblyNodeId?: string;
+    targetAssetId?: string;
+    faceTarget: 'camera' | 'prop' | null;
+    faceTargetAssemblyNodeId?: string;
+    faceTargetAssetId?: string;
+  } {
+    const metadata = (request.metadata || {}) as Record<string, unknown>;
+    return {
+      type: metadata.relativePlacementType === 'next_to'
+        || metadata.relativePlacementType === 'behind'
+        || metadata.relativePlacementType === 'centered_on'
+        ? metadata.relativePlacementType
+        : null,
+      side: metadata.relativePlacementSide === 'left'
+        || metadata.relativePlacementSide === 'right'
+        || metadata.relativePlacementSide === 'center'
+        ? metadata.relativePlacementSide
+        : null,
+      targetAssemblyNodeId: typeof metadata.relativePlacementTargetAssemblyNodeId === 'string'
+        ? metadata.relativePlacementTargetAssemblyNodeId
+        : undefined,
+      targetAssetId: typeof metadata.relativePlacementTargetAssetId === 'string'
+        ? metadata.relativePlacementTargetAssetId
+        : undefined,
+      faceTarget: metadata.faceTarget === 'camera'
+        || metadata.faceTarget === 'prop'
+        ? metadata.faceTarget
+        : null,
+      faceTargetAssemblyNodeId: typeof metadata.faceTargetAssemblyNodeId === 'string'
+        ? metadata.faceTargetAssemblyNodeId
+        : undefined,
+      faceTargetAssetId: typeof metadata.faceTargetAssetId === 'string'
+        ? metadata.faceTargetAssetId
+        : undefined,
+    };
+  }
+
+  private findPlacedEnvironmentProp(
+    targetAssemblyNodeId?: string,
+    targetAssetId?: string,
+  ): { id: string; mesh: BABYLON.Mesh; assetId: string; name: string; metadata?: any } | null {
+    if (targetAssemblyNodeId) {
+      const direct = this.sceneState.props.get(targetAssemblyNodeId);
+      if (direct?.mesh && !direct.mesh.isDisposed()) {
+        return direct;
+      }
+    }
+
+    if (!targetAssetId) {
+      return null;
+    }
+
+    return Array.from(this.sceneState.props.values()).find((prop) => (
+      prop.assetId === targetAssetId
+      && prop.mesh
+      && !prop.mesh.isDisposed()
+    )) || null;
+  }
+
+  private findSurfaceAnchorByNodeId(
+    anchorNodeId?: string,
+  ): {
+    id: string;
+    mesh: BABYLON.AbstractMesh;
+  } | null {
+    if (!anchorNodeId) {
+      return null;
+    }
+
+    const prop = this.sceneState.props.get(anchorNodeId);
+    if (!prop?.mesh || prop.mesh.isDisposed()) {
+      return null;
+    }
+
+    return {
+      id: anchorNodeId,
+      mesh: prop.mesh,
+    };
+  }
+
+  private getCameraPlanarBasis(referencePosition?: BABYLON.Vector3): {
+    forward: BABYLON.Vector3;
+    right: BABYLON.Vector3;
+  } {
+    const cameraTarget = referencePosition || this.camera.target.clone();
+    const forward = cameraTarget.subtract(this.camera.position);
+    forward.y = 0;
+    if (forward.lengthSquared() < 0.0001) {
+      forward.copyFromFloats(0, 0, -1);
+    } else {
+      forward.normalize();
+    }
+
+    const right = BABYLON.Vector3.Cross(forward, BABYLON.Axis.Y);
+    if (right.lengthSquared() < 0.0001) {
+      right.copyFromFloats(1, 0, 0);
+    } else {
+      right.normalize();
+    }
+
+    return { forward, right };
+  }
+
+  private getYawFacingPoint(
+    from: BABYLON.Vector3,
+    to: BABYLON.Vector3,
+  ): number | undefined {
+    const direction = to.subtract(from);
+    direction.y = 0;
+    if (direction.lengthSquared() < 0.0001) {
+      return undefined;
+    }
+
+    direction.normalize();
+    return Math.atan2(direction.x, direction.z);
+  }
+
+  private resolvePlacementRotation(
+    request: EnvironmentRuntimePropRequest,
+    position: BABYLON.Vector3,
+    relatedProp?: { mesh: BABYLON.Mesh; assetId: string; metadata?: any } | null,
+  ): number | undefined {
+    const relation = this.getRelativePlacementMetadata(request);
+
+    if (relation.faceTarget === 'camera') {
+      return this.getYawFacingPoint(position, this.camera.position.clone());
+    }
+
+    if (relation.faceTarget === 'prop') {
+      const targetProp = this.findPlacedEnvironmentProp(
+        relation.faceTargetAssemblyNodeId || relation.targetAssemblyNodeId,
+        relation.faceTargetAssetId || relation.targetAssetId,
+      );
+      if (targetProp?.mesh) {
+        return this.getYawFacingPoint(position, targetProp.mesh.position.clone());
+      }
+    }
+
+    if (relatedProp?.mesh && relation.type === 'behind') {
+      return this.getYawFacingPoint(position, this.camera.position.clone());
+    }
+
+    return undefined;
+  }
+
+  private isWithinSurfaceAnchorBounds(
+    anchorMesh: BABYLON.AbstractMesh,
+    position: BABYLON.Vector3,
+    footprintWidth: number,
+    footprintDepth: number,
+    minClearance: number,
+  ): boolean {
+    const bounds = anchorMesh.getHierarchyBoundingVectors(true);
+    const center = bounds.min.add(bounds.max).scale(0.5);
+    const anchorRotationY = anchorMesh.rotation.y || 0;
+    const local = BABYLON.Vector3.TransformCoordinates(
+      position.subtract(center),
+      BABYLON.Matrix.RotationY(-anchorRotationY),
+    );
+    const availableHalfWidth = Math.max(
+      0.02,
+      (bounds.max.x - bounds.min.x) / 2 - footprintWidth / 2 - minClearance,
+    );
+    const availableHalfDepth = Math.max(
+      0.02,
+      (bounds.max.z - bounds.min.z) / 2 - footprintDepth / 2 - minClearance,
+    );
+
+    return Math.abs(local.x) <= availableHalfWidth && Math.abs(local.z) <= availableHalfDepth;
+  }
+
   private clampEnvironmentPosition(
     position: BABYLON.Vector3,
     footprintWidth: number,
@@ -11842,27 +16940,13 @@ class VirtualStudio {
         return false;
       }
 
-      const propMetadata = (prop.metadata || {}) as Record<string, unknown>;
-      if (propMetadata.placementMode === 'wall' || propMetadata.placementMode === 'surface') {
+      const sizing = this.getPlacedPropSizing(prop);
+      if (sizing.placementMode === 'wall' || sizing.placementMode === 'surface') {
         return false;
       }
 
-      const propProfile = assetBrainService.getPlacementProfile(prop.assetId);
-      const propDimensions = propMetadata.assetBrainDimensions as Record<string, unknown> | undefined;
-      const otherWidth = typeof propDimensions?.footprintWidth === 'number'
-        ? propDimensions.footprintWidth
-        : propProfile?.dimensions.footprintWidth
-          || 0.8;
-      const otherDepth = typeof propDimensions?.footprintDepth === 'number'
-        ? propDimensions.footprintDepth
-        : propProfile?.dimensions.footprintDepth
-          || 0.8;
-      const otherClearance = typeof propMetadata.assetBrainMinClearance === 'number'
-        ? propMetadata.assetBrainMinClearance
-        : propProfile?.minClearance
-          || 0.24;
-      const minDeltaX = (footprintWidth + otherWidth) / 2 + Math.max(minClearance, otherClearance);
-      const minDeltaZ = (footprintDepth + otherDepth) / 2 + Math.max(minClearance, otherClearance);
+      const minDeltaX = (footprintWidth + sizing.footprintWidth) / 2 + Math.max(minClearance, sizing.minClearance);
+      const minDeltaZ = (footprintDepth + sizing.footprintDepth) / 2 + Math.max(minClearance, sizing.minClearance);
 
       return Math.abs(prop.mesh.position.x - position.x) < minDeltaX
         && Math.abs(prop.mesh.position.z - position.z) < minDeltaZ;
@@ -11989,26 +17073,107 @@ class VirtualStudio {
       }
 
       const propMetadata = (prop.metadata || {}) as Record<string, unknown>;
-      if (propMetadata.placementMode !== 'surface' || propMetadata.surfaceAnchorId !== anchorId) {
+      const sizing = this.getPlacedPropSizing(prop);
+      if (sizing.placementMode !== 'surface' || propMetadata.surfaceAnchorId !== anchorId) {
         return false;
       }
 
-      const propProfile = assetBrainService.getPlacementProfile(prop.assetId);
-      const propDimensions = propMetadata.assetBrainDimensions as Record<string, unknown> | undefined;
-      const otherWidth = typeof propDimensions?.footprintWidth === 'number'
-        ? propDimensions.footprintWidth
-        : propProfile?.dimensions.footprintWidth
-          || 0.4;
-      const otherDepth = typeof propDimensions?.footprintDepth === 'number'
-        ? propDimensions.footprintDepth
-        : propProfile?.dimensions.footprintDepth
-          || 0.4;
-      const minDeltaX = (footprintWidth + otherWidth) / 2 + minClearance;
-      const minDeltaZ = (footprintDepth + otherDepth) / 2 + minClearance;
+      const minDeltaX = (footprintWidth + sizing.footprintWidth) / 2 + Math.max(minClearance, sizing.minClearance);
+      const minDeltaZ = (footprintDepth + sizing.footprintDepth) / 2 + Math.max(minClearance, sizing.minClearance);
 
       return Math.abs(prop.mesh.position.x - position.x) < minDeltaX
         && Math.abs(prop.mesh.position.z - position.z) < minDeltaZ;
     });
+  }
+
+  private findRelativeGroundPlacement(
+    request: EnvironmentRuntimePropRequest,
+    footprintWidth: number,
+    footprintDepth: number,
+    minClearance: number,
+  ): {
+    position: BABYLON.Vector3;
+    rotationY?: number;
+  } | null {
+    const relation = this.getRelativePlacementMetadata(request);
+    if (!relation.type) {
+      return null;
+    }
+
+    const targetProp = this.findPlacedEnvironmentProp(
+      relation.targetAssemblyNodeId,
+      relation.targetAssetId,
+    );
+    if (!targetProp?.mesh) {
+      return null;
+    }
+
+    const targetSizing = this.getPlacedPropSizing(targetProp);
+    const { forward, right } = this.getCameraPlanarBasis(targetProp.mesh.position.clone());
+    const targetPosition = targetProp.mesh.position.clone();
+    const lateralDistance = (
+      (footprintWidth + targetSizing.footprintWidth) / 2
+      + Math.max(minClearance, targetSizing.minClearance)
+      + 0.16
+    );
+    const depthDistance = (
+      (footprintDepth + targetSizing.footprintDepth) / 2
+      + Math.max(minClearance, targetSizing.minClearance)
+      + 0.2
+    );
+    const sideOrder = relation.side === 'left'
+      ? [-1, 1]
+      : relation.side === 'right'
+        ? [1, -1]
+        : [0, -1, 1];
+    const candidates: BABYLON.Vector3[] = [];
+
+    if (relation.type === 'behind') {
+      sideOrder.forEach((side) => {
+        const lateralOffset = side === 0
+          ? BABYLON.Vector3.Zero()
+          : right.scale(lateralDistance * 0.3 * side);
+        candidates.push(targetPosition.add(forward.scale(depthDistance)).add(lateralOffset));
+      });
+    } else if (relation.type === 'centered_on') {
+      candidates.push(targetPosition.clone());
+      candidates.push(targetPosition.add(forward.scale(depthDistance * 0.55)));
+    } else {
+      sideOrder.forEach((side) => {
+        if (side === 0) {
+          candidates.push(targetPosition.add(forward.scale(depthDistance * 0.2)));
+          return;
+        }
+        candidates.push(targetPosition.add(right.scale(lateralDistance * side)));
+      });
+    }
+
+    for (const candidate of candidates) {
+      const groundedCandidate = this.findFreeGroundPosition(
+        new BABYLON.Vector3(candidate.x, 0, candidate.z),
+        footprintWidth,
+        footprintDepth,
+        minClearance,
+      );
+      if (!this.isGroundPlacementOccupied(groundedCandidate, footprintWidth, footprintDepth, minClearance)) {
+        return {
+          position: groundedCandidate,
+          rotationY: this.resolvePlacementRotation(request, groundedCandidate, targetProp) ?? undefined,
+        };
+      }
+    }
+
+    const fallbackPosition = this.findFreeGroundPosition(
+      new BABYLON.Vector3(targetPosition.x, 0, targetPosition.z),
+      footprintWidth,
+      footprintDepth,
+      minClearance,
+    );
+
+    return {
+      position: fallbackPosition,
+      rotationY: this.resolvePlacementRotation(request, fallbackPosition, targetProp) ?? undefined,
+    };
   }
 
   private findSurfacePlacement(
@@ -12022,15 +17187,25 @@ class VirtualStudio {
     rotationY?: number;
     surfaceAnchorId?: string;
   } | null {
+    const relation = this.getRelativePlacementMetadata(request);
+    const relatedProp = this.findPlacedEnvironmentProp(
+      relation.targetAssemblyNodeId,
+      relation.targetAssetId,
+    );
+    const explicitAnchorId = typeof relatedProp?.metadata?.surfaceAnchorId === 'string'
+      ? relatedProp.metadata.surfaceAnchorId
+      : undefined;
     const preferredAnchorAssetId = typeof request.metadata?.preferredAnchorAssetId === 'string'
       ? request.metadata.preferredAnchorAssetId
       : undefined;
-    const anchor = this.findSurfaceAnchor(surfaceAnchorTypes, preferredAnchorAssetId);
+    const anchor = this.findSurfaceAnchorByNodeId(explicitAnchorId)
+      || this.findSurfaceAnchor(surfaceAnchorTypes, preferredAnchorAssetId);
     if (!anchor) {
       return null;
     }
 
     const hint = (request.placementHint || '').toLowerCase();
+    const metadata = (request.metadata || {}) as Record<string, unknown>;
     const bounds = anchor.mesh.getHierarchyBoundingVectors(true);
     const center = bounds.min.add(bounds.max).scale(0.5);
     const anchorRotationY = anchor.mesh.rotation.y || 0;
@@ -12043,7 +17218,83 @@ class VirtualStudio {
       (bounds.max.z - bounds.min.z) / 2 - footprintDepth / 2 - minClearance,
     );
 
+    if (relatedProp?.mesh && explicitAnchorId === anchor.id) {
+      const relatedSizing = this.getPlacedPropSizing(relatedProp);
+      const { forward, right } = this.getCameraPlanarBasis(relatedProp.mesh.position.clone());
+      const lateralDistance = (
+        (footprintWidth + relatedSizing.footprintWidth) / 2
+        + Math.max(minClearance, relatedSizing.minClearance)
+        + 0.04
+      );
+      const depthDistance = (
+        (footprintDepth + relatedSizing.footprintDepth) / 2
+        + Math.max(minClearance, relatedSizing.minClearance)
+        + 0.04
+      );
+      const preferredSide = relation.side === 'left'
+        ? -1
+        : relation.side === 'right'
+          ? 1
+          : 1;
+      const relatedCandidates: BABYLON.Vector3[] = [];
+
+      if (relation.type === 'behind') {
+        relatedCandidates.push(relatedProp.mesh.position.add(forward.scale(depthDistance)));
+      } else if (relation.type === 'centered_on') {
+        relatedCandidates.push(relatedProp.mesh.position.clone());
+      } else if (relation.type === 'next_to') {
+        relatedCandidates.push(relatedProp.mesh.position.add(right.scale(lateralDistance * preferredSide)));
+        relatedCandidates.push(relatedProp.mesh.position.add(right.scale(lateralDistance * -preferredSide)));
+      }
+
+      for (const relatedCandidate of relatedCandidates) {
+        const candidate = new BABYLON.Vector3(
+          relatedCandidate.x,
+          bounds.max.y + 0.03,
+          relatedCandidate.z,
+        );
+        if (
+          this.isWithinSurfaceAnchorBounds(anchor.mesh, candidate, footprintWidth, footprintDepth, minClearance)
+          && !this.isSurfacePlacementOccupied(anchor.id, candidate, footprintWidth, footprintDepth, minClearance)
+        ) {
+          return {
+            position: candidate,
+            rotationY: this.resolvePlacementRotation(request, candidate, relatedProp) ?? anchorRotationY,
+            surfaceAnchorId: anchor.id,
+          };
+        }
+      }
+    }
+
     const localOffsets: Array<[number, number]> = [];
+    const shotZoneX = typeof metadata.shotZoneX === 'number'
+      ? BABYLON.Scalar.Clamp(metadata.shotZoneX, -1, 1)
+      : null;
+    const shotDepthZone = metadata.shotDepthZone === 'foreground'
+      || metadata.shotDepthZone === 'midground'
+      || metadata.shotDepthZone === 'background'
+      ? metadata.shotDepthZone
+      : null;
+    const hasExplicitHorizontalCue = hint.includes('left') || hint.includes('right') || hint.includes('center');
+    const hasExplicitDepthCue = hint.includes('foreground')
+      || hint.includes('front')
+      || hint.includes('background')
+      || hint.includes('back');
+
+    if (shotZoneX !== null || shotDepthZone) {
+      const zoneOffsetX = hasExplicitHorizontalCue || shotZoneX === null
+        ? 0
+        : availableHalfWidth * BABYLON.Scalar.Clamp(shotZoneX * 0.82, -1, 1);
+      const zoneOffsetZ = hasExplicitDepthCue || !shotDepthZone
+        ? 0
+        : shotDepthZone === 'foreground'
+          ? availableHalfDepth * 0.58
+          : shotDepthZone === 'background'
+            ? -availableHalfDepth * 0.58
+            : 0;
+      localOffsets.push([zoneOffsetX, zoneOffsetZ]);
+    }
+
     if (hint.includes('center')) {
       localOffsets.push([0, 0]);
     }
@@ -12091,10 +17342,13 @@ class VirtualStudio {
         center.z + worldOffset.z,
       );
 
-      if (!this.isSurfacePlacementOccupied(anchor.id, candidate, footprintWidth, footprintDepth, minClearance)) {
+      if (
+        this.isWithinSurfaceAnchorBounds(anchor.mesh, candidate, footprintWidth, footprintDepth, minClearance)
+        && !this.isSurfacePlacementOccupied(anchor.id, candidate, footprintWidth, footprintDepth, minClearance)
+      ) {
         return {
           position: candidate,
-          rotationY: anchorRotationY,
+          rotationY: this.resolvePlacementRotation(request, candidate, relatedProp) ?? anchorRotationY,
           surfaceAnchorId: anchor.id,
         };
       }
@@ -12102,7 +17356,11 @@ class VirtualStudio {
 
     return {
       position: new BABYLON.Vector3(center.x, bounds.max.y + 0.03, center.z),
-      rotationY: anchorRotationY,
+      rotationY: this.resolvePlacementRotation(
+        request,
+        new BABYLON.Vector3(center.x, bounds.max.y + 0.03, center.z),
+        relatedProp,
+      ) ?? anchorRotationY,
       surfaceAnchorId: anchor.id,
     };
   }
@@ -12117,8 +17375,39 @@ class VirtualStudio {
     surfaceAnchorId?: string;
   } {
     const hint = (request.placementHint || '').toLowerCase();
+    const metadata = (request.metadata || {}) as Record<string, unknown>;
     const sizing = this.getPlacementSizing(request);
     const bounds = this.getEnvironmentShellBounds();
+    const preferredWallTarget = metadata.preferredWallTarget === 'backWall'
+      || metadata.preferredWallTarget === 'leftWall'
+      || metadata.preferredWallTarget === 'rightWall'
+      || metadata.preferredWallTarget === 'rearWall'
+      ? metadata.preferredWallTarget
+      : null;
+    const shotZoneX = typeof metadata.shotZoneX === 'number'
+      ? BABYLON.Scalar.Clamp(metadata.shotZoneX, -1, 1)
+      : null;
+    const shotDepthZone = metadata.shotDepthZone === 'foreground'
+      || metadata.shotDepthZone === 'midground'
+      || metadata.shotDepthZone === 'background'
+      ? metadata.shotDepthZone
+      : null;
+    const hasExplicitHorizontalCue = hint.includes('left') || hint.includes('right') || hint.includes('center');
+    const hasExplicitDepthCue = hint.includes('foreground')
+      || hint.includes('front')
+      || hint.includes('background')
+      || hint.includes('back wall')
+      || hint.includes('behind');
+    const shotAwareWorldX = !hasExplicitHorizontalCue && shotZoneX !== null
+      ? BABYLON.Scalar.Lerp(bounds.minX + 1.4, bounds.maxX - 1.4, (shotZoneX + 1) / 2)
+      : null;
+    const shotAwareWorldZ = !hasExplicitDepthCue && shotDepthZone
+      ? shotDepthZone === 'foreground'
+        ? Math.min(bounds.maxZ - 1.4, Math.max(1.4, bounds.maxZ * 0.28))
+        : shotDepthZone === 'background'
+          ? bounds.minZ + 1.8
+          : BABYLON.Scalar.Lerp(bounds.minZ + 1.8, bounds.maxZ - 1.8, 0.5)
+      : null;
 
     if (sizing.placementMode === 'wall' || hint.includes('wall') || hint.includes('shelf')) {
       const slotStep = Math.max(sizing.footprintWidth + sizing.minClearance, 1.1);
@@ -12128,8 +17417,15 @@ class VirtualStudio {
         bounds.wallMinY,
         bounds.wallMaxY,
       );
+      const wallTarget = hint.includes('left')
+        ? 'leftWall'
+        : hint.includes('right') || hint.includes('side')
+          ? 'rightWall'
+          : hint.includes('rear')
+            ? 'rearWall'
+            : preferredWallTarget || 'backWall';
 
-      if (hint.includes('left')) {
+      if (wallTarget === 'leftWall') {
         return {
           position: new BABYLON.Vector3(
             bounds.minX + 0.12,
@@ -12140,7 +17436,7 @@ class VirtualStudio {
           placementMode: 'wall',
         };
       }
-      if (hint.includes('right') || hint.includes('side')) {
+      if (wallTarget === 'rightWall') {
         return {
           position: new BABYLON.Vector3(
             bounds.maxX - 0.12,
@@ -12148,6 +17444,17 @@ class VirtualStudio {
             BABYLON.Scalar.Clamp(bounds.minZ + 1.6 + (index % 4) * slotStep, bounds.minZ + 0.8, bounds.maxZ - 0.8),
           ),
           rotationY: -Math.PI / 2,
+          placementMode: 'wall',
+        };
+      }
+      if (wallTarget === 'rearWall') {
+        return {
+          position: new BABYLON.Vector3(
+            BABYLON.Scalar.Clamp(bounds.minX + 1.4 + (index % 5) * slotStep, bounds.minX + 0.8, bounds.maxX - 0.8),
+            wallY,
+            bounds.maxZ - 0.12,
+          ),
+          rotationY: 0,
           placementMode: 'wall',
         };
       }
@@ -12181,50 +17488,64 @@ class VirtualStudio {
       }
     }
 
-    let x = 0;
-    let z = 0;
-
-    if (hint.includes('foreground') || hint.includes('front')) {
-      z = 2.4;
-    } else if (hint.includes('back wall') || hint.includes('background')) {
-      z = -6.4;
-    } else if (hint.includes('center')) {
-      z = -0.4;
-    } else {
-      z = -1.4;
+    const relativeGroundPlacement = this.findRelativeGroundPlacement(
+      request,
+      sizing.footprintWidth,
+      sizing.footprintDepth,
+      sizing.minClearance,
+    );
+    if (relativeGroundPlacement) {
+      return {
+        position: relativeGroundPlacement.position,
+        rotationY: relativeGroundPlacement.rotationY,
+        placementMode: 'ground',
+      };
     }
 
-    if (hint.includes('left')) {
-      x = -3.4;
-    } else if (hint.includes('right')) {
-      x = 3.4;
+    let desiredZ = shotAwareWorldZ ?? -1.4;
+
+    if (hint.includes('foreground') || hint.includes('front')) {
+      desiredZ = 2.4;
+    } else if (hint.includes('back wall') || hint.includes('background')) {
+      desiredZ = -6.4;
+    } else if (hint.includes('center')) {
+      desiredZ = -0.4;
     } else {
-      x = ((index % 3) - 1) * 1.5;
+      desiredZ = shotAwareWorldZ ?? -1.4;
+    }
+
+    let desiredX = shotAwareWorldX ?? 0;
+    if (hint.includes('left')) {
+      desiredX = BABYLON.Scalar.Lerp(0, bounds.minX + 1.4, 0.76);
+    } else if (hint.includes('right')) {
+      desiredX = BABYLON.Scalar.Lerp(0, bounds.maxX - 1.4, 0.76);
+    } else if (shotAwareWorldX === null) {
+      const x = ((index % 3) - 1) * 1.5;
+      const normalizedX = x / 4.5;
+      desiredX = normalizedX >= 0
+        ? BABYLON.Scalar.Lerp(0, bounds.maxX - 1.4, normalizedX)
+        : BABYLON.Scalar.Lerp(0, bounds.minX + 1.4, -normalizedX);
     }
 
     if (hint.includes('shelves')) {
-      x = index % 2 === 0 ? -4.2 : 4.2;
-      z = -3.6 + Math.floor(index / 2) * 1.1;
+      desiredX = index % 2 === 0 ? bounds.minX + 0.8 : bounds.maxX - 0.8;
+      desiredZ = -3.6 + Math.floor(index / 2) * 1.1;
     }
 
-    const normalizedX = x >= 0
-      ? x / 4.5
-      : x / 4.5;
-    const desiredX = normalizedX >= 0
-      ? BABYLON.Scalar.Lerp(0, bounds.maxX - 1.4, normalizedX)
-      : BABYLON.Scalar.Lerp(0, bounds.minX + 1.4, -normalizedX);
+    const fallbackPosition = this.findFreeGroundPosition(
+      new BABYLON.Vector3(
+        desiredX,
+        0,
+        BABYLON.Scalar.Clamp(desiredZ, bounds.minZ + 1.2, bounds.maxZ - 1.2),
+      ),
+      sizing.footprintWidth,
+      sizing.footprintDepth,
+      sizing.minClearance,
+    );
 
     return {
-      position: this.findFreeGroundPosition(
-        new BABYLON.Vector3(
-          desiredX,
-          0,
-          BABYLON.Scalar.Clamp(z, bounds.minZ + 1.2, bounds.maxZ - 1.2),
-        ),
-        sizing.footprintWidth,
-        sizing.footprintDepth,
-        sizing.minClearance,
-      ),
+      position: fallbackPosition,
+      rotationY: this.resolvePlacementRotation(request, fallbackPosition) ?? undefined,
       placementMode: 'ground',
     };
   }
@@ -12315,6 +17636,8 @@ class VirtualStudio {
         priority: request.priority || 'medium',
         description: request.description || null,
         placementMode: placement.placementMode,
+        propPrimitive: typeof propDef.metadata?.primitive === 'string' ? propDef.metadata.primitive : null,
+        propCategory: propDef.category,
         assetBrainDimensions: request.metadata?.assetBrainDimensions || placementProfile?.dimensions || null,
         assetBrainMinClearance: request.metadata?.assetBrainMinClearance || placementProfile?.minClearance || null,
         assetBrainWallYOffset: request.metadata?.assetBrainWallYOffset || placementProfile?.wallYOffset || null,
@@ -12351,6 +17674,7 @@ class VirtualStudio {
     }
 
     if (nodeIds.length > 0) {
+      this.refreshEnvironmentPropBranding();
       this.updateTopView();
       this.publishEnvironmentDiagnostics('environment-props-applied');
     }
@@ -14775,6 +20099,7 @@ class VirtualStudio {
     } else if (keyboardMesh && keyboardMotionMesh && !keyboardMesh.isDisposed() && !keyboardMotionMesh.isDisposed()) {
       this.syncCharacterNodeTransform(keyboardMotionMesh, true);
     }
+    this.clearCharacterBodyMotionOverlay(keyboardMesh);
     if (wasActive) {
       window.dispatchEvent(new CustomEvent('ch-character-keyboard-control-stopped'));
     }
@@ -14852,6 +20177,7 @@ class VirtualStudio {
         const meshAtRest = this.getPrimaryCharacterMesh();
         if (meshAtRest) {
           this.forceStopCharacterAnimations(meshAtRest, state.rigId);
+          this.clearCharacterBodyMotionOverlay(meshAtRest);
         }
         if (this.activeCharacterLocomotion) {
           this.stopCharacterWalk(false);
@@ -14978,6 +20304,9 @@ class VirtualStudio {
     } else {
       speedMetersPerSecond = 1.45;
     }
+
+    const motionCadence = BABYLON.Scalar.Clamp(speedMetersPerSecond * 1.8, 1.0, 3.2);
+    state.proceduralWalkPhase += dt * motionCadence * Math.PI * 2;
 
     const travel = speedMetersPerSecond * dt;
     const currentYawBeforeMove = this.getMeshYaw(motionMesh, profile);
@@ -15132,6 +20461,18 @@ class VirtualStudio {
 
     this.applyRootMotionLocksForMesh(mesh);
     this.setCharacterMotionNodeLock(motionMesh, profile);
+
+    if (!this.findSkeletonCarrierMesh(mesh)?.skeleton) {
+      this.applyCharacterBodyMotionOverlay(mesh, {
+        moving: isMoving,
+        phase: state.proceduralWalkPhase,
+        speed: speedMetersPerSecond,
+        forwardAxis,
+        strafeAxis,
+      });
+    } else if (!isMoving) {
+      this.clearCharacterBodyMotionOverlay(mesh);
+    }
 
     this.syncCharacterNodeTransform(motionMesh, false);
   }
@@ -15476,6 +20817,7 @@ class VirtualStudio {
     if (locomotion.proceduralWalk && locomotion.rigId) {
       this.clearProceduralWalkPose(locomotion.rigId);
     }
+    this.clearCharacterBodyMotionOverlay(locomotion.mesh);
     if (locomotion.motionMesh && lockedMotionPosition && !locomotion.motionMesh.isDisposed()) {
       this.setMotionNodeWorldPosition(locomotion.motionMesh, lockedMotionPosition);
       if (!locomotion.mesh.isDisposed()) {
@@ -15696,16 +21038,3048 @@ class VirtualStudio {
     this.applyRootMotionLocksForMesh(mesh);
     this.setCharacterMotionNodeLock(motionMesh, profile);
 
+    if (!this.findSkeletonCarrierMesh(mesh)?.skeleton) {
+      this.applyCharacterBodyMotionOverlay(mesh, {
+        moving: true,
+        phase: locomotion.proceduralWalkPhase,
+        speed: locomotion.speedMetersPerSecond,
+        forwardAxis: 1,
+        strafeAxis: 0,
+      });
+    }
+
     this.syncCharacterNodeTransform(motionMesh, false);
   }
 
+  private getEnvironmentBrandColor(index: number, fallback: string): string {
+    const palette = this.environmentBrandingState.palette;
+    return palette[index] || fallback;
+  }
+
+  private normalizeCharacterBehaviorConfig(
+    behavior?: CharacterBehaviorConfig | null,
+  ): CharacterBehaviorConfig | null {
+    if (!behavior) {
+      return null;
+    }
+
+    const allowedTypes = ['stationary', 'work_loop', 'patrol', 'counter_service', 'serve_route', 'hero_idle'] as const;
+    const allowedPaces = ['still', 'subtle', 'active'] as const;
+    const allowedTargets = ['camera', 'hero_prop', 'counter', 'oven', 'guests'] as const;
+
+    const type = allowedTypes.includes((behavior.type || 'stationary') as typeof allowedTypes[number])
+      ? (behavior.type || 'stationary')
+      : 'stationary';
+    const pace = allowedPaces.includes((behavior.pace || 'subtle') as typeof allowedPaces[number])
+      ? (behavior.pace || 'subtle')
+      : 'subtle';
+    const lookAtTarget = behavior.lookAtTarget && allowedTargets.includes(behavior.lookAtTarget as typeof allowedTargets[number])
+      ? behavior.lookAtTarget
+      : null;
+    const routeZoneIds = Array.isArray(behavior.routeZoneIds)
+      ? behavior.routeZoneIds.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).slice(0, 6)
+      : [];
+    const customRoutePoints = Array.isArray(behavior.customRoutePoints)
+      ? behavior.customRoutePoints
+        .map((point) => ({
+          x: Number(point?.x),
+          z: Number(point?.z),
+        }))
+        .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.z))
+        .slice(0, 8)
+      : [];
+
+    return {
+      type,
+      homeZoneId: typeof behavior.homeZoneId === 'string' && behavior.homeZoneId.trim().length > 0
+        ? behavior.homeZoneId.trim()
+        : null,
+      routeZoneIds,
+      customRoutePoints,
+      lookAtTarget,
+      pace,
+      radius: BABYLON.Scalar.Clamp(typeof behavior.radius === 'number' ? behavior.radius : 0.8, 0.1, 6),
+    };
+  }
+
+  private getRoomShellZone(zoneId: string | null | undefined): EnvironmentPlanRoomShellZone | null {
+    if (!zoneId || !Array.isArray(this.currentRoomShell.zones)) {
+      return null;
+    }
+    return this.currentRoomShell.zones.find((zone) => zone.id === zoneId) || null;
+  }
+
+  private resolveRoomShellZonePosition(
+    zoneId: string | null | undefined,
+    fallback?: BABYLON.Vector3 | null,
+  ): BABYLON.Vector3 | null {
+    const zone = this.getRoomShellZone(zoneId);
+    if (!zone) {
+      return fallback ? fallback.clone() : null;
+    }
+
+    const usableHalfWidth = Math.max(1.2, this.currentRoomShell.width * 0.36);
+    const usableHalfDepth = Math.max(1.2, this.currentRoomShell.depth * 0.32);
+    return new BABYLON.Vector3(
+      zone.xBias * usableHalfWidth,
+      fallback?.y ?? 0,
+      zone.zBias * usableHalfDepth,
+    );
+  }
+
+  private getRoomShellZoneWorldBounds(
+    zone: EnvironmentPlanRoomShellZone | null | undefined,
+  ): {
+    centerX: number;
+    centerZ: number;
+    minX: number;
+    maxX: number;
+    minZ: number;
+    maxZ: number;
+    width: number;
+    depth: number;
+  } | null {
+    if (!zone) {
+      return null;
+    }
+
+    const usableHalfWidth = Math.max(1.2, this.currentRoomShell.width * 0.36);
+    const usableHalfDepth = Math.max(1.2, this.currentRoomShell.depth * 0.32);
+    const usableWidth = usableHalfWidth * 2;
+    const usableDepth = usableHalfDepth * 2;
+    const width = Math.max(0.4, usableWidth * BABYLON.Scalar.Clamp(zone.widthRatio || 0.24, 0.08, 1));
+    const depth = Math.max(0.4, usableDepth * BABYLON.Scalar.Clamp(zone.depthRatio || 0.24, 0.08, 1));
+    const centerX = zone.xBias * usableHalfWidth;
+    const centerZ = zone.zBias * usableHalfDepth;
+
+    return {
+      centerX,
+      centerZ,
+      minX: centerX - (width * 0.5),
+      maxX: centerX + (width * 0.5),
+      minZ: centerZ - (depth * 0.5),
+      maxZ: centerZ + (depth * 0.5),
+      width,
+      depth,
+    };
+  }
+
+  private getTopViewRoomZoneAtPoint(
+    mouseX: number,
+    mouseY: number,
+    scale: number,
+    cx: number,
+    cy: number,
+  ): string | null {
+    const worldX = (mouseX - cx) / scale;
+    const worldZ = -(mouseY - cy) / scale;
+    const zones = Array.isArray(this.currentRoomShell.zones) ? this.currentRoomShell.zones : [];
+
+    for (const zone of zones) {
+      const bounds = this.getRoomShellZoneWorldBounds(zone);
+      if (!bounds) {
+        continue;
+      }
+      if (
+        worldX >= bounds.minX
+        && worldX <= bounds.maxX
+        && worldZ >= bounds.minZ
+        && worldZ <= bounds.maxZ
+      ) {
+        return zone.id;
+      }
+    }
+
+    return null;
+  }
+
+  public getTopViewRoomZoneAtCanvasPoint(mouseX: number, mouseY: number): string | null {
+    const transform = this.getTopViewCanvasTransform();
+    if (!transform) {
+      return null;
+    }
+    return this.getTopViewRoomZoneAtPoint(mouseX, mouseY, transform.scale, transform.cx, transform.cy);
+  }
+
+  public getTopViewRoomZonePreview(zoneId: string): {
+    zoneId: string;
+    label: string;
+    purpose: string;
+    worldCenter: { x: number; z: number };
+    worldBounds: { minX: number; maxX: number; minZ: number; maxZ: number };
+    canvasCenter: { x: number; y: number } | null;
+  } | null {
+    const zone = this.getRoomShellZone(zoneId);
+    const bounds = this.getRoomShellZoneWorldBounds(zone);
+    if (!zone || !bounds) {
+      return null;
+    }
+
+    const transform = this.getTopViewCanvasTransform();
+    return {
+      zoneId: zone.id,
+      label: zone.label,
+      purpose: zone.purpose,
+      worldCenter: { x: bounds.centerX, z: bounds.centerZ },
+      worldBounds: {
+        minX: bounds.minX,
+        maxX: bounds.maxX,
+        minZ: bounds.minZ,
+        maxZ: bounds.maxZ,
+      },
+      canvasCenter: transform
+        ? {
+          x: transform.cx + (bounds.centerX * transform.scale),
+          y: transform.cy - (bounds.centerZ * transform.scale),
+        }
+        : null,
+    };
+  }
+
+  public getTopViewBehaviorZoneAssignmentMode(): 'home-zone' | 'look-target' | null {
+    return this.topViewBehaviorZoneAssignmentMode;
+  }
+
+  public setTopViewBehaviorZoneAssignmentMode(
+    mode: 'home-zone' | 'look-target' | null,
+  ): void {
+    this.topViewBehaviorZoneAssignmentMode = mode;
+    this.syncTopViewBehaviorZoneButtonState();
+    this.publishTopViewSync('topview-behavior-zone-mode-updated', 'topview');
+    this.updateTopViewInfoPanel();
+    this.updateTopView();
+  }
+
+  private resolveLookTargetForRoomZone(
+    zoneId: string | null | undefined,
+  ): CharacterBehaviorConfig['lookAtTarget'] | null {
+    const zone = this.getRoomShellZone(zoneId);
+    if (!zone) {
+      return null;
+    }
+
+    const haystack = `${zone.id} ${zone.label} ${(zone.notes || []).join(' ')}`.toLowerCase();
+    if (haystack.includes('oven') || zone.purpose === 'prep') {
+      return 'oven';
+    }
+    if (zone.purpose === 'counter' || zone.purpose === 'queue' || haystack.includes('counter') || haystack.includes('register')) {
+      return 'counter';
+    }
+    if (zone.purpose === 'hero' || haystack.includes('hero') || haystack.includes('product')) {
+      return 'hero_prop';
+    }
+    if (zone.purpose === 'dining' || zone.purpose === 'service' || haystack.includes('guest') || haystack.includes('table') || haystack.includes('aisle')) {
+      return 'guests';
+    }
+    return 'camera';
+  }
+
+  private async applyTopViewBehaviorZoneAssignment(
+    intent: 'home-zone' | 'look-target',
+    zoneId: string,
+  ): Promise<boolean> {
+    if (!this.selectedActorId) {
+      return false;
+    }
+
+    if (intent === 'home-zone') {
+      const updated = await this.updateCharacterBehaviorHomeZone(this.selectedActorId, zoneId);
+      if (!updated) {
+        return false;
+      }
+      if (this.topViewBehaviorZoneAssignmentMode === 'home-zone') {
+        this.topViewBehaviorZoneAssignmentMode = null;
+      }
+      this.syncTopViewBehaviorZoneButtonState();
+      const zone = this.getRoomShellZone(zoneId);
+      if (zone) {
+        this.showNotification(`Hjemmesone satt til ${zone.label}`, 'info');
+      }
+      this.publishTopViewSync('topview-home-zone-updated', 'topview');
+      this.updateTopViewInfoPanel();
+      this.updateTopView();
+      return true;
+    }
+
+    const nextLookTarget = this.resolveLookTargetForRoomZone(zoneId);
+    if (!nextLookTarget) {
+      return false;
+    }
+    const updated = await this.updateCharacterBehaviorLookAtTarget(this.selectedActorId, nextLookTarget);
+    if (!updated) {
+      return false;
+    }
+    if (this.topViewBehaviorZoneAssignmentMode === 'look-target') {
+      this.topViewBehaviorZoneAssignmentMode = null;
+    }
+    this.syncTopViewBehaviorZoneButtonState();
+    this.showNotification(`Blikkretning satt til ${nextLookTarget}`, 'info');
+    this.publishTopViewSync('topview-look-target-updated', 'topview');
+    this.updateTopViewInfoPanel();
+    this.updateTopView();
+    return true;
+  }
+
+  public async applyTopViewBehaviorZoneAssignmentAtCanvasPoint(
+    mouseX: number,
+    mouseY: number,
+    intent?: 'home-zone' | 'look-target' | null,
+  ): Promise<boolean> {
+    const zoneId = this.getTopViewRoomZoneAtCanvasPoint(mouseX, mouseY);
+    const resolvedIntent = intent || this.topViewBehaviorZoneAssignmentMode;
+    if (!zoneId || (resolvedIntent !== 'home-zone' && resolvedIntent !== 'look-target')) {
+      return false;
+    }
+    return this.applyTopViewBehaviorZoneAssignment(resolvedIntent, zoneId);
+  }
+
+  public async updateCharacterBehaviorHomeZone(
+    actorId: string,
+    homeZoneId: string | null,
+  ): Promise<boolean> {
+    if (homeZoneId && !this.getRoomShellZone(homeZoneId)) {
+      return false;
+    }
+    return this.updateCharacterConfiguration(actorId, {
+      behaviorPlan: {
+        homeZoneId,
+      },
+    });
+  }
+
+  public async updateCharacterBehaviorLookAtTarget(
+    actorId: string,
+    lookAtTarget: CharacterBehaviorConfig['lookAtTarget'] | null,
+  ): Promise<boolean> {
+    return this.updateCharacterConfiguration(actorId, {
+      behaviorPlan: {
+        lookAtTarget,
+      },
+    });
+  }
+
+  public async updateCharacterBehaviorPace(
+    actorId: string,
+    pace: CharacterBehaviorConfig['pace'],
+  ): Promise<boolean> {
+    if (pace !== 'still' && pace !== 'subtle' && pace !== 'active') {
+      return false;
+    }
+    return this.updateCharacterConfiguration(actorId, {
+      behaviorPlan: {
+        pace,
+      },
+    });
+  }
+
+  public async assignTopViewCharacterHomeZoneAtCanvasPoint(
+    actorId: string,
+    mouseX: number,
+    mouseY: number,
+  ): Promise<boolean> {
+    const zoneId = this.getTopViewRoomZoneAtCanvasPoint(mouseX, mouseY);
+    if (!zoneId) {
+      return false;
+    }
+    return this.updateCharacterBehaviorHomeZone(actorId, zoneId);
+  }
+
+  private getRoomShellFixture(fixtureId: string | null | undefined): EnvironmentPlanRoomShellFixture | null {
+    if (!fixtureId || !Array.isArray(this.currentRoomShell.fixtures)) {
+      return null;
+    }
+    return this.currentRoomShell.fixtures.find((fixture) => fixture.id === fixtureId) || null;
+  }
+
+  private findRoomShellFixtureByKinds(
+    kinds: Array<EnvironmentPlanRoomShellFixture['kind']>,
+    zoneHints: string[] = [],
+  ): EnvironmentPlanRoomShellFixture | null {
+    const fixtures = Array.isArray(this.currentRoomShell.fixtures) ? this.currentRoomShell.fixtures : [];
+    const loweredZoneHints = zoneHints.map((hint) => hint.toLowerCase());
+
+    const hintedMatch = fixtures.find((fixture) => {
+      if (!kinds.includes(fixture.kind)) {
+        return false;
+      }
+      if (loweredZoneHints.length === 0) {
+        return false;
+      }
+      const haystack = `${fixture.id} ${fixture.zoneId || ''} ${(fixture.notes || []).join(' ')}`.toLowerCase();
+      return loweredZoneHints.some((hint) => haystack.includes(hint));
+    });
+    if (hintedMatch) {
+      return hintedMatch;
+    }
+
+    return fixtures.find((fixture) => kinds.includes(fixture.kind)) || null;
+  }
+
+  private resolveRoomShellFixturePosition(
+    fixture: EnvironmentPlanRoomShellFixture | null | undefined,
+    fallback?: BABYLON.Vector3 | null,
+  ): BABYLON.Vector3 | null {
+    if (!fixture) {
+      return fallback ? fallback.clone() : null;
+    }
+
+    const zonePosition = fixture.zoneId
+      ? this.resolveRoomShellZonePosition(fixture.zoneId, fallback || null)
+      : null;
+    const usableHalfWidth = Math.max(1.2, this.currentRoomShell.width * 0.36);
+    const usableHalfDepth = Math.max(1.2, this.currentRoomShell.depth * 0.32);
+    const basePosition = zonePosition
+      || new BABYLON.Vector3(
+        (fixture.xBias || 0) * usableHalfWidth,
+        fallback?.y ?? 0,
+        (fixture.zBias || 0) * usableHalfDepth,
+      );
+
+    if (!fixture.wallTarget) {
+      return basePosition;
+    }
+
+    const wallInset = Math.max(0.42, this.currentRoomShell.depth * 0.04);
+    if (fixture.wallTarget === 'backWall') {
+      return new BABYLON.Vector3(basePosition.x, basePosition.y, -(this.currentRoomShell.depth * 0.5) + wallInset);
+    }
+    if (fixture.wallTarget === 'rearWall') {
+      return new BABYLON.Vector3(basePosition.x, basePosition.y, (this.currentRoomShell.depth * 0.5) - wallInset);
+    }
+    if (fixture.wallTarget === 'leftWall') {
+      return new BABYLON.Vector3(-(this.currentRoomShell.width * 0.5) + wallInset, basePosition.y, basePosition.z);
+    }
+    return new BABYLON.Vector3((this.currentRoomShell.width * 0.5) - wallInset, basePosition.y, basePosition.z);
+  }
+
+  private resolveBehaviorLookAtPosition(
+    behavior: CharacterBehaviorConfig,
+    fallback: BABYLON.Vector3,
+  ): BABYLON.Vector3 | null {
+    switch (behavior.lookAtTarget) {
+      case 'camera':
+      case 'guests':
+        return this.camera.position.clone();
+      case 'hero_prop':
+        return new BABYLON.Vector3(0, fallback.y, 0);
+      case 'counter':
+        return this.resolveRoomShellZonePosition('front_counter', fallback) || fallback.clone();
+      case 'oven':
+        return this.resolveRoomShellZonePosition('oven_wall', fallback) || fallback.clone();
+      default:
+        return null;
+    }
+  }
+
+  private getEnvironmentBehaviorRole(mesh: BABYLON.AbstractMesh): string {
+    const metadata = (mesh.metadata || {}) as Record<string, unknown>;
+    return typeof metadata.characterRole === 'string'
+      ? metadata.characterRole.toLowerCase()
+      : '';
+  }
+
+  private getEnvironmentBehaviorWorldPosition(mesh: BABYLON.AbstractMesh): BABYLON.Vector3 {
+    const profile = this.resolveCharacterModelProfile(mesh);
+    const motionMesh = this.resolveCharacterMotionNode(mesh, profile);
+    return motionMesh && !motionMesh.isDisposed()
+      ? this.getMotionNodeWorldPosition(motionMesh)
+      : mesh.position.clone();
+  }
+
+  private findNearestEnvironmentBehaviorActor(
+    requesterNodeId: string,
+    options: {
+      roles?: string[];
+      phases?: CharacterBehaviorPhase[];
+      nearPosition?: BABYLON.Vector3 | null;
+      maxDistance?: number;
+    } = {},
+  ): {
+    nodeId: string;
+    state: {
+      mesh: BABYLON.AbstractMesh;
+      plan: CharacterBehaviorConfig;
+      basePosition: BABYLON.Vector3;
+      routePoints: BABYLON.Vector3[];
+      seed: number;
+      phase: CharacterBehaviorPhase;
+      carryKind: CharacterBehaviorCarryKind | null;
+      targetKind: string | null;
+      targetId: string | null;
+      blockingOffset: number;
+      lastPhaseChangeAtMs: number;
+    };
+    role: string;
+    position: BABYLON.Vector3;
+    distance: number;
+  } | null {
+    const roleFilters = (options.roles || []).map((role) => role.toLowerCase()).filter(Boolean);
+    const phaseFilters = options.phases || [];
+    const nearPosition = options.nearPosition || null;
+    const maxDistance = options.maxDistance ?? Math.max(2.6, this.currentRoomShell.width * 0.34);
+    let bestMatch: {
+      nodeId: string;
+      state: {
+        mesh: BABYLON.AbstractMesh;
+        plan: CharacterBehaviorConfig;
+        basePosition: BABYLON.Vector3;
+        routePoints: BABYLON.Vector3[];
+        seed: number;
+        phase: CharacterBehaviorPhase;
+        carryKind: CharacterBehaviorCarryKind | null;
+        targetKind: string | null;
+        targetId: string | null;
+        blockingOffset: number;
+        lastPhaseChangeAtMs: number;
+      };
+      role: string;
+      position: BABYLON.Vector3;
+      distance: number;
+    } | null = null;
+
+    this.environmentCharacterBehaviors.forEach((candidateState, candidateId) => {
+      if (candidateId === requesterNodeId) {
+        return;
+      }
+      const candidateMesh = candidateState.mesh;
+      if (!candidateMesh || candidateMesh.isDisposed()) {
+        return;
+      }
+      const candidateRole = this.getEnvironmentBehaviorRole(candidateMesh);
+      if (roleFilters.length > 0 && !roleFilters.some((role) => candidateRole.includes(role))) {
+        return;
+      }
+      if (phaseFilters.length > 0 && !phaseFilters.includes(candidateState.phase)) {
+        return;
+      }
+
+      const candidatePosition = this.getEnvironmentBehaviorWorldPosition(candidateMesh);
+      const distance = nearPosition
+        ? BABYLON.Vector3.Distance(nearPosition, candidatePosition)
+        : BABYLON.Vector3.Distance(this.getEnvironmentBehaviorWorldPosition(this.environmentCharacterBehaviors.get(requesterNodeId)?.mesh || candidateMesh), candidatePosition);
+      if (!Number.isFinite(distance) || distance > maxDistance) {
+        return;
+      }
+      if (!bestMatch || distance < bestMatch.distance) {
+        bestMatch = {
+          nodeId: candidateId,
+          state: candidateState,
+          role: candidateRole,
+          position: candidatePosition,
+          distance,
+        };
+      }
+    });
+
+    return bestMatch;
+  }
+
+  private resolveEnvironmentBehaviorQueueSlotPosition(
+    zoneId: string | null,
+    nodeId: string,
+    roleFilters: string[] = ['customer', 'guest'],
+  ): BABYLON.Vector3 | null {
+    const zonePosition = this.resolveRoomShellZonePosition(zoneId);
+    if (!zonePosition) {
+      return null;
+    }
+
+    const queueMembers = Array.from(this.environmentCharacterBehaviors.entries())
+      .filter(([candidateId, candidateState]) => {
+        if (candidateId === nodeId) {
+          return true;
+        }
+        const role = this.getEnvironmentBehaviorRole(candidateState.mesh);
+        return roleFilters.some((value) => role.includes(value));
+      })
+      .sort(([leftId], [rightId]) => leftId.localeCompare(rightId));
+    const slotIndex = Math.max(0, queueMembers.findIndex(([candidateId]) => candidateId === nodeId));
+    const lateralSpacing = Math.max(0.55, this.currentRoomShell.width * 0.032);
+    const depthSpacing = Math.max(0.72, this.currentRoomShell.depth * 0.05);
+    const row = Math.floor(slotIndex / 3);
+    const column = slotIndex % 3;
+    const lateralOffset = (column - 1) * lateralSpacing;
+    const depthDirection = zonePosition.z <= 0 ? 1 : -1;
+
+    return new BABYLON.Vector3(
+      zonePosition.x + lateralOffset,
+      0,
+      zonePosition.z + (depthDirection * (0.9 + (row * depthSpacing))),
+    );
+  }
+
+  private resolveEnvironmentBehaviorDiningSlotPosition(
+    zoneId: string | null,
+    nodeId: string,
+    roleFilters: string[] = ['customer', 'guest'],
+  ): BABYLON.Vector3 | null {
+    const zonePosition = this.resolveRoomShellZonePosition(zoneId);
+    if (!zonePosition) {
+      return null;
+    }
+
+    const diningMembers = Array.from(this.environmentCharacterBehaviors.entries())
+      .filter(([candidateId, candidateState]) => {
+        if (candidateId === nodeId) {
+          return true;
+        }
+        const role = this.getEnvironmentBehaviorRole(candidateState.mesh);
+        return roleFilters.some((value) => role.includes(value));
+      })
+      .sort(([leftId], [rightId]) => leftId.localeCompare(rightId));
+    const slotIndex = Math.max(0, diningMembers.findIndex(([candidateId]) => candidateId === nodeId));
+    const ringIndex = slotIndex % 4;
+    const ring = Math.floor(slotIndex / 4);
+    const radius = 0.72 + (ring * 0.34);
+    const angle = (-Math.PI * 0.35) + (ringIndex * (Math.PI / 2.2));
+
+    return new BABYLON.Vector3(
+      zonePosition.x + Math.cos(angle) * radius,
+      0,
+      zonePosition.z + Math.sin(angle) * radius,
+    );
+  }
+
+  private getDefaultEnvironmentBehaviorPhase(type: CharacterBehaviorConfig['type']): CharacterBehaviorPhase {
+    switch (type) {
+      case 'work_loop':
+        return 'prep';
+      case 'counter_service':
+        return 'greet';
+      case 'serve_route':
+        return 'carry_service';
+      case 'hero_idle':
+        return 'present';
+      case 'patrol':
+        return 'patrol';
+      default:
+        return 'idle';
+    }
+  }
+
+  private resolveEnvironmentBehaviorLayoutAnchor(
+    state: {
+      mesh: BABYLON.AbstractMesh;
+      plan: CharacterBehaviorConfig;
+    },
+    phase: CharacterBehaviorPhase,
+  ): ResolvedLayoutObjectAnchor | null {
+    const metadata = (state.mesh.metadata || {}) as Record<string, unknown>;
+    return findBestBehaviorLayoutAnchor(this.currentEnvironmentLayoutGuidance, {
+      role: typeof metadata.characterRole === 'string' ? metadata.characterRole : null,
+      name: typeof metadata.characterName === 'string' ? metadata.characterName : state.mesh.name,
+      placementHint: typeof metadata.placementHint === 'string' ? metadata.placementHint : null,
+      actionHint: typeof metadata.actionHint === 'string' ? metadata.actionHint : null,
+      behaviorType: state.plan.type,
+      phase,
+      layoutAnchorId: typeof metadata.layoutAnchorId === 'string' ? metadata.layoutAnchorId : null,
+      layoutAnchorKind: typeof metadata.layoutAnchorKind === 'string' ? metadata.layoutAnchorKind : null,
+    });
+  }
+
+  private resolveEnvironmentBehaviorLayoutAnchorPosition(
+    anchor: ResolvedLayoutObjectAnchor | null | undefined,
+    phase: CharacterBehaviorPhase,
+  ): BABYLON.Vector3 | null {
+    const mapped = mapLayoutAnchorToBehaviorPosition(anchor, this.currentRoomShell, phase);
+    if (!mapped) {
+      return null;
+    }
+    return new BABYLON.Vector3(mapped.x, 0, mapped.z);
+  }
+
+  private getBehaviorPaceFactor(behavior: CharacterBehaviorConfig): number {
+    if (behavior.pace === 'still') return 0.18;
+    if (behavior.pace === 'active') return 1;
+    return 0.52;
+  }
+
+  private clearEnvironmentCharacterBehavior(nodeId: string): void {
+    const state = this.environmentCharacterBehaviors.get(nodeId);
+    if (state) {
+      this.clearCharacterBodyMotionOverlay(state.mesh);
+      this.disposeCharacterBehaviorAccessories(state.mesh);
+    }
+    this.environmentCharacterBehaviors.delete(nodeId);
+  }
+
+  private clearEnvironmentCharacterBehaviors(): void {
+    Array.from(this.environmentCharacterBehaviors.keys()).forEach((nodeId) => {
+      this.clearEnvironmentCharacterBehavior(nodeId);
+    });
+    this.publishTopViewSync('topview-behavior-cleared', 'runtime');
+  }
+
+  private buildEnvironmentCharacterRoutePoints(
+    mesh: BABYLON.AbstractMesh,
+    behaviorPlan: CharacterBehaviorConfig,
+    basePosition: BABYLON.Vector3,
+  ): BABYLON.Vector3[] {
+    if (Array.isArray(behaviorPlan.customRoutePoints) && behaviorPlan.customRoutePoints.length > 0) {
+      return behaviorPlan.customRoutePoints
+        .map((point) => new BABYLON.Vector3(point.x, basePosition.y, point.z))
+        .filter((value, index, points) => points.findIndex((candidate) => BABYLON.Vector3.DistanceSquared(candidate, value) < 0.0001) === index);
+    }
+
+    const initialLayoutAnchor = this.resolveEnvironmentBehaviorLayoutAnchor(
+      {
+        mesh,
+        plan: behaviorPlan,
+      },
+      this.getDefaultEnvironmentBehaviorPhase(behaviorPlan.type),
+    );
+
+    return [
+      this.resolveEnvironmentBehaviorLayoutAnchorPosition(
+        initialLayoutAnchor,
+        this.getDefaultEnvironmentBehaviorPhase(behaviorPlan.type),
+      ),
+      this.resolveRoomShellZonePosition(behaviorPlan.homeZoneId, basePosition),
+      ...(behaviorPlan.routeZoneIds || []).map((zoneId) => this.resolveRoomShellZonePosition(zoneId, basePosition)),
+    ]
+      .filter((value): value is BABYLON.Vector3 => Boolean(value))
+      .filter((value, index, points) => points.findIndex((candidate) => BABYLON.Vector3.DistanceSquared(candidate, value) < 0.0001) === index);
+  }
+
+  private registerEnvironmentCharacterBehavior(
+    nodeId: string,
+    mesh: BABYLON.AbstractMesh,
+    behaviorPlan?: CharacterBehaviorConfig | null,
+  ): void {
+    const normalizedBehavior = this.normalizeCharacterBehaviorConfig(behaviorPlan);
+    if (!normalizedBehavior) {
+      this.clearEnvironmentCharacterBehavior(nodeId);
+      return;
+    }
+
+    const basePosition = mesh.position.clone();
+    const routePoints = this.buildEnvironmentCharacterRoutePoints(mesh, normalizedBehavior, basePosition);
+
+    this.environmentCharacterBehaviors.set(nodeId, {
+      mesh,
+      plan: normalizedBehavior,
+      basePosition,
+      routePoints: routePoints.length > 0 ? routePoints : [basePosition.clone()],
+      seed: (mesh.uniqueId % 17) * 0.37,
+      phase: 'idle',
+      carryKind: null,
+      targetKind: null,
+      targetId: null,
+      blockingOffset: 0,
+      lastPhaseChangeAtMs: performance.now(),
+    });
+    this.publishTopViewSync('topview-behavior-registered', 'runtime');
+  }
+
+  private sampleEnvironmentBehaviorRoutePosition(
+    routePoints: BABYLON.Vector3[],
+    progress: number,
+    loop = false,
+  ): BABYLON.Vector3 {
+    if (routePoints.length === 0) {
+      return BABYLON.Vector3.Zero();
+    }
+    if (routePoints.length === 1) {
+      return routePoints[0].clone();
+    }
+
+    const points = loop ? [...routePoints, routePoints[0]] : routePoints;
+    const segmentCount = Math.max(1, points.length - 1);
+    const normalizedProgress = loop
+      ? ((((progress % 1) + 1) % 1) * segmentCount)
+      : BABYLON.Scalar.Clamp(progress, 0, 0.9999) * segmentCount;
+    const startIndex = Math.min(segmentCount - 1, Math.floor(normalizedProgress));
+    const endIndex = Math.min(points.length - 1, startIndex + 1);
+    const blend = normalizedProgress - startIndex;
+    return BABYLON.Vector3.Lerp(points[startIndex], points[endIndex], blend);
+  }
+
+  private disposeCharacterBehaviorAccessories(rootMesh: BABYLON.AbstractMesh): void {
+    rootMesh.getChildMeshes(true)
+      .filter((mesh) => Boolean((mesh.metadata as { characterBehaviorAccessory?: boolean } | undefined)?.characterBehaviorAccessory))
+      .forEach((mesh) => mesh.dispose(false, true));
+  }
+
+  private createCharacterBehaviorMaterial(
+    name: string,
+    colorHex: string,
+    emissiveHex?: string | null,
+  ): BABYLON.StandardMaterial {
+    const material = new BABYLON.StandardMaterial(name, this.scene);
+    material.diffuseColor = BABYLON.Color3.FromHexString(colorHex);
+    material.specularColor = new BABYLON.Color3(0.06, 0.06, 0.06);
+    if (emissiveHex) {
+      material.emissiveColor = BABYLON.Color3.FromHexString(emissiveHex).scale(0.14);
+    }
+    return material;
+  }
+
+  private markCharacterBehaviorAccessory(mesh: BABYLON.AbstractMesh): void {
+    mesh.metadata = {
+      ...(mesh.metadata || {}),
+      characterBehaviorAccessory: true,
+    };
+    mesh.receiveShadows = true;
+    this.lights.forEach((lightData) => {
+      if (lightData.shadowGenerator) {
+        lightData.shadowGenerator.addShadowCaster(mesh);
+      }
+    });
+  }
+
+  private resolveBehaviorCycle(
+    type: CharacterBehaviorConfig['type'],
+    elapsedSeconds: number,
+    seed: number,
+  ): number {
+    const speed = type === 'serve_route'
+      ? 0.12
+      : type === 'work_loop'
+        ? 0.16
+        : type === 'counter_service'
+          ? 0.11
+          : type === 'patrol'
+            ? 0.09
+            : 0.06;
+    return (((elapsedSeconds * speed) + (seed * 0.19)) % 1 + 1) % 1;
+  }
+
+  private resolveEnvironmentBehaviorPresentation(
+    state: {
+      mesh: BABYLON.AbstractMesh;
+      plan: CharacterBehaviorConfig;
+      seed: number;
+    },
+    elapsedSeconds: number,
+  ): { phase: CharacterBehaviorPhase; carryKind: CharacterBehaviorCarryKind | null } {
+    const roleContext = `${String((state.mesh.metadata as Record<string, unknown> | undefined)?.characterRole || '')} ${String((state.mesh.metadata as Record<string, unknown> | undefined)?.actionHint || '')}`.toLowerCase();
+    const cycle = this.resolveBehaviorCycle(state.plan.type, elapsedSeconds, state.seed);
+
+    if (state.plan.type === 'work_loop') {
+      if (cycle < 0.22) return { phase: 'prep', carryKind: roleContext.includes('pizza') ? 'dough_tray' : null };
+      if (cycle < 0.48) return { phase: 'carry_to_oven', carryKind: 'pizza_peel' };
+      if (cycle < 0.66) return { phase: 'oven_check', carryKind: 'pizza_peel' };
+      if (cycle < 0.86) return { phase: 'finish_pass', carryKind: 'pizza_box' };
+      return { phase: 'return', carryKind: null };
+    }
+    if (state.plan.type === 'serve_route') {
+      if (cycle < 0.2) return { phase: 'pickup', carryKind: 'serving_tray' };
+      if (cycle < 0.62) return { phase: 'carry_service', carryKind: 'serving_tray' };
+      if (cycle < 0.82) return { phase: 'serve', carryKind: 'pizza_box' };
+      return { phase: 'return', carryKind: null };
+    }
+    if (state.plan.type === 'counter_service') {
+      if (cycle < 0.34) return { phase: 'greet', carryKind: null };
+      if (cycle < 0.7) return { phase: 'register', carryKind: roleContext.includes('menu') ? 'menu_card' : 'order_pad' };
+      return { phase: 'handover', carryKind: roleContext.includes('pizza') ? 'pizza_box' : 'order_pad' };
+    }
+    if (state.plan.type === 'patrol') {
+      if (roleContext.includes('customer') || roleContext.includes('guest')) {
+        if (cycle < 0.34) return { phase: 'queue', carryKind: null };
+        if (cycle < 0.84) return { phase: 'dine', carryKind: null };
+      }
+      return { phase: 'patrol', carryKind: null };
+    }
+    if (state.plan.type === 'hero_idle') {
+      return { phase: 'present', carryKind: null };
+    }
+    return { phase: 'idle', carryKind: null };
+  }
+
+  private findEnvironmentPropAnchorPosition(options: {
+    assetIds?: string[];
+    primitiveIds?: string[];
+    keywords?: string[];
+  }): BABYLON.Vector3 | null {
+    const requestedAssetIds = new Set((options.assetIds || []).filter(Boolean));
+    const requestedPrimitiveIds = new Set((options.primitiveIds || []).filter(Boolean));
+    const requestedKeywords = (options.keywords || []).map((keyword) => keyword.toLowerCase()).filter(Boolean);
+
+    for (const propState of this.sceneState.props.values()) {
+      const propDef = getPropById(propState.assetId);
+      const primitive = typeof propState.metadata?.propPrimitive === 'string'
+        ? String(propState.metadata.propPrimitive)
+        : typeof propDef?.metadata?.primitive === 'string'
+          ? String(propDef.metadata.primitive)
+          : '';
+      const haystack = `${propState.assetId} ${propState.name} ${primitive} ${String(propState.metadata?.placementHint || '')}`.toLowerCase();
+      const matches = (
+        (requestedAssetIds.size > 0 && requestedAssetIds.has(propState.assetId))
+        || (requestedPrimitiveIds.size > 0 && primitive && requestedPrimitiveIds.has(primitive))
+        || (requestedKeywords.length > 0 && requestedKeywords.some((keyword) => haystack.includes(keyword)))
+      );
+      if (!matches) {
+        continue;
+      }
+
+      const bounds = propState.mesh.getHierarchyBoundingVectors(true);
+      const center = bounds.min.add(bounds.max).scale(0.5);
+      return new BABYLON.Vector3(center.x, 0, center.z);
+    }
+
+    return null;
+  }
+
+  private resolveEnvironmentBehaviorPhaseTarget(
+    nodeId: string,
+    state: {
+      mesh: BABYLON.AbstractMesh;
+      plan: CharacterBehaviorConfig;
+      routePoints: BABYLON.Vector3[];
+    },
+    phase: CharacterBehaviorPhase,
+  ): { position: BABYLON.Vector3 | null; targetKind: string | null; targetId: string | null } {
+    const role = this.getEnvironmentBehaviorRole(state.mesh);
+    const isCustomer = role.includes('customer') || role.includes('guest');
+    const isCashier = role.includes('cashier') || role.includes('host');
+    const isServer = role.includes('server');
+    const prepFixture = this.findRoomShellFixtureByKinds(['prep_island', 'counter_block'], ['prep', 'kitchen']);
+    const counterFixture = this.findRoomShellFixtureByKinds(['counter_block', 'host_stand', 'pass_shelf'], ['counter', 'front', 'register']);
+    const serviceFixture = this.findRoomShellFixtureByKinds(['pass_shelf', 'counter_block'], ['pass', 'oven', 'counter']);
+    const diningFixture = this.findRoomShellFixtureByKinds(['banquette', 'display_plinth'], ['dining', 'hero', 'aisle']);
+    const prepPosition = this.resolveRoomShellFixturePosition(prepFixture) || this.resolveRoomShellZonePosition(state.plan.homeZoneId || null);
+    const counterPosition = this.resolveRoomShellFixturePosition(counterFixture) || this.resolveRoomShellZonePosition('front_counter');
+    const servicePosition = this.resolveRoomShellFixturePosition(serviceFixture) || counterPosition;
+    const diningPosition = this.resolveRoomShellFixturePosition(diningFixture) || this.resolveRoomShellZonePosition('dining_aisle');
+    const ovenPosition = this.findEnvironmentPropAnchorPosition({
+      primitiveIds: ['oven-facade'],
+      keywords: ['oven', 'pizza peel', 'wood-fired'],
+    }) || this.resolveRoomShellZonePosition('oven_wall');
+    const heroTablePosition = this.findEnvironmentPropAnchorPosition({
+      primitiveIds: ['table', 'counter'],
+      keywords: ['hero', 'pizza', 'table', 'counter'],
+    }) || this.resolveRoomShellZonePosition('hero_zone');
+    const layoutAnchor = this.resolveEnvironmentBehaviorLayoutAnchor(state, phase);
+    const layoutAnchorPosition = this.resolveEnvironmentBehaviorLayoutAnchorPosition(layoutAnchor, phase);
+    const counterCustomerTarget = isCashier
+      ? this.findNearestEnvironmentBehaviorActor(nodeId, {
+        roles: ['customer', 'guest'],
+        phases: ['queue', 'patrol', 'dine'],
+        nearPosition: counterPosition || servicePosition,
+        maxDistance: Math.max(3.6, this.currentRoomShell.width * 0.42),
+      })
+      : null;
+    const diningCustomerTarget = isServer
+      ? this.findNearestEnvironmentBehaviorActor(nodeId, {
+        roles: ['customer', 'guest'],
+        phases: ['dine', 'patrol', 'queue'],
+        nearPosition: diningPosition || heroTablePosition,
+        maxDistance: Math.max(4.2, this.currentRoomShell.width * 0.46),
+      })
+      : null;
+    const customerQueuePosition = isCustomer
+      ? this.resolveEnvironmentBehaviorQueueSlotPosition(counterFixture?.zoneId || 'front_counter', nodeId)
+      : null;
+    const customerDiningPosition = isCustomer
+      ? this.resolveEnvironmentBehaviorDiningSlotPosition(diningFixture?.zoneId || 'dining_aisle', nodeId)
+      : null;
+
+    const fixtureOrZoneTarget = (
+      position: BABYLON.Vector3 | null,
+      targetKind: string,
+      targetId: string | null,
+    ) => ({
+      position,
+      targetKind,
+      targetId,
+    });
+    const withLayoutTarget = (
+      position: BABYLON.Vector3 | null,
+      targetKind: string,
+      targetId: string | null,
+    ) => fixtureOrZoneTarget(
+      layoutAnchorPosition || position,
+      layoutAnchorPosition ? 'scene_anchor' : targetKind,
+      layoutAnchorPosition ? layoutAnchor?.id || targetId : targetId,
+    );
+
+    switch (phase) {
+      case 'prep':
+      case 'return':
+        return withLayoutTarget(prepPosition, prepFixture ? 'fixture' : 'zone', prepFixture?.id || state.plan.homeZoneId || null);
+      case 'carry_to_oven':
+      case 'oven_check':
+        return withLayoutTarget(ovenPosition, ovenPosition ? 'scene_anchor' : 'zone', ovenPosition ? 'oven_anchor' : 'oven_wall');
+      case 'finish_pass':
+      case 'pickup':
+        return withLayoutTarget(servicePosition, serviceFixture ? 'fixture' : 'zone', serviceFixture?.id || 'front_counter');
+      case 'greet':
+      case 'register':
+      case 'handover':
+        if (counterCustomerTarget) {
+          const interactionPosition = counterPosition
+            ? BABYLON.Vector3.Lerp(counterPosition, counterCustomerTarget.position, 0.32)
+            : counterCustomerTarget.position.clone();
+          return withLayoutTarget(interactionPosition, 'actor', counterCustomerTarget.nodeId);
+        }
+        return withLayoutTarget(counterPosition, counterFixture ? 'fixture' : 'zone', counterFixture?.id || 'front_counter');
+      case 'carry_service':
+      case 'serve':
+        if (diningCustomerTarget) {
+          const serviceApproach = diningPosition
+            ? BABYLON.Vector3.Lerp(diningCustomerTarget.position, diningPosition, 0.24)
+            : diningCustomerTarget.position.clone();
+          return withLayoutTarget(serviceApproach, 'actor', diningCustomerTarget.nodeId);
+        }
+        return withLayoutTarget(heroTablePosition || diningPosition, heroTablePosition ? 'scene_anchor' : 'zone', heroTablePosition ? 'hero_anchor' : 'dining_aisle');
+      case 'queue':
+        return withLayoutTarget(customerQueuePosition || counterPosition, customerQueuePosition ? 'queue_slot' : 'zone', customerQueuePosition ? `${counterFixture?.zoneId || 'front_counter'}:${nodeId}` : (counterFixture?.zoneId || 'front_counter'));
+      case 'dine':
+        return withLayoutTarget(customerDiningPosition || diningPosition || heroTablePosition, customerDiningPosition ? 'dining_slot' : (diningFixture ? 'fixture' : 'zone'), customerDiningPosition ? `${diningFixture?.zoneId || 'dining_aisle'}:${nodeId}` : (diningFixture?.id || 'dining_aisle'));
+      case 'patrol':
+        if (isCustomer) {
+          return withLayoutTarget(customerDiningPosition || customerQueuePosition || diningPosition || counterPosition, customerDiningPosition ? 'dining_slot' : customerQueuePosition ? 'queue_slot' : 'zone', customerDiningPosition ? `${diningFixture?.zoneId || 'dining_aisle'}:${nodeId}` : customerQueuePosition ? `${counterFixture?.zoneId || 'front_counter'}:${nodeId}` : (diningFixture?.id || 'dining_aisle'));
+        }
+        return withLayoutTarget(diningPosition || counterPosition, diningFixture ? 'fixture' : 'zone', diningFixture?.id || 'dining_aisle');
+      case 'present':
+        return withLayoutTarget(heroTablePosition, heroTablePosition ? 'scene_anchor' : 'zone', heroTablePosition ? 'hero_anchor' : 'hero_zone');
+      default:
+        return withLayoutTarget(state.routePoints[0] || null, 'route', state.plan.homeZoneId || null);
+    }
+  }
+
+  private applyEnvironmentBehaviorBlockingOffset(
+    nodeId: string,
+    desiredPosition: BABYLON.Vector3,
+    radius: number,
+  ): { position: BABYLON.Vector3; blockingOffset: number } {
+    const adjusted = desiredPosition.clone();
+    let totalOffset = 0;
+
+    this.environmentCharacterBehaviors.forEach((otherState, otherNodeId) => {
+      if (otherNodeId === nodeId) {
+        return;
+      }
+      const delta = adjusted.subtract(otherState.mesh.position);
+      delta.y = 0;
+      const distance = delta.length();
+      const interactionPair = (
+        (this.environmentCharacterBehaviors.get(nodeId)?.targetKind === 'actor' && this.environmentCharacterBehaviors.get(nodeId)?.targetId === otherNodeId)
+        || (otherState.targetKind === 'actor' && otherState.targetId === nodeId)
+      );
+      const minimumDistance = interactionPair
+        ? Math.max(0.44, radius * 0.48)
+        : Math.max(0.7, radius * 0.9);
+      if (distance > 0.001 && distance < minimumDistance) {
+        const pushStrength = (minimumDistance - distance) * (interactionPair ? 0.24 : 0.55);
+        adjusted.addInPlace(delta.normalize().scale(pushStrength));
+        totalOffset += pushStrength;
+      }
+    });
+
+    this.sceneState.props.forEach((propState) => {
+      const bounds = propState.mesh.getHierarchyBoundingVectors(true);
+      const center = bounds.min.add(bounds.max).scale(0.5);
+      center.y = 0;
+      const propRadius = Math.max(0.3, Math.max(bounds.max.x - bounds.min.x, bounds.max.z - bounds.min.z) * 0.35);
+      const delta = adjusted.subtract(center);
+      delta.y = 0;
+      const distance = delta.length();
+      const minimumDistance = propRadius + Math.max(0.35, radius * 0.45);
+      if (distance > 0.001 && distance < minimumDistance) {
+        const pushStrength = (minimumDistance - distance) * 0.35;
+        adjusted.addInPlace(delta.normalize().scale(pushStrength));
+        totalOffset += pushStrength;
+      }
+    });
+
+    adjusted.x = BABYLON.Scalar.Clamp(adjusted.x, -(this.currentRoomShell.width * 0.46), this.currentRoomShell.width * 0.46);
+    adjusted.z = BABYLON.Scalar.Clamp(adjusted.z, -(this.currentRoomShell.depth * 0.46), this.currentRoomShell.depth * 0.46);
+    return { position: adjusted, blockingOffset: totalOffset };
+  }
+
+  private refreshEnvironmentCharacterBehaviorAccessory(
+    rootMesh: BABYLON.AbstractMesh,
+    phase: CharacterBehaviorPhase,
+    carryKind: CharacterBehaviorCarryKind | null,
+  ): void {
+    this.disposeCharacterBehaviorAccessories(rootMesh);
+    if (!carryKind) {
+      return;
+    }
+
+    const profile = this.resolveCharacterModelProfile(rootMesh);
+    const anchor = this.resolveCharacterMotionNode(rootMesh, profile) || rootMesh;
+    const bounds = rootMesh.getHierarchyBoundingVectors(true);
+    const center = bounds.min.add(bounds.max).scale(0.5);
+    const height = Math.max(1.2, bounds.max.y - bounds.min.y);
+    const width = Math.max(0.3, bounds.max.x - bounds.min.x);
+    const depth = Math.max(0.2, bounds.max.z - bounds.min.z);
+    const up = BABYLON.Axis.Y.clone();
+    const towardCamera = this.getBrandDirectionToCamera(center);
+    const right = BABYLON.Vector3.Cross(up, towardCamera).normalize();
+    const primary = this.getEnvironmentBrandColor(0, '#c0392b');
+    const secondary = this.getEnvironmentBrandColor(1, '#f4e7d3');
+    const accent = this.getEnvironmentBrandColor(2, '#1f2937');
+
+    const attachMesh = (mesh: BABYLON.AbstractMesh, worldPosition: BABYLON.Vector3, yaw = 0, material?: BABYLON.Material | null): void => {
+      mesh.parent = anchor;
+      mesh.position = this.toLocalPosition(anchor, worldPosition);
+      mesh.rotation = new BABYLON.Vector3(0, yaw, 0);
+      if (material) {
+        mesh.material = material;
+      }
+      this.markCharacterBehaviorAccessory(mesh);
+    };
+
+    if (carryKind === 'dough_tray') {
+      const tray = BABYLON.MeshBuilder.CreateBox(`${rootMesh.name}_behaviorTray`, {
+        width: width * 0.34,
+        height: height * 0.05,
+        depth: depth * 0.42,
+      }, this.scene);
+      attachMesh(
+        tray,
+        center.add(up.scale(height * 0.02)).add(right.scale(width * 0.18)).add(towardCamera.scale(depth * 0.2)),
+        0,
+        this.createCharacterBehaviorMaterial(`${rootMesh.name}_behaviorTrayMat`, secondary, accent),
+      );
+    } else if (carryKind === 'pizza_peel') {
+      const head = BABYLON.MeshBuilder.CreateBox(`${rootMesh.name}_behaviorPeelHead`, {
+        width: width * 0.22,
+        height: height * 0.025,
+        depth: depth * 0.3,
+      }, this.scene);
+      attachMesh(
+        head,
+        center.add(up.scale(height * 0.04)).add(right.scale(width * 0.14)).add(towardCamera.scale(depth * 0.2)),
+        0,
+        this.createCharacterBehaviorMaterial(`${rootMesh.name}_behaviorPeelHeadMat`, secondary),
+      );
+      const handle = BABYLON.MeshBuilder.CreateBox(`${rootMesh.name}_behaviorPeelHandle`, {
+        width: width * 0.05,
+        height: height * 0.018,
+        depth: depth * 0.48,
+      }, this.scene);
+      attachMesh(
+        handle,
+        center.add(up.scale(height * 0.04)).add(right.scale(width * 0.14)).add(towardCamera.scale(depth * 0.44)),
+        0,
+        this.createCharacterBehaviorMaterial(`${rootMesh.name}_behaviorPeelHandleMat`, '#8b5e3c'),
+      );
+    } else if (carryKind === 'pizza_box') {
+      const box = BABYLON.MeshBuilder.CreateBox(`${rootMesh.name}_behaviorPizzaBox`, {
+        width: width * 0.3,
+        height: height * 0.08,
+        depth: depth * 0.34,
+      }, this.scene);
+      attachMesh(
+        box,
+        center.add(up.scale(height * 0.03)).add(right.scale(width * 0.18)).add(towardCamera.scale(depth * 0.22)),
+        0,
+        this.createCharacterBehaviorMaterial(`${rootMesh.name}_behaviorPizzaBoxMat`, secondary, primary),
+      );
+    } else if (carryKind === 'serving_tray') {
+      const tray = BABYLON.MeshBuilder.CreateCylinder(`${rootMesh.name}_behaviorServingTray`, {
+        diameter: width * 0.28,
+        height: height * 0.025,
+        tessellation: 18,
+      }, this.scene);
+      attachMesh(
+        tray,
+        center.add(up.scale(height * 0.07)).add(right.scale(width * 0.18)).add(towardCamera.scale(depth * 0.18)),
+        0,
+        this.createCharacterBehaviorMaterial(`${rootMesh.name}_behaviorServingTrayMat`, accent, primary),
+      );
+    } else if (carryKind === 'menu_card' || carryKind === 'order_pad') {
+      const plate = BABYLON.MeshBuilder.CreatePlane(`${rootMesh.name}_behaviorCard`, {
+        width: width * 0.18,
+        height: height * 0.16,
+      }, this.scene);
+      attachMesh(
+        plate,
+        center.add(up.scale(height * 0.08)).add(right.scale(width * 0.14)).add(towardCamera.scale(depth * 0.24)),
+        this.getYawFacingPoint(center, this.camera.position.clone()) || 0,
+        this.createBrandedCardMaterial(`${rootMesh.name}_behaviorCardMat`, {
+          title: carryKind === 'menu_card' ? 'Menu' : 'Order',
+          subtitle: phase.replace(/_/g, ' '),
+          style: 'menu_board',
+          decorationKind: 'packaging',
+        }),
+      );
+    }
+  }
+
+  private updateEnvironmentCharacterBehaviors(): void {
+    if (this.environmentCharacterBehaviors.size === 0) {
+      this.environmentCharacterBehaviorLastTickAtMs = null;
+      return;
+    }
+
+    const nowMs = performance.now();
+    const engineDt = Math.max(0.001, Math.min(0.08, this.engine.getDeltaTime() / 1000));
+    const idleDt = this.environmentCharacterBehaviorLastTickAtMs !== null
+      ? Math.max(0.001, Math.min(0.14, (nowMs - this.environmentCharacterBehaviorLastTickAtMs) / 1000))
+      : engineDt;
+    const dt = Math.max(engineDt, idleDt);
+    this.environmentCharacterBehaviorLastTickAtMs = nowMs;
+    const elapsedSeconds = nowMs * 0.001;
+
+    this.environmentCharacterBehaviors.forEach((state, nodeId) => {
+      const mesh = state.mesh;
+      if (!mesh || mesh.isDisposed()) {
+        this.environmentCharacterBehaviors.delete(nodeId);
+        return;
+      }
+
+      if (this.selectedActorId === nodeId || this.activeCharacterLocomotion?.mesh === mesh) {
+        this.clearCharacterBodyMotionOverlay(mesh);
+        this.disposeCharacterBehaviorAccessories(mesh);
+        state.phase = 'idle';
+        state.carryKind = null;
+        state.targetKind = null;
+        state.targetId = null;
+        state.blockingOffset = 0;
+        state.basePosition = mesh.position.clone();
+        return;
+      }
+
+      const profile = this.resolveCharacterModelProfile(mesh);
+      const motionMesh = this.resolveCharacterMotionNode(mesh, profile);
+      if (!motionMesh || motionMesh.isDisposed()) {
+        return;
+      }
+
+      const presentation = this.resolveEnvironmentBehaviorPresentation(state, elapsedSeconds);
+      if (presentation.phase !== state.phase || presentation.carryKind !== state.carryKind) {
+        state.phase = presentation.phase;
+        state.carryKind = presentation.carryKind;
+        state.lastPhaseChangeAtMs = performance.now();
+        this.refreshEnvironmentCharacterBehaviorAccessory(mesh, presentation.phase, presentation.carryKind);
+      }
+
+      const currentPosition = this.getMotionNodeWorldPosition(motionMesh);
+      const centerPoint = state.routePoints[0] || state.basePosition;
+      const paceFactor = this.getBehaviorPaceFactor(state.plan);
+      const radius = Math.max(0.08, state.plan.radius || 0.8);
+      let desiredPosition = centerPoint.clone();
+      const phaseTarget = this.resolveEnvironmentBehaviorPhaseTarget(nodeId, state, presentation.phase);
+      state.targetKind = phaseTarget.targetKind;
+      state.targetId = phaseTarget.targetId;
+
+      if (phaseTarget.position) {
+        desiredPosition = phaseTarget.position.clone();
+      } else if (state.plan.type === 'counter_service') {
+        if (state.routePoints.length > 1) {
+          desiredPosition = this.sampleEnvironmentBehaviorRoutePosition(
+            state.routePoints,
+            (Math.sin(elapsedSeconds * 0.35 + state.seed) + 1) * 0.5,
+          );
+        }
+        desiredPosition.x += Math.sin(elapsedSeconds * 0.9 + state.seed) * radius * 0.35;
+      } else if (state.plan.type === 'work_loop') {
+        if (state.routePoints.length > 1) {
+          desiredPosition = this.sampleEnvironmentBehaviorRoutePosition(
+            state.routePoints,
+            (elapsedSeconds * (0.075 + paceFactor * 0.04)) + (state.seed * 0.12),
+            true,
+          );
+        }
+        desiredPosition.x += Math.sin(elapsedSeconds * 1.3 + state.seed) * radius * 0.28;
+        desiredPosition.z += Math.cos(elapsedSeconds * 0.9 + state.seed) * radius * 0.18;
+      } else if (state.plan.type === 'serve_route' || state.plan.type === 'patrol') {
+        const routePoints = state.routePoints.length > 1
+          ? state.routePoints
+          : [centerPoint, centerPoint.clone().add(new BABYLON.Vector3(radius * 0.4, 0, radius * 0.26))];
+        desiredPosition = this.sampleEnvironmentBehaviorRoutePosition(
+          routePoints,
+          (Math.sin(elapsedSeconds * (state.plan.type === 'serve_route' ? 0.55 : 0.35) + state.seed) + 1) * 0.5,
+        );
+      } else if (state.plan.type === 'hero_idle') {
+        desiredPosition.x += Math.sin(elapsedSeconds * 0.48 + state.seed) * radius * 0.12;
+      } else if (state.plan.type === 'stationary') {
+        desiredPosition = centerPoint.clone();
+      }
+
+      const blocked = this.applyEnvironmentBehaviorBlockingOffset(nodeId, desiredPosition, radius);
+      state.blockingOffset = blocked.blockingOffset;
+      const nextPosition = BABYLON.Vector3.Lerp(currentPosition, blocked.position, BABYLON.Scalar.Clamp(dt * (0.6 + paceFactor), 0.05, 0.45));
+      const movement = blocked.position.subtract(currentPosition);
+      const movementStrength = movement.length();
+      const lookAtPosition = this.resolveBehaviorLookAtPosition(state.plan, nextPosition) || (movementStrength > 0.02 ? blocked.position.clone() : null);
+
+      if (lookAtPosition) {
+        const desiredFacingYaw = Math.atan2(lookAtPosition.x - nextPosition.x, lookAtPosition.z - nextPosition.z) + (profile.forwardYawOffset || 0);
+        this.setMeshYaw(motionMesh, profile, desiredFacingYaw, Math.min(1, dt * 3.2));
+      }
+
+      this.setMotionNodeWorldPosition(motionMesh, nextPosition);
+      if (!this.findSkeletonCarrierMesh(mesh)?.skeleton) {
+        if (movementStrength > 0.01) {
+          this.applyCharacterBodyMotionOverlay(mesh, {
+            moving: true,
+            phase: elapsedSeconds * (1.4 + paceFactor),
+            speed: 0.35 + paceFactor,
+            forwardAxis: 1,
+            strafeAxis: 0,
+          });
+        } else {
+          this.clearCharacterBodyMotionOverlay(mesh);
+        }
+      }
+      this.syncCharacterNodeTransform(motionMesh, false);
+    });
+
+    if (nowMs - this.topViewLastBehaviorSyncAtMs >= 240) {
+      this.topViewLastBehaviorSyncAtMs = nowMs;
+      this.publishTopViewSync('topview-behavior-updated', 'runtime');
+    }
+  }
+
+  private resolveBrandedOutfitColors(
+    baseColors: string[] | undefined,
+    wardrobeStyle: string | null | undefined,
+    wardrobeVariantId?: string | null,
+  ): string[] {
+    const currentColors = Array.isArray(baseColors) ? baseColors.filter((value): value is string => typeof value === 'string' && value.length > 0) : [];
+    if (!this.environmentBrandingState.applyToWardrobe || this.environmentBrandingState.palette.length === 0) {
+      return currentColors;
+    }
+
+    const primary = this.getEnvironmentBrandColor(0, currentColors[0] || '#f97316');
+    const secondary = this.getEnvironmentBrandColor(1, currentColors[1] || '#fff7ed');
+    const accent = this.getEnvironmentBrandColor(2, currentColors[2] || '#111827');
+    const style = (wardrobeStyle || '').toLowerCase();
+    const variant = (wardrobeVariantId || '').toLowerCase();
+    const policy = (this.environmentBrandingState.uniformPolicy || 'match_palette').toLowerCase();
+
+    if (policy === 'front_of_house_emphasis' && (style === 'cashier' || style === 'server' || style === 'host')) {
+      return [primary, secondary, accent];
+    }
+    if (policy === 'kitchen_emphasis' && style === 'baker') {
+      return [primary, secondary, accent];
+    }
+    if (variant.includes('apron')) {
+      return [primary, secondary, accent];
+    }
+    if (variant.includes('polo') || variant.includes('tee')) {
+      return [accent, primary, secondary];
+    }
+    return [primary, secondary, accent];
+  }
+
+  private refreshEnvironmentCharacterBranding(): void {
+    this.sceneState.characters.forEach((character, nodeId) => {
+      if (!character.metadata?.environmentGenerated && character.metadata?.wardrobeStyle !== 'branded_uniform') {
+        return;
+      }
+
+      const meshMetadata = (character.mesh.metadata || {}) as Record<string, unknown>;
+      const catalogEntry = getCharacterCatalogEntry(typeof meshMetadata.characterCatalogId === 'string' ? meshMetadata.characterCatalogId : '')
+        || inferCharacterCatalogEntry(`${character.role || ''} ${character.name}`);
+      const wardrobeStyle = character.metadata?.wardrobeStyle || catalogEntry.wardrobeStyle;
+      const wardrobeVariantId = character.metadata?.wardrobeVariantId || null;
+      const brandedColors = this.resolveBrandedOutfitColors(character.metadata?.outfitColors, wardrobeStyle, wardrobeVariantId);
+      character.metadata = {
+        ...(character.metadata || {}),
+        outfitColors: brandedColors,
+      };
+      character.mesh.metadata = {
+        ...(character.mesh.metadata || {}),
+        outfitColors: brandedColors,
+      };
+      this.applyCharacterAppearanceShading(character.mesh, character.metadata?.appearance || null, brandedColors);
+      this.decorateCharacterForRole(character.mesh, catalogEntry, {
+        role: character.role,
+        wardrobeStyle,
+        wardrobeVariantId,
+        outfitColors: brandedColors,
+        logoPlacement: character.metadata?.logoPlacement,
+        actionHint: character.metadata?.actionHint || undefined,
+        appearance: character.metadata?.appearance || null,
+      });
+      useAppStore.getState().updateNode(nodeId, {
+        userData: {
+          ...(useAppStore.getState().getNode(nodeId)?.userData || {}),
+          outfitColors: brandedColors,
+        },
+      });
+    });
+  }
+
+  private disposeEnvironmentBrandAccessories(rootMesh: BABYLON.AbstractMesh): void {
+    rootMesh.getChildMeshes(true)
+      .filter((mesh) => Boolean((mesh.metadata as { environmentBrandAccessory?: boolean } | undefined)?.environmentBrandAccessory))
+      .forEach((mesh) => mesh.dispose(false, true));
+  }
+
+  private markEnvironmentBrandAccessory(
+    mesh: BABYLON.AbstractMesh,
+    decorationKind: 'signage' | 'packaging' | 'interior_trim',
+  ): void {
+    mesh.metadata = {
+      ...(mesh.metadata || {}),
+      environmentBrandAccessory: true,
+      environmentBrandDecorationKind: decorationKind,
+    };
+    mesh.receiveShadows = true;
+    this.lights.forEach((lightData) => {
+      if (lightData.shadowGenerator) {
+        lightData.shadowGenerator.addShadowCaster(mesh);
+      }
+    });
+  }
+
+  private getEnvironmentBrandTargets(): Set<EnvironmentBrandApplicationTarget> {
+    return new Set(this.environmentBrandingState.applicationTargets);
+  }
+
+  private getBrandDirectionToCamera(center: BABYLON.Vector3): BABYLON.Vector3 {
+    const direction = this.camera.position.subtract(center);
+    direction.y = 0;
+    if (direction.lengthSquared() < 0.0001) {
+      return new BABYLON.Vector3(0, 0, 1);
+    }
+    return direction.normalize();
+  }
+
+  private createBrandedCardMaterial(
+    name: string,
+    options: {
+      title: string;
+      subtitle?: string | null;
+      style?: string | null;
+      decorationKind: 'signage' | 'packaging';
+    },
+  ): BABYLON.StandardMaterial {
+    const primary = this.getEnvironmentBrandColor(0, '#c0392b');
+    const secondary = this.getEnvironmentBrandColor(1, '#f4e7d3');
+    const accent = this.getEnvironmentBrandColor(2, '#1f2937');
+    const style = (options.style || '').toLowerCase();
+    const material = new BABYLON.StandardMaterial(name, this.scene);
+    const textureWidth = 768;
+    const textureHeight = options.decorationKind === 'packaging' ? 256 : 384;
+    const dynamicTexture = new BABYLON.DynamicTexture(`${name}_texture`, { width: textureWidth, height: textureHeight }, this.scene, true);
+    const ctx = dynamicTexture.getContext() as unknown as CanvasRenderingContext2D;
+
+    ctx.clearRect(0, 0, textureWidth, textureHeight);
+    const background = ctx.createLinearGradient(0, 0, textureWidth, textureHeight);
+    if (style === 'neon') {
+      background.addColorStop(0, 'rgba(12, 14, 20, 0.92)');
+      background.addColorStop(1, 'rgba(18, 22, 30, 0.92)');
+    } else if (style === 'menu_board') {
+      background.addColorStop(0, 'rgba(26, 32, 24, 0.95)');
+      background.addColorStop(1, 'rgba(18, 23, 18, 0.95)');
+    } else {
+      background.addColorStop(0, 'rgba(24, 24, 28, 0.9)');
+      background.addColorStop(1, 'rgba(18, 18, 24, 0.92)');
+    }
+    ctx.fillStyle = background;
+    this.drawRoundedRect(ctx, 12, 12, textureWidth - 24, textureHeight - 24, 18);
+    ctx.fill();
+
+    const border = ctx.createLinearGradient(0, 0, textureWidth, 0);
+    border.addColorStop(0, primary);
+    border.addColorStop(0.5, secondary);
+    border.addColorStop(1, accent);
+    ctx.strokeStyle = border;
+    ctx.lineWidth = style === 'neon' ? 6 : 4;
+    this.drawRoundedRect(ctx, 12, 12, textureWidth - 24, textureHeight - 24, 18);
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.font = options.decorationKind === 'packaging' ? 'bold 46px Arial, sans-serif' : 'bold 64px Arial, sans-serif';
+    ctx.fillStyle = style === 'menu_board' ? secondary : '#f8fafc';
+    ctx.fillText(options.title.slice(0, 30), textureWidth / 2, options.decorationKind === 'packaging' ? 112 : 148);
+
+    if (options.subtitle) {
+      ctx.font = options.decorationKind === 'packaging' ? 'bold 24px Arial, sans-serif' : 'bold 32px Arial, sans-serif';
+      ctx.fillStyle = primary;
+      ctx.fillText(options.subtitle.slice(0, 42), textureWidth / 2, options.decorationKind === 'packaging' ? 162 : 214);
+    }
+
+    if (options.decorationKind === 'packaging') {
+      ctx.font = '20px Arial, sans-serif';
+      ctx.fillStyle = accent;
+      ctx.fillText('brand packaging', textureWidth / 2, 210);
+    }
+
+    dynamicTexture.update();
+    material.diffuseTexture = dynamicTexture;
+    material.emissiveTexture = dynamicTexture;
+    material.useAlphaFromDiffuseTexture = true;
+    material.backFaceCulling = false;
+    material.specularColor = new BABYLON.Color3(0, 0, 0);
+    if (style === 'neon') {
+      material.emissiveColor = BABYLON.Color3.FromHexString(primary).scale(0.35).add(BABYLON.Color3.FromHexString(accent).scale(0.15));
+    }
+    return material;
+  }
+
+  private updateEnvironmentPropBrandDecorationState(nodeId: string, decorationKinds: string[]): void {
+    const normalizedKinds = Array.from(new Set(decorationKinds.filter((value): value is string => typeof value === 'string' && value.length > 0)));
+    const propState = this.sceneState.props.get(nodeId);
+    if (propState) {
+      propState.metadata = {
+        ...(propState.metadata || {}),
+        brandDecorationKinds: normalizedKinds,
+      };
+      propState.mesh.metadata = {
+        ...(propState.mesh.metadata || {}),
+        brandDecorationKinds: normalizedKinds,
+      };
+    }
+
+    const store = useAppStore.getState();
+    const node = store.getNode(nodeId);
+    if (node) {
+      store.updateNode(nodeId, {
+        userData: {
+          ...(node.userData || {}),
+          brandDecorationKinds: normalizedKinds,
+        },
+      });
+    }
+  }
+
+  private refreshEnvironmentPropBranding(): void {
+    const targets = this.getEnvironmentBrandTargets();
+    const hasBranding = this.environmentBrandingState.palette.length > 0
+      || Boolean(this.environmentBrandingState.brandName)
+      || Boolean(this.environmentBrandingState.signageText)
+      || Boolean(this.environmentBrandingState.logoImage);
+
+    this.sceneState.props.forEach((propState, nodeId) => {
+      const rootMesh = propState.mesh;
+      if (!rootMesh || rootMesh.isDisposed()) {
+        return;
+      }
+
+      this.disposeEnvironmentBrandAccessories(rootMesh);
+      if (!propState.metadata?.environmentGenerated || !hasBranding) {
+        this.updateEnvironmentPropBrandDecorationState(nodeId, []);
+        return;
+      }
+
+      const propDef = getPropById(propState.assetId);
+      const primitive = typeof propState.metadata?.propPrimitive === 'string'
+        ? String(propState.metadata.propPrimitive)
+        : typeof propDef?.metadata?.primitive === 'string'
+          ? String(propDef.metadata.primitive)
+          : '';
+      const bounds = rootMesh.getHierarchyBoundingVectors(true);
+      const center = bounds.min.add(bounds.max).scale(0.5);
+      const width = Math.max(0.24, bounds.max.x - bounds.min.x);
+      const height = Math.max(0.12, bounds.max.y - bounds.min.y);
+      const depth = Math.max(0.12, bounds.max.z - bounds.min.z);
+      const up = BABYLON.Axis.Y.clone();
+      const towardCamera = this.getBrandDirectionToCamera(center);
+      const right = BABYLON.Vector3.Cross(up, towardCamera).normalize();
+      const decorationKinds: string[] = [];
+
+      if (targets.has('signage') && ['menu-board', 'neon-sign'].includes(primitive)) {
+        const signPlate = BABYLON.MeshBuilder.CreatePlane(`${rootMesh.name}_brandSignage`, {
+          width: Math.max(0.48, width * 0.92),
+          height: Math.max(0.24, height * 0.82),
+        }, this.scene);
+        const signWorldPos = center.add(towardCamera.scale(0.028));
+        signPlate.parent = rootMesh;
+        signPlate.position = this.toLocalPosition(rootMesh, signWorldPos);
+        signPlate.rotation = new BABYLON.Vector3(0, this.getYawFacingPoint(signWorldPos, this.camera.position.clone()) || 0, 0);
+        signPlate.material = this.createBrandedCardMaterial(`${rootMesh.name}_brandSignage_mat`, {
+          title: this.environmentBrandingState.brandName || 'Brand',
+          subtitle: this.environmentBrandingState.signageText || this.environmentBrandingState.profileName || 'Signature scene',
+          style: this.environmentBrandingState.signageStyle,
+          decorationKind: 'signage',
+        });
+        this.markEnvironmentBrandAccessory(signPlate, 'signage');
+        decorationKinds.push('signage');
+      }
+
+      if ((targets.has('interior_details') || targets.has('environment')) && ['counter', 'rustic-table', 'display-shelf', 'oven-facade', 'menu-board'].includes(primitive)) {
+        const trim = BABYLON.MeshBuilder.CreateBox(`${rootMesh.name}_brandTrim`, {
+          width: Math.max(0.18, width * 0.78),
+          height: Math.max(0.03, Math.min(0.08, height * 0.08)),
+          depth: Math.max(0.012, Math.min(0.05, depth * 0.08)),
+        }, this.scene);
+        const trimHeight = primitive === 'menu-board'
+          ? center.y + height * 0.34
+          : bounds.max.y - Math.min(0.12, height * 0.12);
+        const trimWorldPos = new BABYLON.Vector3(
+          center.x + towardCamera.x * ((depth * 0.5) + 0.02),
+          trimHeight,
+          center.z + towardCamera.z * ((depth * 0.5) + 0.02),
+        );
+        trim.parent = rootMesh;
+        trim.position = this.toLocalPosition(rootMesh, trimWorldPos);
+        trim.rotation = new BABYLON.Vector3(0, this.getYawFacingPoint(trimWorldPos, this.camera.position.clone()) || 0, 0);
+        const trimMaterial = new BABYLON.StandardMaterial(`${rootMesh.name}_brandTrim_mat`, this.scene);
+        trimMaterial.diffuseColor = BABYLON.Color3.FromHexString(this.getEnvironmentBrandColor(0, '#c0392b'));
+        trimMaterial.emissiveColor = BABYLON.Color3.FromHexString(this.getEnvironmentBrandColor(2, '#1f2937')).scale(0.08);
+        trim.material = trimMaterial;
+        this.markEnvironmentBrandAccessory(trim, 'interior_trim');
+        decorationKinds.push('interior_trim');
+      }
+
+      if (targets.has('packaging') && ['counter', 'rustic-table', 'props-cluster'].includes(primitive)) {
+        const packageBox = BABYLON.MeshBuilder.CreateBox(`${rootMesh.name}_brandPackage`, {
+          width: Math.max(0.16, Math.min(0.34, width * 0.22)),
+          height: Math.max(0.08, Math.min(0.18, height * 0.14)),
+          depth: Math.max(0.14, Math.min(0.28, depth * 0.24)),
+        }, this.scene);
+        const packageWorldPos = center
+          .add(up.scale((height * 0.5) + (packageBox.scaling.y * 0.02) + 0.08))
+          .add(towardCamera.scale(Math.min(0.22, depth * 0.2)))
+          .add(right.scale(Math.min(0.24, width * 0.16)));
+        packageBox.parent = rootMesh;
+        packageBox.position = this.toLocalPosition(rootMesh, packageWorldPos);
+        packageBox.rotation = new BABYLON.Vector3(0, this.getYawFacingPoint(packageWorldPos, this.camera.position.clone()) || 0, 0);
+        const packageMaterial = new BABYLON.StandardMaterial(`${rootMesh.name}_brandPackage_mat`, this.scene);
+        packageMaterial.diffuseColor = BABYLON.Color3.FromHexString(this.getEnvironmentBrandColor(1, '#f4e7d3'));
+        packageMaterial.specularColor = BABYLON.Color3.FromHexString(this.getEnvironmentBrandColor(2, '#1f2937')).scale(0.2);
+        packageBox.material = packageMaterial;
+        this.markEnvironmentBrandAccessory(packageBox, 'packaging');
+
+        const packageLabel = BABYLON.MeshBuilder.CreatePlane(`${rootMesh.name}_brandPackageLabel`, {
+          width: Math.max(0.12, Math.min(0.26, width * 0.18)),
+          height: Math.max(0.07, Math.min(0.16, height * 0.12)),
+        }, this.scene);
+        const labelWorldPos = packageWorldPos.add(towardCamera.scale(0.07)).add(up.scale(0.01));
+        packageLabel.parent = rootMesh;
+        packageLabel.position = this.toLocalPosition(rootMesh, labelWorldPos);
+        packageLabel.rotation = new BABYLON.Vector3(0, this.getYawFacingPoint(labelWorldPos, this.camera.position.clone()) || 0, 0);
+        packageLabel.material = this.createBrandedCardMaterial(`${rootMesh.name}_brandPackageLabel_mat`, {
+          title: this.environmentBrandingState.brandName || 'Brand',
+          subtitle: this.environmentBrandingState.signageText || 'Takeaway',
+          style: this.environmentBrandingState.packagingStyle,
+          decorationKind: 'packaging',
+        });
+        this.markEnvironmentBrandAccessory(packageLabel, 'packaging');
+        decorationKinds.push('packaging');
+      }
+
+      this.updateEnvironmentPropBrandDecorationState(nodeId, decorationKinds);
+    });
+  }
+
+  private findRoomShellZoneByPurpose(
+    purposes: Array<EnvironmentPlanRoomShellZone['purpose']>,
+    keywordHints: string[] = [],
+  ): EnvironmentPlanRoomShellZone | null {
+    const zones = Array.isArray(this.currentRoomShell.zones) ? this.currentRoomShell.zones : [];
+    const loweredKeywords = keywordHints.map((value) => value.toLowerCase());
+    if (loweredKeywords.length > 0) {
+      const keywordMatch = zones.find((zone) => {
+        const haystack = `${zone.id} ${zone.label} ${(zone.notes || []).join(' ')}`.toLowerCase();
+        return loweredKeywords.some((keyword) => haystack.includes(keyword));
+      });
+      if (keywordMatch) {
+        return keywordMatch;
+      }
+    }
+
+    return zones.find((zone) => purposes.includes(zone.purpose)) || null;
+  }
+
+  private resolveEnvironmentCharacterBehaviorPlan(
+    role: string | null | undefined,
+    behaviorPlan?: CharacterBehaviorConfig | null,
+    options: {
+      inferIfMissing?: boolean;
+      placementHint?: string | null;
+      actionHint?: string | null;
+    } = {},
+  ): CharacterBehaviorConfig | null {
+    const normalized = this.normalizeCharacterBehaviorConfig(behaviorPlan);
+    const shouldInfer = options.inferIfMissing !== false;
+    if (!normalized && !shouldInfer) {
+      return null;
+    }
+
+    const loweredRole = (role || '').toLowerCase();
+    const loweredHints = `${options.placementHint || ''} ${options.actionHint || ''}`.toLowerCase();
+    const loweredContext = `${loweredRole} ${loweredHints}`.trim();
+
+    const explicitBaker = loweredRole.includes('baker');
+    const explicitCashier = loweredRole.includes('cashier');
+    const explicitServer = loweredRole.includes('server');
+    const explicitHost = loweredRole.includes('host');
+    const explicitCustomer = loweredRole.includes('customer') || loweredRole.includes('guest');
+    const explicitTalent = loweredRole.includes('talent') || loweredRole.includes('hero');
+
+    const allowHintDrivenRole = !explicitCustomer && !explicitHost && !explicitCashier && !explicitServer && !explicitBaker;
+
+    const isBaker = explicitBaker
+      || (allowHintDrivenRole && (loweredHints.includes('oven') || loweredHints.includes('pizza')));
+    const isCashier = explicitCashier
+      || (!explicitCustomer && !explicitHost && (loweredHints.includes('register') || loweredHints.includes('cashier')));
+    const isServer = explicitServer
+      || (!explicitCustomer && !explicitHost && (loweredHints.includes('serv') || loweredHints.includes('dining') || loweredHints.includes('aisle')));
+    const isHost = explicitHost || (!explicitCustomer && (loweredHints.includes('welcome') || loweredHints.includes('host stand')));
+    const isCustomer = explicitCustomer || (!explicitCashier && !explicitHost && loweredHints.includes('customer'));
+    const isTalent = explicitTalent || loweredHints.includes('hero');
+
+    const prepZone = this.findRoomShellZoneByPurpose(['prep'], ['prep', 'kitchen']);
+    const ovenZone = this.findRoomShellZoneByPurpose(['prep', 'background'], ['oven']);
+    const counterZone = this.findRoomShellZoneByPurpose(['counter', 'queue', 'service'], ['counter', 'register']);
+    const diningZone = this.findRoomShellZoneByPurpose(['dining', 'service', 'background'], ['dining', 'aisle', 'floor']);
+    const heroZone = this.findRoomShellZoneByPurpose(['hero'], ['hero', 'product']);
+
+    const defaultType = isBaker
+      ? 'work_loop'
+      : isCashier || isHost
+        ? 'counter_service'
+        : isServer
+          ? 'serve_route'
+          : isCustomer
+            ? 'patrol'
+            : isTalent
+              ? 'hero_idle'
+              : 'stationary';
+    const defaultHomeZoneId = isBaker
+      ? prepZone?.id || ovenZone?.id || null
+      : isCashier || isHost
+        ? counterZone?.id || null
+        : isServer
+          ? diningZone?.id || counterZone?.id || null
+          : isCustomer
+            ? diningZone?.id || heroZone?.id || null
+            : heroZone?.id || null;
+    const defaultRouteZoneIds = isBaker
+      ? [prepZone?.id, ovenZone?.id].filter((value): value is string => Boolean(value))
+      : isServer
+        ? [counterZone?.id, diningZone?.id, heroZone?.id].filter((value): value is string => Boolean(value))
+        : isCashier || isHost
+          ? [counterZone?.id, heroZone?.id].filter((value): value is string => Boolean(value))
+          : isCustomer
+            ? [counterZone?.id, diningZone?.id].filter((value): value is string => Boolean(value))
+            : [heroZone?.id].filter((value): value is string => Boolean(value));
+    const validExistingRoute = (normalized?.routeZoneIds || []).filter((zoneId) => Boolean(this.getRoomShellZone(zoneId)));
+    const resolvedHomeZoneId = normalized?.homeZoneId && this.getRoomShellZone(normalized.homeZoneId)
+      ? normalized.homeZoneId
+      : defaultHomeZoneId;
+    const resolvedRouteZoneIds = validExistingRoute.length > 0
+      ? validExistingRoute
+      : Array.from(new Set(defaultRouteZoneIds));
+    const resolvedLookAtTarget = normalized?.lookAtTarget
+      || (isBaker
+        ? 'oven'
+        : isCashier || isHost || isServer || isCustomer
+          ? 'guests'
+          : isTalent
+            ? 'camera'
+            : 'hero_prop');
+    const resolvedPace = normalized?.pace
+      || (isBaker || isServer ? 'active' : isCustomer || isCashier || isHost ? 'subtle' : 'still');
+    const resolvedRadius = normalized?.radius
+      ?? (isServer ? 1.1 : isBaker ? 0.72 : isCustomer ? 0.95 : 0.55);
+    const resolvedCustomRoutePoints = Array.isArray(normalized?.customRoutePoints)
+      ? normalized.customRoutePoints
+        .map((point) => ({
+          x: Number(point.x),
+          z: Number(point.z),
+        }))
+        .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.z))
+      : [];
+
+    return {
+      type: normalized?.type || defaultType,
+      homeZoneId: resolvedHomeZoneId,
+      routeZoneIds: resolvedRouteZoneIds,
+      customRoutePoints: resolvedCustomRoutePoints,
+      lookAtTarget: resolvedLookAtTarget,
+      pace: resolvedPace,
+      radius: resolvedRadius,
+    };
+  }
+
+  private resolveCharacterAppearanceConfig(
+    appearance?: CharacterAppearanceConfig | null,
+    fallbackSkinTone?: string | null,
+  ): Required<CharacterAppearanceConfig> {
+    const normalizeEnum = <T extends string>(value: string | null | undefined, allowed: readonly T[], fallback: T): T => {
+      if (!value) return fallback;
+      const normalized = value.trim().toLowerCase();
+      return (allowed as readonly string[]).includes(normalized)
+        ? normalized as T
+        : fallback;
+    };
+
+    const normalizedSkinTone = (appearance?.skinTone || fallbackSkinTone || '#d9b08c').trim();
+    const normalizedHairColor = (appearance?.hairColor || '#3b2f2f').trim();
+
+    return {
+      skinTone: normalizedSkinTone,
+      hairColor: normalizedHairColor,
+      hairStyle: normalizeEnum(appearance?.hairStyle ?? null, ['short', 'medium', 'long', 'bun', 'covered'] as const, 'short'),
+      facialHair: normalizeEnum(appearance?.facialHair ?? null, ['none', 'stubble', 'mustache', 'beard'] as const, 'none'),
+      ageGroup: normalizeEnum(appearance?.ageGroup ?? null, ['teen', 'young_adult', 'adult', 'senior'] as const, 'adult'),
+      genderPresentation: normalizeEnum(appearance?.genderPresentation ?? null, ['male', 'female', 'neutral'] as const, 'neutral'),
+    };
+  }
+
+  private toLocalPosition(parent: BABYLON.TransformNode, worldPoint: BABYLON.Vector3): BABYLON.Vector3 {
+    const inverseWorld = parent.getWorldMatrix().clone().invert();
+    return BABYLON.Vector3.TransformCoordinates(worldPoint, inverseWorld);
+  }
+
+  private disposeCharacterGeneratedAccessories(rootMesh: BABYLON.AbstractMesh): void {
+    rootMesh.getChildMeshes(true)
+      .filter((mesh) => {
+        const metadata = mesh.metadata as {
+          characterWardrobeAccessory?: boolean;
+          characterAppearanceAccessory?: boolean;
+        } | undefined;
+        return Boolean(metadata?.characterWardrobeAccessory || metadata?.characterAppearanceAccessory);
+      })
+      .forEach((mesh) => mesh.dispose(false, true));
+  }
+
+  private createWardrobeMaterial(
+    name: string,
+    colorHex: string,
+    profile: 'fabric' | 'hair' | 'trim' | 'skin' = 'fabric',
+  ): BABYLON.PBRMaterial {
+    const baseColor = BABYLON.Color3.FromHexString(colorHex);
+    const material = new BABYLON.PBRMaterial(name, this.scene);
+    material.albedoColor = baseColor;
+    material.metallic = 0;
+    material.roughness = profile === 'hair'
+      ? 0.58
+      : profile === 'trim'
+        ? 0.48
+        : profile === 'skin'
+          ? 0.68
+          : 0.82;
+    material.specularIntensity = profile === 'hair'
+      ? 0.3
+      : profile === 'trim'
+        ? 0.22
+        : profile === 'skin'
+          ? 0.24
+          : 0.12;
+    if (profile === 'skin') {
+      material.subSurface.isTranslucencyEnabled = true;
+      material.subSurface.translucencyIntensity = 0.18;
+      material.subSurface.tintColor = new BABYLON.Color3(
+        BABYLON.Scalar.Clamp(baseColor.r * 1.05, 0, 1),
+        BABYLON.Scalar.Clamp(baseColor.g * 0.95, 0, 1),
+        BABYLON.Scalar.Clamp(baseColor.b * 0.9, 0, 1),
+      );
+    }
+    return material;
+  }
+
+  private getCharacterVisualKind(
+    rootMesh: BABYLON.AbstractMesh,
+  ): 'catalog-glb' | 'procedural-mannequin' | 'manual-glb' | null {
+    const metadata = (rootMesh.metadata || {}) as Record<string, unknown>;
+    const visualKind = typeof metadata.characterVisualKind === 'string' ? metadata.characterVisualKind : null;
+    return visualKind === 'catalog-glb' || visualKind === 'procedural-mannequin' || visualKind === 'manual-glb'
+      ? visualKind
+      : null;
+  }
+
+  private tintCharacterMeshMaterial(
+    mesh: BABYLON.Mesh,
+    colorHex: string,
+    options: {
+      amount?: number;
+      roughness?: number;
+      metallic?: number;
+    } = {},
+  ): void {
+    if (!mesh.material) {
+      return;
+    }
+
+    const sourceMaterial = mesh.material;
+    const existingMetadata = (sourceMaterial.metadata || {}) as Record<string, unknown>;
+    let nextMaterial = sourceMaterial;
+    if (!existingMetadata.characterStyleClone && typeof sourceMaterial.clone === 'function') {
+      const cloned = sourceMaterial.clone(`${sourceMaterial.name || mesh.name}_styleClone`);
+      if (cloned) {
+        cloned.metadata = {
+          ...(cloned.metadata || {}),
+          characterStyleClone: true,
+        };
+        nextMaterial = cloned;
+        mesh.material = cloned;
+      }
+    }
+
+    const amount = options.amount ?? 0.35;
+    const targetColor = BABYLON.Color3.FromHexString(colorHex);
+
+    if (nextMaterial instanceof BABYLON.PBRMaterial) {
+      const currentColor = nextMaterial.albedoColor || new BABYLON.Color3(0.56, 0.56, 0.56);
+      nextMaterial.albedoColor = BABYLON.Color3.Lerp(currentColor, targetColor, amount);
+      nextMaterial.roughness = BABYLON.Scalar.Lerp(
+        nextMaterial.roughness ?? (options.roughness ?? 0.7),
+        options.roughness ?? nextMaterial.roughness ?? 0.7,
+        0.45,
+      );
+      nextMaterial.metallic = Math.min(
+        nextMaterial.metallic ?? 0,
+        options.metallic ?? nextMaterial.metallic ?? 0.08,
+      );
+      nextMaterial.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
+      nextMaterial.alpha = 1;
+      nextMaterial.backFaceCulling = true;
+      return;
+    }
+
+    if (nextMaterial instanceof BABYLON.StandardMaterial) {
+      const currentColor = nextMaterial.diffuseColor || new BABYLON.Color3(0.56, 0.56, 0.56);
+      nextMaterial.diffuseColor = BABYLON.Color3.Lerp(currentColor, targetColor, amount);
+      nextMaterial.specularColor = new BABYLON.Color3(0.08, 0.08, 0.08);
+      nextMaterial.alpha = 1;
+    }
+  }
+
+  private decorateCharacterForRole(
+    rootMesh: BABYLON.AbstractMesh,
+    entry: CharacterCatalogEntry,
+    options: {
+      role?: string;
+      placementHint?: string;
+      wardrobeStyle?: string;
+      wardrobeVariantId?: string | null;
+      outfitColors?: string[];
+      logoPlacement?: string;
+      actionHint?: string;
+      appearance?: CharacterAppearanceConfig | null;
+    },
+  ): void {
+    this.disposeCharacterGeneratedAccessories(rootMesh);
+
+    const bounds = rootMesh.getHierarchyBoundingVectors(true);
+    const height = Math.max(1.2, bounds.max.y - bounds.min.y);
+    const width = Math.max(0.3, bounds.max.x - bounds.min.x);
+    const depth = Math.max(0.18, bounds.max.z - bounds.min.z);
+    const center = bounds.min.add(bounds.max).scale(0.5);
+    const visualKind = this.getCharacterVisualKind(rootMesh);
+    const isImportedCharacter = visualKind === 'catalog-glb' || visualKind === 'manual-glb';
+
+    const up = BABYLON.Axis.Y.clone();
+    const profile = this.resolveCharacterModelProfile(rootMesh);
+    const motionNode = this.resolveCharacterMotionNode(rootMesh, profile);
+    const facingYaw = this.getMeshYaw(motionNode, profile);
+    const forward = new BABYLON.Vector3(Math.sin(facingYaw), 0, Math.cos(facingYaw));
+    if (forward.lengthSquared() < 1e-6) {
+      forward.set(0, 0, 1);
+    } else {
+      forward.normalize();
+    }
+    const right = BABYLON.Vector3.Cross(up, forward);
+    if (right.lengthSquared() < 1e-6) {
+      right.set(1, 0, 0);
+    } else {
+      right.normalize();
+    }
+    const torsoForwardOffset = depth * (isImportedCharacter ? 0.34 : 0.58);
+    const logoForwardOffset = depth * (isImportedCharacter ? 0.38 : 0.7);
+
+    const primary = options.outfitColors?.[0] || this.getEnvironmentBrandColor(0, '#f97316');
+    const secondary = options.outfitColors?.[1] || this.getEnvironmentBrandColor(1, '#fff7ed');
+    const accent = options.outfitColors?.[2] || this.getEnvironmentBrandColor(2, '#111827');
+    const wardrobeStyle = options.wardrobeStyle || entry.wardrobeStyle;
+    const wardrobeVariantId = (options.wardrobeVariantId || entry.wardrobeVariants?.[0] || '').toLowerCase();
+    const logoPlacement = options.logoPlacement || entry.logoPlacement;
+    const appearance = this.resolveCharacterAppearanceConfig(options.appearance);
+    const hairColor = appearance.hairColor || '#3b2f2f';
+    const skinHex = appearance.skinTone || '#d9b08c';
+    const skinFeatureMaterial = this.createWardrobeMaterial(`${rootMesh.name}_skin_feature_mat`, skinHex, 'skin');
+    const hairFeatureMaterial = this.createWardrobeMaterial(`${rootMesh.name}_hair_feature_mat`, hairColor, 'hair');
+    const eyeWhiteMaterial = this.createWardrobeMaterial(`${rootMesh.name}_eye_white_mat`, '#f8fafc', 'trim');
+    const eyeIrisMaterial = this.createWardrobeMaterial(`${rootMesh.name}_eye_iris_mat`, accent, 'trim');
+    const lipMaterial = this.createWardrobeMaterial(`${rootMesh.name}_lip_mat`, '#8b5e5a', 'trim');
+    const shoeMaterial = this.createWardrobeMaterial(`${rootMesh.name}_shoe_mat`, '#111827', 'trim');
+
+    const createAccessoryPlane = (
+      name: string,
+      widthValue: number,
+      heightValue: number,
+      worldPosition: BABYLON.Vector3,
+      material: BABYLON.Material,
+      appearanceAccessory = false,
+    ): BABYLON.Mesh => {
+      const plane = BABYLON.MeshBuilder.CreatePlane(name, {
+        width: widthValue,
+        height: heightValue,
+      }, this.scene);
+      plane.parent = rootMesh;
+      plane.position = this.toLocalPosition(rootMesh, worldPosition);
+      plane.material = material;
+      plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_NONE;
+      if (appearanceAccessory) {
+        addAppearanceAccessoryMetadata(plane);
+      } else {
+        addAccessoryMetadata(plane);
+      }
+      return plane;
+    };
+
+    const addAccessoryMetadata = (mesh: BABYLON.AbstractMesh): void => {
+      mesh.metadata = {
+        ...(mesh.metadata || {}),
+        characterWardrobeAccessory: true,
+      };
+      mesh.receiveShadows = true;
+      this.lights.forEach((lightData) => {
+        if (lightData.shadowGenerator) {
+          lightData.shadowGenerator.addShadowCaster(mesh);
+        }
+      });
+    };
+
+    const addAppearanceAccessoryMetadata = (mesh: BABYLON.AbstractMesh): void => {
+      mesh.metadata = {
+        ...(mesh.metadata || {}),
+        characterAppearanceAccessory: true,
+      };
+      mesh.receiveShadows = true;
+      this.lights.forEach((lightData) => {
+        if (lightData.shadowGenerator) {
+          lightData.shadowGenerator.addShadowCaster(mesh);
+        }
+      });
+    };
+
+    if (!isImportedCharacter) {
+      const neck = BABYLON.MeshBuilder.CreateCylinder(`${rootMesh.name}_neck`, {
+        diameterTop: width * 0.12,
+        diameterBottom: width * 0.14,
+        height: height * 0.085,
+        tessellation: 12,
+      }, this.scene);
+      neck.parent = rootMesh;
+      neck.position = this.toLocalPosition(rootMesh, center
+        .add(up.scale(height * 0.33))
+        .add(forward.scale(depth * 0.14)));
+      neck.material = skinFeatureMaterial;
+      addAppearanceAccessoryMetadata(neck);
+
+      ['left', 'right'].forEach((side, index) => {
+        const direction = index === 0 ? -1 : 1;
+        const eyeBasePos = center
+          .add(up.scale(height * 0.305))
+          .add(forward.scale(depth * 0.8))
+          .add(right.scale(width * 0.11 * direction));
+        const eye = BABYLON.MeshBuilder.CreateSphere(`${rootMesh.name}_${side}Eye`, {
+          diameterX: width * 0.065,
+          diameterY: height * 0.04,
+          diameterZ: depth * 0.16,
+          segments: 12,
+        }, this.scene);
+        eye.parent = rootMesh;
+        eye.position = this.toLocalPosition(rootMesh, eyeBasePos);
+        eye.material = eyeWhiteMaterial;
+        addAppearanceAccessoryMetadata(eye);
+
+        const iris = BABYLON.MeshBuilder.CreateSphere(`${rootMesh.name}_${side}Iris`, {
+          diameter: width * 0.024,
+          segments: 10,
+        }, this.scene);
+        iris.parent = rootMesh;
+        iris.position = this.toLocalPosition(rootMesh, eyeBasePos.add(forward.scale(depth * 0.06)));
+        iris.material = eyeIrisMaterial;
+        addAppearanceAccessoryMetadata(iris);
+
+        const brow = BABYLON.MeshBuilder.CreateBox(`${rootMesh.name}_${side}Brow`, {
+          width: width * 0.1,
+          height: height * 0.014,
+          depth: depth * 0.04,
+        }, this.scene);
+        brow.parent = rootMesh;
+        brow.position = this.toLocalPosition(rootMesh, center
+          .add(up.scale(height * 0.355))
+          .add(forward.scale(depth * 0.76))
+          .add(right.scale(width * 0.11 * direction)));
+        brow.rotation.z = direction * 0.12;
+        brow.material = hairFeatureMaterial;
+        addAppearanceAccessoryMetadata(brow);
+      });
+
+      const noseBridge = BABYLON.MeshBuilder.CreateCylinder(`${rootMesh.name}_noseBridge`, {
+        diameterTop: width * 0.024,
+        diameterBottom: width * 0.04,
+        height: height * 0.085,
+        tessellation: 10,
+      }, this.scene);
+      noseBridge.parent = rootMesh;
+      noseBridge.position = this.toLocalPosition(rootMesh, center
+        .add(up.scale(height * 0.25))
+        .add(forward.scale(depth * 0.82)));
+      noseBridge.material = skinFeatureMaterial;
+      addAppearanceAccessoryMetadata(noseBridge);
+
+      createAccessoryPlane(
+        `${rootMesh.name}_mouth`,
+        width * 0.12,
+        height * 0.018,
+        center
+          .add(up.scale(height * 0.17))
+          .add(forward.scale(depth * 0.79)),
+        lipMaterial,
+        true,
+      );
+
+      if (appearance.hairStyle !== 'covered') {
+        const hairCap = BABYLON.MeshBuilder.CreateSphere(`${rootMesh.name}_hairCap`, {
+          diameterX: width * 0.44,
+          diameterY: height * (appearance.hairStyle === 'bun' ? 0.15 : appearance.hairStyle === 'long' ? 0.16 : 0.12),
+          diameterZ: depth * 1.7,
+          segments: 16,
+        }, this.scene);
+        const hairWorldPos = new BABYLON.Vector3(
+          center.x,
+          bounds.max.y - (height * 0.075),
+          center.z + (depth * 0.04),
+        );
+        hairCap.parent = rootMesh;
+        hairCap.position = this.toLocalPosition(rootMesh, hairWorldPos);
+        hairCap.material = this.createWardrobeMaterial(`${rootMesh.name}_hair_mat`, hairColor, 'hair');
+        addAppearanceAccessoryMetadata(hairCap);
+
+        if (appearance.hairStyle === 'bun') {
+          const bun = BABYLON.MeshBuilder.CreateSphere(`${rootMesh.name}_hairBun`, {
+            diameter: width * 0.12,
+            segments: 12,
+          }, this.scene);
+          const bunWorldPos = new BABYLON.Vector3(center.x, bounds.max.y - (height * 0.01), center.z - (depth * 0.18));
+          bun.parent = rootMesh;
+          bun.position = this.toLocalPosition(rootMesh, bunWorldPos);
+          bun.material = this.createWardrobeMaterial(`${rootMesh.name}_hair_bun_mat`, hairColor, 'hair');
+          addAppearanceAccessoryMetadata(bun);
+        }
+      }
+
+      if (appearance.facialHair !== 'none') {
+        const facialWidth = appearance.facialHair === 'mustache' ? width * 0.11 : width * 0.18;
+        const facialHeight = appearance.facialHair === 'stubble' ? height * 0.035 : height * 0.055;
+        const facialPlate = BABYLON.MeshBuilder.CreatePlane(`${rootMesh.name}_facialHair`, {
+          width: facialWidth,
+          height: facialHeight,
+        }, this.scene);
+        const facialWorldPos = center
+          .add(up.scale(height * 0.25))
+          .add(forward.scale(depth * 0.74));
+        facialPlate.parent = rootMesh;
+        facialPlate.position = this.toLocalPosition(rootMesh, facialWorldPos);
+        facialPlate.material = this.createWardrobeMaterial(`${rootMesh.name}_facialHair_mat`, hairColor, 'hair');
+        addAppearanceAccessoryMetadata(facialPlate);
+      }
+    }
+
+    if (!isImportedCharacter && (wardrobeStyle === 'baker' || wardrobeStyle === 'branded_uniform')) {
+      const apron = BABYLON.MeshBuilder.CreatePlane(`${rootMesh.name}_apron`, {
+        width: width * 0.62,
+        height: height * (wardrobeVariantId.includes('slim') ? 0.34 : 0.42),
+      }, this.scene);
+      const apronWorldPos = center
+        .add(up.scale(height * 0.02))
+        .add(forward.scale(torsoForwardOffset));
+      apron.parent = rootMesh;
+      apron.position = this.toLocalPosition(rootMesh, apronWorldPos);
+      apron.material = this.createWardrobeMaterial(`${rootMesh.name}_apron_mat`, primary);
+      addAccessoryMetadata(apron);
+
+      if (!isImportedCharacter) {
+        [-1, 1].forEach((direction) => {
+          const apronStrap = BABYLON.MeshBuilder.CreatePlane(`${rootMesh.name}_apronStrap_${direction < 0 ? 'left' : 'right'}`, {
+            width: width * 0.05,
+            height: height * 0.3,
+          }, this.scene);
+          apronStrap.parent = rootMesh;
+          apronStrap.position = this.toLocalPosition(rootMesh, center
+            .add(up.scale(height * 0.14))
+            .add(forward.scale(depth * 0.6))
+            .add(right.scale(width * 0.16 * direction)));
+          apronStrap.rotation.z = direction * 0.16;
+          apronStrap.material = this.createWardrobeMaterial(`${rootMesh.name}_apronStrap_mat_${direction}`, secondary);
+          addAccessoryMetadata(apronStrap);
+        });
+
+        const apronTie = BABYLON.MeshBuilder.CreatePlane(`${rootMesh.name}_apronTie`, {
+          width: width * 0.46,
+          height: height * 0.045,
+        }, this.scene);
+        apronTie.parent = rootMesh;
+        apronTie.position = this.toLocalPosition(rootMesh, center
+          .add(up.scale(height * -0.03))
+          .add(forward.scale(depth * 0.61)));
+        apronTie.material = this.createWardrobeMaterial(`${rootMesh.name}_apronTie_mat`, secondary);
+        addAccessoryMetadata(apronTie);
+      }
+    }
+
+    if (!isImportedCharacter && (wardrobeStyle === 'server' || wardrobeStyle === 'cashier' || wardrobeStyle === 'worker' || wardrobeStyle === 'host')) {
+      const shirtPanel = BABYLON.MeshBuilder.CreatePlane(`${rootMesh.name}_shirtPanel`, {
+        width: width * 0.48,
+        height: height * 0.22,
+      }, this.scene);
+      const shirtWorldPos = center
+        .add(up.scale(height * 0.16))
+        .add(forward.scale(torsoForwardOffset));
+      shirtPanel.parent = rootMesh;
+      shirtPanel.position = this.toLocalPosition(rootMesh, shirtWorldPos);
+      shirtPanel.material = this.createWardrobeMaterial(`${rootMesh.name}_shirtPanel_mat`, accent);
+      addAccessoryMetadata(shirtPanel);
+
+      if (!isImportedCharacter) {
+        const collar = BABYLON.MeshBuilder.CreateCylinder(`${rootMesh.name}_collar`, {
+          diameterTop: width * 0.22,
+          diameterBottom: width * 0.28,
+          height: height * 0.045,
+          tessellation: 16,
+        }, this.scene);
+        collar.parent = rootMesh;
+        collar.position = this.toLocalPosition(rootMesh, center
+          .add(up.scale(height * 0.23))
+          .add(forward.scale(depth * 0.36)));
+        collar.material = this.createWardrobeMaterial(`${rootMesh.name}_collar_mat`, primary);
+        addAccessoryMetadata(collar);
+
+        const shoulderYoke = BABYLON.MeshBuilder.CreateBox(`${rootMesh.name}_shoulderYoke`, {
+          width: width * 0.74,
+          height: height * 0.055,
+          depth: depth * 0.62,
+        }, this.scene);
+        shoulderYoke.parent = rootMesh;
+        shoulderYoke.position = this.toLocalPosition(rootMesh, center.add(up.scale(height * 0.19)));
+        shoulderYoke.material = this.createWardrobeMaterial(`${rootMesh.name}_shoulderYoke_mat`, primary);
+        addAccessoryMetadata(shoulderYoke);
+      }
+    }
+
+    if (!isImportedCharacter && (wardrobeVariantId.includes('polo') || wardrobeVariantId.includes('tee') || wardrobeVariantId.includes('blazer'))) {
+      const chestBand = BABYLON.MeshBuilder.CreatePlane(`${rootMesh.name}_chestBand`, {
+        width: width * 0.42,
+        height: height * (wardrobeVariantId.includes('blazer') ? 0.16 : 0.12),
+      }, this.scene);
+      const chestBandWorldPos = center
+        .add(up.scale(height * 0.18))
+        .add(forward.scale(torsoForwardOffset));
+      chestBand.parent = rootMesh;
+      chestBand.position = this.toLocalPosition(rootMesh, chestBandWorldPos);
+      chestBand.material = this.createWardrobeMaterial(`${rootMesh.name}_chestBand_mat`, primary);
+      addAccessoryMetadata(chestBand);
+    }
+
+    if (!isImportedCharacter && (wardrobeVariantId.includes('service') || wardrobeVariantId.includes('utility') || wardrobeVariantId.includes('front_counter'))) {
+      const belt = BABYLON.MeshBuilder.CreatePlane(`${rootMesh.name}_utilityBelt`, {
+        width: width * 0.54,
+        height: height * 0.08,
+      }, this.scene);
+      const beltWorldPos = center
+        .add(up.scale(height * -0.03))
+        .add(forward.scale(depth * 0.58));
+      belt.parent = rootMesh;
+      belt.position = this.toLocalPosition(rootMesh, beltWorldPos);
+      belt.material = this.createWardrobeMaterial(`${rootMesh.name}_utilityBelt_mat`, accent);
+      addAccessoryMetadata(belt);
+    }
+
+    if (!isImportedCharacter && wardrobeStyle === 'baker') {
+      const hat = BABYLON.MeshBuilder.CreateCylinder(`${rootMesh.name}_hat`, {
+        diameterTop: width * 0.16,
+        diameterBottom: width * 0.22,
+        height: height * 0.16,
+        tessellation: 18,
+      }, this.scene);
+      const hatWorldPos = new BABYLON.Vector3(center.x, bounds.max.y - (height * 0.02), center.z);
+      hat.parent = rootMesh;
+      hat.position = this.toLocalPosition(rootMesh, hatWorldPos);
+      hat.material = this.createWardrobeMaterial(`${rootMesh.name}_hat_mat`, secondary);
+      addAccessoryMetadata(hat);
+
+      const hatBand = BABYLON.MeshBuilder.CreateCylinder(`${rootMesh.name}_hatBand`, {
+        diameterTop: width * 0.22,
+        diameterBottom: width * 0.24,
+        height: height * 0.028,
+        tessellation: 18,
+      }, this.scene);
+      hatBand.parent = rootMesh;
+      hatBand.position = this.toLocalPosition(rootMesh, new BABYLON.Vector3(center.x, bounds.max.y - (height * 0.09), center.z));
+      hatBand.material = this.createWardrobeMaterial(`${rootMesh.name}_hatBand_mat`, primary);
+      addAccessoryMetadata(hatBand);
+    }
+
+    if (!isImportedCharacter && wardrobeVariantId.includes('cap') && wardrobeStyle !== 'baker') {
+      const cap = BABYLON.MeshBuilder.CreateCylinder(`${rootMesh.name}_cap`, {
+        diameterTop: width * 0.18,
+        diameterBottom: width * 0.22,
+        height: height * 0.08,
+        tessellation: 16,
+      }, this.scene);
+      const capWorldPos = new BABYLON.Vector3(center.x, bounds.max.y - (height * 0.05), center.z);
+      cap.parent = rootMesh;
+      cap.position = this.toLocalPosition(rootMesh, capWorldPos);
+      cap.material = this.createWardrobeMaterial(`${rootMesh.name}_cap_mat`, primary);
+      addAccessoryMetadata(cap);
+
+      const brim = BABYLON.MeshBuilder.CreateBox(`${rootMesh.name}_capBrim`, {
+        width: width * 0.2,
+        height: height * 0.018,
+        depth: depth * 0.16,
+      }, this.scene);
+      brim.parent = rootMesh;
+      brim.position = this.toLocalPosition(rootMesh, new BABYLON.Vector3(
+        center.x,
+        bounds.max.y - (height * 0.08),
+        center.z + (depth * 0.18),
+      ));
+      brim.material = this.createWardrobeMaterial(`${rootMesh.name}_capBrim_mat`, primary, 'trim');
+      addAccessoryMetadata(brim);
+    }
+
+    if (this.environmentBrandingState.applyToWardrobe && this.environmentBrandingState.logoImage && logoPlacement !== 'none') {
+      const backPlate = BABYLON.MeshBuilder.CreatePlane(`${rootMesh.name}_logoBackplate`, {
+        width: width * 0.22,
+        height: height * 0.14,
+      }, this.scene);
+      const logoPlate = BABYLON.MeshBuilder.CreatePlane(`${rootMesh.name}_logoPlate`, {
+        width: width * 0.18,
+        height: height * 0.12,
+      }, this.scene);
+      const baseWorldPos = logoPlacement === 'cap_front'
+        ? new BABYLON.Vector3(center.x, bounds.max.y - (height * 0.1), center.z)
+        : center
+          .add(up.scale(logoPlacement === 'apron_chest' ? height * 0.05 : height * 0.18))
+          .add(forward.scale(logoForwardOffset));
+      backPlate.parent = rootMesh;
+      backPlate.position = this.toLocalPosition(rootMesh, baseWorldPos.add(forward.scale(-depth * 0.02)));
+      backPlate.material = this.createWardrobeMaterial(`${rootMesh.name}_logo_backplate_mat`, secondary, 'trim');
+      addAccessoryMetadata(backPlate);
+      logoPlate.parent = rootMesh;
+      logoPlate.position = this.toLocalPosition(rootMesh, baseWorldPos);
+      const logoMaterial = new BABYLON.StandardMaterial(`${rootMesh.name}_logo_mat`, this.scene);
+      const logoTexture = new BABYLON.Texture(this.environmentBrandingState.logoImage, this.scene, true, false);
+      logoTexture.hasAlpha = true;
+      logoMaterial.diffuseTexture = logoTexture;
+      logoMaterial.emissiveTexture = logoTexture;
+      logoMaterial.useAlphaFromDiffuseTexture = true;
+      logoMaterial.backFaceCulling = false;
+      logoMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+      logoPlate.material = logoMaterial;
+      addAccessoryMetadata(logoPlate);
+    }
+
+    if (!isImportedCharacter) {
+      [-1, 1].forEach((direction) => {
+        const shoe = BABYLON.MeshBuilder.CreateBox(`${rootMesh.name}_shoe_${direction < 0 ? 'left' : 'right'}`, {
+          width: width * 0.16,
+          height: height * 0.05,
+          depth: depth * 0.3,
+        }, this.scene);
+        shoe.parent = rootMesh;
+        shoe.position = this.toLocalPosition(rootMesh, new BABYLON.Vector3(
+          center.x + (width * 0.14 * direction),
+          bounds.min.y + (height * 0.02),
+          center.z + (depth * 0.08),
+        ));
+        shoe.material = shoeMaterial;
+        addAccessoryMetadata(shoe);
+      });
+    }
+  }
+
+  private async loadCharacterFromCatalog(
+    entry: CharacterCatalogEntry,
+    options: {
+      nodeId: string;
+      name: string;
+      position: BABYLON.Vector3;
+      role?: string;
+      placementHint?: string | null;
+      wardrobeStyle?: string;
+      wardrobeVariantId?: string | null;
+      outfitColors?: string[];
+      logoPlacement?: string;
+      actionHint?: string;
+      wardrobeNotes?: string[];
+      appearance?: CharacterAppearanceConfig | null;
+      behaviorPlan?: CharacterBehaviorConfig | null;
+      layoutAnchorId?: string | null;
+      layoutAnchorKind?: string | null;
+      environmentGenerated?: boolean;
+      existingNode?: SceneNode | null;
+      selectOnLoad?: boolean;
+    },
+  ): Promise<BABYLON.AbstractMesh> {
+    const resolvedWardrobeStyle = options.wardrobeStyle || entry.wardrobeStyle;
+    const resolvedWardrobeVariantId = options.wardrobeVariantId || entry.wardrobeVariants?.[0] || null;
+    const resolvedWardrobeNotes = Array.isArray(options.wardrobeNotes)
+      ? options.wardrobeNotes.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      : [];
+    const resolvedBehaviorPlan = this.resolveEnvironmentCharacterBehaviorPlan(
+      options.role || entry.id,
+      options.behaviorPlan,
+      {
+        inferIfMissing: Boolean(options.environmentGenerated),
+        placementHint: options.placementHint || null,
+        actionHint: options.actionHint || null,
+      },
+    );
+    const resolvedOutfitColors = this.resolveBrandedOutfitColors(
+      options.outfitColors,
+      resolvedWardrobeStyle,
+      resolvedWardrobeVariantId,
+    );
+    let rootMesh: BABYLON.AbstractMesh;
+    let importedAnimationGroups: BABYLON.AnimationGroup[] = [];
+
+    try {
+      const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', entry.modelUrl, this.scene);
+      importedAnimationGroups = result.animationGroups || [];
+      const importedRoot = result.meshes.find((mesh) => !mesh.parent) || result.meshes[0];
+      if (!importedRoot) {
+        throw new Error(`No meshes returned for ${entry.id}`);
+      }
+      rootMesh = importedRoot;
+      rootMesh.metadata = {
+        ...(rootMesh.metadata || {}),
+        sourceModelUrl: entry.modelUrl,
+        characterVisualKind: 'catalog-glb',
+        characterFallback: false,
+      };
+      this.applyPBRShadingToMeshes(result.meshes, entry.avatarId);
+      this.applyCharacterAppearanceShading(rootMesh, options.appearance, resolvedOutfitColors);
+      this.trackAnimationGroupsForMesh(rootMesh, importedAnimationGroups);
+      this.stopAnimationGroupsForMesh(rootMesh, importedAnimationGroups);
+    } catch (error) {
+      console.warn(`[CharacterCatalog] Failed to import ${entry.id}, using procedural mannequin fallback`, error);
+      rootMesh = this.createProceduralMannequin(options.nodeId, {
+        name: options.name,
+        height: 1.72,
+        skinTone: options.appearance?.skinTone || null,
+        outfitColors: resolvedOutfitColors,
+        appearance: options.appearance,
+      });
+    }
+
+    rootMesh.name = options.nodeId;
+    rootMesh.metadata = {
+      ...(rootMesh.metadata || {}),
+      modelId: options.nodeId,
+      characterId: options.nodeId,
+      characterName: options.name,
+      characterRole: options.role || entry.id,
+      characterCatalogId: entry.id,
+      avatarId: entry.avatarId,
+      characterWardrobeStyle: resolvedWardrobeStyle,
+      characterWardrobeVariantId: resolvedWardrobeVariantId,
+      outfitColors: [...resolvedOutfitColors],
+      baseVisualRotation: [Math.PI, 0, 0],
+      environmentGenerated: Boolean(options.environmentGenerated),
+      placementHint: options.placementHint || null,
+      actionHint: options.actionHint || null,
+      wardrobeNotes: [...resolvedWardrobeNotes],
+      appearance: options.appearance || null,
+      layoutAnchorId: options.layoutAnchorId || null,
+      layoutAnchorKind: options.layoutAnchorKind || null,
+      behaviorPlan: resolvedBehaviorPlan,
+      sourceModelUrl: entry.modelUrl,
+      characterVisualKind: (rootMesh.metadata as Record<string, unknown> | null)?.characterVisualKind || 'catalog-glb',
+    };
+
+    const bounds = rootMesh.getHierarchyBoundingVectors(true);
+    const modelHeight = Math.max(0.001, bounds.max.y - bounds.min.y);
+    const scale = 1.72 / modelHeight;
+    rootMesh.scaling = new BABYLON.Vector3(scale, scale, scale);
+    rootMesh.rotation = new BABYLON.Vector3(Math.PI, 0, 0);
+    const groundedPosition = this.positionMeshOnGround(rootMesh, options.position.clone());
+    rootMesh.position = groundedPosition;
+    this.rotateMeshTowardCamera(rootMesh);
+    rootMesh.rotation.x = Math.PI;
+    rootMesh.rotation.z = 0;
+    rootMesh.computeWorldMatrix(true);
+
+    this.registerModelMeshesInScene(rootMesh, options.nodeId, options.name);
+    this.decorateCharacterForRole(rootMesh, entry, {
+      role: options.role,
+      wardrobeStyle: resolvedWardrobeStyle,
+      wardrobeVariantId: resolvedWardrobeVariantId,
+      outfitColors: resolvedOutfitColors,
+      logoPlacement: options.logoPlacement,
+      actionHint: options.actionHint,
+      appearance: options.appearance,
+    });
+    this.rememberCharacterVisualBase(rootMesh);
+
+    const store = useAppStore.getState();
+    const node = options.existingNode || store.getNode(options.nodeId);
+    const nextPosition: [number, number, number] = [
+      rootMesh.position.x,
+      rootMesh.position.y,
+      rootMesh.position.z,
+    ];
+    if (node) {
+      store.updateNode(options.nodeId, {
+        name: options.name,
+        visible: true,
+        userData: {
+          ...(node.userData || {}),
+          avatarUrl: entry.modelUrl,
+          avatarId: entry.avatarId,
+          characterCatalogId: entry.id,
+          characterId: options.nodeId,
+          actorRole: options.role || entry.id,
+          wardrobeStyle: resolvedWardrobeStyle,
+          wardrobeVariantId: resolvedWardrobeVariantId,
+          logoPlacement: options.logoPlacement || entry.logoPlacement,
+          outfitColors: [...resolvedOutfitColors],
+          meshNames: this.getChildMeshNames(rootMesh),
+          placementHint: options.placementHint || null,
+          actionHint: options.actionHint || null,
+          wardrobeNotes: [...resolvedWardrobeNotes],
+          environmentGenerated: Boolean(options.environmentGenerated),
+          appearance: options.appearance || null,
+          layoutAnchorId: options.layoutAnchorId || null,
+          layoutAnchorKind: options.layoutAnchorKind || null,
+          behaviorPlan: resolvedBehaviorPlan,
+          sourceModelUrl: typeof (rootMesh.metadata as Record<string, unknown> | null)?.sourceModelUrl === 'string'
+            ? (rootMesh.metadata as Record<string, unknown>).sourceModelUrl as string
+            : entry.modelUrl,
+          characterVisualKind: ((rootMesh.metadata as Record<string, unknown> | null)?.characterVisualKind as 'catalog-glb' | 'procedural-mannequin' | undefined)
+            || 'catalog-glb',
+        },
+        transform: {
+          position: nextPosition,
+          rotation: [0, rootMesh.rotation.y, 0],
+          scale: [1, 1, 1],
+        },
+      });
+    } else {
+      store.addNode({
+        id: options.nodeId,
+        type: 'model',
+        name: options.name,
+        transform: {
+          position: nextPosition,
+          rotation: [0, rootMesh.rotation.y, 0],
+          scale: [1, 1, 1],
+        },
+        visible: true,
+        userData: {
+          avatarUrl: entry.modelUrl,
+          avatarId: entry.avatarId,
+          characterCatalogId: entry.id,
+          characterId: options.nodeId,
+          actorRole: options.role || entry.id,
+          wardrobeStyle: resolvedWardrobeStyle,
+          wardrobeVariantId: resolvedWardrobeVariantId,
+          logoPlacement: options.logoPlacement || entry.logoPlacement,
+          outfitColors: [...resolvedOutfitColors],
+          meshNames: this.getChildMeshNames(rootMesh),
+          placementHint: options.placementHint || null,
+          actionHint: options.actionHint || null,
+          wardrobeNotes: [...resolvedWardrobeNotes],
+          environmentGenerated: Boolean(options.environmentGenerated),
+          appearance: options.appearance || null,
+          layoutAnchorId: options.layoutAnchorId || null,
+          layoutAnchorKind: options.layoutAnchorKind || null,
+          behaviorPlan: resolvedBehaviorPlan,
+          sourceModelUrl: typeof (rootMesh.metadata as Record<string, unknown> | null)?.sourceModelUrl === 'string'
+            ? (rootMesh.metadata as Record<string, unknown>).sourceModelUrl as string
+            : entry.modelUrl,
+          characterVisualKind: ((rootMesh.metadata as Record<string, unknown> | null)?.characterVisualKind as 'catalog-glb' | 'procedural-mannequin' | undefined)
+            || 'catalog-glb',
+        },
+      });
+    }
+
+    this.sceneState.characters.set(options.nodeId, {
+      id: options.nodeId,
+      mesh: rootMesh,
+      name: options.name,
+      avatarUrl: entry.modelUrl,
+      avatarId: entry.avatarId,
+      role: options.role || entry.id,
+      metadata: {
+        wardrobeStyle: resolvedWardrobeStyle,
+        wardrobeVariantId: resolvedWardrobeVariantId,
+        logoPlacement: options.logoPlacement || entry.logoPlacement,
+        outfitColors: [...resolvedOutfitColors],
+        placementHint: options.placementHint || null,
+        actionHint: options.actionHint || null,
+        wardrobeNotes: [...resolvedWardrobeNotes],
+        environmentGenerated: Boolean(options.environmentGenerated),
+        appearance: options.appearance || null,
+        layoutAnchorId: options.layoutAnchorId || null,
+        layoutAnchorKind: options.layoutAnchorKind || null,
+        behaviorPlan: resolvedBehaviorPlan,
+        visualKind: ((rootMesh.metadata as Record<string, unknown> | null)?.characterVisualKind as 'catalog-glb' | 'procedural-mannequin' | undefined) || 'catalog-glb',
+        sourceModelUrl: typeof (rootMesh.metadata as Record<string, unknown> | null)?.sourceModelUrl === 'string'
+          ? (rootMesh.metadata as Record<string, unknown>).sourceModelUrl as string
+          : entry.modelUrl,
+      },
+    });
+
+    this.registerEnvironmentCharacterBehavior(options.nodeId, rootMesh, resolvedBehaviorPlan);
+
+    const shouldSelectOnLoad = options.selectOnLoad !== false;
+
+    if (shouldSelectOnLoad && this.gizmoManager && rootMesh instanceof BABYLON.Mesh) {
+      this.gizmoManager.attachToMesh(rootMesh);
+    }
+    if (shouldSelectOnLoad) {
+      this.selectedActorId = options.nodeId;
+      useAppStore.getState().selectNode(options.nodeId);
+    }
+    this.regenerateShadowMaps();
+    this.recalculateAmbientLighting();
+    this.publishSceneSelectionSync('character-loaded', 'environment-character');
+    this.publishEnvironmentDiagnostics('environment-character-loaded');
+    return rootMesh;
+  }
+
+  private resolveEnvironmentCharacterPosition(
+    character: EnvironmentPlanCharacterSuggestion,
+    index: number,
+    layoutGuidance?: EnvironmentPlanLayoutGuidance | null,
+  ): BABYLON.Vector3 {
+    const anchor = findBestCharacterLayoutAnchor(layoutGuidance, character);
+    const anchorPosition = mapLayoutAnchorToRoomPosition(anchor, this.currentRoomShell);
+    if (anchorPosition) {
+      return new BABYLON.Vector3(anchorPosition.x, 0, anchorPosition.z);
+    }
+
+    const resolvedBehaviorPlan = this.resolveEnvironmentCharacterBehaviorPlan(
+      character.role,
+      character.behaviorPlan || null,
+      {
+        inferIfMissing: true,
+        placementHint: character.placementHint || null,
+        actionHint: character.actionHint || null,
+      },
+    );
+    const zonePosition = this.resolveRoomShellZonePosition(resolvedBehaviorPlan?.homeZoneId || null);
+    if (zonePosition) {
+      return new BABYLON.Vector3(zonePosition.x, 0, zonePosition.z);
+    }
+
+    const width = this.currentRoomShell.width;
+    const depth = this.currentRoomShell.depth;
+    const lowered = `${character.role} ${character.placementHint || ''} ${character.actionHint || ''}`.toLowerCase();
+    const laneOffsets = [-0.22, 0.2, 0.0, -0.36, 0.36];
+    const x = (laneOffsets[index % laneOffsets.length] || 0) * width;
+
+    if (lowered.includes('back') || lowered.includes('oven') || lowered.includes('prep')) {
+      return new BABYLON.Vector3(x, 0, depth * 0.18);
+    }
+    if (lowered.includes('front') || lowered.includes('register') || lowered.includes('counter')) {
+      return new BABYLON.Vector3(x, 0, -(depth * 0.12));
+    }
+    if (lowered.includes('aisle') || lowered.includes('floor') || lowered.includes('center')) {
+      return new BABYLON.Vector3(x * 0.7, 0, 0);
+    }
+
+    return new BABYLON.Vector3(x, 0, BABYLON.Scalar.Lerp(depth * 0.08, -(depth * 0.08), index / Math.max(1, 4)));
+  }
+
+  private removeCharacterNodeById(nodeId: string, sync = true): void {
+    this.clearEnvironmentCharacterBehavior(nodeId);
+    const characterState = this.sceneState.characters.get(nodeId);
+    if (characterState) {
+      this.clearCharacterBodyMotionOverlay(characterState.mesh);
+      this.clearTrackedAnimationGroupsForMesh(characterState.mesh);
+      this.unloadRigForMesh(characterState.mesh);
+      characterState.mesh.dispose(false, true);
+      this.sceneState.characters.delete(nodeId);
+    } else {
+      this.scene.getMeshByName(nodeId)?.dispose(false, true);
+    }
+    useAppStore.getState().removeNode(nodeId);
+    if (this.selectedActorId === nodeId) {
+      this.selectedActorId = null;
+    }
+    if (sync) {
+      this.publishSceneSelectionSync('character-removed', 'environment-character');
+      this.publishEnvironmentDiagnostics('environment-character-removed');
+    }
+  }
+
+  private clearEnvironmentCharacters(): void {
+    Array.from(this.sceneState.characters.keys()).forEach((nodeId) => {
+      this.removeCharacterNodeById(nodeId, false);
+    });
+    this.clearEnvironmentCharacterBehaviors();
+    this.sceneState.characters.clear();
+    this.publishEnvironmentDiagnostics('environment-characters-cleared');
+  }
+
+  public async updateCharacterConfiguration(
+    nodeId: string,
+    updates: {
+      name?: string;
+      role?: string;
+      characterCatalogId?: string;
+      wardrobeStyle?: string;
+      wardrobeVariantId?: string | null;
+      logoPlacement?: string;
+      outfitColors?: string[];
+      actionHint?: string | null;
+      wardrobeNotes?: string[];
+      appearance?: Partial<CharacterAppearanceConfig> | null;
+      behaviorPlan?: Partial<CharacterBehaviorConfig> | null;
+    },
+  ): Promise<boolean> {
+    const store = useAppStore.getState();
+    const node = store.getNode(nodeId);
+    const characterState = this.sceneState.characters.get(nodeId);
+    if (!node || !characterState) {
+      return false;
+    }
+
+    const nodeUserData = (node.userData || {}) as Record<string, unknown>;
+    const environmentGenerated = Boolean(characterState.metadata?.environmentGenerated || nodeUserData.environmentGenerated);
+    const nextPlacementHint = typeof characterState.metadata?.placementHint === 'string'
+      ? characterState.metadata.placementHint
+      : (typeof nodeUserData.placementHint === 'string' ? nodeUserData.placementHint : null);
+    const currentAppearance = this.resolveCharacterAppearanceConfig(
+      (nodeUserData.appearance as CharacterAppearanceConfig | null | undefined) || characterState.metadata?.appearance || null,
+      typeof nodeUserData.skinTone === 'string' ? nodeUserData.skinTone : undefined,
+    );
+    const mergedAppearance = this.resolveCharacterAppearanceConfig({
+      ...currentAppearance,
+      ...((updates.appearance || {}) as Partial<CharacterAppearanceConfig>),
+    });
+
+    const currentCatalogId = typeof nodeUserData.characterCatalogId === 'string'
+      ? nodeUserData.characterCatalogId
+      : (characterState.role || 'worker_generic');
+    const nextEntry = getCharacterCatalogEntry(updates.characterCatalogId || currentCatalogId)
+      || inferCharacterCatalogEntry(`${updates.role || characterState.role || ''} ${updates.name || characterState.name}`);
+    const nextName = updates.name?.trim() || characterState.name || node.name;
+    const nextRole = updates.role?.trim() || characterState.role || (typeof nodeUserData.actorRole === 'string' ? nodeUserData.actorRole : nextEntry.id);
+    const nextWardrobeStyle = updates.wardrobeStyle
+      || characterState.metadata?.wardrobeStyle
+      || (typeof nodeUserData.wardrobeStyle === 'string' ? nodeUserData.wardrobeStyle : nextEntry.wardrobeStyle);
+    const nextWardrobeVariantId = updates.wardrobeVariantId !== undefined
+      ? updates.wardrobeVariantId
+      : (typeof characterState.metadata?.wardrobeVariantId === 'string'
+        ? characterState.metadata.wardrobeVariantId
+        : (typeof nodeUserData.wardrobeVariantId === 'string'
+          ? nodeUserData.wardrobeVariantId
+          : (nextEntry.wardrobeVariants?.[0] || null)));
+    const nextLogoPlacement = updates.logoPlacement
+      || characterState.metadata?.logoPlacement
+      || (typeof nodeUserData.logoPlacement === 'string' ? nodeUserData.logoPlacement : nextEntry.logoPlacement);
+    const nextOutfitColors = Array.isArray(updates.outfitColors) && updates.outfitColors.length > 0
+      ? updates.outfitColors.filter((value): value is string => typeof value === 'string')
+      : Array.isArray(characterState.metadata?.outfitColors) && characterState.metadata.outfitColors.length > 0
+        ? [...characterState.metadata.outfitColors]
+        : Array.isArray(nodeUserData.outfitColors)
+          ? (nodeUserData.outfitColors as string[]).filter((value): value is string => typeof value === 'string')
+          : [];
+    const resolvedOutfitColors = this.resolveBrandedOutfitColors(
+      nextOutfitColors,
+      nextWardrobeStyle,
+      nextWardrobeVariantId,
+    );
+    const nextActionHint = updates.actionHint !== undefined
+      ? updates.actionHint
+      : (characterState.metadata?.actionHint ?? (typeof nodeUserData.actionHint === 'string' ? nodeUserData.actionHint : null));
+    const nextWardrobeNotes = Array.isArray(updates.wardrobeNotes)
+      ? updates.wardrobeNotes.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      : Array.isArray(characterState.metadata?.wardrobeNotes)
+        ? [...characterState.metadata.wardrobeNotes]
+        : Array.isArray(nodeUserData.wardrobeNotes)
+          ? (nodeUserData.wardrobeNotes as string[]).filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+          : [];
+    const shouldInferBehavior = Boolean(environmentGenerated || nextPlacementHint || nextActionHint);
+    const currentLayoutAnchorId = typeof characterState.metadata?.layoutAnchorId === 'string'
+      ? characterState.metadata.layoutAnchorId
+      : (typeof nodeUserData.layoutAnchorId === 'string' ? nodeUserData.layoutAnchorId : null);
+    const currentLayoutAnchorKind = typeof characterState.metadata?.layoutAnchorKind === 'string'
+      ? characterState.metadata.layoutAnchorKind
+      : (typeof nodeUserData.layoutAnchorKind === 'string' ? nodeUserData.layoutAnchorKind : null);
+    const currentBehaviorPlan = this.resolveEnvironmentCharacterBehaviorPlan(
+      nextRole,
+      (nodeUserData.behaviorPlan as CharacterBehaviorConfig | null | undefined)
+      || characterState.metadata?.behaviorPlan
+      || null,
+      {
+        inferIfMissing: shouldInferBehavior,
+        placementHint: nextPlacementHint,
+        actionHint: nextActionHint || null,
+      },
+    );
+    const nextBehaviorPlan = updates.behaviorPlan === undefined
+      ? currentBehaviorPlan
+      : updates.behaviorPlan === null
+        ? null
+        : this.resolveEnvironmentCharacterBehaviorPlan(
+          nextRole,
+          {
+            ...(currentBehaviorPlan || {}),
+            ...updates.behaviorPlan,
+          } as CharacterBehaviorConfig,
+          {
+            inferIfMissing: shouldInferBehavior,
+            placementHint: nextPlacementHint,
+            actionHint: nextActionHint || null,
+          },
+        );
+    const nextLayoutAnchor = findBestCharacterLayoutAnchor(this.currentEnvironmentLayoutGuidance, {
+      role: nextRole,
+      name: nextName,
+      placementHint: nextPlacementHint || undefined,
+      actionHint: nextActionHint || undefined,
+    }) || findLayoutObjectAnchorById(this.currentEnvironmentLayoutGuidance, currentLayoutAnchorId);
+    const nextLayoutAnchorId = nextLayoutAnchor?.id || currentLayoutAnchorId || null;
+    const nextLayoutAnchorKind = nextLayoutAnchor?.kind || currentLayoutAnchorKind || null;
+
+    const requiresReload = Boolean(
+      updates.characterCatalogId
+      && updates.characterCatalogId !== currentCatalogId,
+    );
+
+    if (requiresReload) {
+      const previousPosition = characterState.mesh.position.clone();
+      const previousRotationY = characterState.mesh.rotation.y;
+      this.clearCharacterBodyMotionOverlay(characterState.mesh);
+      this.clearTrackedAnimationGroupsForMesh(characterState.mesh);
+      this.unloadRigForMesh(characterState.mesh);
+      characterState.mesh.dispose(false, true);
+      this.sceneState.characters.delete(nodeId);
+
+      const reloadedMesh = await this.loadCharacterFromCatalog(nextEntry, {
+        nodeId,
+        existingNode: node,
+        name: nextName,
+        position: previousPosition,
+        role: nextRole,
+        placementHint: nextPlacementHint,
+        wardrobeStyle: nextWardrobeStyle,
+        wardrobeVariantId: nextWardrobeVariantId,
+        logoPlacement: nextLogoPlacement,
+        outfitColors: resolvedOutfitColors,
+        actionHint: nextActionHint || undefined,
+        wardrobeNotes: nextWardrobeNotes,
+        appearance: mergedAppearance,
+        behaviorPlan: nextBehaviorPlan,
+        layoutAnchorId: nextLayoutAnchorId,
+        layoutAnchorKind: nextLayoutAnchorKind,
+        environmentGenerated,
+      });
+      reloadedMesh.rotation.y = previousRotationY;
+      reloadedMesh.computeWorldMatrix(true);
+    } else {
+      characterState.name = nextName;
+      characterState.role = nextRole;
+      characterState.avatarId = nextEntry.avatarId;
+      characterState.avatarUrl = nextEntry.modelUrl;
+      characterState.metadata = {
+        ...(characterState.metadata || {}),
+        wardrobeStyle: nextWardrobeStyle,
+        wardrobeVariantId: nextWardrobeVariantId,
+        logoPlacement: nextLogoPlacement,
+        outfitColors: resolvedOutfitColors,
+        placementHint: nextPlacementHint,
+        actionHint: nextActionHint,
+        wardrobeNotes: nextWardrobeNotes,
+        appearance: mergedAppearance,
+        behaviorPlan: nextBehaviorPlan,
+        layoutAnchorId: nextLayoutAnchorId,
+        layoutAnchorKind: nextLayoutAnchorKind,
+        visualKind: ((characterState.mesh.metadata as Record<string, unknown> | null)?.characterVisualKind as 'catalog-glb' | 'procedural-mannequin' | 'manual-glb' | undefined)
+          || characterState.metadata?.visualKind
+          || 'catalog-glb',
+        sourceModelUrl: typeof (characterState.mesh.metadata as Record<string, unknown> | null)?.sourceModelUrl === 'string'
+          ? (characterState.mesh.metadata as Record<string, unknown>).sourceModelUrl as string
+          : characterState.metadata?.sourceModelUrl
+            || nextEntry.modelUrl,
+      };
+
+      characterState.mesh.metadata = {
+        ...(characterState.mesh.metadata || {}),
+        characterName: nextName,
+        characterRole: nextRole,
+        characterCatalogId: nextEntry.id,
+        avatarId: nextEntry.avatarId,
+        characterWardrobeStyle: nextWardrobeStyle,
+        characterWardrobeVariantId: nextWardrobeVariantId,
+        placementHint: nextPlacementHint,
+        actionHint: nextActionHint,
+        wardrobeNotes: nextWardrobeNotes,
+        appearance: mergedAppearance,
+        outfitColors: resolvedOutfitColors,
+        behaviorPlan: nextBehaviorPlan,
+        layoutAnchorId: nextLayoutAnchorId,
+        layoutAnchorKind: nextLayoutAnchorKind,
+        sourceModelUrl: typeof (characterState.mesh.metadata as Record<string, unknown> | null)?.sourceModelUrl === 'string'
+          ? (characterState.mesh.metadata as Record<string, unknown>).sourceModelUrl as string
+          : nextEntry.modelUrl,
+        characterVisualKind: ((characterState.mesh.metadata as Record<string, unknown> | null)?.characterVisualKind as 'catalog-glb' | 'procedural-mannequin' | 'manual-glb' | undefined)
+          || 'catalog-glb',
+      };
+
+      this.applyCharacterAppearanceShading(characterState.mesh, mergedAppearance, resolvedOutfitColors);
+      this.decorateCharacterForRole(characterState.mesh, nextEntry, {
+        role: nextRole,
+        wardrobeStyle: nextWardrobeStyle,
+        wardrobeVariantId: nextWardrobeVariantId,
+        logoPlacement: nextLogoPlacement,
+        outfitColors: resolvedOutfitColors,
+        actionHint: nextActionHint || undefined,
+        appearance: mergedAppearance,
+      });
+      this.rememberCharacterVisualBase(characterState.mesh);
+      this.registerEnvironmentCharacterBehavior(nodeId, characterState.mesh, nextBehaviorPlan);
+
+      store.updateNode(nodeId, {
+        name: nextName,
+        userData: {
+          ...(node.userData || {}),
+          avatarUrl: nextEntry.modelUrl,
+          avatarId: nextEntry.avatarId,
+          characterCatalogId: nextEntry.id,
+          characterId: nodeId,
+          actorRole: nextRole,
+          wardrobeStyle: nextWardrobeStyle,
+          wardrobeVariantId: nextWardrobeVariantId,
+          logoPlacement: nextLogoPlacement,
+          outfitColors: resolvedOutfitColors,
+          placementHint: nextPlacementHint,
+          actionHint: nextActionHint,
+          wardrobeNotes: nextWardrobeNotes,
+          appearance: mergedAppearance,
+          behaviorPlan: nextBehaviorPlan,
+          layoutAnchorId: nextLayoutAnchorId,
+          layoutAnchorKind: nextLayoutAnchorKind,
+          meshNames: this.getChildMeshNames(characterState.mesh),
+          sourceModelUrl: typeof (characterState.mesh.metadata as Record<string, unknown> | null)?.sourceModelUrl === 'string'
+            ? (characterState.mesh.metadata as Record<string, unknown>).sourceModelUrl as string
+            : nextEntry.modelUrl,
+          characterVisualKind: ((characterState.mesh.metadata as Record<string, unknown> | null)?.characterVisualKind as 'catalog-glb' | 'procedural-mannequin' | 'manual-glb' | undefined)
+            || 'catalog-glb',
+        },
+        transform: {
+          position: [
+            characterState.mesh.position.x,
+            characterState.mesh.position.y,
+            characterState.mesh.position.z,
+          ],
+          rotation: [0, characterState.mesh.rotation.y, 0],
+          scale: [1, 1, 1],
+        },
+      });
+    }
+
+    this.regenerateShadowMaps();
+    this.recalculateAmbientLighting();
+    this.publishSceneSelectionSync('character-updated', 'character-inspector');
+    this.publishEnvironmentDiagnostics('character-updated');
+    return true;
+  }
+
+  public async addEnvironmentCharacters(
+    options: {
+      planId?: string;
+      characters: EnvironmentPlanCharacterSuggestion[];
+      branding?: EnvironmentPlanBranding | null;
+      layoutGuidance?: EnvironmentPlanLayoutGuidance | null;
+      clearExisting?: boolean;
+    },
+  ): Promise<{ applied: string[]; skipped: string[]; characterIds: string[] }> {
+    const applied: string[] = [];
+    const skipped: string[] = [];
+    const characterIds: string[] = [];
+
+    if (options.clearExisting) {
+      this.clearEnvironmentCharacters();
+    }
+    if (options.branding) {
+      this.applyEnvironmentBranding({ planId: options.planId, branding: options.branding });
+    }
+    this.currentEnvironmentLayoutGuidance = options.layoutGuidance || null;
+
+    for (let index = 0; index < options.characters.length; index += 1) {
+      const character = options.characters[index];
+      const entry = getCharacterCatalogEntry(character.archetypeId || '') || inferCharacterCatalogEntry(`${character.role} ${character.name}`);
+      const nodeId = `character-${Date.now()}-${index}`;
+      try {
+        const resolvedBehaviorPlan = this.resolveEnvironmentCharacterBehaviorPlan(
+          character.role,
+          character.behaviorPlan || null,
+          {
+            inferIfMissing: true,
+            placementHint: character.placementHint || null,
+            actionHint: character.actionHint || null,
+          },
+        );
+        const layoutAnchor = findBestCharacterLayoutAnchor(
+          options.layoutGuidance || this.currentEnvironmentLayoutGuidance,
+          character,
+        );
+        const position = this.resolveEnvironmentCharacterPosition({
+          ...character,
+          behaviorPlan: resolvedBehaviorPlan,
+        }, index, options.layoutGuidance || this.currentEnvironmentLayoutGuidance);
+        const resolvedOutfitColors = this.resolveBrandedOutfitColors(
+          character.outfitColors,
+          character.wardrobeStyle || entry.wardrobeStyle,
+          character.wardrobeVariantId || entry.wardrobeVariants?.[0] || null,
+        );
+        await this.loadCharacterFromCatalog(entry, {
+          nodeId,
+          name: character.name,
+          position,
+          role: character.role,
+          placementHint: character.placementHint || null,
+          wardrobeStyle: character.wardrobeStyle,
+          wardrobeVariantId: character.wardrobeVariantId || null,
+          outfitColors: resolvedOutfitColors,
+          logoPlacement: character.logoPlacement,
+          actionHint: character.actionHint,
+          wardrobeNotes: character.wardrobeNotes,
+          appearance: character.appearance || null,
+          behaviorPlan: resolvedBehaviorPlan,
+          layoutAnchorId: layoutAnchor?.id || null,
+          layoutAnchorKind: layoutAnchor?.kind || null,
+          environmentGenerated: true,
+          selectOnLoad: false,
+        });
+        applied.push(`${character.role}: ${character.name}`);
+        characterIds.push(nodeId);
+      } catch (error) {
+        console.warn('[Environment Characters] Failed to add character:', character.name, error);
+        skipped.push(`Kunne ikke laste ${character.name}`);
+      }
+    }
+
+    window.dispatchEvent(new CustomEvent('characters-updated', {
+      detail: {
+        action: 'environment-auto-cast',
+        planId: options.planId || null,
+        characterCount: characterIds.length,
+      },
+    }));
+
+    if (characterIds.length > 0) {
+      this.selectedActorId = null;
+      useAppStore.getState().selectNode(null);
+      this.gizmoManager?.attachToMesh(null);
+      this.publishSceneSelectionSync('environment-characters-ready', 'environment-auto-cast');
+      this.publishEnvironmentDiagnostics('environment-characters-ready');
+    }
+
+    return {
+      applied,
+      skipped,
+      characterIds,
+    };
+  }
+
   // Public method to load avatar from API URL
-  public async loadAvatarModel(glbUrl: string, metadata?: { name?: string; category?: string }): Promise<void> {
+  public async loadAvatarModel(
+    glbUrl: string,
+    metadata?: {
+      name?: string;
+      category?: string;
+      appearance?: CharacterAppearanceConfig | null;
+      skinTone?: string;
+      height?: number;
+    },
+  ): Promise<void> {
     console.log('Loading avatar from API:', glbUrl, metadata);
     const avatarName = metadata?.name || `Avatar_${Date.now()}`;
-    const skinTone = '#FFDAB9';
+    const skinTone = metadata?.skinTone || metadata?.appearance?.skinTone || '#FFDAB9';
     // loadCharacterModel handles adding to store
-    await this.loadCharacterModel(glbUrl, avatarName, skinTone, 1.0);
+    await this.loadCharacterModel(glbUrl, avatarName, skinTone, metadata?.height || 1.0, metadata?.appearance || null);
     console.log('Avatar loaded and added to Studio Library:', avatarName);
   }
 
@@ -15726,8 +24100,17 @@ class VirtualStudio {
       rootMesh.rotation = new BABYLON.Vector3(Math.PI, 0, 0);
       
       this.applyPBRShadingToMeshes(result.meshes, `casting_${candidateId}`);
+      this.applyCharacterAppearanceShading(rootMesh, {
+        skinTone: '#d9b08c',
+        hairColor: '#3b2f2f',
+        hairStyle: 'short',
+        facialHair: 'none',
+        ageGroup: 'adult',
+        genderPresentation: 'neutral',
+      });
       this.trackAnimationGroupsForMesh(rootMesh, result.animationGroups || []);
       this.stopAnimationGroupsForMesh(rootMesh, result.animationGroups || []);
+      this.rememberCharacterVisualBase(rootMesh);
       
       // Register all child meshes (geometry_0, etc.) for proper scene tracking
       this.registerModelMeshesInScene(rootMesh, `casting_${candidateId}`, name);
@@ -15794,20 +24177,24 @@ class VirtualStudio {
   }
 
   private createPlaceholderActor(candidateId: string, name: string, position: BABYLON.Vector3): void {
-    const capsule = BABYLON.MeshBuilder.CreateCapsule(`casting_${candidateId}`, {
-      height: 1.7,
-      radius: 0.25,
-    }, this.scene);
-    
-    capsule.position = position.clone();
-    capsule.position.y = 0.85;
-    
-    const material = new BABYLON.StandardMaterial(`casting_${candidateId}_mat`, this.scene);
-    material.diffuseColor = new BABYLON.Color3(0.6, 0.5, 0.4);
-    material.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
-    capsule.material = material;
-    
-    this.castingCandidates.set(candidateId, { mesh: capsule, name });
+    const mannequin = this.createProceduralMannequin(`casting_${candidateId}`, {
+      name,
+      height: 1.72,
+      appearance: {
+        skinTone: '#c58c62',
+        hairColor: '#3b2f2f',
+        hairStyle: 'short',
+        facialHair: 'none',
+        ageGroup: 'adult',
+        genderPresentation: 'neutral',
+      },
+      outfitColors: ['#334155', '#111827'],
+    });
+
+    mannequin.position = this.positionMeshOnGround(mannequin, position.clone());
+    this.rotateMeshTowardCamera(mannequin);
+
+    this.castingCandidates.set(candidateId, { mesh: mannequin, name });
     console.log(`Created placeholder actor for ${name}`);
   }
   
@@ -15830,17 +24217,23 @@ class VirtualStudio {
       baseRotation: BABYLON.Vector3;
     }> = [
       {
-        // Rigged + animated fallback so limbs can move.
-        url: 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/CesiumMan/glTF-Binary/CesiumMan.glb',
-        name: 'Avatar (Rigged)',
-        pbrKey: 'cesium_man',
-        baseRotation: new BABYLON.Vector3(0, 0, 0),
+        url: '/models/avatars/avatar_man.glb',
+        name: 'Avatar (Man)',
+        pbrKey: 'avatar_man',
+        baseRotation: new BABYLON.Vector3(Math.PI, Math.PI, 0),
       },
       {
-        url: resolveModelPath('/models/avatars/avatar_woman.glb'),
+        url: '/models/avatars/avatar_woman.glb',
         name: 'Avatar (Woman)',
         pbrKey: 'avatar_woman',
         baseRotation: new BABYLON.Vector3(Math.PI, Math.PI, 0),
+      },
+      {
+        // Keep Cesium only as a last-resort technical fallback for rig testing.
+        url: 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/CesiumMan/glTF-Binary/CesiumMan.glb',
+        name: 'Avatar (Rigged Fallback)',
+        pbrKey: 'cesium_man',
+        baseRotation: new BABYLON.Vector3(0, 0, 0),
       },
     ];
 
@@ -15870,9 +24263,18 @@ class VirtualStudio {
         rootMesh.rotation.x = rotationX;
 
         this.applyPBRShadingToMeshes(result.meshes, candidate.pbrKey);
+        this.applyCharacterAppearanceShading(rootMesh, {
+          skinTone: '#d9b08c',
+          hairColor: '#3b2f2f',
+          hairStyle: 'short',
+          facialHair: 'none',
+          ageGroup: 'adult',
+          genderPresentation: 'neutral',
+        });
         this.registerModelMeshesInScene(rootMesh, avatarId, candidate.name);
         this.trackAnimationGroupsForMesh(rootMesh, result.animationGroups || []);
         this.stopAnimationGroupsForMesh(rootMesh, result.animationGroups || []);
+        this.rememberCharacterVisualBase(rootMesh);
 
         this.castingCandidates.set(avatarId, {
           mesh: rootMesh,
@@ -15903,26 +24305,32 @@ class VirtualStudio {
       }
     }
 
-    console.error('Failed to load default avatar candidates, using placeholder:', lastError);
+    console.error('Failed to load default avatar candidates, using procedural mannequin:', lastError);
     this.createSimpleMannequin(avatarId);
   }
   
   /**
-   * Create a simple capsule mannequin as fallback
+   * Create a simple procedural mannequin as fallback
    */
   private createSimpleMannequin(id: string): void {
-    const capsule = BABYLON.MeshBuilder.CreateCapsule(id, {
+    const mannequin = this.createProceduralMannequin(id, {
+      name: 'Mannequin',
       height: 1.75,
-      radius: 0.25,
-    }, this.scene);
-    
-    capsule.position = new BABYLON.Vector3(0, 0.875, 0);
-    
-    const material = new BABYLON.StandardMaterial(`${id}_mat`, this.scene);
-    material.diffuseColor = new BABYLON.Color3(0.6, 0.5, 0.45);
-    capsule.material = material;
-    
-    this.castingCandidates.set(id, { mesh: capsule, name: 'Mannequin' });
+      appearance: {
+        skinTone: '#d9b08c',
+        hairColor: '#3b2f2f',
+        hairStyle: 'short',
+        facialHair: 'none',
+        ageGroup: 'adult',
+        genderPresentation: 'neutral',
+      },
+      outfitColors: ['#475569', '#1f2937'],
+    });
+
+    mannequin.position = this.positionMeshOnGround(mannequin, new BABYLON.Vector3(0, 0, 0));
+    this.rotateMeshTowardCamera(mannequin);
+
+    this.castingCandidates.set(id, { mesh: mannequin, name: 'Mannequin' });
     
     setTimeout(() => {
       this.updateFocusObjectsList();
@@ -16016,14 +24424,7 @@ class VirtualStudio {
       cct?: number;
     }>
   ): void {
-    // Remove existing lights
-    this.lights.forEach((lightData) => {
-      if (lightData.light) lightData.light.dispose();
-      if (lightData.mesh) lightData.mesh.dispose();
-      if (lightData.shadowGenerator) lightData.shadowGenerator.dispose();
-      if (lightData.beamVisualization) lightData.beamVisualization.dispose();
-    });
-    this.lights.clear();
+    this.clearAllLights();
 
     // Create new lights from preset
     lights.forEach((lightConfig, _index) => {
@@ -16317,7 +24718,429 @@ class VirtualStudio {
     return material;
   }
 
-  private async loadCharacterModel(modelUrl: string, name: string, skinTone: string, height: number): Promise<void> {
+  private getCharacterToneColor(value: string | null | undefined, fallback: string): BABYLON.Color3 {
+    const hex = (value || fallback).trim();
+    try {
+      return BABYLON.Color3.FromHexString(hex);
+    } catch {
+      return BABYLON.Color3.FromHexString(fallback);
+    }
+  }
+
+  private inferAvatarIdFromModelUrl(modelUrl: string | null | undefined): string | undefined {
+    if (typeof modelUrl !== 'string' || modelUrl.trim().length === 0) {
+      return undefined;
+    }
+
+    const lowered = modelUrl.toLowerCase();
+    const avatarIds = [
+      'avatar_child',
+      'avatar_teenager',
+      'avatar_woman',
+      'avatar_man',
+      'avatar_elderly',
+      'avatar_athlete',
+      'avatar_pregnant',
+      'avatar_dancer',
+    ] as const;
+
+    return avatarIds.find((avatarId) => lowered.includes(avatarId));
+  }
+
+  private rememberCharacterVisualBase(mesh: BABYLON.AbstractMesh): void {
+    mesh.metadata = {
+      ...(mesh.metadata || {}),
+      baseVisualRotation: [
+        mesh.rotation.x,
+        mesh.rotation.y,
+        mesh.rotation.z,
+      ],
+    };
+  }
+
+  private clearCharacterBodyMotionOverlay(mesh: BABYLON.AbstractMesh | null | undefined): void {
+    if (!mesh || mesh.isDisposed()) return;
+    const metadata = mesh.metadata as { baseVisualRotation?: [number, number, number] } | undefined;
+    const baseVisualRotation = Array.isArray(metadata?.baseVisualRotation)
+      ? metadata?.baseVisualRotation
+      : [mesh.rotation.x, mesh.rotation.y, mesh.rotation.z];
+    mesh.rotation.x = Number(baseVisualRotation?.[0] ?? mesh.rotation.x);
+    mesh.rotation.z = Number(baseVisualRotation?.[2] ?? mesh.rotation.z);
+    mesh.computeWorldMatrix(true);
+  }
+
+  private applyCharacterBodyMotionOverlay(
+    mesh: BABYLON.AbstractMesh,
+    options: {
+      moving: boolean;
+      phase: number;
+      speed: number;
+      forwardAxis: number;
+      strafeAxis: number;
+    },
+  ): void {
+    if (!mesh || mesh.isDisposed()) return;
+
+    const metadata = mesh.metadata as { baseVisualRotation?: [number, number, number] } | undefined;
+    const baseVisualRotation = Array.isArray(metadata?.baseVisualRotation)
+      ? metadata?.baseVisualRotation
+      : [mesh.rotation.x, mesh.rotation.y, mesh.rotation.z];
+    const basePitch = Number(baseVisualRotation?.[0] ?? mesh.rotation.x);
+    const baseRoll = Number(baseVisualRotation?.[2] ?? mesh.rotation.z);
+    const speedFactor = BABYLON.Scalar.Clamp(options.speed / 1.45, 0, 1.2);
+
+    if (!options.moving) {
+      const breathing = Math.sin((performance.now() * 0.0022) + mesh.uniqueId * 0.11) * 0.006;
+      mesh.rotation.x = basePitch + breathing;
+      mesh.rotation.z = baseRoll;
+      mesh.computeWorldMatrix(true);
+      return;
+    }
+
+    const sway = Math.sin(options.phase) * 0.045 * Math.max(0.35, speedFactor);
+    const counterTilt = Math.cos(options.phase * 2) * 0.014 * Math.max(0.35, speedFactor);
+    const forwardLean = BABYLON.Scalar.Clamp((-options.forwardAxis * 0.05) + (Math.abs(options.strafeAxis) * -0.012), -0.08, 0.04);
+    const strafeLean = BABYLON.Scalar.Clamp((options.strafeAxis * 0.055) + sway, -0.12, 0.12);
+
+    mesh.rotation.x = basePitch + forwardLean + counterTilt;
+    mesh.rotation.z = baseRoll + strafeLean;
+    mesh.computeWorldMatrix(true);
+  }
+
+  private applyCharacterAppearanceShading(
+    rootMesh: BABYLON.AbstractMesh,
+    appearance?: CharacterAppearanceConfig | null,
+    outfitColors?: string[],
+  ): void {
+    const resolvedAppearance = this.resolveCharacterAppearanceConfig(appearance);
+    const visualKind = this.getCharacterVisualKind(rootMesh);
+    const isImportedCharacter = visualKind === 'catalog-glb' || visualKind === 'manual-glb';
+    const bounds = rootMesh.getHierarchyBoundingVectors(true);
+    const totalHeight = Math.max(0.001, bounds.max.y - bounds.min.y);
+    const totalWidth = Math.max(0.18, bounds.max.x - bounds.min.x);
+    const centerX = bounds.min.x + ((bounds.max.x - bounds.min.x) * 0.5);
+    const primaryHex = outfitColors?.[0] || this.getEnvironmentBrandColor(0, '#3b82f6');
+    const secondaryHex = outfitColors?.[1] || this.getEnvironmentBrandColor(2, '#1f2937');
+    const accentHex = outfitColors?.[2] || this.getEnvironmentBrandColor(1, '#f8fafc');
+
+    const skinMaterial = this.createProceduralCharacterMaterial(
+      `${rootMesh.name}_skin_style_mat`,
+      this.getCharacterToneColor(resolvedAppearance.skinTone, '#d9b08c'),
+      'skin',
+    );
+    const shirtMaterial = this.createProceduralCharacterMaterial(
+      `${rootMesh.name}_shirt_style_mat`,
+      this.getCharacterToneColor(primaryHex, '#3b82f6'),
+      'shirt',
+    );
+    const pantsMaterial = this.createProceduralCharacterMaterial(
+      `${rootMesh.name}_pants_style_mat`,
+      this.getCharacterToneColor(secondaryHex, '#1f2937'),
+      'pants',
+    );
+    const hairMaterial = this.createProceduralCharacterMaterial(
+      `${rootMesh.name}_hair_style_mat`,
+      this.getCharacterToneColor(resolvedAppearance.hairColor, '#3b2f2f'),
+      'shirt',
+    );
+
+    const hierarchyMeshes = [rootMesh, ...rootMesh.getChildMeshes(true)]
+      .filter((candidate): candidate is BABYLON.Mesh => candidate instanceof BABYLON.Mesh && candidate.getTotalVertices() > 0)
+      .filter((mesh) => {
+        const metadata = mesh.metadata as {
+          characterWardrobeAccessory?: boolean;
+          characterAppearanceAccessory?: boolean;
+        } | undefined;
+        return !metadata?.characterWardrobeAccessory && !metadata?.characterAppearanceAccessory;
+      });
+
+    if (isImportedCharacter) {
+      const hasAnyToken = (value: string, tokens: string[]): boolean => tokens.some((token) => value.includes(token));
+      const isUntexturedMaterial = (material: BABYLON.Material | null | undefined): boolean => {
+        if (!material) return true;
+        if (material instanceof BABYLON.PBRMaterial) {
+          return !material.albedoTexture && !material.bumpTexture && !material.metallicTexture;
+        }
+        if (material instanceof BABYLON.StandardMaterial) {
+          return !material.diffuseTexture && !material.bumpTexture;
+        }
+        return false;
+      };
+
+      hierarchyMeshes.forEach((mesh) => {
+        const loweredName = `${mesh.name} ${mesh.material?.name || ''}`.toLowerCase();
+        if (loweredName.includes('logo') || loweredName.includes('eye') || loweredName.includes('iris') || loweredName.includes('pupil')) {
+          mesh.receiveShadows = true;
+          this.lights.forEach((lightData) => {
+            if (lightData.shadowGenerator) {
+              lightData.shadowGenerator.addShadowCaster(mesh);
+            }
+          });
+          return;
+        }
+
+        const meshBounds = mesh.getBoundingInfo().boundingBox;
+        const centerY = (meshBounds.maximumWorld.y + meshBounds.minimumWorld.y) * 0.5;
+        const centerXLocal = (meshBounds.maximumWorld.x + meshBounds.minimumWorld.x) * 0.5;
+        const normalizedY = (centerY - bounds.min.y) / totalHeight;
+        const lateralDistance = Math.abs(centerXLocal - centerX);
+        const materialIsFlat = isUntexturedMaterial(mesh.material);
+
+        if (hasAnyToken(loweredName, ['hair', 'brow', 'lash', 'beard', 'mustache'])) {
+          this.tintCharacterMeshMaterial(mesh, resolvedAppearance.hairColor, { amount: 0.32, roughness: 0.56, metallic: 0 });
+        } else if (hasAnyToken(loweredName, ['skin', 'face', 'head', 'ear', 'arm', 'hand', 'leg', 'body', 'torso', 'neck'])) {
+          this.tintCharacterMeshMaterial(mesh, resolvedAppearance.skinTone, { amount: 0.22, roughness: 0.68, metallic: 0 });
+        } else if (hasAnyToken(loweredName, ['shirt', 'top', 'jacket', 'coat', 'dress', 'hoodie', 'sweater', 'fabric', 'cloth', 'blouse'])) {
+          this.tintCharacterMeshMaterial(mesh, primaryHex, { amount: 0.52, roughness: 0.82, metallic: 0 });
+        } else if (hasAnyToken(loweredName, ['pant', 'jean', 'skirt', 'short', 'legging', 'trouser'])) {
+          this.tintCharacterMeshMaterial(mesh, secondaryHex, { amount: 0.48, roughness: 0.84, metallic: 0 });
+        } else if (hasAnyToken(loweredName, ['shoe', 'boot', 'sneaker', 'heel'])) {
+          this.tintCharacterMeshMaterial(mesh, accentHex, { amount: 0.32, roughness: 0.52, metallic: 0 });
+        } else if (materialIsFlat) {
+          if (normalizedY > 0.84) {
+            this.tintCharacterMeshMaterial(mesh, resolvedAppearance.skinTone, { amount: 0.18, roughness: 0.68, metallic: 0 });
+          } else if (normalizedY > 0.38) {
+            this.tintCharacterMeshMaterial(
+              mesh,
+              lateralDistance > totalWidth * 0.34 && normalizedY > 0.5 ? resolvedAppearance.skinTone : primaryHex,
+              {
+                amount: lateralDistance > totalWidth * 0.34 && normalizedY > 0.5 ? 0.16 : 0.28,
+                roughness: lateralDistance > totalWidth * 0.34 && normalizedY > 0.5 ? 0.68 : 0.82,
+                metallic: 0,
+              },
+            );
+          } else {
+            this.tintCharacterMeshMaterial(mesh, secondaryHex, { amount: 0.28, roughness: 0.84, metallic: 0 });
+          }
+        }
+
+        mesh.receiveShadows = true;
+        this.lights.forEach((lightData) => {
+          if (lightData.shadowGenerator) {
+            lightData.shadowGenerator.addShadowCaster(mesh);
+          }
+        });
+      });
+
+      return;
+    }
+
+    hierarchyMeshes.forEach((mesh) => {
+      const loweredName = mesh.name.toLowerCase();
+      if (loweredName.includes('logo') || loweredName.includes('eye')) {
+        return;
+      }
+
+      const meshBounds = mesh.getBoundingInfo().boundingBox;
+      const centerY = (meshBounds.maximumWorld.y + meshBounds.minimumWorld.y) * 0.5;
+      const centerXLocal = (meshBounds.maximumWorld.x + meshBounds.minimumWorld.x) * 0.5;
+      const normalizedY = (centerY - bounds.min.y) / totalHeight;
+      const lateralDistance = Math.abs(centerXLocal - centerX);
+
+      if (loweredName.includes('hair') || loweredName.includes('beard') || loweredName.includes('brow')) {
+        mesh.material = hairMaterial;
+      } else if (normalizedY > 0.84) {
+        mesh.material = skinMaterial;
+      } else if (normalizedY > 0.38) {
+        mesh.material = lateralDistance > totalWidth * 0.34 && normalizedY > 0.5
+          ? skinMaterial
+          : shirtMaterial;
+      } else {
+        mesh.material = pantsMaterial;
+      }
+
+      mesh.receiveShadows = true;
+      this.lights.forEach((lightData) => {
+        if (lightData.shadowGenerator) {
+          lightData.shadowGenerator.addShadowCaster(mesh);
+        }
+      });
+    });
+  }
+
+  private createProceduralMannequin(
+    id: string,
+    options?: {
+      name?: string;
+      height?: number;
+      skinTone?: string;
+      outfitColors?: string[];
+      appearance?: CharacterAppearanceConfig | null;
+    },
+  ): BABYLON.Mesh {
+    const root = BABYLON.MeshBuilder.CreateBox(id, {
+      width: 0.34,
+      height: 0.58,
+      depth: 0.22,
+    }, this.scene);
+    root.position = new BABYLON.Vector3(0, 1.02, 0);
+    root.metadata = {
+      ...(root.metadata || {}),
+      sourceModelUrl: 'procedural-mannequin',
+      characterFallback: true,
+      characterVisualKind: 'procedural-mannequin',
+    };
+
+    const resolvedAppearance = this.resolveCharacterAppearanceConfig(options?.appearance, options?.skinTone);
+    const skinMaterial = this.createProceduralCharacterMaterial(
+      `${id}_skin_mat`,
+      this.getCharacterToneColor(resolvedAppearance.skinTone, '#d9b08c'),
+      'skin',
+    );
+    const shirtMaterial = this.createProceduralCharacterMaterial(
+      `${id}_shirt_mat`,
+      this.getCharacterToneColor(options?.outfitColors?.[0] || '#2563eb', '#2563eb'),
+      'shirt',
+    );
+    const pantsMaterial = this.createProceduralCharacterMaterial(
+      `${id}_pants_mat`,
+      this.getCharacterToneColor(options?.outfitColors?.[1] || '#1f2937', '#1f2937'),
+      'pants',
+    );
+    const shoeMaterial = this.createWardrobeMaterial(`${id}_shoe_trim_mat`, '#111827', 'trim');
+
+    root.material = shirtMaterial;
+
+    const makeLimb = (
+      name: string,
+      diameter: number,
+      height: number,
+      material: BABYLON.Material,
+      position: BABYLON.Vector3,
+      rotationZ = 0,
+      taper = 0.84,
+    ): BABYLON.Mesh => {
+      const limb = BABYLON.MeshBuilder.CreateCylinder(name, {
+        diameterTop: diameter * taper,
+        diameterBottom: diameter,
+        height,
+        tessellation: 14,
+      }, this.scene);
+      limb.parent = root;
+      limb.position = position;
+      limb.rotation.z = rotationZ;
+      limb.material = material;
+      return limb;
+    };
+
+    const head = BABYLON.MeshBuilder.CreateSphere(`${id}_head`, { diameter: 0.28, segments: 18 }, this.scene);
+    head.parent = root;
+    head.position = new BABYLON.Vector3(0, 0.48, 0.01);
+    head.scaling = new BABYLON.Vector3(0.92, 1.08, 0.96);
+    head.material = skinMaterial;
+
+    const neck = BABYLON.MeshBuilder.CreateCylinder(`${id}_neck`, {
+      diameterTop: 0.08,
+      diameterBottom: 0.1,
+      height: 0.09,
+      tessellation: 12,
+    }, this.scene);
+    neck.parent = root;
+    neck.position = new BABYLON.Vector3(0, 0.32, 0.01);
+    neck.material = skinMaterial;
+
+    const shoulders = BABYLON.MeshBuilder.CreateBox(`${id}_shoulders`, {
+      width: 0.46,
+      height: 0.14,
+      depth: 0.2,
+    }, this.scene);
+    shoulders.parent = root;
+    shoulders.position = new BABYLON.Vector3(0, 0.14, 0);
+    shoulders.material = shirtMaterial;
+
+    const chestShell = BABYLON.MeshBuilder.CreateBox(`${id}_chestShell`, {
+      width: 0.3,
+      height: 0.32,
+      depth: 0.16,
+    }, this.scene);
+    chestShell.parent = root;
+    chestShell.position = new BABYLON.Vector3(0, 0.02, 0.02);
+    chestShell.material = shirtMaterial;
+
+    const jaw = BABYLON.MeshBuilder.CreateBox(`${id}_jaw`, {
+      width: 0.14,
+      height: 0.06,
+      depth: 0.08,
+    }, this.scene);
+    jaw.parent = root;
+    jaw.position = new BABYLON.Vector3(0, 0.38, 0.06);
+    jaw.material = skinMaterial;
+
+    const pelvis = BABYLON.MeshBuilder.CreateBox(`${id}_pelvis`, {
+      width: 0.28,
+      height: 0.2,
+      depth: 0.18,
+    }, this.scene);
+    pelvis.parent = root;
+    pelvis.position = new BABYLON.Vector3(0, -0.38, 0);
+    pelvis.material = pantsMaterial;
+
+    makeLimb(`${id}_leftArm`, 0.1, 0.58, skinMaterial, new BABYLON.Vector3(-0.25, 0.02, 0), Math.PI * 0.05, 0.78);
+    makeLimb(`${id}_rightArm`, 0.1, 0.58, skinMaterial, new BABYLON.Vector3(0.25, 0.02, 0), -Math.PI * 0.05, 0.78);
+    makeLimb(`${id}_leftLeg`, 0.12, 0.82, pantsMaterial, new BABYLON.Vector3(-0.09, -0.88, 0), 0, 0.88);
+    makeLimb(`${id}_rightLeg`, 0.12, 0.82, pantsMaterial, new BABYLON.Vector3(0.09, -0.88, 0), 0, 0.88);
+
+    const leftHand = BABYLON.MeshBuilder.CreateSphere(`${id}_leftHand`, { diameter: 0.09, segments: 12 }, this.scene);
+    leftHand.parent = root;
+    leftHand.position = new BABYLON.Vector3(-0.39, -0.2, 0.01);
+    leftHand.material = skinMaterial;
+
+    const rightHand = BABYLON.MeshBuilder.CreateSphere(`${id}_rightHand`, { diameter: 0.09, segments: 12 }, this.scene);
+    rightHand.parent = root;
+    rightHand.position = new BABYLON.Vector3(0.39, -0.2, 0.01);
+    rightHand.material = skinMaterial;
+
+    const leftFoot = BABYLON.MeshBuilder.CreateBox(`${id}_leftFoot`, {
+      width: 0.13,
+      height: 0.08,
+      depth: 0.26,
+    }, this.scene);
+    leftFoot.parent = root;
+    leftFoot.position = new BABYLON.Vector3(-0.09, -1.31, 0.05);
+    leftFoot.material = shoeMaterial;
+
+    const rightFoot = BABYLON.MeshBuilder.CreateBox(`${id}_rightFoot`, {
+      width: 0.13,
+      height: 0.08,
+      depth: 0.26,
+    }, this.scene);
+    rightFoot.parent = root;
+    rightFoot.position = new BABYLON.Vector3(0.09, -1.31, 0.05);
+    rightFoot.material = shoeMaterial;
+
+    [root, ...root.getChildMeshes(true)].forEach((mesh) => {
+      mesh.receiveShadows = true;
+      this.lights.forEach((lightData) => {
+        if (lightData.shadowGenerator) {
+          lightData.shadowGenerator.addShadowCaster(mesh);
+        }
+      });
+    });
+
+    const targetHeight = options?.height || 1.72;
+    const bounds = root.getHierarchyBoundingVectors(true);
+    const modelHeight = Math.max(0.001, bounds.max.y - bounds.min.y);
+    const scale = targetHeight / modelHeight;
+    root.scaling = new BABYLON.Vector3(scale, scale, scale);
+    root.metadata = {
+      ...(root.metadata || {}),
+      avatarId: 'procedural_mannequin',
+      generatedName: options?.name || id,
+      sourceModelUrl: 'procedural-mannequin',
+      characterVisualKind: 'procedural-mannequin',
+    };
+    this.applyCharacterAppearanceShading(root, resolvedAppearance, options?.outfitColors);
+    this.rememberCharacterVisualBase(root);
+    return root;
+  }
+
+  private async loadCharacterModel(
+    modelUrl: string,
+    name: string,
+    skinTone: string,
+    height: number,
+    appearance?: CharacterAppearanceConfig | null,
+  ): Promise<void> {
     this.removeCharacterModel();
     
     let meshPosition = new BABYLON.Vector3(0, 0, 0);
@@ -16330,6 +25153,11 @@ class VirtualStudio {
       this.characterMesh.name = name;
       this.characterMesh.metadata = this.characterMesh.metadata || {};
       (this.characterMesh.metadata as Record<string, unknown>).sourceModelUrl = modelUrl;
+      (this.characterMesh.metadata as Record<string, unknown>).characterVisualKind = 'manual-glb';
+      const inferredAvatarId = this.inferAvatarIdFromModelUrl(modelUrl);
+      if (inferredAvatarId) {
+        (this.characterMesh.metadata as Record<string, unknown>).avatarId = inferredAvatarId;
+      }
       this.trackAnimationGroupsForMesh(this.characterMesh, importedAnimationGroups);
       this.stopAnimationGroupsForMesh(this.characterMesh, importedAnimationGroups);
       
@@ -16371,87 +25199,11 @@ class VirtualStudio {
       this.characterMesh.position = meshPosition;
       this.characterMesh.computeWorldMatrix(true);
       
-      // Character Material Stack: PBRMaterial for skin, shirt, and pants
-      const skinColor = BABYLON.Color3.FromHexString(skinTone || '#FFDAB9');
-      const shirtColor = new BABYLON.Color3(0.2, 0.4, 0.7); // Blue shirt
-      const pantsColor = new BABYLON.Color3(0.2, 0.2, 0.25); // Dark gray pants
-      
-      // Use original local bounds (before rotation/scaling) for material selection
-      const localMinY = boundingInfo.min.y;
-      const localMaxY = boundingInfo.max.y;
-      const localModelHeight = localMaxY - localMinY;
-      
-      console.log(`Material bounds: localMinY=${localMinY.toFixed(3)}, localMaxY=${localMaxY.toFixed(3)}`);
-      
-      // Textured PBR material stack (albedo + normal + roughness/metallic maps).
-      const skinMaterial = this.createProceduralCharacterMaterial(`${name}_skin_mat`, skinColor, 'skin');
-      const shirtMaterial = this.createProceduralCharacterMaterial(`${name}_shirt_mat`, shirtColor, 'shirt');
-      const pantsMaterial = this.createProceduralCharacterMaterial(`${name}_pants_mat`, pantsColor, 'pants');
-      
       // Get all meshes including root
       const allMeshes = this.characterMesh.getChildMeshes(true);
       allMeshes.push(this.characterMesh);
+      this.applyPBRShadingToMeshes(allMeshes, inferredAvatarId);
       
-      let meshCount = 0;
-      let skinMeshCount = 0;
-      let shirtMeshCount = 0;
-      let pantsMeshCount = 0;
-      
-      // Apply materials based on mesh position (simplified approach)
-      // For now, apply skin material to all meshes - in a full implementation,
-      // you would use submeshes or vertex colors to distinguish body parts
-      allMeshes.forEach(mesh => {
-        if (mesh instanceof BABYLON.Mesh && this.characterMesh) {
-          // Get mesh center in local space
-          const meshBounds = mesh.getBoundingInfo();
-          const meshCenterY = (meshBounds.boundingBox.maximumWorld.y + meshBounds.boundingBox.minimumWorld.y) / 2;
-          const normalizedY = (meshCenterY - this.characterMesh.getAbsolutePosition().y - localMinY) / localModelHeight;
-          
-          // Determine material based on Y position
-          // Head/neck area (above 82%) = skin
-          // Torso (38% to 82%) = shirt (except arms)
-          // Legs (below 38%) = pants
-          if (normalizedY > 0.82) {
-            mesh.material = skinMaterial;
-            skinMeshCount++;
-          } else if (normalizedY > 0.38) {
-            // Torso area - check if arms (far from center X)
-            const meshCenterX = (meshBounds.boundingBox.maximumWorld.x + meshBounds.boundingBox.minimumWorld.x) / 2;
-            const xDist = Math.abs(meshCenterX - this.characterMesh.getAbsolutePosition().x);
-            if (xDist > 0.15 && normalizedY > 0.55) {
-              mesh.material = skinMaterial; // Arms
-              skinMeshCount++;
-            } else {
-              mesh.material = shirtMaterial; // Shirt
-              shirtMeshCount++;
-            }
-          } else {
-            mesh.material = pantsMaterial; // Pants
-            pantsMeshCount++;
-          }
-          
-          // Enable shadows
-          mesh.receiveShadows = true;
-          mesh.castShadows = true;
-          
-          // Add to shadow generators
-          this.lights.forEach((lightData) => {
-            if (lightData.shadowGenerator) {
-              lightData.shadowGenerator.addShadowCaster(mesh);
-            }
-          });
-          
-          meshCount++;
-        }
-      });
-      
-      console.log(`Applied PBR material stack (skin: ${skinMeshCount}, shirt: ${shirtMeshCount}, pants: ${pantsMeshCount}) to ${meshCount} mesh(es)`);
-      
-      // Add eyes to the character model
-      this.addEyesToMesh(this.characterMesh, name);
-      
-      // Reposition mesh on ground after adding eyes (eyes change the bounding box)
-      // Use positionMeshOnGround to ensure correct positioning
       meshPosition = this.positionMeshOnGround(this.characterMesh, meshPosition.clone());
       this.characterMesh.position = meshPosition;
       this.characterMesh.computeWorldMatrix(true);
@@ -16466,38 +25218,36 @@ class VirtualStudio {
         this.characterMesh.computeWorldMatrix(true);
         meshPosition.y = this.characterMesh.position.y;
       }
-      
+
+      this.applyCharacterAppearanceShading(this.characterMesh, appearance, undefined);
+      this.decorateCharacterForRole(this.characterMesh, inferCharacterCatalogEntry(name), {
+        appearance,
+      });
+      this.rememberCharacterVisualBase(this.characterMesh);
+
       console.log(`Loaded character: ${name} at position (${meshPosition.x}, ${meshPosition.y}, ${meshPosition.z})`);
     } catch (error) {
-      console.warn(`Character model not found: ${modelUrl}, creating placeholder`, error);
-      const capsule = BABYLON.MeshBuilder.CreateCapsule(name, { height: 1.75, radius: 0.22 }, this.scene);
-      
-      // Position capsule on ground
-      meshPosition = this.positionMeshOnGround(capsule, new BABYLON.Vector3(0, 0, 0));
-      capsule.position = meshPosition;
-      
-      // Rotate capsule toward camera
-      this.rotateMeshTowardCamera(capsule);
-      
-      const skinColor = BABYLON.Color3.FromHexString(skinTone || '#EAC086');
-      const pbrMaterial = this.createProceduralCharacterMaterial(`${name}_pbr_mat`, skinColor, 'skin');
-      capsule.material = pbrMaterial;
-      
-      // Enable shadows
-      capsule.receiveShadows = true;
-      capsule.castShadows = true;
-      
-      // Add to shadow generators
-      this.lights.forEach((lightData) => {
-        if (lightData.shadowGenerator) {
-          lightData.shadowGenerator.addShadowCaster(capsule);
-        }
+      console.warn(`Character model not found: ${modelUrl}, creating procedural mannequin fallback`, error);
+      const mannequin = this.createProceduralMannequin(name, {
+        name,
+        height: 1.7 * (height || 1.0),
+        skinTone,
+        appearance,
       });
-      
-      // Add eyes to placeholder capsule
-      this.addEyesToActor(capsule, 1.75, skinTone || '#EAC086');
-      
-      this.characterMesh = capsule;
+
+      meshPosition = this.positionMeshOnGround(mannequin, new BABYLON.Vector3(0, 0, 0));
+      mannequin.position = meshPosition;
+      this.rotateMeshTowardCamera(mannequin);
+      this.decorateCharacterForRole(mannequin, inferCharacterCatalogEntry(name), {
+        appearance,
+      });
+      this.rememberCharacterVisualBase(mannequin);
+      this.characterMesh = mannequin;
+      this.characterMesh.metadata = {
+        ...(this.characterMesh.metadata || {}),
+        sourceModelUrl: 'procedural-mannequin',
+        characterVisualKind: 'procedural-mannequin',
+      };
     }
 
     // Add to scene hierarchy store
@@ -16525,7 +25275,9 @@ class VirtualStudio {
         scale: [1, 1, 1]
       },
       userData: {
-        meshNames: this.characterMesh ? this.getChildMeshNames(this.characterMesh) : []
+        meshNames: this.characterMesh ? this.getChildMeshNames(this.characterMesh) : [],
+        skinTone,
+        appearance: appearance || null,
       }
     };
     
@@ -16699,6 +25451,7 @@ class VirtualStudio {
     this.characterKeyboardState.rigResolvePending = false;
     this.characterKeyboardState.cachedGroundY = null;
     if (this.characterMesh) {
+      this.clearCharacterBodyMotionOverlay(this.characterMesh);
       this.clearTrackedAnimationGroupsForMesh(this.characterMesh);
       this.unloadRigForMesh(this.characterMesh);
       this.characterMesh.dispose();
@@ -16733,7 +25486,8 @@ class VirtualStudio {
   private topViewShowCCTColors: boolean = false;
   private topViewShowLightFalloff: boolean = false;
   private topViewShowPatternGuides: boolean = false;
-  private topViewSelectedPattern: 'rembrandt' | 'butterfly' | 'loop' | 'none' = 'none';
+  private topViewSelectedPattern: LightingPatternGuideId | 'none' = 'none';
+  private topViewLastBehaviorSyncAtMs: number = 0;
   private topViewShowShadows: boolean = false;
   private topViewZoom: number = 1.0;
   private topViewPan: { x: number; y: number } = { x: 0, y: 0 };
@@ -16743,6 +25497,10 @@ class VirtualStudio {
   private topViewDraggingPropId: string | null = null;
   private topViewHoveredActorId: string | null = null;
   private topViewDraggingActorId: string | null = null;
+  private topViewHoveredBehaviorHandle: { actorId: string; pointIndex: number } | null = null;
+  private topViewDraggingBehaviorHandle: { actorId: string; pointIndex: number } | null = null;
+  private topViewHoveredZoneId: string | null = null;
+  private topViewBehaviorZoneAssignmentMode: 'home-zone' | 'look-target' | null = null;
   private selectedActorId: string | null = null;
   private topViewHoveredCameraId: string | null = null;
   private topViewDraggingCameraId: string | null = null;
@@ -16819,7 +25577,9 @@ class VirtualStudio {
       minimapCtx: !!this.topViewMinimapCtx,
       showMinimap: this.topViewShowMinimap,
       showLightOverlap: this.topViewShowLightOverlap,
-      showHeightIndicator: this.topViewShowHeightIndicator
+      showHeightIndicator: this.topViewShowHeightIndicator,
+      hoveredZoneId: this.topViewHoveredZoneId,
+      behaviorZoneAssignmentMode: this.topViewBehaviorZoneAssignmentMode,
     };
   }
 
@@ -16932,6 +25692,8 @@ class VirtualStudio {
       this.drawFloorInTopView(ctx, cx, cy, scale);
     }
 
+    this.drawRoomShellZonesInTopView(ctx, cx, cy, scale);
+
     // Draw walls (before props and actors)
     if (this.topViewShowWalls) {
       this.drawWallsInTopView(ctx, cx, cy, scale);
@@ -16941,6 +25703,9 @@ class VirtualStudio {
     if (this.topViewShowProps) {
       this.drawPropsInTopView(ctx, cx, cy, scale);
     }
+
+    // Draw AI behavior routes and targets beneath actor markers
+    this.drawEnvironmentBehaviorRoutesInTopView(ctx, cx, cy, scale);
 
     // Draw actors/models in scene
     this.drawActorsInTopView(ctx, cx, cy, scale);
@@ -17331,6 +26096,101 @@ class VirtualStudio {
         ctx.textBaseline = 'middle';
         ctx.fillText('Loop Key (30-45°)', loopX + Math.cos(loopRad) * 20, loopZ + Math.sin(loopRad) * 20);
         break;
+
+      case 'split':
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx - guideRadius, cy);
+        ctx.stroke();
+
+        ctx.fillStyle = guideColor.replace('0.6', '0.9');
+        ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Split Key (90°)', cx - guideRadius - 20, cy);
+        break;
+
+      case 'clamshell':
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - guideRadius * 0.4);
+        ctx.lineTo(cx, cy - guideRadius * 1.35);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cx - guideRadius * 0.3, cy - guideRadius * 0.9);
+        ctx.lineTo(cx + guideRadius * 0.3, cy - guideRadius * 0.9);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cx - guideRadius * 0.2, cy + guideRadius * 0.15);
+        ctx.lineTo(cx + guideRadius * 0.2, cy + guideRadius * 0.15);
+        ctx.stroke();
+
+        ctx.fillStyle = guideColor.replace('0.6', '0.9');
+        ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('Clamshell Axis', cx, cy - guideRadius * 1.5);
+        break;
+
+      case 'three-point':
+        {
+          const keyAngle = (45 - 90) * Math.PI / 180;
+          const fillAngle = (-30 - 90) * Math.PI / 180;
+          const backAngle = (180 - 90) * Math.PI / 180;
+          const positions = [
+            { label: 'Key', rad: keyAngle, distance: guideRadius },
+            { label: 'Fill', rad: fillAngle, distance: guideRadius * 0.85 },
+            { label: 'Back', rad: backAngle, distance: guideRadius * 0.95 },
+          ];
+
+          positions.forEach(({ label, rad, distance }) => {
+            const x = cx + Math.cos(rad) * distance;
+            const z = cy + Math.sin(rad) * distance;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(x, z);
+            ctx.stroke();
+            ctx.fillStyle = guideColor.replace('0.6', '0.9');
+            ctx.fillText(label, x + Math.cos(rad) * 16, z + Math.sin(rad) * 16);
+          });
+        }
+        break;
+
+      case 'high-key':
+        ctx.beginPath();
+        ctx.arc(cx, cy, guideRadius * 0.9, -Math.PI * 0.82, -Math.PI * 0.18);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx - guideRadius * 0.75, cy + guideRadius * 0.55);
+        ctx.lineTo(cx + guideRadius * 0.75, cy + guideRadius * 0.55);
+        ctx.stroke();
+        ctx.fillStyle = guideColor.replace('0.6', '0.9');
+        ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('High Key Front Wash', cx, cy - guideRadius * 1.05);
+        break;
+
+      case 'low-key':
+        {
+          const lowKeyAngle = (70 - 90) * Math.PI / 180;
+          const lowKeyX = cx + Math.cos(lowKeyAngle) * guideRadius;
+          const lowKeyZ = cy + Math.sin(lowKeyAngle) * guideRadius;
+          ctx.beginPath();
+          ctx.arc(cx, cy, guideRadius, lowKeyAngle - 0.18, lowKeyAngle + 0.18);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(lowKeyX, lowKeyZ);
+          ctx.stroke();
+          ctx.fillStyle = guideColor.replace('0.6', '0.9');
+          ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('Low Key Side', lowKeyX + Math.cos(lowKeyAngle) * 18, lowKeyZ + Math.sin(lowKeyAngle) * 18);
+        }
+        break;
     }
 
     ctx.setLineDash([]);
@@ -17422,6 +26282,138 @@ class VirtualStudio {
     ctx.beginPath();
     ctx.arc(cx, cy, 25, 0, Math.PI * 2);
     ctx.fill();
+  }
+
+  private getTopViewBehaviorColor(type: CharacterBehaviorConfig['type']): string {
+    switch (type) {
+      case 'work_loop':
+        return 'rgba(249, 115, 22, 0.95)';
+      case 'serve_route':
+        return 'rgba(59, 130, 246, 0.95)';
+      case 'counter_service':
+        return 'rgba(16, 185, 129, 0.95)';
+      case 'patrol':
+        return 'rgba(168, 85, 247, 0.95)';
+      case 'hero_idle':
+        return 'rgba(244, 114, 182, 0.95)';
+      default:
+        return 'rgba(148, 163, 184, 0.85)';
+    }
+  }
+
+  private drawEnvironmentBehaviorRoutesInTopView(
+    ctx: CanvasRenderingContext2D,
+    cx: number,
+    cy: number,
+    scale: number,
+  ): void {
+    this.environmentCharacterBehaviors.forEach((state, nodeId) => {
+      const mesh = state.mesh;
+      if (!mesh || mesh.isDisposed()) {
+        return;
+      }
+
+      const routePoints = state.routePoints.filter((point) => Boolean(point));
+      const color = this.getTopViewBehaviorColor(state.plan.type);
+      const isSelected = this.selectedActorId === nodeId || useAppStore.getState().selectedNodeId === nodeId;
+      const behaviorPaused = this.selectedActorId === nodeId || this.activeCharacterLocomotion?.mesh === mesh;
+      const phaseTarget = behaviorPaused
+        ? { position: null, targetKind: null, targetId: null }
+        : this.resolveEnvironmentBehaviorPhaseTarget(nodeId, state, state.phase);
+      const profile = this.resolveCharacterModelProfile(mesh);
+      const motionMesh = this.resolveCharacterMotionNode(mesh, profile);
+      const currentPosition = motionMesh && !motionMesh.isDisposed()
+        ? this.getMotionNodeWorldPosition(motionMesh)
+        : mesh.position.clone();
+
+      if (routePoints.length > 1) {
+        ctx.save();
+        ctx.strokeStyle = color.replace('0.95', isSelected ? '0.95' : '0.55');
+        ctx.lineWidth = isSelected ? 2.6 : 1.4;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        routePoints.forEach((point, index) => {
+          const routeX = cx + point.x * scale;
+          const routeZ = cy - point.z * scale;
+          if (index === 0) {
+            ctx.moveTo(routeX, routeZ);
+          } else {
+            ctx.lineTo(routeX, routeZ);
+          }
+        });
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        routePoints.forEach((point, index) => {
+          const routeX = cx + point.x * scale;
+          const routeZ = cy - point.z * scale;
+          ctx.fillStyle = index === 0 ? color : color.replace('0.95', '0.6');
+          ctx.beginPath();
+          ctx.arc(routeX, routeZ, index === 0 ? 3.8 : 2.6, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.restore();
+      }
+
+      if (isSelected && routePoints.length > 1) {
+        routePoints.forEach((point, index) => {
+          if (index === 0) {
+            return;
+          }
+          const routeX = cx + point.x * scale;
+          const routeZ = cy - point.z * scale;
+          const isHoveredHandle = this.topViewHoveredBehaviorHandle?.actorId === nodeId && this.topViewHoveredBehaviorHandle?.pointIndex === index;
+          const isDraggingHandle = this.topViewDraggingBehaviorHandle?.actorId === nodeId && this.topViewDraggingBehaviorHandle?.pointIndex === index;
+          const handleRadius = isDraggingHandle ? 7.5 : isHoveredHandle ? 6.8 : 5.6;
+
+          ctx.save();
+          ctx.fillStyle = 'rgba(13, 17, 23, 0.92)';
+          ctx.beginPath();
+          ctx.arc(routeX, routeZ, handleRadius + 1.8, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = color.replace('0.95', isDraggingHandle ? '1' : '0.92');
+          ctx.beginPath();
+          ctx.arc(routeX, routeZ, handleRadius, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.arc(routeX, routeZ, handleRadius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.fillStyle = 'rgba(255,255,255,0.96)';
+          ctx.font = 'bold 9px Inter, system-ui, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(String(index), routeX, routeZ + 0.5);
+          ctx.restore();
+        });
+      }
+
+      if (phaseTarget.position) {
+        const actorX = cx + currentPosition.x * scale;
+        const actorZ = cy - currentPosition.z * scale;
+        const targetX = cx + phaseTarget.position.x * scale;
+        const targetZ = cy - phaseTarget.position.z * scale;
+        const markerSize = isSelected ? 6 : 4.5;
+
+        ctx.save();
+        ctx.strokeStyle = color.replace('0.95', isSelected ? '0.9' : '0.45');
+        ctx.lineWidth = isSelected ? 2 : 1.2;
+        ctx.beginPath();
+        ctx.moveTo(actorX, actorZ);
+        ctx.lineTo(targetX, targetZ);
+        ctx.stroke();
+
+        ctx.translate(targetX, targetZ);
+        ctx.rotate(Math.PI / 4);
+        ctx.fillStyle = color.replace('0.95', isSelected ? '1' : '0.78');
+        ctx.fillRect(-markerSize * 0.5, -markerSize * 0.5, markerSize, markerSize);
+        ctx.restore();
+      }
+    });
   }
 
   private drawActorsInTopView(ctx: CanvasRenderingContext2D, cx: number, cy: number, scale: number): void {
@@ -17537,7 +26529,8 @@ class VirtualStudio {
   private drawWallsInTopView(ctx: CanvasRenderingContext2D, cx: number, cy: number, scale: number): void {
     const envState = environmentService.getState();
     const wallThickness = 0.2; // Wall thickness in meters (visual representation)
-    const studioSize = 10; // Studio size is 20m x 20m, so half is 10m
+    const halfWidth = this.currentRoomShell.width / 2;
+    const halfDepth = this.currentRoomShell.depth / 2;
 
     // Wall colors based on visibility and material
     const getWallColor = (wallId: keyof typeof envState.walls): string => {
@@ -17555,17 +26548,17 @@ class VirtualStudio {
     };
 
     // Draw all walls (toggle is checked in updateTopView)
-    // Back wall (facing camera) - at z = -10
+    // Back wall (facing camera)
     {
       ctx.strokeStyle = getWallColor('backWall');
       ctx.fillStyle = getWallColor('backWall');
       ctx.lineWidth = 3;
-      const z = cy - (-10) * scale;
+      const z = cy - (-halfDepth) * scale;
       const wallThicknessScaled = wallThickness * scale;
       ctx.fillRect(
-        cx - studioSize * scale - wallThicknessScaled / 2,
+        cx - halfWidth * scale - wallThicknessScaled / 2,
         z - wallThicknessScaled / 2,
-        (studioSize * 2) * scale + wallThicknessScaled,
+        (halfWidth * 2) * scale + wallThicknessScaled,
         wallThicknessScaled
       );
       
@@ -17579,18 +26572,18 @@ class VirtualStudio {
       }
     }
 
-    // Left wall - at x = -10
+    // Left wall
     {
       ctx.strokeStyle = getWallColor('leftWall');
       ctx.fillStyle = getWallColor('leftWall');
       ctx.lineWidth = 3;
-      const x = cx + (-10) * scale;
+      const x = cx + (-halfWidth) * scale;
       const wallThicknessScaled = wallThickness * scale;
       ctx.fillRect(
         x - wallThicknessScaled / 2,
-        cy - studioSize * scale - wallThicknessScaled / 2,
+        cy - halfDepth * scale - wallThicknessScaled / 2,
         wallThicknessScaled,
-        (studioSize * 2) * scale + wallThicknessScaled
+        (halfDepth * 2) * scale + wallThicknessScaled
       );
       
       // Wall label
@@ -17607,18 +26600,18 @@ class VirtualStudio {
       }
     }
 
-    // Right wall - at x = 10
+    // Right wall
     {
       ctx.strokeStyle = getWallColor('rightWall');
       ctx.fillStyle = getWallColor('rightWall');
       ctx.lineWidth = 3;
-      const x = cx + 10 * scale;
+      const x = cx + halfWidth * scale;
       const wallThicknessScaled = wallThickness * scale;
       ctx.fillRect(
         x - wallThicknessScaled / 2,
-        cy - studioSize * scale - wallThicknessScaled / 2,
+        cy - halfDepth * scale - wallThicknessScaled / 2,
         wallThicknessScaled,
-        (studioSize * 2) * scale + wallThicknessScaled
+        (halfDepth * 2) * scale + wallThicknessScaled
       );
       
       // Wall label
@@ -17635,17 +26628,17 @@ class VirtualStudio {
       }
     }
 
-    // Rear wall (behind camera) - at z = 10
+    // Rear wall (behind camera)
     {
       ctx.strokeStyle = getWallColor('rearWall');
       ctx.fillStyle = getWallColor('rearWall');
       ctx.lineWidth = 3;
-      const z = cy - 10 * scale;
+      const z = cy - halfDepth * scale;
       const wallThicknessScaled = wallThickness * scale;
       ctx.fillRect(
-        cx - studioSize * scale - wallThicknessScaled / 2,
+        cx - halfWidth * scale - wallThicknessScaled / 2,
         z - wallThicknessScaled / 2,
-        (studioSize * 2) * scale + wallThicknessScaled,
+        (halfWidth * 2) * scale + wallThicknessScaled,
         wallThicknessScaled
       );
       
@@ -17664,15 +26657,16 @@ class VirtualStudio {
     const envState = environmentService.getState();
     if (!envState.floor.visible) return;
 
-    const studioSize = 10; // Studio size is 20m x 20m, so half is 10m
+    const halfWidth = this.currentRoomShell.width / 2;
+    const halfDepth = this.currentRoomShell.depth / 2;
 
     // Draw floor as a rectangle
     ctx.fillStyle = 'rgba(60, 60, 70, 0.3)';
     ctx.fillRect(
-      cx - studioSize * scale,
-      cy - studioSize * scale,
-      studioSize * 2 * scale,
-      studioSize * 2 * scale
+      cx - halfWidth * scale,
+      cy - halfDepth * scale,
+      halfWidth * 2 * scale,
+      halfDepth * 2 * scale
     );
 
     // Draw floor grid pattern if enabled
@@ -17680,25 +26674,25 @@ class VirtualStudio {
       ctx.strokeStyle = 'rgba(100, 100, 120, 0.2)';
       ctx.lineWidth = 1;
       const gridStep = 1; // 1 meter grid
-      const gridRange = studioSize;
-
-      for (let i = -gridRange; i <= gridRange; i += gridStep) {
-        const xPos = cx + i * scale;
-        const yPos = cy + i * scale;
+      for (let xMeters = -halfWidth; xMeters <= halfWidth; xMeters += gridStep) {
+        const xPos = cx + xMeters * scale;
 
         // Vertical lines
-        if (xPos >= cx - studioSize * scale && xPos <= cx + studioSize * scale) {
+        if (xPos >= cx - halfWidth * scale && xPos <= cx + halfWidth * scale) {
           ctx.beginPath();
-          ctx.moveTo(xPos, cy - studioSize * scale);
-          ctx.lineTo(xPos, cy + studioSize * scale);
+          ctx.moveTo(xPos, cy - halfDepth * scale);
+          ctx.lineTo(xPos, cy + halfDepth * scale);
           ctx.stroke();
         }
+      }
 
+      for (let zMeters = -halfDepth; zMeters <= halfDepth; zMeters += gridStep) {
+        const yPos = cy + zMeters * scale;
         // Horizontal lines
-        if (yPos >= cy - studioSize * scale && yPos <= cy + studioSize * scale) {
+        if (yPos >= cy - halfDepth * scale && yPos <= cy + halfDepth * scale) {
           ctx.beginPath();
-          ctx.moveTo(cx - studioSize * scale, yPos);
-          ctx.lineTo(cx + studioSize * scale, yPos);
+          ctx.moveTo(cx - halfWidth * scale, yPos);
+          ctx.lineTo(cx + halfWidth * scale, yPos);
           ctx.stroke();
         }
       }
@@ -17710,8 +26704,73 @@ class VirtualStudio {
       ctx.font = '9px Inter, system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';
-      ctx.fillText('Floor', cx, cy + studioSize * scale - 5);
+      ctx.fillText('Floor', cx, cy + halfDepth * scale - 5);
     }
+  }
+
+  private drawRoomShellZonesInTopView(
+    ctx: CanvasRenderingContext2D,
+    cx: number,
+    cy: number,
+    scale: number,
+  ): void {
+    const zones = Array.isArray(this.currentRoomShell.zones) ? this.currentRoomShell.zones : [];
+    if (zones.length === 0) {
+      return;
+    }
+
+    const purposeColors: Record<string, { fill: string; stroke: string; label: string }> = {
+      prep: { fill: 'rgba(249, 115, 22, 0.12)', stroke: 'rgba(249, 115, 22, 0.48)', label: 'rgba(255, 214, 170, 0.95)' },
+      counter: { fill: 'rgba(16, 185, 129, 0.12)', stroke: 'rgba(16, 185, 129, 0.48)', label: 'rgba(185, 255, 232, 0.95)' },
+      dining: { fill: 'rgba(59, 130, 246, 0.12)', stroke: 'rgba(59, 130, 246, 0.45)', label: 'rgba(203, 224, 255, 0.95)' },
+      hero: { fill: 'rgba(244, 114, 182, 0.12)', stroke: 'rgba(244, 114, 182, 0.48)', label: 'rgba(255, 216, 236, 0.95)' },
+      service: { fill: 'rgba(168, 85, 247, 0.12)', stroke: 'rgba(168, 85, 247, 0.42)', label: 'rgba(236, 216, 255, 0.95)' },
+      background: { fill: 'rgba(148, 163, 184, 0.1)', stroke: 'rgba(148, 163, 184, 0.3)', label: 'rgba(226, 232, 240, 0.85)' },
+      queue: { fill: 'rgba(250, 204, 21, 0.12)', stroke: 'rgba(250, 204, 21, 0.42)', label: 'rgba(255, 247, 205, 0.95)' },
+    };
+
+    zones.forEach((zone) => {
+      const bounds = this.getRoomShellZoneWorldBounds(zone);
+      if (!bounds) {
+        return;
+      }
+
+      const style = purposeColors[zone.purpose] || purposeColors.background;
+      const x = cx + (bounds.minX * scale);
+      const y = cy - (bounds.maxZ * scale);
+      const width = bounds.width * scale;
+      const height = bounds.depth * scale;
+      const isHomeZone = Array.from(this.environmentCharacterBehaviors.values()).some((state) => state.plan.homeZoneId === zone.id);
+      const isHoveredZone = this.topViewHoveredZoneId === zone.id;
+      const isBehaviorZoneTarget = this.topViewBehaviorZoneAssignmentMode !== null && this.selectedActorId !== null;
+
+      ctx.save();
+      ctx.fillStyle = style.fill;
+      ctx.strokeStyle = isHoveredZone
+        ? 'rgba(255, 255, 255, 0.92)'
+        : style.stroke;
+      ctx.lineWidth = isHoveredZone ? 2.8 : isHomeZone ? 2.2 : 1.2;
+      ctx.setLineDash(isHoveredZone
+        ? (isBehaviorZoneTarget ? [10, 3] : [])
+        : isHomeZone
+          ? [8, 4]
+          : [4, 4]);
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, height, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      if (this.topViewShowLabels) {
+        const label = zone.label || zone.id;
+        ctx.fillStyle = isHoveredZone ? 'rgba(255, 255, 255, 0.98)' : style.label;
+        ctx.font = isHomeZone ? 'bold 10px Inter, system-ui, sans-serif' : '9px Inter, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, x + (width * 0.5), y + (height * 0.5));
+      }
+      ctx.restore();
+    });
   }
 
   private drawPropsInTopView(ctx: CanvasRenderingContext2D, cx: number, cy: number, scale: number): void {
@@ -18259,6 +27318,32 @@ class VirtualStudio {
     return Math.round(value / this.topViewGridSize) * this.topViewGridSize;
   }
 
+  private updateTopViewDraggedLightPosition(lightId: string, worldX: number, worldZ: number): boolean {
+    const light = this.lights.get(lightId);
+    if (!light) {
+      console.warn(`[2D TopView Drag] Light with ID ${lightId} not found in lights Map!`);
+      return false;
+    }
+
+    light.mesh.position.x = worldX;
+    light.mesh.position.z = worldZ;
+    if (
+      light.light instanceof BABYLON.SpotLight
+      || light.light instanceof BABYLON.DirectionalLight
+      || light.light instanceof BABYLON.PointLight
+    ) {
+      light.light.position.x = worldX;
+      light.light.position.z = worldZ;
+    }
+
+    window.dispatchEvent(new CustomEvent('ch-light-position-changed', {
+      detail: { lightId }
+    }));
+    this.publishCameraLightingSync('topview-light-dragged', 'topview');
+    this.publishTopViewSync('topview-light-dragged', 'topview');
+    return true;
+  }
+
   // Setup top view interactivity
   public setupTopViewInteractivity(): void {
     if (!this.topViewCanvas) return;
@@ -18281,11 +27366,26 @@ class VirtualStudio {
         this.topViewPan.y += dy;
         this.topViewLastMousePos = { x: mouseX, y: mouseY };
         canvas.style.cursor = 'grabbing';
+      } else if (this.topViewDraggingBehaviorHandle) {
+        let worldX = (mouseX - cx) / scale;
+        let worldZ = -(mouseY - cy) / scale;
+
+        if (this.topViewSnapToGrid || e.ctrlKey || e.metaKey) {
+          worldX = this.snapToGrid(worldX);
+          worldZ = this.snapToGrid(worldZ);
+        }
+
+        if (this.updateEnvironmentBehaviorRoutePoint(
+          this.topViewDraggingBehaviorHandle.actorId,
+          this.topViewDraggingBehaviorHandle.pointIndex,
+          worldX,
+          worldZ,
+        )) {
+          canvas.style.cursor = 'grabbing';
+        }
       } else if (this.topViewDraggingLightId) {
         // Drag light - IMPORTANT: Use topViewDraggingLightId, not selectedLightId
-        const light = this.lights.get(this.topViewDraggingLightId);
-        if (light) {
-          
+        if (this.lights.has(this.topViewDraggingLightId)) {
           let worldX = (mouseX - cx) / scale;
           let worldZ = -(mouseY - cy) / scale;
 
@@ -18295,20 +27395,8 @@ class VirtualStudio {
             worldZ = this.snapToGrid(worldZ);
           }
 
-          // Update the light that was actually clicked, not selectedLightId
-          light.mesh.position.x = worldX;
-          light.mesh.position.z = worldZ;
-          if (light.light instanceof BABYLON.SpotLight || light.light instanceof BABYLON.DirectionalLight) {
-            light.light.position.x = worldX;
-            light.light.position.z = worldZ;
-          }
-          
-          // Dispatch event for real-time updates - use the dragging light ID
-          window.dispatchEvent(new CustomEvent('ch-light-position-changed', {
-            detail: { lightId: this.topViewDraggingLightId }
-          }));
+          this.updateTopViewDraggedLightPosition(this.topViewDraggingLightId, worldX, worldZ);
         } else {
-          console.warn(`[2D TopView Drag] Light with ID ${this.topViewDraggingLightId} not found in lights Map!`);
           // Reset dragging state if light not found
           this.topViewDraggingLightId = null;
         }
@@ -18459,8 +27547,21 @@ class VirtualStudio {
         let hoveredPropId: string | null = null;
         let hoveredActorId: string | null = null;
         let hoveredCameraId: string | null = null;
+        let hoveredZoneId: string | null = null;
+        let hoveredBehaviorHandle: { actorId: string; pointIndex: number } | null = this.getTopViewBehaviorHandleAtPoint(mouseX, mouseY, scale, cx, cy);
         let closestDist = Infinity;
         const threshold = 40;
+
+        if (hoveredBehaviorHandle) {
+          this.topViewHoveredBehaviorHandle = hoveredBehaviorHandle;
+          this.topViewHoveredLightId = null;
+          this.topViewHoveredPropId = null;
+          this.topViewHoveredActorId = null;
+          this.topViewHoveredCameraId = null;
+          this.topViewHoveredZoneId = null;
+          canvas.style.cursor = 'grab';
+          return;
+        }
 
         // Check lights
         for (const [id, data] of this.lights) {
@@ -18523,11 +27624,21 @@ class VirtualStudio {
           }
         }
 
+        if (!hoveredLightId && !hoveredPropId && !hoveredActorId && !hoveredCameraId && this.selectedActorId) {
+          hoveredZoneId = this.getTopViewRoomZoneAtPoint(mouseX, mouseY, scale, cx, cy);
+        }
+
         this.topViewHoveredLightId = hoveredLightId;
         this.topViewHoveredPropId = hoveredPropId;
         this.topViewHoveredActorId = hoveredActorId;
         this.topViewHoveredCameraId = hoveredCameraId;
-        canvas.style.cursor = (hoveredLightId || hoveredPropId || hoveredActorId || hoveredCameraId) ? 'pointer' : 'default';
+        this.topViewHoveredZoneId = hoveredZoneId;
+        this.topViewHoveredBehaviorHandle = hoveredBehaviorHandle;
+        canvas.style.cursor = hoveredZoneId && this.selectedActorId
+          ? 'copy'
+          : (hoveredLightId || hoveredPropId || hoveredActorId || hoveredCameraId)
+            ? 'pointer'
+            : 'default';
       }
     });
 
@@ -18616,6 +27727,18 @@ class VirtualStudio {
         this.topViewIsPanning = true;
         this.topViewLastMousePos = { x: mouseX, y: mouseY };
         canvas.style.cursor = 'grabbing';
+        e.preventDefault();
+        return;
+      }
+
+      const behaviorHandle = e.button === 0
+        ? this.getTopViewBehaviorHandleAtPoint(mouseX, mouseY, scale, cx, cy)
+        : null;
+      if (behaviorHandle) {
+        this.topViewDraggingBehaviorHandle = behaviorHandle;
+        this.topViewHoveredBehaviorHandle = behaviorHandle;
+        canvas.style.cursor = 'grabbing';
+        this.publishTopViewSync('topview-behavior-route-drag-start', 'topview');
         e.preventDefault();
         return;
       }
@@ -18712,6 +27835,7 @@ class VirtualStudio {
         this.topViewDraggingLightId = closestLightId;
         this.selectLight(closestLightId);
         canvas.style.cursor = 'grabbing';
+        this.publishTopViewSync('topview-light-drag-start', 'topview');
       } else if (closestPropId) {
         this.topViewDraggingPropId = closestPropId;
         const store = useAppStore.getState();
@@ -18721,6 +27845,7 @@ class VirtualStudio {
         window.dispatchEvent(new CustomEvent('ch-scene-node-selected', {
           detail: { nodeId: closestPropId }
         }));
+        this.publishTopViewSync('topview-prop-drag-start', 'topview');
       } else if (closestActorId) {
         this.topViewDraggingActorId = closestActorId;
         const store = useAppStore.getState();
@@ -18739,6 +27864,7 @@ class VirtualStudio {
         window.dispatchEvent(new CustomEvent('ch-scene-node-selected', {
           detail: { nodeId: closestActorId }
         }));
+        this.publishTopViewSync('topview-actor-drag-start', 'topview');
       } else if (closestCameraId) {
         this.topViewDraggingCameraId = closestCameraId;
         this.selectedCameraPresetId = closestCameraId;
@@ -18747,10 +27873,14 @@ class VirtualStudio {
         window.dispatchEvent(new CustomEvent('ch-camera-preset-selected', {
           detail: { presetId: closestCameraId }
         }));
+        this.publishTopViewSync('topview-camera-drag-start', 'topview');
       }
     });
 
     canvas.addEventListener('mouseup', () => {
+      if (this.topViewDraggingBehaviorHandle) {
+        this.persistEnvironmentBehaviorRouteEdit(this.topViewDraggingBehaviorHandle.actorId);
+      }
       // Dispatch final update when drag ends
       if (this.topViewDraggingLightId) {
         window.dispatchEvent(new CustomEvent('ch-light-position-changed', {
@@ -18784,28 +27914,89 @@ class VirtualStudio {
       this.topViewDraggingPropId = null;
       this.topViewDraggingActorId = null;
       this.topViewDraggingCameraId = null;
+      this.topViewDraggingBehaviorHandle = null;
       this.topViewIsPanning = false;
       this.topViewLastMousePos = null;
-      const hasHover = this.topViewHoveredLightId || this.topViewHoveredPropId || this.topViewHoveredActorId || this.topViewHoveredCameraId;
-      canvas.style.cursor = hasHover ? 'pointer' : 'default';
+      const hasHover = this.topViewHoveredBehaviorHandle || this.topViewHoveredLightId || this.topViewHoveredPropId || this.topViewHoveredActorId || this.topViewHoveredCameraId || this.topViewHoveredZoneId;
+      canvas.style.cursor = this.topViewHoveredBehaviorHandle
+        ? 'grab'
+        : this.topViewHoveredZoneId && this.selectedActorId
+          ? 'copy'
+          : hasHover
+            ? 'pointer'
+            : 'default';
+      this.publishTopViewSync('topview-interaction-complete', 'topview');
     });
 
     canvas.addEventListener('mouseleave', () => {
+      if (this.topViewDraggingBehaviorHandle) {
+        this.persistEnvironmentBehaviorRouteEdit(this.topViewDraggingBehaviorHandle.actorId);
+      }
       this.topViewHoveredLightId = null;
       this.topViewHoveredPropId = null;
       this.topViewHoveredActorId = null;
       this.topViewHoveredCameraId = null;
+      this.topViewHoveredZoneId = null;
+      this.topViewHoveredBehaviorHandle = null;
       this.topViewDraggingLightId = null;
       this.topViewDraggingPropId = null;
       this.topViewDraggingActorId = null;
       this.topViewDraggingCameraId = null;
+      this.topViewDraggingBehaviorHandle = null;
       this.topViewIsPanning = false;
       this.topViewLastMousePos = null;
+      this.publishTopViewSync('topview-pointer-left', 'topview');
     });
 
-    canvas.addEventListener('click', (_e) => {
+    canvas.addEventListener('click', (e) => {
       // Close context menu if clicking elsewhere
       this.hideTopViewContextMenu();
+
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const scale = this.getTopViewScale();
+      const { cx, cy } = this.getTopViewCenter();
+      const clickedZoneId = this.getTopViewRoomZoneAtPoint(mouseX, mouseY, scale, cx, cy) || this.topViewHoveredZoneId;
+
+      if (this.topViewHoveredBehaviorHandle || this.topViewDraggingBehaviorHandle) {
+        this.publishTopViewSync('topview-click-selection', 'topview');
+        return;
+      }
+
+      const hasObjectHover = Boolean(
+        this.topViewHoveredLightId
+        || this.topViewHoveredPropId
+        || this.topViewHoveredActorId
+        || this.topViewHoveredCameraId,
+      );
+      const assignmentMode = this.topViewBehaviorZoneAssignmentMode;
+      const shouldAssignHomeZone = Boolean(
+        this.selectedActorId
+        && clickedZoneId
+        && (
+          assignmentMode === 'home-zone'
+          || (!hasObjectHover && (e.ctrlKey || e.metaKey))
+        ),
+      );
+      const shouldAssignLookTarget = Boolean(
+        this.selectedActorId
+        && clickedZoneId
+        && (
+          assignmentMode === 'look-target'
+          || (!hasObjectHover && e.altKey)
+        ),
+      );
+
+      if (shouldAssignHomeZone && this.selectedActorId && clickedZoneId) {
+        void this.applyTopViewBehaviorZoneAssignment('home-zone', clickedZoneId);
+        return;
+      }
+
+      if (shouldAssignLookTarget && this.selectedActorId && clickedZoneId) {
+        void this.applyTopViewBehaviorZoneAssignment('look-target', clickedZoneId);
+        return;
+      }
       
       // Only handle click if not dragging (click after drag ends)
       if (this.topViewHoveredLightId && !this.topViewDraggingLightId && !this.topViewDraggingPropId && !this.topViewDraggingActorId && !this.topViewDraggingCameraId) {
@@ -18835,6 +28026,7 @@ class VirtualStudio {
           detail: { presetId: this.topViewHoveredCameraId }
         }));
       }
+      this.publishTopViewSync('topview-click-selection', 'topview');
     });
 
     // Right-click context menu
@@ -19066,8 +28258,7 @@ class VirtualStudio {
 
         if (this.topViewDraggingLightId) {
           // Drag light
-          const light = this.lights.get(this.topViewDraggingLightId);
-          if (light) {
+          if (this.lights.has(this.topViewDraggingLightId)) {
             let worldX = (touchX - cx) / scale;
             let worldZ = -(touchY - cy) / scale;
 
@@ -19076,16 +28267,7 @@ class VirtualStudio {
               worldZ = this.snapToGrid(worldZ);
             }
 
-            light.mesh.position.x = worldX;
-            light.mesh.position.z = worldZ;
-            if (light.light instanceof BABYLON.SpotLight || light.light instanceof BABYLON.DirectionalLight) {
-              light.light.position.x = worldX;
-              light.light.position.z = worldZ;
-            }
-            
-            window.dispatchEvent(new CustomEvent('ch-light-position-changed', {
-              detail: { lightId: this.topViewDraggingLightId }
-            }));
+            this.updateTopViewDraggedLightPosition(this.topViewDraggingLightId, worldX, worldZ);
           }
         } else if (this.topViewDraggingPropId) {
           // Drag prop
@@ -19339,6 +28521,8 @@ class VirtualStudio {
         const node = store.getNode(id);
         if (this.sceneState.props.has(id) || node?.userData?.propId) {
           this.removePropNodeById(id);
+        } else if (this.sceneState.characters.has(id) || node?.userData?.characterId) {
+          this.removeCharacterNodeById(id);
         } else {
           store.removeNode(id);
           const mesh = this.scene.getMeshByName(id);
@@ -19622,6 +28806,11 @@ class VirtualStudio {
 
   private setupTopViewToolbarButtons(): void {
     this.setupTopViewToolbarCollapsible();
+    window.addEventListener('vs-environment-plan-insights-updated', () => {
+      this.updateTopViewInfoPanel();
+      this.syncTopViewPatternActionState();
+      this.syncTopViewAiLightActionState();
+    });
 
     // Zoom In
     document.getElementById('topviewZoomIn')?.addEventListener('click', () => {
@@ -19638,6 +28827,34 @@ class VirtualStudio {
     // Reset View
     document.getElementById('topviewReset')?.addEventListener('click', () => {
       this.resetTopView();
+    });
+
+    document.getElementById('topviewApplyAiPattern')?.addEventListener('click', () => {
+      void this.applyRecommendedTopViewPattern();
+    });
+
+    document.getElementById('topviewOpenPatternLibrary')?.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('openLightPatternLibrary', {
+        detail: {
+          preferredPatternId: this.getRecommendedTopViewPatternId(),
+        },
+      }));
+    });
+
+    document.getElementById('topviewApplyAiModifier')?.addEventListener('click', () => {
+      this.applySelectedLightRecommendedModifier();
+    });
+
+    document.getElementById('topviewApplyAiBeam')?.addEventListener('click', () => {
+      this.applySelectedLightRecommendedBeamAngle();
+    });
+
+    document.getElementById('topviewApplyAiGobo')?.addEventListener('click', () => {
+      this.applySelectedLightRecommendedGobo();
+    });
+
+    document.getElementById('topviewApplyAiHaze')?.addEventListener('click', () => {
+      this.applySelectedLightRecommendedHaze();
     });
 
     // Toggle Grid
@@ -19688,6 +28905,50 @@ class VirtualStudio {
       document.getElementById('topviewProps')?.classList.toggle('active', this.topViewShowProps);
     });
 
+    document.getElementById('topviewAssignHomeZone')?.addEventListener('click', () => {
+      if (!this.selectedActorId) {
+        this.syncTopViewBehaviorZoneButtonState();
+        return;
+      }
+      const nextMode = this.topViewBehaviorZoneAssignmentMode === 'home-zone' ? null : 'home-zone';
+      this.setTopViewBehaviorZoneAssignmentMode(nextMode);
+    });
+
+    document.getElementById('topviewAssignLookTarget')?.addEventListener('click', () => {
+      if (!this.selectedActorId) {
+        this.syncTopViewBehaviorZoneButtonState();
+        return;
+      }
+      const nextMode = this.topViewBehaviorZoneAssignmentMode === 'look-target' ? null : 'look-target';
+      this.setTopViewBehaviorZoneAssignmentMode(nextMode);
+    });
+
+    const bindTopViewPaceButton = (
+      elementId: string,
+      pace: CharacterBehaviorConfig['pace'],
+    ): void => {
+      document.getElementById(elementId)?.addEventListener('click', async () => {
+        if (!this.selectedActorId) {
+          this.syncTopViewBehaviorPaceButtonState();
+          return;
+        }
+
+        const updated = await this.updateCharacterBehaviorPace(this.selectedActorId, pace);
+        if (!updated) {
+          return;
+        }
+
+        this.syncTopViewBehaviorPaceButtonState();
+        this.publishTopViewSync('topview-behavior-pace-updated', 'topview');
+        this.updateTopViewInfoPanel();
+        this.updateTopView();
+      });
+    };
+
+    bindTopViewPaceButton('topviewBehaviorPaceStill', 'still');
+    bindTopViewPaceButton('topviewBehaviorPaceSubtle', 'subtle');
+    bindTopViewPaceButton('topviewBehaviorPaceActive', 'active');
+
     // Toggle Measurement Mode
     document.getElementById('topviewMeasure')?.addEventListener('click', () => {
       this.topViewMeasurementMode = !this.topViewMeasurementMode;
@@ -19711,12 +28972,19 @@ class VirtualStudio {
     });
 
     // Toggle Pattern Guides
-    document.getElementById('topviewPatterns')?.addEventListener('click', () => {
-      this.topViewShowPatternGuides = !this.topViewShowPatternGuides;
-      document.getElementById('topviewPatterns')?.classList.toggle('active', this.topViewShowPatternGuides);
-      if (!this.topViewShowPatternGuides) {
-        this.topViewSelectedPattern = 'none';
+    document.getElementById('topviewPatterns')?.addEventListener('dblclick', () => {
+      if (this.topViewSelectedPattern === 'none') {
+        this.setTopViewPatternGuide(TOP_VIEW_LIGHTING_PATTERN_SEQUENCE[0], { source: 'topview' });
+        return;
       }
+
+      this.setTopViewPatternGuide(
+        this.topViewShowPatternGuides ? 'none' : this.topViewSelectedPattern,
+        {
+          source: 'topview',
+          showGuides: !this.topViewShowPatternGuides,
+        },
+      );
     });
 
     // Pattern selection (right-click or long-press on pattern button)
@@ -19726,23 +28994,13 @@ class VirtualStudio {
       void patternCycleTimeout; // Reset tracking for debounce on pattern cycle
       patternBtn.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        const patterns: Array<'rembrandt' | 'butterfly' | 'loop' | 'none'> = ['rembrandt', 'butterfly', 'loop', 'none'];
-        const currentIndex = patterns.indexOf(this.topViewSelectedPattern);
-        const nextIndex = (currentIndex + 1) % patterns.length;
-        this.topViewSelectedPattern = patterns[nextIndex];
-        this.topViewShowPatternGuides = this.topViewSelectedPattern !== 'none';
-        patternBtn.classList.toggle('active', this.topViewShowPatternGuides);
+        this.cycleTopViewPatternGuide('topview');
       });
       
       // Single click cycles through patterns
       patternBtn.addEventListener('click', (e) => {
         if (e.button === 0 && !e.ctrlKey && !e.metaKey) {
-          const patterns: Array<'rembrandt' | 'butterfly' | 'loop' | 'none'> = ['rembrandt', 'butterfly', 'loop', 'none'];
-          const currentIndex = patterns.indexOf(this.topViewSelectedPattern);
-          const nextIndex = (currentIndex + 1) % patterns.length;
-          this.topViewSelectedPattern = patterns[nextIndex];
-          this.topViewShowPatternGuides = this.topViewSelectedPattern !== 'none';
-          patternBtn.classList.toggle('active', this.topViewShowPatternGuides);
+          this.cycleTopViewPatternGuide('topview');
         }
       });
     }
@@ -19780,6 +29038,12 @@ class VirtualStudio {
         this.toggleTopViewFullscreen(false);
       }
     });
+
+    this.syncTopViewPatternButtonState();
+    this.syncTopViewBehaviorZoneButtonState();
+    this.syncTopViewBehaviorPaceButtonState();
+    this.syncTopViewPatternActionState();
+    this.syncTopViewAiLightActionState();
     
     // ============================================
     // PRO MENU IN TOPVIEW
@@ -19806,7 +29070,7 @@ class VirtualStudio {
           const panel = item.getAttribute('data-panel');
           if (panel) {
             // Dispatch event for VirtualStudioPro component
-            window.dispatchEvent(new CustomEvent('toggle-pro-panel', { detail: { panel } }));
+            window.dispatchEvent(new CustomEvent('vs-open-pro-panel', { detail: { panel } }));
             
             // Update active state
             proDropdown.querySelectorAll('.topview-pro-item').forEach(i => i.classList.remove('active'));
@@ -19814,7 +29078,7 @@ class VirtualStudio {
             
             proDropdown.classList.remove('open');
             
-            console.log(`[Pro Menu] Toggled panel: ${panel}`);
+            console.log(`[Pro Menu] Opened panel: ${panel}`);
           }
         });
       });
@@ -19868,6 +29132,7 @@ class VirtualStudio {
     this.topViewZoom = 1.0;
     this.topViewPan = { x: 0, y: 0 };
     this.updateTopViewScaleInfo();
+    this.publishTopViewSync('topview-reset', 'topview');
   }
 
   private updateTopViewScaleInfo(): void {
@@ -19884,14 +29149,53 @@ class VirtualStudio {
     if (zoomLevel) {
       zoomLevel.textContent = `${Math.round(this.topViewZoom * 100)}%`;
     }
+
+    this.publishTopViewSync('topview-viewport-updated', 'topview');
   }
 
   private updateTopViewInfoPanel(): void {
     const posYRow = document.getElementById('topviewInfoPosYRow');
     const rotationRow = document.getElementById('topviewInfoRotationRow');
     const heightRow = document.getElementById('topviewInfoHeightRow');
+    const behaviorModeRow = document.getElementById('topviewInfoBehaviorModeRow');
+    const behaviorModeValue = document.getElementById('topviewInfoBehaviorMode');
+    const behaviorPaceRow = document.getElementById('topviewInfoBehaviorPaceRow');
+    const behaviorPaceValue = document.getElementById('topviewInfoBehaviorPace');
+    const aiFamilyRow = document.getElementById('topviewInfoAiFamilyRow');
+    const aiFamilyValue = document.getElementById('topviewInfoAiFamily');
+    const aiReasonRow = document.getElementById('topviewInfoAiReasonRow');
+    const aiReasonValue = document.getElementById('topviewInfoAiReason');
+    const aiPatternRow = document.getElementById('topviewInfoAiPatternRow');
+    const aiPatternValue = document.getElementById('topviewInfoAiPattern');
+    const patternRow = document.getElementById('topviewInfoPatternRow');
+    const patternValue = document.getElementById('topviewInfoPattern');
     const intensityRow = document.getElementById('topviewInfoIntensity')?.parentElement;
     const keyFillRow = document.getElementById('topviewInfoKeyFill')?.parentElement;
+    const environmentInsights = ((window as Window & {
+      __virtualStudioLastEnvironmentPlanInsights?: {
+        familyId?: string;
+        familyLabel?: string;
+        summary?: string;
+        lightingDetails?: string[];
+      };
+    }).__virtualStudioLastEnvironmentPlanInsights) || null;
+    const aiPatternLabel = getRecommendedLightingPatternLabelsForSceneFamily(environmentInsights?.familyId || null)[0] || null;
+    const activePatternLabel = this.topViewSelectedPattern !== 'none'
+      ? formatLightingPatternLabel(this.topViewSelectedPattern)
+      : null;
+    const setAiInfo = (family: string | null | undefined, reason: string | null | undefined): void => {
+      if (aiFamilyValue) aiFamilyValue.textContent = family || '-';
+      if (aiReasonValue) aiReasonValue.textContent = reason || '-';
+      if (aiPatternValue) aiPatternValue.textContent = aiPatternLabel || '-';
+      if (patternValue) patternValue.textContent = activePatternLabel || 'Ingen';
+      if (aiFamilyRow) aiFamilyRow.style.display = 'flex';
+      if (aiReasonRow) aiReasonRow.style.display = 'flex';
+      if (aiPatternRow) aiPatternRow.style.display = 'flex';
+      if (patternRow) patternRow.style.display = 'flex';
+    };
+
+    this.syncTopViewBehaviorZoneButtonState();
+    this.syncTopViewBehaviorPaceButtonState();
     
     // Check if actor is selected
     if (this.selectedActorId) {
@@ -19927,17 +29231,56 @@ class VirtualStudio {
         if (posYRow) posYRow.style.display = 'flex';
         if (rotationRow) rotationRow.style.display = 'flex';
         if (heightRow) heightRow.style.display = 'flex';
+        if (behaviorModeRow) behaviorModeRow.style.display = 'flex';
+        if (behaviorPaceRow) behaviorPaceRow.style.display = 'flex';
         if (intensityRow) intensityRow.style.display = 'none';
         if (keyFillRow) keyFillRow.style.display = 'none';
         
         const posYEl = document.getElementById('topviewInfoPosY');
         const rotationEl = document.getElementById('topviewInfoRotation');
         const heightEl = document.getElementById('topviewInfoHeight');
+        const activeModeLabel = this.getTopViewBehaviorZoneModeLabel(this.topViewBehaviorZoneAssignmentMode);
+        const behaviorPaceLabel = this.getTopViewBehaviorPaceLabel(this.getSelectedCharacterBehaviorPlan()?.pace);
+        const behaviorModeLabel = this.topViewBehaviorZoneAssignmentMode
+          ? `${activeModeLabel}: klikk en sone`
+          : 'Klar. Velg Hjem eller Se mot i verktøylinjen';
         
         if (posYEl) posYEl.textContent = `${posY.toFixed(2)} m`;
         if (rotationEl) rotationEl.textContent = `${(rotY * 180 / Math.PI).toFixed(1)}°`;
         if (heightEl) heightEl.textContent = `${heightInMeters.toFixed(2)} m`;
-        
+        if (behaviorModeValue) behaviorModeValue.textContent = behaviorModeLabel;
+        if (behaviorPaceValue) behaviorPaceValue.textContent = behaviorPaceLabel;
+        setAiInfo(environmentInsights?.familyLabel || null, environmentInsights?.summary || null);
+
+        return;
+      }
+    }
+
+    if (!this.selectedLightId && this.selectedCameraPresetId) {
+      const preset = this.cameraPresets.get(this.selectedCameraPresetId);
+      if (preset) {
+        const posX = preset.position.x;
+        const posZ = preset.position.z;
+        const distance = Math.sqrt(posX * posX + posZ * posZ);
+        const direction = preset.target.subtract(preset.position).normalize();
+        const angle = Math.atan2(-direction.x, -direction.z) * (180 / Math.PI);
+
+        document.getElementById('topviewInfoTitle')!.textContent = this.selectedCameraPresetId.replace('cam', 'Camera ');
+        document.getElementById('topviewInfoPosX')!.textContent = `${posX.toFixed(2)} m`;
+        document.getElementById('topviewInfoPosZ')!.textContent = `${posZ.toFixed(2)} m`;
+        document.getElementById('topviewInfoDist')!.textContent = `${distance.toFixed(2)} m`;
+        document.getElementById('topviewInfoAngle')!.textContent = `${angle.toFixed(1)}°`;
+        document.getElementById('topviewInfoIntensity')!.textContent = `${Math.round((1 / preset.fov) * 40)} mm eq`;
+        document.getElementById('topviewInfoKeyFill')!.textContent = `${(preset.fov * 100).toFixed(0)}° FOV`;
+
+        if (posYRow) posYRow.style.display = 'none';
+        if (rotationRow) rotationRow.style.display = 'none';
+        if (heightRow) heightRow.style.display = 'none';
+        if (behaviorModeRow) behaviorModeRow.style.display = 'none';
+        if (behaviorPaceRow) behaviorPaceRow.style.display = 'none';
+        if (intensityRow) intensityRow.style.display = 'flex';
+        if (keyFillRow) keyFillRow.style.display = 'flex';
+        setAiInfo(environmentInsights?.familyLabel || null, environmentInsights?.summary || null);
         return;
       }
     }
@@ -19956,8 +29299,11 @@ class VirtualStudio {
       if (posYRow) posYRow.style.display = 'none';
       if (rotationRow) rotationRow.style.display = 'none';
       if (heightRow) heightRow.style.display = 'none';
+      if (behaviorModeRow) behaviorModeRow.style.display = 'none';
+      if (behaviorPaceRow) behaviorPaceRow.style.display = 'none';
       if (intensityRow) intensityRow.style.display = 'flex';
       if (keyFillRow) keyFillRow.style.display = 'flex';
+      setAiInfo(environmentInsights?.familyLabel || null, environmentInsights?.summary || null);
       
       return;
     }
@@ -19977,11 +29323,24 @@ class VirtualStudio {
     document.getElementById('topviewInfoDist')!.textContent = `${distance.toFixed(2)} m`;
     document.getElementById('topviewInfoAngle')!.textContent = `${angle.toFixed(1)}°`;
     document.getElementById('topviewInfoIntensity')!.textContent = `${(intensity * 100).toFixed(0)}%`;
+    const lightRole = typeof light.metadata?.role === 'string' ? light.metadata.role : null;
+    const selectedLightInsight = lightRole && Array.isArray(environmentInsights?.lightingDetails)
+      ? environmentInsights?.lightingDetails.find((detail) => detail.toLowerCase().startsWith(`${lightRole.toLowerCase()}:`))
+      : environmentInsights?.lightingDetails?.[0] || null;
+    const selectedLightRationale = typeof light.metadata?.lightingRationale === 'string'
+      ? light.metadata.lightingRationale
+      : selectedLightInsight;
+    setAiInfo(
+      environmentInsights?.familyLabel || null,
+      selectedLightRationale || environmentInsights?.summary || null,
+    );
     
     // Hide actor-specific fields
     if (posYRow) posYRow.style.display = 'none';
     if (rotationRow) rotationRow.style.display = 'none';
     if (heightRow) heightRow.style.display = 'none';
+    if (behaviorModeRow) behaviorModeRow.style.display = 'none';
+    if (behaviorPaceRow) behaviorPaceRow.style.display = 'none';
     if (intensityRow) intensityRow.style.display = 'flex';
     if (keyFillRow) keyFillRow.style.display = 'flex';
     
@@ -20083,6 +29442,35 @@ class VirtualStudio {
   private histogramLogScale: boolean = false; // Logarithmic scale like cinema cameras
   private histogramSmoothingFactor: number = 0.3; // Temporal smoothing (0 = instant, 1 = very smooth)
   private histogramShowStats: boolean = true; // Show exposure statistics
+
+  private isElementVisibleForPlayback(element: Element | null): boolean {
+    if (!(element instanceof HTMLElement)) {
+      return false;
+    }
+    if (!element.isConnected) {
+      return false;
+    }
+    if (element.offsetParent !== null) {
+      return true;
+    }
+    const computedStyle = window.getComputedStyle(element);
+    return computedStyle.display !== 'none' && computedStyle.visibility !== 'hidden' && computedStyle.opacity !== '0';
+  }
+
+  private shouldUpdateHistogramScopes(): boolean {
+    if (!PLAYWRIGHT_LIGHT_MODE) {
+      return true;
+    }
+    return this.isElementVisibleForPlayback(this.histogramCanvas);
+  }
+
+  private shouldUpdateMonitorCanvases(): boolean {
+    if (!PLAYWRIGHT_LIGHT_MODE) {
+      return true;
+    }
+    const monitorCanvases = Array.from(document.querySelectorAll('.monitor-canvas'));
+    return monitorCanvases.some((canvas) => this.isElementVisibleForPlayback(canvas));
+  }
 
   private updateHistogram(): void {
     if (!this.histogramCtx || !this.histogramCanvas) return;
@@ -22562,6 +31950,8 @@ class VirtualStudio {
     if (posZ && document.activeElement !== posZ) {
       posZ.value = data.mesh.position.z.toFixed(1);
     }
+
+    this.publishCameraLightingSync('selected-light-properties-updated', 'light-controls');
   }
 
   public cctToColor(cct: number): BABYLON.Color3 {
@@ -23079,22 +32469,47 @@ class VirtualStudio {
    */
   async applyLightPattern(pattern: any): Promise<void> {
     console.log('Applying light pattern:', pattern.name || pattern.id);
-    
-    // Clear existing lights first (optional - could be configurable)
-    this.lights.forEach((lightData, _id) => {
-      lightData.light.dispose();
-      lightData.mesh.dispose();
-    });
-    this.lights.clear();
-    this.lightCounter = 0;
+
+    this.clearAllLights();
     
     // Determine which format the pattern uses
     const lightsConfig = pattern.lights || pattern.lightSetup || [];
+    const patternIntent = inferLightingPatternIntent({
+      id: pattern.id,
+      slug: pattern.slug,
+      name: pattern.name,
+      category: pattern.category,
+      description: [pattern.description, pattern.lookDescription, pattern.whenToUse].filter(Boolean).join(' '),
+      tags: Array.isArray(pattern.tags) ? pattern.tags : [],
+    });
+    const patternGuide = getTopViewGuideForPattern({
+      id: pattern.id,
+      slug: pattern.slug,
+      name: pattern.name,
+      category: pattern.category,
+      description: [pattern.description, pattern.lookDescription, pattern.whenToUse].filter(Boolean).join(' '),
+      tags: Array.isArray(pattern.tags) ? pattern.tags : [],
+    });
+    const patternContextText = [
+      pattern.name,
+      pattern.category,
+      pattern.description,
+      pattern.lookDescription,
+      pattern.whenToUse,
+      Array.isArray(pattern.tags) ? pattern.tags.join(' ') : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
     
     if (lightsConfig.length === 0) {
       console.warn('No lights defined in pattern:', pattern.name);
       return;
     }
+
+    this.setTopViewPatternGuide(patternGuide, {
+      source: 'light-pattern',
+      showGuides: patternGuide !== 'none',
+    });
     
     // Apply each light from the pattern
     for (let index = 0; index < lightsConfig.length; index++) {
@@ -23167,6 +32582,16 @@ class VirtualStudio {
       if (lightId) {
         const lightData = this.lights.get(lightId);
         if (lightData) {
+          lightData.metadata = {
+            ...(lightData.metadata || {}),
+            role,
+            patternId: patternIntent?.id || pattern.id || null,
+            patternName: pattern.name || null,
+            patternCategory: pattern.category || null,
+            patternGuideId: patternGuide !== 'none' ? patternGuide : null,
+            source: 'light-pattern',
+          };
+
           // Set color temperature
           const cct = lightConfig.colorTemp || lightConfig.cct || 5600;
           lightData.cct = cct;
@@ -23198,6 +32623,24 @@ class VirtualStudio {
           if (lightData.light instanceof BABYLON.SpotLight) {
             lightData.light.setDirectionToTarget(new BABYLON.Vector3(0, 1.5, 0));
           }
+
+          const recommendedGobo =
+            (lightConfig.gobo && typeof lightConfig.gobo === 'object' ? lightConfig.gobo : null)
+            || getLightingPatternGobo(
+              {
+                id: patternIntent?.id || pattern.id,
+                slug: pattern.slug,
+                name: pattern.name,
+                category: pattern.category,
+                description: patternContextText,
+              },
+              role,
+              patternContextText,
+            );
+
+          if (recommendedGobo) {
+            this.applyGoboToRuntimeLight(lightId, recommendedGobo, 'light-pattern');
+          }
         }
       }
     }
@@ -23212,6 +32655,10 @@ class VirtualStudio {
     
     this.updateSceneList();
     this.updateLightMeterReading();
+    this.publishSceneSelectionSync('light-pattern-applied', 'light-pattern');
+    this.publishCameraLightingSync('light-pattern-applied', 'light-pattern');
+    this.publishEnvironmentDiagnostics('light-pattern-applied');
+    this.publishTopViewSync('light-pattern-applied', 'light-pattern');
     console.log(`Light pattern "${pattern.name}" applied with ${lightsConfig.length} lights`);
   }
 
@@ -24531,6 +33978,25 @@ class VirtualStudio {
     
     const evDiff = targetEV - currentEV;
     const evDiffText = evDiff > 0 ? `${evDiff.toFixed(1)} EV` : '';
+    const environmentInsights = ((window as Window & {
+      __virtualStudioLastEnvironmentPlanInsights?: {
+        familyId?: string;
+        familyLabel?: string;
+        lightingDetails?: string[];
+        summary?: string;
+      };
+    }).__virtualStudioLastEnvironmentPlanInsights) || null;
+    const recommendedPatternId = getRecommendedLightingPatternIdsForSceneFamily(environmentInsights?.familyId || null)[0] || null;
+    const recommendedPatternLabel = recommendedPatternId ? formatLightingPatternLabel(recommendedPatternId) : null;
+    const weakLight = weakLightId ? this.lights.get(weakLightId) : null;
+    const weakLightRole = String(weakLight?.role || '').trim().toLowerCase();
+    const weakLightInsight = weakLightRole && Array.isArray(environmentInsights?.lightingDetails)
+      ? environmentInsights.lightingDetails.find((detail) => detail.toLowerCase().startsWith(`${weakLightRole}:`)) || null
+      : environmentInsights?.lightingDetails?.[0] || null;
+    const aiPatternNote = weakLightInsight
+      || weakLight?.purpose
+      || environmentInsights?.summary
+      || 'AI anbefaler et lysmønster som passer scene-familien og rollen til dette lyset.';
     
     dialog.innerHTML = `
       <div class="light-recommendation-overlay"></div>
@@ -24543,6 +34009,35 @@ class VirtualStudio {
           <p class="light-recommendation-message">
             Scenariet krever sterkere lys. Nåværende belysning er <strong>${evDiffText}</strong> under anbefalt nivå (EV ${targetEV}).
           </p>
+          ${environmentInsights?.familyLabel && recommendedPatternId && recommendedPatternLabel ? `
+            <div
+              class="light-recommendation-ai-pattern"
+              style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 18px 0;padding:16px;border-radius:14px;background:linear-gradient(135deg, rgba(18,35,56,0.96) 0%, rgba(12,24,38,0.98) 100%);border:1px solid rgba(0,212,255,0.24);box-shadow:inset 0 1px 0 rgba(255,255,255,0.05);"
+            >
+              <div style="display:flex;flex-direction:column;gap:4px;min-width:220px;flex:1;">
+                <span style="font-size:12px;color:#8feeff;text-transform:uppercase;letter-spacing:1px;font-weight:700;">AI-pattern</span>
+                <span id="lightRecommendationAiPatternFamily" style="font-size:15px;font-weight:700;color:#fff;">${environmentInsights.familyLabel}</span>
+                <span id="lightRecommendationAiPatternLabel" style="font-size:13px;color:#d7f9ff;">${recommendedPatternLabel}</span>
+                <span style="font-size:12px;line-height:1.5;color:rgba(255,255,255,0.72);margin-top:6px;">${aiPatternNote}</span>
+              </div>
+              <button
+                id="lightRecommendationAiPatternApplyBtn"
+                type="button"
+                data-preferred-pattern-id="${recommendedPatternId}"
+                style="position:relative;z-index:2;pointer-events:auto;padding:10px 14px;border-radius:10px;background:rgba(56,189,248,0.92);border:1px solid rgba(125,211,252,0.42);color:#06131e;font-size:12px;font-weight:800;cursor:pointer;"
+              >
+                Bruk AI-pattern
+              </button>
+              <button
+                id="lightRecommendationAiPatternDetailsBtn"
+                type="button"
+                data-preferred-pattern-id="${recommendedPatternId}"
+                style="position:relative;z-index:2;pointer-events:auto;padding:10px 14px;border-radius:10px;background:rgba(0,212,255,0.14);border:1px solid rgba(0,212,255,0.38);color:#9feeff;font-size:12px;font-weight:700;cursor:pointer;"
+              >
+                Se AI-patterndetaljer
+              </button>
+            </div>
+          ` : ''}
           <p class="light-recommendation-subtitle">Velg et anbefalt lys for å bytte:</p>
           <div class="light-recommendation-grid">
             ${recommendedLights.map(light => `
@@ -24613,6 +34108,8 @@ class VirtualStudio {
     const dismissBtn = dialog.querySelector('.light-recommendation-dismiss');
     const overlay = dialog.querySelector('.light-recommendation-overlay');
     const selectBtns = dialog.querySelectorAll('.light-recommendation-select-btn');
+    const aiPatternApplyBtn = dialog.querySelector('#lightRecommendationAiPatternApplyBtn') as HTMLButtonElement | null;
+    const aiPatternDetailsBtn = dialog.querySelector('#lightRecommendationAiPatternDetailsBtn') as HTMLButtonElement | null;
     
     const closeDialog = () => {
       dialog!.style.display = 'none';
@@ -24621,6 +34118,30 @@ class VirtualStudio {
     closeBtn?.addEventListener('click', closeDialog);
     dismissBtn?.addEventListener('click', closeDialog);
     overlay?.addEventListener('click', closeDialog);
+    aiPatternApplyBtn?.addEventListener('click', () => {
+      const preferredPatternId = aiPatternApplyBtn.dataset.preferredPatternId || null;
+      const pattern = findLocalLightPatternById(preferredPatternId);
+      if (!pattern) {
+        return;
+      }
+      closeDialog();
+      window.dispatchEvent(new CustomEvent('applyLightPattern', {
+        detail: pattern,
+      }));
+    });
+    aiPatternDetailsBtn?.addEventListener('click', () => {
+      const preferredPatternId = aiPatternDetailsBtn.dataset.preferredPatternId || null;
+      if (!preferredPatternId) {
+        return;
+      }
+      closeDialog();
+      window.dispatchEvent(new CustomEvent('openLightPatternLibrary', {
+        detail: {
+          preferredPatternId,
+          openPreferredPatternDetails: true,
+        },
+      }));
+    });
     
     selectBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -24699,6 +34220,7 @@ class VirtualStudio {
     }
     
     this.selectedLightId = id;
+    this.lastRuntimeLightId = id;
     this.selectedActorId = null; // Clear actor selection when selecting light
 
     if (data) {
@@ -24758,6 +34280,8 @@ class VirtualStudio {
 
     this.updateSceneList();
     window.dispatchEvent(new CustomEvent('light-selected', { detail: { id } }));
+    this.publishSceneSelectionSync('light-selected', 'light-controls');
+    this.publishCameraLightingSync('light-selected', 'light-controls');
   }
   
   private addLightHighlight(mesh: BABYLON.Mesh): void {
@@ -24945,23 +34469,23 @@ class VirtualStudio {
 
     // Update ambient light if auto-dimming is enabled
     this.updateAmbientLightIntensity();
+    this.publishCameraLightingSync('light-toggled', 'light-controls');
   }
 
   public removeLight(id: string): void {
     const data = this.lights.get(id);
     if (!data) return;
 
-    // Dispose light and mesh
-    data.light.dispose();
-    data.mesh.dispose();
-    
-    // Dispose beam visualization if exists
-    if (data.beamVisualization) {
-      data.beamVisualization.dispose();
-    }
+    this.disposeLightData(data);
 
     // Remove from map
     this.lights.delete(id);
+    this.environmentAutoRigState.lightIds.delete(id);
+    this.environmentAutoRigState.animatedLights.delete(id);
+    if (this.environmentAutoRigState.lightIds.size === 0) {
+      this.stopEnvironmentAutoRigAnimations();
+      this.environmentAutoRigState.planId = null;
+    }
 
     // Clear selection if this was selected
     if (this.selectedLightId === id) {
@@ -24973,9 +34497,13 @@ class VirtualStudio {
     this.updateSceneList();
     this.updateLightMeterReading();
     this.updateAmbientLightIntensity(); // Auto-dim ambient based on studio lights
+    this.publishSceneSelectionSync('light-removed', 'light-controls');
+    this.publishCameraLightingSync('light-removed', 'light-controls');
   }
   
   public clearAllLights(): void {
+    this.stopEnvironmentAutoRigAnimations();
+
     // Get all light IDs first to avoid modifying map while iterating
     const lightIds = Array.from(this.lights.keys());
     
@@ -24983,19 +34511,18 @@ class VirtualStudio {
     lightIds.forEach(id => {
       const data = this.lights.get(id);
       if (data) {
-        data.light.dispose();
-        data.mesh.dispose();
-        if (data.beamVisualization) {
-          data.beamVisualization.dispose();
-        }
+        this.disposeLightData(data);
       }
     });
     
     // Clear the map
     this.lights.clear();
+    this.environmentAutoRigState.lightIds.clear();
+    this.environmentAutoRigState.planId = null;
     
     // Clear selection and studio gizmos
     this.selectedLightId = null;
+    this.lastRuntimeLightId = null;
     this.gizmoManager?.attachToMesh(null);
     this.disposeStudioGizmos();
     
@@ -25006,6 +34533,8 @@ class VirtualStudio {
     this.updateSceneList();
     this.updateLightMeterReading();
     this.updateAmbientLightIntensity();
+    this.publishSceneSelectionSync('lights-cleared', 'light-controls');
+    this.publishCameraLightingSync('lights-cleared', 'light-controls');
     
     console.log('All lights cleared');
   }
@@ -25353,6 +34882,41 @@ class VirtualStudio {
     window.dispatchEvent(new CustomEvent('camera-settings-changed', {
       detail: { ...this.cameraSettings }
     }));
+    this.publishCameraLightingSync('camera-focal-length-updated', 'camera-settings');
+  }
+
+  private setCameraAperture(aperture: number): void {
+    const apertureValues = [1.0, 1.2, 1.4, 1.8, 2.0, 2.8, 4.0, 5.6, 8.0, 11, 16, 22, 32];
+    const apertureSlider = document.getElementById('apertureSlider') as HTMLInputElement | null;
+    const apertureDisplay = document.getElementById('apertureDisplay');
+    const sliderValidApertures = ((apertureSlider as any)?._validApertures as number[] | undefined) || apertureValues;
+    const validApertures = sliderValidApertures.includes(aperture)
+      ? sliderValidApertures
+      : [...sliderValidApertures, aperture].sort((a, b) => a - b);
+
+    if (validApertures.length === 0) {
+      this.cameraSettings.aperture = aperture;
+      this.updateExposureDisplay();
+      return;
+    }
+
+    const closestAperture = validApertures.reduce((closest, current) => (
+      Math.abs(current - aperture) < Math.abs(closest - aperture) ? current : closest
+    ), validApertures[0]);
+    const closestIndex = Math.max(0, validApertures.indexOf(closestAperture));
+
+    this.cameraSettings.aperture = closestAperture;
+    if (apertureSlider) {
+      apertureSlider.min = '0';
+      apertureSlider.max = String(Math.max(0, validApertures.length - 1));
+      apertureSlider.value = String(closestIndex);
+      (apertureSlider as any)._validApertures = validApertures;
+    }
+    if (apertureDisplay) {
+      apertureDisplay.textContent = `f/${closestAperture}`;
+    }
+    this.updateExposureDisplay();
+    this.publishCameraLightingSync('camera-aperture-updated', 'camera-settings');
   }
 
   // Camera Preset Methods (Cam A-E)
@@ -25596,6 +35160,154 @@ class VirtualStudio {
     window.dispatchEvent(new CustomEvent('active-camera-changed', {
       detail: { activeCameraId: presetId }
     }));
+    this.publishSceneSelectionSync('active-camera-preset-changed', 'camera-preset');
+  }
+
+  private syncCameraPresetAfterRuntimeChange(presetId: string, previousPreset?: {
+    fov?: number;
+    focalLength?: number;
+  } | null): void {
+    const updatedPreset = this.cameraPresets.get(presetId) as {
+      position: BABYLON.Vector3;
+      target: BABYLON.Vector3;
+      fov: number;
+      alpha: number;
+      beta: number;
+      radius: number;
+      distance?: number;
+      height?: number;
+      focalLength?: number;
+    } | null;
+
+    if (!updatedPreset) {
+      return;
+    }
+
+    if (previousPreset?.fov !== undefined) {
+      updatedPreset.fov = previousPreset.fov;
+    }
+    updatedPreset.distance = updatedPreset.radius;
+    updatedPreset.height = updatedPreset.position.y;
+    if (previousPreset?.focalLength !== undefined) {
+      updatedPreset.focalLength = previousPreset.focalLength;
+    } else if (this.cameraSettings.focalLength) {
+      updatedPreset.focalLength = this.cameraSettings.focalLength;
+    }
+
+    this.updateMonitorCameraFromPreset(presetId, updatedPreset);
+
+    if (this.activeCameraPresetId === presetId || this.selectedCameraPresetId === presetId) {
+      this.loadCameraPreset(presetId);
+    }
+  }
+
+  private nudgeCameraPreset(
+    presetId: string,
+    direction: 'forward' | 'backward' | 'left' | 'right' | 'up' | 'down',
+    speed: number,
+  ): void {
+    const mesh = this.cameraPresetMeshes.get(presetId);
+    const preset = this.cameraPresets.get(presetId) as { fov?: number; focalLength?: number } | null;
+    if (!mesh || !preset) {
+      return;
+    }
+
+    const step = Math.max(0.05, Math.min(1.5, speed)) * 0.35;
+    const rotationMatrix = BABYLON.Matrix.RotationYawPitchRoll(mesh.rotation.y, mesh.rotation.x, mesh.rotation.z);
+    const forward = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0, 0, 1), rotationMatrix).normalize();
+    const right = BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(1, 0, 0), rotationMatrix).normalize();
+    const up = BABYLON.Vector3.Up();
+    let delta = BABYLON.Vector3.Zero();
+
+    switch (direction) {
+      case 'forward':
+        delta = forward.scale(step);
+        break;
+      case 'backward':
+        delta = forward.scale(-step);
+        break;
+      case 'left':
+        delta = right.scale(-step);
+        break;
+      case 'right':
+        delta = right.scale(step);
+        break;
+      case 'up':
+        delta = up.scale(step);
+        break;
+      case 'down':
+        delta = up.scale(-step);
+        break;
+    }
+
+    mesh.position.addInPlace(delta);
+    this.updateCameraPresetFromMesh(presetId);
+    this.syncCameraPresetAfterRuntimeChange(presetId, preset);
+    this.publishSceneSelectionSync('director-camera-moved', 'director-mode');
+    this.publishCameraLightingSync('director-camera-moved', 'director-mode');
+  }
+
+  private rotateCameraPreset(
+    presetId: string,
+    axis: 'pan' | 'tilt' | 'roll',
+    amount: number,
+  ): void {
+    const mesh = this.cameraPresetMeshes.get(presetId);
+    const preset = this.cameraPresets.get(presetId) as { fov?: number; focalLength?: number } | null;
+    if (!mesh || !preset) {
+      return;
+    }
+
+    const radians = BABYLON.Angle.FromDegrees(amount).radians();
+    if (axis === 'pan') {
+      mesh.rotation.y += radians;
+    } else if (axis === 'tilt') {
+      mesh.rotation.x += radians;
+    } else if (axis === 'roll') {
+      mesh.rotation.z += radians;
+    }
+
+    this.updateCameraPresetFromMesh(presetId);
+    this.syncCameraPresetAfterRuntimeChange(presetId, preset);
+    this.publishSceneSelectionSync('director-camera-rotated', 'director-mode');
+    this.publishCameraLightingSync('director-camera-rotated', 'director-mode');
+  }
+
+  private zoomCameraPreset(presetId: string, amount: number): void {
+    const preset = this.cameraPresets.get(presetId) as {
+      position: BABYLON.Vector3;
+      target: BABYLON.Vector3;
+      fov: number;
+      alpha: number;
+      beta: number;
+      radius: number;
+      distance?: number;
+      height?: number;
+      focalLength?: number;
+    } | null;
+    if (!preset) {
+      return;
+    }
+
+    preset.fov = BABYLON.Scalar.Clamp(preset.fov - amount * 0.08, 0.2, 1.8);
+    this.updateMonitorCameraFromPreset(presetId, preset);
+
+    if (this.activeCameraPresetId === presetId || this.selectedCameraPresetId === presetId) {
+      this.loadCameraPreset(presetId);
+    }
+
+    this.publishSceneSelectionSync('director-camera-zoomed', 'director-mode');
+    this.publishCameraLightingSync('director-camera-zoomed', 'director-mode');
+  }
+
+  private resetDirectedCameraPreset(presetId: string): void {
+    if (!this.cameraPresets.get(presetId)) {
+      return;
+    }
+
+    this.loadCameraPreset(presetId);
+    this.publishSceneSelectionSync('director-camera-reset', 'director-mode');
+    this.publishCameraLightingSync('director-camera-reset', 'director-mode');
   }
 
   public selectCameraPreset(presetId: string): void {
@@ -25622,6 +35334,7 @@ class VirtualStudio {
     });
 
     console.log(`Camera ${presetId} selected for editing`);
+    this.publishSceneSelectionSync('camera-preset-selected', 'camera-preset');
   }
 
   public deselectCameraPreset(): void {
@@ -25630,6 +35343,7 @@ class VirtualStudio {
       this.gizmoManager.attachToMesh(null);
     }
     this.hideCameraControlPanel();
+    this.publishSceneSelectionSync('camera-preset-deselected', 'camera-preset');
   }
 
   public updateCameraPresetFromMesh(presetId: string): void {
@@ -25778,6 +35492,9 @@ class VirtualStudio {
     // CRITICAL: Re-assign RTT settings after preset change to ensure continuous rendering
     // This prevents RTT from becoming stale after preset-switch
     this.reassignMonitorRTTSettings(presetId);
+
+    this.publishSceneSelectionSync('camera-preset-loaded', 'camera-preset');
+    this.publishCameraLightingSync('camera-preset-loaded', 'camera-preset');
 
     return true;
   }
@@ -28095,45 +37812,57 @@ class VirtualStudio {
       return;
     }
 
-    const capsule = BABYLON.MeshBuilder.CreateCapsule(actorId, {
-      height: scaledHeight,
-      radius: scaledHeight * 0.125,
-      tessellation: 16,
-      subdivisions: 4
-    }, this.scene);
+    const inferredEntry = getCharacterCatalogEntry(
+      typeof userData?.characterCatalogId === 'string' ? userData.characterCatalogId : '',
+    ) || inferCharacterCatalogEntry(`${actorNode.name} ${String(userData?.actorRole || '')}`);
 
-    const pos = actorNode.transform.position;
-    capsule.position = new BABYLON.Vector3(pos[0], pos[1] + scaledHeight / 2, pos[2]);
+    const position = new BABYLON.Vector3(
+      actorNode.transform.position[0],
+      actorNode.transform.position[1],
+      actorNode.transform.position[2],
+    );
 
-    // Character Material Stack: PBRMaterial with subsurface scattering for realistic skin
-    const pbrMaterial = this.createSkinPbrMaterial(actorId, skinTone);
-    
-    // Enable shadows
-    capsule.receiveShadows = true;
-    capsule.castShadows = true;
-    
-    capsule.material = pbrMaterial;
-    
-    // Add to all existing shadow generators
-    this.lights.forEach((lightData) => {
-      if (lightData.shadowGenerator) {
-        lightData.shadowGenerator.addShadowCaster(capsule);
-      }
+    void this.loadCharacterFromCatalog(inferredEntry, {
+      nodeId: actorId,
+      name: actorNode.name,
+      position,
+      role: typeof userData?.actorRole === 'string' ? userData.actorRole : inferredEntry.id,
+      placementHint: typeof userData?.placementHint === 'string' ? userData.placementHint : null,
+      wardrobeStyle: typeof userData?.wardrobeStyle === 'string' ? userData.wardrobeStyle : inferredEntry.wardrobeStyle,
+      wardrobeVariantId: typeof userData?.wardrobeVariantId === 'string' ? userData.wardrobeVariantId : null,
+      outfitColors: Array.isArray(userData?.outfitColors)
+        ? userData.outfitColors.filter((color): color is string => typeof color === 'string')
+        : [skinTone],
+      logoPlacement: typeof userData?.logoPlacement === 'string' ? userData.logoPlacement : inferredEntry.logoPlacement,
+      actionHint: typeof userData?.actionHint === 'string' ? userData.actionHint : undefined,
+      wardrobeNotes: Array.isArray(userData?.wardrobeNotes)
+        ? userData.wardrobeNotes.filter((note): note is string => typeof note === 'string' && note.trim().length > 0)
+        : [],
+      appearance: (userData?.appearance as CharacterAppearanceConfig | null | undefined) || null,
+      behaviorPlan: (userData?.behaviorPlan as CharacterBehaviorConfig | null | undefined) || null,
+      existingNode: actorNode,
+      environmentGenerated: Boolean(userData?.environmentGenerated),
+    }).then(() => {
+      this.updateSceneList();
+      console.log('Actor added to 3D scene with visible avatar:', actorId);
+    }).catch((error) => {
+      console.warn('[Actor] Failed to resolve visible avatar for node:', actorId, error);
     });
-    
-    // Add eyes to the actor
-    this.addEyesToActor(capsule, scaledHeight, skinTone);
-
-    if (useRenderingStore.getState().activePreset === 'portrait-realistic') {
-      const meshesToTune: BABYLON.AbstractMesh[] = [capsule, ...capsule.getChildMeshes(true)];
-      this.applyPortraitMaterialTuning(meshesToTune);
-    }
-
-    this.updateSceneList();
-    console.log('Actor added to 3D scene with PBR skin material:', actorId);
   }
   
   private addEyesToMesh(targetMesh: BABYLON.AbstractMesh, name: string): void {
+    const visualKind = this.getCharacterVisualKind(targetMesh);
+    const metadata = (targetMesh.metadata || {}) as {
+      sourceModelUrl?: string;
+    };
+    if (
+      visualKind === 'catalog-glb'
+      || visualKind === 'manual-glb'
+      || (typeof metadata.sourceModelUrl === 'string' && metadata.sourceModelUrl !== 'procedural-mannequin')
+    ) {
+      return;
+    }
+
     const existingEyes = targetMesh.getChildMeshes(true).some(mesh =>
       mesh.name.includes('_leftEye') || mesh.name.includes('_rightEye')
     );
@@ -28833,6 +38562,48 @@ class VirtualStudio {
       capsuleHeight: height
     });
   }
+
+  public async captureEnvironmentValidationPreview(options?: {
+    maxWidth?: number;
+    maxHeight?: number;
+    quality?: number;
+    mimeType?: 'image/jpeg' | 'image/png';
+  }): Promise<string | null> {
+    await this.waitForRuntimeReady();
+
+    const sourceCanvas = (this.engine.getRenderingCanvas() || document.getElementById('renderCanvas')) as HTMLCanvasElement | null;
+    if (!sourceCanvas) {
+      return null;
+    }
+
+    const maxWidth = Math.max(320, options?.maxWidth ?? 960);
+    const maxHeight = Math.max(180, options?.maxHeight ?? 540);
+    const mimeType = options?.mimeType ?? 'image/jpeg';
+    const quality = Math.max(0.3, Math.min(1, options?.quality ?? 0.82));
+    const sourceWidth = sourceCanvas.width || sourceCanvas.clientWidth || maxWidth;
+    const sourceHeight = sourceCanvas.height || sourceCanvas.clientHeight || maxHeight;
+    const scale = Math.min(1, maxWidth / Math.max(1, sourceWidth), maxHeight / Math.max(1, sourceHeight));
+    const targetWidth = Math.max(1, Math.round(sourceWidth * scale));
+    const targetHeight = Math.max(1, Math.round(sourceHeight * scale));
+
+    try {
+      const offscreenCanvas = document.createElement('canvas');
+      offscreenCanvas.width = targetWidth;
+      offscreenCanvas.height = targetHeight;
+      const context = offscreenCanvas.getContext('2d');
+      if (!context) {
+        return sourceCanvas.toDataURL(mimeType, quality);
+      }
+      context.drawImage(sourceCanvas, 0, 0, targetWidth, targetHeight);
+      return offscreenCanvas.toDataURL(mimeType, quality);
+    } catch {
+      try {
+        return sourceCanvas.toDataURL(mimeType, quality);
+      } catch {
+        return null;
+      }
+    }
+  }
 }
 
 
@@ -28886,6 +38657,16 @@ window.addEventListener('DOMContentLoaded', () => {
     
     window.virtualStudio = studio;
     environmentLearningService.start();
+    (studio as any).publishCameraLightingSync?.('studio-initialized', 'runtime');
+    (studio as any).publishSceneSelectionSync?.('studio-initialized', 'runtime');
+    let previousSelectedNodeId = useAppStore.getState().selectedNodeId;
+    useAppStore.subscribe(() => {
+      const selectedNodeId = useAppStore.getState().selectedNodeId;
+      if (selectedNodeId !== previousSelectedNodeId) {
+        previousSelectedNodeId = selectedNodeId;
+        (studio as any).publishSceneSelectionSync?.('app-store-selection-changed', 'app-store');
+      }
+    });
     
     // Expose model geometry registration helpers on window for debugging/external access
     (window as any).getRegisteredModelGeometries = () => studio.getRegisteredModelGeometries();
@@ -29323,6 +39104,15 @@ window.addEventListener('DOMContentLoaded', () => {
       avRoot.render(React.createElement(AvatarGeneratorApp, {}));
     }
 
+    const marketplacePanelRoot = document.getElementById('marketplacePanelRoot');
+    if (marketplacePanelRoot) {
+      const marketplaceRoot = createRoot(marketplacePanelRoot);
+      marketplaceRoot.render(React.createElement(MarketplacePanel, {}));
+      console.log('MarketplacePanel mounted');
+    } else {
+      console.error('marketplacePanelRoot element not found!');
+    }
+
     // Mount AI Assistant Panel App
     const aiAssistantPanelRoot = document.getElementById('aiAssistantPanelRoot');
     if (aiAssistantPanelRoot) {
@@ -29331,6 +39121,15 @@ window.addEventListener('DOMContentLoaded', () => {
       console.log('AIAssistantApp mounted');
     } else {
       console.error('aiAssistantPanelRoot element not found!');
+    }
+
+    const panelCreatorRoot = document.getElementById('panelCreatorRoot');
+    if (panelCreatorRoot) {
+      const creatorRoot = createRoot(panelCreatorRoot);
+      creatorRoot.render(React.createElement(PanelCreator, {}));
+      console.log('PanelCreator mounted');
+    } else {
+      console.error('panelCreatorRoot element not found!');
     }
 
     // Mount Scene Composer Panel App
@@ -29439,6 +39238,30 @@ window.addEventListener('DOMContentLoaded', () => {
         button.appendChild(content);
         container.appendChild(button);
 
+        const dispatchInstalledToolPanelEvent = (mode: 'open' | 'close' | 'toggle') => {
+          const installedTool = marketplaceService.getInstalledTool(tool.id);
+          const toolConfig = installedTool?.toolConfig ?? tool.toolConfig;
+          if (!toolConfig) {
+            return;
+          }
+
+          const eventName =
+            mode === 'open'
+              ? toolConfig.openEvent
+              : mode === 'close'
+                ? toolConfig.closeEvent
+                : toolConfig.toggleEvent;
+
+          if (eventName) {
+            window.dispatchEvent(new CustomEvent(eventName, { detail: { toolId: tool.id } }));
+            return;
+          }
+
+          if (mode === 'toggle') {
+            window.dispatchEvent(new CustomEvent(`toggle-plugin-${tool.id}-panel`));
+          }
+        };
+
         // Add click handler based on panel component
         button.addEventListener('click', (e) => {
           e.preventDefault();
@@ -29446,13 +39269,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
           const panelComponent = tool.toolConfig?.panelComponent;
           console.log('Tool clicked:', tool.name, 'Panel:', panelComponent);
-
-          if (panelComponent === 'AIAssistantPanel') {
-            window.dispatchEvent(new CustomEvent('toggle-ai-assistant-panel'));
-          } else {
-            // Generic toggle for other panels
-            window.dispatchEvent(new CustomEvent(`toggle-plugin-${tool.id}-panel`));
-          }
+          // Installed-tool launchers behave like user toggles; modern programmatic callers can use explicit open/close below.
+          dispatchInstalledToolPanelEvent('toggle');
         });
       });
     };
@@ -29465,6 +39283,51 @@ window.addEventListener('DOMContentLoaded', () => {
       console.log('Installed tools changed, re-rendering...');
       renderInstalledTools();
     });
+
+    const handleOpenInstalledToolPanel = ((event: Event) => {
+      const customEvent = event as CustomEvent<{ toolId?: string }>;
+      const toolId = customEvent.detail?.toolId;
+      if (!toolId) {
+        return;
+      }
+      const tool = marketplaceService.getInstalledTool(toolId);
+      const eventName = tool?.toolConfig?.openEvent;
+      if (eventName) {
+        window.dispatchEvent(new CustomEvent(eventName, { detail: { toolId } }));
+      }
+    }) as EventListener;
+
+    const handleCloseInstalledToolPanel = ((event: Event) => {
+      const customEvent = event as CustomEvent<{ toolId?: string }>;
+      const toolId = customEvent.detail?.toolId;
+      if (!toolId) {
+        return;
+      }
+      const tool = marketplaceService.getInstalledTool(toolId);
+      const eventName = tool?.toolConfig?.closeEvent;
+      if (eventName) {
+        window.dispatchEvent(new CustomEvent(eventName, { detail: { toolId } }));
+      }
+    }) as EventListener;
+
+    const handleToggleInstalledToolPanel = ((event: Event) => {
+      const customEvent = event as CustomEvent<{ toolId?: string }>;
+      const toolId = customEvent.detail?.toolId;
+      if (!toolId) {
+        return;
+      }
+      const tool = marketplaceService.getInstalledTool(toolId);
+      const eventName = tool?.toolConfig?.toggleEvent;
+      if (eventName) {
+        window.dispatchEvent(new CustomEvent(eventName, { detail: { toolId } }));
+        return;
+      }
+      window.dispatchEvent(new CustomEvent(`toggle-plugin-${toolId}-panel`));
+    }) as EventListener;
+
+    window.addEventListener('vs-open-installed-tool-panel', handleOpenInstalledToolPanel);
+    window.addEventListener('vs-close-installed-tool-panel', handleCloseInstalledToolPanel);
+    window.addEventListener('vs-toggle-installed-tool-panel', handleToggleInstalledToolPanel);
 
     // Setup Camera Controls (Touch-friendly overlay)
     const cameraControlBtn = document.getElementById('cameraControlBtn');
@@ -29697,26 +39560,32 @@ window.addEventListener('DOMContentLoaded', () => {
         const studioInstance = (window as any).virtualStudio as VirtualStudio;
         if (!studioInstance) return;
         const camera = studioInstance.getCamera();
-        if (camera && cameraDistanceSlider) {
-          const clampedRadius = Math.min(50, Math.max(3, camera.radius));
+        const radius = typeof (camera as any)?.radius === 'number' ? (camera as any).radius : null;
+        const cameraPositionY = typeof (camera as any)?.position?.y === 'number' ? (camera as any).position.y : null;
+        const cameraFov = typeof (camera as any)?.fov === 'number' ? (camera as any).fov : null;
+
+        if (camera && cameraDistanceSlider && radius !== null) {
+          const clampedRadius = Math.min(50, Math.max(3, radius));
           cameraDistanceSlider.value = String(clampedRadius);
           if (cameraDistanceValue) cameraDistanceValue.textContent = `${clampedRadius.toFixed(1)}m`;
         }
         // Use camera's actual Y position for height (reflects orbit changes)
-        if (camera && cameraHeightSlider) {
-          const cameraHeight = camera.position.y;
+        if (camera && cameraHeightSlider && cameraPositionY !== null) {
+          const cameraHeight = cameraPositionY;
           const clampedHeight = Math.min(10, Math.max(0, cameraHeight));
           cameraHeightSlider.value = String(clampedHeight);
           if (cameraHeightValue) cameraHeightValue.textContent = `${clampedHeight.toFixed(1)}m`;
         }
         // Sync focal length from camera FOV
-        if (camera && focalLengthSlider) {
+        if (camera && focalLengthSlider && cameraFov !== null && Number.isFinite(cameraFov) && cameraFov > 0.0001) {
           // FOV = (50 / focalLength) * 0.8, so focalLength = 50 * 0.8 / FOV = 40 / FOV
-          const focalFromFOV = Math.round(40 / camera.fov);
+          const focalFromFOV = Math.round(40 / cameraFov);
           const clampedFocal = Math.min(400, Math.max(14, focalFromFOV));
           focalLengthSlider.value = String(clampedFocal);
           if (focalLengthValue) focalLengthValue.textContent = `${clampedFocal}mm`;
         }
+
+        (studioInstance as any).publishCameraLightingSync?.('camera-view-changed', 'viewport');
       };
 
       // Initial sync (delay to ensure studio is initialized)
@@ -29757,8 +39626,8 @@ window.addEventListener('DOMContentLoaded', () => {
           if (!studioInstance) return;
           const distance = parseFloat(cameraDistanceSlider.value);
           const camera = studioInstance.getCamera();
-          if (camera) {
-            camera.radius = distance;
+          if (camera && typeof (camera as any).radius === 'number') {
+            (camera as any).radius = distance;
           }
           if (cameraDistanceValue) cameraDistanceValue.textContent = `${distance.toFixed(1)}m`;
         });
@@ -29770,16 +39639,26 @@ window.addEventListener('DOMContentLoaded', () => {
           if (!studioInstance) return;
           const height = parseFloat(cameraHeightSlider.value);
           const camera = studioInstance.getCamera();
-          if (camera) {
+          if (
+            camera
+            && typeof (camera as any).radius === 'number'
+            && typeof (camera as any).target?.y === 'number'
+          ) {
             // Calculate beta angle to achieve desired height
             // camera.position.y = target.y + radius * cos(beta)
             // So: beta = acos((height - target.y) / radius)
-            const targetY = camera.target.y;
-            const radius = camera.radius;
+            const targetY = (camera as any).target.y as number;
+            const radius = (camera as any).radius as number;
             const deltaY = height - targetY;
             // Clamp to valid range for acos
             const cosB = Math.max(-1, Math.min(1, deltaY / radius));
-            camera.beta = Math.acos(cosB);
+            if (typeof (camera as any).beta === 'number') {
+              (camera as any).beta = Math.acos(cosB);
+            } else if ((camera as any).position) {
+              (camera as any).position.y = height;
+            }
+          } else if (camera && (camera as any).position) {
+            (camera as any).position.y = height;
           }
           if (cameraHeightValue) cameraHeightValue.textContent = `${height.toFixed(1)}m`;
         });
@@ -29791,8 +39670,8 @@ window.addEventListener('DOMContentLoaded', () => {
           if (!studioInstance) return;
           const focal = parseFloat(focalLengthSlider.value);
           const camera = studioInstance.getCamera();
-          if (camera) {
-            camera.fov = (50 / focal) * 0.8;
+          if (camera && typeof (camera as any).fov === 'number') {
+            (camera as any).fov = (50 / focal) * 0.8;
           }
           if (focalLengthValue) focalLengthValue.textContent = `${Math.round(focal)}mm`;
         });
@@ -31366,7 +41245,11 @@ window.addEventListener('DOMContentLoaded', () => {
             light.mesh.position.x += dx;
             light.mesh.position.y += dy;
             light.mesh.position.z += dz;
-            if (light.light instanceof BABYLON.SpotLight || light.light instanceof BABYLON.DirectionalLight) {
+            if (
+              light.light instanceof BABYLON.SpotLight
+              || light.light instanceof BABYLON.DirectionalLight
+              || light.light instanceof BABYLON.PointLight
+            ) {
               light.light.position.x += dx;
               light.light.position.y += dy;
               light.light.position.z += dz;
@@ -31533,6 +41416,82 @@ window.addEventListener('DOMContentLoaded', () => {
       const azimuthValue = document.getElementById('azimuthValue');
       const elevationValue = document.getElementById('elevationValue');
       const resetLightDirectionBtn = document.getElementById('resetLightDirection');
+
+      const updateLightAiPatternCard = () => {
+        const card = document.getElementById('lightAiPatternCard') as HTMLElement | null;
+      const familyEl = document.getElementById('lightAiPatternFamily');
+      const patternEl = document.getElementById('lightAiPatternLabel');
+      const noteEl = document.getElementById('lightAiPatternNote');
+      const applyBtn = document.getElementById('lightAiPatternApplyBtn') as HTMLButtonElement | null;
+      const detailsBtn = document.getElementById('lightAiPatternDetailsBtn') as HTMLButtonElement | null;
+      if (!card || !familyEl || !patternEl || !noteEl || !applyBtn || !detailsBtn) {
+        return;
+      }
+
+        const environmentInsights = ((window as Window & {
+          __virtualStudioLastEnvironmentPlanInsights?: {
+            familyId?: string;
+            familyLabel?: string;
+            lightingDetails?: string[];
+            summary?: string;
+          };
+        }).__virtualStudioLastEnvironmentPlanInsights) || null;
+        const selectedLight = studio.selectedLightId ? studio.lights.get(studio.selectedLightId) : null;
+        const recommendedPatternId = getRecommendedLightingPatternIdsForSceneFamily(environmentInsights?.familyId || null)[0] || null;
+        const lightRole = String(selectedLight?.role || '').trim().toLowerCase();
+        const selectedLightInsight = lightRole && Array.isArray(environmentInsights?.lightingDetails)
+          ? environmentInsights.lightingDetails.find((detail) => detail.toLowerCase().startsWith(`${lightRole}:`)) || null
+          : environmentInsights?.lightingDetails?.[0] || null;
+        const noteText = (selectedLight as any)?.metadata?.lightingRationale
+          || selectedLight?.purpose
+          || selectedLightInsight
+          || environmentInsights?.summary
+          || 'AI kobler valgt lys til et anbefalt mønster for denne scene-familien.';
+
+        if (!selectedLight || !environmentInsights?.familyLabel || !recommendedPatternId) {
+          card.style.display = 'none';
+          applyBtn.disabled = true;
+          applyBtn.dataset.preferredPatternId = '';
+          detailsBtn.disabled = true;
+          detailsBtn.dataset.preferredPatternId = '';
+          return;
+        }
+
+        familyEl.textContent = environmentInsights.familyLabel;
+        patternEl.textContent = formatLightingPatternLabel(recommendedPatternId);
+        noteEl.textContent = noteText;
+        applyBtn.disabled = false;
+        applyBtn.dataset.preferredPatternId = recommendedPatternId;
+        detailsBtn.disabled = false;
+        detailsBtn.dataset.preferredPatternId = recommendedPatternId;
+        card.style.display = 'block';
+      };
+
+      document.getElementById('lightAiPatternApplyBtn')?.addEventListener('click', () => {
+        const applyBtn = document.getElementById('lightAiPatternApplyBtn') as HTMLButtonElement | null;
+        const preferredPatternId = applyBtn?.dataset.preferredPatternId || null;
+        const pattern = findLocalLightPatternById(preferredPatternId);
+        if (!pattern) {
+          return;
+        }
+        window.dispatchEvent(new CustomEvent('applyLightPattern', {
+          detail: pattern,
+        }));
+      });
+
+      document.getElementById('lightAiPatternDetailsBtn')?.addEventListener('click', () => {
+        const detailsBtn = document.getElementById('lightAiPatternDetailsBtn') as HTMLButtonElement | null;
+        const preferredPatternId = detailsBtn?.dataset.preferredPatternId || null;
+        if (!preferredPatternId) {
+          return;
+        }
+        window.dispatchEvent(new CustomEvent('openLightPatternLibrary', {
+          detail: {
+            preferredPatternId,
+            openPreferredPatternDetails: true,
+          },
+        }));
+      });
       
       const updateLightSettingsFromSelected = () => {
         const settingsSection = document.getElementById('lightSettingsSection');
@@ -31548,6 +41507,7 @@ window.addEventListener('DOMContentLoaded', () => {
           if (selectedNameEl) selectedNameEl.textContent = '';
           if (lightToggleSwitch) lightToggleSwitch.checked = false;
           if (lightToggleStatus) lightToggleStatus.textContent = 'AV';
+          updateLightAiPatternCard();
           return;
         }
 
@@ -31709,6 +41669,7 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
         updateLightDisplay();
+        updateLightAiPatternCard();
       };
 
       // Azimuth/Elevation direction controls - event listeners
@@ -31774,6 +41735,10 @@ window.addEventListener('DOMContentLoaded', () => {
         updateLightSelectionList();
         updateLightSettingsFromSelected();
       });
+
+      window.addEventListener('vs-environment-plan-insights-updated', () => {
+        updateLightAiPatternCard();
+      });
       
       // Listen for light deletion (Delete/Backspace key)
       window.addEventListener('light-deleted', () => {
@@ -31832,6 +41797,7 @@ window.addEventListener('DOMContentLoaded', () => {
       window.addEventListener('lights-updated', (e) => {
         console.log('[UI] lights-updated event received:', (e as CustomEvent).detail);
         updateLightSelectionList();
+        updateLightAiPatternCard();
       });
       
       // Initial update to show any lights already in scene
@@ -32114,10 +42080,10 @@ window.addEventListener('DOMContentLoaded', () => {
           const aiAssistantPanel = document.getElementById('aiAssistantPanel');
 
           if (marketplacePanel && marketplacePanel.classList.contains('open')) {
-            window.dispatchEvent(new CustomEvent('toggle-marketplace-panel'));
+            window.dispatchEvent(new CustomEvent('vs-close-marketplace-panel'));
           }
           if (aiAssistantPanel && aiAssistantPanel.classList.contains('open')) {
-            window.dispatchEvent(new CustomEvent('toggle-ai-assistant-panel'));
+            window.dispatchEvent(new CustomEvent('vs-close-ai-assistant-panel'));
           }
           actorBottomPanel.classList.add('open');
           actorPanelTrigger.classList.add('active');
@@ -32311,6 +42277,11 @@ window.addEventListener('DOMContentLoaded', () => {
               // For lights, also select in 3D scene and open light panel
               if (type === 'light' && id.startsWith('light')) {
                 studio.selectLight(id);
+              } else if (type === 'model' || type === 'equipment') {
+                useAppStore.getState().selectNode(id);
+                window.dispatchEvent(new CustomEvent('ch-scene-node-selected', {
+                  detail: { nodeId: id }
+                }));
               }
             });
             
@@ -32621,6 +42592,142 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         });
       });
+
+      const ensureStudioLibraryOpen = () => {
+        if (actorBottomPanel.classList.contains('open')) {
+          return;
+        }
+
+        const marketplacePanel = document.getElementById('marketplacePanel');
+        const aiAssistantPanel = document.getElementById('aiAssistantPanel');
+
+        if (marketplacePanel && marketplacePanel.classList.contains('open')) {
+          window.dispatchEvent(new CustomEvent('vs-close-marketplace-panel'));
+        }
+        if (aiAssistantPanel && aiAssistantPanel.classList.contains('open')) {
+          window.dispatchEvent(new CustomEvent('vs-close-ai-assistant-panel'));
+        }
+
+        actorBottomPanel.classList.add('open');
+        actorPanelTrigger?.classList.add('active');
+        actorPanelTrigger?.setAttribute('aria-expanded', 'true');
+        actorPanelTrigger?.querySelector('.library-arrow')?.replaceChildren(document.createTextNode('−'));
+        if (actorTab) {
+          actorTab.classList.add('panel-open');
+        }
+      };
+
+      const openStudioLibraryPanel = () => {
+        ensureStudioLibraryOpen();
+      };
+
+      const closeStudioLibraryPanel = () => {
+        closePanel();
+      };
+
+      const toggleStudioLibraryPanel = () => {
+        if (actorBottomPanel.classList.contains('open')) {
+          closeStudioLibraryPanel();
+        } else {
+          openStudioLibraryPanel();
+        }
+      };
+
+      const openStudioLibraryTab = (tabName: 'scener' | 'assets' | 'lights' | 'camera' | 'equipment' | 'hdri' | 'models') => {
+        ensureStudioLibraryOpen();
+        const targetTab = document.querySelector(`.actor-tab[data-tab="${tabName}"]`) as HTMLElement | null;
+        targetTab?.click();
+      };
+
+      const openCameraControlsTab = (tabName: 'camera' | 'light') => {
+        const cameraControlBtn = document.getElementById('cameraControlBtn') as HTMLElement | null;
+        const cameraControlsPanel = document.getElementById('cameraControlsPanel') as HTMLElement | null;
+        if (cameraControlsPanel?.style.display === 'none' && cameraControlBtn) {
+          cameraControlBtn.click();
+        } else if (cameraControlsPanel && !cameraControlsPanel.style.display) {
+          cameraControlsPanel.style.display = 'block';
+          cameraControlBtn?.classList.add('active');
+        }
+
+        const targetTab = document.getElementById(tabName === 'light' ? 'tabLight' : 'tabCamera') as HTMLElement | null;
+        targetTab?.click();
+      };
+
+      const ensureAIAssistantOpen = () => {
+        const aiAssistantPanel = document.getElementById('aiAssistantPanel') as HTMLElement | null;
+        if (aiAssistantPanel?.classList.contains('open')) {
+          return;
+        }
+        window.dispatchEvent(new CustomEvent('vs-open-ai-assistant-panel'));
+      };
+
+      window.addEventListener('vs-open-studio-library-tab', ((event: Event) => {
+        const customEvent = event as CustomEvent<{ tab?: 'scener' | 'assets' | 'lights' | 'camera' | 'equipment' | 'hdri' | 'models' }>;
+        const requestedTab = customEvent.detail?.tab ?? 'models';
+        openStudioLibraryTab(requestedTab);
+      }) as EventListener);
+
+      window.addEventListener('vs-open-camera-controls-tab', ((event: Event) => {
+        const customEvent = event as CustomEvent<{ tab?: 'camera' | 'light' }>;
+        const requestedTab = customEvent.detail?.tab ?? 'camera';
+        openCameraControlsTab(requestedTab);
+      }) as EventListener);
+
+      window.addEventListener('toggle-studio-library-panel', (toggleStudioLibraryPanel as EventListener));
+      window.addEventListener('vs-open-studio-library-panel', (openStudioLibraryPanel as EventListener));
+      window.addEventListener('vs-close-studio-library-panel', (closeStudioLibraryPanel as EventListener));
+
+      window.addEventListener('open-panel-creator', (() => {
+        ensureAIAssistantOpen();
+      }) as EventListener);
+
+      window.addEventListener('vs-open-panel-creator', (() => {
+        ensureAIAssistantOpen();
+        window.dispatchEvent(new CustomEvent('open-panel-creator'));
+      }) as EventListener);
+
+      const legacyPanelEventBridges: Array<{ eventName: string; handler: () => void }> = [
+        { eventName: 'open-scene-library', handler: () => openStudioLibraryTab('scener') },
+        { eventName: 'open-asset-library', handler: () => openStudioLibraryTab('assets') },
+        { eventName: 'open-light-browser', handler: () => openStudioLibraryTab('lights') },
+        { eventName: 'open-camera-gear', handler: () => openStudioLibraryTab('camera') },
+        { eventName: 'open-character-library', handler: () => openStudioLibraryTab('models') },
+        { eventName: 'open-equipment-library', handler: () => openStudioLibraryTab('equipment') },
+        { eventName: 'open-hdri-library', handler: () => openStudioLibraryTab('hdri') },
+        { eventName: 'open-light-control', handler: () => openCameraControlsTab('light') },
+        { eventName: 'open-camera-control', handler: () => openCameraControlsTab('camera') },
+        { eventName: 'create-new-scene', handler: () => window.dispatchEvent(new CustomEvent('ch-open-scene-composer', { detail: { tab: 'scenes' } })) },
+      ];
+
+      legacyPanelEventBridges.forEach(({ eventName, handler }) => {
+        window.addEventListener(eventName, handler as EventListener);
+      });
+
+      const openSceneHierarchyPanel = () => {
+        leftPanel.classList.add('floating-open');
+        menuSceneHierarchy?.classList.add('active');
+      };
+
+      const closeSceneHierarchyPanel = () => {
+        leftPanel.classList.remove('floating-open');
+        menuSceneHierarchy?.classList.remove('active');
+      };
+
+      const toggleSceneHierarchyPanel = () => {
+        if (leftPanel.classList.contains('floating-open')) {
+          closeSceneHierarchyPanel();
+        } else {
+          openSceneHierarchyPanel();
+        }
+      };
+
+      window.addEventListener('toggle-scene-hierarchy-panel', (toggleSceneHierarchyPanel as EventListener));
+      window.addEventListener('vs-open-scene-hierarchy-panel', (openSceneHierarchyPanel as EventListener));
+      window.addEventListener('vs-close-scene-hierarchy-panel', (closeSceneHierarchyPanel as EventListener));
+
+      (window as Window & {
+        __virtualStudioPanelEventBridgeReady?: boolean;
+      }).__virtualStudioPanelEventBridgeReady = true;
     }
     
     // Secondary menu bar event listeners
@@ -32632,51 +42739,26 @@ window.addEventListener('DOMContentLoaded', () => {
     
     if (menuHjelp) {
       menuHjelp.addEventListener('click', () => {
-        const helpPanel = document.getElementById('helpPanel');
-        const helpTrigger = document.getElementById('helpPanelTrigger');
-        if (helpPanel && helpTrigger) {
-          const isOpen = helpPanel.classList.contains('open');
-          if (isOpen) {
-            helpPanel.classList.remove('open');
-            helpPanel.style.display = 'none';
-            helpTrigger.classList.remove('active');
-          } else {
-            helpPanel.style.display = 'flex';
-            helpPanel.classList.add('open');
-            helpTrigger.classList.add('active');
-          }
-        }
+        window.dispatchEvent(new CustomEvent('vs-open-help-panel'));
       });
     }
     
     if (menuMarketplace) {
       menuMarketplace.addEventListener('click', () => {
-        window.dispatchEvent(new CustomEvent('toggle-marketplace-panel'));
+        window.dispatchEvent(new CustomEvent('vs-open-marketplace-panel'));
       });
     }
     
     if (menuStudioLibrary) {
       menuStudioLibrary.addEventListener('click', () => {
-        const actorBottomPanel = document.getElementById('actorBottomPanel');
-        const actorPanelTrigger = document.getElementById('actorPanelTrigger');
-        if (actorBottomPanel && actorPanelTrigger) {
-          const isOpen = actorBottomPanel.classList.contains('open');
-          if (isOpen) {
-            actorBottomPanel.classList.remove('open');
-            actorPanelTrigger.classList.remove('active');
-          } else {
-            actorBottomPanel.classList.add('open');
-            actorPanelTrigger.classList.add('active');
-          }
-        }
+        window.dispatchEvent(new CustomEvent('vs-open-studio-library-panel'));
       });
     }
     
     if (menuPanelCreator) {
       menuPanelCreator.addEventListener('click', () => {
         console.log('Menu Panel Creator clicked, dispatching event');
-        // Dispatch event to open Panel Creator dialog
-        window.dispatchEvent(new CustomEvent('open-panel-creator'));
+        window.dispatchEvent(new CustomEvent('vs-open-panel-creator'));
       });
     }
     
@@ -32685,24 +42767,13 @@ window.addEventListener('DOMContentLoaded', () => {
     if (panelCreatorTriggerBtn) {
       panelCreatorTriggerBtn.addEventListener('click', () => {
         console.log('Panel Creator trigger button clicked, dispatching event');
-        // Dispatch event to open Panel Creator dialog
-        window.dispatchEvent(new CustomEvent('open-panel-creator'));
+        window.dispatchEvent(new CustomEvent('vs-open-panel-creator'));
       });
     }
     
     if (menuSceneHierarchy) {
       menuSceneHierarchy.addEventListener('click', () => {
-        const leftPanel = document.querySelector('.left-panel') as HTMLElement;
-        if (leftPanel) {
-          const isOpen = leftPanel.classList.contains('floating-open');
-          if (isOpen) {
-            leftPanel.classList.remove('floating-open');
-            menuSceneHierarchy.classList.remove('active');
-          } else {
-            leftPanel.classList.add('floating-open');
-            menuSceneHierarchy.classList.add('active');
-          }
-        }
+        window.dispatchEvent(new CustomEvent('vs-open-scene-hierarchy-panel'));
       });
     }
   }

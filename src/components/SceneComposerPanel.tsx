@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
+  Alert,
   Box,
   Typography,
   TextField,
@@ -70,6 +71,12 @@ import { sceneComposerService } from '../services/sceneComposerService';
 import { sceneVersionService } from '../services/sceneVersionService';
 import { sceneAutoSaveService } from '../services/sceneAutoSaveService';
 import { SceneMetadataEditor } from './SceneMetadataEditor';
+import {
+  getSceneAssemblyExportWarning,
+  matchesSceneAssemblyValidationFilter,
+  type SceneAssemblyValidationFilter,
+  getSceneAssemblyValidationPresentation,
+} from '../services/sceneAssemblyValidationPresentation';
 import { TimelineEditor } from './TimelineEditor';
 import { LayerEditor } from './LayerEditor';
 import { sceneValidationService } from '../services/sceneValidationService';
@@ -77,6 +84,11 @@ import { sceneOptimizationService } from '../services/sceneOptimizationService';
 import { sceneAnalysisService } from '../services/sceneAnalysisService';
 import { sceneVariationService } from '../services/sceneVariationService';
 import { EnvironmentBrowser } from './EnvironmentBrowser';
+import {
+  sceneComposerPreferencesService,
+  type SceneComposerActiveTab,
+  type SceneComposerSortOption,
+} from '../services/sceneComposerPreferencesService';
 interface SceneComposerPanelProps {
   onClose?: () => void;
   onSaveScene?: (scene: SceneComposition) => void;
@@ -89,13 +101,7 @@ interface TabPanelProps {
   value: number;
 }
 
-type SceneComposerTabKey =
-  | 'scenes'
-  | 'timeline'
-  | 'layers'
-  | 'environment'
-  | 'export'
-  | 'advanced';
+type SceneComposerTabKey = SceneComposerActiveTab;
 
 const SCENE_COMPOSER_TAB_INDEX: Record<SceneComposerTabKey, number> = {
   scenes: 0,
@@ -119,6 +125,15 @@ function resolveSceneComposerTabIndex(tab: unknown): number | null {
   return SCENE_COMPOSER_TAB_INDEX[normalizedTab] ?? null;
 }
 
+function resolveSceneComposerTabKey(value: unknown): SceneComposerTabKey {
+  const index = resolveSceneComposerTabIndex(value);
+  if (index === null) {
+    return 'scenes';
+  }
+
+  return (Object.entries(SCENE_COMPOSER_TAB_INDEX).find(([, tabIndex]) => tabIndex === index)?.[0] as SceneComposerTabKey | undefined) ?? 'scenes';
+}
+
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
   return (
@@ -134,7 +149,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-type SortOption = 'name' | 'createdAt' | 'updatedAt' | 'size';
+type SortOption = SceneComposerSortOption;
 
 export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneComposerPanelProps) {
   const [tabValue, setTabValue] = useState(0);
@@ -151,6 +166,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
   const [sortBy, setSortBy] = useState<SortOption>('updatedAt');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTags, setFilterTags] = useState<string[]>([]);
+  const [validationFilter, setValidationFilter] = useState<SceneAssemblyValidationFilter>('all');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [hoveredScene, setHoveredScene] = useState<string | null>(null);
   const [previewAnchor, setPreviewAnchor] = useState<HTMLElement | null>(null);
@@ -177,6 +193,8 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
   const [backupRestoreDialogOpen, setBackupRestoreDialogOpen] = useState(false);
   const [trashDialogOpen, setTrashDialogOpen] = useState(false);
   const [trashedScenes, setTrashedScenes] = useState<SceneComposition[]>([]);
+  const [preferencesHydrated, setPreferencesHydrated] = useState(false);
+  const explicitTabSelectionRef = useRef<number | null>(null);
 
   // Load scenes on mount
   useEffect(() => {
@@ -187,6 +205,32 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
     }
     return () => {
       sceneAutoSaveService.disable();
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void sceneComposerPreferencesService.getPreferences()
+      .then((preferences) => {
+        if (cancelled) {
+          return;
+        }
+        setSortBy(preferences.sortBy);
+        setValidationFilter(preferences.validationFilter);
+        setShowFavoritesOnly(preferences.showFavoritesOnly);
+        setFilterTags(preferences.filterTags);
+        setTabValue(explicitTabSelectionRef.current ?? resolveSceneComposerTabIndex(preferences.activeTab) ?? 0);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          explicitTabSelectionRef.current = null;
+          setPreferencesHydrated(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -202,6 +246,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
       const customEvent = event as CustomEvent<{ tab?: SceneComposerTabKey | number }>;
       const nextTabValue = resolveSceneComposerTabIndex(customEvent.detail?.tab);
       if (nextTabValue !== null) {
+        explicitTabSelectionRef.current = nextTabValue;
         setTabValue(nextTabValue);
       }
     };
@@ -211,6 +256,43 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
       window.removeEventListener('ch-open-scene-composer', handleOpenSceneComposer as EventListener);
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const testWindow = window as Window & {
+      __virtualStudioSceneComposerTestApi?: {
+        setActiveTab: (tab: SceneComposerTabKey | number) => void;
+        getSnapshot: () => {
+          tabValue: number;
+          activeTab: SceneComposerTabKey;
+          preferencesHydrated: boolean;
+        };
+      };
+    };
+
+    testWindow.__virtualStudioSceneComposerTestApi = {
+      setActiveTab: (tab) => {
+        const nextTabValue = resolveSceneComposerTabIndex(tab);
+        if (nextTabValue === null) {
+          return;
+        }
+        explicitTabSelectionRef.current = nextTabValue;
+        setTabValue(nextTabValue);
+      },
+      getSnapshot: () => ({
+        tabValue,
+        activeTab: resolveSceneComposerTabKey(tabValue),
+        preferencesHydrated,
+      }),
+    };
+
+    return () => {
+      delete testWindow.__virtualStudioSceneComposerTestApi;
+    };
+  }, [preferencesHydrated, tabValue]);
 
   const loadScenes = () => {
     const allScenes = sceneComposerService.getAllScenes().filter(s => !s.deletedAt);
@@ -230,8 +312,9 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
       tags: filterTags.length > 0 ? filterTags : undefined,
       favoritesOnly: showFavoritesOnly,
     });
+    filtered = filtered.filter((scene) => matchesSceneAssemblyValidationFilter(scene, validationFilter));
     return sceneComposerService.sortScenes(filtered, sortBy);
-  }, [scenes, searchQuery, filterTags, showFavoritesOnly, sortBy]);
+  }, [scenes, searchQuery, filterTags, showFavoritesOnly, sortBy, validationFilter]);
 
   // Get all unique tags
   const allTags = useMemo(() => {
@@ -241,6 +324,26 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
     });
     return Array.from(tags).sort();
   }, [scenes]);
+
+  const validationCounts = useMemo(() => ({
+    validated: scenes.filter((scene) => matchesSceneAssemblyValidationFilter(scene, 'validated')).length,
+    differences: scenes.filter((scene) => matchesSceneAssemblyValidationFilter(scene, 'differences')).length,
+    local: scenes.filter((scene) => matchesSceneAssemblyValidationFilter(scene, 'local')).length,
+  }), [scenes]);
+
+  useEffect(() => {
+    if (!preferencesHydrated) {
+      return;
+    }
+
+    void sceneComposerPreferencesService.setPreferences({
+      sortBy,
+      validationFilter,
+      showFavoritesOnly,
+      filterTags,
+      activeTab: resolveSceneComposerTabKey(tabValue),
+    });
+  }, [sortBy, validationFilter, showFavoritesOnly, filterTags, tabValue, preferencesHydrated]);
 
   const handleSaveClick = () => {
     setSceneName('');
@@ -256,6 +359,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
       if (onSaveScene) {
         // Capture environment state
         const environment = sceneComposerService.captureEnvironmentState();
+        const environmentAssemblyValidation = sceneComposerService.captureEnvironmentAssemblyValidation();
         
         // Capture gobo state
         const gobos = sceneComposerService.captureGoboState();
@@ -282,6 +386,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
           isFavorite: false,
           order: scenes.length,
           environment: environment, // Include environment state
+          environmentAssemblyValidation,
           gobos: gobos.length > 0 ? gobos : undefined, // Include gobo state
         };
         await onSaveScene(tempScene);
@@ -302,7 +407,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
     
     // Restore environment if present
     if (scene.environment) {
-      sceneComposerService.restoreEnvironment(scene.environment);
+      void sceneComposerService.restoreEnvironment(scene.environment);
     }
     
     // Restore gobos if present
@@ -336,9 +441,13 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
     }
   };
 
-  const handleExportScene = (scene: SceneComposition) => {
+  const handleExportScene = async (scene: SceneComposition) => {
     try {
-      sceneComposerService.downloadScene(scene);
+      const validationWarning = getSceneAssemblyExportWarning(scene);
+      if (validationWarning && !window.confirm(validationWarning)) {
+        return;
+      }
+      await sceneComposerService.downloadScene(scene);
     } catch (error) {
       console.error('Error exporting scene:', error);
       alert('Kunne ikke eksportere scene');
@@ -639,6 +748,10 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
     setVersionHistoryOpen(true);
   };
 
+  const selectedSceneAssemblyValidation = selectedScene
+    ? getSceneAssemblyValidationPresentation(selectedScene.environmentAssemblyValidation)
+    : null;
+
   return (
     <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'transparent' }}>
       <Tabs
@@ -818,6 +931,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
                   <MenuItem value="createdAt">Opprettet</MenuItem>
                   <MenuItem value="updatedAt">Oppdatert</MenuItem>
                   <MenuItem value="size">Størrelse</MenuItem>
+                  <MenuItem value="validationStatus">Valideringsstatus</MenuItem>
                 </Select>
               </FormControl>
 
@@ -834,6 +948,61 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
               >
                 Favoritter
               </Button>
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mr: 1 }}>
+                Assembly:
+              </Typography>
+              <Chip
+                label={`Alle (${scenes.length})`}
+                size="small"
+                onClick={() => setValidationFilter('all')}
+                sx={{
+                  bgcolor: validationFilter === 'all' ? '#00d4ff' : 'rgba(255,255,255,0.1)',
+                  color: validationFilter === 'all' ? '#000' : '#fff',
+                  cursor: 'pointer',
+                }}
+              />
+              <Chip
+                label={`Backend validert (${validationCounts.validated})`}
+                size="small"
+                onClick={() => setValidationFilter('validated')}
+                sx={{
+                  bgcolor: validationFilter === 'validated' ? 'rgba(16,185,129,0.95)' : 'rgba(16,185,129,0.18)',
+                  color: validationFilter === 'validated' ? '#04130d' : '#10b981',
+                  cursor: 'pointer',
+                }}
+              />
+              <Chip
+                label={`Avvik (${validationCounts.differences})`}
+                size="small"
+                onClick={() => setValidationFilter('differences')}
+                sx={{
+                  bgcolor: validationFilter === 'differences' ? 'rgba(245,158,11,0.95)' : 'rgba(245,158,11,0.18)',
+                  color: validationFilter === 'differences' ? '#1a1204' : '#f59e0b',
+                  cursor: 'pointer',
+                }}
+              />
+              <Chip
+                label={`Lokal assembly (${validationCounts.local})`}
+                size="small"
+                onClick={() => setValidationFilter('local')}
+                sx={{
+                  bgcolor: validationFilter === 'local' ? 'rgba(96,165,250,0.95)' : 'rgba(96,165,250,0.18)',
+                  color: validationFilter === 'local' ? '#08111d' : '#60a5fa',
+                  cursor: 'pointer',
+                }}
+              />
+              {validationFilter !== 'all' && (
+                <Button
+                  size="small"
+                  onClick={() => setValidationFilter('all')}
+                  sx={{ color: 'rgba(255,255,255,0.87)' }}
+                >
+                  Nullstill
+                </Button>
+              )}
             </Box>
 
             {/* Tags filter */}
@@ -1072,6 +1241,31 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
                               label={`${scene.environment.walls.length + scene.environment.floors.length} miljø`}
                               size="small"
                               sx={{ bgcolor: 'rgba(142,68,173,0.2)', color: '#8e44ad', fontSize: '11px' }}
+                            />
+                          )}
+                          {scene.environmentAssemblyValidation && (
+                            <Chip
+                              label={
+                                scene.environmentAssemblyValidation.backendValidated
+                                  ? scene.environmentAssemblyValidation.differences.length === 0
+                                    ? 'Backend validert'
+                                    : `Assembly-avvik (${scene.environmentAssemblyValidation.differences.length})`
+                                  : 'Lokal assembly'
+                              }
+                              size="small"
+                              sx={{
+                                bgcolor: scene.environmentAssemblyValidation.backendValidated
+                                  ? scene.environmentAssemblyValidation.differences.length === 0
+                                    ? 'rgba(16,185,129,0.2)'
+                                    : 'rgba(245,158,11,0.2)'
+                                  : 'rgba(59,130,246,0.2)',
+                                color: scene.environmentAssemblyValidation.backendValidated
+                                  ? scene.environmentAssemblyValidation.differences.length === 0
+                                    ? '#10b981'
+                                    : '#f59e0b'
+                                  : '#60a5fa',
+                                fontSize: '11px',
+                              }}
                             />
                           )}
                         </Box>
@@ -1319,6 +1513,21 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
               <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.87)' }}>
                 Velg en scene fra Scener-fanen og klikk på "Eksporter" for å laste ned som JSON-fil.
               </Typography>
+              {selectedSceneAssemblyValidation && (
+                <Alert severity={selectedSceneAssemblyValidation.severity} sx={{ mt: 1.5 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    {selectedSceneAssemblyValidation.label}
+                  </Typography>
+                  <Typography variant="caption" sx={{ display: 'block', mb: selectedSceneAssemblyValidation.details.length > 0 ? 0.5 : 0 }}>
+                    {selectedSceneAssemblyValidation.summary}
+                  </Typography>
+                  {selectedSceneAssemblyValidation.details.slice(0, 2).map((detail) => (
+                    <Typography key={detail} variant="caption" sx={{ display: 'block' }}>
+                      {detail}
+                    </Typography>
+                  ))}
+                </Alert>
+              )}
             </Box>
 
             <Box>

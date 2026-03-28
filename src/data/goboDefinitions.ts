@@ -2,6 +2,8 @@
  * Gobo Definitions - Pattern definitions and texture generators for gobos
  */
 
+import * as BABYLON from '@babylonjs/core';
+
 export type GoboPattern = 'window' | 'blinds' | 'leaves' | 'breakup' | 'dots' | 'lines' | 'custom';
 
 export interface GoboDefinition {
@@ -114,11 +116,19 @@ export function generateGoboTexture(
   pattern: GoboPattern,
   size: number = 512,
   scene?: BABYLON.Scene
-): BABYLON.Texture {
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d')!;
+): BABYLON.DynamicTexture {
+  if (!scene) {
+    throw new Error('generateGoboTexture requires a Babylon scene');
+  }
+
+  const texture = new BABYLON.DynamicTexture(
+    `gobo-${pattern}-${size}`,
+    { width: size, height: size },
+    scene,
+    false,
+    BABYLON.Texture.NEAREST_SAMPLINGMODE,
+  );
+  const ctx = texture.getContext();
 
   // Clear with black (transparent areas)
   ctx.fillStyle = '#000000';
@@ -208,10 +218,10 @@ export function generateGoboTexture(
     case 'lines':
       // Parallel lines
       const lineSpacing = size / 12;
-      const lineWidth = lineSpacing * 0.2;
+      const stripeWidth = lineSpacing * 0.2;
       
       for (let y = lineSpacing; y < size; y += lineSpacing) {
-        ctx.fillRect(0, y - lineWidth / 2, size, lineWidth);
+        ctx.fillRect(0, y - stripeWidth / 2, size, stripeWidth);
       }
       break;
 
@@ -220,17 +230,12 @@ export function generateGoboTexture(
       break;
   }
 
-  // Create texture from canvas
-  if (scene) {
-    return new BABYLON.Texture('', scene, false, false, BABYLON.Texture.NEAREST_SAMPLINGMODE, () => {
-      return canvas;
-    });
-  } else {
-    // Return a placeholder texture
-    const texture = new BABYLON.Texture('', null as any);
-    (texture as any)._canvas = canvas;
-    return texture;
-  }
+  texture.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
+  texture.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
+  texture.hasAlpha = false;
+  texture.update(false);
+
+  return texture;
 }
 
 /**
@@ -253,7 +258,6 @@ export function getGobosByPattern(pattern: GoboPattern): GoboDefinition[] {
 export function getGobosByCategory(category: GoboDefinition['category']): GoboDefinition[] {
   return GOBO_PATTERNS.filter(g => g.category === category);
 }
-
 
 
 

@@ -1,20 +1,40 @@
 """
-Virtual Studio Backend - SAM 3D Body Avatar Generator
-FastAPI service for generating 3D avatars from images using Meta SAM 3D Body
+Virtual Studio Backend
+FastAPI service for generating quality-first 3D avatars and studio assets.
 """
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Request
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, Response
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 import os
+import re
+from mimetypes import guess_type
 from typing import Any, Dict, List, Optional
 import uuid
 from datetime import datetime
 import base64
+import io
 import json
 from pathlib import Path
 from psycopg2.extras import RealDictCursor, Json as PgJson
+try:
+    from utils.generated_asset_storage import (
+        delete_stored_asset,
+        get_storage_metadata_path,
+        get_stored_asset_head,
+        read_storage_metadata,
+        store_generated_file,
+        write_storage_metadata,
+    )
+except ImportError:
+    from backend.utils.generated_asset_storage import (
+        delete_stored_asset,
+        get_storage_metadata_path,
+        get_stored_asset_head,
+        read_storage_metadata,
+        store_generated_file,
+        write_storage_metadata,
+    )
 
 
 def load_local_env_file() -> None:
@@ -52,8 +72,21 @@ try:
     )
     AUTH_SERVICE_AVAILABLE = True
 except ImportError as e:
-    print(f"Warning: Auth service not available: {e}")
-    AUTH_SERVICE_AVAILABLE = False
+    try:
+        from backend.auth_service import (
+            init_admin_table,
+            generate_password,
+            create_admin_user,
+            authenticate_user,
+            get_all_admins,
+            update_admin_user,
+            delete_admin_user,
+            get_admin_count
+        )
+        AUTH_SERVICE_AVAILABLE = True
+    except ImportError:
+        print(f"Warning: Auth service not available: {e}")
+        AUTH_SERVICE_AVAILABLE = False
 
 # Tutorials service imports
 try:
@@ -69,8 +102,21 @@ try:
     )
     TUTORIALS_SERVICE_AVAILABLE = True
 except ImportError as e:
-    print(f"Warning: Tutorials service not available: {e}")
-    TUTORIALS_SERVICE_AVAILABLE = False
+    try:
+        from backend.tutorials_service import (
+            init_tutorials_table,
+            create_tutorial as db_create_tutorial,
+            get_all_tutorials as db_get_all_tutorials,
+            get_tutorial as db_get_tutorial,
+            update_tutorial as db_update_tutorial,
+            delete_tutorial as db_delete_tutorial,
+            set_active_tutorial as db_set_active_tutorial,
+            get_active_tutorial as db_get_active_tutorial
+        )
+        TUTORIALS_SERVICE_AVAILABLE = True
+    except ImportError:
+        print(f"Warning: Tutorials service not available: {e}")
+        TUTORIALS_SERVICE_AVAILABLE = False
 
 # Virtual Studio service imports
 try:
@@ -87,8 +133,22 @@ try:
     )
     VIRTUAL_STUDIO_SERVICE_AVAILABLE = True
 except ImportError as e:
-    print(f"Warning: Virtual Studio service not available: {e}")
-    VIRTUAL_STUDIO_SERVICE_AVAILABLE = False
+    try:
+        from backend.virtual_studio_service import (
+            init_virtual_studio_tables,
+            save_scene, get_scenes, get_scene, delete_scene,
+            save_preset, get_presets, delete_preset,
+            save_light_group, get_light_groups, delete_light_group,
+            save_user_asset, get_user_assets, delete_user_asset,
+            save_scene_version, get_scene_versions, delete_scene_version,
+            save_note, get_notes, delete_note,
+            save_camera_preset, get_camera_presets, delete_camera_preset,
+            save_export_template, get_export_templates, delete_export_template
+        )
+        VIRTUAL_STUDIO_SERVICE_AVAILABLE = True
+    except ImportError:
+        print(f"Warning: Virtual Studio service not available: {e}")
+        VIRTUAL_STUDIO_SERVICE_AVAILABLE = False
 
 # User KV service imports
 try:
@@ -99,8 +159,16 @@ try:
     )
     USER_KV_SERVICE_AVAILABLE = True
 except ImportError as e:
-    print(f"Warning: User KV service not available: {e}")
-    USER_KV_SERVICE_AVAILABLE = False
+    try:
+        from backend.user_kv_service import (
+            init_user_kv_tables,
+            set_user_kv as db_set_user_kv,
+            get_user_kv as db_get_user_kv
+        )
+        USER_KV_SERVICE_AVAILABLE = True
+    except ImportError:
+        print(f"Warning: User KV service not available: {e}")
+        USER_KV_SERVICE_AVAILABLE = False
 
 # Branding settings service imports
 try:
@@ -111,8 +179,16 @@ try:
     )
     BRANDING_SERVICE_AVAILABLE = True
 except ImportError as e:
-    print(f"Warning: Branding service not available: {e}")
-    BRANDING_SERVICE_AVAILABLE = False
+    try:
+        from backend.branding_service import (
+            init_branding_settings_table,
+            get_branding_settings as db_get_branding_settings,
+            set_branding_settings as db_set_branding_settings
+        )
+        BRANDING_SERVICE_AVAILABLE = True
+    except ImportError:
+        print(f"Warning: Branding service not available: {e}")
+        BRANDING_SERVICE_AVAILABLE = False
 
 # App settings service imports
 try:
@@ -125,8 +201,48 @@ try:
     )
     SETTINGS_SERVICE_AVAILABLE = True
 except ImportError as e:
-    print(f"Warning: Settings service not available: {e}")
-    SETTINGS_SERVICE_AVAILABLE = False
+    try:
+        from backend.settings_service import (
+            init_settings_table,
+            get_settings as db_get_settings,
+            set_settings as db_set_settings,
+            delete_settings as db_delete_settings,
+            list_settings as db_list_settings
+        )
+        SETTINGS_SERVICE_AVAILABLE = True
+    except ImportError:
+        print(f"Warning: Settings service not available: {e}")
+        SETTINGS_SERVICE_AVAILABLE = False
+
+# Marketplace registry imports
+try:
+    from marketplace_registry_service import (
+        get_environment_pack_release_dashboard,
+        get_environment_pack_quality_report,
+        list_environment_pack_products,
+        promote_environment_pack_candidate,
+        rollback_environment_pack_release,
+        record_environment_pack_install,
+        upsert_environment_pack_product,
+        validate_environment_pack_release,
+    )
+    MARKETPLACE_REGISTRY_AVAILABLE = True
+except ImportError as e:
+    try:
+        from backend.marketplace_registry_service import (
+            get_environment_pack_release_dashboard,
+            get_environment_pack_quality_report,
+            list_environment_pack_products,
+            promote_environment_pack_candidate,
+            rollback_environment_pack_release,
+            record_environment_pack_install,
+            upsert_environment_pack_product,
+            validate_environment_pack_release,
+        )
+        MARKETPLACE_REGISTRY_AVAILABLE = True
+    except ImportError:
+        print(f"Warning: Marketplace registry service not available: {e}")
+        MARKETPLACE_REGISTRY_AVAILABLE = False
 
 # Word Bank service imports
 try:
@@ -159,7 +275,7 @@ except ImportError as e:
 
 app = FastAPI(
     title="Virtual Studio Avatar API",
-    description="Generate 3D avatars from images using Meta SAM 3D Body",
+    description="Generate quality-first 3D avatars from images using premium providers with controlled fallback.",
     version="1.0.0"
 )
 
@@ -174,23 +290,347 @@ app.add_middleware(
 # Mount static files from root directory
 ROOT_DIR = Path(__file__).parent.parent
 PUBLIC_DIR = ROOT_DIR / "public"
+AVATAR_LIBRARY_DIR = Path(__file__).parent / "test_images"
 
-# Serve public folder static files (logos, images, etc.)
+
+def maybe_proxy_r2_asset(
+    metadata: Optional[Dict[str, Any]],
+    fallback_media_type: str,
+    *,
+    filename: Optional[str] = None,
+) -> Optional[Response]:
+    if not metadata or metadata.get("storage") != "r2":
+        return None
+
+    storage_url = str(metadata.get("public_url") or metadata.get("url") or "")
+    if storage_url.startswith(("http://", "https://")):
+        return RedirectResponse(url=storage_url, status_code=307)
+
+    r2_key = metadata.get("r2_key")
+    if not r2_key:
+        return None
+
+    try:
+        try:
+            from utils.r2_client import get_models_bucket_name, get_r2_object
+        except ImportError:
+            from backend.utils.r2_client import get_models_bucket_name, get_r2_object
+
+        response = get_r2_object(
+            str(r2_key),
+            bucket=str(metadata.get("bucket") or os.environ.get("R2_GENERATED_ASSET_BUCKET") or get_models_bucket_name()),
+        )
+        if not response:
+            return None
+
+        media_type = (
+            response.get("ContentType")
+            or metadata.get("content_type")
+            or metadata.get("contentType")
+            or fallback_media_type
+        )
+        headers = {"X-Storage-Backend": "r2"}
+        if filename:
+            headers["Content-Disposition"] = f'inline; filename="{Path(filename).name}"'
+        return Response(content=response["Body"].read(), media_type=media_type, headers=headers)
+    except Exception as error:
+        print(f"[R2Proxy] Failed to proxy {r2_key}: {error}")
+        return None
+
+
+def build_environment_provider_smoke_reference_image() -> str:
+    try:
+        from PIL import Image, ImageDraw
+    except ImportError as exc:
+        raise RuntimeError("Pillow is required for provider smoke images") from exc
+
+    image = Image.new("RGB", (640, 360), "#d8d0c3")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle([0, 0, 639, 126], fill="#c7d6e8")
+    draw.polygon([(0, 152), (148, 118), (156, 359), (0, 359)], fill="#8a6f58")
+    draw.polygon([(639, 152), (492, 118), (484, 359), (639, 359)], fill="#7c6652")
+    draw.polygon([(148, 118), (492, 118), (570, 359), (72, 359)], fill="#b79672")
+    draw.rectangle([208, 180, 434, 296], fill="#6e4f34")
+    draw.rectangle([42, 126, 136, 336], fill="#556270")
+    draw.rectangle([490, 128, 620, 248], fill="#6f7e90")
+    draw.rectangle([250, 138, 392, 218], fill="#8c2f24")
+    draw.rectangle([284, 202, 354, 338], fill="#2d2d2d")
+
+    image_bytes = io.BytesIO()
+    image.save(image_bytes, format="PNG")
+    return f"data:image/png;base64,{base64.b64encode(image_bytes.getvalue()).decode('ascii')}"
+
+
+def build_environment_provider_smoke_plan(
+    *,
+    prompt: str,
+    preferred_room_type: Optional[str],
+    layout_analysis: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    aggregate = (
+        layout_analysis.get("layoutHints", {}).get("aggregate", {})
+        if isinstance(layout_analysis, dict)
+        else {}
+    )
+    room_type = str(aggregate.get("roomType") or preferred_room_type or "storefront")
+    estimated_shell = aggregate.get("estimatedShell") if isinstance(aggregate.get("estimatedShell"), dict) else {}
+    suggested_camera = aggregate.get("suggestedCamera") if isinstance(aggregate.get("suggestedCamera"), dict) else {}
+    suggested_zones = aggregate.get("suggestedZones") if isinstance(aggregate.get("suggestedZones"), dict) else {}
+    object_anchors = aggregate.get("objectAnchors") if isinstance(aggregate.get("objectAnchors"), list) else []
+    detected_openings = aggregate.get("detectedOpenings") if isinstance(aggregate.get("detectedOpenings"), list) else []
+
+    return {
+        "version": "1.0",
+        "planId": f"provider-smoke-{uuid.uuid4()}",
+        "prompt": prompt,
+        "source": "provider_smoke",
+        "summary": "Smoke test plan for environment providers",
+        "concept": "Provider smoke validation scene",
+        "roomShell": {
+            "type": room_type,
+            "width": float(estimated_shell.get("width", 14.0)),
+            "depth": float(estimated_shell.get("depth", 10.0)),
+            "height": float(estimated_shell.get("height", 4.6)),
+            "openCeiling": bool(estimated_shell.get("openCeiling", False)),
+            "notes": [],
+            "openings": detected_openings,
+            "zones": [
+                {"id": "hero_zone", "label": "Hero", "purpose": "hero", "xBias": 0.0, "zBias": 0.0},
+                {"id": "front_counter", "label": "Counter", "purpose": "counter", "xBias": 0.15, "zBias": -0.1},
+            ],
+            "fixtures": [
+                {"id": "front_counter_block", "kind": "counter_block", "zoneId": "front_counter"},
+            ],
+            "niches": [],
+            "wallSegments": [],
+        },
+        "surfaces": [],
+        "atmosphere": {"haze": 0.08},
+        "ambientSounds": ["restaurant_roomtone"],
+        "props": [
+            {
+                "name": "Hero Pizza",
+                "category": "hero",
+                "priority": "high",
+                "placementHint": "Centered on the prep counter",
+            },
+            {
+                "name": "Menu Board",
+                "category": "signage",
+                "priority": "medium",
+                "placementHint": "Mounted on the back wall",
+            },
+        ],
+        "characters": [
+            {
+                "role": "baker",
+                "actionHint": "Preparing pizza at the counter",
+                "behaviorPlan": {
+                    "type": "stationed_work",
+                    "homeZoneId": "front_counter",
+                    "routeZoneIds": ["front_counter", "hero_zone"],
+                    "pace": "flow",
+                },
+                "layoutAnchorKind": object_anchors[0].get("kind") if object_anchors and isinstance(object_anchors[0], dict) else None,
+                "layoutAnchorId": object_anchors[0].get("id") if object_anchors and isinstance(object_anchors[0], dict) else None,
+            },
+        ],
+        "branding": {
+            "enabled": True,
+            "brandName": "Provider Smoke Pizza",
+            "palette": ["#8c2f24", "#f4e7d3", "#2d2d2d"],
+            "applyToEnvironment": True,
+            "applyToWardrobe": True,
+            "applyToSignage": True,
+            "applicationTargets": ["signage", "wardrobe", "packaging", "interior_details"],
+        },
+        "lighting": [
+            {
+                "role": "key",
+                "intent": "food",
+                "modifier": "softbox",
+                "beamAngle": 38,
+                "rationale": "Warm appetizing key for the hero pizza.",
+            },
+            {
+                "role": "rim",
+                "intent": "food",
+                "modifier": "fresnel",
+                "beamAngle": 28,
+                "gobo": {"goboId": "window"},
+                "haze": {"enabled": True, "density": 0.12},
+                "rationale": "Window rim to shape steam and crust edge.",
+            },
+        ],
+        "camera": {
+            "shotType": str(suggested_camera.get("shotType") or "hero shot"),
+            "target": suggested_camera.get("target") or [0.0, 1.4, 0.0],
+            "positionHint": suggested_camera.get("positionHint") or [0.0, 1.8, -6.0],
+            "fov": 0.68,
+            "mood": "appetizing branded commercial",
+        },
+        "assemblySteps": [],
+        "compatibility": {
+            "currentStudioShellSupported": True,
+            "confidence": 0.85,
+            "gaps": [],
+            "nextBuildModules": [],
+        },
+        "layoutGuidance": {
+            "summary": str(aggregate.get("summary") or "Smoke layout guidance"),
+            "roomType": room_type,
+            "visiblePlanes": aggregate.get("visiblePlanes") or ["floor", "backWall"],
+            "depthProfile": aggregate.get("depthProfile") or {"quality": "medium"},
+            "suggestedZones": suggested_zones,
+            "objectAnchors": object_anchors,
+            "detectedOpenings": detected_openings,
+            "surfacePolygons": aggregate.get("surfacePolygons") or {},
+            "visiblePlaneConfidence": aggregate.get("visiblePlaneConfidence") or {},
+        },
+    }
+
+
+SYNCED_REPO_FILE_PREFIXES = (
+    "attached_assets/",
+    "backend/test_images/",
+    "backend/outputs/",
+    "backend/backend/outputs/",
+    "backend/humaniflow/assets/",
+    "backend/humaniflow/model_files/",
+    "backend/sam3d_repo/assets/",
+    "backend/sam3d_repo/notebook/images/",
+    "backend/facexformer_repo/docs/static/images/",
+    "public/",
+)
+
+
+def resolve_synced_repo_file(relative_path: str) -> Optional[Path]:
+    normalized = str(relative_path or "").strip().replace("\\", "/").lstrip("/")
+    if not normalized or normalized.startswith("../") or "/../" in normalized:
+        return None
+
+    if not any(
+        normalized == prefix.rstrip("/") or normalized.startswith(prefix)
+        for prefix in SYNCED_REPO_FILE_PREFIXES
+    ):
+        return None
+
+    resolved_path = (ROOT_DIR / normalized).resolve()
+    root_resolved = ROOT_DIR.resolve()
+    if root_resolved not in resolved_path.parents and resolved_path != root_resolved:
+        return None
+
+    return resolved_path
+
+
+def build_repo_file_response(relative_path: str):
+    file_path = resolve_synced_repo_file(relative_path)
+    if not file_path:
+        raise HTTPException(status_code=404, detail="Stored repo asset not found")
+
+    metadata = read_storage_metadata(get_storage_metadata_path(file_path))
+    media_type = (
+        (metadata or {}).get("content_type")
+        or (metadata or {}).get("contentType")
+        or guess_type(str(file_path))[0]
+        or "application/octet-stream"
+    )
+    proxy_response = maybe_proxy_r2_asset(
+        metadata,
+        media_type,
+        filename=file_path.name,
+    )
+    if proxy_response:
+        return proxy_response
+
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Stored repo asset not found")
+
+    return FileResponse(file_path, media_type=media_type, filename=file_path.name)
+
+
+def build_public_file_response(asset_path: str):
+    normalized_asset_path = str(asset_path or "").strip().lstrip("/")
+    if not normalized_asset_path:
+        raise HTTPException(status_code=404, detail="Public asset not found")
+    return build_repo_file_response(f"public/{normalized_asset_path}")
+
+
+@app.get("/api/avatars/{avatar_key}")
+async def serve_avatar_model(avatar_key: str):
+    safe_name = Path(avatar_key).name
+    avatar_path = AVATAR_LIBRARY_DIR / safe_name
+    metadata = read_storage_metadata(get_storage_metadata_path(avatar_path))
+    proxy_response = maybe_proxy_r2_asset(metadata, "model/gltf-binary", filename=safe_name)
+    if proxy_response:
+        return proxy_response
+    if not avatar_path.exists() or not avatar_path.is_file():
+        raise HTTPException(status_code=404, detail="Avatar model not found")
+    return FileResponse(avatar_path, media_type="model/gltf-binary")
+
+
+@app.get("/models/avatars/{avatar_key}")
+async def serve_avatar_model_static(avatar_key: str):
+    safe_name = Path(avatar_key).name
+    avatar_path = AVATAR_LIBRARY_DIR / safe_name
+    metadata = read_storage_metadata(get_storage_metadata_path(avatar_path))
+    proxy_response = maybe_proxy_r2_asset(metadata, "model/gltf-binary", filename=safe_name)
+    if proxy_response:
+        return proxy_response
+    if not avatar_path.exists() or not avatar_path.is_file():
+        raise HTTPException(status_code=404, detail="Avatar model not found")
+    return FileResponse(avatar_path, media_type="model/gltf-binary")
+
+
+@app.get("/public/{asset_path:path}")
+async def serve_public_asset(asset_path: str):
+    return build_public_file_response(asset_path)
+
+
+@app.get("/attached_assets/{asset_path:path}")
+async def serve_attached_asset(asset_path: str):
+    return build_repo_file_response(f"attached_assets/{asset_path}")
+
+
+@app.get("/api/storage/repo-file")
+async def api_get_repo_file(path: str = Query(...)):
+    return build_repo_file_response(path)
+
+
 if PUBLIC_DIR.exists():
-    app.mount("/public", StaticFiles(directory=str(PUBLIC_DIR)), name="public")
-    
-    # Also serve public files from root path (for /creatorhub-virtual-studio-logo.svg etc.)
     @app.get("/creatorhub-virtual-studio-logo.svg")
     async def serve_virtual_studio_logo():
-        return FileResponse(PUBLIC_DIR / "creatorhub-virtual-studio-logo.svg", media_type="image/svg+xml")
-    
+        return build_public_file_response("creatorhub-virtual-studio-logo.svg")
+
+
     @app.get("/creatorhub-logo-amber.svg")
     async def serve_logo_amber():
-        return FileResponse(PUBLIC_DIR / "creatorhub-logo-amber.svg", media_type="image/svg+xml")
-    
+        return build_public_file_response("creatorhub-logo-amber.svg")
+
+
     @app.get("/manifest.json")
     async def serve_manifest():
-        return FileResponse(PUBLIC_DIR / "manifest.json", media_type="application/json")
+        return build_public_file_response("manifest.json")
+
+
+    @app.get("/sw.js")
+    async def serve_service_worker():
+        return build_public_file_response("sw.js")
+
+
+    @app.get("/creatorhub-vs-icon-32.svg")
+    async def serve_vs_icon_32():
+        return build_public_file_response("creatorhub-vs-icon-32.svg")
+
+
+    @app.get("/creatorhub-vs-icon-64.svg")
+    async def serve_vs_icon_64():
+        return build_public_file_response("creatorhub-vs-icon-64.svg")
+
+
+    @app.get("/creatorhub-vs-header.svg")
+    async def serve_vs_header():
+        return build_public_file_response("creatorhub-vs-header.svg")
 
 # Serve favicon if it exists
 FAVICON_PATHS = [
@@ -222,9 +662,14 @@ def serialize_row(row: dict) -> dict:
 UPLOAD_DIR = Path("backend/uploads")
 OUTPUT_DIR = Path(__file__).parent / "outputs"
 RODIN_MODELS_DIR = Path(__file__).parent / "rodin_models"
+STUDIO_STORAGE_DIR = OUTPUT_DIR / "studio_storage"
+AVATAR_CONTENT_TYPE = "model/gltf-binary"
+STUDIO_THUMBNAIL_INLINE_MAX_CHARS = int(os.environ.get("STUDIO_THUMBNAIL_INLINE_MAX_CHARS", "120000"))
+STUDIO_STORAGE_MAX_UPLOAD_BYTES = int(os.environ.get("STUDIO_STORAGE_MAX_UPLOAD_BYTES", str(25 * 1024 * 1024)))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 RODIN_MODELS_DIR.mkdir(parents=True, exist_ok=True)
+STUDIO_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 sam3d_service = None
 face_analysis = None
@@ -233,12 +678,252 @@ flux_service = None
 storyboard_service = None
 environment_planner_service = None
 asset_retrieval_service = None
+environment_layout_service = None
+environment_assembly_service = None
+environment_validation_service = None
+avatar_provider_service = None
+
+
+def get_avatar_output_path(request_id: str) -> Path:
+    return OUTPUT_DIR / f"{request_id}_avatar.glb"
+
+
+def get_avatar_storage_metadata_path(request_id: str) -> Path:
+    return get_storage_metadata_path(get_avatar_output_path(request_id))
+
+
+def guess_extension_from_content_type(content_type: str, default_extension: str) -> str:
+    content_type_map = {
+        "image/png": ".png",
+        "image/jpeg": ".jpg",
+        "image/webp": ".webp",
+        "application/json": ".json",
+        "application/xml": ".xml",
+        "text/xml": ".xml",
+        "application/yaml": ".yaml",
+        "text/yaml": ".yaml",
+        "text/plain": ".txt",
+    }
+    extension = content_type_map.get((content_type or "").split(";", 1)[0].strip().lower())
+    if extension:
+        return extension
+    return default_extension if default_extension.startswith(".") else f".{default_extension}"
+
+
+def sanitize_storage_filename(name: str, fallback_stem: str, default_extension: str) -> str:
+    original = Path(name or "").name
+    raw_stem = Path(original).stem if original else fallback_stem
+    safe_stem = re.sub(r"[^a-zA-Z0-9._-]+", "-", raw_stem).strip("._-") or fallback_stem
+    raw_extension = Path(original).suffix or default_extension
+    safe_extension = re.sub(r"[^a-zA-Z0-9.]+", "", raw_extension).lower() or default_extension
+    if not safe_extension.startswith("."):
+        safe_extension = f".{safe_extension}"
+    return f"{safe_stem}{safe_extension}"
+
+
+def get_studio_storage_path(asset_id: str) -> Path:
+    return STUDIO_STORAGE_DIR / Path(asset_id).name
+
+
+def extract_studio_storage_asset_id(storage_url: Optional[str]) -> Optional[str]:
+    if not isinstance(storage_url, str):
+        return None
+
+    marker = "/api/studio/storage/files/"
+    if marker not in storage_url:
+        return None
+
+    return storage_url.split(marker, 1)[1].split("?", 1)[0].strip() or None
+
+
+def delete_studio_storage_asset(asset_id: Optional[str]) -> bool:
+    if not asset_id:
+        return False
+
+    asset_path = get_studio_storage_path(asset_id)
+    metadata_path = get_storage_metadata_path(asset_path)
+    metadata = read_storage_metadata(metadata_path)
+    deleted = delete_stored_asset(metadata, asset_path)
+    if metadata_path.exists():
+        metadata_path.unlink()
+        deleted = True
+    return deleted
+
+
+def parse_data_url_payload(data_url: str) -> tuple[str, bytes]:
+    if not isinstance(data_url, str) or not data_url.startswith("data:") or "," not in data_url:
+        raise HTTPException(status_code=400, detail="Invalid data URL payload")
+
+    header, encoded = data_url.split(",", 1)
+    if ";base64" not in header:
+        raise HTTPException(status_code=400, detail="Only base64 data URLs are supported")
+
+    content_type = header[5:].split(";", 1)[0].strip() or "application/octet-stream"
+    try:
+        payload = base64.b64decode(encoded, validate=True)
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=f"Invalid base64 payload: {error}") from error
+
+    if len(payload) > STUDIO_STORAGE_MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Uploaded asset is too large")
+
+    return content_type, payload
+
+
+def decode_base64_payload(content_base64: str) -> bytes:
+    if not isinstance(content_base64, str) or not content_base64.strip():
+        raise HTTPException(status_code=400, detail="Missing base64 payload")
+
+    try:
+        payload = base64.b64decode(content_base64, validate=True)
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=f"Invalid base64 payload: {error}") from error
+
+    if len(payload) > STUDIO_STORAGE_MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Uploaded asset is too large")
+
+    return payload
+
+
+def store_studio_binary_asset(
+    *,
+    category: str,
+    storage_id: str,
+    filename: str,
+    content_type: str,
+    payload: bytes,
+) -> Dict[str, Any]:
+    asset_id = Path(filename).name
+    local_path = get_studio_storage_path(asset_id)
+    local_path.write_bytes(payload)
+
+    metadata = store_generated_file(
+        local_path,
+        category=category,
+        storage_id=storage_id,
+        filename=asset_id,
+        content_type=content_type,
+        fallback_url=f"/api/studio/storage/files/{asset_id}",
+    )
+    metadata.update({
+        "assetId": asset_id,
+        "fileName": asset_id,
+        "contentType": content_type,
+        "sizeBytes": len(payload),
+    })
+    write_storage_metadata(get_storage_metadata_path(local_path), metadata)
+    return metadata
+
+
+def store_scene_thumbnail_asset(scene_id: str, thumbnail_data_url: str, filename: Optional[str] = None) -> Dict[str, Any]:
+    content_type, payload = parse_data_url_payload(thumbnail_data_url)
+    if not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Thumbnail must be an image")
+
+    extension = guess_extension_from_content_type(content_type, ".png")
+    safe_filename = sanitize_storage_filename(
+        filename or f"scene-thumbnail-{scene_id}{extension}",
+        fallback_stem=f"scene-thumbnail-{scene_id}",
+        default_extension=extension,
+    )
+    return store_studio_binary_asset(
+        category="scene-thumbnails",
+        storage_id=scene_id,
+        filename=safe_filename,
+        content_type=content_type,
+        payload=payload,
+    )
+
+
+def store_snapshot_thumbnail_asset(scene_id: str, snapshot_id: str, thumbnail_data_url: str) -> Dict[str, Any]:
+    content_type, payload = parse_data_url_payload(thumbnail_data_url)
+    if not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Snapshot thumbnail must be an image")
+
+    extension = guess_extension_from_content_type(content_type, ".png")
+    safe_filename = sanitize_storage_filename(
+        f"scene-snapshot-{snapshot_id}{extension}",
+        fallback_stem=f"scene-snapshot-{snapshot_id}",
+        default_extension=extension,
+    )
+    return store_studio_binary_asset(
+        category="scene-snapshots",
+        storage_id=f"{scene_id}-{snapshot_id}",
+        filename=safe_filename,
+        content_type=content_type,
+        payload=payload,
+    )
+
+
+def maybe_store_snapshot_thumbnail(record: Dict[str, Any], scene_id: str) -> None:
+    thumbnail_url = record.get("thumbnailUrl")
+    if not isinstance(thumbnail_url, str):
+        return
+
+    if not thumbnail_url.startswith("data:image/") or len(thumbnail_url) < STUDIO_THUMBNAIL_INLINE_MAX_CHARS:
+        asset_id = extract_studio_storage_asset_id(thumbnail_url)
+        if asset_id and not record.get("thumbnailAssetId"):
+            record["thumbnailAssetId"] = asset_id
+        return
+
+    snapshot_id = str(record.get("id") or uuid.uuid4().hex[:10])
+    metadata = store_snapshot_thumbnail_asset(scene_id, snapshot_id, thumbnail_url)
+    stored_url = metadata.get("url") or metadata.get("public_url")
+    if stored_url:
+        record["thumbnailUrl"] = stored_url
+    if metadata.get("assetId"):
+        record["thumbnailAssetId"] = metadata["assetId"]
+    if metadata.get("storage"):
+        record["thumbnailStorage"] = metadata["storage"]
+
+
+def hydrate_snapshot_thumbnail_reference(record: Dict[str, Any]) -> Dict[str, Any]:
+    hydrated = dict(record)
+    asset_id = hydrated.get("thumbnailAssetId") or extract_studio_storage_asset_id(hydrated.get("thumbnailUrl"))
+    if asset_id and not hydrated.get("thumbnailUrl"):
+        hydrated["thumbnailUrl"] = f"/api/studio/storage/files/{asset_id}"
+    if asset_id and not hydrated.get("thumbnailAssetId"):
+        hydrated["thumbnailAssetId"] = asset_id
+    return hydrated
+
+
+def maybe_store_scene_thumbnail_url(scene_payload: Dict[str, Any]) -> Optional[str]:
+    scene_data_payload = scene_payload.get("sceneData")
+    if not isinstance(scene_data_payload, dict):
+        scene_data_payload = scene_payload.get("scene_data")
+
+    existing_thumbnail = scene_payload.get("thumbnail")
+    if not isinstance(existing_thumbnail, str) and isinstance(scene_data_payload, dict):
+        nested_thumbnail = scene_data_payload.get("thumbnail")
+        if isinstance(nested_thumbnail, str):
+            existing_thumbnail = nested_thumbnail
+
+    if not isinstance(existing_thumbnail, str):
+        return None
+
+    if not existing_thumbnail.startswith("data:image/") or len(existing_thumbnail) < STUDIO_THUMBNAIL_INLINE_MAX_CHARS:
+        return existing_thumbnail
+
+    scene_id = str(scene_payload.get("id") or uuid.uuid4().hex)
+    metadata = store_scene_thumbnail_asset(scene_id, existing_thumbnail)
+    thumbnail_url = metadata.get("url") or metadata.get("public_url")
+    if not thumbnail_url:
+        return existing_thumbnail
+
+    scene_payload["thumbnail"] = thumbnail_url
+    if isinstance(scene_data_payload, dict):
+        scene_data_payload["thumbnail"] = thumbnail_url
+
+    return thumbnail_url
 
 
 def get_or_create_environment_planner():
     global environment_planner_service
     if environment_planner_service is None:
-        from environment_planner_service import EnvironmentPlannerService
+        try:
+            from environment_planner_service import EnvironmentPlannerService
+        except ImportError:
+            from backend.environment_planner_service import EnvironmentPlannerService
         environment_planner_service = EnvironmentPlannerService()
     return environment_planner_service
 
@@ -246,9 +931,71 @@ def get_or_create_environment_planner():
 def get_or_create_asset_retrieval_service():
     global asset_retrieval_service
     if asset_retrieval_service is None:
-        from asset_retrieval_service import AssetRetrievalService
+        try:
+            from asset_retrieval_service import AssetRetrievalService
+        except ImportError:
+            from backend.asset_retrieval_service import AssetRetrievalService
         asset_retrieval_service = AssetRetrievalService()
     return asset_retrieval_service
+
+
+def get_or_create_environment_layout_service():
+    global environment_layout_service
+    if environment_layout_service is None:
+        try:
+            from environment_layout_service import EnvironmentLayoutService
+        except ImportError:
+            from backend.environment_layout_service import EnvironmentLayoutService
+        environment_layout_service = EnvironmentLayoutService()
+    return environment_layout_service
+
+
+def get_or_create_environment_assembly_service():
+    global environment_assembly_service
+    if environment_assembly_service is None:
+        retrieval = get_or_create_asset_retrieval_service()
+        try:
+            from environment_assembly_service import EnvironmentAssemblyService
+        except ImportError:
+            from backend.environment_assembly_service import EnvironmentAssemblyService
+        environment_assembly_service = EnvironmentAssemblyService(retrieval_service=retrieval)
+    return environment_assembly_service
+
+
+def get_or_create_environment_validation_service():
+    global environment_validation_service
+    if environment_validation_service is None:
+        assembly_service = get_or_create_environment_assembly_service()
+        try:
+            from environment_validation_service import EnvironmentValidationService
+        except ImportError:
+            from backend.environment_validation_service import EnvironmentValidationService
+        environment_validation_service = EnvironmentValidationService(assembly_service=assembly_service)
+    return environment_validation_service
+
+
+def get_or_create_avatar_provider_service():
+    global avatar_provider_service
+    if avatar_provider_service is None:
+        try:
+            from avatar_provider_service import AvatarGenerationRequest, AvatarProviderService
+        except ImportError:
+            from backend.avatar_provider_service import AvatarGenerationRequest, AvatarProviderService
+        avatar_provider_service = {
+            "requestClass": AvatarGenerationRequest,
+            "service": AvatarProviderService(sam3d_service=sam3d_service),
+        }
+    elif avatar_provider_service["service"].providers["local"].sam3d_service is None and sam3d_service is not None:
+        avatar_provider_service["service"].providers["local"].sam3d_service = sam3d_service
+    return avatar_provider_service
+
+
+def get_or_create_gemini_environment_provider():
+    try:
+        from gemini_environment_provider import get_or_create_gemini_environment_provider as getter
+    except ImportError:
+        from backend.gemini_environment_provider import get_or_create_gemini_environment_provider as getter
+    return getter()
 
 @app.on_event("startup")
 async def startup_event():
@@ -860,6 +1607,233 @@ async def test_r2_connection():
             "error": str(e)
         }
 
+
+@app.get("/api/storage/large-files/status")
+async def get_large_file_storage_status(
+    min_bytes: Optional[int] = Query(default=None),
+    roots: Optional[str] = Query(default=None),
+):
+    try:
+        try:
+            from utils.large_asset_sync import DEFAULT_MIN_BYTES, sync_large_assets_to_r2
+        except ImportError:
+            from backend.utils.large_asset_sync import DEFAULT_MIN_BYTES, sync_large_assets_to_r2
+
+        root_list = [value.strip() for value in (roots or "").split(",") if value.strip()] or None
+        summary = sync_large_assets_to_r2(
+            dry_run=True,
+            min_bytes=min_bytes or DEFAULT_MIN_BYTES,
+            roots=root_list,
+            write_report=False,
+        )
+        return JSONResponse(summary)
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error))
+
+
+@app.post("/api/storage/sync-large-files")
+async def sync_large_files_to_r2(payload: Optional[Dict[str, Any]] = None):
+    try:
+        try:
+            from utils.large_asset_sync import DEFAULT_MIN_BYTES, sync_large_assets_to_r2
+        except ImportError:
+            from backend.utils.large_asset_sync import DEFAULT_MIN_BYTES, sync_large_assets_to_r2
+
+        request_payload = payload or {}
+        raw_roots = request_payload.get("roots")
+        root_list = raw_roots if isinstance(raw_roots, list) else None
+        summary = sync_large_assets_to_r2(
+            dry_run=bool(request_payload.get("dryRun", False)),
+            min_bytes=int(request_payload.get("minBytes") or DEFAULT_MIN_BYTES),
+            roots=root_list,
+            delete_local_after_upload=bool(request_payload.get("deleteLocalAfterUpload", False)),
+            write_report=bool(request_payload.get("writeReport", True)),
+        )
+        return JSONResponse(summary)
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error))
+
+
+@app.get("/api/avatar/providers/health")
+async def get_avatar_provider_health(
+    probe: bool = Query(False, description="When true, perform lightweight live probes against configured avatar providers"),
+):
+    provider_bundle = get_or_create_avatar_provider_service()
+    service = provider_bundle["service"]
+    return JSONResponse({
+        "success": True,
+        "probe": probe,
+        "providers": service.get_provider_health(probe=probe).get("providers", {}),
+        "recommendations": {
+            "hero_talent": service.recommend_provider("hero_talent"),
+            "staff_branded": service.recommend_provider("staff_branded"),
+            "scan_subject": service.recommend_provider("scan_subject"),
+        },
+    })
+
+
+@app.post("/api/avatar/generate")
+async def generate_avatar_quality_first(
+    file: UploadFile = File(...),
+    depth_file: Optional[UploadFile] = File(default=None),
+    side_file_1: Optional[UploadFile] = File(default=None),
+    side_file_2: Optional[UploadFile] = File(default=None),
+    provider: str = Form("auto"),
+    character_tier: str = Form("staff_branded"),
+    quality_target: str = Form("production"),
+    avatar_name: Optional[str] = Form(default=None),
+    branding_mode: str = Form("none"),
+    body_type: Optional[str] = Form(default=None),
+    telephoto: bool = Form(False),
+    allow_fallback: bool = Form(False),
+):
+    """
+    Generate a quality-first 3D avatar from an uploaded image.
+    Premium providers are preferred and local fallback is blocked by default.
+    """
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    if depth_file and depth_file.content_type and not depth_file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Depth file must be an image")
+    if side_file_1 and side_file_1.content_type and not side_file_1.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Side file 1 must be an image")
+    if side_file_2 and side_file_2.content_type and not side_file_2.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Side file 2 must be an image")
+
+    request_id = str(uuid.uuid4())
+    input_path = UPLOAD_DIR / f"{request_id}_{file.filename}"
+    output_path = get_avatar_output_path(request_id)
+    metadata_path = get_avatar_storage_metadata_path(request_id)
+    depth_path: Optional[Path] = None
+    side_path_1: Optional[Path] = None
+    side_path_2: Optional[Path] = None
+
+    try:
+        contents = await file.read()
+        with open(input_path, "wb") as input_handle:
+            input_handle.write(contents)
+
+        if depth_file is not None:
+            depth_filename = depth_file.filename or "depth.png"
+            depth_path = UPLOAD_DIR / f"{request_id}_depth_{depth_filename}"
+            depth_contents = await depth_file.read()
+            with open(depth_path, "wb") as depth_handle:
+                depth_handle.write(depth_contents)
+
+        if side_file_1 is not None:
+            side_filename_1 = side_file_1.filename or "side-1.jpg"
+            side_path_1 = UPLOAD_DIR / f"{request_id}_side1_{side_filename_1}"
+            side_contents_1 = await side_file_1.read()
+            with open(side_path_1, "wb") as side_handle_1:
+                side_handle_1.write(side_contents_1)
+
+        if side_file_2 is not None:
+            side_filename_2 = side_file_2.filename or "side-2.jpg"
+            side_path_2 = UPLOAD_DIR / f"{request_id}_side2_{side_filename_2}"
+            side_contents_2 = await side_file_2.read()
+            with open(side_path_2, "wb") as side_handle_2:
+                side_handle_2.write(side_contents_2)
+
+        face_result = None
+        if face_analysis is not None:
+            face_result = face_analysis.analyze_image(str(input_path))
+
+        facexformer_result = None
+        if facexformer is not None and facexformer.is_enabled():
+            facexformer_result = await facexformer.analyze_face(str(input_path))
+
+        provider_bundle = get_or_create_avatar_provider_service()
+        AvatarGenerationRequest = provider_bundle["requestClass"]
+        service = provider_bundle["service"]
+        request_payload = AvatarGenerationRequest(
+            provider=provider,
+            character_tier=character_tier,
+            quality_target=quality_target,
+            avatar_name=avatar_name,
+            branding_mode=branding_mode,
+            body_type=body_type,
+            telephoto=telephoto,
+            allow_fallback=allow_fallback,
+        )
+        extra_input_paths: Dict[str, Path] = {}
+        if side_path_1 is not None:
+            extra_input_paths["image-side-1"] = side_path_1
+        if side_path_2 is not None:
+            extra_input_paths["image-side-2"] = side_path_2
+        if character_tier == "staff_branded" or provider == "avaturn":
+            extra_input_paths["image-frontal"] = input_path
+
+        result = await service.generate_avatar(
+            input_path=input_path,
+            output_path=output_path,
+            request_id=request_id,
+            request=request_payload,
+            depth_path=depth_path,
+            extra_input_paths=extra_input_paths or None,
+        )
+
+        if not result.get("success"):
+            raise HTTPException(status_code=500, detail="Avatar generation failed")
+
+        storage_metadata = store_generated_file(
+            output_path,
+            category="avatars",
+            storage_id=request_id,
+            filename=f"avatar_{request_id}.glb",
+            content_type=AVATAR_CONTENT_TYPE,
+            fallback_url=f"/api/avatar/{request_id}.glb",
+        )
+        write_storage_metadata(metadata_path, storage_metadata)
+
+        response_data: Dict[str, Any] = {
+            "success": True,
+            "request_id": request_id,
+            "glb_url": storage_metadata.get("url") or f"/api/avatar/{request_id}.glb",
+            "storage": storage_metadata.get("storage", "local"),
+            "provider": result.get("provider"),
+            "providerName": result.get("providerName"),
+            "usedFallback": bool(result.get("usedFallback")),
+            "qualityReport": result.get("qualityReport"),
+            "metadata": {
+                **(result.get("metadata") or {}),
+                "storage": storage_metadata.get("storage", "local"),
+                "storageUrl": storage_metadata.get("url"),
+            },
+        }
+
+        if face_result and face_result.get("detected"):
+            response_data["face_analysis"] = {
+                "gender": face_result.get("gender"),
+                "gender_confidence": face_result.get("gender_confidence"),
+                "age_range": face_result.get("age_range"),
+                "age_confidence": face_result.get("age_confidence"),
+                "category": face_result.get("category"),
+            }
+
+        if facexformer_result and facexformer_result.get("face_detected"):
+            response_data["facexformer"] = {
+                "head_pose": facexformer_result.get("head_pose"),
+                "face_box": facexformer_result.get("face_box"),
+            }
+
+        return JSONResponse(response_data)
+    except HTTPException:
+        raise
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error)) from error
+    finally:
+        if input_path.exists():
+            os.remove(input_path)
+        if depth_path and depth_path.exists():
+            os.remove(depth_path)
+        if side_path_1 and side_path_1.exists():
+            os.remove(side_path_1)
+        if side_path_2 and side_path_2.exists():
+            os.remove(side_path_2)
+
 @app.post("/api/generate-avatar")
 async def generate_avatar(file: UploadFile = File(...)):
     """
@@ -871,7 +1845,8 @@ async def generate_avatar(file: UploadFile = File(...)):
     
     request_id = str(uuid.uuid4())
     input_path = UPLOAD_DIR / f"{request_id}_{file.filename}"
-    output_path = OUTPUT_DIR / f"{request_id}_avatar.glb"
+    output_path = get_avatar_output_path(request_id)
+    metadata_path = get_avatar_storage_metadata_path(request_id)
     
     try:
         contents = await file.read()
@@ -885,12 +1860,27 @@ async def generate_avatar(file: UploadFile = File(...)):
         
         if not result["success"]:
             raise HTTPException(status_code=500, detail=result.get("error", "Generation failed"))
+
+        storage_metadata = store_generated_file(
+            output_path,
+            category="avatars",
+            storage_id=request_id,
+            filename=f"avatar_{request_id}.glb",
+            content_type=AVATAR_CONTENT_TYPE,
+            fallback_url=f"/api/avatar/{request_id}.glb",
+        )
+        write_storage_metadata(metadata_path, storage_metadata)
         
         return JSONResponse({
             "success": True,
             "request_id": request_id,
-            "glb_url": f"/api/avatar/{request_id}.glb",
-            "metadata": result.get("metadata", {})
+            "glb_url": storage_metadata.get("url") or f"/api/avatar/{request_id}.glb",
+            "storage": storage_metadata.get("storage", "local"),
+            "metadata": {
+                **result.get("metadata", {}),
+                "storage": storage_metadata.get("storage", "local"),
+                "storageUrl": storage_metadata.get("url"),
+            }
         })
         
     except Exception as e:
@@ -902,40 +1892,57 @@ async def generate_avatar(file: UploadFile = File(...)):
 @app.get("/api/avatar/{request_id}.glb")
 async def get_avatar(request_id: str):
     """Download the generated GLB avatar file."""
-    output_path = OUTPUT_DIR / f"{request_id}_avatar.glb"
-    
+    output_path = get_avatar_output_path(request_id)
+    metadata = read_storage_metadata(get_avatar_storage_metadata_path(request_id))
+
+    proxy_response = maybe_proxy_r2_asset(
+        metadata,
+        AVATAR_CONTENT_TYPE,
+        filename=f"avatar_{request_id}.glb",
+    )
+    if proxy_response:
+        return proxy_response
+
     if not output_path.exists():
         raise HTTPException(status_code=404, detail="Avatar not found")
     
     return FileResponse(
         path=str(output_path),
-        media_type="model/gltf-binary",
+        media_type=AVATAR_CONTENT_TYPE,
         filename=f"avatar_{request_id}.glb"
     )
 
 @app.head("/api/avatar/{request_id}.glb")
 async def head_avatar(request_id: str):
     """Check if avatar exists (for Babylon.js loader)."""
-    output_path = OUTPUT_DIR / f"{request_id}_avatar.glb"
-    
-    if not output_path.exists():
+    output_path = get_avatar_output_path(request_id)
+    metadata = read_storage_metadata(get_avatar_storage_metadata_path(request_id))
+    head_data = get_stored_asset_head(metadata, output_path)
+
+    if head_data.get("storage") == "unknown" and not output_path.exists():
         raise HTTPException(status_code=404, detail="Avatar not found")
     
-    from starlette.responses import Response
     return Response(
         headers={
-            "Content-Type": "model/gltf-binary",
-            "Content-Length": str(output_path.stat().st_size)
+            "Content-Type": str(head_data.get("content_type") or AVATAR_CONTENT_TYPE),
+            "Content-Length": str(head_data.get("content_length") or 0),
+            "X-Storage-Backend": str(head_data.get("storage") or "local"),
         }
     )
 
 @app.delete("/api/avatar/{request_id}")
 async def delete_avatar(request_id: str):
     """Delete a generated avatar."""
-    output_path = OUTPUT_DIR / f"{request_id}_avatar.glb"
-    
-    if output_path.exists():
-        os.remove(output_path)
+    output_path = get_avatar_output_path(request_id)
+    metadata_path = get_avatar_storage_metadata_path(request_id)
+    metadata = read_storage_metadata(metadata_path)
+
+    deleted = delete_stored_asset(metadata, output_path)
+    if metadata_path.exists():
+        metadata_path.unlink()
+        deleted = True
+
+    if deleted:
         return {"success": True, "message": "Avatar deleted"}
     
     raise HTTPException(status_code=404, detail="Avatar not found")
@@ -1029,7 +2036,8 @@ async def generate_avatar_with_analysis(file: UploadFile = File(...)):
     
     request_id = str(uuid.uuid4())
     input_path = UPLOAD_DIR / f"{request_id}_{file.filename}"
-    output_path = OUTPUT_DIR / f"{request_id}_avatar.glb"
+    output_path = get_avatar_output_path(request_id)
+    metadata_path = get_avatar_storage_metadata_path(request_id)
     
     try:
         contents = await file.read()
@@ -1051,12 +2059,27 @@ async def generate_avatar_with_analysis(file: UploadFile = File(...)):
         
         if not result["success"]:
             raise HTTPException(status_code=500, detail=result.get("error", "Generation failed"))
+
+        storage_metadata = store_generated_file(
+            output_path,
+            category="avatars",
+            storage_id=request_id,
+            filename=f"avatar_{request_id}.glb",
+            content_type=AVATAR_CONTENT_TYPE,
+            fallback_url=f"/api/avatar/{request_id}.glb",
+        )
+        write_storage_metadata(metadata_path, storage_metadata)
         
         response_data = {
             "success": True,
             "request_id": request_id,
-            "glb_url": f"/api/avatar/{request_id}.glb",
-            "metadata": result.get("metadata", {})
+            "glb_url": storage_metadata.get("url") or f"/api/avatar/{request_id}.glb",
+            "storage": storage_metadata.get("storage", "local"),
+            "metadata": {
+                **result.get("metadata", {}),
+                "storage": storage_metadata.get("storage", "local"),
+                "storageUrl": storage_metadata.get("url"),
+            }
         }
         
         if face_result and face_result.get("detected"):
@@ -1129,6 +2152,23 @@ class EnvironmentPlanRequest(BaseModel):
     preferredPresetId: Optional[str] = None
     worldModelProvider: str = "none"
     worldModelReference: Optional[Dict[str, Any]] = None
+    layoutProvider: Optional[str] = None
+    layoutOptions: Optional[Dict[str, Any]] = None
+    brandReference: Optional[Dict[str, Any]] = None
+
+
+class EnvironmentLayoutRequest(BaseModel):
+    referenceImages: List[str]
+    prompt: str = ""
+    preferredRoomType: Optional[str] = None
+    provider: Optional[str] = None
+    layoutOptions: Optional[Dict[str, Any]] = None
+
+
+class EnvironmentBuildShellRequest(BaseModel):
+    shell: Optional[Dict[str, Any]] = None
+    prompt: str = ""
+    layoutHints: Optional[Dict[str, Any]] = None
 
 
 class EnvironmentAssetRetrievalRequest(BaseModel):
@@ -1142,6 +2182,47 @@ class EnvironmentAssetRetrievalRequest(BaseModel):
     categoryHint: Optional[str] = None
     limit: int = 5
     minScore: float = 0.75
+
+
+class EnvironmentAssembleRequest(BaseModel):
+    plan: Dict[str, Any]
+
+
+class EnvironmentValidateRequest(BaseModel):
+    plan: Dict[str, Any]
+    previewImage: Optional[str] = None
+    provider: Optional[str] = None
+    validationOptions: Optional[Dict[str, Any]] = None
+
+
+class EnvironmentProviderSmokeRequest(BaseModel):
+    prompt: str = "Pizza restaurant storefront with warm branded staff and visible counter"
+    preferredRoomType: Optional[str] = "storefront"
+    layoutProvider: Optional[str] = "auto"
+    validationProvider: Optional[str] = "auto"
+    includeLayout: bool = True
+    includeValidation: bool = True
+    layoutOptions: Optional[Dict[str, Any]] = None
+
+
+class MarketplaceEnvironmentPackPublishRequest(BaseModel):
+    product: Dict[str, Any]
+    mode: Optional[str] = "save_copy"
+    actor: Optional[Dict[str, Any]] = None
+
+
+class MarketplaceEnvironmentPackValidateRequest(BaseModel):
+    product: Dict[str, Any]
+    mode: Optional[str] = "save_copy"
+
+
+class MarketplaceEnvironmentPackPromoteRequest(BaseModel):
+    actor: Optional[Dict[str, Any]] = None
+
+
+class MarketplaceEnvironmentPackRollbackRequest(BaseModel):
+    actor: Optional[Dict[str, Any]] = None
+    targetVersion: Optional[str] = None
 
 @app.post("/api/rodin/generate")
 async def rodin_generate(request: RodinGenerateRequest):
@@ -1211,7 +2292,8 @@ async def download_rodin_model(task_uuid: str, filename: str = ""):
         return JSONResponse({
             "success": True,
             "path": result.get("path"),
-            "filename": result.get("filename")
+            "filename": result.get("filename"),
+            "storage": result.get("storage", "local"),
         })
     except HTTPException:
         raise
@@ -1247,6 +2329,10 @@ async def get_rodin_model(filename: str):
     
     if not filename.endswith(".glb"):
         model_path = rodin_service.output_dir / f"{filename}.glb"
+
+    metadata = read_storage_metadata(get_storage_metadata_path(model_path))
+    if metadata and metadata.get("storage") == "r2" and metadata.get("url"):
+        return RedirectResponse(url=str(metadata["url"]), status_code=307)
     
     if not model_path.exists():
         raise HTTPException(status_code=404, detail="Model not found")
@@ -1260,13 +2346,34 @@ async def get_rodin_model(filename: str):
 @app.get("/api/rodin/models")
 async def list_rodin_models():
     """List all generated Rodin models."""
-    models = []
+    models_by_filename: Dict[str, Dict[str, Any]] = {}
+
     for f in rodin_service.output_dir.glob("*.glb"):
-        models.append({
+        metadata = read_storage_metadata(get_storage_metadata_path(f)) or {}
+        models_by_filename[f.name] = {
             "filename": f.name,
-            "url": f"/api/rodin/model/{f.name}",
-            "size": f.stat().st_size
-        })
+            "url": metadata.get("url") or f"/api/rodin/model/{f.name}",
+            "size": metadata.get("size_bytes") or f.stat().st_size,
+            "storage": metadata.get("storage", "local"),
+        }
+
+    for metadata_file in rodin_service.output_dir.glob("*.glb.storage.json"):
+        metadata = read_storage_metadata(metadata_file)
+        if not metadata:
+            continue
+
+        filename = str(metadata.get("filename") or metadata_file.name.replace(".storage.json", ""))
+        if filename in models_by_filename:
+            continue
+
+        models_by_filename[filename] = {
+            "filename": filename,
+            "url": metadata.get("url") or f"/api/rodin/model/{filename}",
+            "size": metadata.get("size_bytes") or 0,
+            "storage": metadata.get("storage", "unknown"),
+        }
+
+    models = sorted(models_by_filename.values(), key=lambda item: item["filename"])
     return JSONResponse({"models": models})
 
 @app.post("/api/rodin/test-status")
@@ -1488,6 +2595,104 @@ async def activate_tutorial(tutorial_id: str, request: Request):
 # Virtual Studio API Endpoints
 # ============================================================================
 
+@app.post("/api/studio/storage/thumbnail")
+async def api_store_scene_thumbnail(request: Request):
+    try:
+        data = await request.json()
+        scene_id = str(data.get("sceneId") or data.get("scene_id") or uuid.uuid4().hex)
+        thumbnail_data_url = data.get("thumbnailDataUrl") or data.get("thumbnail")
+        filename = data.get("filename")
+        metadata = store_scene_thumbnail_asset(scene_id, thumbnail_data_url, filename=filename)
+        return JSONResponse({
+            "success": True,
+            "assetId": metadata.get("assetId"),
+            "url": metadata.get("url") or metadata.get("public_url"),
+            "storage": metadata.get("storage"),
+            "contentType": metadata.get("contentType"),
+            "sizeBytes": metadata.get("sizeBytes"),
+        })
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error))
+
+
+@app.post("/api/studio/scene-exports")
+async def api_store_scene_export(request: Request):
+    try:
+        data = await request.json()
+        scene_id = str(data.get("sceneId") or data.get("scene_id") or uuid.uuid4().hex)
+        content_base64 = data.get("contentBase64")
+        content_type = str(data.get("contentType") or "application/octet-stream")
+        format_name = str(data.get("format") or "json").lower()
+        extension = guess_extension_from_content_type(content_type, f".{format_name}")
+        payload = decode_base64_payload(content_base64)
+        filename = sanitize_storage_filename(
+            str(data.get("fileName") or f"scene-export-{scene_id}-{uuid.uuid4().hex[:8]}{extension}"),
+            fallback_stem=f"scene-export-{scene_id}",
+            default_extension=extension,
+        )
+        metadata = store_studio_binary_asset(
+            category="scene-exports",
+            storage_id=scene_id,
+            filename=filename,
+            content_type=content_type,
+            payload=payload,
+        )
+        return JSONResponse({
+            "success": True,
+            "assetId": metadata.get("assetId"),
+            "url": metadata.get("url") or metadata.get("public_url"),
+            "storage": metadata.get("storage"),
+            "contentType": metadata.get("contentType"),
+            "sizeBytes": metadata.get("sizeBytes"),
+            "fileName": metadata.get("fileName"),
+        })
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error))
+
+
+@app.get("/api/studio/storage/files/{asset_id}")
+async def api_get_studio_storage_file(asset_id: str):
+    file_path = get_studio_storage_path(asset_id)
+    metadata = read_storage_metadata(get_storage_metadata_path(file_path))
+    proxy_response = maybe_proxy_r2_asset(
+        metadata,
+        "application/octet-stream",
+        filename=file_path.name,
+    )
+    if proxy_response:
+        return proxy_response
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Stored asset not found")
+
+    return FileResponse(
+        file_path,
+        media_type=(metadata or {}).get("content_type") or (metadata or {}).get("contentType") or "application/octet-stream",
+        filename=file_path.name,
+    )
+
+
+@app.head("/api/studio/storage/files/{asset_id}")
+async def api_head_studio_storage_file(asset_id: str):
+    file_path = get_studio_storage_path(asset_id)
+    metadata = read_storage_metadata(get_storage_metadata_path(file_path))
+    head = get_stored_asset_head(metadata, file_path)
+    if head.get("storage") == "unknown":
+        raise HTTPException(status_code=404, detail="Stored asset not found")
+
+    headers = {
+        "Content-Type": str(head.get("content_type") or "application/octet-stream"),
+        "Content-Length": str(head.get("content_length") or 0),
+        "X-Storage-Backend": str(head.get("storage") or "unknown"),
+    }
+    if head.get("url"):
+        headers["X-Storage-Url"] = str(head["url"])
+    return Response(status_code=200, headers=headers)
+
 @app.get("/api/studio/scenes")
 async def api_get_scenes(user_id: Optional[str] = None, is_template: Optional[bool] = None):
     if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
@@ -1518,9 +2723,12 @@ async def api_save_scene(request: Request):
         raise HTTPException(status_code=503, detail="Virtual Studio service not available")
     try:
         data = await request.json()
+        maybe_store_scene_thumbnail_url(data)
         user_id = data.pop('userId', None)
         scene = save_scene(data, user_id)
         return JSONResponse({"success": True, "scene": scene})
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1844,7 +3052,8 @@ async def api_list_snapshots(scene_id: str, user_id: Optional[str] = None):
         raise HTTPException(status_code=503, detail="Settings service not available")
     try:
         data = db_get_settings(user_id or "default-user", "studio_snapshots", scene_id) or {"snapshots": []}
-        return JSONResponse({"snapshots": data.get("snapshots", [])})
+        snapshots = [hydrate_snapshot_thumbnail_reference(record) for record in data.get("snapshots", [])]
+        return JSONResponse({"snapshots": snapshots})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1862,10 +3071,33 @@ async def api_create_snapshot(request: Request, user_id: Optional[str] = None):
             record["id"] = f"snapshot_{uuid.uuid4().hex[:10]}"
         if not record.get("createdAt"):
             record["createdAt"] = datetime.utcnow().isoformat()
+        maybe_store_snapshot_thumbnail(record, scene_id)
         data = db_get_settings(user_id or "default-user", "studio_snapshots", scene_id) or {"snapshots": []}
-        snapshots = [record] + [s for s in data.get("snapshots", []) if s.get("id") != record["id"]]
-        db_set_settings(user_id or "default-user", "studio_snapshots", {"snapshots": snapshots[:10]}, scene_id)
-        return JSONResponse({"snapshot": record})
+        existing_records = data.get("snapshots", [])
+        replaced_snapshot = next((s for s in existing_records if s.get("id") == record["id"]), None)
+        if replaced_snapshot:
+            replaced_asset_id = (
+                replaced_snapshot.get("thumbnailAssetId")
+                or extract_studio_storage_asset_id(replaced_snapshot.get("thumbnailUrl"))
+            )
+            if replaced_asset_id and replaced_asset_id != record.get("thumbnailAssetId"):
+                delete_studio_storage_asset(str(replaced_asset_id))
+
+        snapshots = [hydrate_snapshot_thumbnail_reference(record)] + [
+            hydrate_snapshot_thumbnail_reference(s)
+            for s in existing_records
+            if s.get("id") != record["id"]
+        ]
+        trimmed_snapshots = snapshots[:10]
+        overflow_snapshots = snapshots[10:]
+        for overflow_snapshot in overflow_snapshots:
+            overflow_asset_id = (
+                overflow_snapshot.get("thumbnailAssetId")
+                or extract_studio_storage_asset_id(overflow_snapshot.get("thumbnailUrl"))
+            )
+            delete_studio_storage_asset(str(overflow_asset_id) if overflow_asset_id else None)
+        db_set_settings(user_id or "default-user", "studio_snapshots", {"snapshots": trimmed_snapshots}, scene_id)
+        return JSONResponse({"snapshot": hydrate_snapshot_thumbnail_reference(record)})
     except HTTPException:
         raise
     except Exception as e:
@@ -1879,6 +3111,13 @@ async def api_delete_snapshot(snapshot_id: str, sceneId: Optional[str] = None, u
         raise HTTPException(status_code=400, detail="sceneId required")
     try:
         data = db_get_settings(user_id or "default-user", "studio_snapshots", sceneId) or {"snapshots": []}
+        removed_snapshot = next((s for s in data.get("snapshots", []) if s.get("id") == snapshot_id), None)
+        if removed_snapshot:
+            removed_asset_id = (
+                removed_snapshot.get("thumbnailAssetId")
+                or extract_studio_storage_asset_id(removed_snapshot.get("thumbnailUrl"))
+            )
+            delete_studio_storage_asset(str(removed_asset_id) if removed_asset_id else None)
         snapshots = [s for s in data.get("snapshots", []) if s.get("id") != snapshot_id]
         db_set_settings(user_id or "default-user", "studio_snapshots", {"snapshots": snapshots}, sceneId)
         return JSONResponse({"success": True})
@@ -5053,22 +6292,397 @@ async def get_environment_planner_status():
     return planner.get_status()
 
 
+@app.get("/api/environment/layout-from-image/status")
+async def get_environment_layout_status():
+    layout_service = get_or_create_environment_layout_service()
+    return layout_service.get_status()
+
+
+@app.get("/api/environment/providers/health")
+async def get_environment_provider_health(
+    probe: bool = Query(False, description="When true, perform lightweight live probes against configured provider endpoints"),
+):
+    layout_service = get_or_create_environment_layout_service()
+    validation_service = get_or_create_environment_validation_service()
+    planner = get_or_create_environment_planner()
+
+    return JSONResponse({
+        "success": True,
+        "probe": probe,
+        "planner": planner.get_status(),
+        "layout": {
+            "status": layout_service.get_status(),
+            "health": layout_service.get_provider_health(probe=probe),
+        },
+        "validation": {
+            "status": validation_service.get_status(),
+            "health": validation_service.get_provider_health(probe=probe),
+        },
+    })
+
+
+@app.get("/api/environment/providers/gemini/status")
+async def get_gemini_environment_provider_status():
+    provider = get_or_create_gemini_environment_provider()
+    return JSONResponse({
+        "success": True,
+        "status": provider.get_status(),
+    })
+
+
+@app.post("/api/environment/providers/layout-gemini")
+async def analyze_environment_layout_with_gemini(request: EnvironmentLayoutRequest):
+    if not request.referenceImages:
+        raise HTTPException(status_code=400, detail="At least one reference image is required")
+
+    provider = get_or_create_gemini_environment_provider()
+    if not provider.enabled:
+        raise HTTPException(status_code=503, detail="Gemini environment provider is not configured")
+
+    try:
+        result = provider.analyze_layout(
+            reference_images=request.referenceImages,
+            prompt=request.prompt,
+            preferred_room_type=request.preferredRoomType,
+            segmentation_prompts=(
+                request.layoutOptions.get("segmentationPrompts")
+                if isinstance(request.layoutOptions, dict) and isinstance(request.layoutOptions.get("segmentationPrompts"), list)
+                else []
+            ),
+            layout_options=request.layoutOptions or {},
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Gemini layout provider failed: {exc}") from exc
+
+    return JSONResponse(result)
+
+
+@app.post("/api/environment/providers/validate-gemini")
+async def validate_environment_with_gemini(request: EnvironmentValidateRequest):
+    provider = get_or_create_gemini_environment_provider()
+    if not provider.enabled:
+        raise HTTPException(status_code=503, detail="Gemini environment provider is not configured")
+
+    if not request.previewImage:
+        raise HTTPException(status_code=400, detail="previewImage is required")
+
+    try:
+        result = provider.validate_environment(
+            plan=request.plan,
+            preview_image=request.previewImage,
+            heuristic_evaluation=None,
+            validation_options=request.validationOptions or {},
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Gemini validation provider failed: {exc}") from exc
+
+    return JSONResponse(result)
+
+
+@app.post("/api/environment/providers/smoke")
+async def smoke_environment_providers(request: EnvironmentProviderSmokeRequest):
+    layout_service = get_or_create_environment_layout_service()
+    validation_service = get_or_create_environment_validation_service()
+    smoke_image = build_environment_provider_smoke_reference_image()
+
+    layout_result: Optional[Dict[str, Any]] = None
+    validation_result: Optional[Dict[str, Any]] = None
+
+    if request.includeLayout:
+        layout_result = layout_service.analyze_images(
+            reference_images=[smoke_image],
+            prompt=request.prompt,
+            preferred_room_type=request.preferredRoomType,
+            provider=request.layoutProvider,
+            layout_options=request.layoutOptions or {},
+        )
+
+    if request.includeValidation:
+        smoke_plan = build_environment_provider_smoke_plan(
+            prompt=request.prompt,
+            preferred_room_type=request.preferredRoomType,
+            layout_analysis=layout_result,
+        )
+        validation_result = validation_service.validate(
+            smoke_plan,
+            preview_image=smoke_image,
+            provider=request.validationProvider,
+            validation_options={
+                "referenceMode": "provider_smoke",
+                "source": "synthetic_smoke_image",
+                "scenePhase": "provider_smoke",
+            },
+        )
+
+    return JSONResponse({
+        "success": True,
+        "sample": {
+            "prompt": request.prompt,
+            "preferredRoomType": request.preferredRoomType,
+            "imageSource": "synthetic_smoke_image",
+        },
+        "layout": layout_result,
+        "validation": validation_result,
+    })
+
+
+@app.get("/api/marketplace/environment-packs")
+async def list_marketplace_environment_packs(
+    actor_user_id: Optional[str] = Query(None),
+    actor_name: Optional[str] = Query(None),
+    actor_role: Optional[str] = Query(None),
+):
+    if not MARKETPLACE_REGISTRY_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Marketplace registry service is not available")
+
+    actor = {
+        "userId": actor_user_id,
+        "name": actor_name,
+        "role": actor_role,
+    }
+
+    return JSONResponse({
+        "success": True,
+        "products": list_environment_pack_products(actor=actor),
+    })
+
+
+@app.get("/api/marketplace/environment-packs/release-dashboard")
+async def get_marketplace_environment_pack_release_dashboard(
+    actor_user_id: Optional[str] = Query(None),
+    actor_name: Optional[str] = Query(None),
+    actor_role: Optional[str] = Query(None),
+):
+    if not MARKETPLACE_REGISTRY_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Marketplace registry service is not available")
+
+    actor = {
+        "userId": actor_user_id,
+        "name": actor_name,
+        "role": actor_role,
+    }
+
+    try:
+        dashboard = get_environment_pack_release_dashboard(actor=actor)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+    return JSONResponse({
+        "success": True,
+        "dashboard": dashboard,
+    })
+
+
+@app.post("/api/marketplace/environment-packs/publish")
+async def publish_marketplace_environment_pack(request: MarketplaceEnvironmentPackPublishRequest):
+    if not MARKETPLACE_REGISTRY_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Marketplace registry service is not available")
+
+    product_id = str((request.product or {}).get("id") or "").strip()
+    if not product_id:
+        raise HTTPException(status_code=400, detail="product.id is required")
+
+    try:
+        product = upsert_environment_pack_product(
+            request.product,
+            actor=request.actor,
+            publish_mode=str(request.mode or "save_copy"),
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return JSONResponse({
+        "success": True,
+        "product": product,
+    })
+
+
+@app.post("/api/marketplace/environment-packs/validate-release")
+async def validate_marketplace_environment_pack_release(request: MarketplaceEnvironmentPackValidateRequest):
+    if not MARKETPLACE_REGISTRY_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Marketplace registry service is not available")
+
+    quality_report = get_environment_pack_quality_report(request.product)
+
+    return JSONResponse({
+        "success": True,
+        "qualityReport": quality_report,
+    })
+
+
+@app.post("/api/marketplace/environment-packs/{product_id}/promote")
+async def promote_marketplace_environment_pack(product_id: str, request: MarketplaceEnvironmentPackPromoteRequest):
+    if not MARKETPLACE_REGISTRY_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Marketplace registry service is not available")
+
+    try:
+        product = promote_environment_pack_candidate(product_id, actor=request.actor)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return JSONResponse({
+        "success": True,
+        "product": product,
+    })
+
+
+@app.post("/api/marketplace/environment-packs/{product_id}/rollback")
+async def rollback_marketplace_environment_pack(product_id: str, request: MarketplaceEnvironmentPackRollbackRequest):
+    if not MARKETPLACE_REGISTRY_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Marketplace registry service is not available")
+
+    try:
+        product = rollback_environment_pack_release(
+            product_id,
+            actor=request.actor,
+            target_version=request.targetVersion,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return JSONResponse({
+        "success": True,
+        "product": product,
+    })
+
+
+@app.post("/api/marketplace/environment-packs/{product_id}/record-install")
+async def record_marketplace_environment_pack_install(product_id: str):
+    if not MARKETPLACE_REGISTRY_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Marketplace registry service is not available")
+
+    updated_product = record_environment_pack_install(product_id)
+    if updated_product is None:
+        raise HTTPException(status_code=404, detail="Marketplace environment pack not found")
+
+    return JSONResponse({
+        "success": True,
+        "product": updated_product,
+    })
+
+
+@app.post("/api/environment/layout-from-image")
+async def analyze_environment_layout(request: EnvironmentLayoutRequest):
+    if not request.referenceImages:
+        raise HTTPException(status_code=400, detail="At least one reference image is required")
+
+    layout_service = get_or_create_environment_layout_service()
+    try:
+        result = layout_service.analyze_images(
+            reference_images=request.referenceImages,
+            prompt=request.prompt,
+            preferred_room_type=request.preferredRoomType,
+            provider=request.provider,
+            layout_options=request.layoutOptions,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return JSONResponse(result)
+
+
+@app.post("/api/environment/build-shell")
+async def build_environment_shell(request: EnvironmentBuildShellRequest):
+    try:
+        try:
+            from environment_planner_service import build_room_shell_spec
+        except ImportError:
+            from backend.environment_planner_service import build_room_shell_spec
+
+        shell = build_room_shell_spec(
+            request.shell,
+            prompt=request.prompt,
+            layout_hints=request.layoutHints,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return JSONResponse({
+        "shell": shell,
+        "runtimeSupported": True,
+        "typeAccessoryHints": list(dict.fromkeys({
+            "interior_room": ["baseboard", "crown_molding", "ceiling_coffered", "wall_segment_panel", "wall_segment_pilaster"],
+            "warehouse": ["warehouse_beam", "warehouse_column", "ceiling_open_truss", "wall_segment_bay"],
+            "storefront": ["storefront_awning", "storefront_header", "display_ledge", "ceiling_canopy", "wall_segment_bay"],
+            "abstract_stage": ["cyclorama_curve", "stage_edge"],
+            "outdoor_illusion": ["sky_backdrop", "ground_extension"],
+            "studio_shell": [],
+        }.get(shell["type"], []) + [
+            hint
+            for hint in [
+                {
+                    "coffered": "ceiling_coffered",
+                    "exposed_beams": "ceiling_exposed_beams",
+                    "open_truss": "ceiling_open_truss",
+                    "canopy": "ceiling_canopy",
+                }.get(str(shell.get("ceilingStyle") or "flat"))
+            ]
+            if hint
+        ] + [
+            f"wall_segment_{segment.get('kind')}"
+            for segment in (shell.get("wallSegments") or [])
+            if isinstance(segment, dict) and segment.get("kind")
+        ] + [
+            str(fixture.get("kind"))
+            for fixture in (shell.get("fixtures") or [])
+            if isinstance(fixture, dict) and fixture.get("kind")
+        ])),
+    })
+
+
 @app.post("/api/environment/plan")
 async def generate_environment_plan(request: EnvironmentPlanRequest):
     if not request.prompt.strip() and not request.referenceImages:
         raise HTTPException(status_code=400, detail="Prompt or reference image is required")
 
     planner = get_or_create_environment_planner()
+    room_constraints = dict(request.roomConstraints or {})
+    layout_analysis: Optional[Dict[str, Any]] = None
+    layout_provider = request.layoutProvider or room_constraints.get("layoutProvider")
+    layout_options = request.layoutOptions if isinstance(request.layoutOptions, dict) else None
+    if layout_options:
+        room_constraints["layoutOptions"] = layout_options
+
+    if request.referenceImages and not room_constraints.get("layoutHints"):
+        layout_service = get_or_create_environment_layout_service()
+        try:
+            layout_analysis = layout_service.analyze_images(
+                reference_images=request.referenceImages,
+                prompt=request.prompt,
+                preferred_room_type=room_constraints.get("preferredRoomType"),
+                provider=str(layout_provider) if layout_provider else None,
+                layout_options=layout_options,
+            )
+            room_constraints["layoutHints"] = layout_analysis.get("layoutHints")
+            room_constraints["imageLayoutSummary"] = layout_analysis.get("summary")
+        except Exception as exc:
+            print(f"Warning: environment layout analysis failed, continuing without it: {exc}")
 
     result = await planner.generate_plan(
         prompt=request.prompt,
         reference_images=request.referenceImages,
-        room_constraints=request.roomConstraints,
+        room_constraints=room_constraints,
         prefer_fallback=request.preferFallback,
         preferred_preset_id=request.preferredPresetId,
         world_model_provider=request.worldModelProvider,
         world_model_reference=request.worldModelReference,
+        brand_reference=request.brandReference,
     )
+
+    if layout_analysis:
+        result["layoutAnalysis"] = layout_analysis
 
     return JSONResponse(result)
 
@@ -5097,6 +6711,49 @@ async def retrieve_environment_assets(request: EnvironmentAssetRetrievalRequest)
         limit=request.limit,
         min_score=request.minScore,
     )
+    return JSONResponse(result)
+
+
+@app.get("/api/environment/assemble/status")
+async def get_environment_assembly_status():
+    assembly_service = get_or_create_environment_assembly_service()
+    return assembly_service.get_status()
+
+
+@app.post("/api/environment/assemble")
+async def assemble_environment_plan(request: EnvironmentAssembleRequest):
+    if not isinstance(request.plan, dict) or not request.plan:
+        raise HTTPException(status_code=400, detail="A plan payload is required")
+
+    assembly_service = get_or_create_environment_assembly_service()
+    try:
+        result = assembly_service.assemble(request.plan)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse(result)
+
+
+@app.get("/api/environment/validate/status")
+async def get_environment_validation_status():
+    validation_service = get_or_create_environment_validation_service()
+    return validation_service.get_status()
+
+
+@app.post("/api/environment/validate")
+async def validate_environment_plan(request: EnvironmentValidateRequest):
+    if not isinstance(request.plan, dict) or not request.plan:
+        raise HTTPException(status_code=400, detail="A plan payload is required")
+
+    validation_service = get_or_create_environment_validation_service()
+    try:
+        result = validation_service.validate(
+            request.plan,
+            preview_image=request.previewImage,
+            provider=request.provider,
+            validation_options=request.validationOptions,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return JSONResponse(result)
 
 @app.get("/api/storyboards/camera-angles")
@@ -5238,6 +6895,10 @@ async def get_email_logo(logo_key: str):
 async def serve_model_file(filename: str):
     """Serve 3D model files (GLB, GLTF, etc.) from rodin_models directory."""
     file_path = RODIN_MODELS_DIR / filename
+    metadata = read_storage_metadata(get_storage_metadata_path(file_path))
+
+    if metadata and metadata.get("storage") == "r2" and metadata.get("url"):
+        return RedirectResponse(url=str(metadata["url"]), status_code=307)
     
     if not file_path.exists():
         print(f"[Models] File not found: {file_path}")

@@ -34,6 +34,7 @@ import {
   CheckCircle as ApplyIcon,
 } from '@mui/icons-material';
 import { cinematographyPatternsService, type CinematographyPattern } from '@/core/services/cinematographyPatternsService';
+import { getLightingPatternGobo } from '@/core/services/lightingPatternIntelligence';
 interface CinematographyPatternsPanelProps {
   onApplyPattern: (pattern: CinematographyPattern) => void;
 }
@@ -59,6 +60,23 @@ export function CinematographyPatternsPanel({ onApplyPattern }: CinematographyPa
 
     return patterns;
   }, [allPatterns, selectedCategory, selectedDifficulty]);
+
+  const getPrimaryGoboRecommendation = (pattern: CinematographyPattern) => {
+    for (const light of pattern.lights) {
+      const recommendation = getLightingPatternGobo({
+        id: pattern.id,
+        name: pattern.name,
+        category: pattern.category,
+        description: pattern.description,
+      }, light.type, pattern.description);
+
+      if (recommendation) {
+        return recommendation;
+      }
+    }
+
+    return null;
+  };
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -167,6 +185,9 @@ export function CinematographyPatternsPanel({ onApplyPattern }: CinematographyPa
         <Grid container spacing={2}>
           {filteredPatterns.map((pattern) => (
             <Grid size={{ xs: 12, md: 6 }} key={pattern.id}>
+              {(() => {
+                const primaryGobo = getPrimaryGoboRecommendation(pattern);
+                return (
               <Card 
                 variant="outlined" 
                 sx={{ 
@@ -238,6 +259,13 @@ export function CinematographyPatternsPanel({ onApplyPattern }: CinematographyPa
                       size="small"
                       sx={{ height: 20, fontSize: 9, bgcolor: 'rgba(255,170,0,0.2)', color: '#ffaa00' }}
                     />
+                    {primaryGobo && (
+                      <Chip
+                        label={`AI gobo: ${primaryGobo.goboId}`}
+                        size="small"
+                        sx={{ height: 20, fontSize: 9, bgcolor: 'rgba(143,238,255,0.18)', color: '#8feeff' }}
+                      />
+                    )}
                   </Stack>
 
                   <Typography variant="caption" sx={{ display: 'block', fontSize: 10, color: '#777', fontStyle: 'italic' }}>
@@ -267,6 +295,8 @@ export function CinematographyPatternsPanel({ onApplyPattern }: CinematographyPa
                   </Button>
                 </CardActions>
               </Card>
+                );
+              })()}
             </Grid>
           ))}
         </Grid>
@@ -284,4 +314,3 @@ export function CinematographyPatternsPanel({ onApplyPattern }: CinematographyPa
     </Paper>
   );
 }
-

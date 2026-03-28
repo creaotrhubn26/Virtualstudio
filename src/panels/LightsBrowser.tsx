@@ -23,8 +23,19 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../state/store';
+import { useCameraLightingSyncStore } from '../state/cameraLightingSyncStore';
 import { LIGHT_DATABASE, LightSpec } from '../data/lightFixtures';
 import { AtmosphereSettings } from '../core/models/sceneComposer';
+import type { EnvironmentPlanInsightPresentation } from '../services/environmentPlanInsightPresentation';
+import { getGoboById } from '../data/goboDefinitions';
+import { getRecommendedLightingPatternIdsForSceneFamily } from '../core/services/lightingPatternIntelligence';
+import { findLocalLightPatternById } from './LightPatternLibrary';
+import {
+  getLightingInsightForRole,
+  inferRecommendedBeamAngle,
+  inferRecommendedGoboId,
+  inferRecommendedModifier,
+} from '../services/lightingInsightRecommendations';
 export type { LightSpec };
 export { LIGHT_DATABASE };
 
@@ -116,6 +127,46 @@ export function LightsBrowser() {
   const [searchQuery, setSearchQuery] = useState('');
   const [modifierSearchQuery, setModifierSearchQuery] = useState('');
   const [activeAtmosphere, setActiveAtmosphere] = useState<AtmosphereSettings | null>(null);
+  const [environmentInsights, setEnvironmentInsights] = useState<EnvironmentPlanInsightPresentation | null>(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    return (window as Window & {
+      __virtualStudioLastEnvironmentPlanInsights?: EnvironmentPlanInsightPresentation;
+    }).__virtualStudioLastEnvironmentPlanInsights ?? null;
+  });
+  const lightingSync = useCameraLightingSyncStore((state) => state.lighting);
+  const selectedLight = useMemo(
+    () => lightingSync.lights.find((light) => light.id === lightingSync.selectedLightId) || null,
+    [lightingSync.lights, lightingSync.selectedLightId],
+  );
+  const selectedLightInsight = useMemo(() => {
+    if (!selectedLight) {
+      return null;
+    }
+    return getLightingInsightForRole(environmentInsights, selectedLight.role);
+  }, [environmentInsights, selectedLight]);
+  const inferredRecommendedGoboId = useMemo(
+    () => inferRecommendedGoboId(selectedLight?.role, selectedLight?.rationale || selectedLightInsight, environmentInsights),
+    [environmentInsights, selectedLight, selectedLightInsight],
+  );
+  const inferredRecommendedGobo = inferredRecommendedGoboId ? getGoboById(inferredRecommendedGoboId) : null;
+  const inferredRecommendedModifier = useMemo(
+    () => inferRecommendedModifier(selectedLight?.rationale || selectedLightInsight),
+    [selectedLight?.rationale, selectedLightInsight],
+  );
+  const inferredRecommendedBeamAngle = useMemo(
+    () => inferRecommendedBeamAngle(selectedLight?.rationale || selectedLightInsight),
+    [selectedLight?.rationale, selectedLightInsight],
+  );
+  const recommendedPatternId = useMemo(
+    () => getRecommendedLightingPatternIdsForSceneFamily(environmentInsights?.familyId || null)[0] || null,
+    [environmentInsights?.familyId],
+  );
+  const recommendedPattern = useMemo(
+    () => findLocalLightPatternById(recommendedPatternId),
+    [recommendedPatternId],
+  );
 
   const filteredLights = useMemo(() => {
     return LIGHT_DATABASE.filter((light) => {
@@ -143,6 +194,15 @@ export function LightsBrowser() {
     const handleAtmosphere = (e: CustomEvent) => setActiveAtmosphere(e.detail);
     window.addEventListener('ch-atmosphere-changed', handleAtmosphere as EventListener);
     return () => window.removeEventListener('ch-atmosphere-changed', handleAtmosphere as EventListener);
+  }, []);
+
+  useEffect(() => {
+    const handleInsightsUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<EnvironmentPlanInsightPresentation>;
+      setEnvironmentInsights(customEvent.detail || null);
+    };
+    window.addEventListener('vs-environment-plan-insights-updated', handleInsightsUpdate as EventListener);
+    return () => window.removeEventListener('vs-environment-plan-insights-updated', handleInsightsUpdate as EventListener);
   }, []);
 
   // Get recommended lights based on environment
@@ -223,6 +283,87 @@ export function LightsBrowser() {
     }));
   };
 
+  const handleApplyRecommendedGobo = () => {
+    if (!selectedLight?.id || !inferredRecommendedGoboId) {
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('ch-attach-gobo', {
+      detail: {
+        lightId: selectedLight.id,
+        goboId: inferredRecommendedGoboId,
+      },
+    }));
+  };
+
+  const handleRemoveSelectedGobo = () => {
+    if (!selectedLight?.id || !selectedLight.goboId) {
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('ch-remove-gobo', {
+      detail: {
+        lightId: selectedLight.id,
+      },
+    }));
+  };
+
+  const handleApplyRecommendedModifier = () => {
+    if (!selectedLight?.id || !inferredRecommendedModifier) {
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('ch-set-light-modifier', {
+      detail: {
+        lightId: selectedLight.id,
+        modifier: inferredRecommendedModifier,
+      },
+    }));
+  };
+
+  const handleApplyRecommendedBeamAngle = () => {
+    if (!selectedLight?.id || typeof inferredRecommendedBeamAngle !== 'number') {
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('ch-set-light-beam-angle', {
+      detail: {
+        lightId: selectedLight.id,
+        beamAngle: inferredRecommendedBeamAngle,
+      },
+    }));
+  };
+
+  const handleApplyRecommendedHaze = () => {
+    const density = selectedLight?.hazeDensity;
+    if (!selectedLight?.hazeEnabled || typeof density !== 'number') {
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('ch-apply-atmosphere', {
+      detail: {
+        fogEnabled: true,
+        fogDensity: density,
+      },
+    }));
+  };
+
+  const handleOpenRecommendedPatternDetails = () => {
+    if (!recommendedPatternId) {
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('openLightPatternLibrary', {
+      detail: {
+        preferredPatternId: recommendedPatternId,
+        openPreferredPatternDetails: true,
+      },
+    }));
+  };
+
+  const handleApplyRecommendedPattern = () => {
+    if (!recommendedPattern) {
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('applyLightPattern', {
+      detail: recommendedPattern,
+    }));
+  };
+
   const getModifierTypeLabel = (type: string): string => {
     const labels: Record<string, string> = {
       'softbox': 'Softboks',
@@ -241,8 +382,180 @@ export function LightsBrowser() {
 
   return (
     <Paper elevation={0} sx={{ p: 2, backgroundColor: 'transparent', color: '#fff' }}>
-      {/* Header */}
-      {/* Atmosphere recommendations */}
+      <Box
+        sx={{
+          mb: 2,
+          p: 1.5,
+          bgcolor: 'rgba(251, 191, 36, 0.08)',
+          borderRadius: 2,
+          border: '1px solid rgba(251, 191, 36, 0.18)',
+        }}
+      >
+        <Typography variant="subtitle2" sx={{ color: '#fcd34d', mb: 0.5 }}>
+          Live lys-synk
+        </Typography>
+        <Typography variant="body2" sx={{ color: '#fff' }}>
+          {lightingSync.lights.length} aktive lys
+          {selectedLight ? ` · valgt: ${selectedLight.name}` : ' · ingen valgt'}
+        </Typography>
+        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
+          <Chip
+            size="small"
+            label={lightingSync.autoRigPlanId ? `AI-rigg ${lightingSync.autoRigPlanId}` : 'Manuell lysrigg'}
+            sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: '#fff' }}
+          />
+          {selectedLight?.role && (
+            <Chip
+              size="small"
+              label={`Rolle: ${selectedLight.role}`}
+              sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: '#d9e2ea' }}
+            />
+          )}
+        </Stack>
+        {(environmentInsights || selectedLight?.rationale) && (
+          <Box sx={{ mt: 1.25 }}>
+            {environmentInsights?.familyLabel && (
+              <Typography variant="caption" sx={{ display: 'block', color: '#fef3c7', opacity: 0.95 }}>
+                AI-retning: {environmentInsights.familyLabel}
+              </Typography>
+            )}
+            {selectedLight?.rationale ? (
+              <Typography variant="caption" sx={{ display: 'block', color: 'rgba(255,255,255,0.9)' }}>
+                Lysvalg: {selectedLight.rationale}
+              </Typography>
+            ) : selectedLightInsight ? (
+              <Typography variant="caption" sx={{ display: 'block', color: 'rgba(255,255,255,0.9)' }}>
+                Lysvalg: {selectedLightInsight}
+              </Typography>
+            ) : null}
+            {selectedLight && (
+              <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
+                {selectedLight.modifier && (
+                  <Chip
+                    size="small"
+                    label={`Modifier: ${selectedLight.modifier}`}
+                    sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: '#d9e2ea' }}
+                  />
+                )}
+                {typeof selectedLight.beamAngle === 'number' && (
+                  <Chip
+                    size="small"
+                    label={`Beam: ${Math.round(selectedLight.beamAngle)}°`}
+                    sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: '#d9e2ea' }}
+                  />
+                )}
+                {selectedLight.hazeEnabled && (
+                  <Chip
+                    size="small"
+                    label={`Haze: ${selectedLight.hazeDensity ? selectedLight.hazeDensity.toFixed(3) : 'på'}`}
+                    sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: '#d9e2ea' }}
+                  />
+                )}
+                {(selectedLight.goboId || inferredRecommendedGobo) && (
+                  <Chip
+                    size="small"
+                    label={`Gobo: ${getGoboById(selectedLight.goboId || '')?.nameNo || inferredRecommendedGobo?.nameNo || (selectedLight.goboId || inferredRecommendedGobo?.id)}`}
+                    sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: '#d9e2ea' }}
+                  />
+                )}
+              </Stack>
+            )}
+            {selectedLight && (
+              <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
+                {inferredRecommendedModifier && inferredRecommendedModifier !== selectedLight.modifier && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleApplyRecommendedModifier}
+                    sx={{
+                      borderColor: 'rgba(191, 219, 254, 0.4)',
+                      color: '#dbeafe',
+                    }}
+                  >
+                    Bruk AI modifier
+                  </Button>
+                )}
+                {typeof inferredRecommendedBeamAngle === 'number'
+                  && Math.round(selectedLight.beamAngle ?? -1) !== Math.round(inferredRecommendedBeamAngle) && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleApplyRecommendedBeamAngle}
+                    sx={{
+                      borderColor: 'rgba(191, 219, 254, 0.4)',
+                      color: '#dbeafe',
+                    }}
+                  >
+                    Bruk AI beam
+                  </Button>
+                )}
+                {selectedLight.hazeEnabled && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleApplyRecommendedHaze}
+                    sx={{
+                      borderColor: 'rgba(167, 243, 208, 0.42)',
+                      color: '#d1fae5',
+                    }}
+                  >
+                    Bruk AI haze
+                  </Button>
+                )}
+                {inferredRecommendedGoboId && inferredRecommendedGoboId !== selectedLight.goboId && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={handleApplyRecommendedGobo}
+                    sx={{
+                      borderColor: 'rgba(252, 211, 77, 0.45)',
+                      color: '#fef3c7',
+                    }}
+                  >
+                    Bruk anbefalt gobo
+                  </Button>
+                )}
+                {selectedLight.goboId && (
+                  <Button
+                    size="small"
+                    variant="text"
+                    onClick={handleRemoveSelectedGobo}
+                    sx={{ color: 'rgba(255,255,255,0.82)' }}
+                  >
+                    Fjern gobo
+                  </Button>
+                )}
+                {recommendedPatternId && (
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleApplyRecommendedPattern}
+                    disabled={!recommendedPattern}
+                    sx={{
+                      bgcolor: 'rgba(56, 189, 248, 0.92)',
+                      color: '#06131e',
+                      fontWeight: 700,
+                      '&:hover': { bgcolor: 'rgba(125, 211, 252, 0.96)' },
+                    }}
+                  >
+                    Bruk AI-pattern
+                  </Button>
+                )}
+                {recommendedPatternId && (
+                  <Button
+                    size="small"
+                    variant="text"
+                    onClick={handleOpenRecommendedPatternDetails}
+                    sx={{ color: 'rgba(147, 197, 253, 0.95)' }}
+                  >
+                    Se AI-patterndetaljer
+                  </Button>
+                )}
+              </Stack>
+            )}
+          </Box>
+        )}
+      </Box>
       {activeAtmosphere && getRecommendedLights.length > 0 && (
         <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
           <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
@@ -252,8 +565,8 @@ export function LightsBrowser() {
             Basert på aktivt miljø anbefaler vi disse lysene:
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap">
-            {getRecommendedLights.map(light => (
-              <Chip 
+            {getRecommendedLights.map((light) => (
+              <Chip
                 key={light.id}
                 label={`${light.brand} ${light.model}`}
                 size="small"
@@ -265,39 +578,18 @@ export function LightsBrowser() {
         </Box>
       )}
 
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between',
-        gap: 1.5,
-        mb: 2,
-      }}>
-        {/* Atmosphere recommendations */}
-      {activeAtmosphere && getRecommendedLights.length > 0 && (
-        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
-          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
-            🌫️ Miljø-tilpassede anbefalinger
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
-            Basert på aktivt miljø anbefaler vi disse lysene:
-          </Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            {getRecommendedLights.map(light => (
-              <Chip 
-                key={light.id}
-                label={`${light.brand} ${light.model}`}
-                size="small"
-                onClick={() => handleAddToScene(light)}
-                sx={{ cursor: 'pointer' }}
-              />
-            ))}
-          </Stack>
-        </Box>
-      )}
-
-      <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1.5,
+          mb: 2,
+        }}
+      >
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
           gap: 1.5,
           background: 'linear-gradient(135deg, rgba(243,156,18,0.15) 0%, rgba(241,196,15,0.15) 100%)',
           borderRadius: '14px',
@@ -338,30 +630,8 @@ export function LightsBrowser() {
             </Typography>
           </Box>
         </Box>
-        {/* Atmosphere recommendations */}
-      {activeAtmosphere && getRecommendedLights.length > 0 && (
-        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
-          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
-            🌫️ Miljø-tilpassede anbefalinger
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
-            Basert på aktivt miljø anbefaler vi disse lysene:
-          </Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            {getRecommendedLights.map(light => (
-              <Chip 
-                key={light.id}
-                label={`${light.brand} ${light.model}`}
-                size="small"
-                onClick={() => handleAddToScene(light)}
-                sx={{ cursor: 'pointer' }}
-              />
-            ))}
-          </Stack>
-        </Box>
-      )}
 
-      <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1 }}>
           <Chip
             label={`${LIGHT_DATABASE.length} lys`}
             size="medium"
@@ -462,31 +732,7 @@ export function LightsBrowser() {
 
       {activeTab === 'lights' && (
         <>
-          {/* Type category buttons with search */}
-          {/* Atmosphere recommendations */}
-      {activeAtmosphere && getRecommendedLights.length > 0 && (
-        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
-          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
-            🌫️ Miljø-tilpassede anbefalinger
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
-            Basert på aktivt miljø anbefaler vi disse lysene:
-          </Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            {getRecommendedLights.map(light => (
-              <Chip 
-                key={light.id}
-                label={`${light.brand} ${light.model}`}
-                size="small"
-                onClick={() => handleAddToScene(light)}
-                sx={{ cursor: 'pointer' }}
-              />
-            ))}
-          </Stack>
-        </Box>
-      )}
-
-      <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
             {LIGHT_CATEGORIES.map((cat) => (
               <Button
                 key={cat.key}
@@ -521,34 +767,11 @@ export function LightsBrowser() {
                     boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
                   },
                 }}
-              >
-                {cat.label}
-              </Button>
-            ))}
-            {/* Atmosphere recommendations */}
-      {activeAtmosphere && getRecommendedLights.length > 0 && (
-        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
-          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
-            🌫️ Miljø-tilpassede anbefalinger
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
-            Basert på aktivt miljø anbefaler vi disse lysene:
-          </Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            {getRecommendedLights.map(light => (
-              <Chip 
-                key={light.id}
-                label={`${light.brand} ${light.model}`}
-                size="small"
-                onClick={() => handleAddToScene(light)}
-                sx={{ cursor: 'pointer' }}
-              />
-            ))}
-          </Stack>
-        </Box>
-      )}
-
-      <Box sx={{ 
+                >
+                  {cat.label}
+                </Button>
+              ))}
+            <Box sx={{ 
               display: 'flex', 
               alignItems: 'center', 
               bgcolor: '#2a2a2a', 

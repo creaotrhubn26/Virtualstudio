@@ -12,10 +12,37 @@ import {
   buildEnvironmentRuntimeProps,
   type EnvironmentRuntimePropRequest,
 } from './environmentPropMapper';
+import {
+  findBestLayoutObjectAnchor,
+  getLayoutAnchorDepthZone,
+  getLayoutAnchorShotZoneX,
+  getLayoutAnchorSurfaceHint,
+} from './environmentLayoutAnchorGuidance';
 
 export interface EnvironmentScenegraphAssemblyResult {
   assembly: EnvironmentScenegraphAssembly;
   runtimeProps: EnvironmentRuntimePropRequest[];
+}
+
+type RelativePlacementType = 'next_to' | 'behind' | 'centered_on';
+type RelativePlacementSide = 'left' | 'right' | 'center';
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getRequestSortLabel(request: EnvironmentRuntimePropRequest): string {
+  const candidateName = typeof request.name === 'string' ? request.name.trim() : '';
+  if (candidateName.length > 0) {
+    return candidateName;
+  }
+
+  const description = typeof request.description === 'string' ? request.description.trim() : '';
+  if (description.length > 0) {
+    return description;
+  }
+
+  return request.assetId;
 }
 
 function uniqueRequests(
@@ -110,6 +137,54 @@ function inferWallTargetFromHint(
   return 'backWall';
 }
 
+function includesAny(text: string, values: string[]): boolean {
+  return values.some((value) => text.includes(value));
+}
+
+function inferRelativeSideFromHint(hint?: string): RelativePlacementSide | undefined {
+  const normalized = (hint || '').toLowerCase();
+  if (includesAny(normalized, ['camera-left', 'slightly left', 'to the left', 'left side', 'left foreground'])) {
+    return 'left';
+  }
+  if (includesAny(normalized, ['camera-right', 'slightly right', 'to the right', 'right side', 'right foreground'])) {
+    return 'right';
+  }
+  if (normalized.includes('center')) {
+    return 'center';
+  }
+  return undefined;
+}
+
+function getAnchorKeywordFromHint(hint?: string): string | null {
+  const normalized = (hint || '').toLowerCase();
+  if (normalized.includes('counter')) return 'counter';
+  if (normalized.includes('podium') || normalized.includes('pedestal')) return 'podium';
+  if (normalized.includes('shelf')) return 'shelf';
+  if (normalized.includes('table')) return 'table';
+  return null;
+}
+
+function findRequestByAnchorKeyword(
+  requests: EnvironmentRuntimePropRequest[],
+  keyword: string | null,
+): EnvironmentRuntimePropRequest | null {
+  if (!keyword) {
+    return null;
+  }
+
+  return requests.find((candidate) => {
+    const profile = assetBrainService.getPlacementProfile(candidate.assetId);
+    const searchableText = `${candidate.assetId} ${candidate.name} ${candidate.description || ''}`.toLowerCase();
+    return Boolean(
+      profile?.anchorRole === 'surface_anchor'
+      && (
+        profile.surfaceAnchorTypes.includes(keyword)
+        || searchableText.includes(keyword)
+      )
+    );
+  }) || null;
+}
+
 function placementRank(request: EnvironmentRuntimePropRequest): number {
   const profile = assetBrainService.getPlacementProfile(request.assetId);
   const mode = inferPlacementMode(request);
@@ -141,6 +216,191 @@ function createRelationship(
     reason,
     strength,
   };
+}
+
+function inferHeroShotDepthZone(plan: EnvironmentPlan): 'foreground' | 'midground' | 'background' {
+  const shotType = (plan.camera.shotType || '').toLowerCase();
+  if (
+    includesAny(shotType, ['close', 'beauty', 'hero', 'macro', 'portrait'])
+    || (typeof plan.camera.fov === 'number' && plan.camera.fov <= 0.58)
+  ) {
+    return 'foreground';
+  }
+  if (includesAny(shotType, ['establishing'])) {
+    return 'background';
+  }
+  return 'midground';
+}
+
+function inferHeroShotZoneX(plan: EnvironmentPlan): number {
+  const targetX = Array.isArray(plan.camera.target) && typeof plan.camera.target[0] === 'number'
+    ? plan.camera.target[0]
+    : 0;
+  const usableHalfWidth = Math.max(1.6, plan.roomShell.width / 2 - 1.8);
+  return clamp(targetX / usableHalfWidth, -1, 1);
+}
+
+function applyHeroShotAwareMetadata(
+  request: EnvironmentRuntimePropRequest,
+  plan: EnvironmentPlan,
+): void {
+  if (request.priority !== 'high') {
+    return;
+  }
+
+  request.metadata = {
+    ...(request.metadata || {}),
+    shotZoneX: inferHeroShotZoneX(plan),
+    shotDepthZone: inferHeroShotDepthZone(plan),
+    shotAwarePlacement: true,
+  };
+}
+
+function hasExplicitDirectionalHint(request: EnvironmentRuntimePropRequest): boolean {
+  const hint = (request.placementHint || '').toLowerCase();
+  return includesAny(hint, [
+    'left',
+    'right',
+    'center',
+    'foreground',
+    'background',
+    'front',
+    'back',
+    'behind',
+    'next to',
+    'camera-left',
+    'camera-right',
+  ]);
+}
+
+function applyPlanLayoutGuidanceMetadata(
+  request: EnvironmentRuntimePropRequest,
+  plan: EnvironmentPlan,
+): void {
+  const guidance = plan.layoutGuidance;
+  if (!guidance || hasExplicitDirectionalHint(request)) {
+    return;
+  }
+
+  const placementMode = inferPlacementMode(request);
+  const isHero = request.priority === 'high';
+  const nextMetadata: Record<string, unknown> = {
+    ...(request.metadata || {}),
+  };
+
+  if (isHero) {
+    applyHeroShotAwareMetadata(request, plan);
+    return;
+  }
+
+  if (request.priority === 'medium') {
+    const side = guidance.suggestedZones.supporting.side;
+    nextMetadata.shotZoneX = side === 'left' ? -0.68 : side === 'right' ? 0.68 : 0;
+    nextMetadata.shotDepthZone = guidance.suggestedZones.supporting.depthZone;
+    nextMetadata.shotAwarePlacement = true;
+  } else {
+    nextMetadata.shotZoneX = 0;
+    nextMetadata.shotDepthZone = guidance.suggestedZones.background.depthZone;
+    nextMetadata.shotAwarePlacement = true;
+  }
+
+  if (placementMode === 'wall' || (request.placementHint || '').toLowerCase().includes('wall')) {
+    nextMetadata.preferredWallTarget = guidance.suggestedZones.background.wallTarget;
+  }
+
+  request.metadata = nextMetadata;
+}
+
+function applyLayoutObjectAnchorMetadata(
+  request: EnvironmentRuntimePropRequest,
+  plan: EnvironmentPlan,
+): void {
+  const guidance = plan.layoutGuidance;
+  if (!guidance) {
+    return;
+  }
+
+  const existingMetadata: Record<string, unknown> = {
+    ...(request.metadata || {}),
+  };
+  const placementMode = inferPlacementMode(request);
+  const preferredSurfaceHint = typeof existingMetadata.surfaceHint === 'string'
+    ? existingMetadata.surfaceHint
+    : null;
+  const anchor = findBestLayoutObjectAnchor(guidance, {
+    placementMode,
+    text: `${request.name} ${request.description || ''} ${request.placementHint || ''}`,
+    preferredSurfaceHint,
+    priority: request.priority,
+  });
+
+  if (!anchor) {
+    return;
+  }
+
+  const anchorSurfaceHint = getLayoutAnchorSurfaceHint(anchor.kind);
+  const shotZoneX = getLayoutAnchorShotZoneX(anchor);
+  const shotDepthZone = getLayoutAnchorDepthZone(anchor);
+
+  existingMetadata.layoutAnchorId = anchor.id;
+  existingMetadata.layoutAnchorKind = anchor.kind;
+  existingMetadata.layoutAnchorConfidence = anchor.confidence ?? null;
+  if (anchor.preferredZonePurpose) {
+    existingMetadata.preferredZonePurpose = anchor.preferredZonePurpose;
+  }
+
+  if (placementMode === 'surface' && anchorSurfaceHint) {
+    existingMetadata.surfaceHint = anchorSurfaceHint;
+  }
+  if (placementMode === 'wall' && anchor.wallTarget) {
+    existingMetadata.preferredWallTarget = anchor.wallTarget;
+  }
+
+  if (!hasExplicitDirectionalHint(request)) {
+    if (shotZoneX !== null) {
+      existingMetadata.shotZoneX = shotZoneX;
+      existingMetadata.shotAwarePlacement = true;
+    }
+    if (shotDepthZone) {
+      existingMetadata.shotDepthZone = shotDepthZone;
+      existingMetadata.shotAwarePlacement = true;
+    }
+  }
+
+  request.metadata = existingMetadata;
+}
+
+function inferAnchorEntryFromSearch(
+  surfaceRequest: EnvironmentRuntimePropRequest,
+  plan: EnvironmentPlan,
+): AssetBrainEntry | null {
+  const anchorTypes = getSurfaceAnchorTypes(surfaceRequest);
+  const context = assetBrainService.inferPlanContext(plan);
+  const matches = assetBrainService.search({
+    text: `${surfaceRequest.name} ${surfaceRequest.description || ''} support anchor ${anchorTypes.join(' ')}`.trim(),
+    placementHint: surfaceRequest.placementHint,
+    contextText: [plan.prompt, plan.summary, plan.concept].filter(Boolean).join(' '),
+    assetTypes: ['prop'],
+    preferredPlacementMode: 'ground',
+    preferredRoomTypes: context.roomTypes,
+    surfaceAnchor: anchorTypes[0],
+    categoryHint: 'supporting',
+    limit: 8,
+    minScore: 1.2,
+  });
+
+  return matches
+    .map((match) => match.entry)
+    .find((entry) => {
+      const profile = entry.placementProfile;
+      if (profile?.anchorRole !== 'surface_anchor') {
+        return false;
+      }
+      if (anchorTypes.length === 0) {
+        return true;
+      }
+      return profile.surfaceAnchorTypes.some((anchorType) => anchorTypes.includes(anchorType));
+    }) || null;
 }
 
 function findAnchorRequestForSurface(
@@ -186,6 +446,127 @@ function createAutoAddedAnchorRequest(
       supportsAssetId: surfaceRequest.assetId,
     },
   };
+}
+
+function chooseRelationshipPlacementPair(
+  requests: EnvironmentRuntimePropRequest[],
+  leftRequest: EnvironmentRuntimePropRequest,
+  rightRequest: EnvironmentRuntimePropRequest,
+): {
+  sourceRequest: EnvironmentRuntimePropRequest;
+  targetRequest: EnvironmentRuntimePropRequest;
+} {
+  const leftPriority = priorityRank(leftRequest);
+  const rightPriority = priorityRank(rightRequest);
+
+  if (leftPriority !== rightPriority) {
+    return leftPriority < rightPriority
+      ? { sourceRequest: rightRequest, targetRequest: leftRequest }
+      : { sourceRequest: leftRequest, targetRequest: rightRequest };
+  }
+
+  const leftPlacement = placementRank(leftRequest);
+  const rightPlacement = placementRank(rightRequest);
+  if (leftPlacement !== rightPlacement) {
+    return leftPlacement < rightPlacement
+      ? { sourceRequest: rightRequest, targetRequest: leftRequest }
+      : { sourceRequest: leftRequest, targetRequest: rightRequest };
+  }
+
+  const leftIndex = requests.indexOf(leftRequest);
+  const rightIndex = requests.indexOf(rightRequest);
+  return leftIndex <= rightIndex
+    ? { sourceRequest: rightRequest, targetRequest: leftRequest }
+    : { sourceRequest: leftRequest, targetRequest: rightRequest };
+}
+
+function setRelativePlacementMetadata(
+  request: EnvironmentRuntimePropRequest,
+  targetRequest: EnvironmentRuntimePropRequest,
+  type: RelativePlacementType,
+  reason: string,
+  side?: RelativePlacementSide,
+): void {
+  if (request.metadata?.relativePlacementType) {
+    return;
+  }
+
+  request.metadata = {
+    ...(request.metadata || {}),
+    relativePlacementType: type,
+    relativePlacementReason: reason,
+    relativePlacementTargetAssemblyNodeId: targetRequest.metadata?.assemblyNodeId || null,
+    relativePlacementTargetAssetId: targetRequest.assetId,
+    relativePlacementSide: side || null,
+  };
+}
+
+function setFacingMetadata(
+  request: EnvironmentRuntimePropRequest,
+  target: 'camera' | 'prop',
+  targetRequest?: EnvironmentRuntimePropRequest,
+): void {
+  request.metadata = {
+    ...(request.metadata || {}),
+    faceTarget: target,
+    faceTargetAssemblyNodeId: targetRequest?.metadata?.assemblyNodeId || null,
+    faceTargetAssetId: targetRequest?.assetId || null,
+  };
+}
+
+function inferExplicitRelativePlacement(
+  request: EnvironmentRuntimePropRequest,
+  requests: EnvironmentRuntimePropRequest[],
+  heroRequest: EnvironmentRuntimePropRequest | null,
+): {
+  type: RelativePlacementType;
+  targetRequest: EnvironmentRuntimePropRequest;
+  side?: RelativePlacementSide;
+  reason: string;
+} | null {
+  const hint = (request.placementHint || '').toLowerCase();
+  if (!hint) {
+    return null;
+  }
+
+  const anchorKeyword = getAnchorKeywordFromHint(hint);
+  const explicitAnchorTarget = findRequestByAnchorKeyword(requests, anchorKeyword);
+  const side = inferRelativeSideFromHint(hint);
+  const heroTarget = heroRequest && heroRequest.assetId !== request.assetId ? heroRequest : null;
+  const targetRequest = explicitAnchorTarget || heroTarget;
+
+  if (!targetRequest) {
+    return null;
+  }
+
+  if (includesAny(hint, ['behind', 'background', 'layered behind', 'just behind'])) {
+    return {
+      type: 'behind',
+      targetRequest,
+      side,
+      reason: 'Placement hint requests background depth behind the primary focal element.',
+    };
+  }
+
+  if (includesAny(hint, ['next to', 'beside', 'to the side', 'camera-left', 'camera-right', 'slightly left', 'slightly right'])) {
+    return {
+      type: 'next_to',
+      targetRequest,
+      side,
+      reason: 'Placement hint requests side-by-side staging.',
+    };
+  }
+
+  if (hint.includes('centered') && targetRequest.assetId !== request.assetId) {
+    return {
+      type: 'centered_on',
+      targetRequest,
+      side: 'center',
+      reason: 'Placement hint requests centered alignment against the target asset.',
+    };
+  }
+
+  return null;
 }
 
 function buildSelectedRelationshipMap(
@@ -250,6 +631,11 @@ export function assembleEnvironmentScenegraph(
   const autoAddedAssetIds: string[] = [];
 
   requests.forEach((request) => {
+    applyPlanLayoutGuidanceMetadata(request, plan);
+    applyLayoutObjectAnchorMetadata(request, plan);
+  });
+
+  requests.forEach((request) => {
     if (inferPlacementMode(request) !== 'surface') {
       return;
     }
@@ -291,17 +677,18 @@ export function assembleEnvironmentScenegraph(
       );
     });
 
-    if (!anchorMatch || selectedAssetIds.has(anchorMatch.entry.id)) {
+    const chosenAnchorEntry = anchorMatch?.entry || inferAnchorEntryFromSearch(request, plan);
+    if (!chosenAnchorEntry || selectedAssetIds.has(chosenAnchorEntry.id)) {
       return;
     }
 
-    const anchorRequest = createAutoAddedAnchorRequest(anchorMatch.entry, request);
+    const anchorRequest = createAutoAddedAnchorRequest(chosenAnchorEntry, request);
     requests.push(anchorRequest);
-    selectedAssetIds.add(anchorMatch.entry.id);
-    autoAddedAssetIds.push(anchorMatch.entry.id);
+    selectedAssetIds.add(chosenAnchorEntry.id);
+    autoAddedAssetIds.push(chosenAnchorEntry.id);
     request.metadata = {
       ...(request.metadata || {}),
-      preferredAnchorAssetId: anchorMatch.entry.id,
+      preferredAnchorAssetId: chosenAnchorEntry.id,
     };
   });
 
@@ -316,12 +703,13 @@ export function assembleEnvironmentScenegraph(
       return priorityDelta;
     }
 
-    return left.name.localeCompare(right.name);
+    return getRequestSortLabel(left).localeCompare(getRequestSortLabel(right));
   });
 
   const nodes: EnvironmentScenegraphNode[] = [];
   const relationships: EnvironmentScenegraphRelationship[] = [];
   const shellNodeId = `shell:${plan.planId}`;
+  const cameraNodeId = 'camera:primary';
 
   nodes.push({
     id: shellNodeId,
@@ -334,6 +722,20 @@ export function assembleEnvironmentScenegraph(
       recommendedPresetId: plan.recommendedPresetId || null,
     },
   });
+
+  nodes.push({
+    id: cameraNodeId,
+    type: 'camera',
+    label: `camera:${plan.camera.shotType || 'default'}`,
+    role: 'shell',
+    metadata: {
+      shotType: plan.camera.shotType || null,
+      positionHint: plan.camera.positionHint || null,
+      target: plan.camera.target || null,
+      fov: plan.camera.fov || null,
+    },
+  });
+  relationships.push(createRelationship('contains', shellNodeId, cameraNodeId, 'Shell contains the active framing camera.'));
 
   const surfaceNodeIds = new Map<string, string>();
   plan.surfaces.forEach((surface) => {
@@ -354,6 +756,7 @@ export function assembleEnvironmentScenegraph(
   });
 
   const propNodeIdsByAssetId = new Map<string, string[]>();
+  const requestByNodeId = new Map<string, EnvironmentRuntimePropRequest>();
   orderedRequests.forEach((request, index) => {
     const nodeId = `prop:${index}:${request.assetId}`;
     const role = getPropRole(request);
@@ -376,11 +779,18 @@ export function assembleEnvironmentScenegraph(
         priority: request.priority,
         placementHint: request.placementHint || null,
         preferredAnchorAssetId: request.metadata?.preferredAnchorAssetId || null,
+        preferredWallTarget: request.metadata?.preferredWallTarget || null,
+        preferredZonePurpose: request.metadata?.preferredZonePurpose || null,
+        layoutAnchorKind: request.metadata?.layoutAnchorKind || null,
+        layoutAnchorId: request.metadata?.layoutAnchorId || null,
+        shotZoneX: request.metadata?.shotZoneX ?? null,
+        shotDepthZone: request.metadata?.shotDepthZone ?? null,
       },
     });
     const assetNodeIds = propNodeIdsByAssetId.get(request.assetId) || [];
     assetNodeIds.push(nodeId);
     propNodeIdsByAssetId.set(request.assetId, assetNodeIds);
+    requestByNodeId.set(nodeId, request);
     relationships.push(createRelationship('contains', shellNodeId, nodeId, 'Shell contains assembled runtime props.'));
   });
 
@@ -392,7 +802,9 @@ export function assembleEnvironmentScenegraph(
 
     const placementMode = inferPlacementMode(request);
     if (placementMode === 'wall') {
-      const target = inferWallTargetFromHint(request.placementHint);
+      const target = typeof request.metadata?.preferredWallTarget === 'string'
+        ? request.metadata.preferredWallTarget
+        : inferWallTargetFromHint(request.placementHint);
       const targetNodeId = surfaceNodeIds.get(target);
       if (targetNodeId) {
         relationships.push(createRelationship('attached_to', propNodeId, targetNodeId, 'Wall prop is attached to a shell surface.'));
@@ -411,6 +823,56 @@ export function assembleEnvironmentScenegraph(
   });
 
   const heroNode = nodes.find((node) => node.type === 'prop' && node.role === 'hero');
+  const heroRequest = heroNode ? requestByNodeId.get(heroNode.id) || null : null;
+
+  if (heroRequest) {
+    if (!heroRequest.metadata?.layoutAnchorId) {
+      applyHeroShotAwareMetadata(heroRequest, plan);
+    }
+    const heroNodeIndex = nodes.findIndex((node) => node.id === heroNode?.id);
+    if (heroNodeIndex >= 0) {
+      nodes[heroNodeIndex] = {
+        ...nodes[heroNodeIndex],
+        metadata: {
+          ...(nodes[heroNodeIndex].metadata || {}),
+          shotZoneX: heroRequest.metadata?.shotZoneX ?? null,
+          shotDepthZone: heroRequest.metadata?.shotDepthZone ?? null,
+        },
+      };
+    }
+  }
+
+  orderedRequests.forEach((request) => {
+    const placementMode = inferPlacementMode(request);
+    const nodeId = request.metadata?.assemblyNodeId as string | undefined;
+    if (!nodeId) {
+      return;
+    }
+
+    const explicitRelativePlacement = inferExplicitRelativePlacement(request, orderedRequests, heroRequest);
+    if (explicitRelativePlacement && placementMode !== 'wall') {
+      setRelativePlacementMetadata(
+        request,
+        explicitRelativePlacement.targetRequest,
+        explicitRelativePlacement.type,
+        explicitRelativePlacement.reason,
+        explicitRelativePlacement.side,
+      );
+      relationships.push(createRelationship(
+        explicitRelativePlacement.type,
+        nodeId,
+        explicitRelativePlacement.targetRequest.metadata?.assemblyNodeId as string,
+        explicitRelativePlacement.reason,
+      ));
+    }
+
+    const hint = (request.placementHint || '').toLowerCase();
+    if (includesAny(hint, ['towards the camera', 'toward the camera', 'facing the camera', 'towards camera', 'toward camera'])) {
+      setFacingMetadata(request, 'camera');
+      relationships.push(createRelationship('facing', nodeId, cameraNodeId, 'Placement hint requests that the asset faces the camera.'));
+    }
+  });
+
   if (heroNode) {
     relationships.push(createRelationship('hero_focus', shellNodeId, heroNode.id, 'Hero prop should stay in the primary composition field.'));
   }
@@ -431,6 +893,40 @@ export function assembleEnvironmentScenegraph(
       relationship.reason,
       relationship.strength,
     ));
+
+    if (relationship.type === 'paired_with' || relationship.type === 'styled_with') {
+      const leftRequest = requestByNodeId.get(leftNodeId);
+      const rightRequest = requestByNodeId.get(rightNodeId);
+      if (!leftRequest || !rightRequest) {
+        return;
+      }
+
+      const { sourceRequest, targetRequest } = chooseRelationshipPlacementPair(
+        orderedRequests,
+        leftRequest,
+        rightRequest,
+      );
+      const placementMode = inferPlacementMode(sourceRequest);
+      if (placementMode === 'wall') {
+        return;
+      }
+
+      const side = inferRelativeSideFromHint(sourceRequest.placementHint);
+      setRelativePlacementMetadata(
+        sourceRequest,
+        targetRequest,
+        'next_to',
+        relationship.reason,
+        side,
+      );
+      relationships.push(createRelationship(
+        'next_to',
+        sourceRequest.metadata?.assemblyNodeId as string,
+        targetRequest.metadata?.assemblyNodeId as string,
+        relationship.reason,
+        relationship.strength,
+      ));
+    }
   });
 
   if (heroNode) {
@@ -449,7 +945,7 @@ export function assembleEnvironmentScenegraph(
     assembly: {
       planId: plan.planId,
       nodes,
-      relationships,
+      relationships: Array.from(new Map(relationships.map((relationship) => [relationship.id, relationship])).values()),
       autoAddedAssetIds,
     },
     runtimeProps: orderedRequests,

@@ -14,6 +14,8 @@ backend/outputs/
 
 # Store assets
 # attached_assets/ - Now tracked in git
+*.storage.json
+backend/outputs/r2_large_asset_sync_report.json
 *.pth
 *.tar
 *.tar.gz

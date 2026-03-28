@@ -20,27 +20,34 @@ Brukeren skal kunne beskrive en scene med tekst, referansebilde eller Genie-lign
 - [x] Bruke footprint, clearance og anchor-profiler under auto-plassering.
 - [x] Finne bord-/counter-ankere for surface-props automatisk.
 - [x] Unngå enkle overlappinger på gulv og på samme surface-anchor.
-- [ ] Legge inn eksplisitt kollisjonssjekk med mesh-bounds, ikke bare footprint.
+- [x] Legge inn eksplisitt kollisjonssjekk med mesh-bounds, ikke bare footprint.
+- [x] Bruke `layoutGuidance` for surface-props, ikke bare gulv- og veggprops.
 - [ ] Legge inn “snap to wall / floor / surface” med normale og offsets.
-- [ ] Støtte relative relasjoner som `next_to`, `behind`, `stacked_on`, `under`, `facing`.
-- [ ] Prioritere shot-aware plassering: hero-objekter i kameraets primære komposisjonsfelt.
-- [ ] Bygge `POST /api/environment/assemble` som returnerer konkret scenegraph, ikke bare forslag.
+- [x] Støtte relative relasjoner som `next_to`, `behind` og `facing`.
+- [ ] Utvide relative relasjoner med `stacked_on` og `under`.
+- [x] Prioritere shot-aware plassering: hero-objekter i kameraets primære komposisjonsfelt.
+- [x] Bygge `POST /api/environment/assemble` som returnerer konkret scenegraph, ikke bare forslag.
 
 ## Phase 3: Image -> Layout
 
 - [ ] Koble på `SAM 2` for promptbar segmentering av objekter/personer.
 - [ ] Koble på `Depth Anything V2` for dybdekart og plane-estimering.
-- [ ] Trekke ut layout-hints: veggflater, gulv, horisont, vanishing lines, avstander, høyder.
-- [ ] Konvertere bildeanalyse til `LayoutHints`-JSON.
-- [ ] Koble `LayoutHints` inn i planner og placement engine.
-- [ ] Bygge `POST /api/environment/layout-from-image`.
+- [x] Gjøre layout-tjenesten provider-basert med `auto | heuristics | sam2_depth`.
+- [x] Normalisere separate `SAM 2`-/depth-svar til strukturerte layout-signaler som `detectedOpenings`, `objectAnchors`, `surfacePolygons` og `visiblePlaneConfidence`.
+- [x] Trekke ut layout-hints: veggflater, gulv, horisont, vanishing lines, avstander, høyder.
+- [x] Konvertere bildeanalyse til `LayoutHints`-JSON.
+- [x] Koble `LayoutHints` inn i planner og placement engine.
+- [x] Bruke `objectAnchors` til å styre surface-/wall-placement og karakterplassering når referansebildet gir tydelige ankere.
+- [x] Bygge `POST /api/environment/layout-from-image`.
 
 ## Phase 4: Lighting + Camera Auto-Rig
 
-- [ ] Introdusere `LightingIntent` i planen: `hero_product`, `beauty`, `interview`, `dramatic`, `soft_daylight`, `noir`, `cyberpunk`.
-- [ ] Generere faktisk lysrigg i runtime, ikke bare tekstlige cues.
+- [x] Introdusere `LightingIntent` i planen: `hero_product`, `beauty`, `interview`, `dramatic`, `soft_daylight`, `noir`, `cyberpunk`.
+- [x] Rigge kamera i runtime fra `shotType`, hero-prop og room shell.
+- [x] Generere faktisk lysrigg i runtime, ikke bare tekstlige cues.
+- [x] Gjøre lysriggen layout-aware, så key/fill/background-lys følger hero- og bakgrunnssoner.
 - [ ] Legge inn AI-validering for separasjon, catchlights, highlight-kontroll og bakgrunnsratio.
-- [ ] Støtte bevegelse i lyset via cue curves og behaviors:
+- [x] Støtte bevegelse i lyset via cue curves og behaviors:
   - `pulse`
   - `flicker`
   - `orbit`
@@ -52,11 +59,14 @@ Brukeren skal kunne beskrive en scene med tekst, referansebilde eller Genie-lign
 
 ## Phase 5: Parametric Room Shell
 
-- [ ] Erstatte fast 20x20-shell med parametrisk rombygger.
-- [ ] Støtte bredde, dybde, høyde, taktype, åpninger, nisjer og modulære veggsegmenter.
-- [ ] Støtte typene `interior_room`, `warehouse`, `storefront`, `abstract_stage`, `outdoor_illusion`.
-- [ ] Bygge `POST /api/environment/build-shell`.
-- [ ] Oppdatere diagnostics så faktisk shell-størrelse, åpninger og ankerflater er synlige i e2e.
+- [x] Erstatte fast 20x20-shell med første parametriske rombygger.
+- [x] Støtte bredde, dybde, høyde, taktype, åpninger, nisjer og modulære veggsegmenter.
+- [x] Legge inn første runtime-støtte for `ceilingStyle` og modulære `wallSegments`.
+- [x] Legge inn nisjer som første modulære veggdetalj i planner, shell-builder og runtime.
+- [x] Støtte typene `interior_room`, `warehouse`, `storefront`, `abstract_stage`, `outdoor_illusion`.
+- [x] Bygge `POST /api/environment/build-shell`.
+- [x] Oppdatere diagnostics så faktisk shell-størrelse er synlig i e2e.
+- [x] Utvide diagnostics med åpninger og shell-tilbehør i e2e.
 
 ## Phase 6: Missing Asset Generation
 
@@ -77,7 +87,7 @@ Brukeren skal kunne beskrive en scene med tekst, referansebilde eller Genie-lign
   - collision / floating / clipping
   - room realism
 - [ ] Auto-iterere scene til scoren er over terskel eller budsjettet er brukt opp.
-- [ ] Bygge `POST /api/environment/validate`.
+- [x] Bygge `POST /api/environment/validate`.
 
 ## Phase 8: Virtual Production Alignment
 
@@ -90,6 +100,6 @@ Brukeren skal kunne beskrive en scene med tekst, referansebilde eller Genie-lign
 
 - [ ] Erstatte token-søk i `Asset Brain` med embedding-basert retrieval.
 - [x] Lage en egen `scenegraph assembly`-modell som placement engine skriver til.
-- [ ] Gjøre lysrigg om fra forslag til faktisk runtime-rigg.
-- [ ] Bruke `roomShell`-data til å bygge ekte parametrisk geometri.
-- [ ] Legge på en Playwright-regresjon for “AI -> shell -> props -> lys -> kamera -> diagnostics”.
+- [x] Gjøre lysrigg om fra forslag til faktisk runtime-rigg.
+- [x] Bruke `roomShell`-data til å bygge første modulære parametriske geometri for nisjer, takbehandling og veggsegmenter.
+- [x] Legge på en Playwright-regresjon for “AI -> shell -> props -> lys -> kamera -> diagnostics”.

@@ -54,6 +54,7 @@ function buildPlaceholderSvg(pathname: string): string {
 function devAssetFallbackPlugin() {
   const publicDir = resolve(process.cwd(), 'public');
   const attachedAssetsDir = resolve(process.cwd(), 'attached_assets');
+  const avatarLibraryDir = resolve(process.cwd(), 'backend', 'test_images');
 
   const getContentType = (pathname: string): string => {
     const extension = extname(pathname).toLowerCase();
@@ -117,11 +118,109 @@ function devAssetFallbackPlugin() {
 
         const localPath = resolve(attachedAssetsDir, `.${pathname.slice('/attached_assets'.length)}`);
         if (!existsSync(localPath)) {
+          if (existsSync(`${localPath}.storage.json`)) {
+            res.statusCode = 307;
+            res.setHeader('Location', `/api/storage/repo-file?path=${encodeURIComponent(pathname.slice(1))}`);
+            res.end();
+            return;
+          }
           next();
           return;
         }
 
         res.setHeader('Content-Type', getContentType(localPath));
+        res.setHeader('Cache-Control', 'no-store');
+        createReadStream(localPath).pipe(res);
+      });
+
+      server.middlewares.use((req, res, next) => {
+        if (req.method !== 'GET' || !req.url) {
+          next();
+          return;
+        }
+
+        const pathname = req.url.split('?')[0];
+        const isRootStaticAsset =
+          pathname.startsWith('/') &&
+          pathname !== '/' &&
+          !!extname(pathname) &&
+          !pathname.startsWith('/api/') &&
+          !pathname.startsWith('/public/') &&
+          !pathname.startsWith('/attached_assets/') &&
+          !pathname.startsWith('/models/') &&
+          !pathname.startsWith('/src/') &&
+          !pathname.startsWith('/@');
+
+        if (!isRootStaticAsset) {
+          next();
+          return;
+        }
+
+        const localPath = resolve(publicDir, `.${pathname}`);
+        if (!existsSync(localPath) && existsSync(`${localPath}.storage.json`)) {
+          res.statusCode = 307;
+          res.setHeader('Location', `/api/storage/repo-file?path=${encodeURIComponent(`public/${pathname.slice(1)}`)}`);
+          res.end();
+          return;
+        }
+
+        next();
+      });
+
+      server.middlewares.use((req, res, next) => {
+        if (req.method !== 'GET' || !req.url) {
+          next();
+          return;
+        }
+
+        const pathname = req.url.split('?')[0];
+        if (!pathname.startsWith('/public/')) {
+          next();
+          return;
+        }
+
+        const localPath = resolve(publicDir, `.${pathname.slice('/public'.length)}`);
+        if (!existsSync(localPath)) {
+          if (existsSync(`${localPath}.storage.json`)) {
+            res.statusCode = 307;
+            res.setHeader('Location', `/api/storage/repo-file?path=${encodeURIComponent(pathname.slice(1))}`);
+            res.end();
+            return;
+          }
+          next();
+          return;
+        }
+
+        res.setHeader('Content-Type', getContentType(localPath));
+        res.setHeader('Cache-Control', 'no-store');
+        createReadStream(localPath).pipe(res);
+      });
+
+      server.middlewares.use((req, res, next) => {
+        if (req.method !== 'GET' || !req.url) {
+          next();
+          return;
+        }
+
+        const pathname = req.url.split('?')[0];
+        if (!pathname.startsWith('/models/avatars/')) {
+          next();
+          return;
+        }
+
+        const localPath = resolve(avatarLibraryDir, `.${pathname.slice('/models/avatars'.length)}`);
+        if (!existsSync(localPath)) {
+          if (existsSync(`${localPath}.storage.json`)) {
+            res.statusCode = 307;
+            res.setHeader('Location', `/api/avatars/${encodeURIComponent(basename(pathname))}`);
+            res.end();
+            return;
+          }
+          next();
+          return;
+        }
+
+        res.setHeader('Content-Type', 'model/gltf-binary');
         res.setHeader('Cache-Control', 'no-store');
         createReadStream(localPath).pipe(res);
       });
@@ -156,7 +255,7 @@ export default defineConfig({
     esbuildOptions: {
       target: 'esnext',
     },
-    force: true,
+    force: process.env.VITE_FORCE_OPTIMIZE_DEPS === '1',
   },
   server: {
     host: '0.0.0.0',
@@ -165,7 +264,7 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8001',
         changeOrigin: true,
       },
       // Proxy R2 CDN requests to avoid CORS issues in development

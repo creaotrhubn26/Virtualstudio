@@ -62,6 +62,20 @@ export const sceneCompressionService = {
           ai: scene.environment.atmosphere.ambientIntensity,
         } : undefined,
       } : undefined,
+      environmentAssemblyValidation: scene.environmentAssemblyValidation ? {
+        bv: scene.environmentAssemblyValidation.backendValidated,
+        d: scene.environmentAssemblyValidation.differences,
+        lnc: scene.environmentAssemblyValidation.localNodeCount,
+        lrc: scene.environmentAssemblyValidation.localRelationshipCount,
+        lrpc: scene.environmentAssemblyValidation.localRuntimePropCount,
+        lra: scene.environmentAssemblyValidation.localRuntimeAssetIds,
+        bnc: scene.environmentAssemblyValidation.backendNodeCount,
+        brc: scene.environmentAssemblyValidation.backendRelationshipCount,
+        brpc: scene.environmentAssemblyValidation.backendRuntimePropCount,
+        bra: scene.environmentAssemblyValidation.backendRuntimeAssetIds,
+        bst: scene.environmentAssemblyValidation.backendShellType,
+        va: scene.environmentAssemblyValidation.validatedAt,
+      } : undefined,
     };
 
     return JSON.stringify(compressed);
@@ -124,6 +138,20 @@ export const sceneCompressionService = {
           ambientIntensity: data.environment.a.ai,
         } : undefined,
       } : undefined,
+      environmentAssemblyValidation: data.environmentAssemblyValidation ? {
+        backendValidated: Boolean(data.environmentAssemblyValidation.bv),
+        differences: data.environmentAssemblyValidation.d || [],
+        localNodeCount: data.environmentAssemblyValidation.lnc || 0,
+        localRelationshipCount: data.environmentAssemblyValidation.lrc || 0,
+        localRuntimePropCount: data.environmentAssemblyValidation.lrpc || 0,
+        localRuntimeAssetIds: data.environmentAssemblyValidation.lra || [],
+        backendNodeCount: data.environmentAssemblyValidation.bnc,
+        backendRelationshipCount: data.environmentAssemblyValidation.brc,
+        backendRuntimePropCount: data.environmentAssemblyValidation.brpc,
+        backendRuntimeAssetIds: data.environmentAssemblyValidation.bra || [],
+        backendShellType: data.environmentAssemblyValidation.bst,
+        validatedAt: data.environmentAssemblyValidation.va,
+      } : undefined,
     };
   },
 
@@ -136,4 +164,3 @@ export const sceneCompressionService = {
     return originalSize > 0 ? (compressedSize / originalSize) * 100 : 0;
   },
 };
-

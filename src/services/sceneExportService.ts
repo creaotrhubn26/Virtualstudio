@@ -1,4 +1,5 @@
 import { SceneComposition } from '../core/models/sceneComposer';
+import { sceneAssetStorageService } from './sceneAssetStorageService';
 
 export type ExportFormat = 'json' | 'xml' | 'yaml';
 
@@ -13,6 +14,7 @@ export interface ExportOptions {
   includeTimeline: boolean;
   includeThumbnail: boolean;
   includeEnvironment: boolean;
+  includeValidation: boolean;
 }
 
 export const sceneExportService = {
@@ -31,6 +33,7 @@ export const sceneExportService = {
       includeTimeline: true,
       includeThumbnail: true,
       includeEnvironment: true,
+      includeValidation: true,
     };
 
     const opts = { ...defaultOptions, ...options };
@@ -52,6 +55,7 @@ export const sceneExportService = {
     if (opts.includeTimeline) exported.timeline = scene.timeline;
     if (opts.includeThumbnail) exported.thumbnail = scene.thumbnail;
     if (opts.includeEnvironment) exported.environment = scene.environment;
+    if (opts.includeValidation) exported.environmentAssemblyValidation = scene.environmentAssemblyValidation;
 
     return JSON.stringify(exported, null, 2);
   },
@@ -71,6 +75,7 @@ export const sceneExportService = {
       includeTimeline: true,
       includeThumbnail: true,
       includeEnvironment: true,
+      includeValidation: true,
     };
 
     const opts = { ...defaultOptions, ...options };
@@ -143,6 +148,30 @@ export const sceneExportService = {
       xml += '  </environment>\n';
     }
 
+    if (opts.includeValidation && scene.environmentAssemblyValidation) {
+      const validation = scene.environmentAssemblyValidation;
+      xml += `  <environmentAssemblyValidation backendValidated="${validation.backendValidated}">\n`;
+      if (validation.validatedAt) {
+        xml += `    <validatedAt>${this.escapeXML(validation.validatedAt)}</validatedAt>\n`;
+      }
+      if (validation.backendShellType) {
+        xml += `    <backendShellType>${this.escapeXML(validation.backendShellType)}</backendShellType>\n`;
+      }
+      xml += `    <localRuntimePropCount>${validation.localRuntimePropCount}</localRuntimePropCount>\n`;
+      xml += `    <localRelationshipCount>${validation.localRelationshipCount}</localRelationshipCount>\n`;
+      if (typeof validation.backendRuntimePropCount === 'number') {
+        xml += `    <backendRuntimePropCount>${validation.backendRuntimePropCount}</backendRuntimePropCount>\n`;
+      }
+      if (validation.differences.length > 0) {
+        xml += '    <differences>\n';
+        validation.differences.forEach(difference => {
+          xml += `      <difference>${this.escapeXML(difference)}</difference>\n`;
+        });
+        xml += '    </differences>\n';
+      }
+      xml += '  </environmentAssemblyValidation>\n';
+    }
+
     xml += '</scene>';
     return xml;
   },
@@ -162,6 +191,7 @@ export const sceneExportService = {
       includeTimeline: true,
       includeThumbnail: true,
       includeEnvironment: true,
+      includeValidation: true,
     };
 
     const opts = { ...defaultOptions, ...options };
@@ -225,6 +255,27 @@ export const sceneExportService = {
       }
     }
 
+    if (opts.includeValidation && scene.environmentAssemblyValidation) {
+      const validation = scene.environmentAssemblyValidation;
+      yaml += 'environmentAssemblyValidation:\n';
+      yaml += `  backendValidated: ${validation.backendValidated}\n`;
+      if (validation.validatedAt) {
+        yaml += `  validatedAt: ${validation.validatedAt}\n`;
+      }
+      if (validation.backendShellType) {
+        yaml += `  backendShellType: ${validation.backendShellType}\n`;
+      }
+      yaml += `  localRuntimePropCount: ${validation.localRuntimePropCount}\n`;
+      yaml += `  localRelationshipCount: ${validation.localRelationshipCount}\n`;
+      if (typeof validation.backendRuntimePropCount === 'number') {
+        yaml += `  backendRuntimePropCount: ${validation.backendRuntimePropCount}\n`;
+      }
+      yaml += '  differences:\n';
+      validation.differences.forEach(difference => {
+        yaml += `    - ${difference}\n`;
+      });
+    }
+
     return yaml;
   },
 
@@ -243,7 +294,7 @@ export const sceneExportService = {
   /**
    * Download scene in specified format
    */
-  downloadScene(scene: SceneComposition, format: ExportFormat, options: Partial<ExportOptions> = {}): void {
+  async downloadScene(scene: SceneComposition, format: ExportFormat, options: Partial<ExportOptions> = {}): Promise<void> {
     let content: string;
     let mimeType: string;
     let extension: string;
@@ -266,15 +317,26 @@ export const sceneExportService = {
         break;
     }
 
+    const fileName = `${scene.name.replace(/[^a-z0-9]/gi, '_')}.${extension}`;
+    const downloadedFromStorage = await sceneAssetStorageService.maybeDownloadSceneExport({
+      sceneId: scene.id,
+      fileName,
+      content,
+      contentType: mimeType,
+      format,
+    });
+    if (downloadedFromStorage) {
+      return;
+    }
+
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${scene.name.replace(/[^a-z0-9]/gi, '_')}.${extension}`;
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   },
 };
-

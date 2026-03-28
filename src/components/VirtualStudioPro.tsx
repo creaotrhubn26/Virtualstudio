@@ -39,6 +39,10 @@ import { useCollaborationStore } from '../services/collaborationService';
 import { useStreamingStore } from '../services/streamingService';
 import { useParticleStore } from '../services/particleService';
 import { useSpatialAudioStore } from '../services/spatialAudioService';
+import {
+  consumeBufferedPanelPayload,
+  markBufferedPanelReady,
+} from '../services/panelOpenBuffer';
 
 // Loading fallback component
 const PanelLoadingFallback = () => (
@@ -86,6 +90,10 @@ const darkTheme = createTheme({
 });
 
 type PanelType = 'collaboration' | 'xr' | 'animation' | 'streaming' | 'rendering' | 'export' | 'particles' | 'audio' | null;
+
+type PendingProPanelOpenRequest = {
+  panel?: Exclude<PanelType, null> | null;
+};
 
 interface VirtualStudioProProps {
   scene?: BABYLON.Scene | null;
@@ -138,20 +146,58 @@ export const VirtualStudioPro: React.FC<VirtualStudioProProps> = ({ scene: propS
     }
   }, [propCamera]);
   
-  // Listen for toggle-pro-panel events from the TopView Pro menu
+  // Keep toggle-pro-panel as a legacy compatibility path; modern callers use vs-open-pro-panel/vs-close-pro-panel.
   useEffect(() => {
+    const panelWindow = window as Window & {
+      __virtualStudioGlobalVirtualStudioProHost?: {
+        open: (panel?: Exclude<PanelType, null> | null) => void;
+        close: (panel?: Exclude<PanelType, null> | null) => void;
+        getSnapshot: () => { activePanel: PanelType };
+      };
+    };
+
+    const applyOpenRequest = (request?: PendingProPanelOpenRequest | null) => {
+      const panel = request?.panel ?? null;
+      if (panel) {
+        setActivePanel(panel);
+      }
+    };
+
     const handleTogglePanel = (e: CustomEvent<{ panel: string }>) => {
       const panel = e.detail.panel as PanelType;
       if (panel) {
         setActivePanel(current => current === panel ? null : panel);
       }
     };
-    
+
+    const closePanel = (requestedPanel?: Exclude<PanelType, null> | null) => {
+      setActivePanel(current => {
+        if (!requestedPanel) {
+          return null;
+        }
+        return current === requestedPanel ? null : current;
+      });
+    };
+
+    const pendingRequest = consumeBufferedPanelPayload<PendingProPanelOpenRequest>('virtualStudioPro');
+    if (pendingRequest?.hasEvent) {
+      applyOpenRequest(pendingRequest.payload);
+    }
+
+    panelWindow.__virtualStudioGlobalVirtualStudioProHost = {
+      open: (panel) => applyOpenRequest({ panel }),
+      close: (panel) => closePanel(panel ?? null),
+      getSnapshot: () => ({ activePanel }),
+    };
+
+    markBufferedPanelReady('virtualStudioPro', true);
     window.addEventListener('toggle-pro-panel', handleTogglePanel as EventListener);
     return () => {
+      markBufferedPanelReady('virtualStudioPro', false);
+      delete panelWindow.__virtualStudioGlobalVirtualStudioProHost;
       window.removeEventListener('toggle-pro-panel', handleTogglePanel as EventListener);
     };
-  }, []);
+  }, [activePanel]);
   
   const togglePanel = useCallback((panel: PanelType) => {
     setActivePanel(current => current === panel ? null : panel);
@@ -211,7 +257,11 @@ export const VirtualStudioPro: React.FC<VirtualStudioProProps> = ({ scene: propS
   return (
     <ThemeProvider theme={darkTheme}>
       {/* Panels - positioned based on active panel */}
-      <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 900 }}>
+      <Box
+        data-testid="virtual-studio-pro-shell"
+        data-active-panel={activePanel ?? ''}
+        sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 900 }}
+      >
         {/* Each panel manages its own positioning - wrapped in Suspense for lazy loading */}
         <Suspense fallback={<PanelLoadingFallback />}>
           {activePanel === 'collaboration' && (

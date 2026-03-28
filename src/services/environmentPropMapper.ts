@@ -17,6 +17,38 @@ function includesAny(text: string, tokens: string[]): boolean {
   return tokens.some((token) => text.includes(token));
 }
 
+function isHeroPizzaSuggestion(
+  suggestion: EnvironmentPlanPropSuggestion,
+  primaryText: string,
+): boolean {
+  if (includesAny(primaryText, ['freshly baked pizza', 'hero pizza', 'whole pizza', 'pizza pie'])) {
+    return true;
+  }
+
+  if (suggestion.category !== 'hero') {
+    return false;
+  }
+
+  if (!includesAny(primaryText, ['pizza', 'pie'])) {
+    return false;
+  }
+
+  return !includesAny(primaryText, [
+    'peel',
+    'counter',
+    'prep',
+    'oven',
+    'menu',
+    'board',
+    'sign',
+    'poster',
+    'box',
+    'boxes',
+    'slice',
+    'slices',
+  ]);
+}
+
 function pushUnique(
   target: EnvironmentRuntimePropRequest[],
   seen: Set<string>,
@@ -33,9 +65,15 @@ function createRequest(
   suggestion: EnvironmentPlanPropSuggestion,
   metadata?: Record<string, unknown>,
 ): EnvironmentRuntimePropRequest {
+  const resolvedName = typeof suggestion.name === 'string' && suggestion.name.trim().length > 0
+    ? suggestion.name.trim()
+    : typeof suggestion.description === 'string' && suggestion.description.trim().length > 0
+      ? suggestion.description.trim()
+      : assetId;
+
   return {
     assetId,
-    name: suggestion.name,
+    name: resolvedName,
     description: suggestion.description,
     priority: suggestion.priority,
     placementHint: suggestion.placementHint,
@@ -106,7 +144,7 @@ function mapSuggestionToRequests(
     .toLowerCase();
   const isPizzaContext = includesAny(contextText, ['pizza', 'pizzeria', 'restaurant', 'food', 'kitchen']);
 
-  if (includesAny(primaryText, ['freshly baked pizza', 'hero pizza', 'whole pizza', 'pizza'])) {
+  if (isHeroPizzaSuggestion(suggestion, primaryText)) {
     requests.push(createRequest('pizza_hero_display', suggestion, {
       placementMode: 'surface',
       surfaceHint: 'table',

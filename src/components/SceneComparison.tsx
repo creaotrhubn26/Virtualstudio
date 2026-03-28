@@ -115,13 +115,29 @@ class SnapshotManager {
     // Save to database
     if (this.currentSceneId) {
       try {
-        await snapshotsApi.create({
+        const persisted = await snapshotsApi.create({
           sceneId: this.currentSceneId,
           name: snapshot.name,
           description: snapshot.description,
           thumbnailUrl: snapshot.imageDataUrl,
           sceneState: snapshot.sceneData,
         });
+
+        const snapshotIndex = this.snapshots.findIndex((entry) => entry.id === newSnapshot.id);
+        if (snapshotIndex >= 0) {
+          this.snapshots[snapshotIndex] = {
+            ...this.snapshots[snapshotIndex],
+            id: persisted.id,
+            timestamp: persisted.createdAt ? new Date(persisted.createdAt).getTime() : this.snapshots[snapshotIndex].timestamp,
+            imageDataUrl: persisted.thumbnailUrl || this.snapshots[snapshotIndex].imageDataUrl,
+            description: persisted.description ?? this.snapshots[snapshotIndex].description,
+          };
+          newSnapshot.id = this.snapshots[snapshotIndex].id;
+          newSnapshot.timestamp = this.snapshots[snapshotIndex].timestamp;
+          newSnapshot.imageDataUrl = this.snapshots[snapshotIndex].imageDataUrl;
+          this.notify();
+          this.save();
+        }
       } catch (e) {
         log.warn('Failed to save snapshot to database: ', e);
       }
@@ -789,4 +805,3 @@ export function SceneComparisonPanel({
 }
 
 export default SceneComparisonPanel;
-

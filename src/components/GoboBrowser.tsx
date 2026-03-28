@@ -45,6 +45,16 @@ interface GoboBrowserProps {
 }
 
 export const GoboBrowser: FC<GoboBrowserProps> = ({ selectedLightId, onClose }) => {
+  const [runtimeSelectedLightId, setRuntimeSelectedLightId] = useState<string | null>(() => {
+    const snapshot = (window as Window & {
+      __virtualStudioCameraLightingSync?: {
+        selection?: {
+          selectedLightId?: string | null;
+        };
+      };
+    }).__virtualStudioCameraLightingSync;
+    return snapshot?.selection?.selectedLightId ?? null;
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedGobo, setSelectedGobo] = useState<GoboDefinition | null>(null);
@@ -55,6 +65,29 @@ export const GoboBrowser: FC<GoboBrowserProps> = ({ selectedLightId, onClose }) 
   });
   const [attachMode, setAttachMode] = useState<'light' | 'standalone'>('light');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const resolvedSelectedLightId = selectedLightId ?? runtimeSelectedLightId ?? undefined;
+
+  useEffect(() => {
+    if (selectedLightId) {
+      setRuntimeSelectedLightId(selectedLightId);
+      return;
+    }
+
+    const handleCameraLightingSync = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const nextSelectedLightId = customEvent.detail?.selection?.selectedLightId;
+      setRuntimeSelectedLightId(typeof nextSelectedLightId === 'string' ? nextSelectedLightId : null);
+    };
+
+    window.addEventListener('vs-camera-lighting-sync', handleCameraLightingSync as EventListener);
+    return () => window.removeEventListener('vs-camera-lighting-sync', handleCameraLightingSync as EventListener);
+  }, [selectedLightId]);
+
+  useEffect(() => {
+    if (attachMode === 'light' && !resolvedSelectedLightId) {
+      setAttachMode('standalone');
+    }
+  }, [attachMode, resolvedSelectedLightId]);
 
   const categories = ['all', 'architectural', 'nature', 'abstract', 'custom'];
 
@@ -73,17 +106,18 @@ export const GoboBrowser: FC<GoboBrowserProps> = ({ selectedLightId, onClose }) 
       rotation: gobo.defaultRotation,
       intensity: 1.0,
     });
+    setAttachMode(resolvedSelectedLightId ? 'light' : 'standalone');
     setDialogOpen(true);
   };
 
   const handleApply = () => {
     if (!selectedGobo) return;
 
-    if (attachMode === 'light' && selectedLightId) {
+    if (attachMode === 'light' && resolvedSelectedLightId) {
       // Attach to light
       window.dispatchEvent(new CustomEvent('ch-attach-gobo', {
         detail: {
-          lightId: selectedLightId,
+          lightId: resolvedSelectedLightId,
           goboId: selectedGobo.id,
           options: goboOptions,
         }
@@ -105,16 +139,16 @@ export const GoboBrowser: FC<GoboBrowserProps> = ({ selectedLightId, onClose }) 
   };
 
   const handleRemoveGobo = () => {
-    if (selectedLightId) {
+    if (resolvedSelectedLightId) {
       window.dispatchEvent(new CustomEvent('ch-remove-gobo', {
-        detail: { lightId: selectedLightId }
+        detail: { lightId: resolvedSelectedLightId }
       }));
       if (onClose) onClose();
     }
   };
 
   // Check if selected light has a gobo
-  const hasGobo = selectedLightId && goboService.getGoboAttachment(selectedLightId);
+  const hasGobo = resolvedSelectedLightId && goboService.getGoboAttachment(resolvedSelectedLightId);
 
   return (
     <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#0d1117' }}>
@@ -288,8 +322,8 @@ export const GoboBrowser: FC<GoboBrowserProps> = ({ selectedLightId, onClose }) 
                 onChange={(e) => setAttachMode(e.target.value as 'light' | 'standalone')}
                 label="Plasseringsmodus"
               >
-                <MenuItem value="light" disabled={!selectedLightId}>
-                  Fest til lys {selectedLightId ? `(${selectedLightId})` : '(Ingen valgt)'}
+                <MenuItem value="light" disabled={!resolvedSelectedLightId}>
+                  Fest til lys {resolvedSelectedLightId ? `(${resolvedSelectedLightId})` : '(Ingen valgt)'}
                 </MenuItem>
                 <MenuItem value="standalone">Plasser som egen gjenstand</MenuItem>
               </Select>
@@ -344,5 +378,3 @@ export const GoboBrowser: FC<GoboBrowserProps> = ({ selectedLightId, onClose }) 
 };
 
 export default GoboBrowser;
-
-

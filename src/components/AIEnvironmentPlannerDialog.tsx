@@ -26,6 +26,25 @@ import UploadIcon from '@mui/icons-material/Upload';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import type { EnvironmentPlanApplyResult } from '../services/environmentPlannerService';
 import { environmentPlannerService } from '../services/environmentPlannerService';
+import type { EnvironmentAssemblyValidationSummary } from '../services/environmentAssemblyValidation';
+import {
+  extractBrandPaletteOptionsFromFile,
+  type BrandPaletteOption,
+} from '../services/brandPaletteService';
+import {
+  getBrandDirectionPresetById,
+  getBrandDirectionPresets,
+} from '../services/brandDirectionService';
+import {
+  buildBrandReferenceFromProfile,
+  clearStoredBrandProfile,
+  getStoredBrandProfile,
+  hasMeaningfulBrandProfile,
+  saveStoredBrandProfile,
+  type StoredBrandProfile,
+} from '../services/brandProfileService';
+import { getEnvironmentEvaluationPresentation } from '../services/environmentEvaluationPresentation';
+import { getEnvironmentPlanInsightPresentation } from '../services/environmentPlanInsightPresentation';
 import { environmentService } from '../core/services/environmentService';
 import {
   getEnvironmentById,
@@ -54,6 +73,9 @@ type AIPlannerTestDraft = {
   sceneTalent?: string;
   shotIntent?: string;
   mustHaveElements?: string;
+  brandName?: string;
+  brandNotes?: string;
+  brandLogoImage?: AIPlannerReferenceImageSeed | null;
   selectedTemplateId?: string;
   worldModelProvider?: WorldModelProvider;
   geniePrompt?: string;
@@ -70,23 +92,37 @@ type AIPlannerTestSnapshot = {
   worldModelProvider: WorldModelProvider;
   selectedTemplateId: string;
   selectedFileNames: string[];
+  brandName: string;
+  brandNotes: string;
+  brandLogoName: string | null;
+  selectedBrandPaletteId: string;
+  selectedBrandDirectionId: string;
+  storedBrandProfileName: string | null;
   resultConcept: string | null;
   hasResult: boolean;
   appliedCount: number;
   skippedCount: number;
+  backendValidated: boolean;
+  assemblyDifferenceCount: number;
   requestCount: number;
+  lastTestApiError: string | null;
 };
 
 type AIPlannerTestApi = {
   seedDraft: (draft: AIPlannerTestDraft) => Promise<AIPlannerTestSnapshot>;
   generate: () => Promise<AIPlannerTestSnapshot>;
+  startApply: () => Promise<AIPlannerTestSnapshot>;
   apply: () => Promise<AIPlannerTestSnapshot>;
+  clearBrandInputs: () => Promise<AIPlannerTestSnapshot>;
+  useStoredBrandProfile: () => Promise<AIPlannerTestSnapshot>;
+  clearStoredBrandProfile: () => Promise<AIPlannerTestSnapshot>;
   getSnapshot: () => AIPlannerTestSnapshot;
 };
 
 type AIPlannerTestWindow = Window & {
   __virtualStudioAiPlannerTestApi?: AIPlannerTestApi;
   __virtualStudioEnvironmentPlannerRequests?: unknown[];
+  __virtualStudioAiPlannerTestApiError?: string | null;
 };
 
 const EXAMPLE_BRIEFS = [
@@ -95,6 +131,43 @@ const EXAMPLE_BRIEFS = [
   'Podcast-sett med myke materialer og koselig lys',
   'Teknologi-lansering med futuristisk, ren produktscene',
 ];
+
+function getAssemblyValidationAlertState(
+  summary: EnvironmentAssemblyValidationSummary | null | undefined,
+): {
+  severity: 'success' | 'warning' | 'info';
+  title: string;
+  details: string[];
+} | null {
+  if (!summary) {
+    return null;
+  }
+
+  if (summary.backendValidated && summary.differences.length === 0) {
+    return {
+      severity: 'success',
+      title: 'Scenegraph validert i backend',
+      details: [
+        `${summary.backendRuntimePropCount ?? summary.localRuntimePropCount} props kontrollert`,
+        `${summary.backendRelationshipCount ?? summary.localRelationshipCount} relasjoner kontrollert`,
+      ],
+    };
+  }
+
+  if (summary.backendValidated) {
+    return {
+      severity: 'warning',
+      title: 'Backend fant avvik i assembly',
+      details: summary.differences,
+    };
+  }
+
+  return {
+    severity: 'info',
+    title: 'Brukte lokal assembly',
+    details: ['Backend-validering var ikke tilgjengelig akkurat nå.'],
+  };
+}
 
 const WRITING_HINTS = [
   'Hva skal vi vise eller selge?',
@@ -123,6 +196,8 @@ function buildCompositePrompt(input: {
   sceneTalent: string;
   shotIntent: string;
   mustHaveElements: string;
+  brandName: string;
+  brandNotes: string;
   selectedTemplateName: string;
   worldModelProvider: WorldModelProvider;
   geniePrompt: string;
@@ -139,6 +214,8 @@ function buildCompositePrompt(input: {
   if (input.sceneTalent.trim()) sections.push(`I scenen skal vi ha: ${input.sceneTalent.trim()}.`);
   if (input.shotIntent.trim()) sections.push(`Shot / bruk: ${input.shotIntent.trim()}.`);
   if (input.mustHaveElements.trim()) sections.push(`Må-ha elementer: ${input.mustHaveElements.trim()}.`);
+  if (input.brandName.trim()) sections.push(`Brand / kunde: ${input.brandName.trim()}.`);
+  if (input.brandNotes.trim()) sections.push(`Branding-notater: ${input.brandNotes.trim()}.`);
 
   if (input.worldModelProvider === 'genie') {
     if (input.geniePrompt.trim()) sections.push(`Genie world prompt: ${input.geniePrompt.trim()}.`);
@@ -148,12 +225,40 @@ function buildCompositePrompt(input: {
   return sections.join('\n');
 }
 
+function buildEffectiveBrandNotes(baseNotes: string, applicationTargets?: string[], directionUsageNote?: string | null): string | undefined {
+  const targets = applicationTargets && applicationTargets.length > 0
+    ? applicationTargets
+    : ['signage', 'wardrobe', 'packaging', 'interior_details'];
+  const defaultDirective = `Apply the brand consistently across ${targets.map((target) => target.replace(/_/g, ' ')).join(', ')}.`;
+  return [baseNotes.trim(), directionUsageNote || '', defaultDirective].filter(Boolean).join(' ').trim() || undefined;
+}
+
 function waitForPlannerUiTurn(): Promise<void> {
   return new Promise((resolve) => {
     window.setTimeout(() => {
       window.requestAnimationFrame(() => resolve());
     }, 0);
   });
+}
+
+async function waitForPlannerCondition(
+  condition: () => boolean,
+  timeoutMs = 10_000,
+): Promise<void> {
+  const startTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
+
+  while (true) {
+    if (condition()) {
+      return;
+    }
+
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if ((now - startTime) >= timeoutMs) {
+      throw new Error('Timed out while waiting for planner test condition');
+    }
+
+    await waitForPlannerUiTurn();
+  }
 }
 
 async function dataUrlToFile(reference: AIPlannerReferenceImageSeed): Promise<File> {
@@ -168,8 +273,10 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
   onClose,
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const brandLogoInputRef = useRef<HTMLInputElement | null>(null);
   const latestRequestIdRef = useRef(0);
   const lastSignatureRef = useRef('');
+  const brandingHydratedRef = useRef(false);
   const plannerStateRef = useRef({
     brief: '',
     subjectFocus: '',
@@ -177,6 +284,9 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
     sceneTalent: '',
     shotIntent: '',
     mustHaveElements: '',
+    brandName: '',
+    brandNotes: '',
+    brandLogoFile: null as File | null,
     selectedTemplateId: '',
     worldModelProvider: 'none' as WorldModelProvider,
     geniePrompt: '',
@@ -184,6 +294,15 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
     referenceFiles: [] as File[],
   });
   const resultRef = useRef<EnvironmentPlanResponse | null>(null);
+  const plannerUiStateRef = useRef({
+    open: false,
+    loading: false,
+    applyLoading: false,
+    applyResult: null as EnvironmentPlanApplyResult | null,
+    storedBrandProfileName: null as string | null,
+    selectedBrandPaletteId: '',
+    selectedBrandDirectionId: '',
+  });
 
   const [brief, setBrief] = useState('');
   const [subjectFocus, setSubjectFocus] = useState('');
@@ -191,6 +310,16 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
   const [sceneTalent, setSceneTalent] = useState('');
   const [shotIntent, setShotIntent] = useState('');
   const [mustHaveElements, setMustHaveElements] = useState('');
+  const [brandName, setBrandName] = useState('');
+  const [brandNotes, setBrandNotes] = useState('');
+  const [brandLogoFile, setBrandLogoFile] = useState<File | null>(null);
+  const [brandPaletteOptions, setBrandPaletteOptions] = useState<BrandPaletteOption[]>([]);
+  const [selectedBrandPaletteId, setSelectedBrandPaletteId] = useState<string>('');
+  const [selectedBrandDirectionId, setSelectedBrandDirectionId] = useState<string>('trattoria-warm');
+  const [brandPaletteLoading, setBrandPaletteLoading] = useState(false);
+  const [brandLogoDataUrl, setBrandLogoDataUrl] = useState<string | null>(null);
+  const [storedBrandProfile, setStoredBrandProfile] = useState<StoredBrandProfile | null>(null);
+  const [brandProfileLoading, setBrandProfileLoading] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [worldModelProvider, setWorldModelProvider] = useState<WorldModelProvider>('none');
   const [geniePrompt, setGeniePrompt] = useState('');
@@ -211,6 +340,9 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
     sceneTalent,
     shotIntent,
     mustHaveElements,
+    brandName,
+    brandNotes,
+    brandLogoFile,
     selectedTemplateId,
     worldModelProvider,
     geniePrompt,
@@ -218,11 +350,21 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
     referenceFiles,
   };
   resultRef.current = result;
+  plannerUiStateRef.current = {
+    open,
+    loading,
+    applyLoading,
+    applyResult,
+    storedBrandProfileName: storedBrandProfile?.brandName || null,
+    selectedBrandPaletteId,
+    selectedBrandDirectionId,
+  };
 
   useEffect(() => {
     if (!open) return;
 
     let cancelled = false;
+    setBrandProfileLoading(true);
     void environmentPlannerService.getStatus()
       .then((nextStatus) => {
         if (!cancelled) setStatus(nextStatus);
@@ -236,6 +378,30 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
             hasVisionSupport: false,
             supportedWorldModelProviders: ['none', 'manual', 'genie'],
           });
+        }
+      });
+    void getStoredBrandProfile()
+      .then(async (profile) => {
+        if (cancelled) return;
+        setStoredBrandProfile(profile);
+
+        if (
+          profile
+          && !brandingHydratedRef.current
+          && !hasMeaningfulBrandProfile({
+            brandName,
+            brandNotes,
+            logoImage: brandLogoDataUrl,
+            selectedPaletteColors: selectedBrandPalette?.colors,
+          })
+        ) {
+          brandingHydratedRef.current = true;
+          await applyStoredBrandProfileToForm(profile);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setBrandProfileLoading(false);
         }
       });
 
@@ -254,6 +420,101 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
     [selectedTemplateId],
   );
 
+  const selectedBrandPalette = useMemo(
+    () => brandPaletteOptions.find((option) => option.id === selectedBrandPaletteId) || brandPaletteOptions[0] || null,
+    [brandPaletteOptions, selectedBrandPaletteId],
+  );
+  const brandDirectionOptions = useMemo(
+    () => getBrandDirectionPresets(),
+    [],
+  );
+  const selectedBrandDirection = useMemo(
+    () => getBrandDirectionPresetById(selectedBrandDirectionId) || brandDirectionOptions[0] || null,
+    [brandDirectionOptions, selectedBrandDirectionId],
+  );
+
+  useEffect(() => {
+    if (!open) return;
+
+    const hasProfile = hasMeaningfulBrandProfile({
+      brandName,
+      brandNotes,
+      logoImage: brandLogoDataUrl,
+      selectedPaletteColors: selectedBrandPalette?.colors,
+    });
+    if (!hasProfile) return;
+
+    const timeoutId = window.setTimeout(() => {
+      void saveStoredBrandProfile({
+        brandName,
+        brandNotes,
+        logoName: brandLogoFile?.name ?? null,
+        logoImage: brandLogoDataUrl,
+        paletteOptions: brandPaletteOptions,
+        selectedPaletteId: selectedBrandPalette?.id || '',
+        selectedPaletteColors: selectedBrandPalette?.colors || [],
+        applicationTargets: selectedBrandDirection?.applicationTargets || undefined,
+        selectedDirectionId: selectedBrandDirection?.id || '',
+        uniformPolicy: selectedBrandDirection?.uniformPolicy || null,
+        signageStyle: selectedBrandDirection?.signageStyle || null,
+        packagingStyle: selectedBrandDirection?.packagingStyle || null,
+        interiorStyle: selectedBrandDirection?.interiorStyle || null,
+      }).then((savedProfile) => {
+        setStoredBrandProfile(savedProfile);
+      }).catch(() => {
+        // Keep editing flow seamless even if persistence fails
+      });
+    }, 700);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    brandLogoDataUrl,
+    brandLogoFile?.name,
+    brandName,
+    brandNotes,
+    brandPaletteOptions,
+    open,
+    selectedBrandDirection,
+    selectedBrandPalette,
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!brandLogoFile) {
+      setBrandPaletteLoading(false);
+      setBrandLogoDataUrl(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setBrandPaletteLoading(true);
+    void Promise.all([
+      extractBrandPaletteOptionsFromFile(brandLogoFile),
+      environmentPlannerService.fileToDataUrl(brandLogoFile),
+    ])
+      .then(([options, dataUrl]) => {
+        if (cancelled) return;
+        setBrandPaletteOptions(options);
+        setSelectedBrandPaletteId((current) => current || options[0]?.id || '');
+        setBrandLogoDataUrl(dataUrl);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setBrandLogoDataUrl(null);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setBrandPaletteLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [brandLogoFile]);
+
   const compositePrompt = useMemo(
     () => buildCompositePrompt({
       brief,
@@ -262,6 +523,8 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
       sceneTalent,
       shotIntent,
       mustHaveElements,
+      brandName,
+      brandNotes,
       selectedTemplateName: selectedTemplate?.nameNo ?? '',
       worldModelProvider,
       geniePrompt,
@@ -274,6 +537,8 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
       sceneTalent,
       shotIntent,
       mustHaveElements,
+      brandName,
+      brandNotes,
       selectedTemplate,
       worldModelProvider,
       geniePrompt,
@@ -284,13 +549,28 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
   const requestSignature = useMemo(
     () => JSON.stringify({
       compositePrompt,
+      brandName,
+      brandNotes,
+      brandLogoName: brandLogoFile?.name ?? null,
+      selectedBrandPalette: selectedBrandPalette?.colors ?? null,
       selectedTemplateId,
       worldModelProvider,
       geniePrompt,
       genieNotes,
       files: selectedFileNames,
     }),
-    [compositePrompt, genieNotes, geniePrompt, selectedFileNames, selectedTemplateId, worldModelProvider],
+    [
+      brandLogoFile?.name,
+      brandName,
+      brandNotes,
+      compositePrompt,
+      genieNotes,
+      geniePrompt,
+      selectedBrandPalette,
+      selectedFileNames,
+      selectedTemplateId,
+      worldModelProvider,
+    ],
   );
 
   const hasEnoughInput = compositePrompt.trim().length > 0 || referenceFiles.length > 0;
@@ -298,6 +578,43 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>): void => {
     const files = Array.from(event.target.files || []);
     setReferenceFiles(files);
+  };
+
+  const handleBrandLogoChange = (event: ChangeEvent<HTMLInputElement>): void => {
+    const file = event.target.files?.[0] ?? null;
+    setBrandLogoFile(file);
+  };
+
+  const applyStoredBrandProfileToForm = async (profile: StoredBrandProfile): Promise<void> => {
+    setBrandName(profile.brandName);
+    setBrandNotes(profile.brandNotes);
+    setBrandPaletteOptions(profile.paletteOptions || []);
+    setSelectedBrandPaletteId(profile.selectedPaletteId || profile.paletteOptions?.[0]?.id || '');
+    setSelectedBrandDirectionId(profile.selectedDirectionId || getBrandDirectionPresets()[0]?.id || 'trattoria-warm');
+    setBrandLogoDataUrl(profile.logoImage || null);
+    if (profile.logoImage && profile.logoName) {
+      const restoredFile = await dataUrlToFile({
+        name: profile.logoName,
+        dataUrl: profile.logoImage,
+      });
+      setBrandLogoFile(restoredFile);
+    } else {
+      setBrandLogoFile(null);
+    }
+  };
+
+  const handleUseStoredBrandProfile = async (): Promise<void> => {
+    if (!storedBrandProfile) return;
+    await applyStoredBrandProfileToForm(storedBrandProfile);
+    setResult(null);
+    setApplyResult(null);
+    setError(null);
+    lastSignatureRef.current = '';
+  };
+
+  const handleClearStoredBrandProfile = async (): Promise<void> => {
+    await clearStoredBrandProfile();
+    setStoredBrandProfile(null);
   };
 
   const getCurrentPlannerInputs = () => {
@@ -313,6 +630,8 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
       sceneTalent: currentState.sceneTalent,
       shotIntent: currentState.shotIntent,
       mustHaveElements: currentState.mustHaveElements,
+      brandName: currentState.brandName,
+      brandNotes: currentState.brandNotes,
       selectedTemplateName: selectedTemplateForState?.nameNo ?? '',
       worldModelProvider: currentState.worldModelProvider,
       geniePrompt: currentState.geniePrompt,
@@ -320,6 +639,11 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
     });
     const currentRequestSignature = JSON.stringify({
       compositePrompt: currentCompositePrompt,
+      brandName: currentState.brandName,
+      brandNotes: currentState.brandNotes,
+      brandLogoName: currentState.brandLogoFile?.name ?? null,
+      selectedBrandPalette: selectedBrandPalette?.colors ?? null,
+      selectedBrandDirectionId: selectedBrandDirection?.id ?? null,
       selectedTemplateId: currentState.selectedTemplateId,
       worldModelProvider: currentState.worldModelProvider,
       geniePrompt: currentState.geniePrompt,
@@ -363,12 +687,40 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
 
     try {
       const referenceImages = await environmentPlannerService.filesToDataUrls(currentInputs.referenceFiles);
+      const brandLogoImage = currentInputs.brandLogoFile
+        ? await environmentPlannerService.fileToDataUrl(currentInputs.brandLogoFile)
+        : undefined;
+      const currentBrandReference = hasMeaningfulBrandProfile({
+        brandName: currentInputs.brandName,
+        brandNotes: currentInputs.brandNotes,
+        logoImage: brandLogoImage || brandLogoDataUrl,
+        selectedPaletteColors: selectedBrandPalette?.colors,
+      })
+        ? {
+          brandName: currentInputs.brandName.trim() || undefined,
+          usageNotes: buildEffectiveBrandNotes(
+            currentInputs.brandNotes,
+            selectedBrandDirection?.applicationTargets,
+            selectedBrandDirection?.usageNote,
+          ),
+          logoImage: brandLogoImage || brandLogoDataUrl || undefined,
+          palette: selectedBrandPalette?.colors,
+          applicationTargets: selectedBrandDirection?.applicationTargets,
+          uniformPolicy: selectedBrandDirection?.uniformPolicy,
+          signageStyle: selectedBrandDirection?.signageStyle,
+          packagingStyle: selectedBrandDirection?.packagingStyle,
+          interiorStyle: selectedBrandDirection?.interiorStyle,
+          directionId: selectedBrandDirection?.id,
+        }
+        : undefined;
+      const resolvedBrandReference = currentBrandReference || buildBrandReferenceFromProfile(storedBrandProfile);
+      const currentRoomShell = environmentService.getState().roomShell;
       const response = await environmentPlannerService.generatePlan({
         prompt: currentInputs.compositePrompt,
         referenceImages,
         roomConstraints: {
-          currentShell: '20x20 studio with four walls and one floor',
-          supportsParametricGeometry: false,
+          currentShell: `${currentRoomShell.type} ${currentRoomShell.width}x${currentRoomShell.depth}x${currentRoomShell.height}m, ${currentRoomShell.openCeiling ? 'open ceiling' : 'closed ceiling'}`,
+          supportsParametricGeometry: true,
           supportsPresetMaterials: true,
         },
         preferredPresetId: currentInputs.selectedTemplateId || undefined,
@@ -383,6 +735,7 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
             previewLabels: currentInputs.selectedFileNames,
           }
           : undefined,
+        brandReference: resolvedBrandReference,
       });
 
       if (requestId !== latestRequestIdRef.current) return;
@@ -464,22 +817,46 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
     if (typeof window === 'undefined') return;
 
     const plannerWindow = window as AIPlannerTestWindow;
+    const runTestApiTask = (task: () => Promise<void> | void): void => {
+      plannerWindow.__virtualStudioAiPlannerTestApiError = null;
+      void Promise.resolve()
+        .then(task)
+        .catch((taskError) => {
+          const message = taskError instanceof Error
+            ? taskError.message
+            : 'AI planner test task failed';
+          plannerWindow.__virtualStudioAiPlannerTestApiError = message;
+          setError(message);
+          setLoading(false);
+          setApplyLoading(false);
+        });
+    };
     const buildSnapshot = (): AIPlannerTestSnapshot => {
       const currentInputs = getCurrentPlannerInputs();
+      const currentUiState = plannerUiStateRef.current;
       return {
-        open,
-        loading,
-        applyLoading,
+        open: currentUiState.open,
+        loading: currentUiState.loading,
+        applyLoading: currentUiState.applyLoading,
         hasEnoughInput: currentInputs.hasEnoughInput,
         brief: currentInputs.brief,
         worldModelProvider: currentInputs.worldModelProvider,
         selectedTemplateId: currentInputs.selectedTemplateId,
         selectedFileNames: currentInputs.selectedFileNames,
+        brandName: currentInputs.brandName,
+        brandNotes: currentInputs.brandNotes,
+        brandLogoName: currentInputs.brandLogoFile?.name ?? null,
+        selectedBrandPaletteId: currentUiState.selectedBrandPaletteId,
+        selectedBrandDirectionId: currentUiState.selectedBrandDirectionId,
+        storedBrandProfileName: currentUiState.storedBrandProfileName,
         resultConcept: resultRef.current?.plan.concept ?? null,
         hasResult: Boolean(resultRef.current),
-        appliedCount: applyResult?.applied.length ?? 0,
-        skippedCount: applyResult?.skipped.length ?? 0,
+        appliedCount: currentUiState.applyResult?.applied.length ?? 0,
+        skippedCount: currentUiState.applyResult?.skipped.length ?? 0,
+        backendValidated: Boolean(currentUiState.applyResult?.assemblyValidation?.backendValidated),
+        assemblyDifferenceCount: currentUiState.applyResult?.assemblyValidation?.differences.length ?? 0,
         requestCount: plannerWindow.__virtualStudioEnvironmentPlannerRequests?.length ?? 0,
+        lastTestApiError: plannerWindow.__virtualStudioAiPlannerTestApiError ?? null,
       };
     };
 
@@ -491,10 +868,32 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
         if (draft.sceneTalent !== undefined) setSceneTalent(draft.sceneTalent);
         if (draft.shotIntent !== undefined) setShotIntent(draft.shotIntent);
         if (draft.mustHaveElements !== undefined) setMustHaveElements(draft.mustHaveElements);
+        if (draft.brandName !== undefined) setBrandName(draft.brandName);
+        if (draft.brandNotes !== undefined) setBrandNotes(draft.brandNotes);
         if (draft.selectedTemplateId !== undefined) setSelectedTemplateId(draft.selectedTemplateId);
         if (draft.worldModelProvider !== undefined) setWorldModelProvider(draft.worldModelProvider);
         if (draft.geniePrompt !== undefined) setGeniePrompt(draft.geniePrompt);
         if (draft.genieNotes !== undefined) setGenieNotes(draft.genieNotes);
+        if (draft.brandLogoImage !== undefined) {
+          if (draft.brandLogoImage) {
+            const brandFile = await dataUrlToFile(draft.brandLogoImage);
+            setBrandLogoFile(brandFile);
+            setBrandLogoDataUrl(draft.brandLogoImage.dataUrl);
+            try {
+              const paletteOptions = await extractBrandPaletteOptionsFromFile(brandFile);
+              setBrandPaletteOptions(paletteOptions);
+              setSelectedBrandPaletteId(paletteOptions[0]?.id || '');
+            } catch {
+              setBrandPaletteOptions([]);
+              setSelectedBrandPaletteId('');
+            }
+          } else {
+            setBrandLogoFile(null);
+            setBrandLogoDataUrl(null);
+            setBrandPaletteOptions([]);
+            setSelectedBrandPaletteId('');
+          }
+        }
         if (draft.referenceImages !== undefined) {
           const files = await Promise.all(draft.referenceImages.map(dataUrlToFile));
           setReferenceFiles(files);
@@ -504,16 +903,83 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
         setApplyResult(null);
         setError(null);
         lastSignatureRef.current = '';
-        await waitForPlannerUiTurn();
-        await waitForPlannerUiTurn();
+        plannerWindow.__virtualStudioAiPlannerTestApiError = null;
+        await waitForPlannerCondition(() => {
+          const snapshot = buildSnapshot();
+          const brandReady = draft.brandLogoImage === undefined
+            || snapshot.brandLogoName === draft.brandLogoImage?.name
+            || draft.brandLogoImage === null;
+          const refsReady = draft.referenceImages === undefined
+            || snapshot.selectedFileNames.length === draft.referenceImages.length;
+          return snapshot.brief === (draft.brief ?? snapshot.brief)
+            && brandReady
+            && refsReady;
+        });
         return buildSnapshot();
       },
       generate: async () => {
-        await triggerGeneration(true);
+        const initialSnapshot = buildSnapshot();
+        runTestApiTask(() => triggerGeneration(true));
+        await waitForPlannerCondition(() => {
+          const nextSnapshot = buildSnapshot();
+          return nextSnapshot.loading
+            || nextSnapshot.hasResult
+            || nextSnapshot.requestCount !== initialSnapshot.requestCount
+            || Boolean(nextSnapshot.lastTestApiError);
+        }, 60_000);
+        await waitForPlannerCondition(() => {
+          const nextSnapshot = buildSnapshot();
+          if (nextSnapshot.loading) {
+            return false;
+          }
+          return nextSnapshot.hasResult
+            || Boolean(nextSnapshot.lastTestApiError);
+        }, 60_000);
         return buildSnapshot();
       },
       apply: async () => {
+        plannerWindow.__virtualStudioAiPlannerTestApiError = null;
         await handleApply();
+        await waitForPlannerUiTurn();
+        await waitForPlannerUiTurn();
+        await waitForPlannerCondition(() => {
+          const nextSnapshot = buildSnapshot();
+          return !nextSnapshot.applyLoading;
+        }, 180_000);
+        return buildSnapshot();
+      },
+      startApply: async () => {
+        runTestApiTask(() => handleApply());
+        await waitForPlannerUiTurn();
+        await waitForPlannerUiTurn();
+        return buildSnapshot();
+      },
+      clearBrandInputs: async () => {
+        setBrandName('');
+        setBrandNotes('');
+        setBrandLogoFile(null);
+        setBrandPaletteOptions([]);
+        setSelectedBrandPaletteId('');
+        setSelectedBrandDirectionId(getBrandDirectionPresets()[0]?.id || 'trattoria-warm');
+        setBrandLogoDataUrl(null);
+        setResult(null);
+        setApplyResult(null);
+        setError(null);
+        lastSignatureRef.current = '';
+        await waitForPlannerUiTurn();
+        await waitForPlannerUiTurn();
+        return buildSnapshot();
+      },
+      useStoredBrandProfile: async () => {
+        await handleUseStoredBrandProfile();
+        await waitForPlannerUiTurn();
+        await waitForPlannerUiTurn();
+        return buildSnapshot();
+      },
+      clearStoredBrandProfile: async () => {
+        await handleClearStoredBrandProfile();
+        await waitForPlannerUiTurn();
+        await waitForPlannerUiTurn();
         return buildSnapshot();
       },
       getSnapshot: () => buildSnapshot(),
@@ -522,7 +988,26 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
     return () => {
       delete plannerWindow.__virtualStudioAiPlannerTestApi;
     };
-  }, [applyLoading, applyResult, loading, open, result]);
+  }, [
+    applyLoading,
+    applyResult,
+    loading,
+    open,
+    result,
+    storedBrandProfile,
+    brief,
+    brandName,
+    brandNotes,
+    brandLogoFile?.name,
+    requestSignature,
+    selectedBrandDirectionId,
+    selectedBrandPaletteId,
+    selectedFileNames,
+    selectedTemplateId,
+    worldModelProvider,
+  ]);
+
+  const planInsights = result ? getEnvironmentPlanInsightPresentation(result.plan, applyResult?.evaluation) : null;
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
@@ -650,6 +1135,183 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
             placeholder="For eksempel ovn, menybrett, neon-skilt, vinduer, lounge-møbler"
             fullWidth
           />
+
+          <Stack spacing={1.25}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              Branding
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Valgfritt. Last opp logo hvis du vil at AI skal foreslå palett, skilting og branded uniformer på karakterene.
+            </Typography>
+            {(brandProfileLoading || storedBrandProfile) && (
+              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                {brandProfileLoading && <CircularProgress size={16} />}
+                {storedBrandProfile && (
+                  <>
+                    <Chip
+                      size="small"
+                      color="secondary"
+                      variant="outlined"
+                      label={`Lagret brandprofil: ${storedBrandProfile.brandName || 'Uten navn'}`}
+                    />
+                    <Button variant="text" onClick={() => void handleUseStoredBrandProfile()}>
+                      Bruk lagret profil
+                    </Button>
+                    <Button variant="text" color="inherit" onClick={() => void handleClearStoredBrandProfile()}>
+                      Fjern lagret profil
+                    </Button>
+                  </>
+                )}
+              </Stack>
+            )}
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 1.5,
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: '1fr 1fr',
+                },
+              }}
+            >
+              <TextField
+                label="Brand / kunde"
+                value={brandName}
+                onChange={(event) => setBrandName(event.target.value)}
+                placeholder="Luigi's Pizza, kundens kampanje, intern brand"
+                fullWidth
+              />
+              <TextField
+                label="Branding-notater"
+                value={brandNotes}
+                onChange={(event) => setBrandNotes(event.target.value)}
+                placeholder="Farger, tone, uniform, skilt, emballasje"
+                fullWidth
+              />
+            </Box>
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+              <Button
+                variant="outlined"
+                startIcon={<UploadIcon />}
+                onClick={() => brandLogoInputRef.current?.click()}
+              >
+                Last opp logo
+              </Button>
+              <input
+                ref={brandLogoInputRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={handleBrandLogoChange}
+              />
+              {brandLogoFile && (
+                <Chip size="small" color="secondary" variant="outlined" label={`Logo: ${brandLogoFile.name}`} />
+              )}
+            </Stack>
+            {brandPaletteOptions.length > 0 && (
+              <Stack spacing={1}>
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <Typography variant="body2" color="text.secondary">
+                    Velg paletten AI skal bruke på lokale, skilt og uniformer.
+                  </Typography>
+                  {brandPaletteLoading && <CircularProgress size={16} />}
+                  {storedBrandProfile && selectedBrandPalette && (
+                    <Chip size="small" variant="outlined" label={`Aktiv: ${selectedBrandPalette.label}`} />
+                  )}
+                </Stack>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  {brandPaletteOptions.map((option) => {
+                    const isSelected = selectedBrandPalette?.id === option.id;
+                    return (
+                      <Button
+                        key={option.id}
+                        variant={isSelected ? 'contained' : 'outlined'}
+                        color={isSelected ? 'primary' : 'inherit'}
+                        onClick={() => setSelectedBrandPaletteId(option.id)}
+                        sx={{
+                          alignItems: 'flex-start',
+                          justifyContent: 'flex-start',
+                          px: 1.5,
+                          py: 1,
+                          minWidth: 180,
+                          textTransform: 'none',
+                        }}
+                      >
+                        <Stack spacing={0.75} alignItems="flex-start">
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {option.label}
+                          </Typography>
+                          <Typography variant="caption" color={isSelected ? 'inherit' : 'text.secondary'}>
+                            {option.description}
+                          </Typography>
+                          <Stack direction="row" spacing={0.75}>
+                            {option.colors.map((color) => (
+                              <Box
+                                key={`${option.id}-${color}`}
+                                sx={{
+                                  width: 18,
+                                  height: 18,
+                                  borderRadius: '50%',
+                                  bgcolor: color,
+                                  border: '1px solid rgba(255,255,255,0.4)',
+                                  boxShadow: '0 0 0 1px rgba(15,23,42,0.18)',
+                                }}
+                              />
+                            ))}
+                          </Stack>
+                        </Stack>
+                      </Button>
+                    );
+                  })}
+                </Stack>
+              </Stack>
+            )}
+            {(brandPaletteOptions.length > 0 || storedBrandProfile) && (
+              <Stack spacing={1}>
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <Typography variant="body2" color="text.secondary">
+                    Velg hvordan brandet skal slå ut i scene, packaging og uniformer.
+                  </Typography>
+                  {selectedBrandDirection && (
+                    <Chip size="small" variant="outlined" label={`Look: ${selectedBrandDirection.label}`} />
+                  )}
+                </Stack>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  {brandDirectionOptions.map((direction) => {
+                    const isSelected = selectedBrandDirection?.id === direction.id;
+                    return (
+                      <Button
+                        key={direction.id}
+                        variant={isSelected ? 'contained' : 'outlined'}
+                        color={isSelected ? 'secondary' : 'inherit'}
+                        onClick={() => setSelectedBrandDirectionId(direction.id)}
+                        sx={{
+                          alignItems: 'flex-start',
+                          justifyContent: 'flex-start',
+                          px: 1.5,
+                          py: 1,
+                          minWidth: 210,
+                          textTransform: 'none',
+                        }}
+                      >
+                        <Stack spacing={0.75} alignItems="flex-start">
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {direction.label}
+                          </Typography>
+                          <Typography variant="caption" color={isSelected ? 'inherit' : 'text.secondary'}>
+                            {direction.description}
+                          </Typography>
+                          <Typography variant="caption" color={isSelected ? 'inherit' : 'text.secondary'}>
+                            {direction.signageStyle} / {direction.packagingStyle} / {direction.uniformPolicy}
+                          </Typography>
+                        </Stack>
+                      </Button>
+                    );
+                  })}
+                </Stack>
+              </Stack>
+            )}
+          </Stack>
 
           <Divider />
 
@@ -861,6 +1523,83 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
                 </Box>
               )}
 
+              {result.plan.characters.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Karakterer AI vil sette inn
+                  </Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    {result.plan.characters.map((character) => (
+                      <Chip
+                        key={`${character.name}-${character.role}`}
+                        size="small"
+                        color={character.priority === 'high' ? 'secondary' : 'default'}
+                        variant="outlined"
+                        label={[
+                          `${character.name} · ${character.role}`,
+                          character.appearance?.skinTone ? `hud ${character.appearance.skinTone}` : null,
+                          character.appearance?.hairStyle ? `hår ${character.appearance.hairStyle}` : null,
+                        ].filter(Boolean).join(' · ')}
+                      />
+                    ))}
+                  </Stack>
+                </Box>
+              )}
+
+              {result.plan.branding?.enabled && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Branding og palett
+                  </Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
+                    {result.plan.branding.brandName && (
+                      <Chip size="small" color="secondary" label={result.plan.branding.brandName} />
+                    )}
+                    {result.plan.branding.signageText && (
+                      <Chip size="small" variant="outlined" label={`Skilt: ${result.plan.branding.signageText}`} />
+                    )}
+                  </Stack>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    {result.plan.branding.palette.map((color) => (
+                      <Chip
+                        key={color}
+                        size="small"
+                        label={color}
+                        sx={{
+                          bgcolor: color,
+                          color: '#fff',
+                          border: '1px solid rgba(255,255,255,0.24)',
+                        }}
+                      />
+                    ))}
+                  </Stack>
+                </Box>
+              )}
+
+              {planInsights && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    AI kreative valg
+                  </Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
+                    <Chip size="small" color="info" label={`Familie: ${planInsights.familyLabel}`} />
+                    {planInsights.validationModeLabel && (
+                      <Chip size="small" variant="outlined" label={planInsights.validationModeLabel} />
+                    )}
+                  </Stack>
+                  <Typography variant="body2" sx={{ mb: 0.75 }}>
+                    {planInsights.summary}
+                  </Typography>
+                  <Stack spacing={0.5}>
+                    {planInsights.lightingDetails.map((detail) => (
+                      <Typography key={detail} variant="caption" sx={{ display: 'block' }}>
+                        {detail}
+                      </Typography>
+                    ))}
+                  </Stack>
+                </Box>
+              )}
+
               <Box>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
                   Neste byggesteg
@@ -892,10 +1631,88 @@ export const AIEnvironmentPlannerDialog: FC<AIEnvironmentPlannerDialogProps> = (
               </Box>
 
               {applyResult && (
-                <Alert severity={applyResult.skipped.length > 0 ? 'warning' : 'success'}>
-                  Anvendt: {applyResult.applied.join(', ') || 'ingenting'}
-                  {applyResult.skipped.length > 0 ? ` | Hoppet over: ${applyResult.skipped.join(', ')}` : ''}
-                </Alert>
+                <Stack spacing={1.25}>
+                  <Alert severity={applyResult.skipped.length > 0 ? 'warning' : 'success'}>
+                    Anvendt: {applyResult.applied.join(', ') || 'ingenting'}
+                    {applyResult.skipped.length > 0 ? ` | Hoppet over: ${applyResult.skipped.join(', ')}` : ''}
+                  </Alert>
+
+                  {(() => {
+                    const validationState = getAssemblyValidationAlertState(applyResult.assemblyValidation);
+                    if (!validationState) {
+                      return null;
+                    }
+
+                    return (
+                      <Alert severity={validationState.severity}>
+                        <Stack spacing={0.5}>
+                          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                            {validationState.title}
+                          </Typography>
+                          {validationState.details.map((detail) => (
+                            <Typography key={detail} variant="caption" sx={{ display: 'block' }}>
+                              {detail}
+                            </Typography>
+                          ))}
+                        </Stack>
+                      </Alert>
+                    );
+                  })()}
+
+                  {(() => {
+                    const evaluationState = getEnvironmentEvaluationPresentation(applyResult.evaluation);
+                    if (!evaluationState) {
+                      return null;
+                    }
+
+                    return (
+                      <Alert severity={evaluationState.severity}>
+                        <Stack spacing={0.5}>
+                          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                            {evaluationState.title}
+                          </Typography>
+                          <Typography variant="caption">
+                            {evaluationState.summary}
+                          </Typography>
+                          {evaluationState.details.map((detail) => (
+                            <Typography key={detail} variant="caption" sx={{ display: 'block' }}>
+                              {detail}
+                            </Typography>
+                          ))}
+                        </Stack>
+                      </Alert>
+                    );
+                  })()}
+
+                  {applyResult.refinement?.attempted && (
+                    <Alert severity={applyResult.refinement.accepted ? 'info' : applyResult.refinement.reverted ? 'warning' : 'info'}>
+                      <Stack spacing={0.5}>
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                          {applyResult.refinement.accepted
+                            ? 'AI finjusterte scenen etter preview-sjekk'
+                            : applyResult.refinement.reverted
+                              ? 'AI testet en finjustering, men beholdt originalscenen'
+                              : 'AI vurderte auto-justering'}
+                        </Typography>
+                        {typeof applyResult.refinement.initialScore === 'number' && typeof applyResult.refinement.finalScore === 'number' && (
+                          <Typography variant="caption">
+                            Score: {Math.round(applyResult.refinement.initialScore * 100)}% til {Math.round(applyResult.refinement.finalScore * 100)}%
+                          </Typography>
+                        )}
+                        {typeof applyResult.refinement.attemptedIterations === 'number' && applyResult.refinement.attemptedIterations > 0 && (
+                          <Typography variant="caption">
+                            Iterasjoner: {applyResult.refinement.attemptedIterations}
+                          </Typography>
+                        )}
+                        {applyResult.refinement.changes.map((detail) => (
+                          <Typography key={detail} variant="caption" sx={{ display: 'block' }}>
+                            {detail}
+                          </Typography>
+                        ))}
+                      </Stack>
+                    </Alert>
+                  )}
+                </Stack>
               )}
             </Stack>
           )}

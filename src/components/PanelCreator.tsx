@@ -3,7 +3,7 @@
  * Allows users to create and manage custom panels easily
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ThemeProvider,
   createTheme,
@@ -161,6 +161,15 @@ import { usePanelValidation } from './PanelCreator/hooks/usePanelValidation';
 import { usePanelForm } from './PanelCreator/hooks/usePanelForm';
 import { PanelPreview } from './PanelCreator/PanelPreview';
 import { getTextFieldStyles, getInputLabelStyles, getSelectMenuProps } from './PanelCreator/styles';
+import {
+  consumeBufferedPanelVisibilityState,
+  installBufferedPanelVisibilityEvents,
+  markBufferedPanelReady,
+} from '../services/panelOpenBuffer';
+
+if (typeof window !== 'undefined') {
+  installBufferedPanelVisibilityEvents('panelCreator', 'open-panel-creator');
+}
 // Sortable Panel Item Component
 interface SortablePanelItemProps {
   panel: PanelConfig;
@@ -391,8 +400,6 @@ const PanelCreatorContent: React.FC = () => {
   } = usePanelStorage();
 
   const [open, setOpen] = useState(false);
-  const setOpenRef = useRef(setOpen);
-  setOpenRef.current = setOpen;
   const [showPanelList, setShowPanelList] = useState(false);
   const [loadingServices, setLoadingServices] = useState(false);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
@@ -502,13 +509,20 @@ const PanelCreatorContent: React.FC = () => {
       setShowPanelList(true);
       // Reset form when opening
       resetForm();
-      console.log('Panel Creator: Setting open to true via ref');
-      setOpenRef.current(true);
+      console.log('Panel Creator: Setting open to true');
+      setOpen(true);
       console.log('Panel Creator: open state set');
     };
 
+    const pendingIsOpen = consumeBufferedPanelVisibilityState('panelCreator');
+    if (pendingIsOpen) {
+      handleOpenPanelCreator();
+    }
+
+    markBufferedPanelReady('panelCreator', true);
     window.addEventListener('open-panel-creator', handleOpenPanelCreator);
     return () => {
+      markBufferedPanelReady('panelCreator', false);
       window.removeEventListener('open-panel-creator', handleOpenPanelCreator);
     };
   }, []);
@@ -781,7 +795,12 @@ const PanelCreatorContent: React.FC = () => {
   };
 
   return (
-    <>
+    <Box
+      data-testid="panel-creator-shell"
+      data-dialog-open={open ? 'true' : 'false'}
+      data-panel-list-open={showPanelList ? 'true' : 'false'}
+      sx={{ display: 'contents' }}
+    >
       {/* Floating Action Button to open Panel Creator */}
       {!showPanelList && (
         <Button
@@ -1079,6 +1098,7 @@ const PanelCreatorContent: React.FC = () => {
         fullWidth
         container={() => document.body}
         PaperProps={{
+          'data-testid': 'panel-creator-dialog',
           sx: {
             bgcolor: '#1c2128',
             backgroundImage: 'linear-gradient(135deg, rgba(139,92,246,0.05) 0%, rgba(0,212,255,0.05) 100%)',
@@ -2737,7 +2757,7 @@ const PanelCreatorContent: React.FC = () => {
           <Button onClick={() => setShowBackupDialog(false)}>Lukk</Button>
         </DialogActions>
       </Dialog>
-    </>
+    </Box>
   );
 };
 

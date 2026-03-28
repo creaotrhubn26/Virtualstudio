@@ -19,6 +19,7 @@ import { Person, Delete, Refresh, Add, Search, Male, Female, ChildCare, Face, Bu
 import { logger } from '../core/services/logger';
 import { ALL_POSES } from '../core/animation/PoseLibrary';
 import type { PosePreset } from '../core/animation/PoseLibrary';
+import { CHARACTER_CATALOG, getCharacterCatalogEntry, getCharacterModelUrl } from '../data/characterCatalog';
 
 const log = logger.module('CharacterLoader');
 
@@ -41,6 +42,29 @@ interface Pose {
   description: string;
   difficulty: PosePreset['difficulty'];
 }
+
+const HAIR_COLOR_OPTIONS = [
+  { label: 'Sort', value: '#1f2937' },
+  { label: 'Brun', value: '#5b3a29' },
+  { label: 'Blond', value: '#d4af37' },
+  { label: 'Rød', value: '#8b4513' },
+  { label: 'Grå', value: '#8a8f98' },
+];
+
+const HAIR_STYLE_OPTIONS = [
+  { label: 'Kort', value: 'short' },
+  { label: 'Medium', value: 'medium' },
+  { label: 'Lang', value: 'long' },
+  { label: 'Knute', value: 'bun' },
+  { label: 'Dekt', value: 'covered' },
+] as const;
+
+const FACIAL_HAIR_OPTIONS = [
+  { label: 'Ingen', value: 'none' },
+  { label: 'Stubb', value: 'stubble' },
+  { label: 'Bart', value: 'mustache' },
+  { label: 'Skjegg', value: 'beard' },
+] as const;
 
 const createCharacterSVG = (type: 'female' | 'male' | 'couple', color = '#666') => {
   const svgs: Record<string, string> = {
@@ -82,7 +106,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     name: 'Barn',
     gender: 'neutral',
     category: 'portrett' as any,
-    modelUrl: '/models/avatars/avatar_child.glb',
+    modelUrl: getCharacterModelUrl('avatar_child.glb'),
     thumbnail: createAvatarSVG('child'),
     description: 'SAM 3D Body - Barn 8 år',
     poses: 1,
@@ -92,7 +116,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     name: 'Tenåring',
     gender: 'female',
     category: 'portrett' as any,
-    modelUrl: '/models/avatars/avatar_teenager.glb',
+    modelUrl: getCharacterModelUrl('avatar_teenager.glb'),
     thumbnail: createAvatarSVG('teenager'),
     description: 'SAM 3D Body - Tenåring 14 år',
     poses: 1,
@@ -102,7 +126,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     name: 'Voksen Kvinne',
     gender: 'female',
     category: 'portrett' as any,
-    modelUrl: '/models/avatars/avatar_woman.glb',
+    modelUrl: getCharacterModelUrl('avatar_woman.glb'),
     thumbnail: createAvatarSVG('woman'),
     description: 'SAM 3D Body - Profesjonell kvinne',
     poses: 1,
@@ -112,7 +136,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     name: 'Voksen Mann',
     gender: 'male',
     category: 'portrett' as any,
-    modelUrl: '/models/avatars/avatar_man.glb',
+    modelUrl: getCharacterModelUrl('avatar_man.glb'),
     thumbnail: createAvatarSVG('man'),
     description: 'SAM 3D Body - Casual mann',
     poses: 1,
@@ -122,7 +146,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     name: 'Eldre Kvinne',
     gender: 'female',
     category: 'portrett' as any,
-    modelUrl: '/models/avatars/avatar_elderly.glb',
+    modelUrl: getCharacterModelUrl('avatar_elderly.glb'),
     thumbnail: createAvatarSVG('elderly'),
     description: 'SAM 3D Body - Bestemor 70+',
     poses: 1,
@@ -132,7 +156,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     name: 'Atlet',
     gender: 'male',
     category: 'mote' as any,
-    modelUrl: '/models/avatars/avatar_athlete.glb',
+    modelUrl: getCharacterModelUrl('avatar_athlete.glb'),
     thumbnail: createAvatarSVG('athlete'),
     description: 'SAM 3D Body - Atletisk mann',
     poses: 1,
@@ -142,7 +166,7 @@ const CHARACTER_MODELS: CharacterModel[] = [
     name: 'Gravid',
     gender: 'female',
     category: 'portrett' as any,
-    modelUrl: '/models/avatars/avatar_pregnant.glb',
+    modelUrl: getCharacterModelUrl('avatar_pregnant.glb'),
     thumbnail: createAvatarSVG('pregnant'),
     description: 'SAM 3D Body - Gravid kvinne',
     poses: 1,
@@ -152,9 +176,29 @@ const CHARACTER_MODELS: CharacterModel[] = [
     name: 'Balettdanser',
     gender: 'female',
     category: 'mote' as any,
-    modelUrl: '/models/avatars/avatar_dancer.glb',
+    modelUrl: getCharacterModelUrl('avatar_dancer.glb'),
     thumbnail: createAvatarSVG('dancer'),
     description: 'SAM 3D Body - Grasiøs danser',
+    poses: 1,
+  },
+  {
+    id: 'worker_baker',
+    name: 'Bakemester',
+    gender: 'male',
+    category: 'naringsliv' as any,
+    modelUrl: getCharacterCatalogEntry('worker_baker')?.modelUrl || getCharacterModelUrl('avatar_man.glb'),
+    thumbnail: createAvatarSVG('man', '#f97316'),
+    description: CHARACTER_CATALOG.find((entry) => entry.id === 'worker_baker')?.description || 'Bakemester med branded forkle',
+    poses: 1,
+  },
+  {
+    id: 'worker_server',
+    name: 'Servitør',
+    gender: 'female',
+    category: 'naringsliv' as any,
+    modelUrl: getCharacterCatalogEntry('worker_server')?.modelUrl || getCharacterModelUrl('avatar_teenager.glb'),
+    thumbnail: createAvatarSVG('woman', '#2563eb'),
+    description: CHARACTER_CATALOG.find((entry) => entry.id === 'worker_server')?.description || 'Restaurantansatt i branded uniform',
     poses: 1,
   },
 ];
@@ -210,6 +254,9 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
   const [selectedPose, setSelectedPose] = useState<Pose | null>(null);
   const [skinTone, setSkinTone] = useState('#FFDAB9');
   const [height, setHeight] = useState(1.0);
+  const [hairColor, setHairColor] = useState('#1f2937');
+  const [hairStyle, setHairStyle] = useState<'short' | 'medium' | 'long' | 'bun' | 'covered'>('short');
+  const [facialHair, setFacialHair] = useState<'none' | 'stubble' | 'mustache' | 'beard'>('none');
   const [searchQuery, setSearchQuery] = useState('');
   const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female' | 'neutral'>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'portrett' | 'mote' | 'bryllup' | 'naringsliv'>('all');
@@ -242,6 +289,12 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
           name: model.name,
           skinTone,
           height,
+          appearance: {
+            skinTone,
+            hairColor,
+            hairStyle,
+            facialHair,
+          },
         },
       }));
     } catch (error) {
@@ -249,7 +302,7 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [onLoadCharacter, skinTone, height]);
+  }, [facialHair, hairColor, hairStyle, onLoadCharacter, skinTone, height]);
 
   const removeCharacter = useCallback(() => {
     setSelectedModel(null);
@@ -754,6 +807,65 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
               },
             }}
           />
+
+          <Typography variant="caption" color="text.secondary" display="block" gutterBottom sx={{ mt: 2, fontSize: shouldUseTabletMode ? 13 : 11 }}>
+            Hårfarge
+          </Typography>
+          <Box sx={{ display: 'flex', gap: shouldUseTabletMode ? 1.5 : 1, mb: 2, flexWrap: 'wrap' }}>
+            {HAIR_COLOR_OPTIONS.map((option) => (
+              <Box
+                key={option.value}
+                onClick={() => setHairColor(option.value)}
+                role="button"
+                tabIndex={0}
+                aria-label={`Velg hårfarge ${option.label}`}
+                aria-pressed={hairColor === option.value}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setHairColor(option.value); }}
+                sx={{
+                  width: shouldUseTabletMode ? 40 : 28,
+                  height: shouldUseTabletMode ? 40 : 28,
+                  borderRadius: '50%',
+                  backgroundColor: option.value,
+                  cursor: 'pointer',
+                  border: hairColor === option.value ? '3px solid #3b82f6' : '2px solid #333',
+                  '&:hover': { transform: 'scale(1.08)' },
+                  '&:focus-visible': { outline: '2px solid #3b82f6', outlineOffset: 2 },
+                }}
+              />
+            ))}
+          </Box>
+
+          <Typography variant="caption" color="text.secondary" display="block" gutterBottom sx={{ fontSize: shouldUseTabletMode ? 13 : 11 }}>
+            Hårstil
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+            {HAIR_STYLE_OPTIONS.map((option) => (
+              <Chip
+                key={option.value}
+                label={option.label}
+                clickable
+                color={hairStyle === option.value ? 'primary' : 'default'}
+                variant={hairStyle === option.value ? 'filled' : 'outlined'}
+                onClick={() => setHairStyle(option.value)}
+              />
+            ))}
+          </Box>
+
+          <Typography variant="caption" color="text.secondary" display="block" gutterBottom sx={{ fontSize: shouldUseTabletMode ? 13 : 11 }}>
+            Ansiktstrekk
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {FACIAL_HAIR_OPTIONS.map((option) => (
+              <Chip
+                key={option.value}
+                label={option.label}
+                clickable
+                color={facialHair === option.value ? 'secondary' : 'default'}
+                variant={facialHair === option.value ? 'filled' : 'outlined'}
+                onClick={() => setFacialHair(option.value)}
+              />
+            ))}
+          </Box>
 
           <Button
             variant="contained"

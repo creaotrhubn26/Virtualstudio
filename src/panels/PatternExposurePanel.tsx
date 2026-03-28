@@ -8,7 +8,7 @@
  * - See which patterns work with available gear
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -37,6 +37,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  CardMedia,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
@@ -57,6 +58,12 @@ import {
 } from '@mui/icons-material';
 import { useUserEquipmentInventory } from '@/hooks/useUserEquipmentInventory';
 import { cinematographyPatternsService, CinematographyPattern } from '@/core/services/cinematographyPatternsService';
+import {
+  getRecommendedLightingPatternIdsForSceneFamily,
+  isLightingPatternRecommendedForSceneFamily,
+  resolveLightingPatternThumbnail,
+  resolveLightingPatternThumbnailFallback,
+} from '@/core/services/lightingPatternIntelligence';
 import { 
   patternExposureIntegration, 
   PatternExposureAnalysis, 
@@ -65,6 +72,7 @@ import {
 } from '@/core/services/patternExposureIntegration';
 import { useNodes, useActions } from '@/state/selectors';
 import type { SceneNode } from '@/state/store';
+import type { EnvironmentPlanInsightPresentation } from '@/services/environmentPlanInsightPresentation';
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
@@ -204,12 +212,26 @@ interface PatternCardProps {
   onApply: () => void;
   onSelect: () => void;
   isSelected: boolean;
+  aiRecommended?: boolean;
   compact?: boolean;
 }
 
-function PatternCard({ pattern, analysis, onApply, onSelect, isSelected, compact }: PatternCardProps) {
+function formatRecommendedPatternLabel(patternId: string, patternList: CinematographyPattern[]): string {
+  const match = patternList.find((pattern) => pattern.id === patternId);
+  if (match?.name) {
+    return match.name;
+  }
+  return patternId
+    .split('-')
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ');
+}
+
+function PatternCard({ pattern, analysis, onApply, onSelect, isSelected, compact, aiRecommended = false }: PatternCardProps) {
+  const fallbackThumbnail = resolveLightingPatternThumbnailFallback(pattern);
   return (
     <Card 
+      data-testid={`pattern-exposure-card-${pattern.id}`}
       variant={isSelected ? 'elevation' : 'outlined'}
       sx={{ 
         cursor: 'pointer',
@@ -217,6 +239,20 @@ function PatternCard({ pattern, analysis, onApply, onSelect, isSelected, compact
         borderColor: isSelected ? 'primary.main' : 'divider'}}
       onClick={onSelect}
     >
+      {!compact && (
+        <CardMedia
+          component="img"
+          height="140"
+          image={pattern.thumbnail || resolveLightingPatternThumbnail(pattern)}
+          alt={pattern.name}
+          onError={(event) => {
+            if (event.currentTarget.src !== fallbackThumbnail) {
+              event.currentTarget.src = fallbackThumbnail;
+            }
+          }}
+          sx={{ objectFit: 'cover', objectPosition: 'center 22%' }}
+        />
+      )}
       <CardContent sx={{ pb: compact ? 1 : 2 }}>
         <Stack direction="row" alignItems="flex-start" spacing={1}>
           <Box sx={{ flex: 1 }}>
@@ -244,6 +280,13 @@ function PatternCard({ pattern, analysis, onApply, onSelect, isSelected, compact
         </Stack>
         
         <Stack direction="row" spacing={0.5} mt={1} flexWrap="wrap" useFlexGap>
+          {aiRecommended && (
+            <Chip
+              label="AI-match"
+              size="small"
+              color="success"
+            />
+          )}
           <Chip 
             label={pattern.category} 
             size="small" 
@@ -479,12 +522,34 @@ export function PatternExposurePanel() {
   const [selectedPatternId, setSelectedPatternId] = useState<string | null>(null);
   const [targetFStop, setTargetFStop] = useState(8);
   const [targetISO, setTargetISO] = useState(100);
+  const [environmentInsights, setEnvironmentInsights] = useState<EnvironmentPlanInsightPresentation | null>(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    return (window as Window & {
+      __virtualStudioLastEnvironmentPlanInsights?: EnvironmentPlanInsightPresentation;
+    }).__virtualStudioLastEnvironmentPlanInsights ?? null;
+  });
+
+  useEffect(() => {
+    const handleInsightsUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<EnvironmentPlanInsightPresentation>;
+      setEnvironmentInsights(customEvent.detail || null);
+    };
+    window.addEventListener('vs-environment-plan-insights-updated', handleInsightsUpdate as EventListener);
+    return () => window.removeEventListener('vs-environment-plan-insights-updated', handleInsightsUpdate as EventListener);
+  }, []);
   
   // Get all patterns
   const patterns = useMemo(() => {
     return cinematographyPatternsService.getAllPatterns();
   }, []);
   
+  const recommendedPatternIds = useMemo(
+    () => getRecommendedLightingPatternIdsForSceneFamily(environmentInsights?.familyId),
+    [environmentInsights?.familyId],
+  );
+
   // Analyze all patterns with user equipment
   const patternAnalyses = useMemo(() => {
     if (!userInventory) return new Map<string, PatternExposureAnalysis>();
@@ -503,14 +568,25 @@ export function PatternExposurePanel() {
   
   // Get compatible patterns (sorted by feasibility)
   const compatiblePatterns = useMemo(() => {
+    const getRecommendationRank = (patternId: string) => {
+      const recommendationIndex = recommendedPatternIds.findIndex((recommendedId) => recommendedId === patternId);
+      return recommendationIndex === -1 ? Number.MAX_SAFE_INTEGER : recommendationIndex;
+    };
+
     return patterns
       .map(p => ({
         pattern: p,
         analysis: patternAnalyses.get(p.id)!,
         feasibility: patternAnalyses.get(p.id)?.feasibilityScore || 0,
       }))
-      .sort((a, b) => b.feasibility - a.feasibility);
-  }, [patterns, patternAnalyses]);
+      .sort((a, b) => {
+        const recommendationDelta = getRecommendationRank(a.pattern.id) - getRecommendationRank(b.pattern.id);
+        if (recommendationDelta !== 0) {
+          return recommendationDelta;
+        }
+        return b.feasibility - a.feasibility;
+      });
+  }, [patterns, patternAnalyses, recommendedPatternIds]);
   
   // Selected pattern analysis
   const selectedAnalysis = useMemo(() => {
@@ -523,6 +599,15 @@ export function PatternExposurePanel() {
     if (!userInventory) return [];
     return patternExposureIntegration.suggestEquipmentForPatterns(userInventory);
   }, [userInventory]);
+
+  const recommendedPatternLabels = useMemo(
+    () => recommendedPatternIds.map((patternId) => formatRecommendedPatternLabel(patternId, patterns)),
+    [patterns, recommendedPatternIds],
+  );
+  const recommendedPattern = useMemo(
+    () => compatiblePatterns.find(({ pattern }) => isLightingPatternRecommendedForSceneFamily(pattern, environmentInsights?.familyId))?.pattern || null,
+    [compatiblePatterns, environmentInsights?.familyId],
+  );
   
   // Apply pattern to scene
   const handleApplyPattern = useCallback((patternId: string) => {
@@ -590,6 +675,50 @@ export function PatternExposurePanel() {
           Professional cinematography patterns matched to your equipment
         </Typography>
       </Paper>
+
+      {environmentInsights && recommendedPatternIds.length > 0 && (
+        <Alert severity="info" sx={{ mb: 2 }} data-testid="pattern-exposure-ai-banner">
+          <AlertTitle>AI-retning: {environmentInsights.familyLabel}</AlertTitle>
+          Prioriterer: {recommendedPatternLabels.join(' · ')}
+          <Stack direction="row" spacing={1} sx={{ mt: 1.25 }} flexWrap="wrap">
+            <Button
+              size="small"
+              variant="contained"
+              data-testid="pattern-exposure-ai-apply"
+              onClick={() => {
+                if (recommendedPattern) {
+                  setSelectedPatternId(recommendedPattern.id);
+                  setActiveTab(0);
+                  handleApplyPattern(recommendedPattern.id);
+                }
+              }}
+              disabled={!recommendedPattern}
+              startIcon={<MagicIcon />}
+            >
+              Bruk AI-pattern
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              data-testid="pattern-exposure-ai-details"
+              onClick={() => {
+                if (!recommendedPattern) {
+                  return;
+                }
+                window.dispatchEvent(new CustomEvent('openLightPatternLibrary', {
+                  detail: {
+                    preferredPatternId: recommendedPattern.id,
+                    openPreferredPatternDetails: true,
+                  },
+                }));
+              }}
+              disabled={!recommendedPattern}
+            >
+              Se AI-detaljer
+            </Button>
+          </Stack>
+        </Alert>
+      )}
       
       {/* Tabs */}
       <Tabs
@@ -632,6 +761,7 @@ export function PatternExposurePanel() {
                           onApply={() => handleApplyPattern(pattern.id)}
                           onSelect={() => setSelectedPatternId(pattern.id)}
                           isSelected={selectedPatternId === pattern.id}
+                          aiRecommended={isLightingPatternRecommendedForSceneFamily(pattern, environmentInsights?.familyId)}
                           compact={!!selectedPatternId}
                         />
                       ))}
@@ -674,6 +804,7 @@ export function PatternExposurePanel() {
                       setActiveTab(0);
                     }}
                     isSelected={false}
+                    aiRecommended={isLightingPatternRecommendedForSceneFamily(pattern, environmentInsights?.familyId)}
                     compact={false}
                   />
                 ))}
@@ -730,4 +861,3 @@ export function PatternExposurePanel() {
 }
 
 export default PatternExposurePanel;
-

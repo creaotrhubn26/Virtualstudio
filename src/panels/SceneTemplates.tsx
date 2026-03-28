@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   logger } from '../../core/services/logger';
 import Grid from '@mui/material/GridLegacy';
+import { resolveLightingPatternThumbnail } from '../core/services/lightingPatternIntelligence';
 
 const log = logger.module('');
 import {
@@ -65,13 +66,43 @@ const createLightingDiagramSVG = (template: string) => {
   return `data:image/svg+xml,${encodeURIComponent(diagrams[template] || diagrams['3point'])}`;
 };
 
+const resolveSceneTemplateThumbnail = (templateId: string, fallbackDiagram: string): string => {
+  const patternMap: Record<string, string> = {
+    portrait_3point: 'three-point',
+    portrait_butterfly: 'butterfly',
+    portrait_rembrandt: 'rembrandt',
+    portrait_split: 'split',
+    portrait_loop: 'loop',
+    portrait_clamshell: 'clamshell',
+    portrait_dramatic: 'low-key',
+  };
+
+  const patternId = patternMap[templateId];
+  return patternId ? resolveLightingPatternThumbnail(patternId) : fallbackDiagram;
+};
+
+const resolveSceneTemplateThumbnailFallback = (template: SceneTemplate): string => {
+  if (template.category === 'product') return createLightingDiagramSVG('product');
+  if (template.category === 'fashion') {
+    return template.id.includes('editorial')
+      ? createLightingDiagramSVG('editorial')
+      : createLightingDiagramSVG('fashion');
+  }
+  if (template.category === 'wedding') return createLightingDiagramSVG('wedding');
+  if (template.category === 'lovecraft') return createLightingDiagramSVG('dramatic');
+  if (template.id.includes('rembrandt') || template.id.includes('split') || template.id.includes('dramatic')) {
+    return createLightingDiagramSVG('dramatic');
+  }
+  return createLightingDiagramSVG('3point');
+};
+
 const SCENE_TEMPLATES: SceneTemplate[] = [
   // Portrait Templates
   {
     id: 'portrait_3point',
     name: '3-Point Portrait',
     category: 'portrait',
-    thumbnail: createLightingDiagramSVG('3point'),
+    thumbnail: resolveSceneTemplateThumbnail('portrait_3point', createLightingDiagramSVG('3point')),
     description: 'Classic 3-point lighting for portraits',
     lights: [
       { type: 'key', power: 500, position: [2, 2, 2], angle: 45 },
@@ -84,7 +115,7 @@ const SCENE_TEMPLATES: SceneTemplate[] = [
     id: 'portrait_dramatic',
     name: 'Dramatic Portrait',
     category: 'portrait',
-    thumbnail: createLightingDiagramSVG('dramatic'),
+    thumbnail: resolveSceneTemplateThumbnail('portrait_dramatic', createLightingDiagramSVG('dramatic')),
     description: 'Single key light for dramatic shadows',
     lights: [{ type: 'key', power: 800, position: [3, 2, 1], angle: 30 }],
     camera: { focalLength: 85, aperture: 1.8, iso: 200 },
@@ -93,7 +124,7 @@ const SCENE_TEMPLATES: SceneTemplate[] = [
     id: 'portrait_butterfly',
     name: 'Butterfly/Paramount',
     category: 'portrait',
-    thumbnail: createLightingDiagramSVG('3point'),
+    thumbnail: resolveSceneTemplateThumbnail('portrait_butterfly', createLightingDiagramSVG('3point')),
     description: 'Classic glamour lighting with butterfly shadow',
     lights: [
       { type: 'key', power: 600, position: [0, 2.5, 2], angle: 45 },
@@ -105,7 +136,7 @@ const SCENE_TEMPLATES: SceneTemplate[] = [
     id: 'portrait_rembrandt',
     name: 'Rembrandt Lighting',
     category: 'portrait',
-    thumbnail: createLightingDiagramSVG('dramatic'),
+    thumbnail: resolveSceneTemplateThumbnail('portrait_rembrandt', createLightingDiagramSVG('dramatic')),
     description: 'Classic Rembrandt triangle shadow pattern',
     lights: [
       { type: 'key', power: 600, position: [2.5, 2, 1.5], angle: 45 },
@@ -117,7 +148,7 @@ const SCENE_TEMPLATES: SceneTemplate[] = [
     id: 'portrait_split',
     name: 'Split Lighting',
     category: 'portrait',
-    thumbnail: createLightingDiagramSVG('dramatic'),
+    thumbnail: resolveSceneTemplateThumbnail('portrait_split', createLightingDiagramSVG('dramatic')),
     description: 'Half face in shadow for dramatic effect',
     lights: [{ type: 'key', power: 700, position: [3, 1.8, 0], angle: 90 }],
     camera: { focalLength: 85, aperture: 2.8, iso: 200 },
@@ -126,7 +157,7 @@ const SCENE_TEMPLATES: SceneTemplate[] = [
     id: 'portrait_loop',
     name: 'Loop Lighting',
     category: 'portrait',
-    thumbnail: createLightingDiagramSVG('3point'),
+    thumbnail: resolveSceneTemplateThumbnail('portrait_loop', createLightingDiagramSVG('3point')),
     description: 'Small shadow loops under nose',
     lights: [
       { type: 'key', power: 500, position: [1.5, 2.2, 2], angle: 35 },
@@ -138,7 +169,7 @@ const SCENE_TEMPLATES: SceneTemplate[] = [
     id: 'portrait_clamshell',
     name: 'Clamshell Beauty',
     category: 'portrait',
-    thumbnail: createLightingDiagramSVG('3point'),
+    thumbnail: resolveSceneTemplateThumbnail('portrait_clamshell', createLightingDiagramSVG('3point')),
     description: 'Beauty/glamour with fill from below',
     lights: [
       { type: 'key', power: 500, position: [0, 2.5, 2], angle: 45 },
@@ -521,6 +552,12 @@ export const SceneTemplates: React.FC = () => {
                   height="150"
                   image={template.thumbnail}
                   alt={template.name}
+                  onError={(event) => {
+                    const fallbackThumbnail = resolveSceneTemplateThumbnailFallback(template);
+                    if (event.currentTarget.src !== fallbackThumbnail) {
+                      event.currentTarget.src = fallbackThumbnail;
+                    }
+                  }}
                 />
                 <CardContent>
                   <Typography variant="subtitle2" gutterBottom>

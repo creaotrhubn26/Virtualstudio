@@ -21,6 +21,10 @@ export type EnvironmentScenegraphRelationshipType =
   | 'paired_with'
   | 'styled_with'
   | 'near'
+  | 'next_to'
+  | 'behind'
+  | 'facing'
+  | 'centered_on'
   | 'hero_focus';
 
 export interface EnvironmentScenegraphNode {

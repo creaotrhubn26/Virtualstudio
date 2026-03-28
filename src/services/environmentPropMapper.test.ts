@@ -21,6 +21,8 @@ function createBasePlan(overrides: Partial<EnvironmentPlan> = {}): EnvironmentPl
     atmosphere: {},
     ambientSounds: [],
     props: [],
+    characters: [],
+    branding: null,
     lighting: [],
     camera: {
       shotType: 'hero',
@@ -81,9 +83,39 @@ describe('buildEnvironmentRuntimeProps', () => {
     expect(requests.some((request) => request.assetId === 'wine_glass_clear')).toBe(true);
     expect(requests.some((request) => request.assetId === 'herb_pots_cluster')).toBe(true);
     expect(requests.some((request) => request.assetId === 'plant_potted')).toBe(false);
+    expect(requests.filter((request) => request.assetId === 'pizza_hero_display')).toHaveLength(1);
     expect(
       requests.find((request) => request.assetId === 'pizza_hero_display')?.metadata?.placementMode,
     ).toBe('surface');
+  });
+
+  it('does not create duplicate hero pizzas from other pizza-related supporting props', () => {
+    const requests = buildEnvironmentRuntimeProps(createBasePlan({
+      props: [
+        {
+          name: 'Freshly baked pizza',
+          category: 'hero',
+          priority: 'high',
+          placementHint: 'On the rustic wooden table',
+        },
+        {
+          name: 'Pizza peel',
+          category: 'set_dressing',
+          priority: 'medium',
+          placementHint: 'Leaning against the back wall',
+        },
+        {
+          name: 'Pizza prep counter',
+          category: 'supporting',
+          priority: 'medium',
+          placementHint: 'Back prep line',
+        },
+      ],
+    }));
+
+    expect(requests.filter((request) => request.assetId === 'pizza_hero_display')).toHaveLength(1);
+    expect(requests.some((request) => request.assetId === 'pizza_peel_wall')).toBe(true);
+    expect(requests.some((request) => request.assetId === 'counter_pizza_prep')).toBe(true);
   });
 
   it('builds a usable pizza fallback pack when the model returns no prop suggestions', () => {

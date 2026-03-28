@@ -1,4 +1,5 @@
 import { SceneNode } from '../../state/store';
+import type { EnvironmentPlanRoomShell } from './environmentPlan';
 
 // Camera preset data structure
 export interface CameraPreset {
@@ -156,11 +157,27 @@ export interface GoboState {
   };
 }
 
+export interface SceneEnvironmentAssemblyValidation {
+  backendValidated: boolean;
+  differences: string[];
+  localNodeCount: number;
+  localRelationshipCount: number;
+  localRuntimePropCount: number;
+  localRuntimeAssetIds: string[];
+  backendNodeCount?: number;
+  backendRelationshipCount?: number;
+  backendRuntimePropCount?: number;
+  backendRuntimeAssetIds?: string[];
+  backendShellType?: string;
+  validatedAt?: string;
+}
+
 export interface EnvironmentState {
   walls: WallState[];
   floors: FloorState[];
   atmosphere?: AtmosphereSettings;
   preset?: string; // f.eks. 'lovecraft-temple'
+  roomShell?: EnvironmentPlanRoomShell;
 }
 
 // Main scene composition interface
@@ -184,12 +201,13 @@ export interface SceneComposition {
   
   // Environment (NEW)
   environment?: EnvironmentState;
+  environmentAssemblyValidation?: SceneEnvironmentAssemblyValidation;
   
   // Gobos
   gobos?: GoboState[];
   
   // Metadata
-  thumbnail?: string; // Base64 encoded preview
+  thumbnail?: string; // Preview image as URL or data URL
   tags: string[];
   
   // New fields for Phase 1 improvements
@@ -242,4 +260,3 @@ export function createDefaultTimeline(duration: number = 60): TimelineData {
     keyframes: []
   };
 }
-

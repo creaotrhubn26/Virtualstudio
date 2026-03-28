@@ -5,7 +5,7 @@
  * with one click. Includes setup instructions and recommendations.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -46,7 +46,15 @@ import {
   Visibility,
 } from '@mui/icons-material';
 import { apiRequest } from '@/lib/api';
-interface LightPattern {
+import {
+  getLightingPatternGobo,
+  getRecommendedLightingPatternIdsForSceneFamily,
+  isLightingPatternRecommendedForSceneFamily,
+  resolveLightingPatternThumbnail,
+  resolveLightingPatternThumbnailFallback,
+} from '@/core/services/lightingPatternIntelligence';
+import type { EnvironmentPlanInsightPresentation } from '@/services/environmentPlanInsightPresentation';
+export interface LightPattern {
   id: string;
   name: string;
   slug: string;
@@ -71,7 +79,7 @@ interface LightPattern {
   thumbnailUrl?: string;
 }
 
-const LOCAL_PATTERNS: LightPattern[] = [
+export const LOCAL_PATTERNS: LightPattern[] = [
   {
     id: 'rembrandt',
     name: 'Rembrandt',
@@ -94,7 +102,7 @@ const LOCAL_PATTERNS: LightPattern[] = [
     usageCount: 1250,
     ratingAverage: 4.8,
     ratingCount: 156,
-    thumbnailUrl: '/pattern-thumbnails/rembrandt_lighting_pattern_diagram.png'
+    thumbnailUrl: resolveLightingPatternThumbnail('rembrandt')
   },
   {
     id: 'butterfly',
@@ -118,7 +126,7 @@ const LOCAL_PATTERNS: LightPattern[] = [
     usageCount: 980,
     ratingAverage: 4.6,
     ratingCount: 89,
-    thumbnailUrl: '/pattern-thumbnails/butterfly_lighting_pattern_diagram.png'
+    thumbnailUrl: resolveLightingPatternThumbnail('butterfly')
   },
   {
     id: 'split',
@@ -142,7 +150,7 @@ const LOCAL_PATTERNS: LightPattern[] = [
     usageCount: 567,
     ratingAverage: 4.4,
     ratingCount: 45,
-    thumbnailUrl: '/pattern-thumbnails/split_lighting_pattern_diagram.png'
+    thumbnailUrl: resolveLightingPatternThumbnail('split')
   },
   {
     id: 'loop',
@@ -166,7 +174,7 @@ const LOCAL_PATTERNS: LightPattern[] = [
     usageCount: 1100,
     ratingAverage: 4.7,
     ratingCount: 134,
-    thumbnailUrl: '/pattern-thumbnails/loop_lighting_pattern_diagram.png'
+    thumbnailUrl: resolveLightingPatternThumbnail('loop')
   },
   {
     id: 'clamshell',
@@ -193,7 +201,7 @@ const LOCAL_PATTERNS: LightPattern[] = [
     usageCount: 445,
     ratingAverage: 4.5,
     ratingCount: 67,
-    thumbnailUrl: '/pattern-thumbnails/clamshell_lighting_pattern_diagram.png'
+    thumbnailUrl: resolveLightingPatternThumbnail('clamshell')
   },
   {
     id: 'three-point',
@@ -221,7 +229,7 @@ const LOCAL_PATTERNS: LightPattern[] = [
     usageCount: 2340,
     ratingAverage: 4.9,
     ratingCount: 289,
-    thumbnailUrl: '/pattern-thumbnails/three-point_lighting_diagram.png'
+    thumbnailUrl: resolveLightingPatternThumbnail('three-point')
   },
   {
     id: 'high-key',
@@ -249,7 +257,7 @@ const LOCAL_PATTERNS: LightPattern[] = [
     usageCount: 678,
     ratingAverage: 4.3,
     ratingCount: 56,
-    thumbnailUrl: '/pattern-thumbnails/high-key_lighting_diagram.png'
+    thumbnailUrl: resolveLightingPatternThumbnail('high-key')
   },
   {
     id: 'low-key',
@@ -273,7 +281,7 @@ const LOCAL_PATTERNS: LightPattern[] = [
     usageCount: 890,
     ratingAverage: 4.6,
     ratingCount: 112,
-    thumbnailUrl: '/pattern-thumbnails/film_noir_lighting_diagram.png'
+    thumbnailUrl: resolveLightingPatternThumbnail('low-key')
   }
 ];
 
@@ -281,19 +289,60 @@ interface LightPatternLibraryProps {
   open: boolean;
   onClose: () => void;
   onApplyPattern: (pattern: LightPattern) => Promise<void>;
+  preferredPatternId?: string | null;
+  openPreferredPatternDetails?: boolean;
+}
+
+function formatRecommendedPatternLabel(patternId: string, patternList: LightPattern[]): string {
+  const match = patternList.find((pattern) => [pattern.id, pattern.slug].includes(patternId));
+  if (match?.name) {
+    return match.name;
+  }
+  return patternId
+    .split('-')
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ');
+}
+
+export function findLocalLightPatternById(patternId: string | null | undefined): LightPattern | null {
+  if (!patternId) {
+    return null;
+  }
+  const normalizedPatternId = patternId.trim().toLowerCase();
+  return LOCAL_PATTERNS.find((pattern) => {
+    const candidates = [
+      pattern.id,
+      pattern.slug,
+      pattern.name,
+    ]
+      .filter(Boolean)
+      .map((value) => String(value).trim().toLowerCase());
+    return candidates.includes(normalizedPatternId);
+  }) || null;
 }
 
 export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
   open,
   onClose,
   onApplyPattern,
+  preferredPatternId = null,
+  openPreferredPatternDetails = false,
 }) => {
+  const patternCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [patterns, setPatterns] = useState<LightPattern[]>([]);
   const [customPatterns, setCustomPatterns] = useState<LightPattern[]>([]);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState<string | null>(null);
   const [selectedPattern, setSelectedPattern] = useState<LightPattern | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [environmentInsights, setEnvironmentInsights] = useState<EnvironmentPlanInsightPresentation | null>(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    return (window as Window & {
+      __virtualStudioLastEnvironmentPlanInsights?: EnvironmentPlanInsightPresentation;
+    }).__virtualStudioLastEnvironmentPlanInsights ?? null;
+  });
 
   // Tabs
   const [tabValue, setTabValue] = useState(0); // 0 = Professional, 1 = Community, 2 = My Patterns
@@ -309,6 +358,52 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
       fetchCustomPatterns();
     }
   }, [open, tabValue]);
+
+  useEffect(() => {
+    const handleInsightsUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<EnvironmentPlanInsightPresentation>;
+      setEnvironmentInsights(customEvent.detail || null);
+    };
+
+    window.addEventListener('vs-environment-plan-insights-updated', handleInsightsUpdate as EventListener);
+    return () => window.removeEventListener('vs-environment-plan-insights-updated', handleInsightsUpdate as EventListener);
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      setShowDetails(false);
+      setSelectedPattern(null);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || showDetails || !preferredPatternId) {
+      return;
+    }
+
+    const normalizedPreferredId = preferredPatternId.trim().toLowerCase();
+    const activePatterns = tabValue === 0
+      ? (patterns.length > 0 ? patterns : LOCAL_PATTERNS)
+      : customPatterns;
+    const fallbackPatterns = tabValue === 0 ? LOCAL_PATTERNS : [];
+    const preferredPattern = [...activePatterns, ...fallbackPatterns].find((pattern) => {
+      const candidates = [
+        pattern.id,
+        pattern.slug,
+        pattern.name,
+      ]
+        .filter(Boolean)
+        .map((value) => String(value).trim().toLowerCase());
+      return candidates.includes(normalizedPreferredId);
+    });
+
+    if (preferredPattern) {
+      setSelectedPattern(preferredPattern);
+      if (openPreferredPatternDetails) {
+        setShowDetails(true);
+      }
+    }
+  }, [customPatterns, open, openPreferredPatternDetails, patterns, preferredPatternId, showDetails, tabValue]);
 
   const fetchPatterns = async () => {
     setLoading(true);
@@ -361,8 +456,52 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
     setShowDetails(true);
   };
 
+  const getPatternGoboRecommendations = (pattern: LightPattern) => {
+    const contextText = [pattern.lookDescription, pattern.description, pattern.whenToUse]
+      .filter(Boolean)
+      .join(' ');
+
+    return pattern.lightSetup
+      .map((light) => {
+        const role = String(light.role || light.type || light.name || '').toLowerCase();
+        const recommendation = getLightingPatternGobo({
+          id: pattern.id,
+          slug: pattern.slug,
+          name: pattern.name,
+          category: pattern.category,
+          description: contextText,
+        }, role, contextText);
+
+        if (!recommendation) {
+          return null;
+        }
+
+        return {
+          label: String(light.name || role || 'Light'),
+          role: role || 'light',
+          recommendation,
+        };
+      })
+      .filter((entry): entry is {
+        label: string;
+        role: string;
+        recommendation: NonNullable<ReturnType<typeof getLightingPatternGobo>>;
+      } => Boolean(entry));
+  };
+
+  const resolvePatternThumbnailFallback = (pattern: LightPattern) => (
+    resolveLightingPatternThumbnailFallback({
+      id: pattern.id,
+      slug: pattern.slug,
+      name: pattern.name,
+      category: pattern.category,
+      description: pattern.description,
+      tags: [pattern.lookDescription, pattern.whenToUse].filter(Boolean),
+    })
+  );
+
   const filterPatterns = (patternList: LightPattern[]) => {
-    return patternList.filter(pattern => {
+    const filtered = patternList.filter(pattern => {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         if (!pattern.name.toLowerCase().includes(query) &&
@@ -382,9 +521,67 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
 
       return true;
     });
+
+    const recommendedIds = getRecommendedLightingPatternIdsForSceneFamily(environmentInsights?.familyId);
+    const getRecommendationRank = (pattern: LightPattern) => {
+      const patternTokens = [pattern.id, pattern.slug, pattern.name]
+        .filter(Boolean)
+        .map((token) => String(token).trim().toLowerCase());
+      const recommendationIndex = recommendedIds.findIndex((recommendedId) => patternTokens.includes(recommendedId));
+      return recommendationIndex === -1 ? Number.MAX_SAFE_INTEGER : recommendationIndex;
+    };
+
+    return filtered.slice().sort((left, right) => {
+      const recommendationDelta = getRecommendationRank(left) - getRecommendationRank(right);
+      if (recommendationDelta !== 0) {
+        return recommendationDelta;
+      }
+      if (left.isFeatured !== right.isFeatured) {
+        return left.isFeatured ? -1 : 1;
+      }
+      return right.usageCount - left.usageCount;
+    });
   };
 
   const filteredPatterns = filterPatterns(tabValue === 0 ? patterns : customPatterns);
+  const selectedPatternGobos = selectedPattern ? getPatternGoboRecommendations(selectedPattern) : [];
+  const recommendedPatternIds = useMemo(
+    () => getRecommendedLightingPatternIdsForSceneFamily(environmentInsights?.familyId),
+    [environmentInsights?.familyId],
+  );
+  const recommendedPatternLabels = useMemo(
+    () => recommendedPatternIds.map((patternId) => formatRecommendedPatternLabel(patternId, patterns.length > 0 ? patterns : LOCAL_PATTERNS)),
+    [patterns, recommendedPatternIds],
+  );
+  const recommendedPattern = useMemo(
+    () => filteredPatterns.find((pattern) => isLightingPatternRecommendedForSceneFamily(pattern, environmentInsights?.familyId)) || null,
+    [environmentInsights?.familyId, filteredPatterns],
+  );
+  const selectedPatternIsRecommended = selectedPattern
+    ? isLightingPatternRecommendedForSceneFamily(selectedPattern, environmentInsights?.familyId)
+    : false;
+  const preselectedPatternId = open && !showDetails ? selectedPattern?.id ?? null : null;
+
+  useEffect(() => {
+    if (!open || showDetails || !preselectedPatternId) {
+      return;
+    }
+
+    const cardNode = patternCardRefs.current[preselectedPatternId];
+    if (!cardNode || typeof cardNode.scrollIntoView !== 'function') {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      cardNode.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest',
+      });
+    }, 40);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [filteredPatterns.length, open, preselectedPatternId, showDetails]);
 
   const getDifficultyColor = (level: string) => {
     switch (level) {
@@ -469,6 +666,46 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
               </Typography>
             </Alert>
 
+            {environmentInsights && recommendedPatternIds.length > 0 && (
+              <Alert
+                severity="success"
+                data-testid="light-pattern-ai-banner"
+                sx={{
+                  bgcolor: 'rgba(16,185,129,0.12)',
+                  border: '1px solid rgba(16,185,129,0.25)',
+                  '& .MuiAlert-message': { color: '#d1fae5' },
+                }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                  AI-retning: {environmentInsights.familyLabel}
+                </Typography>
+                <Typography variant="body2">
+                  Prioriterer: {recommendedPatternLabels.join(' · ')}
+                </Typography>
+                <Box sx={{ mt: 1.25 }}>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    data-testid="light-pattern-ai-apply"
+                    onClick={() => {
+                      if (recommendedPattern) {
+                        void handleApply(recommendedPattern);
+                      }
+                    }}
+                    disabled={!recommendedPattern || applying !== null}
+                    sx={{
+                      bgcolor: '#10b981',
+                      color: '#04130d',
+                      fontWeight: 700,
+                      '&:hover': { bgcolor: '#34d399' },
+                    }}
+                  >
+                    Bruk AI-pattern
+                  </Button>
+                </Box>
+              </Alert>
+            )}
+
             {/* Search and Filters */}
             <Box>
               <Grid container spacing={2} alignItems="center">
@@ -527,21 +764,30 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
             {/* Patterns Grid */}
             {!loading && (
               <Grid container spacing={2}>
-                {filteredPatterns.map((pattern) => (
+                {filteredPatterns.map((pattern) => {
+                  const isPreselected = preselectedPatternId === pattern.id;
+                  return (
                   <Grid size={{ xs: 12, sm: 6, md: 4 }} key={pattern.id}>
-                    <Card sx={{ 
-                      height: '100%', 
-                      display: 'flex', 
-                      flexDirection: 'column',
-                      bgcolor: 'rgba(255,255,255,0.05)',
-                      borderColor: 'rgba(255,255,255,0.1)',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        bgcolor: 'rgba(255,255,255,0.08)',
-                        borderColor: 'rgba(0,212,255,0.3)',
-                        transform: 'translateY(-2px)'
-                      }
-                    }}>
+                    <Card
+                      ref={(node) => {
+                        patternCardRefs.current[pattern.id] = node;
+                      }}
+                      data-testid={`light-pattern-card-${pattern.id}`}
+                      data-preferred-pattern={isPreselected ? 'true' : 'false'}
+                      sx={{
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        bgcolor: isPreselected ? 'rgba(0,212,255,0.12)' : 'rgba(255,255,255,0.05)',
+                        borderColor: isPreselected ? 'rgba(0,212,255,0.65)' : 'rgba(255,255,255,0.1)',
+                        boxShadow: isPreselected ? '0 0 0 1px rgba(0,212,255,0.2), 0 18px 34px rgba(0,0,0,0.28)' : 'none',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          bgcolor: isPreselected ? 'rgba(0,212,255,0.15)' : 'rgba(255,255,255,0.08)',
+                          borderColor: 'rgba(0,212,255,0.3)',
+                          transform: 'translateY(-2px)'
+                        }
+                      }}>
                       {/* Thumbnail Image */}
                       {pattern.thumbnailUrl && (
                         <Box
@@ -556,8 +802,23 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
                             position: 'relative'}}
                         >
                           <img
-                            src={pattern.thumbnailUrl}
+                            src={
+                              pattern.thumbnailUrl
+                              || resolveLightingPatternThumbnail({
+                                id: pattern.id,
+                                slug: pattern.slug,
+                                name: pattern.name,
+                                category: pattern.category,
+                                description: pattern.description,
+                              })
+                            }
                             alt={pattern.name}
+                            onError={(event) => {
+                              const fallbackSource = resolvePatternThumbnailFallback(pattern);
+                              if (event.currentTarget.src !== fallbackSource) {
+                                event.currentTarget.src = fallbackSource;
+                              }
+                            }}
                             style={{
                               width: '100%',
                               height: '100%',
@@ -586,6 +847,12 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
                       <CardContent sx={{ flexGrow: 1 }}>
                         {/* Badges */}
                         <Stack direction="row" spacing={0.5} sx={{ mb: 1 }} flexWrap="wrap">
+                          {isPreselected && (
+                            <Chip label="Forhåndsvalgt" size="small" color="info" />
+                          )}
+                          {isLightingPatternRecommendedForSceneFamily(pattern, environmentInsights?.familyId) && (
+                            <Chip label="AI-match" size="small" color="success" />
+                          )}
                           {pattern.isFeatured && (
                             <Chip label="Anbefalt" size="small" color="primary" icon={<Star />} />
                           )}
@@ -629,6 +896,19 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
                           sx={{ textTransform: 'capitalize' }}
                         />
 
+                        {getPatternGoboRecommendations(pattern)[0] && (
+                          <Chip
+                            label={`AI gobo: ${getPatternGoboRecommendations(pattern)[0]!.recommendation.goboId}`}
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                              ml: 1,
+                              borderColor: 'rgba(0,212,255,0.35)',
+                              color: '#8feeff',
+                            }}
+                          />
+                        )}
+
                         {/* Stats */}
                         {pattern.usageCount > 0 && (
                           <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 1 }}>
@@ -664,7 +944,8 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
                       </CardActions>
                     </Card>
                   </Grid>
-                ))}
+                  );
+                })}
               </Grid>
             )}
 
@@ -716,6 +997,17 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
                   {selectedPattern.lookDescription}
                 </Typography>
               </Alert>
+
+              {selectedPatternIsRecommended && environmentInsights && (
+                <Alert severity="success">
+                  <Typography variant="body2" fontWeight="bold">
+                    AI-match for {environmentInsights.familyLabel}
+                  </Typography>
+                  <Typography variant="body2">
+                    Dette mønsteret er prioritert fordi det passer scene-familien og lysintensjonen i oppsettet ditt.
+                  </Typography>
+                </Alert>
+              )}
 
               {/* Description */}
               <Box>
@@ -775,6 +1067,27 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
                   ))}
                 </List>
               </Box>
+
+              {selectedPatternGobos.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    AI Gobo Recommendations
+                  </Typography>
+                  <List dense>
+                    {selectedPatternGobos.map((entry, index) => (
+                      <ListItem key={`${entry.role}-${entry.recommendation.goboId}-${index}`}>
+                        <ListItemIcon>
+                          <Lightbulb color="info" fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={`${entry.label}: ${entry.recommendation.goboId}`}
+                          secondary={entry.recommendation.rationale || 'AI foreslår denne goboen for å forsterke looken.'}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+              )}
 
               {/* Subject Orientation */}
               <Box>
@@ -875,4 +1188,3 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
     </>
   );
 };
-

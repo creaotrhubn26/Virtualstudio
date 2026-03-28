@@ -158,7 +158,14 @@ function ToolButton({ icon, label, shortcut, onClick, active, disabled, badge }:
 // ============================================================================
 
 function SelectionInfo() {
-  const selection = useSelection('toolbar,');
+  const selection = useSelection('toolbar');
+
+  const handleClearSelection = () => {
+    selection.clear();
+    window.dispatchEvent(new CustomEvent('ch-scene-node-selected', {
+      detail: { nodeId: null },
+    }));
+  };
 
   if (selection.selectedIds.length === 0) {
     return (
@@ -172,7 +179,7 @@ function SelectionInfo() {
     <Chip
       size="small"
       label={`${selection.selectedIds.length} selected`}
-      onDelete={() => selection.clear()}
+      onDelete={handleClearSelection}
       sx={{ mx: 1 }}
     />
   );
@@ -183,7 +190,7 @@ function SelectionInfo() {
 // ============================================================================
 
 export function QuickAccessToolbar({
-  transformMode = 'translate,',
+  transformMode = 'translate',
   onTransformModeChange,
   viewMode = 'perspective',
   onViewModeChange,
@@ -221,7 +228,17 @@ export function QuickAccessToolbar({
     if (onDuplicate) {
       onDuplicate();
     } else if (selection.selectedIds.length > 0) {
-      equipmentGroupingService.duplicateNodes(selection.selectedIds);
+      const duplicated = equipmentGroupingService.duplicateNodes(selection.selectedIds);
+      const duplicatedIds = Array.isArray(duplicated)
+        ? duplicated
+        : duplicated
+          ? [duplicated]
+          : [];
+      if (duplicatedIds.length > 0) {
+        window.dispatchEvent(new CustomEvent('ch-scene-node-selected', {
+          detail: { nodeId: duplicatedIds[0] },
+        }));
+      }
     }
   }, [onDuplicate, selection.selectedIds]);
 
@@ -486,4 +503,3 @@ export function MiniToolbar({
 }
 
 export default QuickAccessToolbar;
-
