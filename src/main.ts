@@ -5637,6 +5637,7 @@ class VirtualStudio {
         // The GLB __root__ is a TransformNode, so real geometry sits one level deeper;
         // using (true) returns an empty array and breaks all bounding-box logic.
         const allSubMeshes = parentMesh.getChildMeshes(false);
+        console.log(`[addLight] getChildMeshes(false) returned ${allSubMeshes.length} meshes: [${allSubMeshes.map(m => `"${m.name}"(${m.constructor.name})`).join(', ')}]`);
         const headMeshes: BABYLON.Mesh[] = [];
         let headCount = 0;
         for (const sm of allSubMeshes) {
@@ -5669,9 +5670,11 @@ class VirtualStudio {
         headPivot.computeWorldMatrix(true);
         let bMin = new BABYLON.Vector3(Infinity, Infinity, Infinity);
         let bMax = new BABYLON.Vector3(-Infinity, -Infinity, -Infinity);
-        glowSource.forEach(sm => {
+        glowSource.forEach((sm, idx) => {
+          sm.refreshBoundingInfo();   // ensure bounding info is built from actual vertices
           sm.computeWorldMatrix(true);
           const bb = sm.getBoundingInfo().boundingBox;
+          console.log(`[addLight] glowSrc[${idx}] name="${sm.name}" verts=${sm.getTotalVertices()} minWorld=(${bb.minimumWorld.x.toFixed(2)},${bb.minimumWorld.y.toFixed(2)},${bb.minimumWorld.z.toFixed(2)}) maxWorld=(${bb.maximumWorld.x.toFixed(2)},${bb.maximumWorld.y.toFixed(2)},${bb.maximumWorld.z.toFixed(2)})`);
           bMin = BABYLON.Vector3.Minimize(bMin, bb.minimumWorld);
           bMax = BABYLON.Vector3.Maximize(bMax, bb.maximumWorld);
         });
