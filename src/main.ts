@@ -690,6 +690,7 @@ class VirtualStudio {
   private gridMesh: BABYLON.Mesh | null = null;
   private gizmoManager: BABYLON.GizmoManager | null = null;
   private wallsVisible: boolean = true;
+  private activePresetKategori: string = '';
   
   // Undo/Redo system
   private undoStack: UndoAction[] = [];
@@ -23199,6 +23200,7 @@ class VirtualStudio {
 
   applyScenarioPreset(preset: ScenarioPreset): void {
     console.log('Applying scenario preset:', preset.navn);
+    this.activePresetKategori = preset.kategori || '';
 
     this.lights.forEach((lightData, _id) => {
       lightData.light.dispose();
@@ -24740,8 +24742,9 @@ class VirtualStudio {
     
     // Check if lights are too weak and recommend stronger lights
     // Target EV for well-lit studio is typically EV 10-12
+    // Skip for story presets — atmospheric/practical lighting is intentionally dim
     const targetEV = 10;
-    if (ev < targetEV - 1 && this.lights.size > 0) {
+    if (ev < targetEV - 1 && this.lights.size > 0 && this.activePresetKategori !== 'story') {
       // Lights are too weak - check if we should show recommendation
       const lastRecommendationTime = (window as any).lastLightRecommendationTime || 0;
       const now = Date.now();

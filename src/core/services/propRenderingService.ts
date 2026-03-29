@@ -45,14 +45,24 @@ class PropRenderingService {
     this.clearEnvironment();
     try {
       const result = await SceneLoader.ImportMeshAsync('', '', url, this.scene);
+
+      // Scale only the root mesh — children inherit the transform automatically.
+      // Scaling every mesh individually causes double-scaling through the hierarchy.
+      const root = result.meshes[0];
+      if (root) {
+        root.scaling.setAll(scale);
+        root.position = Vector3.Zero();
+      }
+
       result.meshes.forEach(m => {
         m.receiveShadows = true;
         m.isPickable = false;
-        m.scaling.scaleInPlace(scale);
+        m.checkCollisions = false;
 
         if (m.material instanceof PBRMaterial) {
           m.material.unlit = false;
           m.material.backFaceCulling = false;
+          m.material.twoSidedLighting = true;
         } else if (m.material instanceof StandardMaterial) {
           m.material.backFaceCulling = false;
         }

@@ -107,6 +107,9 @@ class StorySceneLoaderService {
     report('clear', 0, 'Rydder forrige scene…');
     window.dispatchEvent(new CustomEvent('ch-clear-story-characters'));
     propRenderingService.clearEnvironment();
+    // Restore default floor/grid in case a previous story scene hid them
+    window.dispatchEvent(new CustomEvent('ch-toggle-floor', { detail: { visible: true } }));
+    window.dispatchEvent(new CustomEvent('ch-toggle-grid', { detail: { visible: true } }));
     await new Promise(r => setTimeout(r, 200));
     report('clear', 1, 'Forrige scene fjernet');
 
@@ -117,6 +120,9 @@ class StorySceneLoaderService {
         propRenderingService.setScene(vs.scene);
       }
       await propRenderingService.loadEnvironment(preset.environmentUrl, 10);
+      // Hide the built-in floor/grid — the GLB room has its own floor
+      window.dispatchEvent(new CustomEvent('ch-toggle-floor', { detail: { visible: false } }));
+      window.dispatchEvent(new CustomEvent('ch-toggle-grid', { detail: { visible: false } }));
       report('environment', 1, 'Miljø lastet');
     }
 
