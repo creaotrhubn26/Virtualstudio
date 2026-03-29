@@ -159,7 +159,7 @@ class StorySceneLoaderService {
 
         const skinHex = getAvatarSkinHex(charManifest.avatarType);
 
-        window.dispatchEvent(new CustomEvent('ch-load-character', {
+        window.dispatchEvent(new CustomEvent('ch-load-story-character', {
           detail: {
             modelUrl,
             name: charManifest.label,
@@ -168,7 +168,6 @@ class StorySceneLoaderService {
             position: charManifest.position,
             rotation: charManifest.rotation ?? [0, 0, 0],
             storyRigId: charManifest.id,
-            additive: true,
           },
         }));
 
