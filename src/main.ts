@@ -5731,11 +5731,17 @@ class VirtualStudio {
             }
 
             if (isFinite(fxMin) && isFinite(fyMin) && fxMax > fxMin && fyMax > fyMin) {
+              // Width (X) is measured correctly from the front-face vertices.
+              // Height (Y) is inflated by mounting hardware above/below the gray panel.
+              // The softbox is square, so force panelH = panelW to match the gray panel.
               panelW = fxMax - fxMin;
-              panelH = fyMax - fyMin;
+              panelH = panelW;
+              // Use the vertex-measured Y center, not the hardware-inflated bbox Y center.
+              // Store it so worldCenter below can use it.
+              (geoMesh as any)._diffuserYCenter = (fyMin + fyMax) * 0.5;
               measuredFromVertices = true;
-              console.log(`[addLight] VERTEX diffuser: W=${panelW.toFixed(3)}m H=${panelH.toFixed(3)}m` +
-                ` (eps=${epsilon.toFixed(3)}, bMinZ=${bMin.z.toFixed(3)}, jointY=${headJointWorldY.toFixed(3)})`);
+              console.log(`[addLight] VERTEX diffuser: W=${panelW.toFixed(3)}m (square) rawYrange=[${fyMin.toFixed(3)},${fyMax.toFixed(3)}]` +
+                ` Ycenter=${((fyMin + fyMax) * 0.5).toFixed(3)} (eps=${epsilon.toFixed(3)})`);
             } else {
               console.warn(`[addLight] No front-face vertices found (eps=${epsilon.toFixed(3)}, bMinZ=${bMin.z.toFixed(3)}); using bbox fallback`);
             }
@@ -5748,11 +5754,15 @@ class VirtualStudio {
           panelH = Math.max(0.05, bMax.y - bMin.y);
           console.log(`[addLight] BBOX diffuser fallback: W=${panelW.toFixed(3)}m H=${panelH.toFixed(3)}m`);
         }
-        // World-space centre on the −Z (diffuser) face of the head bounding box.
-        // Offset 1.5 cm in −Z so it sits just in front of the physical face.
+        // World-space centre on the −Z (diffuser) face.
+        // Use the vertex-measured Y center when available (avoids hardware inflation).
+        // Offset 1.5 cm in −Z so the plane sits just in front of the physical face.
+        const vertexYCenter = (measuredFromVertices && geoMesh)
+          ? (geoMesh as any)._diffuserYCenter as number
+          : (bMin.y + bMax.y) * 0.5;
         const worldCenter = new BABYLON.Vector3(
           (bMin.x + bMax.x) * 0.5,
-          (bMin.y + bMax.y) * 0.5,
+          vertexYCenter,
           bMin.z - 0.015
         );
 
