@@ -16,7 +16,7 @@ import { ScenarioPreset } from '../data/scenarioPresets';
 import { propRenderingService } from '../core/services/propRenderingService';
 import { useSkeletalAnimationStore } from './skeletalAnimationService';
 import { ALL_POSES } from '../core/animation/PoseLibrary';
-import { getAvatarModelUrl, getAvatarSkinHex } from '../core/data/avatarDefinitions';
+import { getAvatarModelUrl, getAvatarSkinHex, getAvatarDefinition } from '../core/data/avatarDefinitions';
 import { logger } from '../core/services/logger';
 
 const log = logger.module('StorySceneLoader');
@@ -159,12 +159,15 @@ class StorySceneLoaderService {
 
         const skinHex = getAvatarSkinHex(charManifest.avatarType);
 
+        const avatarDef = getAvatarDefinition(charManifest.avatarType);
+        const height = charManifest.height ?? avatarDef?.defaultHeight ?? 1.75;
+
         window.dispatchEvent(new CustomEvent('ch-load-story-character', {
           detail: {
             modelUrl,
             name: charManifest.label,
             skinTone: skinHex,
-            height: 1.75,
+            height,
             position: charManifest.position,
             rotation: charManifest.rotation ?? [0, 0, 0],
             storyRigId: charManifest.id,

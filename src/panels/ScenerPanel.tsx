@@ -848,9 +848,12 @@ const buttonStyle = {
             ))}
           </Box>
 
-          {/* Napoli Dreams banner: open multiview for all three acts */}
+          {/* Napoli Dreams banner: open multiview for currently loaded story act */}
           {(() => {
-            const napoliPreset = scenarioPresets.find(p => p.kategori === 'story' && p.characters && p.characters.length > 0);
+            const activeStoryPreset = storySceneLoaderService.getCurrentPreset();
+            const napoliPreset = (activeStoryPreset?.kategori === 'story' && activeStoryPreset.characters?.length)
+              ? activeStoryPreset
+              : scenarioPresets.find(p => p.kategori === 'story' && p.characters && p.characters.length > 0);
             if (!napoliPreset) return null;
             return (
               <Button

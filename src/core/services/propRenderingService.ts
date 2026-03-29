@@ -241,16 +241,32 @@ class PropRenderingService {
         }, this.scene);
         break;
       case 'monitor-stand': {
-        // Screen panel on a thin stand
+        // Composite: vertical stand pole + screen panel parented to a root transform node
         const standH = Number(metadata.standHeight) || 1.1;
         const screenW = Number(metadata.width) || 0.62;
         const screenH = Number(metadata.height) || 0.48;
-        mesh = MeshBuilder.CreateBox(prop.id, {
+        const screenD = Number(metadata.depth) || 0.08;
+
+        const root = MeshBuilder.CreateBox(`${prop.id}_root`, { size: 0.001 }, this.scene);
+        root.isVisible = false;
+
+        const pole = MeshBuilder.CreateCylinder(`${prop.id}_pole`, {
+          diameter: 0.04,
+          height: standH,
+          tessellation: 10,
+        }, this.scene);
+        pole.parent = root;
+        pole.position.y = standH / 2;
+
+        const screen = MeshBuilder.CreateBox(`${prop.id}_screen`, {
           width: screenW,
           height: screenH,
-          depth: Number(metadata.depth) || 0.08,
+          depth: screenD,
         }, this.scene);
-        mesh.position.y = standH + screenH / 2;
+        screen.parent = root;
+        screen.position.y = standH + screenH / 2;
+
+        mesh = root;
         break;
       }
       case 'props-cluster':

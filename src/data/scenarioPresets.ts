@@ -6,6 +6,7 @@ export interface StoryCharacterManifest {
   position: [number, number, number];
   rotation?: [number, number, number];
   label: string;
+  height?: number;
 }
 
 export interface StoryPropManifest {
