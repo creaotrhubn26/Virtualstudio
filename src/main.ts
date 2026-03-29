@@ -17099,6 +17099,14 @@ class VirtualStudio {
       useAppStore.getState().removeNode(modelId);
     });
     this.storyCharacters.clear();
+
+    // Hide the permanent default avatar so it does not appear alongside story characters
+    const defaultAvatarMesh = this.scene.getMeshByName('default_avatar');
+    if (defaultAvatarMesh) {
+      defaultAvatarMesh.setEnabled(false);
+      console.log('[StoryScene] Default avatar hidden for story scene');
+    }
+
     console.log('[StoryScene] All story characters cleared');
   }
 
