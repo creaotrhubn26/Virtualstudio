@@ -10475,16 +10475,39 @@ class VirtualStudio {
     window.addEventListener('ch-apply-scene-branding', ((e: CustomEvent) => {
       const { companyName, logoUrl, brandColor } = (e.detail || {}) as { companyName?: string; logoUrl?: string; brandColor?: string };
 
-      const existingSign = this.scene.getMeshByName('__branding-sign__');
-      if (existingSign) existingSign.dispose();
-      const existingLogo = this.scene.getMeshByName('__branding-logo__');
-      if (existingLogo) existingLogo.dispose();
+      // Remove existing scene branding meshes (sign, logo, per-character chest decals)
+      ['__branding-sign__', '__branding-logo__'].forEach(n => {
+        const m = this.scene.getMeshByName(n);
+        if (m) m.dispose();
+      });
+      this.scene.meshes
+        .filter(m => m.name.startsWith('__brand-chest-'))
+        .slice()
+        .forEach(m => m.dispose());
+
+      const hex = brandColor ?? '#c8392b';
+      const brandColorBabylon = BABYLON.Color3.FromHexString(hex);
+      const defaultShirtColor = new BABYLON.Color3(0.2, 0.4, 0.7);
+
+      // Apply / reset brand color on all character shirt-zone materials
+      this.scene.materials.forEach(mat => {
+        if (!(mat instanceof BABYLON.StandardMaterial)) return;
+        if (!mat.name.endsWith('_shirt')) return;
+        if (!companyName && !logoUrl) {
+          mat.diffuseColor = defaultShirtColor;
+          mat.emissiveColor = BABYLON.Color3.Black();
+        } else {
+          mat.diffuseColor = brandColorBabylon;
+          mat.emissiveColor = brandColorBabylon.scale(0.18);
+        }
+      });
 
       if (!companyName && !logoUrl) {
         console.info('[SceneBranding] Cleared');
         return;
       }
 
+      // Wall sign with company name
       const signWidth = 2.0;
       const signHeight = 0.5;
       const sign = BABYLON.MeshBuilder.CreatePlane('__branding-sign__', { width: signWidth, height: signHeight }, this.scene);
@@ -10496,29 +10519,32 @@ class VirtualStudio {
       const texH = 256;
       const dynTex = new BABYLON.DynamicTexture('__branding-tex__', { width: texW, height: texH }, this.scene, false);
       const ctx = dynTex.getContext() as CanvasRenderingContext2D;
-
-      const hex = brandColor ?? '#c8392b';
-      const r = parseInt(hex.slice(1, 3), 16);
-      const g = parseInt(hex.slice(3, 5), 16);
-      const b = parseInt(hex.slice(5, 7), 16);
-      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      const rr = parseInt(hex.slice(1, 3), 16);
+      const gg = parseInt(hex.slice(3, 5), 16);
+      const bb = parseInt(hex.slice(5, 7), 16);
+      ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
       ctx.fillRect(0, 0, texW, texH);
+      // Subtle rounded border
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.lineWidth = 8;
+      ctx.strokeRect(12, 12, texW - 24, texH - 24);
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 72px Arial';
+      ctx.font = 'bold 68px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(companyName ?? '', texW / 2, texH / 2);
       dynTex.update();
 
-      const mat = new BABYLON.StandardMaterial('__branding-mat__', this.scene);
-      mat.diffuseTexture = dynTex;
-      mat.emissiveColor = new BABYLON.Color3(1, 1, 1);
-      mat.backFaceCulling = false;
-      sign.material = mat;
+      const signMat = new BABYLON.StandardMaterial('__branding-mat__', this.scene);
+      signMat.diffuseTexture = dynTex;
+      signMat.emissiveColor = new BABYLON.Color3(1, 1, 1);
+      signMat.backFaceCulling = false;
+      sign.material = signMat;
 
+      // Logo beside the sign
       if (logoUrl) {
-        const logoPlane = BABYLON.MeshBuilder.CreatePlane('__branding-logo__', { width: 0.4, height: 0.4 }, this.scene);
-        logoPlane.position = new BABYLON.Vector3(-signWidth / 2 + 0.25, 2.5, -2.75);
+        const logoPlane = BABYLON.MeshBuilder.CreatePlane('__branding-logo__', { width: 0.42, height: 0.42 }, this.scene);
+        logoPlane.position = new BABYLON.Vector3(-signWidth / 2 - 0.28, 2.5, -2.75);
         logoPlane.isPickable = false;
         logoPlane.checkCollisions = false;
         const logoMat = new BABYLON.StandardMaterial('__branding-logo-mat__', this.scene);
@@ -10529,9 +10555,41 @@ class VirtualStudio {
         logoMat.useAlphaFromDiffuseTexture = true;
         logoMat.backFaceCulling = false;
         logoPlane.material = logoMat;
+
+        // Logo chest decal on each loaded story character
+        for (const [rigId, { mesh }] of this.storyCharacters.entries()) {
+          const bounds = mesh.getHierarchyBoundingVectors(true);
+          const charHeight = bounds.max.y - bounds.min.y;
+          const chestWorldY = bounds.min.y + charHeight * 0.70;
+          const charWorldPos = mesh.getAbsolutePosition();
+
+          // Forward direction: mesh.rotation.x = PI means local -Z is world +Z after flip
+          const rotY = mesh.rotation.y;
+          const fwdX = -Math.sin(rotY);
+          const fwdZ = -Math.cos(rotY);
+
+          const decal = BABYLON.MeshBuilder.CreatePlane(`__brand-chest-${rigId}__`, { width: 0.14, height: 0.14 }, this.scene);
+          decal.position = new BABYLON.Vector3(
+            charWorldPos.x + fwdX * 0.11,
+            chestWorldY,
+            charWorldPos.z + fwdZ * 0.11,
+          );
+          decal.rotation.y = rotY + Math.PI;
+          decal.isPickable = false;
+          decal.checkCollisions = false;
+
+          const decalMat = new BABYLON.StandardMaterial(`__brand-chest-mat-${rigId}__`, this.scene);
+          const decalTex = new BABYLON.Texture(logoUrl, this.scene);
+          decalTex.hasAlpha = true;
+          decalMat.diffuseTexture = decalTex;
+          decalMat.emissiveColor = new BABYLON.Color3(1, 1, 1);
+          decalMat.useAlphaFromDiffuseTexture = true;
+          decalMat.backFaceCulling = false;
+          decal.material = decalMat;
+        }
       }
 
-      console.info('[SceneBranding] Applied:', { companyName, logoUrl, brandColor });
+      console.info('[SceneBranding] Applied (clothes + sign):', { companyName, logoUrl, brandColor, characters: this.storyCharacters.size });
     }) as EventListener);
 
     window.addEventListener('ch-set-wall-material', ((e: CustomEvent) => {
