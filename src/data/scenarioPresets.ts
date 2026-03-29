@@ -726,9 +726,9 @@ export const scenarioPresets: ScenarioPreset[] = [
     props: [
       { id: 'prop-akt2-pizza', propId: 'pizza-plate', position: [0, 0.8, 0], rotation: [0, 0, 0], label: 'Pizza (hero shot)' },
       { id: 'prop-akt2-shoot-table', propId: 'shooting-table-studio', position: [0, 0, 0], rotation: [0, 0, 0], label: 'Fotograferingsbord (studio sweep)' },
-      { id: 'prop-akt2-reflector-l', propId: 'reflective_panel', position: [-1.2, 0.8, 0.4], rotation: [0, 15, 0], label: 'Reflektor venstre' },
-      { id: 'prop-akt2-reflector-r', propId: 'reflective_panel', position: [1.2, 0.8, 0.4], rotation: [0, -15, 0], label: 'Reflektor høyre' },
-      { id: 'prop-akt2-candle', propId: 'candle-holder', position: [0.4, 0.8, 0.1], rotation: [0, 0, 0], label: 'Stearinlys (stemning)' },
+      { id: 'prop-akt2-reflector-l', propId: 'reflective_panel', position: [-1.2, 0, 0.4], rotation: [0, 15, 0], label: 'Reflektor venstre' },
+      { id: 'prop-akt2-reflector-r', propId: 'reflective_panel', position: [1.2, 0, 0.4], rotation: [0, -15, 0], label: 'Reflektor høyre' },
+      { id: 'prop-akt2-candle', propId: 'candle-holder', position: [0.4, 0.80, 0.1], rotation: [0, 0, 0], label: 'Stearinlys (stemning)' },
     ],
     sceneConfig: {
       lights: [
@@ -1078,13 +1078,13 @@ export const scenarioPresets: ScenarioPreset[] = [
     props: [
       { id: 'prop-hw-camera', propId: 'cinema-camera', position: [0.5, 0, 1.0], rotation: [0, 180, 0], label: 'Kinokamera (primær)' },
       { id: 'prop-hw-dolly', propId: 'camera-dolly-track', position: [0.5, 0, 2.5], rotation: [0, 0, 0], label: 'Dolly-sporssystem' },
-      { id: 'prop-hw-led-key', propId: 'led-panel-light', position: [-1.8, 1.5, 0.5], rotation: [0, 30, -15], label: 'LED Key Light (SkyPanel)' },
-      { id: 'prop-hw-fresnel-fill', propId: 'fresnel-light', position: [2.0, 1.5, 0.8], rotation: [0, -25, -10], label: 'Fresnel Fill Light' },
+      { id: 'prop-hw-led-key', propId: 'led-panel-light', position: [-1.8, 0, 0.5], rotation: [0, 30, -15], label: 'LED Key Light (SkyPanel)' },
+      { id: 'prop-hw-fresnel-fill', propId: 'fresnel-light', position: [2.0, 0, 0.8], rotation: [0, -25, -10], label: 'Fresnel Fill Light' },
       { id: 'prop-hw-c-stand-l', propId: 'c-stand', position: [-2.5, 0, 0.5], rotation: [0, 15, 0], label: 'C-stativ venstre' },
       { id: 'prop-hw-c-stand-r', propId: 'c-stand', position: [2.5, 0, 0.5], rotation: [0, -15, 0], label: 'C-stativ høyre' },
       { id: 'prop-hw-reflector', propId: 'reflector-disc', position: [1.5, 0, -0.5], rotation: [0, -20, 0], label: 'Reflektordisk (fill)' },
       { id: 'prop-hw-boom', propId: 'boom-mic', position: [0, 0, 0.2], rotation: [0, 0, 0], label: 'Bom-mikrofon' },
-      { id: 'prop-hw-led-wall', propId: 'led-video-wall', position: [0, 1.0, -3.0], rotation: [0, 0, 0], label: 'LED Videowall (Virtual BG)' },
+      { id: 'prop-hw-led-wall', propId: 'led-video-wall', position: [0, 0, -3.0], rotation: [0, 0, 0], label: 'LED Videowall (Virtual BG)' },
       { id: 'prop-hw-monitors', propId: 'monitor-stack', position: [-2.0, 0, 2.0], rotation: [0, 20, 0], label: 'Video Village (monitorer)' },
       { id: 'prop-hw-director-chair', propId: 'directors-chair', position: [-2.5, 0, 2.0], rotation: [0, 25, 0], label: 'Regissørstol' },
       { id: 'prop-hw-jib', propId: 'camera-jib-crane', position: [2.5, 0, 2.5], rotation: [0, -30, 0], label: 'Jib-kran (B-camera)' },

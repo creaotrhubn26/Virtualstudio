@@ -416,6 +416,19 @@ class PropRenderingService {
           );
         }
 
+        // Ground correction: shift Y so the prop's bottom face lands exactly
+        // at the preset's target Y — regardless of whether the GLB pivot is at
+        // the bottom or at the centre of the mesh.
+        mesh.computeWorldMatrix(true);
+        const bounds = mesh.getHierarchyBoundingVectors(true);
+        if (isFinite(bounds.min.y) && bounds.min.y !== bounds.max.y) {
+          const bottomOffset = bounds.min.y - py;
+          if (Math.abs(bottomOffset) > 0.001) {
+            mesh.position.y -= bottomOffset;
+            log.info(`[PropGround] ${manifest.id}: adjusted Y by ${(-bottomOffset).toFixed(3)}m (bottomY was ${bounds.min.y.toFixed(3)}, target ${py})`);
+          }
+        }
+
         results.set(manifest.id, mesh);
         log.info(`Story prop loaded: ${manifest.label} (${manifest.propId})`);
       } catch (err) {
