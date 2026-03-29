@@ -126,7 +126,7 @@ class StorySceneLoaderService {
       log.debug(`[${phase}] ${Math.round(progress * 100)}% — ${message}`);
     };
 
-    const vs = (window as any).virtualStudio;
+    const vs = window.virtualStudio;
 
     // ── PHASE 0: Clear previous story characters ──────────────────────
     report('clear', 0, 'Rydder forrige scene…');
