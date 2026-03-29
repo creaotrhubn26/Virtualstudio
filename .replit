@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "python-3.11", "postgresql-16"]
+modules = ["nodejs-20", "python-3.11", "web"]
 [agent]
 expertMode = true
 integrations = ["python_openai_ai_integrations:1.0.0"]
@@ -42,7 +42,7 @@ externalPort = 5000
 exposeLocalhost = true
 
 [nix]
-packages = ["awscli2", "cargo", "libGL", "libGLU", "libiconv", "openssh", "pkg-config", "rustc"]
+packages = ["awscli2", "cargo", "freetype", "lcms2", "libGL", "libGLU", "libiconv", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssh", "pkg-config", "rustc", "tcl", "tk", "zlib"]
 channel = "stable-25_05"
 
 [workflows]
@@ -84,3 +84,8 @@ waitForPort = 8000
 
 [workflows.workflow.metadata]
 outputType = "console"
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["node", "./dist/index.cjs"]
+build = ["npm", "run", "build"]
