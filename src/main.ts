@@ -5736,12 +5736,15 @@ class VirtualStudio {
               // The softbox is square, so force panelH = panelW to match the gray panel.
               panelW = fxMax - fxMin;
               panelH = panelW;
-              // Use the vertex-measured Y center, not the hardware-inflated bbox Y center.
-              // Store it so worldCenter below can use it.
+              // Use vertex-measured centers (not hardware-inflated bbox centers) for
+              // both X and Y so the plane sits exactly on the diffuser face.
+              (geoMesh as any)._diffuserXCenter = (fxMin + fxMax) * 0.5;
               (geoMesh as any)._diffuserYCenter = (fyMin + fyMax) * 0.5;
               measuredFromVertices = true;
-              console.log(`[addLight] VERTEX diffuser: W=${panelW.toFixed(3)}m (square) rawYrange=[${fyMin.toFixed(3)},${fyMax.toFixed(3)}]` +
-                ` Ycenter=${((fyMin + fyMax) * 0.5).toFixed(3)} (eps=${epsilon.toFixed(3)})`);
+              console.log(`[addLight] VERTEX diffuser: W=${panelW.toFixed(3)}m (square)` +
+                ` Xcenter=${((fxMin + fxMax) * 0.5).toFixed(3)} Ycenter=${((fyMin + fyMax) * 0.5).toFixed(3)}` +
+                ` rawX=[${fxMin.toFixed(3)},${fxMax.toFixed(3)}] rawY=[${fyMin.toFixed(3)},${fyMax.toFixed(3)}]` +
+                ` eps=${epsilon.toFixed(3)}`);
             } else {
               console.warn(`[addLight] No front-face vertices found (eps=${epsilon.toFixed(3)}, bMinZ=${bMin.z.toFixed(3)}); using bbox fallback`);
             }
@@ -5755,13 +5758,17 @@ class VirtualStudio {
           console.log(`[addLight] BBOX diffuser fallback: W=${panelW.toFixed(3)}m H=${panelH.toFixed(3)}m`);
         }
         // World-space centre on the −Z (diffuser) face.
-        // Use the vertex-measured Y center when available (avoids hardware inflation).
+        // Use vertex-measured X and Y centers when available (avoids hardware inflation
+        // from flash mount / brackets that offset the bbox center from the diffuser center).
         // Offset 1.5 cm in −Z so the plane sits just in front of the physical face.
+        const vertexXCenter = (measuredFromVertices && geoMesh)
+          ? (geoMesh as any)._diffuserXCenter as number
+          : (bMin.x + bMax.x) * 0.5;
         const vertexYCenter = (measuredFromVertices && geoMesh)
           ? (geoMesh as any)._diffuserYCenter as number
           : (bMin.y + bMax.y) * 0.5;
         const worldCenter = new BABYLON.Vector3(
-          (bMin.x + bMax.x) * 0.5,
+          vertexXCenter,
           vertexYCenter,
           bMin.z - 0.015
         );
