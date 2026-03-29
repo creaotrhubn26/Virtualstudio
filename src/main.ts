@@ -5554,25 +5554,24 @@ class VirtualStudio {
     
     console.log(`[addLight] Loading light model: ${modelId} at position ${position.toString()}`);
     
-    // Map model IDs to light specs and GLB file names
+    // Map model IDs to light specs — GLB paths point to the actual files in /models/props/studio/
     const lightSpecs: { [key: string]: { intensity: number; name: string; cct: number; beamAngle: number; glbFile: string } } = {
-      'aputure-300d': { intensity: 2.0, name: 'Aputure 300D', cct: 5600, beamAngle: Math.PI / 5, glbFile: '300D_Light.glb' },
-      'aputure-120d': { intensity: 1.5, name: 'Aputure 120D', cct: 5600, beamAngle: Math.PI / 5, glbFile: '120D_Light.glb' },
-      'aputure-600d': { intensity: 3.0, name: 'Aputure 600D Pro', cct: 5600, beamAngle: Math.PI / 6, glbFile: '600D_Light.glb' },
-      'godox-ad600': { intensity: 1.2, name: 'Godox AD600', cct: 5600, beamAngle: Math.PI / 4, glbFile: 'Godox_AD600.glb' },
-      'godox-ad200pro': { intensity: 0.8, name: 'Godox AD200Pro', cct: 5600, beamAngle: Math.PI / 3, glbFile: 'Godox_AD200Pro.glb' },
-      'godox-ad400pro': { intensity: 1.0, name: 'Godox AD400Pro', cct: 5600, beamAngle: Math.PI / 3, glbFile: 'Godox_AD400Pro.glb' },
-      'godox-ad600pro': { intensity: 1.3, name: 'Godox AD600Pro', cct: 5600, beamAngle: Math.PI / 4, glbFile: 'Godox_AD600Pro.glb' },
-      'profoto-b10plus': { intensity: 1.4, name: 'Profoto B10 Plus', cct: 5600, beamAngle: Math.PI / 3.5, glbFile: 'Profoto_B10Plus.glb' },
-      'profoto-b10': { intensity: 1.3, name: 'Profoto B10', cct: 5600, beamAngle: Math.PI / 3.5, glbFile: 'Profoto_B10.glb' },
-      'profoto-d2': { intensity: 1.1, name: 'Profoto D2', cct: 5600, beamAngle: Math.PI / 3.8, glbFile: 'Profoto_D2.glb' }
+      'aputure-300d':   { intensity: 2.0, name: 'Aputure 300D',     cct: 5600, beamAngle: Math.PI / 5,   glbFile: '/models/props/studio/led-panel-light.glb' },
+      'aputure-120d':   { intensity: 1.5, name: 'Aputure 120D',     cct: 5600, beamAngle: Math.PI / 5,   glbFile: '/models/props/studio/led-panel-light.glb' },
+      'aputure-600d':   { intensity: 3.0, name: 'Aputure 600D Pro', cct: 5600, beamAngle: Math.PI / 6,   glbFile: '/models/props/studio/led-panel-light.glb' },
+      'godox-ad600':    { intensity: 1.2, name: 'Godox AD600',      cct: 5600, beamAngle: Math.PI / 4,   glbFile: '/models/props/studio/fresnel-light.glb' },
+      'godox-ad200pro': { intensity: 0.8, name: 'Godox AD200Pro',   cct: 5600, beamAngle: Math.PI / 3,   glbFile: '/models/props/studio/fresnel-light.glb' },
+      'godox-ad400pro': { intensity: 1.0, name: 'Godox AD400Pro',   cct: 5600, beamAngle: Math.PI / 3,   glbFile: '/models/props/studio/fresnel-light.glb' },
+      'godox-ad600pro': { intensity: 1.3, name: 'Godox AD600Pro',   cct: 5600, beamAngle: Math.PI / 4,   glbFile: '/models/props/studio/fresnel-light.glb' },
+      'profoto-b10plus':{ intensity: 1.4, name: 'Profoto B10 Plus', cct: 5600, beamAngle: Math.PI / 3.5, glbFile: '/models/props/studio/fresnel-light.glb' },
+      'profoto-b10':    { intensity: 1.3, name: 'Profoto B10',      cct: 5600, beamAngle: Math.PI / 3.5, glbFile: '/models/props/studio/fresnel-light.glb' },
+      'profoto-d2':     { intensity: 1.1, name: 'Profoto D2',       cct: 5600, beamAngle: Math.PI / 3.8, glbFile: '/models/props/studio/fresnel-light.glb' },
     };
     
-    const lightConfig = lightSpecs[modelId] || { intensity: 1.5, name: modelId, cct: 5600, beamAngle: Math.PI / 5, glbFile: '300D_Light.glb' };
+    const lightConfig = lightSpecs[modelId] || { intensity: 1.5, name: modelId, cct: 5600, beamAngle: Math.PI / 5, glbFile: '/models/props/studio/led-panel-light.glb' };
     
     try {
-      // Load the actual 3D light model from R2
-      // Files are at /assets/models/300D_Light.glb (not in lights subfolder)
+      // Load the 3D light fixture model (led-panel-light.glb or fresnel-light.glb from /models/props/studio/)
       const modelUrl = resolveModelPath(lightConfig.glbFile);
       console.log(`[addLight] Loading GLB from: ${modelUrl}`);
       
@@ -25264,9 +25263,39 @@ class VirtualStudio {
     this.selectedActorId = null; // Clear actor selection when selecting light
 
     if (data) {
-      // Removed automatic opening of "Kamera & Lys" panel when selecting lights
-      // Users can manually open the panel if needed
-      
+      // Open the "Kamera & Lys" panel and switch to the light tab automatically
+      const cameraControlBtn = document.getElementById('cameraControlBtn') as HTMLElement;
+      const cameraControlsPanel = document.getElementById('cameraControlsPanel') as HTMLElement;
+      if (cameraControlsPanel && cameraControlsPanel.style.display === 'none') {
+        if (cameraControlBtn) cameraControlBtn.click();
+        else cameraControlsPanel.style.display = 'block';
+      }
+      const tabLight = document.getElementById('tabLight') as HTMLElement;
+      const tabCamera = document.getElementById('tabCamera') as HTMLElement;
+      const cameraTabContent = document.getElementById('cameraTabContent') as HTMLElement;
+      const lightTabContent = document.getElementById('lightTabContent') as HTMLElement;
+      if (tabLight && tabCamera && cameraTabContent && lightTabContent) {
+        tabCamera.classList.remove('active');
+        tabCamera.style.background = 'transparent';
+        tabCamera.style.borderBottom = '2px solid transparent';
+        tabCamera.style.color = 'rgba(255,255,255,0.6)';
+        tabLight.classList.add('active');
+        tabLight.style.background = 'rgba(255,170,0,0.15)';
+        tabLight.style.borderBottom = '2px solid #ffaa00';
+        tabLight.style.color = '#ffaa00';
+        cameraTabContent.style.display = 'none';
+        lightTabContent.style.display = 'flex';
+        const screenWidth = window.innerWidth;
+        const lightTabWidth = screenWidth >= 1440 ? '1100px' : '900px';
+        if (cameraControlsPanel) {
+          cameraControlsPanel.style.width = lightTabWidth;
+          cameraControlsPanel.style.maxHeight = 'none';
+        }
+        setTimeout(() => {
+          if ((window as any).setupLightSectionCollapse) (window as any).setupLightSectionCollapse();
+        }, 50);
+      }
+
       const propsPanel = document.getElementById('lightProperties');
       if (propsPanel) propsPanel.style.display = 'block';
 
