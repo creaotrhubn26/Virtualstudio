@@ -1,6 +1,7 @@
 import { Scene, SceneLoader, Mesh, MeshBuilder, StandardMaterial, PBRMaterial, Material, Color3, Vector3, AbstractMesh } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
-import { PropDefinition } from '../data/propDefinitions';
+import { PropDefinition, PROP_DEFINITIONS } from '../data/propDefinitions';
+import { StoryPropManifest } from '../../data/scenarioPresets';
 import { logger } from './logger';
 
 const log = logger.module('PropRendering');
@@ -246,6 +247,62 @@ class PropRenderingService {
 
     log.debug(`Created placeholder prop: ${prop.name}`);
     return mesh;
+  }
+
+  /**
+   * Load all props from a StoryPropManifest array into the scene.
+   * Used by StorySceneLoaderService to populate story scenes.
+   * @param manifests Array of prop manifests from the story preset
+   * @param onProgress Optional progress callback (0-1)
+   * @returns Array of loaded meshes keyed by manifest id
+   */
+  async loadStorySceneProps(
+    manifests: StoryPropManifest[],
+    onProgress?: (progress: number, label: string) => void,
+  ): Promise<Map<string, AbstractMesh>> {
+    const results = new Map<string, AbstractMesh>();
+    if (!this.scene || manifests.length === 0) return results;
+
+    for (let i = 0; i < manifests.length; i++) {
+      const manifest = manifests[i];
+      const propDef = PROP_DEFINITIONS.find(p => p.id === manifest.propId);
+
+      onProgress?.(i / manifests.length, manifest.label);
+
+      if (!propDef) {
+        log.warn(`Story prop not found in definitions: ${manifest.propId}`);
+        continue;
+      }
+
+      try {
+        const [px, py, pz] = manifest.position;
+        const [rx, ry, rz] = manifest.rotation ?? [0, 0, 0];
+        const [sx, sy, sz] = manifest.scale ?? [1, 1, 1];
+
+        const mesh = await this.loadProp(propDef, {
+          position: new Vector3(px, py, pz),
+          scale: propDef.defaultScale * Math.max(sx, sy, sz),
+        });
+
+        mesh.name = `story_prop_${manifest.id}`;
+        mesh.rotation = new Vector3(rx, ry, rz);
+        if (manifest.scale) {
+          mesh.scaling = new Vector3(
+            (propDef.defaultScale) * sx,
+            (propDef.defaultScale) * sy,
+            (propDef.defaultScale) * sz,
+          );
+        }
+
+        results.set(manifest.id, mesh);
+        log.info(`Story prop loaded: ${manifest.label} (${manifest.propId})`);
+      } catch (err) {
+        log.error(`Failed to load story prop ${manifest.propId}:`, err);
+      }
+    }
+
+    onProgress?.(1, 'Props lastet');
+    return results;
   }
 
   removeProp(propId: string): void {

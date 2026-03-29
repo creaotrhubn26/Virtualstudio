@@ -25,6 +25,7 @@ import { Palette, Person, BusinessCenter, Favorite, Movie, Star, Lightbulb, Came
 import { scenarioPresets, ScenarioPreset } from '../data/scenarioPresets';
 import { customPresetService, CustomPreset } from '../services/customPresetService';
 import { MultiviewSkeletonPanel } from './MultiviewSkeletonPanel';
+import { storySceneLoaderService, StorySceneLoadProgress } from '../services/storySceneLoaderService';
 import { CAMERA_BODIES, LENSES, CameraBody, Lens, getLensFocalLength } from '../data/cameraGear';
 import { LIGHT_DATABASE, LightSpec, getLightDisplayName, getLightPowerDisplay } from '../data/lightFixtures';
 import { BACKDROP_DATABASE, BACKDROP_CATEGORIES, BackdropSpec, BackdropCategory } from '../data/backdropDefinitions';
@@ -117,6 +118,7 @@ const buttonStyle = {
   const [search, setSearch] = useState<string>('');
   const [customPresets, setCustomPresets] = useState<CustomPreset[]>([]);
   const [multiviewPreset, setMultiviewPreset] = useState<ScenarioPreset | null>(null);
+  const [storyLoadProgress, setStoryLoadProgress] = useState<StorySceneLoadProgress | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showSetupTypeDialog, setShowSetupTypeDialog] = useState(false);
   const [showModeSelection, setShowModeSelection] = useState(false);
@@ -504,11 +506,36 @@ const buttonStyle = {
           )}
 
           <Stack direction="column" spacing={1}>
+            {storyLoadProgress && storyLoadProgress.phase !== 'done' && storyLoadProgress.phase !== 'error' && (
+              <Box sx={{ mb: 0.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.3 }}>
+                  <Typography sx={{ fontSize: 11, color: '#ff9800' }}>{storyLoadProgress.message}</Typography>
+                  <Typography sx={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{Math.round(storyLoadProgress.progress * 100)}%</Typography>
+                </Box>
+                <Box sx={{ height: 3, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+                  <Box sx={{ height: '100%', bgcolor: '#ff9800', borderRadius: 2, width: `${storyLoadProgress.progress * 100}%`, transition: 'width 0.3s ease' }} />
+                </Box>
+              </Box>
+            )}
             <Stack direction="row" spacing={1.5}>
               <Button
                 variant="contained"
                 fullWidth
-                onClick={() => onApplyPreset(preset as ScenarioPreset)}
+                onClick={async () => {
+                  const p = preset as ScenarioPreset;
+                  if (p.kategori === 'story' && (p.characters?.length || p.props?.length)) {
+                    setStoryLoadProgress({ phase: 'lights', progress: 0, message: 'Starter scenelasting…' });
+                    try {
+                      await storySceneLoaderService.load(p, (progress) => setStoryLoadProgress(progress));
+                    } catch (err) {
+                      setStoryLoadProgress({ phase: 'error', progress: 0, message: 'Feil under lasting av scene' });
+                    } finally {
+                      setTimeout(() => setStoryLoadProgress(null), 3000);
+                    }
+                  } else {
+                    onApplyPreset(p);
+                  }
+                }}
                 sx={{
                   ...buttonStyle,
                   bgcolor: color,
