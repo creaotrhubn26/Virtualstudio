@@ -5648,30 +5648,69 @@ class VirtualStudio {
           }
         }
         (mesh as any)._headPivot = headPivot;
+        console.log(`[addLight] headPivot tilt meshes=${headCount}`);
 
-        // Fallback: if no meshes are above 60% (single fused GLB), treat all sub-meshes as the head
-        const glowMeshes = headMeshes.length > 0 ? headMeshes : allSubMeshes.filter(sm => sm instanceof BABYLON.Mesh) as BABYLON.Mesh[];
-        (mesh as any)._headMeshes = glowMeshes;
-
-        // Apply emissive glow to the softbox/octabox head.
-        // The diffuser panel is the face that emits light — make it glow on load.
+        // Build a CCT-tinted emissive glow plane that sits just in front of the
+        // diffuser face (−Z face of the TRELLIS model). This is fully under our
+        // control — no GLB material hacking required.
         const cctColor = this.cctToColor(lightConfig.cct);
-        glowMeshes.forEach(sm => {
-          const mat = sm.material;
-          if (mat instanceof BABYLON.PBRMaterial) {
-            mat.emissiveColor  = new BABYLON.Color3(cctColor.r, cctColor.g, cctColor.b);
-            mat.emissiveIntensity = 0; // will be set by updateLightHeadGlow below
-          } else if (mat instanceof BABYLON.StandardMaterial) {
-            mat.emissiveColor = new BABYLON.Color3(0, 0, 0);
-            mat.disableLighting = false;
-          } else if (mat) {
-            // Unknown material type — replace with a new StandardMaterial that supports emissive
-            const newMat = new BABYLON.StandardMaterial(`${sm.name}_emissive`, this.scene);
-            newMat.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.9);
-            newMat.emissiveColor = new BABYLON.Color3(0, 0, 0);
-            sm.material = newMat;
-          }
+        const initT = Math.min(1.0, lightConfig.intensity / 500);
+        const initStrength = Math.sqrt(initT) * 1.6;
+
+        // Measure head bounding box in world space.
+        // Use head sub-meshes (above threshold) if available; fall back to all sub-meshes.
+        const glowSource = headMeshes.length > 0
+          ? headMeshes
+          : (allSubMeshes.filter(sm => sm instanceof BABYLON.Mesh) as BABYLON.Mesh[]);
+
+        headPivot.computeWorldMatrix(true);
+        let bMin = new BABYLON.Vector3(Infinity, Infinity, Infinity);
+        let bMax = new BABYLON.Vector3(-Infinity, -Infinity, -Infinity);
+        glowSource.forEach(sm => {
+          sm.computeWorldMatrix(true);
+          const bb = sm.getBoundingInfo().boundingBox;
+          bMin = BABYLON.Vector3.Minimize(bMin, bb.minimumWorld);
+          bMax = BABYLON.Vector3.Maximize(bMax, bb.maximumWorld);
         });
+
+        const panelW = Math.max(0.05, bMax.x - bMin.x);
+        const panelH = Math.max(0.05, bMax.y - bMin.y);
+        // World-space centre of the diffuser front face (−Z = lowest Z value)
+        const worldCenter = new BABYLON.Vector3(
+          (bMin.x + bMax.x) * 0.5,
+          (bMin.y + bMax.y) * 0.5,
+          bMin.z - 0.015  // 1.5 cm in front to avoid z-fighting
+        );
+
+        // Convert world centre to headPivot local space (pivot has no rotation at this point)
+        const pivotWorld = headPivot.getAbsolutePosition();
+        const localPos = worldCenter.subtract(pivotWorld);
+
+        // Create plane mesh — default normal is +Z; rotate 180° around Y to face −Z
+        const diffuserPlane = BABYLON.MeshBuilder.CreatePlane(
+          `${lightId}_diffuserGlow`, { width: panelW, height: panelH }, this.scene
+        );
+        diffuserPlane.rotation.y = Math.PI;   // face −Z (toward the subject)
+        diffuserPlane.position   = localPos;
+        diffuserPlane.parent     = headPivot;
+
+        const diffuserMat = new BABYLON.StandardMaterial(`${lightId}_diffuserGlowMat`, this.scene);
+        diffuserMat.disableLighting = true;    // always self-lit, unaffected by scene lights
+        diffuserMat.backFaceCulling = false;   // visible from both sides
+        diffuserMat.emissiveColor = new BABYLON.Color3(
+          cctColor.r * initStrength,
+          cctColor.g * initStrength,
+          cctColor.b * initStrength
+        );
+        diffuserPlane.material = diffuserMat;
+
+        // _headMeshes is consumed by updateLightHeadGlow — just the glow plane
+        (mesh as any)._headMeshes = [diffuserPlane];
+
+        console.log(
+          `[addLight] Diffuser glow plane: W=${panelW.toFixed(2)} H=${panelH.toFixed(2)}` +
+          ` localZ=${localPos.z.toFixed(2)} strength=${initStrength.toFixed(2)}`
+        );
 
         console.log(`[addLight] GLB loaded: ${result.meshes.length} meshes, scale=${scaleFactor.toFixed(3)}, lightHeadY=${lightHeadHeight.toFixed(2)}m, headMeshes=${headCount}`);
       } catch (loadErr) {
@@ -5750,7 +5789,9 @@ class VirtualStudio {
           powerUnit: 'Ws' as const,
           beamAngle: lightConfig.beamAngle * 180 / Math.PI
         },
-        intensity: lightConfig.intensity
+        intensity: lightConfig.intensity,
+        baseIntensity: lightConfig.intensity,  // physical candela — glow reference
+        powerMultiplier: 1.0
       };
       
       // Store light in lights map
