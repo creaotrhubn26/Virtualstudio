@@ -36,6 +36,7 @@ const CinematographyPatternsPanel = lazy(() => import('./components/Cinematograp
 const LightPatternLibrary = lazy(() => import('./panels/LightPatternLibrary').then(m => ({ default: m.LightPatternLibrary })));
 const AvatarGeneratorPanel = lazy(() => import('./panels/AvatarGeneratorPanel').then(m => ({ default: m.AvatarGeneratorPanel })));
 const ScenerPanel = lazy(() => import('./panels/ScenerPanel').then(m => ({ default: m.ScenerPanel })));
+import { StoryCharacterHUD } from './components/StoryCharacterHUD';
 const TidslinjeLibraryPanel = lazy(() => import('./panels/TidslinjeLibraryPanel').then(m => ({ default: m.TidslinjeLibraryPanel })));
 const AnimationComposerPanel = lazy(() => import('./panels/AnimationComposerPanel').then(m => ({ default: m.AnimationComposerPanel })));
 const EnvironmentBrowser = lazy(() => import('./components/EnvironmentBrowser').then(m => ({ default: m.EnvironmentBrowser })));
@@ -847,3 +848,10 @@ export const AccessoriesPanelApp: React.FC = () => {
     
   );
 };
+
+// Story Character HUD — floating WASD character selector overlay
+export const StoryCharacterHUDApp: React.FC = () => (
+  <CustomThemeProvider>
+    <StoryCharacterHUD />
+  </CustomThemeProvider>
+);

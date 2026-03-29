@@ -3,7 +3,7 @@ import '@babylonjs/loaders/glTF';
 import { GLTFFileLoader, GLTFLoaderAnimationStartMode } from '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, AIAssistantApp, SceneComposerPanelApp, AnimationComposerApp, VirtualStudioProApp, InteractiveElementsBrowserApp, AmbientSoundsBrowserApp, AccessoriesPanelApp } from './App';
+import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, AIAssistantApp, SceneComposerPanelApp, AnimationComposerApp, VirtualStudioProApp, InteractiveElementsBrowserApp, AmbientSoundsBrowserApp, AccessoriesPanelApp, StoryCharacterHUDApp } from './App';
 import { useAppStore, useFocusStore, useAutoFocusStore, useFocusPeakingStore, SceneNode } from './state/store';
 import { AutoFocusSystem } from './core/AutoFocusSystem';
 import { FocusPeakingEffect } from './core/FocusPeakingEffect';
@@ -6009,6 +6009,14 @@ class VirtualStudio {
         for (const [id, data] of this.lights) {
           if (data.mesh === info.pickInfo.pickedMesh) {
             this.selectLight(id);
+            return;
+          }
+        }
+        // Select story character for WASD control when clicked
+        for (const [storyRigId, data] of this.storyCharacters) {
+          const childMeshes = data.mesh.getChildMeshes(true);
+          if (data.mesh === info.pickInfo.pickedMesh || childMeshes.includes(info.pickInfo.pickedMesh)) {
+            this.selectStoryCharacterForKeyboard(storyRigId);
             return;
           }
         }
@@ -12775,6 +12783,8 @@ class VirtualStudio {
   private characterModelId: string | null = null;
   // Multi-character story support — storyRigId → {mesh, modelId}
   private storyCharacters: Map<string, { mesh: BABYLON.AbstractMesh; modelId: string }> = new Map();
+  private selectedStoryRigId: string | null = null;
+  private storySelectionIndicator: BABYLON.AbstractMesh | null = null;
   private characterRigByMeshUniqueId: Map<number, string> = new Map();
   private characterAnimationLibraryByRigId: Map<string, CharacterAnimationLibrary> = new Map();
   private characterIKByRigId: Map<string, CharacterIKRigState> = new Map();
@@ -15291,6 +15301,18 @@ class VirtualStudio {
       }
 
       if (document.activeElement !== canvas) return;
+
+      // Tab cycles through story characters (canvas must be focused)
+      if (e.code === 'Tab' && this.storyCharacters.size > 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        const rigIds = Array.from(this.storyCharacters.keys());
+        const currentIdx = this.selectedStoryRigId ? rigIds.indexOf(this.selectedStoryRigId) : -1;
+        const nextIdx = (currentIdx + 1) % rigIds.length;
+        this.selectStoryCharacterForKeyboard(rigIds[nextIdx]);
+        return;
+      }
+
       if (!this.characterKeyboardControlsEnabled) return;
 
       let handled = true;
@@ -15371,6 +15393,26 @@ class VirtualStudio {
         this.stopCharacterKeyboardControl(true);
       }
     }) as EventListener);
+
+    window.addEventListener('ch-select-story-character', ((event: CustomEvent) => {
+      const rigId = typeof event.detail?.rigId === 'string' ? event.detail.rigId : null;
+      this.selectStoryCharacterForKeyboard(rigId);
+    }) as EventListener);
+
+    // Keep selection indicator beneath the active story character each frame
+    this.scene.onBeforeRenderObservable.add(() => {
+      if (
+        this.storySelectionIndicator &&
+        !this.storySelectionIndicator.isDisposed() &&
+        this.selectedStoryRigId
+      ) {
+        const entry = this.storyCharacters.get(this.selectedStoryRigId);
+        if (entry && entry.mesh && !entry.mesh.isDisposed()) {
+          this.storySelectionIndicator.position.x = entry.mesh.position.x;
+          this.storySelectionIndicator.position.z = entry.mesh.position.z;
+        }
+      }
+    });
   }
 
   private toWalkTargetVector(
@@ -17025,6 +17067,14 @@ class VirtualStudio {
    * Remove all story characters from the scene.
    */
   private clearStoryCharacters(): void {
+    // Deselect before clearing
+    this.selectedStoryRigId = null;
+    if (this.storySelectionIndicator && !this.storySelectionIndicator.isDisposed()) {
+      this.storySelectionIndicator.dispose();
+    }
+    this.storySelectionIndicator = null;
+    window.dispatchEvent(new CustomEvent('ch-story-character-selected', { detail: { rigId: null } }));
+
     this.storyCharacters.forEach(({ mesh, modelId }) => {
       this.clearTrackedAnimationGroupsForMesh(mesh);
       this.unloadRigForMesh(mesh);
@@ -17033,6 +17083,67 @@ class VirtualStudio {
     });
     this.storyCharacters.clear();
     console.log('[StoryScene] All story characters cleared');
+  }
+
+  /**
+   * Select a story character by its storyRigId so WASD keys move it.
+   * Pass null to deselect.
+   */
+  public selectStoryCharacterForKeyboard(rigId: string | null): void {
+    if (this.storySelectionIndicator && !this.storySelectionIndicator.isDisposed()) {
+      this.storySelectionIndicator.dispose();
+    }
+    this.storySelectionIndicator = null;
+    this.selectedStoryRigId = rigId;
+
+    if (!rigId) {
+      this.characterKeyboardState.meshUniqueId = null;
+      window.dispatchEvent(new CustomEvent('ch-story-character-selected', { detail: { rigId: null } }));
+      return;
+    }
+
+    const entry = this.storyCharacters.get(rigId);
+    if (!entry) {
+      console.warn(`[StorySelect] RigId "${rigId}" not found in storyCharacters`);
+      return;
+    }
+    const mesh = entry.mesh;
+    if (!mesh || mesh.isDisposed()) {
+      console.warn('[StorySelect] Story character mesh is already disposed');
+      return;
+    }
+
+    // Point the keyboard state at this mesh — getPrimaryCharacterMesh() picks it up next frame
+    this.characterKeyboardState.meshUniqueId = mesh.uniqueId;
+
+    // Build a selection disc under the character
+    const bounds = mesh.getHierarchyBoundingVectors(true);
+    const groundY = bounds.min.y + 0.015;
+    const rawRadius = Math.max(bounds.max.x - bounds.min.x, bounds.max.z - bounds.min.z) * 0.65;
+    const radius = Math.max(rawRadius, 0.3);
+    const disc = BABYLON.MeshBuilder.CreateDisc('__story_sel_disc__', { radius, tessellation: 36 }, this.scene);
+    disc.rotation.x = Math.PI / 2;
+    disc.position.copyFrom(mesh.position);
+    disc.position.y = groundY;
+    disc.isPickable = false;
+    disc.checkCollisions = false;
+    disc.renderingGroupId = 1;
+    const discMat = new BABYLON.StandardMaterial('__story_sel_mat__', this.scene);
+    discMat.diffuseColor = new BABYLON.Color3(0.1, 0.75, 1.0);
+    discMat.emissiveColor = new BABYLON.Color3(0.05, 0.35, 0.5);
+    discMat.alpha = 0.5;
+    discMat.backFaceCulling = false;
+    disc.material = discMat;
+    this.storySelectionIndicator = disc;
+
+    // Focus canvas so WASD responds immediately
+    const renderCanvas = this.scene.getEngine().getRenderingCanvas();
+    if (renderCanvas) renderCanvas.focus();
+
+    window.dispatchEvent(new CustomEvent('ch-story-character-selected', {
+      detail: { rigId, modelId: entry.modelId },
+    }));
+    console.info(`[StorySelect] Keyboard control → "${rigId}" (meshUniqueId=${mesh.uniqueId})`);
   }
 
   private resizeCanvases(): void {
@@ -29803,6 +29914,14 @@ window.addEventListener('DOMContentLoaded', () => {
       const asReactRoot = createRoot(ambientSoundsRoot);
       asReactRoot.render(React.createElement(AmbientSoundsBrowserApp, {}));
       console.log('AmbientSoundsBrowserApp mounted');
+    }
+
+    // Mount Story Character HUD
+    const storyCharacterHudRoot = document.getElementById('storyCharacterHudRoot');
+    if (storyCharacterHudRoot) {
+      const hudReactRoot = createRoot(storyCharacterHudRoot);
+      hudReactRoot.render(React.createElement(StoryCharacterHUDApp, {}));
+      console.log('StoryCharacterHUDApp mounted');
     }
 
     // Mount Accessories Panel App
