@@ -152,6 +152,24 @@ A complete image-to-3D pipeline using TripoSR via Replicate API:
 - **BoneInspectorSidebar** (`src/panels/BoneInspectorSidebar.tsx`): Categorized bone picker (5 groups), per-bone X/Y/Z rotation sliders, and pose library browser (6 categories in Norwegian).
 - **ScenerPanel integration**: "🎬 Åpne Multiview" button on all story scene cards that have characters; opens the MultiviewSkeletonPanel overlay.
 
+## Photorealistic Napoli Characters
+Six photorealistic 3D character GLBs generated for the Napoli Dreams story (stored in `public/models/avatars/`):
+- `avatar_bakemester.glb` — Italian master baker (white chef coat, toque hat)
+- `avatar_waiter.glb` — Restaurant waiter (formal black & white uniform)
+- `avatar_customer_woman.glb` — Female restaurant guest (casual elegant)
+- `avatar_customer_man.glb` — Male restaurant guest (smart casual)
+- `avatar_baker_assistant.glb` — Female bakery assistant (white uniform, hair net)
+- `avatar_food_photographer.glb` — Male food photographer (creative casual)
+
+All 6 are registered in `src/core/data/avatarDefinitions.ts` as named avatar types. The Napoli presets use specific types: Akt1 → `waiter` + `customer_woman` + `bakemester`; Akt2 → `baker_assistant` + `food_photographer`; Akt3 → `bakemester` + `customer_woman`.
+
+## Scene Branding (Merkevarebygging)
+The Napoli Dreams banner in ScenerPanel includes a collapsible **Merkevarebygging** section:
+- Fields: company name, logo URL (PNG/SVG), brand color picker
+- On "Bruk i scene": dispatches `ch-apply-scene-branding` event with `{ companyName, logoUrl, brandColor }`
+- Handler in `src/main.ts`: creates a `__branding-sign__` plane (DynamicTexture with colored background + company name text), and if a logoUrl is provided, a `__branding-logo__` plane with the logo texture at `StandardMaterial.emissiveColor = white` (unlit, always visible)
+- Re-applying replaces existing sign; clearing both fields removes all branding meshes
+
 ## External Dependencies
 - **@babylonjs/core, @babylonjs/loaders, @babylonjs/gui**: 3D engine and related components.
 - **react, react-dom**: Core libraries for the user interface.

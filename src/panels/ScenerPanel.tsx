@@ -152,6 +152,10 @@ const buttonStyle = {
 
   const [selectedFixtures, setSelectedFixtures] = useState<(string | null)[]>([null]);
   const [lightPickerOpen, setLightPickerOpen] = useState<number | null>(null);
+  const [brandingOpen, setBrandingOpen] = useState(false);
+  const [brandName, setBrandName] = useState('');
+  const [brandLogoUrl, setBrandLogoUrl] = useState('');
+  const [brandColor, setBrandColor] = useState('#c8392b');
 
   const filteredCameras = useMemo(() => {
     return CAMERA_BODIES.filter(c => 
@@ -881,6 +885,87 @@ const buttonStyle = {
               </Button>
             );
           })()}
+
+          {/* Merkevarebygging — Scene Branding */}
+          <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(255,109,0,0.2)' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: brandingOpen ? 1.5 : 0 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <BusinessCenter sx={{ color: '#ff9a4d', fontSize: 18 }} />
+                <Typography sx={{ color: '#ff9a4d', fontWeight: 700, fontSize: 13 }}>
+                  Merkevarebygging
+                </Typography>
+              </Box>
+              <Button
+                size="small"
+                onClick={() => setBrandingOpen(v => !v)}
+                sx={{ color: '#ff6d00', fontSize: 12, minWidth: 0, p: '3px 10px', borderRadius: '8px', bgcolor: 'rgba(255,109,0,0.08)', '&:hover': { bgcolor: 'rgba(255,109,0,0.18)' } }}
+              >
+                {brandingOpen ? 'Skjul' : 'Sett opp'}
+              </Button>
+            </Box>
+            {brandingOpen && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Box>
+                  <Typography sx={{ color: '#888', fontSize: 11, mb: 0.5 }}>Bedriftsnavn</Typography>
+                  <InputBase
+                    value={brandName}
+                    onChange={e => setBrandName(e.target.value)}
+                    placeholder="F.eks. Napoli Pizzeria AS"
+                    sx={{ bgcolor: 'rgba(255,255,255,0.06)', borderRadius: '8px', px: 1.5, py: 0.8, fontSize: 13, color: '#fff', width: '100%', border: '1px solid rgba(255,255,255,0.12)' }}
+                  />
+                </Box>
+                <Box>
+                  <Typography sx={{ color: '#888', fontSize: 11, mb: 0.5 }}>Logo-URL (PNG / SVG)</Typography>
+                  <InputBase
+                    value={brandLogoUrl}
+                    onChange={e => setBrandLogoUrl(e.target.value)}
+                    placeholder="https://example.com/logo.png"
+                    sx={{ bgcolor: 'rgba(255,255,255,0.06)', borderRadius: '8px', px: 1.5, py: 0.8, fontSize: 13, color: '#fff', width: '100%', border: '1px solid rgba(255,255,255,0.12)' }}
+                  />
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1.5 }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography sx={{ color: '#888', fontSize: 11, mb: 0.5 }}>Merkevarefarge</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'rgba(255,255,255,0.06)', borderRadius: '8px', px: 1.5, py: 0.5, border: '1px solid rgba(255,255,255,0.12)' }}>
+                      <Box
+                        component="input"
+                        type="color"
+                        value={brandColor}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBrandColor(e.target.value)}
+                        sx={{ width: 28, height: 28, border: 'none', borderRadius: '6px', cursor: 'pointer', bgcolor: 'transparent', p: 0 }}
+                      />
+                      <Typography sx={{ color: '#ccc', fontSize: 12, fontFamily: 'monospace' }}>{brandColor.toUpperCase()}</Typography>
+                    </Box>
+                  </Box>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('ch-apply-scene-branding', {
+                        detail: { companyName: brandName, logoUrl: brandLogoUrl, brandColor },
+                      }));
+                    }}
+                    sx={{
+                      bgcolor: brandColor,
+                      color: '#fff',
+                      fontWeight: 700,
+                      fontSize: 12,
+                      px: 2,
+                      py: 1,
+                      borderRadius: '8px',
+                      whiteSpace: 'nowrap',
+                      '&:hover': { bgcolor: brandColor, filter: 'brightness(1.2)' },
+                    }}
+                  >
+                    Bruk i scene
+                  </Button>
+                </Box>
+                <Typography sx={{ color: '#666', fontSize: 11, lineHeight: 1.5 }}>
+                  Merkevarenavn og logo plasseres på skiltet i scenen og i eksporterte stillbilder.
+                </Typography>
+              </Box>
+            )}
+          </Box>
         </Box>
       )}
 

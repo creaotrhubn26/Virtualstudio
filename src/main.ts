@@ -10472,6 +10472,68 @@ class VirtualStudio {
       window.dispatchEvent(new CustomEvent('ch-floor-visibility-changed', { detail: { visible: isVisible } }));
     }) as EventListener);
 
+    window.addEventListener('ch-apply-scene-branding', ((e: CustomEvent) => {
+      const { companyName, logoUrl, brandColor } = (e.detail || {}) as { companyName?: string; logoUrl?: string; brandColor?: string };
+
+      const existingSign = this.scene.getMeshByName('__branding-sign__');
+      if (existingSign) existingSign.dispose();
+      const existingLogo = this.scene.getMeshByName('__branding-logo__');
+      if (existingLogo) existingLogo.dispose();
+
+      if (!companyName && !logoUrl) {
+        console.info('[SceneBranding] Cleared');
+        return;
+      }
+
+      const signWidth = 2.0;
+      const signHeight = 0.5;
+      const sign = BABYLON.MeshBuilder.CreatePlane('__branding-sign__', { width: signWidth, height: signHeight }, this.scene);
+      sign.position = new BABYLON.Vector3(0, 2.5, -2.8);
+      sign.isPickable = false;
+      sign.checkCollisions = false;
+
+      const texW = 1024;
+      const texH = 256;
+      const dynTex = new BABYLON.DynamicTexture('__branding-tex__', { width: texW, height: texH }, this.scene, false);
+      const ctx = dynTex.getContext() as CanvasRenderingContext2D;
+
+      const hex = brandColor ?? '#c8392b';
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(0, 0, texW, texH);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 72px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(companyName ?? '', texW / 2, texH / 2);
+      dynTex.update();
+
+      const mat = new BABYLON.StandardMaterial('__branding-mat__', this.scene);
+      mat.diffuseTexture = dynTex;
+      mat.emissiveColor = new BABYLON.Color3(1, 1, 1);
+      mat.backFaceCulling = false;
+      sign.material = mat;
+
+      if (logoUrl) {
+        const logoPlane = BABYLON.MeshBuilder.CreatePlane('__branding-logo__', { width: 0.4, height: 0.4 }, this.scene);
+        logoPlane.position = new BABYLON.Vector3(-signWidth / 2 + 0.25, 2.5, -2.75);
+        logoPlane.isPickable = false;
+        logoPlane.checkCollisions = false;
+        const logoMat = new BABYLON.StandardMaterial('__branding-logo-mat__', this.scene);
+        const logoTex = new BABYLON.Texture(logoUrl, this.scene);
+        logoTex.hasAlpha = true;
+        logoMat.diffuseTexture = logoTex;
+        logoMat.emissiveColor = new BABYLON.Color3(1, 1, 1);
+        logoMat.useAlphaFromDiffuseTexture = true;
+        logoMat.backFaceCulling = false;
+        logoPlane.material = logoMat;
+      }
+
+      console.info('[SceneBranding] Applied:', { companyName, logoUrl, brandColor });
+    }) as EventListener);
+
     window.addEventListener('ch-set-wall-material', ((e: CustomEvent) => {
       const { wallId, material } = e.detail || {};
       const materialId = material?.id;

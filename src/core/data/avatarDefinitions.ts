@@ -80,6 +80,48 @@ export const AVATAR_DEFINITIONS: AvatarDefinition[] = [
     skinHex: '#EAC086',
     defaultHeight: 1.75,
   },
+  {
+    type: 'bakemester',
+    name: 'Bakemester',
+    modelUrl: '/models/avatars/avatar_bakemester.glb',
+    skinHex: '#C68642',
+    defaultHeight: 1.80,
+  },
+  {
+    type: 'waiter',
+    name: 'Kelner',
+    modelUrl: '/models/avatars/avatar_waiter.glb',
+    skinHex: '#8B6343',
+    defaultHeight: 1.78,
+  },
+  {
+    type: 'customer_woman',
+    name: 'Restaurantgjest (Kvinne)',
+    modelUrl: '/models/avatars/avatar_customer_woman.glb',
+    skinHex: '#D4956B',
+    defaultHeight: 1.68,
+  },
+  {
+    type: 'customer_man',
+    name: 'Restaurantgjest (Mann)',
+    modelUrl: '/models/avatars/avatar_customer_man.glb',
+    skinHex: '#A0522D',
+    defaultHeight: 1.80,
+  },
+  {
+    type: 'baker_assistant',
+    name: 'Bakerassistent',
+    modelUrl: '/models/avatars/avatar_baker_assistant.glb',
+    skinHex: '#C89060',
+    defaultHeight: 1.65,
+  },
+  {
+    type: 'food_photographer',
+    name: 'Matfotograf',
+    modelUrl: '/models/avatars/avatar_food_photographer.glb',
+    skinHex: '#8B6343',
+    defaultHeight: 1.82,
+  },
 ];
 
 /** Look up an avatar definition by type key. Returns `undefined` if unknown. */
