@@ -5696,9 +5696,9 @@ class VirtualStudio {
         console.log(`[addLight] HEAD bbox (headMeshes=${headCount}): X[${bMin.x.toFixed(2)},${bMax.x.toFixed(2)}] Y[${bMin.y.toFixed(2)},${bMax.y.toFixed(2)}] Z[${bMin.z.toFixed(2)},${bMax.z.toFixed(2)}]`);
 
         // World-space extents of the full softbox head bounding box.
-        // The bbox includes the outer black frame, rods, and backing hardware.
-        // The actual white diffuser panel sits inside that frame and is ~72% per axis.
-        const DIFFUSER_INNER_RATIO = 0.72;
+        // The bbox includes the outer black border rail only (~6% per side).
+        // The gray diffuser fabric fills ~88% of the bbox in each axis.
+        const DIFFUSER_INNER_RATIO = 0.88;
         const panelW = Math.max(0.05, bMax.x - bMin.x) * DIFFUSER_INNER_RATIO;
         const panelH = Math.max(0.05, bMax.y - bMin.y) * DIFFUSER_INNER_RATIO;
         // World-space centre on the −Z (diffuser) face of the head bounding box.
