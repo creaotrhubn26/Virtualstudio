@@ -818,18 +818,19 @@ const buttonStyle = {
               border: '1px solid rgba(255,109,0,0.3)',
             }}>
               <Typography sx={{ color: '#ff9a4d', fontSize: 12, fontWeight: 600 }}>
-                3 akter · 1 fortelling
+                4 akter · 1 fortelling
               </Typography>
             </Box>
           </Box>
           <Typography sx={{ color: '#cc8855', fontSize: 13.5, lineHeight: 1.6, mb: 2 }}>
-            En komplett produksjonsserie for en pizzarestaurant-merkevare. Tre ulike scener — restaurantens atmosfære, profesjonell produktfotografering og branded videostudio — som sammen forteller én sammenhengende merkevarehistorie.
+            En komplett produksjonsserie for en pizzarestaurant-merkevare. Fire ulike scener — restaurantens atmosfære, profesjonell produktfotografering, branded videostudio og utendørs napolitansk piazza — som sammen forteller én sammenhengende merkevarehistorie.
           </Typography>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
             {[
               { akt: 'Akt 1', tittel: 'Restauranten', ikoner: '🕯️ 🍕', desc: 'Atmosfære & stemning' },
               { akt: 'Akt 2', tittel: 'Produktfoto', ikoner: '📸 💡', desc: 'Studio & menybilder' },
               { akt: 'Akt 3', tittel: 'Chef-video', ikoner: '🎬 👨‍🍳', desc: 'Intervju & brand story' },
+              { akt: 'Akt 4', tittel: 'Utendørs piazza', ikoner: '🌅 🏛️', desc: 'Naturlig lys & by' },
             ].map((a, i) => (
               <Box key={i} sx={{
                 flex: 1,

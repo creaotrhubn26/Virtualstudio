@@ -125,13 +125,20 @@ PostgreSQL database with comprehensive table structure:
 
 ## Story Scenes — "Napoli Dreams"
 
-A dedicated **Story** category in the Scener panel with three connected story-based scenes for a pizza restaurant brand:
+A dedicated **Story** category in the Scener panel with four connected story-based scenes for a pizza restaurant brand:
 
 - **Akt 1 – Restauranten** (`story-napoli-akt1-restaurant`): Warm candlelight atmosphere, tungsten practical lights (2700–3200K), 7-light rig including candle simulations. 85mm food photography setup.
 - **Akt 2 – Produktfotografering** (`story-napoli-akt2-produktfoto`): Clean professional food studio. Top-down overhead octabox (5600K), 6-light rig, shooting-table backdrop. 100mm macro camera setup.
 - **Akt 3 – Chef-videostudio** (`story-napoli-akt3-video`): Branded video studio, bicolor LED three-point rig (4200–5600K + warm background accent). 7-light rig optimized for video. 50mm interview framing.
+- **Akt 4 – Utendørs piazza** (`story-napoli-akt4-piazza`): Outdoor Neapolitan city piazza scene. VirtualCity.glb environment (KhronosGroup CC-BY) + Venice Sunset HDRI from Poly Haven (CC0, 2K). Warm golden-hour natural light rig (3800K key, 6500K sky fill). 35mm wide-angle framing. `hdriUrl: '/hdri/venice_sunset_2k.hdr'` triggers `vs-load-hdri` event automatically on load.
 
-Story scenes appear in `src/data/scenarioPresets.ts` under `kategori: 'story'`. The ScenerPanel shows a story arc banner and per-card "AKT X/3" badge when this category is active. Category color: `#ff6d00` (amber-orange).
+Story scenes appear in `src/data/scenarioPresets.ts` under `kategori: 'story'`. The ScenerPanel shows a story arc banner and per-card "AKT X/4" badge when this category is active. Category color: `#ff6d00` (amber-orange).
+
+### Environment + HDRI System for Outdoor Scenes
+- `ScenarioPreset.hdriUrl?: string` — optional HDRI path for outdoor scenes
+- `storySceneLoaderService.ts` fires `vs-load-hdri` event automatically when `preset.hdriUrl` is set (Phase 0b, after GLB load)
+- `HDRIEnvironmentLoader.tsx` handles the `vs-load-hdri` event: downloads/caches .hdr, applies as `scene.environmentTexture`
+- HDRI files stored in `public/hdri/` (served at `/hdri/`)
 
 ## GLB Generation Pipeline (TripoSR)
 

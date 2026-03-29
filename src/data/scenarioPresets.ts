@@ -30,6 +30,7 @@ export interface ScenarioPreset {
   characters?: StoryCharacterManifest[];
   props?: StoryPropManifest[];
   environmentUrl?: string;
+  hdriUrl?: string;
   sceneConfig: {
     lights: Array<{
       type: string;
@@ -933,6 +934,105 @@ export const scenarioPresets: ScenarioPreset[] = [
       lights: ['aputure-300d', 'aputure-120d', 'nanlite-forza300', 'candle-light'],
       modifiers: ['softbox-90x120', 'umbrella-white', 'stripbox-15x60', 'stripbox-30x120', 'fresnel', 'barn-doors'],
       backdrops: ['muslin-dark', 'cove']
+    }
+  },
+  {
+    id: 'story-napoli-akt4-piazza',
+    navn: 'Napoli Dreams — Akt 4: Utendørs piazza',
+    kategori: 'story',
+    beskrivelse: 'Akt 4 av 4 — Utendørs napolitansk piazza i gylden kveldslys. Autentisk bygatescene med varmt solnedgangsambient. Perfekt for produktlanseringer, brand storytelling og social media content i naturlig lys.',
+    tags: ['story', 'napoli-dreams', 'utendørs', 'piazza', 'solnedgang', 'urban', 'naturlig-lys', 'by', 'gate', 'kveld', 'akt-4'],
+    difficulty: 'intermediate',
+    usedIn: ['Napoli Dreams — Akt 4 av 4', 'Utendørs produktfoto', 'Brand story', 'Social media content'],
+    environmentUrl: '/models/environments/napoli/outdoor-piazza.glb',
+    hdriUrl: '/hdri/venice_sunset_2k.hdr',
+    characters: [
+      {
+        id: 'char-akt4-chef',
+        role: 'Bakemester',
+        avatarType: 'bakemester',
+        poseId: 'commercial_welcoming',
+        position: [-0.5, 0, 0.5],
+        rotation: [0, 15, 0],
+        label: 'Bakemester (utendørs)',
+      },
+      {
+        id: 'char-akt4-guest',
+        role: 'Gjest',
+        avatarType: 'customer_woman',
+        poseId: 'seated_confident',
+        position: [1.2, 0, 0.8],
+        rotation: [0, -30, 0],
+        label: 'Gjest (sittende)',
+      },
+    ],
+    props: [
+      { id: 'prop-akt4-table', propId: 'dining-table', position: [1.2, 0, 0.5], rotation: [0, 0, 0], label: 'Bistrobord (utendørs)' },
+      { id: 'prop-akt4-chair-l', propId: 'wooden-chair-restaurant', position: [0.7, 0, 0.9], rotation: [0, 30, 0], label: 'Bistrostol venstre' },
+      { id: 'prop-akt4-chair-r', propId: 'wooden-chair-restaurant', position: [1.7, 0, 0.9], rotation: [0, -30, 0], label: 'Bistrostol høyre' },
+      { id: 'prop-akt4-wine', propId: 'wine_bottle_red', position: [1.2, 0.76, 0.5], rotation: [0, 20, 0], label: 'Rødvin' },
+      { id: 'prop-akt4-pizza', propId: 'pizza-plate', position: [0.95, 0.76, 0.5], rotation: [0, 0, 0], label: 'Pizza' },
+    ],
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [3.0, 4.5, 2.0],
+          rotation: [-40, -55, 0],
+          intensity: 1.2,
+          cct: 3800,
+          color: '#ffe0a0',
+          modifier: 'softbox-90x120'
+        },
+        {
+          type: 'fill-light',
+          position: [-2.5, 2.5, 2.5],
+          rotation: [-20, 60, 0],
+          intensity: 0.4,
+          cct: 6500,
+          color: '#c8d8ff',
+          modifier: 'umbrella-white'
+        },
+        {
+          type: 'rim-light',
+          position: [-1.5, 3.0, -2.0],
+          rotation: [-35, 140, 0],
+          intensity: 0.55,
+          cct: 4200,
+          color: '#ffd080',
+          modifier: 'stripbox-30x120'
+        },
+        {
+          type: 'background-light',
+          position: [0, 2.0, -3.0],
+          rotation: [20, 0, 0],
+          intensity: 0.3,
+          cct: 3200,
+          color: '#ff9940',
+          modifier: 'fresnel'
+        }
+      ],
+      camera: {
+        position: [0, 1.8, 5.5],
+        target: [0.5, 1.4, 0],
+        focalLength: 35
+      },
+      gear: {
+        setupType: 'photo',
+        cameraBodyId: 'sony-fx3',
+        cameraLabel: 'Sony A7 IV',
+        cameraCount: 1,
+        lensId: 'sony-fe-35mm-f18',
+        lensLabel: '35mm f/1.8',
+        lightCount: 4,
+        lightTypes: ['led', 'natural'],
+        fixtureIds: ['aputure-300d', 'nanlite-forza300']
+      }
+    },
+    recommendedAssets: {
+      lights: ['aputure-300d', 'nanlite-forza300'],
+      modifiers: ['softbox-90x120', 'umbrella-white', 'stripbox-30x120', 'fresnel'],
+      backdrops: []
     }
   }
 ];

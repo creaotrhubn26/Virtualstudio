@@ -123,6 +123,19 @@ class StorySceneLoaderService {
       // Hide the built-in floor/grid — the GLB room has its own floor
       window.dispatchEvent(new CustomEvent('ch-toggle-floor', { detail: { visible: false } }));
       window.dispatchEvent(new CustomEvent('ch-toggle-grid', { detail: { visible: false } }));
+
+      // Load HDRI sky/ambient if preset specifies one (e.g. outdoor scenes)
+      if (preset.hdriUrl) {
+        window.dispatchEvent(new CustomEvent('vs-load-hdri', {
+          detail: {
+            id: `preset-hdri-${preset.id}`,
+            url: preset.hdriUrl,
+            intensity: 0.85,
+            name: preset.navn,
+          }
+        }));
+      }
+
       report('environment', 1, 'Miljø lastet');
     }
 
