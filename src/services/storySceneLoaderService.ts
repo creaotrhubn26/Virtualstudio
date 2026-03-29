@@ -16,35 +16,10 @@ import { ScenarioPreset } from '../data/scenarioPresets';
 import { propRenderingService } from '../core/services/propRenderingService';
 import { useSkeletalAnimationStore } from './skeletalAnimationService';
 import { ALL_POSES } from '../core/animation/PoseLibrary';
+import { getAvatarModelUrl, getAvatarSkinHex } from '../core/data/avatarDefinitions';
 import { logger } from '../core/services/logger';
 
 const log = logger.module('StorySceneLoader');
-
-// ─── Skin tone hex values (must be valid hex strings for Color3.FromHexString) ─
-const AVATAR_SKIN_HEX: Record<string, string> = {
-  man:       '#C68642',
-  woman:     '#EAC086',
-  child:     '#FFDAB9',
-  teenager:  '#FFE4C4',
-  elderly:   '#D2A679',
-  athlete:   '#A0522D',
-  dancer:    '#F5CBA7',
-  pregnant:  '#EAC086',
-  generated: '#EAC086',
-};
-
-// ─── Avatar type → model URL mapping (mirrors CharacterModelLoader registry) ─
-const AVATAR_MODEL_URLS: Record<string, string> = {
-  man:       '/models/avatars/avatar_man.glb',
-  woman:     '/models/avatars/avatar_woman.glb',
-  child:     '/models/avatars/avatar_child.glb',
-  teenager:  '/models/avatars/avatar_teenager.glb',
-  elderly:   '/models/avatars/avatar_elderly.glb',
-  athlete:   '/models/avatars/avatar_athlete.glb',
-  dancer:    '/models/avatars/avatar_dancer.glb',
-  pregnant:  '/models/avatars/avatar_pregnant.glb',
-  generated: 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/CesiumMan/glTF-Binary/CesiumMan.glb',
-};
 
 // How long to wait for all story rigs to report ready (ms)
 const RIG_WAIT_TIMEOUT_MS = 10000;
@@ -179,10 +154,10 @@ class StorySceneLoaderService {
       const storyRigIds = characters.map(c => c.id);
 
       characters.forEach((charManifest, idx) => {
-        const modelUrl = AVATAR_MODEL_URLS[charManifest.avatarType] ?? AVATAR_MODEL_URLS['generated'];
+        const modelUrl = getAvatarModelUrl(charManifest.avatarType);
         log.info(`Dispatching story character: ${charManifest.label} (${charManifest.avatarType})`);
 
-        const skinHex = AVATAR_SKIN_HEX[charManifest.avatarType] ?? '#EAC086';
+        const skinHex = getAvatarSkinHex(charManifest.avatarType);
 
         window.dispatchEvent(new CustomEvent('ch-load-story-character', {
           detail: {

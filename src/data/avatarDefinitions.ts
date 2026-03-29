@@ -504,3 +504,9 @@ export function getMediumSkinAvatars(): AvatarMaterial[] {
 export function getDarkSkinAvatars(): AvatarMaterial[] {
   return AVATAR_MATERIALS.filter(a => a.skinToneRange === 'dark');
 }
+
+/**
+ * Type alias for AvatarMaterial — used by AnimationMaterialController.
+ * Provides a stable named import without duplicating the interface.
+ */
+export type AvatarMaterialDefinition = AvatarMaterial;

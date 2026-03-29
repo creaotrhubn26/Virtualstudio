@@ -319,6 +319,68 @@ export const ALL_POSES: PosePreset[] = [
     },
   },
 
+  // ── COMMERCIAL (story-scene additions) ────────────────────────────────────
+
+  {
+    id: 'commercial_seated_diner',
+    name: 'Sittende (Restaurant)',
+    description: 'Seated dining pose — relaxed upright posture at a table, one hand resting on surface',
+    category: 'commercial',
+    difficulty: 'beginner',
+    pose: {
+      [B.HIPS]:           { x: 1.30, y: 0,     z: 0     },  // hips flex for sitting
+      [B.SPINE]:          { x: -0.05,y: 0,     z: 0     },
+      [B.SPINE1]:         { x: -0.03,y: 0,     z: 0     },
+      [B.HEAD]:           { x: -0.10,y: 0,     z: 0     },
+      [B.LEFT_UP_LEG]:    { x: -1.45,y: 0,     z: 0.05  },  // upper leg horizontal
+      [B.LEFT_LEG]:       { x: 1.50, y: 0,     z: 0     },  // lower leg down
+      [B.RIGHT_UP_LEG]:   { x: -1.45,y: 0,     z: -0.05 },
+      [B.RIGHT_LEG]:      { x: 1.50, y: 0,     z: 0     },
+      [B.LEFT_ARM]:       { x: 0.10, y: 0,     z: 0.30  },  // arm slightly down to table
+      [B.LEFT_FOREARM]:   { x: 0,    y: -0.50, z: 0     },  // forearm on table
+      [B.RIGHT_ARM]:      { x: 0.10, y: 0,     z: -0.35 },
+      [B.RIGHT_FOREARM]:  { x: 0,    y: 0.40,  z: 0     },
+    },
+  },
+  {
+    id: 'commercial_seated_interview',
+    name: 'Sittende (Intervju)',
+    description: 'Seated broadcast interview pose — professional upright, arms lightly folded or at rest',
+    category: 'commercial',
+    difficulty: 'beginner',
+    pose: {
+      [B.HIPS]:           { x: 1.30, y: 0,     z: 0     },
+      [B.SPINE]:          { x: -0.10,y: 0,     z: 0     },
+      [B.SPINE1]:         { x: -0.05,y: 0,     z: 0     },
+      [B.HEAD]:           { x: -0.10,y: 0.05,  z: 0     },
+      [B.LEFT_UP_LEG]:    { x: -1.45,y: 0.10,  z: 0.05  },
+      [B.LEFT_LEG]:       { x: 1.50, y: 0,     z: 0     },
+      [B.RIGHT_UP_LEG]:   { x: -1.45,y: -0.10, z: -0.05 },
+      [B.RIGHT_LEG]:      { x: 1.50, y: 0,     z: 0     },
+      [B.LEFT_ARM]:       { x: 0.15, y: 0,     z: 0.25  },
+      [B.LEFT_FOREARM]:   { x: 0,    y: -0.30, z: 0.10  },
+      [B.RIGHT_ARM]:      { x: 0.15, y: 0,     z: -0.30 },
+      [B.RIGHT_FOREARM]:  { x: 0,    y: 0.25,  z: -0.10 },
+    },
+  },
+  {
+    id: 'portrait_overhead_lean',
+    name: 'Fremoverlent (Overhead)',
+    description: 'Leaning forward and downward — ideal for overhead product / food photography where stylist looks into frame',
+    category: 'portrait',
+    difficulty: 'beginner',
+    pose: {
+      [B.HIPS]:           { x: 0.20, y: 0,     z: 0     },
+      [B.SPINE]:          { x: 0.40, y: 0,     z: 0     },
+      [B.SPINE1]:         { x: 0.30, y: 0,     z: 0     },
+      [B.HEAD]:           { x: 0.50, y: 0,     z: 0     },
+      [B.LEFT_ARM]:       { x: 0.50, y: 0,     z: 0.20  },
+      [B.LEFT_FOREARM]:   { x: 0,    y: -0.20, z: 0.10  },
+      [B.RIGHT_ARM]:      { x: 0.50, y: 0,     z: -0.20 },
+      [B.RIGHT_FOREARM]:  { x: 0,    y: 0.20,  z: -0.10 },
+    },
+  },
+
   // ── DANCE ─────────────────────────────────────────────────────────────────
   {
     id: 'dance_ballet_first',

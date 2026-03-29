@@ -240,6 +240,19 @@ class PropRenderingService {
           depth: Number(metadata.depth) || 1.5,
         }, this.scene);
         break;
+      case 'monitor-stand': {
+        // Screen panel on a thin stand
+        const standH = Number(metadata.standHeight) || 1.1;
+        const screenW = Number(metadata.width) || 0.62;
+        const screenH = Number(metadata.height) || 0.48;
+        mesh = MeshBuilder.CreateBox(prop.id, {
+          width: screenW,
+          height: screenH,
+          depth: Number(metadata.depth) || 0.08,
+        }, this.scene);
+        mesh.position.y = standH + screenH / 2;
+        break;
+      }
       case 'props-cluster':
       case 'herb-pots':
       case 'vase':

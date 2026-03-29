@@ -643,6 +643,29 @@ export const PROP_DEFINITIONS: PropDefinition[] = [
       accentColor: '#333333',
     },
   },
+  {
+    id: 'studio-monitor',
+    name: 'Studioskjerm (Monitor)',
+    description: 'Broadcast studio monitor on a stand — used as a talent confidence monitor or on-set display for chef/interview sets.',
+    category: 'electronics',
+    modelUrl: null,
+    thumbnailUrl: null,
+    defaultScale: 1.0,
+    size: 'medium',
+    complexity: 'medium',
+    supportsLOD: true,
+    supportsInstancing: true,
+    metadata: {
+      primitive: 'monitor-stand',
+      width: 0.62,
+      height: 0.48,
+      depth: 0.08,
+      standHeight: 1.1,
+      color: '#111111',
+      accentColor: '#222222',
+      emissiveColor: '#1a2a4a',
+    },
+  },
 ];
 
 export const ALL_PROPS: PropDefinition[] = PROP_DEFINITIONS;
