@@ -19,4 +19,5 @@ dependencies = [
     "numpy>=2.2.6",
     "opencv-python>=4.13.0.92",
     "pillow>=12.1.1",
+    "trimesh>=4.11.5",
 ]

@@ -24,6 +24,7 @@ import {
 } from '@/core/services/library';
 import { getUserAssets, saveUserAsset } from '@/core/services/userLibrary';
 import Rodin3DGeneratorDialog from '@/components/Rodin3DGeneratorDialog';
+import { GLBGeneratorDialog } from '@/components/GLBGeneratorDialog';
 import { scanAndAddAllModels } from '@/scripts/scanAndAddHyper3DModels';
 
 function useLibrary(type: AssetType) {
@@ -249,6 +250,7 @@ export default function LibraryPanel() {
   const { q, setQ, items, refresh } = useLibrary(tab);
   const [scanning, setScanning] = React.useState(false);
   const [generateDialogOpen, setGenerateDialogOpen] = React.useState(false);
+  const [glbDialogOpen, setGlbDialogOpen] = React.useState(false);
   
   // Responsive values for iPad
   const buttonHeight = isIPadFriendly ? 52 : 32;
@@ -301,6 +303,15 @@ export default function LibraryPanel() {
         modelUrl: modelUrl,
         category: category || 'misc',
       },
+    });
+    await refresh();
+  };
+
+  const handleGlbGenerated = async (modelUrl: string, modelName: string) => {
+    await saveUserAsset({
+      type: 'model',
+      title: modelName,
+      data: { modelUrl, category: 'generated' },
     });
     await refresh();
   };
@@ -403,6 +414,30 @@ export default function LibraryPanel() {
               }}
             >
               Generer 3D
+            </Button>
+          </Tooltip>
+          <Tooltip title="Generer GLB fra bilde (TripoSR)">
+            <Button
+              size={isIPadFriendly ? 'medium' : 'small'}
+              variant="outlined"
+              startIcon={<ViewInArIcon fontSize={isIPadFriendly ? 'medium' : 'small'} />}
+              onClick={() => setGlbDialogOpen(true)}
+              sx={{
+                textTransform: 'none',
+                fontSize: buttonFontSize,
+                minHeight: buttonHeight,
+                borderColor: '#06b6d4',
+                color: '#06b6d4',
+                px: isIPadFriendly ? 3 : 2,
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  borderColor: '#0891b2',
+                  color: '#0891b2',
+                  bgcolor: 'rgba(6,182,212,0.08)',
+                },
+              }}
+            >
+              Bilde → 3D
             </Button>
           </Tooltip>
           <Tooltip title="Scan and add Hyper3D models to library">
@@ -538,6 +573,11 @@ export default function LibraryPanel() {
         open={generateDialogOpen}
         onClose={() => setGenerateDialogOpen(false)}
         onGenerated={handleModelGenerated}
+      />
+      <GLBGeneratorDialog
+        open={glbDialogOpen}
+        onClose={() => setGlbDialogOpen(false)}
+        onGenerated={handleGlbGenerated}
       />
     </Box>
   );

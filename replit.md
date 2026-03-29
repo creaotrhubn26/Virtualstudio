@@ -123,6 +123,18 @@ PostgreSQL database with comprehensive table structure:
 - `src/services/virtualStudioApiService.ts` - Typed API client for Virtual Studio
 - `src/services/castingApiService.ts` - Typed API client for Virtual Studio
 
+## GLB Generation Pipeline (TripoSR)
+
+A complete image-to-3D pipeline using TripoSR via Replicate API:
+- **Service**: `backend/triposr_service.py` — handles image upload, Replicate prediction lifecycle, GLB download and local caching
+- **Routes**: `POST /api/triposr/generate`, `GET /api/triposr/status/{job_id}`, `POST /api/triposr/download/{job_id}`, `GET /api/triposr/model/{filename}`, `GET /api/triposr/models`
+- **Frontend service**: `src/services/glbGeneratorService.ts` — full pipeline wrapper with progress callbacks
+- **Frontend UI**: `src/components/GLBGeneratorDialog.tsx` — drag-and-drop image upload, background removal toggle, polling progress bar, add-to-scene action
+- **Entry point**: "Bilde → 3D" button in the Library panel (cyan outlined button next to "Generer 3D")
+- **Requires**: `REPLICATE_API_TOKEN` environment secret (set via Secrets tab)
+- **Model**: `stability-ai/triposr` on Replicate (~60–120 seconds per generation)
+- **Output**: GLB files saved in `backend/triposr_models/`, served via `/api/triposr/model/`
+
 ## External Dependencies
 - **@babylonjs/core, @babylonjs/loaders, @babylonjs/gui**: 3D engine and related components.
 - **react, react-dom**: Core libraries for the user interface.

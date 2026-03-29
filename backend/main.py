@@ -1314,6 +1314,96 @@ async def test_rodin_generate(request: dict):
 
 
 # ============================================================================
+# TripoSR 3D Generation Endpoints (image → high-quality GLB via Replicate)
+# ============================================================================
+
+TRIPOSR_SERVICE_AVAILABLE = False
+try:
+    from triposr_service import triposr_service
+    TRIPOSR_SERVICE_AVAILABLE = True
+    print("TripoSR service loaded")
+except ImportError as e:
+    print(f"Warning: TripoSR service not available: {e}")
+    triposr_service = None
+
+
+@app.post("/api/triposr/generate")
+async def triposr_generate(
+    image: UploadFile = File(...),
+    do_remove_background: bool = True,
+    foreground_ratio: float = 0.85,
+):
+    """Upload an image and generate a high-quality GLB via TripoSR on Replicate."""
+    if not TRIPOSR_SERVICE_AVAILABLE or triposr_service is None:
+        raise HTTPException(status_code=503, detail="TripoSR service not available")
+
+    if not triposr_service.api_token:
+        raise HTTPException(
+            status_code=503,
+            detail="REPLICATE_API_TOKEN is not set. Add it in your Replit project Secrets.",
+        )
+
+    allowed_types = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
+    content_type = image.content_type or ""
+    if content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail=f"Unsupported image type: {content_type}. Use JPEG, PNG or WebP.")
+
+    image_data = await image.read()
+    if len(image_data) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Image too large. Maximum 20 MB.")
+
+    result = await triposr_service.generate_from_image(
+        image_data=image_data,
+        original_filename=image.filename or "upload.png",
+        do_remove_background=do_remove_background,
+        foreground_ratio=foreground_ratio,
+    )
+    return JSONResponse(result)
+
+
+@app.get("/api/triposr/status/{job_id}")
+async def triposr_status(job_id: str):
+    """Poll the status of a TripoSR generation job."""
+    if not TRIPOSR_SERVICE_AVAILABLE or triposr_service is None:
+        raise HTTPException(status_code=503, detail="TripoSR service not available")
+    result = await triposr_service.check_status(job_id)
+    return JSONResponse(result)
+
+
+@app.post("/api/triposr/download/{job_id}")
+async def triposr_download(job_id: str):
+    """Download the finished GLB and save it locally. Returns a serveable URL."""
+    if not TRIPOSR_SERVICE_AVAILABLE or triposr_service is None:
+        raise HTTPException(status_code=503, detail="TripoSR service not available")
+    result = await triposr_service.download_model(job_id)
+    return JSONResponse(result)
+
+
+@app.get("/api/triposr/model/{filename:path}")
+async def serve_triposr_model(filename: str):
+    """Serve a generated TripoSR GLB file."""
+    if not TRIPOSR_SERVICE_AVAILABLE or triposr_service is None:
+        raise HTTPException(status_code=503, detail="TripoSR service not available")
+    file_path = triposr_service.output_dir / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"Model not found: {filename}")
+    return FileResponse(
+        path=str(file_path),
+        media_type="model/gltf-binary",
+        filename=filename,
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
+@app.get("/api/triposr/models")
+async def list_triposr_models():
+    """List all generated TripoSR GLB models."""
+    if not TRIPOSR_SERVICE_AVAILABLE or triposr_service is None:
+        return JSONResponse({"models": []})
+    return JSONResponse({"models": triposr_service.list_models()})
+
+
+# ============================================================================
 # Virtual Studio API Endpoints
 # ============================================================================
 
