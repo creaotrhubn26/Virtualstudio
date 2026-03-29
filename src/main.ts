@@ -5737,16 +5737,19 @@ class VirtualStudio {
               // the head; fyMax-fyMin captures only that thin strip. Since the TRELLIS
               // softbox is square and the octabox is circular, height = width is correct.
               panelH = panelW;
-              // X center: vertex-measured (avoids flash-mount bracket offset).
-              // Y center: vertex-measured midpoint of the front-face strip, which sits at
-              // the actual diffuser panel centre even when fyMin ≈ headJointWorldY.
+              // X center: vertex-measured (avoids flash-mount bracket X-offset).
+              // Y center: anchor the BOTTOM of the plane at headJointWorldY and the TOP
+              // at headJointWorldY + panelW. Center = headJointWorldY + panelW * 0.5.
+              // Using (fyMin+fyMax)/2 overshoots because the front-face strip is only at
+              // the very top of the head, centering a panelW-tall plane above the model.
+              const diffuserYCenter = headJointWorldY + panelW * 0.5;
               (geoMesh as any)._diffuserXCenter = (fxMin + fxMax) * 0.5;
-              (geoMesh as any)._diffuserYCenter = (fyMin + fyMax) * 0.5;
+              (geoMesh as any)._diffuserYCenter = diffuserYCenter;
               measuredFromVertices = true;
               console.log(`[addLight] VERTEX diffuser: W=${panelW.toFixed(3)}m H(=W)=${panelH.toFixed(3)}m` +
-                ` Xcenter=${((fxMin + fxMax) * 0.5).toFixed(3)} Ycenter=${((fyMin + fyMax) * 0.5).toFixed(3)}` +
-                ` rawX=[${fxMin.toFixed(3)},${fxMax.toFixed(3)}] rawY=[${fyMin.toFixed(3)},${fyMax.toFixed(3)}]` +
-                ` eps=${epsilon.toFixed(3)}`);
+                ` Xcenter=${((fxMin + fxMax) * 0.5).toFixed(3)} Ycenter=${diffuserYCenter.toFixed(3)}` +
+                ` (headJointY=${headJointWorldY.toFixed(3)} + panelW/2=${(panelW*0.5).toFixed(3)})` +
+                ` rawX=[${fxMin.toFixed(3)},${fxMax.toFixed(3)}] eps=${epsilon.toFixed(3)}`);
             } else {
               console.warn(`[addLight] No front-face vertices found (eps=${epsilon.toFixed(3)}, bMinZ=${bMin.z.toFixed(3)}); using bbox fallback`);
             }
