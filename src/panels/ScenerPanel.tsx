@@ -915,6 +915,50 @@ const buttonStyle = {
             Bilde → 3D Miljø (TRELLIS)
           </Button>
 
+          {/* TRELLIS-genererte Napoli-miljøer */}
+          <Box sx={{ mt: 1.5 }}>
+            <Typography sx={{ color: '#7c86d4', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
+              TRELLIS-genererte Napoli-miljøer
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+              {[
+                { label: 'Utendørs restaurant', emoji: '🪑', file: 'trellis-outdoor-restaurant.glb', desc: 'Uteserveringsscene' },
+                { label: 'Restaurantterrasse', emoji: '🌿', file: 'trellis-terrace.glb', desc: 'Terrasse & grønt' },
+                { label: 'Italiensk restaurant', emoji: '🍕', file: 'trellis-italian-restaurant.glb', desc: 'Klassisk interiør' },
+                { label: 'Utendørs dining', emoji: '🌅', file: 'trellis-outdoor-dining.glb', desc: 'Piazza & bord' },
+                { label: 'Restaurantfasade', emoji: '🏛️', file: 'trellis-exterior.glb', desc: 'Bygningsfasade' },
+              ].map((env) => (
+                <Box
+                  key={env.file}
+                  onClick={() => window.dispatchEvent(new CustomEvent('ch-load-environment', { detail: { url: `/models/environments/napoli/${env.file}`, scale: 10 } }))}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    p: '8px 12px',
+                    borderRadius: '8px',
+                    background: 'rgba(99,102,241,0.07)',
+                    border: '1px solid rgba(99,102,241,0.2)',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      background: 'rgba(99,102,241,0.15)',
+                      borderColor: 'rgba(99,102,241,0.5)',
+                      transform: 'translateX(2px)',
+                    },
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <Typography sx={{ fontSize: 18 }}>{env.emoji}</Typography>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography sx={{ color: '#c7d2fe', fontSize: 12.5, fontWeight: 600 }}>{env.label}</Typography>
+                    <Typography sx={{ color: '#6b7280', fontSize: 11 }}>{env.desc}</Typography>
+                  </Box>
+                  <Typography sx={{ color: '#4b5563', fontSize: 10, fontFamily: 'monospace' }}>GLB</Typography>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+
           {/* Merkevarebygging — Scene Branding */}
           <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(255,109,0,0.2)' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: brandingOpen ? 1.5 : 0 }}>
