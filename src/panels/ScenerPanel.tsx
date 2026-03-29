@@ -1042,6 +1042,139 @@ const buttonStyle = {
         </Box>
       )}
 
+      {/* ─── Hollywood Studio Section ─────────────────────────────────────── */}
+      {(activeKategori === 'story' || activeKategori === 'hollywood' || activeKategori === 'alle') && (() => {
+        const hwPreset = scenarioPresets.find(p => p.id === 'story-hollywood-studio');
+        if (!hwPreset) return null;
+        return (
+          <Box sx={{
+            mb: 3,
+            p: 3,
+            borderRadius: '16px',
+            background: 'linear-gradient(135deg, #0a0a12 0%, #0d0d20 50%, #0a0a12 100%)',
+            border: '1px solid rgba(255,193,7,0.35)',
+            boxShadow: '0 4px 24px rgba(255,193,7,0.08)',
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+              <Movie sx={{ color: '#ffc107', fontSize: 28 }} />
+              <Typography sx={{ color: '#ffd54f', fontWeight: 700, fontSize: 18, letterSpacing: 0.5 }}>
+                Hollywood Studio
+              </Typography>
+              <Box sx={{
+                ml: 'auto',
+                px: 1.5,
+                py: 0.4,
+                borderRadius: '20px',
+                background: 'rgba(255,193,7,0.12)',
+                border: '1px solid rgba(255,193,7,0.3)',
+              }}>
+                <Typography sx={{ color: '#ffc107', fontSize: 12, fontWeight: 600 }}>
+                  AI + TRELLIS · Full produksjon
+                </Typography>
+              </Box>
+            </Box>
+            <Typography sx={{ color: '#9e8c44', fontSize: 13.5, lineHeight: 1.6, mb: 2 }}>
+              Et komplett Hollywood-nivå produksjonsstudio med 15 profesjonelle rekvisitter. LED-videowall (virtual production), kinokamera på dolly-spor, jib-kran, lydmikser og video village. Miljøet er AI-generert og konvertert til 3D med TRELLIS.
+            </Typography>
+
+            {/* Equipment overview */}
+            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mb: 2 }}>
+              {[
+                { icon: '🎬', label: 'Kinokamera' },
+                { icon: '💡', label: 'LED SkyPanel' },
+                { icon: '🎤', label: 'Bom-mikrofon' },
+                { icon: '🖥️', label: 'Video Village' },
+                { icon: '📽️', label: 'Jib-kran' },
+                { icon: '🌟', label: 'LED Videowall' },
+                { icon: '🎚️', label: 'Lydmikser' },
+                { icon: '🎞️', label: 'Dolly-spor' },
+                { icon: '💺', label: 'Regissørstol' },
+                { icon: '🔦', label: 'Fresnel-spot' },
+              ].map((eq) => (
+                <Box key={eq.label} sx={{
+                  px: 1.2,
+                  py: 0.5,
+                  borderRadius: '8px',
+                  background: 'rgba(255,193,7,0.07)',
+                  border: '1px solid rgba(255,193,7,0.18)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                }}>
+                  <Typography sx={{ fontSize: 13 }}>{eq.icon}</Typography>
+                  <Typography sx={{ color: '#cbb060', fontSize: 11.5, fontWeight: 600 }}>{eq.label}</Typography>
+                </Box>
+              ))}
+            </Box>
+
+            {/* Load scene button */}
+            <Button
+              variant="contained"
+              fullWidth
+              startIcon={<Landscape sx={{ fontSize: 18 }} />}
+              onClick={() => {
+                storySceneLoaderService.load(hwPreset);
+              }}
+              sx={{
+                mb: 1.5,
+                bgcolor: '#ffc107',
+                color: '#000',
+                fontWeight: 700,
+                fontSize: 13.5,
+                letterSpacing: 0.5,
+                '&:hover': {
+                  bgcolor: '#ffd54f',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 6px 20px rgba(255,193,7,0.4)',
+                },
+                transition: 'all 0.18s',
+              }}
+            >
+              Last inn Hollywood Studio
+            </Button>
+
+            {/* TRELLIS-generated studio environments */}
+            <Typography sx={{ color: '#7c6d30', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
+              TRELLIS-genererte studiomiljøer
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+              {[
+                { label: 'Hollywood Studio (hoved)', emoji: '🏟️', file: 'trellis-studio-main.glb', desc: 'AI-generert · hoved-lydstudio' },
+                { label: 'Kamerarigg-oppsett', emoji: '🎥', file: 'trellis-camera-setup.glb', desc: 'AI-generert · kinokamera-scene' },
+              ].map((env) => (
+                <Box
+                  key={env.file}
+                  onClick={() => window.dispatchEvent(new CustomEvent('ch-load-environment', { detail: { url: `/models/environments/studio/${env.file}`, scale: 10 } }))}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    p: '8px 12px',
+                    borderRadius: '8px',
+                    background: 'rgba(255,193,7,0.06)',
+                    border: '1px solid rgba(255,193,7,0.18)',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      background: 'rgba(255,193,7,0.14)',
+                      borderColor: 'rgba(255,193,7,0.45)',
+                      transform: 'translateX(2px)',
+                    },
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <Typography sx={{ fontSize: 18 }}>{env.emoji}</Typography>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography sx={{ color: '#ffd54f', fontSize: 12.5, fontWeight: 600 }}>{env.label}</Typography>
+                    <Typography sx={{ color: '#6b5d20', fontSize: 11 }}>{env.desc}</Typography>
+                  </Box>
+                  <Typography sx={{ color: '#4b4020', fontSize: 10, fontFamily: 'monospace' }}>GLB</Typography>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        );
+      })()}
+
       <Box sx={{ 
         display: 'grid', 
         gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 

@@ -1034,7 +1034,127 @@ export const scenarioPresets: ScenarioPreset[] = [
       modifiers: ['softbox-90x120', 'umbrella-white', 'stripbox-30x120', 'fresnel'],
       backdrops: []
     }
-  }
+  },
+
+  // ─── Hollywood Studio — Full Production Suite ────────────────────────────
+  {
+    id: 'story-hollywood-studio',
+    navn: 'Hollywood Studio — Full Produksjon',
+    kategori: 'story',
+    beskrivelse: 'Et komplett Hollywood-nivå videoproduksjonsstudio med alt av kamera-, lyd- og lysutstyr. LED-videowall, kinokamera på dolly, jib-kran, regissørstol og profesjonelt monitorsett. Generert med AI og konvertert til 3D med TRELLIS.',
+    tags: ['story', 'hollywood', 'studio', 'film', 'produksjon', 'led-wall', 'virtual-production', 'kino', 'dolly', 'kran', 'profesjonell'],
+    difficulty: 'advanced',
+    usedIn: ['Hollywood-produksjon', 'Filmstudio', 'Virtual Production', 'Brand Film', 'Commercial', 'Music Video'],
+    environmentUrl: '/models/environments/studio/trellis-studio-main.glb',
+    characters: [
+      {
+        id: 'char-hw-director',
+        role: 'Regissør',
+        avatarType: 'bakemester',
+        poseId: 'commercial_welcoming',
+        position: [-2.0, 0, 1.5],
+        rotation: [0, 30, 0],
+        label: 'Regissør',
+      },
+      {
+        id: 'char-hw-dp',
+        role: 'Director of Photography',
+        avatarType: 'waiter',
+        poseId: 'commercial_welcoming',
+        position: [0.5, 0, 0.5],
+        rotation: [0, -10, 0],
+        label: 'DP / Cinematographer',
+      },
+      {
+        id: 'char-hw-talent',
+        role: 'Talent/Skuespiller',
+        avatarType: 'customer_woman',
+        poseId: 'commercial_standing',
+        position: [0, 0, -1.0],
+        rotation: [0, 0, 0],
+        label: 'Talent (foran kamera)',
+      },
+    ],
+    props: [
+      { id: 'prop-hw-camera', propId: 'cinema-camera', position: [0.5, 0, 1.0], rotation: [0, 180, 0], label: 'Kinokamera (primær)' },
+      { id: 'prop-hw-dolly', propId: 'camera-dolly-track', position: [0.5, 0, 2.5], rotation: [0, 0, 0], label: 'Dolly-sporssystem' },
+      { id: 'prop-hw-led-key', propId: 'led-panel-light', position: [-1.8, 1.5, 0.5], rotation: [0, 30, -15], label: 'LED Key Light (SkyPanel)' },
+      { id: 'prop-hw-fresnel-fill', propId: 'fresnel-light', position: [2.0, 1.5, 0.8], rotation: [0, -25, -10], label: 'Fresnel Fill Light' },
+      { id: 'prop-hw-c-stand-l', propId: 'c-stand', position: [-2.5, 0, 0.5], rotation: [0, 15, 0], label: 'C-stativ venstre' },
+      { id: 'prop-hw-c-stand-r', propId: 'c-stand', position: [2.5, 0, 0.5], rotation: [0, -15, 0], label: 'C-stativ høyre' },
+      { id: 'prop-hw-reflector', propId: 'reflector-disc', position: [1.5, 0, -0.5], rotation: [0, -20, 0], label: 'Reflektordisk (fill)' },
+      { id: 'prop-hw-boom', propId: 'boom-mic', position: [0, 0, 0.2], rotation: [0, 0, 0], label: 'Bom-mikrofon' },
+      { id: 'prop-hw-led-wall', propId: 'led-video-wall', position: [0, 1.0, -3.0], rotation: [0, 0, 0], label: 'LED Videowall (Virtual BG)' },
+      { id: 'prop-hw-monitors', propId: 'monitor-stack', position: [-2.0, 0, 2.0], rotation: [0, 20, 0], label: 'Video Village (monitorer)' },
+      { id: 'prop-hw-director-chair', propId: 'directors-chair', position: [-2.5, 0, 2.0], rotation: [0, 25, 0], label: 'Regissørstol' },
+      { id: 'prop-hw-jib', propId: 'camera-jib-crane', position: [2.5, 0, 2.5], rotation: [0, -30, 0], label: 'Jib-kran (B-camera)' },
+      { id: 'prop-hw-teleprompter', propId: 'teleprompter', position: [0.5, 0, 1.5], rotation: [0, 180, 0], label: 'Teleprompter' },
+      { id: 'prop-hw-cart', propId: 'production-cart', position: [3.0, 0, 1.5], rotation: [0, -15, 0], label: 'Produksjonsvogn (G&E)' },
+      { id: 'prop-hw-mixing', propId: 'mixing-console', position: [-3.0, 0, 3.0], rotation: [0, 15, 0], label: 'Lydmikser (Audio)' },
+      { id: 'prop-hw-slate', propId: 'clapperboard', position: [0, 0, 0.8], rotation: [0, -45, 0], label: 'Filmklapper' },
+    ],
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [-2.5, 3.0, 1.0],
+          rotation: [35, 30, 0],
+          intensity: 1.2,
+          cct: 5600,
+          color: '#e8f0ff',
+          modifier: 'led-panel'
+        },
+        {
+          type: 'fill-light',
+          position: [2.5, 2.0, 1.0],
+          rotation: [25, -30, 0],
+          intensity: 0.6,
+          cct: 3200,
+          color: '#ffd4a0',
+          modifier: 'fresnel'
+        },
+        {
+          type: 'back-light',
+          position: [0, 3.5, -3.0],
+          rotation: [-20, 0, 0],
+          intensity: 0.8,
+          cct: 5600,
+          color: '#ffffff',
+          modifier: 'softbox'
+        },
+        {
+          type: 'background-light',
+          position: [0, 2.0, -4.0],
+          rotation: [10, 0, 0],
+          intensity: 2.0,
+          cct: 6500,
+          color: '#4488ff',
+          modifier: 'led-wall'
+        }
+      ],
+      camera: {
+        position: [0, 1.8, 5.0],
+        target: [0, 1.3, 0],
+        focalLength: 50
+      },
+      gear: {
+        setupType: 'video',
+        cameraBodyId: 'sony-fx3',
+        cameraLabel: 'ARRI Alexa 35 (Cinema)',
+        cameraCount: 2,
+        lensId: 'sony-fe-35mm-f18',
+        lensLabel: '35mm Zeiss Master Prime',
+        lightCount: 8,
+        lightTypes: ['led', 'fresnel', 'hmi'],
+        fixtureIds: ['arri-skypanel-s60', 'aputure-1200d', 'nanlite-forza300']
+      }
+    },
+    recommendedAssets: {
+      lights: ['arri-skypanel-s60', 'aputure-1200d', 'nanlite-forza300'],
+      modifiers: ['softbox-90x120', 'fresnel', 'led-panel'],
+      backdrops: []
+    }
+  },
 ];
 
 export const getPresetsByKategori = (kategori: string): ScenarioPreset[] => {
