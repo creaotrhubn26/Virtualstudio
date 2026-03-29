@@ -106,6 +106,19 @@ class PropRenderingService {
     return mesh;
   }
 
+  /**
+   * Load a prop and track it by an explicit instance key (e.g., manifest.id).
+   * This allows multiple instances of the same PropDefinition in the same scene
+   * (e.g., two chairs, two reflectors) without map-key collisions.
+   */
+  async loadPropInstance(instanceKey: string, prop: PropDefinition, options: PropLoadOptions = {}): Promise<AbstractMesh> {
+    const mesh = await this.loadProp(prop, options);
+    // Re-register under the instance key so clearAllProps() can dispose all instances
+    this.loadedProps.delete(prop.id);
+    this.loadedProps.set(instanceKey, mesh);
+    return mesh;
+  }
+
   private createPlaceholderProp(prop: PropDefinition): Mesh {
     if (!this.scene) {
       throw new Error('Scene not set');
@@ -199,6 +212,34 @@ class PropRenderingService {
           depth: Number(metadata.depth) || 0.25,
         }, this.scene);
         break;
+      case 'table-round':
+        mesh = MeshBuilder.CreateCylinder(prop.id, {
+          diameter: Number(metadata.diameter) || 0.9,
+          height: Number(metadata.height) || 0.76,
+          tessellation: 32,
+        }, this.scene);
+        break;
+      case 'disc':
+        mesh = MeshBuilder.CreateCylinder(prop.id, {
+          diameter: Number(metadata.diameter) || 0.35,
+          height: Number(metadata.height) || 0.04,
+          tessellation: 32,
+        }, this.scene);
+        break;
+      case 'candle':
+        mesh = MeshBuilder.CreateCylinder(prop.id, {
+          diameter: Number(metadata.diameter) || 0.06,
+          height: Number(metadata.height) || 0.22,
+          tessellation: 12,
+        }, this.scene);
+        break;
+      case 'sweep-table':
+        mesh = MeshBuilder.CreateBox(prop.id, {
+          width: Number(metadata.width) || 1.2,
+          height: Number(metadata.height) || 0.75,
+          depth: Number(metadata.depth) || 1.5,
+        }, this.scene);
+        break;
       case 'props-cluster':
       case 'herb-pots':
       case 'vase':
@@ -279,20 +320,23 @@ class PropRenderingService {
         const [rx, ry, rz] = manifest.rotation ?? [0, 0, 0];
         const [sx, sy, sz] = manifest.scale ?? [1, 1, 1];
 
-        const mesh = await this.loadProp(propDef, {
+        // Manifest rotation values are in degrees — convert to radians for Babylon
+        const DEG2RAD = Math.PI / 180;
+
+        // Use manifest.id (instance key) not propDef.id to support multiple instances
+        // of the same prop definition in the same scene (e.g. two chairs, two reflectors)
+        const mesh = await this.loadPropInstance(manifest.id, propDef, {
           position: new Vector3(px, py, pz),
           scale: propDef.defaultScale * Math.max(sx, sy, sz),
         });
 
         mesh.name = `story_prop_${manifest.id}`;
-        // Manifest rotation values are in degrees — convert to radians for Babylon
-        const DEG2RAD = Math.PI / 180;
         mesh.rotation = new Vector3(rx * DEG2RAD, ry * DEG2RAD, rz * DEG2RAD);
         if (manifest.scale) {
           mesh.scaling = new Vector3(
-            (propDef.defaultScale) * sx,
-            (propDef.defaultScale) * sy,
-            (propDef.defaultScale) * sz,
+            propDef.defaultScale * sx,
+            propDef.defaultScale * sy,
+            propDef.defaultScale * sz,
           );
         }
 
