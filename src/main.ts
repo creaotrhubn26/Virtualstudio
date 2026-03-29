@@ -5726,15 +5726,18 @@ class VirtualStudio {
       const dz = target.z - mesh.position.z;
       const horizontalDist = Math.sqrt(dx * dx + dz * dz);
 
-      // Azimuth: rotate around Y so model's +Z face points at target horizontally
-      const yRotation = Math.atan2(dx, dz);
+      // The TRELLIS softbox/octabox model has its diffuser face on -Z (model default).
+      // To aim the -Z face AT the target we need atan2(-dx, -dz) (i.e. atan2(dx,dz) + π).
+      const yRotation = Math.atan2(-dx, -dz);
 
-      // Elevation: tilt the model downward so the light head faces the target
-      // lightHeadHeight is stored on the mesh when it was loaded
+      // Elevation: tilt the -Z face downward toward the subject.
+      // lightHeadHeight stored on the mesh by addLight after bounding-box grounding.
       const lightHeadY = (mesh as any)._lightHeadHeight ?? lightHeadPos.y;
-      const dy = target.y - lightHeadY; // Negative = target is below the light head
-      // Positive xRotation in Babylon.js tilts the model top forward (+Z) = downward tilt
-      const xRotation = horizontalDist > 0.01 ? Math.atan2(-dy, horizontalDist) : 0;
+      const dy = target.y - lightHeadY; // Negative: target is below light head
+
+      // For -Z face: Rx(θ) produces y-component = sin(θ) on the face direction.
+      // We want downward → negative y → negative θ → atan2(dy, h) (dy is negative → θ negative).
+      const xRotation = horizontalDist > 0.01 ? Math.atan2(dy, horizontalDist) : 0;
 
       mesh.rotation = new BABYLON.Vector3(xRotation, yRotation, 0);
       mesh.rotationQuaternion = null;
