@@ -687,22 +687,38 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
 
   const handleBonePositionChange = useCallback((boneName: string, axis: 'x' | 'y' | 'z', value: number) => {
     if (!activeCharacter) return;
-    const posKey = `pos_${axis}` as keyof BoneOverride;
+    const charState = poseStates[activeCharacter.id];
+    if (!charState) return;
+
+    const posKey = `pos_${axis}` as 'pos_x' | 'pos_y' | 'pos_z';
+
+    // Update local UI state first
     setPoseStates(prev => {
-      const charState = prev[activeCharacter.id];
-      const existing: BoneOverride = charState.boneOverrides[boneName] ?? { x: 0, y: 0, z: 0 };
+      const cs = prev[activeCharacter.id];
+      const existing: BoneOverride = cs.boneOverrides[boneName] ?? { x: 0, y: 0, z: 0 };
       return {
         ...prev,
         [activeCharacter.id]: {
-          ...charState,
+          ...cs,
           boneOverrides: {
-            ...charState.boneOverrides,
+            ...cs.boneOverrides,
             [boneName]: { ...existing, [posKey]: value },
           },
         },
       };
     });
-  }, [activeCharacter]);
+
+    // Apply to live rig immediately via store
+    if (charState.rigId) {
+      const existing: BoneOverride = charState.boneOverrides[boneName] ?? { x: 0, y: 0, z: 0 };
+      const nextPos = {
+        x: axis === 'x' ? value : (existing.pos_x ?? 0),
+        y: axis === 'y' ? value : (existing.pos_y ?? 0),
+        z: axis === 'z' ? value : (existing.pos_z ?? 0),
+      };
+      useSkeletalAnimationStore.getState().setBonePosition(charState.rigId, boneName, nextPos);
+    }
+  }, [activeCharacter, poseStates]);
 
   const handlePoseChange = useCallback((poseId: string) => {
     if (!activeCharacter) return;

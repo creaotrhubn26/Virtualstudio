@@ -266,11 +266,18 @@ class StorySceneLoaderService {
    */
   applyBoneOverridesToRig(
     rigId: string,
-    boneOverrides: Record<string, { x: number; y: number; z: number }>,
+    boneOverrides: Record<string, { x: number; y: number; z: number; pos_x?: number; pos_y?: number; pos_z?: number }>,
   ): void {
-    const { setBoneRotation } = useSkeletalAnimationStore.getState();
-    Object.entries(boneOverrides).forEach(([boneName, rotation]) => {
-      setBoneRotation(rigId, boneName, rotation);
+    const { setBoneRotation, setBonePosition } = useSkeletalAnimationStore.getState();
+    Object.entries(boneOverrides).forEach(([boneName, override]) => {
+      setBoneRotation(rigId, boneName, { x: override.x, y: override.y, z: override.z });
+      if (override.pos_x !== undefined || override.pos_y !== undefined || override.pos_z !== undefined) {
+        setBonePosition(rigId, boneName, {
+          x: override.pos_x ?? 0,
+          y: override.pos_y ?? 0,
+          z: override.pos_z ?? 0,
+        });
+      }
     });
     log.debug(`Applied ${Object.keys(boneOverrides).length} bone override(s) to rig ${rigId}`);
   }
