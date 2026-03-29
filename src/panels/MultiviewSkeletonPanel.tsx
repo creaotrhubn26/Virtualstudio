@@ -44,6 +44,8 @@ import {
   GridView,
   Fullscreen,
   PictureInPicture,
+  Visibility,
+  VisibilityOff,
 } from '@mui/icons-material';
 import { ALL_POSES, BONE_NAMES } from '../core/animation/PoseLibrary';
 import { StoryCharacterManifest } from '../data/scenarioPresets';
@@ -415,7 +417,7 @@ const BabylonViewport: React.FC<BabylonViewportProps> = ({
           height="100%"
           viewBox={`0 0 ${VW} ${VH}`}
           preserveAspectRatio="xMidYMid meet"
-          style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: ikEnabled ? 'all' : 'none' }}
+          style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'all' }}
           onPointerMove={handleIkPointerMove}
           onPointerUp={handleIkPointerUp}
           onPointerLeave={handleIkPointerUp}
@@ -736,27 +738,22 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
   };
 
   const handleIkTargetDrag = useCallback((chainName: string, dx: number, dy: number) => {
-    const boneName = IK_CHAIN_TO_BONE[chainName];
-    if (!boneName || !activeCharacter) return;
-    setPoseStates(prev => {
-      const charState = prev[activeCharacter.id];
-      const existing: BoneOverride = charState.boneOverrides[boneName] ?? { x: 0, y: 0, z: 0 };
-      return {
-        ...prev,
-        [activeCharacter.id]: {
-          ...charState,
-          boneOverrides: {
-            ...charState.boneOverrides,
-            [boneName]: {
-              ...existing,
-              pos_x: (existing.pos_x ?? 0) + dx,
-              pos_y: (existing.pos_y ?? 0) + dy,
-            },
-          },
-        },
-      };
-    });
-  }, [activeCharacter]);
+    if (!activeCharacter) return;
+    const charState = poseStates[activeCharacter.id];
+    if (!charState?.rigId) return;
+
+    const { setIKTarget, rigs } = useSkeletalAnimationStore.getState();
+    const rig = rigs.get(charState.rigId);
+    const existingTarget = rig?.ikTargets.get(chainName)?.targetPosition ?? { x: 0, y: 0.8, z: 0 };
+
+    const nextTarget = {
+      x: existingTarget.x + dx,
+      y: existingTarget.y + dy,
+      z: existingTarget.z,
+    };
+
+    setIKTarget(charState.rigId, chainName, { targetPosition: nextTarget, enabled: true });
+  }, [activeCharacter, poseStates]);
 
   if (!open) return null;
 
@@ -812,6 +809,23 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
           </Stack>
 
           <Stack direction="row" spacing={1} alignItems="center">
+            {/* Skeleton overlay toggle — always accessible in top toolbar */}
+            <Tooltip title={skeletonOverlayEnabled ? 'Skjul skjelett' : 'Vis skjelett'}>
+              <IconButton
+                size="small"
+                onClick={() => setSkeletonOverlayEnabled(v => !v)}
+                sx={{
+                  color: skeletonOverlayEnabled ? '#64b5f6' : 'rgba(255,255,255,0.35)',
+                  bgcolor: skeletonOverlayEnabled ? 'rgba(100,181,246,0.12)' : 'transparent',
+                  border: `1px solid ${skeletonOverlayEnabled ? 'rgba(100,181,246,0.4)' : 'transparent'}`,
+                }}
+              >
+                {skeletonOverlayEnabled
+                  ? <Visibility sx={{ fontSize: 18 }} />
+                  : <VisibilityOff sx={{ fontSize: 18 }} />}
+              </IconButton>
+            </Tooltip>
+
             <ToggleButtonGroup
               value={layoutMode}
               exclusive
