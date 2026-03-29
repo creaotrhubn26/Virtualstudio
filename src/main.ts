@@ -5773,15 +5773,26 @@ class VirtualStudio {
           bMin.z - 0.015
         );
 
-        // CreatePlane sizes are in LOCAL units. headPivot inherits scaleFactor from
-        // parentMesh, so the plane would appear scaleFactor× too large if we used
-        // world-space dimensions directly. Divide by scaleFactor to compensate.
+        // CreatePlane sizes are in LOCAL units. parentMesh inherits scaleFactor so we
+        // must divide by scaleFactor to get the correct displayed world-space size.
         const localPanelW = panelW / scaleFactor;
         const localPanelH = panelH / scaleFactor;
-        const diffuserPlane = BABYLON.MeshBuilder.CreatePlane(
-          `${lightId}_diffuserGlow`, { width: localPanelW, height: localPanelH }, this.scene
-        );
-        // Plane normal defaults to +Z; rotate 180° around Y so it faces −Z (the subject side).
+        const isOctabox = lightConfig.glbFile.includes('octabox');
+        let diffuserPlane: BABYLON.Mesh;
+        if (isOctabox) {
+          // Octabox has an octagonal / circular diffuser — use a disc with 8 sides.
+          // radius = half of the panel width so the diameter matches panelW.
+          diffuserPlane = BABYLON.MeshBuilder.CreateDisc(
+            `${lightId}_diffuserGlow`,
+            { radius: localPanelW * 0.5, tessellation: 8 },
+            this.scene
+          );
+        } else {
+          diffuserPlane = BABYLON.MeshBuilder.CreatePlane(
+            `${lightId}_diffuserGlow`, { width: localPanelW, height: localPanelH }, this.scene
+          );
+        }
+        // Mesh normal defaults to +Z; rotate 180° around Y so it faces −Z (the subject side).
         diffuserPlane.rotation.y = Math.PI;
         // Parent to parentMesh (same as the geometry mesh) NOT headPivot.
         // The TRELLIS GLB is a fused single mesh — head and stand can never be separated,
