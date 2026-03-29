@@ -4,11 +4,13 @@
  * Beinselektor og rotasjonsjustering for multiview skjelett-panelet.
  * Gir brukeren muligheten til å:
  *   - Velge et bein fra en kategorisert liste
- *   - Justere X/Y/Z-rotasjon med slidere
- *   - Velge en ferdig pose fra posebiblioteket
+ *   - Justere X/Y/Z-rotasjon med slidere (synkronisert til live Babylon rig)
+ *   - Velge en ferdig pose fra posebiblioteket (filtrert etter scenetypen)
+ *   - Slå skjelettovertrekk PÅ/AV
+ *   - Slå IK (inverse kinematikk) PÅ/AV
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Box,
   Typography,
@@ -16,11 +18,11 @@ import {
   Stack,
   Divider,
   Chip,
-  Button,
-  ButtonGroup,
   Tooltip,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
-import { RestartAlt, AccessibilityNew } from '@mui/icons-material';
+import { RestartAlt, AccessibilityNew, Visibility, VisibilityOff, Link as LinkIcon } from '@mui/icons-material';
 import { ALL_POSES, PosePreset, BONE_NAMES } from '../core/animation/PoseLibrary';
 import { ActiveCharacterPose } from './MultiviewSkeletonPanel';
 
@@ -104,6 +106,25 @@ const POSE_CATEGORY_COLORS: Record<string, string> = {
 };
 
 // ============================================================================
+// Scene-type relevance scoring — returns 6 most relevant poses for a scene
+// ============================================================================
+
+const SCENE_POSE_AFFINITY: Record<string, string[]> = {
+  restaurant:  ['commercial_welcoming', 'portrait_classic_stand', 'commercial_pointing', 'portrait_relaxed', 'fashion_editorial_lean', 'commercial_arms_crossed'],
+  produktfoto: ['commercial_pointing', 'commercial_welcoming', 'portrait_power', 'fashion_power_stance', 'editorial_dynamic_1', 'commercial_arms_crossed'],
+  video:       ['fashion_power_stance', 'portrait_classic_stand', 'commercial_welcoming', 'portrait_power', 'commercial_pointing', 'fashion_editorial_lean'],
+  portrett:    ['portrait_classic_stand', 'portrait_relaxed', 'portrait_power', 'fashion_editorial_lean', 'commercial_welcoming', 'fashion_power_stance'],
+  mote:        ['fashion_power_stance', 'fashion_editorial_lean', 'editorial_dynamic_1', 'portrait_power', 'dance_open_arms', 'fashion_s_curve'],
+};
+
+function getRelevantPoses(sceneType: string): string[] {
+  for (const [key, ids] of Object.entries(SCENE_POSE_AFFINITY)) {
+    if (sceneType.toLowerCase().includes(key)) return ids;
+  }
+  return Object.values(SCENE_POSE_AFFINITY)[0];
+}
+
+// ============================================================================
 // Bone rotation value display helper
 // ============================================================================
 
@@ -121,6 +142,9 @@ interface BoneInspectorSidebarProps {
   onSelectBone: (boneName: string) => void;
   onBoneRotationChange: (boneName: string, axis: 'x' | 'y' | 'z', value: number) => void;
   onPoseChange: (poseId: string) => void;
+  skeletonOverlayEnabled?: boolean;
+  onSkeletonOverlayToggle?: (enabled: boolean) => void;
+  sceneType?: string;
 }
 
 export const BoneInspectorSidebar: React.FC<BoneInspectorSidebarProps> = ({
@@ -129,7 +153,13 @@ export const BoneInspectorSidebar: React.FC<BoneInspectorSidebarProps> = ({
   onSelectBone,
   onBoneRotationChange,
   onPoseChange,
+  skeletonOverlayEnabled = true,
+  onSkeletonOverlayToggle,
+  sceneType = 'portrett',
 }) => {
+  const [ikEnabled, setIkEnabled] = useState(false);
+  const [showAllPoses, setShowAllPoses] = useState(false);
+
   const selectedBoneData = useMemo(() => {
     for (const group of BONE_GROUPS) {
       const found = group.bones.find(b => b.boneName === selectedBone);
@@ -145,6 +175,8 @@ export const BoneInspectorSidebar: React.FC<BoneInspectorSidebarProps> = ({
     return override ?? base;
   }, [selectedBone, character.poseId, character.boneOverrides]);
 
+  const relevantPoseIds = useMemo(() => getRelevantPoses(sceneType), [sceneType]);
+
   const posesByCategory = useMemo(() => {
     const map: Record<string, PosePreset[]> = {};
     ALL_POSES.forEach(p => {
@@ -154,19 +186,66 @@ export const BoneInspectorSidebar: React.FC<BoneInspectorSidebarProps> = ({
     return map;
   }, []);
 
+  const relevantPoses = useMemo(() =>
+    ALL_POSES.filter(p => relevantPoseIds.includes(p.id)),
+    [relevantPoseIds],
+  );
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Header */}
-      <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+      <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
         <Stack direction="row" spacing={1} alignItems="center">
           <AccessibilityNew sx={{ fontSize: 16, color: '#ff9800' }} />
           <Typography sx={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>
             {character.label}
           </Typography>
+          {character.rigId && (
+            <Chip label="Live rig" size="small" sx={{ bgcolor: 'rgba(76,175,80,0.2)', color: '#4caf50', fontSize: 9, height: 16 }} />
+          )}
         </Stack>
         <Typography sx={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', mt: 0.3 }}>
           {character.avatarType} · {ALL_POSES.find(p => p.id === character.poseId)?.name ?? character.poseId}
         </Typography>
+
+        {/* Overlay & IK toggles */}
+        <Stack direction="row" sx={{ mt: 1.2, gap: 0.5 }}>
+          <Tooltip title={skeletonOverlayEnabled ? 'Skjul skjelettovertrekk' : 'Vis skjelettovertrekk'}>
+            <Box
+              onClick={() => onSkeletonOverlayToggle?.(!skeletonOverlayEnabled)}
+              sx={{
+                display: 'flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.3, borderRadius: '6px', cursor: 'pointer',
+                bgcolor: skeletonOverlayEnabled ? 'rgba(100,181,246,0.15)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${skeletonOverlayEnabled ? '#64b5f6' : 'transparent'}`,
+                transition: 'all 0.15s',
+              }}
+            >
+              {skeletonOverlayEnabled
+                ? <Visibility sx={{ fontSize: 12, color: '#64b5f6' }} />
+                : <VisibilityOff sx={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }} />}
+              <Typography sx={{ fontSize: 10, fontWeight: 600, color: skeletonOverlayEnabled ? '#64b5f6' : 'rgba(255,255,255,0.35)' }}>
+                Skjelett
+              </Typography>
+            </Box>
+          </Tooltip>
+
+          <Tooltip title={ikEnabled ? 'Deaktiver IK' : 'Aktiver IK (invers kinematikk)'}>
+            <Box
+              onClick={() => setIkEnabled(v => !v)}
+              sx={{
+                display: 'flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.3, borderRadius: '6px', cursor: 'pointer',
+                bgcolor: ikEnabled ? 'rgba(206,147,216,0.15)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${ikEnabled ? '#ce93d8' : 'transparent'}`,
+                transition: 'all 0.15s',
+              }}
+            >
+              <LinkIcon sx={{ fontSize: 12, color: ikEnabled ? '#ce93d8' : 'rgba(255,255,255,0.3)' }} />
+              <Typography sx={{ fontSize: 10, fontWeight: 600, color: ikEnabled ? '#ce93d8' : 'rgba(255,255,255,0.35)' }}>
+                IK {ikEnabled ? 'På' : 'Av'}
+              </Typography>
+            </Box>
+          </Tooltip>
+        </Stack>
       </Box>
 
       <Box sx={{ flex: 1, overflowY: 'auto', '&::-webkit-scrollbar': { width: 4 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.15)', borderRadius: 2 } }}>
@@ -224,6 +303,17 @@ export const BoneInspectorSidebar: React.FC<BoneInspectorSidebarProps> = ({
               </Box>
             ))}
 
+            {ikEnabled && (
+              <Box sx={{ bgcolor: 'rgba(206,147,216,0.1)', border: '1px solid rgba(206,147,216,0.3)', borderRadius: '6px', p: 1.2, mb: 1 }}>
+                <Typography sx={{ fontSize: 10, color: '#ce93d8', fontWeight: 600 }}>
+                  IK aktiv — beinvinkel styres automatisk
+                </Typography>
+                <Typography sx={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', mt: 0.3 }}>
+                  Dra endemålet for å posere armer/bein naturlig
+                </Typography>
+              </Box>
+            )}
+
             <Divider sx={{ borderColor: 'rgba(255,255,255,0.06)', my: 1 }} />
           </Box>
         )}
@@ -247,11 +337,7 @@ export const BoneInspectorSidebar: React.FC<BoneInspectorSidebarProps> = ({
                       key={bone.id}
                       onClick={() => onSelectBone(bone.boneName)}
                       sx={{
-                        px: 1.2,
-                        py: 0.4,
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: 11,
+                        px: 1.2, py: 0.4, borderRadius: '6px', cursor: 'pointer', fontSize: 11,
                         fontWeight: isSelected ? 700 : 400,
                         bgcolor: isSelected ? `${group.color}30` : 'rgba(255,255,255,0.05)',
                         color: isSelected ? group.color : 'rgba(255,255,255,0.65)',
@@ -261,14 +347,8 @@ export const BoneInspectorSidebar: React.FC<BoneInspectorSidebarProps> = ({
                         '&:hover': { bgcolor: `${group.color}20`, color: group.color },
                         ...(hasOverride && !isSelected && {
                           '&::after': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 3,
-                            right: 3,
-                            width: 5,
-                            height: 5,
-                            borderRadius: '50%',
-                            bgcolor: '#ff9800',
+                            content: '""', position: 'absolute', top: 3, right: 3,
+                            width: 5, height: 5, borderRadius: '50%', bgcolor: '#ff9800',
                           },
                         }),
                       }}
@@ -286,54 +366,82 @@ export const BoneInspectorSidebar: React.FC<BoneInspectorSidebarProps> = ({
 
         {/* ── Pose library ── */}
         <Box sx={{ px: 1.5, py: 1.5 }}>
-          <Typography sx={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: 1, textTransform: 'uppercase', mb: 1 }}>
-            Posebibliotek
-          </Typography>
-          {Object.entries(posesByCategory).map(([category, poses]) => (
-            <Box key={category} sx={{ mb: 1.5 }}>
-              <Typography sx={{ fontSize: 10, color: POSE_CATEGORY_COLORS[category] ?? '#fff', fontWeight: 700, mb: 0.5, textTransform: 'uppercase', letterSpacing: 0.8 }}>
-                {POSE_CATEGORY_LABELS[category] ?? category}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+            <Typography sx={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: 1, textTransform: 'uppercase' }}>
+              Posebibliotek
+            </Typography>
+            <Box
+              onClick={() => setShowAllPoses(v => !v)}
+              sx={{ fontSize: 10, color: '#ff9800', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+            >
+              {showAllPoses ? 'Relevante' : 'Alle'}
+            </Box>
+          </Box>
+
+          {!showAllPoses ? (
+            /* Relevant poses for this scene type */
+            <Box sx={{ mb: 1 }}>
+              <Typography sx={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', px: 0.5, mb: 0.5 }}>
+                Anbefalt for denne scenen
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4 }}>
-                {poses.map(pose => {
-                  const isActive = character.poseId === pose.id;
-                  return (
-                    <Box
-                      key={pose.id}
-                      onClick={() => onPoseChange(pose.id)}
-                      sx={{
-                        px: 1.5,
-                        py: 0.7,
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        bgcolor: isActive ? `${POSE_CATEGORY_COLORS[category] ?? '#ff9800'}20` : 'rgba(255,255,255,0.03)',
-                        border: `1px solid ${isActive ? POSE_CATEGORY_COLORS[category] ?? '#ff9800' : 'transparent'}`,
-                        transition: 'all 0.12s ease',
-                        '&:hover': { bgcolor: `${POSE_CATEGORY_COLORS[category] ?? '#ff9800'}15` },
-                      }}
-                    >
-                      <Typography sx={{
-                        fontSize: 12,
-                        fontWeight: isActive ? 700 : 400,
-                        color: isActive ? (POSE_CATEGORY_COLORS[category] ?? '#ff9800') : 'rgba(255,255,255,0.75)',
-                      }}>
-                        {pose.name}
-                      </Typography>
-                      {pose.description && (
-                        <Typography sx={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', mt: 0.2 }}>
-                          {pose.description}
-                        </Typography>
-                      )}
-                    </Box>
-                  );
-                })}
+                {relevantPoses.length > 0 ? relevantPoses.map(pose => (
+                  <PoseButton key={pose.id} pose={pose} isActive={character.poseId === pose.id} onSelect={onPoseChange} />
+                )) : (
+                  ALL_POSES.slice(0, 6).map(pose => (
+                    <PoseButton key={pose.id} pose={pose} isActive={character.poseId === pose.id} onSelect={onPoseChange} />
+                  ))
+                )}
               </Box>
             </Box>
-          ))}
+          ) : (
+            /* All poses grouped by category */
+            Object.entries(posesByCategory).map(([category, poses]) => (
+              <Box key={category} sx={{ mb: 1.5 }}>
+                <Typography sx={{ fontSize: 10, color: POSE_CATEGORY_COLORS[category] ?? '#fff', fontWeight: 700, mb: 0.5, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                  {POSE_CATEGORY_LABELS[category] ?? category}
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4 }}>
+                  {poses.map(pose => (
+                    <PoseButton key={pose.id} pose={pose} isActive={character.poseId === pose.id} onSelect={onPoseChange} categoryColor={POSE_CATEGORY_COLORS[category]} />
+                  ))}
+                </Box>
+              </Box>
+            ))
+          )}
         </Box>
       </Box>
     </Box>
   );
 };
+
+// ── Small reusable PoseButton ─────────────────────────────────────────────────
+
+const PoseButton: React.FC<{
+  pose: PosePreset;
+  isActive: boolean;
+  onSelect: (id: string) => void;
+  categoryColor?: string;
+}> = ({ pose, isActive, onSelect, categoryColor = '#ff9800' }) => (
+  <Box
+    onClick={() => onSelect(pose.id)}
+    sx={{
+      px: 1.5, py: 0.7, borderRadius: '6px', cursor: 'pointer',
+      bgcolor: isActive ? `${categoryColor}20` : 'rgba(255,255,255,0.03)',
+      border: `1px solid ${isActive ? categoryColor : 'transparent'}`,
+      transition: 'all 0.12s ease',
+      '&:hover': { bgcolor: `${categoryColor}15` },
+    }}
+  >
+    <Typography sx={{ fontSize: 12, fontWeight: isActive ? 700 : 400, color: isActive ? categoryColor : 'rgba(255,255,255,0.75)' }}>
+      {pose.name}
+    </Typography>
+    {pose.description && (
+      <Typography sx={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', mt: 0.2 }}>
+        {pose.description}
+      </Typography>
+    )}
+  </Box>
+);
 
 export default BoneInspectorSidebar;

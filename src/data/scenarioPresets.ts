@@ -580,8 +580,11 @@ export const scenarioPresets: ScenarioPreset[] = [
     ],
     props: [
       { id: 'prop-akt1-table', propId: 'table_rustic', position: [0, 0, 0.4], rotation: [0, 0, 0], label: 'Rustikt bord' },
+      { id: 'prop-akt1-chair-l', propId: 'chair_posing', position: [-0.5, 0, 0.8], rotation: [0, 20, 0], label: 'Spisestol venstre' },
+      { id: 'prop-akt1-chair-r', propId: 'chair_posing', position: [0.5, 0, 0.8], rotation: [0, -20, 0], label: 'Spisestol høyre' },
       { id: 'prop-akt1-wine', propId: 'wine_bottle_red', position: [0.15, 0.76, 0.4], rotation: [0, 20, 0], label: 'Rødvin' },
       { id: 'prop-akt1-pizza', propId: 'pizza_hero_display', position: [-0.1, 0.76, 0.4], rotation: [0, 0, 0], label: 'Pizza' },
+      { id: 'prop-akt1-wine-glass', propId: 'wine_glass_clear', position: [0.3, 0.76, 0.4], rotation: [0, 0, 0], label: 'Vinglass' },
       { id: 'prop-akt1-counter', propId: 'counter_pizza_prep', position: [0, 0.9, -1.0], rotation: [0, 0, 0], label: 'Pizzateller' },
     ],
     sceneConfig: {
@@ -698,7 +701,10 @@ export const scenarioPresets: ScenarioPreset[] = [
     ],
     props: [
       { id: 'prop-akt2-pizza', propId: 'pizza_hero_display', position: [0, 0.55, 0], rotation: [0, 0, 0], label: 'Pizza (hero shot)' },
-      { id: 'prop-akt2-table', propId: 'table_rustic', position: [0, 0, 0], rotation: [0, 0, 0], label: 'Produktbord', scale: [0.8, 0.6, 0.8] },
+      { id: 'prop-akt2-shoot-table', propId: 'beauty_table', position: [0, 0, 0], rotation: [0, 0, 0], label: 'Produktbord (shooting table)' },
+      { id: 'prop-akt2-reflector-l', propId: 'reflective_panel', position: [-1.2, 0.8, 0.4], rotation: [0, 15, 0], label: 'Reflektor venstre' },
+      { id: 'prop-akt2-reflector-r', propId: 'reflective_panel', position: [1.2, 0.8, 0.4], rotation: [0, -15, 0], label: 'Reflektor høyre' },
+      { id: 'prop-akt2-herb', propId: 'herb_pots_cluster', position: [0.3, 0.55, 0.2], rotation: [0, 0, 0], label: 'Urter (dekor)' },
     ],
     sceneConfig: {
       lights: [
@@ -809,6 +815,9 @@ export const scenarioPresets: ScenarioPreset[] = [
       { id: 'prop-akt3-table', propId: 'table_rustic', position: [0.3, 0, -0.2], rotation: [0, 0, 0], label: 'Arbeidsbord' },
       { id: 'prop-akt3-pizza', propId: 'pizza_hero_display', position: [0.3, 0.76, -0.2], rotation: [0, 0, 0], label: 'Pizza prop' },
       { id: 'prop-akt3-wine', propId: 'wine_bottle_red', position: [0.55, 0.76, -0.2], rotation: [0, 30, 0], label: 'Vinflasker' },
+      { id: 'prop-akt3-podium', propId: 'product_podium_round', position: [-0.5, 0, 0.8], rotation: [0, 0, 0], label: 'Podium (broadcast)' },
+      { id: 'prop-akt3-stool', propId: 'stool_wooden', position: [-0.3, 0, 0.4], rotation: [0, 10, 0], label: 'Intervjustol' },
+      { id: 'prop-akt3-neon', propId: 'neon_sign_cyan', position: [0, 1.8, -1.5], rotation: [0, 0, 0], label: 'Neonskilt (bakgrunn)' },
     ],
     sceneConfig: {
       lights: [

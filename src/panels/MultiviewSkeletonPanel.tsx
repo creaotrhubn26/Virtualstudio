@@ -151,10 +151,11 @@ interface SkeletonViewProps {
   selectedBone: string | null;
   onSelectBone: (boneName: string) => void;
   compact?: boolean;
+  showSkeleton?: boolean;
 }
 
 const SkeletonView: React.FC<SkeletonViewProps> = ({
-  view, character, selectedBone, onSelectBone, compact = false,
+  view, character, selectedBone, onSelectBone, compact = false, showSkeleton = true,
 }) => {
   const pose = useMemo(() => {
     const base = ALL_POSES.find(p => p.id === character.poseId)?.pose ?? {};
@@ -196,7 +197,7 @@ const SkeletonView: React.FC<SkeletonViewProps> = ({
         <ellipse cx={VW/2} cy={VH - 16} rx={28} ry={5} fill="rgba(255,255,255,0.05)" />
 
         {/* Skeleton edges */}
-        {EDGES.map(edge => {
+        {showSkeleton && EDGES.map(edge => {
           const a = jointMap[edge.from];
           const b = jointMap[edge.to];
           if (!a || !b) return null;
@@ -213,7 +214,7 @@ const SkeletonView: React.FC<SkeletonViewProps> = ({
         })}
 
         {/* Joints */}
-        {joints.map(joint => {
+        {showSkeleton && joints.map(joint => {
           const isSel = selectedBone === joint.boneName;
           const hasOverride = Boolean(character.boneOverrides[joint.boneName]);
           return (
@@ -234,7 +235,7 @@ const SkeletonView: React.FC<SkeletonViewProps> = ({
         })}
 
         {/* Head circle */}
-        <circle
+        {showSkeleton && <circle
           cx={jointMap['head']?.x ?? 80}
           cy={jointMap['head']?.y ?? 17}
           r={compact ? 11 : 14}
@@ -243,7 +244,7 @@ const SkeletonView: React.FC<SkeletonViewProps> = ({
           strokeWidth={selectedBone === BONE_NAMES.HEAD ? 2.5 : 1.5}
           style={{ cursor: 'pointer' }}
           onClick={() => onSelectBone(BONE_NAMES.HEAD)}
-        />
+        />}
       </svg>
     </Box>
   );
@@ -267,6 +268,7 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
   const [selectedBone, setSelectedBone] = useState<string | null>(null);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('2x2');
   const [singleViewId, setSingleViewId] = useState<string>('front');
+  const [skeletonOverlayEnabled, setSkeletonOverlayEnabled] = useState(true);
   const [poseStates, setPoseStates] = useState<Record<string, ActiveCharacterPose>>(() => {
     const init: Record<string, ActiveCharacterPose> = {};
     characters.forEach(c => {
@@ -448,7 +450,7 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', height: '100%' }}>
                 {VIEWS.map(view => (
                   <Box key={view.id} sx={{ border: '1px solid rgba(255,255,255,0.04)', position: 'relative' }}>
-                    <SkeletonView view={view} character={activePoseState} selectedBone={selectedBone} onSelectBone={setSelectedBone} />
+                    <SkeletonView view={view} character={activePoseState} selectedBone={selectedBone} onSelectBone={setSelectedBone} showSkeleton={skeletonOverlayEnabled} />
                     <Tooltip title="Enkeltvisning">
                       <IconButton
                         size="small"
@@ -466,7 +468,7 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
             {/* Single mode */}
             {layoutMode === 'single' && (
               <Box sx={{ height: '100%', position: 'relative' }}>
-                <SkeletonView view={singleView} character={activePoseState} selectedBone={selectedBone} onSelectBone={setSelectedBone} />
+                <SkeletonView view={singleView} character={activePoseState} selectedBone={selectedBone} onSelectBone={setSelectedBone} showSkeleton={skeletonOverlayEnabled} />
                 {/* Mini view picker at bottom */}
                 <Box sx={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 1 }}>
                   {VIEWS.map(v => (
@@ -490,7 +492,7 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
             {/* PiP mode: large primary + 3 mini overlays */}
             {layoutMode === 'pip' && (
               <Box sx={{ height: '100%', position: 'relative' }}>
-                <SkeletonView view={VIEWS.find(v => v.id === singleViewId) ?? VIEWS[0]} character={activePoseState} selectedBone={selectedBone} onSelectBone={setSelectedBone} />
+                <SkeletonView view={VIEWS.find(v => v.id === singleViewId) ?? VIEWS[0]} character={activePoseState} selectedBone={selectedBone} onSelectBone={setSelectedBone} showSkeleton={skeletonOverlayEnabled} />
                 <Box sx={{ position: 'absolute', bottom: 10, right: 10, display: 'flex', flexDirection: 'column', gap: 1 }}>
                   {VIEWS.filter(v => v.id !== singleViewId).map(v => (
                     <Box
@@ -498,7 +500,7 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
                       onClick={() => setSingleViewId(v.id)}
                       sx={{ width: 100, height: 80, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', overflow: 'hidden', '&:hover': { borderColor: '#ff9800' } }}
                     >
-                      <SkeletonView view={v} character={activePoseState} selectedBone={selectedBone} onSelectBone={setSelectedBone} compact />
+                      <SkeletonView view={v} character={activePoseState} selectedBone={selectedBone} onSelectBone={setSelectedBone} compact showSkeleton={skeletonOverlayEnabled} />
                     </Box>
                   ))}
                 </Box>
@@ -517,6 +519,9 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
             onSelectBone={setSelectedBone}
             onBoneRotationChange={handleBoneRotationChange}
             onPoseChange={handlePoseChange}
+            skeletonOverlayEnabled={skeletonOverlayEnabled}
+            onSkeletonOverlayToggle={setSkeletonOverlayEnabled}
+            sceneType={sceneName}
           />
         )}
       </Box>
