@@ -5554,92 +5554,88 @@ class VirtualStudio {
     
     console.log(`[addLight] Loading light model: ${modelId} at position ${position.toString()}`);
     
-    // Map model IDs to light specs — GLB paths point to the actual files in /models/props/studio/
+    // Map model IDs to light specs — softbox/octabox GLBs generated for realistic studio look
     const lightSpecs: { [key: string]: { intensity: number; name: string; cct: number; beamAngle: number; glbFile: string } } = {
-      'aputure-300d':   { intensity: 2.0, name: 'Aputure 300D',     cct: 5600, beamAngle: Math.PI / 5,   glbFile: '/models/props/studio/led-panel-light.glb' },
-      'aputure-120d':   { intensity: 1.5, name: 'Aputure 120D',     cct: 5600, beamAngle: Math.PI / 5,   glbFile: '/models/props/studio/led-panel-light.glb' },
-      'aputure-600d':   { intensity: 3.0, name: 'Aputure 600D Pro', cct: 5600, beamAngle: Math.PI / 6,   glbFile: '/models/props/studio/led-panel-light.glb' },
-      'godox-ad600':    { intensity: 1.2, name: 'Godox AD600',      cct: 5600, beamAngle: Math.PI / 4,   glbFile: '/models/props/studio/fresnel-light.glb' },
-      'godox-ad200pro': { intensity: 0.8, name: 'Godox AD200Pro',   cct: 5600, beamAngle: Math.PI / 3,   glbFile: '/models/props/studio/fresnel-light.glb' },
-      'godox-ad400pro': { intensity: 1.0, name: 'Godox AD400Pro',   cct: 5600, beamAngle: Math.PI / 3,   glbFile: '/models/props/studio/fresnel-light.glb' },
-      'godox-ad600pro': { intensity: 1.3, name: 'Godox AD600Pro',   cct: 5600, beamAngle: Math.PI / 4,   glbFile: '/models/props/studio/fresnel-light.glb' },
-      'profoto-b10plus':{ intensity: 1.4, name: 'Profoto B10 Plus', cct: 5600, beamAngle: Math.PI / 3.5, glbFile: '/models/props/studio/fresnel-light.glb' },
-      'profoto-b10':    { intensity: 1.3, name: 'Profoto B10',      cct: 5600, beamAngle: Math.PI / 3.5, glbFile: '/models/props/studio/fresnel-light.glb' },
-      'profoto-d2':     { intensity: 1.1, name: 'Profoto D2',       cct: 5600, beamAngle: Math.PI / 3.8, glbFile: '/models/props/studio/fresnel-light.glb' },
+      'aputure-300d':   { intensity: 20, name: 'Aputure 300D',     cct: 5600, beamAngle: Math.PI / 5,   glbFile: '/models/lights/softbox-stand.glb' },
+      'aputure-120d':   { intensity: 15, name: 'Aputure 120D',     cct: 5600, beamAngle: Math.PI / 5,   glbFile: '/models/lights/softbox-stand.glb' },
+      'aputure-600d':   { intensity: 30, name: 'Aputure 600D Pro', cct: 5600, beamAngle: Math.PI / 6,   glbFile: '/models/lights/softbox-stand.glb' },
+      'godox-ad600':    { intensity: 18, name: 'Godox AD600',      cct: 5600, beamAngle: Math.PI / 4,   glbFile: '/models/lights/octabox-stand.glb' },
+      'godox-ad200pro': { intensity: 12, name: 'Godox AD200Pro',   cct: 5600, beamAngle: Math.PI / 3,   glbFile: '/models/lights/octabox-stand.glb' },
+      'godox-ad400pro': { intensity: 16, name: 'Godox AD400Pro',   cct: 5600, beamAngle: Math.PI / 3,   glbFile: '/models/lights/octabox-stand.glb' },
+      'godox-ad600pro': { intensity: 20, name: 'Godox AD600Pro',   cct: 5600, beamAngle: Math.PI / 4,   glbFile: '/models/lights/octabox-stand.glb' },
+      'profoto-b10plus':{ intensity: 22, name: 'Profoto B10 Plus', cct: 5600, beamAngle: Math.PI / 3.5, glbFile: '/models/lights/octabox-stand.glb' },
+      'profoto-b10':    { intensity: 20, name: 'Profoto B10',      cct: 5600, beamAngle: Math.PI / 3.5, glbFile: '/models/lights/octabox-stand.glb' },
+      'profoto-d2':     { intensity: 18, name: 'Profoto D2',       cct: 5600, beamAngle: Math.PI / 3.8, glbFile: '/models/lights/octabox-stand.glb' },
     };
     
-    const lightConfig = lightSpecs[modelId] || { intensity: 1.5, name: modelId, cct: 5600, beamAngle: Math.PI / 5, glbFile: '/models/props/studio/led-panel-light.glb' };
+    const lightConfig = lightSpecs[modelId] || { intensity: 15, name: modelId, cct: 5600, beamAngle: Math.PI / 5, glbFile: '/models/lights/softbox-stand.glb' };
     
     try {
-      // Load the 3D light fixture model (led-panel-light.glb or fresnel-light.glb from /models/props/studio/)
       const modelUrl = resolveModelPath(lightConfig.glbFile);
       console.log(`[addLight] Loading GLB from: ${modelUrl}`);
       
       let mesh: BABYLON.Mesh;
-      let lightHeadHeight = position.y; // The height where the light head should be
+      let lightHeadHeight = position.y;
       
       try {
         const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
-        
-        if (result.meshes.length > 0) {
-          // Create a parent mesh to hold all imported meshes
-          const rootMesh = new BABYLON.Mesh(lightId, this.scene);
-          result.meshes.forEach(m => {
-            if (m !== result.meshes[0]) {
-              m.parent = rootMesh;
-            }
-          });
-          
-          // Use the first mesh or root
-          if (result.meshes[0].getClassName() === 'Mesh') {
-            result.meshes[0].name = lightId;
-            mesh = result.meshes[0] as BABYLON.Mesh;
-            mesh.parent = null;
-            // Parent all other meshes to this one
-            result.meshes.slice(1).forEach(m => m.parent = mesh);
-          } else {
-            mesh = rootMesh;
-          }
-          
-          // Place the light stand on the ground (Y=0), not floating
-          // The X,Z position stays the same, but Y is 0 so the stand is on the floor
-          mesh.position = new BABYLON.Vector3(position.x, 0, position.z);
-          
-          // Scale the model to appropriate size (adjust if needed)
-          // The 300D model might need scaling - typical light stand is ~2-2.5m tall
-          const desiredHeight = lightHeadHeight; // Scale to reach the desired light head height
-          mesh.scaling = new BABYLON.Vector3(desiredHeight / 2.5, desiredHeight / 2.5, desiredHeight / 2.5);
-          
-          console.log(`[addLight] GLB loaded successfully with ${result.meshes.length} meshes, placed on ground at X=${position.x}, Z=${position.z}`);
-        } else {
-          throw new Error('No meshes in GLB');
-        }
+        if (result.meshes.length === 0) throw new Error('No meshes in GLB');
+
+        // In Babylon.js GLB imports, result.meshes[0] is always the __root__ TransformNode.
+        // Parent it under a plain Mesh so we can control position/scale/rotation cleanly.
+        const parentMesh = new BABYLON.Mesh(lightId, this.scene);
+        parentMesh.position = new BABYLON.Vector3(position.x, 0, position.z);
+        result.meshes[0].parent = parentMesh;
+        mesh = parentMesh;
+
+        // Measure native model height via bounding box (model loaded at scale 1)
+        parentMesh.computeWorldMatrix(true);
+        const nativeBounds = parentMesh.getHierarchyBoundingVectors(true);
+        const nativeHeight = Math.max(0.01, nativeBounds.max.y - nativeBounds.min.y);
+
+        // Scale so the entire model height equals the desired lightHeadHeight
+        const scaleFactor = lightHeadHeight / nativeHeight;
+        parentMesh.scaling = new BABYLON.Vector3(scaleFactor, scaleFactor, scaleFactor);
+
+        // Ground: shift Y so the model's bottom face sits exactly on Y=0
+        parentMesh.computeWorldMatrix(true);
+        const groundedBounds = parentMesh.getHierarchyBoundingVectors(true);
+        parentMesh.position.y -= groundedBounds.min.y;
+
+        // The SpotLight should originate from the top of the model (light head)
+        parentMesh.computeWorldMatrix(true);
+        const finalBounds = parentMesh.getHierarchyBoundingVectors(true);
+        lightHeadHeight = finalBounds.max.y;
+
+        console.log(`[addLight] GLB loaded: ${result.meshes.length} meshes, scale=${scaleFactor.toFixed(3)}, lightHeadY=${lightHeadHeight.toFixed(2)}m`);
       } catch (loadErr) {
-        console.warn(`[addLight] Failed to load GLB ${modelUrl}, creating fallback cylinder:`, loadErr);
-        // Fallback to cylinder if GLB fails to load
-        const cylinder = BABYLON.MeshBuilder.CreateCylinder(`light_${lightId}`, {
-          height: 0.5,
-          diameterTop: 0.15,
-          diameterBottom: 0.35,
-          tessellation: 16
+        console.warn(`[addLight] Failed to load GLB ${modelUrl}, using fallback stand:`, loadErr);
+
+        // Fallback: realistic light-stand placeholder (pole + glowing softbox head)
+        const standParent = new BABYLON.Mesh(lightId, this.scene);
+        standParent.position = new BABYLON.Vector3(position.x, 0, position.z);
+
+        const pole = BABYLON.MeshBuilder.CreateCylinder(`${lightId}_pole`, {
+          height: lightHeadHeight, diameterTop: 0.03, diameterBottom: 0.07, tessellation: 8
         }, this.scene);
-        cylinder.position = position.clone();
-        cylinder.name = lightId;
-        mesh = cylinder;
-        
-        // Only apply material to fallback cylinder
-        const mat = new BABYLON.StandardMaterial(`mat_${lightId}`, this.scene);
+        pole.position.y = lightHeadHeight / 2;
+        pole.parent = standParent;
+        const poleMat = new BABYLON.StandardMaterial(`${lightId}_poleMat`, this.scene);
+        poleMat.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.15);
+        pole.material = poleMat;
+
+        const head = BABYLON.MeshBuilder.CreateBox(`${lightId}_head`, {
+          width: 0.65, height: 0.45, depth: 0.08
+        }, this.scene);
+        head.position.y = lightHeadHeight;
+        head.parent = standParent;
+        const headMat = new BABYLON.StandardMaterial(`${lightId}_headMat`, this.scene);
         const color = this.cctToColor(lightConfig.cct);
-        const emissiveIntensity = Math.min(2.5, 0.3 + lightConfig.intensity / 3);
-        mat.emissiveColor = new BABYLON.Color3(
-          Math.min(2.5, color.r * emissiveIntensity),
-          Math.min(2.5, color.g * emissiveIntensity),
-          Math.min(2.5, color.b * emissiveIntensity)
-        );
-        mat.useEmissiveAsIllumination = true;
-        mat.disableLighting = true;
-        mesh.material = mat;
-        lightHeadHeight = position.y; // Fallback cylinder stays at original height
+        headMat.emissiveColor = new BABYLON.Color3(color.r * 1.5, color.g * 1.5, color.b * 1.5);
+        headMat.disableLighting = true;
+        head.material = headMat;
+
+        mesh = standParent;
       }
       
       mesh.name = lightId;
@@ -5789,7 +5785,7 @@ class VirtualStudio {
       if (keyLight.light instanceof BABYLON.SpotLight) {
         keyLight.light.angle = Math.PI / 4; // ~45° beam - covers full body
         keyLight.light.exponent = 1.5; // Soft falloff
-        keyLight.light.intensity = 2.5; // Strong key
+        keyLight.light.intensity = 20; // Professional key light intensity
       }
     }
     
@@ -5808,7 +5804,7 @@ class VirtualStudio {
       if (fillLight.light instanceof BABYLON.SpotLight) {
         fillLight.light.angle = Math.PI / 3; // ~60° wider beam for soft fill
         fillLight.light.exponent = 1.0; // Very soft falloff
-        fillLight.light.intensity = 1.2; // Moderate fill
+        fillLight.light.intensity = 12; // Fill at ~60% of key
       }
     }
     
@@ -5827,7 +5823,7 @@ class VirtualStudio {
       if (rimLight.light instanceof BABYLON.SpotLight) {
         rimLight.light.angle = Math.PI / 5; // ~36° tighter beam for crisp edge
         rimLight.light.exponent = 2.5; // Sharper falloff for defined rim
-        rimLight.light.intensity = 1.5; // Strong enough to see rim effect
+        rimLight.light.intensity = 15; // Rim at 75% of key for strong separation
       }
       
       // Slightly warmer color for golden rim effect (classic portrait look)
