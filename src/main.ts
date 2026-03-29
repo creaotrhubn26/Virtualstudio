@@ -5731,17 +5731,15 @@ class VirtualStudio {
             }
 
             if (isFinite(fxMin) && isFinite(fyMin) && fxMax > fxMin && fyMax > fyMin) {
-              // Width (X) is measured correctly from the front-face vertices.
-              // Height (Y) is inflated by mounting hardware above/below the gray panel.
-              // The softbox is square, so force panelH = panelW to match the gray panel.
+              // Use both the measured width AND measured height independently.
+              // Do NOT force square — the actual diffuser may be rectangular.
               panelW = fxMax - fxMin;
-              panelH = panelW;
-              // Use vertex-measured centers (not hardware-inflated bbox centers) for
-              // both X and Y so the plane sits exactly on the diffuser face.
+              panelH = fyMax - fyMin;
+              // Vertex-measured centers avoid hardware-inflated bbox center shifts.
               (geoMesh as any)._diffuserXCenter = (fxMin + fxMax) * 0.5;
               (geoMesh as any)._diffuserYCenter = (fyMin + fyMax) * 0.5;
               measuredFromVertices = true;
-              console.log(`[addLight] VERTEX diffuser: W=${panelW.toFixed(3)}m (square)` +
+              console.log(`[addLight] VERTEX diffuser: W=${panelW.toFixed(3)}m H=${panelH.toFixed(3)}m` +
                 ` Xcenter=${((fxMin + fxMax) * 0.5).toFixed(3)} Ycenter=${((fyMin + fyMax) * 0.5).toFixed(3)}` +
                 ` rawX=[${fxMin.toFixed(3)},${fxMax.toFixed(3)}] rawY=[${fyMin.toFixed(3)},${fyMax.toFixed(3)}]` +
                 ` eps=${epsilon.toFixed(3)}`);
@@ -5787,6 +5785,11 @@ class VirtualStudio {
             { radius: localPanelW * 0.5, tessellation: 8 },
             this.scene
           );
+          // Stretch the disc vertically to match the measured height.
+          // (diameter = panelW in X; scale Y so diameter = panelH in Y.)
+          if (localPanelW > 0) {
+            diffuserPlane.scaling.y = localPanelH / localPanelW;
+          }
         } else {
           diffuserPlane = BABYLON.MeshBuilder.CreatePlane(
             `${lightId}_diffuserGlow`, { width: localPanelW, height: localPanelH }, this.scene
