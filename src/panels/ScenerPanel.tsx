@@ -821,7 +821,7 @@ const buttonStyle = {
           <Typography sx={{ color: '#cc8855', fontSize: 13.5, lineHeight: 1.6, mb: 2 }}>
             En komplett produksjonsserie for en pizzarestaurant-merkevare. Tre ulike scener — restaurantens atmosfære, profesjonell produktfotografering og branded videostudio — som sammen forteller én sammenhengende merkevarehistorie.
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
             {[
               { akt: 'Akt 1', tittel: 'Restauranten', ikoner: '🕯️ 🍕', desc: 'Atmosfære & stemning' },
               { akt: 'Akt 2', tittel: 'Produktfoto', ikoner: '📸 💡', desc: 'Studio & menybilder' },
@@ -847,6 +847,37 @@ const buttonStyle = {
               </Box>
             ))}
           </Box>
+
+          {/* Napoli Dreams banner: open multiview for all three acts */}
+          {(() => {
+            const napoliPreset = scenarioPresets.find(p => p.kategori === 'story' && p.characters && p.characters.length > 0);
+            if (!napoliPreset) return null;
+            return (
+              <Button
+                variant="outlined"
+                fullWidth
+                startIcon={<AccessibilityNew sx={{ fontSize: 18 }} />}
+                onClick={() => setMultiviewPreset(napoliPreset)}
+                sx={{
+                  borderColor: '#ff6d00',
+                  color: '#ff9a4d',
+                  borderWidth: 2,
+                  bgcolor: 'rgba(255,109,0,0.06)',
+                  fontWeight: 700,
+                  letterSpacing: 0.5,
+                  '&:hover': {
+                    borderColor: '#ff9a4d',
+                    bgcolor: 'rgba(255,109,0,0.15)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 6px 20px rgba(255,109,0,0.3)',
+                  },
+                  transition: 'all 0.18s',
+                }}
+              >
+                Åpne Multiview — Napoli Dreams
+              </Button>
+            );
+          })()}
         </Box>
       )}
 

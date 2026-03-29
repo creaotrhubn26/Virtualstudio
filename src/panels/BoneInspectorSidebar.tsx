@@ -142,9 +142,12 @@ interface BoneInspectorSidebarProps {
   selectedBone: string | null;
   onSelectBone: (boneName: string) => void;
   onBoneRotationChange: (boneName: string, axis: 'x' | 'y' | 'z', value: number) => void;
+  onBonePositionChange?: (boneName: string, axis: 'x' | 'y' | 'z', value: number) => void;
   onPoseChange: (poseId: string) => void;
   skeletonOverlayEnabled?: boolean;
   onSkeletonOverlayToggle?: (enabled: boolean) => void;
+  ikEnabled?: boolean;
+  onIkToggle?: (enabled: boolean) => void;
   sceneType?: string;
 }
 
@@ -153,13 +156,16 @@ export const BoneInspectorSidebar: React.FC<BoneInspectorSidebarProps> = ({
   selectedBone,
   onSelectBone,
   onBoneRotationChange,
+  onBonePositionChange,
   onPoseChange,
   skeletonOverlayEnabled = true,
   onSkeletonOverlayToggle,
+  ikEnabled = false,
+  onIkToggle,
   sceneType = 'portrett',
 }) => {
-  const [ikEnabled, setIkEnabled] = useState(false);
   const [showAllPoses, setShowAllPoses] = useState(false);
+  const [inspectorMode, setInspectorMode] = useState<'rotation' | 'position'>('rotation');
 
   const selectedBoneData = useMemo(() => {
     for (const group of BONE_GROUPS) {
@@ -234,7 +240,7 @@ export const BoneInspectorSidebar: React.FC<BoneInspectorSidebarProps> = ({
             <Box
               onClick={() => {
                 const next = !ikEnabled;
-                setIkEnabled(next);
+                onIkToggle?.(next);
                 // Wire to live skeleton IK system if rig is available
                 if (character.rigId) {
                   const IK_CHAIN_NAMES = ['leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
@@ -263,7 +269,7 @@ export const BoneInspectorSidebar: React.FC<BoneInspectorSidebarProps> = ({
         {/* ── Bone rotation inspector ── */}
         {selectedBoneData && (
           <Box sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.2 }}>
               <Chip
                 label={selectedBoneData.labelNorsk}
                 size="small"
@@ -277,6 +283,9 @@ export const BoneInspectorSidebar: React.FC<BoneInspectorSidebarProps> = ({
                       onBoneRotationChange(selectedBone, 'x', base?.x ?? 0);
                       onBoneRotationChange(selectedBone, 'y', base?.y ?? 0);
                       onBoneRotationChange(selectedBone, 'z', base?.z ?? 0);
+                      onBonePositionChange?.(selectedBone, 'x', 0);
+                      onBonePositionChange?.(selectedBone, 'y', 0);
+                      onBonePositionChange?.(selectedBone, 'z', 0);
                     }
                   }}
                   sx={{ cursor: 'pointer', color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#ff9800' }, display: 'flex', alignItems: 'center' }}
@@ -286,7 +295,27 @@ export const BoneInspectorSidebar: React.FC<BoneInspectorSidebarProps> = ({
               </Tooltip>
             </Box>
 
-            {(['x', 'y', 'z'] as const).map(axis => (
+            {/* Mode toggle: Rotation / Position */}
+            <Box sx={{ display: 'flex', mb: 1.5, borderRadius: '6px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+              {(['rotation', 'position'] as const).map(mode => (
+                <Box
+                  key={mode}
+                  onClick={() => setInspectorMode(mode)}
+                  sx={{
+                    flex: 1, textAlign: 'center', py: 0.5, cursor: 'pointer', fontSize: 10, fontWeight: 600,
+                    textTransform: 'uppercase', letterSpacing: 0.8,
+                    bgcolor: inspectorMode === mode ? (mode === 'rotation' ? 'rgba(255,152,0,0.2)' : 'rgba(33,150,243,0.2)') : 'transparent',
+                    color: inspectorMode === mode ? (mode === 'rotation' ? '#ff9800' : '#2196f3') : 'rgba(255,255,255,0.35)',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {mode === 'rotation' ? 'Rotasjon' : 'Posisjon'}
+                </Box>
+              ))}
+            </Box>
+
+            {/* Rotation sliders */}
+            {inspectorMode === 'rotation' && (['x', 'y', 'z'] as const).map(axis => (
               <Box key={axis} sx={{ mb: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                   <Typography sx={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8 }}>
@@ -313,13 +342,44 @@ export const BoneInspectorSidebar: React.FC<BoneInspectorSidebarProps> = ({
               </Box>
             ))}
 
+            {/* Position sliders — offset from rig-pose default (metres) */}
+            {inspectorMode === 'position' && (['x', 'y', 'z'] as const).map(axis => {
+              const posOverride = (character.boneOverrides[selectedBone ?? ''] as any)?.[`pos_${axis}`] ?? 0;
+              return (
+                <Box key={axis} sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography sx={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                      {axis.toUpperCase()}
+                    </Typography>
+                    <Typography sx={{ fontSize: 11, color: '#2196f3', fontWeight: 700 }}>
+                      {posOverride.toFixed(3)} m
+                    </Typography>
+                  </Box>
+                  <Slider
+                    size="small"
+                    value={posOverride}
+                    min={-0.5}
+                    max={0.5}
+                    step={0.005}
+                    onChange={(_, val) => selectedBone && onBonePositionChange?.(selectedBone, axis, val as number)}
+                    sx={{
+                      color: axis === 'x' ? '#f44336' : axis === 'y' ? '#4caf50' : '#2196f3',
+                      height: 4,
+                      '& .MuiSlider-thumb': { width: 12, height: 12 },
+                      '& .MuiSlider-rail': { opacity: 0.2 },
+                    }}
+                  />
+                </Box>
+              );
+            })}
+
             {ikEnabled && (
               <Box sx={{ bgcolor: 'rgba(206,147,216,0.1)', border: '1px solid rgba(206,147,216,0.3)', borderRadius: '6px', p: 1.2, mb: 1 }}>
                 <Typography sx={{ fontSize: 10, color: '#ce93d8', fontWeight: 600 }}>
                   IK aktiv — beinvinkel styres automatisk
                 </Typography>
                 <Typography sx={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', mt: 0.3 }}>
-                  Dra endemålet for å posere armer/bein naturlig
+                  Dra endemålet i viewportene for naturlig posering
                 </Typography>
               </Box>
             )}

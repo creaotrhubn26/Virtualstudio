@@ -177,7 +177,11 @@ function setupBabylonMultiviewCameras(
 // Module-level store for active SkeletonViewer instances (not on window)
 let _activeSkeletonViewers: SkeletonViewer[] = [];
 
-function activateBabylonSkeletonViewers(enabled: boolean): void {
+/**
+ * Activate Babylon SkeletonViewer ONLY for the active character's rig mesh.
+ * Passing `activeRigId` scopes the overlay to avoid confusing multi-character scenes.
+ */
+function activateBabylonSkeletonViewers(enabled: boolean, activeRigId?: string): void {
   // Dispose existing viewers
   _activeSkeletonViewers.forEach((sv) => { try { sv.dispose(); } catch {} });
   _activeSkeletonViewers = [];
@@ -186,25 +190,48 @@ function activateBabylonSkeletonViewers(enabled: boolean): void {
   const scene = getVSScene();
   if (!scene) return;
 
-  const viewers: SkeletonViewer[] = [];
-  (scene.skeletons ?? []).forEach((skeleton) => {
-    try {
-      const meshes = scene.meshes.filter((m) => m.skeleton === skeleton);
-      if (meshes.length === 0) return;
-      const sv = new SkeletonViewer(skeleton, meshes[0], scene, true, (meshes[0].renderingGroupId ?? 0) + 1, {
-        pauseAnimations: false,
-        returnToRest: false,
-        computeBonesUsingShaders: false,
-        displayMode: SkeletonViewer.DISPLAY_LINES,
-      });
-      sv.isEnabled = true;
-      viewers.push(sv);
-    } catch (err) {
-      console.warn('[SkeletonViewer] Could not create viewer:', err);
+  // Identify the target mesh: prefer the active rig's mesh, fall back to first skeleton
+  if (activeRigId) {
+    const { rigs } = useSkeletalAnimationStore.getState();
+    const activeRig = rigs.get(activeRigId);
+    if (activeRig?.mesh && activeRig.mesh.skeleton) {
+      // Use only this rig's skeleton
+      const skeleton = activeRig.mesh.skeleton;
+      try {
+        const sv = new SkeletonViewer(skeleton, activeRig.mesh as any, scene, true, (activeRig.mesh.renderingGroupId ?? 0) + 1, {
+          pauseAnimations: false,
+          returnToRest: false,
+          computeBonesUsingShaders: false,
+          displayMode: SkeletonViewer.DISPLAY_LINES,
+        });
+        sv.isEnabled = true;
+        _activeSkeletonViewers = [sv];
+        console.log(`[MultiviewPanel] SkeletonViewer: scoped to active rig "${activeRigId}"`);
+        return;
+      } catch (err) {
+        console.warn('[SkeletonViewer] Could not create viewer for active rig:', err);
+      }
     }
-  });
-  _activeSkeletonViewers = viewers;
-  console.log(`[MultiviewPanel] SkeletonViewer: ${viewers.length} active`);
+  }
+
+  // Fallback: first skeleton in scene only (not all skeletons)
+  const firstSkeleton = scene.skeletons?.[0];
+  if (!firstSkeleton) return;
+  try {
+    const meshes = scene.meshes.filter((m) => m.skeleton === firstSkeleton);
+    if (meshes.length === 0) return;
+    const sv = new SkeletonViewer(firstSkeleton, meshes[0], scene, true, (meshes[0].renderingGroupId ?? 0) + 1, {
+      pauseAnimations: false,
+      returnToRest: false,
+      computeBonesUsingShaders: false,
+      displayMode: SkeletonViewer.DISPLAY_LINES,
+    });
+    sv.isEnabled = true;
+    _activeSkeletonViewers = [sv];
+    console.log('[MultiviewPanel] SkeletonViewer: fallback to first skeleton');
+  } catch (err) {
+    console.warn('[SkeletonViewer] Fallback viewer failed:', err);
+  }
 }
 
 function getCharacterCenter(rigId: string | undefined): { x: number; y: number; z: number; radius: number } {
@@ -286,6 +313,14 @@ const EDGES: SkeletonEdge[] = [
 // BabylonViewport component — real Babylon canvas + SVG joint overlay
 // ============================================================================
 
+// IK chain definitions — end-effector joint ID per chain
+const IK_CHAIN_END_JOINTS: Record<string, string> = {
+  leftArm:  'lwrist',
+  rightArm: 'rwrist',
+  leftLeg:  'lankle',
+  rightLeg: 'rankle',
+};
+
 interface BabylonViewportProps {
   viewIdx: number;
   view: ViewConfig;
@@ -294,11 +329,12 @@ interface BabylonViewportProps {
   onSelectBone: (boneName: string) => void;
   compact?: boolean;
   showSkeleton: boolean;
+  ikEnabled: boolean;
   canvasRef: React.Ref<HTMLCanvasElement>;
 }
 
 const BabylonViewport: React.FC<BabylonViewportProps> = ({
-  viewIdx, view, character, selectedBone, onSelectBone, compact = false, showSkeleton, canvasRef,
+  viewIdx, view, character, selectedBone, onSelectBone, compact = false, showSkeleton, ikEnabled, canvasRef,
 }) => {
   const joints = useMemo(() => getSkeletonJoints(viewIdx), [viewIdx]);
   const jointMap = useMemo(() => {
@@ -384,6 +420,32 @@ const BabylonViewport: React.FC<BabylonViewportProps> = ({
               strokeWidth={2}
             />
           </g>
+
+          {/* IK target handles — diamond markers at end-effectors, visible when IK is active */}
+          {ikEnabled && Object.entries(IK_CHAIN_END_JOINTS).map(([chainName, jointId]) => {
+            const j = jointMap[jointId];
+            if (!j) return null;
+            const s = compact ? 6 : 8;
+            return (
+              <g key={`ik-${chainName}`} style={{ pointerEvents: 'none' }}>
+                {/* Outer glow ring */}
+                <circle cx={j.x} cy={j.y} r={s + 4} fill="none" stroke="#ce93d8" strokeWidth={1} opacity={0.3} strokeDasharray="2 2" />
+                {/* Diamond IK target */}
+                <polygon
+                  points={`${j.x},${j.y - s} ${j.x + s},${j.y} ${j.x},${j.y + s} ${j.x - s},${j.y}`}
+                  fill="rgba(206,147,216,0.55)"
+                  stroke="#ce93d8"
+                  strokeWidth={1.5}
+                />
+                {/* IK label */}
+                {!compact && (
+                  <text x={j.x + s + 3} y={j.y + 3} fontSize={7} fill="#ce93d8" opacity={0.8} style={{ userSelect: 'none' }}>
+                    {chainName.replace('left', 'V').replace('right', 'H').replace('Arm', '↑').replace('Leg', '↓')}
+                  </text>
+                )}
+              </g>
+            );
+          })}
         </svg>
       )}
     </Box>
@@ -409,6 +471,7 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('2x2');
   const [singleViewId, setSingleViewId] = useState<string>('front');
   const [skeletonOverlayEnabled, setSkeletonOverlayEnabled] = useState(true);
+  const [ikEnabled, setIkEnabled] = useState(false);
   const [poseStates, setPoseStates] = useState<Record<string, ActiveCharacterPose>>(() => {
     const init: Record<string, ActiveCharacterPose> = {};
     characters.forEach(c => {
@@ -465,7 +528,7 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
       }
 
       if (skeletonOverlayEnabled) {
-        activateBabylonSkeletonViewers(true);
+        activateBabylonSkeletonViewers(true, rigId);
       }
     }, 200);
 
@@ -477,11 +540,13 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Re-activate skeleton viewers when toggled
+  // Re-activate skeleton viewers when toggled or active character changes
   useEffect(() => {
     if (!open) return;
-    activateBabylonSkeletonViewers(skeletonOverlayEnabled);
-  }, [open, skeletonOverlayEnabled, rigs.size]);
+    const activeChar = characters[activeCharIdx];
+    const rigId = activeChar ? poseStates[activeChar.id]?.rigId : undefined;
+    activateBabylonSkeletonViewers(skeletonOverlayEnabled, rigId);
+  }, [open, skeletonOverlayEnabled, activeCharIdx, rigs.size]);
 
   // Re-register views when layout changes (canvases may re-mount in new DOM positions)
   useEffect(() => {
@@ -613,6 +678,7 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
         onSelectBone={setSelectedBone}
         compact={compact}
         showSkeleton={skeletonOverlayEnabled}
+        ikEnabled={ikEnabled}
         canvasRef={canvasRefs[viewIdx]}
       />
     );
@@ -781,6 +847,8 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
             onPoseChange={handlePoseChange}
             skeletonOverlayEnabled={skeletonOverlayEnabled}
             onSkeletonOverlayToggle={setSkeletonOverlayEnabled}
+            ikEnabled={ikEnabled}
+            onIkToggle={setIkEnabled}
             sceneType={sceneName}
           />
         )}
