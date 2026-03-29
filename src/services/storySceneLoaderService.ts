@@ -189,6 +189,15 @@ class StorySceneLoaderService {
         this.storyRigIdToRigId.set(storyRigId, rigId);
       });
 
+      // Runtime assertion: warn clearly if characters have no rig (skeleton/IK will not work)
+      const unrigged = storyRigIds.filter(id => !rigMapping.has(id));
+      if (unrigged.length > 0) {
+        const msg = `[StoryScene] ${unrigged.length} karakter(er) mangler rigg etter lasting: ${unrigged.join(', ')} — skjelett/IK vil ikke fungere for disse`;
+        log.warn(msg);
+        console.error(msg);
+        report('error', 0, `${unrigged.length} karakter(er) uten rigg — kontrollér konsollen`);
+      }
+
       // Extra settle time
       await new Promise(r => setTimeout(r, RIG_SETTLE_MS));
 

@@ -16805,19 +16805,33 @@ class VirtualStudio {
 
       console.log(`[StoryScene] Loaded: ${name} (${storyRigId}) at (${px.toFixed(2)}, ${groundPos.y.toFixed(2)}, ${pz.toFixed(2)})`);
     } catch (err) {
-      console.warn(`[StoryScene] Model not found: ${modelUrl}, using placeholder`, err);
-      // Fallback: capsule placeholder
+      console.warn(`[StoryScene] Model not found: ${modelUrl}, falling back to rigged CesiumMan`, err);
+      // Fallback: load rigged CesiumMan so skeleton/pose/IK workflows still operate
+      const RIGGED_FALLBACK_URL = 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/CesiumMan/glTF-Binary/CesiumMan.glb';
+      const fallbackResult = await BABYLON.SceneLoader.ImportMeshAsync('', '', RIGGED_FALLBACK_URL, this.scene);
+      importedAnimationGroups = fallbackResult.animationGroups || [];
+      mesh = fallbackResult.meshes[0];
+      mesh.name = `story_${storyRigId}`;
+
+      const bounds = mesh.getHierarchyBoundingVectors(true);
+      const modelHeight = bounds.max.y - bounds.min.y;
+      if (modelHeight > 0.001) {
+        const targetH = height || 1.75;
+        const scale = targetH / modelHeight;
+        mesh.scaling = new BABYLON.Vector3(scale, scale, scale);
+      }
+
       const [px, , pz] = position;
-      const capsule = BABYLON.MeshBuilder.CreateCapsule(`story_${storyRigId}`, { height: 1.75, radius: 0.22 }, this.scene);
-      const groundPos = this.positionMeshOnGround(capsule, new BABYLON.Vector3(px, 0, pz));
-      capsule.position = groundPos;
+      const groundPos = this.positionMeshOnGround(mesh, new BABYLON.Vector3(px, 0, pz));
+      mesh.position = groundPos;
+      mesh.computeWorldMatrix(true);
+
       const [, ry] = rotation;
-      capsule.rotation = new BABYLON.Vector3(0, (ry * Math.PI) / 180, 0);
-      const skinColor = BABYLON.Color3.FromHexString('#EAC086');
-      capsule.material = this.createProceduralCharacterMaterial(`${storyRigId}_mat`, skinColor, 'skin');
-      capsule.receiveShadows = true;
-      mesh = capsule;
-      console.log(`[StoryScene] Placeholder capsule for ${storyRigId}`);
+      mesh.rotation = new BABYLON.Vector3(0, (ry * Math.PI) / 180, 0);
+
+      this.trackAnimationGroupsForMesh(mesh, importedAnimationGroups);
+      this.stopAnimationGroupsForMesh(mesh, importedAnimationGroups);
+      console.log(`[StoryScene] Rigged fallback (CesiumMan) for ${storyRigId}`);
     }
 
     // Register in scene hierarchy
