@@ -5633,7 +5633,10 @@ class VirtualStudio {
         parentMesh.computeWorldMatrix(true);
         headPivot.setAbsolutePosition(new BABYLON.Vector3(position.x, headJointWorldY, position.z));
 
-        const allSubMeshes = parentMesh.getChildMeshes(true);
+        // false = all descendants, not just direct children.
+        // The GLB __root__ is a TransformNode, so real geometry sits one level deeper;
+        // using (true) returns an empty array and breaks all bounding-box logic.
+        const allSubMeshes = parentMesh.getChildMeshes(false);
         const headMeshes: BABYLON.Mesh[] = [];
         let headCount = 0;
         for (const sm of allSubMeshes) {
@@ -5673,30 +5676,48 @@ class VirtualStudio {
           bMax = BABYLON.Vector3.Maximize(bMax, bb.maximumWorld);
         });
 
+        // When head-mesh separation failed (single fused model), the bounding box
+        // spans the full fixture including the stand/tripod.
+        // 1. Clip Y to the top 40% so the plane covers the softbox head, not the stand.
+        // 2. Clip X to a square of the same size centered on the model — the tripod
+        //    legs can spread 2–3× wider than the actual softbox panel.
+        if (headMeshes.length === 0) {
+          bMin.y = Math.max(bMin.y, headJointWorldY);
+          const headH = bMax.y - bMin.y;           // ≈ 40% of model height
+          const cx   = (bMin.x + bMax.x) * 0.5;   // model X centre
+          bMin.x = cx - headH * 0.5;               // square: same width as height
+          bMax.x = cx + headH * 0.5;
+        }
+
+        console.log(`[addLight] HEAD bbox (headMeshes=${headCount}): X[${bMin.x.toFixed(2)},${bMax.x.toFixed(2)}] Y[${bMin.y.toFixed(2)},${bMax.y.toFixed(2)}] Z[${bMin.z.toFixed(2)},${bMax.z.toFixed(2)}]`);
+
         const panelW = Math.max(0.05, bMax.x - bMin.x);
         const panelH = Math.max(0.05, bMax.y - bMin.y);
-        // World-space centre of the diffuser front face (−Z = lowest Z value)
+        // World-space centre on the −Z (diffuser) face of the head bounding box.
+        // Offset 1.5 cm in −Z so it sits just in front of the physical face.
         const worldCenter = new BABYLON.Vector3(
           (bMin.x + bMax.x) * 0.5,
           (bMin.y + bMax.y) * 0.5,
-          bMin.z - 0.015  // 1.5 cm in front to avoid z-fighting
+          bMin.z - 0.015
         );
 
-        // Convert world centre to headPivot local space (pivot has no rotation at this point)
-        const pivotWorld = headPivot.getAbsolutePosition();
-        const localPos = worldCenter.subtract(pivotWorld);
-
-        // Create plane mesh — default normal is +Z; rotate 180° around Y to face −Z
+        // Create the plane WITHOUT a parent first so its .position is in world space.
+        // After parenting we will call setAbsolutePosition() to restore the correct
+        // world position (just setting .position would be in headPivot local space,
+        // which includes the parent mesh's scaleFactor and would place the plane wrongly).
         const diffuserPlane = BABYLON.MeshBuilder.CreatePlane(
           `${lightId}_diffuserGlow`, { width: panelW, height: panelH }, this.scene
         );
-        diffuserPlane.rotation.y = Math.PI;   // face −Z (toward the subject)
-        diffuserPlane.position   = localPos;
-        diffuserPlane.parent     = headPivot;
+        // Plane normal defaults to +Z; rotate 180° around Y so it faces −Z (the subject side).
+        diffuserPlane.rotation.y = Math.PI;
+        // Parent first, then move to the correct world position.
+        diffuserPlane.parent = headPivot;
+        diffuserPlane.setAbsolutePosition(worldCenter);
+        diffuserPlane.computeWorldMatrix(true);
 
         const diffuserMat = new BABYLON.StandardMaterial(`${lightId}_diffuserGlowMat`, this.scene);
-        diffuserMat.disableLighting = true;    // always self-lit, unaffected by scene lights
-        diffuserMat.backFaceCulling = false;   // visible from both sides
+        diffuserMat.disableLighting = true;    // self-lit — unaffected by scene lights
+        diffuserMat.backFaceCulling = false;   // visible from either side of the panel
         diffuserMat.emissiveColor = new BABYLON.Color3(
           cctColor.r * initStrength,
           cctColor.g * initStrength,
@@ -5704,12 +5725,12 @@ class VirtualStudio {
         );
         diffuserPlane.material = diffuserMat;
 
-        // _headMeshes is consumed by updateLightHeadGlow — just the glow plane
+        // _headMeshes is used by updateLightHeadGlow — only the glow plane here
         (mesh as any)._headMeshes = [diffuserPlane];
 
         console.log(
           `[addLight] Diffuser glow plane: W=${panelW.toFixed(2)} H=${panelH.toFixed(2)}` +
-          ` localZ=${localPos.z.toFixed(2)} strength=${initStrength.toFixed(2)}`
+          ` worldZ=${worldCenter.z.toFixed(3)} bMinZ=${bMin.z.toFixed(3)} strength=${initStrength.toFixed(2)}`
         );
 
         console.log(`[addLight] GLB loaded: ${result.meshes.length} meshes, scale=${scaleFactor.toFixed(3)}, lightHeadY=${lightHeadHeight.toFixed(2)}m, headMeshes=${headCount}`);
