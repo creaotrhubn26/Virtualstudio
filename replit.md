@@ -123,6 +123,16 @@ PostgreSQL database with comprehensive table structure:
 - `src/services/virtualStudioApiService.ts` - Typed API client for Virtual Studio
 - `src/services/castingApiService.ts` - Typed API client for Virtual Studio
 
+## Story Scenes — "Napoli Dreams"
+
+A dedicated **Story** category in the Scener panel with three connected story-based scenes for a pizza restaurant brand:
+
+- **Akt 1 – Restauranten** (`story-napoli-akt1-restaurant`): Warm candlelight atmosphere, tungsten practical lights (2700–3200K), 7-light rig including candle simulations. 85mm food photography setup.
+- **Akt 2 – Produktfotografering** (`story-napoli-akt2-produktfoto`): Clean professional food studio. Top-down overhead octabox (5600K), 6-light rig, shooting-table backdrop. 100mm macro camera setup.
+- **Akt 3 – Chef-videostudio** (`story-napoli-akt3-video`): Branded video studio, bicolor LED three-point rig (4200–5600K + warm background accent). 7-light rig optimized for video. 50mm interview framing.
+
+Story scenes appear in `src/data/scenarioPresets.ts` under `kategori: 'story'`. The ScenerPanel shows a story arc banner and per-card "AKT X/3" badge when this category is active. Category color: `#ff6d00` (amber-orange).
+
 ## GLB Generation Pipeline (TripoSR)
 
 A complete image-to-3D pipeline using TripoSR via Replicate API:

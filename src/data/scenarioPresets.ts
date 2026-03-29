@@ -1,7 +1,7 @@
 export interface ScenarioPreset {
   id: string;
   navn: string;
-  kategori: 'bryllup' | 'portrett' | 'mote' | 'naeringsliv' | 'hollywood' | 'skolefoto';
+  kategori: 'bryllup' | 'portrett' | 'mote' | 'naeringsliv' | 'hollywood' | 'skolefoto' | 'story';
   beskrivelse: string;
   tags: string[];
   previewImage?: string;
@@ -523,6 +523,296 @@ export const scenarioPresets: ScenarioPreset[] = [
       camera: { position: [0, 1.4, 3.5], target: [0, 1.2, 0], focalLength: 70 }
     },
     recommendedAssets: { lights: ['godox-ad400-pro'], modifiers: ['octabox-150', 'reflector-white-42'], backdrops: ['seamless-blue', 'seamless-grey'] }
+  },
+
+  // ============================================================
+  // STORY SCENES: "NAPOLI DREAMS" — Tre akter, én fortelling
+  // En komplett produksjonsserie for en pizzarestaurant-merkevare.
+  // ============================================================
+  {
+    id: 'story-napoli-akt1-restaurant',
+    navn: 'Napoli Dreams — Akt 1: Restauranten',
+    kategori: 'story',
+    beskrivelse: 'Akt 1 av 3 — Ambiente og atmosfære i en autentisk italiensk pizzarestaurant. Stearinlys og varme tungstenlys skaper magisk, intim stemning. Perfekt for mat-innhold på sosiale medier, menybilder og restaurantpresentasjon. Fortellingen begynner her — i restaurantens hjerte.',
+    tags: ['story', 'napoli-dreams', 'restaurant', 'mat', 'atmosfære', 'stearinlys', 'tungsten', 'varm', 'intim', 'pizzeria', 'akt-1'],
+    difficulty: 'intermediate',
+    usedIn: ['Napoli Dreams — Akt 1 av 3', 'Restaurantfotografering', 'Social media innhold'],
+    sceneConfig: {
+      lights: [
+        {
+          type: 'practical',
+          position: [0, 2.6, -0.5],
+          rotation: [0, 0, 0],
+          intensity: 0.7,
+          cct: 2700,
+          color: '#ff8c1a',
+          modifier: 'bare-bulb'
+        },
+        {
+          type: 'practical',
+          position: [-1.2, 2.5, 0.5],
+          rotation: [0, 20, 0],
+          intensity: 0.5,
+          cct: 2700,
+          color: '#ff7a00',
+          modifier: 'bare-bulb'
+        },
+        {
+          type: 'key-light',
+          position: [-1.5, 2.0, 1.5],
+          rotation: [-20, 35, 0],
+          intensity: 0.6,
+          cct: 3200,
+          color: '#ffaa44',
+          modifier: 'softbox-60x60'
+        },
+        {
+          type: 'fill-light',
+          position: [1.8, 1.4, 1.8],
+          rotation: [0, -30, 0],
+          intensity: 0.25,
+          cct: 2800,
+          color: '#ff9900',
+          modifier: 'umbrella-white'
+        },
+        {
+          type: 'atmospheric',
+          position: [-0.3, 0.85, 0.8],
+          rotation: [0, 0, 0],
+          intensity: 0.35,
+          cct: 1800,
+          color: '#ff6600',
+          modifier: 'candle'
+        },
+        {
+          type: 'atmospheric',
+          position: [0.6, 0.85, 1.0],
+          rotation: [0, 0, 0],
+          intensity: 0.3,
+          cct: 1800,
+          color: '#ff6600',
+          modifier: 'candle'
+        },
+        {
+          type: 'rim-light',
+          position: [2.0, 2.2, -1.5],
+          rotation: [-15, 140, 0],
+          intensity: 0.4,
+          cct: 3000,
+          color: '#ffcc66',
+          modifier: 'stripbox-15x60'
+        }
+      ],
+      backdrop: {
+        type: 'muslin',
+        color: '#1c0e06'
+      },
+      camera: {
+        position: [0, 1.15, 2.8],
+        target: [0, 0.75, 0],
+        focalLength: 85
+      },
+      gear: {
+        setupType: 'foto',
+        cameraBodyId: 'sony-a7r5',
+        cameraLabel: 'Sony A7R V',
+        lensId: 'sony-fe-85mm-f14-gm',
+        lensLabel: '85mm f/1.4 GM',
+        lightCount: 7,
+        lightTypes: ['practical', 'atmospheric', 'led'],
+        fixtureIds: ['candle-light', 'nanlite-forza60', 'aputure-60x']
+      }
+    },
+    recommendedAssets: {
+      lights: ['candle-light', 'nanlite-forza60', 'aputure-60x'],
+      modifiers: ['softbox-60x60', 'umbrella-white', 'stripbox-15x60', 'barn-doors'],
+      backdrops: ['muslin-dark', 'seamless-black']
+    }
+  },
+
+  {
+    id: 'story-napoli-akt2-produktfoto',
+    navn: 'Napoli Dreams — Akt 2: Produktfotografering',
+    kategori: 'story',
+    beskrivelse: 'Akt 2 av 3 — Profesjonell matfotografering i studio. Ren hvit bakgrunn, overhead octabox og presist lys fremhever pizzaens farger, tekstur og appetittvekkende utseende. Brukes til menykort, nettside og leveringsapp. Produktet i sitt aller beste lys.',
+    tags: ['story', 'napoli-dreams', 'mat', 'produkt', 'studio', 'overhead', 'matfoto', 'hvit', 'ren', 'meny', 'akt-2'],
+    difficulty: 'beginner',
+    usedIn: ['Napoli Dreams — Akt 2 av 3', 'Matfotografering', 'Menyfoto', 'Leveringsapp'],
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [0, 3.0, 0.2],
+          rotation: [-80, 0, 0],
+          intensity: 1.0,
+          cct: 5600,
+          modifier: 'octabox-120'
+        },
+        {
+          type: 'fill-light',
+          position: [-2.2, 1.8, 1.0],
+          rotation: [0, 55, 0],
+          intensity: 0.45,
+          cct: 5600,
+          modifier: 'softbox-60x90'
+        },
+        {
+          type: 'fill-light',
+          position: [2.2, 1.8, 1.0],
+          rotation: [0, -55, 0],
+          intensity: 0.3,
+          cct: 5600,
+          modifier: 'reflector-white'
+        },
+        {
+          type: 'rim-light',
+          position: [-1.5, 2.0, -1.5],
+          rotation: [-20, 120, 0],
+          intensity: 0.55,
+          cct: 5800,
+          modifier: 'stripbox-30x120'
+        },
+        {
+          type: 'rim-light',
+          position: [1.5, 2.0, -1.5],
+          rotation: [-20, -120, 0],
+          intensity: 0.55,
+          cct: 5800,
+          modifier: 'stripbox-30x120'
+        },
+        {
+          type: 'background-light',
+          position: [0, 1.2, -2.8],
+          rotation: [0, 180, 0],
+          intensity: 0.6,
+          cct: 5600
+        }
+      ],
+      backdrop: {
+        type: 'seamless',
+        color: '#f2f2f0'
+      },
+      camera: {
+        position: [0.3, 2.8, 1.2],
+        target: [0, 0.55, 0],
+        focalLength: 100
+      },
+      gear: {
+        setupType: 'foto',
+        cameraBodyId: 'canon-r5',
+        cameraLabel: 'Canon EOS R5',
+        lensId: 'canon-rf-100mm-f28l-macro',
+        lensLabel: '100mm f/2.8L Macro',
+        lightCount: 6,
+        lightTypes: ['strobe', 'led'],
+        fixtureIds: ['profoto-d2', 'profoto-b10', 'godox-ad400pro']
+      }
+    },
+    recommendedAssets: {
+      lights: ['profoto-d2', 'profoto-b10plus', 'godox-ad400pro'],
+      modifiers: ['octabox-120', 'softbox-60x90', 'stripbox-30x120', 'reflector-white', 'diffuser-scrim-120'],
+      backdrops: ['seamless-white', 'shooting-table']
+    }
+  },
+
+  {
+    id: 'story-napoli-akt3-video',
+    navn: 'Napoli Dreams — Akt 3: Chef-videostudio',
+    kategori: 'story',
+    beskrivelse: 'Akt 3 av 3 — Branded video-studio for chef-intervju og merkevarefortelling. Bicolor LED-belysning gir filmisk, profesjonelt uttrykk. Tre-punkt-lys-oppsett optimalisert for video. Varm, autentisk estetikk for YouTube, Instagram Reels og TV-reklame. Fortellingens klimaks.',
+    tags: ['story', 'napoli-dreams', 'video', 'intervju', 'chef', 'bicolor', 'led', 'branded', 'youtube', 'tre-punkt', 'akt-3'],
+    difficulty: 'intermediate',
+    usedIn: ['Napoli Dreams — Akt 3 av 3', 'Chef-intervju', 'Brand story video', 'YouTube produksjon'],
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [-1.8, 2.4, 2.2],
+          rotation: [-30, 42, 0],
+          intensity: 1.0,
+          cct: 4500,
+          color: '#fff5e0',
+          modifier: 'softbox-90x120'
+        },
+        {
+          type: 'fill-light',
+          position: [2.0, 1.9, 2.0],
+          rotation: [0, -40, 0],
+          intensity: 0.45,
+          cct: 4200,
+          color: '#fff8ee',
+          modifier: 'umbrella-white'
+        },
+        {
+          type: 'hair-light',
+          position: [0.8, 3.0, -0.8],
+          rotation: [-55, 150, 0],
+          intensity: 0.6,
+          cct: 5200,
+          modifier: 'stripbox-15x60'
+        },
+        {
+          type: 'rim-light',
+          position: [-2.2, 2.1, -1.0],
+          rotation: [-20, 125, 0],
+          intensity: 0.5,
+          cct: 5600,
+          modifier: 'stripbox-30x120'
+        },
+        {
+          type: 'background-light',
+          position: [-1.0, 1.0, -2.5],
+          rotation: [15, 30, 0],
+          intensity: 0.55,
+          cct: 3200,
+          color: '#ff8833',
+          modifier: 'fresnel'
+        },
+        {
+          type: 'background-light',
+          position: [1.0, 1.0, -2.5],
+          rotation: [15, -30, 0],
+          intensity: 0.4,
+          cct: 2800,
+          color: '#cc5500',
+          modifier: 'barn-doors'
+        },
+        {
+          type: 'atmospheric',
+          position: [0, 0.9, -1.8],
+          rotation: [0, 0, 0],
+          intensity: 0.2,
+          cct: 2200,
+          color: '#ff6600',
+          modifier: 'candle'
+        }
+      ],
+      backdrop: {
+        type: 'muslin',
+        color: '#2a1508'
+      },
+      camera: {
+        position: [0, 1.6, 4.5],
+        target: [0, 1.5, 0],
+        focalLength: 50
+      },
+      gear: {
+        setupType: 'video',
+        cameraBodyId: 'sony-fx3',
+        cameraLabel: 'Sony FX3',
+        cameraCount: 2,
+        lensId: 'sony-fe-50mm-f12-gm',
+        lensLabel: '50mm f/1.2 GM',
+        lightCount: 7,
+        lightTypes: ['led', 'atmospheric'],
+        fixtureIds: ['aputure-300d', 'aputure-120d', 'nanlite-forza300', 'candle-light']
+      }
+    },
+    recommendedAssets: {
+      lights: ['aputure-300d', 'aputure-120d', 'nanlite-forza300', 'candle-light'],
+      modifiers: ['softbox-90x120', 'umbrella-white', 'stripbox-15x60', 'stripbox-30x120', 'fresnel', 'barn-doors'],
+      backdrops: ['muslin-dark', 'cove']
+    }
   }
 ];
 

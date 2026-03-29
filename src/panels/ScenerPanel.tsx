@@ -21,7 +21,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { Palette, Person, BusinessCenter, Favorite, Movie, Star, Lightbulb, CameraAlt, Search as SearchIcon, School, Add, Folder, Edit, Delete, Close, Save, Build, PhotoCamera, Wallpaper, Tune, Landscape, Videocam, FlashOn, ShowChart, CameraEnhance } from '@mui/icons-material';
+import { Palette, Person, BusinessCenter, Favorite, Movie, Star, Lightbulb, CameraAlt, Search as SearchIcon, School, Add, Folder, Edit, Delete, Close, Save, Build, PhotoCamera, Wallpaper, Tune, Landscape, Videocam, FlashOn, ShowChart, CameraEnhance, AutoStories } from '@mui/icons-material';
 import { scenarioPresets, ScenarioPreset } from '../data/scenarioPresets';
 import { customPresetService, CustomPreset } from '../services/customPresetService';
 import { CAMERA_BODIES, LENSES, CameraBody, Lens, getLensFocalLength } from '../data/cameraGear';
@@ -41,6 +41,7 @@ const kategoriIcons: Record<string, React.ReactNode> = {
   naeringsliv: <BusinessCenter sx={{ fontSize: 22 }} />,
   hollywood: <Movie sx={{ fontSize: 22 }} />,
   skolefoto: <School sx={{ fontSize: 22 }} />,
+  story: <AutoStories sx={{ fontSize: 22 }} />,
   'mine-oppsett': <Folder sx={{ fontSize: 22 }} />,
 };
 
@@ -51,12 +52,14 @@ const kategoriColors: Record<string, string> = {
   naeringsliv: '#4caf50',
   hollywood: '#ffc107',
   skolefoto: '#00bcd4',
+  story: '#ff6d00',
   'mine-oppsett': '#ff5722',
 };
 
 const kategoriLabels: Record<string, string> = {
   alle: 'Alle',
   'mine-oppsett': 'Mine oppsett',
+  story: 'Story',
   hollywood: 'Hollywood',
   skolefoto: 'Skolefoto',
   bryllup: 'Bryllup',
@@ -362,6 +365,31 @@ const buttonStyle = {
             </IconButton>
           </Box>
         )}
+        {preset.kategori === 'story' && (() => {
+          const aktMatch = preset.id.match(/akt(\d+)/);
+          const aktNum = aktMatch ? aktMatch[1] : null;
+          return aktNum ? (
+            <Box sx={{
+              position: 'absolute',
+              top: 10,
+              left: 10,
+              zIndex: 10,
+              px: 1.2,
+              py: 0.4,
+              borderRadius: '8px',
+              background: 'rgba(255,109,0,0.9)',
+              backdropFilter: 'blur(4px)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.6,
+            }}>
+              <AutoStories sx={{ fontSize: 13, color: '#fff' }} />
+              <Typography sx={{ color: '#fff', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>
+                AKT {aktNum}/3
+              </Typography>
+            </Box>
+          ) : null;
+        })()}
         
         {preset.previewImage && (
           <CardMedia
@@ -628,7 +656,7 @@ const buttonStyle = {
       </Box>
 
       <Box sx={{ display: 'flex', gap: 1.5, mb: 3, flexWrap: 'wrap' }}>
-        {['alle', 'mine-oppsett', 'hollywood', 'skolefoto', 'bryllup', 'portrett', 'mote', 'naeringsliv'].map((kat) => (
+        {['alle', 'mine-oppsett', 'story', 'hollywood', 'skolefoto', 'bryllup', 'portrett', 'mote', 'naeringsliv'].map((kat) => (
           <Button
             key={kat}
             variant={activeKategori === kat ? 'contained' : 'outlined'}
@@ -705,6 +733,65 @@ const buttonStyle = {
           >
             Lag nytt oppsett
           </Button>
+        </Box>
+      )}
+
+      {activeKategori === 'story' && (
+        <Box sx={{
+          mb: 3,
+          p: 3,
+          borderRadius: '16px',
+          background: 'linear-gradient(135deg, #1a0a00 0%, #2a1200 50%, #1a0a00 100%)',
+          border: '1px solid rgba(255,109,0,0.35)',
+          boxShadow: '0 4px 24px rgba(255,109,0,0.12)',
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+            <AutoStories sx={{ color: '#ff6d00', fontSize: 28 }} />
+            <Typography sx={{ color: '#ff9a4d', fontWeight: 700, fontSize: 18, letterSpacing: 0.5 }}>
+              Napoli Dreams
+            </Typography>
+            <Box sx={{
+              ml: 'auto',
+              px: 1.5,
+              py: 0.4,
+              borderRadius: '20px',
+              background: 'rgba(255,109,0,0.15)',
+              border: '1px solid rgba(255,109,0,0.3)',
+            }}>
+              <Typography sx={{ color: '#ff9a4d', fontSize: 12, fontWeight: 600 }}>
+                3 akter · 1 fortelling
+              </Typography>
+            </Box>
+          </Box>
+          <Typography sx={{ color: '#cc8855', fontSize: 13.5, lineHeight: 1.6, mb: 2 }}>
+            En komplett produksjonsserie for en pizzarestaurant-merkevare. Tre ulike scener — restaurantens atmosfære, profesjonell produktfotografering og branded videostudio — som sammen forteller én sammenhengende merkevarehistorie.
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            {[
+              { akt: 'Akt 1', tittel: 'Restauranten', ikoner: '🕯️ 🍕', desc: 'Atmosfære & stemning' },
+              { akt: 'Akt 2', tittel: 'Produktfoto', ikoner: '📸 💡', desc: 'Studio & menybilder' },
+              { akt: 'Akt 3', tittel: 'Chef-video', ikoner: '🎬 👨‍🍳', desc: 'Intervju & brand story' },
+            ].map((a, i) => (
+              <Box key={i} sx={{
+                flex: 1,
+                minWidth: 100,
+                p: 1.5,
+                borderRadius: '10px',
+                background: 'rgba(255,109,0,0.08)',
+                border: '1px solid rgba(255,109,0,0.2)',
+                textAlign: 'center',
+              }}>
+                <Typography sx={{ color: '#ff6d00', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, mb: 0.3 }}>
+                  {a.akt}
+                </Typography>
+                <Typography sx={{ color: '#fff', fontSize: 13, fontWeight: 600, mb: 0.3 }}>
+                  {a.tittel}
+                </Typography>
+                <Typography sx={{ color: '#888', fontSize: 11 }}>{a.ikoner}</Typography>
+                <Typography sx={{ color: '#777', fontSize: 11, mt: 0.3 }}>{a.desc}</Typography>
+              </Box>
+            ))}
+          </Box>
         </Box>
       )}
 
