@@ -5694,6 +5694,7 @@ class VirtualStudio {
 
         console.log(`[addLight] HEAD bbox (headMeshes=${headCount}): X[${bMin.x.toFixed(2)},${bMax.x.toFixed(2)}] Y[${bMin.y.toFixed(2)},${bMax.y.toFixed(2)}] Z[${bMin.z.toFixed(2)},${bMax.z.toFixed(2)}]`);
 
+        // World-space extents of the diffuser panel.
         const panelW = Math.max(0.05, bMax.x - bMin.x);
         const panelH = Math.max(0.05, bMax.y - bMin.y);
         // World-space centre on the −Z (diffuser) face of the head bounding box.
@@ -5704,12 +5705,13 @@ class VirtualStudio {
           bMin.z - 0.015
         );
 
-        // Create the plane WITHOUT a parent first so its .position is in world space.
-        // After parenting we will call setAbsolutePosition() to restore the correct
-        // world position (just setting .position would be in headPivot local space,
-        // which includes the parent mesh's scaleFactor and would place the plane wrongly).
+        // CreatePlane sizes are in LOCAL units. headPivot inherits scaleFactor from
+        // parentMesh, so the plane would appear scaleFactor× too large if we used
+        // world-space dimensions directly. Divide by scaleFactor to compensate.
+        const localPanelW = panelW / scaleFactor;
+        const localPanelH = panelH / scaleFactor;
         const diffuserPlane = BABYLON.MeshBuilder.CreatePlane(
-          `${lightId}_diffuserGlow`, { width: panelW, height: panelH }, this.scene
+          `${lightId}_diffuserGlow`, { width: localPanelW, height: localPanelH }, this.scene
         );
         // Plane normal defaults to +Z; rotate 180° around Y so it faces −Z (the subject side).
         diffuserPlane.rotation.y = Math.PI;
@@ -5732,7 +5734,8 @@ class VirtualStudio {
         (mesh as any)._headMeshes = [diffuserPlane];
 
         console.log(
-          `[addLight] Diffuser glow plane: W=${panelW.toFixed(2)} H=${panelH.toFixed(2)}` +
+          `[addLight] Diffuser glow plane: localW=${localPanelW.toFixed(3)} localH=${localPanelH.toFixed(3)}` +
+          ` worldW=${panelW.toFixed(2)} worldH=${panelH.toFixed(2)} scaleFactor=${scaleFactor.toFixed(2)}` +
           ` worldZ=${worldCenter.z.toFixed(3)} bMinZ=${bMin.z.toFixed(3)} strength=${initStrength.toFixed(2)}`
         );
 
