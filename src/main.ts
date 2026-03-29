@@ -5776,8 +5776,11 @@ class VirtualStudio {
         );
         // Plane normal defaults to +Z; rotate 180° around Y so it faces −Z (the subject side).
         diffuserPlane.rotation.y = Math.PI;
-        // Parent first, then move to the correct world position.
-        diffuserPlane.parent = headPivot;
+        // Parent to parentMesh (same as the geometry mesh) NOT headPivot.
+        // The TRELLIS GLB is a fused single mesh — head and stand can never be separated,
+        // so headCount is always 0 and headPivot.rotation.x (pitch) never moves the model.
+        // Parenting the plane to headPivot caused it to tilt when the model stayed vertical.
+        diffuserPlane.parent = parentMesh;
         diffuserPlane.setAbsolutePosition(worldCenter);
         diffuserPlane.computeWorldMatrix(true);
 
