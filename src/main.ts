@@ -5720,28 +5720,27 @@ class VirtualStudio {
     const direction = target.subtract(lightHeadPos).normalize();
     console.log(`[aimLightAt] ${lightId}: lightHead=${lightHeadPos}, target=${target}, dir=${direction}`);
     
-    // Rotate the light stand to face the target
-    // The 300D model has the dish on a horizontal boom arm extending from the stand
-    // The dish faces outward along the boom direction (approximately -Z in local space)
+    // Rotate the light stand to fully aim at the target (both horizontal + vertical tilt)
     try {
-      // Calculate the angle to rotate around Y to face the target horizontally
       const dx = target.x - mesh.position.x;
       const dz = target.z - mesh.position.z;
-      
-      // Point the light's -Z toward the target (standard 3D convention)
-      // atan2(dx, dz) gives angle where +Z points to target
-      // We want -Z to point to target, so add PI, but that's same as atan2(-dx, -dz)
+      const horizontalDist = Math.sqrt(dx * dx + dz * dz);
+
+      // Azimuth: rotate around Y so model's +Z face points at target horizontally
       const yRotation = Math.atan2(dx, dz);
-      
-      // For now, don't apply X rotation (tilt) since the dish is on a boom arm
-      // The boom arm's angle should be adjusted separately if needed
-      // Just rotate around Y to face the target horizontally
-      mesh.rotation = new BABYLON.Vector3(0, yRotation, 0);
-      mesh.rotationQuaternion = null; // Use Euler angles
-      
+
+      // Elevation: tilt the model downward so the light head faces the target
+      // lightHeadHeight is stored on the mesh when it was loaded
+      const lightHeadY = (mesh as any)._lightHeadHeight ?? lightHeadPos.y;
+      const dy = target.y - lightHeadY; // Negative = target is below the light head
+      // Positive xRotation in Babylon.js tilts the model top forward (+Z) = downward tilt
+      const xRotation = horizontalDist > 0.01 ? Math.atan2(-dy, horizontalDist) : 0;
+
+      mesh.rotation = new BABYLON.Vector3(xRotation, yRotation, 0);
+      mesh.rotationQuaternion = null;
       mesh.computeWorldMatrix(true);
-      
-      console.log(`[aimLightAt] ${lightId}: mesh rotation set (yaw=${(yRotation * 180/Math.PI).toFixed(1)}°)`);
+
+      console.log(`[aimLightAt] ${lightId}: yaw=${(yRotation * 180/Math.PI).toFixed(1)}°, tilt=${(xRotation * 180/Math.PI).toFixed(1)}°`);
     } catch (e) {
       console.error(`[aimLightAt] Error rotating mesh:`, e);
     }
