@@ -5624,10 +5624,11 @@ class VirtualStudio {
         const finalBounds = parentMesh.getHierarchyBoundingVectors(true);
         lightHeadHeight = finalBounds.max.y;
 
-        // Create a headPivot at the stand-head junction (~60% of total height).
+        // Create a headPivot at the stand-head junction (~72% of total height).
+        // TRELLIS GLB: tripod+pole occupy the bottom 72%; the softbox box is the top 28%.
         // Sub-meshes whose centroid is above the junction get re-parented here,
         // so only the head geometry tilts while the stand stays vertical.
-        const headJointWorldY = lightHeadHeight * 0.60;
+        const headJointWorldY = lightHeadHeight * 0.72;
         const headPivot = new BABYLON.TransformNode(`${lightId}_headPivot`, this.scene);
         headPivot.parent = parentMesh;
         parentMesh.computeWorldMatrix(true);
@@ -5723,6 +5724,7 @@ class VirtualStudio {
         const diffuserMat = new BABYLON.StandardMaterial(`${lightId}_diffuserGlowMat`, this.scene);
         diffuserMat.disableLighting = true;    // self-lit — unaffected by scene lights
         diffuserMat.backFaceCulling = false;   // visible from either side of the panel
+        diffuserMat.alpha = 0.88;              // slight transparency so face-on glow doesn't blow out
         diffuserMat.emissiveColor = new BABYLON.Color3(
           cctColor.r * initStrength,
           cctColor.g * initStrength,
