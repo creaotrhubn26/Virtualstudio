@@ -5730,19 +5730,21 @@ class VirtualStudio {
               }
             }
 
-            if (isFinite(fxMin) && isFinite(fyMin) && fxMax > fxMin && fyMax > fyMin) {
-              // Use both the measured width AND measured height independently.
-              // Do NOT force square — the actual diffuser may be rectangular.
+            if (isFinite(fxMin) && fxMax > fxMin) {
+              // Width: measured from front-face vertices — accurate.
               panelW = fxMax - fxMin;
-              panelH = fyMax - fyMin;
-              // Vertex-measured centers avoid hardware-inflated bbox center shifts.
+              // Height: the TRELLIS GLB only has front-face geometry at the very top of
+              // the head, so fyMax-fyMin gives just that thin strip.
+              // Use the full head height (headJointWorldY → bMax.y) instead.
+              panelH = bMax.y - headJointWorldY;
+              // X center: vertex-measured (avoids flash-mount bracket offset).
+              // Y center: midpoint of the full head height range.
               (geoMesh as any)._diffuserXCenter = (fxMin + fxMax) * 0.5;
-              (geoMesh as any)._diffuserYCenter = (fyMin + fyMax) * 0.5;
+              (geoMesh as any)._diffuserYCenter = (headJointWorldY + bMax.y) * 0.5;
               measuredFromVertices = true;
               console.log(`[addLight] VERTEX diffuser: W=${panelW.toFixed(3)}m H=${panelH.toFixed(3)}m` +
-                ` Xcenter=${((fxMin + fxMax) * 0.5).toFixed(3)} Ycenter=${((fyMin + fyMax) * 0.5).toFixed(3)}` +
-                ` rawX=[${fxMin.toFixed(3)},${fxMax.toFixed(3)}] rawY=[${fyMin.toFixed(3)},${fyMax.toFixed(3)}]` +
-                ` eps=${epsilon.toFixed(3)}`);
+                ` Xcenter=${((fxMin + fxMax) * 0.5).toFixed(3)} Ycenter=${((headJointWorldY + bMax.y) * 0.5).toFixed(3)}` +
+                ` rawX=[${fxMin.toFixed(3)},${fxMax.toFixed(3)}] headJointY=${headJointWorldY.toFixed(3)} bMaxY=${bMax.y.toFixed(3)}`);
             } else {
               console.warn(`[addLight] No front-face vertices found (eps=${epsilon.toFixed(3)}, bMinZ=${bMin.z.toFixed(3)}); using bbox fallback`);
             }
