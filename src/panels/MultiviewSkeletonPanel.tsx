@@ -39,6 +39,51 @@ import { BoneInspectorSidebar } from './BoneInspectorSidebar';
 import { useSkeletalAnimationStore } from '../services/skeletalAnimationService';
 import { storySceneLoaderService } from '../services/storySceneLoaderService';
 
+// ── Babylon SkeletonViewer integration helpers ────────────────────────────────
+// We reference BABYLON from window.virtualStudio.scene rather than importing
+// to avoid circular dependencies and keep the panel tree-shakeable.
+
+function activateBabylonSkeletonViewers(enabled: boolean): void {
+  const vs = (window as any).virtualStudio;
+  if (!vs?.scene) return;
+  const scene = vs.scene;
+
+  // Dispose existing viewers first
+  if (!enabled) {
+    if ((window as any).__storySkeletonViewers) {
+      ((window as any).__storySkeletonViewers as any[]).forEach((sv: any) => {
+        try { sv.dispose?.(); } catch {}
+      });
+      (window as any).__storySkeletonViewers = [];
+    }
+    return;
+  }
+
+  const viewers: any[] = [];
+  const BABYLON = (window as any).BABYLON;
+  if (!BABYLON?.SkeletonViewer) return;
+
+  scene.skeletons?.forEach((skeleton: any) => {
+    try {
+      const meshes = scene.meshes.filter((m: any) => m.skeleton === skeleton);
+      if (meshes.length === 0) return;
+      const sv = new BABYLON.SkeletonViewer(skeleton, meshes[0], scene, true, meshes[0].renderingGroupId + 1, {
+        pauseAnimations: false,
+        returnToRest: false,
+        computeBonesUsingShaders: false,
+        displayMode: BABYLON.SkeletonViewer.DISPLAY_LINES,
+      });
+      sv.isEnabled = true;
+      viewers.push(sv);
+    } catch (err) {
+      console.warn('[SkeletonViewer] Could not create viewer for skeleton:', err);
+    }
+  });
+
+  (window as any).__storySkeletonViewers = viewers;
+  console.log(`[MultiviewPanel] SkeletonViewer: activated ${viewers.length} viewer(s)`);
+}
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -285,17 +330,43 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
 
   const { rigs, activeRigId } = useSkeletalAnimationStore();
 
-  // Attach loaded rigs to characters by index order
+  // Activate/deactivate Babylon SkeletonViewer on the main scene canvas
+  useEffect(() => {
+    if (!open) {
+      activateBabylonSkeletonViewers(false);
+      return;
+    }
+    // Slight delay so rigs are fully ready
+    const timer = setTimeout(() => activateBabylonSkeletonViewers(skeletonOverlayEnabled), 500);
+    return () => {
+      clearTimeout(timer);
+      activateBabylonSkeletonViewers(false);
+    };
+  }, [open, skeletonOverlayEnabled, rigs.size]);
+
+  // Listen for deterministic storyRigId → rigId mapping events
+  useEffect(() => {
+    const onRigReady = (e: Event) => {
+      const { storyRigId, rigId } = (e as CustomEvent).detail;
+      setPoseStates(prev => {
+        if (!prev[storyRigId]) return prev;
+        return { ...prev, [storyRigId]: { ...prev[storyRigId], rigId } };
+      });
+    };
+    window.addEventListener('ch-story-rig-ready', onRigReady);
+    return () => window.removeEventListener('ch-story-rig-ready', onRigReady);
+  }, []);
+
+  // Fallback: attach loaded rigs to characters by index order for non-story rigs
   useEffect(() => {
     const rigEntries = Array.from(rigs.entries());
     setPoseStates(prev => {
       const updated = { ...prev };
       characters.forEach((c, idx) => {
-        if (rigEntries[idx]) {
+        // Only update if not already set by storyRigId event
+        if (!updated[c.id]?.rigId && rigEntries[idx]) {
           const [rigId] = rigEntries[idx];
-          if (updated[c.id] && updated[c.id].rigId !== rigId) {
-            updated[c.id] = { ...updated[c.id], rigId };
-          }
+          updated[c.id] = { ...updated[c.id], rigId };
         }
       });
       return updated;

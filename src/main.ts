@@ -10270,6 +10270,19 @@ class VirtualStudio {
       this.removeCharacterModel();
     }) as EventListener);
 
+    // Multi-character story loading — does NOT replace existing characters
+    window.addEventListener('ch-load-story-character', ((e: CustomEvent) => {
+      const { modelUrl, name, skinTone, height, position, rotation, storyRigId } = e.detail;
+      console.log(`[StoryScene] Loading character: ${name} at [${position}] rigId=${storyRigId}`);
+      this.loadStoryCharacter(modelUrl, name, skinTone || 'medium', height || 1.75, position, rotation, storyRigId);
+    }) as EventListener);
+
+    // Clear all story characters
+    window.addEventListener('ch-clear-story-characters', (() => {
+      console.log('[StoryScene] Clearing all story characters');
+      this.clearStoryCharacters();
+    }) as EventListener);
+
     const handleWalkCharacterEvent = (event: CustomEvent) => {
       if (this.characterKeyboardControlsEnabled) {
         return;
@@ -12639,6 +12652,8 @@ class VirtualStudio {
 
   private characterMesh: BABYLON.AbstractMesh | null = null;
   private characterModelId: string | null = null;
+  // Multi-character story support — storyRigId → {mesh, modelId}
+  private storyCharacters: Map<string, { mesh: BABYLON.AbstractMesh; modelId: string }> = new Map();
   private characterRigByMeshUniqueId: Map<number, string> = new Map();
   private characterAnimationLibraryByRigId: Map<string, CharacterAnimationLibrary> = new Map();
   private characterIKByRigId: Map<string, CharacterIKRigState> = new Map();
@@ -16708,6 +16723,148 @@ class VirtualStudio {
       useAppStore.getState().removeNode(this.characterModelId);
       this.characterModelId = null;
     }
+  }
+
+  /**
+   * Load a character for a story scene without removing existing characters.
+   * Supports multi-character scenes. Characters are tracked by storyRigId.
+   * Position/rotation from the story manifest are applied after loading.
+   */
+  private async loadStoryCharacter(
+    modelUrl: string,
+    name: string,
+    skinTone: string,
+    height: number,
+    position: [number, number, number],
+    rotation: [number, number, number],
+    storyRigId: string,
+  ): Promise<void> {
+    // Remove a previous instance of this storyRigId if present
+    const existing = this.storyCharacters.get(storyRigId);
+    if (existing) {
+      this.clearTrackedAnimationGroupsForMesh(existing.mesh);
+      this.unloadRigForMesh(existing.mesh);
+      existing.mesh.dispose();
+      useAppStore.getState().removeNode(existing.modelId);
+      this.storyCharacters.delete(storyRigId);
+    }
+
+    let mesh: BABYLON.AbstractMesh;
+    let importedAnimationGroups: BABYLON.AnimationGroup[] = [];
+
+    try {
+      const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
+      importedAnimationGroups = result.animationGroups || [];
+      mesh = result.meshes[0];
+      mesh.name = `story_${storyRigId}`;
+
+      // Scale to target height
+      const bounds = mesh.getHierarchyBoundingVectors(true);
+      const modelHeight = bounds.max.y - bounds.min.y;
+      if (modelHeight > 0.001) {
+        const targetH = 1.7 * (height || 1.0);
+        const scale = targetH / modelHeight;
+        mesh.scaling = new BABYLON.Vector3(scale, scale, scale);
+      }
+
+      // Fix export orientation (many GLBs are flipped on X)
+      mesh.rotation = new BABYLON.Vector3(Math.PI, 0, 0);
+
+      // Position mesh at manifest position (x, ground, z)
+      const [px, , pz] = position;
+      const groundPos = this.positionMeshOnGround(mesh, new BABYLON.Vector3(px, 0, pz));
+      mesh.position = groundPos;
+      mesh.computeWorldMatrix(true);
+
+      // Apply Y rotation from manifest
+      const [, ry] = rotation;
+      mesh.rotation.y = (ry * Math.PI) / 180;
+
+      this.trackAnimationGroupsForMesh(mesh, importedAnimationGroups);
+      this.stopAnimationGroupsForMesh(mesh, importedAnimationGroups);
+
+      // Apply skin material
+      const skinColor = BABYLON.Color3.FromHexString(skinTone || '#EAC086');
+      const shirtColor = new BABYLON.Color3(0.2, 0.4, 0.7);
+      const pantsColor = new BABYLON.Color3(0.2, 0.2, 0.25);
+      const skinMaterial = this.createProceduralCharacterMaterial(`${name}_skin`, skinColor, 'skin');
+      const shirtMaterial = this.createProceduralCharacterMaterial(`${name}_shirt`, shirtColor, 'shirt');
+      const pantsMaterial = this.createProceduralCharacterMaterial(`${name}_pants`, pantsColor, 'pants');
+
+      const allMeshes = [mesh, ...mesh.getChildMeshes(true)];
+      allMeshes.forEach(m => {
+        const localBounds = m.getBoundingInfo().boundingBox;
+        const centerY = (localBounds.minimumWorld.y + localBounds.maximumWorld.y) / 2;
+        const headY = groundPos.y + (1.7 * 0.85);
+        const beltY = groundPos.y + (1.7 * 0.5);
+        if (centerY >= headY) { m.material = skinMaterial; }
+        else if (centerY >= beltY) { m.material = shirtMaterial; }
+        else { m.material = pantsMaterial; }
+        m.receiveShadows = true;
+      });
+
+      console.log(`[StoryScene] Loaded: ${name} (${storyRigId}) at (${px.toFixed(2)}, ${groundPos.y.toFixed(2)}, ${pz.toFixed(2)})`);
+    } catch (err) {
+      console.warn(`[StoryScene] Model not found: ${modelUrl}, using placeholder`, err);
+      // Fallback: capsule placeholder
+      const [px, , pz] = position;
+      const capsule = BABYLON.MeshBuilder.CreateCapsule(`story_${storyRigId}`, { height: 1.75, radius: 0.22 }, this.scene);
+      const groundPos = this.positionMeshOnGround(capsule, new BABYLON.Vector3(px, 0, pz));
+      capsule.position = groundPos;
+      const [, ry] = rotation;
+      capsule.rotation = new BABYLON.Vector3(0, (ry * Math.PI) / 180, 0);
+      const skinColor = BABYLON.Color3.FromHexString('#EAC086');
+      capsule.material = this.createProceduralCharacterMaterial(`${storyRigId}_mat`, skinColor, 'skin');
+      capsule.receiveShadows = true;
+      mesh = capsule;
+      console.log(`[StoryScene] Placeholder capsule for ${storyRigId}`);
+    }
+
+    // Register in scene hierarchy
+    const modelId = `story_model_${storyRigId}_${Date.now()}`;
+    mesh.name = modelId;
+    this.registerModelMeshesInScene(mesh, modelId, name);
+
+    const [px, , pz] = position;
+    const newNode: SceneNode = {
+      id: modelId,
+      name,
+      type: 'model',
+      visible: true,
+      locked: false,
+      transform: {
+        position: [px, mesh.position.y, pz],
+        rotation: [0, rotation[1] ?? 0, 0],
+        scale: [1, 1, 1],
+      },
+      userData: { meshNames: this.getChildMeshNames(mesh), storyRigId },
+    };
+    useAppStore.getState().addNode(newNode);
+
+    // Register rig and dispatch rigId so poses can be applied by storyRigId
+    const rigId = await this.ensureRigRegisteredForMesh(mesh, name, importedAnimationGroups);
+    this.storyCharacters.set(storyRigId, { mesh, modelId });
+
+    // Dispatch event so storySceneLoaderService can map storyRigId → rigId
+    window.dispatchEvent(new CustomEvent('ch-story-rig-ready', {
+      detail: { storyRigId, rigId, modelId },
+    }));
+
+    console.log(`[StoryScene] Rig ready: ${storyRigId} → rigId=${rigId}`);
+  }
+
+  /**
+   * Remove all story characters from the scene.
+   */
+  private clearStoryCharacters(): void {
+    this.storyCharacters.forEach(({ mesh, modelId }) => {
+      this.clearTrackedAnimationGroupsForMesh(mesh);
+      this.unloadRigForMesh(mesh);
+      mesh.dispose();
+      useAppStore.getState().removeNode(modelId);
+    });
+    this.storyCharacters.clear();
+    console.log('[StoryScene] All story characters cleared');
   }
 
   private resizeCanvases(): void {

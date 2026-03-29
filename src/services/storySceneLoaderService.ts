@@ -2,17 +2,17 @@
  * StorySceneLoaderService
  *
  * Orchestrates loading of a complete story scene preset:
- * 1. Applies lighting via window.virtualStudio.applyScenarioPreset()
- * 2. Loads props via propRenderingService.loadStorySceneProps()
- * 3. Loads / positions characters by dispatching 'ch-load-character' events
- *    (same path as CharacterModelLoader — triggers loadCharacterModel in main.ts)
- * 4. Applies PoseLibrary presets to loaded rigs via useSkeletalAnimationStore.setBoneRotation()
- * 5. Emits 'ch-story-scene-loaded' event when complete
- *
- * Exposes progress updates throughout loading via callbacks.
+ * 1. Clears previous story characters
+ * 2. Applies lighting via window.virtualStudio.applyScenarioPreset()
+ * 3. Loads props via propRenderingService.loadStorySceneProps()
+ * 4. Dispatches 'ch-load-story-character' for each manifest character
+ *    (NEW multi-character path in main.ts — does NOT replace existing chars)
+ * 5. Listens for 'ch-story-rig-ready' events to build storyRigId → rigId map
+ * 6. Applies PoseLibrary presets deterministically by storyRigId
+ * 7. Emits 'ch-story-scene-loaded' when fully done
  */
 
-import { ScenarioPreset, StoryCharacterManifest } from '../data/scenarioPresets';
+import { ScenarioPreset } from '../data/scenarioPresets';
 import { propRenderingService } from '../core/services/propRenderingService';
 import { useSkeletalAnimationStore } from './skeletalAnimationService';
 import { ALL_POSES } from '../core/animation/PoseLibrary';
@@ -30,18 +30,16 @@ const AVATAR_MODEL_URLS: Record<string, string> = {
   athlete:   '/models/avatars/avatar_athlete.glb',
   dancer:    '/models/avatars/avatar_dancer.glb',
   pregnant:  '/models/avatars/avatar_pregnant.glb',
-  // fallback — public glb known to work
   generated: 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/CesiumMan/glTF-Binary/CesiumMan.glb',
 };
 
-// ─── Pose apply delay — let the rig finish loading before applying joints ────
-const RIG_LOAD_WAIT_MS = 1800;
-
-// ─── How long we wait for a rig to appear after character load event ─────────
-const RIG_WAIT_TIMEOUT_MS = 8000;
+// How long to wait for all story rigs to report ready (ms)
+const RIG_WAIT_TIMEOUT_MS = 10000;
+// Extra settle time after all rigs ready before applying poses
+const RIG_SETTLE_MS = 400;
 
 export interface StorySceneLoadProgress {
-  phase: 'lights' | 'props' | 'characters' | 'poses' | 'done' | 'error';
+  phase: 'clear' | 'lights' | 'props' | 'characters' | 'poses' | 'done' | 'error';
   progress: number;
   message: string;
 }
@@ -57,23 +55,45 @@ export interface StorySceneLoadResult {
 
 class StorySceneLoaderService {
   private currentPreset: ScenarioPreset | null = null;
+  // storyRigId → actual Zustand rigId (populated as 'ch-story-rig-ready' fires)
+  private storyRigIdToRigId: Map<string, string> = new Map();
 
   /**
-   * Wait until a specific number of rigs are loaded (or timeout).
-   * The skeletal animation store is populated by main.ts when loadCharacterModel completes.
+   * Wait until all given storyRigIds have been mapped to actual rigIds,
+   * or until timeout expires.
    */
-  private waitForRigs(expectedCount: number, timeoutMs: number): Promise<void> {
+  private waitForStoryRigs(
+    storyRigIds: string[],
+    timeoutMs: number,
+    onProgress?: (ready: number, total: number) => void,
+  ): Promise<Map<string, string>> {
     return new Promise(resolve => {
+      const mapping = new Map<string, string>();
       const deadline = Date.now() + timeoutMs;
-      const check = () => {
-        const { rigs } = useSkeletalAnimationStore.getState();
-        if (rigs.size >= expectedCount || Date.now() >= deadline) {
-          resolve();
-        } else {
-          setTimeout(check, 250);
+
+      const onReady = (e: Event) => {
+        const { storyRigId, rigId } = (e as CustomEvent).detail;
+        if (storyRigIds.includes(storyRigId)) {
+          mapping.set(storyRigId, rigId);
+          onProgress?.(mapping.size, storyRigIds.length);
+          log.debug(`Rig ready: ${storyRigId} → ${rigId} (${mapping.size}/${storyRigIds.length})`);
+        }
+        if (mapping.size >= storyRigIds.length) {
+          window.removeEventListener('ch-story-rig-ready', onReady);
+          resolve(mapping);
         }
       };
-      setTimeout(check, 250);
+
+      window.addEventListener('ch-story-rig-ready', onReady);
+
+      // Timeout fallback
+      const timer = setInterval(() => {
+        if (mapping.size >= storyRigIds.length || Date.now() >= deadline) {
+          clearInterval(timer);
+          window.removeEventListener('ch-story-rig-ready', onReady);
+          resolve(mapping);
+        }
+      }, 300);
     });
   }
 
@@ -85,6 +105,7 @@ class StorySceneLoaderService {
     onProgress?: StorySceneProgressCallback,
   ): Promise<StorySceneLoadResult> {
     this.currentPreset = preset;
+    this.storyRigIdToRigId.clear();
     log.info(`Loading story scene: ${preset.navn}`);
 
     const report = (phase: StorySceneLoadProgress['phase'], progress: number, message: string) => {
@@ -93,6 +114,12 @@ class StorySceneLoaderService {
     };
 
     const vs = (window as any).virtualStudio;
+
+    // ── PHASE 0: Clear previous story characters ──────────────────────
+    report('clear', 0, 'Rydder forrige scene…');
+    window.dispatchEvent(new CustomEvent('ch-clear-story-characters'));
+    await new Promise(r => setTimeout(r, 200));
+    report('clear', 1, 'Forrige karakterer fjernet');
 
     // ── PHASE 1: Lights ───────────────────────────────────────────────
     report('lights', 0, 'Laster lys…');
@@ -116,9 +143,7 @@ class StorySceneLoaderService {
 
       const loadedProps = await propRenderingService.loadStorySceneProps(
         preset.props,
-        (progress, label) => {
-          report('props', progress, `Laster prop: ${label}`);
-        },
+        (progress, label) => report('props', progress, `Laster prop: ${label}`),
       );
 
       propsLoaded = loadedProps.size;
@@ -127,7 +152,7 @@ class StorySceneLoaderService {
       report('props', 1, 'Ingen props i denne scenen');
     }
 
-    // ── PHASE 3: Characters — load models ─────────────────────────────
+    // ── PHASE 3: Characters — dispatch load events ────────────────────
     const characters = preset.characters ?? [];
     let charactersLoaded = 0;
     let posesApplied = 0;
@@ -135,23 +160,20 @@ class StorySceneLoaderService {
     if (characters.length > 0) {
       report('characters', 0, 'Laster karakterer…');
 
-      const rigCountBefore = useSkeletalAnimationStore.getState().rigs.size;
+      const storyRigIds = characters.map(c => c.id);
 
       characters.forEach((charManifest, idx) => {
         const modelUrl = AVATAR_MODEL_URLS[charManifest.avatarType] ?? AVATAR_MODEL_URLS['generated'];
-        const [px, py, pz] = charManifest.position;
+        log.info(`Dispatching story character: ${charManifest.label} (${charManifest.avatarType})`);
 
-        log.info(`Loading character: ${charManifest.label} (${charManifest.avatarType}) → ${modelUrl}`);
-
-        // Dispatch the same event that CharacterModelLoader fires
-        window.dispatchEvent(new CustomEvent('ch-load-character', {
+        window.dispatchEvent(new CustomEvent('ch-load-story-character', {
           detail: {
             modelUrl,
             name: charManifest.label,
-            position: [px, py, pz],
-            rotation: charManifest.rotation ?? [0, 0, 0],
             skinTone: 'medium',
             height: 1.75,
+            position: charManifest.position,
+            rotation: charManifest.rotation ?? [0, 0, 0],
             storyRigId: charManifest.id,
           },
         }));
@@ -160,34 +182,38 @@ class StorySceneLoaderService {
         report('characters', (idx + 1) / characters.length, `Laster: ${charManifest.label}`);
       });
 
-      // ── PHASE 4: Poses — wait for rigs then apply ─────────────────
+      // ── PHASE 4: Wait for rigs, then apply poses ──────────────────
       report('poses', 0, 'Venter på karakterrigg…');
 
-      await this.waitForRigs(rigCountBefore + characters.length, RIG_WAIT_TIMEOUT_MS);
+      const rigMapping = await this.waitForStoryRigs(
+        storyRigIds,
+        RIG_WAIT_TIMEOUT_MS,
+        (ready, total) => report('poses', ready / total * 0.7, `${ready}/${total} rigger klare…`),
+      );
 
-      // Short extra wait for rig initialisation
-      await new Promise(r => setTimeout(r, RIG_LOAD_WAIT_MS));
+      // Store mapping for live bone control
+      rigMapping.forEach((rigId, storyRigId) => {
+        this.storyRigIdToRigId.set(storyRigId, rigId);
+      });
 
-      const { rigs, setBoneRotation } = useSkeletalAnimationStore.getState();
-      const rigEntries = Array.from(rigs.entries());
+      // Extra settle time
+      await new Promise(r => setTimeout(r, RIG_SETTLE_MS));
 
-      // Map new rigs (those added after rigCountBefore) to character manifests
-      const newRigs = rigEntries.slice(rigCountBefore);
+      const { setBoneRotation } = useSkeletalAnimationStore.getState();
 
       characters.forEach((charManifest, idx) => {
+        const rigId = rigMapping.get(charManifest.id);
+        if (!rigId) {
+          log.warn(`No rigId mapped for ${charManifest.id} — pose skipped`);
+          return;
+        }
+
         const posePreset = ALL_POSES.find(p => p.id === charManifest.poseId);
         if (!posePreset) {
           log.warn(`Pose not found: ${charManifest.poseId} for ${charManifest.label}`);
           return;
         }
 
-        const rigEntry = newRigs[idx] ?? rigEntries[idx];
-        if (!rigEntry) {
-          log.warn(`No rig found for character index ${idx} (${charManifest.label})`);
-          return;
-        }
-
-        const [rigId] = rigEntry;
         let applied = 0;
         Object.entries(posePreset.pose).forEach(([boneName, rotation]) => {
           if (rotation) {
@@ -198,12 +224,12 @@ class StorySceneLoaderService {
 
         if (applied > 0) {
           posesApplied++;
-          report('poses', (idx + 1) / characters.length, `Pose brukt: ${charManifest.label}`);
-          log.info(`Applied pose "${posePreset.name}" (${applied} bones) to rig ${rigId}`);
+          report('poses', 0.7 + (idx + 1) / characters.length * 0.3, `Pose brukt: ${charManifest.label}`);
+          log.info(`Applied pose "${posePreset.name}" (${applied} bones) to rigId=${rigId}`);
         }
       });
 
-      report('poses', 1, `${posesApplied} karakter-pose(r) brukt`);
+      report('poses', 1, `${posesApplied} pose(r) brukt på ${characters.length} karakter(er)`);
     } else {
       report('characters', 1, 'Ingen karakterer i denne scenen');
     }
@@ -212,9 +238,8 @@ class StorySceneLoaderService {
     report('done', 1, `Scene klar: ${preset.navn}`);
 
     const result: StorySceneLoadResult = { preset, propsLoaded, charactersLoaded, posesApplied };
-
     window.dispatchEvent(new CustomEvent('ch-story-scene-loaded', { detail: result }));
-    log.info('Story scene loaded — event dispatched', result);
+    log.info('Story scene loaded', result);
 
     return result;
   }
@@ -227,8 +252,15 @@ class StorySceneLoaderService {
   }
 
   /**
-   * Apply specific bone overrides to a live Babylon rig.
-   * Called from MultiviewSkeletonPanel when the user adjusts bones via the inspector.
+   * Get the Zustand rigId for a given storyRigId.
+   * Returns undefined if the rig hasn't been loaded yet.
+   */
+  getRigId(storyRigId: string): string | undefined {
+    return this.storyRigIdToRigId.get(storyRigId);
+  }
+
+  /**
+   * Apply specific bone overrides to a live Babylon rig by storyRigId or rigId.
    */
   applyBoneOverridesToRig(
     rigId: string,
@@ -242,7 +274,7 @@ class StorySceneLoaderService {
   }
 
   /**
-   * Apply a full pose preset to a rig, clearing previous bone overrides first.
+   * Apply a full pose preset to a rig, resetting previous bone overrides first.
    */
   applyPoseToRig(rigId: string, poseId: string): void {
     const posePreset = ALL_POSES.find(p => p.id === poseId);
@@ -255,9 +287,7 @@ class StorySceneLoaderService {
     resetAllBones(rigId);
 
     Object.entries(posePreset.pose).forEach(([boneName, rotation]) => {
-      if (rotation) {
-        setBoneRotation(rigId, boneName, rotation);
-      }
+      if (rotation) setBoneRotation(rigId, boneName, rotation);
     });
 
     log.info(`Applied pose "${posePreset.name}" to rig ${rigId}`);
