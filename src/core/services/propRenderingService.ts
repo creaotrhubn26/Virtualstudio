@@ -22,10 +22,47 @@ export interface PropLoadOptions {
 class PropRenderingService {
   private scene: Scene | null = null;
   private loadedProps: Map<string, AbstractMesh> = new Map();
+  private environmentMeshes: AbstractMesh[] = [];
 
   setScene(scene: Scene): void {
     this.scene = scene;
     log.info('Scene set for prop rendering');
+  }
+
+  clearEnvironment(): void {
+    this.environmentMeshes.forEach(m => {
+      try { m.dispose(); } catch (err) { log.warn('Failed to dispose environment mesh:', err); }
+    });
+    this.environmentMeshes = [];
+    log.info('Environment cleared');
+  }
+
+  async loadEnvironment(url: string, scale = 10): Promise<void> {
+    if (!this.scene) {
+      log.warn('loadEnvironment: scene not set');
+      return;
+    }
+    this.clearEnvironment();
+    try {
+      const result = await SceneLoader.ImportMeshAsync('', '', url, this.scene);
+      result.meshes.forEach(m => {
+        m.receiveShadows = true;
+        m.isPickable = false;
+        m.scaling.scaleInPlace(scale);
+
+        if (m.material instanceof PBRMaterial) {
+          m.material.unlit = false;
+          m.material.backFaceCulling = false;
+        } else if (m.material instanceof StandardMaterial) {
+          m.material.backFaceCulling = false;
+        }
+
+        this.environmentMeshes.push(m);
+      });
+      log.info(`Environment loaded: ${url} (${result.meshes.length} meshes, scale ${scale}×)`);
+    } catch (err) {
+      log.warn(`Failed to load environment GLB: ${url}`, err);
+    }
   }
 
   async loadProp(prop: PropDefinition, options: PropLoadOptions = {}): Promise<AbstractMesh> {

@@ -29,6 +29,7 @@ export interface ScenarioPreset {
   usedIn?: string[];
   characters?: StoryCharacterManifest[];
   props?: StoryPropManifest[];
+  environmentUrl?: string;
   sceneConfig: {
     lights: Array<{
       type: string;
@@ -559,6 +560,7 @@ export const scenarioPresets: ScenarioPreset[] = [
     tags: ['story', 'napoli-dreams', 'restaurant', 'mat', 'atmosfære', 'stearinlys', 'tungsten', 'varm', 'intim', 'pizzeria', 'akt-1'],
     difficulty: 'intermediate',
     usedIn: ['Napoli Dreams — Akt 1 av 3', 'Restaurantfotografering', 'Social media innhold'],
+    environmentUrl: '/models/environments/napoli/restaurant-room.glb',
     characters: [
       {
         id: 'char-akt1-waiter',
@@ -690,6 +692,7 @@ export const scenarioPresets: ScenarioPreset[] = [
     tags: ['story', 'napoli-dreams', 'mat', 'produkt', 'studio', 'overhead', 'matfoto', 'hvit', 'ren', 'meny', 'akt-2'],
     difficulty: 'beginner',
     usedIn: ['Napoli Dreams — Akt 2 av 3', 'Matfotografering', 'Menyfoto', 'Leveringsapp'],
+    environmentUrl: '/models/environments/napoli/studio-room.glb',
     characters: [
       {
         id: 'char-akt2-stylist',
@@ -793,6 +796,7 @@ export const scenarioPresets: ScenarioPreset[] = [
     tags: ['story', 'napoli-dreams', 'video', 'intervju', 'chef', 'bicolor', 'led', 'branded', 'youtube', 'tre-punkt', 'akt-3'],
     difficulty: 'intermediate',
     usedIn: ['Napoli Dreams — Akt 3 av 3', 'Chef-intervju', 'Brand story video', 'YouTube produksjon'],
+    environmentUrl: '/models/environments/napoli/video-studio-room.glb',
     characters: [
       {
         id: 'char-akt3-chef',

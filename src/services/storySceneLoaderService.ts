@@ -27,7 +27,7 @@ const RIG_WAIT_TIMEOUT_MS = 10000;
 const RIG_SETTLE_MS = 400;
 
 export interface StorySceneLoadProgress {
-  phase: 'clear' | 'lights' | 'props' | 'characters' | 'poses' | 'done' | 'error';
+  phase: 'environment' | 'clear' | 'lights' | 'props' | 'characters' | 'poses' | 'done' | 'error';
   progress: number;
   message: string;
 }
@@ -103,11 +103,22 @@ class StorySceneLoaderService {
 
     const vs = window.virtualStudio;
 
-    // ── PHASE 0: Clear previous story characters ──────────────────────
+    // ── PHASE 0a: Clear previous scene ───────────────────────────────
     report('clear', 0, 'Rydder forrige scene…');
     window.dispatchEvent(new CustomEvent('ch-clear-story-characters'));
+    propRenderingService.clearEnvironment();
     await new Promise(r => setTimeout(r, 200));
-    report('clear', 1, 'Forrige karakterer fjernet');
+    report('clear', 1, 'Forrige scene fjernet');
+
+    // ── PHASE 0b: Environment GLB ─────────────────────────────────────
+    if (preset.environmentUrl) {
+      report('environment', 0, 'Laster miljø…');
+      if (vs?.scene) {
+        propRenderingService.setScene(vs.scene);
+      }
+      await propRenderingService.loadEnvironment(preset.environmentUrl, 10);
+      report('environment', 1, 'Miljø lastet');
+    }
 
     // ── PHASE 1: Lights ───────────────────────────────────────────────
     report('lights', 0, 'Laster lys…');
