@@ -5634,6 +5634,7 @@ class VirtualStudio {
         headPivot.setAbsolutePosition(new BABYLON.Vector3(position.x, headJointWorldY, position.z));
 
         const allSubMeshes = parentMesh.getChildMeshes(true);
+        const headMeshes: BABYLON.Mesh[] = [];
         let headCount = 0;
         for (const sm of allSubMeshes) {
           if (!(sm instanceof BABYLON.Mesh)) continue;
@@ -5642,10 +5643,35 @@ class VirtualStudio {
           const cy = (bi.minimumWorld.y + bi.maximumWorld.y) * 0.5;
           if (cy > headJointWorldY) {
             sm.setParent(headPivot);
+            headMeshes.push(sm);
             headCount++;
           }
         }
         (mesh as any)._headPivot = headPivot;
+
+        // Fallback: if no meshes are above 60% (single fused GLB), treat all sub-meshes as the head
+        const glowMeshes = headMeshes.length > 0 ? headMeshes : allSubMeshes.filter(sm => sm instanceof BABYLON.Mesh) as BABYLON.Mesh[];
+        (mesh as any)._headMeshes = glowMeshes;
+
+        // Apply emissive glow to the softbox/octabox head.
+        // The diffuser panel is the face that emits light — make it glow on load.
+        const cctColor = this.cctToColor(lightConfig.cct);
+        glowMeshes.forEach(sm => {
+          const mat = sm.material;
+          if (mat instanceof BABYLON.PBRMaterial) {
+            mat.emissiveColor  = new BABYLON.Color3(cctColor.r, cctColor.g, cctColor.b);
+            mat.emissiveIntensity = 0; // will be set by updateLightHeadGlow below
+          } else if (mat instanceof BABYLON.StandardMaterial) {
+            mat.emissiveColor = new BABYLON.Color3(0, 0, 0);
+            mat.disableLighting = false;
+          } else if (mat) {
+            // Unknown material type — replace with a new StandardMaterial that supports emissive
+            const newMat = new BABYLON.StandardMaterial(`${sm.name}_emissive`, this.scene);
+            newMat.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.9);
+            newMat.emissiveColor = new BABYLON.Color3(0, 0, 0);
+            sm.material = newMat;
+          }
+        });
 
         console.log(`[addLight] GLB loaded: ${result.meshes.length} meshes, scale=${scaleFactor.toFixed(3)}, lightHeadY=${lightHeadHeight.toFixed(2)}m, headMeshes=${headCount}`);
       } catch (loadErr) {
@@ -5676,13 +5702,14 @@ class VirtualStudio {
         head.position.y = 0;
         head.parent = fallbackHeadPivot;
         const headMat = new BABYLON.StandardMaterial(`${lightId}_headMat`, this.scene);
-        const color = this.cctToColor(lightConfig.cct);
-        headMat.emissiveColor = new BABYLON.Color3(color.r * 1.5, color.g * 1.5, color.b * 1.5);
-        headMat.disableLighting = true;
+        headMat.diffuseColor = new BABYLON.Color3(0.95, 0.95, 0.95);
+        headMat.emissiveColor = new BABYLON.Color3(0, 0, 0); // will be set by updateLightHeadGlow
+        headMat.disableLighting = false;
         head.material = headMat;
 
         mesh = standParent;
         (mesh as any)._headPivot = fallbackHeadPivot;
+        (mesh as any)._headMeshes = [head]; // track for live emissive updates
       }
       
       mesh.name = lightId;
@@ -5756,12 +5783,53 @@ class VirtualStudio {
         detail: { action: 'added', lightId, lightCount: this.lights.size } 
       }));
       
+      // Initial glow — apply at the current intensity right away
+      this.updateLightHeadGlow(lightData);
+
       console.log(`[addLight] Light created successfully: ${lightId}`);
       return lightId;
     } catch (err) {
       console.error(`[addLight] Error loading light ${modelId}:`, err);
       throw err;
     }
+  }
+
+  // Update the emissive glow on the softbox/octabox head to match current intensity.
+  // Call this whenever intensity, power, CCT or on/off state changes.
+  public updateLightHeadGlow(lightData: LightData): void {
+    const headMeshes: BABYLON.Mesh[] | undefined = (lightData.mesh as any)._headMeshes;
+    if (!headMeshes || headMeshes.length === 0) return;
+
+    const isEnabled = lightData.light.isEnabled();
+    // Use baseIntensity × powerMultiplier so the glow tracks the power slider,
+    // not the camera-exposure-adjusted light intensity.
+    const physicalCd = isEnabled
+      ? (lightData.baseIntensity ?? lightData.light.intensity) * (lightData.powerMultiplier ?? 1.0)
+      : 0;
+    // Map candela → perceptual emissive strength (0 = off, 1 = full brightness).
+    // We cap at 500 cd as the reference "full" brightness.
+    const t = Math.min(1.0, physicalCd / 500);
+    // Non-linear curve: looks more realistic (sqrt gives fast initial glow then gradual saturation)
+    const emissiveStrength = Math.sqrt(t) * 1.6;
+
+    // Use the light's current diffuse colour as the emissive tint.
+    const lightColor = lightData.light.diffuse;
+
+    headMeshes.forEach(sm => {
+      const mat = sm.material;
+      if (!mat) return;
+
+      if (mat instanceof BABYLON.PBRMaterial) {
+        mat.emissiveColor    = new BABYLON.Color3(lightColor.r, lightColor.g, lightColor.b);
+        mat.emissiveIntensity = emissiveStrength;
+      } else if (mat instanceof BABYLON.StandardMaterial) {
+        mat.emissiveColor = new BABYLON.Color3(
+          lightColor.r * emissiveStrength,
+          lightColor.g * emissiveStrength,
+          lightColor.b * emissiveStrength
+        );
+      }
+    });
   }
 
   // Helper: Aim light and mesh at a target position
@@ -6691,7 +6759,8 @@ class VirtualStudio {
         data.cct = cct;
         const color = this.cctToColor(cct);
         data.light.diffuse = color;
-        (data.mesh.material as BABYLON.StandardMaterial).emissiveColor = color;
+        // Update the visual glow colour to match the new CCT
+        this.updateLightHeadGlow(data);
       }
     });
 
@@ -6893,6 +6962,8 @@ class VirtualStudio {
       // Apply: baseIntensity * powerMultiplier * brightness
       data.light.intensity = data.baseIntensity * data.powerMultiplier * brightness;
       data.intensity = data.light.intensity;
+      // Sync visual glow on the softbox/octabox head to the power level
+      this.updateLightHeadGlow(data);
     }
     
     // Update ambient/hemisphere light if exists
@@ -25613,6 +25684,9 @@ class VirtualStudio {
     // Update visual state (emissive material, beam visualization)
     this.updateLightVisualState(data, newEnabled);
 
+    // Sync the softbox/octabox diffuser glow
+    this.updateLightHeadGlow(data);
+
     // Update light meter reading
     this.updateLightMeterReading();
 
@@ -31320,20 +31394,8 @@ window.addEventListener('DOMContentLoaded', () => {
             updateLightDisplay();
             // Trigger brightness update to apply the change
             studio.updateSceneBrightness();
-            
-            // Update emissive material intensity based on power
-            if (light.mesh.material) {
-              const mat = light.mesh.material as BABYLON.StandardMaterial | BABYLON.PBRMaterial;
-              if (mat.emissiveColor) {
-                const baseEmissive = light.light.diffuse;
-                const emissiveIntensity = Math.min(1.0, (light.intensity || 1) * light.powerMultiplier / 10);
-                mat.emissiveColor = new BABYLON.Color3(
-                  Math.min(1, baseEmissive.r * emissiveIntensity),
-                  Math.min(1, baseEmissive.g * emissiveIntensity),
-                  Math.min(1, baseEmissive.b * emissiveIntensity)
-                );
-              }
-            }
+            // Sync the visual glow on the softbox/octabox head
+            studio.updateLightHeadGlow(light);
           }
         }
       });
