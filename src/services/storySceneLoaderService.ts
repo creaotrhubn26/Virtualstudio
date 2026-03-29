@@ -20,6 +20,19 @@ import { logger } from '../core/services/logger';
 
 const log = logger.module('StorySceneLoader');
 
+// ─── Skin tone hex values (must be valid hex strings for Color3.FromHexString) ─
+const AVATAR_SKIN_HEX: Record<string, string> = {
+  man:       '#C68642',
+  woman:     '#EAC086',
+  child:     '#FFDAB9',
+  teenager:  '#FFE4C4',
+  elderly:   '#D2A679',
+  athlete:   '#A0522D',
+  dancer:    '#F5CBA7',
+  pregnant:  '#EAC086',
+  generated: '#EAC086',
+};
+
 // ─── Avatar type → model URL mapping (mirrors CharacterModelLoader registry) ─
 const AVATAR_MODEL_URLS: Record<string, string> = {
   man:       '/models/avatars/avatar_man.glb',
@@ -141,6 +154,9 @@ class StorySceneLoaderService {
         propRenderingService.setScene(vs.scene);
       }
 
+      // Clear previously loaded story props before loading new ones
+      propRenderingService.clearAllProps();
+
       const loadedProps = await propRenderingService.loadStorySceneProps(
         preset.props,
         (progress, label) => report('props', progress, `Laster prop: ${label}`),
@@ -166,11 +182,13 @@ class StorySceneLoaderService {
         const modelUrl = AVATAR_MODEL_URLS[charManifest.avatarType] ?? AVATAR_MODEL_URLS['generated'];
         log.info(`Dispatching story character: ${charManifest.label} (${charManifest.avatarType})`);
 
+        const skinHex = AVATAR_SKIN_HEX[charManifest.avatarType] ?? '#EAC086';
+
         window.dispatchEvent(new CustomEvent('ch-load-story-character', {
           detail: {
             modelUrl,
             name: charManifest.label,
-            skinTone: 'medium',
+            skinTone: skinHex,
             height: 1.75,
             position: charManifest.position,
             rotation: charManifest.rotation ?? [0, 0, 0],

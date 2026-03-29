@@ -25,6 +25,7 @@ import {
 import { RestartAlt, AccessibilityNew, Visibility, VisibilityOff, Link as LinkIcon } from '@mui/icons-material';
 import { ALL_POSES, PosePreset, BONE_NAMES } from '../core/animation/PoseLibrary';
 import { ActiveCharacterPose } from './MultiviewSkeletonPanel';
+import { useSkeletalAnimationStore } from '../services/skeletalAnimationService';
 
 // ============================================================================
 // Bone groups for organized display
@@ -231,7 +232,16 @@ export const BoneInspectorSidebar: React.FC<BoneInspectorSidebarProps> = ({
 
           <Tooltip title={ikEnabled ? 'Deaktiver IK' : 'Aktiver IK (invers kinematikk)'}>
             <Box
-              onClick={() => setIkEnabled(v => !v)}
+              onClick={() => {
+                const next = !ikEnabled;
+                setIkEnabled(next);
+                // Wire to live skeleton IK system if rig is available
+                if (character.rigId) {
+                  const IK_CHAIN_NAMES = ['leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
+                  const { enableIK: enableIKFn } = useSkeletalAnimationStore.getState();
+                  IK_CHAIN_NAMES.forEach(chain => enableIKFn(character.rigId!, chain, next));
+                }
+              }}
               sx={{
                 display: 'flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.3, borderRadius: '6px', cursor: 'pointer',
                 bgcolor: ikEnabled ? 'rgba(206,147,216,0.15)' : 'rgba(255,255,255,0.05)',
