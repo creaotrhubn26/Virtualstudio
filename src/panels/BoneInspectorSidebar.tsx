@@ -24,7 +24,7 @@ import {
 } from '@mui/material';
 import { RestartAlt, AccessibilityNew, Visibility, VisibilityOff, Link as LinkIcon } from '@mui/icons-material';
 import { ALL_POSES, PosePreset, BONE_NAMES } from '../core/animation/PoseLibrary';
-import { ActiveCharacterPose } from './MultiviewSkeletonPanel';
+import { ActiveCharacterPose, BoneOverride } from './MultiviewSkeletonPanel';
 import { useSkeletalAnimationStore } from '../services/skeletalAnimationService';
 
 // ============================================================================
@@ -344,7 +344,9 @@ export const BoneInspectorSidebar: React.FC<BoneInspectorSidebarProps> = ({
 
             {/* Position sliders — offset from rig-pose default (metres) */}
             {inspectorMode === 'position' && (['x', 'y', 'z'] as const).map(axis => {
-              const posOverride = (character.boneOverrides[selectedBone ?? ''] as any)?.[`pos_${axis}`] ?? 0;
+              const boneOverride: BoneOverride | undefined = selectedBone ? character.boneOverrides[selectedBone] : undefined;
+              const posKey: keyof BoneOverride = axis === 'x' ? 'pos_x' : axis === 'y' ? 'pos_y' : 'pos_z';
+              const posOverride: number = boneOverride?.[posKey] ?? 0;
               return (
                 <Box key={axis} sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>

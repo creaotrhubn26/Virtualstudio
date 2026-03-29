@@ -62,12 +62,28 @@ function getVSScene(): Scene | undefined {
 // Types
 // ============================================================================
 
+/** Per-bone rotation (Euler radians) and optional position offset (metres). */
+export interface BoneOverride {
+  /** Rotation X (radians) */
+  x: number;
+  /** Rotation Y (radians) */
+  y: number;
+  /** Rotation Z (radians) */
+  z: number;
+  /** Optional world-space position offset X (metres) */
+  pos_x?: number;
+  /** Optional world-space position offset Y (metres) */
+  pos_y?: number;
+  /** Optional world-space position offset Z (metres) */
+  pos_z?: number;
+}
+
 export interface ActiveCharacterPose {
   characterId: string;
   label: string;
   avatarType: string;
   poseId: string;
-  boneOverrides: Record<string, { x: number; y: number; z: number }>;
+  boneOverrides: Record<string, BoneOverride>;
   rigId?: string;
 }
 
@@ -198,7 +214,8 @@ function activateBabylonSkeletonViewers(enabled: boolean, activeRigId?: string):
       // Use only this rig's skeleton
       const skeleton = activeRig.mesh.skeleton;
       try {
-        const sv = new SkeletonViewer(skeleton, activeRig.mesh as any, scene, true, (activeRig.mesh.renderingGroupId ?? 0) + 1, {
+        const renderingGroup = activeRig.mesh.renderingGroupId ?? 0;
+        const sv = new SkeletonViewer(skeleton, activeRig.mesh, scene, true, renderingGroup + 1, {
           pauseAnimations: false,
           returnToRest: false,
           computeBonesUsingShaders: false,
@@ -327,6 +344,7 @@ interface BabylonViewportProps {
   character: ActiveCharacterPose;
   selectedBone: string | null;
   onSelectBone: (boneName: string) => void;
+  onIkTargetDrag?: (chainName: string, deltaX: number, deltaY: number) => void;
   compact?: boolean;
   showSkeleton: boolean;
   ikEnabled: boolean;
@@ -334,7 +352,7 @@ interface BabylonViewportProps {
 }
 
 const BabylonViewport: React.FC<BabylonViewportProps> = ({
-  viewIdx, view, character, selectedBone, onSelectBone, compact = false, showSkeleton, ikEnabled, canvasRef,
+  viewIdx, view, character, selectedBone, onSelectBone, onIkTargetDrag, compact = false, showSkeleton, ikEnabled, canvasRef,
 }) => {
   const joints = useMemo(() => getSkeletonJoints(viewIdx), [viewIdx]);
   const jointMap = useMemo(() => {
@@ -342,6 +360,30 @@ const BabylonViewport: React.FC<BabylonViewportProps> = ({
     joints.forEach(j => { m[j.id] = j; });
     return m;
   }, [joints]);
+
+  // IK drag state — track which chain is being dragged and last pointer position
+  const ikDragRef = React.useRef<{ chain: string; lastX: number; lastY: number } | null>(null);
+
+  const handleIkPointerDown = React.useCallback((chainName: string, e: React.PointerEvent<SVGElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    (e.target as SVGElement).setPointerCapture(e.pointerId);
+    ikDragRef.current = { chain: chainName, lastX: e.clientX, lastY: e.clientY };
+  }, []);
+
+  const handleIkPointerMove = React.useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+    if (!ikDragRef.current || !onIkTargetDrag) return;
+    const dx = e.clientX - ikDragRef.current.lastX;
+    const dy = e.clientY - ikDragRef.current.lastY;
+    ikDragRef.current.lastX = e.clientX;
+    ikDragRef.current.lastY = e.clientY;
+    // Scale pixel delta to metres (viewport width ≈ VW=160px ≡ ~2m span)
+    onIkTargetDrag(ikDragRef.current.chain, dx * 0.012, -dy * 0.012);
+  }, [onIkTargetDrag]);
+
+  const handleIkPointerUp = React.useCallback(() => {
+    ikDragRef.current = null;
+  }, []);
 
   return (
     <Box sx={{ position: 'relative', width: '100%', height: '100%', bgcolor: '#0a0d12', overflow: 'hidden' }}>
@@ -373,7 +415,10 @@ const BabylonViewport: React.FC<BabylonViewportProps> = ({
           height="100%"
           viewBox={`0 0 ${VW} ${VH}`}
           preserveAspectRatio="xMidYMid meet"
-          style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none' }}
+          style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: ikEnabled ? 'all' : 'none' }}
+          onPointerMove={handleIkPointerMove}
+          onPointerUp={handleIkPointerUp}
+          onPointerLeave={handleIkPointerUp}
         >
           {/* Subtle edges (selection hint only, real skeleton drawn by Babylon SkeletonViewer) */}
           {EDGES.map(edge => {
@@ -421,26 +466,30 @@ const BabylonViewport: React.FC<BabylonViewportProps> = ({
             />
           </g>
 
-          {/* IK target handles — diamond markers at end-effectors, visible when IK is active */}
+          {/* IK target handles — draggable diamond markers at end-effectors, visible when IK is active */}
           {ikEnabled && Object.entries(IK_CHAIN_END_JOINTS).map(([chainName, jointId]) => {
             const j = jointMap[jointId];
             if (!j) return null;
             const s = compact ? 6 : 8;
             return (
-              <g key={`ik-${chainName}`} style={{ pointerEvents: 'none' }}>
+              <g
+                key={`ik-${chainName}`}
+                style={{ cursor: 'grab', pointerEvents: 'all' }}
+                onPointerDown={(e: React.PointerEvent<SVGGElement>) => handleIkPointerDown(chainName, e)}
+              >
                 {/* Outer glow ring */}
                 <circle cx={j.x} cy={j.y} r={s + 4} fill="none" stroke="#ce93d8" strokeWidth={1} opacity={0.3} strokeDasharray="2 2" />
-                {/* Diamond IK target */}
+                {/* Diamond IK target — draggable */}
                 <polygon
                   points={`${j.x},${j.y - s} ${j.x + s},${j.y} ${j.x},${j.y + s} ${j.x - s},${j.y}`}
-                  fill="rgba(206,147,216,0.55)"
+                  fill="rgba(206,147,216,0.65)"
                   stroke="#ce93d8"
                   strokeWidth={1.5}
                 />
-                {/* IK label */}
+                {/* IK chain label */}
                 {!compact && (
-                  <text x={j.x + s + 3} y={j.y + 3} fontSize={7} fill="#ce93d8" opacity={0.8} style={{ userSelect: 'none' }}>
-                    {chainName.replace('left', 'V').replace('right', 'H').replace('Arm', '↑').replace('Leg', '↓')}
+                  <text x={j.x + s + 3} y={j.y + 3} fontSize={7} fill="#ce93d8" opacity={0.9} style={{ userSelect: 'none', pointerEvents: 'none' }}>
+                    {chainName === 'leftArm' ? 'V-arm' : chainName === 'rightArm' ? 'H-arm' : chainName === 'leftLeg' ? 'V-ben' : 'H-ben'}
                   </text>
                 )}
               </g>
@@ -615,7 +664,7 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
     if (!activeCharacter) return;
     setPoseStates(prev => {
       const charState = prev[activeCharacter.id];
-      const existing = charState.boneOverrides[boneName] ?? { x: 0, y: 0, z: 0 };
+      const existing: BoneOverride = charState.boneOverrides[boneName] ?? { x: 0, y: 0, z: 0 };
       const updated = {
         ...prev,
         [activeCharacter.id]: {
@@ -631,6 +680,25 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
         storySceneLoaderService.applyBoneOverridesToRig(charState.rigId, { [boneName]: newOverrides[boneName] });
       }
       return updated;
+    });
+  }, [activeCharacter]);
+
+  const handleBonePositionChange = useCallback((boneName: string, axis: 'x' | 'y' | 'z', value: number) => {
+    if (!activeCharacter) return;
+    const posKey = `pos_${axis}` as keyof BoneOverride;
+    setPoseStates(prev => {
+      const charState = prev[activeCharacter.id];
+      const existing: BoneOverride = charState.boneOverrides[boneName] ?? { x: 0, y: 0, z: 0 };
+      return {
+        ...prev,
+        [activeCharacter.id]: {
+          ...charState,
+          boneOverrides: {
+            ...charState.boneOverrides,
+            [boneName]: { ...existing, [posKey]: value },
+          },
+        },
+      };
     });
   }, [activeCharacter]);
 
@@ -659,6 +727,37 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
     setSelectedBone(null);
   }, [activeCharacter]);
 
+  // Map IK chain names to their end-effector Mixamo bone names
+  const IK_CHAIN_TO_BONE: Record<string, string> = {
+    leftArm:  BONE_NAMES.LEFT_FOREARM,
+    rightArm: BONE_NAMES.RIGHT_FOREARM,
+    leftLeg:  BONE_NAMES.LEFT_FOOT,
+    rightLeg: BONE_NAMES.RIGHT_FOOT,
+  };
+
+  const handleIkTargetDrag = useCallback((chainName: string, dx: number, dy: number) => {
+    const boneName = IK_CHAIN_TO_BONE[chainName];
+    if (!boneName || !activeCharacter) return;
+    setPoseStates(prev => {
+      const charState = prev[activeCharacter.id];
+      const existing: BoneOverride = charState.boneOverrides[boneName] ?? { x: 0, y: 0, z: 0 };
+      return {
+        ...prev,
+        [activeCharacter.id]: {
+          ...charState,
+          boneOverrides: {
+            ...charState.boneOverrides,
+            [boneName]: {
+              ...existing,
+              pos_x: (existing.pos_x ?? 0) + dx,
+              pos_y: (existing.pos_y ?? 0) + dy,
+            },
+          },
+        },
+      };
+    });
+  }, [activeCharacter]);
+
   if (!open) return null;
 
   const singleViewConfig = VIEWS.find(v => v.id === singleViewId) ?? VIEWS[0];
@@ -676,6 +775,7 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
         character={activePoseState}
         selectedBone={selectedBone}
         onSelectBone={setSelectedBone}
+        onIkTargetDrag={ikEnabled ? handleIkTargetDrag : undefined}
         compact={compact}
         showSkeleton={skeletonOverlayEnabled}
         ikEnabled={ikEnabled}
@@ -836,14 +936,26 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
         </Box>
       </Box>
 
-      {/* ── Right: Bone Inspector Sidebar ─────────────────────────────────── */}
-      <Box sx={{ width: 280, flexShrink: 0, bgcolor: '#0a0e15', borderLeft: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {activePoseState && (
+      {/* ── Right: Bone Inspector Sidebar — shown when a bone is selected ─── */}
+      <Box
+        sx={{
+          width: selectedBone ? 280 : 0,
+          flexShrink: 0,
+          bgcolor: '#0a0e15',
+          borderLeft: selectedBone ? '1px solid rgba(255,255,255,0.07)' : 'none',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          transition: 'width 0.22s ease',
+        }}
+      >
+        {activePoseState && selectedBone && (
           <BoneInspectorSidebar
             character={activePoseState}
             selectedBone={selectedBone}
             onSelectBone={setSelectedBone}
             onBoneRotationChange={handleBoneRotationChange}
+            onBonePositionChange={handleBonePositionChange}
             onPoseChange={handlePoseChange}
             skeletonOverlayEnabled={skeletonOverlayEnabled}
             onSkeletonOverlayToggle={setSkeletonOverlayEnabled}
@@ -851,6 +963,10 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
             onIkToggle={setIkEnabled}
             sceneType={sceneName}
           />
+        )}
+        {/* Hint when no bone is selected */}
+        {activePoseState && !selectedBone && (
+          <Box sx={{ width: 0, overflow: 'hidden' }} />
         )}
       </Box>
     </Box>
