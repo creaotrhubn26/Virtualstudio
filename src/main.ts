@@ -1279,7 +1279,9 @@ class VirtualStudio {
       this.lights.forEach((lightData) => {
         if (!lightData.shadowGenerator && lightData.light instanceof BABYLON.SpotLight) {
           lightData.shadowGenerator = new BABYLON.ShadowGenerator(2048, lightData.light);
-          lightData.shadowGenerator.useBlurExponentialShadowMap = true;
+          lightData.shadowGenerator.usePercentageCloserFiltering = true;
+          lightData.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
+          lightData.shadowGenerator.blurKernel = 64;
         }
         if (lightData.shadowGenerator) {
           this.scene.meshes.filter(m => m.isVisible && m !== lightData.mesh).forEach(m => {
@@ -1340,6 +1342,9 @@ class VirtualStudio {
     // Regenerate shadow maps for all lights (Phase 3: Shadow Map Auto-Update)
     private regenerateShadowMaps(): void {
       this.lights.forEach((lightData) => {
+        // Save existing kernel before disposing so we can restore it
+        const savedKernel = lightData.shadowGenerator?.blurKernel ?? 64;
+
         // Dispose existing shadow generator if present
         if (lightData.shadowGenerator) {
           const shadowMap = lightData.shadowGenerator.getShadowMap();
@@ -1353,8 +1358,10 @@ class VirtualStudio {
         // Create new shadow generator for spot/directional lights
         if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.DirectionalLight) {
           const shadowGenerator = new BABYLON.ShadowGenerator(2048, lightData.light);
-          shadowGenerator.useBlurExponentialShadowMap = true;
-          shadowGenerator.blurKernel = 32;
+          shadowGenerator.usePercentageCloserFiltering = true;
+          shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
+          // Restore previously tuned kernel (softbox=64, octabox=96, snoot=4, etc.)
+          shadowGenerator.blurKernel = savedKernel;
           
           // Add all visible meshes as shadow casters
           this.scene.meshes.forEach(mesh => {
@@ -1544,12 +1551,16 @@ class VirtualStudio {
         this.aimLightAt(lightId, config.target);
 
         if (data.shadowGenerator) {
-          data.shadowGenerator.useBlurExponentialShadowMap = true;
+          data.shadowGenerator.usePercentageCloserFiltering = true;
+          data.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
           data.shadowGenerator.blurKernel = config.blurKernel;
         }
 
         if (data.mesh.material instanceof BABYLON.StandardMaterial) {
-          const emissiveIntensity = Math.min(2.2, 0.5 + config.intensity * 0.25);
+          // Normalise emissive intensity to a 0-1 range for display glow.
+          // Physical intensities are in candela (300-700), so divide by 500 before scaling.
+          const normIntensity = Math.min(1.0, config.intensity / 500);
+          const emissiveIntensity = Math.min(2.2, 0.5 + normIntensity * 1.8);
           data.mesh.material.emissiveColor = new BABYLON.Color3(
             Math.min(2.2, color.r * emissiveIntensity),
             Math.min(2.2, color.g * emissiveIntensity),
@@ -1559,39 +1570,40 @@ class VirtualStudio {
       };
 
       applyLightProfile(keyEntry, {
-        intensity: 2.0,
+        intensity: 450,       // candela — strong key, FALLOFF_PHYSICAL 1/d²
         cct: 5200,
-        angle: Math.PI / 4.2,
-        exponent: 1.4,
+        angle: Math.PI / 3,   // 60° half-angle, softbox-style wide field
+        exponent: 2.0,         // near-uniform illumination across panel
         target: new BABYLON.Vector3(0, 1.3, 0),
-        blurKernel: 32,
+        blurKernel: 64,        // softbox: broad soft shadows
       });
 
       applyLightProfile(fillEntry, {
-        intensity: 0.9,
+        intensity: 200,       // ~44% of key — classic 2.2:1 ratio
         cct: 5600,
-        angle: Math.PI / 2.6,
-        exponent: 1.0,
+        angle: Math.PI / 2.5, // 72° — octabox-style very wide
+        exponent: 1.5,         // near-uniform, maximum coverage
         target: new BABYLON.Vector3(0, 1.2, 0),
-        blurKernel: 64,
+        blurKernel: 96,        // octabox: maximum beauty softness
       });
 
       applyLightProfile(rimEntry, {
-        intensity: 1.25,
+        intensity: 350,       // strong rim for separation
         cct: 6200,
-        angle: Math.PI / 5.2,
-        exponent: 2.2,
+        angle: Math.PI / 5,   // 36° — tighter, edge-defining beam
+        exponent: 3.5,         // slight centre hotspot for crisp edge
         target: new BABYLON.Vector3(0, 1.45, 0),
-        blurKernel: 56,
+        blurKernel: 32,        // rim: some shadow definition
       });
 
-      // Keep any extra lights from flattening facial contrast.
+      // Keep extra lights from flattening facial contrast.
+      // Scale intensity proportionally rather than clamping to a tiny absolute value.
       entries.forEach(([lightId, data]) => {
         if (used.has(lightId)) return;
         const clampedPower = Math.min(0.45, data.powerMultiplier ?? 1.0);
         data.powerMultiplier = clampedPower;
-        data.intensity = Math.min(data.intensity || data.light.intensity, 0.65);
-        data.light.intensity = data.intensity * clampedPower;
+        data.intensity = (data.intensity || data.light.intensity) * clampedPower;
+        data.light.intensity = data.intensity;
       });
     }
 
@@ -5555,20 +5567,25 @@ class VirtualStudio {
     console.log(`[addLight] Loading light model: ${modelId} at position ${position.toString()}`);
     
     // Map model IDs to light specs — softbox/octabox GLBs generated for realistic studio look
-    const lightSpecs: { [key: string]: { intensity: number; name: string; cct: number; beamAngle: number; glbFile: string } } = {
-      'aputure-300d':   { intensity: 20, name: 'Aputure 300D',     cct: 5600, beamAngle: Math.PI / 5,   glbFile: '/models/lights/softbox-stand.glb' },
-      'aputure-120d':   { intensity: 15, name: 'Aputure 120D',     cct: 5600, beamAngle: Math.PI / 5,   glbFile: '/models/lights/softbox-stand.glb' },
-      'aputure-600d':   { intensity: 30, name: 'Aputure 600D Pro', cct: 5600, beamAngle: Math.PI / 6,   glbFile: '/models/lights/softbox-stand.glb' },
-      'godox-ad600':    { intensity: 18, name: 'Godox AD600',      cct: 5600, beamAngle: Math.PI / 4,   glbFile: '/models/lights/octabox-stand.glb' },
-      'godox-ad200pro': { intensity: 12, name: 'Godox AD200Pro',   cct: 5600, beamAngle: Math.PI / 3,   glbFile: '/models/lights/octabox-stand.glb' },
-      'godox-ad400pro': { intensity: 16, name: 'Godox AD400Pro',   cct: 5600, beamAngle: Math.PI / 3,   glbFile: '/models/lights/octabox-stand.glb' },
-      'godox-ad600pro': { intensity: 20, name: 'Godox AD600Pro',   cct: 5600, beamAngle: Math.PI / 4,   glbFile: '/models/lights/octabox-stand.glb' },
-      'profoto-b10plus':{ intensity: 22, name: 'Profoto B10 Plus', cct: 5600, beamAngle: Math.PI / 3.5, glbFile: '/models/lights/octabox-stand.glb' },
-      'profoto-b10':    { intensity: 20, name: 'Profoto B10',      cct: 5600, beamAngle: Math.PI / 3.5, glbFile: '/models/lights/octabox-stand.glb' },
-      'profoto-d2':     { intensity: 18, name: 'Profoto D2',       cct: 5600, beamAngle: Math.PI / 3.8, glbFile: '/models/lights/octabox-stand.glb' },
+    // Physical intensity values in candela — calibrated for FALLOFF_PHYSICAL (1/d²).
+    // Formula: E_lux = I_cd / d².  Key light at ~4.5m needs I ≈ E × d² ≈ 250 × 20 = 5000 cd.
+    // We use moderate values (300-700 cd) balanced against the scene's exposure/tone-map.
+    // Softbox (rectangular) → wider beam, lower exponent (uniform field), very soft shadows.
+    // Octabox (circular)    → even wider, near-uniform field, maximum shadow softness.
+    const lightSpecs: { [key: string]: { intensity: number; name: string; cct: number; beamAngle: number; exponent: number; shadowKernel: number; glbFile: string } } = {
+      'aputure-300d':   { intensity: 450, name: 'Aputure 300D',     cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb' },
+      'aputure-120d':   { intensity: 300, name: 'Aputure 120D',     cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb' },
+      'aputure-600d':   { intensity: 700, name: 'Aputure 600D Pro', cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb' },
+      'godox-ad600':    { intensity: 380, name: 'Godox AD600',      cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb' },
+      'godox-ad200pro': { intensity: 240, name: 'Godox AD200Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb' },
+      'godox-ad400pro': { intensity: 340, name: 'Godox AD400Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb' },
+      'godox-ad600pro': { intensity: 420, name: 'Godox AD600Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb' },
+      'profoto-b10plus':{ intensity: 480, name: 'Profoto B10 Plus', cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb' },
+      'profoto-b10':    { intensity: 420, name: 'Profoto B10',      cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb' },
+      'profoto-d2':     { intensity: 380, name: 'Profoto D2',       cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 80,  glbFile: '/models/lights/octabox-stand.glb' },
     };
     
-    const lightConfig = lightSpecs[modelId] || { intensity: 15, name: modelId, cct: 5600, beamAngle: Math.PI / 5, glbFile: '/models/lights/softbox-stand.glb' };
+    const lightConfig = lightSpecs[modelId] || { intensity: 350, name: modelId, cct: 5600, beamAngle: Math.PI / 3, exponent: 2.0, shadowKernel: 64, glbFile: '/models/lights/softbox-stand.glb' };
     
     try {
       const modelUrl = resolveModelPath(lightConfig.glbFile);
@@ -5679,13 +5696,16 @@ class VirtualStudio {
         lightHeadPosition,
         new BABYLON.Vector3(0, -1, 0).normalize(), // Will be updated by aimLightAt
         lightConfig.beamAngle,
-        2.0,
+        lightConfig.exponent,
         this.scene
       );
       
+      // Physical inverse-square-law falloff: E = I / d²
+      // FALLOFF_PHYSICAL disables the legacy "range" soft cutoff and uses true 1/d² attenuation.
+      babylonLight.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
       babylonLight.intensity = lightConfig.intensity;
       babylonLight.diffuse = color;
-      babylonLight.range = 50;
+      babylonLight.range = 200; // Large value — acts as hard-cutoff only, not attenuation
       
       // Store light head height for later use in aiming
       (mesh as any)._lightHeadHeight = lightHeadHeight;
@@ -5708,6 +5728,23 @@ class VirtualStudio {
       
       // Store light in lights map
       this.lights.set(lightId, lightData);
+
+      // Create shadow generator immediately with PCF soft shadows.
+      // Kernel size is tuned per light type: softboxes need larger kernels for
+      // diffuse, wrapping shadows; snoots/fresnels use small kernels for crisp edges.
+      const shadowGen = new BABYLON.ShadowGenerator(2048, babylonLight);
+      shadowGen.usePercentageCloserFiltering = true;
+      shadowGen.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
+      shadowGen.blurKernel = lightConfig.shadowKernel;
+      // Add every visible mesh in the scene as a shadow caster
+      this.scene.meshes.forEach(m => {
+        if (m.isVisible && m !== mesh && m.getTotalVertices() > 0) {
+          shadowGen.addShadowCaster(m, true);
+        }
+      });
+      this.scene.meshes.forEach(m => { if (m.isVisible && m.getTotalVertices() > 0) m.receiveShadows = true; });
+      lightData.shadowGenerator = shadowGen;
+      console.log(`[addLight] Shadow generator created: kernel=${lightConfig.shadowKernel}, PCF quality=HIGH`);
       
       // Add mesh to gizmo manager for selection
       if (this.gizmoManager?.attachableMeshes) {
@@ -5821,9 +5858,14 @@ class VirtualStudio {
       this.aimLightAt(keyLightId, new BABYLON.Vector3(0, 1.3, 0));
       
       if (keyLight.light instanceof BABYLON.SpotLight) {
-        keyLight.light.angle = Math.PI / 4; // ~45° beam - covers full body
-        keyLight.light.exponent = 1.5; // Soft falloff
-        keyLight.light.intensity = 20; // Professional key light intensity
+        // Softbox: wide, uniform field — low exponent gives flat (non-concentrated) illumination
+        keyLight.light.angle = Math.PI / 3;   // 60° half-angle → 120° total spread
+        keyLight.light.exponent = 2.0;         // Soft field, slight centre warmth
+        keyLight.light.intensity = 450;        // candela — at 4.5m: ~22 lux (realistic key)
+        keyLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
+      }
+      if (keyLight.shadowGenerator) {
+        keyLight.shadowGenerator.blurKernel = 64; // Softbox: broad, soft shadows
       }
     }
     
@@ -5840,9 +5882,14 @@ class VirtualStudio {
       this.aimLightAt(fillLightId, subjectCenter);
       
       if (fillLight.light instanceof BABYLON.SpotLight) {
-        fillLight.light.angle = Math.PI / 3; // ~60° wider beam for soft fill
-        fillLight.light.exponent = 1.0; // Very soft falloff
-        fillLight.light.intensity = 12; // Fill at ~60% of key
+        // Octabox fill: even wider, near-uniform field — closest to a true area light
+        fillLight.light.angle = Math.PI / 2.5; // 72° half-angle → 144° total spread
+        fillLight.light.exponent = 1.5;         // Near-uniform illumination across panel
+        fillLight.light.intensity = 200;        // candela — ~50% of key (classic 2:1 ratio)
+        fillLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
+      }
+      if (fillLight.shadowGenerator) {
+        fillLight.shadowGenerator.blurKernel = 96; // Octabox: maximum softness ("beauty" shadows)
       }
     }
     
@@ -5859,17 +5906,18 @@ class VirtualStudio {
       this.aimLightAt(rimLightId, new BABYLON.Vector3(0, 1.5, 0));
       
       if (rimLight.light instanceof BABYLON.SpotLight) {
-        rimLight.light.angle = Math.PI / 5; // ~36° tighter beam for crisp edge
-        rimLight.light.exponent = 2.5; // Sharper falloff for defined rim
-        rimLight.light.intensity = 15; // Rim at 75% of key for strong separation
+        // Rim/hair light: tighter cone, moderate concentration — defines the edge
+        rimLight.light.angle = Math.PI / 5;   // 36° half-angle — focused on subject edge
+        rimLight.light.exponent = 3.5;         // Slight centre hotspot → crisper edge light
+        rimLight.light.intensity = 350;        // candela — strong rim for separation
+        rimLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
       }
       
       // Slightly warmer color for golden rim effect (classic portrait look)
       rimLight.light.diffuse = new BABYLON.Color3(1.0, 0.95, 0.88);
       
       if (rimLight.shadowGenerator) {
-        // Softer shadows from rim light
-        rimLight.shadowGenerator.blurKernel = 64;
+        rimLight.shadowGenerator.blurKernel = 32; // Rim: tighter, some definition in shadow edge
       }
     }
     
@@ -31457,74 +31505,46 @@ window.addEventListener('DOMContentLoaded', () => {
             // For directional modifiers (snoot, grid), adjust for sharper, more focused lighting
             
             if (light.light instanceof BABYLON.SpotLight) {
-              // Adjust SpotLight properties based on modifier
-              switch (modifier) {
-                // Focusing modifiers - narrow beam, sharp falloff
-                case 'snoot':
-                  light.light.angle = Math.PI / 12; // 15°
-                  light.light.exponent = 80;
-                  break;
-                case 'grid':
-                  light.light.angle = Math.PI / 8; // 22.5°
-                  light.light.exponent = 64;
-                  break;
-                case 'barndoors':
-                  light.light.angle = Math.PI / 5; // 36°
-                  light.light.exponent = 48;
-                  break;
-                case 'fresnel':
-                  light.light.angle = Math.PI / 6; // 30°
-                  light.light.exponent = 40;
-                  break;
-                case 'gobo':
-                  light.light.angle = Math.PI / 10; // 18°
-                  light.light.exponent = 64;
-                  break;
-                  
-                // Softening modifiers - wider beam, soft falloff
-                case 'softbox':
-                case 'stripbox':
-                  light.light.angle = Math.PI / 3; // 60°
-                  light.light.exponent = 16;
-                  break;
-                case 'octabox':
-                  light.light.angle = Math.PI / 2.5; // 72°
-                  light.light.exponent = 12;
-                  break;
-                case 'umbrella':
-                case 'umbrella-reflective':
-                  light.light.angle = Math.PI / 2; // 90°
-                  light.light.exponent = 8;
-                  break;
-                case 'beautydish':
-                  light.light.angle = Math.PI / 4; // 45°
-                  light.light.exponent = 24;
-                  break;
-                case 'silkframe':
-                  light.light.angle = Math.PI / 2; // 90°
-                  light.light.exponent = 4;
-                  break;
-                  
-                // Reflectors - adjust color temperature slightly
-                case 'reflector-silver':
-                  light.light.angle = Math.PI / 4;
-                  light.light.exponent = 32;
-                  break;
-                case 'reflector-gold':
-                  light.light.angle = Math.PI / 4;
-                  light.light.exponent = 32;
-                  // Warm up the light slightly
-                  light.light.diffuse = new BABYLON.Color3(1.0, 0.92, 0.8);
-                  break;
-                case 'reflector-white':
-                  light.light.angle = Math.PI / 3;
-                  light.light.exponent = 20;
-                  break;
-                  
-                default:
-                  // No modifier - default spotlight settings
-                  light.light.angle = Math.PI / 4; // 45°
-                  light.light.exponent = 32;
+              // Physical modifier profiles — inverse square law already active (FALLOFF_PHYSICAL).
+              // exponent: controls beam concentration within the cone (cos^exponent falloff).
+              //   Low  (1-3): near-uniform field across the whole modifier face — softbox/octabox.
+              //   Mid  (4-8): slight centre hotspot — beauty dish, barndoors.
+              //   High (12+): concentrated beam with sharp edges — fresnel, snoot, grid.
+              // shadowKernel: larger = softer shadow penumbra.
+              //   Octabox/umbrella → 96   (maximum beauty softness)
+              //   Softbox/stripbox → 64   (clean portrait shadow)
+              //   Beauty dish      → 32   (defined but soft)
+              //   Barndoors/grid   → 16   (crisp spill control)
+              //   Fresnel          → 8    (sharp theatrical beam)
+              //   Snoot/gobo       → 4    (hard accent/hair light)
+              type ModProfile = { angle: number; exponent: number; kernel: number };
+              const modProfiles: { [k: string]: ModProfile } = {
+                'softbox':            { angle: Math.PI / 3,    exponent: 2.0,  kernel: 64  },
+                'stripbox':           { angle: Math.PI / 3,    exponent: 2.0,  kernel: 64  },
+                'octabox':            { angle: Math.PI / 2.5,  exponent: 1.5,  kernel: 96  },
+                'umbrella':           { angle: Math.PI / 2,    exponent: 1.0,  kernel: 96  },
+                'umbrella-reflective':{ angle: Math.PI / 2,    exponent: 1.0,  kernel: 96  },
+                'silkframe':          { angle: Math.PI / 2,    exponent: 1.0,  kernel: 96  },
+                'beautydish':         { angle: Math.PI / 4,    exponent: 3.5,  kernel: 32  },
+                'barndoors':          { angle: Math.PI / 5,    exponent: 4.0,  kernel: 16  },
+                'reflector-silver':   { angle: Math.PI / 4,    exponent: 5.0,  kernel: 24  },
+                'reflector-gold':     { angle: Math.PI / 4,    exponent: 5.0,  kernel: 24  },
+                'reflector-white':    { angle: Math.PI / 3,    exponent: 3.5,  kernel: 32  },
+                'fresnel':            { angle: Math.PI / 6,    exponent: 10.0, kernel: 8   },
+                'grid':               { angle: Math.PI / 8,    exponent: 12.0, kernel: 12  },
+                'snoot':              { angle: Math.PI / 12,   exponent: 20.0, kernel: 4   },
+                'gobo':               { angle: Math.PI / 10,   exponent: 18.0, kernel: 4   },
+                'none':               { angle: Math.PI / 4,    exponent: 4.0,  kernel: 32  },
+              };
+              const prof = modProfiles[modifier] ?? modProfiles['none'];
+              light.light.angle    = prof.angle;
+              light.light.exponent = prof.exponent;
+              if (light.shadowGenerator) {
+                light.shadowGenerator.blurKernel = prof.kernel;
+              }
+              // Gold reflector also warms the colour temperature
+              if (modifier === 'reflector-gold') {
+                light.light.diffuse = new BABYLON.Color3(1.0, 0.92, 0.8);
               }
             } else if (light.light instanceof BABYLON.PointLight) {
               // Adjust PointLight range based on modifier
@@ -31829,9 +31849,10 @@ window.addEventListener('DOMContentLoaded', () => {
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light && light.shadowGenerator) {
-            // Map 0-100 to blur kernel 0-64
-            light.shadowGenerator.blurKernel = Math.floor((value / 100) * 64);
-            light.shadowGenerator.useBlurExponentialShadowMap = value > 0;
+            // Map 0-100% → kernel 4-128 (PCF softness)
+            light.shadowGenerator.blurKernel = Math.max(4, Math.floor((value / 100) * 128));
+            light.shadowGenerator.usePercentageCloserFiltering = value > 0;
+            light.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
           }
         }
       });
@@ -31867,7 +31888,8 @@ window.addEventListener('DOMContentLoaded', () => {
             newGenerator.setDarkness(oldGenerator.getDarkness());
             newGenerator.blurKernel = oldGenerator.blurKernel;
             newGenerator.bias = oldGenerator.bias;
-            newGenerator.useBlurExponentialShadowMap = oldGenerator.useBlurExponentialShadowMap;
+            newGenerator.usePercentageCloserFiltering = true;
+            newGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
             
             // Add shadow casters
             studio.scene.meshes.forEach(mesh => {
@@ -32428,9 +32450,9 @@ window.addEventListener('DOMContentLoaded', () => {
           
           // Define preset positions and settings
           const presets: Record<string, { pos: [number, number, number], cct: number, intensity: number }> = {
-            key: { pos: [2, 3, 2], cct: 5600, intensity: 1.0 },
-            fill: { pos: [-1.5, 2.5, 2], cct: 5600, intensity: 0.4 },
-            rim: { pos: [-2, 3.5, -2], cct: 5600, intensity: 0.8 }
+            key:  { pos: [2, 3, 2],      cct: 5600, intensity: 420 },  // candela, FALLOFF_PHYSICAL
+            fill: { pos: [-1.5, 2.5, 2], cct: 5600, intensity: 190 },  // ~45% of key
+            rim:  { pos: [-2, 3.5, -2],  cct: 5600, intensity: 340 }   // strong rim
           };
           
           const presetData = presets[preset];
