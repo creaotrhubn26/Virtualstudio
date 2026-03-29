@@ -21,7 +21,6 @@ export interface VirtualStudioPublicProps {
 
 declare global {
   interface Window {
-    virtualStudio?: VirtualStudioPublicProps;
     __storySkeletonViewers?: SkeletonViewer[];
   }
 }

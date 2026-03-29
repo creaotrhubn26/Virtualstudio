@@ -36,10 +36,10 @@ import { useSkeletalAnimationStore } from '../services/skeletalAnimationService'
 import { storySceneLoaderService } from '../services/storySceneLoaderService';
 
 // ── Runtime accessor for window.virtualStudio ──────────────────────────────
-// `scene` is public on VirtualStudio — typed in src/types/babylon-extensions.d.ts.
+// `scene` is public on VirtualStudio (main.ts line 677).
 // Engine is obtained via scene.getEngine() to avoid accessing private members.
 function getVSScene(): Scene | undefined {
-  return window.virtualStudio?.scene;
+  return window.virtualStudio?.scene as Scene | undefined;
 }
 
 // Types
@@ -487,12 +487,15 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
   const [poseStates, setPoseStates] = useState<Record<string, ActiveCharacterPose>>(() => {
     const init: Record<string, ActiveCharacterPose> = {};
     characters.forEach(c => {
+      // Hydrate rigId immediately from service if already loaded (panel opened after scene load)
+      const existingRigId = storySceneLoaderService.getRigId(c.id);
       init[c.id] = {
         characterId: c.id,
         label: c.label,
         avatarType: c.avatarType,
         poseId: c.poseId,
         boneOverrides: {},
+        rigId: existingRigId,
       };
     });
     return init;
@@ -611,7 +614,9 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
     if (!activeCharacter) return;
     setPoseStates(prev => {
       const charState = prev[activeCharacter.id];
-      const existing: BoneOverride = charState.boneOverrides[boneName] ?? { x: 0, y: 0, z: 0 };
+      // Seed from active pose baseline so other axes are preserved on first edit
+      const poseBaseline = ALL_POSES.find(p => p.id === charState.poseId)?.pose[boneName] ?? { x: 0, y: 0, z: 0 };
+      const existing: BoneOverride = charState.boneOverrides[boneName] ?? { ...poseBaseline };
       const updated = {
         ...prev,
         [activeCharacter.id]: {
