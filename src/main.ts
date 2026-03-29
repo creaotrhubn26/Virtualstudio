@@ -5730,21 +5730,23 @@ class VirtualStudio {
               }
             }
 
-            if (isFinite(fxMin) && fxMax > fxMin) {
+            if (isFinite(fxMin) && isFinite(fyMin) && fxMax > fxMin) {
               // Width: measured from front-face vertices — accurate.
               panelW = fxMax - fxMin;
               // Height: the TRELLIS GLB only has front-face geometry at the very top of
-              // the head, so fyMax-fyMin gives just that thin strip.
-              // Use the full head height (headJointWorldY → bMax.y) instead.
-              panelH = bMax.y - headJointWorldY;
+              // the head; fyMax-fyMin captures only that thin strip. Since the TRELLIS
+              // softbox is square and the octabox is circular, height = width is correct.
+              panelH = panelW;
               // X center: vertex-measured (avoids flash-mount bracket offset).
-              // Y center: midpoint of the full head height range.
+              // Y center: vertex-measured midpoint of the front-face strip, which sits at
+              // the actual diffuser panel centre even when fyMin ≈ headJointWorldY.
               (geoMesh as any)._diffuserXCenter = (fxMin + fxMax) * 0.5;
-              (geoMesh as any)._diffuserYCenter = (headJointWorldY + bMax.y) * 0.5;
+              (geoMesh as any)._diffuserYCenter = (fyMin + fyMax) * 0.5;
               measuredFromVertices = true;
-              console.log(`[addLight] VERTEX diffuser: W=${panelW.toFixed(3)}m H=${panelH.toFixed(3)}m` +
-                ` Xcenter=${((fxMin + fxMax) * 0.5).toFixed(3)} Ycenter=${((headJointWorldY + bMax.y) * 0.5).toFixed(3)}` +
-                ` rawX=[${fxMin.toFixed(3)},${fxMax.toFixed(3)}] headJointY=${headJointWorldY.toFixed(3)} bMaxY=${bMax.y.toFixed(3)}`);
+              console.log(`[addLight] VERTEX diffuser: W=${panelW.toFixed(3)}m H(=W)=${panelH.toFixed(3)}m` +
+                ` Xcenter=${((fxMin + fxMax) * 0.5).toFixed(3)} Ycenter=${((fyMin + fyMax) * 0.5).toFixed(3)}` +
+                ` rawX=[${fxMin.toFixed(3)},${fxMax.toFixed(3)}] rawY=[${fyMin.toFixed(3)},${fyMax.toFixed(3)}]` +
+                ` eps=${epsilon.toFixed(3)}`);
             } else {
               console.warn(`[addLight] No front-face vertices found (eps=${epsilon.toFixed(3)}, bMinZ=${bMin.z.toFixed(3)}); using bbox fallback`);
             }
@@ -5780,18 +5782,13 @@ class VirtualStudio {
         const isOctabox = lightConfig.glbFile.includes('octabox');
         let diffuserPlane: BABYLON.Mesh;
         if (isOctabox) {
-          // Octabox has an octagonal / circular diffuser — use a disc with 8 sides.
-          // radius = half of the panel width so the diameter matches panelW.
+          // Octabox diffuser is circular — 8-sided disc (regular octagon).
+          // panelH = panelW so no Y-stretch needed; radius = half diameter.
           diffuserPlane = BABYLON.MeshBuilder.CreateDisc(
             `${lightId}_diffuserGlow`,
             { radius: localPanelW * 0.5, tessellation: 8 },
             this.scene
           );
-          // Stretch the disc vertically to match the measured height.
-          // (diameter = panelW in X; scale Y so diameter = panelH in Y.)
-          if (localPanelW > 0) {
-            diffuserPlane.scaling.y = localPanelH / localPanelW;
-          }
         } else {
           diffuserPlane = BABYLON.MeshBuilder.CreatePlane(
             `${lightId}_diffuserGlow`, { width: localPanelW, height: localPanelH }, this.scene
