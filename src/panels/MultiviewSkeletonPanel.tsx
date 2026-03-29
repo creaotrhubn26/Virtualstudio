@@ -603,19 +603,6 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
     return () => window.removeEventListener('ch-story-rig-ready', onRigReady);
   }, []);
 
-  // Fallback: attach loaded rigs by index if storyRigId not matched
-  useEffect(() => {
-    const rigEntries = Array.from(rigs.entries());
-    setPoseStates(prev => {
-      const updated = { ...prev };
-      characters.forEach((c, idx) => {
-        if (!updated[c.id]?.rigId && rigEntries[idx]) {
-          updated[c.id] = { ...updated[c.id], rigId: rigEntries[idx][0] };
-        }
-      });
-      return updated;
-    });
-  }, [rigs, characters]);
 
   const activeCharacter = characters[activeCharIdx];
   const activePoseState = activeCharacter ? poseStates[activeCharacter.id] : null;
@@ -937,7 +924,12 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
           transition: 'width 0.22s ease',
         }}
       >
-        {activePoseState && selectedBone && (
+        {activePoseState && !activePoseState.rigId && (
+          <Box sx={{ px: 2, py: 1.5 }}>
+            <Typography sx={{ fontSize: 11, color: '#ff9800' }}>Rigg ikke klar</Typography>
+          </Box>
+        )}
+        {activePoseState && activePoseState.rigId && selectedBone && (
           <BoneInspectorSidebar
             character={activePoseState}
             selectedBone={selectedBone}
@@ -951,10 +943,6 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
             onIkToggle={setIkEnabled}
             sceneType={sceneName}
           />
-        )}
-        {/* Hint when no bone is selected */}
-        {activePoseState && !selectedBone && (
-          <Box sx={{ width: 0, overflow: 'hidden' }} />
         )}
       </Box>
     </Box>
