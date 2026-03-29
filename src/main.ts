@@ -5695,12 +5695,59 @@ class VirtualStudio {
 
         console.log(`[addLight] HEAD bbox (headMeshes=${headCount}): X[${bMin.x.toFixed(2)},${bMax.x.toFixed(2)}] Y[${bMin.y.toFixed(2)},${bMax.y.toFixed(2)}] Z[${bMin.z.toFixed(2)},${bMax.z.toFixed(2)}]`);
 
-        // World-space extents of the full softbox head bounding box.
-        // The gray diffuser fabric fills the entire face of the softbox head.
-        // The outer black border rail is < 2% per side — use the full bbox.
-        const DIFFUSER_INNER_RATIO = 1.0;
-        const panelW = Math.max(0.05, bMax.x - bMin.x) * DIFFUSER_INNER_RATIO;
-        const panelH = Math.max(0.05, bMax.y - bMin.y) * DIFFUSER_INNER_RATIO;
+        // Measure the diffuser panel exactly by scanning the geometry mesh's vertices.
+        // Strategy: find all vertices that are (a) near the minimum Z of the head bbox
+        // (the −Z diffuser face) AND (b) above the head joint Y (excludes tripod legs
+        // that share the same bMin.z because the model is Z-symmetric).
+        let panelW: number = Math.max(0.05, bMax.x - bMin.x);
+        let panelH: number = Math.max(0.05, bMax.y - bMin.y);
+
+        const geoMesh = glowSource.find(sm => sm.getTotalVertices() > 0) as BABYLON.Mesh | undefined;
+        let measuredFromVertices = false;
+
+        if (geoMesh) {
+          const positions = geoMesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+          if (positions && positions.length > 0) {
+            geoMesh.computeWorldMatrix(true);
+            const wm = geoMesh.getWorldMatrix();
+            // Epsilon: 4% of the model depth, minimum 3 cm.
+            const modelDepth = Math.abs(bMax.z - bMin.z);
+            const epsilon = Math.max(0.03, modelDepth * 0.04);
+
+            let fxMin = Infinity, fxMax = -Infinity;
+            let fyMin = Infinity, fyMax = -Infinity;
+            const src = new BABYLON.Vector3();
+            const dst = new BABYLON.Vector3();
+            for (let vi = 0; vi < positions.length; vi += 3) {
+              src.x = positions[vi]; src.y = positions[vi + 1]; src.z = positions[vi + 2];
+              BABYLON.Vector3.TransformCoordinatesToRef(src, wm, dst);
+              // Front face filter: near bMin.z, above the stand/tripod joint.
+              if (Math.abs(dst.z - bMin.z) <= epsilon && dst.y >= headJointWorldY) {
+                if (dst.x < fxMin) fxMin = dst.x;
+                if (dst.x > fxMax) fxMax = dst.x;
+                if (dst.y < fyMin) fyMin = dst.y;
+                if (dst.y > fyMax) fyMax = dst.y;
+              }
+            }
+
+            if (isFinite(fxMin) && isFinite(fyMin) && fxMax > fxMin && fyMax > fyMin) {
+              panelW = fxMax - fxMin;
+              panelH = fyMax - fyMin;
+              measuredFromVertices = true;
+              console.log(`[addLight] VERTEX diffuser: W=${panelW.toFixed(3)}m H=${panelH.toFixed(3)}m` +
+                ` (eps=${epsilon.toFixed(3)}, bMinZ=${bMin.z.toFixed(3)}, jointY=${headJointWorldY.toFixed(3)})`);
+            } else {
+              console.warn(`[addLight] No front-face vertices found (eps=${epsilon.toFixed(3)}, bMinZ=${bMin.z.toFixed(3)}); using bbox fallback`);
+            }
+          }
+        }
+
+        if (!measuredFromVertices) {
+          // Fallback: use the full head bounding box extents.
+          panelW = Math.max(0.05, bMax.x - bMin.x);
+          panelH = Math.max(0.05, bMax.y - bMin.y);
+          console.log(`[addLight] BBOX diffuser fallback: W=${panelW.toFixed(3)}m H=${panelH.toFixed(3)}m`);
+        }
         // World-space centre on the −Z (diffuser) face of the head bounding box.
         // Offset 1.5 cm in −Z so it sits just in front of the physical face.
         const worldCenter = new BABYLON.Vector3(
