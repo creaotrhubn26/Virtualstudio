@@ -21,9 +21,10 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { Palette, Person, BusinessCenter, Favorite, Movie, Star, Lightbulb, CameraAlt, Search as SearchIcon, School, Add, Folder, Edit, Delete, Close, Save, Build, PhotoCamera, Wallpaper, Tune, Landscape, Videocam, FlashOn, ShowChart, CameraEnhance, AutoStories } from '@mui/icons-material';
+import { Palette, Person, BusinessCenter, Favorite, Movie, Star, Lightbulb, CameraAlt, Search as SearchIcon, School, Add, Folder, Edit, Delete, Close, Save, Build, PhotoCamera, Wallpaper, Tune, Landscape, Videocam, FlashOn, ShowChart, CameraEnhance, AutoStories, AccessibilityNew } from '@mui/icons-material';
 import { scenarioPresets, ScenarioPreset } from '../data/scenarioPresets';
 import { customPresetService, CustomPreset } from '../services/customPresetService';
+import { MultiviewSkeletonPanel } from './MultiviewSkeletonPanel';
 import { CAMERA_BODIES, LENSES, CameraBody, Lens, getLensFocalLength } from '../data/cameraGear';
 import { LIGHT_DATABASE, LightSpec, getLightDisplayName, getLightPowerDisplay } from '../data/lightFixtures';
 import { BACKDROP_DATABASE, BACKDROP_CATEGORIES, BackdropSpec, BackdropCategory } from '../data/backdropDefinitions';
@@ -115,6 +116,7 @@ const buttonStyle = {
   const [activeKategori, setActiveKategori] = useState<string>('alle');
   const [search, setSearch] = useState<string>('');
   const [customPresets, setCustomPresets] = useState<CustomPreset[]>([]);
+  const [multiviewPreset, setMultiviewPreset] = useState<ScenarioPreset | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showSetupTypeDialog, setShowSetupTypeDialog] = useState(false);
   const [showModeSelection, setShowModeSelection] = useState(false);
@@ -501,45 +503,71 @@ const buttonStyle = {
             </Typography>
           )}
 
-          <Stack direction="row" spacing={1.5}>
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={() => onApplyPreset(preset as ScenarioPreset)}
-              sx={{
-                ...buttonStyle,
-                bgcolor: color,
-                color: preset.kategori === 'hollywood' ? '#000' : '#fff',
-                fontWeight: 700,
-                '&:hover': {
-                  bgcolor: color,
-                  filter: 'brightness(1.15)',
-                  transform: 'translateY(-2px)',
-                  boxShadow: `0 6px 16px ${color}50`,
-                },
-              }}
-            >
-              Last mal
-            </Button>
-            {!isCustom && (
+          <Stack direction="column" spacing={1}>
+            <Stack direction="row" spacing={1.5}>
               <Button
-                variant="outlined"
+                variant="contained"
                 fullWidth
-                onClick={() => onShowRecommended(preset as ScenarioPreset)}
+                onClick={() => onApplyPreset(preset as ScenarioPreset)}
                 sx={{
                   ...buttonStyle,
-                  borderColor: color,
-                  color: color,
-                  borderWidth: 2,
+                  bgcolor: color,
+                  color: preset.kategori === 'hollywood' ? '#000' : '#fff',
+                  fontWeight: 700,
                   '&:hover': {
-                    borderColor: color,
-                    bgcolor: `${color}15`,
+                    bgcolor: color,
+                    filter: 'brightness(1.15)',
                     transform: 'translateY(-2px)',
-                    boxShadow: `0 6px 16px ${color}30`,
+                    boxShadow: `0 6px 16px ${color}50`,
                   },
                 }}
               >
-                Anbefalt utstyr
+                Last mal
+              </Button>
+              {!isCustom && (
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  onClick={() => onShowRecommended(preset as ScenarioPreset)}
+                  sx={{
+                    ...buttonStyle,
+                    borderColor: color,
+                    color: color,
+                    borderWidth: 2,
+                    '&:hover': {
+                      borderColor: color,
+                      bgcolor: `${color}15`,
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 6px 16px ${color}30`,
+                    },
+                  }}
+                >
+                  Anbefalt utstyr
+                </Button>
+              )}
+            </Stack>
+
+            {preset.kategori === 'story' && !isCustom && (preset as ScenarioPreset).characters && (preset as ScenarioPreset).characters!.length > 0 && (
+              <Button
+                variant="outlined"
+                fullWidth
+                startIcon={<AccessibilityNew sx={{ fontSize: 18 }} />}
+                onClick={() => setMultiviewPreset(preset as ScenarioPreset)}
+                sx={{
+                  ...buttonStyle,
+                  borderColor: '#ff9800',
+                  color: '#ff9800',
+                  borderWidth: 2,
+                  bgcolor: 'rgba(255,152,0,0.05)',
+                  '&:hover': {
+                    borderColor: '#ff9800',
+                    bgcolor: 'rgba(255,152,0,0.15)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 6px 16px rgba(255,152,0,0.25)',
+                  },
+                }}
+              >
+                🎬 Åpne Multiview
               </Button>
             )}
           </Stack>
@@ -2599,6 +2627,16 @@ const buttonStyle = {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Multiview Skeleton Panel */}
+      {multiviewPreset && multiviewPreset.characters && (
+        <MultiviewSkeletonPanel
+          open={Boolean(multiviewPreset)}
+          onClose={() => setMultiviewPreset(null)}
+          characters={multiviewPreset.characters}
+          sceneName={multiviewPreset.navn}
+        />
+      )}
     </Box>
   );
 };

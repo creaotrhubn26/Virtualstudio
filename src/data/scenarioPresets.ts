@@ -1,3 +1,22 @@
+export interface StoryCharacterManifest {
+  id: string;
+  role: string;
+  avatarType: string;
+  poseId: string;
+  position: [number, number, number];
+  rotation?: [number, number, number];
+  label: string;
+}
+
+export interface StoryPropManifest {
+  id: string;
+  propId: string;
+  position: [number, number, number];
+  rotation?: [number, number, number];
+  scale?: [number, number, number];
+  label: string;
+}
+
 export interface ScenarioPreset {
   id: string;
   navn: string;
@@ -7,6 +26,8 @@ export interface ScenarioPreset {
   previewImage?: string;
   difficulty?: 'beginner' | 'intermediate' | 'advanced' | 'expert';
   usedIn?: string[];
+  characters?: StoryCharacterManifest[];
+  props?: StoryPropManifest[];
   sceneConfig: {
     lights: Array<{
       type: string;
@@ -537,6 +558,32 @@ export const scenarioPresets: ScenarioPreset[] = [
     tags: ['story', 'napoli-dreams', 'restaurant', 'mat', 'atmosfære', 'stearinlys', 'tungsten', 'varm', 'intim', 'pizzeria', 'akt-1'],
     difficulty: 'intermediate',
     usedIn: ['Napoli Dreams — Akt 1 av 3', 'Restaurantfotografering', 'Social media innhold'],
+    characters: [
+      {
+        id: 'char-akt1-waiter',
+        role: 'Kelner',
+        avatarType: 'man',
+        poseId: 'commercial_welcoming',
+        position: [-0.6, 0, 0.3],
+        rotation: [0, 15, 0],
+        label: 'Kelner',
+      },
+      {
+        id: 'char-akt1-guest',
+        role: 'Gjest',
+        avatarType: 'woman',
+        poseId: 'portrait_classic_stand',
+        position: [0.8, 0, 0.6],
+        rotation: [0, -20, 0],
+        label: 'Gjest',
+      },
+    ],
+    props: [
+      { id: 'prop-akt1-table', propId: 'table_rustic', position: [0, 0, 0.4], rotation: [0, 0, 0], label: 'Rustikt bord' },
+      { id: 'prop-akt1-wine', propId: 'wine_bottle_red', position: [0.15, 0.76, 0.4], rotation: [0, 20, 0], label: 'Rødvin' },
+      { id: 'prop-akt1-pizza', propId: 'pizza_hero_display', position: [-0.1, 0.76, 0.4], rotation: [0, 0, 0], label: 'Pizza' },
+      { id: 'prop-akt1-counter', propId: 'counter_pizza_prep', position: [0, 0.9, -1.0], rotation: [0, 0, 0], label: 'Pizzateller' },
+    ],
     sceneConfig: {
       lights: [
         {
@@ -638,6 +685,21 @@ export const scenarioPresets: ScenarioPreset[] = [
     tags: ['story', 'napoli-dreams', 'mat', 'produkt', 'studio', 'overhead', 'matfoto', 'hvit', 'ren', 'meny', 'akt-2'],
     difficulty: 'beginner',
     usedIn: ['Napoli Dreams — Akt 2 av 3', 'Matfotografering', 'Menyfoto', 'Leveringsapp'],
+    characters: [
+      {
+        id: 'char-akt2-stylist',
+        role: 'Mat-stylist',
+        avatarType: 'woman',
+        poseId: 'commercial_pointing',
+        position: [1.2, 0, 0.5],
+        rotation: [0, -45, 0],
+        label: 'Mat-stylist',
+      },
+    ],
+    props: [
+      { id: 'prop-akt2-pizza', propId: 'pizza_hero_display', position: [0, 0.55, 0], rotation: [0, 0, 0], label: 'Pizza (hero shot)' },
+      { id: 'prop-akt2-table', propId: 'table_rustic', position: [0, 0, 0], rotation: [0, 0, 0], label: 'Produktbord', scale: [0.8, 0.6, 0.8] },
+    ],
     sceneConfig: {
       lights: [
         {
@@ -723,6 +785,31 @@ export const scenarioPresets: ScenarioPreset[] = [
     tags: ['story', 'napoli-dreams', 'video', 'intervju', 'chef', 'bicolor', 'led', 'branded', 'youtube', 'tre-punkt', 'akt-3'],
     difficulty: 'intermediate',
     usedIn: ['Napoli Dreams — Akt 3 av 3', 'Chef-intervju', 'Brand story video', 'YouTube produksjon'],
+    characters: [
+      {
+        id: 'char-akt3-chef',
+        role: 'Kokk',
+        avatarType: 'man',
+        poseId: 'fashion_power_stance',
+        position: [-0.3, 0, 0.5],
+        rotation: [0, 10, 0],
+        label: 'Chef',
+      },
+      {
+        id: 'char-akt3-interviewer',
+        role: 'Intervjuer',
+        avatarType: 'woman',
+        poseId: 'portrait_classic_stand',
+        position: [1.5, 0, 1.2],
+        rotation: [0, -60, 0],
+        label: 'Intervjuer',
+      },
+    ],
+    props: [
+      { id: 'prop-akt3-table', propId: 'table_rustic', position: [0.3, 0, -0.2], rotation: [0, 0, 0], label: 'Arbeidsbord' },
+      { id: 'prop-akt3-pizza', propId: 'pizza_hero_display', position: [0.3, 0.76, -0.2], rotation: [0, 0, 0], label: 'Pizza prop' },
+      { id: 'prop-akt3-wine', propId: 'wine_bottle_red', position: [0.55, 0.76, -0.2], rotation: [0, 30, 0], label: 'Vinflasker' },
+    ],
     sceneConfig: {
       lights: [
         {

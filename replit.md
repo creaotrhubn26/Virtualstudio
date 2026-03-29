@@ -145,6 +145,13 @@ A complete image-to-3D pipeline using TripoSR via Replicate API:
 - **Model**: `stability-ai/triposr` on Replicate (~60–120 seconds per generation)
 - **Output**: GLB files saved in `backend/triposr_models/`, served via `/api/triposr/model/`
 
+## Story Scenes & Multiview Skeleton
+- **Story presets** (`src/data/scenarioPresets.ts`): Three "Napoli Dreams" presets (Akt 1-3) under the `story` category, each with `characters[]` and `props[]` manifests defining positions/roles/poses.
+- **Schema extensions**: `StoryCharacterManifest` and `StoryPropManifest` interfaces added to `ScenarioPreset`.
+- **MultiviewSkeletonPanel** (`src/panels/MultiviewSkeletonPanel.tsx`): Full-screen 2×2 multiview SVG skeleton grid (Front, Side, 3/4, Back views) with interactive bone selection, character tab switching, and per-view zoom.
+- **BoneInspectorSidebar** (`src/panels/BoneInspectorSidebar.tsx`): Categorized bone picker (5 groups), per-bone X/Y/Z rotation sliders, and pose library browser (6 categories in Norwegian).
+- **ScenerPanel integration**: "🎬 Åpne Multiview" button on all story scene cards that have characters; opens the MultiviewSkeletonPanel overlay.
+
 ## External Dependencies
 - **@babylonjs/core, @babylonjs/loaders, @babylonjs/gui**: 3D engine and related components.
 - **react, react-dom**: Core libraries for the user interface.
