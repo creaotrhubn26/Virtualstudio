@@ -5607,14 +5607,38 @@ class VirtualStudio {
         const finalBounds = parentMesh.getHierarchyBoundingVectors(true);
         lightHeadHeight = finalBounds.max.y;
 
-        console.log(`[addLight] GLB loaded: ${result.meshes.length} meshes, scale=${scaleFactor.toFixed(3)}, lightHeadY=${lightHeadHeight.toFixed(2)}m`);
+        // Create a headPivot at the stand-head junction (~60% of total height).
+        // Sub-meshes whose centroid is above the junction get re-parented here,
+        // so only the head geometry tilts while the stand stays vertical.
+        const headJointWorldY = lightHeadHeight * 0.60;
+        const headPivot = new BABYLON.TransformNode(`${lightId}_headPivot`, this.scene);
+        headPivot.parent = parentMesh;
+        parentMesh.computeWorldMatrix(true);
+        headPivot.setAbsolutePosition(new BABYLON.Vector3(position.x, headJointWorldY, position.z));
+
+        const allSubMeshes = parentMesh.getChildMeshes(true);
+        let headCount = 0;
+        for (const sm of allSubMeshes) {
+          if (!(sm instanceof BABYLON.Mesh)) continue;
+          sm.computeWorldMatrix(true);
+          const bi = sm.getBoundingInfo().boundingBox;
+          const cy = (bi.minimumWorld.y + bi.maximumWorld.y) * 0.5;
+          if (cy > headJointWorldY) {
+            sm.setParent(headPivot);
+            headCount++;
+          }
+        }
+        (mesh as any)._headPivot = headPivot;
+
+        console.log(`[addLight] GLB loaded: ${result.meshes.length} meshes, scale=${scaleFactor.toFixed(3)}, lightHeadY=${lightHeadHeight.toFixed(2)}m, headMeshes=${headCount}`);
       } catch (loadErr) {
         console.warn(`[addLight] Failed to load GLB ${modelUrl}, using fallback stand:`, loadErr);
 
-        // Fallback: realistic light-stand placeholder (pole + glowing softbox head)
+        // Fallback: realistic light-stand placeholder (vertical pole + tilting head)
         const standParent = new BABYLON.Mesh(lightId, this.scene);
         standParent.position = new BABYLON.Vector3(position.x, 0, position.z);
 
+        // Pole stays under standParent — only Y rotation is applied (always vertical)
         const pole = BABYLON.MeshBuilder.CreateCylinder(`${lightId}_pole`, {
           height: lightHeadHeight, diameterTop: 0.03, diameterBottom: 0.07, tessellation: 8
         }, this.scene);
@@ -5624,11 +5648,16 @@ class VirtualStudio {
         poleMat.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.15);
         pole.material = poleMat;
 
+        // HeadPivot at the top of the pole — only X rotation is applied (tilt)
+        const fallbackHeadPivot = new BABYLON.TransformNode(`${lightId}_headPivot`, this.scene);
+        fallbackHeadPivot.parent = standParent;
+        fallbackHeadPivot.position.y = lightHeadHeight; // top of stand
+
         const head = BABYLON.MeshBuilder.CreateBox(`${lightId}_head`, {
           width: 0.65, height: 0.45, depth: 0.08
         }, this.scene);
-        head.position.y = lightHeadHeight;
-        head.parent = standParent;
+        head.position.y = 0;
+        head.parent = fallbackHeadPivot;
         const headMat = new BABYLON.StandardMaterial(`${lightId}_headMat`, this.scene);
         const color = this.cctToColor(lightConfig.cct);
         headMat.emissiveColor = new BABYLON.Color3(color.r * 1.5, color.g * 1.5, color.b * 1.5);
@@ -5636,6 +5665,7 @@ class VirtualStudio {
         head.material = headMat;
 
         mesh = standParent;
+        (mesh as any)._headPivot = fallbackHeadPivot;
       }
       
       mesh.name = lightId;
@@ -5727,23 +5757,29 @@ class VirtualStudio {
       const horizontalDist = Math.sqrt(dx * dx + dz * dz);
 
       // The TRELLIS softbox/octabox model has its diffuser face on -Z (model default).
-      // To aim the -Z face AT the target we need atan2(-dx, -dz) (i.e. atan2(dx,dz) + π).
+      // atan2(-dx, -dz) makes the -Z face point at the target horizontally.
       const yRotation = Math.atan2(-dx, -dz);
 
-      // Elevation: tilt the -Z face downward toward the subject.
+      // Elevation: tilt the head downward toward the subject.
       // lightHeadHeight stored on the mesh by addLight after bounding-box grounding.
       const lightHeadY = (mesh as any)._lightHeadHeight ?? lightHeadPos.y;
       const dy = target.y - lightHeadY; // Negative: target is below light head
-
-      // For -Z face: Rx(θ) produces y-component = sin(θ) on the face direction.
-      // We want downward → negative y → negative θ → atan2(dy, h) (dy is negative → θ negative).
+      // For -Z face: xRotation = atan2(dy, h) → negative → tilts -Z face downward.
       const xRotation = horizontalDist > 0.01 ? Math.atan2(dy, horizontalDist) : 0;
 
-      mesh.rotation = new BABYLON.Vector3(xRotation, yRotation, 0);
+      // Apply Y rotation to the whole model (azimuth only — stand stays perfectly vertical).
+      mesh.rotation = new BABYLON.Vector3(0, yRotation, 0);
       mesh.rotationQuaternion = null;
       mesh.computeWorldMatrix(true);
 
-      console.log(`[aimLightAt] ${lightId}: yaw=${(yRotation * 180/Math.PI).toFixed(1)}°, tilt=${(xRotation * 180/Math.PI).toFixed(1)}°`);
+      // Apply X rotation ONLY to the head pivot so the stand never tilts.
+      const headPivotNode = (mesh as any)._headPivot as BABYLON.TransformNode | undefined;
+      if (headPivotNode) {
+        headPivotNode.rotationQuaternion = null;
+        headPivotNode.rotation.x = xRotation;
+      }
+
+      console.log(`[aimLightAt] ${lightId}: yaw=${(yRotation * 180/Math.PI).toFixed(1)}°, tilt=${(xRotation * 180/Math.PI).toFixed(1)}° (headPivot=${!!headPivotNode})`);
     } catch (e) {
       console.error(`[aimLightAt] Error rotating mesh:`, e);
     }
