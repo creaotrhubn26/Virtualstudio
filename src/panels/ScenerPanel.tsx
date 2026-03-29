@@ -27,6 +27,7 @@ import { scenarioPresets, ScenarioPreset } from '../data/scenarioPresets';
 import { customPresetService, CustomPreset } from '../services/customPresetService';
 import { MultiviewSkeletonPanel } from './MultiviewSkeletonPanel';
 import { storySceneLoaderService, StorySceneLoadProgress } from '../services/storySceneLoaderService';
+import { CinematicDirectorPanel } from '../components/CinematicDirectorPanel';
 import { CAMERA_BODIES, LENSES, CameraBody, Lens, getLensFocalLength } from '../data/cameraGear';
 import { LIGHT_DATABASE, LightSpec, getLightDisplayName, getLightPowerDisplay } from '../data/lightFixtures';
 import { BACKDROP_DATABASE, BACKDROP_CATEGORIES, BackdropSpec, BackdropCategory } from '../data/backdropDefinitions';
@@ -1039,6 +1040,11 @@ const buttonStyle = {
               </Box>
             )}
           </Box>
+
+          {/* Cinematic Director for Napoli Dreams */}
+          <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(255,109,0,0.2)' }}>
+            <CinematicDirectorPanel sceneType="napoli" />
+          </Box>
         </Box>
       )}
 
@@ -1170,6 +1176,11 @@ const buttonStyle = {
                   <Typography sx={{ color: '#4b4020', fontSize: 10, fontFamily: 'monospace' }}>GLB</Typography>
                 </Box>
               ))}
+            </Box>
+
+            {/* Cinematic Director for Hollywood Studio */}
+            <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(255,193,7,0.15)' }}>
+              <CinematicDirectorPanel sceneType="hollywood" />
             </Box>
           </Box>
         );

@@ -55,7 +55,8 @@ The application uses a hybrid architecture combining Vanilla TypeScript with Bab
 - **Properties Panel:** Allows selection-specific adjustments for lights (position, rotation, CCT, modifier settings, IES, Gobo, Focus) and cameras (Aperture, Shutter, ISO, ND), along with a light meter.
 - **Virtual Actor Panel:** Generates and customizes 3D actors with adjustable parameters, presets, and integration with Meta SAM 3D Body for realistic avatar creation from images.
 - **Asset Loading:** Comprehensive system for loading 3D assets (characters, props, modifiers, accessories, HDRI environments) with drag-and-drop.
-- **Animation Engine:** Utilizes a `SceneGraphAnimationEngine` for keyframe-based animations.
+- **Animation Engine:** Utilizes a `SceneGraphAnimationEngine` for keyframe-based animations, a `SkeletalAnimationService` for IK/FK/blend-shape character animation, and a `CinematicDirectorService` for pre-built cinematic camera sequences (orbit, dolly, crane, dramatic low-angle, pull-back reveal, and scene-specific Hollywood Studio / Napoli Dreams shots) using Babylon.js native `Animation.CreateAndStartAnimation`.
+- **Cinematic Director Panel:** `src/components/CinematicDirectorPanel.tsx` — compact panel integrated into the Scener tab showing playable cinematic shots filtered by scene type (hollywood / napoli / all), with progress tracking, category filters, and play/stop controls.
 - **Project Management:** Includes project name editing, undo/redo, resolution selection, PDF export, custom preset system, and a "Scener" tab for scenario presets.
 - **NotesPanel:** Professional solution for creating, editing, and deleting categorized notes with localStorage persistence.
 - **Academy Learning Platform:** A comprehensive learning and course creation platform with components for dashboards, course management, video annotation, and instructor revenue tracking.
