@@ -16758,11 +16758,11 @@ class VirtualStudio {
       mesh = result.meshes[0];
       mesh.name = `story_${storyRigId}`;
 
-      // Scale to target height
+      // Scale to target height — height parameter is already the desired height in metres
       const bounds = mesh.getHierarchyBoundingVectors(true);
       const modelHeight = bounds.max.y - bounds.min.y;
       if (modelHeight > 0.001) {
-        const targetH = 1.7 * (height || 1.0);
+        const targetH = height || 1.75; // use height directly as metres (not as multiplier)
         const scale = targetH / modelHeight;
         mesh.scaling = new BABYLON.Vector3(scale, scale, scale);
       }

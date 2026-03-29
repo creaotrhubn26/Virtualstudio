@@ -24,6 +24,7 @@ import React, {
   useEffect,
   useRef,
 } from 'react';
+import type { ArcRotateCamera, Engine, Scene, SkeletonViewer } from '@babylonjs/core';
 import {
   Box,
   Typography,
@@ -43,11 +44,33 @@ import {
   Fullscreen,
   PictureInPicture,
 } from '@mui/icons-material';
-import { ALL_POSES, PosePreset, PoseData, BONE_NAMES } from '../core/animation/PoseLibrary';
+import { ALL_POSES, BONE_NAMES } from '../core/animation/PoseLibrary';
 import { StoryCharacterManifest } from '../data/scenarioPresets';
 import { BoneInspectorSidebar } from './BoneInspectorSidebar';
 import { useSkeletalAnimationStore } from '../services/skeletalAnimationService';
 import { storySceneLoaderService } from '../services/storySceneLoaderService';
+
+// ── Runtime accessor for window.virtualStudio (engine is private on class) ──
+interface VSRuntime { engine: Engine; scene: Scene; }
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function getVS(): VSRuntime | undefined {
+  return (window as any).virtualStudio as VSRuntime | undefined;
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+// ── Runtime accessor for BABYLON global ──────────────────────────────────────
+interface BABYLONRuntime {
+  ArcRotateCamera: new (name: string, alpha: number, beta: number, radius: number, target: unknown, scene: Scene) => ArcRotateCamera;
+  Vector3: new (x: number, y: number, z: number) => { x: number; y: number; z: number };
+  SkeletonViewer: {
+    new (skeleton: unknown, mesh: unknown, scene: Scene, autoUpdate: boolean, rgId: number, opts: Record<string, unknown>): SkeletonViewer;
+    DISPLAY_LINES: number;
+  };
+}
+function getBABYLON(): BABYLONRuntime | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (window as any).BABYLON as BABYLONRuntime | undefined;
+}
 
 // ============================================================================
 // Types
@@ -85,20 +108,24 @@ const VIEWS: ViewConfig[] = [
 // Babylon multiview management
 // ============================================================================
 
+interface BabylonEngineView {
+  target: HTMLCanvasElement;
+}
+
 interface BabylonView {
   viewId: string;
-  camera: any;   // BABYLON.ArcRotateCamera
-  view: any;     // engine.registerView() handle
+  camera: ArcRotateCamera;
+  view: BabylonEngineView | null;
 }
 
 let _registeredViews: BabylonView[] = [];
 
 function disposeBabylonViews(): void {
-  const vs = (window as any).virtualStudio;
+  const vs = getVS();
   if (!vs?.engine) return;
   _registeredViews.forEach(({ view, camera }) => {
-    try { vs.engine.unRegisterView?.(view.target); } catch {}
-    try { camera.dispose?.(); } catch {}
+    try { if (view?.target) (vs.engine as unknown as { unRegisterView?(c: HTMLCanvasElement): void }).unRegisterView?.(view.target); } catch {}
+    try { camera.dispose(); } catch {}
   });
   _registeredViews = [];
 }
@@ -110,21 +137,23 @@ function setupBabylonMultiviewCameras(
 ): void {
   disposeBabylonViews();
 
-  const vs = (window as any).virtualStudio;
+  const vs = getVS();
   if (!vs?.engine || !vs?.scene) {
     console.warn('[MultiviewPanel] virtualStudio engine/scene not available');
     return;
   }
 
-  const engine: any = vs.engine;
-  const scene: any = vs.scene;
-  const BABYLON = (window as any).BABYLON;
-  if (!BABYLON) {
+  const { engine, scene } = vs;
+  const BABYLON = getBABYLON();
+  if (!BABYLON?.ArcRotateCamera) {
     console.warn('[MultiviewPanel] BABYLON global not available');
     return;
   }
 
   const target = new BABYLON.Vector3(targetPosition.x, targetPosition.y, targetPosition.z);
+  const engineWithViews = engine as unknown as {
+    registerView(canvas: HTMLCanvasElement, camera: ArcRotateCamera): BabylonEngineView;
+  };
 
   VIEWS.forEach((viewCfg, idx) => {
     const canvas = canvases[idx];
@@ -137,18 +166,15 @@ function setupBabylonMultiviewCameras(
       radius,
       target,
       scene,
-    );
+    ) as ArcRotateCamera;
     cam.lowerRadiusLimit = radius * 0.3;
     cam.upperRadiusLimit = radius * 4;
-    cam.wheelPrecision = 50;
-    cam.pinchPrecision = 50;
-    // Do NOT attach control to avoid interfering with main canvas
-    // cam.attachControl(canvas, true);  // omitted intentionally
+    (cam as ArcRotateCamera & { wheelPrecision: number; pinchPrecision: number }).wheelPrecision = 50;
+    (cam as ArcRotateCamera & { wheelPrecision: number; pinchPrecision: number }).pinchPrecision = 50;
 
-    let viewHandle: any = null;
+    let viewHandle: BabylonEngineView | null = null;
     try {
-      // engine.registerView returns an EngineView — each canvas gets a dedicated viewport
-      viewHandle = engine.registerView(canvas, cam);
+      viewHandle = engineWithViews.registerView(canvas, cam);
     } catch (err) {
       console.warn(`[MultiviewPanel] registerView failed for ${viewCfg.id}:`, err);
     }
@@ -161,27 +187,27 @@ function setupBabylonMultiviewCameras(
 }
 
 function activateBabylonSkeletonViewers(enabled: boolean): void {
-  const vs = (window as any).virtualStudio;
+  const vs = getVS();
   if (!vs?.scene) return;
-  const scene = vs.scene;
+  const { scene } = vs;
 
-  if ((window as any).__storySkeletonViewers) {
-    ((window as any).__storySkeletonViewers as any[]).forEach((sv: any) => {
-      try { sv.dispose?.(); } catch {}
-    });
-    (window as any).__storySkeletonViewers = [];
+  // Dispose existing viewers
+  const existingViewers = (window as unknown as { __storySkeletonViewers?: SkeletonViewer[] }).__storySkeletonViewers;
+  if (existingViewers) {
+    existingViewers.forEach((sv) => { try { sv.dispose(); } catch {} });
+    (window as unknown as { __storySkeletonViewers: SkeletonViewer[] }).__storySkeletonViewers = [];
   }
   if (!enabled) return;
 
-  const BABYLON = (window as any).BABYLON;
+  const BABYLON = getBABYLON();
   if (!BABYLON?.SkeletonViewer) return;
 
-  const viewers: any[] = [];
-  scene.skeletons?.forEach((skeleton: any) => {
+  const viewers: SkeletonViewer[] = [];
+  (scene.skeletons ?? []).forEach((skeleton) => {
     try {
-      const meshes = scene.meshes.filter((m: any) => m.skeleton === skeleton);
+      const meshes = scene.meshes.filter((m) => m.skeleton === skeleton);
       if (meshes.length === 0) return;
-      const sv = new BABYLON.SkeletonViewer(skeleton, meshes[0], scene, true, meshes[0].renderingGroupId + 1, {
+      const sv = new BABYLON.SkeletonViewer(skeleton, meshes[0], scene, true, (meshes[0].renderingGroupId ?? 0) + 1, {
         pauseAnimations: false,
         returnToRest: false,
         computeBonesUsingShaders: false,
@@ -193,7 +219,7 @@ function activateBabylonSkeletonViewers(enabled: boolean): void {
       console.warn('[SkeletonViewer] Could not create viewer:', err);
     }
   });
-  (window as any).__storySkeletonViewers = viewers;
+  (window as unknown as { __storySkeletonViewers: SkeletonViewer[] }).__storySkeletonViewers = viewers;
   console.log(`[MultiviewPanel] SkeletonViewer: ${viewers.length} active`);
 }
 
@@ -205,22 +231,14 @@ function getCharacterCenter(rigId: string | undefined): { x: number; y: number; 
   const rig = rigs.get(rigId);
   if (!rig?.mesh) return fallback;
 
-  const BABYLON = (window as any).BABYLON;
-  if (!BABYLON) return fallback;
-
   try {
-    const mesh: any = rig.mesh;
+    const mesh = rig.mesh;
     mesh.computeWorldMatrix(true);
     const info = mesh.getHierarchyBoundingVectors(true);
-    const min = info.min;
-    const max = info.max;
-    const cx = (min.x + max.x) / 2;
-    const cy = (min.y + max.y) / 2;
-    const cz = (min.z + max.z) / 2;
-    const dx = max.x - min.x;
-    const dy = max.y - min.y;
-    const dz = max.z - min.z;
-    const radius = Math.max(dx, dy, dz) * 1.4;
+    const cx = (info.min.x + info.max.x) / 2;
+    const cy = (info.min.y + info.max.y) / 2;
+    const cz = (info.min.z + info.max.z) / 2;
+    const radius = Math.max(info.max.x - info.min.x, info.max.y - info.min.y, info.max.z - info.min.z) * 1.4;
     return { x: cx, y: cy, z: cz, radius };
   } catch {
     return fallback;
@@ -470,18 +488,34 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
     activateBabylonSkeletonViewers(skeletonOverlayEnabled);
   }, [open, skeletonOverlayEnabled, rigs.size]);
 
+  // Re-register views when layout changes (canvases may have been re-mounted)
+  useEffect(() => {
+    if (!open) return;
+    const timer = setTimeout(() => {
+      const activeChar = characters[activeCharIdx];
+      const rigId = activeChar ? poseStates[activeChar.id]?.rigId : undefined;
+      const center = getCharacterCenter(rigId);
+      const canvases = canvasRefs.map(r => r.current).filter(Boolean) as HTMLCanvasElement[];
+      if (canvases.length > 0) {
+        setupBabylonMultiviewCameras(canvases, center, center.radius);
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, layoutMode]);
+
   // Re-point cameras when active character changes
   useEffect(() => {
     if (!open || _registeredViews.length === 0) return;
     const activeChar = characters[activeCharIdx];
     const rigId = activeChar ? poseStates[activeChar.id]?.rigId : undefined;
     const center = getCharacterCenter(rigId);
-    const BABYLON = (window as any).BABYLON;
-    if (!BABYLON) return;
-    const newTarget = new BABYLON.Vector3(center.x, center.y, center.z);
     _registeredViews.forEach(({ camera }) => {
       try {
-        camera.target = newTarget;
+        // Update target coordinates in-place to avoid Vector3 type assignment issues
+        camera.target.x = center.x;
+        camera.target.y = center.y;
+        camera.target.z = center.z;
         camera.radius = center.radius;
       } catch {}
     });

@@ -285,7 +285,9 @@ class PropRenderingService {
         });
 
         mesh.name = `story_prop_${manifest.id}`;
-        mesh.rotation = new Vector3(rx, ry, rz);
+        // Manifest rotation values are in degrees — convert to radians for Babylon
+        const DEG2RAD = Math.PI / 180;
+        mesh.rotation = new Vector3(rx * DEG2RAD, ry * DEG2RAD, rz * DEG2RAD);
         if (manifest.scale) {
           mesh.scaling = new Vector3(
             (propDef.defaultScale) * sx,
