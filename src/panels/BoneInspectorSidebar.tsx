@@ -1,14 +1,3 @@
-/**
- * BoneInspectorSidebar
- *
- * Beinselektor og rotasjonsjustering for multiview skjelett-panelet.
- * Gir brukeren muligheten til å:
- *   - Velge et bein fra en kategorisert liste
- *   - Justere X/Y/Z-rotasjon med slidere (synkronisert til live Babylon rig)
- *   - Velge en ferdig pose fra posebiblioteket (filtrert etter scenetypen)
- *   - Slå skjelettovertrekk PÅ/AV
- *   - Slå IK (inverse kinematikk) PÅ/AV
- */
 
 import React, { useMemo, useState } from 'react';
 import {
@@ -27,9 +16,7 @@ import { ALL_POSES, PosePreset, BONE_NAMES } from '../core/animation/PoseLibrary
 import { ActiveCharacterPose, BoneOverride } from './MultiviewSkeletonPanel';
 import { useSkeletalAnimationStore } from '../services/skeletalAnimationService';
 
-// ============================================================================
 // Bone groups for organized display
-// ============================================================================
 
 const BONE_GROUPS: { label: string; color: string; bones: Array<{ id: string; boneName: string; labelNorsk: string }> }[] = [
   {
@@ -84,9 +71,7 @@ const BONE_GROUPS: { label: string; color: string; bones: Array<{ id: string; bo
   },
 ];
 
-// ============================================================================
 // Pose category labels in Norwegian
-// ============================================================================
 
 const POSE_CATEGORY_LABELS: Record<string, string> = {
   portrait:   'Portrett',
@@ -106,9 +91,7 @@ const POSE_CATEGORY_COLORS: Record<string, string> = {
   dance:      '#ff9800',
 };
 
-// ============================================================================
 // Scene-type relevance scoring — returns 6 most relevant poses for a scene
-// ============================================================================
 
 const SCENE_POSE_AFFINITY: Record<string, string[]> = {
   restaurant:  ['commercial_welcoming', 'portrait_classic_stand', 'commercial_pointing', 'portrait_relaxed', 'fashion_editorial_lean', 'commercial_arms_crossed'],
@@ -125,17 +108,13 @@ function getRelevantPoses(sceneType: string): string[] {
   return Object.values(SCENE_POSE_AFFINITY)[0];
 }
 
-// ============================================================================
 // Bone rotation value display helper
-// ============================================================================
 
 function toDeg(rad: number): string {
   return (rad * (180 / Math.PI)).toFixed(1) + '°';
 }
 
-// ============================================================================
 // Component
-// ============================================================================
 
 interface BoneInspectorSidebarProps {
   character: ActiveCharacterPose;

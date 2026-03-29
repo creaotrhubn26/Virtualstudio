@@ -10260,9 +10260,9 @@ class VirtualStudio {
     }) as EventListener);
 
     window.addEventListener('ch-load-character', ((e: CustomEvent) => {
-      const { modelUrl, name, skinTone, height } = e.detail;
-      console.log('Loading character:', name);
-      this.loadCharacterModel(modelUrl, name, skinTone, height);
+      const { modelUrl, name, skinTone, height, position, rotation, storyRigId, additive } = e.detail;
+      console.log('Loading character:', name, storyRigId ? `(story: ${storyRigId})` : '');
+      this.loadCharacterModel(modelUrl, name, skinTone, height, { position, rotation, storyRigId, additive });
     }) as EventListener);
 
     window.addEventListener('ch-remove-character', (() => {
@@ -16332,8 +16332,19 @@ class VirtualStudio {
     return material;
   }
 
-  private async loadCharacterModel(modelUrl: string, name: string, skinTone: string, height: number): Promise<void> {
-    this.removeCharacterModel();
+  private async loadCharacterModel(
+    modelUrl: string,
+    name: string,
+    skinTone: string,
+    height: number,
+    options?: {
+      position?: [number, number, number];
+      rotation?: [number, number, number];
+      storyRigId?: string;
+      additive?: boolean;
+    },
+  ): Promise<void> {
+    if (!options?.additive && !options?.storyRigId) this.removeCharacterModel();
     
     let meshPosition = new BABYLON.Vector3(0, 0, 0);
     let importedAnimationGroups: BABYLON.AnimationGroup[] = [];
@@ -16371,17 +16382,24 @@ class VirtualStudio {
       this.characterMesh.rotation = new BABYLON.Vector3(Math.PI, 0, 0);
       
       // Position mesh on ground using the helper function (after rotation so bounds are correct)
-      meshPosition = this.positionMeshOnGround(this.characterMesh, new BABYLON.Vector3(0, 0, 0));
+      const storyPos = options?.position;
+      const originXZ = storyPos ? new BABYLON.Vector3(storyPos[0], 0, storyPos[2]) : new BABYLON.Vector3(0, 0, 0);
+      meshPosition = this.positionMeshOnGround(this.characterMesh, originXZ);
       this.characterMesh.position = meshPosition;
       this.characterMesh.computeWorldMatrix(true);
-      console.log(`Positioned character on ground: position=(${meshPosition.x.toFixed(3)}, ${meshPosition.y.toFixed(3)}, ${meshPosition.z.toFixed(3)}), bounds.min.y=${this.characterMesh.getHierarchyBoundingVectors(true).min.y.toFixed(3)}`);
-      
-      // Rotate mesh toward camera (preserves X rotation, only adjusts Y rotation)
-      const currentRotationX = this.characterMesh.rotation.x;
-      this.rotateMeshTowardCamera(this.characterMesh);
-      // Restore X rotation in case rotateMeshTowardCamera overwrote it
-      this.characterMesh.rotation.x = currentRotationX;
-      
+      console.log(`Positioned character on ground: position=(${meshPosition.x.toFixed(3)}, ${meshPosition.y.toFixed(3)}, ${meshPosition.z.toFixed(3)})`);
+
+      if (storyPos) {
+        // Story character: apply Y rotation from manifest, skip camera-facing
+        const ry = options?.rotation?.[1] ?? 0;
+        this.characterMesh.rotation.y = (ry * Math.PI) / 180;
+      } else {
+        // Standard character: face toward camera
+        const currentRotationX = this.characterMesh.rotation.x;
+        this.rotateMeshTowardCamera(this.characterMesh);
+        this.characterMesh.rotation.x = currentRotationX;
+      }
+
       // Ensure position is still correct after rotation
       this.characterMesh.position = meshPosition;
       this.characterMesh.computeWorldMatrix(true);
@@ -16550,8 +16568,23 @@ class VirtualStudio {
 
     if (this.characterMesh) {
       await this.ensureRigRegisteredForMesh(this.characterMesh, name, importedAnimationGroups);
+
+      // Notify story loader which rig was created for this character
+      if (options?.storyRigId) {
+        const { rigs } = useSkeletalAnimationStore.getState();
+        const matchedRigId = [...rigs.keys()].find(id => {
+          const r = rigs.get(id);
+          return r?.mesh === this.characterMesh || r?.name === name;
+        });
+        if (matchedRigId) {
+          window.dispatchEvent(new CustomEvent('ch-story-rig-ready', {
+            detail: { storyRigId: options.storyRigId, rigId: matchedRigId },
+          }));
+          console.log(`[StoryScene] Rig ready: storyRigId=${options.storyRigId} → rigId=${matchedRigId}`);
+        }
+      }
     }
-    
+
     // Update DOM hierarchy
     if ((window as any).addToHierarchy) {
       console.log('Calling addToHierarchy for:', name);

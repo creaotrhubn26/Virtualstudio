@@ -1,21 +1,3 @@
-/**
- * MultiviewSkeletonPanel
- *
- * Real 4-camera Babylon.js multiview panel for professional skeleton posing.
- *
- * Architecture:
- * - Creates 4 dedicated <canvas> elements and registers each with engine.registerView()
- * - Each view gets its own ArcRotateCamera (Front / Side-L / Perspective / Back)
- * - Cameras orbit around the active character's bounding sphere
- * - Babylon SkeletonViewer is activated on the shared scene for bone debug overlay
- * - SVG joint hit targets overlay each canvas for bone selection
- * - IK is wired via useSkeletalAnimationStore.enableIK()
- *
- * Layout modes:
- *   '2x2'    — four cameras in a 2×2 grid
- *   'single' — one camera fullscreen
- *   'pip'    — one large + three mini thumbnails
- */
 
 import React, {
   useState,
@@ -60,9 +42,7 @@ function getVSScene(): Scene | undefined {
   return window.virtualStudio?.scene;
 }
 
-// ============================================================================
 // Types
-// ============================================================================
 
 /** Per-bone rotation (Euler radians) and optional position offset (metres). */
 export interface BoneOverride {
@@ -108,9 +88,7 @@ const VIEWS: ViewConfig[] = [
   { id: 'back',         labelNorsk: 'Bakfra',     alpha: 0,             beta: Math.PI / 2.2, labelColor: '#f48fb1' },
 ];
 
-// ============================================================================
 // Babylon multiview management
-// ============================================================================
 
 interface BabylonEngineView {
   target: HTMLCanvasElement;
@@ -135,16 +113,14 @@ function disposeBabylonViews(): void {
   if (!scene) return;
   const engine = scene.getEngine() as unknown as EngineWithViews;
   _registeredViews.forEach(({ view, camera }) => {
-    try { if (view?.target) engine.unRegisterView(view.target); } catch {}
-    try { camera.dispose(); } catch {}
+    if (view?.target) {
+      try { engine.unRegisterView(view.target); } catch (err) { console.warn('[MultiviewPanel] unRegisterView failed:', err); }
+    }
+    try { camera.dispose(); } catch (err) { console.warn('[MultiviewPanel] camera.dispose failed:', err); }
   });
   _registeredViews = [];
 }
 
-/**
- * Register a Babylon camera for each canvas supplied via an explicit
- * viewId→canvas map so layout-mode changes never mis-bind cameras.
- */
 function setupBabylonMultiviewCameras(
   canvasMap: Map<string, HTMLCanvasElement>,
   targetPosition: { x: number; y: number; z: number },
@@ -195,13 +171,8 @@ function setupBabylonMultiviewCameras(
 // Module-level store for active SkeletonViewer instances (not on window)
 let _activeSkeletonViewers: SkeletonViewer[] = [];
 
-/**
- * Activate Babylon SkeletonViewer ONLY for the active character's rig mesh.
- * Passing `activeRigId` scopes the overlay to avoid confusing multi-character scenes.
- */
 function activateBabylonSkeletonViewers(enabled: boolean, activeRigId?: string): void {
-  // Dispose existing viewers
-  _activeSkeletonViewers.forEach((sv) => { try { sv.dispose(); } catch {} });
+  _activeSkeletonViewers.forEach((sv) => { try { sv.dispose(); } catch (err) { console.warn('[SkeletonViewer] dispose failed:', err); } });
   _activeSkeletonViewers = [];
   if (!enabled) return;
 
@@ -261,23 +232,17 @@ function getCharacterCenter(rigId: string | undefined): { x: number; y: number; 
   const rig = rigs.get(rigId);
   if (!rig?.mesh) return fallback;
 
-  try {
-    const mesh = rig.mesh;
-    mesh.computeWorldMatrix(true);
-    const info = mesh.getHierarchyBoundingVectors(true);
-    const cx = (info.min.x + info.max.x) / 2;
-    const cy = (info.min.y + info.max.y) / 2;
-    const cz = (info.min.z + info.max.z) / 2;
-    const radius = Math.max(info.max.x - info.min.x, info.max.y - info.min.y, info.max.z - info.min.z) * 1.4;
-    return { x: cx, y: cy, z: cz, radius };
-  } catch {
-    return fallback;
-  }
+  const mesh = rig.mesh;
+  mesh.computeWorldMatrix(true);
+  const info = mesh.getHierarchyBoundingVectors(true);
+  const cx = (info.min.x + info.max.x) / 2;
+  const cy = (info.min.y + info.max.y) / 2;
+  const cz = (info.min.z + info.max.z) / 2;
+  const radius = Math.max(info.max.x - info.min.x, info.max.y - info.min.y, info.max.z - info.min.z) * 1.4;
+  return { x: cx, y: cy, z: cz, radius };
 }
 
-// ============================================================================
 // SVG skeleton constants (overlaid on canvas for bone click-selection)
-// ============================================================================
 
 const VW = 160;
 const VH = 300;
@@ -328,9 +293,7 @@ const EDGES: SkeletonEdge[] = [
   { from: 'rknee',    to: 'rankle'    },
 ];
 
-// ============================================================================
 // BabylonViewport component — real Babylon canvas + SVG joint overlay
-// ============================================================================
 
 // IK chain definitions — end-effector joint ID per chain
 const IK_CHAIN_END_JOINTS: Record<string, string> = {
@@ -503,9 +466,7 @@ const BabylonViewport: React.FC<BabylonViewportProps> = ({
   );
 };
 
-// ============================================================================
 // Main Panel
-// ============================================================================
 
 interface MultiviewSkeletonPanelProps {
   open: boolean;
@@ -622,13 +583,10 @@ export const MultiviewSkeletonPanel: React.FC<MultiviewSkeletonPanelProps> = ({
     const rigId = activeChar ? poseStates[activeChar.id]?.rigId : undefined;
     const center = getCharacterCenter(rigId);
     _registeredViews.forEach(({ camera }) => {
-      try {
-        // Update target coordinates in-place to avoid Vector3 type assignment issues
-        camera.target.x = center.x;
-        camera.target.y = center.y;
-        camera.target.z = center.z;
-        camera.radius = center.radius;
-      } catch {}
+      camera.target.x = center.x;
+      camera.target.y = center.y;
+      camera.target.z = center.z;
+      camera.radius = center.radius;
     });
   }, [open, activeCharIdx, poseStates, characters]);
 
