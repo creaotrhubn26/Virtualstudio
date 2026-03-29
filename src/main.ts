@@ -23199,45 +23199,144 @@ class VirtualStudio {
 
   applyScenarioPreset(preset: ScenarioPreset): void {
     console.log('Applying scenario preset:', preset.navn);
-    
+
     this.lights.forEach((lightData, _id) => {
       lightData.light.dispose();
       lightData.mesh.dispose();
     });
     this.lights.clear();
     this.lightCounter = 0;
-    
+
+    // Beam angle (radians) by modifier name — narrower for focused lights, wider for soft sources
+    const modifierBeamAngle = (modifier?: string): number => {
+      if (!modifier) return Math.PI / 4;
+      const m = modifier.toLowerCase();
+      if (m.includes('candle') || m.includes('bare-bulb') || m.includes('bare_bulb')) return Math.PI * 1.5;
+      if (m.includes('octabox') || m.includes('umbrella')) return Math.PI / 2.5;
+      if (m.includes('reflector') && !m.includes('fresnel')) return Math.PI / 2;
+      if (m.includes('softbox-90') || m.includes('softbox-60')) return Math.PI / 3;
+      if (m.includes('softbox')) return Math.PI / 3.5;
+      if (m.includes('stripbox')) return Math.PI / 6;
+      if (m.includes('beauty-dish')) return Math.PI / 4.5;
+      if (m.includes('fresnel')) return Math.PI / 5;
+      if (m.includes('snoot')) return Math.PI / 10;
+      if (m.includes('grid')) return Math.PI / 9;
+      if (m.includes('barn-doors') || m.includes('barn_doors')) return Math.PI / 7;
+      if (m.includes('spot')) return Math.PI / 8;
+      return Math.PI / 4;
+    };
+
+    // Resolve color: explicit hex in preset overrides CCT-derived color
+    const resolveColor = (lightConfig: { cct?: number; color?: string }): BABYLON.Color3 => {
+      if (lightConfig.color && lightConfig.color.startsWith('#')) {
+        try {
+          return BABYLON.Color3.FromHexString(lightConfig.color);
+        } catch {
+          // fall through to CCT
+        }
+      }
+      return this.cctToColor(lightConfig.cct || 5600);
+    };
+
+    // Whether a light role should be omnidirectional (PointLight) vs directed (SpotLight)
+    const isOmnidirectional = (type: string): boolean => {
+      return type === 'atmospheric' || type === 'practical' || type === 'candle';
+    };
+
     preset.sceneConfig.lights.forEach((lightConfig, index) => {
+      const id = `preset_light_${index}`;
+      const role = lightConfig.type || 'key-light';
+      const label = role.replace(/-/g, ' ');
+      const name = `${label.charAt(0).toUpperCase() + label.slice(1)} ${index + 1}`;
+
       const position = new BABYLON.Vector3(
         lightConfig.position[0],
         lightConfig.position[1],
         lightConfig.position[2]
       );
-      
+
       const rotationDeg = lightConfig.rotation || [0, 0, 0];
       const rotationRad = new BABYLON.Vector3(
         (rotationDeg[0] * Math.PI) / 180,
         (rotationDeg[1] * Math.PI) / 180,
         (rotationDeg[2] * Math.PI) / 180
       );
-      
+
       const cct = lightConfig.cct || 5600;
-      const intensity = lightConfig.intensity || 1.0;
-      const type = lightConfig.type.includes('soft') || lightConfig.type.includes('fill') ? 'led' : 'strobe';
-      
-      const specs = {
-        power: intensity * 600,
-        powerUnit: 'Ws' as const,
-        cct: cct,
-        cri: 95,
-        lux1m: intensity * 10000,
-        beamAngle: 45
+      const presetIntensity = lightConfig.intensity ?? 1.0;
+      const color = resolveColor(lightConfig);
+
+      let light: BABYLON.Light;
+      let mesh: BABYLON.Mesh;
+
+      if (isOmnidirectional(role)) {
+        // Candle / practical / atmospheric: point light, glows in all directions
+        const ptLight = new BABYLON.PointLight(id, position.clone(), this.scene);
+        ptLight.intensity = presetIntensity * 1.8;
+        ptLight.diffuse = color;
+        ptLight.specular = color.scale(0.4);
+        ptLight.range = 3.5 + presetIntensity * 2;
+        light = ptLight;
+
+        mesh = BABYLON.MeshBuilder.CreateSphere(`mesh_${id}`, { diameter: 0.12 }, this.scene);
+      } else {
+        // Directed light: SpotLight aimed by rotation
+        const direction = new BABYLON.Vector3(0, -1, 0);
+        const rotMatrix = BABYLON.Matrix.RotationYawPitchRoll(rotationRad.y, rotationRad.x, rotationRad.z);
+        const rotatedDir = BABYLON.Vector3.TransformNormal(direction, rotMatrix).normalize();
+
+        const angle = modifierBeamAngle(lightConfig.modifier);
+        const spotLight = new BABYLON.SpotLight(id, position.clone(), rotatedDir, angle, 2, this.scene);
+        spotLight.intensity = presetIntensity * 2.5;
+        spotLight.diffuse = color;
+        spotLight.specular = color.scale(0.6);
+        light = spotLight;
+
+        mesh = BABYLON.MeshBuilder.CreateCylinder(`mesh_${id}`, {
+          height: 0.4, diameterTop: 0.12, diameterBottom: 0.28
+        }, this.scene);
+        mesh.rotation.x = Math.PI + rotationRad.x;
+        mesh.rotation.y = rotationRad.y;
+        mesh.rotation.z = rotationRad.z;
+      }
+
+      mesh.position = position.clone();
+      const mat = new BABYLON.StandardMaterial(`mat_${id}`, this.scene);
+      mat.emissiveColor = new BABYLON.Color3(
+        Math.min(1.0, color.r),
+        Math.min(1.0, color.g),
+        Math.min(1.0, color.b)
+      );
+      mat.disableLighting = true;
+      mesh.material = mat;
+
+      // Keep light and mesh in sync during render loop
+      this.scene.onBeforeRenderObservable.add(() => {
+        if (light instanceof BABYLON.SpotLight || light instanceof BABYLON.PointLight) {
+          light.position = mesh.position.clone();
+        }
+      });
+
+      const lightData: LightData = {
+        light,
+        mesh,
+        type: isOmnidirectional(role) ? 'led' : 'strobe',
+        name,
+        cct,
+        modifier: lightConfig.modifier || 'Ingen',
+        specs: {
+          power: presetIntensity * 600,
+          powerUnit: 'Ws',
+          cct,
+          cri: 95,
+          lux1m: presetIntensity * 10000,
+          beamAngle: modifierBeamAngle(lightConfig.modifier) * (180 / Math.PI),
+        },
+        intensity: presetIntensity * 2.5,
       };
-      
-      const id = `preset_light_${index}`;
-      const name = `${preset.navn} - Lys ${index + 1}`;
-      
-      this.addLightWithSpecsAndRotation(id, name, type, position, rotationRad, specs);
+
+      this.lights.set(id, lightData);
+      this.gizmoManager?.attachableMeshes?.push(mesh);
     });
     
     if (preset.sceneConfig.camera) {
