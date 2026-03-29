@@ -1404,6 +1404,123 @@ async def list_triposr_models():
 
 
 # ============================================================================
+# TRELLIS 3D Environment Generation (image → scene GLB via Replicate)
+# ============================================================================
+
+TRELLIS_SERVICE_AVAILABLE = False
+try:
+    from trellis_service import trellis_service
+    TRELLIS_SERVICE_AVAILABLE = True
+    print("TRELLIS service loaded")
+except ImportError as e:
+    print(f"Warning: TRELLIS service not available: {e}")
+    trellis_service = None
+
+
+@app.post("/api/trellis/generate")
+async def trellis_generate(
+    request: Request,
+    image: UploadFile = File(...),
+    texture_size: int = 1024,
+    mesh_simplify: float = 0.95,
+    ss_steps: int = 12,
+    slat_steps: int = 12,
+):
+    """Upload a restaurant/scene image and convert it to a 3D GLB via TRELLIS on Replicate."""
+    if not TRELLIS_SERVICE_AVAILABLE or trellis_service is None:
+        raise HTTPException(status_code=503, detail="TRELLIS service ikke tilgjengelig")
+
+    if not trellis_service.api_token:
+        raise HTTPException(
+            status_code=503,
+            detail="REPLICATE_API_TOKEN er ikke satt. Legg det til under Secrets i Replit.",
+        )
+
+    allowed_types = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
+    content_type = image.content_type or ""
+    if content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail=f"Ikke støttet bildeformat: {content_type}. Bruk JPEG, PNG eller WebP.")
+
+    image_data = await image.read()
+    if len(image_data) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Bildet er for stort. Maks 25 MB.")
+
+    # Build the public base URL so Replicate can fetch the uploaded image
+    public_base = os.environ.get("REPLIT_DEV_DOMAIN", "")
+    if public_base and not public_base.startswith("http"):
+        public_base = f"https://{public_base}"
+    if not public_base:
+        public_base = str(request.base_url).rstrip("/")
+
+    result = await trellis_service.generate_from_image(
+        image_data=image_data,
+        original_filename=image.filename or "upload.png",
+        public_base_url=public_base,
+        texture_size=texture_size,
+        mesh_simplify=mesh_simplify,
+        ss_steps=ss_steps,
+        slat_steps=slat_steps,
+    )
+    return JSONResponse(result)
+
+
+@app.get("/api/trellis/upload/{filename:path}")
+async def serve_trellis_upload(filename: str):
+    """Serve a temporarily stored upload image so Replicate can fetch it."""
+    if not TRELLIS_SERVICE_AVAILABLE or trellis_service is None:
+        raise HTTPException(status_code=503, detail="TRELLIS service ikke tilgjengelig")
+    file_path = trellis_service.uploads_dir / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"Opplastet bilde ikke funnet: {filename}")
+    ext = file_path.suffix.lower()
+    mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+    media_type = mime_map.get(ext, "image/png")
+    return FileResponse(path=str(file_path), media_type=media_type)
+
+
+@app.get("/api/trellis/status/{job_id}")
+async def trellis_status(job_id: str):
+    """Poll the status of a TRELLIS generation job."""
+    if not TRELLIS_SERVICE_AVAILABLE or trellis_service is None:
+        raise HTTPException(status_code=503, detail="TRELLIS service ikke tilgjengelig")
+    result = await trellis_service.check_status(job_id)
+    return JSONResponse(result)
+
+
+@app.post("/api/trellis/download/{job_id}")
+async def trellis_download(job_id: str):
+    """Download the finished GLB and save it locally. Returns a serveable path."""
+    if not TRELLIS_SERVICE_AVAILABLE or trellis_service is None:
+        raise HTTPException(status_code=503, detail="TRELLIS service ikke tilgjengelig")
+    result = await trellis_service.download_model(job_id)
+    return JSONResponse(result)
+
+
+@app.get("/api/trellis/model/{filename:path}")
+async def serve_trellis_model(filename: str):
+    """Serve a generated TRELLIS GLB file."""
+    if not TRELLIS_SERVICE_AVAILABLE or trellis_service is None:
+        raise HTTPException(status_code=503, detail="TRELLIS service ikke tilgjengelig")
+    file_path = trellis_service.models_dir / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"Modell ikke funnet: {filename}")
+    return FileResponse(
+        path=str(file_path),
+        media_type="model/gltf-binary",
+        filename=filename,
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
+@app.get("/api/trellis/models")
+async def list_trellis_models():
+    """List all generated TRELLIS GLB models."""
+    if not TRELLIS_SERVICE_AVAILABLE or trellis_service is None:
+        return JSONResponse({"models": []})
+    return JSONResponse({"models": trellis_service.list_models()})
+
+
+# ============================================================================
 # Virtual Studio API Endpoints
 # ============================================================================
 

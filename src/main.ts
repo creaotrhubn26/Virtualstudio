@@ -10292,6 +10292,23 @@ class VirtualStudio {
       this.clearStoryCharacters();
     }) as EventListener);
 
+    // Load a custom environment GLB (e.g. from TRELLIS image-to-3D)
+    window.addEventListener('ch-load-environment', ((e: CustomEvent) => {
+      const { url, scale } = e.detail as { url: string; scale?: number };
+      if (!url) { console.warn('[ch-load-environment] No URL provided'); return; }
+      const envScale = scale ?? 10;
+      console.log(`[ch-load-environment] Loading: ${url} at scale ${envScale}`);
+      propRenderingService.setScene(this.scene);
+      propRenderingService.clearEnvironment();
+      propRenderingService.loadEnvironment(url, envScale).then(() => {
+        window.dispatchEvent(new CustomEvent('ch-toggle-floor', { detail: { visible: false } }));
+        window.dispatchEvent(new CustomEvent('ch-toggle-grid', { detail: { visible: false } }));
+        console.log('[ch-load-environment] Environment loaded');
+      }).catch((err: unknown) => {
+        console.warn('[ch-load-environment] Failed to load environment:', err);
+      });
+    }) as EventListener);
+
     const handleWalkCharacterEvent = (event: CustomEvent) => {
       if (this.characterKeyboardControlsEnabled) {
         return;

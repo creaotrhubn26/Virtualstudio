@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+const TrellisEnvironmentDialog = lazy(() => import('../components/TrellisEnvironmentDialog').then(m => ({ default: m.TrellisEnvironmentDialog })));
 import {
   Box,
   Typography,
@@ -155,6 +156,7 @@ const buttonStyle = {
   const [brandingOpen, setBrandingOpen] = useState(false);
   const [brandName, setBrandName] = useState('');
   const [brandLogoUrl, setBrandLogoUrl] = useState('');
+  const [trellisDialogOpen, setTrellisDialogOpen] = useState(false);
   const [brandColor, setBrandColor] = useState('#c8392b');
 
   const filteredCameras = useMemo(() => {
@@ -886,6 +888,32 @@ const buttonStyle = {
               </Button>
             );
           })()}
+
+          {/* Bilde → 3D Miljø via TRELLIS */}
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<Landscape sx={{ fontSize: 18 }} />}
+            onClick={() => setTrellisDialogOpen(true)}
+            sx={{
+              mt: 1,
+              borderColor: 'rgba(99,102,241,0.5)',
+              color: '#a5b4fc',
+              borderWidth: 1.5,
+              bgcolor: 'rgba(99,102,241,0.05)',
+              fontWeight: 600,
+              fontSize: 13,
+              '&:hover': {
+                borderColor: '#818cf8',
+                bgcolor: 'rgba(99,102,241,0.12)',
+                transform: 'translateY(-1px)',
+                boxShadow: '0 4px 16px rgba(99,102,241,0.2)',
+              },
+              transition: 'all 0.18s',
+            }}
+          >
+            Bilde → 3D Miljø (TRELLIS)
+          </Button>
 
           {/* Merkevarebygging — Scene Branding */}
           <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(255,109,0,0.2)' }}>
@@ -2784,6 +2812,19 @@ const buttonStyle = {
           sceneName={multiviewPreset.navn}
         />
       )}
+
+      {/* TRELLIS Image → 3D Environment Dialog */}
+      <Suspense fallback={null}>
+        <TrellisEnvironmentDialog
+          open={trellisDialogOpen}
+          onClose={() => setTrellisDialogOpen(false)}
+          onUseEnvironment={(glbPath: string) => {
+            window.dispatchEvent(new CustomEvent('ch-load-environment', {
+              detail: { url: glbPath, scale: 10 },
+            }));
+          }}
+        />
+      </Suspense>
     </Box>
   );
 };
