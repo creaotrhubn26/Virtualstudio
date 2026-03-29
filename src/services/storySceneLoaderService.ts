@@ -12,7 +12,7 @@
  * 7. Emits 'ch-story-scene-loaded' when fully done
  */
 
-import { ScenarioPreset } from '../data/scenarioPresets';
+import { ScenarioPreset, scenarioPresets } from '../data/scenarioPresets';
 import { propRenderingService } from '../core/services/propRenderingService';
 import { useSkeletalAnimationStore } from './skeletalAnimationService';
 import { ALL_POSES } from '../core/animation/PoseLibrary';
@@ -318,3 +318,18 @@ class StorySceneLoaderService {
 }
 
 export const storySceneLoaderService = new StorySceneLoaderService();
+
+// Test helper — expose service on window so Playwright can trigger scene loads
+if (typeof window !== 'undefined') {
+  (window as Record<string, unknown>).__storyLoader = {
+    loadById: (presetId: string) => {
+      const preset = scenarioPresets.find(p => p.id === presetId);
+      if (!preset) {
+        console.warn(`[StoryLoader] Preset not found: ${presetId}`);
+        return Promise.resolve(null);
+      }
+      return storySceneLoaderService.load(preset);
+    },
+    listPresets: () => scenarioPresets.map(p => ({ id: p.id, navn: p.navn })),
+  };
+}
