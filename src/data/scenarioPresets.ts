@@ -1156,6 +1156,357 @@ export const scenarioPresets: ScenarioPreset[] = [
     }
   },
   {
+    id: 'produkt-overhead',
+    navn: 'Produkt - Overhead Studio',
+    kategori: 'portrett',
+    beskrivelse: 'Produktfotografering med overhead pendel-softboks og to sidefresnel. Terrakotta seamless. Inspirert av klassisk produktstudio.',
+    tags: ['produkt', 'overhead', 'studio', 'seamless', 'terrakotta', 'fresnel'],
+    previewImage: '/images/presets/produkt-overhead.png',
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [0, 3.2, 1.0],
+          rotation: [-85, 0, 0],
+          intensity: 1.0,
+          cct: 3400,
+          modifier: 'large-octabox'
+        },
+        {
+          type: 'fill-light',
+          position: [-2.2, 1.8, 0.5],
+          rotation: [10, 50, 0],
+          intensity: 0.7,
+          cct: 5600,
+          modifier: 'fresnel'
+        },
+        {
+          type: 'fill-light',
+          position: [2.2, 1.8, 0.5],
+          rotation: [10, -50, 0],
+          intensity: 0.7,
+          cct: 5600,
+          modifier: 'fresnel'
+        }
+      ],
+      backdrop: {
+        type: 'seamless',
+        color: '#b57248'
+      },
+      camera: {
+        position: [0, 1.2, 3.0],
+        target: [0, 0.4, 0],
+        focalLength: 85
+      }
+    },
+    recommendedAssets: {
+      lights: ['aputure-300d', 'godox-ad400pro', 'arri-skypanel-s30'],
+      modifiers: ['large-octabox', 'fresnel', 'snoot'],
+      backdrops: ['backdrop-terracotta', 'backdrop-natural-linen']
+    }
+  },
+  {
+    id: 'mote-tube-rig',
+    navn: 'Mote - Tube Light V-Rig',
+    kategori: 'mote',
+    beskrivelse: 'Kreativt tube-lys oppsett med to PavoTubes i V-form bak modellen + stor parabolparaply og V-flat. Mørk seamless bakgrunn.',
+    tags: ['mote', 'tube-light', 'rgb', 'kreativ', 'parabolparaply', 'v-rig'],
+    previewImage: '/images/presets/mote-tube-rig.png',
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [-2.5, 2.8, 0.8],
+          rotation: [15, 40, 0],
+          intensity: 0.8,
+          cct: 5600,
+          modifier: 'parabolic-umbrella-130'
+        },
+        {
+          type: 'rim-light',
+          position: [-0.8, 2.5, -0.8],
+          rotation: [0, 45, 30],
+          intensity: 0.9,
+          cct: 5600,
+          color: '#f8f0ff'
+        },
+        {
+          type: 'rim-light',
+          position: [0.8, 2.5, -0.8],
+          rotation: [0, -45, -30],
+          intensity: 0.9,
+          cct: 5600,
+          color: '#fff0e8'
+        }
+      ],
+      backdrop: {
+        type: 'seamless',
+        color: '#1a1a1a'
+      },
+      camera: {
+        position: [0, 1.6, 4.5],
+        target: [0, 1.4, 0],
+        focalLength: 70
+      }
+    },
+    recommendedAssets: {
+      lights: ['nanlite-pavotube-60c', 'godox-sl150iii'],
+      modifiers: ['parabolic-umbrella-130', 'v-flat-white', 'v-flat-black'],
+      backdrops: ['backdrop-black', 'velvet-black']
+    }
+  },
+  {
+    id: 'mote-gel-color',
+    navn: 'Mote - Gel Fargeoppsett',
+    kategori: 'mote',
+    beskrivelse: 'Høy-fargemettings gel-oppsett for editorial og musikkvideo-estetikk. Sterke fargekontraster med CTO/CTB og fargegeler.',
+    tags: ['mote', 'gel', 'farge', 'editorial', 'musikkvideo', 'cyberpunk'],
+    previewImage: '/images/presets/mote-gel-color.png',
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [-2.5, 2.5, 1.5],
+          rotation: [20, 40, 0],
+          intensity: 1.0,
+          cct: 5600,
+          color: '#ff6622',
+          modifier: 'octabox-90'
+        },
+        {
+          type: 'rim-light',
+          position: [2.5, 2.2, -0.5],
+          rotation: [15, -130, 0],
+          intensity: 0.8,
+          cct: 5600,
+          color: '#0033aa',
+          modifier: 'fresnel'
+        },
+        {
+          type: 'background-light',
+          position: [0, 1.5, -3],
+          rotation: [0, 180, 0],
+          intensity: 0.7,
+          cct: 5600,
+          color: '#cc1188'
+        }
+      ],
+      backdrop: {
+        type: 'seamless',
+        color: '#111111'
+      },
+      camera: {
+        position: [0, 1.6, 4.5],
+        target: [0, 1.4, 0],
+        focalLength: 70
+      }
+    },
+    recommendedAssets: {
+      lights: ['godox-ad600-pro', 'aputure-300d', 'nanlite-mixpad-27c'],
+      modifiers: ['octabox-90', 'fresnel', 'snoot'],
+      backdrops: ['backdrop-black', 'velvet-black']
+    }
+  },
+  {
+    id: 'beauty-ring-glamour',
+    navn: 'Beauty - Ring Flash Glamour',
+    kategori: 'portrett',
+    beskrivelse: 'Klassisk ring flash-portrett med skyggeløst beauty-lys, blød bakgrunn og subtil hair light. Typisk for high-fashion skjønnhet.',
+    tags: ['beauty', 'ring-flash', 'glamour', 'skjønnhet', 'portrett', 'fashion'],
+    previewImage: '/images/presets/beauty-ring-glamour.png',
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [0, 1.8, 2.5],
+          rotation: [0, 180, 0],
+          intensity: 1.0,
+          cct: 5600,
+          modifier: 'ring-flash'
+        },
+        {
+          type: 'background-light',
+          position: [0, 1.8, -3.5],
+          rotation: [0, 0, 0],
+          intensity: 0.4,
+          cct: 5600
+        },
+        {
+          type: 'hair-light',
+          position: [0, 3.5, -0.5],
+          rotation: [-70, 0, 0],
+          intensity: 0.5,
+          cct: 5800,
+          modifier: 'small-softbox'
+        }
+      ],
+      backdrop: {
+        type: 'seamless',
+        color: '#f5f0ee'
+      },
+      camera: {
+        position: [0, 1.65, 4.0],
+        target: [0, 1.6, 0],
+        focalLength: 85
+      }
+    },
+    recommendedAssets: {
+      lights: ['godox-ring-flash-ar400', 'profoto-ringflash', 'nanlite-halo-26'],
+      modifiers: ['ring-flash', 'small-softbox'],
+      backdrops: ['backdrop-white', 'backdrop-cream']
+    }
+  },
+  {
+    id: 'beauty-dish-rembrandt',
+    navn: 'Beauty - Beauty Dish Portrett',
+    kategori: 'portrett',
+    beskrivelse: 'Klassisk beauty dish-lys med kontrast, retning og dybde. Kombinert med fill-reflektor og bakgrunnsgradiering.',
+    tags: ['beauty', 'beauty-dish', 'portrett', 'kontrast', 'glamour', 'studio'],
+    previewImage: '/images/presets/beauty-dish-rembrandt.png',
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [-1.8, 2.4, 1.5],
+          rotation: [30, 40, 0],
+          intensity: 1.0,
+          cct: 5600,
+          modifier: 'beauty-dish'
+        },
+        {
+          type: 'fill-light',
+          position: [2.0, 1.5, 1.5],
+          rotation: [10, -30, 0],
+          intensity: 0.35,
+          cct: 5600,
+          modifier: 'reflector-white'
+        },
+        {
+          type: 'hair-light',
+          position: [0, 3.4, -0.5],
+          rotation: [-65, 0, 0],
+          intensity: 0.6,
+          cct: 6000,
+          modifier: 'snoot'
+        }
+      ],
+      backdrop: {
+        type: 'seamless',
+        color: '#888888'
+      },
+      camera: {
+        position: [0, 1.65, 4.0],
+        target: [0, 1.6, 0],
+        focalLength: 105
+      }
+    },
+    recommendedAssets: {
+      lights: ['godox-bd-07', 'profoto-beauty-dish-65'],
+      modifiers: ['beauty-dish', 'reflector-white', 'snoot'],
+      backdrops: ['backdrop-gray', 'backdrop-dark-gray']
+    }
+  },
+  {
+    id: 'produkt-tabell',
+    navn: 'Produkt - Bords-studio (Tabletop)',
+    kategori: 'portrett',
+    beskrivelse: 'Tabletop produktfotografering med lys fra venstre, fill fra høyre og en overhead for dybde. Perfekt for mat, kosmetikk og gadgets.',
+    tags: ['produkt', 'tabletop', 'mat', 'kosmetikk', 'gadget', 'ren', 'hvit'],
+    previewImage: '/images/presets/produkt-tabell.png',
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [-2.0, 1.8, 0.5],
+          rotation: [10, 50, 0],
+          intensity: 1.0,
+          cct: 5500,
+          modifier: 'stripbox-60x90'
+        },
+        {
+          type: 'fill-light',
+          position: [2.0, 1.6, 0.5],
+          rotation: [10, -45, 0],
+          intensity: 0.6,
+          cct: 5500,
+          modifier: 'reflector-white'
+        },
+        {
+          type: 'key-light',
+          position: [0, 2.8, 0.2],
+          rotation: [-75, 0, 0],
+          intensity: 0.45,
+          cct: 5500,
+          modifier: 'small-softbox'
+        }
+      ],
+      backdrop: {
+        type: 'sweep',
+        color: '#f8f8f6'
+      },
+      camera: {
+        position: [0, 0.8, 2.5],
+        target: [0, 0.1, 0],
+        focalLength: 90
+      }
+    },
+    recommendedAssets: {
+      lights: ['godox-sl150iii', 'aputure-120d', 'nanlite-mixpad-27c'],
+      modifiers: ['stripbox-60x90', 'reflector-white', 'small-softbox'],
+      backdrops: ['backdrop-white', 'backdrop-cream', 'backdrop-natural-linen']
+    }
+  },
+  {
+    id: 'produkt-smykker',
+    navn: 'Produkt - Smykker og Ur (Jewelry)',
+    kategori: 'portrett',
+    beskrivelse: 'Spesialisert juveleroppsett med hardere lys, tight fokus og kontrollerte reflekser for metall og stein. Svart bakgrunn.',
+    tags: ['produkt', 'smykker', 'ur', 'gull', 'metall', 'kontrollert', 'hard-lys'],
+    previewImage: '/images/presets/produkt-smykker.png',
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [-1.5, 1.8, 0.8],
+          rotation: [15, 45, 0],
+          intensity: 1.2,
+          cct: 6000,
+          modifier: 'snoot'
+        },
+        {
+          type: 'fill-light',
+          position: [1.5, 1.4, 0.8],
+          rotation: [10, -40, 0],
+          intensity: 0.3,
+          cct: 6000,
+          modifier: 'foam-core-white'
+        },
+        {
+          type: 'key-light',
+          position: [0, 2.5, -0.2],
+          rotation: [-60, 0, 0],
+          intensity: 0.8,
+          cct: 6000,
+          modifier: 'snoot'
+        }
+      ],
+      backdrop: {
+        type: 'seamless',
+        color: '#0a0a0a'
+      },
+      camera: {
+        position: [0, 0.5, 1.8],
+        target: [0, 0.05, 0],
+        focalLength: 105
+      }
+    },
+    recommendedAssets: {
+      lights: ['aputure-ls600x', 'godox-sk400ii'],
+      modifiers: ['snoot', 'foam-core-white', 'fresnel'],
+      backdrops: ['backdrop-black', 'velvet-black']
+    }
+  },
+  {
     id: 'bryllup-utendors',
     navn: 'Bryllup - Utendørs Gyllen Time',
     kategori: 'bryllup',
