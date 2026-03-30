@@ -14309,7 +14309,13 @@ class VirtualStudio {
       if (searchTokens.has(boneNormalized) || searchTokens.has(stripped)) {
         return bone;
       }
+      // Forward: does the bone name end with a search token?
       if (tokens.some((token) => boneNormalized.endsWith(token) || stripped.endsWith(token))) {
+        return bone;
+      }
+      // Reverse: does any search token end with the bone's stripped name?
+      // Handles mixamorig:Hips (stripped="hips") vs mixamorigHips (token="mixamorigehips")
+      if (stripped.length >= 2 && tokens.some((token) => token.endsWith(stripped))) {
         return bone;
       }
     }

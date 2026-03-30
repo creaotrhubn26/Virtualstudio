@@ -129,6 +129,13 @@ export const AVATAR_DEFINITIONS: AvatarDefinition[] = [
     skinHex: '#C68642',
     defaultHeight: 1.80,
   },
+  {
+    type: 'mixamo_soldier',
+    name: 'Mixamo-figur (poseable)',
+    modelUrl: '/models/avatars/mixamo-character.glb',
+    skinHex: '#C68642',
+    defaultHeight: 1.80,
+  },
 ];
 
 /** Look up an avatar definition by type key. Returns `undefined` if unknown. */
