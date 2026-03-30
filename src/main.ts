@@ -5792,9 +5792,14 @@ class VirtualStudio {
         const vertexYCenter = (measuredFromVertices && geoMesh)
           ? (geoMesh as any)._diffuserYCenter as number
           : (bMin.y + bMax.y) * 0.5;
+        // Octabox: the disc should sit at the centre of the octagonal panel face.
+        // The head's flash-mount hardware pushes the face-centre Y above the panel midpoint.
+        // Shift the disc down by 25% of its diameter so it aligns with the diffuser centre.
+        const isOctaboxEarly = lightConfig.glbFile.includes('octabox');
+        const yOffset = isOctaboxEarly ? -panelW * 0.25 : 0;
         const worldCenter = new BABYLON.Vector3(
           vertexXCenter,
-          vertexYCenter,
+          vertexYCenter + yOffset,
           diffuserFaceZ - 0.015    // 1.5 cm in front of the HEAD's actual front face
         );
 
