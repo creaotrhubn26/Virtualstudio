@@ -486,77 +486,285 @@ DIRECTOR_TOOLS: List[Dict[str, Any]] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_backdrop_color",
+            "description": (
+                "Change the studio backdrop/background color. "
+                "Use this to set the mood — white for high-key, black for drama, "
+                "grey tones for natural, or colored for creative looks."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "color": {
+                        "type": "string",
+                        "description": (
+                            "Hex color for the backdrop. "
+                            "White: '#ffffff', Black: '#0a0a0a', Mid-grey: '#808080', "
+                            "Warm grey: '#9a8a7a', Cobalt blue: '#1a3a6a', Forest: '#1a3a1a'"
+                        ),
+                    },
+                },
+                "required": ["color"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "clear_scene",
+            "description": (
+                "Remove ALL props from the scene and optionally clear all lights and characters too. "
+                "Use this to start fresh before building a new setup."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "clear_lights": {
+                        "type": "boolean",
+                        "description": "Also remove all studio lights (default: false)",
+                    },
+                    "clear_characters": {
+                        "type": "boolean",
+                        "description": "Also remove all characters/avatars (default: true)",
+                    },
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "duplicate_prop",
+            "description": (
+                "Duplicate an existing prop in the scene and place the copy at a new position. "
+                "Useful for quickly populating the scene with multiple identical objects."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "prop_id": {
+                        "type": "string",
+                        "description": "ID of the prop to duplicate (from scene state).",
+                    },
+                    "position": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "minItems": 3,
+                        "maxItems": 3,
+                        "description": "[x, y, z] position for the new copy.",
+                    },
+                },
+                "required": ["prop_id", "position"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "focus_camera_on",
+            "description": (
+                "Reposition the camera to focus on a specific prop, character, or world position. "
+                "Use this after placing elements to frame them properly."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "target": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "minItems": 3,
+                        "maxItems": 3,
+                        "description": "[x, y, z] world position to focus on. E.g. [0, 1.5, 0] for a standing subject.",
+                    },
+                    "distance": {
+                        "type": "number",
+                        "description": "How far back to pull the camera (metres). E.g. 4.0 for close portrait, 8.0 for full-body.",
+                    },
+                },
+                "required": ["target"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_scene_name",
+            "description": "Give the current scene a descriptive name that will be shown in the UI.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Scene name in Norwegian, e.g. 'Romantisk portrett – varm kveldsstemning'",
+                    },
+                },
+                "required": ["name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_ambient_light",
+            "description": (
+                "Adjust the global ambient/fill light level. "
+                "Ambient light fills shadows uniformly — lower values create more dramatic contrast."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "intensity": {
+                        "type": "number",
+                        "description": (
+                            "Ambient intensity 0.0–1.0. "
+                            "0.05 = near-zero fill (very dramatic), "
+                            "0.15 = low-key portrait fill, "
+                            "0.30 = natural studio, "
+                            "0.60 = high-key / bright studio."
+                        ),
+                    },
+                    "color": {
+                        "type": "string",
+                        "description": "Ambient colour hex. '#ffffff' = neutral, '#f0e8d8' = warm, '#d0e0f0' = cool.",
+                    },
+                },
+                "required": ["intensity"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "audit_lighting",
+            "description": (
+                "Analyze the current lighting setup and provide professional feedback. "
+                "Reports key-to-fill ratio, missing lights, CCT consistency, and quality score. "
+                "Call this when the user asks for a critique or quality check of the scene."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "report_language": {
+                        "type": "string",
+                        "description": "Language for report — always 'no' (Norwegian)",
+                        "enum": ["no"],
+                    },
+                },
+                "required": [],
+            },
+        },
+    },
 ]
 
-SYSTEM_PROMPT = """Du er AI Direktør for Virtual Studio — en profesjonell 3D-lysstudio-simulator.
-Du hjelper fotografer og filmregissører med å sette opp perfekte scener.
+SYSTEM_PROMPT = """Du er AI Direktør for Virtual Studio — en prisbelønt 3D-lysstudio-simulator.
+Du er en erfaren fotografilærer, filmfotograf og lysdesigner i én person.
+Du hjelper brukeren med å skape perfekte scener ved å kombinere presis teknisk kunnskap
+med kreativt kunstnerisk blikk.
 
-Svar alltid på norsk. Vær presis, profesjonell og entusiastisk.
+ALLTID norsk. ALLTID forklarende — si kort HVORFOR du gjør de valgene du gjør.
+Bruk function calling aktivt. Kall gjerne 3–6 funksjoner i én respons for å bygge hele scenen.
+Etter oppsett: gi en kort vurdering av lysoppsettets styrker og eventuelt hva som kan forbedres.
 
-Når brukeren beskriver en scene, bruk function calling for å sette opp lys, kamera, props og karakterer.
-Du KAN og BØR kalle flere funksjoner i én respons for å bygge hele scenen på en gang.
+═══════════════════════════════════════════════════════
+STUDIO-KOORDINATSYSTEM (memoriser dette)
+═══════════════════════════════════════════════════════
 
-═══════════════════════════════════════════════════
-STUDIO KOORDINATSYSTEM — Lær dette utenat:
-═══════════════════════════════════════════════════
+Y=0 = gulvet. Props og karakterer hviler alltid på Y=0.
+Motivet/subjektet: origo [0, 0, 0]
+Kamera: Z ≈ -4, ser mot [0, 1.5, 0] (positiv Z-retning)
+Bruksareal: X ∈ [-5, +5], Z ∈ [0, +8]
+Props med Z < -2 er BEHIND kameraet og USYNLIGE — aldri bruk Z < 0 for props!
+Venstre i bildet = positiv X. Høyre = negativ X (speil av kameraet).
 
-• Gulvet er alltid Y = 0. Systemet justerer automatisk Y slik at props hviler på gulvet.
-  → Sett alltid Y = 0 i posisjonsarrayene dine. Aldri negativ Y.
+Typiske lysposisjoner (Y = lyshøyde over gulvet, høy Y = takvinkel):
+  Key light:  X=-2.5, Y=4.0, Z=-1.5   (45° til siden, over motivet)
+  Fill light: X=+2.5, Y=3.0, Z=-1.0   (lavere, mykere, mot skyggeside)
+  Rim light:  X=±1.0, Y=4.5, Z=+3.0   (bak motivet, adskiller fra bakgrunn)
+  Hair light: X=0,    Y=5.0, Z=+1.0   (rett over hodet, fremhever hår)
 
-• Motivet (avatar/karakter) står i origo: [0, 0, 0]
+═══════════════════════════════════════════════════════
+LYSTEORI OG KEY:FILL-FORHOLD (memoriser dette)
+═══════════════════════════════════════════════════════
 
-• Kamera er plassert ca. ved Z = -4 (foran motivet), ser mot [0, 1.5, 0]
-  → Props med Z < -2 vil havne bak kamera og ikke synes!
-  → Props bør ha Z mellom 0 og +6 (bak motivet) eller X mellom ±1 og ±4 (til sidene)
+Key:Fill ratio bestemmer scenekarakteren:
+  1:1   = Flat, myk, glamour/mote (Hollywood-reklame)
+  2:1   = Mykt, naturlig (nyheter, intervju, komedi)
+  3:1   = Standard Hollywood-portrett (mest brukt)
+  4:1   = Dramatisk (thriller, portrett med karakter)
+  6:1   = Noir-belysning (meget dramatisk, kunstnerisk)
+  8:1+  = Silhouette/svart/hvitt kunstfoto
 
-• Studioets bruksareal: X = [-5 til +5], Z = [0 til +8]
+Eksempel med key intensity=1.0:
+  Filmisk portrett (3:1): fill=0.33
+  Dramatisk (5:1): fill=0.20
+  Noir (8:1): fill=0.12
 
-• Skjermbilde/kameravinkel: kameraet ser mot bakveggen (positiv Z)
-  → Venstre i bildet = positiv X, Høyre = negativ X (speilvend for kameraet)
+CCT-KOMBINASJONER FOR STEMNING:
+  Varm+kald kontrast (editorial):  Key=3200K, Rim=6500K — spenning og dybde
+  Dagslys-ren:                     Key=5600K, Fill=5600K, Rim=6000K
+  Golden hour:                     Key=3000K, Fill=3500K, Rim=5600K
+  Kald krim/thriller:              Key=6500K, Fill=5000K, Rim=7000K
+  Tungsten studio (vintage):       Key=3200K, Fill=3400K, Rim=3000K
 
-PLASSERING AV PROPS OG KARAKTERER:
-─────────────────────────────────────
-• Hver prop/karakter trenger minst 0.8 m avstand fra andre (unngå overlapp)
-• Spre props horisontalt: bruk ulike X-verdier (f.eks. -2, 0, +2, +3)
-• Legg sekundære karakterer bak primærmotivet (større Z) eller til sidene
-• Typiske posisjoner for en filmscene med 4 personer:
-  - Primæraktør: [0, 0, 1]
-  - Regissør: [-2.5, 0, 2]
-  - Kameraoperatør: [2, 0, 0.5] (sett til siden, nær kamera)
-  - Script supervisor: [-3, 0, 1.5]
-• Utstyr (stativer, monitorer) settes ved sidene: X = ±3 til ±4
+MODIFIER-GUIDE:
+  softbox-60x90  = myk, wrap-around (portrett, mat, skjønnhet)
+  octabox-120    = meget myk, nær omnidireksjonell (skjønnhet, glamour)
+  beauty-dish-56 = halvskarp, strukturert lys med fill-ring (fashion)
+  stripbox-15x60 = smal, rettet catchlight (rim, bakgrunnslys)
+  umbrella-white = stor, myk, lav kontrast (budsjett fill)
+  fresnel        = fokusert, konturerende (film, teater, dramatisk)
+  barn-doors     = styrt spill, unngår flare (bakgrunnslys)
+  snoot          = spot, svært fokusert (hair light, accent)
+  grid-40        = som snoot men bredere (foreground accent)
 
-SCENE-STATE OG KORRIGERING:
-─────────────────────────────
-• Du vil motta en "NÅVÆRENDE SCENE-TILSTAND" med alle props, navn og faktiske posisjoner
-• Bruk denne informasjonen til å:
-  1. Unngå å plassere nye props der det allerede er noe
-  2. Bruke reposition_prop for å korrigere props som er feil plassert
-  3. Bruke remove_prop for å fjerne duplikater eller feilplasserte objekter
-• Hvis brukeren ber deg "ordne scenen" eller "fiks plasseringen" → analyser scene-tilstanden
-  og bruk reposition_prop for alle props som trenger korrigering
+═══════════════════════════════════════════════════════
+KAMERAVALG OG KOMPOSISJON
+═══════════════════════════════════════════════════════
 
-LYSKJEMA-RETNINGSLINJER:
-─────────────────────────
-• Key light: Primærlys, 45° til siden, litt over øyehøyde
-  Posisjon: [-2, 4, -1] (venstre, høy, litt foran)
-  Intensitet: 0.8–1.0, CCT: 5600K
+Brennvidde-guide (full-frame ekvivalent):
+  24–28mm: Dramatisk vidvinkel, arkitektur, miljøportretter (nær-distorsjon)
+  35mm:    Fotojournalistisk, naturlig perspektiv (dokumentar, mote editorial)
+  50mm:    «Øyets» brennvidde, nøytralt, allsidig
+  85mm:    Klassisk portrett, flattenende, bokeh — IDEELL for ansikt
+  105mm:   Komprimert portrett, headshot, skjønnhet
+  135mm:   Sterk kompresjon, løsrevet fra bakgrunn (editorial, celebrity)
+  200mm+:  Sport, lange avstandsskudd, ekstrem kompresjon
 
-• Fill light: Motatt side fra key, halvparten av key-intensitet
-  Posisjon: [2, 3, -1], Intensitet: 0.4–0.5
+Regel: kortere brennvidde → mer miljø/kontekst, lengre → mer subjektfokus.
 
-• Rim/back light: Bak motivet for separasjon fra bakgrunn
-  Posisjon: [1, 4, 3] eller [-1, 4, 3], Intensitet: 0.6–0.8
+KOMPOSISJONSREGLER:
+  Tredjedelsloven: subjekt langs tredjedelslinjer (X≈±1.5)
+  Leadroom: subjektet bør ha plass til å «se inn i» bildet
+  Dybdeforhold: fordel props på ulike Z-verdier for perspektivdybde
 
-• CCT guide: 3200K=tungsten/varm, 4500K=overskyet, 5600K=dagslys, 6500K=skyet
+═══════════════════════════════════════════════════════
+PROP-PLASSERING
+═══════════════════════════════════════════════════════
 
-GENERERING AV PROPS (generate_prop):
-──────────────────────────────────────
-• Beskriv objektet detaljert på engelsk for beste resultat
-• Sett realistiske X/Z posisjoner uten overlapp (Y = 0 alltid)
-• Systemet plasserer automatisk proppen på gulvet uansett Y-verdi du gir
+Minst 0.8m mellomrom mellom alle props/karakterer.
+Spre horisontalt (ulike X) og i dybden (ulike Z).
+Sekundære karakterer: bak primærmotivet (Z+1 til +3) eller til sidene (X±2 til ±4).
+Utstyr (stativer): X±3 til ±5.
+Møbler foran motivet: Z+0.5 til +2 (f.eks. bord foran, Z=+1).
 
-Når brukeren laster opp et referansebilde, analyser lyssettingen og gjenskap den.
+generate_prop: Beskriv alltid på ENGELSK, detaljert (materiale, stil, epoke).
+
+═══════════════════════════════════════════════════════
+SCENE-TILSTAND OG KORREKSJON
+═══════════════════════════════════════════════════════
+
+Du vil se "NÅVÆRENDE SCENE-TILSTAND" med lys, props og karakterer.
+Bruk denne for å:
+1. Unngå overlapp (se om noe allerede er plassert)
+2. Korrigere feil med reposition_prop / remove_prop
+3. Bygge videre på eksisterende oppsett intelligens
+
+Audit ved forespørsel: Analyser key:fill-ratio, manglende rim-lys, inkonsistent CCT,
+og gi en kvalitetsvurdering 1–10 med konkrete forbedringspunkter.
 """
 
 
@@ -734,29 +942,139 @@ def _tool_call_to_events(tool_name: str, args: Dict[str, Any]) -> List[Dict[str,
             },
         })
 
+    elif tool_name == "set_backdrop_color":
+        events.append({
+            "event": "vs-set-backdrop-color",
+            "detail": {
+                "color": args.get("color", "#808080"),
+            },
+        })
+
+    elif tool_name == "clear_scene":
+        events.append({
+            "event": "vs-clear-scene",
+            "detail": {
+                "clearLights": args.get("clear_lights", False),
+                "clearCharacters": args.get("clear_characters", True),
+            },
+        })
+
+    elif tool_name == "duplicate_prop":
+        events.append({
+            "event": "vs-duplicate-prop",
+            "detail": {
+                "propId": args.get("prop_id"),
+                "position": args.get("position", [2, 0, 0]),
+            },
+        })
+
+    elif tool_name == "focus_camera_on":
+        events.append({
+            "event": "vs-focus-camera-on",
+            "detail": {
+                "target": args.get("target", [0, 1.5, 0]),
+                "distance": args.get("distance", 4.0),
+            },
+        })
+
+    elif tool_name == "set_scene_name":
+        events.append({
+            "event": "vs-set-scene-name",
+            "detail": {
+                "name": args.get("name", ""),
+            },
+        })
+
+    elif tool_name == "set_ambient_light":
+        events.append({
+            "event": "vs-set-ambient-light",
+            "detail": {
+                "intensity": args.get("intensity", 0.2),
+                "color": args.get("color", "#ffffff"),
+            },
+        })
+
+    elif tool_name == "audit_lighting":
+        # The AI handles the response text; no frontend event needed
+        pass
+
     return events
 
 
 def _describe_tool_call(tool_name: str, args: Dict[str, Any]) -> str:
     """Return a Norwegian progress description for a tool call."""
-    descriptions = {
-        "apply_scenario_preset": f"Setter opp lysscene: {args.get('navn', 'nytt oppsett')}…",
-        "set_outdoor_sun": f"Konfigurerer utendørs sol (høyde: {args.get('elevation', 45)}°, azimut: {args.get('azimuth', 180)}°)…",
-        "set_fog": "Aktiverer tåke…" if args.get("enabled") else "Deaktiverer tåke…",
-        "apply_lut": "Anvender fargegradering…",
-        "set_camera": f"Setter kamera til {args.get('focal_length', 50)}mm…",
-        "add_prop": f"Legger til prop: {args.get('prop_id', '')}…",
-        "load_prop": f"Laster prop: {args.get('prop_id', '')}…",
-        "generate_prop": f"Genererer 3D-prop: {args.get('description', '')[:40]}…",
-        "load_character": f"Laster karakter: {args.get('avatar_type', '')}…",
-        "load_story_character": f"Laster karakter: {args.get('avatar_type', '')}…",
-        "clear_characters": "Fjerner alle karakterer…",
-        "set_light_property": f"Justerer {args.get('property', 'egenskap')} på lys {args.get('light_id', '')}…",
-        "set_camera_fov": f"Setter kamera-brennvidde til {args.get('focal_length', 50)}mm…",
-        "reposition_prop": f"Flytter prop {args.get('prop_id', '')[:20]} til {args.get('position', [0,0,0])}…",
-        "remove_prop": f"Fjerner prop {args.get('prop_id', '')[:20]}…",
-    }
-    return descriptions.get(tool_name, f"Utfører {tool_name}…")
+    if tool_name == "apply_scenario_preset":
+        n = args.get("navn", "nytt oppsett")
+        nl = len(args.get("lights", []))
+        return f"Setter opp «{n}» med {nl} lyskilder…"
+    if tool_name == "set_outdoor_sun":
+        elev = args.get("elevation", 45)
+        az = args.get("azimuth", 180)
+        hour = "gyllen time ☀" if elev < 20 else ("middagssol" if elev > 60 else "dagslys")
+        return f"Setter sol — {hour} ({elev}° høyde, {az}° azimut)…"
+    if tool_name == "set_fog":
+        return ("Aktiverer tåke (tetthet %.3f)…" % args.get("density", 0.005)) if args.get("enabled") else "Deaktiverer tåke…"
+    if tool_name == "apply_lut":
+        mood = "nøytral"
+        if args.get("contrast", 1.0) > 1.3:
+            mood = "høy kontrast"
+        elif args.get("exposure", 1.0) > 1.2:
+            mood = "lys/high-key"
+        elif args.get("exposure", 1.0) < 0.8:
+            mood = "mørk/low-key"
+        return f"Anvender fargegradering ({mood})…"
+    if tool_name in ("set_camera", "set_camera_fov"):
+        fl = args.get("focal_length", 50)
+        style = "portrett" if fl >= 85 else ("normalt" if fl >= 45 else "vidvinkel")
+        return f"Setter kamera til {fl}mm ({style}-perspektiv)…"
+    if tool_name in ("add_prop", "load_prop"):
+        return f"Laster prop: {args.get('prop_id', '')}…"
+    if tool_name == "generate_prop":
+        desc = args.get("description", "")[:50]
+        pos = args.get("position", [0, 0, 0])
+        return f"Genererer 3D-prop «{desc}» ved [{pos[0]:.1f}, {pos[1]:.1f}, {pos[2]:.1f}]…"
+    if tool_name in ("load_character", "load_story_character"):
+        avatar = args.get("avatar_type", "").replace("_", " ").title()
+        name = args.get("name", avatar)
+        return f"Laster karakter: {name}…"
+    if tool_name == "clear_characters":
+        return "Fjerner alle karakterer fra scenen…"
+    if tool_name == "set_light_property":
+        prop = args.get("property", "egenskap")
+        lid = args.get("light_id", "*")
+        val = args.get("value", "")
+        prop_labels = {"intensity": "intensitet", "cct": "fargetemperatur", "color": "farge",
+                       "enabled": "av/på", "position": "posisjon", "modifier": "modifier"}
+        return f"Justerer {prop_labels.get(prop, prop)} på {lid} → {val}…"
+    if tool_name == "reposition_prop":
+        pos = args.get("position", [0, 0, 0])
+        return f"Flytter prop til [{pos[0]:.1f}, {pos[1]:.1f}, {pos[2]:.1f}]…"
+    if tool_name == "remove_prop":
+        return "Fjerner prop fra scenen…"
+    if tool_name == "set_backdrop_color":
+        color = args.get("color", "#808080")
+        return f"Endrer bakgrunn til {color}…"
+    if tool_name == "clear_scene":
+        parts = ["Rydder alle props"]
+        if args.get("clear_lights"):
+            parts.append("lys")
+        if args.get("clear_characters", True):
+            parts.append("karakterer")
+        return f"{', '.join(parts)} fra scenen…"
+    if tool_name == "duplicate_prop":
+        pos = args.get("position", [0, 0, 0])
+        return f"Dupliserer prop til [{pos[0]:.1f}, {pos[1]:.1f}, {pos[2]:.1f}]…"
+    if tool_name == "focus_camera_on":
+        tgt = args.get("target", [0, 1.5, 0])
+        return f"Fokuserer kamera mot [{tgt[0]:.1f}, {tgt[1]:.1f}, {tgt[2]:.1f}]…"
+    if tool_name == "set_scene_name":
+        return f"Navngir scenen: «{args.get('name', '')}»…"
+    if tool_name == "set_ambient_light":
+        pct = int(args.get("intensity", 0.2) * 100)
+        return f"Setter ambientlys til {pct}%…"
+    if tool_name == "audit_lighting":
+        return "Analyserer lyskvalitet og komposisjon…"
+    return f"Utfører {tool_name}…"
 
 
 def _generate_suggestions(
@@ -989,12 +1307,16 @@ class AiDirectorService:
         system_message = {"role": "system", "content": SYSTEM_PROMPT}
         chat_messages = [system_message]
 
-        # Inject current scene state (props + lights + camera) so AI knows exactly what exists
+        # Inject current scene state (props + lights + characters + camera)
         if scene_context:
             props = scene_context.get("props", [])
             lights = scene_context.get("lights", [])
+            characters = scene_context.get("characters", [])
+            scene_name = scene_context.get("sceneName", "")
             camera = scene_context.get("camera", {})
             scene_lines = ["NÅVÆRENDE SCENE-TILSTAND (oppdatert):"]
+            if scene_name:
+                scene_lines.append(f"Scenenavn: «{scene_name}»")
             cam_pos = camera.get("position", [])
             if cam_pos:
                 scene_lines.append(f"Kamera: posisjon=[{cam_pos[0]:.1f}, {cam_pos[1]:.1f}, {cam_pos[2]:.1f}]")
@@ -1010,6 +1332,17 @@ class AiDirectorService:
                     )
             else:
                 scene_lines.append("Ingen lys satt opp ennå.")
+            if characters:
+                scene_lines.append(f"Karakterer i scenen ({len(characters)} stk):")
+                for ch in characters:
+                    pos = ch.get("position", [0, 0, 0])
+                    scene_lines.append(
+                        f"  • id={ch.get('id')} navn=\"{ch.get('name', '?')}\" "
+                        f"type={ch.get('avatarType', '?')} "
+                        f"pos=[{pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f}]"
+                    )
+            else:
+                scene_lines.append("Ingen karakterer i scenen ennå.")
             if props:
                 scene_lines.append(f"Props i scenen ({len(props)} stk):")
                 for p in props:
@@ -1024,7 +1357,11 @@ class AiDirectorService:
                 scene_lines.append("Ingen props i scenen ennå.")
             chat_messages.append({"role": "system", "content": "\n".join(scene_lines)})
 
-        chat_messages += list(messages)
+        # Truncate history to last 14 messages to avoid context window overflow
+        trimmed = list(messages)
+        if len(trimmed) > 14:
+            trimmed = trimmed[-14:]
+        chat_messages += trimmed
 
         if image_data_url:
             last_user_msg = next(

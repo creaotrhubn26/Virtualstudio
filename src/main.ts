@@ -1190,6 +1190,7 @@ class VirtualStudio {
           target: cameraTarget ? [cameraTarget.x, cameraTarget.y, cameraTarget.z] : null,
           fov: this.camera.fov,
         },
+        sceneName: (this as any)._sceneName || '',
         lights: Array.from(this.lights.values()).map((light) => ({
           id: light.name,
           lightType: light.type || 'spot',
@@ -1202,6 +1203,16 @@ class VirtualStudio {
           cct: light.cct || 5600,
           modifier: light.modifier || 'none',
           enabled: light.mesh.isVisible,
+        })),
+        characters: Array.from(this.sceneState.characters.values()).map((ch) => ({
+          id: ch.id,
+          name: ch.name,
+          avatarType: ch.avatarUrl ? ch.avatarUrl.split('/').pop()?.replace('.glb', '') ?? 'unknown' : 'unknown',
+          position: [
+            parseFloat(ch.mesh.position.x.toFixed(2)),
+            parseFloat(ch.mesh.position.y.toFixed(2)),
+            parseFloat(ch.mesh.position.z.toFixed(2)),
+          ],
         })),
         props: Array.from(this.sceneState.props.values()).map((prop) => {
           const mesh = prop.mesh as BABYLON.AbstractMesh;
@@ -10789,7 +10800,113 @@ class VirtualStudio {
       this.recalculateAmbientLighting();
     }) as EventListener);
 
-    // Apply gel/colour filter to a light (fired by GelPickerPanel)
+    // ── AI Director: Set backdrop color ──────────────────────────────────────
+    window.addEventListener('vs-set-backdrop-color', ((e: CustomEvent) => {
+      const { color } = e.detail || {};
+      if (!color) return;
+      const hexStr: string = color as string;
+      const clean = hexStr.replace('#', '');
+      const r = parseInt(clean.slice(0, 2), 16) / 255;
+      const g = parseInt(clean.slice(2, 4), 16) / 255;
+      const b = parseInt(clean.slice(4, 6), 16) / 255;
+      this.scene.clearColor = new BABYLON.Color4(r, g, b, 1);
+      if (this.backdropMesh) {
+        const mat = this.backdropMesh.material as BABYLON.StandardMaterial | null;
+        if (mat) mat.diffuseColor = new BABYLON.Color3(r, g, b);
+      }
+      console.log(`[vs-set-backdrop-color] Set to ${color}`);
+    }) as EventListener);
+
+    // ── AI Director: Clear scene ──────────────────────────────────────────────
+    window.addEventListener('vs-clear-scene', ((e: CustomEvent) => {
+      const { clearLights = false, clearCharacters = true } = e.detail || {};
+      // Remove all props
+      const propIds = Array.from(this.sceneState.props.keys());
+      for (const pid of propIds) {
+        const prop = this.sceneState.props.get(pid);
+        if (prop) {
+          prop.mesh.getChildMeshes().forEach(m => m.dispose());
+          prop.mesh.dispose();
+          this.sceneState.props.delete(pid);
+        }
+      }
+      // Optionally remove characters
+      if (clearCharacters) {
+        window.dispatchEvent(new CustomEvent('ch-clear-story-characters', { detail: {} }));
+        this.sceneState.characters.clear();
+      }
+      // Optionally remove lights
+      if (clearLights) {
+        const lightIds = Array.from(this.lights.keys());
+        for (const lid of lightIds) {
+          const ld = this.lights.get(lid);
+          if (ld) {
+            ld.shadowGenerator?.dispose();
+            ld.light.dispose();
+            ld.mesh.getChildMeshes().forEach(m => m.dispose());
+            ld.mesh.dispose();
+            this.lights.delete(lid);
+          }
+        }
+      }
+      this.publishEnvironmentDiagnostics('clear-scene');
+      console.log(`[vs-clear-scene] Cleared props${clearCharacters ? '+chars' : ''}${clearLights ? '+lights' : ''}`);
+    }) as EventListener);
+
+    // ── AI Director: Duplicate prop ───────────────────────────────────────────
+    window.addEventListener('vs-duplicate-prop', ((e: CustomEvent) => {
+      const { propId, position } = e.detail || {};
+      if (!propId || !position) return;
+      const original = this.sceneState.props.get(propId);
+      if (!original) {
+        console.warn(`[vs-duplicate-prop] Prop not found: ${propId}`);
+        return;
+      }
+      window.dispatchEvent(new CustomEvent('vs-add-prop', {
+        detail: {
+          propId: original.assetId || propId,
+          position,
+        },
+      }));
+      console.log(`[vs-duplicate-prop] Duplicating ${propId} to [${position}]`);
+    }) as EventListener);
+
+    // ── AI Director: Focus camera on target ───────────────────────────────────
+    window.addEventListener('vs-focus-camera-on', ((e: CustomEvent) => {
+      const { target, distance = 4.0 } = e.detail || {};
+      if (!target || !Array.isArray(target)) return;
+      const [tx, ty, tz] = target;
+      const tgt = new BABYLON.Vector3(tx, ty, tz);
+      this.camera.target = tgt;
+      // Pull camera back along current alpha/beta arc
+      this.camera.radius = Math.max(2, distance);
+      console.log(`[vs-focus-camera-on] Target=[${tx.toFixed(1)}, ${ty.toFixed(1)}, ${tz.toFixed(1)}] dist=${distance}`);
+    }) as EventListener);
+
+    // ── AI Director: Set scene name ───────────────────────────────────────────
+    window.addEventListener('vs-set-scene-name', ((e: CustomEvent) => {
+      const { name } = e.detail || {};
+      if (!name) return;
+      (this as any)._sceneName = name;
+      document.title = `${name} — Virtual Studio`;
+      window.dispatchEvent(new CustomEvent('vs-scene-name-changed', { detail: { name } }));
+      console.log(`[vs-set-scene-name] "${name}"`);
+    }) as EventListener);
+
+    // ── AI Director: Set ambient light ────────────────────────────────────────
+    window.addEventListener('vs-set-ambient-light', ((e: CustomEvent) => {
+      const { intensity = 0.2, color = '#ffffff' } = e.detail || {};
+      if (this.ambientLight) {
+        this.ambientLight.intensity = intensity;
+        const clean = (color as string).replace('#', '');
+        const r = parseInt(clean.slice(0, 2), 16) / 255;
+        const g = parseInt(clean.slice(2, 4), 16) / 255;
+        const b = parseInt(clean.slice(4, 6), 16) / 255;
+        this.ambientLight.diffuse = new BABYLON.Color3(r, g, b);
+        console.log(`[vs-set-ambient-light] intensity=${intensity} color=${color}`);
+      }
+    }) as EventListener);
+
     window.addEventListener('vs-apply-gel', ((e: CustomEvent) => {
       const { lightId, hex, gelId, gelName, blendMode } = e.detail || {};
       if (!hex || typeof hex !== 'string') return;

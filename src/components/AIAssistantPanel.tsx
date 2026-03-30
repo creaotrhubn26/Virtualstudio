@@ -32,7 +32,18 @@ import {
   Movie as DirectorIcon,
   PhotoCamera as CameraIcon,
   ViewInAr as Model3DIcon,
+  ContentCopy as CopyIcon,
+  Replay as RetryIcon,
+  Stop as StopIcon,
+  DeleteSweep as ClearIcon,
+  KeyboardArrowDown as ScrollDownIcon,
+  Mic as MicIcon,
+  MicOff as MicOffIcon,
+  LightbulbOutlined as LightIcon,
+  People as PeopleIcon,
+  Inventory2Outlined as PropsIcon,
 } from '@mui/icons-material';
+import { Tooltip } from '@mui/material';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -40,6 +51,8 @@ interface ChatMessage {
   steps?: string[];
   isLoading?: boolean;
   suggestions?: string[];
+  isError?: boolean;
+  timestamp?: number;
 }
 
 interface PropGenState {
@@ -62,7 +75,21 @@ const QUICK_BRIEFS = [
   'Dramatisk low-key noir med hardt sidelys',
   'Varm gylden timebelysning, 15° solvinkel',
   'Napoli-restaurant scene, stearinlys og varm glødepære',
+  'Fashion editorial med hard kontrastbelysning',
+  'Mykt skjønnhetslys, octabox, hvit bakgrunn',
+  'Produktfotografi med rent hvitt lys og reflektorer',
+  'Film noir krimscene, ett enkelt sidelys',
 ];
+
+const INPUT_PLACEHOLDERS = [
+  'Beskriv scenen på norsk…',
+  'F.eks. "Dramatisk portrett med varm belysning"…',
+  'F.eks. "Legg til rim-lys bak karakteren"…',
+  'F.eks. "Analyser og forbedre lyskvaliteten"…',
+  'F.eks. "Gjenskap en golden hour-scene utendørs"…',
+];
+
+const LS_KEY = 'vs-ai-chat-history';
 
 function dispatchStudioEvents(events: Array<{ event: string; detail: unknown }>) {
   for (const { event, detail } of events) {
@@ -70,19 +97,43 @@ function dispatchStudioEvents(events: Array<{ event: string; detail: unknown }>)
   }
 }
 
+const INITIAL_MSG: ChatMessage = {
+  role: 'assistant',
+  content:
+    'Hei! Jeg er AI Direktøren for Virtual Studio. Beskriv scenen du vil lage, og jeg setter opp lys, kamera og props automatisk. Prøv for eksempel: «Lag en dramatisk portrettscene med varm belysning».',
+};
+
 export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullscreen }: AIAssistantPanelProps) {
   const [activeTab, setActiveTab] = useState(0);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: 'assistant',
-      content:
-        'Hei! Jeg er AI Direktøren for Virtual Studio. Beskriv scenen du vil lage, og jeg setter opp lys, kamera og props automatisk. Prøv for eksempel: "Lag en dramatisk portrettscene med varm belysning".',
-    },
-  ]);
+  // Load persisted history on mount
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const saved = localStorage.getItem(LS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as ChatMessage[];
+        if (parsed.length > 0) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return [INITIAL_MSG];
+  });
+
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [thinkingSeconds, setThinkingSeconds] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [placeholderIdx, setPlaceholderIdx] = useState(0);
+  const [sceneName, setSceneName] = useState('');
+  const [sceneStats, setSceneStats] = useState({ lights: 0, props: 0, chars: 0 });
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const lastUserMsgRef = useRef('');
 
   const [refImage, setRefImage] = useState<string | null>(null);
   const [refFileName, setRefFileName] = useState('');
@@ -105,17 +156,98 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
   });
   const propPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Persist chat history (skip loading messages to avoid storing stale state)
+  useEffect(() => {
+    const toSave = messages.filter(m => !m.isLoading);
+    try { localStorage.setItem(LS_KEY, JSON.stringify(toSave)); } catch { /* ignore */ }
+  }, [messages]);
+
+  // Auto-scroll during token streaming
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distFromBottom < 120) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  }, [messages]);
+
+  // Smooth scroll to bottom on first load
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, []);
+
+  // Show/hide scroll-to-bottom button
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+      setShowScrollBtn(dist > 150);
+    };
+    el.addEventListener('scroll', onScroll);
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Thinking elapsed timer
+  useEffect(() => {
+    if (isSending) {
+      setThinkingSeconds(0);
+      timerRef.current = setInterval(() => setThinkingSeconds(s => s + 1), 1000);
+    } else {
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+      setThinkingSeconds(0);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [isSending]);
+
+  // Rotating input placeholder
+  useEffect(() => {
+    const t = setInterval(() => {
+      setPlaceholderIdx(i => (i + 1) % INPUT_PLACEHOLDERS.length);
+    }, 5000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Scene stats and name from diagnostics
+  useEffect(() => {
+    const updateStats = () => {
+      const diag = (window as Record<string, unknown>).__virtualStudioDiagnostics as
+        { environment?: { sceneState?: { lights?: unknown[]; props?: unknown[]; characters?: unknown[]; sceneName?: string } } } | undefined;
+      const ss = diag?.environment?.sceneState;
+      if (ss) {
+        setSceneStats({
+          lights: ss.lights?.length ?? 0,
+          props: ss.props?.length ?? 0,
+          chars: ss.characters?.length ?? 0,
+        });
+        if (ss.sceneName) setSceneName(ss.sceneName);
+      }
+    };
+    updateStats();
+    const h = () => updateStats();
+    window.addEventListener('vs-environment-diagnostics', h);
+    window.addEventListener('vs-scene-name-changed', (e: Event) => {
+      const name = (e as CustomEvent).detail?.name;
+      if (name) setSceneName(name);
+    });
+    return () => { window.removeEventListener('vs-environment-diagnostics', h); };
+  }, []);
 
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || isSending) return;
       setIsSending(true);
+      lastUserMsgRef.current = text;
 
-      const userMsg: ChatMessage = { role: 'user', content: text };
-      const loadingMsg: ChatMessage = { role: 'assistant', content: '', isLoading: true, steps: [] };
+      // Cancel any in-flight request
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      const ctrl = new AbortController();
+      abortControllerRef.current = ctrl;
+
+      const userMsg: ChatMessage = { role: 'user', content: text, timestamp: Date.now() };
+      const loadingMsg: ChatMessage = { role: 'assistant', content: '', isLoading: true, steps: [], timestamp: Date.now() };
+
+      // Dismiss suggestions from previous messages when starting a new send
+      setMessages((prev) => prev.map(m => ({ ...m, suggestions: undefined })));
 
       setMessages((prev) => [...prev, userMsg, loadingMsg]);
       setInputText('');
@@ -141,6 +273,7 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ messages: history, sceneContext }),
+          signal: ctrl.signal,
         });
 
         if (!res.ok || !res.body) {
@@ -217,18 +350,76 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
           )
         );
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Ukjent feil';
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.isLoading ? { role: 'assistant' as const, content: `Feil: ${msg}`, steps: accumulatedSteps } : m
-          )
-        );
+        if (err instanceof Error && err.name === 'AbortError') {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.isLoading
+                ? { role: 'assistant' as const, content: m.content || 'Avbrutt.', steps: accumulatedSteps }
+                : m
+            )
+          );
+        } else {
+          const msg = err instanceof Error ? err.message : 'Ukjent feil';
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.isLoading
+                ? { role: 'assistant' as const, content: `Feil: ${msg}`, steps: accumulatedSteps, isError: true }
+                : m
+            )
+          );
+        }
       } finally {
         setIsSending(false);
+        abortControllerRef.current = null;
       }
     },
     [isSending, messages]
   );
+
+  const cancelRequest = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsSending(false);
+  }, []);
+
+  const copyMessage = useCallback((content: string) => {
+    navigator.clipboard.writeText(content).catch(console.warn);
+  }, []);
+
+  const clearConversation = useCallback(() => {
+    if (!window.confirm('Tøm hele samtalen?')) return;
+    setMessages([INITIAL_MSG]);
+    try { localStorage.removeItem(LS_KEY); } catch { /* ignore */ }
+  }, []);
+
+  const retryLastMessage = useCallback(() => {
+    if (lastUserMsgRef.current) void sendMessage(lastUserMsgRef.current);
+  }, [sendMessage]);
+
+  const toggleVoice = useCallback(() => {
+    if (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)) {
+      console.warn('[Voice] SpeechRecognition not supported');
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+    const SR = (window.SpeechRecognition || (window as Record<string, unknown>).webkitSpeechRecognition) as typeof SpeechRecognition;
+    const rec = new SR();
+    rec.lang = 'nb-NO';
+    rec.interimResults = false;
+    rec.onresult = (e: SpeechRecognitionEvent) => {
+      const transcript = e.results[0][0].transcript;
+      setInputText(prev => prev + (prev ? ' ' : '') + transcript);
+    };
+    rec.onend = () => setIsListening(false);
+    rec.onerror = () => setIsListening(false);
+    recognitionRef.current = rec;
+    rec.start();
+    setIsListening(true);
+  }, [isListening]);
 
   const handleRefImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -442,7 +633,38 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
 
       {activeTab === 0 && (
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <Box sx={{ flex: 1, overflowY: 'auto', p: 1.5 }}>
+
+          {/* Scene status bar */}
+          <Box sx={{
+            display: 'flex', alignItems: 'center', gap: 1.5, px: 1.5, py: 0.5,
+            borderBottom: '1px solid rgba(255,255,255,0.05)',
+            bgcolor: 'rgba(0,0,0,0.2)', flexShrink: 0,
+          }}>
+            {sceneName && (
+              <Typography variant="caption" sx={{ color: '#00d4ff', fontWeight: 600, fontSize: 10, mr: 'auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>
+                {sceneName}
+              </Typography>
+            )}
+            <Stack direction="row" alignItems="center" spacing={0.3}>
+              <LightIcon sx={{ fontSize: 11, color: sceneStats.lights > 0 ? '#ffcc44' : 'rgba(255,255,255,0.25)' }} />
+              <Typography variant="caption" sx={{ color: sceneStats.lights > 0 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)', fontSize: 10 }}>{sceneStats.lights}</Typography>
+            </Stack>
+            <Stack direction="row" alignItems="center" spacing={0.3}>
+              <PropsIcon sx={{ fontSize: 11, color: sceneStats.props > 0 ? '#88aaff' : 'rgba(255,255,255,0.25)' }} />
+              <Typography variant="caption" sx={{ color: sceneStats.props > 0 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)', fontSize: 10 }}>{sceneStats.props}</Typography>
+            </Stack>
+            <Stack direction="row" alignItems="center" spacing={0.3}>
+              <PeopleIcon sx={{ fontSize: 11, color: sceneStats.chars > 0 ? '#88ffaa' : 'rgba(255,255,255,0.25)' }} />
+              <Typography variant="caption" sx={{ color: sceneStats.chars > 0 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)', fontSize: 10 }}>{sceneStats.chars}</Typography>
+            </Stack>
+            <Tooltip title="Tøm samtale" placement="top">
+              <IconButton onClick={clearConversation} size="small" sx={{ color: 'rgba(255,255,255,0.3)', p: 0.3, '&:hover': { color: '#ff6b6b' } }}>
+                <ClearIcon sx={{ fontSize: 13 }} />
+              </IconButton>
+            </Tooltip>
+          </Box>
+
+          <Box ref={scrollContainerRef} sx={{ flex: 1, overflowY: 'auto', p: 1.5, position: 'relative' }}>
             {messages.map((msg, i) => (
               <Box
                 key={i}
@@ -452,16 +674,36 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
                   justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
                 }}
               >
-                <Box
-                  sx={{
-                    maxWidth: '88%',
-                    px: 1.5,
-                    py: 1,
-                    borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                    bgcolor: msg.role === 'user' ? '#00d4ff' : 'rgba(255,255,255,0.07)',
-                    border: msg.role === 'assistant' ? '1px solid rgba(255,255,255,0.1)' : 'none',
-                  }}
-                >
+                <Box sx={{ maxWidth: '88%', position: 'relative', '&:hover .msg-actions': { opacity: 1 } }}>
+                  {/* Copy / Retry actions on hover */}
+                  {!msg.isLoading && msg.role === 'assistant' && (
+                    <Box className="msg-actions" sx={{
+                      position: 'absolute', top: -14, right: 0, opacity: 0, transition: 'opacity 0.15s',
+                      display: 'flex', gap: 0.3,
+                    }}>
+                      <Tooltip title="Kopier" placement="top">
+                        <IconButton size="small" onClick={() => copyMessage(msg.content)} sx={{ p: 0.3, bgcolor: 'rgba(30,40,60,0.9)', color: 'rgba(255,255,255,0.7)', '&:hover': { color: '#fff' } }}>
+                          <CopyIcon sx={{ fontSize: 11 }} />
+                        </IconButton>
+                      </Tooltip>
+                      {msg.isError && (
+                        <Tooltip title="Prøv igjen" placement="top">
+                          <IconButton size="small" onClick={retryLastMessage} sx={{ p: 0.3, bgcolor: 'rgba(30,40,60,0.9)', color: '#ff9955', '&:hover': { color: '#ffbb77' } }}>
+                            <RetryIcon sx={{ fontSize: 11 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
+                  )}
+                  <Box
+                    sx={{
+                      px: 1.5,
+                      py: 1,
+                      borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                      bgcolor: msg.role === 'user' ? '#00d4ff' : msg.isError ? 'rgba(255,80,80,0.1)' : 'rgba(255,255,255,0.07)',
+                      border: msg.role === 'assistant' ? `1px solid ${msg.isError ? 'rgba(255,80,80,0.3)' : 'rgba(255,255,255,0.1)'}` : 'none',
+                    }}
+                  >
                   {msg.isLoading ? (
                     <Box>
                       {msg.steps && msg.steps.length > 0 && (
@@ -504,7 +746,7 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
                         <Stack direction="row" alignItems="center" spacing={1}>
                           <CircularProgress size={14} sx={{ color: '#00d4ff' }} />
                           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>
-                            Tenker…
+                            Tenker{thinkingSeconds > 2 ? ` (${thinkingSeconds}s)` : '…'}
                           </Typography>
                         </Stack>
                       )}
@@ -558,6 +800,7 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
                       )}
                     </>
                   )}
+                  </Box>
                 </Box>
               </Box>
             ))}
@@ -597,61 +840,128 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
             </Box>
           </Box>
 
+          {/* Scroll-to-bottom FAB */}
+          {showScrollBtn && (
+            <Box sx={{ position: 'relative', flexShrink: 0 }}>
+              <IconButton
+                size="small"
+                onClick={() => scrollContainerRef.current?.scrollTo({ top: scrollContainerRef.current.scrollHeight, behavior: 'smooth' })}
+                sx={{
+                  position: 'absolute', bottom: 4, right: 16, zIndex: 10,
+                  bgcolor: 'rgba(0,212,255,0.18)', color: '#00d4ff',
+                  border: '1px solid rgba(0,212,255,0.35)',
+                  width: 28, height: 28,
+                  '&:hover': { bgcolor: 'rgba(0,212,255,0.3)' },
+                }}
+              >
+                <ScrollDownIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Box>
+          )}
+
           <Box
             sx={{
               flexShrink: 0,
-              display: 'flex',
-              gap: 1,
               px: 1.5,
               pb: 1.5,
               pt: 0.5,
               borderTop: '1px solid rgba(255,255,255,0.06)',
             }}
           >
-            <TextField
-              fullWidth
-              multiline
-              maxRows={3}
-              size="small"
-              placeholder="Beskriv scenen på norsk…"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  void sendMessage(inputText);
-                }
-              }}
-              disabled={isSending}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: 'rgba(255,255,255,0.05)',
-                  color: '#fff',
-                  fontSize: 13,
-                  '& fieldset': { borderColor: 'rgba(255,255,255,0.12)' },
-                  '&:hover fieldset': { borderColor: 'rgba(0,212,255,0.4)' },
-                  '&.Mui-focused fieldset': { borderColor: '#00d4ff' },
-                },
-                '& .MuiInputBase-input::placeholder': { color: 'rgba(255,255,255,0.3)' },
-              }}
-            />
-            <IconButton
-              onClick={() => sendMessage(inputText)}
-              disabled={isSending || !inputText.trim()}
-              sx={{
-                bgcolor: '#00d4ff',
-                color: '#000',
-                borderRadius: 2,
-                width: 40,
-                height: 40,
-                alignSelf: 'flex-end',
-                flexShrink: 0,
-                '&:hover': { bgcolor: '#00b8e6' },
-                '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' },
-              }}
-            >
-              {isSending ? <CircularProgress size={16} sx={{ color: '#000' }} /> : <SendIcon fontSize="small" />}
-            </IconButton>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end' }}>
+              <Box sx={{ flex: 1, position: 'relative' }}>
+                <TextField
+                  fullWidth
+                  multiline
+                  maxRows={3}
+                  size="small"
+                  placeholder={INPUT_PLACEHOLDERS[placeholderIdx]}
+                  value={inputText}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 600) setInputText(e.target.value);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      void sendMessage(inputText);
+                    }
+                    if (e.key === 'ArrowUp' && !inputText && lastUserMsgRef.current) {
+                      e.preventDefault();
+                      setInputText(lastUserMsgRef.current);
+                    }
+                  }}
+                  disabled={isSending}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      bgcolor: 'rgba(255,255,255,0.05)',
+                      color: '#fff',
+                      fontSize: 13,
+                      '& fieldset': { borderColor: 'rgba(255,255,255,0.12)' },
+                      '&:hover fieldset': { borderColor: 'rgba(0,212,255,0.4)' },
+                      '&.Mui-focused fieldset': { borderColor: '#00d4ff' },
+                    },
+                    '& .MuiInputBase-input::placeholder': { color: 'rgba(255,255,255,0.3)', fontSize: 12 },
+                  }}
+                />
+                {/* Character counter */}
+                {inputText.length > 300 && (
+                  <Typography variant="caption" sx={{
+                    position: 'absolute', bottom: 4, right: 8,
+                    fontSize: 9, color: inputText.length > 550 ? '#ff9955' : 'rgba(255,255,255,0.3)',
+                    pointerEvents: 'none',
+                  }}>
+                    {inputText.length}/600
+                  </Typography>
+                )}
+              </Box>
+
+              {/* Voice input */}
+              <Tooltip title={isListening ? 'Stopp lytting' : 'Taleinndata'} placement="top">
+                <IconButton
+                  onClick={toggleVoice}
+                  size="small"
+                  sx={{
+                    width: 36, height: 36, borderRadius: 2, flexShrink: 0,
+                    bgcolor: isListening ? 'rgba(255,80,80,0.2)' : 'rgba(255,255,255,0.07)',
+                    border: isListening ? '1px solid rgba(255,80,80,0.5)' : '1px solid rgba(255,255,255,0.12)',
+                    color: isListening ? '#ff6b6b' : 'rgba(255,255,255,0.5)',
+                    '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.12)' },
+                  }}
+                >
+                  <MicIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Tooltip>
+
+              {/* Send / Stop button */}
+              {isSending ? (
+                <Tooltip title={`Stopp (${thinkingSeconds}s)`} placement="top">
+                  <IconButton
+                    onClick={cancelRequest}
+                    sx={{
+                      bgcolor: 'rgba(255,80,80,0.18)', color: '#ff6b6b',
+                      border: '1px solid rgba(255,80,80,0.35)',
+                      borderRadius: 2, width: 40, height: 40, flexShrink: 0,
+                      '&:hover': { bgcolor: 'rgba(255,80,80,0.32)' },
+                    }}
+                  >
+                    <StopIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              ) : (
+                <IconButton
+                  onClick={() => void sendMessage(inputText)}
+                  disabled={!inputText.trim()}
+                  sx={{
+                    bgcolor: '#00d4ff', color: '#000',
+                    borderRadius: 2, width: 40, height: 40, flexShrink: 0,
+                    '&:hover': { bgcolor: '#00b8e6' },
+                    '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' },
+                  }}
+                >
+                  <SendIcon fontSize="small" />
+                </IconButton>
+              )}
+            </Box>
           </Box>
         </Box>
       )}
