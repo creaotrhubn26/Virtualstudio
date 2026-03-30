@@ -5662,135 +5662,48 @@ class VirtualStudio {
         const initT = Math.min(1.0, lightConfig.intensity / 500);
         const initStrength = Math.sqrt(initT) * 1.6;
 
- {
-            geoMesh.computeWorldMatrix(true);
-            const wm = geoMesh.getWorldMatrix();
-            const modelDepth = Math.abs(bMax.z - bMin.z);
-            // Epsilon: 4% of model depth, min 3 cm. Used as Z-band thickness for the scan.
-            const epsilon = Math.max(0.03, modelDepth * 0.04);
 
-            const src = new BABYLON.Vector3();
-            const dst = new BABYLON.Vector3();
-
-            // --- Pass 1: find the HEAD's minimum Z (front face of softbox head, not tripod) ---
-            let headBMinZ = Infinity;
-            for (let vi = 0; vi < positions.length; vi += 3) {
-              src.x = positions[vi]; src.y = positions[vi + 1]; src.z = positions[vi + 2];
-              BABYLON.Vector3.TransformCoordinatesToRef(src, wm, dst);
-              if (dst.y >= headJointWorldY && dst.z < headBMinZ) headBMinZ = dst.z;
-            }
-
-            if (isFinite(headBMinZ)) {
-              diffuserFaceZ = headBMinZ;
-              console.log(`[addLight] Pass1: headBMinZ=${headBMinZ.toFixed(3)} bMinZ=${bMin.z.toFixed(3)} delta=${(headBMinZ - bMin.z).toFixed(3)}`);
-            } else {
-              console.warn(`[addLight] Pass1: no head vertices above headJointY=${headJointWorldY.toFixed(2)}, using bMinZ=${bMin.z.toFixed(3)}`);
-            }
-
-            // --- Pass 2: X/Y extent of head-face vertices at headBMinZ ± epsilon ---
-            let fxMin = Infinity, fxMax = -Infinity;
-            let fyMin = Infinity, fyMax = -Infinity;
-            for (let vi = 0; vi < positions.length; vi += 3) {
-              src.x = positions[vi]; src.y = positions[vi + 1]; src.z = positions[vi + 2];
-              BABYLON.Vector3.TransformCoordinatesToRef(src, wm, dst);
-              if (dst.y >= headJointWorldY && Math.abs(dst.z - diffuserFaceZ) <= epsilon) {
-                if (dst.x < fxMin) fxMin = dst.x;
-                if (dst.x > fxMax) fxMax = dst.x;
-                if (dst.y < fyMin) fyMin = dst.y;
-                if (dst.y > fyMax) fyMax = dst.y;
-              }
-            }
-
-            if (isFinite(fxMin) && fxMax > fxMin) {
-              panelW = fxMax - fxMin;
-              // Height = width (square diffuser assumption for both softbox and octabox).
-              panelH = panelW;
-              // X center: vertex-measured (avoids flash-mount bracket X-offset).
-              // Y center: anchor bottom at headJointWorldY, top at headJointWorldY + panelW.
-              const diffuserYCenter = headJointWorldY + panelW * 0.5;
-              (geoMesh as any)._diffuserXCenter = (fxMin + fxMax) * 0.5;
-              (geoMesh as any)._diffuserYCenter = diffuserYCenter;
-              measuredFromVertices = true;
-              console.log(`[addLight] VERTEX diffuser: W=${panelW.toFixed(3)}m H(=W)=${panelH.toFixed(3)}m` +
-                ` Xcenter=${((fxMin + fxMax) * 0.5).toFixed(3)} Ycenter=${diffuserYCenter.toFixed(3)}` +
-                ` headFaceZ=${diffuserFaceZ.toFixed(3)} eps=${epsilon.toFixed(3)}` +
-                ` rawX=[${fxMin.toFixed(3)},${fxMax.toFixed(3)}] rawY=[${fyMin.toFixed(3)},${fyMax.toFixed(3)}]`);
-            } else {
-              console.warn(`[addLight] Pass2: no face vertices at headBMinZ=${diffuserFaceZ.toFixed(3)} eps=${epsilon.toFixed(3)}`);
-            }
+        // Find white diffuser meshes by material brightness (> 0.6 average albedo).
+        // The softbox GLB has a bright-white diffuser panel and a dark stand body.
+        const diffuserMeshes: BABYLON.Mesh[] = [];
+        for (const sm of allSubMeshes) {
+          if (!(sm instanceof BABYLON.Mesh)) continue;
+          const mat = sm.material;
+          if (!mat) continue;
+          let brightness = 0;
+          if (mat instanceof BABYLON.PBRMaterial) {
+            const c = mat.albedoColor;
+            brightness = (c.r + c.g + c.b) / 3;
+          } else if (mat instanceof BABYLON.StandardMaterial) {
+            const c = mat.diffuseColor;
+            brightness = (c.r + c.g + c.b) / 3;
           }
+          if (brightness > 0.6) diffuserMeshes.push(sm);
         }
+        // Fall back to all submeshes when no clearly-white material is found.
+        const glowMeshes = diffuserMeshes.length > 0
+          ? diffuserMeshes
+          : (allSubMeshes.filter(sm => sm instanceof BABYLON.Mesh) as BABYLON.Mesh[]);
 
-        if (!measuredFromVertices) {
-          // Fallback: square head area from clipped bbox.
-          panelW = Math.max(0.05, bMax.x - bMin.x);
-          panelH = panelW;
-          console.log(`[addLight] BBOX diffuser fallback: W=${panelW.toFixed(3)}m H(=W)=${panelH.toFixed(3)}m`);
-        }
-        // World-space centre on the −Z (diffuser) face.
-        // Use vertex-measured X and Y centers when available (avoids hardware inflation
-        // from flash mount / brackets that offset the bbox center from the diffuser center).
-        // Offset 1.5 cm in −Z so the plane sits just in front of the physical face.
-        const vertexXCenter = (measuredFromVertices && geoMesh)
-          ? (geoMesh as any)._diffuserXCenter as number
-          : (bMin.x + bMax.x) * 0.5;
-        const vertexYCenter = (measuredFromVertices && geoMesh)
-          ? (geoMesh as any)._diffuserYCenter as number
-          : (bMin.y + bMax.y) * 0.5;
-        // Shift glow centre downward so it aligns with the visual centre of the diffuser face.
-        // The flash-mount bracket at the top of the head pushes the geometric centre (headJoint
-        // + panelW*0.5) above the actual diffuser cloth centre. 30% of panelW corrects this.
-        const glowYCenter = vertexYCenter - panelW * 0.40;
-        const worldCenter = new BABYLON.Vector3(
-          vertexXCenter,
-          glowYCenter,
-          diffuserFaceZ - 0.015    // 1.5 cm in front of the HEAD's actual front face
-        );
+        // Apply initial emissive glow to the diffuser faces.
+        glowMeshes.forEach(sm => {
+          const mat = sm.material;
+          if (!mat) return;
+          if (mat instanceof BABYLON.PBRMaterial) {
+            mat.emissiveColor    = new BABYLON.Color3(cctColor.r, cctColor.g, cctColor.b);
+            mat.emissiveIntensity = initStrength;
+          } else if (mat instanceof BABYLON.StandardMaterial) {
+            mat.emissiveColor = new BABYLON.Color3(
+              cctColor.r * initStrength,
+              cctColor.g * initStrength,
+              cctColor.b * initStrength
+            );
+          }
+        });
 
-        // Plane has no parent so sizes are in WORLD units directly (no scaleFactor division).
-        const isOctabox = lightConfig.glbFile.includes('octabox');
-        let diffuserPlane: BABYLON.Mesh;
-        if (isOctabox) {
-          // Octabox diffuser is circular — 8-sided disc (regular octagon).
-          // panelH = panelW so no Y-stretch needed; radius = half diameter.
-          diffuserPlane = BABYLON.MeshBuilder.CreateDisc(
-            `${lightId}_diffuserGlow`,
-            { radius: panelW * 0.5, tessellation: 8 },
-            this.scene
-          );
-        } else {
-          diffuserPlane = BABYLON.MeshBuilder.CreatePlane(
-            `${lightId}_diffuserGlow`, { width: panelW, height: panelH }, this.scene
-          );
-        }
-        // Billboard around Y so the panel always faces the camera horizontally while
-        // remaining vertical — eliminates the tilt that appeared when the stand was yaw-rotated.
-        // No rotation.y override needed; billboard handles facing automatically.
-        diffuserPlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_Y;
-        // No parent: position is set in world space directly so the stand's yaw rotation
-        // doesn't propagate into the plane's orientation.
-        diffuserPlane.position.copyFrom(worldCenter);
-        diffuserPlane.computeWorldMatrix(true);
-
-        const diffuserMat = new BABYLON.StandardMaterial(`${lightId}_diffuserGlowMat`, this.scene);
-        diffuserMat.disableLighting = true;    // self-lit — unaffected by scene lights
-        diffuserMat.backFaceCulling = false;   // visible from either side of the panel
-        diffuserMat.alpha = 0.88;              // slight transparency so face-on glow doesn't blow out
-        diffuserMat.emissiveColor = new BABYLON.Color3(
-          cctColor.r * initStrength,
-          cctColor.g * initStrength,
-          cctColor.b * initStrength
-        );
-        diffuserPlane.material = diffuserMat;
-
-        // _headMeshes is used by updateLightHeadGlow — only the glow plane here
-        (mesh as any)._headMeshes = [diffuserPlane];
-
-        console.log(
-          `[addLight] Diffuser glow plane: localW=${localPanelW.toFixed(3)} localH=${localPanelH.toFixed(3)}` +
-          ` worldW=${panelW.toFixed(2)} worldH=${panelH.toFixed(2)} scaleFactor=${scaleFactor.toFixed(2)}` +
-          ` worldZ=${worldCenter.z.toFixed(3)} bMinZ=${bMin.z.toFixed(3)} strength=${initStrength.toFixed(2)}`
-        );
+        // Store for live updates via updateLightHeadGlow.
+        (mesh as any)._headMeshes = glowMeshes;
+        console.log(`[addLight] diffuserMeshes=${diffuserMeshes.length} bright / ${allSubMeshes.length} total, initStrength=${initStrength.toFixed(2)}`);
 
         console.log(`[addLight] GLB loaded: ${result.meshes.length} meshes, scale=${scaleFactor.toFixed(3)}, lightHeadY=${lightHeadHeight.toFixed(2)}m, headMeshes=${headCount}`);
       } catch (loadErr) {
