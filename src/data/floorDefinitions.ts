@@ -40,10 +40,14 @@ export const FLOOR_MATERIALS: FloorMaterial[] = [
   // SOLID COLORS - Studio Standards
   // ============================================
   { id: 'white', name: 'Studio White', nameNo: 'Studio hvit', category: 'solid', color: '#ffffff', roughness: 0.8, metallic: 0, reflectivity: 0.1, tags: ['studio', 'clean', 'bright'], moodTags: ['professional', 'clean'] },
+  { id: 'white-semi-gloss', name: 'Semi-Gloss White', nameNo: 'Halvblank hvit', category: 'solid', color: '#f8f8f8', roughness: 0.4, metallic: 0, reflectivity: 0.4, tags: ['studio', 'clean', 'reflective'], moodTags: ['professional', 'clean'] },
   { id: 'gray-light', name: 'Light Gray', nameNo: 'Lys grå', category: 'solid', color: '#c0c0c0', roughness: 0.75, metallic: 0, reflectivity: 0.15, tags: ['studio', 'neutral'], moodTags: ['professional'] },
+  { id: 'gray-18pct', name: '18% Middle Gray', nameNo: '18% mellomgrå', category: 'solid', color: '#767676', roughness: 0.85, metallic: 0, reflectivity: 0.08, tags: ['studio', 'neutral', 'exposure'], moodTags: ['professional', 'technical'] },
   { id: 'gray-dark', name: 'Dark Gray', nameNo: 'Mørk grå', category: 'solid', color: '#404040', roughness: 0.7, metallic: 0, reflectivity: 0.2, tags: ['studio', 'dramatic'], moodTags: ['dramatic', 'moody'] },
   { id: 'black', name: 'Studio Black', nameNo: 'Studio svart', category: 'solid', color: '#1a1a1a', roughness: 0.85, metallic: 0, reflectivity: 0.05, tags: ['studio', 'dramatic', 'void'], moodTags: ['dramatic', 'dark'] },
   { id: 'black-glossy', name: 'Glossy Black', nameNo: 'Blank svart', category: 'solid', color: '#0d0d0d', roughness: 0.1, metallic: 0.1, reflectivity: 0.9, tags: ['studio', 'dramatic', 'reflective'], moodTags: ['dramatic', 'elegant'] },
+  { id: 'vinyl-beige', name: 'Studio Vinyl Beige', nameNo: 'Studio vinyl beige', category: 'solid', color: '#d4c4a8', roughness: 0.7, metallic: 0, reflectivity: 0.12, tags: ['studio', 'vinyl', 'warm', 'natural'], moodTags: ['warm', 'natural'] },
+  { id: 'vinyl-slate', name: 'Studio Vinyl Slate', nameNo: 'Studio vinyl skifer', category: 'solid', color: '#6a7a7a', roughness: 0.72, metallic: 0, reflectivity: 0.14, tags: ['studio', 'vinyl', 'cool', 'modern'], moodTags: ['modern', 'cool'] },
 
   // ============================================
   // WOOD - Natural and Finished

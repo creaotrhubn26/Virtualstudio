@@ -360,6 +360,158 @@ const patterns: CinematographyPattern[] = [
     ],
     usedIn: ['Blade Runner 2049', 'Cyberpunk 2077', 'Music videos'],
     reference: 'Neon Noir Cinematography'
+  },
+  {
+    id: 'short-lighting',
+    name: 'Kort Belysning',
+    category: 'portrait',
+    difficulty: 'beginner',
+    description: 'Lys treffer den smaleste (bortvendte) siden av ansiktet. Slankende og tredimensjonalt.',
+    mood: 'sculpted',
+    keyToFillRatio: '3',
+    lights: [
+      { type: 'key', position: { x: 2.5, y: 2, z: 1.5 }, intensity: 100, colorTemp: 5600, modifier: 'softbox' },
+      { type: 'fill', position: { x: -1.5, y: 1.5, z: 1 }, intensity: 33, colorTemp: 5600 }
+    ],
+    usedIn: ['Portrait photography', 'Editorial fashion'],
+    reference: 'Portrait Lighting: Craft and Technique, Ch. 5'
+  },
+  {
+    id: 'broad-lighting',
+    name: 'Bred Belysning',
+    category: 'portrait',
+    difficulty: 'beginner',
+    description: 'Lys treffer den bredeste (nærmeste) siden av ansiktet. Runder og myker ansiktsformen.',
+    mood: 'open',
+    keyToFillRatio: '2.5',
+    lights: [
+      { type: 'key', position: { x: -2.5, y: 2, z: 1.5 }, intensity: 100, colorTemp: 5600, modifier: 'softbox' },
+      { type: 'fill', position: { x: 1.5, y: 1.5, z: 1 }, intensity: 40, colorTemp: 5600 }
+    ],
+    usedIn: ['Corporate headshots', 'Family portraits'],
+    reference: 'Portrait Lighting: Craft and Technique, Ch. 4'
+  },
+  {
+    id: 'window-natural',
+    name: 'Vinduslys (Naturlig)',
+    category: 'portrait',
+    difficulty: 'beginner',
+    description: 'Etterligner mykt nordvendt vindusslys. Naturlig og flatterende for de fleste motiver.',
+    mood: 'natural',
+    keyToFillRatio: '4',
+    lights: [
+      { type: 'key', position: { x: -3, y: 1.6, z: 0 }, intensity: 80, colorTemp: 5500, modifier: 'large softbox' }
+    ],
+    usedIn: ['Documentary portraits', 'Editorial lifestyle', 'Nordisk portrettfotografi'],
+    reference: 'Available Light Photography'
+  },
+  {
+    id: 'interview-corporate',
+    name: 'Intervju Corporate',
+    category: 'interview',
+    difficulty: 'beginner',
+    description: 'Tre-lys oppsett for profesjonelt TV-intervju og corporate video.',
+    mood: 'professional',
+    keyToFillRatio: '2',
+    lights: [
+      { type: 'key', position: { x: -2, y: 2.5, z: 1.5 }, intensity: 100, colorTemp: 5600, modifier: 'octabox' },
+      { type: 'fill', position: { x: 2, y: 1.5, z: 1 }, intensity: 50, colorTemp: 5600, modifier: 'softbox' },
+      { type: 'hair', position: { x: 0, y: 3, z: -2 }, intensity: 60, colorTemp: 5600 }
+    ],
+    usedIn: ['TV interviews', 'Corporate videos', 'Talking heads'],
+    reference: 'Broadcast Lighting Techniques'
+  },
+  {
+    id: 'beauty-dish-shot',
+    name: 'Beauty Dish Classic',
+    category: 'beauty',
+    difficulty: 'intermediate',
+    description: 'Høyt plassert beauty dish med honeycomb grid gir skarpe, men myke skygger.',
+    mood: 'glamorous',
+    keyToFillRatio: '3',
+    lights: [
+      { type: 'key', position: { x: 0, y: 2.5, z: 1.5 }, intensity: 100, colorTemp: 5600, modifier: 'beauty dish' },
+      { type: 'fill', position: { x: 0, y: 0.5, z: 2 }, intensity: 33, colorTemp: 5600, modifier: 'reflector' },
+      { type: 'hair', position: { x: 0, y: 3, z: -1.5 }, intensity: 50, colorTemp: 5600 }
+    ],
+    usedIn: ['Fashion beauty', 'Cosmetics advertising', 'Magazine covers'],
+    reference: 'Beauty Photography Lighting'
+  },
+  {
+    id: 'fashion-gel',
+    name: 'Fashion Gel Editorial',
+    category: 'commercial',
+    difficulty: 'expert',
+    description: 'Tonede gels for kreativ mote-estetikk med høy fargemetting.',
+    mood: 'vibrant',
+    keyToFillRatio: '2',
+    lights: [
+      { type: 'key', position: { x: -2, y: 2, z: 1 }, intensity: 100, colorTemp: 5600, modifier: 'magenta gel' },
+      { type: 'fill', position: { x: 2, y: 1.5, z: 1 }, intensity: 50, colorTemp: 5600, modifier: 'cyan gel' },
+      { type: 'background', position: { x: 0, y: 2, z: -3 }, intensity: 70, colorTemp: 5600, modifier: 'cobalt gel' }
+    ],
+    usedIn: ['Fashion Week shoots', 'Music video', 'Editorial campaigns'],
+    reference: 'Color Gel Techniques in Fashion Photography'
+  },
+  {
+    id: 'ring-light-portrait',
+    name: 'Ringlys Portrett',
+    category: 'beauty',
+    difficulty: 'beginner',
+    description: 'Ringlys foran motivet gir det karakteristiske runde reflekset i øynene og jevnt, flatfyllende lys.',
+    mood: 'glamorous',
+    keyToFillRatio: '1',
+    lights: [
+      { type: 'key', position: { x: 0, y: 1.6, z: 2 }, intensity: 120, colorTemp: 5500, modifier: 'ring light' }
+    ],
+    usedIn: ['Beauty YouTube', 'Makeup tutorials', 'Social media portraits', 'TikTok / Instagram'],
+    reference: 'Ring Light Technique Guide'
+  },
+  {
+    id: 'product-packshot',
+    name: 'Produktfoto Packshot',
+    category: 'product',
+    difficulty: 'intermediate',
+    description: 'Hvit infinity bakgrunn med jevnt overeksponert lys – standard for e-handel og katalog.',
+    mood: 'clean',
+    keyToFillRatio: '1',
+    lights: [
+      { type: 'key', position: { x: 0, y: 3, z: 1 }, intensity: 120, colorTemp: 5500, modifier: 'softbox large' },
+      { type: 'fill', position: { x: -2, y: 1.5, z: 1 }, intensity: 100, colorTemp: 5500, modifier: 'softbox' },
+      { type: 'fill', position: { x: 2, y: 1.5, z: 1 }, intensity: 100, colorTemp: 5500, modifier: 'softbox' },
+      { type: 'background', position: { x: 0, y: 1, z: -3 }, intensity: 120, colorTemp: 5500 }
+    ],
+    usedIn: ['E-commerce', 'Catalog photography', 'Amazon listings', 'Product launch'],
+    reference: 'E-Commerce Lighting Guide'
+  },
+  {
+    id: 'detective-noir',
+    name: 'Detektivens Kontor (Noir)',
+    category: 'film-noir',
+    difficulty: 'expert',
+    description: 'Ekstrem venetiansk persienne-projeksjon med 90% skygge – mørk, intens, klassisk noir.',
+    mood: 'dark',
+    keyToFillRatio: '8',
+    lights: [
+      { type: 'key', position: { x: -3, y: 2.5, z: 0 }, intensity: 150, colorTemp: 3200, modifier: 'venetian blinds gobo' },
+      { type: 'rim', position: { x: 3, y: 2, z: -2 }, intensity: 40, colorTemp: 3000 }
+    ],
+    usedIn: ['Film noir', 'Crime thrillers', 'Neo-noir', 'Dark editorial'],
+    reference: 'Gordon Willis Cinematography Techniques'
+  },
+  {
+    id: 'documentary-available',
+    name: 'Dokumentar Tilgjengelig Lys',
+    category: 'interview',
+    difficulty: 'beginner',
+    description: 'Minimal manipulasjon av tilgjengelig lys – praktisk og miljøbasert. Beholder stemning og autentisitet.',
+    mood: 'natural',
+    keyToFillRatio: '3',
+    lights: [
+      { type: 'key', position: { x: -3, y: 2, z: 0 }, intensity: 60, colorTemp: 5600, modifier: 'bare or diffused window' }
+    ],
+    usedIn: ['Documentary film', 'News reporting', 'Lifestyle photography', 'Social documentary'],
+    reference: 'Documentary Cinematography Handbook'
   }
 ];
 

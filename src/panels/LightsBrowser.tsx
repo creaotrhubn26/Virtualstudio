@@ -38,16 +38,22 @@ const LIGHT_CATEGORIES: CategoryInfo[] = [
   { key: 'all', label: 'Alle' },
   { key: 'strobe', label: 'Blits' },
   { key: 'led', label: 'LED' },
+  { key: 'continuous', label: 'Kontinuerlig' },
+  { key: 'atmospheric', label: 'Atmosfærisk' },
+  { key: 'practical', label: 'Praktisk' },
 ];
 
 const LIGHT_BRANDS: CategoryInfo[] = [
   { key: 'all', label: 'Alle merker' },
+  { key: 'Arri', label: 'Arri' },
   { key: 'Godox', label: 'Godox' },
   { key: 'Profoto', label: 'Profoto' },
   { key: 'Aputure', label: 'Aputure' },
   { key: 'Nanlite', label: 'Nanlite' },
   { key: 'Elinchrom', label: 'Elinchrom' },
   { key: 'Broncolor', label: 'Broncolor' },
+  { key: 'Westcott', label: 'Westcott' },
+  { key: 'Arri', label: 'Arri' },
 ];
 
 interface ModifierSpec {
@@ -87,18 +93,31 @@ const MODIFIER_DATABASE: ModifierSpec[] = [
   { id: 'honeycomb-grid-20', brand: 'Generic', model: 'Honeycomb Grid 20°', type: 'grid', size: '20°', stopLoss: 1.0, thumbnail: '/images/gear/modifier_grid.png' },
   { id: 'honeycomb-grid-40', brand: 'Generic', model: 'Honeycomb Grid 40°', type: 'grid', size: '40°', stopLoss: 0.5, thumbnail: '/images/gear/modifier_grid.png' },
   { id: 'snoot-standard', brand: 'Generic', model: 'Snoot Standard', type: 'snoot', stopLoss: 0, thumbnail: '/images/gear/modifier_snoot.png' },
+  { id: 'snoot-conical', brand: 'Generic', model: 'Konisk Snoot', type: 'snoot', stopLoss: 0, thumbnail: '/images/gear/modifier_snoot.png' },
   { id: 'barn-doors-4leaf', brand: 'Generic', model: 'Barn Doors 4-Leaf', type: 'barn-doors', stopLoss: 0, thumbnail: '/images/gear/modifier_barndoors.png' },
   { id: 'reflector-5in1', brand: 'Generic', model: 'Reflektor 5-i-1', type: 'reflector', size: '110cm', stopLoss: 0.5, thumbnail: '/images/gear/reflector_5in1.png' },
+  { id: 'godox-strip-20x90', brand: 'Godox', model: 'Strip 20x90cm', type: 'stripbox', size: '20x90cm', shape: 'strip', stopLoss: 1.5, mount: 'Bowens', thumbnail: '/images/gear/modifier_stripbox.png' },
+  { id: 'elinchrom-rotalux-90', brand: 'Elinchrom', model: 'Rotalux 90cm Octa', type: 'octabox', size: '90cm', shape: 'octagon', stopLoss: 1.5, mount: 'Elinchrom', thumbnail: '/images/gear/modifier_octabox.png' },
+  { id: 'elinchrom-rotalux-100', brand: 'Elinchrom', model: 'Rotalux 100cm Deep Octa', type: 'octabox', size: '100cm', shape: 'deep-octagon', stopLoss: 1.5, mount: 'Elinchrom', thumbnail: '/images/gear/modifier_octabox.png' },
+  { id: 'profoto-beauty-65', brand: 'Profoto', model: 'Beauty Dish 65cm Hvit', type: 'beauty-dish', size: '65cm', stopLoss: 0.5, mount: 'Profoto', thumbnail: '/images/gear/modifier_beautydish.png' },
+  { id: 'fomex-fl900', brand: 'Fomex', model: 'FL-900 Panel', type: 'softbox', size: '90cm', shape: 'rectangle', stopLoss: 1.5, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'diffuser-1-4', brand: 'Lee Filters', model: 'Grid Cloth 1/4 Stop', type: 'diffuser', stopLoss: 0.5, thumbnail: '/images/gear/modifier_diffuser.png' },
+  { id: 'diffuser-1-2', brand: 'Lee Filters', model: 'Grid Cloth 1/2 Stop', type: 'diffuser', stopLoss: 1.0, thumbnail: '/images/gear/modifier_diffuser.png' },
+  { id: 'diffuser-full', brand: 'Lee Filters', model: 'Grid Cloth Full Stop', type: 'diffuser', stopLoss: 2.0, thumbnail: '/images/gear/modifier_diffuser.png' },
 ];
 
 const MODIFIER_CATEGORIES: CategoryInfo[] = [
   { key: 'all', label: 'Alle' },
   { key: 'softbox', label: 'Softboks' },
   { key: 'octabox', label: 'Oktaboks' },
+  { key: 'stripbox', label: 'Stripboks' },
   { key: 'umbrella', label: 'Paraply' },
   { key: 'beauty-dish', label: 'Beauty Dish' },
   { key: 'reflector', label: 'Reflektor' },
   { key: 'grid', label: 'Grid' },
+  { key: 'snoot', label: 'Snoot' },
+  { key: 'barn-doors', label: 'Klaffedører' },
+  { key: 'diffuser', label: 'Diffuser' },
 ];
 
 type BrowserTab = 'lights' | 'modifiers';
@@ -272,29 +291,6 @@ export function LightsBrowser() {
         gap: 1.5,
         mb: 2,
       }}>
-        {/* Atmosphere recommendations */}
-      {activeAtmosphere && getRecommendedLights.length > 0 && (
-        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
-          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
-            🌫️ Miljø-tilpassede anbefalinger
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
-            Basert på aktivt miljø anbefaler vi disse lysene:
-          </Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            {getRecommendedLights.map(light => (
-              <Chip 
-                key={light.id}
-                label={`${light.brand} ${light.model}`}
-                size="small"
-                onClick={() => handleAddToScene(light)}
-                sx={{ cursor: 'pointer' }}
-              />
-            ))}
-          </Stack>
-        </Box>
-      )}
-
       <Box sx={{ 
           display: 'flex', 
           alignItems: 'center', 
@@ -338,29 +334,6 @@ export function LightsBrowser() {
             </Typography>
           </Box>
         </Box>
-        {/* Atmosphere recommendations */}
-      {activeAtmosphere && getRecommendedLights.length > 0 && (
-        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(255,165,0,0.1)', borderRadius: 2 }}>
-          <Typography variant="subtitle2" sx={{ color: '#ff9800', mb: 1 }}>
-            🌫️ Miljø-tilpassede anbefalinger
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)', mb: 1 }}>
-            Basert på aktivt miljø anbefaler vi disse lysene:
-          </Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            {getRecommendedLights.map(light => (
-              <Chip 
-                key={light.id}
-                label={`${light.brand} ${light.model}`}
-                size="small"
-                onClick={() => handleAddToScene(light)}
-                sx={{ cursor: 'pointer' }}
-              />
-            ))}
-          </Stack>
-        </Box>
-      )}
-
       <Box sx={{ display: 'flex', gap: 1 }}>
           <Chip
             label={`${LIGHT_DATABASE.length} lys`}

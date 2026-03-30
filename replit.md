@@ -178,6 +178,37 @@ The Napoli Dreams banner in ScenerPanel includes a collapsible **Merkevarebyggin
 - Handler in `src/main.ts`: creates a `__branding-sign__` plane (DynamicTexture with colored background + company name text), and if a logoUrl is provided, a `__branding-logo__` plane with the logo texture at `StandardMaterial.emissiveColor = white` (unlit, always visible)
 - Re-applying replaces existing sign; clearing both fields removes all branding meshes
 
+## Data Library Improvements (March 2026 — Comprehensive Quality Pass)
+
+### Light & Modifier Data
+- **lightFixtures.ts**: 30+ fixtures incl. Aputure, Nanlite, Godox, ARRI SkyPanel, Westcott, Profoto — all with Norwegian descriptions
+- **LightsBrowser.tsx**: 6 light categories, 11 modifier categories, Westcott + ARRI brands, 12 new modifier entries — all duplicate blocks removed
+- **LightPatternLibrary.tsx**: 9→17 patterns with category filter UI chips; includes broad/short/fashion-rim/beauty-dish/editorial-gel/window-light/product-packshot
+- **cinematographyPatternsService.ts**: 23→35 patterns including ring-light, product-packshot, detective-noir, documentary-available, interview-corporate, beauty-dish-classic
+
+### Scene & Environment Data
+- **ScenePresets.tsx**: +6 new Norwegian presets: Svangerskapsportrett, Nyfødt fotografering, Dans/Ballett, Konseptfotografi, Boudoir, Bord/Makrofotografi
+- **environmentPresets.ts**: +10 new presets — Fantasy (throne room, enchanted forest, wizard study, ancient ruins), Nature (golden hour, overcast, desert dunes), Cinematic (Wes Anderson, Tarantino)
+- **backdropDefinitions.ts**: 10→28 entries (gel colors, greenscreen, reflectors)
+- **floorDefinitions.ts**: Added 18% gray, semi-gloss white, vinyl options
+- **wallDefinitions.ts**: Added 11 solid colors + 9 gradients
+
+### Gobo Library
+- **goboDefinitions.ts**: 6→20 gobos — added arched window, prison bars, diamond lattice, forest canopy, palm fronds, starburst, honeycomb, industrial grate, heavy breakup, soft clouds, circular vignette, venetian diagonal, cobweb, brick wall
+
+### Equipment & Gear Data
+- **EquipmentCatalog.tsx**: +10 items — light meter, color checker, clapperboard, field monitor, 5-in-1 reflector, large diffusion frame, sandbag, flag set, shooting table, V-flat
+- **photo-camera-database.ts**: 6→22 cameras — Sony, Canon, Nikon, Fujifilm, Hasselblad, Leica (medium format + APS-C)
+- **video-camera-database.ts**: 5→19 cameras — Sony Cinema Line, Canon Cinema EOS, Blackmagic, RED, ARRI, Nikon, Panasonic; with logFormat fields
+- **memory-card-database.ts**: 4→17 cards — CFexpress A/B, SD V90/V60/V30, CFast 2.0, CompactFlash; with utility functions
+
+### Sounds & Atmosphere
+- **soundDefinitions.ts**: +12 new sounds — studio AC hum, silent room, camera shutter (burst/single), fireplace, cathedral ambience, water stream, morning birds, desert wind, crowd, magical tones
+
+### Rendering Quality (main.ts)
+- Floor PBR: `maxSimultaneousLights=8`, `usePhysicalLightFalloff=true`, normalMap bump=0.85, reflectivity clamped to 1.0
+- Wall PBR: `maxSimultaneousLights=8`, `usePhysicalLightFalloff=true`, normalMap bump=0.75
+
 ## External Dependencies
 - **@babylonjs/core, @babylonjs/loaders, @babylonjs/gui**: 3D engine and related components.
 - **react, react-dom**: Core libraries for the user interface.

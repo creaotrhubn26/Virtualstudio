@@ -47,6 +47,13 @@ export const WALL_MATERIALS: WallMaterial[] = [
   { id: 'navy', name: 'Navy Blue', nameNo: 'Marineblå', category: 'solid', color: '#1a2744', roughness: 0.8, metallic: 0.05, tags: ['corporate', 'elegant'], moodTags: ['professional', 'serious'] },
   { id: 'burgundy', name: 'Burgundy', nameNo: 'Burgunder', category: 'solid', color: '#4a1c2e', roughness: 0.8, metallic: 0.05, tags: ['warm', 'elegant', 'rich'], moodTags: ['dramatic', 'rich'] },
   { id: 'forest-green', name: 'Forest Green', nameNo: 'Skogsgrønn', category: 'solid', color: '#1a3d2e', roughness: 0.8, metallic: 0.05, tags: ['nature', 'calm'], moodTags: ['calm', 'natural'] },
+  { id: 'cobalt', name: 'Cobalt Blue', nameNo: 'Koboltblå', category: 'solid', color: '#0047ab', roughness: 0.8, metallic: 0.05, tags: ['fashion', 'vivid', 'pop'], moodTags: ['vivid', 'bold'] },
+  { id: 'electric-violet', name: 'Electric Violet', nameNo: 'Elektrisk violet', category: 'solid', color: '#7b00d4', roughness: 0.75, metallic: 0.05, tags: ['fashion', 'neon', 'vibrant', 'pop'], moodTags: ['vivid', 'energetic'] },
+  { id: 'emerald', name: 'Emerald Green', nameNo: 'Smaragdgrønn', category: 'solid', color: '#046307', roughness: 0.8, metallic: 0.05, tags: ['fashion', 'vivid', 'rich'], moodTags: ['rich', 'vivid'] },
+  { id: 'terracotta', name: 'Terracotta', nameNo: 'Terrakotta', category: 'solid', color: '#c06040', roughness: 0.85, metallic: 0, tags: ['warm', 'earthy', 'mediterranean', 'boho'], moodTags: ['warm', 'earthy'] },
+  { id: 'dusty-rose', name: 'Dusty Rose', nameNo: 'Støvete rosa', category: 'solid', color: '#c48b8b', roughness: 0.85, metallic: 0, tags: ['beauty', 'feminine', 'soft', 'wedding'], moodTags: ['romantic', 'soft'] },
+  { id: 'slate-blue', name: 'Slate Blue', nameNo: 'Skiferhvit blå', category: 'solid', color: '#4a6380', roughness: 0.82, metallic: 0, tags: ['cool', 'muted', 'corporate', 'editorial'], moodTags: ['professional', 'cool'] },
+  { id: 'champagne', name: 'Champagne', nameNo: 'Champagne', category: 'solid', color: '#f0d9a0', roughness: 0.8, metallic: 0.05, tags: ['warm', 'luxury', 'soft', 'wedding'], moodTags: ['elegant', 'warm', 'luxury'] },
 
   // ============================================
   // TEXTURED - Realistic Materials
@@ -64,6 +71,12 @@ export const WALL_MATERIALS: WallMaterial[] = [
   { id: 'gradient-sunset', name: 'Sunset Gradient', nameNo: 'Solnedgangsgradient', category: 'gradient', gradientColors: ['#ff6b35', '#f7c59f', '#2a9d8f'], roughness: 0.8, metallic: 0.1, tags: ['warm', 'dramatic', 'artistic'], moodTags: ['dramatic', 'warm'] },
   { id: 'gradient-ocean', name: 'Ocean Gradient', nameNo: 'Havgradient', category: 'gradient', gradientColors: ['#0077b6', '#00b4d8', '#90e0ef'], roughness: 0.8, metallic: 0.1, tags: ['cool', 'calm', 'fresh'], moodTags: ['calm', 'fresh'] },
   { id: 'gradient-noir', name: 'Film Noir', nameNo: 'Film Noir', category: 'gradient', gradientColors: ['#0d0d0d', '#1a1a2e', '#16213e'], roughness: 0.9, metallic: 0.05, tags: ['dramatic', 'noir', 'classic'], moodTags: ['dark', 'mysterious'] },
+  { id: 'gradient-rose-gold', name: 'Rose Gold', nameNo: 'Rosegull', category: 'gradient', gradientColors: ['#b76e79', '#e8c4b8', '#d4a5a5'], roughness: 0.75, metallic: 0.15, tags: ['fashion', 'beauty', 'warm', 'feminine'], moodTags: ['elegant', 'warm', 'romantic'] },
+  { id: 'gradient-purple-blue', name: 'Purple to Blue', nameNo: 'Lilla til blå', category: 'gradient', gradientColors: ['#6a0572', '#1a0080', '#0d00c0'], roughness: 0.8, metallic: 0.1, tags: ['fashion', 'dramatic', 'night', 'neon'], moodTags: ['dramatic', 'vivid', 'night'] },
+  { id: 'gradient-teal-black', name: 'Teal to Black', nameNo: 'Teal til svart', category: 'gradient', gradientColors: ['#00796b', '#004d40', '#0a0a0a'], roughness: 0.8, metallic: 0.1, tags: ['cinematic', 'dramatic', 'deep', 'moody'], moodTags: ['dramatic', 'moody', 'cinematic'] },
+  { id: 'gradient-amber-crimson', name: 'Amber to Crimson', nameNo: 'Rav til karmosin', category: 'gradient', gradientColors: ['#ff8f00', '#c62828', '#1a0a0a'], roughness: 0.8, metallic: 0.1, tags: ['dramatic', 'warm', 'fire', 'intense'], moodTags: ['intense', 'dramatic', 'warm'] },
+  { id: 'gradient-mint-white', name: 'Mint to White', nameNo: 'Mint til hvit', category: 'gradient', gradientColors: ['#a8d5b5', '#d4ecd9', '#f8fdf9'], roughness: 0.85, metallic: 0, tags: ['fresh', 'natural', 'clean', 'beauty'], moodTags: ['fresh', 'clean', 'natural'] },
+  { id: 'gradient-midnight', name: 'Midnight Sky', nameNo: 'Midnattshimmel', category: 'gradient', gradientColors: ['#0a0a1a', '#1a1a4a', '#2a2a6a'], roughness: 0.9, metallic: 0.05, tags: ['night', 'dramatic', 'moody', 'deep'], moodTags: ['mysterious', 'night', 'dramatic'] },
 
   // ============================================
   // LOVECRAFT / HORROR - Eldritch Themes

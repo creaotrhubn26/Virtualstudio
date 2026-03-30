@@ -274,6 +274,251 @@ const LOCAL_PATTERNS: LightPattern[] = [
     ratingAverage: 4.6,
     ratingCount: 112,
     thumbnailUrl: '/pattern-thumbnails/film_noir_lighting_diagram.png'
+  },
+  {
+    id: 'broad',
+    name: 'Bred Belysning',
+    slug: 'broad',
+    category: 'portrait',
+    description: 'Lys treffer den bredeste siden av ansiktet',
+    lookDescription: 'Rund, fyldig look som breddder smale ansikter',
+    whenToUse: 'Smale ansikter, avslappede portretter',
+    difficultyLevel: 'beginner',
+    lightSetup: [
+      { type: 'key', angle: -45, height: 1.5, power: 75 },
+      { type: 'fill', angle: 30, height: 1.2, power: 30 }
+    ],
+    setupInstructions: ['Lys treffer den siden av ansiktet vendt mot kamera', 'Lett fill fra andre side'],
+    recommendedModifiers: ['Softbox', 'Paraply'],
+    recommendedHdris: [],
+    recommendedBackgrounds: ['Grå', 'Hvit'],
+    subjectOrientation: 'slight-turn',
+    subjectDistance: 2,
+    shadowRules: 'Light shadows on far side',
+    isFeatured: false,
+    isBeginnerFriendly: true,
+    usageCount: 340,
+    ratingAverage: 4.2,
+    ratingCount: 28,
+    thumbnailUrl: '/pattern-thumbnails/loop_lighting_pattern_diagram.png'
+  },
+  {
+    id: 'short',
+    name: 'Kort Belysning',
+    slug: 'short',
+    category: 'portrait',
+    description: 'Lys treffer den smaleste, bortvendte siden av ansiktet',
+    lookDescription: 'Slankende, mer dramatisk og tredimensjonalt',
+    whenToUse: 'Runde ansikter, karakterportretter, mote',
+    difficultyLevel: 'beginner',
+    lightSetup: [
+      { type: 'key', angle: 45, height: 1.5, power: 80 },
+      { type: 'fill', angle: -30, height: 1.2, power: 25 }
+    ],
+    setupInstructions: ['Lys treffer siden av ansiktet vendt bort fra kamera', 'Minimal fill for kontrast'],
+    recommendedModifiers: ['Softbox', 'Beauty Dish'],
+    recommendedHdris: [],
+    recommendedBackgrounds: ['Grå', 'Sort'],
+    subjectOrientation: 'slight-turn',
+    subjectDistance: 2,
+    shadowRules: 'Deeper shadows on camera side',
+    isFeatured: true,
+    isBeginnerFriendly: true,
+    usageCount: 520,
+    ratingAverage: 4.5,
+    ratingCount: 63,
+    thumbnailUrl: '/pattern-thumbnails/loop_lighting_pattern_diagram.png'
+  },
+  {
+    id: 'fashion-rim',
+    name: 'Mote Rim/Kontur',
+    slug: 'fashion-rim',
+    category: 'fashion',
+    description: 'Sterk rim-light bak subjektet med dempet frontlys',
+    lookDescription: 'Grafikk, høy kontrast mote-estetikk',
+    whenToUse: 'Motefoto, produktfoto, editorial',
+    difficultyLevel: 'intermediate',
+    lightSetup: [
+      { type: 'key', angle: 0, height: 1.5, power: 60 },
+      { type: 'rim', angle: 150, height: 2.0, power: 100 },
+      { type: 'rim', angle: -150, height: 2.0, power: 100 }
+    ],
+    setupInstructions: [
+      'Sett to sterke rim-lys bak fra begge sider',
+      'Bruk moderat frontlys',
+      'Sorte blendes for å styre lyset'
+    ],
+    recommendedModifiers: ['Stripbox', 'Grid', 'Snoot'],
+    recommendedHdris: [],
+    recommendedBackgrounds: ['Sort', 'Mørk grå'],
+    subjectOrientation: 'front',
+    subjectDistance: 2,
+    shadowRules: 'Strong rim separation, deep front shadows',
+    isFeatured: true,
+    isBeginnerFriendly: false,
+    usageCount: 670,
+    ratingAverage: 4.7,
+    ratingCount: 89,
+    thumbnailUrl: '/pattern-thumbnails/film_noir_lighting_diagram.png'
+  },
+  {
+    id: 'beauty-dish-pattern',
+    name: 'Beauty Dish Klassisk',
+    slug: 'beauty-dish-pattern',
+    category: 'beauty',
+    description: 'Beauty dish rett ovenfra, skarpe men myke kanter',
+    lookDescription: 'Glamorøs beauty look med dybde og kontrast',
+    whenToUse: 'Beauty, makeup, smykker, editorial',
+    difficultyLevel: 'intermediate',
+    lightSetup: [
+      { type: 'key', angle: 0, height: 2.2, power: 85 },
+      { type: 'fill', angle: 0, height: -0.3, power: 30 }
+    ],
+    setupInstructions: [
+      'Plasser beauty dish høyt rett over kamera',
+      'Legg til refleksjonsskjerm (hvit) under haken',
+      'Juster avstand for ønsket kontrast'
+    ],
+    recommendedModifiers: ['Beauty Dish', 'Grid'],
+    recommendedHdris: [],
+    recommendedBackgrounds: ['Hvit', 'Lys grå', 'Kremfarget'],
+    subjectOrientation: 'front',
+    subjectDistance: 1.8,
+    shadowRules: 'Defined shadows under nose and chin',
+    isFeatured: true,
+    isBeginnerFriendly: false,
+    usageCount: 445,
+    ratingAverage: 4.6,
+    ratingCount: 77,
+    thumbnailUrl: '/pattern-thumbnails/butterfly_lighting_pattern_diagram.png'
+  },
+  {
+    id: 'environmental',
+    name: 'Miljøportrett',
+    slug: 'environmental',
+    category: 'portrait',
+    description: 'Naturlig lysoppsett som etterligner omgivelsenes lys',
+    lookDescription: 'Autentisk, reportasjeaktig look',
+    whenToUse: 'Dokumentarfoto, reportasje, lifestyle',
+    difficultyLevel: 'intermediate',
+    lightSetup: [
+      { type: 'key', angle: 60, height: 1.5, power: 70 },
+      { type: 'fill', angle: -30, height: 1.0, power: 20 }
+    ],
+    setupInstructions: [
+      'Bruk store softbokser for å etterligne vindusslys',
+      'Lavere intensitet for naturlig look',
+      'Legg til bakgrunnsbelysning for dybde'
+    ],
+    recommendedModifiers: ['Softbox', 'Diffuser', 'Paraply'],
+    recommendedHdris: ['interior', 'window'],
+    recommendedBackgrounds: ['Grå', 'Nøytralgrå', 'Trebakgrunn'],
+    subjectOrientation: 'slight-turn',
+    subjectDistance: 2.5,
+    shadowRules: 'Natural, soft shadows',
+    isFeatured: false,
+    isBeginnerFriendly: false,
+    usageCount: 280,
+    ratingAverage: 4.4,
+    ratingCount: 34,
+    thumbnailUrl: '/pattern-thumbnails/loop_lighting_pattern_diagram.png'
+  },
+  {
+    id: 'editorial-gel',
+    name: 'Editorial Gel-rig',
+    slug: 'editorial-gel',
+    category: 'fashion',
+    description: 'Fargerik gel-belysning for editorial og motefoto',
+    lookDescription: 'Fargerik, kreativ editorial-estetikk',
+    whenToUse: 'Motefoto, musikkvideo, editorial, kreativt portrett',
+    difficultyLevel: 'advanced',
+    lightSetup: [
+      { type: 'key', angle: 45, height: 1.8, power: 90 },
+      { type: 'fill', angle: -90, height: 1.5, power: 60 },
+      { type: 'background', angle: 0, height: 0, power: 80 }
+    ],
+    setupInstructions: [
+      'Sett gel-filter på key lyset (f.eks. magenta)',
+      'Motfarget gel på fill-lyset (f.eks. cyan)',
+      'Farget bakgrunnsbelysning for dybde',
+      'Juster gel-farger etter ønsket estetikk'
+    ],
+    recommendedModifiers: ['Softbox', 'Grid', 'Barn doors'],
+    recommendedHdris: [],
+    recommendedBackgrounds: ['Sort', 'Hvit', 'Mørk grå'],
+    subjectOrientation: 'front',
+    subjectDistance: 2,
+    shadowRules: 'Colored shadows from gels',
+    isFeatured: true,
+    isBeginnerFriendly: false,
+    usageCount: 390,
+    ratingAverage: 4.8,
+    ratingCount: 56,
+    thumbnailUrl: '/pattern-thumbnails/film_noir_lighting_diagram.png'
+  },
+  {
+    id: 'window-light',
+    name: 'Vindussimulering',
+    slug: 'window-light',
+    category: 'portrait',
+    description: 'Etterligner naturlig vindusslys fra én side',
+    lookDescription: 'Naturlig, varmt portrettlys — nordisk estetikk',
+    whenToUse: 'Naturlige portretter, lifestyle, boudoir',
+    difficultyLevel: 'beginner',
+    lightSetup: [
+      { type: 'key', angle: 90, height: 1.6, power: 65 },
+      { type: 'fill', angle: -30, height: 1.2, power: 15 }
+    ],
+    setupInstructions: [
+      'Stor softboks plassert 90° til siden',
+      'Lav, nær jord-nivå for lavere lyshøyde',
+      'Minimal fill — valgfritt hvit refleksjonsskjerm'
+    ],
+    recommendedModifiers: ['Softbox', 'Scrim', 'Diffuser'],
+    recommendedHdris: ['interior'],
+    recommendedBackgrounds: ['Hvit', 'Kremfarget', 'Lys grå'],
+    subjectOrientation: 'front',
+    subjectDistance: 1.8,
+    shadowRules: 'Strong side gradient with visible window-fall',
+    isFeatured: true,
+    isBeginnerFriendly: true,
+    usageCount: 780,
+    ratingAverage: 4.5,
+    ratingCount: 98,
+    thumbnailUrl: '/pattern-thumbnails/split_lighting_pattern_diagram.png'
+  },
+  {
+    id: 'product-packshot',
+    name: 'Produkt Packshot',
+    slug: 'product-packshot',
+    category: 'product',
+    description: 'Jevn belysning fra alle sider for detalj-rik produktfoto',
+    lookDescription: 'Ren, skyggeløs bakgrunn med full detalj',
+    whenToUse: 'Produktfoto, e-handel, packshots',
+    difficultyLevel: 'intermediate',
+    lightSetup: [
+      { type: 'key', angle: 45, height: 2.0, power: 80 },
+      { type: 'fill', angle: -45, height: 1.8, power: 70 },
+      { type: 'background', angle: 0, height: 0, power: 90 }
+    ],
+    setupInstructions: [
+      'To store, myke lys fra begge sider',
+      'Hvit bakgrunnsbelysning for ren hvit bakgrunn',
+      'Diffusere scrim-paneler for myk wrap-around belysning',
+      'Sørg for jevn belysning uten overeksponering'
+    ],
+    recommendedModifiers: ['Softbox', 'Scrim', 'Diffuser', 'Reflektor'],
+    recommendedHdris: [],
+    recommendedBackgrounds: ['Hvit', 'Syklorama'],
+    subjectOrientation: 'front',
+    subjectDistance: 1.5,
+    shadowRules: 'Minimal or no shadows',
+    isFeatured: false,
+    isBeginnerFriendly: false,
+    usageCount: 310,
+    ratingAverage: 4.3,
+    ratingCount: 42,
+    thumbnailUrl: '/pattern-thumbnails/high-key_lighting_diagram.png'
   }
 ];
 
@@ -516,6 +761,32 @@ export const LightPatternLibrary: React.FC<LightPatternLibraryProps> = ({
                 </Grid>
               </Grid>
             </Box>
+
+            {/* Category Filter */}
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              {[
+                { value: 'all', label: 'Alle' },
+                { value: 'portrait', label: 'Portrett' },
+                { value: 'beauty', label: 'Beauty' },
+                { value: 'dramatic', label: 'Dramatisk' },
+                { value: 'fashion', label: 'Mote' },
+                { value: 'product', label: 'Produkt' },
+              ].map((cat) => (
+                <Chip
+                  key={cat.value}
+                  label={cat.label}
+                  size="small"
+                  onClick={() => setCategoryFilter(cat.value)}
+                  sx={{
+                    cursor: 'pointer',
+                    bgcolor: categoryFilter === cat.value ? '#00d4ff' : 'rgba(255,255,255,0.08)',
+                    color: categoryFilter === cat.value ? '#000' : '#ccc',
+                    fontWeight: categoryFilter === cat.value ? 700 : 400,
+                    '&:hover': { bgcolor: categoryFilter === cat.value ? '#00d4ff' : 'rgba(255,255,255,0.15)' },
+                  }}
+                />
+              ))}
+            </Stack>
 
             {/* Loading State */}
             {loading && (

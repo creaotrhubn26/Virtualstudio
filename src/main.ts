@@ -2731,9 +2731,9 @@ class VirtualStudio {
     this.renderingPipeline.imageProcessing.toneMappingEnabled = true;
     this.renderingPipeline.imageProcessing.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
 
-    // Exposure / contrast — neutral exposure so gel colours read true; lifted contrast for punch
-    this.renderingPipeline.imageProcessing.exposure = 1.0;
-    this.renderingPipeline.imageProcessing.contrast = 1.2;
+    // Exposure / contrast — slight lift for cleaner highlights; more punch in mid-tones
+    this.renderingPipeline.imageProcessing.exposure = 1.08;
+    this.renderingPipeline.imageProcessing.contrast = 1.28;
 
     // Vignette — moderate oval that draws the eye to the subject without crushing edges
     this.renderingPipeline.imageProcessing.vignetteEnabled = true;
@@ -2746,28 +2746,28 @@ class VirtualStudio {
     this.renderingPipeline.fxaaEnabled = true;
     this.renderingPipeline.samples = 8;
 
-    // Bloom — lower threshold so coloured gel on backdrop halos nicely
+    // Bloom — wide, soft halo so gel colours spill across the backdrop naturally
     this.renderingPipeline.bloomEnabled = true;
-    this.renderingPipeline.bloomThreshold = 0.45;
-    this.renderingPipeline.bloomWeight = 0.55;
-    this.renderingPipeline.bloomKernel = 128;
+    this.renderingPipeline.bloomThreshold = 0.38;   // lower = more gel areas bloom
+    this.renderingPipeline.bloomWeight = 0.65;       // stronger bloom for vivid gels
+    this.renderingPipeline.bloomKernel = 192;        // wider kernel = softer halo
     this.renderingPipeline.bloomScale = 0.5;
 
     // Depth of Field - DISABLED: Using custom PhysicsBasedDOF instead
     this.renderingPipeline.depthOfFieldEnabled = false;
 
-    // Film grain — very subtle on by default for photorealistic texture
+    // Film grain — very subtle, animated for photorealistic film texture
     this.renderingPipeline.grainEnabled = true;
-    this.renderingPipeline.grain.intensity = 3;
+    this.renderingPipeline.grain.intensity = 1.5;   // reduced from 3 — cleaner, more controlled
     this.renderingPipeline.grain.animated = true;
 
-    // Chromatic aberration (off by default, user can enable)
-    this.renderingPipeline.chromaticAberrationEnabled = false;
-    this.renderingPipeline.chromaticAberration.aberrationAmount = 20;
+    // Chromatic aberration — enabled at a gentle amount for lens realism
+    this.renderingPipeline.chromaticAberrationEnabled = true;
+    this.renderingPipeline.chromaticAberration.aberrationAmount = 6;  // subtle
 
-    // Sharpen — slightly higher for crisp studio detail
+    // Sharpen — strong enough for crisp hair and fabric detail without ringing
     this.renderingPipeline.sharpenEnabled = true;
-    this.renderingPipeline.sharpen.edgeAmount = 0.35;
+    this.renderingPipeline.sharpen.edgeAmount = 0.45;
     
     // Setup SSR (Screen-Space Reflections) for realistic reflections
     try {
@@ -2779,17 +2779,17 @@ class VirtualStudio {
         BABYLON.Constants.TEXTURETYPE_UNSIGNED_BYTE
       );
       
-      // SSR settings for quality/performance balance
+      // SSR settings — higher quality for polished floor/backdrop reflections
       this.ssrPipeline.strength = 1.0;
       this.ssrPipeline.reflectionSpecularFalloffExponent = 2;
-      this.ssrPipeline.step = 1;
-      this.ssrPipeline.maxSteps = 64;
+      this.ssrPipeline.step = 0.5;              // finer steps → less stair-stepping
+      this.ssrPipeline.maxSteps = 128;          // more steps → longer reflections
       this.ssrPipeline.maxDistance = 50;
-      this.ssrPipeline.thickness = 0.5;
-      this.ssrPipeline.roughnessFactor = 0.1;
+      this.ssrPipeline.thickness = 0.35;        // tighter → crisper contact reflections
+      this.ssrPipeline.roughnessFactor = 0.08;  // tighter roughness gate
       this.ssrPipeline.selfCollisionNumSkip = 2;
       this.ssrPipeline.enableSmoothReflections = true;
-      this.ssrPipeline.blurDispersionStrength = 0.03;
+      this.ssrPipeline.blurDispersionStrength = 0.02; // less blur = cleaner floor mirror
       this.ssrPipeline.enableAutomaticThicknessComputation = false;
       
       console.log('SSR pipeline enabled');
@@ -5174,10 +5174,10 @@ class VirtualStudio {
   private async setupStudio(): Promise<void> {
     // Create ambient hemispheric light and store reference for control
     this.ambientLight = new BABYLON.HemisphericLight('ambient', new BABYLON.Vector3(0, 1, 0), this.scene);
-    this.ambientLight.intensity = this.ambientLightBaseIntensity;
-    // Slightly cool sky + slightly warm ground — classic studio fill bounce
-    this.ambientLight.diffuse = new BABYLON.Color3(0.92, 0.95, 1.0);    // cool overhead sky
-    this.ambientLight.groundColor = new BABYLON.Color3(0.18, 0.16, 0.14); // warm-dark floor bounce
+    this.ambientLight.intensity = 0.22;  // lower than base: more drama, less grey ambient wash
+    // Distinctly cool sky + warm amber ground — stronger temperature split
+    this.ambientLight.diffuse = new BABYLON.Color3(0.85, 0.90, 1.0);    // vivid cool sky
+    this.ambientLight.groundColor = new BABYLON.Color3(0.26, 0.20, 0.14); // warm amber floor bounce
 
     const ground = BABYLON.MeshBuilder.CreateGround('ground', { width: 20, height: 20 }, this.scene);
     const groundMat = new BABYLON.StandardMaterial('groundMat', this.scene);
@@ -5325,6 +5325,13 @@ class VirtualStudio {
     // PBR properties
     mat.roughness = wallMaterial.roughness ?? 0.8;
     mat.metallic = wallMaterial.metallic ?? 0;
+    mat.maxSimultaneousLights = 8;
+    mat.usePhysicalLightFalloff = true;
+
+    // Normal map bump scale
+    if (wallMaterial.normalMapUrl) {
+      mat.bumpTexture!.level = 0.75;
+    }
 
     // Emissive (for neon/glowing materials)
     if (wallMaterial.emissive && wallMaterial.emissiveIntensity) {
@@ -5394,10 +5401,17 @@ class VirtualStudio {
     // PBR properties
     mat.roughness = floorMaterial.roughness ?? 0.7;
     mat.metallic = floorMaterial.metallic ?? 0;
+    mat.maxSimultaneousLights = 8;
+    mat.usePhysicalLightFalloff = true;
 
     // Reflectivity (for glossy/mirror floors)
     if (floorMaterial.reflectivity !== undefined) {
-      mat.environmentIntensity = floorMaterial.reflectivity;
+      mat.environmentIntensity = Math.min(floorMaterial.reflectivity, 1.0);
+    }
+
+    // Bump scale for normal maps — makes surface detail more pronounced
+    if (floorMaterial.normalMapUrl) {
+      mat.bumpTexture!.level = 0.85;
     }
 
     // Emissive (for special effects)
@@ -6076,14 +6090,19 @@ class VirtualStudio {
       if (keyLight.light instanceof BABYLON.SpotLight) {
         keyLight.light.angle = Math.PI / 3;
         keyLight.light.exponent = 2.0;
-        keyLight.light.intensity = 450;
+        keyLight.light.intensity = 520;          // stronger key → 2.9:1 key:fill ratio
         keyLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        // Warm daylight colour temperature (5600K approximation)
-        keyLight.light.diffuse = new BABYLON.Color3(1.0, 0.97, 0.92);
-        keyLight.light.specular = new BABYLON.Color3(1.0, 0.97, 0.92);
+        // Warm tungsten/HMI colour — 3200K approximation
+        keyLight.light.diffuse  = new BABYLON.Color3(1.0, 0.96, 0.86);
+        keyLight.light.specular = new BABYLON.Color3(1.0, 0.96, 0.86);
       }
       if (keyLight.shadowGenerator) {
+        keyLight.shadowGenerator.useBlurExponentialShadowMap = true;
         keyLight.shadowGenerator.blurKernel = 64;
+        keyLight.shadowGenerator.depthScale = 50;
+        keyLight.shadowGenerator.bias = 0.00004;
+        keyLight.shadowGenerator.normalBias = 0.06;
+        keyLight.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
       }
     }
 
@@ -6097,14 +6116,18 @@ class VirtualStudio {
       if (fillLight.light instanceof BABYLON.SpotLight) {
         fillLight.light.angle = Math.PI / 2.5;
         fillLight.light.exponent = 1.5;
-        fillLight.light.intensity = 190;
+        fillLight.light.intensity = 178;         // 520:178 ≈ 2.9:1 — professional portrait ratio
         fillLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        // Slight cool bias for contrast with the warm key
-        fillLight.light.diffuse = new BABYLON.Color3(0.88, 0.92, 1.0);
-        fillLight.light.specular = new BABYLON.Color3(0.88, 0.92, 1.0);
+        // Distinctly cool daylight bias — strong temperature contrast with warm key
+        fillLight.light.diffuse  = new BABYLON.Color3(0.78, 0.86, 1.0);
+        fillLight.light.specular = new BABYLON.Color3(0.78, 0.86, 1.0);
       }
       if (fillLight.shadowGenerator) {
-        fillLight.shadowGenerator.blurKernel = 96;
+        fillLight.shadowGenerator.useBlurExponentialShadowMap = true;
+        fillLight.shadowGenerator.blurKernel = 80;
+        fillLight.shadowGenerator.bias = 0.00006;
+        fillLight.shadowGenerator.normalBias = 0.08;
+        fillLight.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_MEDIUM;
       }
     }
 
