@@ -1047,6 +1047,11 @@ class VirtualStudio {
       this.gizmoManager.rotationGizmoEnabled = false;
       this.gizmoManager.scaleGizmoEnabled = false;
       this.gizmoManager.attachableMeshes = [];
+      // Disable auto-attach on click — our POINTERPICK observer manages selection.
+      // Without this, clicking the GLB model causes GizmoManager to auto-attach its
+      // position gizmo to the light parentMesh (via ancestor walk), which then conflicts
+      // with selectLight disabling the gizmo and causes the mesh to disappear.
+      this.gizmoManager.usePointerToAttachGizmos = false;
 
       this.customizeGizmoAppearance();
 
