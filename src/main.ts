@@ -5572,21 +5572,23 @@ class VirtualStudio {
     // We use moderate values (300-700 cd) balanced against the scene's exposure/tone-map.
     // Softbox (rectangular) → wider beam, lower exponent (uniform field), very soft shadows.
     // Octabox (circular)    → even wider, near-uniform field, maximum shadow softness.
-    const lightSpecs: { [key: string]: { intensity: number; name: string; cct: number; beamAngle: number; exponent: number; shadowKernel: number; glbFile: string } } = {
-      'aputure-300d':        { intensity: 450, name: 'Aputure 300D',          cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb'  },
-      'aputure-300d-strip':  { intensity: 350, name: 'Aputure 300D Stripbox',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 3.5, shadowKernel: 32,  glbFile: '/models/lights/stripbox-stand.glb' },
-      'aputure-120d':        { intensity: 300, name: 'Aputure 120D',           cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb'  },
-      'aputure-600d':        { intensity: 700, name: 'Aputure 600D Pro',       cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb'  },
-      'godox-ad600':    { intensity: 380, name: 'Godox AD600',      cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb' },
-      'godox-ad200pro': { intensity: 240, name: 'Godox AD200Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb' },
-      'godox-ad400pro': { intensity: 340, name: 'Godox AD400Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb' },
-      'godox-ad600pro': { intensity: 420, name: 'Godox AD600Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb' },
-      'profoto-b10plus':{ intensity: 480, name: 'Profoto B10 Plus', cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb' },
-      'profoto-b10':    { intensity: 420, name: 'Profoto B10',      cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb' },
-      'profoto-d2':     { intensity: 380, name: 'Profoto D2',       cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 80,  glbFile: '/models/lights/octabox-stand.glb' },
+    const lightSpecs: { [key: string]: { intensity: number; name: string; cct: number; beamAngle: number; exponent: number; shadowKernel: number; glbFile: string; faceYawOffset: number | null } } = {
+      // faceYawOffset: known TRELLIS models are confirmed -Z face (offset=0).
+      //                null = auto-detect from bright submesh centroid (for Tripo/AI models).
+      'aputure-300d':        { intensity: 450, name: 'Aputure 300D',          cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
+      'aputure-300d-strip':  { intensity: 350, name: 'Aputure 300D Stripbox',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 3.5, shadowKernel: 32,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: null },
+      'aputure-120d':        { intensity: 300, name: 'Aputure 120D',           cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
+      'aputure-600d':        { intensity: 700, name: 'Aputure 600D Pro',       cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
+      'godox-ad600':    { intensity: 380, name: 'Godox AD600',      cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'godox-ad200pro': { intensity: 240, name: 'Godox AD200Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'godox-ad400pro': { intensity: 340, name: 'Godox AD400Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'godox-ad600pro': { intensity: 420, name: 'Godox AD600Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'profoto-b10plus':{ intensity: 480, name: 'Profoto B10 Plus', cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'profoto-b10':    { intensity: 420, name: 'Profoto B10',      cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'profoto-d2':     { intensity: 380, name: 'Profoto D2',       cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 80,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
     };
     
-    const lightConfig = lightSpecs[modelId] || { intensity: 350, name: modelId, cct: 5600, beamAngle: Math.PI / 3, exponent: 2.0, shadowKernel: 64, glbFile: '/models/lights/softbox-stand.glb' };
+    const lightConfig = lightSpecs[modelId] || { intensity: 350, name: modelId, cct: 5600, beamAngle: Math.PI / 3, exponent: 2.0, shadowKernel: 64, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 };
     
     try {
       const modelUrl = resolveModelPath(lightConfig.glbFile);
@@ -5656,54 +5658,59 @@ class VirtualStudio {
         (mesh as any)._headPivot = headPivot;
         console.log(`[addLight] headPivot tilt meshes=${headCount}`);
 
-        // Auto-detect which face of this model is the diffuser (bright/white submesh).
-        // The diffuser face centroid is offset from the model center in one horizontal direction.
-        // We store a _faceYawOffset so aimLightAt can correct any model regardless of its
-        // native orientation. TRELLIS models have no isolated bright submesh (fused), so they
-        // default to 0 (diffuser already on -Z).
+        // Determine the face yaw offset so aimLightAt always makes the diffuser face
+        // the subject regardless of the model's native orientation.
+        // - Known TRELLIS models: spec sets faceYawOffset=0 (confirmed -Z face, skip scan).
+        // - Tripo/AI models: spec sets faceYawOffset=null → auto-detect from bright submesh.
         {
-          const allBounds = parentMesh.getHierarchyBoundingVectors(true);
-          const modelCX = (allBounds.min.x + allBounds.max.x) * 0.5;
-          const modelCZ = (allBounds.min.z + allBounds.max.z) * 0.5;
-
-          const brightMeshes = allSubMeshes.filter(sm => {
-            if (!(sm instanceof BABYLON.Mesh)) return false;
-            const mat = sm.material;
-            if (!mat) return false;
-            let brightness = 0;
-            if (mat instanceof BABYLON.PBRMaterial) {
-              const c = mat.albedoColor;
-              brightness = (c.r + c.g + c.b) / 3;
-            } else if (mat instanceof BABYLON.StandardMaterial) {
-              const c = mat.diffuseColor;
-              brightness = (c.r + c.g + c.b) / 3;
-            }
-            return brightness > 0.5;
-          }) as BABYLON.Mesh[];
-
-          let faceYawOffset = 0; // default: diffuser on -Z (TRELLIS models)
-          if (brightMeshes.length > 0) {
-            let sumCX = 0, sumCZ = 0;
-            for (const bm of brightMeshes) {
-              bm.computeWorldMatrix(true);
-              const bb = bm.getBoundingInfo().boundingBox;
-              sumCX += (bb.minimumWorld.x + bb.maximumWorld.x) * 0.5;
-              sumCZ += (bb.minimumWorld.z + bb.maximumWorld.z) * 0.5;
-            }
-            const centCX = sumCX / brightMeshes.length;
-            const centCZ = sumCZ / brightMeshes.length;
-            const offX = centCX - modelCX;
-            const offZ = centCZ - modelCZ;
-            if (Math.abs(offZ) >= Math.abs(offX)) {
-              // Diffuser is in the ±Z half
-              faceYawOffset = offZ < 0 ? 0 : Math.PI;           // -Z → 0, +Z → 180°
-            } else {
-              // Diffuser is in the ±X half
-              faceYawOffset = offX < 0 ? -Math.PI / 2 : Math.PI / 2; // -X → -90°, +X → +90°
-            }
-            console.log(`[addLight] Face auto-detect: brightMeshes=${brightMeshes.length}, offX=${offX.toFixed(3)}, offZ=${offZ.toFixed(3)}, faceYawOffset=${(faceYawOffset * 180 / Math.PI).toFixed(1)}°`);
+          let faceYawOffset: number;
+          if (lightConfig.faceYawOffset !== null) {
+            // Trust the spec — no detection needed.
+            faceYawOffset = lightConfig.faceYawOffset;
+            console.log(`[addLight] Face offset from spec: ${(faceYawOffset * 180 / Math.PI).toFixed(1)}°`);
           } else {
-            console.log('[addLight] Face auto-detect: no isolated bright mesh → assuming -Z face (offset 0°)');
+            // Auto-detect: find bright/white submeshes and see which face their centroid is on.
+            const allBounds = parentMesh.getHierarchyBoundingVectors(true);
+            const modelCX = (allBounds.min.x + allBounds.max.x) * 0.5;
+            const modelCZ = (allBounds.min.z + allBounds.max.z) * 0.5;
+
+            const brightMeshes = allSubMeshes.filter(sm => {
+              if (!(sm instanceof BABYLON.Mesh)) return false;
+              const mat = sm.material;
+              if (!mat) return false;
+              let brightness = 0;
+              if (mat instanceof BABYLON.PBRMaterial) {
+                const c = mat.albedoColor;
+                brightness = (c.r + c.g + c.b) / 3;
+              } else if (mat instanceof BABYLON.StandardMaterial) {
+                const c = mat.diffuseColor;
+                brightness = (c.r + c.g + c.b) / 3;
+              }
+              return brightness > 0.5;
+            }) as BABYLON.Mesh[];
+
+            faceYawOffset = 0; // fallback: assume -Z
+            if (brightMeshes.length > 0) {
+              let sumCX = 0, sumCZ = 0;
+              for (const bm of brightMeshes) {
+                bm.computeWorldMatrix(true);
+                const bb = bm.getBoundingInfo().boundingBox;
+                sumCX += (bb.minimumWorld.x + bb.maximumWorld.x) * 0.5;
+                sumCZ += (bb.minimumWorld.z + bb.maximumWorld.z) * 0.5;
+              }
+              const centCX = sumCX / brightMeshes.length;
+              const centCZ = sumCZ / brightMeshes.length;
+              const offX = centCX - modelCX;
+              const offZ = centCZ - modelCZ;
+              if (Math.abs(offZ) >= Math.abs(offX)) {
+                faceYawOffset = offZ < 0 ? 0 : Math.PI;
+              } else {
+                faceYawOffset = offX < 0 ? -Math.PI / 2 : Math.PI / 2;
+              }
+              console.log(`[addLight] Face auto-detect: brightMeshes=${brightMeshes.length}, offX=${offX.toFixed(3)}, offZ=${offZ.toFixed(3)}, faceYawOffset=${(faceYawOffset * 180 / Math.PI).toFixed(1)}°`);
+            } else {
+              console.log('[addLight] Face auto-detect: no bright mesh found → fallback -Z (0°)');
+            }
           }
           (parentMesh as any)._faceYawOffset = faceYawOffset;
         }
