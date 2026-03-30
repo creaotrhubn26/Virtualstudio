@@ -5655,68 +5655,14 @@ class VirtualStudio {
         (mesh as any)._headPivot = headPivot;
         console.log(`[addLight] headPivot tilt meshes=${headCount}`);
 
-        // Build a CCT-tinted emissive glow plane that sits just in front of the
-        // diffuser face (−Z face of the TRELLIS model). This is fully under our
-        // control — no GLB material hacking required.
+        // Identify the diffuser face meshes by brightness: the white diffuser panel
+        // has the highest albedo in the model.  These are stored in _headMeshes so
+        // updateLightHeadGlow can drive emissive intensity live.
         const cctColor = this.cctToColor(lightConfig.cct);
         const initT = Math.min(1.0, lightConfig.intensity / 500);
         const initStrength = Math.sqrt(initT) * 1.6;
 
-        // Measure head bounding box in world space.
-        // Use head sub-meshes (above threshold) if available; fall back to all sub-meshes.
-        const glowSource = headMeshes.length > 0
-          ? headMeshes
-          : (allSubMeshes.filter(sm => sm instanceof BABYLON.Mesh) as BABYLON.Mesh[]);
-
-        headPivot.computeWorldMatrix(true);
-        let bMin = new BABYLON.Vector3(Infinity, Infinity, Infinity);
-        let bMax = new BABYLON.Vector3(-Infinity, -Infinity, -Infinity);
-        glowSource.forEach((sm, idx) => {
-          sm.refreshBoundingInfo();   // ensure bounding info is built from actual vertices
-          sm.computeWorldMatrix(true);
-          const bb = sm.getBoundingInfo().boundingBox;
-          console.log(`[addLight] glowSrc[${idx}] name="${sm.name}" verts=${sm.getTotalVertices()} minWorld=(${bb.minimumWorld.x.toFixed(2)},${bb.minimumWorld.y.toFixed(2)},${bb.minimumWorld.z.toFixed(2)}) maxWorld=(${bb.maximumWorld.x.toFixed(2)},${bb.maximumWorld.y.toFixed(2)},${bb.maximumWorld.z.toFixed(2)})`);
-          bMin = BABYLON.Vector3.Minimize(bMin, bb.minimumWorld);
-          bMax = BABYLON.Vector3.Maximize(bMax, bb.maximumWorld);
-        });
-
-        // When head-mesh separation failed (single fused model), the bounding box
-        // spans the full fixture including the stand/tripod.
-        // 1. Clip Y to the top 40% so the plane covers the softbox head, not the stand.
-        // 2. Clip X to a square of the same size centered on the model — the tripod
-        //    legs can spread 2–3× wider than the actual softbox panel.
-        if (headMeshes.length === 0) {
-          bMin.y = Math.max(bMin.y, headJointWorldY);
-          const headH = bMax.y - bMin.y;           // ≈ 40% of model height
-          const cx   = (bMin.x + bMax.x) * 0.5;   // model X centre
-          bMin.x = cx - headH * 0.5;               // square: same width as height
-          bMax.x = cx + headH * 0.5;
-        }
-
-        console.log(`[addLight] HEAD bbox (headMeshes=${headCount}): X[${bMin.x.toFixed(2)},${bMax.x.toFixed(2)}] Y[${bMin.y.toFixed(2)},${bMax.y.toFixed(2)}] Z[${bMin.z.toFixed(2)},${bMax.z.toFixed(2)}]`);
-
-        // Measure the diffuser panel using a two-pass vertex scan.
-        //
-        // PROBLEM: bMin.z is the FULL MODEL's minimum Z (the tripod legs may protrude
-        // further forward than the softbox diffuser face). Scanning at bMin.z finds only
-        // tripod vertices (at low Y, filtered out by headJointWorldY), so the scan fails
-        // and the plane ends up at the TRIPOD front face instead of the DIFFUSER face.
-        //
-        // SOLUTION: 
-        //   Pass 1 — find headBMinZ: the minimum Z of all vertices above headJointWorldY.
-        //             This is the actual Z of the softbox HEAD's front face.
-        //   Pass 2 — scan for X, Y, Z extent at headBMinZ ± epsilon to measure the
-        //             diffuser panel width, height, and precise Z position.
-        let panelW: number = Math.max(0.05, bMax.x - bMin.x);
-        let panelH: number = Math.max(0.05, bMax.y - bMin.y);
-        let diffuserFaceZ: number = bMin.z;   // default: full-model front face
-
-        const geoMesh = glowSource.find(sm => sm.getTotalVertices() > 0) as BABYLON.Mesh | undefined;
-        let measuredFromVertices = false;
-
-        if (geoMesh) {
-          const positions = geoMesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
-          if (positions && positions.length > 0) {
+ {
             geoMesh.computeWorldMatrix(true);
             const wm = geoMesh.getWorldMatrix();
             const modelDepth = Math.abs(bMax.z - bMin.z);
