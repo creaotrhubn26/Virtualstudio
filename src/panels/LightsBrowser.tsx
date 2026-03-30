@@ -163,6 +163,48 @@ const MODIFIER_DATABASE: ModifierSpec[] = [
   { id: 'diffuser-grid-cloth', brand: 'Generic', model: 'Grid Cloth 1-stop', type: 'diffuser', size: '120x180cm', stopLoss: 1.0, mount: 'Frame', thumbnail: '/images/gear/modifier_softbox.png' },
   { id: 'scrim-net-single', brand: 'Generic', model: 'Scrim Net Enkelt', type: 'diffuser', size: '120x180cm', stopLoss: 1.0, mount: 'Frame', thumbnail: '/images/gear/modifier_softbox.png' },
   { id: 'scrim-net-double', brand: 'Generic', model: 'Scrim Net Dobbelt', type: 'diffuser', size: '120x180cm', stopLoss: 2.0, mount: 'Frame', thumbnail: '/images/gear/modifier_softbox.png' },
+
+  // Large Octaboxes (broadcast / fashion / cine)
+  { id: 'octabox-120', brand: 'Generic', model: 'Oktaboks 120cm', type: 'octabox', size: '120cm', shape: 'octagon', stopLoss: 1.8, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'octabox-150', brand: 'Generic', model: 'Oktaboks 150cm', type: 'octabox', size: '150cm', shape: 'octagon', stopLoss: 2.0, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'octabox-200', brand: 'Generic', model: 'Oktaboks 200cm (Deep)', type: 'octabox', size: '200cm', shape: 'octagon', stopLoss: 2.2, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'octa-profoto-xxl', brand: 'Profoto', model: 'XL Softbox Octa 175cm', type: 'octabox', size: '175cm', shape: 'octagon', stopLoss: 2.0, mount: 'Profoto', thumbnail: '/images/gear/modifier_softbox.png' },
+
+  // Umbrella — extended sizes
+  { id: 'umbrella-white-65', brand: 'Generic', model: 'Hvit Paraply 65cm', type: 'umbrella', size: '65cm', shape: 'round', stopLoss: 1.0, mount: 'Generic', thumbnail: '/images/gear/modifier_umbrella.png' },
+  { id: 'umbrella-white-85', brand: 'Generic', model: 'Hvit Paraply 85cm', type: 'umbrella', size: '85cm', shape: 'round', stopLoss: 1.2, mount: 'Generic', thumbnail: '/images/gear/modifier_umbrella.png' },
+  { id: 'umbrella-silver-85', brand: 'Generic', model: 'Sølv Paraply 85cm', type: 'umbrella', size: '85cm', shape: 'round', stopLoss: 0.3, mount: 'Generic', thumbnail: '/images/gear/modifier_umbrella.png' },
+  { id: 'umbrella-deep-silver-150', brand: 'Godox', model: 'Deep Sølvparaply 150cm', type: 'umbrella', size: '150cm', shape: 'deep', stopLoss: 0.5, mount: 'Generic', thumbnail: '/images/gear/modifier_umbrella.png' },
+  { id: 'umbrella-shoot-through-100', brand: 'Generic', model: 'Shoot-Through 100cm', type: 'umbrella', size: '100cm', shape: 'round', stopLoss: 1.5, mount: 'Generic', thumbnail: '/images/gear/modifier_umbrella.png' },
+  { id: 'umbrella-shoot-through-150', brand: 'Generic', model: 'Shoot-Through 150cm', type: 'umbrella', size: '150cm', shape: 'round', stopLoss: 1.7, mount: 'Generic', thumbnail: '/images/gear/modifier_umbrella.png' },
+  { id: 'profoto-rfi-3x4', brand: 'Profoto', model: 'RFi Softbox 3x4ft (90x120cm)', type: 'softbox', size: '90x120cm', shape: 'rectangle', stopLoss: 2.0, mount: 'Profoto', thumbnail: '/images/gear/modifier_softbox.png' },
+
+  // Cine-style flags and cutters
+  { id: 'cine-flag-4x4', brand: 'Matthews', model: 'Flag 4x4 (120x120cm)', type: 'barn-doors', size: '120x120cm', stopLoss: 0, mount: 'C-Stand', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'cine-floppy-4x4', brand: 'Matthews', model: 'Floppy Cutter 4x4ft', type: 'barn-doors', size: '120x120cm', stopLoss: 0, mount: 'C-Stand', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'cine-silk-4x4', brand: 'Matthews', model: '1/4 Silk 4x4ft', type: 'diffuser', size: '120x120cm', stopLoss: 0.5, mount: 'C-Stand', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'cine-full-grid-4x4', brand: 'Matthews', model: 'Full Grid Cloth 4x4ft', type: 'diffuser', size: '120x120cm', stopLoss: 1.5, mount: 'C-Stand', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'cine-unbleached-muslin', brand: 'Generic', model: 'Unbleached Muslin 6x6ft', type: 'diffuser', size: '180x180cm', stopLoss: 0.8, mount: 'C-Stand', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'cine-black-net-single', brand: 'Matthews', model: 'Black Net Single 4x4ft', type: 'grid', size: '120x120cm', stopLoss: 1.0, mount: 'C-Stand', thumbnail: '/images/gear/modifier_grid.png' },
+
+  // Clamshell / Book Light configuration helpers
+  { id: 'clamshell-setup', brand: 'Generic', model: 'Clamshell (2x Softbox)', type: 'softbox', size: 'clamshell', stopLoss: 1.5, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'book-light-120x180', brand: 'Generic', model: 'Book Light 120x180cm', type: 'softbox', size: '120x180cm', shape: 'rectangle', stopLoss: 2.0, mount: 'C-Stand', thumbnail: '/images/gear/modifier_softbox.png' },
+
+  // Magnum / Narrow beam reflectors
+  { id: 'magnum-reflector', brand: 'Profoto', model: 'Magnum Reflector', type: 'reflector', size: 'magnum', stopLoss: -1.0, thumbnail: '/images/gear/modifier_reflector.png' },
+  { id: 'narrow-beam-reflector', brand: 'Elinchrom', model: 'Narrow Beam Reflektor', type: 'reflector', size: 'narrow', stopLoss: -0.5, thumbnail: '/images/gear/modifier_reflector.png' },
+  { id: 'wide-angle-reflector', brand: 'Broncolor', model: 'Wide Angle Reflektor', type: 'reflector', size: 'wide', stopLoss: -0.3, thumbnail: '/images/gear/modifier_reflector.png' },
+
+  // Stripbox extended
+  { id: 'stripbox-30x120', brand: 'Generic', model: 'Stripboks 30x120cm', type: 'stripbox', size: '30x120cm', shape: 'strip', stopLoss: 1.5, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'stripbox-40x180', brand: 'Generic', model: 'Stripboks 40x180cm', type: 'stripbox', size: '40x180cm', shape: 'strip', stopLoss: 1.8, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'aputure-light-storm-banner', brand: 'Aputure', model: 'Light Storm Banner 60x180cm', type: 'stripbox', size: '60x180cm', shape: 'strip', stopLoss: 2.0, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
+
+  // Fresnel — dedicated
+  { id: 'fresnel-4in-wide', brand: 'Generic', model: 'Fresnel 4" Open Flood', type: 'grid', size: '4"', stopLoss: 0, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'fresnel-8in-spot', brand: 'Generic', model: 'Fresnel 8" Hard Spot', type: 'grid', size: '8"', stopLoss: 0, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'dedolight-lens', brand: 'Dedolight', model: 'Dedolight Aspherical Lens', type: 'grid', size: '150mm', stopLoss: 0, thumbnail: '/images/gear/modifier_grid.png' },
 ];
 
 const MODIFIER_CATEGORIES: CategoryInfo[] = [

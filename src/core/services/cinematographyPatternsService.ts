@@ -589,6 +589,142 @@ const patterns: CinematographyPattern[] = [
     ],
     usedIn: ['Fashion editorial', 'Wedding photography', 'Lifestyle', 'Romantic film scenes'],
     reference: 'Golden Hour Photography — Bryan Peterson'
+  },
+  {
+    id: 'split-tone-dual-gel',
+    name: 'Split Tone — Dual Gel',
+    category: 'portrait',
+    difficulty: 'intermediate',
+    description: 'To kontrasterende farger fra begge sider — typisk orange/blå eller grønn/magenta. Sterk visuell effekt for musikkvideo og editorial.',
+    mood: 'dramatic',
+    keyToFillRatio: '1:1',
+    lights: [
+      { type: 'key', position: { x: -2.5, y: 2.0, z: 1.0 }, intensity: 80, colorTemp: 5600, modifier: 'CTO gel + octabox' },
+      { type: 'fill', position: { x: 2.5, y: 2.0, z: 1.0 }, intensity: 75, colorTemp: 5600, modifier: 'CTB gel + octabox' }
+    ],
+    usedIn: ['Music video', 'Fashion editorial', 'Cyberpunk aesthetic', 'Social media'],
+    reference: 'Wong Kar-Wai — In the Mood for Love'
+  },
+  {
+    id: 'broad-lighting',
+    name: 'Bred Belysning (Broad Lighting)',
+    category: 'portrait',
+    difficulty: 'beginner',
+    description: 'Nøkkellys belyst den brede siden av ansiktet mot kameraet. Gjør ansiktet bredere og mer fremtredende. Vanlig for maskuline portretter.',
+    mood: 'neutral',
+    keyToFillRatio: '3:1',
+    lights: [
+      { type: 'key', position: { x: -1.5, y: 2.0, z: 1.5 }, intensity: 75, colorTemp: 5500, modifier: 'large softbox' },
+      { type: 'fill', position: { x: 2.5, y: 1.5, z: 1.0 }, intensity: 25, colorTemp: 5500, modifier: 'reflector' }
+    ],
+    usedIn: ['Masculine portraits', 'Corporate', 'Headshots', 'Character study'],
+    reference: 'Joe Edelman — Portrait Photography'
+  },
+  {
+    id: 'short-lighting',
+    name: 'Kort Belysning (Short Lighting)',
+    category: 'portrait',
+    difficulty: 'beginner',
+    description: 'Nøkkellys belyser den korte (skyggesiden) av ansiktet. Gir mer kontur og slanker ansiktet. Tidløs og flatterende.',
+    mood: 'neutral',
+    keyToFillRatio: '3:1',
+    lights: [
+      { type: 'key', position: { x: 2.5, y: 2.0, z: 1.5 }, intensity: 75, colorTemp: 5500, modifier: 'softbox 60x90' },
+      { type: 'fill', position: { x: -2.5, y: 1.5, z: 1.0 }, intensity: 25, colorTemp: 5500, modifier: 'reflector' }
+    ],
+    usedIn: ['Portrait', 'Headshot', 'Commercial', 'Event photography'],
+    reference: 'Zack Arias — One Light Workshop'
+  },
+  {
+    id: 'clamshell-beauty',
+    name: 'Clamshell (Skjønnhetslys)',
+    category: 'portrait',
+    difficulty: 'intermediate',
+    description: 'Refleksjonsform med to lys: stor oktaboks over og reflektor-fill under. Gir bløte og flatterende øyehalv-månene under øynene.',
+    mood: 'glamour',
+    keyToFillRatio: '2:1',
+    lights: [
+      { type: 'key', position: { x: 0, y: 2.5, z: 1.5 }, intensity: 90, colorTemp: 5600, modifier: 'large octabox 120cm' },
+      { type: 'fill', position: { x: 0, y: 0.5, z: 1.5 }, intensity: 45, colorTemp: 5600, modifier: 'white reflector / bounce card' }
+    ],
+    usedIn: ['Beauty photography', 'Glamour', 'Fashion editorial', 'Cosmetics'],
+    reference: 'Peter Hurley — The Headshot'
+  },
+  {
+    id: 'hard-neon-portrait',
+    name: 'Hard Neon Portrett',
+    category: 'narrative',
+    difficulty: 'intermediate',
+    description: 'Hard, uhyggelig neonlys uten softboks. Inspirert av Drive og Blade Runner. Sterke farger, minimal diffusjon.',
+    mood: 'dramatic',
+    keyToFillRatio: '6:1',
+    lights: [
+      { type: 'key', position: { x: -2.0, y: 2.0, z: 1.0 }, intensity: 85, colorTemp: 5600, modifier: 'RGB tube bare or snoot' },
+      { type: 'rim', position: { x: 2.0, y: 2.5, z: -0.5 }, intensity: 60, colorTemp: 5600, modifier: 'RGB tube bare — opposite color' }
+    ],
+    usedIn: ['Cyberpunk', 'Noir', 'Music video', 'Action film'],
+    reference: 'Blade Runner 2049 — Roger Deakins'
+  },
+  {
+    id: 'available-light-window',
+    name: 'Available Light — Vindus Portrett',
+    category: 'natural',
+    difficulty: 'beginner',
+    description: 'Rent vinduslys med minimal påvirkning. Klassisk "natural light photographer" oppsett med eventuell bounce card.',
+    mood: 'natural',
+    keyToFillRatio: '5:1',
+    lights: [
+      { type: 'key', position: { x: -3, y: 1.8, z: 0 }, intensity: 100, colorTemp: 6200, modifier: 'window (available daylight)' },
+      { type: 'fill', position: { x: 2, y: 1.5, z: 0.5 }, intensity: 20, colorTemp: 6000, modifier: 'white foam core bounce' }
+    ],
+    usedIn: ['Lifestyle', 'Natural light portrait', 'Documentary', 'Newborn'],
+    reference: 'Annie Leibovitz — Natural Light'
+  },
+  {
+    id: 'top-down-overhead',
+    name: 'Overhead Flat (Top-Down)',
+    category: 'product',
+    difficulty: 'beginner',
+    description: 'Lys rett ovenfra for flat lay og mat-fotografi. Jevn skyggefri overflate.',
+    mood: 'clean',
+    keyToFillRatio: '1:1',
+    lights: [
+      { type: 'key', position: { x: 0, y: 3.5, z: 0 }, intensity: 100, colorTemp: 5500, modifier: 'large softbox or LED panel overhead' },
+      { type: 'fill', position: { x: -2, y: 1.5, z: 0.5 }, intensity: 40, colorTemp: 5500, modifier: 'foam core bounce' }
+    ],
+    usedIn: ['Food photography', 'Product', 'Flat lay', 'Cosmetics'],
+    reference: 'Standard Tabletop / Food Photography'
+  },
+  {
+    id: 'contre-jour',
+    name: 'Contre-Jour (Silhouette / Bakgrunnslys)',
+    category: 'cinematic',
+    difficulty: 'intermediate',
+    description: 'Lyset er plassert bak motivet, mot kameraet. Skaper silhuett eller rim-glow. Brukes for drama, mysterium og romantikk.',
+    mood: 'dramatic',
+    keyToFillRatio: '0:1',
+    lights: [
+      { type: 'back', position: { x: 0, y: 2.0, z: -3 }, intensity: 120, colorTemp: 5600, modifier: 'HMI, window, or large LED panel' },
+      { type: 'fill', position: { x: 0, y: 1.5, z: 2 }, intensity: 10, colorTemp: 5600, modifier: 'subtle reflector fill' }
+    ],
+    usedIn: ['Drama', 'Wedding', 'Romantic film', 'Thriller', 'Music video'],
+    reference: 'Terrence Malick — Days of Heaven'
+  },
+  {
+    id: 'motivated-practical-diegetic',
+    name: 'Motivated / Praktisk Lys (Diegetisk)',
+    category: 'narrative',
+    difficulty: 'advanced',
+    description: 'Alle lys er "motiverte" av synlige lyskilder i scenen (lamper, skjermer, vindu). Svært realistisk og filmisk.',
+    mood: 'natural',
+    keyToFillRatio: '4:1',
+    lights: [
+      { type: 'key', position: { x: 1.5, y: 1.8, z: 0.5 }, intensity: 70, colorTemp: 2800, modifier: 'table lamp / floor lamp simulation' },
+      { type: 'fill', position: { x: -2, y: 1.5, z: 0 }, intensity: 18, colorTemp: 5500, modifier: 'window or screen bounce' },
+      { type: 'rim', position: { x: 0, y: 2, z: -2 }, intensity: 25, colorTemp: 3800, modifier: 'motivated background source' }
+    ],
+    usedIn: ['Narrative film', 'TV drama', 'Realistic documentary', 'On-location'],
+    reference: 'Roger Deakins — No Country for Old Men'
   }
 ];
 

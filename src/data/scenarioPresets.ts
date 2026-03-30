@@ -1758,6 +1758,167 @@ export const scenarioPresets: ScenarioPreset[] = [
       backdrops: ['env-car-showroom', 'env-garage-workshop']
     }
   },
+
+  // ─── Architecture & Interior ──────────────────────────────────────────────
+  {
+    id: 'interior-bolig',
+    navn: 'Interiør - Boligfotografering',
+    kategori: 'portrett',
+    beskrivelse: 'Typisk boliginteriør-oppsett med balansert blending av dagslys gjennom vindu og kunstig rombelysning. Jevn og rent.',
+    tags: ['interiør', 'bolig', 'arkitektur', 'dagslys', 'rom', 'rom-foto'],
+    previewImage: '/images/presets/interior-bolig.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-3.5, 2.5, 0.5], rotation: [0, 85, 0], intensity: 1.2, cct: 6200, modifier: 'window-daylight' },
+        { type: 'fill-light', position: [0, 2.8, -2], rotation: [-60, 0, 0], intensity: 0.5, cct: 3200, modifier: 'led-panel-60x60' },
+        { type: 'practical', position: [2, 1.0, 0], rotation: [0, -90, 0], intensity: 0.7, cct: 2800 }
+      ],
+      backdrop: { type: 'environment', id: 'env-loft-interior' },
+      camera: { position: [0, 1.4, 4.5], target: [0, 1.2, 0], focalLength: 24 }
+    },
+    recommendedAssets: {
+      lights: ['window-daylight', 'aputure-120d', 'godox-sl150iii'],
+      modifiers: ['led-panel-60x60', 'diffuser-silk'],
+      backdrops: ['env-loft-interior', 'env-library-books', 'env-restaurant-interior']
+    }
+  },
+  {
+    id: 'arkitektur-eksterior',
+    navn: 'Arkitektur - Eksterior Kveld',
+    kategori: 'portrett',
+    beskrivelse: 'Kveldsbelysning for fasadefotografering. Blå time med innvendig lys som skinner ut gjennom vinduene. Dramatisk og elegant.',
+    tags: ['arkitektur', 'eksterior', 'fasade', 'kveld', 'blå-time', 'vindu-glo'],
+    previewImage: '/images/presets/arkitektur-eksterior.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [0, 3.5, -4], rotation: [-30, 0, 0], intensity: 0.4, cct: 7000, color: '#88aacc' },
+        { type: 'background-light', position: [0, 1.8, -3.5], rotation: [0, 0, 0], intensity: 0.8, cct: 3200, color: '#ffdd88' },
+        { type: 'fill-light', position: [-3.0, 2.0, 0], rotation: [0, 85, 0], intensity: 0.3, cct: 6800, color: '#99bbee' }
+      ],
+      backdrop: { type: 'environment', id: 'env-window-city-night' },
+      camera: { position: [0, 1.5, 4.0], target: [0, 1.2, 0], focalLength: 28 }
+    },
+    recommendedAssets: {
+      lights: ['arri-m18', 'godox-sl150iii'],
+      modifiers: ['diffuser-silk', 'cine-flag-4x4'],
+      backdrops: ['env-window-city-night', 'env-neon-city']
+    }
+  },
+
+  // ─── Healthcare / Medical / Clinical ─────────────────────────────────────
+  {
+    id: 'medisinsk-klinisk',
+    navn: 'Medisinsk - Klinisk Portrett',
+    kategori: 'naeringsliv',
+    beskrivelse: 'Rent og profesjonelt klinisk portrett-oppsett for leger, tannleger og helsearbeidere. Hvit og nøytral estetikk.',
+    tags: ['medisinsk', 'klinisk', 'lege', 'hvit', 'profesjonell', 'helse'],
+    previewImage: '/images/presets/medisinsk-klinisk.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-1.5, 2.5, 1.5], rotation: [20, 35, 0], intensity: 0.9, cct: 5500, modifier: 'octabox-90' },
+        { type: 'fill-light', position: [2.0, 1.8, 1.5], rotation: [10, -35, 0], intensity: 0.5, cct: 5500, modifier: 'large-softbox' },
+        { type: 'background-light', position: [0, 1.5, -3.5], rotation: [0, 0, 0], intensity: 0.6, cct: 6000, color: '#f0f4ff' }
+      ],
+      backdrop: { type: 'environment', id: 'env-clinic-white' },
+      camera: { position: [0, 1.65, 3.8], target: [0, 1.6, 0], focalLength: 85 }
+    },
+    recommendedAssets: {
+      lights: ['godox-sl150iii', 'nanlite-forza-60b'],
+      modifiers: ['octabox-90', 'large-softbox'],
+      backdrops: ['env-clinic-white', 'backdrop-white']
+    }
+  },
+
+  // ─── Fashion Editorial — HMI Style ────────────────────────────────────────
+  {
+    id: 'mote-hmi-outdoor',
+    navn: 'Mote - HMI Utendørs Editorial',
+    kategori: 'mote',
+    beskrivelse: 'Utendørs motefoto simulert med kraftig HMI som key-light og skylight som fill. Sterkt og kontrastfullt dagslys-look.',
+    tags: ['mote', 'hmi', 'utendørs', 'editorial', 'dagslys', 'kontrastfull'],
+    previewImage: '/images/presets/mote-hmi-outdoor.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-3.0, 3.5, 1.5], rotation: [30, 50, 0], intensity: 1.6, cct: 5600, modifier: 'fresnel' },
+        { type: 'fill-light', position: [0, 5.0, 0], rotation: [-90, 0, 0], intensity: 0.5, cct: 7500, modifier: 'diffuser-silk' }
+      ],
+      backdrop: { type: 'environment', id: 'env-rooftop-sunset' },
+      camera: { position: [0, 1.6, 4.5], target: [0, 1.5, 0], focalLength: 70 }
+    },
+    recommendedAssets: {
+      lights: ['arri-m18', 'joker-400'],
+      modifiers: ['fresnel', 'diffuser-silk'],
+      backdrops: ['env-rooftop-sunset', 'env-beach-golden']
+    }
+  },
+  {
+    id: 'mote-kontrastfull-gallery',
+    navn: 'Mote - Kunstgalleri Kontrast',
+    kategori: 'mote',
+    beskrivelse: 'Hvit cube kunstgalleri med spotlys ovenfra. Minimalistisk og definert. Moderne editorial estetikk.',
+    tags: ['mote', 'gallery', 'kunstgalleri', 'spot', 'minimalistisk', 'editorial', 'hvit'],
+    previewImage: '/images/presets/mote-kontrastfull-gallery.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [0, 3.5, 0.5], rotation: [-75, 0, 0], intensity: 1.3, cct: 3500, modifier: 'snoot' },
+        { type: 'fill-light', position: [-2.5, 2.0, 1.5], rotation: [10, 45, 0], intensity: 0.2, cct: 5000, modifier: 'reflector-white' },
+        { type: 'rim-light', position: [2.5, 2.5, -0.5], rotation: [10, -130, 0], intensity: 0.4, cct: 4000, modifier: 'snoot' }
+      ],
+      backdrop: { type: 'environment', id: 'env-art-gallery' },
+      camera: { position: [0, 1.65, 4.0], target: [0, 1.55, 0], focalLength: 85 }
+    },
+    recommendedAssets: {
+      lights: ['godox-ad600-pro', 'profoto-b10'],
+      modifiers: ['snoot', 'reflector-white'],
+      backdrops: ['env-art-gallery', 'backdrop-white']
+    }
+  },
+
+  // ─── Wedding Indoor ────────────────────────────────────────────────────────
+  {
+    id: 'bryllup-innendors-kirke',
+    navn: 'Bryllup - Innendørs Kirke',
+    kategori: 'bryllup',
+    beskrivelse: 'Romantisk kirke-innendørs med blendet ambient kirkelys og subtilt flash. Varm tungsten-stemning.',
+    tags: ['bryllup', 'kirke', 'innendørs', 'romantisk', 'varm', 'ambient'],
+    previewImage: '/images/presets/bryllup-innendors-kirke.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-1.5, 2.0, 1.5], rotation: [20, 35, 0], intensity: 0.7, cct: 3800, modifier: 'octabox-60' },
+        { type: 'fill-light', position: [2.0, 1.5, 1.0], rotation: [5, -40, 0], intensity: 0.3, cct: 3600, modifier: 'reflector-gold' },
+        { type: 'background-light', position: [0, 3.0, -3.5], rotation: [-45, 0, 0], intensity: 0.5, cct: 2800, color: '#ffeecc' }
+      ],
+      backdrop: { type: 'seamless', color: '#2a1a0a' },
+      camera: { position: [0, 1.55, 4.0], target: [0, 1.5, 0], focalLength: 85 }
+    },
+    recommendedAssets: {
+      lights: ['godox-ad400pro', 'profoto-b10', 'aputure-mc-pro'],
+      modifiers: ['octabox-60', 'reflector-gold'],
+      backdrops: ['seamless-chocolate', 'env-loft-interior']
+    }
+  },
+  {
+    id: 'bryllup-resepsjon',
+    navn: 'Bryllup - Resepsjon / Bankett',
+    kategori: 'bryllup',
+    beskrivelse: 'Festmiddag-belysning med kakebordsbelysning, mykt ambient og elegant stemning. For resepsjon og fest.',
+    tags: ['bryllup', 'resepsjon', 'bankett', 'fest', 'elegant', 'varm', 'middag'],
+    previewImage: '/images/presets/bryllup-resepsjon.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-2.0, 2.8, 1.5], rotation: [30, 40, 0], intensity: 0.8, cct: 3400, modifier: 'octabox-90' },
+        { type: 'practical', position: [1.5, 0.8, 0.5], rotation: [0, -90, 0], intensity: 0.9, cct: 2700 },
+        { type: 'background-light', position: [0, 2.5, -3.5], rotation: [-40, 0, 0], intensity: 0.4, cct: 2500, color: '#ffdd99' }
+      ],
+      backdrop: { type: 'environment', id: 'env-restaurant-interior' },
+      camera: { position: [0, 1.55, 4.0], target: [0, 1.45, 0], focalLength: 70 }
+    },
+    recommendedAssets: {
+      lights: ['godox-ad400pro', 'aputure-mc-pro'],
+      modifiers: ['octabox-90', 'reflector-gold'],
+      backdrops: ['env-restaurant-interior', 'env-hotel-lobby']
+    }
+  },
   {
     id: 'bryllup-utendors',
     navn: 'Bryllup - Utendørs Gyllen Time',
