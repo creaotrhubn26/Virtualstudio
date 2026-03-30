@@ -16793,9 +16793,12 @@ class VirtualStudio {
         console.log(`Scaling model by ${scale.toFixed(3)} to reach ${targetHeight}m height`);
       }
       
-      // Fix rotation - SAM 3D Body models may be exported upside down or facing wrong direction
-      // Rotate 180 degrees around X axis to flip right-side up
-      this.characterMesh.rotation = new BABYLON.Vector3(Math.PI, 0, 0);
+      // SAM 3D Body exports are upside-down → need Math.PI X-flip.
+      // Tripo / realistic models are already right-side-up → no flip.
+      // Cesium Man is rigged and already correct → no flip.
+      const isSamModel = /\/avatar_\w+\.glb(\?.*)?$/.test(modelUrl);
+      const preserveOriginalMaterials = !isSamModel;
+      this.characterMesh.rotation = new BABYLON.Vector3(isSamModel ? Math.PI : 0, 0, 0);
       
       // Position mesh on ground using the helper function (after rotation so bounds are correct)
       const storyPos = options?.position;
@@ -16820,81 +16823,64 @@ class VirtualStudio {
       this.characterMesh.position = meshPosition;
       this.characterMesh.computeWorldMatrix(true);
       
-      // Character Material Stack: PBRMaterial for skin, shirt, and pants
-      const skinColor = BABYLON.Color3.FromHexString(skinTone || '#FFDAB9');
-      const shirtColor = new BABYLON.Color3(0.2, 0.4, 0.7); // Blue shirt
-      const pantsColor = new BABYLON.Color3(0.2, 0.2, 0.25); // Dark gray pants
-      
-      // Use original local bounds (before rotation/scaling) for material selection
-      const localMinY = boundingInfo.min.y;
-      const localMaxY = boundingInfo.max.y;
-      const localModelHeight = localMaxY - localMinY;
-      
-      console.log(`Material bounds: localMinY=${localMinY.toFixed(3)}, localMaxY=${localMaxY.toFixed(3)}`);
-      
-      // Textured PBR material stack (albedo + normal + roughness/metallic maps).
-      const skinMaterial = this.createProceduralCharacterMaterial(`${name}_skin_mat`, skinColor, 'skin');
-      const shirtMaterial = this.createProceduralCharacterMaterial(`${name}_shirt_mat`, shirtColor, 'shirt');
-      const pantsMaterial = this.createProceduralCharacterMaterial(`${name}_pants_mat`, pantsColor, 'pants');
-      
       // Get all meshes including root
       const allMeshes = this.characterMesh.getChildMeshes(true);
       allMeshes.push(this.characterMesh);
-      
       let meshCount = 0;
-      let skinMeshCount = 0;
-      let shirtMeshCount = 0;
-      let pantsMeshCount = 0;
-      
-      // Apply materials based on mesh position (simplified approach)
-      // For now, apply skin material to all meshes - in a full implementation,
-      // you would use submeshes or vertex colors to distinguish body parts
-      allMeshes.forEach(mesh => {
-        if (mesh instanceof BABYLON.Mesh && this.characterMesh) {
-          // Get mesh center in local space
-          const meshBounds = mesh.getBoundingInfo();
-          const meshCenterY = (meshBounds.boundingBox.maximumWorld.y + meshBounds.boundingBox.minimumWorld.y) / 2;
-          const normalizedY = (meshCenterY - this.characterMesh.getAbsolutePosition().y - localMinY) / localModelHeight;
-          
-          // Determine material based on Y position
-          // Head/neck area (above 82%) = skin
-          // Torso (38% to 82%) = shirt (except arms)
-          // Legs (below 38%) = pants
-          if (normalizedY > 0.82) {
-            mesh.material = skinMaterial;
-            skinMeshCount++;
-          } else if (normalizedY > 0.38) {
-            // Torso area - check if arms (far from center X)
-            const meshCenterX = (meshBounds.boundingBox.maximumWorld.x + meshBounds.boundingBox.minimumWorld.x) / 2;
-            const xDist = Math.abs(meshCenterX - this.characterMesh.getAbsolutePosition().x);
-            if (xDist > 0.15 && normalizedY > 0.55) {
-              mesh.material = skinMaterial; // Arms
-              skinMeshCount++;
-            } else {
-              mesh.material = shirtMaterial; // Shirt
-              shirtMeshCount++;
-            }
-          } else {
-            mesh.material = pantsMaterial; // Pants
-            pantsMeshCount++;
+
+      if (preserveOriginalMaterials) {
+        // Tripo / Cesium / rigged models: keep the model's own PBR materials.
+        // Only wire up shadows and isPickable.
+        console.log(`[loadCharacterModel] preserveOriginalMaterials — keeping model PBR textures`);
+        allMeshes.forEach(mesh => {
+          if (mesh instanceof BABYLON.Mesh) {
+            mesh.receiveShadows = true;
+            mesh.castShadows = true;
+            this.lights.forEach((lightData) => {
+              if (lightData.shadowGenerator) lightData.shadowGenerator.addShadowCaster(mesh);
+            });
+            meshCount++;
           }
-          
-          // Enable shadows
-          mesh.receiveShadows = true;
-          mesh.castShadows = true;
-          
-          // Add to shadow generators
-          this.lights.forEach((lightData) => {
-            if (lightData.shadowGenerator) {
-              lightData.shadowGenerator.addShadowCaster(mesh);
+        });
+        console.log(`[loadCharacterModel] Shadow-wired ${meshCount} mesh(es), original materials kept`);
+      } else {
+        // SAM 3D Body models: apply procedural skin/shirt/pants material stack.
+        const skinColor = BABYLON.Color3.FromHexString(skinTone || '#FFDAB9');
+        const shirtColor = new BABYLON.Color3(0.2, 0.4, 0.7);
+        const pantsColor = new BABYLON.Color3(0.2, 0.2, 0.25);
+        const localMinY = boundingInfo.min.y;
+        const localMaxY = boundingInfo.max.y;
+        const localModelHeight = localMaxY - localMinY;
+        console.log(`Material bounds: localMinY=${localMinY.toFixed(3)}, localMaxY=${localMaxY.toFixed(3)}`);
+        const skinMaterial  = this.createProceduralCharacterMaterial(`${name}_skin_mat`,  skinColor,  'skin');
+        const shirtMaterial = this.createProceduralCharacterMaterial(`${name}_shirt_mat`, shirtColor, 'shirt');
+        const pantsMaterial = this.createProceduralCharacterMaterial(`${name}_pants_mat`, pantsColor, 'pants');
+        let skinMeshCount = 0, shirtMeshCount = 0, pantsMeshCount = 0;
+        allMeshes.forEach(mesh => {
+          if (mesh instanceof BABYLON.Mesh && this.characterMesh) {
+            const meshBounds = mesh.getBoundingInfo();
+            const meshCenterY = (meshBounds.boundingBox.maximumWorld.y + meshBounds.boundingBox.minimumWorld.y) / 2;
+            const normalizedY = (meshCenterY - this.characterMesh.getAbsolutePosition().y - localMinY) / localModelHeight;
+            if (normalizedY > 0.82) {
+              mesh.material = skinMaterial; skinMeshCount++;
+            } else if (normalizedY > 0.38) {
+              const meshCenterX = (meshBounds.boundingBox.maximumWorld.x + meshBounds.boundingBox.minimumWorld.x) / 2;
+              const xDist = Math.abs(meshCenterX - this.characterMesh.getAbsolutePosition().x);
+              if (xDist > 0.15 && normalizedY > 0.55) { mesh.material = skinMaterial; skinMeshCount++; }
+              else { mesh.material = shirtMaterial; shirtMeshCount++; }
+            } else {
+              mesh.material = pantsMaterial; pantsMeshCount++;
             }
-          });
-          
-          meshCount++;
-        }
-      });
-      
-      console.log(`Applied PBR material stack (skin: ${skinMeshCount}, shirt: ${shirtMeshCount}, pants: ${pantsMeshCount}) to ${meshCount} mesh(es)`);
+            mesh.receiveShadows = true;
+            mesh.castShadows = true;
+            this.lights.forEach((lightData) => {
+              if (lightData.shadowGenerator) lightData.shadowGenerator.addShadowCaster(mesh);
+            });
+            meshCount++;
+          }
+        });
+        console.log(`Applied PBR material stack (skin: ${skinMeshCount}, shirt: ${shirtMeshCount}, pants: ${pantsMeshCount}) to ${meshCount} mesh(es)`);
+      }
       
       // Add eyes to the character model
       this.addEyesToMesh(this.characterMesh, name);
