@@ -275,6 +275,13 @@ async def startup_event():
     except Exception as e:
         print(f"Warning: ML services failed to initialize: {e}")
         print("Server will continue with basic functionality only")
+
+    try:
+        from ai_director_service import ai_director_service as _ai_director
+        globals()["ai_director_service"] = _ai_director
+        print(f"AI Director Service initialized (enabled: {_ai_director.enabled})")
+    except Exception as e:
+        print(f"Warning: AI Director Service failed to initialize: {e}")
     
     # Initialize admin users table
     if AUTH_SERVICE_AVAILABLE:
@@ -1401,6 +1408,126 @@ async def list_triposr_models():
     if not TRIPOSR_SERVICE_AVAILABLE or triposr_service is None:
         return JSONResponse({"models": []})
     return JSONResponse({"models": triposr_service.list_models()})
+
+
+# ============================================================================
+# AI Studio Director — GPT-4o function calling orchestration
+# ============================================================================
+
+ai_director_service = None  # will be set in startup_event
+
+
+@app.get("/api/ai/director/status")
+async def ai_director_status():
+    """Return the AI Director service status."""
+    if ai_director_service is None:
+        return JSONResponse({"enabled": False, "error": "not_initialized"})
+    return JSONResponse(ai_director_service.get_status())
+
+
+@app.post("/api/ai/director")
+async def ai_director_chat(request: Request):
+    """
+    AI Director chat endpoint.
+    Body: { messages: [...], imageDataUrl?: string }
+    Returns: { reply, events, steps, tool_calls_made, error }
+    """
+    if ai_director_service is None:
+        raise HTTPException(status_code=503, detail="AI Director Service not initialized")
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    messages = body.get("messages", [])
+    image_data_url = body.get("imageDataUrl")
+
+    if not messages:
+        raise HTTPException(status_code=400, detail="messages is required")
+
+    result = await ai_director_service.chat(messages, image_data_url)
+    return JSONResponse(result)
+
+
+@app.post("/api/ai/analyze-reference")
+async def ai_analyze_reference(request: Request):
+    """
+    Analyse a reference photo using GPT-4o Vision.
+    Body: { imageDataUrl: string }  (base64 data URL)
+    Returns: { success, summary, mood, light_count, preset, events }
+    """
+    if ai_director_service is None:
+        raise HTTPException(status_code=503, detail="AI Director Service not initialized")
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    image_data_url = body.get("imageDataUrl")
+    if not image_data_url:
+        raise HTTPException(status_code=400, detail="imageDataUrl is required")
+
+    result = await ai_director_service.analyze_reference_image(image_data_url)
+    if not result.get("success"):
+        raise HTTPException(status_code=422, detail=result.get("error", "Analysis failed"))
+    return JSONResponse(result)
+
+
+@app.post("/api/ai/generate-prop-glb")
+async def ai_generate_prop_glb(request: Request):
+    """
+    AI asset pipeline: text description → gpt-image-1 concept image → TripoSR GLB.
+    Body: { description: string }
+    Returns: { success, job_id, optimised_prompt } (poll /api/triposr/status/{job_id})
+    """
+    if ai_director_service is None:
+        raise HTTPException(status_code=503, detail="AI Director Service not initialized")
+
+    if not TRIPOSR_SERVICE_AVAILABLE or triposr_service is None:
+        raise HTTPException(status_code=503, detail="TripoSR service not available — cannot generate 3D models")
+
+    if not triposr_service.api_token:
+        raise HTTPException(
+            status_code=503,
+            detail="REPLICATE_API_TOKEN is not set. Add it in your Replit project Secrets.",
+        )
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    description = (body.get("description") or "").strip()
+    if not description:
+        raise HTTPException(status_code=400, detail="description is required")
+
+    concept_result = await ai_director_service.generate_prop_concept_image(description)
+    if not concept_result.get("success"):
+        error = concept_result.get("error", "Image generation failed")
+        code = concept_result.get("error_code")
+        if code == "BUDGET_EXCEEDED":
+            raise HTTPException(status_code=402, detail=error)
+        raise HTTPException(status_code=422, detail=error)
+
+    image_base64 = concept_result["image_base64"]
+    image_bytes = base64.b64decode(image_base64)
+
+    triposr_result = await triposr_service.generate_from_image(
+        image_data=image_bytes,
+        original_filename="ai_prop_concept.png",
+        do_remove_background=True,
+        foreground_ratio=0.88,
+    )
+
+    return JSONResponse({
+        "success": True,
+        "job_id": triposr_result.get("job_id"),
+        "optimised_prompt": concept_result.get("optimised_prompt", description),
+        "concept_image_base64": image_base64[:100] + "...",
+        "triposr": triposr_result,
+    })
 
 
 # ============================================================================

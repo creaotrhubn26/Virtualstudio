@@ -1,54 +1,53 @@
 /**
- * AI Scene Assistant Panel
- * 
- * Comprehensive AI-powered assistant for scene composition, lighting, and optimization
+ * AI Studio Director Panel
+ *
+ * GPT-4o-powered orchestrator for Virtual Studio:
+ * - Natural language scene control (function calling)
+ * - Reference photo → lighting recreation (Vision)
+ * - Text → gpt-image-1 → TripoSR GLB asset pipeline
  */
 
-import {
-  useState,
-  useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
-  Paper,
-  Chip,
   Stack,
   Button,
-  Card,
-  CardContent,
-  CardActions,
-  Divider,
-  LinearProgress,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Alert,
+  IconButton,
+  TextField,
+  Chip,
   CircularProgress,
+  Alert,
+  LinearProgress,
+  Divider,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
-  ExpandMore as ExpandIcon,
-  Lightbulb as IdeaIcon,
-  Warning as WarningIcon,
-  CheckCircle as SuccessIcon,
-  School as LearnIcon,
   AutoAwesome as AIIcon,
-  TrendingUp as ImprovementIcon,
-  } from '@mui/icons-material';
-import { Tabs,
-  Tab,
-  IconButton,
-} from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+  Send as SendIcon,
+  Close as CloseIcon,
+  Upload as UploadIcon,
+  CheckCircle as CheckIcon,
+  Movie as DirectorIcon,
+  PhotoCamera as CameraIcon,
+  ViewInAr as Model3DIcon,
+} from '@mui/icons-material';
 
-interface AIRecommendation {
-  id: string;
-  title: string;
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  steps?: string[];
+  isLoading?: boolean;
+}
+
+interface PropGenState {
+  status: 'idle' | 'generating-image' | 'converting-3d' | 'done' | 'error';
+  jobId?: string;
   description: string;
-  priority: 'high' | 'medium' | 'low';
-  category: string;
-  reasoning: string;
-  expectedImprovement: string;
-  difficulty: string;
+  modelUrl?: string;
+  error?: string;
+  progress: number;
 }
 
 interface AIAssistantPanelProps {
@@ -57,148 +56,251 @@ interface AIAssistantPanelProps {
   onToggleFullscreen?: () => void;
 }
 
-export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullscreen }: AIAssistantPanelProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
-  const [analysis, setAnalysis] = useState({
-    qualityScore: 75,
-    grade: 'B+',
-    summary: 'Scene-komposisjonen er god, men kan optimaliseres med noen justeringer.',
-    recommendations: [
-      {
-        id: '1',
-        title: 'Optimaliser kamera-vinkel',
-        description: 'Juster kameraet for bedre rammekomposisjon basert på rule of thirds.',
-        priority: 'high' as const,
-        category: 'composition',
-        reasoning: 'Nåværende vinkel kan forbedres for bedre visuell balanse.',
-        expectedImprovement: '+15% visuell appell',
-        difficulty: 'Easy',
-      },
-      {
-        id: '2',
-        title: 'Tilføy fill-lys',
-        description: 'Legg til et fill-lys for å redusere harde skygger.',
-        priority: 'medium' as const,
-        category: 'lighting',
-        reasoning: 'Fill-lys vil gi mer jevn belysning og bedre detaljgjengivelse.',
-        expectedImprovement: '+10% kvalitet',
-        difficulty: 'Medium',
-      },
-      {
-        id: '3',
-        title: 'Juster HDRI-eksponering',
-        description: 'Reduser HDRI-eksponeringen med 0.5 stops for bedre balanse.',
-        priority: 'low' as const,
-        category: 'exposure',
-        reasoning: 'Mindre justering vil gi bedre eksponering uten å miste detaljer.',
-        expectedImprovement: '+5% eksponering',
-        difficulty: 'Easy',
-      },
-    ],
-    suggestedPatterns: [
-      {
-        id: '1',
-        name: 'Three-Point Lighting',
-        description: 'Klassisk belysningsmønster som gir dybde og dimensjon.',
-      },
-      {
-        id: '2',
-        name: 'Rembrandt Lighting',
-        description: 'Dramatisk belysning med karakteristisk trekant på kinnet.',
-      },
-    ],
-  });
+const QUICK_BRIEFS = [
+  'Tre-punkt belysning for profesjonelt portrett',
+  'Dramatisk low-key noir med hardt sidelys',
+  'Varm gylden timebelysning, 15° solvinkel',
+  'Napoli-restaurant scene, stearinlys og varm glødepære',
+];
 
-  // Simulate loading on mount
+function dispatchStudioEvents(events: Array<{ event: string; detail: unknown }>) {
+  for (const { event, detail } of events) {
+    window.dispatchEvent(new CustomEvent(event, { detail }));
+  }
+}
+
+export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullscreen }: AIAssistantPanelProps) {
+  const [activeTab, setActiveTab] = useState(0);
+
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: 'assistant',
+      content:
+        'Hei! Jeg er AI Direktøren for Virtual Studio. Beskriv scenen du vil lage, og jeg setter opp lys, kamera og props automatisk. Prøv for eksempel: "Lag en dramatisk portrettscene med varm belysning".',
+    },
+  ]);
+  const [inputText, setInputText] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const [refImage, setRefImage] = useState<string | null>(null);
+  const [refFileName, setRefFileName] = useState('');
+  const [refLoading, setRefLoading] = useState(false);
+  const [refResult, setRefResult] = useState<{
+    summary: string;
+    mood: string;
+    light_count: number;
+    events: Array<{ event: string; detail: unknown }>;
+  } | null>(null);
+  const [refApplied, setRefApplied] = useState(false);
+  const [refError, setRefError] = useState('');
+  const refInputRef = useRef<HTMLInputElement>(null);
+
+  const [propDesc, setPropDesc] = useState('');
+  const [propGen, setPropGen] = useState<PropGenState>({
+    status: 'idle',
+    description: '',
+    progress: 0,
+  });
+  const propPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  useEffect(() => {
+    return () => {
+      if (propPollRef.current) clearTimeout(propPollRef.current);
+    };
   }, []);
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return '#F44336';
-      case 'medium':
-        return '#FF9800';
-      case 'low':
-        return '#4CAF50';
-      default:
-        return '#9E9E9E';
+  const sendMessage = useCallback(
+    async (text: string) => {
+      if (!text.trim() || isSending) return;
+      setIsSending(true);
+
+      const userMsg: ChatMessage = { role: 'user', content: text };
+      const loadingMsg: ChatMessage = {
+        role: 'assistant',
+        content: '',
+        isLoading: true,
+      };
+
+      setMessages((prev) => [...prev, userMsg, loadingMsg]);
+      setInputText('');
+
+      const history = [
+        ...messages.filter((m) => !m.isLoading),
+        userMsg,
+      ].map((m) => ({ role: m.role, content: m.content }));
+
+      try {
+        const res = await fetch('/api/ai/director', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: history }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: res.statusText }));
+          throw new Error(err.detail || 'Forespørsel feilet');
+        }
+
+        const data = await res.json();
+
+        if (data.events?.length) {
+          dispatchStudioEvents(data.events);
+        }
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.isLoading
+              ? {
+                  role: 'assistant',
+                  content: data.reply || 'Ferdig!',
+                  steps: data.steps || [],
+                }
+              : m
+          )
+        );
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Ukjent feil';
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.isLoading ? { role: 'assistant', content: `Feil: ${msg}` } : m
+          )
+        );
+      } finally {
+        setIsSending(false);
+      }
+    },
+    [isSending, messages]
+  );
+
+  const handleRefImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRefFileName(file.name);
+    setRefResult(null);
+    setRefApplied(false);
+    setRefError('');
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setRefImage(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAnalyzeReference = async () => {
+    if (!refImage) return;
+    setRefLoading(true);
+    setRefError('');
+    setRefResult(null);
+    setRefApplied(false);
+    try {
+      const res = await fetch('/api/ai/analyze-reference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageDataUrl: refImage }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || 'Analyse feilet');
+      }
+      const data = await res.json();
+      setRefResult(data);
+    } catch (err) {
+      setRefError(err instanceof Error ? err.message : 'Ukjent feil');
+    } finally {
+      setRefLoading(false);
     }
   };
 
-  const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return <WarningIcon fontSize="small" />;
-      case 'medium':
-        return <IdeaIcon fontSize="small" />;
-      case 'low':
-        return <LearnIcon fontSize="small" />;
-      default:
-        return <IdeaIcon fontSize="small" />;
+  const handleApplyReference = () => {
+    if (!refResult?.events) return;
+    dispatchStudioEvents(refResult.events);
+    setRefApplied(true);
+  };
+
+  const pollTriposrStatus = useCallback(async (jobId: string) => {
+    try {
+      const res = await fetch(`/api/triposr/status/${jobId}`);
+      const data = await res.json();
+      const status = data.status;
+
+      if (status === 'succeeded') {
+        const dlRes = await fetch(`/api/triposr/download/${jobId}`, { method: 'POST' });
+        const dlData = await dlRes.json();
+        const modelUrl = dlData.url || `/api/triposr/model/${dlData.filename}`;
+        setPropGen((prev) => ({
+          ...prev,
+          status: 'done',
+          modelUrl,
+          progress: 100,
+        }));
+        window.dispatchEvent(
+          new CustomEvent('vs-add-prop', {
+            detail: { propId: 'triposr-generated', modelUrl, position: [0, 0, 0] },
+          })
+        );
+        window.dispatchEvent(
+          new CustomEvent('ch-load-environment', {
+            detail: { url: modelUrl, scale: 2.5 },
+          })
+        );
+      } else if (status === 'failed' || status === 'canceled') {
+        setPropGen((prev) => ({
+          ...prev,
+          status: 'error',
+          error: 'TripoSR-generering mislyktes.',
+          progress: 0,
+        }));
+      } else {
+        setPropGen((prev) => ({
+          ...prev,
+          progress: Math.min((prev.progress || 0) + 8, 90),
+        }));
+        propPollRef.current = setTimeout(() => pollTriposrStatus(jobId), 4000);
+      }
+    } catch (err) {
+      console.warn('[PropGen] Polling error:', err);
+      propPollRef.current = setTimeout(() => pollTriposrStatus(jobId), 6000);
+    }
+  }, []);
+
+  const handleGenerateProp = async () => {
+    if (!propDesc.trim()) return;
+    if (propPollRef.current) clearTimeout(propPollRef.current);
+    setPropGen({ status: 'generating-image', description: propDesc, progress: 10 });
+
+    try {
+      const res = await fetch('/api/ai/generate-prop-glb', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: propDesc }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || 'Generering feilet');
+      }
+      const data = await res.json();
+      const jobId = data.job_id;
+      setPropGen((prev) => ({
+        ...prev,
+        status: 'converting-3d',
+        jobId,
+        progress: 25,
+      }));
+      propPollRef.current = setTimeout(() => pollTriposrStatus(jobId), 4000);
+    } catch (err) {
+      setPropGen({
+        status: 'error',
+        description: propDesc,
+        error: err instanceof Error ? err.message : 'Ukjent feil',
+        progress: 0,
+      });
     }
   };
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'composition':
-        return <AIIcon fontSize="small" />;
-      case 'lighting':
-        return <IdeaIcon fontSize="small" />;
-      case 'exposure':
-        return <ImprovementIcon fontSize="small" />;
-      case 'camera':
-        return <AIIcon fontSize="small" />;
-      default:
-        return <IdeaIcon fontSize="small" />;
-    }
-  };
-
-  const handleApplyRecommendation = (recommendation: AIRecommendation) => {
-    // Dispatch event to apply recommendation
-    window.dispatchEvent(new CustomEvent('ai-assistant-apply', { detail: recommendation }));
-    alert(`Anbefaling "${recommendation.title}" vil bli anvendt på scenen.`);
-  };
-
-  const getGradeColor = (grade: string) => {
-    if (grade.startsWith('A')) return '#4CAF50';
-    if (grade.startsWith('B')) return '#8BC34A';
-    if (grade.startsWith('C')) return '#FF9800';
-    if (grade.startsWith('D')) return '#F44336';
-    return '#9E9E9E';
-  };
-
-  // Show loading state
-  if (isLoading) {
-    return (
-      <Box
-        sx={{
-          width: '100%',
-          height: '100%',
-          bgcolor: '#0d1117',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          p: 4,
-        }}
-      >
-        <CircularProgress sx={{ color: '#00d4ff', mb: 2 }} size={48} />
-        <Typography variant="h6" sx={{ color: '#ffffff', mb: 1 }}>
-          Analyserer scene...
-        </Typography>
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.87)' }}>
-          AI-assistenten analyserer komposisjon, belysning og optimalisering
-        </Typography>
-      </Box>
-    );
-  }
 
   return (
     <Box
@@ -211,473 +313,529 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
         overflow: 'hidden',
       }}
     >
-      {/* Header */}
       {isFullscreen && (
         <Box
           sx={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 1,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             p: 2,
             borderBottom: '1px solid rgba(255,255,255,0.1)',
             bgcolor: '#1c2128',
+            flexShrink: 0,
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <AIIcon sx={{ color: '#00d4ff', fontSize: 32 }} />
-            <Typography variant="h5" sx={{ color: '#fff', fontWeight: 600 }}>
-              AI Scene Assistant
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <AIIcon sx={{ color: '#00d4ff', fontSize: 28 }} />
+            <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700 }}>
+              AI Direktør
             </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          </Stack>
+          <Stack direction="row" spacing={0.5}>
             {onToggleFullscreen && (
-              <IconButton onClick={onToggleFullscreen} sx={{ color: '#fff' }} title="Gå tilbake til panel">
-                <CloseIcon />
+              <IconButton onClick={onToggleFullscreen} sx={{ color: '#ccc' }} size="small">
+                <CloseIcon fontSize="small" />
               </IconButton>
             )}
             {onClose && (
-              <IconButton onClick={onClose} sx={{ color: '#fff' }}>
-                <CloseIcon />
+              <IconButton onClick={onClose} sx={{ color: '#ccc' }} size="small">
+                <CloseIcon fontSize="small" />
               </IconButton>
             )}
+          </Stack>
+        </Box>
+      )}
+
+      <Tabs
+        value={activeTab}
+        onChange={(_, v) => setActiveTab(v)}
+        sx={{
+          flexShrink: 0,
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          '& .MuiTab-root': {
+            color: 'rgba(255,255,255,0.6)',
+            fontSize: 12,
+            fontWeight: 600,
+            textTransform: 'none',
+            minHeight: 44,
+            py: 0,
+            '&.Mui-selected': { color: '#00d4ff' },
+          },
+          '& .MuiTabs-indicator': { bgcolor: '#00d4ff' },
+        }}
+      >
+        <Tab icon={<DirectorIcon fontSize="small" />} iconPosition="start" label="Direktør" />
+        <Tab icon={<CameraIcon fontSize="small" />} iconPosition="start" label="Referanse" />
+        <Tab icon={<Model3DIcon fontSize="small" />} iconPosition="start" label="3D Prop" />
+      </Tabs>
+
+      {activeTab === 0 && (
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Box sx={{ flex: 1, overflowY: 'auto', p: 1.5 }}>
+            {messages.map((msg, i) => (
+              <Box
+                key={i}
+                sx={{
+                  mb: 1.5,
+                  display: 'flex',
+                  justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                }}
+              >
+                <Box
+                  sx={{
+                    maxWidth: '88%',
+                    px: 1.5,
+                    py: 1,
+                    borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                    bgcolor: msg.role === 'user' ? '#00d4ff' : 'rgba(255,255,255,0.07)',
+                    border: msg.role === 'assistant' ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                  }}
+                >
+                  {msg.isLoading ? (
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <CircularProgress size={14} sx={{ color: '#00d4ff' }} />
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>
+                        Tenker…
+                      </Typography>
+                    </Stack>
+                  ) : (
+                    <>
+                      {msg.steps && msg.steps.length > 0 && (
+                        <Box sx={{ mb: 0.5 }}>
+                          {msg.steps.map((step, si) => (
+                            <Stack key={si} direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.3 }}>
+                              <CheckIcon sx={{ fontSize: 12, color: '#4caf50' }} />
+                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>
+                                {step}
+                              </Typography>
+                            </Stack>
+                          ))}
+                          <Divider sx={{ my: 0.5, borderColor: 'rgba(255,255,255,0.08)' }} />
+                        </Box>
+                      )}
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: msg.role === 'user' ? '#000' : 'rgba(255,255,255,0.9)',
+                          fontSize: 13,
+                          lineHeight: 1.5,
+                          whiteSpace: 'pre-wrap',
+                        }}
+                      >
+                        {msg.content}
+                      </Typography>
+                    </>
+                  )}
+                </Box>
+              </Box>
+            ))}
+            <div ref={messagesEndRef} />
+          </Box>
+
+          <Box sx={{ flexShrink: 0, px: 1.5, pb: 0.5 }}>
+            <Box
+              sx={{
+                overflowX: 'auto',
+                display: 'flex',
+                gap: 0.5,
+                pb: 0.5,
+                scrollbarWidth: 'none',
+                '&::-webkit-scrollbar': { display: 'none' },
+              }}
+            >
+              {QUICK_BRIEFS.map((brief) => (
+                <Chip
+                  key={brief}
+                  label={brief}
+                  size="small"
+                  onClick={() => sendMessage(brief)}
+                  disabled={isSending}
+                  sx={{
+                    whiteSpace: 'nowrap',
+                    bgcolor: 'rgba(0,212,255,0.08)',
+                    color: '#00d4ff',
+                    border: '1px solid rgba(0,212,255,0.2)',
+                    fontSize: 11,
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    '&:hover': { bgcolor: 'rgba(0,212,255,0.18)' },
+                  }}
+                />
+              ))}
+            </Box>
+          </Box>
+
+          <Box
+            sx={{
+              flexShrink: 0,
+              display: 'flex',
+              gap: 1,
+              px: 1.5,
+              pb: 1.5,
+              pt: 0.5,
+              borderTop: '1px solid rgba(255,255,255,0.06)',
+            }}
+          >
+            <TextField
+              fullWidth
+              multiline
+              maxRows={3}
+              size="small"
+              placeholder="Beskriv scenen på norsk…"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  void sendMessage(inputText);
+                }
+              }}
+              disabled={isSending}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: 'rgba(255,255,255,0.05)',
+                  color: '#fff',
+                  fontSize: 13,
+                  '& fieldset': { borderColor: 'rgba(255,255,255,0.12)' },
+                  '&:hover fieldset': { borderColor: 'rgba(0,212,255,0.4)' },
+                  '&.Mui-focused fieldset': { borderColor: '#00d4ff' },
+                },
+                '& .MuiInputBase-input::placeholder': { color: 'rgba(255,255,255,0.3)' },
+              }}
+            />
+            <IconButton
+              onClick={() => sendMessage(inputText)}
+              disabled={isSending || !inputText.trim()}
+              sx={{
+                bgcolor: '#00d4ff',
+                color: '#000',
+                borderRadius: 2,
+                width: 40,
+                height: 40,
+                alignSelf: 'flex-end',
+                flexShrink: 0,
+                '&:hover': { bgcolor: '#00b8e6' },
+                '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' },
+              }}
+            >
+              {isSending ? <CircularProgress size={16} sx={{ color: '#000' }} /> : <SendIcon fontSize="small" />}
+            </IconButton>
           </Box>
         </Box>
       )}
 
-      <Box sx={{ flex: 1, overflow: 'auto', p: { xs: 2, sm: 3 } }}>
-        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 3 }}>
-          <AIIcon sx={{ color: '#00d4ff', fontSize: 28 }} />
-          <Typography variant="h6" sx={{ color: '#ffffff', fontWeight: 700, flex: 1 }}>
-            AI Scene Assistant
+      {activeTab === 1 && (
+        <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
+            <CameraIcon sx={{ color: '#00d4ff', fontSize: 20 }} />
+            <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>
+              Referansebilde → Lysoppsett
+            </Typography>
+          </Stack>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 2, fontSize: 13 }}>
+            Last opp et bilde og AI rekonstruerer lyssettingen direkte i studioet.
           </Typography>
-        <Chip
-          label={`${analysis.qualityScore}/100`}
-          sx={{
-            bgcolor: getGradeColor(analysis.grade),
-            color: 'white',
-            fontWeight: 600}}
-        />
-        <Chip
-          label={`Grade ${analysis.grade}`}
-          sx={{
-            bgcolor: getGradeColor(analysis.grade),
-            color: 'white',
-            fontWeight: 600}}
-        />
-      </Stack>
 
-      {/* Quality Score Bar */}
-      <Box sx={{ mb: 2 }}>
-        <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
-          <Typography variant="caption" sx={{ color: '#666' }}>
-            Overall Quality
-          </Typography>
-          <Typography variant="caption" sx={{ color: '#666', fontWeight: 600}}>
-            {analysis.qualityScore}%
-          </Typography>
-        </Stack>
-        <LinearProgress
-          variant="determinate"
-          value={analysis.qualityScore}
-          sx={{
-            height: 8,
-            borderRadius: 4,
-            bgcolor: '#e0e0e0',
-                            '& .MuiLinearProgress-bar': {
-              bgcolor: getGradeColor(analysis.grade),
-            }}}
-        />
-      </Box>
+          <input
+            ref={refInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleRefImageChange}
+          />
 
-      {/* Summary */}
-      <Alert
-        severity={analysis.qualityScore >= 75 ? 'success' : analysis.qualityScore >= 60 ? 'warning' : 'error'}
-        icon={<AIIcon />}
-        sx={{ mb: 2 }}
-      >
-        <Typography variant="caption" sx={{ fontWeight: 500}}>
-          {analysis.summary}
-        </Typography>
-      </Alert>
-
-      <Divider sx={{ my: 2 }} />
-
-        {/* Tabs */}
-        <Tabs
-          value={activeTab}
-          onChange={(_, v) => setActiveTab(v)}
-          sx={{
-            mb: 3,
-            borderBottom: '1px solid rgba(255,255,255,0.1)',
-            '& .MuiTab-root': {
-              color: 'rgba(255,255,255,0.87)',
-              fontSize: '14px',
-              fontWeight: 600,
-              textTransform: 'none',
-              '&.Mui-selected': { color: '#00d4ff' },
-            },
-            '& .MuiTabs-indicator': { bgcolor: '#00d4ff' },
-          }}
-        >
-          <Tab label="Anbefalinger" />
-          <Tab label="Komposisjon" />
-          <Tab label="Optimalisering" />
-        </Tabs>
-
-        {/* Recommendations Tab */}
-        {activeTab === 0 && (
-          <>
-            <Typography
-              variant="subtitle1"
+          {!refImage ? (
+            <Box
+              onClick={() => refInputRef.current?.click()}
               sx={{
-                fontWeight: 700,
-                display: 'block',
+                border: '2px dashed rgba(0,212,255,0.3)',
+                borderRadius: 2,
+                p: 4,
+                textAlign: 'center',
+                cursor: 'pointer',
+                bgcolor: 'rgba(0,212,255,0.04)',
+                '&:hover': { borderColor: '#00d4ff', bgcolor: 'rgba(0,212,255,0.08)' },
                 mb: 2,
-                color: '#ffffff',
-                fontSize: '18px',
               }}
             >
-              🎯 Anbefalinger ({analysis.recommendations.length})
-            </Typography>
-
-            <Box sx={{ maxHeight: '60vh', overflowY: 'auto', pr: 1 }}>
-              <Stack spacing={2}>
-                {analysis.recommendations.map((rec) => (
-                  <Card
-                    key={rec.id}
-                    variant="outlined"
-                    sx={{
-                      bgcolor: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      '&:hover': { borderColor: '#00d4ff' },
-                    }}
-                  >
-                    <CardContent sx={{ pb: 1 }}>
-                      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                        {getPriorityIcon(rec.priority)}
-                        <Typography
-                          variant="subtitle2"
-                          sx={{
-                            fontWeight: 600,
-                            flex: 1,
-                            fontSize: 15,
-                            color: '#ffffff',
-                          }}
-                        >
-                          {rec.title}
-                        </Typography>
-                        <Chip
-                          label={rec.priority === 'high' ? 'Høy' : rec.priority === 'medium' ? 'Middels' : 'Lav'}
-                          size="small"
-                          sx={{
-                            height: 24,
-                            fontSize: 11,
-                            bgcolor: getPriorityColor(rec.priority),
-                            color: 'white',
-                            fontWeight: 600,
-                          }}
-                        />
-                      </Stack>
-
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          display: 'block',
-                          mb: 1,
-                          color: 'rgba(255,255,255,0.8)',
-                          fontSize: 14,
-                          lineHeight: 1.6,
-                        }}
-                      >
-                        {rec.description}
-                      </Typography>
-
-                <Accordion
-                  disableGutters
-                  elevation={0}
-                  sx={{
-                    bgcolor: 'transparent', '&:before': { display: 'none' },
-                    mt: 0.5}}
-                >
-                  <AccordionSummary
-                    expandIcon={<ExpandIcon sx={{ fontSize: 16 }} />}
-                    sx={{ minHeight: 0, px: 0, '& .MuiAccordionSummary-content': { my: 0.5 } }}
-                  >
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontSize: 12,
-                          color: '#00d4ff',
-                          fontWeight: 600,
-                        }}
-                      >
-                        Hvorfor dette betyr noe
-                      </Typography>
-                    </AccordionSummary>
-                    <AccordionDetails sx={{ px: 0, pt: 0 }}>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontSize: 13,
-                          color: 'rgba(255,255,255,0.87)',
-                          lineHeight: 1.6,
-                        }}
-                      >
-                        {rec.reasoning}
-                      </Typography>
-                      <Box
-                        sx={{
-                          mt: 1.5,
-                          p: 1.5,
-                          bgcolor: 'rgba(0,212,255,0.1)',
-                          borderRadius: 1,
-                          border: '1px solid rgba(0,212,255,0.2)',
-                        }}
-                      >
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <SuccessIcon sx={{ fontSize: 16, color: '#00d4ff' }} />
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontSize: 13,
-                              color: '#00d4ff',
-                              fontWeight: 600,
-                            }}
-                          >
-                            Forventet forbedring: {rec.expectedImprovement}
-                          </Typography>
-                        </Stack>
-                      </Box>
-                    </AccordionDetails>
-                </Accordion>
-              </CardContent>
-
-              <CardActions sx={{ pt: 0, px: 2, pb: 1 }}>
+              <UploadIcon sx={{ fontSize: 40, color: 'rgba(0,212,255,0.5)', mb: 1 }} />
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
+                Klikk for å laste opp referansebilde
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                PNG, JPG, WebP
+              </Typography>
+            </Box>
+          ) : (
+            <Box sx={{ mb: 2 }}>
+              <Box
+                component="img"
+                src={refImage}
+                alt="Referanse"
+                sx={{ width: '100%', maxHeight: 180, objectFit: 'cover', borderRadius: 1, mb: 1 }}
+              />
+              <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>
+                  {refFileName}
+                </Typography>
                 <Button
                   size="small"
+                  onClick={() => {
+                    setRefImage(null);
+                    setRefFileName('');
+                    setRefResult(null);
+                    setRefApplied(false);
+                    setRefError('');
+                  }}
+                  sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, textTransform: 'none', minWidth: 0, p: 0.5 }}
+                >
+                  Fjern
+                </Button>
+              </Stack>
+            </Box>
+          )}
+
+          {refImage && !refResult && (
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={handleAnalyzeReference}
+              disabled={refLoading}
+              startIcon={refLoading ? <CircularProgress size={14} sx={{ color: '#000' }} /> : <AIIcon />}
+              sx={{
+                bgcolor: '#00d4ff',
+                color: '#000',
+                fontWeight: 700,
+                textTransform: 'none',
+                mb: 1.5,
+                '&:hover': { bgcolor: '#00b8e6' },
+                '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.1)' },
+              }}
+            >
+              {refLoading ? 'Analyserer…' : 'Analyser lyssetting'}
+            </Button>
+          )}
+
+          {refLoading && (
+            <LinearProgress sx={{ mb: 1.5, borderRadius: 1, '& .MuiLinearProgress-bar': { bgcolor: '#00d4ff' } }} />
+          )}
+
+          {refError && (
+            <Alert severity="error" sx={{ mb: 1.5, bgcolor: 'rgba(244,67,54,0.1)', '& .MuiAlert-message': { color: '#ff8a8a' } }}>
+              {refError}
+            </Alert>
+          )}
+
+          {refResult && (
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 2,
+                mb: 1.5,
+              }}
+            >
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                <CheckIcon sx={{ fontSize: 16, color: '#4caf50' }} />
+                <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>
+                  Analyse fullført
+                </Typography>
+              </Stack>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, mb: 1 }}>
+                {refResult.summary}
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 1.5 }}>
+                <Chip
+                  label={`${refResult.light_count} lys`}
+                  size="small"
+                  sx={{ bgcolor: 'rgba(0,212,255,0.15)', color: '#00d4ff', fontSize: 11 }}
+                />
+                <Chip
+                  label={refResult.mood}
+                  size="small"
+                  sx={{ bgcolor: 'rgba(255,193,7,0.15)', color: '#ffc107', fontSize: 11 }}
+                />
+              </Stack>
+              {!refApplied ? (
+                <Button
+                  fullWidth
                   variant="contained"
-                  onClick={() => handleApplyRecommendation(rec)}
+                  onClick={handleApplyReference}
                   sx={{
+                    bgcolor: '#4caf50',
+                    color: '#fff',
+                    fontWeight: 700,
                     textTransform: 'none',
-                    fontSize: 12,
-                    bgcolor: '#00d4ff',
-                    color: '#000',
-                    fontWeight: 600,
-                    '&:hover': { bgcolor: '#00b8e6' },
+                    fontSize: 13,
+                    '&:hover': { bgcolor: '#43a047' },
                   }}
                 >
-                  Anvend
+                  Anvend i studio
                 </Button>
-                <Chip
-                  label={rec.difficulty}
-                  size="small"
-                  sx={{
-                    height: 20,
-                    fontSize: 10,
-                    ml: 'auto',
-                    bgcolor: 'rgba(255,255,255,0.1)',
-                    color: '#fff',
-                  }}
-                />
-              </CardActions>
-            </Card>
-          ))}
-        </Stack>
+              ) : (
+                <Alert
+                  severity="success"
+                  sx={{ bgcolor: 'rgba(76,175,80,0.1)', '& .MuiAlert-message': { color: '#a5d6a7', fontSize: 13 } }}
+                >
+                  Lysoppsett er lagt inn i studioet!
+                </Alert>
+              )}
             </Box>
-          </>
-        )}
+          )}
 
-        {/* Composition Tab */}
-        {activeTab === 1 && (
-          <Box>
-            <Typography
-              variant="subtitle1"
+          {refResult && (
+            <Button
+              fullWidth
+              variant="outlined"
+              size="small"
+              onClick={() => refInputRef.current?.click()}
               sx={{
-                fontWeight: 700,
-                display: 'block',
-                mb: 2,
-                color: '#ffffff',
-                fontSize: '18px',
+                color: 'rgba(255,255,255,0.5)',
+                borderColor: 'rgba(255,255,255,0.15)',
+                textTransform: 'none',
+                fontSize: 12,
+                '&:hover': { borderColor: 'rgba(255,255,255,0.3)' },
               }}
             >
-              🎨 Komposisjonsanalyse
-            </Typography>
-            <Alert
-              severity="info"
-              sx={{
-                mb: 2,
-                bgcolor: 'rgba(0,212,255,0.1)',
-                border: '1px solid rgba(0,212,255,0.3)',
-                '& .MuiAlert-icon': { color: '#00d4ff' },
-              }}
-            >
-              <Typography variant="body2" sx={{ color: '#ffffff', fontWeight: 600 }}>
-                Komposisjonsscore: 78%
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', mt: 0.5 }}>
-                Scenen følger rule of thirds godt, men kan forbedres med justeringer i dybde og fokus.
-              </Typography>
-            </Alert>
-            <Stack spacing={2}>
-              <Card
-                variant="outlined"
-                sx={{
-                  bgcolor: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                }}
-              >
-                <CardContent>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: 15, color: '#ffffff', mb: 1 }}>
-                    Juster kamera-vinkel
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: 14 }}>
-                    Flytt kameraet 15° til høyre for bedre balanse i rammen.
-                  </Typography>
-                </CardContent>
-              </Card>
-              <Card
-                variant="outlined"
-                sx={{
-                  bgcolor: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                }}
-              >
-                <CardContent>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: 15, color: '#ffffff', mb: 1 }}>
-                    Optimaliser dybdeskarphet
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: 14 }}>
-                    Reduser aperture til f/2.8 for bedre fokus på hovedmotivet.
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Stack>
-          </Box>
-        )}
+              Last opp nytt bilde
+            </Button>
+          )}
+        </Box>
+      )}
 
-        {/* Optimization Tab */}
-        {activeTab === 2 && (
-          <Box>
-            <Typography
-              variant="subtitle1"
+      {activeTab === 2 && (
+        <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
+            <Model3DIcon sx={{ color: '#00d4ff', fontSize: 20 }} />
+            <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>
+              AI 3D Prop-generator
+            </Typography>
+          </Stack>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 2, fontSize: 13 }}>
+            Beskriv et objekt og AI genererer et 3D-bilde som konverteres til GLB og lastes inn i scenen.
+            Tar 60–120 sekunder.
+          </Typography>
+
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            size="small"
+            placeholder="F.eks: Vintage espressomaskin i rustikk kobber og messing, detaljert"
+            value={propDesc}
+            onChange={(e) => setPropDesc(e.target.value)}
+            disabled={propGen.status !== 'idle' && propGen.status !== 'error' && propGen.status !== 'done'}
+            sx={{
+              mb: 1.5,
+              '& .MuiOutlinedInput-root': {
+                bgcolor: 'rgba(255,255,255,0.05)',
+                color: '#fff',
+                fontSize: 13,
+                '& fieldset': { borderColor: 'rgba(255,255,255,0.12)' },
+                '&:hover fieldset': { borderColor: 'rgba(0,212,255,0.4)' },
+                '&.Mui-focused fieldset': { borderColor: '#00d4ff' },
+              },
+              '& .MuiInputBase-input::placeholder': { color: 'rgba(255,255,255,0.3)' },
+            }}
+          />
+
+          {(propGen.status === 'idle' || propGen.status === 'error' || propGen.status === 'done') && (
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={handleGenerateProp}
+              disabled={!propDesc.trim()}
+              startIcon={<Model3DIcon />}
               sx={{
+                bgcolor: '#7c4dff',
+                color: '#fff',
                 fontWeight: 700,
-                display: 'block',
-                mb: 2,
-                color: '#ffffff',
-                fontSize: '18px',
+                textTransform: 'none',
+                mb: 1.5,
+                '&:hover': { bgcolor: '#651fff' },
+                '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' },
               }}
             >
-              ⚡ Optimalisering
-            </Typography>
+              Generer 3D-prop
+            </Button>
+          )}
+
+          {propGen.status === 'generating-image' && (
+            <Box sx={{ mb: 2 }}>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                <CircularProgress size={16} sx={{ color: '#7c4dff' }} />
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>
+                  Genererer konseptbilde med gpt-image-1…
+                </Typography>
+              </Stack>
+              <LinearProgress
+                variant="determinate"
+                value={propGen.progress}
+                sx={{ borderRadius: 1, '& .MuiLinearProgress-bar': { bgcolor: '#7c4dff' } }}
+              />
+            </Box>
+          )}
+
+          {propGen.status === 'converting-3d' && (
+            <Box sx={{ mb: 2 }}>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+                <CircularProgress size={16} sx={{ color: '#7c4dff' }} />
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>
+                  Konverterer til 3D-modell via TripoSR…
+                </Typography>
+              </Stack>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block', mb: 1 }}>
+                Ca. 60–120 sekunder
+              </Typography>
+              <LinearProgress
+                variant="determinate"
+                value={propGen.progress}
+                sx={{ borderRadius: 1, '& .MuiLinearProgress-bar': { bgcolor: '#7c4dff' } }}
+              />
+            </Box>
+          )}
+
+          {propGen.status === 'done' && (
             <Alert
               severity="success"
-              sx={{
-                mb: 2,
-                bgcolor: 'rgba(16,185,129,0.1)',
-                border: '1px solid rgba(16,185,129,0.3)',
-                '& .MuiAlert-icon': { color: '#10b981' },
-              }}
+              sx={{ mb: 1.5, bgcolor: 'rgba(76,175,80,0.1)', '& .MuiAlert-message': { color: '#a5d6a7', fontSize: 13 } }}
             >
-              <Typography variant="body2" sx={{ color: '#ffffff', fontWeight: 600 }}>
-                Ytelsesoptimalisering
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', mt: 0.5 }}>
-                Scenen er godt optimalisert. FPS: 60, Render time: 16ms
-              </Typography>
+              3D-prop generert og lagt inn i scenen!
+              {propGen.modelUrl && (
+                <Typography variant="caption" sx={{ display: 'block', color: 'rgba(255,255,255,0.5)', mt: 0.5 }}>
+                  {propGen.modelUrl}
+                </Typography>
+              )}
             </Alert>
-            <Stack spacing={2}>
-              <Card
-                variant="outlined"
-                sx={{
-                  bgcolor: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                }}
-              >
-                <CardContent>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: 15, color: '#ffffff', mb: 1 }}>
-                    Reduser polygon-telling
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: 14 }}>
-                    Noen objekter kan forenkles uten å miste visuell kvalitet. Forventet FPS-forbedring: +5-10
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Stack>
-          </Box>
-        )}
+          )}
 
-        {/* Suggested Patterns */}
-        {analysis.suggestedPatterns.length > 0 && activeTab === 0 && (
-          <>
-            <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.1)' }} />
-            <Typography
-              variant="subtitle1"
-              sx={{
-                fontWeight: 700,
-                display: 'block',
-                mb: 2,
-                color: '#ffffff',
-                fontSize: '18px',
-              }}
+          {propGen.status === 'error' && (
+            <Alert
+              severity="error"
+              sx={{ mb: 1.5, bgcolor: 'rgba(244,67,54,0.1)', '& .MuiAlert-message': { color: '#ff8a8a', fontSize: 13 } }}
             >
-              🎬 Foreslåtte mønstre
-            </Typography>
-            <Stack spacing={2}>
-              {analysis.suggestedPatterns.map((pattern) => (
-                <Box
-                  key={pattern.id}
-                  sx={{
-                    p: 2,
-                    bgcolor: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 2,
-                    '&:hover': { borderColor: '#00d4ff' },
-                  }}
-                >
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: 15, color: '#ffffff', mb: 0.5 }}>
-                    {pattern.name}
-                  </Typography>
-                  <Typography variant="body2" sx={{ display: 'block', fontSize: 13, color: 'rgba(255,255,255,0.87)' }}>
-                    {pattern.description}
-                  </Typography>
-                </Box>
-              ))}
-            </Stack>
-          </>
-        )}
+              {propGen.error}
+            </Alert>
+          )}
 
-        {/* Footer */}
-        <Box
-          sx={{
-            mt: 4,
-            p: 2,
-            bgcolor: 'rgba(0,212,255,0.1)',
-            borderRadius: 2,
-            border: '1px solid rgba(0,212,255,0.2)',
-          }}
-        >
-          <Typography
-            variant="body2"
-            sx={{
-              color: '#00d4ff',
-              display: 'block',
-              fontWeight: 700,
-              fontSize: 14,
-              mb: 0.5,
-            }}
-          >
-            💡 AI-drevet analyse
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>
-            Basert på ASC-standarder, cinematografi best practices og bransjeforskning
+          {(propGen.status === 'done' || propGen.status === 'error') && (
+            <Button
+              size="small"
+              onClick={() => setPropGen({ status: 'idle', description: '', progress: 0 })}
+              sx={{ color: 'rgba(255,255,255,0.5)', textTransform: 'none', fontSize: 12 }}
+            >
+              Generer en ny prop
+            </Button>
+          )}
+
+          <Divider sx={{ my: 2, borderColor: 'rgba(255,255,255,0.08)' }} />
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>
+            Pipeline: Beskrivelse → GPT-4o optimaliserer prompt → gpt-image-1 genererer bilde →
+            TripoSR (Replicate) konverterer til GLB → auto-lastet i Babylon.js
           </Typography>
         </Box>
-      </Box>
+      )}
     </Box>
   );
 }
-
