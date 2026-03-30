@@ -5574,7 +5574,7 @@ class VirtualStudio {
     // Octabox (circular)    → even wider, near-uniform field, maximum shadow softness.
     const lightSpecs: { [key: string]: { intensity: number; name: string; cct: number; beamAngle: number; exponent: number; shadowKernel: number; glbFile: string } } = {
       'aputure-300d':        { intensity: 450, name: 'Aputure 300D',          cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb'  },
-      'aputure-300d-strip':  { intensity: 350, name: 'Aputure 300D Stripbox',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 3.5, shadowKernel: 32,  glbFile: '/models/lights/softbox-stand.glb'  },
+      'aputure-300d-strip':  { intensity: 350, name: 'Aputure 300D Stripbox',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 3.5, shadowKernel: 32,  glbFile: '/models/lights/stripbox-stand.glb' },
       'aputure-120d':        { intensity: 300, name: 'Aputure 120D',           cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb'  },
       'aputure-600d':        { intensity: 700, name: 'Aputure 600D Pro',       cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb'  },
       'godox-ad600':    { intensity: 380, name: 'Godox AD600',      cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb' },
@@ -5655,6 +5655,58 @@ class VirtualStudio {
         }
         (mesh as any)._headPivot = headPivot;
         console.log(`[addLight] headPivot tilt meshes=${headCount}`);
+
+        // Auto-detect which face of this model is the diffuser (bright/white submesh).
+        // The diffuser face centroid is offset from the model center in one horizontal direction.
+        // We store a _faceYawOffset so aimLightAt can correct any model regardless of its
+        // native orientation. TRELLIS models have no isolated bright submesh (fused), so they
+        // default to 0 (diffuser already on -Z).
+        {
+          const allBounds = parentMesh.getHierarchyBoundingVectors(true);
+          const modelCX = (allBounds.min.x + allBounds.max.x) * 0.5;
+          const modelCZ = (allBounds.min.z + allBounds.max.z) * 0.5;
+
+          const brightMeshes = allSubMeshes.filter(sm => {
+            if (!(sm instanceof BABYLON.Mesh)) return false;
+            const mat = sm.material;
+            if (!mat) return false;
+            let brightness = 0;
+            if (mat instanceof BABYLON.PBRMaterial) {
+              const c = mat.albedoColor;
+              brightness = (c.r + c.g + c.b) / 3;
+            } else if (mat instanceof BABYLON.StandardMaterial) {
+              const c = mat.diffuseColor;
+              brightness = (c.r + c.g + c.b) / 3;
+            }
+            return brightness > 0.5;
+          }) as BABYLON.Mesh[];
+
+          let faceYawOffset = 0; // default: diffuser on -Z (TRELLIS models)
+          if (brightMeshes.length > 0) {
+            let sumCX = 0, sumCZ = 0;
+            for (const bm of brightMeshes) {
+              bm.computeWorldMatrix(true);
+              const bb = bm.getBoundingInfo().boundingBox;
+              sumCX += (bb.minimumWorld.x + bb.maximumWorld.x) * 0.5;
+              sumCZ += (bb.minimumWorld.z + bb.maximumWorld.z) * 0.5;
+            }
+            const centCX = sumCX / brightMeshes.length;
+            const centCZ = sumCZ / brightMeshes.length;
+            const offX = centCX - modelCX;
+            const offZ = centCZ - modelCZ;
+            if (Math.abs(offZ) >= Math.abs(offX)) {
+              // Diffuser is in the ±Z half
+              faceYawOffset = offZ < 0 ? 0 : Math.PI;           // -Z → 0, +Z → 180°
+            } else {
+              // Diffuser is in the ±X half
+              faceYawOffset = offX < 0 ? -Math.PI / 2 : Math.PI / 2; // -X → -90°, +X → +90°
+            }
+            console.log(`[addLight] Face auto-detect: brightMeshes=${brightMeshes.length}, offX=${offX.toFixed(3)}, offZ=${offZ.toFixed(3)}, faceYawOffset=${(faceYawOffset * 180 / Math.PI).toFixed(1)}°`);
+          } else {
+            console.log('[addLight] Face auto-detect: no isolated bright mesh → assuming -Z face (offset 0°)');
+          }
+          (parentMesh as any)._faceYawOffset = faceYawOffset;
+        }
 
         // White emissive glow plane representing the softbox diffuser panel.
         // Sized at ~22% of stand height; always faces the camera (billboardMode Y)
@@ -5884,15 +5936,17 @@ class VirtualStudio {
       const dz = target.z - mesh.position.z;
       const horizontalDist = Math.sqrt(dx * dx + dz * dz);
 
-      // The TRELLIS softbox/octabox model has its diffuser face on -Z (model default).
       // atan2(-dx, -dz) makes the -Z face point at the target horizontally.
-      const yRotation = Math.atan2(-dx, -dz);
+      // _faceYawOffset corrects for models whose diffuser is not on -Z (auto-detected on load).
+      const faceYawOffset = (mesh as any)._faceYawOffset ?? 0;
+      const yRotation = Math.atan2(-dx, -dz) + faceYawOffset;
+      console.log(`[aimLightAt] ${lightId}: faceYawOffset=${(faceYawOffset * 180 / Math.PI).toFixed(1)}°, yRotation=${(yRotation * 180 / Math.PI).toFixed(1)}°`);
 
       // Elevation: tilt the head downward toward the subject.
       // lightHeadHeight stored on the mesh by addLight after bounding-box grounding.
       const lightHeadY = (mesh as any)._lightHeadHeight ?? lightHeadPos.y;
       const dy = target.y - lightHeadY; // Negative: target is below light head
-      // For -Z face: xRotation = atan2(dy, h) → negative → tilts -Z face downward.
+      // xRotation tilts -Z face downward toward the subject.
       const xRotation = horizontalDist > 0.01 ? Math.atan2(dy, horizontalDist) : 0;
 
       // Apply Y rotation to the whole model (azimuth only — stand stays perfectly vertical).
