@@ -2434,7 +2434,300 @@ export const scenarioPresets: ScenarioPreset[] = [
       modifiers: ['octabox-90', 'reflector-5in1'],
       backdrops: ['backdrop-white', 'backdrop-gray', 'backdrop-light-gray']
     }
-  }
+  },
+
+  // ── Documentary / Editorial ────────────────────────────────────────────────
+  {
+    id: 'documentary-available-light',
+    navn: 'Dokumentar — Tilgjengelig Lys',
+    kategori: 'portrett',
+    description: 'Naturalistisk dokumentarstil med vinduslys som eneste kilde. Faller av hardt til skygge for autentisk følelse.',
+    thumbnail: '/images/gear/equipment_backdrop.png',
+    difficulty: 'beginner',
+    style: 'documentary',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-2.5, 2.2, -1.0], rotation: [15, 55, 0], intensity: 1.3, cct: 5500, modifier: 'none' },
+      ],
+      backdrop: { type: 'seamless', id: 'seamless-gray', color: '#888888' },
+      camera: { position: [0, 1.6, -4.2], target: [0, 1.5, 0], focalLength: 50 }
+    },
+    recommendedAssets: { lights: ['arri-m18-hmi'], modifiers: [], backdrops: ['seamless-gray'] }
+  },
+  {
+    id: 'documentary-environmental-portrait',
+    navn: 'Dokumentar — Miljøportrett',
+    kategori: 'portrett',
+    description: 'Portrettet i omgivelser med en fylllys for å balansere bakgrunnsdetaljene. Journalistisk estetikk.',
+    thumbnail: '/images/gear/equipment_backdrop.png',
+    difficulty: 'intermediate',
+    style: 'documentary',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-1.8, 2.0, -0.8], rotation: [20, 40, 0], intensity: 1.1, cct: 5600, modifier: 'none' },
+        { type: 'fill-light', position: [2.2, 1.5, -0.5], rotation: [10, -30, 0], intensity: 0.35, cct: 5600, modifier: 'reflector-white' },
+      ],
+      backdrop: { type: 'environment', id: 'env-warehouse-loft' },
+      camera: { position: [0, 1.6, -4.0], target: [0, 1.5, 0], focalLength: 35 }
+    },
+    recommendedAssets: { lights: ['godox-ad400pro'], modifiers: ['reflector-5in1'], backdrops: ['env-warehouse-loft'] }
+  },
+
+  // ── Beauty Close-Up ────────────────────────────────────────────────────────
+  {
+    id: 'beauty-macro-glossy',
+    navn: 'Beauty Makro — Glossy Skinn',
+    kategori: 'beauty',
+    description: 'Intens frontbelysning for perfekt skinnfremhevelse. Ring-lys for øyenrefleks og oval softbox for kjevelinje.',
+    thumbnail: '/images/gear/equipment_backdrop.png',
+    difficulty: 'intermediate',
+    style: 'beauty',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [0, 2.0, -1.5], rotation: [20, 0, 0], intensity: 1.6, cct: 5500, modifier: 'ring-flash' },
+        { type: 'fill-light', position: [0, 1.5, -2.0], rotation: [0, 0, 0], intensity: 0.6, cct: 5500, modifier: 'beauty-dish' },
+        { type: 'hair-light', position: [0, 2.8, 0.8], rotation: [-40, 0, 0], intensity: 0.7, cct: 6000, modifier: 'stripbox-60' },
+      ],
+      backdrop: { type: 'seamless', id: 'seamless-white', color: '#f5f5f5' },
+      camera: { position: [0, 1.65, -2.8], target: [0, 1.6, 0], focalLength: 105 }
+    },
+    recommendedAssets: { lights: ['ring-flash-pro', 'godox-ad400pro'], modifiers: ['ring-flash', 'beauty-dish', 'stripbox-60'], backdrops: ['seamless-white'] }
+  },
+  {
+    id: 'beauty-smoky-dark',
+    navn: 'Beauty Smoky — Mørk Editorial',
+    kategori: 'beauty',
+    description: 'Lav-nøkkel beauty med sidebelysning for dramatisk skyggedybde. Svart bakgrunn for maksimal kontrast.',
+    thumbnail: '/images/gear/equipment_backdrop.png',
+    difficulty: 'advanced',
+    style: 'beauty',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-1.5, 2.2, -0.5], rotation: [25, 50, 0], intensity: 1.4, cct: 4500, modifier: 'beauty-dish-silver' },
+        { type: 'rim-light', position: [1.8, 1.8, 0.8], rotation: [-10, -50, 0], intensity: 0.9, cct: 5500, modifier: 'stripbox-30' },
+        { type: 'hair-light', position: [0, 2.9, 0.6], rotation: [-35, 5, 0], intensity: 0.6, cct: 5800, modifier: 'none' },
+      ],
+      backdrop: { type: 'seamless', id: 'seamless-black', color: '#0a0a0a' },
+      camera: { position: [0, 1.65, -3.0], target: [0, 1.6, 0], focalLength: 85 }
+    },
+    recommendedAssets: { lights: ['profoto-b10', 'godox-ad200pro'], modifiers: ['beauty-dish-silver', 'stripbox-30'], backdrops: ['seamless-black'] }
+  },
+
+  // ── Corporate / Business ───────────────────────────────────────────────────
+  {
+    id: 'corporate-executive',
+    navn: 'Korporasjon — Executive Portrett',
+    kategori: 'portrett',
+    description: 'Klassisk bedriftsleder-portrett med tre-lysoppsett. Ren grå bakgrunn, naturlig og autoritativ.',
+    thumbnail: '/images/gear/equipment_backdrop.png',
+    difficulty: 'beginner',
+    style: 'corporate',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-1.5, 2.2, -1.0], rotation: [25, 40, 0], intensity: 1.2, cct: 5500, modifier: 'octabox-90' },
+        { type: 'fill-light', position: [1.8, 1.6, -0.8], rotation: [15, -35, 0], intensity: 0.5, cct: 5500, modifier: 'reflector-white' },
+        { type: 'hair-light', position: [0, 2.8, 0.8], rotation: [-38, 0, 0], intensity: 0.4, cct: 5500, modifier: 'gridded-spot' },
+      ],
+      backdrop: { type: 'seamless', id: 'seamless-mid-gray', color: '#7a7a7a' },
+      camera: { position: [0, 1.7, -3.5], target: [0, 1.65, 0], focalLength: 85 }
+    },
+    recommendedAssets: { lights: ['godox-ad400pro', 'profoto-b10'], modifiers: ['octabox-90', 'reflector-5in1'], backdrops: ['seamless-gray'] }
+  },
+  {
+    id: 'corporate-environmental',
+    navn: 'Korporasjon — Miljøportrett Kontor',
+    kategori: 'portrett',
+    description: 'Business-portrett i kontoromgivelser. Blander naturlig vindulys med nøkkellys for profesjonell men varm tone.',
+    thumbnail: '/images/gear/equipment_backdrop.png',
+    difficulty: 'intermediate',
+    style: 'corporate',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-2.0, 2.0, -0.8], rotation: [20, 45, 0], intensity: 1.0, cct: 5600, modifier: 'softbox-60x90' },
+        { type: 'fill-light', position: [2.5, 1.8, -0.5], rotation: [10, -30, 0], intensity: 0.4, cct: 5600, modifier: 'reflector-white' },
+      ],
+      backdrop: { type: 'environment', id: 'env-conference-room' },
+      camera: { position: [0, 1.7, -4.0], target: [0, 1.6, 0], focalLength: 50 }
+    },
+    recommendedAssets: { lights: ['godox-ad400pro'], modifiers: ['softbox-60x90', 'reflector-5in1'], backdrops: ['env-conference-room'] }
+  },
+
+  // ── Product Photography ────────────────────────────────────────────────────
+  {
+    id: 'product-jewelry-macro',
+    navn: 'Produktfoto — Smykker Makro',
+    kategori: 'produktfoto',
+    description: 'Presisjonsbelysning for smykker og juveler. Ringblits for catchlight i steiner pluss spotlys for gnist.',
+    thumbnail: '/images/gear/equipment_backdrop.png',
+    difficulty: 'advanced',
+    style: 'product',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [0, 1.8, -1.2], rotation: [30, 0, 0], intensity: 1.5, cct: 5600, modifier: 'ring-flash' },
+        { type: 'accent-light', position: [1.0, 1.5, -0.8], rotation: [20, -30, 0], intensity: 0.8, cct: 5600, modifier: 'gridded-spot' },
+        { type: 'fill-light', position: [-1.0, 1.2, -1.0], rotation: [10, 30, 0], intensity: 0.4, cct: 5600, modifier: 'reflector-silver' },
+      ],
+      backdrop: { type: 'seamless', id: 'seamless-white', color: '#ffffff' },
+      camera: { position: [0, 1.2, -2.0], target: [0, 0.8, 0], focalLength: 100 }
+    },
+    recommendedAssets: { lights: ['ring-flash-pro', 'godox-ad400pro'], modifiers: ['ring-flash', 'gridded-spot', 'reflector-silver'], backdrops: ['seamless-white', 'seamless-black'] }
+  },
+  {
+    id: 'product-cosmetics-beauty',
+    navn: 'Produktfoto — Kosmetikk / Beauty',
+    kategori: 'produktfoto',
+    description: 'Lys og luftig oppsett for skjønnhetsprodukter. Stor softbox for glans på emballasje, hvit bakgrunn.',
+    thumbnail: '/images/gear/equipment_backdrop.png',
+    difficulty: 'beginner',
+    style: 'product',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-1.2, 2.0, -1.0], rotation: [20, 35, 0], intensity: 1.3, cct: 5500, modifier: 'octabox-120' },
+        { type: 'fill-light', position: [1.5, 1.5, -0.8], rotation: [10, -25, 0], intensity: 0.6, cct: 5500, modifier: 'reflector-white' },
+        { type: 'background-light', position: [0, 1.0, 2.5], rotation: [-15, 180, 0], intensity: 0.8, cct: 5500, modifier: 'none' },
+      ],
+      backdrop: { type: 'seamless', id: 'seamless-white', color: '#f8f8f8' },
+      camera: { position: [0, 1.0, -2.5], target: [0, 0.6, 0], focalLength: 90 }
+    },
+    recommendedAssets: { lights: ['godox-ad400pro', 'profoto-b10'], modifiers: ['octabox-120', 'reflector-5in1'], backdrops: ['seamless-white'] }
+  },
+  {
+    id: 'product-electronics-tech',
+    navn: 'Produktfoto — Elektronikk / Tech',
+    kategori: 'produktfoto',
+    description: 'Gradient grå bakgrunn, presis sidebelysning for å fremheve tekstur og overflatedetaljer på elektronikk.',
+    thumbnail: '/images/gear/equipment_backdrop.png',
+    difficulty: 'intermediate',
+    style: 'product',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-1.8, 2.2, -0.6], rotation: [25, 50, 0], intensity: 1.2, cct: 5600, modifier: 'stripbox-60' },
+        { type: 'fill-light', position: [1.8, 1.8, -0.6], rotation: [20, -50, 0], intensity: 0.4, cct: 5600, modifier: 'stripbox-60' },
+        { type: 'accent-light', position: [0, 0.6, -1.8], rotation: [-10, 0, 0], intensity: 0.3, cct: 5600, modifier: 'none' },
+      ],
+      backdrop: { type: 'seamless', id: 'seamless-mid-gray', color: '#606060' },
+      camera: { position: [0, 0.9, -2.8], target: [0, 0.5, 0], focalLength: 85 }
+    },
+    recommendedAssets: { lights: ['godox-ad400pro'], modifiers: ['stripbox-60', 'stripbox-60'], backdrops: ['seamless-gray'] }
+  },
+  {
+    id: 'product-dark-luxury',
+    navn: 'Produktfoto — Mørk Luksus',
+    kategori: 'produktfoto',
+    description: 'Lav-nøkkel luksus produktfoto. Svart bakgrunn med gull-rim lys. Parfyme, whisky og premium brands.',
+    thumbnail: '/images/gear/equipment_backdrop.png',
+    difficulty: 'advanced',
+    style: 'product',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-1.2, 2.0, -0.8], rotation: [25, 40, 0], intensity: 0.9, cct: 3200, modifier: 'stripbox-30' },
+        { type: 'rim-light', position: [1.5, 1.6, 0.6], rotation: [-5, -55, 0], intensity: 1.2, cct: 3200, modifier: 'stripbox-30' },
+        { type: 'accent-light', position: [0, 0.4, 1.2], rotation: [-20, 180, 0], intensity: 0.5, cct: 3200, modifier: 'gridded-spot' },
+      ],
+      backdrop: { type: 'seamless', id: 'seamless-black', color: '#050505' },
+      camera: { position: [0, 0.9, -2.5], target: [0, 0.6, 0], focalLength: 100 }
+    },
+    recommendedAssets: { lights: ['profoto-b10', 'godox-ad200pro'], modifiers: ['stripbox-30', 'gridded-spot'], backdrops: ['seamless-black', 'seamless-black-velvet'] }
+  },
+
+  // ── Lifestyle / Social Media ───────────────────────────────────────────────
+  {
+    id: 'lifestyle-golden-hour',
+    navn: 'Livsstil — Gylden Time Simulasjon',
+    kategori: 'portrett',
+    description: 'Simulert gylden time med varmt lys i lav vinkel. Soft skygger og varm gul-oransje tone.',
+    thumbnail: '/images/gear/equipment_backdrop.png',
+    difficulty: 'intermediate',
+    style: 'lifestyle',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-3.5, 1.2, -0.5], rotation: [8, 60, 0], intensity: 2.0, cct: 2850, modifier: 'none' },
+        { type: 'fill-light', position: [0, 1.8, -2.5], rotation: [15, 0, 0], intensity: 0.3, cct: 5500, modifier: 'reflector-white' },
+      ],
+      backdrop: { type: 'environment', id: 'env-rooftop-sunset' },
+      camera: { position: [0, 1.65, -4.5], target: [0, 1.6, 0], focalLength: 50 }
+    },
+    recommendedAssets: { lights: ['godox-ad400pro'], modifiers: ['reflector-5in1'], backdrops: ['env-rooftop-sunset'] }
+  },
+  {
+    id: 'lifestyle-instagram-bright',
+    navn: 'Livsstil — Instagram Lyst og Luftig',
+    kategori: 'portrett',
+    description: 'Overeksponeringsstil med hvit bakgrunn, soft lys for millenial-estetikk og social media content.',
+    thumbnail: '/images/gear/equipment_backdrop.png',
+    difficulty: 'beginner',
+    style: 'lifestyle',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [0, 2.5, -1.8], rotation: [30, 0, 0], intensity: 2.2, cct: 5600, modifier: 'octabox-150' },
+        { type: 'fill-light', position: [2.0, 1.8, -1.5], rotation: [15, -30, 0], intensity: 0.9, cct: 5600, modifier: 'reflector-white' },
+        { type: 'fill-light', position: [-2.0, 1.8, -1.5], rotation: [15, 30, 0], intensity: 0.7, cct: 5600, modifier: 'reflector-white' },
+      ],
+      backdrop: { type: 'seamless', id: 'seamless-white', color: '#ffffff' },
+      camera: { position: [0, 1.6, -3.5], target: [0, 1.55, 0], focalLength: 50 }
+    },
+    recommendedAssets: { lights: ['godox-ad400pro', 'profoto-b10'], modifiers: ['octabox-150', 'reflector-5in1'], backdrops: ['seamless-white'] }
+  },
+
+  // ── Dark Academia ──────────────────────────────────────────────────────────
+  {
+    id: 'dark-academia-library',
+    navn: 'Dark Academia — Bibliotek',
+    kategori: 'portrett',
+    description: 'Mørk, atmosfærisk bibliotekscene. Enkel lampe-kilde, sepia-toner, dyp skygge og praktisk belysning.',
+    thumbnail: '/images/gear/equipment_backdrop.png',
+    difficulty: 'intermediate',
+    style: 'editorial',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-1.0, 1.6, -1.0], rotation: [10, 40, 0], intensity: 0.7, cct: 2700, modifier: 'none' },
+        { type: 'practical', position: [1.5, 1.4, 0.2], rotation: [0, -30, 0], intensity: 0.4, cct: 2400, modifier: 'none' },
+      ],
+      backdrop: { type: 'environment', id: 'env-library-dark' },
+      camera: { position: [0, 1.6, -4.0], target: [0, 1.5, 0], focalLength: 50 }
+    },
+    recommendedAssets: { lights: ['dedolight-150w'], modifiers: [], backdrops: ['env-library-dark'] }
+  },
+
+  // ── Wellness / Health ──────────────────────────────────────────────────────
+  {
+    id: 'wellness-spa-serene',
+    navn: 'Wellness — Spa og Ro',
+    kategori: 'portrett',
+    description: 'Soft, varm og beroligende belysning for spa- og wellnessbilder. Hvit wrap-around lys og varme toner.',
+    thumbnail: '/images/gear/equipment_backdrop.png',
+    difficulty: 'beginner',
+    style: 'lifestyle',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [0, 2.2, -1.5], rotation: [25, 0, 0], intensity: 1.1, cct: 4000, modifier: 'octabox-120' },
+        { type: 'fill-light', position: [1.8, 1.5, -1.0], rotation: [10, -30, 0], intensity: 0.7, cct: 4000, modifier: 'reflector-white' },
+        { type: 'fill-light', position: [-1.8, 1.5, -1.0], rotation: [10, 30, 0], intensity: 0.5, cct: 4000, modifier: 'reflector-white' },
+      ],
+      backdrop: { type: 'seamless', id: 'seamless-white', color: '#f0ede8' },
+      camera: { position: [0, 1.6, -3.5], target: [0, 1.55, 0], focalLength: 85 }
+    },
+    recommendedAssets: { lights: ['godox-ad400pro'], modifiers: ['octabox-120', 'reflector-5in1'], backdrops: ['seamless-white', 'seamless-sage'] }
+  },
+  {
+    id: 'fitness-high-energy',
+    navn: 'Fitness — Høy Energi Sport',
+    kategori: 'portrett',
+    description: 'Dramatisk sidelys for muskeldefenisjon. Blå og cyan gel for sporty "arena"-feel.',
+    thumbnail: '/images/gear/equipment_backdrop.png',
+    difficulty: 'advanced',
+    style: 'editorial',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-2.0, 2.5, -0.5], rotation: [30, 55, 0], intensity: 1.8, cct: 5600, modifier: 'stripbox-60' },
+        { type: 'rim-light', position: [2.2, 2.0, 0.8], rotation: [-10, -55, 0], intensity: 2.0, cct: 5600, modifier: 'stripbox-60', gel: '#00aaff' },
+        { type: 'hair-light', position: [0, 3.0, 0.8], rotation: [-45, 0, 0], intensity: 1.0, cct: 6000, modifier: 'gridded-spot', gel: '#00ffcc' },
+      ],
+      backdrop: { type: 'seamless', id: 'seamless-black', color: '#0a0a0a' },
+      camera: { position: [0, 1.7, -4.0], target: [0, 1.5, 0], focalLength: 50 }
+    },
+    recommendedAssets: { lights: ['godox-ad600pro', 'arri-skypanel-s60'], modifiers: ['stripbox-60', 'gridded-spot'], backdrops: ['seamless-black'] }
+  },
 ];
 
 export const getPresetsByKategori = (kategori: string): ScenarioPreset[] => {

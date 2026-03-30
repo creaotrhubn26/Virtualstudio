@@ -120,6 +120,43 @@ export const BACKDROP_DATABASE: BackdropSpec[] = [
   { id: 'env-hotel-lobby', name: 'Hotellober', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Luksuriøs hotell lobby — corporate, forretningsreise og livsstil' },
   { id: 'env-neon-city', name: 'Neon By (Natt)', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Regnvåt natt bygate med neonskilt — cyberpunk og nocturnal mote' },
   { id: 'env-snow-outdoor', name: 'Snø Utendørs', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Snødekt landskap i vinterlys — ren, frisk vinterestetikk' },
+
+  // ── More Seamless Colors ──────────────────────────────────────────────────
+  { id: 'seamless-peach', name: 'Seamless Fersken', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Myk ferskenrosa — feminin, varm og delikat beauty-estetikk' },
+  { id: 'seamless-turquoise', name: 'Seamless Turkis', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Levende turkis — tropisk, frisk og sommernaturlig farge' },
+  { id: 'seamless-rose-gold', name: 'Seamless Rose Gold', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Trendy rose gold metallic — luksus, beauty og produktfoto' },
+  { id: 'seamless-deep-navy', name: 'Seamless Mørk Marine', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Dyp marineblå — klassisk, profesjonell og tidløs estetikk' },
+  { id: 'seamless-royal-blue', name: 'Seamless Kongeblå', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Kongeblå — klassisk British og formell stemning' },
+  { id: 'seamless-hunter-green', name: 'Seamless Jaktgrønn', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Dyp jaktgrønn — rik, naturlig og britisk elegang' },
+  { id: 'seamless-sand', name: 'Seamless Sand', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Varm sandfarget — strandminimalism og naturlig jordtone' },
+  { id: 'seamless-chocolate', name: 'Seamless Sjokolade', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Rik sjokoladebrun — luksus, cozy og varm editorial' },
+  { id: 'seamless-terracotta', name: 'Seamless Terrakotta', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Mediterran terrakotta — varm, autentisk og jordnær stemning' },
+  { id: 'seamless-sage', name: 'Seamless Salvie', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Muted salvie-grønn — naturlig, kalm og wellness-estetikk' },
+  { id: 'seamless-dusty-rose', name: 'Seamless Støvete Rose', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Vintage støvete rose — romantisk, pastel og soft-editorial' },
+  { id: 'seamless-electric-blue', name: 'Seamless Elektrisk Blå', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Neonblå elektrisk — pop, sport og energisk youth-estetikk' },
+  { id: 'seamless-hot-pink', name: 'Seamless Sterk Rosa', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Sterk hot pink — leken, freidig og high-energy beauty' },
+  { id: 'seamless-champagne', name: 'Seamless Champagne', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Eksklusiv champagnehvit — luksus, bryllup og high-fashion' },
+  { id: 'seamless-copper', name: 'Seamless Kobber', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Varm kobbermetallisk — kunsthåndverk og industriell luksus' },
+  { id: 'seamless-teal', name: 'Seamless Teal', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Dypblå-grønn teal — moderne, fresh og editorial' },
+  { id: 'seamless-off-white', name: 'Seamless Off-White (Krem)', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Varm kremhvit — naturlig, myk og timeless for portrett og beauty' },
+  { id: 'seamless-black-velvet', name: 'Seamless Svart Fløyel', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Dypsvart fløyel — dramatisk, low-key og eksklusivt produktfoto' },
+  { id: 'seamless-iridescent', name: 'Seamless Iriserende', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Holografisk iriserende — editorial, fantasy og avant-garde' },
+
+  // ── More Environment Sets ─────────────────────────────────────────────────
+  { id: 'env-living-room', name: 'Stue (Moderne)', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Moderne skandinavisk stue med sofaer og planter — livsstilsinteriør' },
+  { id: 'env-conference-room', name: 'Møterom', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Corporate møterom med skjerm og stoler — business-portrett' },
+  { id: 'env-greenhouse', name: 'Drivhus / Veksthus', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Grønt drivhus fylt med planter — natur, botanikk og wellness' },
+  { id: 'env-sports-arena', name: 'Sportarena / Stadion', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Sporttarena med flombelysning og tribuner — idrettsfotografi' },
+  { id: 'env-festival-stage', name: 'Festivalscene', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Festivalscene med LED-rig og publikum i bokeh — musikk og event' },
+  { id: 'env-rooftop-pool', name: 'Takhøyde Basseng', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Hotell rooftop pool med byutsikt — luksus og reise' },
+  { id: 'env-scandinavian-home', name: 'Skandinavisk Hjem', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Lyse skandinaviske rom med eikeparkett — hygge og interiørstil' },
+  { id: 'env-warehouse-loft', name: 'Lager / Loft', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Industriell lager-loft med eksponerte rør — urban editorial og mote' },
+  { id: 'env-japanese-zen', name: 'Japansk Zen-hage', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Zen-hage med bambus og grus — ro, meditasjon og minimalistisk estetikk' },
+  { id: 'env-paris-cafe', name: 'Pariser Kafé', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Klassisk parisisk kafé med fletting og vinduer — romantikk og reise' },
+  { id: 'env-desert-dunes', name: 'Ørkensand Dyner', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Sahara-lignende sanddyner i gyllen lys — dramatisk og eksotisk' },
+  { id: 'env-underwater-studio', name: 'Undervanns Studio', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Simulert undervannsmiljø med blå lysbryting — kreativt konseptfoto' },
+  { id: 'env-luxury-bathroom', name: 'Luksuriøst Baderom', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Marmorbasert luksus baderom — skjønnhetsprodukter og wellness' },
+  { id: 'env-library-dark', name: 'Bibliotek (Mørkt)', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Lav-belyst gammelt bibliotek med vegger av bøker — dark academia' },
 ];
 
 export const BACKDROP_CATEGORIES: { key: BackdropCategory; label: string }[] = [

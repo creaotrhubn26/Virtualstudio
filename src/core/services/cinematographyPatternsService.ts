@@ -725,6 +725,178 @@ const patterns: CinematographyPattern[] = [
     ],
     usedIn: ['Narrative film', 'TV drama', 'Realistic documentary', 'On-location'],
     reference: 'Roger Deakins — No Country for Old Men'
+  },
+
+  // ── Extended Pattern Library ───────────────────────────────────────────────
+  {
+    id: 'beauty-ring-light',
+    name: 'Beauty Ring Light (Frontal Annular)',
+    category: 'beauty',
+    difficulty: 'beginner',
+    description: 'Kamera-aksel ringblits gir karakteristisk donut-catchlight og skyggefritt frontlys. Standard for beauty og beauty bloggers.',
+    mood: 'clean',
+    keyToFillRatio: '1:1',
+    lights: [
+      { type: 'key', position: { x: 0, y: 1.7, z: -1.5 }, intensity: 100, colorTemp: 5600, modifier: 'ring flash / ring light (on camera axis)' }
+    ],
+    usedIn: ['Beauty editorial', 'Instagram', 'YouTube', 'Cosmetics'],
+    reference: 'Classic beauty ring — Patrick Demarchelier, Irving Penn'
+  },
+  {
+    id: 'high-fashion-edge',
+    name: 'High Fashion — Edge Sidelight',
+    category: 'editorial',
+    difficulty: 'advanced',
+    description: 'Ekstremt sidelys fra nesten 90° for maksimal kantdefinisjon og skulpturell effekt. Svart negfyll på motstående side.',
+    mood: 'dramatic',
+    keyToFillRatio: '8:1',
+    lights: [
+      { type: 'key', position: { x: -3.0, y: 2.0, z: 0 }, intensity: 100, colorTemp: 5500, modifier: 'stripbox 60x20 or hard reflector' },
+      { type: 'negative-fill', position: { x: 3.0, y: 2.0, z: 0 }, intensity: 0, colorTemp: 5500, modifier: 'black foam core (negative fill)' }
+    ],
+    usedIn: ['Haute couture', 'Vogue editorial', 'Fine art', 'Avant-garde'],
+    reference: 'Nick Knight — Vogue UK / Helmut Newton'
+  },
+  {
+    id: 'foundation-beauty',
+    name: 'Foundation / Skincare Beauty',
+    category: 'beauty',
+    difficulty: 'intermediate',
+    description: 'Weich, jevnt lys fra litt over kameraet for perfekt hudgjengivelse og minimal skygge. Standard for foundation og moisturizer reklame.',
+    mood: 'soft',
+    keyToFillRatio: '3:2',
+    lights: [
+      { type: 'key', position: { x: 0, y: 2.2, z: -1.2 }, intensity: 100, colorTemp: 5500, modifier: 'large octabox 120cm or overhead softbox' },
+      { type: 'fill', position: { x: 1.8, y: 1.5, z: -0.8 }, intensity: 65, colorTemp: 5500, modifier: 'reflector or small softbox' },
+      { type: 'hair', position: { x: 0, y: 2.8, z: 0.8 }, intensity: 40, colorTemp: 6000, modifier: 'stripbox with grid' }
+    ],
+    usedIn: ['Beauty ads', 'Skincare', 'Cosmetics campaigns', 'Magazine'],
+    reference: 'Standard beauty triangle / Mario Testino beauty shoots'
+  },
+  {
+    id: 'color-gel-creative',
+    name: 'Creative Gel — Dual Color Split',
+    category: 'creative',
+    difficulty: 'intermediate',
+    description: 'To gel-lys i kontrastfarger (typisk blå og oransje) splitter ansiktet og skaper dramatisk estetikk.',
+    mood: 'dramatic',
+    keyToFillRatio: '2:1',
+    lights: [
+      { type: 'key', position: { x: -1.8, y: 2.0, z: -0.5 }, intensity: 100, colorTemp: 3200, modifier: 'gridded spot with CTO gel (warm orange)' },
+      { type: 'rim', position: { x: 2.0, y: 2.0, z: 0.5 }, intensity: 75, colorTemp: 5600, modifier: 'stripbox with CTB gel (cool blue)' }
+    ],
+    usedIn: ['Music video', 'Fashion editorial', 'Album cover', 'Social media'],
+    reference: 'Brandon Woelfel — neon gel split aesthetics'
+  },
+  {
+    id: 'industrial-harsh',
+    name: 'Industriell — Hardt Lys',
+    category: 'portrait',
+    difficulty: 'intermediate',
+    description: 'Ubevegelig hardt lys fra siden som avslører tekstur og porer. Brukt i gritty portrett og arbeiderklasse-estetikk.',
+    mood: 'harsh',
+    keyToFillRatio: '6:1',
+    lights: [
+      { type: 'key', position: { x: -2.0, y: 2.5, z: -0.5 }, intensity: 100, colorTemp: 5500, modifier: 'bare bulb or open reflector (no modifier)' },
+      { type: 'fill', position: { x: 2.0, y: 1.5, z: 0 }, intensity: 18, colorTemp: 5500, modifier: 'foam core bounce (minimal fill)' }
+    ],
+    usedIn: ['Documentary', 'Industrial portrait', 'Gritty editorial', 'Working class'],
+    reference: 'Dorothea Lange — Great Depression portraits'
+  },
+  {
+    id: 'window-light-natural',
+    name: 'Vinduslys — Naturlig Mykhet',
+    category: 'portrait',
+    difficulty: 'beginner',
+    description: 'Simulert naturlig vinduslys fra siden. Soft gradient skygge, lunt og naturlig — det mest tidløse portrettlyset.',
+    mood: 'natural',
+    keyToFillRatio: '4:1',
+    lights: [
+      { type: 'key', position: { x: -2.5, y: 2.0, z: 0 }, intensity: 100, colorTemp: 5500, modifier: 'large softbox 100x150cm or octabox 120cm' },
+      { type: 'fill', position: { x: 2.5, y: 1.8, z: 0 }, intensity: 25, colorTemp: 5500, modifier: 'white reflector card or foam core' }
+    ],
+    usedIn: ['Portrait', 'Lifestyle', 'Wedding', 'Family photography'],
+    reference: 'Studio window light — Karsh, Leibovitz intimate portraits'
+  },
+  {
+    id: 'product-360-turntable',
+    name: 'Produktfoto 360° — Turntable Oppsett',
+    category: 'commercial',
+    difficulty: 'intermediate',
+    description: 'To stripbokser på hver side pluss underbelysning gir jevnt lys fra alle vinkler — perfekt for 360° produktrotasjon.',
+    mood: 'clean',
+    keyToFillRatio: '2:1',
+    lights: [
+      { type: 'key', position: { x: -2.0, y: 1.5, z: 0 }, intensity: 100, colorTemp: 5600, modifier: 'stripbox 30x120cm' },
+      { type: 'fill', position: { x: 2.0, y: 1.5, z: 0 }, intensity: 70, colorTemp: 5600, modifier: 'stripbox 30x120cm' },
+      { type: 'background', position: { x: 0, y: 0.5, z: -0.5 }, intensity: 80, colorTemp: 5600, modifier: 'bottom light / light table' }
+    ],
+    usedIn: ['E-commerce', '360° product spin', 'Luxury goods', 'Amazon listing'],
+    reference: 'Standard e-commerce / Amazon studio setup'
+  },
+  {
+    id: 'glamour-high-key-color',
+    name: 'Glamour High-Key med Farge',
+    category: 'beauty',
+    difficulty: 'intermediate',
+    description: 'Klassisk glamour high-key med pastelfarget bakgrunn og hvitt overlys. Pop-estetikk, VSCO og editorial mote.',
+    mood: 'soft',
+    keyToFillRatio: '2:1',
+    lights: [
+      { type: 'key', position: { x: 0, y: 2.5, z: -1.5 }, intensity: 100, colorTemp: 5500, modifier: 'large parabolic 133cm overhead' },
+      { type: 'fill', position: { x: -1.5, y: 1.5, z: -0.8 }, intensity: 55, colorTemp: 5500, modifier: 'octabox 90cm' },
+      { type: 'fill', position: { x: 1.5, y: 1.5, z: -0.8 }, intensity: 45, colorTemp: 5500, modifier: 'octabox 90cm' },
+      { type: 'background', position: { x: 0, y: 1.5, z: 4.0 }, intensity: 120, colorTemp: 5500, modifier: 'background light with gel' }
+    ],
+    usedIn: ['Pop editorial', 'Fashion week', 'Album artwork', 'Beauty campaigns'],
+    reference: 'David LaChapelle — vivid color editorial'
+  },
+  {
+    id: 'outdoor-sync-daylight',
+    name: 'Utendørs Fill-Sync (Balanced Daylight)',
+    category: 'commercial',
+    difficulty: 'intermediate',
+    description: 'Balanserer strobelys mot naturlig dagslys. HSS-blits brukes som nøkkelfyll for å unngå undersiden av hetter og briller i sol.',
+    mood: 'natural',
+    keyToFillRatio: '1:1',
+    lights: [
+      { type: 'key', position: { x: -1.5, y: 2.0, z: -1.0 }, intensity: 80, colorTemp: 5500, modifier: 'octabox or shoot-through umbrella (HSS strobe)' },
+      { type: 'ambient', position: { x: 3, y: 5, z: -3 }, intensity: 100, colorTemp: 5600, modifier: 'natural sunlight (simulated)' }
+    ],
+    usedIn: ['Outdoor portrait', 'Lifestyle', 'Fashion on location', 'Sports'],
+    reference: 'Joe McNally — HSS fill flash technique'
+  },
+  {
+    id: 'environmental-narrative',
+    name: 'Miljøscene — Narrativt Portrett',
+    category: 'narrative',
+    difficulty: 'advanced',
+    description: 'Motivert fra scene-elementer. Praktisk lampe motiverer varmt nøkkellys, vindu motiverer kjølig fyldlys. Svært filmisk.',
+    mood: 'natural',
+    keyToFillRatio: '3:1',
+    lights: [
+      { type: 'key', position: { x: 1.2, y: 1.6, z: 0.3 }, intensity: 80, colorTemp: 2700, modifier: 'small LED (lamp simulation) with CTO' },
+      { type: 'fill', position: { x: -2.5, y: 2.0, z: 0 }, intensity: 27, colorTemp: 5500, modifier: 'large softbox (window simulation)' },
+      { type: 'practical', position: { x: 1.5, y: 1.4, z: 0.5 }, intensity: 40, colorTemp: 2400, modifier: 'visible lamp (practical in frame)' }
+    ],
+    usedIn: ['Film', 'TV series', 'Commercial', 'Editorial with environment'],
+    reference: 'Barry Lyndon (Kubrick) — practical candle and firelight'
+  },
+  {
+    id: 'fashion-ttv-tunnel',
+    name: 'Fashion Tunnel / Through-the-Viewfinder',
+    category: 'editorial',
+    difficulty: 'advanced',
+    description: 'Kamera i tunnel av lys med frembelysning av bakgrunn og sidelys på motivet. Dybde, kontrast og mystikk.',
+    mood: 'dramatic',
+    keyToFillRatio: '5:1',
+    lights: [
+      { type: 'key', position: { x: -2.0, y: 2.2, z: -1.0 }, intensity: 100, colorTemp: 5500, modifier: 'beauty dish silver' },
+      { type: 'background', position: { x: 0, y: 2.0, z: 5.0 }, intensity: 200, colorTemp: 5500, modifier: 'bare strobe at backdrop' },
+      { type: 'rim', position: { x: 2.2, y: 2.0, z: 0.5 }, intensity: 60, colorTemp: 5500, modifier: 'gridded spot (rim)' }
+    ],
+    usedIn: ['Fashion editorial', 'Advertising', 'High-fashion lookbook'],
+    reference: 'Annie Leibovitz — layered environment shoots'
   }
 ];
 

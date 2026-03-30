@@ -205,6 +205,77 @@ const MODIFIER_DATABASE: ModifierSpec[] = [
   { id: 'fresnel-4in-wide', brand: 'Generic', model: 'Fresnel 4" Open Flood', type: 'grid', size: '4"', stopLoss: 0, thumbnail: '/images/gear/modifier_grid.png' },
   { id: 'fresnel-8in-spot', brand: 'Generic', model: 'Fresnel 8" Hard Spot', type: 'grid', size: '8"', stopLoss: 0, thumbnail: '/images/gear/modifier_grid.png' },
   { id: 'dedolight-lens', brand: 'Dedolight', model: 'Dedolight Aspherical Lens', type: 'grid', size: '150mm', stopLoss: 0, thumbnail: '/images/gear/modifier_grid.png' },
+
+  // ── Parabolic Reflectors ────────────────────────────────────────────────────
+  { id: 'profoto-para-133', brand: 'Profoto', model: 'Para 133 Zoom', type: 'parabolic', size: '133cm', shape: 'parabolic', stopLoss: 0.5, mount: 'Profoto', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'profoto-para-222', brand: 'Profoto', model: 'Para 222 Zoom', type: 'parabolic', size: '222cm', shape: 'parabolic', stopLoss: 0.5, mount: 'Profoto', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'photek-softlighter-60', brand: 'Photek', model: 'Softlighter II 60"', type: 'parabolic', size: '60"', shape: 'parabolic', stopLoss: 1.0, mount: 'Universal', thumbnail: '/images/gear/modifier_umbrella.png' },
+  { id: 'photek-softlighter-46', brand: 'Photek', model: 'Softlighter II 46"', type: 'parabolic', size: '46"', shape: 'parabolic', stopLoss: 1.0, mount: 'Universal', thumbnail: '/images/gear/modifier_umbrella.png' },
+  { id: 'westcott-para-28', brand: 'Westcott', model: 'Rapid Box 28" Octa', type: 'parabolic', size: '28"', shape: 'parabolic', stopLoss: 1.5, mount: 'Universal', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'westcott-para-36', brand: 'Westcott', model: 'Rapid Box 36" Octa', type: 'parabolic', size: '36"', shape: 'parabolic', stopLoss: 1.5, mount: 'Universal', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'broncolor-para-177', brand: 'Broncolor', model: 'Para 177 FB', type: 'parabolic', size: '177cm', shape: 'parabolic', stopLoss: 0.5, mount: 'Broncolor', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'broncolor-para-222', brand: 'Broncolor', model: 'Para 222 FB', type: 'parabolic', size: '222cm', shape: 'parabolic', stopLoss: 0.5, mount: 'Broncolor', thumbnail: '/images/gear/modifier_softbox.png' },
+
+  // ── Beauty Dishes (Extended) ─────────────────────────────────────────────────
+  { id: 'elinchrom-beauty-dish-44', brand: 'Elinchrom', model: 'Beauty Dish 44cm White', type: 'beauty-dish', size: '44cm', stopLoss: 0.5, mount: 'Elinchrom', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'elinchrom-beauty-dish-70', brand: 'Elinchrom', model: 'Rotalux Deep Octa 70cm', type: 'beauty-dish', size: '70cm', shape: 'deep', stopLoss: 1.0, mount: 'Elinchrom', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'profoto-beauty-dish-24', brand: 'Profoto', model: 'Softlight Reflector 24"', type: 'beauty-dish', size: '24"', stopLoss: 0.5, mount: 'Profoto', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'broncolor-beauty-dish', brand: 'Broncolor', model: 'Beautylight Reflecting', type: 'beauty-dish', size: '65cm', stopLoss: 0.5, mount: 'Broncolor', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'hensel-beauty-dish', brand: 'Hensel', model: 'Beauty Reflector 58cm', type: 'beauty-dish', size: '58cm', stopLoss: 0.5, mount: 'Hensel', thumbnail: '/images/gear/modifier_softbox.png' },
+
+  // ── Grids (Extended) ─────────────────────────────────────────────────────────
+  { id: 'eggcrate-30-degree', brand: 'Generic', model: 'Eggcrate 30° Grid (Panel)', type: 'grid', size: '60x90cm', stopLoss: 1.0, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'eggcrate-45-degree', brand: 'Generic', model: 'Eggcrate 45° Grid (Loose)', type: 'grid', size: '60x90cm', stopLoss: 0.5, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'grid-oct-40-degree', brand: 'Generic', model: 'Octabox 40° Honeycomb Grid', type: 'grid', size: 'Universal', stopLoss: 0.8, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'grid-oct-20-degree', brand: 'Generic', model: 'Octabox 20° Honeycomb Grid', type: 'grid', size: 'Universal', stopLoss: 1.5, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'grid-strip-10-degree', brand: 'Generic', model: 'Stripboks 10° Grid (Narrow Beam)', type: 'grid', size: '10°', stopLoss: 1.8, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'profoto-grid-narrow', brand: 'Profoto', model: 'Narrow-Beam Reflector Grid', type: 'grid', size: '10°', stopLoss: 0.5, mount: 'Profoto', thumbnail: '/images/gear/modifier_grid.png' },
+
+  // ── Flags / Cutters / Silks (Extended) ─────────────────────────────────────
+  { id: 'flag-18x24', brand: 'Generic', model: 'Cine Flag 18x24"', type: 'flag', size: '18x24"', stopLoss: 0, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'flag-24x36', brand: 'Generic', model: 'Cine Flag 24x36"', type: 'flag', size: '24x36"', stopLoss: 0, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'cutter-24x36', brand: 'Generic', model: 'Cutter 24x36"', type: 'flag', size: '24x36"', stopLoss: 0, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'silk-6x6', brand: 'Generic', model: 'Diffusion Silk 6x6ft', type: 'diffuser', size: '6x6ft', stopLoss: 1.5, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'silk-12x12', brand: 'Generic', model: 'Silk 12x12ft (Overhead)', type: 'diffuser', size: '12x12ft', stopLoss: 1.5, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'muslin-white', brand: 'Generic', model: 'Muslin Diffuser (Full CTO equiv.)', type: 'diffuser', size: '8x8ft', stopLoss: 1.0, thumbnail: '/images/gear/modifier_grid.png' },
+
+  // ── Color Gels (Modifiers) ──────────────────────────────────────────────────
+  { id: 'gel-cto-full', brand: 'Rosco', model: 'Full CTO (3200K shift)', type: 'gel', size: 'Full', stopLoss: 0.5, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'gel-ctb-full', brand: 'Rosco', model: 'Full CTB (5600K shift)', type: 'gel', size: 'Full', stopLoss: 0.5, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'gel-cto-half', brand: 'Lee', model: 'Half CTO', type: 'gel', size: 'Half', stopLoss: 0.3, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'gel-ctb-half', brand: 'Lee', model: 'Half CTB', type: 'gel', size: 'Half', stopLoss: 0.3, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'gel-plus-green', brand: 'Rosco', model: 'Plus Green (Fluorescent Match)', type: 'gel', size: 'Full', stopLoss: 0.3, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'gel-minus-green', brand: 'Lee', model: 'Minus Green', type: 'gel', size: 'Full', stopLoss: 0.3, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'gel-red', brand: 'Rosco', model: 'Gel Rød #27', type: 'gel', size: 'Full', stopLoss: 1.5, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'gel-blue', brand: 'Rosco', model: 'Gel Blå #80', type: 'gel', size: 'Full', stopLoss: 1.0, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'gel-green', brand: 'Rosco', model: 'Gel Grønn #89', type: 'gel', size: 'Full', stopLoss: 1.0, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'gel-yellow', brand: 'Lee', model: 'Gel Gul #101', type: 'gel', size: 'Full', stopLoss: 0.8, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'gel-magenta', brand: 'Rosco', model: 'Gel Magenta #46', type: 'gel', size: 'Full', stopLoss: 1.2, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'gel-cyan', brand: 'Rosco', model: 'Gel Cyan #74', type: 'gel', size: 'Full', stopLoss: 0.8, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'gel-lavender', brand: 'Lee', model: 'Gel Lavendel #052', type: 'gel', size: 'Full', stopLoss: 0.5, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'gel-straw', brand: 'Lee', model: 'Gel Straw #103', type: 'gel', size: 'Full', stopLoss: 0.3, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'gel-cosmetic-peach', brand: 'Rosco', model: 'Cosmetic Peach #312', type: 'gel', size: 'Full', stopLoss: 0.1, thumbnail: '/images/gear/modifier_grid.png' },
+
+  // ── Ring Flashes / Annular ───────────────────────────────────────────────────
+  { id: 'profoto-ringflash', brand: 'Profoto', model: 'Ring Flash (Profoto)', type: 'ring-flash', size: '30cm', stopLoss: 0, mount: 'Profoto', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'elinchrom-ringflash', brand: 'Elinchrom', model: 'Ringflash S', type: 'ring-flash', size: '28cm', stopLoss: 0, mount: 'Elinchrom', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'godox-ring-68', brand: 'Godox', model: 'Ring Flash AR400', type: 'ring-flash', size: '40cm', stopLoss: 0, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'neewer-ringlight-18', brand: 'Neewer', model: 'Ring Light LED 18"', type: 'ring-flash', size: '18"', stopLoss: 0, mount: 'Standalone', thumbnail: '/images/gear/modifier_softbox.png' },
+
+  // ── Snoot / Honeycomb ────────────────────────────────────────────────────────
+  { id: 'snoot-round', brand: 'Generic', model: 'Snoot Rundt Bowens', type: 'snoot', size: '16cm', stopLoss: 3.0, mount: 'Bowens', thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'snoot-profoto', brand: 'Profoto', model: 'Snoot (Profoto)', type: 'snoot', size: '18cm', stopLoss: 3.0, mount: 'Profoto', thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'barndoors-4leaf', brand: 'Generic', model: 'Barndoors 4-blad Bowens', type: 'barndoor', size: 'Universal', stopLoss: 0, mount: 'Bowens', thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'barndoors-profoto', brand: 'Profoto', model: 'Barndoors (Profoto)', type: 'barndoor', size: 'Universal', stopLoss: 0, mount: 'Profoto', thumbnail: '/images/gear/modifier_grid.png' },
+
+  // ── Reflectors (Extended) ────────────────────────────────────────────────────
+  { id: 'reflector-12x12-white', brand: 'Generic', model: 'Reflector 12x12ft Hvit', type: 'reflector', size: '12x12ft', stopLoss: 0, thumbnail: '/images/gear/modifier_reflector.png' },
+  { id: 'reflector-4x4-gold', brand: 'Generic', model: 'Reflector 4x4ft Gull', type: 'reflector', size: '4x4ft', stopLoss: 0, thumbnail: '/images/gear/modifier_reflector.png' },
+  { id: 'reflector-4x4-silver', brand: 'Generic', model: 'Reflector 4x4ft Sølv', type: 'reflector', size: '4x4ft', stopLoss: 0, thumbnail: '/images/gear/modifier_reflector.png' },
+  { id: 'reflector-4x4-black', brand: 'Generic', model: 'Neg-fill 4x4ft Sort (Neg-fyll)', type: 'reflector', size: '4x4ft', stopLoss: 0, thumbnail: '/images/gear/modifier_reflector.png' },
+  { id: 'lastolite-trigrip-75', brand: 'Lastolite', model: 'TriGrip Reflector 75cm', type: 'reflector', size: '75cm', stopLoss: 0, thumbnail: '/images/gear/modifier_reflector.png' },
+  { id: 'lastolite-trigrip-120', brand: 'Lastolite', model: 'TriGrip Reflector 120cm', type: 'reflector', size: '120cm', stopLoss: 0, thumbnail: '/images/gear/modifier_reflector.png' },
+  { id: 'sunbounce-pro', brand: 'Sunbounce', model: 'Sunbounce Pro 4x6ft', type: 'reflector', size: '4x6ft', stopLoss: 0, thumbnail: '/images/gear/modifier_reflector.png' },
 ];
 
 const MODIFIER_CATEGORIES: CategoryInfo[] = [
@@ -217,8 +288,12 @@ const MODIFIER_CATEGORIES: CategoryInfo[] = [
   { key: 'reflector', label: 'Reflektor' },
   { key: 'grid', label: 'Grid' },
   { key: 'snoot', label: 'Snoot' },
-  { key: 'barn-doors', label: 'Klaffedører' },
+  { key: 'barndoor', label: 'Klaffedører' },
   { key: 'diffuser', label: 'Diffuser' },
+  { key: 'flag', label: 'Flag / Cutter' },
+  { key: 'parabolic', label: 'Parabolsk' },
+  { key: 'ring-flash', label: 'Ringblits' },
+  { key: 'gel', label: 'Fargefilter / Gel' },
   { key: 'led-panel', label: 'LED Panel' },
   { key: 'tube', label: 'Rørlampe' },
 ];
