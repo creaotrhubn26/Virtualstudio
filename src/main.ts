@@ -1652,26 +1652,45 @@ class VirtualStudio {
           mat.unlit = false;
           mat.wireframe = false;
           mat.backFaceCulling = true;
+          mat.maxSimultaneousLights = 8;
 
           if (skinLike) {
             mat.metallic = 0;
-            mat.roughness = Math.max(0.62, Math.min(0.84, mat.roughness ?? 0.75));
-            mat.specularIntensity = 0.22;
-            mat.emissiveColor = mat.emissiveColor.scale(0.35);
-            mat.environmentIntensity = Math.max(0.55, Math.min(0.9, mat.environmentIntensity || 0.72));
+            // Skin needs visible specular highlights — keep roughness low enough for highlights
+            mat.roughness = Math.max(0.35, Math.min(0.55, mat.roughness ?? 0.45));
+            mat.specularIntensity = 0.55;
+            mat.emissiveColor = mat.emissiveColor.scale(0.2);
+            mat.environmentIntensity = Math.max(0.6, Math.min(1.0, mat.environmentIntensity || 0.8));
 
-            if (mat.subSurface?.isTranslucencyEnabled) {
-              const current = mat.subSurface.translucencyIntensity || 0.18;
-              mat.subSurface.translucencyIntensity = Math.max(0.14, Math.min(0.22, current));
+            // Enable SSS whether or not the original model had it
+            mat.subSurface.isTranslucencyEnabled = true;
+            mat.subSurface.translucencyIntensity = 0.32;
+            if (!mat.subSurface.tintColor || mat.subSurface.tintColor.equalsFloats(0, 0, 0)) {
+              const albedo = mat.albedoColor ?? new BABYLON.Color3(0.9, 0.7, 0.55);
+              mat.subSurface.tintColor = new BABYLON.Color3(
+                Math.min(1, albedo.r * 1.08),
+                Math.min(1, albedo.g * 0.88),
+                Math.min(1, albedo.b * 0.72)
+              );
             }
+            // Subtle skin clearCoat — mimics natural pore-level sheen
+            mat.clearCoat.isEnabled = true;
+            mat.clearCoat.intensity = 0.18;
+            mat.clearCoat.roughness = 0.28;
           } else if (hairLike) {
+            mat.maxSimultaneousLights = 8;
             mat.metallic = Math.min(0.02, mat.metallic ?? 0);
-            mat.roughness = Math.max(0.45, Math.min(0.68, mat.roughness ?? 0.58));
-            mat.emissiveColor = mat.emissiveColor.scale(0.65);
+            // Hair needs specular for highlights from rim/hair light
+            mat.roughness = Math.max(0.38, Math.min(0.55, mat.roughness ?? 0.48));
+            mat.specularIntensity = 0.45;
+            mat.emissiveColor = mat.emissiveColor.scale(0.4);
           } else if (fabricLike) {
+            mat.maxSimultaneousLights = 8;
             mat.metallic = Math.min(0.03, mat.metallic ?? 0);
-            mat.roughness = Math.max(0.74, Math.min(0.92, mat.roughness ?? 0.84));
-            mat.emissiveColor = mat.emissiveColor.scale(0.55);
+            mat.roughness = Math.max(0.70, Math.min(0.90, mat.roughness ?? 0.82));
+            mat.emissiveColor = mat.emissiveColor.scale(0.45);
+          } else {
+            mat.maxSimultaneousLights = 8;
           }
         } else if (mesh.material instanceof BABYLON.StandardMaterial) {
           const mat = mesh.material;
@@ -16771,7 +16790,7 @@ class VirtualStudio {
     const normalData = normalCtx.createImageData(size, size);
     const ormData = ormCtx.createImageData(size, size);
 
-    const roughnessBase = profile === 'skin' ? 0.72 : profile === 'shirt' ? 0.82 : 0.88;
+    const roughnessBase = profile === 'skin' ? 0.42 : profile === 'shirt' ? 0.78 : 0.85;
     const metallicBase = profile === 'skin' ? 0.01 : 0.02;
     const textureStrength = profile === 'skin' ? 0.08 : profile === 'shirt' ? 0.14 : 0.18;
 
@@ -16845,13 +16864,22 @@ class VirtualStudio {
     material.metallic = 0;
     material.roughness = roughnessBase;
     material.backFaceCulling = true;
-    material.specularIntensity = profile === 'skin' ? 0.26 : 0.12;
+    material.maxSimultaneousLights = 8;
+    material.specularIntensity = profile === 'skin' ? 0.60 : profile === 'shirt' ? 0.20 : 0.15;
+    material.environmentIntensity = profile === 'skin' ? 0.82 : 0.65;
 
     if (profile === 'skin') {
       material.subSurface.isTranslucencyEnabled = true;
-      material.subSurface.translucencyIntensity = 0.22;
-      material.subSurface.tintColor = new BABYLON.Color3(baseColor.r * 1.06, baseColor.g * 0.95, baseColor.b * 0.88);
-      material.emissiveColor = new BABYLON.Color3(baseColor.r * 0.05, baseColor.g * 0.03, baseColor.b * 0.02);
+      material.subSurface.translucencyIntensity = 0.35;
+      material.subSurface.tintColor = new BABYLON.Color3(
+        Math.min(1, baseColor.r * 1.10),
+        Math.min(1, baseColor.g * 0.90),
+        Math.min(1, baseColor.b * 0.72)
+      );
+      material.emissiveColor = new BABYLON.Color3(baseColor.r * 0.04, baseColor.g * 0.02, baseColor.b * 0.01);
+      material.clearCoat.isEnabled = true;
+      material.clearCoat.intensity = 0.18;
+      material.clearCoat.roughness = 0.28;
     }
 
     return material;
@@ -17148,7 +17176,7 @@ class VirtualStudio {
 
     this.applyCurrentActorParams();
 
-    if (this.characterMesh && useRenderingStore.getState().activePreset === 'portrait-realistic') {
+    if (this.characterMesh) {
       const meshesToTune: BABYLON.AbstractMesh[] = [this.characterMesh, ...this.characterMesh.getChildMeshes(true)];
       this.applyPortraitMaterialTuning(meshesToTune);
     }
