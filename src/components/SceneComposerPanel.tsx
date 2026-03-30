@@ -77,6 +77,7 @@ import { sceneOptimizationService } from '../services/sceneOptimizationService';
 import { sceneAnalysisService } from '../services/sceneAnalysisService';
 import { sceneVariationService } from '../services/sceneVariationService';
 import { EnvironmentBrowser } from './EnvironmentBrowser';
+import { MasterSequencer } from './MasterSequencer';
 interface SceneComposerPanelProps {
   onClose?: () => void;
   onSaveScene?: (scene: SceneComposition) => void;
@@ -95,7 +96,8 @@ type SceneComposerTabKey =
   | 'layers'
   | 'environment'
   | 'export'
-  | 'advanced';
+  | 'advanced'
+  | 'sequence';
 
 const SCENE_COMPOSER_TAB_INDEX: Record<SceneComposerTabKey, number> = {
   scenes: 0,
@@ -104,10 +106,11 @@ const SCENE_COMPOSER_TAB_INDEX: Record<SceneComposerTabKey, number> = {
   environment: 3,
   export: 4,
   advanced: 5,
+  sequence: 6,
 };
 
 function resolveSceneComposerTabIndex(tab: unknown): number | null {
-  if (typeof tab === 'number' && Number.isInteger(tab) && tab >= 0 && tab <= 5) {
+  if (typeof tab === 'number' && Number.isInteger(tab) && tab >= 0 && tab <= 6) {
     return tab;
   }
 
@@ -668,6 +671,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
         <Tab icon={<WallpaperIcon />} iconPosition="start" label="Miljø" />
         <Tab icon={<FileDownloadIcon />} iconPosition="start" label="Eksport" />
         <Tab icon={<LayersIcon />} iconPosition="start" label="Avansert" />
+        <Tab icon={<TimelineIcon />} iconPosition="start" label="Sekvens" />
       </Tabs>
 
       <Box sx={{ flex: 1, overflow: 'auto' }}>
@@ -1532,6 +1536,18 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
               </Typography>
             </Box>
           )}
+        </TabPanel>
+
+        {/* Sekvens Tab — Master Sequencer */}
+        <TabPanel value={tabValue} index={6}>
+          <Box sx={{ height: 480, display: 'flex', flexDirection: 'column' }}>
+            <MasterSequencer
+              scenes={scenes.filter((s) => !s.deletedAt)}
+              onLoadScene={(scene) => {
+                if (onLoadScene) onLoadScene(scene);
+              }}
+            />
+          </Box>
         </TabPanel>
       </Box>
 
