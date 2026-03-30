@@ -2462,29 +2462,35 @@ class VirtualStudio {
   }
 
   private createSeamlessBackdrop(backdropId: string, scale: number, receiveShadow: boolean): void {
-    const W = 7 * scale;      // total width
-    const H = 4.5 * scale;   // wall height above curve
-    const R = 1.8 * scale;   // curve radius (floor-to-wall transition)
-    const D = 4 * scale;     // floor depth in front of curve
-    const Z = -8;            // back wall Z position
+    const W = 8 * scale;       // total width — wider for dramatic colored gradients
+    const H = 5 * scale;       // wall height
+    const R = 2 * scale;       // curve radius (floor-to-wall transition)
+    const D = 5 * scale;       // floor depth in front of curve
+    const Z = -8;              // back wall Z position
 
     const backdropMat = new BABYLON.PBRMaterial('backdropMat_' + backdropId, this.scene);
-    backdropMat.albedoColor = new BABYLON.Color3(0.88, 0.88, 0.90);
-    backdropMat.roughness = 0.92;
+    backdropMat.albedoColor = new BABYLON.Color3(0.85, 0.85, 0.87);
+    backdropMat.roughness = 0.95;
     backdropMat.metallic = 0;
     backdropMat.backFaceCulling = false;
 
+    // Root node at origin — children inherit world positions correctly (no double-offset)
+    const rootNode = new BABYLON.Mesh('backdropRoot_' + backdropId, this.scene);
+    rootNode.isVisible = false;
+    rootNode.position.set(0, 0, 0);
+
     // 1. Back wall (flat vertical plane)
     const backWall = BABYLON.MeshBuilder.CreatePlane('backdropWall_' + backdropId, {
-      width: W, height: H + 0.1,
+      width: W, height: H,
       sideOrientation: BABYLON.Mesh.DOUBLESIDE
     }, this.scene);
     backWall.position.set(0, R + H / 2, Z);
     backWall.material = backdropMat;
     backWall.receiveShadows = receiveShadow;
+    backWall.parent = rootNode;
 
-    // 2. Smooth curved cove (ribbon from floor to wall)
-    const segs = 24;
+    // 2. Smooth curved cove (ribbon from floor to wall, 32 segments)
+    const segs = 32;
     const leftPath: BABYLON.Vector3[] = [];
     const rightPath: BABYLON.Vector3[] = [];
     for (let i = 0; i <= segs; i++) {
@@ -2500,19 +2506,18 @@ class VirtualStudio {
     }, this.scene);
     cove.material = backdropMat;
     cove.receiveShadows = receiveShadow;
+    cove.parent = rootNode;
 
     // 3. Floor extension in front
     const floorExt = BABYLON.MeshBuilder.CreateGround('backdropFloorExt_' + backdropId, {
-      width: W, height: D
+      width: W, height: D, subdivisions: 4
     }, this.scene);
     floorExt.position.set(0, 0.001, Z + R + D / 2);
     floorExt.material = backdropMat;
     floorExt.receiveShadows = receiveShadow;
+    floorExt.parent = rootNode;
 
-    // Parent everything to the wall so it moves together
-    cove.parent = backWall;
-    floorExt.parent = backWall;
-    this.currentBackdropMesh = backWall;
+    this.currentBackdropMesh = rootNode;
     console.log('Infinity-cove backdrop created:', backdropId);
   }
 
@@ -6018,85 +6023,110 @@ class VirtualStudio {
   }
   
   public async setupDefaultLighting(): Promise<void> {
-    // Create target point in center of scene (model chest/face height)
-    const subjectCenter = new BABYLON.Vector3(0, 1.2, 0); // Slightly higher for face focus
-    
-    // Professional 3-Point Lighting Setup
-    // Optimized for portrait/fashion photography of a standing model
-    
-    // === KEY LIGHT ===
-    // Position: 45° to the right, elevated, slightly in front
-    // This is the main modeling light that creates depth and dimension
-    const keyLightId = await this.addLight('aputure-300d', new BABYLON.Vector3(3.5, 3, -2.5));
+    const subjectCenter = new BABYLON.Vector3(0, 1.2, 0);
+
+    // Load the infinity cove backdrop immediately so colored lights have a surface to illuminate
+    this.loadBackdrop('seamless-default', { receiveShadow: true });
+
+    // === KEY LIGHT (warm golden, right 45°) ===
+    const keyLightId = await this.addLight('aputure-300d', new BABYLON.Vector3(3.5, 3.2, -2));
     const keyLight = this.lights.get(keyLightId);
     if (keyLight) {
-      keyLight.name = 'Key Light (Aputure 300D)';
-      keyLight.powerMultiplier = 1.0; // Full power - main light source
-      
-      // Aim at model's face/chest area
+      keyLight.name = 'Key Light (Softbox)';
+      keyLight.powerMultiplier = 1.0;
       this.aimLightAt(keyLightId, new BABYLON.Vector3(0, 1.3, 0));
-      
       if (keyLight.light instanceof BABYLON.SpotLight) {
-        // Softbox: wide, uniform field — low exponent gives flat (non-concentrated) illumination
-        keyLight.light.angle = Math.PI / 3;   // 60° half-angle → 120° total spread
-        keyLight.light.exponent = 2.0;         // Soft field, slight centre warmth
-        keyLight.light.intensity = 450;        // candela — at 4.5m: ~22 lux (realistic key)
+        keyLight.light.angle = Math.PI / 3;
+        keyLight.light.exponent = 2.0;
+        keyLight.light.intensity = 450;
         keyLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
+        // Warm daylight colour temperature (5600K approximation)
+        keyLight.light.diffuse = new BABYLON.Color3(1.0, 0.97, 0.92);
+        keyLight.light.specular = new BABYLON.Color3(1.0, 0.97, 0.92);
       }
       if (keyLight.shadowGenerator) {
-        keyLight.shadowGenerator.blurKernel = 64; // Softbox: broad, soft shadows
+        keyLight.shadowGenerator.blurKernel = 64;
       }
     }
-    
-    // === FILL LIGHT ===
-    // Position: 45° to the left, lower than key, slightly further back
-    // Fills in shadows from key light without creating competing shadows
-    const fillLightId = await this.addLight('aputure-300d', new BABYLON.Vector3(-3, 2, -3.5));
+
+    // === FILL LIGHT (cool blue, left 45°) ===
+    const fillLightId = await this.addLight('aputure-300d', new BABYLON.Vector3(-3.2, 2.2, -3));
     const fillLight = this.lights.get(fillLightId);
     if (fillLight) {
-      fillLight.name = 'Fill Light (Aputure 300D)';
-      fillLight.powerMultiplier = 0.5; // 50% power - shadow fill
-      
-      // Aim at scene center
+      fillLight.name = 'Fill Light (Octabox)';
+      fillLight.powerMultiplier = 0.45;
       this.aimLightAt(fillLightId, subjectCenter);
-      
       if (fillLight.light instanceof BABYLON.SpotLight) {
-        // Octabox fill: even wider, near-uniform field — closest to a true area light
-        fillLight.light.angle = Math.PI / 2.5; // 72° half-angle → 144° total spread
-        fillLight.light.exponent = 1.5;         // Near-uniform illumination across panel
-        fillLight.light.intensity = 200;        // candela — ~50% of key (classic 2:1 ratio)
+        fillLight.light.angle = Math.PI / 2.5;
+        fillLight.light.exponent = 1.5;
+        fillLight.light.intensity = 190;
         fillLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
+        // Slight cool bias for contrast with the warm key
+        fillLight.light.diffuse = new BABYLON.Color3(0.88, 0.92, 1.0);
+        fillLight.light.specular = new BABYLON.Color3(0.88, 0.92, 1.0);
       }
       if (fillLight.shadowGenerator) {
-        fillLight.shadowGenerator.blurKernel = 96; // Octabox: maximum softness ("beauty" shadows)
+        fillLight.shadowGenerator.blurKernel = 96;
       }
     }
-    
-    // === RIM/BACK LIGHT ===
-    // Position: Behind and to the opposite side of key, elevated
-    // Creates edge definition and separation from background
+
+    // === RIM LIGHT (warm separation) ===
     const rimLightId = await this.addLight('aputure-300d-strip', new BABYLON.Vector3(-2.5, 4, 3.5));
     const rimLight = this.lights.get(rimLightId);
     if (rimLight) {
       rimLight.name = 'Rim Light (Stripbox)';
-      rimLight.powerMultiplier = 0.6; // 60% power for visible rim
-      
-      // Aim at back of model's head/shoulders
+      rimLight.powerMultiplier = 0.6;
       this.aimLightAt(rimLightId, new BABYLON.Vector3(0, 1.5, 0));
-      
       if (rimLight.light instanceof BABYLON.SpotLight) {
-        // Rim/hair light: tighter cone, moderate concentration — defines the edge
-        rimLight.light.angle = Math.PI / 5;   // 36° half-angle — focused on subject edge
-        rimLight.light.exponent = 3.5;         // Slight centre hotspot → crisper edge light
-        rimLight.light.intensity = 350;        // candela — strong rim for separation
+        rimLight.light.angle = Math.PI / 5;
+        rimLight.light.exponent = 3.5;
+        rimLight.light.intensity = 350;
         rimLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
+        rimLight.light.diffuse = new BABYLON.Color3(1.0, 0.94, 0.82);
+        rimLight.light.specular = new BABYLON.Color3(1.0, 0.94, 0.82);
       }
-      
-      // Slightly warmer color for golden rim effect (classic portrait look)
-      rimLight.light.diffuse = new BABYLON.Color3(1.0, 0.95, 0.88);
-      
       if (rimLight.shadowGenerator) {
-        rimLight.shadowGenerator.blurKernel = 32; // Rim: tighter, some definition in shadow edge
+        rimLight.shadowGenerator.blurKernel = 32;
+      }
+    }
+
+    // === BACKGROUND LIGHT 1 — Electric blue/violet gel ===
+    // Positioned right-rear, aimed at the centre-left of the backdrop → vivid purple gradient
+    const bgBlueId = await this.addLight('aputure-300d', new BABYLON.Vector3(5, 3.5, -4.5));
+    const bgBlue = this.lights.get(bgBlueId);
+    if (bgBlue) {
+      bgBlue.name = 'Bakgrunnsys (Blå gel)';
+      this.aimLightAt(bgBlueId, new BABYLON.Vector3(-1.5, 2, -8));
+      if (bgBlue.light instanceof BABYLON.SpotLight) {
+        bgBlue.light.angle = Math.PI / 1.8;   // Very wide — floods the backdrop
+        bgBlue.light.exponent = 0.5;          // Uniform, no hotspot
+        bgBlue.light.intensity = 900;
+        bgBlue.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
+        bgBlue.light.diffuse = new BABYLON.Color3(0.18, 0.12, 1.0);   // Electric blue-violet
+        bgBlue.light.specular = new BABYLON.Color3(0.18, 0.12, 1.0);
+      }
+      // Background lights do not need to cast detailed character shadows
+      if (bgBlue.shadowGenerator) {
+        bgBlue.shadowGenerator.blurKernel = 16;
+      }
+    }
+
+    // === BACKGROUND LIGHT 2 — Warm rose/magenta gel (opposite side) ===
+    const bgPinkId = await this.addLight('aputure-300d', new BABYLON.Vector3(-5, 2.5, -5));
+    const bgPink = this.lights.get(bgPinkId);
+    if (bgPink) {
+      bgPink.name = 'Bakgrunnsys (Rosa gel)';
+      this.aimLightAt(bgPinkId, new BABYLON.Vector3(2, 1.5, -8));
+      if (bgPink.light instanceof BABYLON.SpotLight) {
+        bgPink.light.angle = Math.PI / 2;
+        bgPink.light.exponent = 0.5;
+        bgPink.light.intensity = 700;
+        bgPink.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
+        bgPink.light.diffuse = new BABYLON.Color3(1.0, 0.2, 0.55);    // Warm magenta/pink
+        bgPink.light.specular = new BABYLON.Color3(1.0, 0.2, 0.55);
+      }
+      if (bgPink.shadowGenerator) {
+        bgPink.shadowGenerator.blurKernel = 16;
       }
     }
     
