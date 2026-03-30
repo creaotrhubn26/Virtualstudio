@@ -5670,6 +5670,39 @@ class VirtualStudio {
       'profoto-b10plus':{ intensity: 480, name: 'Profoto B10 Plus', cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
       'profoto-b10':    { intensity: 420, name: 'Profoto B10',      cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
       'profoto-d2':     { intensity: 380, name: 'Profoto D2',       cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 80,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+
+      // HMI / Fresnel / PAR
+      'arri-m18':        { intensity: 800, name: 'Arri M18 HMI',       cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.5, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
+      'arri-m40':        { intensity: 1400, name: 'Arri M40 HMI',      cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.5, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
+      'joker-400':       { intensity: 500, name: 'K5600 Joker 400',    cct: 5600, beamAngle: Math.PI / 3.5, exponent: 3.0, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
+      'par-can-1000':    { intensity: 700, name: 'PAR64 1000W',        cct: 3200, beamAngle: Math.PI / 8,   exponent: 5.0, shadowKernel: 16, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
+      'dedolight-150':   { intensity: 280, name: 'Dedolight 150W',     cct: 5600, beamAngle: Math.PI / 18,  exponent: 8.0, shadowKernel: 8,  glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
+      'dedolight-dled4': { intensity: 180, name: 'Dedolight DLED4',    cct: 5600, beamAngle: Math.PI / 18,  exponent: 8.0, shadowKernel: 8,  glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
+      'chauvet-fresnel-spot': { intensity: 220, name: 'Chauvet Fresnel', cct: 5600, beamAngle: Math.PI / 7, exponent: 6.0, shadowKernel: 16, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
+
+      // Beauty Dish / Ring
+      'godox-bd-07':         { intensity: 320, name: 'Godox BD-07 Beauty Dish', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: null },
+      'profoto-softlight-65':{ intensity: 350, name: 'Profoto Softlight 65cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: null },
+      'godox-ar400':         { intensity: 280, name: 'Godox AR400 Ring Flash',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.2, shadowKernel: 96, glbFile: '/models/lights/ring-light-stand.glb',   faceYawOffset: null },
+      'profoto-pro-ring2':   { intensity: 300, name: 'Profoto Pro-Ring2',       cct: 5500, beamAngle: Math.PI / 2,   exponent: 1.2, shadowKernel: 96, glbFile: '/models/lights/ring-light-stand.glb',   faceYawOffset: null },
+
+      // LED Ring Lights
+      'nanlite-halo-14':  { intensity: 160, name: 'Nanlite Halo 14"',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: null },
+      'nanlite-halo-26':  { intensity: 260, name: 'Nanlite Halo 26"',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: null },
+      'godox-rl-60':      { intensity: 200, name: 'Godox RL-60 Ring',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: null },
+
+      // Large LED Panels
+      'aputure-nova-p300c':  { intensity: 550, name: 'Aputure NOVA P300c',   cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
+      'arri-skypanel-s60':   { intensity: 520, name: 'Arri SkyPanel S60-C',  cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
+      'arri-skypanel-s120':  { intensity: 800, name: 'Arri SkyPanel S120-C', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
+      'rosco-litepad-hol':   { intensity: 180, name: 'Rosco LitePad HO+',   cct: 5500, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 64,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
+      'nanlite-mixpad-27c':  { intensity: 140, name: 'Nanlite MixPad 27C',  cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 64,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
+      'nanlite-pavotube-15c-kit': { intensity: 120, name: 'Nanlite PavoTube 15C', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 64, glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: null },
+
+      // Speedlights
+      'godox-tt685-ii':  { intensity: 180, name: 'Godox TT685 II',   cct: 5600, beamAngle: Math.PI / 3, exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
+      'profoto-a10':     { intensity: 220, name: 'Profoto A10',      cct: 5500, beamAngle: Math.PI / 3, exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
+      'canon-600ex-rt':  { intensity: 180, name: 'Canon 600EX-RT',  cct: 5600, beamAngle: Math.PI / 3, exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
     };
     
     const lightConfig = lightSpecs[modelId] || { intensity: 350, name: modelId, cct: 5600, beamAngle: Math.PI / 3, exponent: 2.0, shadowKernel: 64, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 };
