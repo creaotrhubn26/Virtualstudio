@@ -5757,15 +5757,11 @@ class VirtualStudio {
 
             if (isFinite(fxMin) && fxMax > fxMin) {
               panelW = fxMax - fxMin;
-              // Height: use the ACTUAL vertex-measured face height when both edges are captured.
-              // Extend by 20% so the glow covers the diffuser frame border visible from angles.
-              const faceH = (isFinite(fyMin) && fyMax > fyMin) ? (fyMax - fyMin) : panelW;
-              panelH = Math.max(panelW, faceH) * 1.2;
-              // X center: vertex-measured.
-              // Y center: midpoint of the actual measured face span.
-              const diffuserYCenter = (isFinite(fyMin) && fyMax > fyMin)
-                ? (fyMin + fyMax) * 0.5
-                : headJointWorldY + panelW * 0.5;
+              // Height = width (square diffuser assumption for both softbox and octabox).
+              panelH = panelW;
+              // X center: vertex-measured (avoids flash-mount bracket X-offset).
+              // Y center: anchor bottom at headJointWorldY, top at headJointWorldY + panelW.
+              const diffuserYCenter = headJointWorldY + panelW * 0.5;
               (geoMesh as any)._diffuserXCenter = (fxMin + fxMax) * 0.5;
               (geoMesh as any)._diffuserYCenter = diffuserYCenter;
               measuredFromVertices = true;
