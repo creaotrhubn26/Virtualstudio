@@ -2828,7 +2828,6 @@ class VirtualStudio {
         fStop,
         focalLength: this.cameraSettings.focalLength || 50
       });
-      console.log(`[PhysicsDOF] fStop=${fStop}, focus=${focusDistance.toFixed(2)}m, enabled=${enabled}`);
     }
   }
 

@@ -334,7 +334,9 @@ export class PhysicsBasedDOF {
   }
   
   public setEnabled(enabled: boolean): void {
+    if (this._isEnabled === enabled) return;
     this._isEnabled = enabled;
+    console.log(`[PhysicsBasedDOF] ${enabled ? 'Enabled' : 'Disabled'}`);
     
     if (enabled) {
       if (this.cocPass) {
@@ -358,7 +360,6 @@ export class PhysicsBasedDOF {
       }
     }
     
-    console.log(`[PhysicsBasedDOF] ${enabled ? 'Enabled' : 'Disabled'}`);
   }
   
   public updateSettings(settings: Partial<DOFCameraSettings>): void {

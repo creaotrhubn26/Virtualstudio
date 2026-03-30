@@ -430,10 +430,10 @@ export class AutoFocusSystem {
     
     this.showFocusFrame(eye);
     
-    // Only log focus changes, not every frame
-    const focusKey = `${eye.actorName}-${eye.eyeSide}-${eye.distanceFromCamera.toFixed(2)}`;
+    // Only log focus changes when distance shifts by more than 0.5m
+    const focusKey = `${eye.actorName}-${eye.eyeSide}-${Math.round(eye.distanceFromCamera)}`;
     if (this.lastLoggedFocus !== focusKey) {
-      console.log(`[AutoFocusSystem] Focus target set: ${eye.actorName} ${eye.eyeSide} eye at ${eye.distanceFromCamera.toFixed(2)}m`);
+      console.log(`[AutoFocusSystem] Focus target set: ${eye.actorName} ${eye.eyeSide} eye at ${eye.distanceFromCamera.toFixed(1)}m`);
       this.lastLoggedFocus = focusKey;
     }
   }
