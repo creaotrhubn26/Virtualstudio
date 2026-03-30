@@ -1506,6 +1506,258 @@ export const scenarioPresets: ScenarioPreset[] = [
       backdrops: ['backdrop-black', 'velvet-black']
     }
   },
+
+  // ─── Sports & Fitness ─────────────────────────────────────────────────────
+  {
+    id: 'sport-gym-dynamic',
+    navn: 'Sport - Gym Dynamisk',
+    kategori: 'portrett',
+    beskrivelse: 'Kraftig gymstudio-oppsett med hard dramatisk sidelys og bakgrunnsgradient. Perfekt for atleter og fitness-kampanjer.',
+    tags: ['sport', 'gym', 'fitness', 'atletisk', 'hard-lys', 'dramatisk'],
+    previewImage: '/images/presets/sport-gym-dynamic.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-2.5, 2.5, 1.0], rotation: [20, 50, 0], intensity: 1.4, cct: 5600, modifier: 'fresnel' },
+        { type: 'rim-light', position: [2.5, 2.5, -0.5], rotation: [15, -130, 0], intensity: 0.8, cct: 6200, modifier: 'snoot' },
+        { type: 'background-light', position: [-1.5, 1.0, -3.5], rotation: [0, 30, 0], intensity: 0.5, cct: 4200, color: '#ccddff' }
+      ],
+      backdrop: { type: 'seamless', color: '#1a1a2a' },
+      camera: { position: [0, 1.4, 4.0], target: [0, 1.2, 0], focalLength: 50 }
+    },
+    recommendedAssets: {
+      lights: ['aputure-300d', 'godox-sk400ii', 'nanlite-forza-60b'],
+      modifiers: ['fresnel', 'snoot'],
+      backdrops: ['seamless-graphite', 'backdrop-black']
+    }
+  },
+  {
+    id: 'sport-aktiv-utendors',
+    navn: 'Sport - Aktiv Utendørs',
+    kategori: 'portrett',
+    beskrivelse: 'Simulert utendørs sportslys med sterk overhead-sol og subtil reflektorfill. Grønn miljøbakgrunn.',
+    tags: ['sport', 'utendørs', 'naturlig', 'aktiv', 'lys-sol', 'livsstil'],
+    previewImage: '/images/presets/sport-aktiv-utendors.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [1.5, 4.0, 1.0], rotation: [-70, -25, 0], intensity: 1.6, cct: 6500, modifier: 'fresnel' },
+        { type: 'fill-light', position: [0, 0.5, 2.5], rotation: [20, 180, 0], intensity: 0.5, cct: 7000, modifier: 'reflector-silver' }
+      ],
+      backdrop: { type: 'environment', id: 'env-garden-blurred' },
+      camera: { position: [0, 1.5, 4.0], target: [0, 1.3, 0], focalLength: 70 }
+    },
+    recommendedAssets: {
+      lights: ['aputure-ls600x', 'godox-ad600-pro'],
+      modifiers: ['fresnel', 'reflector-silver'],
+      backdrops: ['env-garden-blurred', 'env-beach-golden', 'env-mountain-peak']
+    }
+  },
+
+  // ─── Music & Performing Arts ──────────────────────────────────────────────
+  {
+    id: 'musikk-band-scene',
+    navn: 'Musikk - Bandscene',
+    kategori: 'portrett',
+    beskrivelse: 'Konsertatmosfære med fargerike bakgrunnslys, røk og dramatisk sidelys. Perfekt for band og musikere.',
+    tags: ['musikk', 'band', 'scene', 'konsert', 'røk', 'dramatisk', 'farger'],
+    previewImage: '/images/presets/musikk-band-scene.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-2.0, 3.5, 1.5], rotation: [30, 40, 0], intensity: 1.0, cct: 5600, modifier: 'fresnel' },
+        { type: 'background-light', position: [-2, 2.5, -3], rotation: [0, 30, 0], intensity: 1.0, cct: 5600, color: '#2200cc' },
+        { type: 'background-light', position: [2, 2.5, -3], rotation: [0, -30, 0], intensity: 1.0, cct: 5600, color: '#cc0022' },
+        { type: 'rim-light', position: [0, 4.5, -1.0], rotation: [-70, 0, 0], intensity: 0.8, cct: 6000, color: '#ffffff' }
+      ],
+      backdrop: { type: 'seamless', color: '#0a0a0a' },
+      camera: { position: [0, 1.5, 4.0], target: [0, 1.4, 0], focalLength: 35 }
+    },
+    recommendedAssets: {
+      lights: ['aputure-300d', 'godox-ad600-pro', 'nanlite-pavotube-60c'],
+      modifiers: ['fresnel', 'snoot'],
+      backdrops: ['backdrop-black', 'env-music-studio']
+    }
+  },
+  {
+    id: 'musikk-studio-portrett',
+    navn: 'Musikk - Studio Portrett',
+    kategori: 'portrett',
+    beskrivelse: 'Intim musikerstudio-portrett med mykt tungstenlys og varme toner. Akustisk atmosfære.',
+    tags: ['musikk', 'studio', 'portrett', 'intim', 'varm', 'innspilling'],
+    previewImage: '/images/presets/musikk-studio-portrett.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-1.5, 2.2, 1.5], rotation: [20, 40, 0], intensity: 0.8, cct: 3200, modifier: 'octabox-90' },
+        { type: 'fill-light', position: [2.0, 1.5, 1.0], rotation: [5, -40, 0], intensity: 0.3, cct: 3400, modifier: 'reflector-gold' },
+        { type: 'practical', position: [1.5, 2.0, -0.5], rotation: [0, -90, 0], intensity: 0.6, cct: 3000 }
+      ],
+      backdrop: { type: 'environment', id: 'env-music-studio' },
+      camera: { position: [0, 1.5, 3.5], target: [0, 1.45, 0], focalLength: 85 }
+    },
+    recommendedAssets: {
+      lights: ['godox-sl150iii', 'aputure-120d', 'profoto-b10'],
+      modifiers: ['octabox-90', 'reflector-gold'],
+      backdrops: ['env-music-studio', 'seamless-slate']
+    }
+  },
+
+  // ─── Content Creator / Social Media ──────────────────────────────────────
+  {
+    id: 'content-creator-desk',
+    navn: 'Content Creator - Skrivebordsoppsett',
+    kategori: 'portrett',
+    beskrivelse: 'YouTuber/streamer desk-oppsett med myk ring-light key, farget bakgrunnsbelysning og skjermglo. Moderne creator-estetikk.',
+    tags: ['youtube', 'streaming', 'content', 'creator', 'desk', 'ring-lys', 'social-media'],
+    previewImage: '/images/presets/content-creator-desk.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [0, 1.8, 2.5], rotation: [0, 180, 0], intensity: 0.9, cct: 5600, modifier: 'ring-flash' },
+        { type: 'background-light', position: [0, 1.5, -3.5], rotation: [0, 0, 0], intensity: 0.6, cct: 5600, color: '#2244ee' },
+        { type: 'fill-light', position: [-2.0, 1.2, 1.0], rotation: [5, 60, 0], intensity: 0.4, cct: 6200, color: '#aaccff' }
+      ],
+      backdrop: { type: 'seamless', color: '#111122' },
+      camera: { position: [0, 1.55, 3.5], target: [0, 1.55, 0], focalLength: 50 }
+    },
+    recommendedAssets: {
+      lights: ['nanlite-halo-26', 'godox-rl-60', 'nanlite-pavotube-15c'],
+      modifiers: ['ring-flash'],
+      backdrops: ['seamless-graphite', 'seamless-cobalt', 'backdrop-black']
+    }
+  },
+  {
+    id: 'content-creator-bokeh',
+    navn: 'Content Creator - Bokeh Hjem',
+    kategori: 'portrett',
+    beskrivelse: 'Hjemlig estetikk med uskarp lysbokeh-bakgrunn, varm key og naturlig livsstilsstemning. Instagram og TikTok-stil.',
+    tags: ['instagram', 'tiktok', 'livsstil', 'bokeh', 'hjemlig', 'sosiale-medier'],
+    previewImage: '/images/presets/content-creator-bokeh.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-1.5, 2.0, 1.5], rotation: [15, 35, 0], intensity: 1.0, cct: 4500, modifier: 'octabox-60' },
+        { type: 'fill-light', position: [1.5, 1.5, 1.0], rotation: [5, -40, 0], intensity: 0.5, cct: 4500, modifier: 'reflector-white' },
+        { type: 'background-light', position: [0, 1.5, -3.5], rotation: [0, 0, 0], intensity: 0.7, cct: 2800, color: '#ffddaa' }
+      ],
+      backdrop: { type: 'environment', id: 'env-loft-interior' },
+      camera: { position: [0, 1.55, 3.5], target: [0, 1.55, 0], focalLength: 85 }
+    },
+    recommendedAssets: {
+      lights: ['godox-sl150iii', 'aputure-mc-pro', 'nanlite-forza-60b'],
+      modifiers: ['octabox-60', 'reflector-white'],
+      backdrops: ['env-loft-interior', 'env-library-books']
+    }
+  },
+
+  // ─── Food & Lifestyle Photography ─────────────────────────────────────────
+  {
+    id: 'mat-overhead',
+    navn: 'Mat - Overhead Flat Lay',
+    kategori: 'portrett',
+    beskrivelse: 'Ovenfra-ned flat lay med stor overhead softboks. Diffust og jevnt lys for matstilsetting og flat lay-komposisjoner.',
+    tags: ['mat', 'flat-lay', 'overhead', 'matstyling', 'food', 'jevnt-lys'],
+    previewImage: '/images/presets/mat-overhead.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [0, 3.5, 0.5], rotation: [-85, 0, 0], intensity: 1.2, cct: 5500, modifier: 'large-octabox' },
+        { type: 'fill-light', position: [-2.0, 1.5, 0.5], rotation: [5, 50, 0], intensity: 0.4, cct: 5500, modifier: 'foam-core-white' }
+      ],
+      backdrop: { type: 'seamless', color: '#f2ece4' },
+      camera: { position: [0, 3.5, 0.1], target: [0, 0, 0], focalLength: 50 }
+    },
+    recommendedAssets: {
+      lights: ['arri-skypanel-s30', 'godox-sl150iii'],
+      modifiers: ['large-octabox', 'foam-core-white'],
+      backdrops: ['backdrop-natural-linen', 'seamless-warm-sand']
+    }
+  },
+  {
+    id: 'mat-vindusside',
+    navn: 'Mat - Vindusside (Naturlig Lys)',
+    kategori: 'portrett',
+    beskrivelse: 'Naturlig sidefenster-oppsett for mat og kaffe-estetikk. Enkelt og stemningsfullt dagslys med speilreflektor på motsatt side.',
+    tags: ['mat', 'naturlig-lys', 'vindu', 'kaffe', 'hjem', 'livsstil'],
+    previewImage: '/images/presets/mat-vindusside.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-3.0, 2.0, 0.5], rotation: [5, 90, 0], intensity: 1.0, cct: 6200, modifier: 'window-daylight' },
+        { type: 'fill-light', position: [2.5, 1.5, 0.5], rotation: [0, -90, 0], intensity: 0.45, cct: 6200, modifier: 'foam-core-white' }
+      ],
+      backdrop: { type: 'environment', id: 'env-kitchen-studio' },
+      camera: { position: [0, 1.0, 2.5], target: [0, 0.2, 0], focalLength: 70 }
+    },
+    recommendedAssets: {
+      lights: ['window-daylight', 'aputure-mc-pro'],
+      modifiers: ['foam-core-white', 'reflector-silver'],
+      backdrops: ['env-kitchen-studio', 'backdrop-natural-linen']
+    }
+  },
+
+  // ─── Sci-Fi / Futuristic ──────────────────────────────────────────────────
+  {
+    id: 'scifi-cyberpunk',
+    navn: 'Sci-Fi - Cyberpunk Neon',
+    kategori: 'portrett',
+    beskrivelse: 'Neon cyberpunk-oppsett med harsh lilla, blå og grønn gel-belysning. RGB tube-lys og hård skygge for futuristisk sci-fi estetikk.',
+    tags: ['sci-fi', 'cyberpunk', 'neon', 'rgb', 'futuristisk', 'lilla', 'blå', 'grønn'],
+    previewImage: '/images/presets/scifi-cyberpunk.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-2.5, 2.5, 1.5], rotation: [20, 45, 0], intensity: 1.0, cct: 5600, color: '#8800ff', modifier: 'fresnel' },
+        { type: 'rim-light', position: [2.5, 2.5, -0.5], rotation: [10, -130, 0], intensity: 1.2, cct: 5600, color: '#00ffcc' },
+        { type: 'background-light', position: [-1.5, 1.0, -3.0], rotation: [0, 30, 0], intensity: 0.9, cct: 5600, color: '#0033ff' },
+        { type: 'practical', position: [1.5, 1.5, 0.0], rotation: [0, -90, 0], intensity: 0.7, cct: 5600, color: '#ff0066' }
+      ],
+      backdrop: { type: 'environment', id: 'env-neon-city' },
+      camera: { position: [0, 1.6, 4.0], target: [0, 1.5, 0], focalLength: 35 }
+    },
+    recommendedAssets: {
+      lights: ['nanlite-pavotube-60c', 'aputure-mc-pro', 'godox-sz150r'],
+      modifiers: ['fresnel'],
+      backdrops: ['env-neon-city', 'backdrop-black', 'velvet-black']
+    }
+  },
+  {
+    id: 'scifi-space-portrait',
+    navn: 'Sci-Fi - Romoppdrag',
+    kategori: 'portrett',
+    beskrivelse: 'Kaldt og isolert romstasjon-portrett med enkelt hardt sidelys mot mørk bakgrunn. Enkelt, men intenst.',
+    tags: ['sci-fi', 'rom', 'astronaut', 'kald', 'mørk', 'dramatisk', 'isolert'],
+    previewImage: '/images/presets/scifi-space-portrait.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-3.0, 2.0, 0.5], rotation: [10, 80, 0], intensity: 1.2, cct: 7500, modifier: 'fresnel' },
+        { type: 'rim-light', position: [0, 3.0, -2.0], rotation: [-40, 0, 0], intensity: 0.3, cct: 7000, color: '#aaccff' }
+      ],
+      backdrop: { type: 'seamless', color: '#040408' },
+      camera: { position: [0, 1.65, 4.0], target: [0, 1.6, 0], focalLength: 85 }
+    },
+    recommendedAssets: {
+      lights: ['aputure-300d', 'godox-sk400ii'],
+      modifiers: ['fresnel'],
+      backdrops: ['backdrop-black', 'seamless-graphite']
+    }
+  },
+
+  // ─── Automotive ───────────────────────────────────────────────────────────
+  {
+    id: 'automotive-showroom',
+    navn: 'Automotive - Bilforretning',
+    kategori: 'portrett',
+    beskrivelse: 'Luksuriøst bil showroom-oppsett med store overhead bank-lights, refleksjonsgolv og spot. Inspirert av premium automotive reklame.',
+    tags: ['automotive', 'bil', 'showroom', 'luksus', 'refleksjon', 'spot'],
+    previewImage: '/images/presets/automotive-showroom.png',
+    sceneConfig: {
+      lights: [
+        { type: 'key-light', position: [-3.0, 4.0, 2.0], rotation: [-50, 40, 0], intensity: 1.2, cct: 5600, modifier: 'large-octabox' },
+        { type: 'key-light', position: [3.0, 4.0, 2.0], rotation: [-50, -40, 0], intensity: 1.0, cct: 5600, modifier: 'large-octabox' },
+        { type: 'background-light', position: [0, 1.5, -3.5], rotation: [0, 0, 0], intensity: 0.6, cct: 4500, color: '#eef8ff' }
+      ],
+      backdrop: { type: 'environment', id: 'env-car-showroom' },
+      camera: { position: [3.0, 1.2, 4.0], target: [0, 0.6, 0], focalLength: 35 }
+    },
+    recommendedAssets: {
+      lights: ['arri-skypanel-s30', 'aputure-ls600x'],
+      modifiers: ['large-octabox', 'stripbox-60x90'],
+      backdrops: ['env-car-showroom', 'env-garage-workshop']
+    }
+  },
   {
     id: 'bryllup-utendors',
     navn: 'Bryllup - Utendørs Gyllen Time',
