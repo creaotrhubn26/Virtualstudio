@@ -10799,6 +10799,22 @@ class VirtualStudio {
     }) as EventListener);
 
     // ── Posing Mode Panel events ───────────────────────────────────────────
+    // When the panel requests character info (on open), broadcast it back
+    window.addEventListener('ch-posing-request-info', (async () => {
+      const mesh = this.getPosingTargetMesh();
+      if (!mesh) {
+        window.dispatchEvent(new CustomEvent('ch-posing-character-info', {
+          detail: { available: false, modelLabel: null }
+        }));
+        return;
+      }
+      const hasSkeleton = !!this.findSkeletonCarrierMesh(mesh)?.skeleton;
+      const modelLabel = this.characterModelId || mesh.name || 'Karakter';
+      window.dispatchEvent(new CustomEvent('ch-posing-character-info', {
+        detail: { available: hasSkeleton, modelLabel, meshName: mesh.name }
+      }));
+    }) as EventListener);
+
     window.addEventListener('ch-rotate-bone', ((e: CustomEvent) => {
       const { boneName, rotation } = e.detail as { boneName: string; rotation: { x: number; y: number; z: number } };
       if (!boneName || !rotation) return;
@@ -10806,10 +10822,9 @@ class VirtualStudio {
     }) as EventListener);
 
     window.addEventListener('ch-pose-reset-all', (async () => {
-      const mesh = this.getPrimaryCharacterMesh();
-      if (!mesh) return;
-      const rigId = await this.ensureRigRegisteredForMesh(mesh, this.characterModelId || mesh.name || 'Character');
-      if (!rigId) return;
+      const result = await this.acquirePosingRig();
+      if (!result) return;
+      const { mesh, rigId } = result;
       const store = useSkeletalAnimationStore.getState();
       this.forceStopCharacterAnimations(mesh, rigId);
       store.resetAllBones(rigId);
@@ -10819,30 +10834,24 @@ class VirtualStudio {
     }) as EventListener);
 
     window.addEventListener('ch-pose-t-pose', (async () => {
-      const tPosePreset = this.getPosePresetByIdOrName('portrait_classic_stand') || ALL_POSES[0];
-      if (tPosePreset) {
-        // For T-pose just reset all bones
-        const mesh = this.getPrimaryCharacterMesh();
-        if (!mesh) return;
-        const rigId = await this.ensureRigRegisteredForMesh(mesh, this.characterModelId || mesh.name || 'Character');
-        if (!rigId) return;
-        const store = useSkeletalAnimationStore.getState();
-        this.forceStopCharacterAnimations(mesh, rigId);
-        store.resetAllBones(rigId);
-        // T-pose: arms horizontal
-        store.setBoneRotation(rigId, 'leftUpperArm',  { x: 0, y: 0, z: -Math.PI / 2 });
-        store.setBoneRotation(rigId, 'rightUpperArm', { x: 0, y: 0, z:  Math.PI / 2 });
-        this.characterKeyboardState.poseLocked = true;
-        this.characterKeyboardState.locomotionMode = 'pose';
-        console.log('[PosingMode] T-pose applied');
-      }
+      const result = await this.acquirePosingRig();
+      if (!result) return;
+      const { mesh, rigId } = result;
+      const store = useSkeletalAnimationStore.getState();
+      this.forceStopCharacterAnimations(mesh, rigId);
+      store.resetAllBones(rigId);
+      // T-pose: arms fully horizontal
+      store.setBoneRotation(rigId, 'leftUpperArm',  { x: 0, y: 0, z: -Math.PI / 2 });
+      store.setBoneRotation(rigId, 'rightUpperArm', { x: 0, y: 0, z:  Math.PI / 2 });
+      this.characterKeyboardState.poseLocked = true;
+      this.characterKeyboardState.locomotionMode = 'pose';
+      console.log('[PosingMode] T-pose applied');
     }) as EventListener);
 
     window.addEventListener('ch-pose-a-pose', (async () => {
-      const mesh = this.getPrimaryCharacterMesh();
-      if (!mesh) return;
-      const rigId = await this.ensureRigRegisteredForMesh(mesh, this.characterModelId || mesh.name || 'Character');
-      if (!rigId) return;
+      const result = await this.acquirePosingRig();
+      if (!result) return;
+      const { mesh, rigId } = result;
       const store = useSkeletalAnimationStore.getState();
       this.forceStopCharacterAnimations(mesh, rigId);
       store.resetAllBones(rigId);
@@ -10855,14 +10864,13 @@ class VirtualStudio {
     }) as EventListener);
 
     window.addEventListener('ch-pose-neutral', (async () => {
-      const mesh = this.getPrimaryCharacterMesh();
-      if (!mesh) return;
-      const rigId = await this.ensureRigRegisteredForMesh(mesh, this.characterModelId || mesh.name || 'Character');
-      if (!rigId) return;
+      const result = await this.acquirePosingRig();
+      if (!result) return;
+      const { mesh, rigId } = result;
       const store = useSkeletalAnimationStore.getState();
       this.forceStopCharacterAnimations(mesh, rigId);
       store.resetAllBones(rigId);
-      // Neutral stance
+      // Neutral relaxed stance
       store.setBoneRotation(rigId, 'leftUpperArm',  { x: 0,    y: 0,     z: -0.26 });
       store.setBoneRotation(rigId, 'rightUpperArm', { x: 0,    y: 0,     z:  0.26 });
       store.setBoneRotation(rigId, 'leftLowerArm',  { x: 0,    y: 0.17,  z: 0    });
@@ -15235,32 +15243,76 @@ class VirtualStudio {
     return null;
   }
 
-  /** Apply a single bone rotation coming from the Posing Mode Panel */
-  private async applyManualBoneRotation(
-    boneName: string,
-    rotation: { x: number; y: number; z: number },
-  ): Promise<void> {
-    const mesh = this.getPrimaryCharacterMesh();
-    if (!mesh) {
-      console.warn('[PosingMode] No character mesh found for bone rotation');
-      return;
+  /**
+   * Return the best mesh to target for posing.
+   * Priority: selectedStoryRigId → selectedActorId → getPrimaryCharacterMesh()
+   */
+  private getPosingTargetMesh(): BABYLON.AbstractMesh | null {
+    // Story scene: prefer the actively selected story character
+    if (this.selectedStoryRigId) {
+      const entry = this.storyCharacters.get(this.selectedStoryRigId);
+      if (entry && !entry.mesh.isDisposed()) {
+        return this.resolveControllableCharacterMesh(entry.mesh) ?? entry.mesh;
+      }
     }
+    // Single-character mode via actor panel selection
+    if (this.selectedActorId) {
+      const actorMesh = this.resolveMeshForNodeId(this.selectedActorId);
+      if (actorMesh && !actorMesh.isDisposed() && this.isLikelyCharacterMesh(actorMesh)) {
+        return this.resolveControllableCharacterMesh(actorMesh) ?? actorMesh;
+      }
+    }
+    // Generic fallback
+    return this.getPrimaryCharacterMesh();
+  }
+
+  /**
+   * Acquire a rig for a mesh and return { mesh, rigId, modelLabel } or null on failure.
+   * Shows a notification and dispatches `ch-posing-no-skeleton` if no skeleton exists.
+   */
+  private async acquirePosingRig(): Promise<{ mesh: BABYLON.AbstractMesh; rigId: string; modelLabel: string } | null> {
+    const mesh = this.getPosingTargetMesh();
+    if (!mesh) {
+      this.showNotification('Ingen karakter funnet i scenen', 'warning');
+      window.dispatchEvent(new CustomEvent('ch-posing-no-skeleton', { detail: { reason: 'no-mesh' } }));
+      return null;
+    }
+    const modelLabel = this.characterModelId || mesh.name || 'Karakter';
     const rigId = await this.ensureRigRegisteredForMesh(
       mesh,
-      this.characterModelId || mesh.name || 'Character',
+      modelLabel,
       this.getAnimationGroupsForMesh(mesh) ?? undefined,
     );
     if (!rigId) {
-      console.warn('[PosingMode] Rig not found for mesh');
-      return;
+      this.showNotification(`Ingen rigg/skeleton funnet for "${modelLabel}"`, 'warning');
+      window.dispatchEvent(new CustomEvent('ch-posing-no-skeleton', { detail: { reason: 'no-skeleton', modelLabel } }));
+      return null;
     }
-    const store = useSkeletalAnimationStore.getState();
-    // Stop animations so pose is not overridden
+    return { mesh, rigId, modelLabel };
+  }
+
+  /**
+   * Enter pose-lock mode (stops locomotion animations so manual poses hold).
+   * Idempotent — safe to call repeatedly.
+   */
+  private enterPosingLockMode(mesh: BABYLON.AbstractMesh, rigId: string): void {
     if (!this.characterKeyboardState.poseLocked) {
       this.forceStopCharacterAnimations(mesh, rigId);
       this.characterKeyboardState.poseLocked = true;
       this.characterKeyboardState.locomotionMode = 'pose';
     }
+  }
+
+  /** Apply a single bone rotation coming from the Posing Mode Panel */
+  private async applyManualBoneRotation(
+    boneName: string,
+    rotation: { x: number; y: number; z: number },
+  ): Promise<void> {
+    const result = await this.acquirePosingRig();
+    if (!result) return;
+    const { mesh, rigId } = result;
+    const store = useSkeletalAnimationStore.getState();
+    this.enterPosingLockMode(mesh, rigId);
     store.setBoneRotation(rigId, boneName, rotation);
     console.log(`[PosingMode] ${boneName} → x:${rotation.x.toFixed(2)} y:${rotation.y.toFixed(2)} z:${rotation.z.toFixed(2)}`);
   }

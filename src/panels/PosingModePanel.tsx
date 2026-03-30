@@ -243,14 +243,46 @@ export const PosingModePanel: React.FC = () => {
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
 
+  const [charLabel, setCharLabel] = useState<string | null>(null);
+  const [skeletonAvailable, setSkeletonAvailable] = useState<boolean | null>(null);
+
   // Listen for the POSERING button toggle
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail as { enabled?: boolean } | undefined;
-      setVisible(detail?.enabled ?? false);
+      const nowEnabled = detail?.enabled ?? false;
+      setVisible(nowEnabled);
+      if (nowEnabled) {
+        // Reset info state then ask main.ts which character is targeted
+        setCharLabel(null);
+        setSkeletonAvailable(null);
+        window.dispatchEvent(new CustomEvent('ch-posing-request-info'));
+      }
     };
     window.addEventListener('ch-posing-mode', handler);
     return () => window.removeEventListener('ch-posing-mode', handler);
+  }, []);
+
+  // Receive character info from main.ts
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { available: boolean; modelLabel: string | null };
+      setSkeletonAvailable(detail.available);
+      setCharLabel(detail.modelLabel);
+    };
+    window.addEventListener('ch-posing-character-info', handler);
+    return () => window.removeEventListener('ch-posing-character-info', handler);
+  }, []);
+
+  // Receive no-skeleton error feedback
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { reason: string; modelLabel?: string };
+      setSkeletonAvailable(false);
+      if (detail.modelLabel) setCharLabel(detail.modelLabel);
+    };
+    window.addEventListener('ch-posing-no-skeleton', handler);
+    return () => window.removeEventListener('ch-posing-no-skeleton', handler);
   }, []);
 
   if (!visible) return null;
@@ -383,9 +415,43 @@ export const PosingModePanel: React.FC = () => {
             </IconButton>
           </Tooltip>
         </Box>
+
+        {/* Active character indicator */}
+        {charLabel && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.5 }}>
+            <Box
+              sx={{
+                width: 7, height: 7, borderRadius: '50%',
+                bgcolor: skeletonAvailable === false ? '#ef5350' : skeletonAvailable ? '#66bb6a' : '#ffa726',
+                flexShrink: 0,
+              }}
+            />
+            <Typography variant="caption" sx={{ color: '#aaa', lineHeight: 1.3 }} noWrap>
+              {charLabel}
+            </Typography>
+          </Box>
+        )}
+
+        {/* No-skeleton / no-character warning */}
+        {skeletonAvailable === false && (
+          <Box sx={{ mt: 0.75, px: 1, py: 0.5, bgcolor: 'rgba(239,83,80,0.1)', borderRadius: 1, border: '1px solid rgba(239,83,80,0.3)' }}>
+            <Typography variant="caption" sx={{ color: '#ef9a9a', display: 'block' }}>
+              {charLabel
+                ? `"${charLabel}" har ingen rigg/skeleton. Last inn en humanoid-karakter (Mixamo, ReadyPlayerMe, SAM) for å bruke posering.`
+                : 'Ingen karakter funnet i scenen. Last inn en humanoid-karakter for å bruke posering.'}
+            </Typography>
+          </Box>
+        )}
+
+        {skeletonAvailable === null && visible && (
+          <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 0.5 }}>
+            Laster karakterinfo…
+          </Typography>
+        )}
+
         {helpOpen && (
           <Typography variant="caption" sx={{ color: '#888', display: 'block', mt: 0.5 }}>
-            Klikk på et ledd i diagrammet for å velge det. Bruk sliderene nedenfor for å rotere. Bruk forhåndsinnstilte poser eller nullstill alle ledd.
+            Klikk på et ledd i diagrammet for å velge det. Bruk sliderene nedenfor for å rotere. Virker på alle humanoid avatarer (Mixamo, ReadyPlayerMe, egne modeller).
           </Typography>
         )}
       </Box>
