@@ -17157,11 +17157,14 @@ class VirtualStudio {
       }
       
       // SAM 3D Body exports are upside-down → need Math.PI X-flip.
-      // Tripo / realistic models are already right-side-up → no flip.
-      // Cesium Man is rigged and already correct → no flip.
+      // Ready Player Me, Tripo, Cesium and other Y-up models are already correct.
       const isSamModel = /\/avatar_\w+\.glb(\?.*)?$/.test(modelUrl);
+      const isRpmModel = /models\.readyplayer\.me|api\.readyplayer\.me|readyplayer\.me.*\.glb/i.test(modelUrl);
       const preserveOriginalMaterials = !isSamModel;
       this.characterMesh.rotation = new BABYLON.Vector3(isSamModel ? Math.PI : 0, 0, 0);
+      if (isRpmModel) {
+        console.log('[loadCharacterModel] Ready Player Me avatar detected — preserving PBR materials');
+      }
       
       // Position mesh on ground using the helper function (after rotation so bounds are correct)
       const storyPos = options?.position;
@@ -17361,6 +17364,11 @@ class VirtualStudio {
     store.addNode(newNode);
     store.selectNode(modelId);
     this.characterModelId = modelId;
+
+    // Notify UI that a character has been loaded — lets panels refresh character info
+    window.dispatchEvent(new CustomEvent('ch-character-loaded', {
+      detail: { modelId, name, modelUrl, isRpmModel: /models\.readyplayer\.me|api\.readyplayer\.me|readyplayer\.me.*\.glb/i.test(modelUrl) },
+    }));
 
     if (this.characterMesh) {
       await this.ensureRigRegisteredForMesh(this.characterMesh, name, importedAnimationGroups);

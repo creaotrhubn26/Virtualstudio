@@ -285,6 +285,18 @@ export const PosingModePanel: React.FC = () => {
     return () => window.removeEventListener('ch-posing-no-skeleton', handler);
   }, []);
 
+  // Auto-refresh character info when a new model is loaded while panel is open
+  useEffect(() => {
+    const handler = () => {
+      if (visible) {
+        // Small delay to allow rig registration to complete
+        setTimeout(() => window.dispatchEvent(new CustomEvent('ch-posing-request-info')), 500);
+      }
+    };
+    window.addEventListener('ch-character-loaded', handler);
+    return () => window.removeEventListener('ch-character-loaded', handler);
+  }, [visible]);
+
   if (!visible) return null;
 
   const getRotation = (boneId: string) => boneRotations[boneId] ?? DEFAULT_ROT;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   Box,
   Paper,
@@ -14,8 +14,12 @@ import {
   TextField,
   InputAdornment,
   useMediaQuery,
+  CircularProgress,
+  Alert,
+  Divider,
+  Tooltip,
 } from '@mui/material';
-import { Person, Delete, Refresh, Add, Search, Male, Female, ChildCare, Face, BusinessCenter, Checkroom, Accessibility } from '@mui/icons-material';
+import { Person, Delete, Refresh, Add, Search, Male, Female, ChildCare, Face, BusinessCenter, Checkroom, Accessibility, Link as LinkIcon, OpenInNew, CheckCircle, ContentCopy, PersonAdd } from '@mui/icons-material';
 import { logger } from '../core/services/logger';
 import { ALL_POSES } from '../core/animation/PoseLibrary';
 import type { PosePreset } from '../core/animation/PoseLibrary';
@@ -271,6 +275,46 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
   const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female' | 'neutral'>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'portrett' | 'mote' | 'bryllup' | 'naringsliv'>('all');
 
+  // ── Ready Player Me state ──────────────────────────────────────────────────
+  const [rpmUrl, setRpmUrl] = useState('');
+  const [rpmAvatarUrl, setRpmAvatarUrl] = useState<string | null>(null);
+  const [rpmLoading, setRpmLoading] = useState(false);
+  const [rpmStatus, setRpmStatus] = useState<'idle' | 'received' | 'loaded' | 'error'>('idle');
+  const [rpmCopied, setRpmCopied] = useState(false);
+  const rpmIframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Listen for Ready Player Me avatar URL from the iframe
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (
+        typeof event.data === 'string' &&
+        (event.data.includes('readyplayer.me') || event.data.endsWith('.glb'))
+      ) {
+        const url = event.data;
+        if (url.startsWith('https://') && url.endsWith('.glb')) {
+          setRpmAvatarUrl(url);
+          setRpmUrl(url);
+          setRpmStatus('received');
+          log.info('Ready Player Me avatar URL received:', url);
+        }
+      }
+      // Also handle the frameApi JSON format
+      if (event.data && typeof event.data === 'object' && event.data.source === 'readyplayerme') {
+        if (event.data.eventName === 'v1.avatar.exported') {
+          const url = event.data.data?.url as string | undefined;
+          if (url) {
+            setRpmAvatarUrl(url);
+            setRpmUrl(url);
+            setRpmStatus('received');
+            log.info('Ready Player Me avatar exported:', url);
+          }
+        }
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
   const filteredModels = useMemo(() => {
     return CHARACTER_MODELS.filter((model) => {
       const matchesSearch = searchQuery === '' || 
@@ -326,6 +370,60 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
     }));
     log.debug(`Applied pose: ${pose.name}`);
   }, []);
+
+  // ── Ready Player Me helpers ────────────────────────────────────────────────
+  const isValidRpmUrl = useCallback((url: string) => {
+    return url.trim().startsWith('https://') && url.trim().endsWith('.glb');
+  }, []);
+
+  const loadRpmCharacter = useCallback(async (urlOverride?: string) => {
+    const url = (urlOverride ?? rpmUrl).trim();
+    if (!isValidRpmUrl(url)) {
+      setRpmStatus('error');
+      return;
+    }
+    // Append quality params if not already present
+    const finalUrl = (() => {
+      try {
+        const u = new URL(url);
+        if (!u.searchParams.has('morphTargets')) u.searchParams.set('morphTargets', 'ARKit,Oculus Visemes');
+        if (!u.searchParams.has('textureSizeLimit')) u.searchParams.set('textureSizeLimit', '1024');
+        if (!u.searchParams.has('lod')) u.searchParams.set('lod', '0');
+        return u.toString();
+      } catch {
+        return url;
+      }
+    })();
+    setRpmLoading(true);
+    setRpmStatus('idle');
+    try {
+      window.dispatchEvent(new CustomEvent('ch-load-character', {
+        detail: {
+          modelUrl: finalUrl,
+          name: 'Ready Player Me',
+          skinTone: '#F5CBA7',
+          height: 1.0,
+          tints: null,
+        },
+      }));
+      setRpmStatus('loaded');
+      setRpmAvatarUrl(finalUrl);
+      log.info('RPM avatar dispatched for load:', finalUrl);
+    } catch (err) {
+      setRpmStatus('error');
+      log.error('Failed to load RPM avatar:', err);
+    } finally {
+      setRpmLoading(false);
+    }
+  }, [rpmUrl, isValidRpmUrl]);
+
+  const copyRpmUrl = useCallback(() => {
+    if (rpmAvatarUrl) {
+      navigator.clipboard.writeText(rpmAvatarUrl).catch(() => console.warn('clipboard unavailable'));
+      setRpmCopied(true);
+      setTimeout(() => setRpmCopied(false), 2000);
+    }
+  }, [rpmAvatarUrl]);
 
   return (
     <Paper elevation={0} sx={{ p: 2, backgroundColor: 'transparent', color: '#fff' }}>
@@ -405,6 +503,15 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
         <Tab label="Modeller" sx={{ minHeight: shouldUseTabletMode ? 48 : 36, py: shouldUseTabletMode ? 1 : 0, fontSize: shouldUseTabletMode ? 14 : 12 }} />
         <Tab label="Poser" sx={{ minHeight: shouldUseTabletMode ? 48 : 36, py: shouldUseTabletMode ? 1 : 0, fontSize: shouldUseTabletMode ? 14 : 12 }} />
         <Tab label="Tilpass" sx={{ minHeight: shouldUseTabletMode ? 48 : 36, py: shouldUseTabletMode ? 1 : 0, fontSize: shouldUseTabletMode ? 14 : 12 }} />
+        <Tab
+          label="Ready Player Me"
+          sx={{
+            minHeight: shouldUseTabletMode ? 48 : 36,
+            py: shouldUseTabletMode ? 1 : 0,
+            fontSize: shouldUseTabletMode ? 14 : 12,
+            color: activeTab === 3 ? '#00d4ff !important' : undefined,
+          }}
+        />
       </Tabs>
 
       {activeTab === 0 && (
@@ -825,6 +932,187 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
           </Button>
         </Box>
       )}
+
+      {/* ── Ready Player Me tab ──────────────────────────────────────────────── */}
+      {activeTab === 3 && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+
+          {/* Brand header */}
+          <Box sx={{
+            display: 'flex', alignItems: 'center', gap: 1.5,
+            px: 1.5, py: 1, borderRadius: 2,
+            background: 'linear-gradient(135deg, rgba(0,212,255,0.12) 0%, rgba(0,153,204,0.12) 100%)',
+            border: '1px solid rgba(0,212,255,0.25)',
+          }}>
+            <PersonAdd sx={{ color: '#00d4ff', fontSize: 28 }} />
+            <Box>
+              <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: 14, lineHeight: 1.2 }}>
+                Ready Player Me
+              </Typography>
+              <Typography sx={{ color: '#888', fontSize: 11 }}>
+                Lag din 3D-avatar og last den inn i studioet
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Status banner when avatar received */}
+          {rpmStatus === 'received' && (
+            <Alert
+              severity="success"
+              icon={<CheckCircle fontSize="small" />}
+              sx={{ py: 0.5, bgcolor: 'rgba(102,187,106,0.1)', color: '#a5d6a7', border: '1px solid rgba(102,187,106,0.3)', '& .MuiAlert-icon': { color: '#66bb6a' } }}
+            >
+              Avatar-URL mottatt! Klikk «Last inn» for å legge til i scenen.
+            </Alert>
+          )}
+          {rpmStatus === 'loaded' && (
+            <Alert
+              severity="success"
+              icon={<CheckCircle fontSize="small" />}
+              sx={{ py: 0.5, bgcolor: 'rgba(102,187,106,0.1)', color: '#a5d6a7', border: '1px solid rgba(102,187,106,0.3)', '& .MuiAlert-icon': { color: '#66bb6a' } }}
+            >
+              Ready Player Me-avatar lastet inn i studioet!
+            </Alert>
+          )}
+          {rpmStatus === 'error' && (
+            <Alert
+              severity="error"
+              sx={{ py: 0.5, bgcolor: 'rgba(239,83,80,0.1)', color: '#ef9a9a', border: '1px solid rgba(239,83,80,0.3)', '& .MuiAlert-icon': { color: '#ef5350' } }}
+            >
+              Ugyldig URL. Sørg for at URL-en slutter på .glb
+            </Alert>
+          )}
+
+          {/* RPM iframe creator */}
+          <Box>
+            <Typography variant="caption" sx={{ color: '#666', textTransform: 'uppercase', letterSpacing: 1, mb: 0.5, display: 'block' }}>
+              Avatar-bygger
+            </Typography>
+            <Box sx={{
+              position: 'relative',
+              width: '100%',
+              height: 420,
+              borderRadius: 2,
+              overflow: 'hidden',
+              border: '1px solid #1e1e2e',
+              bgcolor: '#0a0a14',
+            }}>
+              <iframe
+                ref={rpmIframeRef}
+                src="https://demo.readyplayer.me/avatar?frameApi&clearCache"
+                title="Ready Player Me Avatar Creator"
+                allow="camera *; microphone *"
+                style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-downloads"
+              />
+            </Box>
+            <Typography variant="caption" sx={{ color: '#555', mt: 0.5, display: 'block' }}>
+              Lag avataren din i vinduet over. URL-en fylles inn automatisk.
+            </Typography>
+          </Box>
+
+          <Divider sx={{ borderColor: '#1e1e2e' }} />
+
+          {/* URL input */}
+          <Box>
+            <Typography variant="caption" sx={{ color: '#666', textTransform: 'uppercase', letterSpacing: 1, mb: 0.5, display: 'block' }}>
+              Lim inn avatar-URL
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="https://models.readyplayer.me/…glb"
+                value={rpmUrl}
+                onChange={(e) => {
+                  setRpmUrl(e.target.value);
+                  setRpmStatus('idle');
+                }}
+                onKeyDown={(e) => { if (e.key === 'Enter') void loadRpmCharacter(); }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <LinkIcon sx={{ fontSize: 16, color: '#444' }} />
+                    </InputAdornment>
+                  ),
+                  sx: { fontSize: 12, color: '#fff', bgcolor: '#0a0a14' },
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': { borderColor: '#1e1e2e' },
+                    '&:hover fieldset': { borderColor: '#00d4ff55' },
+                    '&.Mui-focused fieldset': { borderColor: '#00d4ff' },
+                  },
+                }}
+              />
+              {rpmAvatarUrl && (
+                <Tooltip title={rpmCopied ? 'Kopiert!' : 'Kopier URL'}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={copyRpmUrl}
+                    sx={{ minWidth: 36, px: 1, borderColor: '#1e1e2e', color: rpmCopied ? '#66bb6a' : '#666', flexShrink: 0 }}
+                  >
+                    <ContentCopy sx={{ fontSize: 16 }} />
+                  </Button>
+                </Tooltip>
+              )}
+            </Box>
+          </Box>
+
+          {/* Load button */}
+          <Button
+            variant="contained"
+            size="large"
+            fullWidth
+            disabled={!isValidRpmUrl(rpmUrl) || rpmLoading}
+            onClick={() => void loadRpmCharacter()}
+            startIcon={rpmLoading ? <CircularProgress size={16} color="inherit" /> : <PersonAdd />}
+            sx={{
+              bgcolor: '#00d4ff',
+              color: '#000',
+              fontWeight: 700,
+              '&:hover': { bgcolor: '#00b8d9' },
+              '&:disabled': { bgcolor: '#1a2a2e', color: '#444' },
+            }}
+          >
+            {rpmLoading ? 'Laster inn…' : 'Last inn avatar'}
+          </Button>
+
+          {/* How to get URL instructions */}
+          <Box sx={{ px: 1.5, py: 1, borderRadius: 2, bgcolor: '#0a0a14', border: '1px solid #1e1e2e' }}>
+            <Typography sx={{ color: '#888', fontSize: 11, fontWeight: 600, mb: 0.5 }}>
+              Slik får du avatar-URL-en:
+            </Typography>
+            {[
+              'Lag avataren din i bygger-vinduet over',
+              'Klikk «Next» og deretter «Done»',
+              'URL-en fylles inn automatisk — klikk «Last inn»',
+              'Alternativt: gå til readyplayer.me, last ned .glb og lim inn URL-en',
+            ].map((step, i) => (
+              <Typography key={i} sx={{ color: '#666', fontSize: 11, display: 'flex', gap: 0.75, mt: 0.25 }}>
+                <Box component="span" sx={{ color: '#00d4ff', fontWeight: 700, flexShrink: 0 }}>{i + 1}.</Box>
+                {step}
+              </Typography>
+            ))}
+          </Box>
+
+          {/* Open RPM in new tab */}
+          <Button
+            variant="text"
+            size="small"
+            endIcon={<OpenInNew sx={{ fontSize: 14 }} />}
+            href="https://readyplayer.me"
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{ color: '#555', fontSize: 11, alignSelf: 'center' }}
+          >
+            Åpne readyplayer.me i ny fane
+          </Button>
+
+        </Box>
+      )}
+
     </Paper>
   );
 };
