@@ -68,6 +68,22 @@ export const BACKDROP_DATABASE: BackdropSpec[] = [
   { id: 'popup-reflector-oval', name: 'Oval Pop-up Reflektor', category: 'reflektor', size: '60 x 90 cm', thumbnail: '/images/gear/equipment_vflat.png', description: 'Oval sammenleggbar reflektor — gull/sølv dobbeltside' },
   { id: 'diffuser-frame-120', name: 'Diffuser Ramme', category: 'diffuser', size: '120 x 120 cm', thumbnail: '/images/gear/equipment_diffuser_panel.png', description: 'Fast diffuserramme med uttrekkbar white diffuser' },
   { id: 'diffuser-silks', name: 'Diffuser Silks 1.5-stop', category: 'diffuser', size: '180 x 180 cm', thumbnail: '/images/gear/equipment_diffuser_panel.png', description: 'Filmdiffuser silks, 1.5-stop reduksjon — jevn myk kilde' },
+
+  // On-location environment backdrops
+  { id: 'env-brick-dark', name: 'Mørk Teglvegg', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Rå mørk teglvegg — urban, industriell og dramatisk atmosfære' },
+  { id: 'env-brick-red', name: 'Rød Teglvegg', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Klassisk rød tegl — varm og teksturert, urban loft-estetikk' },
+  { id: 'env-concrete-raw', name: 'Rå Betong', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Ubehandlet støpt betong — industriell estetikk, grå og teksturert' },
+  { id: 'env-concrete-smooth', name: 'Jevn Betong', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Polert betong — minimal og moderne arkitektonisk bakgrunn' },
+  { id: 'env-wood-dark', name: 'Mørk Treplanke', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Mørk treverk paneling — varm og organisk for interiørsett' },
+  { id: 'env-wood-light', name: 'Lys Treplanke', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Lys naturlig tre — skandinavisk stil, luftig og naturlig' },
+  { id: 'env-curtain-dark', name: 'Mørk Gardin', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Tunge mørke teaterdraperi — elegante filmsett og intervjuer' },
+  { id: 'env-curtain-velvet', name: 'Burgunder Velurdraperi', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Rike burgunder velurdraperi — luksuriøst og teatralsk' },
+  { id: 'env-window-city-night', name: 'Byutsikt Natt (Vindu)', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Panoramautsikt over bylandskap om natten — penthouse-estetikk' },
+  { id: 'env-window-city-day', name: 'Byutsikt Dag (Vindu)', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Dagslys med stor glassfasade mot urban skyline' },
+  { id: 'env-garden-blurred', name: 'Hage Bokeh Bakgrunn', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Uskarp hage/utendørs grønn bakgrunn — naturlig og frisk' },
+  { id: 'env-library-books', name: 'Bokhylle Bibliotek', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Bokhyller fylt med bøker — akademisk og intellektuell setting' },
+  { id: 'env-restaurant-interior', name: 'Restaurant Interiør', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Skummel restaurantatmosfære med bord, stolar og belysning' },
+  { id: 'env-loft-interior', name: 'Loft Interiør', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Urban loft med eksponerte installasjonar og høge vinduer' },
 ];
 
 export const BACKDROP_CATEGORIES: { key: BackdropCategory; label: string }[] = [

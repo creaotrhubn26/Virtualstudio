@@ -1398,6 +1398,238 @@ export const scenarioPresets: ScenarioPreset[] = [
     }
   },
   {
+    id: 'hollywood-penthouse-intervju',
+    navn: 'Hollywood - Penthouse Intervju',
+    kategori: 'hollywood',
+    beskrivelse: 'Nattintervju i eksklusivt penthouse med byutsikt. Praktisk gulvlampe og LED-panels mot store vinduer. Inspirert av eksklusiv dokumentarfilm.',
+    tags: ['hollywood', 'penthouse', 'intervju', 'natt', 'city', 'premium', 'on-location'],
+    previewImage: '/images/presets/hollywood-penthouse-intervju.png',
+    difficulty: 'intermediate',
+    usedIn: ['Documentary filming', 'Interview shoots', 'On-location corporate'],
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [-2.5, 2.2, 1.5],
+          rotation: [15, 40, 0],
+          intensity: 0.8,
+          cct: 4200,
+          modifier: 'led-panel-60x60'
+        },
+        {
+          type: 'fill-light',
+          position: [2.5, 1.8, 1.5],
+          rotation: [10, -35, 0],
+          intensity: 0.35,
+          cct: 4200,
+          modifier: 'led-panel-30x30'
+        },
+        {
+          type: 'practical',
+          position: [1.8, 0.8, 0.5],
+          rotation: [0, -90, 0],
+          intensity: 0.6,
+          cct: 2700,
+          color: '#ffdd99'
+        },
+        {
+          type: 'atmospheric',
+          position: [0, 1.5, -3],
+          rotation: [0, 180, 0],
+          intensity: 0.3,
+          cct: 3800,
+          color: '#ff9944'
+        }
+      ],
+      backdrop: {
+        type: 'environment',
+        color: '#0a0f1a'
+      },
+      camera: {
+        position: [0, 1.5, 4],
+        target: [0, 1.4, 0],
+        focalLength: 35
+      }
+    },
+    recommendedAssets: {
+      lights: ['aputure-300d', 'nanlite-mixpad-27c', 'practical-floor-lamp', 'city-glow-ambient'],
+      modifiers: ['softbox-60x60', 'reflector-white'],
+      backdrops: []
+    }
+  },
+  {
+    id: 'hollywood-restaurant-natt',
+    navn: 'Hollywood - Restaurant Natt',
+    kategori: 'hollywood',
+    beskrivelse: 'Romantisk restaurantscene med panoramautsikt over bylandskap om natten. Varme praktiske lamper og soft LED-panels. Inspirert av rooftop restaurant-film.',
+    tags: ['hollywood', 'restaurant', 'natt', 'romantisk', 'by-utsikt', 'on-location', 'dinner'],
+    previewImage: '/images/presets/hollywood-restaurant-natt.png',
+    difficulty: 'intermediate',
+    usedIn: ['Film production', 'Restaurant commercial', 'Rooftop dining'],
+    sceneConfig: {
+      lights: [
+        {
+          type: 'practical',
+          position: [0, 2.2, 0.5],
+          rotation: [0, 0, 0],
+          intensity: 0.7,
+          cct: 2400,
+          color: '#ffcc66'
+        },
+        {
+          type: 'key-light',
+          position: [-2, 2.8, 2],
+          rotation: [20, 40, 0],
+          intensity: 0.5,
+          cct: 3800,
+          modifier: 'octabox-90'
+        },
+        {
+          type: 'atmospheric',
+          position: [3, 1.5, -2],
+          rotation: [0, -120, 0],
+          intensity: 0.25,
+          cct: 3600,
+          color: '#ff8844'
+        },
+        {
+          type: 'atmospheric',
+          position: [-3, 1.5, -2],
+          rotation: [0, 120, 0],
+          intensity: 0.2,
+          cct: 4500,
+          color: '#aaccff'
+        }
+      ],
+      backdrop: {
+        type: 'environment',
+        color: '#060d1a'
+      },
+      camera: {
+        position: [0.5, 1.4, 3.5],
+        target: [0, 1.3, 0],
+        focalLength: 50
+      }
+    },
+    recommendedAssets: {
+      lights: ['practical-pendant-warm', 'aputure-mc-pro', 'city-glow-ambient', 'candle-light'],
+      modifiers: ['octabox-90', 'diffuser-silk'],
+      backdrops: []
+    }
+  },
+  {
+    id: 'hollywood-privat-middag',
+    navn: 'Hollywood - Privat Middag',
+    kategori: 'hollywood',
+    beskrivelse: 'Eksklusiv middag-scene i privat leilighet. Candle-lit atmosfære med stearinlys og soft warm key. Inspirert av film-previz og crime-drama.',
+    tags: ['hollywood', 'middag', 'privat', 'stearinlys', 'interiør', 'drama', 'crime'],
+    previewImage: '/images/presets/hollywood-privat-middag.png',
+    difficulty: 'advanced',
+    usedIn: ['Crime drama', 'Film previsualization', 'Fine dining scene'],
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [-1.5, 2.5, 1.5],
+          rotation: [25, 35, 0],
+          intensity: 0.65,
+          cct: 3200,
+          color: '#ffe0b0',
+          modifier: 'softbox-60x90'
+        },
+        {
+          type: 'fill-light',
+          position: [2, 1.8, 1.5],
+          rotation: [15, -30, 0],
+          intensity: 0.2,
+          cct: 3200,
+          modifier: 'reflector-warm'
+        },
+        {
+          type: 'practical',
+          position: [0, 0.6, 1.0],
+          rotation: [80, 0, 0],
+          intensity: 0.4,
+          cct: 1900,
+          color: '#ff6600'
+        },
+        {
+          type: 'rim-light',
+          position: [0, 2.5, -1.5],
+          rotation: [-30, 0, 0],
+          intensity: 0.4,
+          cct: 4500
+        }
+      ],
+      backdrop: {
+        type: 'environment',
+        color: '#1a0f0a'
+      },
+      camera: {
+        position: [0.3, 1.5, 3],
+        target: [0, 1.4, 0],
+        focalLength: 35
+      }
+    },
+    recommendedAssets: {
+      lights: ['aputure-300d', 'godox-sl150iii', 'candle-light', 'practical-pendant-warm'],
+      modifiers: ['softbox-60x90', 'reflector-warm-gold'],
+      backdrops: []
+    }
+  },
+  {
+    id: 'hollywood-loft-studio',
+    navn: 'Hollywood - Loft Studio',
+    kategori: 'hollywood',
+    beskrivelse: 'Industrielt loft-studio med takvinduer og betongvegger. Overhead fluorescents og myk vindus-fill. Stilrent og moderne med rå estetikk.',
+    tags: ['hollywood', 'loft', 'studio', 'industriell', 'betong', 'modern'],
+    previewImage: '/images/presets/hollywood-loft-studio.png',
+    difficulty: 'beginner',
+    usedIn: ['Fashion editorial', 'Artist portrait', 'Music video'],
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [0, 3.5, 1],
+          rotation: [-40, 0, 0],
+          intensity: 0.9,
+          cct: 5000,
+          modifier: 'tube-fluorescent'
+        },
+        {
+          type: 'fill-light',
+          position: [-2.5, 2, 1.5],
+          rotation: [10, 50, 0],
+          intensity: 0.4,
+          cct: 5600,
+          modifier: 'reflector-silver'
+        },
+        {
+          type: 'practical',
+          position: [2, 3, 0],
+          rotation: [-30, 0, 0],
+          intensity: 0.5,
+          cct: 4100,
+          color: '#f0f0ff'
+        }
+      ],
+      backdrop: {
+        type: 'concrete',
+        color: '#888888'
+      },
+      camera: {
+        position: [0, 1.6, 5],
+        target: [0, 1.5, 0],
+        focalLength: 50
+      }
+    },
+    recommendedAssets: {
+      lights: ['arri-skypanel-s30', 'overhead-tube-fluorescent', 'window-daylight-emitter'],
+      modifiers: ['chimera-video-pro-m'],
+      backdrops: ['concrete-raw', 'concrete-smooth']
+    }
+  },
+  {
     id: 'naeringsliv-linkedin',
     navn: 'Næringsliv - LinkedIn Headshot',
     kategori: 'naeringsliv',

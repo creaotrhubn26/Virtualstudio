@@ -140,6 +140,29 @@ const MODIFIER_DATABASE: ModifierSpec[] = [
   // Large 2x3 / 4x6 softboxes (video & broadcast)
   { id: 'chimera-video-pro-s', brand: 'Chimera', model: 'Video Pro Plus S (60x80cm)', type: 'softbox', size: '60x80cm', shape: 'rectangle', stopLoss: 2.0, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
   { id: 'chimera-video-pro-m', brand: 'Chimera', model: 'Video Pro Plus M (90x120cm)', type: 'softbox', size: '90x120cm', shape: 'rectangle', stopLoss: 2.0, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
+
+  // Extra softbox sizes for new presets
+  { id: 'softbox-60x60', brand: 'Generic', model: 'Softboks 60x60cm', type: 'softbox', size: '60x60cm', shape: 'rectangle', stopLoss: 1.7, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'softbox-60x90', brand: 'Generic', model: 'Softboks 60x90cm', type: 'softbox', size: '60x90cm', shape: 'rectangle', stopLoss: 1.8, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'softbox-90cm', brand: 'Generic', model: 'Softboks 90cm', type: 'softbox', size: '90cm', shape: 'square', stopLoss: 1.7, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
+
+  // LED Panels (on-location / video)
+  { id: 'led-panel-30x30', brand: 'Generic', model: 'LED Panel 30x30cm', type: 'led-panel', size: '30x30cm', shape: 'rectangle', stopLoss: 0, mount: 'Spigot', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'led-panel-60x60', brand: 'Generic', model: 'LED Panel 60x60cm', type: 'led-panel', size: '60x60cm', shape: 'rectangle', stopLoss: 0, mount: 'Spigot', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'led-panel-1x2', brand: 'Generic', model: 'LED Panel 1x2ft', type: 'led-panel', size: '30x60cm', shape: 'rectangle', stopLoss: 0, mount: 'Spigot', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'led-panel-2x2', brand: 'Generic', model: 'LED Panel 2x2ft', type: 'led-panel', size: '60x60cm', shape: 'square', stopLoss: 0, mount: 'Spigot', thumbnail: '/images/gear/modifier_softbox.png' },
+
+  // Tube / Fluorescent modifiers
+  { id: 'tube-fluorescent', brand: 'Generic', model: 'Neonrør T8 (120cm)', type: 'tube', size: '120cm', shape: 'linear', stopLoss: 0, mount: 'Clip', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'tube-fluorescent-60', brand: 'Generic', model: 'Neonrør T8 (60cm)', type: 'tube', size: '60cm', shape: 'linear', stopLoss: 0, mount: 'Clip', thumbnail: '/images/gear/modifier_softbox.png' },
+
+  // Practical lamp modifiers / accessories
+  { id: 'reflector-warm-gold', brand: 'Generic', model: 'Reflektor Varm Gull', type: 'reflector', size: '100cm', stopLoss: 0.2, thumbnail: '/images/gear/modifier_reflector.png' },
+  { id: 'reflector-silver', brand: 'Generic', model: 'Reflektor Sølv', type: 'reflector', size: '100cm', stopLoss: 0.15, thumbnail: '/images/gear/modifier_reflector.png' },
+  { id: 'diffuser-silk', brand: 'Generic', model: 'Diffuser Silke 1.5-stop', type: 'diffuser', size: '150x150cm', stopLoss: 1.5, mount: 'Frame', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'diffuser-grid-cloth', brand: 'Generic', model: 'Grid Cloth 1-stop', type: 'diffuser', size: '120x180cm', stopLoss: 1.0, mount: 'Frame', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'scrim-net-single', brand: 'Generic', model: 'Scrim Net Enkelt', type: 'diffuser', size: '120x180cm', stopLoss: 1.0, mount: 'Frame', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'scrim-net-double', brand: 'Generic', model: 'Scrim Net Dobbelt', type: 'diffuser', size: '120x180cm', stopLoss: 2.0, mount: 'Frame', thumbnail: '/images/gear/modifier_softbox.png' },
 ];
 
 const MODIFIER_CATEGORIES: CategoryInfo[] = [
@@ -154,6 +177,8 @@ const MODIFIER_CATEGORIES: CategoryInfo[] = [
   { key: 'snoot', label: 'Snoot' },
   { key: 'barn-doors', label: 'Klaffedører' },
   { key: 'diffuser', label: 'Diffuser' },
+  { key: 'led-panel', label: 'LED Panel' },
+  { key: 'tube', label: 'Rørlampe' },
 ];
 
 type BrowserTab = 'lights' | 'modifiers';

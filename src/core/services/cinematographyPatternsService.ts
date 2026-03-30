@@ -512,6 +512,83 @@ const patterns: CinematographyPattern[] = [
     ],
     usedIn: ['Documentary film', 'News reporting', 'Lifestyle photography', 'Social documentary'],
     reference: 'Documentary Cinematography Handbook'
+  },
+  {
+    id: 'practical-only',
+    name: 'Kun Praktiske Lys',
+    category: 'narrative',
+    difficulty: 'intermediate',
+    description: 'Kun praktiske lamper i scenen — gulvlampe, bordlampe, pendellampe. Høy kontrast og autentisk interiørstemning.',
+    mood: 'intimate',
+    keyToFillRatio: '6:1',
+    lights: [
+      { type: 'key', position: { x: 1.8, y: 0.9, z: 0.5 }, intensity: 50, colorTemp: 2700, modifier: 'practical floor lamp' },
+      { type: 'fill', position: { x: 0, y: 2.2, z: 0.5 }, intensity: 20, colorTemp: 2400, modifier: 'pendant warm' }
+    ],
+    usedIn: ['Crime drama', 'Intimate scenes', 'Restaurant interiors', 'Period drama'],
+    reference: 'Practical Lighting for Film (Birns & Sawyer)'
+  },
+  {
+    id: 'window-backlighting',
+    name: 'Vindus Bakbelysning',
+    category: 'portrait',
+    difficulty: 'intermediate',
+    description: 'Naturlig dagslys fra store vinduer bak motivet. Silhuettering og kontur-lys kombinert med front-fill.',
+    mood: 'cinematic',
+    keyToFillRatio: '4:1',
+    lights: [
+      { type: 'key', position: { x: 0, y: 1.5, z: -3 }, intensity: 120, colorTemp: 5600, modifier: 'window / large frame diffuser' },
+      { type: 'fill', position: { x: -2, y: 1.8, z: 1.5 }, intensity: 30, colorTemp: 5600, modifier: 'reflector or LED panel' }
+    ],
+    usedIn: ['Lifestyle photography', 'Fashion editorial', 'Urban portrait', 'Environmental portrait'],
+    reference: 'Strobist Method — On-Location Natural Light'
+  },
+  {
+    id: 'penthouse-night',
+    name: 'Penthouse Natt',
+    category: 'interview',
+    difficulty: 'advanced',
+    description: 'Urban nattintervju i penthouse-omgivelser. Bylysglo fra vinduer kombinert med soft LED key-lys og warm practical.',
+    mood: 'premium',
+    keyToFillRatio: '3:1',
+    lights: [
+      { type: 'key', position: { x: -2.5, y: 2.2, z: 1.5 }, intensity: 80, colorTemp: 4200, modifier: 'LED softbox 60x60' },
+      { type: 'fill', position: { x: 2.5, y: 1.8, z: 1.5 }, intensity: 25, colorTemp: 4200, modifier: 'LED panel 30x30' },
+      { type: 'practical', position: { x: 1.8, y: 0.9, z: 0.5 }, intensity: 40, colorTemp: 2700, modifier: 'floor lamp' },
+      { type: 'ambient', position: { x: 0, y: 1.5, z: -3 }, intensity: 15, colorTemp: 3800, modifier: 'city glow through window' }
+    ],
+    usedIn: ['Corporate interview', 'TV documentary', 'Premium brand film', 'Luxury lifestyle'],
+    reference: 'On-Location Premium Lighting (Vistek)'
+  },
+  {
+    id: 'candle-firelight',
+    name: 'Stearinlys og Båleffekt',
+    category: 'narrative',
+    difficulty: 'advanced',
+    description: 'Meget lavt lavt nøkkellys simulerer stearinlys og bålflammer. Kald bak-rim kombineres med varm, flimrende glød foran.',
+    mood: 'dramatic',
+    keyToFillRatio: '8:1',
+    lights: [
+      { type: 'key', position: { x: 0, y: 0.6, z: 1 }, intensity: 25, colorTemp: 1900, modifier: 'candle simulation (flicker on)' },
+      { type: 'rim', position: { x: 0, y: 2.5, z: -1.5 }, intensity: 20, colorTemp: 4500, modifier: 'bare or grid spot' }
+    ],
+    usedIn: ['Period drama', 'Horror film', 'Fantasy', 'Game previsualization', 'Intimate dinner scene'],
+    reference: 'Kubrick — Barry Lyndon (natural light)'
+  },
+  {
+    id: 'sunset-through-window',
+    name: 'Solnedgang Gjennom Vindu',
+    category: 'portrait',
+    difficulty: 'intermediate',
+    description: 'Gyllen time-lys som strømmer gjennom vinduer. Varm oransje side-nøkkel, blå/kjøl skygge-side. Naturlig og romantisk.',
+    mood: 'golden',
+    keyToFillRatio: '4:1',
+    lights: [
+      { type: 'key', position: { x: -3, y: 2, z: 0 }, intensity: 90, colorTemp: 3200, modifier: 'golden hour window emitter or HMI orange gel' },
+      { type: 'fill', position: { x: 3, y: 1.5, z: 0.5 }, intensity: 20, colorTemp: 6500, modifier: 'sky fill / blue bounce' }
+    ],
+    usedIn: ['Fashion editorial', 'Wedding photography', 'Lifestyle', 'Romantic film scenes'],
+    reference: 'Golden Hour Photography — Bryan Peterson'
   }
 ];
 
