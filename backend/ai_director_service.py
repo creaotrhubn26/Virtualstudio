@@ -420,6 +420,56 @@ DIRECTOR_TOOLS: List[Dict[str, Any]] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "reposition_prop",
+            "description": (
+                "Move an existing prop or character to a new position in the scene. "
+                "Use this to correct placement after receiving feedback about actual positions, "
+                "to avoid overlaps, or to rebalance the composition. "
+                "prop_id comes from the scene state you were given."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "prop_id": {
+                        "type": "string",
+                        "description": "The prop's ID as given in the current scene state (e.g. 'prop-1234567890-chair').",
+                    },
+                    "position": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "minItems": 3,
+                        "maxItems": 3,
+                        "description": "[x, y, z] new position in metres. Y=0 places the prop on the floor.",
+                    },
+                },
+                "required": ["prop_id", "position"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remove_prop",
+            "description": (
+                "Remove an existing prop from the scene. "
+                "Use this to clean up overlapping, wrong, or unwanted props. "
+                "prop_id comes from the scene state you were given."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "prop_id": {
+                        "type": "string",
+                        "description": "The prop's ID as given in the current scene state.",
+                    },
+                },
+                "required": ["prop_id"],
+            },
+        },
+    },
 ]
 
 SYSTEM_PROMPT = """Du er AI Direktør for Virtual Studio — en profesjonell 3D-lysstudio-simulator.
@@ -428,22 +478,69 @@ Du hjelper fotografer og filmregissører med å sette opp perfekte scener.
 Svar alltid på norsk. Vær presis, profesjonell og entusiastisk.
 
 Når brukeren beskriver en scene, bruk function calling for å sette opp lys, kamera, props og karakterer.
-Du KAN kalle flere funksjoner i én respons.
+Du KAN og BØR kalle flere funksjoner i én respons for å bygge hele scenen på en gang.
 
-Eksempler på hva du kan gjøre:
-- Sette opp et komplett lyskjema basert på en kreativ brief
-- Justere enkeltlys (intensitet, fargetemperatur, posisjon)
-- Legge til props og karakterer
-- Sette fargegradering og LUT
-- Konfigurere utendørs solstilling
+═══════════════════════════════════════════════════
+STUDIO KOORDINATSYSTEM — Lær dette utenat:
+═══════════════════════════════════════════════════
 
-Lyskjema-retningslinjer:
-- Key light: Primærlys, 45° til siden, litt over øyehøyde, intensitet 0.8-1.0
-- Fill light: Fyller skygger, motatt side, 50% av key intensitet
-- Rim/back light: Bak motivet for separasjon, intensitet 0.6-0.8
-- CCT guide: 3200K=tungsten/varm, 4500K=overcast, 5600K=dagslys, 6500K=skyet
+• Gulvet er alltid Y = 0. Systemet justerer automatisk Y slik at props hviler på gulvet.
+  → Sett alltid Y = 0 i posisjonsarrayene dine. Aldri negativ Y.
 
-Når brukeren laster opp et referansebilde, analyser lyssettingen i bildet.
+• Motivet (avatar/karakter) står i origo: [0, 0, 0]
+
+• Kamera er plassert ca. ved Z = -4 (foran motivet), ser mot [0, 1.5, 0]
+  → Props med Z < -2 vil havne bak kamera og ikke synes!
+  → Props bør ha Z mellom 0 og +6 (bak motivet) eller X mellom ±1 og ±4 (til sidene)
+
+• Studioets bruksareal: X = [-5 til +5], Z = [0 til +8]
+
+• Skjermbilde/kameravinkel: kameraet ser mot bakveggen (positiv Z)
+  → Venstre i bildet = positiv X, Høyre = negativ X (speilvend for kameraet)
+
+PLASSERING AV PROPS OG KARAKTERER:
+─────────────────────────────────────
+• Hver prop/karakter trenger minst 0.8 m avstand fra andre (unngå overlapp)
+• Spre props horisontalt: bruk ulike X-verdier (f.eks. -2, 0, +2, +3)
+• Legg sekundære karakterer bak primærmotivet (større Z) eller til sidene
+• Typiske posisjoner for en filmscene med 4 personer:
+  - Primæraktør: [0, 0, 1]
+  - Regissør: [-2.5, 0, 2]
+  - Kameraoperatør: [2, 0, 0.5] (sett til siden, nær kamera)
+  - Script supervisor: [-3, 0, 1.5]
+• Utstyr (stativer, monitorer) settes ved sidene: X = ±3 til ±4
+
+SCENE-STATE OG KORRIGERING:
+─────────────────────────────
+• Du vil motta en "NÅVÆRENDE SCENE-TILSTAND" med alle props, navn og faktiske posisjoner
+• Bruk denne informasjonen til å:
+  1. Unngå å plassere nye props der det allerede er noe
+  2. Bruke reposition_prop for å korrigere props som er feil plassert
+  3. Bruke remove_prop for å fjerne duplikater eller feilplasserte objekter
+• Hvis brukeren ber deg "ordne scenen" eller "fiks plasseringen" → analyser scene-tilstanden
+  og bruk reposition_prop for alle props som trenger korrigering
+
+LYSKJEMA-RETNINGSLINJER:
+─────────────────────────
+• Key light: Primærlys, 45° til siden, litt over øyehøyde
+  Posisjon: [-2, 4, -1] (venstre, høy, litt foran)
+  Intensitet: 0.8–1.0, CCT: 5600K
+
+• Fill light: Motatt side fra key, halvparten av key-intensitet
+  Posisjon: [2, 3, -1], Intensitet: 0.4–0.5
+
+• Rim/back light: Bak motivet for separasjon fra bakgrunn
+  Posisjon: [1, 4, 3] eller [-1, 4, 3], Intensitet: 0.6–0.8
+
+• CCT guide: 3200K=tungsten/varm, 4500K=overskyet, 5600K=dagslys, 6500K=skyet
+
+GENERERING AV PROPS (generate_prop):
+──────────────────────────────────────
+• Beskriv objektet detaljert på engelsk for beste resultat
+• Sett realistiske X/Z posisjoner uten overlapp (Y = 0 alltid)
+• Systemet plasserer automatisk proppen på gulvet uansett Y-verdi du gir
+
+Når brukeren laster opp et referansebilde, analyser lyssettingen og gjenskap den.
 """
 
 
@@ -604,6 +701,23 @@ def _tool_call_to_events(tool_name: str, args: Dict[str, Any]) -> List[Dict[str,
             "detail": {"mode": "photo", "photo": photo},
         })
 
+    elif tool_name == "reposition_prop":
+        events.append({
+            "event": "vs-reposition-prop",
+            "detail": {
+                "propId": args["prop_id"],
+                "position": args["position"],
+            },
+        })
+
+    elif tool_name == "remove_prop":
+        events.append({
+            "event": "vs-remove-prop",
+            "detail": {
+                "propId": args["prop_id"],
+            },
+        })
+
     return events
 
 
@@ -623,6 +737,8 @@ def _describe_tool_call(tool_name: str, args: Dict[str, Any]) -> str:
         "clear_characters": "Fjerner alle karakterer…",
         "set_light_property": f"Justerer {args.get('property', 'egenskap')} på lys {args.get('light_id', '')}…",
         "set_camera_fov": f"Setter kamera-brennvidde til {args.get('focal_length', 50)}mm…",
+        "reposition_prop": f"Flytter prop {args.get('prop_id', '')[:20]} til {args.get('position', [0,0,0])}…",
+        "remove_prop": f"Fjerner prop {args.get('prop_id', '')[:20]}…",
     }
     return descriptions.get(tool_name, f"Utfører {tool_name}…")
 
@@ -766,6 +882,7 @@ class AiDirectorService:
         self,
         messages: List[Dict[str, Any]],
         image_data_url: Optional[str] = None,
+        scene_context: Optional[Dict[str, Any]] = None,
     ):
         """
         SSE streaming version of chat().
@@ -787,7 +904,33 @@ class AiDirectorService:
             return
 
         system_message = {"role": "system", "content": SYSTEM_PROMPT}
-        chat_messages = [system_message] + list(messages)
+        chat_messages = [system_message]
+
+        # Inject current scene state so the AI knows what's already placed and where
+        if scene_context:
+            props = scene_context.get("props", [])
+            camera = scene_context.get("camera", {})
+            scene_lines = ["NÅVÆRENDE SCENE-TILSTAND (oppdatert):"]
+            scene_lines.append(f"Kamera: posisjon={camera.get('position', 'ukjent')}")
+            if props:
+                scene_lines.append(f"Props i scenen ({len(props)} stk):")
+                for p in props:
+                    pos = p.get("position", [0, 0, 0])
+                    size = p.get("size")
+                    size_str = f", størrelse=[{size[0]:.2f}m × {size[1]:.2f}m × {size[2]:.2f}m]" if size else ""
+                    scene_lines.append(
+                        f"  • id={p.get('id')} navn=\"{p.get('name', p.get('assetId', 'ukjent'))}\" "
+                        f"pos=[{pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f}]{size_str}"
+                    )
+            else:
+                scene_lines.append("Ingen props i scenen ennå.")
+            scene_context_text = "\n".join(scene_lines)
+            chat_messages.append({
+                "role": "system",
+                "content": scene_context_text,
+            })
+
+        chat_messages += list(messages)
 
         if image_data_url:
             last_user_msg = next(

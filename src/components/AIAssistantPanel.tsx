@@ -127,11 +127,18 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
       const accumulatedSteps: string[] = [];
       let finalReply = '';
 
+      // Capture live scene state so the AI knows exactly what's placed and where
+      const sceneContext = (() => {
+        const diag = (window as Record<string, unknown>).__virtualStudioDiagnostics as
+          { environment?: { sceneState?: Record<string, unknown> } } | undefined;
+        return diag?.environment?.sceneState ?? null;
+      })();
+
       try {
         const res = await fetch('/api/ai/director/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: history }),
+          body: JSON.stringify({ messages: history, sceneContext }),
         });
 
         if (!res.ok || !res.body) {

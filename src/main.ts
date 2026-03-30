@@ -1190,20 +1190,36 @@ class VirtualStudio {
           target: cameraTarget ? [cameraTarget.x, cameraTarget.y, cameraTarget.z] : null,
           fov: this.camera.fov,
         },
-        props: Array.from(this.sceneState.props.values()).map((prop) => ({
-          id: prop.id,
-          assetId: prop.assetId,
-          name: prop.name,
-          position: [
-            prop.mesh.position.x,
-            prop.mesh.position.y,
-            prop.mesh.position.z,
-          ],
-          environmentGenerated: Boolean(prop.metadata?.environmentGenerated),
-          placementHint: prop.metadata?.placementHint ?? null,
-          placementMode: prop.metadata?.placementMode ?? null,
-          surfaceAnchorId: prop.metadata?.surfaceAnchorId ?? null,
-        })),
+        props: Array.from(this.sceneState.props.values()).map((prop) => {
+          const mesh = prop.mesh as BABYLON.AbstractMesh;
+          let size: [number, number, number] | null = null;
+          try {
+            const bi = mesh.getBoundingInfo();
+            const ext = bi.boundingBox.extendSizeWorld;
+            size = [
+              parseFloat((ext.x * 2).toFixed(3)),
+              parseFloat((ext.y * 2).toFixed(3)),
+              parseFloat((ext.z * 2).toFixed(3)),
+            ];
+          } catch {
+            // bounding info not available yet
+          }
+          return {
+            id: prop.id,
+            assetId: prop.assetId,
+            name: prop.name,
+            position: [
+              parseFloat(mesh.position.x.toFixed(3)),
+              parseFloat(mesh.position.y.toFixed(3)),
+              parseFloat(mesh.position.z.toFixed(3)),
+            ],
+            size,
+            environmentGenerated: Boolean(prop.metadata?.environmentGenerated),
+            placementHint: prop.metadata?.placementHint ?? null,
+            placementMode: prop.metadata?.placementMode ?? null,
+            surfaceAnchorId: prop.metadata?.surfaceAnchorId ?? null,
+          };
+        }),
       },
     };
   }
@@ -10723,6 +10739,41 @@ class VirtualStudio {
         },
         pos,
       );
+    }) as EventListener);
+
+    // AI Director: move an existing prop to a new position
+    window.addEventListener('vs-reposition-prop', ((e: CustomEvent) => {
+      const { propId, position } = e.detail || {};
+      if (typeof propId !== 'string' || !Array.isArray(position) || position.length < 3) return;
+      const prop = this.sceneState.props.get(propId);
+      if (!prop) {
+        console.warn(`[vs-reposition-prop] Prop not found: ${propId}`);
+        return;
+      }
+      const newPos = new BABYLON.Vector3(Number(position[0]) || 0, Number(position[1]) || 0, Number(position[2]) || 0);
+      const grounded = this.positionMeshOnGround(prop.mesh as BABYLON.AbstractMesh, newPos);
+      prop.mesh.position = grounded;
+      console.log(`[vs-reposition-prop] ${propId} → [${grounded.x.toFixed(2)}, ${grounded.y.toFixed(2)}, ${grounded.z.toFixed(2)}]`);
+      this.updateShadowMaps();
+    }) as EventListener);
+
+    // AI Director: remove an existing prop from the scene
+    window.addEventListener('vs-remove-prop', ((e: CustomEvent) => {
+      const { propId } = e.detail || {};
+      if (typeof propId !== 'string') return;
+      const prop = this.sceneState.props.get(propId);
+      if (!prop) {
+        console.warn(`[vs-remove-prop] Prop not found: ${propId}`);
+        return;
+      }
+      const meshToDispose = prop.mesh as BABYLON.AbstractMesh;
+      const allMeshes = [meshToDispose, ...meshToDispose.getChildMeshes(false)];
+      allMeshes.forEach((m) => m.dispose());
+      this.sceneState.props.delete(propId);
+      useAppStore.getState().removeNode?.(propId);
+      console.log(`[vs-remove-prop] Removed prop: ${propId}`);
+      this.updateShadowMaps();
+      this.recalculateAmbientLighting();
     }) as EventListener);
 
     // Apply gel/colour filter to a light (fired by GelPickerPanel)
