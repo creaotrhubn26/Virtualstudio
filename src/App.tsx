@@ -44,6 +44,7 @@ const InteractiveElementsBrowser = lazy(() => import('./components/InteractiveEl
 const AmbientSoundsBrowserFallback = lazy(() => import('./components/AmbientSoundsBrowser').then(m => ({ default: m.AmbientSoundsBrowser })));
 const VirtualStudioPro = lazy(() => import('./components/VirtualStudioPro').then(m => ({ default: m.VirtualStudioPro })));
 const AccessoriesPanel = lazy(() => import('./panels/AccessoriesPanel').then(m => ({ default: m.AccessoriesPanel })));
+const PosingModePanel = lazy(() => import('./panels/PosingModePanel').then(m => ({ default: m.PosingModePanel })));
 
 // Loading fallback for lazy-loaded components
 const PanelLoadingFallback = () => (
@@ -853,5 +854,15 @@ export const AccessoriesPanelApp: React.FC = () => {
 export const StoryCharacterHUDApp: React.FC = () => (
   <CustomThemeProvider>
     <StoryCharacterHUD />
+  </CustomThemeProvider>
+);
+
+export const PosingModePanelApp: React.FC = () => (
+  <CustomThemeProvider>
+    <ToastProvider>
+      <Suspense fallback={<PanelLoadingFallback />}>
+        <PosingModePanel />
+      </Suspense>
+    </ToastProvider>
   </CustomThemeProvider>
 );

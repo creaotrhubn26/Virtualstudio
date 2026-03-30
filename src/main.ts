@@ -3,7 +3,7 @@ import '@babylonjs/loaders/glTF';
 import { GLTFFileLoader, GLTFLoaderAnimationStartMode } from '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, AIAssistantApp, SceneComposerPanelApp, AnimationComposerApp, VirtualStudioProApp, InteractiveElementsBrowserApp, AmbientSoundsBrowserApp, AccessoriesPanelApp, StoryCharacterHUDApp } from './App';
+import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, AIAssistantApp, SceneComposerPanelApp, AnimationComposerApp, VirtualStudioProApp, InteractiveElementsBrowserApp, AmbientSoundsBrowserApp, AccessoriesPanelApp, StoryCharacterHUDApp, PosingModePanelApp } from './App';
 import { useAppStore, useFocusStore, useAutoFocusStore, useFocusPeakingStore, SceneNode } from './state/store';
 import { AutoFocusSystem } from './core/AutoFocusSystem';
 import { FocusPeakingEffect } from './core/FocusPeakingEffect';
@@ -10798,6 +10798,82 @@ class VirtualStudio {
       void this.applyPosePreset(preset);
     }) as EventListener);
 
+    // ── Posing Mode Panel events ───────────────────────────────────────────
+    window.addEventListener('ch-rotate-bone', ((e: CustomEvent) => {
+      const { boneName, rotation } = e.detail as { boneName: string; rotation: { x: number; y: number; z: number } };
+      if (!boneName || !rotation) return;
+      void this.applyManualBoneRotation(boneName, rotation);
+    }) as EventListener);
+
+    window.addEventListener('ch-pose-reset-all', (async () => {
+      const mesh = this.getPrimaryCharacterMesh();
+      if (!mesh) return;
+      const rigId = await this.ensureRigRegisteredForMesh(mesh, this.characterModelId || mesh.name || 'Character');
+      if (!rigId) return;
+      const store = useSkeletalAnimationStore.getState();
+      this.forceStopCharacterAnimations(mesh, rigId);
+      store.resetAllBones(rigId);
+      this.characterKeyboardState.poseLocked = false;
+      this.characterKeyboardState.locomotionMode = 'idle';
+      console.log('[PosingMode] All bones reset to rest pose');
+    }) as EventListener);
+
+    window.addEventListener('ch-pose-t-pose', (async () => {
+      const tPosePreset = this.getPosePresetByIdOrName('portrait_classic_stand') || ALL_POSES[0];
+      if (tPosePreset) {
+        // For T-pose just reset all bones
+        const mesh = this.getPrimaryCharacterMesh();
+        if (!mesh) return;
+        const rigId = await this.ensureRigRegisteredForMesh(mesh, this.characterModelId || mesh.name || 'Character');
+        if (!rigId) return;
+        const store = useSkeletalAnimationStore.getState();
+        this.forceStopCharacterAnimations(mesh, rigId);
+        store.resetAllBones(rigId);
+        // T-pose: arms horizontal
+        store.setBoneRotation(rigId, 'leftUpperArm',  { x: 0, y: 0, z: -Math.PI / 2 });
+        store.setBoneRotation(rigId, 'rightUpperArm', { x: 0, y: 0, z:  Math.PI / 2 });
+        this.characterKeyboardState.poseLocked = true;
+        this.characterKeyboardState.locomotionMode = 'pose';
+        console.log('[PosingMode] T-pose applied');
+      }
+    }) as EventListener);
+
+    window.addEventListener('ch-pose-a-pose', (async () => {
+      const mesh = this.getPrimaryCharacterMesh();
+      if (!mesh) return;
+      const rigId = await this.ensureRigRegisteredForMesh(mesh, this.characterModelId || mesh.name || 'Character');
+      if (!rigId) return;
+      const store = useSkeletalAnimationStore.getState();
+      this.forceStopCharacterAnimations(mesh, rigId);
+      store.resetAllBones(rigId);
+      // A-pose: arms at ~45° down from horizontal
+      store.setBoneRotation(rigId, 'leftUpperArm',  { x: 0, y: 0, z: -Math.PI / 4 });
+      store.setBoneRotation(rigId, 'rightUpperArm', { x: 0, y: 0, z:  Math.PI / 4 });
+      this.characterKeyboardState.poseLocked = true;
+      this.characterKeyboardState.locomotionMode = 'pose';
+      console.log('[PosingMode] A-pose applied');
+    }) as EventListener);
+
+    window.addEventListener('ch-pose-neutral', (async () => {
+      const mesh = this.getPrimaryCharacterMesh();
+      if (!mesh) return;
+      const rigId = await this.ensureRigRegisteredForMesh(mesh, this.characterModelId || mesh.name || 'Character');
+      if (!rigId) return;
+      const store = useSkeletalAnimationStore.getState();
+      this.forceStopCharacterAnimations(mesh, rigId);
+      store.resetAllBones(rigId);
+      // Neutral stance
+      store.setBoneRotation(rigId, 'leftUpperArm',  { x: 0,    y: 0,     z: -0.26 });
+      store.setBoneRotation(rigId, 'rightUpperArm', { x: 0,    y: 0,     z:  0.26 });
+      store.setBoneRotation(rigId, 'leftLowerArm',  { x: 0,    y: 0.17,  z: 0    });
+      store.setBoneRotation(rigId, 'rightLowerArm', { x: 0,    y: -0.17, z: 0    });
+      store.setBoneRotation(rigId, 'leftUpperLeg',  { x: 0.09, y: -0.05, z: 0    });
+      store.setBoneRotation(rigId, 'rightUpperLeg', { x: 0.09, y:  0.05, z: 0    });
+      this.characterKeyboardState.poseLocked = true;
+      this.characterKeyboardState.locomotionMode = 'pose';
+      console.log('[PosingMode] Neutral stance applied');
+    }) as EventListener);
+
     window.addEventListener('ch-actor-params-changed', ((e: CustomEvent) => {
       const { actorParams } = e.detail;
       console.log('Actor params changed:', actorParams);
@@ -15157,6 +15233,36 @@ class VirtualStudio {
     }
 
     return null;
+  }
+
+  /** Apply a single bone rotation coming from the Posing Mode Panel */
+  private async applyManualBoneRotation(
+    boneName: string,
+    rotation: { x: number; y: number; z: number },
+  ): Promise<void> {
+    const mesh = this.getPrimaryCharacterMesh();
+    if (!mesh) {
+      console.warn('[PosingMode] No character mesh found for bone rotation');
+      return;
+    }
+    const rigId = await this.ensureRigRegisteredForMesh(
+      mesh,
+      this.characterModelId || mesh.name || 'Character',
+      this.getAnimationGroupsForMesh(mesh) ?? undefined,
+    );
+    if (!rigId) {
+      console.warn('[PosingMode] Rig not found for mesh');
+      return;
+    }
+    const store = useSkeletalAnimationStore.getState();
+    // Stop animations so pose is not overridden
+    if (!this.characterKeyboardState.poseLocked) {
+      this.forceStopCharacterAnimations(mesh, rigId);
+      this.characterKeyboardState.poseLocked = true;
+      this.characterKeyboardState.locomotionMode = 'pose';
+    }
+    store.setBoneRotation(rigId, boneName, rotation);
+    console.log(`[PosingMode] ${boneName} → x:${rotation.x.toFixed(2)} y:${rotation.y.toFixed(2)} z:${rotation.z.toFixed(2)}`);
   }
 
   private mapPoseLibraryBoneNameToHumanoidKey(boneName: string): string {
@@ -30488,6 +30594,14 @@ window.addEventListener('DOMContentLoaded', () => {
       console.log('AccessoriesPanelApp mounted');
     } else {
       console.log('accessoriesPanelRoot element not found (will be created when needed)');
+    }
+
+    // Mount Posing Mode Panel App
+    const posingPanelRoot = document.getElementById('posingModePanelRoot');
+    if (posingPanelRoot) {
+      const posingReactRoot = createRoot(posingPanelRoot);
+      posingReactRoot.render(React.createElement(PosingModePanelApp, {}));
+      console.log('PosingModePanelApp mounted');
     }
 
     // Render installed tools in the left panel
