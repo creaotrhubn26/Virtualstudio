@@ -5796,7 +5796,7 @@ class VirtualStudio {
         // The head's flash-mount hardware pushes the face-centre Y above the panel midpoint.
         // Shift the disc down by 25% of its diameter so it aligns with the diffuser centre.
         const isOctaboxEarly = lightConfig.glbFile.includes('octabox');
-        const yOffset = isOctaboxEarly ? -panelW * 0.50 : 0;
+        const yOffset = isOctaboxEarly ? -panelW * 0.75 : 0;
         const worldCenter = new BABYLON.Vector3(
           vertexXCenter,
           vertexYCenter + yOffset,
