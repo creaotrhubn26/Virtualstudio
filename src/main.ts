@@ -5655,55 +5655,38 @@ class VirtualStudio {
         (mesh as any)._headPivot = headPivot;
         console.log(`[addLight] headPivot tilt meshes=${headCount}`);
 
-        // Identify the diffuser face meshes by brightness: the white diffuser panel
-        // has the highest albedo in the model.  These are stored in _headMeshes so
-        // updateLightHeadGlow can drive emissive intensity live.
+        // White emissive glow plane representing the softbox diffuser panel.
+        // Sized at ~22% of stand height; always faces the camera (billboardMode Y)
+        // so it looks correct from any angle without tilting.
         const cctColor = this.cctToColor(lightConfig.cct);
         const initT = Math.min(1.0, lightConfig.intensity / 500);
         const initStrength = Math.sqrt(initT) * 1.6;
 
+        const panelSize = lightHeadHeight * 0.22;
+        const panelCenterY = headJointWorldY + panelSize * 0.5;
 
-        // Find white diffuser meshes by material brightness (> 0.6 average albedo).
-        // The softbox GLB has a bright-white diffuser panel and a dark stand body.
-        const diffuserMeshes: BABYLON.Mesh[] = [];
-        for (const sm of allSubMeshes) {
-          if (!(sm instanceof BABYLON.Mesh)) continue;
-          const mat = sm.material;
-          if (!mat) continue;
-          let brightness = 0;
-          if (mat instanceof BABYLON.PBRMaterial) {
-            const c = mat.albedoColor;
-            brightness = (c.r + c.g + c.b) / 3;
-          } else if (mat instanceof BABYLON.StandardMaterial) {
-            const c = mat.diffuseColor;
-            brightness = (c.r + c.g + c.b) / 3;
-          }
-          if (brightness > 0.6) diffuserMeshes.push(sm);
-        }
-        // Fall back to all submeshes when no clearly-white material is found.
-        const glowMeshes = diffuserMeshes.length > 0
-          ? diffuserMeshes
-          : (allSubMeshes.filter(sm => sm instanceof BABYLON.Mesh) as BABYLON.Mesh[]);
+        const glowPlane = BABYLON.MeshBuilder.CreatePlane(
+          `${lightId}_diffuserGlow`,
+          { width: panelSize, height: panelSize },
+          this.scene
+        );
+        glowPlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_Y;
+        glowPlane.position.set(position.x, panelCenterY, position.z);
 
-        // Apply initial emissive glow to the diffuser faces.
-        glowMeshes.forEach(sm => {
-          const mat = sm.material;
-          if (!mat) return;
-          if (mat instanceof BABYLON.PBRMaterial) {
-            mat.emissiveColor    = new BABYLON.Color3(cctColor.r, cctColor.g, cctColor.b);
-            mat.emissiveIntensity = initStrength;
-          } else if (mat instanceof BABYLON.StandardMaterial) {
-            mat.emissiveColor = new BABYLON.Color3(
-              cctColor.r * initStrength,
-              cctColor.g * initStrength,
-              cctColor.b * initStrength
-            );
-          }
-        });
+        const glowMat = new BABYLON.StandardMaterial(`${lightId}_diffuserGlowMat`, this.scene);
+        glowMat.disableLighting = true;
+        glowMat.backFaceCulling = false;
+        glowMat.alpha = 0.92;
+        glowMat.emissiveColor = new BABYLON.Color3(
+          cctColor.r * initStrength,
+          cctColor.g * initStrength,
+          cctColor.b * initStrength
+        );
+        glowPlane.material = glowMat;
 
         // Store for live updates via updateLightHeadGlow.
-        (mesh as any)._headMeshes = glowMeshes;
-        console.log(`[addLight] diffuserMeshes=${diffuserMeshes.length} bright / ${allSubMeshes.length} total, initStrength=${initStrength.toFixed(2)}`);
+        (mesh as any)._headMeshes = [glowPlane];
+        console.log(`[addLight] glow plane: size=${panelSize.toFixed(3)}m Y=${panelCenterY.toFixed(3)} strength=${initStrength.toFixed(2)}`);
 
         console.log(`[addLight] GLB loaded: ${result.meshes.length} meshes, scale=${scaleFactor.toFixed(3)}, lightHeadY=${lightHeadHeight.toFixed(2)}m, headMeshes=${headCount}`);
       } catch (loadErr) {
