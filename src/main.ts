@@ -6468,21 +6468,27 @@ class VirtualStudio {
     this.scene.onPointerObservable.add((info) => {
       if (info.type === BABYLON.PointerEventTypes.POINTERPICK && info.pickInfo?.pickedMesh) {
         const picked = info.pickInfo.pickedMesh;
-        // Skip gizmo meshes so clicking on rings doesn't swallow the event
-        if (picked.name.startsWith('studioGizmo_') || picked.name.startsWith('baseMarker_') || picked.name.startsWith('standPole') || picked.name.startsWith('arrowUp') || picked.name.startsWith('arrowDown')) {
-          return;
-        }
-        // Check root mesh AND all child meshes so clicking the visible 3D model selects the light
+
+        // Build a set of light root meshes for O(1) ancestor lookup
+        const lightRootToId = new Map<BABYLON.Node, string>();
         for (const [id, data] of this.lights) {
-          const childMeshes = data.mesh.getChildMeshes(true);
-          if (data.mesh === picked || childMeshes.includes(picked)) {
-            this.selectLight(id);
+          lightRootToId.set(data.mesh, id);
+        }
+
+        // Walk UP the hierarchy from the picked mesh to find if it belongs to a light
+        let node: BABYLON.Node | null = picked;
+        while (node) {
+          const lightId = lightRootToId.get(node);
+          if (lightId) {
+            this.selectLight(lightId);
             return;
           }
+          node = node.parent;
         }
+
         // Select story character for WASD control when clicked
         for (const [storyRigId, data] of this.storyCharacters) {
-          const childMeshes = data.mesh.getChildMeshes(true);
+          const childMeshes = data.mesh.getChildMeshes(false);
           if (data.mesh === picked || childMeshes.includes(picked)) {
             this.selectStoryCharacterForKeyboard(storyRigId);
             return;
@@ -30465,6 +30471,7 @@ class VirtualStudio {
     leftEye.position = leftLocal;
     leftEye.parent = targetMesh;
     leftEye.isVisible = true;
+    leftEye.isPickable = false;
     leftEye.setEnabled(true);
 
     // Create right eye - make it more visible
@@ -30475,6 +30482,7 @@ class VirtualStudio {
     rightEye.position = rightLocal;
     rightEye.parent = targetMesh;
     rightEye.isVisible = true;
+    rightEye.isPickable = false;
     rightEye.setEnabled(true);
 
     // Eye Material Stack: PBRMaterial for sclera/iris (opaque)
