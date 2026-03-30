@@ -49,6 +49,7 @@ const PosingModePanel = lazy(() => import('./panels/PosingModePanel').then(m => 
 const GelPickerPanel = lazy(() => import('./panels/GelPickerPanel').then(m => ({ default: m.GelPickerPanel })));
 const OutdoorLightingPanel = lazy(() => import('./panels/OutdoorLightingPanel').then(m => ({ default: m.OutdoorLightingPanel })));
 const CinematicEvaluationPanel = lazy(() => import('./panels/CinematicEvaluationPanel').then(m => ({ default: m.CinematicEvaluationPanel })));
+const AssetBrowserPanelLazy = lazy(() => import('./components/AssetBrowserPanel').then(m => ({ default: m.AssetBrowserPanel })));
 
 // Loading fallback for lazy-loaded components
 const PanelLoadingFallback = () => (
@@ -968,3 +969,77 @@ export const CinematicEvaluationApp: React.FC = () => (
     </ToastProvider>
   </CustomThemeProvider>
 );
+
+export const AssetBrowserPanelApp: React.FC = () => {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleToggle = () => {
+      setIsOpen(prev => {
+        const newState = !prev;
+        const panel = document.getElementById('assetBrowserPanel');
+        if (panel) {
+          if (newState) {
+            // Close other bottom panels
+            const marketplacePanel = document.getElementById('marketplacePanel');
+            const aiPanel = document.getElementById('aiAssistantPanel');
+            const studioPanel = document.getElementById('actorBottomPanel');
+            if (marketplacePanel?.classList.contains('open')) {
+              window.dispatchEvent(new CustomEvent('toggle-marketplace-panel'));
+            }
+            if (aiPanel?.classList.contains('open')) {
+              window.dispatchEvent(new CustomEvent('toggle-ai-assistant-panel'));
+            }
+            if (studioPanel?.classList.contains('open')) {
+              studioPanel.classList.remove('open');
+              const t = document.getElementById('actorPanelTrigger');
+              t?.classList.remove('active');
+              t?.setAttribute('aria-expanded', 'false');
+            }
+            panel.style.display = 'flex';
+            panel.classList.add('open');
+          } else {
+            panel.style.display = 'none';
+            panel.classList.remove('open');
+            panel.classList.remove('fullscreen');
+            setIsFullscreen(false);
+          }
+        }
+        const trigger = document.getElementById('assetBrowserTrigger');
+        if (trigger) {
+          trigger.classList.toggle('active', newState);
+          trigger.setAttribute('aria-expanded', String(newState));
+          const arrow = trigger.querySelector('.library-arrow');
+          if (arrow) arrow.textContent = newState ? '−' : '+';
+        }
+        return newState;
+      });
+    };
+
+    window.addEventListener('toggle-asset-browser-panel', handleToggle);
+    return () => window.removeEventListener('toggle-asset-browser-panel', handleToggle);
+  }, []);
+
+  if (!isOpen) return null;
+
+  return (
+    <CustomThemeProvider>
+      <Suspense fallback={<PanelLoadingFallback />}>
+        <AssetBrowserPanelLazy
+          isFullscreen={isFullscreen}
+          onClose={() => window.dispatchEvent(new CustomEvent('toggle-asset-browser-panel'))}
+          onToggleFullscreen={() => {
+            const panel = document.getElementById('assetBrowserPanel');
+            if (panel) {
+              const newFs = !panel.classList.contains('fullscreen');
+              setIsFullscreen(newFs);
+              if (newFs) panel.classList.add('fullscreen');
+              else panel.classList.remove('fullscreen');
+            }
+          }}
+        />
+      </Suspense>
+    </CustomThemeProvider>
+  );
+};

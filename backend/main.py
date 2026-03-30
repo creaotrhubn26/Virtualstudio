@@ -1512,6 +1512,38 @@ async def ai_analyze_reference(request: Request):
     return JSONResponse(result)
 
 
+@app.get("/api/assets/search")
+async def asset_browser_search(
+    source: str,
+    q: str = "",
+    type: str = "models",
+    limit: int = 24,
+):
+    """
+    Unified asset search proxy for Poly Haven, ambientCG, Sketchfab and Poly Pizza.
+    Query params: source, q, type (models|hdris|textures), limit
+    """
+    try:
+        from asset_browser_service import search_assets
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail=f"Asset browser service unavailable: {exc}")
+    result = await search_assets(source=source, query=q, asset_type=type, limit=min(limit, 48))
+    return JSONResponse(result)
+
+
+@app.get("/api/assets/sketchfab/download/{uid}")
+async def asset_sketchfab_download(uid: str):
+    """Get a temporary GLB download URL for a Sketchfab model."""
+    try:
+        from asset_browser_service import sketchfab_get_download_url
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    url = await sketchfab_get_download_url(uid)
+    if not url:
+        raise HTTPException(status_code=404, detail="Download URL not available — check SKETCHFAB_API_TOKEN")
+    return JSONResponse({"url": url})
+
+
 @app.post("/api/ai/generate-prop-glb")
 async def ai_generate_prop_glb(request: Request):
     """

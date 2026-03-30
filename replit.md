@@ -256,3 +256,23 @@ The Napoli Dreams banner in ScenerPanel includes a collapsible **Merkevarebyggin
 - **boto3**: Cloudflare R2 / S3-compatible API access for ML model storage.
 - **OpenAI API**: For storyboard AI image generation.
 - **Rodin API**: For Hyper3D text-to-3D model generation.
+- **httpx**: Async HTTP client used by asset_browser_service.py for proxying external asset APIs.
+
+## Asset Browser
+
+A live multi-source 3D asset browser panel (`src/components/AssetBrowserPanel.tsx`) with backend proxy (`backend/asset_browser_service.py`):
+
+| Source | Key required | Asset types |
+|---|---|---|
+| Poly Haven | No (CC0) | Models (GLB), HDRIs (.hdr), Textures |
+| ambientCG | No (CC0) | PBR Textures |
+| Sketchfab | `SKETCHFAB_API_TOKEN` | Models (GLB) |
+| Poly Pizza | `POLYPIZZA_API_KEY` | Models (GLB) |
+
+**Events dispatched from panel:**
+- `vs-load-external-glb { url, name }` — loads a GLB from a URL into the scene as a prop
+- `vs-load-environment-hdri { url, name }` — loads an equirectangular .hdr file as `scene.environmentTexture`
+
+**Backend routes:**
+- `GET /api/assets/search?source=&q=&type=&limit=` — unified search proxy
+- `GET /api/assets/sketchfab/download/{uid}` — deferred temp download URL for Sketchfab models

@@ -483,6 +483,14 @@
           </div>
         </button>
 
+        <button class="actor-panel-trigger" id="assetBrowserTrigger" aria-expanded="false" aria-controls="assetBrowserPanel" style="margin-bottom:8px;" onclick="window.dispatchEvent(new CustomEvent('toggle-asset-browser-panel'))">
+          <div class="library-trigger-content">
+            <div class="library-icon" aria-hidden="true" style="background-image:url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23fff\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5\'/%3E%3C/svg%3E');"></div>
+            <span>Asset Browser</span>
+            <span class="library-arrow" aria-hidden="true">+</span>
+          </div>
+        </button>
+
         <button class="actor-panel-trigger" id="marketplaceTrigger" aria-expanded="false" aria-controls="marketplacePanel" style="margin-bottom:8px;">
           <div class="library-trigger-content">
             <div class="library-icon" aria-hidden="true" style="background-image:url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23fff\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z\'/%3E%3Cpath d=\'M3 6h18\'/%3E%3Cpath d=\'M16 10a4 4 0 0 1-8 0\'/%3E%3C/svg%3E');"></div>
@@ -3351,6 +3359,30 @@
   <div id="avatarGeneratorRoot"></div>
   <div id="accessoriesPanelRoot"></div>
   <div id="posingModePanelRoot"></div>
+    <!-- Asset Browser Panel -->
+    <div class="actor-bottom-panel" id="assetBrowserPanel" style="display:none;">
+      <div class="panel-resize-handle" id="assetBrowserResizeHandle" aria-label="Dra for å endre panelstørrelse"></div>
+      <div class="actor-panel-tabs" role="tablist" aria-label="Asset Browser panel">
+        <div class="marketplace-title" id="assetBrowserTitle">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;flex-shrink:0;">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+          </svg>
+          <span class="marketplace-title-text">Asset Browser</span>
+        </div>
+        <div class="actor-panel-actions">
+          <button class="panel-fullscreen-btn" id="assetBrowserFullscreenBtn" title="Fullskjerm" aria-label="Veksle fullskjermmodus">
+            <span aria-hidden="true">⛶</span>
+          </button>
+          <button class="panel-close-btn" id="assetBrowserCloseBtn" title="Lukk panel" aria-label="Lukk Asset Browser" onclick="window.dispatchEvent(new CustomEvent('toggle-asset-browser-panel'))">
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+      </div>
+      <div class="actor-panel-content" id="assetBrowserPanelContent">
+        <div id="assetBrowserPanelRoot"></div>
+      </div>
+    </div>
+
     <!-- Marketplace Panel -->
     <div class="actor-bottom-panel" id="marketplacePanel" style="display:none;">
       <div class="panel-resize-handle" id="marketplaceResizeHandle" aria-label="Dra for å endre panelstørrelse"></div>

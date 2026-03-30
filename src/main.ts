@@ -3,7 +3,7 @@ import '@babylonjs/loaders/glTF';
 import { GLTFFileLoader, GLTFLoaderAnimationStartMode } from '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, AIAssistantApp, MarketplacePanelApp, SceneComposerPanelApp, AnimationComposerApp, VirtualStudioProApp, InteractiveElementsBrowserApp, AmbientSoundsBrowserApp, AccessoriesPanelApp, StoryCharacterHUDApp, PosingModePanelApp, GelPickerApp, OutdoorLightingApp, CinematicEvaluationApp } from './App';
+import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, AIAssistantApp, MarketplacePanelApp, SceneComposerPanelApp, AnimationComposerApp, VirtualStudioProApp, InteractiveElementsBrowserApp, AmbientSoundsBrowserApp, AccessoriesPanelApp, StoryCharacterHUDApp, PosingModePanelApp, GelPickerApp, OutdoorLightingApp, CinematicEvaluationApp, AssetBrowserPanelApp } from './App';
 import { useAppStore, useFocusStore, useAutoFocusStore, useFocusPeakingStore, SceneNode } from './state/store';
 import { AutoFocusSystem } from './core/AutoFocusSystem';
 import { FocusPeakingEffect } from './core/FocusPeakingEffect';
@@ -69,7 +69,7 @@ interface EnvironmentRuntimePropResult {
 // Early initialization of Studio Library button - runs immediately
 (function initStudioLibraryButton() {
   let isToggling = false;
-  
+
   const togglePanel = () => {
     if (isToggling) return;
     isToggling = true;
@@ -114,7 +114,7 @@ interface EnvironmentRuntimePropResult {
     // Debounce to prevent rapid toggling
     setTimeout(() => { isToggling = false; }, 100);
   };
-  
+
   // Event delegation - catches clicks even before specific handlers are attached
   document.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
@@ -124,7 +124,7 @@ interface EnvironmentRuntimePropResult {
       e.stopPropagation();
       togglePanel();
     }
-    
+
     // Handle equipment add buttons
     const equipBtn = target.closest('.equipment-add-btn') as HTMLElement;
     if (equipBtn) {
@@ -137,7 +137,7 @@ interface EnvironmentRuntimePropResult {
       }
     }
   }, true); // Use capture phase for earliest possible handling
-  
+
   // Also handle keyboard for accessibility
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -694,13 +694,13 @@ class VirtualStudio {
   private gizmoManager: BABYLON.GizmoManager | null = null;
   private wallsVisible: boolean = true;
   private activePresetKategori: string = '';
-  
+
   // Undo/Redo system
   private undoStack: UndoAction[] = [];
   private redoStack: UndoAction[] = [];
   private maxUndoSteps: number = 50;
   private isUndoRedoAction: boolean = false;
-  
+
   // Ambient light control
   private ambientLight: BABYLON.HemisphericLight | null = null;
   private ambientLightBaseIntensity: number = 0.3;
@@ -719,17 +719,17 @@ class VirtualStudio {
   private topViewCtx: CanvasRenderingContext2D | null = null;
   private histogramCanvas: HTMLCanvasElement | null = null;
   private histogramCtx: CanvasRenderingContext2D | null = null;
-  
+
   // Monitor canvas rendering
   private monitorCameras: Map<string, BABYLON.ArcRotateCamera> = new Map();
   private monitorRenderTargets: Map<string, BABYLON.RenderTargetTexture> = new Map();
   private monitorFrameCount: number = 0;
   // Cache texture handles for WebGL2 optimization
   private monitorTextureHandles: Map<string, WebGLTexture | null> = new Map();
-  
+
   // Casting candidates in scene
   private castingCandidates: Map<string, { mesh: BABYLON.Mesh; name: string; avatarUrl?: string }> = new Map();
-  
+
   // Scene banner system
   private sceneBanner: {
     mesh: BABYLON.Mesh | null;
@@ -754,7 +754,7 @@ class VirtualStudio {
     characters: new Map<string, { id: string; mesh: BABYLON.Mesh; name: string; avatarUrl?: string }>(),
     backdrops: new Map<string, { id: string; mesh: BABYLON.Mesh; backdropId: string }>()
   };
-  
+
   // Getter to access lights via sceneState for consistency
   private get sceneLights() { return this.lights; }
   // Track if first render has completed
@@ -765,7 +765,7 @@ class VirtualStudio {
   private monitorContextLost: boolean = false;
   // Track last known renderList length per preset (for change detection)
   private monitorLastRenderListLength: Map<string, number> = new Map();
-  
+
   // Cache for loaded 3D light models to enable cloning (faster than re-loading)
   // Structure: { masterMesh, allMeshes, materialTemplates }
   private lightModelCache: Map<string, {
@@ -774,12 +774,12 @@ class VirtualStudio {
     localForwardAxis: BABYLON.Vector3;
     initialWorldForward: BABYLON.Vector3;
   }> = new Map();
-  
+
   // Autofocus system with eye detection
   private autoFocusSystem: AutoFocusSystem | null = null;
   private focusPeakingEffect: FocusPeakingEffect | null = null;
   private physicsBasedDOF: PhysicsBasedDOF | null = null;
-  
+
   public cameraSettings: CameraSettings & { whiteBalance?: number } = {
     aperture: 2.8,
     shutter: '1/125',
@@ -788,7 +788,7 @@ class VirtualStudio {
     nd: 0,
     whiteBalance: 5600
   };
-  
+
   private lensData: { [key: number]: { maxAperture: number; minAperture: number; name: string } } = {
     24: { maxAperture: 1.4, minAperture: 22, name: '24mm f/1.4' },
     35: { maxAperture: 1.4, minAperture: 22, name: '35mm f/1.4' },
@@ -796,7 +796,7 @@ class VirtualStudio {
     85: { maxAperture: 1.4, minAperture: 16, name: '85mm f/1.4' },
     135: { maxAperture: 2.0, minAperture: 22, name: '135mm f/2.0' }
   };
-  
+
   private animationState: AnimationState = {
     isPlaying: false,
     currentTime: 0,
@@ -843,7 +843,7 @@ class VirtualStudio {
   private studioGizmoOriginalHeight: number = 0;
   private studioGizmoGridSnap: boolean = true;
   private studioGizmoGridSize: number = 0.5; // 50cm grid
-  
+
   // Light POV (Point of View) mode
   private lightPOVActive: boolean = false;
   private lightPOVCamera: BABYLON.FreeCamera | null = null;
@@ -863,7 +863,7 @@ class VirtualStudio {
   private recordingStartTime: number = 0;
   private recordingTimerInterval: number | null = null;
   private activeRecordingCamera: string | null = null;
-  
+
   // Multi-camera recording state
   private multiCameraRecorders: Map<string, MediaRecorder> = new Map();
   private multiCameraChunks: Map<string, Blob[]> = new Map();
@@ -885,14 +885,14 @@ class VirtualStudio {
       console.error('[Constructor] Engine creation failed:', err);
       throw err;
     }
-    
+
     // Handle WebGL context loss - critical for RTT stability
     canvas.addEventListener('webglcontextlost', (event) => {
       console.warn('[Monitor] WebGL context lost! This will cause signals to disappear.');
       event.preventDefault(); // Prevent default behavior to allow recovery
       this.monitorContextLost = true;
     });
-    
+
     canvas.addEventListener('webglcontextrestored', () => {
       console.warn('[Monitor] WebGL context restored. Recreating GPU resources (RTTs, cameras)...');
       // CRITICAL: On context restore, GPU resources (textures, FBOs) are gone and must be recreated
@@ -917,7 +917,7 @@ class VirtualStudio {
           // Camera might already be disposed
         }
       }
-      
+
       // Dispose temporary framebuffers (if context is still valid)
       if (gl && !gl.isContextLost()) {
         for (const [_presetId, tempFbo] of this.monitorTempFramebuffers.entries()) {
@@ -930,7 +930,7 @@ class VirtualStudio {
           }
         }
       }
-      
+
       // Clear all maps to force recreation
       this.monitorRenderTargets.clear();
       this.monitorCameras.clear();
@@ -939,18 +939,18 @@ class VirtualStudio {
       this.monitorTextureHandles.clear();
       this.monitorTempFramebuffers.clear();
       this.monitorLoggedWarnings.clear();
-      
+
       // RTTs will be recreated by updateMonitorCanvases on next render
       this.monitorContextLost = false;
       console.log('[Monitor] GPU resource cleanup complete. RTTs will be recreated on next render.');
     });
-    
+
     console.log('[Constructor] Creating scene...');
     this.scene = new BABYLON.Scene(this.engine);
     this.scene.clearColor = new BABYLON.Color4(0.08, 0.09, 0.11, 1);
     this.configureGltfLoaderDefaults();
     console.log('[Constructor] Scene created, loading environment texture...');
-    
+
     // Create environment texture for PBR materials to render correctly
     // PBR materials need an environment for reflections and proper lighting
     // Note: This loads asynchronously but doesn't block construction
@@ -960,7 +960,7 @@ class VirtualStudio {
     );
     this.scene.environmentIntensity = 0.6; // Subtle environment lighting
     console.log('[Constructor] Environment texture loading initiated');
-    
+
     // Scene optimizations - only override non-defaults that improve performance
     // autoClear and autoClearDepthAndStencil already default to true
     // useRightHandedSystem defaults to false (standard Babylon left-handed)
@@ -980,7 +980,7 @@ class VirtualStudio {
     this.camera.minZ = 0.3;
     this.camera.maxZ = 200;
     this.camera.fov = (this.cameraSettings.focalLength / 50) * 0.8;
-    
+
     // Smooth camera movement to reduce visual artifacts during motion
     this.camera.inertia = 0.9;
     this.camera.panningSensibility = 50;
@@ -1028,7 +1028,7 @@ class VirtualStudio {
       this.engine.resize();
       this.resizeCanvases();
     });
-    
+
     const viewport3d = canvas.parentElement;
     if (viewport3d) {
       const resizeObserver = new ResizeObserver(() => {
@@ -1047,7 +1047,7 @@ class VirtualStudio {
       this.gizmoManager.rotationGizmoEnabled = false;
       this.gizmoManager.scaleGizmoEnabled = false;
       this.gizmoManager.attachableMeshes = [];
-      
+
       this.customizeGizmoAppearance();
 
       virtualActorService.setScene(this.scene);
@@ -1059,25 +1059,25 @@ class VirtualStudio {
       }).catch(err => {
         console.error('[VirtualStudio] setupStudio error:', err);
       });
-      
+
       this.setup2DViews();
       this.setupUI();
       this.setupAssetEventListeners();
       this.setupFocusEventListeners();
-      
+
       this.autoFocusSystem = new AutoFocusSystem(this.scene, this.camera);
       this.focusPeakingEffect = new FocusPeakingEffect(this.scene, this.camera);
       this.physicsBasedDOF = new PhysicsBasedDOF(this.scene, this.camera);
       this.setupAutoFocusUI();
       this.setupFocusPeakingUI();
-      
+
       console.log('[VirtualStudio] Starting addDefaultMannequin...');
       this.addDefaultMannequin();
       console.log('[VirtualStudio] Setup complete!');
     } catch (err) {
       console.error('[VirtualStudio] Setup error (render loop still running):', err);
     }
-    
+
     this.engine.resize();
     this.resizeCanvases();
   }
@@ -1086,31 +1086,31 @@ class VirtualStudio {
   public getCamera(): BABYLON.ArcRotateCamera {
     return this.camera;
   }
-  
+
   public getCameraPosition(): BABYLON.Vector3 {
     return this.camera.position.clone();
   }
-  
+
   public getCameraTarget(): BABYLON.Vector3 {
     return this.camera.target.clone();
   }
-  
+
   public getCameraFov(): number {
     return this.camera.fov;
   }
-  
+
   public getAutoFocusSystem(): AutoFocusSystem | null {
     return this.autoFocusSystem;
   }
-  
+
   public setCameraPosition(position: BABYLON.Vector3): void {
     this.camera.position = position;
   }
-  
+
   public setCameraTarget(target: BABYLON.Vector3): void {
     this.camera.target = target;
   }
-  
+
   public setCameraFov(fov: number): void {
     this.camera.fov = fov;
   }
@@ -1262,7 +1262,7 @@ class VirtualStudio {
       detail: diagnostics,
     }));
   }
-  
+
   public resetCamera(): void {
     this.camera.alpha = -Math.PI / 2;
     this.camera.beta = Math.PI / 3.5;
@@ -1374,7 +1374,7 @@ class VirtualStudio {
           const boundingInfo = mesh.getBoundingInfo();
           const min = boundingInfo.boundingBox.minimumWorld;
           const max = boundingInfo.boundingBox.maximumWorld;
-          
+
           minX = Math.min(minX, min.x);
           minY = Math.min(minY, min.y);
           minZ = Math.min(minZ, min.z);
@@ -1422,14 +1422,14 @@ class VirtualStudio {
           shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
           // Restore previously tuned kernel (softbox=64, octabox=96, snoot=4, etc.)
           shadowGenerator.blurKernel = savedKernel;
-          
+
           // Add all visible meshes as shadow casters
           this.scene.meshes.forEach(mesh => {
             if (mesh.isVisible && mesh !== lightData.mesh && mesh.getTotalVertices() > 0) {
               shadowGenerator.addShadowCaster(mesh, true);
             }
           });
-          
+
           lightData.shadowGenerator = shadowGenerator;
         }
       });
@@ -1762,14 +1762,14 @@ class VirtualStudio {
     public getCurrentSceneAsPreset(): SceneComposition {
       const envState = environmentService.getState();
       const renderState = useRenderingStore.getState();
-      
+
       return {
         id: `preset_${Date.now()}`,
         name: 'Scene ' + new Date().toLocaleString(),
         description: 'Auto-saved scene composition',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        
+
         // Serialize lights
         lights: Array.from(this.lights.values()).map(light => ({
           id: light.name,
@@ -1784,7 +1784,7 @@ class VirtualStudio {
           visible: light.mesh.isVisible,
           specs: light.specs
         })),
-        
+
         // Serialize props
         props: Array.from(this.sceneState.props.values()).map(prop => ({
           id: prop.id,
@@ -1798,7 +1798,7 @@ class VirtualStudio {
           visible: prop.mesh.isVisible,
           locked: false
         } as SceneNode)),
-        
+
         // Serialize characters/actors
         actors: Array.from(this.sceneState.characters.values()).map(char => ({
           id: char.id,
@@ -1812,7 +1812,7 @@ class VirtualStudio {
           visible: char.mesh.isVisible,
           locked: false
         } as SceneNode)),
-        
+
         // Serialize camera
         cameras: [{
           id: 'main',
@@ -1822,7 +1822,7 @@ class VirtualStudio {
           target: { x: this.camera.target.x, y: this.camera.target.y, z: this.camera.target.z },
           fov: this.camera.fov
         }],
-        
+
         // Camera settings
         cameraSettings: {
           aperture: 2.8,
@@ -1831,7 +1831,7 @@ class VirtualStudio {
           focalLength: 50,
           nd: 0
         },
-        
+
         // Environment state
         environment: {
           walls: Object.entries(envState.walls).map(([key, wall]) => ({
@@ -1856,7 +1856,7 @@ class VirtualStudio {
             ambientIntensity: this.ambientLight?.intensity || 0.3
           }
         },
-        
+
         // Layers (default layer with all nodes)
         layers: [{
           id: 'default',
@@ -1869,7 +1869,7 @@ class VirtualStudio {
             ...Array.from(this.sceneState.characters.keys())
           ]
         }],
-        
+
         tags: [renderState.activePreset || 'custom']
       };
     }
@@ -1879,10 +1879,10 @@ class VirtualStudio {
      */
     public async applyScenePreset(preset: SceneComposition): Promise<void> {
       console.log('[Scene] Applying preset:', preset.name);
-      
+
       // Clear current scene
       await this.clearScene();
-      
+
       // Load lights
       if (preset.lights && preset.lights.length > 0) {
         for (const lightData of preset.lights) {
@@ -1893,7 +1893,7 @@ class VirtualStudio {
               lightData.position[2]
             );
             await this.addLight(lightData.name, position);
-            
+
             // Apply light properties
             const light = this.lights.get(lightData.id);
             if (light) {
@@ -1910,7 +1910,7 @@ class VirtualStudio {
           }
         }
       }
-      
+
       // Load props
       if (preset.props && preset.props.length > 0) {
         for (const propData of preset.props) {
@@ -1921,7 +1921,7 @@ class VirtualStudio {
               propNode.position?.y ?? 0,
               propNode.position?.z ?? 0
             );
-            
+
             // Get prop definition from library
             const propDef = getPropById(propNode.assetId);
             if (propDef?.modelUrl) {
@@ -1931,7 +1931,7 @@ class VirtualStudio {
                 { modelUrl: propDef.modelUrl, metadata: propNode.metadata },
                 position
               );
-              
+
               // Apply rotation and scale
               const prop = this.sceneState.props.get(propNode.id);
               if (prop && propNode.rotation && propNode.scale) {
@@ -1945,7 +1945,7 @@ class VirtualStudio {
           }
         }
       }
-      
+
       // Load actors/characters
       if (preset.actors && preset.actors.length > 0) {
         for (const actorData of preset.actors) {
@@ -1953,7 +1953,7 @@ class VirtualStudio {
             const actorNode = actorData as any; // Type assertion for legacy data
             if (actorNode.assetId) {
               await this.loadAvatarModel(actorNode.assetId, { name: actorNode.name });
-              
+
               // Find the loaded character and apply transform
               const character = this.sceneState.characters.get(actorNode.id);
               if (character && actorNode.position && actorNode.rotation && actorNode.scale) {
@@ -1968,7 +1968,7 @@ class VirtualStudio {
           }
         }
       }
-      
+
       // Apply camera
       if (preset.cameras && preset.cameras.length > 0) {
         const camData = preset.cameras[0];
@@ -1978,7 +1978,7 @@ class VirtualStudio {
         this.camera.setTarget(new BABYLON.Vector3(camData.target.x, camData.target.y, camData.target.z));
         this.camera.fov = camData.fov;
       }
-      
+
       // Apply environment
       if (preset.environment) {
         // Apply walls
@@ -1986,13 +1986,13 @@ class VirtualStudio {
           const wall = preset.environment.walls[0];
           this.applyWallTexture(wall.id, wall.assetId);
         }
-        
+
         // Apply floors
         if (preset.environment.floors && preset.environment.floors.length > 0) {
           const floor = preset.environment.floors[0];
           this.updateFloorProperties(floor.assetId);
         }
-        
+
         // Apply atmosphere
         if (preset.environment.atmosphere) {
           const atm = preset.environment.atmosphere;
@@ -2002,7 +2002,7 @@ class VirtualStudio {
           this.scene.clearColor = BABYLON.Color4.FromHexString(atm.clearColor + 'FF');
         }
       }
-      
+
       // Apply rendering preset if available
       if (preset.tags && preset.tags.length > 0) {
         const renderPreset = preset.tags[0];
@@ -2010,7 +2010,7 @@ class VirtualStudio {
           this.applyRenderingPreset(renderPreset);
         }
       }
-      
+
       console.log('[Scene] Preset applied successfully');
       window.dispatchEvent(new CustomEvent('vs-preset-applied', { 
         detail: { presetId: preset.id, presetName: preset.name } 
@@ -2022,7 +2022,7 @@ class VirtualStudio {
      */
     public async applyShotList(shotList: ShotList): Promise<void> {
       console.log('[Scene] Applying shot list:', shotList.id);
-      
+
       // Apply camera settings from shot list
       if (shotList.cameraSettings) {
         const settings = shotList.cameraSettings;
@@ -2035,7 +2035,7 @@ class VirtualStudio {
           this.camera.fov = fov;
         }
       }
-      
+
       // Process shots
       if (shotList.shots && shotList.shots.length > 0) {
         for (const shot of shotList.shots) {
@@ -2044,7 +2044,7 @@ class VirtualStudio {
           this.applyShotListLighting(shot);
         }
       }
-      
+
       console.log('[Scene] Shot list applied');
       window.dispatchEvent(new CustomEvent('vs-shotlist-applied', { 
         detail: { shotListId: shotList.id } 
@@ -2061,7 +2061,7 @@ class VirtualStudio {
         const fov = 2 * Math.atan(sensorWidth / (2 * shot.focalLength));
         this.camera.fov = fov;
       }
-      
+
       // Apply camera angle adjustments
       switch (shot.cameraAngle) {
         case 'Eye Level':
@@ -2083,7 +2083,7 @@ class VirtualStudio {
           console.log('[Camera] Dutch angle requested - not fully supported');
           break;
       }
-      
+
       console.log('[Camera] Applied shot camera:', shot.shotType, shot.cameraAngle);
     }
 
@@ -2099,9 +2099,9 @@ class VirtualStudio {
         'wide': { key: 0.8, fill: 0.6, rim: 0.2 }, // More ambient
         'establishing': { key: 0.7, fill: 0.7, rim: 0.1 }, // Even lighting
       };
-      
+
       const multiplier = moodMultipliers[shot.shotType] || { key: 1.0, fill: 0.5, rim: 0.3 };
-      
+
       // Apply multipliers to lights based on their role
       this.lights.forEach((light, _lightId) => {
         const name = light.name.toLowerCase();
@@ -2114,7 +2114,7 @@ class VirtualStudio {
         }
         // Light intensity already updated above
       });
-      
+
       console.log('[Lighting] Applied shot lighting:', shot.shotType);
     }
 
@@ -2123,23 +2123,23 @@ class VirtualStudio {
      */
     private async clearScene(): Promise<void> {
       console.log('[Scene] Clearing scene');
-      
+
       // Remove all props
       Array.from(this.sceneState.props.keys()).forEach((id) => {
         this.removePropNodeById(id, false);
       });
-      
+
       // Remove all characters
       this.sceneState.characters.forEach((char, _id) => {
         char.mesh.dispose();
       });
       this.sceneState.characters.clear();
-      
+
       // Remove all lights (keep ambient)
       this.lights.forEach((_light, id) => {
         this.removeLight(id);
       });
-      
+
       console.log('[Scene] Scene cleared');
     }
 
@@ -2148,12 +2148,12 @@ class VirtualStudio {
      */
     public async startStreaming(config: StreamConfig): Promise<void> {
       console.log('[Streaming] Starting stream with config:', config);
-      
+
       const streamingStore = useStreamingStore.getState();
-      
+
       // Update config
       streamingStore.setConfig(config);
-      
+
       // Create render target texture for streaming
       const rtt = new BABYLON.RenderTargetTexture(
         'streamRTT',
@@ -2165,26 +2165,26 @@ class VirtualStudio {
         false,
         BABYLON.Texture.BILINEAR_SAMPLINGMODE
       );
-      
+
       // Render all meshes to the texture
       rtt.renderList = this.scene.meshes;
       rtt.activeCamera = this.camera;
-      
+
       // Create canvas for stream capture
       const streamCanvas = document.createElement('canvas');
       streamCanvas.width = config.quality.width;
       streamCanvas.height = config.quality.height;
       const streamCtx = streamCanvas.getContext('2d');
-      
+
       if (!streamCtx) {
         console.error('[Streaming] Failed to create stream canvas context');
         return;
       }
-      
+
       // Setup frame capture loop
       const frameInterval = 1000 / config.quality.frameRate;
       let lastFrameTime = 0;
-      
+
       const captureFrame = () => {
         const now = performance.now();
         if (now - lastFrameTime >= frameInterval) {
@@ -2199,15 +2199,15 @@ class VirtualStudio {
           lastFrameTime = now;
         }
       };
-      
+
       // Register render observer
       const observer = this.scene.onAfterRenderObservable.add(captureFrame);
-      
+
       // Start streaming via service
       try {
         await streamingStore.startStream(streamCanvas);
         console.log('[Streaming] Stream started successfully');
-        
+
         // Store cleanup reference
         (this as any)._streamingCleanup = () => {
           this.scene.onAfterRenderObservable.remove(observer);
@@ -2238,59 +2238,59 @@ class VirtualStudio {
      */
     public async exportScene(format: ExportFormat, options?: Partial<ExportSettings>): Promise<Blob | null> {
       console.log('[Export] Exporting scene as:', format, `(${this.sceneLights.size} lights)`);
-      
+
       const exportStore = useExportStore.getState();
-      
+
       // Get current scene composition
       const sceneData = this.getCurrentSceneAsPreset();
-      
+
       try {
         // Screenshot exports
         if (format === 'screenshot-png' || format === 'screenshot-exr') {
           const width = options?.imageWidth || 1920;
           const height = options?.imageHeight || 1080;
           const samples = options?.imageSamples || 4;
-          
+
           return await this.captureScreenshot(width, height, format === 'screenshot-exr', samples);
         }
-        
+
         // 3D model exports (GLB, GLTF, OBJ, etc.)
         if (format === 'glb' || format === 'gltf' || format === 'obj' || format === 'stl' || format === 'babylon') {
           // Validate all geometry is available
           const meshesToExport: BABYLON.Mesh[] = [];
-          
+
           // Collect props
           this.sceneState.props.forEach((prop) => {
             if (prop.mesh && prop.mesh.isVisible) {
               meshesToExport.push(prop.mesh);
             }
           });
-          
+
           // Collect characters
           this.sceneState.characters.forEach((char) => {
             if (char.mesh && char.mesh.isVisible) {
               meshesToExport.push(char.mesh);
             }
           });
-          
+
           // Include ground/walls if not selectedOnly
           if (!options?.selectedOnly) {
             const ground = this.scene.getMeshByName('ground') as BABYLON.Mesh;
             if (ground) meshesToExport.push(ground);
           }
-          
+
           console.log('[Export] Exporting', meshesToExport.length, 'meshes');
-          
+
           // Use export service to generate file
           return await exportStore.exportScene(sceneData.name, format);
         }
-        
+
         // USD exports
         if (format === 'usda' || format === 'usdz') {
           console.log('[Export] USD export - using export service');
           return await exportStore.exportScene(sceneData.name, format);
         }
-        
+
         console.warn('[Export] Unsupported format:', format);
         return null;
       } catch (error) {
@@ -2309,7 +2309,7 @@ class VirtualStudio {
       samples: number = 4
     ): Promise<Blob> {
       console.log('[Export] Capturing screenshot:', width, 'x', height, hdr ? 'HDR' : 'LDR');
-      
+
       return new Promise((resolve, reject) => {
         // Create high-res render target
         const rtt = new BABYLON.RenderTargetTexture(
@@ -2322,11 +2322,11 @@ class VirtualStudio {
           false,
           BABYLON.Texture.TRILINEAR_SAMPLINGMODE
         );
-        
+
         rtt.renderList = this.scene.meshes;
         rtt.activeCamera = this.camera;
         rtt.samples = samples;
-        
+
         // Render once
         rtt.onAfterRenderObservable.addOnce(() => {
           // Read pixels
@@ -2334,20 +2334,20 @@ class VirtualStudio {
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext('2d');
-          
+
           if (!ctx) {
             rtt.dispose();
             reject(new Error('Failed to create canvas context'));
             return;
           }
-          
+
           const pixelsPromise = rtt.readPixels();
           if (pixelsPromise && pixelsPromise instanceof Uint8Array) {
             const pixels = pixelsPromise as unknown as Uint8ClampedArray;
             const imageData = ctx.createImageData(width, height);
             imageData.data.set(pixels);
             ctx.putImageData(imageData, 0, 0);
-            
+
             canvas.toBlob((blob) => {
               rtt.dispose();
               if (blob) {
@@ -2361,7 +2361,7 @@ class VirtualStudio {
             reject(new Error('Failed to read pixels'));
           }
         });
-        
+
         // Trigger render
         this.scene.incrementRenderId();
         rtt.render();
@@ -2373,13 +2373,13 @@ class VirtualStudio {
      */
     public setupCollaboration(roomId: string, userName: string): void {
       console.log('[Collaboration] Setting up collaboration:', roomId, userName);
-      
+
       const collabStore = useCollaborationStore.getState();
-      
+
       // Connect to collaboration session
       collabStore.connect(roomId, userName).then(() => {
         console.log('[Collaboration] Connected to room:', roomId);
-        
+
         // Subscribe to scene changes and broadcast to collaborators
         this.setupCollaborationListeners();
       }).catch((error) => {
@@ -2392,7 +2392,7 @@ class VirtualStudio {
      */
     private setupCollaborationListeners(): void {
       const collabStore = useCollaborationStore.getState();
-      
+
       // Listen for light changes
       window.addEventListener('vs-light-changed', ((event: CustomEvent) => {
         const { lightId, property, value } = event.detail;
@@ -2402,7 +2402,7 @@ class VirtualStudio {
           value
         });
       }) as EventListener);
-      
+
       // Listen for prop additions
       window.addEventListener('vs-prop-added', ((event: CustomEvent) => {
         const { propId, data } = event.detail;
@@ -2412,13 +2412,13 @@ class VirtualStudio {
           data
         });
       }) as EventListener);
-      
+
       // Listen for prop removals
       window.addEventListener('vs-prop-removed', ((event: CustomEvent) => {
         const { propId } = event.detail;
         collabStore.broadcastObjectDelete(propId);
       }) as EventListener);
-      
+
       // Listen for camera changes
       this.camera.onViewMatrixChangedObservable.add(() => {
         collabStore.broadcastCameraSync({
@@ -2428,7 +2428,7 @@ class VirtualStudio {
           target: this.camera.target.asArray()
         });
       });
-      
+
       console.log('[Collaboration] Event listeners registered');
     }
 
@@ -2640,7 +2640,7 @@ class VirtualStudio {
       pathArray: paths,
       sideOrientation: BABYLON.Mesh.DOUBLESIDE
     }, this.scene);
-    
+
     // Create floor
     const floorDepth = 8 + curveRadius;
     const floor = BABYLON.MeshBuilder.CreateGround('cycloFloor', {
@@ -2690,7 +2690,7 @@ class VirtualStudio {
    */
   private customizeGizmoAppearance(): void {
     if (!this.gizmoManager) return;
-    
+
     // Studio color palette
     const studioAmber = new BABYLON.Color3(1.0, 0.67, 0.0);      // #FFAA00 - primary accent
     const studioGold = new BABYLON.Color3(1.0, 0.84, 0.0);       // Gold highlight
@@ -2698,7 +2698,7 @@ class VirtualStudio {
     const studioGreen = new BABYLON.Color3(0.3, 0.85, 0.4);      // Softer green  
     const studioBlue = new BABYLON.Color3(0.3, 0.6, 1.0);        // Softer blue
     const hoverWhite = new BABYLON.Color3(1.0, 1.0, 1.0);        // White on hover
-    
+
     // Customize position gizmo (arrows)
     const posGizmo = (this.gizmoManager as any).gizmos?.positionGizmo;
     if (posGizmo) {
@@ -2723,11 +2723,11 @@ class VirtualStudio {
         posGizmo.zGizmo.hoverMaterial.diffuseColor = hoverWhite;
         posGizmo.zGizmo.hoverMaterial.emissiveColor = studioAmber.scale(0.5);
       }
-      
+
       // Make arrows slightly thinner for cleaner look
       posGizmo.scaleRatio = 0.9;
     }
-    
+
     // Customize rotation gizmo (rings)
     const rotGizmo = (this.gizmoManager as any).gizmos?.rotationGizmo;
     if (rotGizmo) {
@@ -2749,16 +2749,16 @@ class VirtualStudio {
         rotGizmo.zGizmo.hoverMaterial.diffuseColor = hoverWhite;
         rotGizmo.zGizmo.hoverMaterial.emissiveColor = studioGold.scale(0.5);
       }
-      
+
       rotGizmo.scaleRatio = 0.85;
     }
-    
+
     // Set gizmo thickness for better visibility in studio environment
     this.gizmoManager.gizmos.positionGizmo?.xGizmo?.setCustomMesh;
-    
+
     // Ensure gizmos are rendered on top
     this.gizmoManager.utilityLayer.utilityLayerScene.autoClearDepthAndStencil = false;
-    
+
     console.log('Studio gizmo appearance customized');
   }
 
@@ -2818,7 +2818,7 @@ class VirtualStudio {
     // Sharpen — strong enough for crisp hair and fabric detail without ringing
     this.renderingPipeline.sharpenEnabled = true;
     this.renderingPipeline.sharpen.edgeAmount = 0.45;
-    
+
     // Setup SSR (Screen-Space Reflections) for realistic reflections
     try {
       this.ssrPipeline = new BABYLON.SSRRenderingPipeline(
@@ -2828,7 +2828,7 @@ class VirtualStudio {
         false, // forceGeometryBuffer
         BABYLON.Constants.TEXTURETYPE_UNSIGNED_BYTE
       );
-      
+
       // SSR settings — higher quality for polished floor/backdrop reflections
       this.ssrPipeline.strength = 1.0;
       this.ssrPipeline.reflectionSpecularFalloffExponent = 2;
@@ -2841,17 +2841,17 @@ class VirtualStudio {
       this.ssrPipeline.enableSmoothReflections = true;
       this.ssrPipeline.blurDispersionStrength = 0.02; // less blur = cleaner floor mirror
       this.ssrPipeline.enableAutomaticThicknessComputation = false;
-      
+
       console.log('SSR pipeline enabled');
     } catch (e) {
       console.warn('SSR not available:', e);
     }
-    
+
     // Dispatch event to notify UI about rendering pipeline
     window.dispatchEvent(new CustomEvent('vs-rendering-pipeline-ready', {
       detail: { pipeline: this.renderingPipeline, ssr: this.ssrPipeline }
     }));
-    
+
     console.log('Professional rendering pipeline initialized (Work Mode)');
   }
 
@@ -2876,7 +2876,7 @@ class VirtualStudio {
    */
   public setRenderMode(mode: 'work' | 'final'): void {
     this.renderMode = mode;
-    
+
     if (mode === 'final') {
       // Final Mode: Higher quality, progressive rendering
       if (this.renderingPipeline) {
@@ -2894,7 +2894,7 @@ class VirtualStudio {
       }
       console.log('Switched to Work Mode');
     }
-    
+
     window.dispatchEvent(new CustomEvent('vs-render-mode-changed', {
       detail: { mode, samples: this.finalRenderSamples }
     }));
@@ -2915,7 +2915,7 @@ class VirtualStudio {
   }
 
   // ===== STUDIO GIZMO SYSTEM =====
-  
+
   /**
    * Create and show studio gizmos for the selected light
    * Provides realistic light stand controls instead of abstract XYZ arrows
@@ -2923,15 +2923,15 @@ class VirtualStudio {
   private createStudioGizmos(lightId: string): void {
     const lightData = this.lights.get(lightId);
     if (!lightData) return;
-    
+
     // Clean up existing studio gizmos
     this.disposeStudioGizmos();
-    
+
     const lightPos = lightData.mesh.position.clone();
     const studioAmber = new BABYLON.Color3(1.0, 0.67, 0.0);
     const studioGreen = new BABYLON.Color3(0.3, 0.85, 0.4);
     const studioCyan = new BABYLON.Color3(0.3, 0.8, 1.0);
-    
+
     // 1. BASE RING - Floor ring for horizontal movement (Stativgrep)
     const baseRing = BABYLON.MeshBuilder.CreateTorus('studioGizmo_baseRing', {
       diameter: 1.8,
@@ -2940,7 +2940,7 @@ class VirtualStudio {
     }, this.scene);
     baseRing.position = new BABYLON.Vector3(lightPos.x, 0.02, lightPos.z);
     baseRing.rotation.x = 0; // Flat on ground
-    
+
     const baseRingMat = new BABYLON.StandardMaterial('baseRingMat', this.scene);
     baseRingMat.emissiveColor = studioAmber;
     baseRingMat.diffuseColor = studioAmber;
@@ -2949,7 +2949,7 @@ class VirtualStudio {
     baseRing.material = baseRingMat;
     baseRing.isPickable = true;
     baseRing.renderingGroupId = 1;
-    
+
     // Add grid markers on base ring - use RELATIVE positions since they are children
     for (let i = 0; i < 8; i++) {
       const angle = (i / 8) * Math.PI * 2;
@@ -2965,7 +2965,7 @@ class VirtualStudio {
       marker.parent = baseRing;
       marker.isPickable = false;
     }
-    
+
     // Add drag behavior for base ring
     const baseDragBehavior = new BABYLON.PointerDragBehavior({ dragPlaneNormal: new BABYLON.Vector3(0, 1, 0) });
     baseDragBehavior.useObjectOrientationForDragging = false;
@@ -2982,13 +2982,13 @@ class VirtualStudio {
       if (this.studioGizmoDragging === 'base') {
         let newX = baseRing.position.x;
         let newZ = baseRing.position.z;
-        
+
         // Apply grid snapping if enabled
         if (this.studioGizmoGridSnap) {
           newX = Math.round(newX / this.studioGizmoGridSize) * this.studioGizmoGridSize;
           newZ = Math.round(newZ / this.studioGizmoGridSize) * this.studioGizmoGridSize;
         }
-        
+
         // Update light position (keep Y)
         lightData.mesh.position.x = newX;
         lightData.mesh.position.z = newZ;
@@ -2996,19 +2996,19 @@ class VirtualStudio {
           lightData.light.position.x = newX;
           lightData.light.position.z = newZ;
         }
-        
+
         // Update height slider position
         if (this.studioGizmoMeshes.heightSlider) {
           this.studioGizmoMeshes.heightSlider.position.x = newX;
           this.studioGizmoMeshes.heightSlider.position.z = newZ;
         }
-        
+
         // Update yoke ring position to follow light
         if (this.studioGizmoMeshes.yokeRing) {
           this.studioGizmoMeshes.yokeRing.position.x = newX;
           this.studioGizmoMeshes.yokeRing.position.z = newZ;
         }
-        
+
         // Update POV camera position
         this.updateLightPOVCamera(lightId);
       }
@@ -3030,9 +3030,9 @@ class VirtualStudio {
       this.deactivateLightPOV();
     });
     baseRing.addBehavior(baseDragBehavior);
-    
+
     this.studioGizmoMeshes.baseRing = baseRing;
-    
+
     // 2. HEIGHT SLIDER - Vertical slider along light stand (Teleskopmast)
     const heightSlider = BABYLON.MeshBuilder.CreateCylinder('studioGizmo_heightSlider', {
       height: 0.3,
@@ -3040,7 +3040,7 @@ class VirtualStudio {
       tessellation: 16
     }, this.scene);
     heightSlider.position = new BABYLON.Vector3(lightPos.x, lightPos.y, lightPos.z);
-    
+
     const heightSliderMat = new BABYLON.StandardMaterial('heightSliderMat', this.scene);
     heightSliderMat.emissiveColor = studioGreen;
     heightSliderMat.diffuseColor = studioGreen;
@@ -3049,18 +3049,18 @@ class VirtualStudio {
     heightSlider.material = heightSliderMat;
     heightSlider.isPickable = true;
     heightSlider.renderingGroupId = 1;
-    
+
     // Add up/down arrows on height slider
     const arrowUp = BABYLON.MeshBuilder.CreateCylinder('arrowUp', { height: 0.15, diameterTop: 0, diameterBottom: 0.1 }, this.scene);
     arrowUp.position.y = 0.22;
     arrowUp.material = heightSliderMat;
     arrowUp.parent = heightSlider;
-    
+
     const arrowDown = BABYLON.MeshBuilder.CreateCylinder('arrowDown', { height: 0.15, diameterTop: 0.1, diameterBottom: 0 }, this.scene);
     arrowDown.position.y = -0.22;
     arrowDown.material = heightSliderMat;
     arrowDown.parent = heightSlider;
-    
+
     // Add stand pole visualization - use unit height (1m) for easy scaling
     const standPole = BABYLON.MeshBuilder.CreateCylinder('standPole', {
       height: 1.0, // Unit height for easy scaling
@@ -3076,7 +3076,7 @@ class VirtualStudio {
     standPole.material = poleMat;
     standPole.parent = heightSlider;
     standPole.isPickable = false;
-    
+
     // Add drag behavior for height slider (vertical only)
     const heightDragBehavior = new BABYLON.PointerDragBehavior({ dragAxis: new BABYLON.Vector3(0, 1, 0) });
     heightDragBehavior.onDragStartObservable.add(() => {
@@ -3089,25 +3089,25 @@ class VirtualStudio {
         // Clamp height between 0.5m and 6m
         const newY = Math.max(0.5, Math.min(6.0, heightSlider.position.y));
         heightSlider.position.y = newY;
-        
+
         // Update light position
         lightData.mesh.position.y = newY;
         if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.PointLight) {
           lightData.light.position.y = newY;
         }
-        
+
         // Update stand pole - use absolute scaling since we used unit height
         const pole = heightSlider.getChildMeshes().find(m => m.name === 'standPole');
         if (pole) {
           (pole as BABYLON.Mesh).scaling.y = newY;
           pole.position.y = -newY / 2;
         }
-        
+
         // Update yoke ring height to follow light
         if (this.studioGizmoMeshes.yokeRing) {
           this.studioGizmoMeshes.yokeRing.position.y = newY;
         }
-        
+
         // Show height label
         this.updateHeightLabel(newY);
         this.updateLightPOVCamera(lightId);
@@ -3119,9 +3119,9 @@ class VirtualStudio {
       this.deactivateLightPOV();
     });
     heightSlider.addBehavior(heightDragBehavior);
-    
+
     this.studioGizmoMeshes.heightSlider = heightSlider;
-    
+
     // 3. YOKE RING - Arc for tilt/pan control (Lampehode Yoke)
     const yokeRing = BABYLON.MeshBuilder.CreateTorus('studioGizmo_yokeRing', {
       diameter: 0.8,
@@ -3131,7 +3131,7 @@ class VirtualStudio {
     }, this.scene);
     yokeRing.position = lightData.mesh.position.clone();
     yokeRing.rotation.x = Math.PI / 2; // Vertical orientation
-    
+
     const yokeRingMat = new BABYLON.StandardMaterial('yokeRingMat', this.scene);
     yokeRingMat.emissiveColor = studioCyan;
     yokeRingMat.diffuseColor = studioCyan;
@@ -3140,7 +3140,7 @@ class VirtualStudio {
     yokeRing.material = yokeRingMat;
     yokeRing.isPickable = true;
     yokeRing.renderingGroupId = 1;
-    
+
     // Add rotation drag behavior for yoke
     const yokeDragBehavior = new BABYLON.PointerDragBehavior({ dragPlaneNormal: new BABYLON.Vector3(0, 0, 1) });
     yokeDragBehavior.onDragStartObservable.add(() => {
@@ -3153,26 +3153,26 @@ class VirtualStudio {
         const sensitivity = 0.01;
         const deltaX = event.delta.x * sensitivity;
         const deltaY = event.delta.y * sensitivity;
-        
+
         // Get current direction and modify
         const currentDir = lightData.light.direction.clone();
-        
+
         // Rotate around Y axis (pan)
         const yRotation = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.Y, deltaX);
         currentDir.rotateByQuaternionToRef(yRotation, currentDir);
-        
+
         // Rotate around X axis (tilt)
         const xRotation = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.X, deltaY);
         currentDir.rotateByQuaternionToRef(xRotation, currentDir);
-        
+
         lightData.light.direction = currentDir.normalize();
-        
+
         // Update mesh rotation to match
         if (lightData.mesh.rotationQuaternion) {
           const lookAt = lightData.mesh.position.add(currentDir.scale(5));
           lightData.mesh.lookAt(lookAt);
         }
-        
+
         // Show angle in degrees
         const tiltDeg = Math.round(Math.asin(-currentDir.y) * 180 / Math.PI);
         const panDeg = Math.round(Math.atan2(currentDir.x, -currentDir.z) * 180 / Math.PI);
@@ -3186,32 +3186,32 @@ class VirtualStudio {
       this.deactivateLightPOV();
     });
     yokeRing.addBehavior(yokeDragBehavior);
-    
+
     this.studioGizmoMeshes.yokeRing = yokeRing;
     this.studioGizmoActive = true;
-    
+
     // Add to glow layer for visibility
     if (this.glowLayer) {
       this.glowLayer.addIncludedOnlyMesh(baseRing);
       this.glowLayer.addIncludedOnlyMesh(heightSlider);
       this.glowLayer.addIncludedOnlyMesh(yokeRing);
     }
-    
+
     console.log('Studio gizmos created for light:', lightId);
   }
-  
+
   /**
    * Helper to dispose a mesh with all its behaviors and children
    */
   private disposeMeshWithBehaviors(mesh: BABYLON.Mesh | null): void {
     if (!mesh) return;
-    
+
     // Remove all behaviors first to prevent observer leaks
     const behaviors = mesh.behaviors.slice(); // Copy array
     for (const behavior of behaviors) {
       mesh.removeBehavior(behavior);
     }
-    
+
     // Dispose child meshes explicitly
     const children = mesh.getChildMeshes(false);
     for (const child of children) {
@@ -3220,16 +3220,16 @@ class VirtualStudio {
       }
       child.dispose();
     }
-    
+
     // Dispose material
     if (mesh.material) {
       mesh.material.dispose();
     }
-    
+
     // Dispose the mesh itself
     mesh.dispose();
   }
-  
+
   /**
    * Dispose all studio gizmo meshes
    */
@@ -3246,17 +3246,17 @@ class VirtualStudio {
         this.glowLayer.removeIncludedOnlyMesh(this.studioGizmoMeshes.yokeRing);
       }
     }
-    
+
     // Dispose meshes with all behaviors and children
     this.disposeMeshWithBehaviors(this.studioGizmoMeshes.baseRing);
     this.studioGizmoMeshes.baseRing = null;
-    
+
     this.disposeMeshWithBehaviors(this.studioGizmoMeshes.heightSlider);
     this.studioGizmoMeshes.heightSlider = null;
-    
+
     this.disposeMeshWithBehaviors(this.studioGizmoMeshes.yokeRing);
     this.studioGizmoMeshes.yokeRing = null;
-    
+
     // Dispose labels with dynamic textures
     if (this.studioGizmoMeshes.heightLabel) {
       const mat = this.studioGizmoMeshes.heightLabel.material as BABYLON.StandardMaterial;
@@ -3280,10 +3280,10 @@ class VirtualStudio {
       this.disposeMeshWithBehaviors(this.studioGizmoMeshes.angleLabel);
       this.studioGizmoMeshes.angleLabel = null;
     }
-    
+
     this.studioGizmoActive = false;
   }
-  
+
   /**
    * Draw rounded rectangle (cross-browser compatible)
    */
@@ -3300,23 +3300,23 @@ class VirtualStudio {
     ctx.quadraticCurveTo(x, y, x + r, y);
     ctx.closePath();
   }
-  
+
   /**
    * Update height label during drag with actual text rendering
    */
   private updateHeightLabel(height: number): void {
     const heightCm = Math.round(height * 100);
     const labelText = `${heightCm} cm`;
-    
+
     // Create label plane with dynamic texture for text rendering
     if (!this.studioGizmoMeshes.heightLabel) {
       const labelPlane = BABYLON.MeshBuilder.CreatePlane('heightLabel', { width: 0.5, height: 0.15 }, this.scene);
       labelPlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
       labelPlane.renderingGroupId = 2;
-      
+
       // Create dynamic texture for text
       const dynamicTexture = new BABYLON.DynamicTexture('heightLabelTexture', { width: 256, height: 64 }, this.scene, true);
-      
+
       const labelMat = new BABYLON.StandardMaterial('heightLabelMat', this.scene);
       labelMat.diffuseTexture = dynamicTexture;
       labelMat.emissiveTexture = dynamicTexture;
@@ -3324,45 +3324,45 @@ class VirtualStudio {
       labelMat.disableLighting = true;
       labelMat.backFaceCulling = false;
       labelPlane.material = labelMat;
-      
+
       this.studioGizmoMeshes.heightLabel = labelPlane;
     }
-    
+
     // Update text on dynamic texture
     const mat = this.studioGizmoMeshes.heightLabel.material as BABYLON.StandardMaterial;
     const texture = mat.diffuseTexture as BABYLON.DynamicTexture;
     if (texture) {
       const ctx = texture.getContext() as unknown as CanvasRenderingContext2D;
       ctx.clearRect(0, 0, 256, 64);
-      
+
       // Draw background using cross-browser compatible rounded rect
       ctx.fillStyle = 'rgba(30, 30, 35, 0.9)';
       this.drawRoundedRect(ctx, 4, 4, 248, 56, 8);
       ctx.fill();
-      
+
       // Draw border
       ctx.strokeStyle = '#4DD966'; // Green matching height slider
       ctx.lineWidth = 2;
       this.drawRoundedRect(ctx, 4, 4, 248, 56, 8);
       ctx.stroke();
-      
+
       // Draw text
       ctx.fillStyle = '#FFFFFF';
       ctx.font = 'bold 28px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(labelText, 128, 32);
-      
+
       texture.update();
     }
-    
+
     const slider = this.studioGizmoMeshes.heightSlider;
     if (slider && this.studioGizmoMeshes.heightLabel) {
       this.studioGizmoMeshes.heightLabel.position = slider.position.add(new BABYLON.Vector3(0.5, 0.2, 0));
       this.studioGizmoMeshes.heightLabel.isVisible = true;
     }
   }
-  
+
   /**
    * Hide height label
    */
@@ -3371,22 +3371,22 @@ class VirtualStudio {
       this.studioGizmoMeshes.heightLabel.isVisible = false;
     }
   }
-  
+
   /**
    * Update angle label during yoke drag with actual text rendering
    */
   private updateAngleLabel(tilt: number, pan: number): void {
     const labelText = `Tilt: ${tilt}° Pan: ${pan}°`;
-    
+
     // Create label plane with dynamic texture for text rendering
     if (!this.studioGizmoMeshes.angleLabel) {
       const labelPlane = BABYLON.MeshBuilder.CreatePlane('angleLabel', { width: 0.7, height: 0.15 }, this.scene);
       labelPlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
       labelPlane.renderingGroupId = 2;
-      
+
       // Create dynamic texture for text
       const dynamicTexture = new BABYLON.DynamicTexture('angleLabelTexture', { width: 320, height: 64 }, this.scene, true);
-      
+
       const labelMat = new BABYLON.StandardMaterial('angleLabelMat', this.scene);
       labelMat.diffuseTexture = dynamicTexture;
       labelMat.emissiveTexture = dynamicTexture;
@@ -3394,45 +3394,45 @@ class VirtualStudio {
       labelMat.disableLighting = true;
       labelMat.backFaceCulling = false;
       labelPlane.material = labelMat;
-      
+
       this.studioGizmoMeshes.angleLabel = labelPlane;
     }
-    
+
     // Update text on dynamic texture
     const mat = this.studioGizmoMeshes.angleLabel.material as BABYLON.StandardMaterial;
     const texture = mat.diffuseTexture as BABYLON.DynamicTexture;
     if (texture) {
       const ctx = texture.getContext() as unknown as CanvasRenderingContext2D;
       ctx.clearRect(0, 0, 320, 64);
-      
+
       // Draw background using cross-browser compatible rounded rect
       ctx.fillStyle = 'rgba(30, 30, 35, 0.9)';
       this.drawRoundedRect(ctx, 4, 4, 312, 56, 8);
       ctx.fill();
-      
+
       // Draw border
       ctx.strokeStyle = '#4DCCFF'; // Cyan matching yoke ring
       ctx.lineWidth = 2;
       this.drawRoundedRect(ctx, 4, 4, 312, 56, 8);
       ctx.stroke();
-      
+
       // Draw text
       ctx.fillStyle = '#FFFFFF';
       ctx.font = 'bold 22px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(labelText, 160, 32);
-      
+
       texture.update();
     }
-    
+
     const yoke = this.studioGizmoMeshes.yokeRing;
     if (yoke && this.studioGizmoMeshes.angleLabel) {
       this.studioGizmoMeshes.angleLabel.position = yoke.position.add(new BABYLON.Vector3(0.6, 0.4, 0));
       this.studioGizmoMeshes.angleLabel.isVisible = true;
     }
   }
-  
+
   /**
    * Hide angle label
    */
@@ -3441,9 +3441,9 @@ class VirtualStudio {
       this.studioGizmoMeshes.angleLabel.isVisible = false;
     }
   }
-  
+
   // ===== GAME-STYLE LIGHT CONTROL HUD =====
-  
+
   private hudLightId: string | null = null;
   private hudJoystickDragging: boolean = false;
   private hudHeightDragging: boolean = false;
@@ -3455,7 +3455,7 @@ class VirtualStudio {
   private hudJoystickCachedRect: DOMRect | null = null; // Cache bounding rect during drag
   private hudJoystickDevicePixelRatio: number = 1; // High-DPI support
   private hudJoystickStartEventPos: { x: number; y: number } | null = null; // Store actual event position at start
-  
+
   // Focus Target System
   private focusMode: 'human' | 'product' = 'human';
   private focusTargetId: string | null = null;
@@ -3463,36 +3463,36 @@ class VirtualStudio {
   private focusAnchor: BABYLON.Vector3 = new BABYLON.Vector3(0, 1.6, 0);
   private smoothedFocusAnchor: BABYLON.Vector3 = new BABYLON.Vector3(0, 1.6, 0);
   private focusSmoothingSpeed: number = 8.0;
-  
+
   /**
    * Show the game-style HUD for controlling light rotation/position
    */
   private showLightControlHUD(lightId: string, lightData: LightData): void {
     const hud = document.getElementById('lightControlHUD');
     if (!hud) return;
-    
+
     this.hudLightId = lightId;
-    
+
     // Update HUD with light info
     const nameEl = document.getElementById('hudLightName');
     if (nameEl) nameEl.textContent = lightData.name;
-    
+
     // Update current values
     this.updateHUDValues(lightData);
-    
+
     // Initialize angle display from current light direction
     this.updateAngleDisplayFromLight(lightData);
-    
+
     // Show HUD
     hud.style.display = 'block';
-    
+
     // Initialize event listeners (only once)
     if (!this.hudInitialized) {
       this.initHUDEventListeners();
       this.hudInitialized = true;
     }
   }
-  
+
   /**
    * Hide the light control HUD
    */
@@ -3501,52 +3501,52 @@ class VirtualStudio {
     if (hud) hud.style.display = 'none';
     this.hudLightId = null;
   }
-  
+
   /**
    * Update HUD display values from light data
    */
   private updateHUDValues(lightData: LightData): void {
     const pos = lightData.mesh.position;
-    
+
     // Update position values
     const posX = document.getElementById('hudPosX');
     const posZ = document.getElementById('hudPosZ');
     if (posX) posX.textContent = pos.x.toFixed(2);
     if (posZ) posZ.textContent = pos.z.toFixed(2);
-    
+
     // Update height
     const heightVal = document.getElementById('hudHeightValue');
     const heightFill = document.getElementById('heightSliderFill');
     const heightThumb = document.getElementById('heightSliderThumb');
     if (heightVal) heightVal.textContent = `${pos.y.toFixed(1)}m`;
-    
+
     // Height slider: 0.5m to 6m range, clamped
     const clampedHeight = Math.max(0.5, Math.min(6, pos.y));
     const heightPercent = ((clampedHeight - 0.5) / (6 - 0.5)) * 100;
     if (heightFill) heightFill.style.width = `${heightPercent}%`;
     if (heightThumb) heightThumb.style.left = `${heightPercent}%`;
-    
+
     // Update rotation values if spotlight
     if (lightData.light instanceof BABYLON.SpotLight) {
       const dir = lightData.light.direction.normalize();
-      
+
       // Clamp direction.y to avoid NaN from asin
       const clampedY = Math.max(-1, Math.min(1, -dir.y));
       const tiltAngle = Math.asin(clampedY) * (180 / Math.PI);
       const panAngle = Math.atan2(dir.x, dir.z) * (180 / Math.PI);
-      
+
       // Update main HUD values
       const tiltEl = document.getElementById('hudTiltValue');
       const panEl = document.getElementById('hudPanValue');
       if (tiltEl) tiltEl.textContent = `${tiltAngle.toFixed(0)}°`;
       if (panEl) panEl.textContent = `${panAngle.toFixed(0)}°`;
-      
+
       // Store current angles for joystick reference
       this.hudJoystickStartPan = panAngle * (Math.PI / 180);
       this.hudJoystickStartTilt = tiltAngle * (Math.PI / 180);
     }
   }
-  
+
   /**
    * Initialize HUD event listeners
    */
@@ -3556,33 +3556,33 @@ class VirtualStudio {
     if (closeBtn) {
       closeBtn.addEventListener('click', () => this.hideLightControlHUD());
     }
-    
+
     // ESC key to close
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && this.hudLightId) {
         this.hideLightControlHUD();
       }
     });
-    
+
     // Collapsible sections
     this.initHUDCollapsibleSections();
-    
+
     // Rotation joystick
     this.initJoystickControl();
-    
+
     // Height slider
     this.initHeightSliderControl();
-    
+
     // D-Pad position controls
     this.initDPadControls();
-    
+
     // Action buttons
     this.initHUDActionButtons();
-    
+
     // Focus target system
     this.initFocusTargetControls();
   }
-  
+
   /**
    * Initialize collapsible HUD sections
    */
@@ -3591,7 +3591,7 @@ class VirtualStudio {
       { headerId: 'positionSectionHeader', sectionClass: 'position' },
       { headerId: 'focusSectionHeader', sectionClass: 'focus' }
     ];
-    
+
     collapsibleSections.forEach(({ headerId }) => {
       const header = document.getElementById(headerId);
       if (header) {
@@ -3604,7 +3604,7 @@ class VirtualStudio {
       }
     });
   }
-  
+
   // Joystick sensitivity modes - expanded with finer granularity
   private joystickSensitivityMode: 'ultra-fine' | 'fine' | 'normal' | 'rapid' = 'normal';
   private readonly joystickSensitivities = {
@@ -3613,7 +3613,7 @@ class VirtualStudio {
     normal: Math.PI / 18,         // 10° per full deflection - balanced (reduced from 15°)
     rapid: Math.PI / 4            // 45° per full deflection - fast positioning
   };
-  
+
   // Mode-specific dead zones (adaptive precision)
   // Based on game development best practices: smaller dead zones for fine control
   private readonly joystickDeadZones = {
@@ -3622,7 +3622,7 @@ class VirtualStudio {
     normal: 0.02,        // 2% dead zone - balanced (reduced from 3%)
     rapid: 0.05          // 5% dead zone - original value (stable)
   };
-  
+
   // Mode-specific response curves
   // Based on game dev research: different curves for different control needs
   private readonly joystickResponseCurves = {
@@ -3631,7 +3631,7 @@ class VirtualStudio {
     normal: 1.3,         // Gentle exponential - smooth general use
     rapid: 1.8           // Aggressive exponential - fast movements but more controllable than 2.0
   };
-  
+
   // Mode-specific smoothing factors (how many samples to average)
   // More smoothing for fine modes to reduce jitter
   private readonly joystickSmoothingSizes = {
@@ -3640,10 +3640,10 @@ class VirtualStudio {
     normal: 3,           // Balanced smoothing
     rapid: 2             // Less smoothing for fast response
   };
-  
+
   // Input smoothing for precision
   private joystickInputHistory: Array<{ x: number; y: number; timestamp: number }> = [];
-  
+
   /**
    * Initialize the rotation joystick control
    * Professional multi-mode joystick with adaptive response curve
@@ -3652,48 +3652,48 @@ class VirtualStudio {
     const joystick = document.getElementById('rotationJoystick');
     const knob = document.getElementById('rotationKnob');
     if (!joystick || !knob) return;
-    
+
     const joystickBg = joystick.querySelector('.joystick-bg') as HTMLElement;
     if (!joystickBg) return;
-    
+
     const maxOffset = 40; // Maximum knob offset from center in pixels
     const maxTiltRange = Math.PI / 2 - 0.1; // ±~85° tilt range
-    
+
     // Add sensitivity mode indicator and controls
     this.initJoystickSensitivityControls(joystick);
-    
+
     const handleStart = (e: MouseEvent | TouchEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      
+
       if (!this.hudLightId) return;
       const lightData = this.lights.get(this.hudLightId);
       if (!lightData || !(lightData.light instanceof BABYLON.SpotLight)) return;
-      
+
       this.hudJoystickDragging = true;
       knob.style.transition = 'none';
-      
+
       // Cache bounding rect for consistent calculations during drag
       this.hudJoystickCachedRect = joystickBg.getBoundingClientRect();
       this.hudJoystickDevicePixelRatio = window.devicePixelRatio || 1;
-      
+
       // Clear input history for fresh smoothing
       this.joystickInputHistory = [];
-      
+
       // Store the pointer position at drag start (to calculate delta, not absolute)
       const pos = this.getEventPosition(e);
-      
+
       // Store actual event position for comparison in handleMove
       this.hudJoystickStartEventPos = { x: pos.x, y: pos.y };
-      
+
       const rect = this.hudJoystickCachedRect;
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
-      
+
       // Calculate raw offset from center
       const rawOffsetX = (pos.x - centerX) / maxOffset;
       const rawOffsetY = (pos.y - centerY) / maxOffset;
-      
+
       // Clamp to circular constraint (same as in handleMove for consistency)
       let clampedX = rawOffsetX;
       let clampedY = rawOffsetY;
@@ -3702,7 +3702,7 @@ class VirtualStudio {
         clampedX /= magnitude;
         clampedY /= magnitude;
       }
-      
+
       // Store the clamped start position (this is the "neutral" point for delta calculations)
       // If user clicks in center, this will be (0, 0)
       // If user clicks elsewhere, this will be the normalized position within the circle
@@ -3710,50 +3710,50 @@ class VirtualStudio {
         x: clampedX,
         y: clampedY
       };
-      
+
       // Update knob visual position immediately to match where user clicked
       // This ensures the knob follows the cursor from the start position
       const knobCenterX = 50 + clampedX * 30;
       const knobCenterY = 50 + clampedY * 30;
       knob.style.left = `${knobCenterX}%`;
       knob.style.top = `${knobCenterY}%`;
-      
+
       // DON'T add initial sample to history here - let first handleMove do it
       // This ensures that first handleMove will have zero delta if mouse hasn't moved
-      
+
       // Store the actual light direction when drag begins (not recalculated)
       // This is the reference direction for rotation calculations
       this.hudJoystickStartDir = lightData.light.direction.clone().normalize();
-      
+
       // Also store angles for display (high precision)
       const dir = this.hudJoystickStartDir;
       this.hudJoystickStartTilt = Math.asin(Math.max(-1, Math.min(1, -dir.y)));
       this.hudJoystickStartPan = Math.atan2(dir.x, dir.z);
     };
-    
+
     const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!this.hudJoystickDragging || !this.hudLightId) return;
       e.preventDefault();
-      
+
       const lightData = this.lights.get(this.hudLightId);
       if (!lightData || !(lightData.light instanceof BABYLON.SpotLight)) return;
-      
+
       // Use cached bounding rect (only recalculate if invalid or after resize)
       let rect = this.hudJoystickCachedRect;
       if (!rect) {
         rect = joystickBg.getBoundingClientRect();
         this.hudJoystickCachedRect = rect;
       }
-      
+
       const pos = this.getEventPosition(e);
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
-      
+
       // Sub-pixel precision with high-DPI support
       const dpr = this.hudJoystickDevicePixelRatio;
       const rawOffsetX = ((pos.x - centerX) * dpr) / (maxOffset * dpr);
       const rawOffsetY = ((pos.y - centerY) * dpr) / (maxOffset * dpr);
-      
+
       // Clamp raw input to circular constraint first (same as in handleStart)
       let clampedRawX = rawOffsetX;
       let clampedRawY = rawOffsetY;
@@ -3762,24 +3762,24 @@ class VirtualStudio {
         clampedRawX /= rawMagnitude;
         clampedRawY /= rawMagnitude;
       }
-      
+
       // Input smoothing - average last N samples for smoother control
       const now = performance.now();
-      
+
       // Check if this is the first frame after drag start
       const isFirstFrame = this.joystickInputHistory.length === 0;
-      
+
       // Declare smoothed values
       let smoothedX: number;
       let smoothedY: number;
-      
+
       // On first frame, check if position has actually changed significantly
       // If not, use start position to prevent unwanted movement
       if (isFirstFrame && this.hudJoystickStartEventPos) {
         const deltaX = Math.abs(pos.x - this.hudJoystickStartEventPos.x);
         const deltaY = Math.abs(pos.y - this.hudJoystickStartEventPos.y);
         const movementThreshold = 3; // pixels - minimum movement to register
-        
+
         // If position hasn't changed significantly, use start position and skip adding to history
         if (deltaX < movementThreshold && deltaY < movementThreshold) {
           smoothedX = this.hudJoystickStartPointer.x;
@@ -3793,13 +3793,13 @@ class VirtualStudio {
           });
           this.joystickInputHistory.push({ x: clampedRawX, y: clampedRawY, timestamp: now });
           this.hudJoystickStartEventPos = null; // Clear after first significant movement
-          
+
           // Calculate smoothed input using EMA
           const smoothingSize = this.joystickSmoothingSizes[this.joystickSensitivityMode];
           const smoothingFactor = this.joystickSensitivityMode === 'ultra-fine' ? 0.3 : 
                                   this.joystickSensitivityMode === 'fine' ? 0.4 :
                                   this.joystickSensitivityMode === 'normal' ? 0.5 : 0.6;
-          
+
           // Trim history to smoothing window size
           while (this.joystickInputHistory.length > smoothingSize) {
             this.joystickInputHistory.shift();
@@ -3807,38 +3807,38 @@ class VirtualStudio {
 
           let emaX = this.joystickInputHistory[0].x;
           let emaY = this.joystickInputHistory[0].y;
-          
+
           for (let i = 1; i < this.joystickInputHistory.length; i++) {
             emaX = emaX * (1 - smoothingFactor) + this.joystickInputHistory[i].x * smoothingFactor;
             emaY = emaY * (1 - smoothingFactor) + this.joystickInputHistory[i].y * smoothingFactor;
           }
-          
+
           smoothedX = emaX;
           smoothedY = emaY;
         }
         } else {
           // Subsequent frames - normal smoothing
           this.joystickInputHistory.push({ x: clampedRawX, y: clampedRawY, timestamp: now });
-          
+
           // Keep only recent samples (within last 50ms, or 30ms for rapid for faster response)
           const timeWindow = this.joystickSensitivityMode === 'rapid' ? 30 : 50;
           this.joystickInputHistory = this.joystickInputHistory.filter(
             sample => now - sample.timestamp < timeWindow
           );
-          
+
           // Limit history size based on mode-specific smoothing
           const smoothingSize = this.joystickSmoothingSizes[this.joystickSensitivityMode];
           if (this.joystickInputHistory.length > smoothingSize) {
             this.joystickInputHistory.shift();
           }
-          
+
           // Calculate smoothed input using exponential moving average (EMA) for better responsiveness
           // For fine modes: more aggressive smoothing to reduce jitter
           // For rapid: minimal smoothing for fastest, most direct response
           const smoothingFactor = this.joystickSensitivityMode === 'ultra-fine' ? 0.3 : 
                                   this.joystickSensitivityMode === 'fine' ? 0.4 :
                                   this.joystickSensitivityMode === 'normal' ? 0.5 : 0.7; // Increased from 0.6 for rapid
-        
+
         if (this.joystickInputHistory.length === 1) {
           // Only one sample - use it directly
           smoothedX = this.joystickInputHistory[0].x;
@@ -3847,22 +3847,22 @@ class VirtualStudio {
           // Apply exponential moving average for smooth, responsive control
           let emaX = this.joystickInputHistory[0].x;
           let emaY = this.joystickInputHistory[0].y;
-          
+
           for (let i = 1; i < this.joystickInputHistory.length; i++) {
             emaX = emaX * (1 - smoothingFactor) + this.joystickInputHistory[i].x * smoothingFactor;
             emaY = emaY * (1 - smoothingFactor) + this.joystickInputHistory[i].y * smoothingFactor;
           }
-          
+
           smoothedX = emaX;
           smoothedY = emaY;
         }
       }
-      
+
       // Calculate DELTA from start position (not absolute offset)
       // This ensures zero movement at drag start
       let offsetX = smoothedX - this.hudJoystickStartPointer.x;
       let offsetY = smoothedY - this.hudJoystickStartPointer.y;
-      
+
       // Clamp to circular constraint (prevents square corners)
       // Apply circular clamping BEFORE dead zone for better diagonal handling
       const magnitude = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
@@ -3870,26 +3870,26 @@ class VirtualStudio {
         offsetX /= magnitude;
         offsetY /= magnitude;
       }
-      
+
       // Get mode-specific dead zone and response curve
       const deadZone = this.joystickDeadZones[this.joystickSensitivityMode];
       const responseCurve = this.joystickResponseCurves[this.joystickSensitivityMode];
-      
+
       // === PROFESSIONAL AXIAL DEAD ZONE WITH RESPONSE CURVE ===
       // Based on game development best practices for joystick control
       // Process each axis independently for better pan/tilt control
       const applyAxisDeadzone = (value: number): number => {
         const absVal = Math.abs(value);
-        
+
         // Step 1: Apply dead zone (circular dead zone already applied, now apply axial)
         if (absVal < deadZone) {
           return 0;
         }
-        
+
         // Step 2: Scale from [deadzone, 1] to [0, 1]
         // This ensures full range utilization after dead zone
         const scaled = (absVal - deadZone) / (1 - deadZone);
-        
+
         // Step 3: Apply smooth transition at dead zone boundary
         // Use a gentler transition for fine modes, steeper for rapid
         let transitionFactor: number;
@@ -3910,7 +3910,7 @@ class VirtualStudio {
           const transition = Math.min(1, (absVal - deadZone) / transitionZone);
           transitionFactor = transition * transition * (3 - 2 * transition); // Smoothstep
         }
-        
+
         // Step 4: Apply mode-specific response curve
         // For ultra-fine and fine: use sub-linear/linear for predictable control
         // For normal/rapid: use exponential for acceleration feel
@@ -3926,7 +3926,7 @@ class VirtualStudio {
           // Exponential (for normal/rapid) - increases sensitivity at high deflections
           curved = Math.pow(scaled, responseCurve);
         }
-        
+
         // Step 5: Apply transition smoothly
         // For fine modes: full transition weight for smoothness
         // For rapid: minimal transition weight for snappiest response
@@ -3939,35 +3939,35 @@ class VirtualStudio {
           transitionWeight = 0.7; // Balanced for normal
         }
         const finalValue = curved * ((1 - transitionWeight) + transitionWeight * transitionFactor);
-        
+
         return Math.sign(value) * Math.max(0, Math.min(1, finalValue)); // Clamp to [0, 1]
       };
-      
+
       const curvedOffsetX = applyAxisDeadzone(offsetX);
       const curvedOffsetY = applyAxisDeadzone(offsetY);
-      
+
       // Update knob visual position based on delta movement (30% of container size)
       const knobCenterX = 50 + offsetX * 30;
       const knobCenterY = 50 + offsetY * 30;
       knob.style.left = `${knobCenterX}%`;
       knob.style.top = `${knobCenterY}%`;
-      
+
       // Get current sensitivity based on mode (high precision)
       const sensitivity = this.joystickSensitivities[this.joystickSensitivityMode];
-      
+
       // Calculate delta rotation from joystick input (in radians, high precision)
       const deltaPan = curvedOffsetX * sensitivity;
       const deltaTilt = -curvedOffsetY * sensitivity; // Inverted Y
-      
+
       // For very small rotations, use incremental quaternion multiplication for better precision
       // This reduces numerical errors that accumulate with large quaternion multiplications
       const startDir = this.hudJoystickStartDir;
-      
+
       // Build rotation quaternions for yaw (pan around Y) and pitch (tilt around X)
       // For small angles, this is more stable than Euler angle conversion
       const yawQuat = BABYLON.Quaternion.RotationAxis(BABYLON.Vector3.Up(), deltaPan);
       const pitchQuat = BABYLON.Quaternion.RotationAxis(BABYLON.Vector3.Right(), deltaTilt);
-      
+
       // Improved rotation order: For pan/tilt control, apply pitch (tilt) first in local space
       // then yaw (pan) to reduce gimbal lock issues. However, for intuitive control,
       // we want yaw-first behavior. Use a hybrid approach for better precision.
@@ -3976,13 +3976,13 @@ class VirtualStudio {
       // This is more stable for small deltas and reduces precision loss
       const combinedQuat = yawQuat.multiply(pitchQuat);
       const newDir = startDir.clone();
-      
+
       // Rotate direction vector using quaternion (more stable than angle conversion)
       newDir.rotateByQuaternionToRef(combinedQuat, newDir);
-      
+
       // Ensure normalization after rotation (critical for precision)
       newDir.normalize();
-      
+
       // Clamp vertical angle to avoid gimbal lock
       // Use high-precision clamping with consistent coordinate system
       const clampedY = Math.max(-1, Math.min(1, -newDir.y)); // Clamp before asin
@@ -3993,55 +3993,55 @@ class VirtualStudio {
         const currentPan = Math.atan2(newDir.x, newDir.z);
         const cosTilt = Math.cos(clampedTilt);
         const sinTilt = Math.sin(clampedTilt);
-        
+
         // Reconstruct direction vector with clamped tilt (avoiding angle precision loss)
         newDir.set(
           Math.sin(currentPan) * cosTilt,
           -sinTilt,
           Math.cos(currentPan) * cosTilt
         );
-        
+
         // Normalize to ensure precision (should be ~1.0, but normalization ensures consistency)
         newDir.normalize();
       }
-      
+
       // Apply to light (high precision direction vector)
       lightData.light.direction.copyFrom(newDir);
-      
+
       // Update mesh rotation to match light direction
       this.alignMeshToDirection(lightData.mesh, newDir);
-      
+
       // Calculate current pan/tilt for display (high precision)
       // Minimize conversions - only convert for display, keep radians internally
       const newPan = Math.atan2(newDir.x, newDir.z);
       const newTilt = Math.asin(Math.max(-1, Math.min(1, -newDir.y)));
-      
+
       // Update beam visualization
       this.updateBeamVisualization(this.hudLightId);
-      
+
       // Update HUD values display with pan/tilt angles
       this.updateHUDValues(lightData);
       this.updateJoystickAngleDisplay(newPan, newTilt);
     };
-    
+
     const handleEnd = () => {
       if (!this.hudJoystickDragging) return;
       this.hudJoystickDragging = false;
-      
+
       // Clear cached rect
       this.hudJoystickCachedRect = null;
-      
+
       // Clear input history
       this.joystickInputHistory = [];
-      
+
       // Clear start event position
       this.hudJoystickStartEventPos = null;
-      
+
       // Animate knob back to center
       knob.style.transition = 'left 0.2s ease-out, top 0.2s ease-out';
       knob.style.left = '50%';
       knob.style.top = '50%';
-      
+
       // Update start direction to current position for next drag (high precision)
       if (this.hudLightId) {
         const lightData = this.lights.get(this.hudLightId);
@@ -4055,17 +4055,17 @@ class VirtualStudio {
         }
       }
     };
-    
+
     // Mouse events
     knob.addEventListener('mousedown', handleStart);
     document.addEventListener('mousemove', handleMove);
     document.addEventListener('mouseup', handleEnd);
-    
+
     // Touch events
     knob.addEventListener('touchstart', handleStart as any, { passive: false });
     document.addEventListener('touchmove', handleMove as any, { passive: false });
     document.addEventListener('touchend', handleEnd);
-    
+
     // Keyboard shortcut for sensitivity toggle (hold Shift for fine, Ctrl for rapid, Shift+Ctrl for ultra-fine)
     document.addEventListener('keydown', (e) => {
       if (!this.hudJoystickDragging) return;
@@ -4077,14 +4077,14 @@ class VirtualStudio {
         this.setJoystickSensitivity('rapid');
       }
     });
-    
+
     document.addEventListener('keyup', (e) => {
       if (!e.shiftKey && !e.ctrlKey) {
         this.setJoystickSensitivity('normal');
       }
     });
   }
-  
+
   /**
    * Initialize joystick sensitivity controls from static HTML
    */
@@ -4092,7 +4092,7 @@ class VirtualStudio {
     // Find the static sensitivity buttons in the HTML
     const sensitivityContainer = document.querySelector('.sensitivity-modes-static');
     if (!sensitivityContainer) return;
-    
+
     // Sensitivity mode buttons (supports all modes including ultra-fine)
     sensitivityContainer.querySelectorAll('.sensitivity-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -4105,13 +4105,13 @@ class VirtualStudio {
       });
     });
   }
-  
+
   /**
    * Set joystick sensitivity mode
    */
   private setJoystickSensitivity(mode: 'ultra-fine' | 'fine' | 'normal' | 'rapid'): void {
     this.joystickSensitivityMode = mode;
-    
+
     // Update UI indicator
     const modeLabels = { 
       'ultra-fine': 'ULTRA-FIN', 
@@ -4129,7 +4129,7 @@ class VirtualStudio {
       const modeText = indicator.querySelector('.sensitivity-mode-text');
       if (modeText) modeText.textContent = modeLabel;
     }
-    
+
     // Also update static sensitivity controls
     const staticContainer = document.querySelector('.sensitivity-modes-static');
     if (staticContainer) {
@@ -4138,7 +4138,7 @@ class VirtualStudio {
       });
     }
   }
-  
+
   /**
    * Micro-jog light rotation by precise degrees
    */
@@ -4146,14 +4146,14 @@ class VirtualStudio {
     if (!this.hudLightId) return;
     const lightData = this.lights.get(this.hudLightId);
     if (!lightData || !(lightData.light instanceof BABYLON.SpotLight)) return;
-    
+
     const radians = degrees * (Math.PI / 180);
     const dir = lightData.light.direction;
-    
+
     // Get current angles
     let tilt = Math.asin(Math.max(-1, Math.min(1, -dir.y)));
     let pan = Math.atan2(dir.x, dir.z);
-    
+
     // Apply micro-adjustment
     if (axis === 'pan') {
       pan += radians;
@@ -4161,7 +4161,7 @@ class VirtualStudio {
       tilt += radians;
       tilt = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, tilt));
     }
-    
+
     // Calculate new direction
     const cosTilt = Math.cos(tilt);
     const newDir = new BABYLON.Vector3(
@@ -4169,33 +4169,33 @@ class VirtualStudio {
       -Math.sin(tilt),
       Math.cos(pan) * cosTilt
     ).normalize();
-    
+
     lightData.light.direction = newDir;
-    
+
     // Update mesh rotation
     if (lightData.mesh.rotationQuaternion) {
       const forward = newDir.clone();
       const up = BABYLON.Vector3.Up();
       const right = BABYLON.Vector3.Cross(up, forward).normalize();
       const correctedUp = BABYLON.Vector3.Cross(forward, right).normalize();
-      
+
       const rotMatrix = BABYLON.Matrix.Identity();
       rotMatrix.setRowFromFloats(0, right.x, right.y, right.z, 0);
       rotMatrix.setRowFromFloats(1, correctedUp.x, correctedUp.y, correctedUp.z, 0);
       rotMatrix.setRowFromFloats(2, forward.x, forward.y, forward.z, 0);
-      
+
       lightData.mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(rotMatrix);
     }
-    
+
     this.updateBeamVisualization(this.hudLightId);
     this.updateHUDValues(lightData);
     this.updateJoystickAngleDisplay(pan, tilt);
-    
+
     // Update start angles for next joystick drag
     this.hudJoystickStartPan = pan;
     this.hudJoystickStartTilt = tilt;
   }
-  
+
   /**
    * Align mesh rotation to target direction, accounting for model's rest-pose forward axis
    * This is the professional solution: lookAt quaternion * restCorrection
@@ -4204,15 +4204,15 @@ class VirtualStudio {
     if (!mesh.rotationQuaternion) {
       mesh.rotationQuaternion = BABYLON.Quaternion.Identity();
     }
-    
+
     // Get the model's local forward axis (stored during import)
     // Beauty dish models have aperture along -Z in rest pose
     const localForward = ((mesh as any)._localForwardAxis as BABYLON.Vector3) || new BABYLON.Vector3(0, 0, -1);
-    
+
     // Calculate the look-at quaternion (world-space rotation to face target direction)
     const forward = targetDirection.normalize();
     const up = BABYLON.Vector3.Up();
-    
+
     // Handle edge case when forward is parallel to up
     let right: BABYLON.Vector3;
     if (Math.abs(BABYLON.Vector3.Dot(forward, up)) > 0.999) {
@@ -4221,36 +4221,36 @@ class VirtualStudio {
       right = BABYLON.Vector3.Cross(up, forward).normalize();
     }
     const correctedUp = BABYLON.Vector3.Cross(forward, right).normalize();
-    
+
     // Build world rotation matrix for target direction (Babylon uses +Z as forward)
     const worldRotMatrix = BABYLON.Matrix.Identity();
     worldRotMatrix.setRowFromFloats(0, right.x, right.y, right.z, 0);
     worldRotMatrix.setRowFromFloats(1, correctedUp.x, correctedUp.y, correctedUp.z, 0);
     worldRotMatrix.setRowFromFloats(2, forward.x, forward.y, forward.z, 0);
     const lookAtQuat = BABYLON.Quaternion.FromRotationMatrix(worldRotMatrix);
-    
+
     // Calculate rest correction: rotation needed to align local forward to Babylon's +Z
     // This compensates for the model's baked orientation
     const babylonForward = new BABYLON.Vector3(0, 0, 1);
     const restCorrection = this.quaternionFromUnitVectors(localForward, babylonForward);
-    
+
     // Final rotation = lookAt * restCorrection
     // This makes the model's aperture (-Z) point toward targetDirection
     mesh.rotationQuaternion = lookAtQuat.multiply(restCorrection);
   }
-  
+
   /**
    * Calculate quaternion that rotates vector 'from' to vector 'to'
    * Based on "Quaternion Calculus and Fast Animation" by Ken Shoemake
    */
   private quaternionFromUnitVectors(from: BABYLON.Vector3, to: BABYLON.Vector3): BABYLON.Quaternion {
     const dot = BABYLON.Vector3.Dot(from, to);
-    
+
     // Handle parallel vectors
     if (dot > 0.9999) {
       return BABYLON.Quaternion.Identity();
     }
-    
+
     // Handle anti-parallel vectors
     if (dot < -0.9999) {
       // Find orthogonal axis
@@ -4261,11 +4261,11 @@ class VirtualStudio {
       axis.normalize();
       return BABYLON.Quaternion.RotationAxis(axis, Math.PI);
     }
-    
+
     // General case
     const cross = BABYLON.Vector3.Cross(from, to);
     const w = Math.sqrt(from.lengthSquared() * to.lengthSquared()) + dot;
-    
+
     return new BABYLON.Quaternion(cross.x, cross.y, cross.z, w).normalize();
   }
 
@@ -4278,20 +4278,20 @@ class VirtualStudio {
     const tiltEl = document.getElementById('hudTiltValue');
     const deltaPanEl = document.getElementById('hudDeltaPan');
     const deltaTiltEl = document.getElementById('hudDeltaTilt');
-    
+
     // Convert radians to degrees (high precision)
     const panDeg = pan * 180 / Math.PI;
     const tiltDeg = tilt * 180 / Math.PI;
-    
+
     // Calculate delta from start position
     const deltaPanDeg = (pan - this.hudJoystickStartPan) * 180 / Math.PI;
     const deltaTiltDeg = (tilt - this.hudJoystickStartTilt) * 180 / Math.PI;
-    
+
     // Use sub-degree precision for fine/ultra-fine modes
     // Show 1 decimal place for fine modes, 0 decimal places for normal/rapid
     let panDisplay: string;
     let tiltDisplay: string;
-    
+
     if (this.joystickSensitivityMode === 'ultra-fine' || this.joystickSensitivityMode === 'fine') {
       // Sub-degree precision for fine modes
       panDisplay = panDeg.toFixed(1);
@@ -4301,14 +4301,14 @@ class VirtualStudio {
       panDisplay = Math.round(panDeg).toString();
       tiltDisplay = Math.round(tiltDeg).toString();
     }
-    
+
     if (panEl) panEl.textContent = `${panDisplay}°`;
     if (tiltEl) tiltEl.textContent = `${tiltDisplay}°`;
     // Show delta angles if elements exist
     if (deltaPanEl) deltaPanEl.textContent = `Δ${deltaPanDeg >= 0 ? '+' : ''}${deltaPanDeg.toFixed(1)}°`;
     if (deltaTiltEl) deltaTiltEl.textContent = `Δ${deltaTiltDeg >= 0 ? '+' : ''}${deltaTiltDeg.toFixed(1)}°`;
   }
-  
+
   /**
    * Update angle display when light is selected (initial values)
    */
@@ -4320,7 +4320,7 @@ class VirtualStudio {
       this.updateJoystickAngleDisplay(pan, tilt);
     }
   }
-  
+
   /**
    * Initialize height slider control
    */
@@ -4328,36 +4328,36 @@ class VirtualStudio {
     const track = document.getElementById('heightSliderTrack');
     const thumb = document.getElementById('heightSliderThumb');
     if (!track || !thumb) return;
-    
+
     const handleStart = (e: MouseEvent | TouchEvent) => {
       e.preventDefault();
       this.hudHeightDragging = true;
       thumb.style.transition = 'none';
     };
-    
+
     const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!this.hudHeightDragging || !this.hudLightId) return;
       e.preventDefault();
-      
+
       const lightData = this.lights.get(this.hudLightId);
       if (!lightData) return;
-      
+
       const rect = track.getBoundingClientRect();
       const pos = this.getEventPosition(e);
-      
+
       // Calculate percentage (0-100)
       let percent = ((pos.x - rect.left) / rect.width) * 100;
       percent = Math.max(0, Math.min(100, percent));
-      
+
       // Convert to height (0.5m - 6m)
       const newHeight = 0.5 + (percent / 100) * (6 - 0.5);
-      
+
       // Update light position
       lightData.mesh.position.y = newHeight;
       if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.PointLight) {
         lightData.light.position.y = newHeight;
       }
-      
+
       // Update studio gizmos
       if (this.studioGizmoMeshes.heightSlider) {
         this.studioGizmoMeshes.heightSlider.position.y = newHeight;
@@ -4365,17 +4365,17 @@ class VirtualStudio {
       if (this.studioGizmoMeshes.yokeRing) {
         this.studioGizmoMeshes.yokeRing.position.y = newHeight;
       }
-      
+
       // Update HUD
       this.updateHUDValues(lightData);
     };
-    
+
     const handleEnd = () => {
       this.hudHeightDragging = false;
       const thumb = document.getElementById('heightSliderThumb');
       if (thumb) thumb.style.transition = 'box-shadow 0.2s, transform 0.1s';
     };
-    
+
     // Mouse events
     thumb.addEventListener('mousedown', handleStart);
     track.addEventListener('mousedown', (e) => {
@@ -4384,30 +4384,30 @@ class VirtualStudio {
     });
     document.addEventListener('mousemove', handleMove);
     document.addEventListener('mouseup', handleEnd);
-    
+
     // Touch events
     thumb.addEventListener('touchstart', handleStart as any);
     document.addEventListener('touchmove', handleMove as any);
     document.addEventListener('touchend', handleEnd);
   }
-  
+
   /**
    * Initialize D-Pad position controls
    */
   private initDPadControls(): void {
     const dpad = document.getElementById('positionDpad');
     if (!dpad) return;
-    
+
     const moveStep = 0.25; // 25cm per press
-    
+
     const moveLight = (direction: string) => {
       if (!this.hudLightId) return;
-      
+
       const lightData = this.lights.get(this.hudLightId);
       if (!lightData) return;
-      
+
       const pos = lightData.mesh.position;
-      
+
       switch (direction) {
         case 'up':
           pos.z -= moveStep;
@@ -4422,13 +4422,13 @@ class VirtualStudio {
           pos.x += moveStep;
           break;
       }
-      
+
       // Sync light position
       if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.PointLight) {
         lightData.light.position.x = pos.x;
         lightData.light.position.z = pos.z;
       }
-      
+
       // Update studio gizmos
       if (this.studioGizmoMeshes.baseRing) {
         this.studioGizmoMeshes.baseRing.position.x = pos.x;
@@ -4442,11 +4442,11 @@ class VirtualStudio {
         this.studioGizmoMeshes.yokeRing.position.x = pos.x;
         this.studioGizmoMeshes.yokeRing.position.z = pos.z;
       }
-      
+
       // Update HUD
       this.updateHUDValues(lightData);
     };
-    
+
     // Add click listeners to D-pad buttons
     const buttons = dpad.querySelectorAll('.dpad-btn[data-dir]');
     buttons.forEach(btn => {
@@ -4455,7 +4455,7 @@ class VirtualStudio {
         if (dir) moveLight(dir);
       });
     });
-    
+
     // Center button resets position
     const centerBtn = dpad.querySelector('.dpad-center');
     if (centerBtn) {
@@ -4463,22 +4463,22 @@ class VirtualStudio {
         if (!this.hudLightId) return;
         const lightData = this.lights.get(this.hudLightId);
         if (!lightData) return;
-        
+
         lightData.mesh.position.x = 0;
         lightData.mesh.position.z = 2;
-        
+
         if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.PointLight) {
           lightData.light.position.x = 0;
           lightData.light.position.z = 2;
         }
-        
+
         // Update gizmos
         this.createStudioGizmos(this.hudLightId);
         this.updateHUDValues(lightData);
       });
     }
   }
-  
+
   /**
    * Initialize HUD action buttons
    */
@@ -4490,13 +4490,13 @@ class VirtualStudio {
         if (!this.hudLightId) return;
         const lightData = this.lights.get(this.hudLightId);
         if (!lightData) return;
-        
+
         // Get focus target position
         let targetPos = new BABYLON.Vector3(0, 1.0, 0); // Default target
         if (this.focusTargetMesh && this.focusTargetMesh.isEnabled()) {
           targetPos = this.calculateFocusPoint(this.focusTargetMesh, this.focusMode);
         }
-        
+
         // Keep current position - only reset rotation to point at target
         // Get current light head position
         let lightHeadPos: BABYLON.Vector3;
@@ -4506,26 +4506,26 @@ class VirtualStudio {
           lightHeadPos = lightData.mesh.position.clone();
           lightHeadPos.y += 2.0; // Estimate light head height
         }
-        
+
         // Calculate direction from current light position to target
         const direction = targetPos.subtract(lightHeadPos).normalize();
-        
+
         // Apply direction to light
         if (lightData.light instanceof BABYLON.SpotLight) {
           lightData.light.direction = direction;
         }
-        
+
         // Apply rotation to mesh using professional alignment (keeps position unchanged)
         this.alignMeshToDirection(lightData.mesh, direction);
-        
+
         // Update visuals
         this.updateBeamVisualization(this.hudLightId);
         this.updateHUDValues(lightData);
-        
+
         console.log(`Reset light rotation: pointing at ${targetPos.toString()}`);
       });
     }
-    
+
     // Point at focus button - uses the Focus Target system
     const pointBtn = document.getElementById('hudPointAtFocus');
     if (pointBtn) {
@@ -4534,7 +4534,7 @@ class VirtualStudio {
       });
     }
   }
-  
+
   /**
    * Initialize Focus Target controls
    */
@@ -4555,22 +4555,22 @@ class VirtualStudio {
         });
       });
     }
-    
+
     // Initial population of focus objects
     this.updateFocusObjectsList();
-    
+
     // Listen for model registration events to update the list
     window.addEventListener('model-meshes-registered', () => {
       console.log('[Focus Objects] New model registered, updating list...');
       setTimeout(() => this.updateFocusObjectsList(), 100);
     });
-    
+
     // Periodically refresh focus objects list to catch newly loaded models
     setInterval(() => {
       this.updateFocusObjectsList();
     }, 3000);
   }
-  
+
   /**
    * Set the focus mode (human or product)
    */
@@ -4582,7 +4582,7 @@ class VirtualStudio {
     }
     this.updateFocusObjectsList();
   }
-  
+
   /**
    * Calculate the best focus point for a mesh based on mode
    * Handles parent meshes with children by computing combined bounds
@@ -4590,12 +4590,12 @@ class VirtualStudio {
   private calculateFocusPoint(mesh: BABYLON.Mesh, mode: 'human' | 'product'): BABYLON.Vector3 {
     // Get combined bounding info including children
     const bounds = this.getCombinedBounds(mesh);
-    
+
     const centerX = (bounds.min.x + bounds.max.x) / 2;
     const centerY = (bounds.min.y + bounds.max.y) / 2;
     const centerZ = (bounds.min.z + bounds.max.z) / 2;
     const height = bounds.max.y - bounds.min.y;
-    
+
     if (mode === 'human') {
       // For humans: target upper third (face/chest area)
       // Move up 30% from center toward top
@@ -4609,20 +4609,20 @@ class VirtualStudio {
       return new BABYLON.Vector3(centerX, centerY, centerZ);
     }
   }
-  
+
   /**
    * Get combined world-space bounds for a mesh including all children
    */
   private getCombinedBounds(mesh: BABYLON.Mesh): { min: BABYLON.Vector3; max: BABYLON.Vector3 } {
     let minX = Infinity, minY = Infinity, minZ = Infinity;
     let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
-    
+
     const processNode = (node: BABYLON.AbstractMesh) => {
       if (node.getBoundingInfo) {
         const bounds = node.getBoundingInfo().boundingBox;
         const min = bounds.minimumWorld;
         const max = bounds.maximumWorld;
-        
+
         // Only include valid bounds
         if (isFinite(min.x) && isFinite(max.x)) {
           minX = Math.min(minX, min.x);
@@ -4634,17 +4634,17 @@ class VirtualStudio {
         }
       }
     };
-    
+
     // Process this mesh
     processNode(mesh);
-    
+
     // Process all descendants
     mesh.getDescendants(false).forEach(child => {
       if (child instanceof BABYLON.AbstractMesh) {
         processNode(child);
       }
     });
-    
+
     // Fallback if no valid bounds found
     if (!isFinite(minX)) {
       const pos = mesh.position;
@@ -4653,13 +4653,13 @@ class VirtualStudio {
         max: new BABYLON.Vector3(pos.x + 0.5, pos.y + 1.7, pos.z + 0.5)
       };
     }
-    
+
     return {
       min: new BABYLON.Vector3(minX, minY, minZ),
       max: new BABYLON.Vector3(maxX, maxY, maxZ)
     };
   }
-  
+
   /**
    * Set a specific object as the focus target
    */
@@ -4667,24 +4667,24 @@ class VirtualStudio {
     this.focusTargetId = targetId;
     this.focusTargetMesh = mesh;
     this.focusAnchor = this.calculateFocusPoint(mesh, this.focusMode);
-    
+
     // Update UI
     const nameEl = document.getElementById('focusTargetName');
     if (nameEl) nameEl.textContent = name;
-    
+
     // Update list selection
     this.updateFocusObjectsList();
   }
-  
+
   /**
    * Update the list of focusable objects in the HUD
    */
   private updateFocusObjectsList(): void {
     const listEl = document.getElementById('focusObjectsList');
     if (!listEl) return;
-    
+
     listEl.innerHTML = '';
-    
+
     interface FocusableObject {
       id: string;
       name: string;
@@ -4692,10 +4692,10 @@ class VirtualStudio {
       type: 'human' | 'product';
       distance: number;
     }
-    
+
     const objects: FocusableObject[] = [];
     const lightPos = this.hudLightId ? this.lights.get(this.hudLightId)?.mesh.position : this.camera.position;
-    
+
     // Add casting candidates
     this.castingCandidates.forEach((candidate, id) => {
       if (candidate.mesh && candidate.mesh.isEnabled()) {
@@ -4706,7 +4706,7 @@ class VirtualStudio {
         const centerZ = (bounds.min.z + bounds.max.z) / 2;
         const center = new BABYLON.Vector3(centerX, centerY, centerZ);
         const distance = lightPos ? BABYLON.Vector3.Distance(lightPos, center) : 0;
-        
+
         // Detect type based on bounding box proportions
         const height = bounds.max.y - bounds.min.y;
         const width = Math.max(
@@ -4714,7 +4714,7 @@ class VirtualStudio {
           bounds.max.z - bounds.min.z
         );
         const isHuman = height > width * 1.5 && height > 0.8; // Tall and upright = human
-        
+
         objects.push({
           id,
           name: candidate.name,
@@ -4724,7 +4724,7 @@ class VirtualStudio {
         });
       }
     });
-    
+
     // Add scene props and models from useAppStore
     const store = useAppStore.getState();
     if (store?.scene) {
@@ -4732,7 +4732,7 @@ class VirtualStudio {
         if ((node.type === 'prop' || node.type === 'model') && node.visible !== false) {
           // Try to find corresponding mesh by node ID
           let mesh = this.scene.getMeshByName(node.id) as BABYLON.Mesh;
-          
+
           // If not found by ID, try finding by checking metadata
           if (!mesh) {
             for (const sceneMesh of this.scene.meshes) {
@@ -4743,7 +4743,7 @@ class VirtualStudio {
               }
             }
           }
-          
+
           // Skip if we already have this object from castingCandidates
           if (mesh && !objects.some(o => o.id === node.id)) {
             const bounds = this.getCombinedBounds(mesh);
@@ -4752,7 +4752,7 @@ class VirtualStudio {
             const centerZ = (bounds.min.z + bounds.max.z) / 2;
             const center = new BABYLON.Vector3(centerX, centerY, centerZ);
             const distance = lightPos ? BABYLON.Vector3.Distance(lightPos, center) : 0;
-            
+
             // Detect type based on bounding box proportions
             const height = bounds.max.y - bounds.min.y;
             const width = Math.max(
@@ -4760,7 +4760,7 @@ class VirtualStudio {
               bounds.max.z - bounds.min.z
             );
             const isHuman = height > width * 1.5 && height > 0.8;
-            
+
             objects.push({
               id: node.id,
               name: node.name || 'Model',
@@ -4772,13 +4772,13 @@ class VirtualStudio {
         }
       });
     }
-    
+
     // Also scan for any meshes with model geometry metadata that aren't yet tracked
     for (const sceneMesh of this.scene.meshes) {
       if (sceneMesh.metadata?.isModelRoot && sceneMesh.isEnabled()) {
         const modelId = sceneMesh.metadata.modelId;
         const modelName = sceneMesh.metadata.modelName;
-        
+
         // Skip if already in objects list
         if (!objects.some(o => o.id === modelId)) {
           const bounds = this.getCombinedBounds(sceneMesh as BABYLON.Mesh);
@@ -4787,14 +4787,14 @@ class VirtualStudio {
           const centerZ = (bounds.min.z + bounds.max.z) / 2;
           const center = new BABYLON.Vector3(centerX, centerY, centerZ);
           const distance = lightPos ? BABYLON.Vector3.Distance(lightPos, center) : 0;
-          
+
           const height = bounds.max.y - bounds.min.y;
           const width = Math.max(
             bounds.max.x - bounds.min.x,
             bounds.max.z - bounds.min.z
           );
           const isHuman = height > width * 1.5 && height > 0.8;
-          
+
           objects.push({
             id: modelId,
             name: modelName || 'Model',
@@ -4805,19 +4805,19 @@ class VirtualStudio {
         }
       }
     }
-    
+
     // Filter by current mode if desired (optional - show all but highlight matching)
     // Sort by distance
     objects.sort((a, b) => a.distance - b.distance);
-    
+
     // Limit to 5 closest objects
     const displayObjects = objects.slice(0, 5);
-    
+
     if (displayObjects.length === 0) {
       listEl.innerHTML = '<div class="focus-object-item" style="color: rgba(255,255,255,0.4); justify-content: center;">Ingen objekter i scenen</div>';
       return;
     }
-    
+
     displayObjects.forEach(obj => {
       const item = document.createElement('div');
       item.className = `focus-object-item ${obj.id === this.focusTargetId ? 'selected' : ''}`;
@@ -4831,14 +4831,14 @@ class VirtualStudio {
       });
       listEl.appendChild(item);
     });
-    
+
     // Auto-select first if none selected
     if (!this.focusTargetId && displayObjects.length > 0) {
       const first = displayObjects[0];
       this.setFocusTarget(first.id, first.mesh, first.name);
     }
   }
-  
+
   /**
    * Point the selected light at the current focus target
    */
@@ -4846,13 +4846,13 @@ class VirtualStudio {
     if (!this.hudLightId) return;
     const lightData = this.lights.get(this.hudLightId);
     if (!lightData) return;
-    
+
     // Update focus objects list first
     this.updateFocusObjectsList();
-    
+
     // Get target position
     let targetPos: BABYLON.Vector3;
-    
+
     if (this.focusTargetMesh && this.focusTargetMesh.isEnabled()) {
       // Use calculated focus anchor based on mode
       targetPos = this.calculateFocusPoint(this.focusTargetMesh, this.focusMode);
@@ -4864,50 +4864,50 @@ class VirtualStudio {
         ? new BABYLON.Vector3(0, 1.6, 0)  // Face height for humans
         : new BABYLON.Vector3(0, 1.0, 0); // Table height for products
     }
-    
+
     // Smooth the focus anchor for gradual transitions
     BABYLON.Vector3.LerpToRef(this.smoothedFocusAnchor, this.focusAnchor, 
       1.0 / this.focusSmoothingSpeed, this.smoothedFocusAnchor);
-    
+
     const lightPos = lightData.mesh.position;
-    
+
     // Calculate direction from light to smoothed target
     const direction = this.smoothedFocusAnchor.subtract(lightPos);
-    
+
     // Ensure we have a valid direction
     if (direction.length() < 0.01) {
       direction.set(0, -1, 0);
     } else {
       direction.normalize();
     }
-    
+
     // Apply direction to spotlight
     if (lightData.light instanceof BABYLON.SpotLight) {
       lightData.light.direction = direction.clone();
     }
-    
+
     // Update mesh rotation
     this.setMeshRotationFromDirection(lightData.mesh, direction);
-    
+
     // Update visuals
     this.updateBeamVisualization(this.hudLightId);
     this.updateHUDValues(lightData);
-    
+
     console.log(`Light pointed at focus target: mode=${this.focusMode}, target=${targetPos.toString()}`);
   }
-  
+
   /**
    * Set mesh rotation to point light head at target position
    * Uses lookAt calculation with model orientation correction
    */
   private setMeshRotationFromDirection(mesh: BABYLON.Mesh, direction: BABYLON.Vector3): void {
     const dir = direction.normalize();
-    
+
     // Get the light type from the mesh name to look up cached orientation
     const meshName = mesh.name.toLowerCase();
     let modelForward = new BABYLON.Vector3(0, 0, -1); // Default: -Z forward
     void modelForward; // Used as a reference direction - may refine later
-    
+
     // Check if we have cached orientation data for this model type
     for (const [type, cacheData] of this.lightModelCache.entries()) {
       if (meshName.includes(type.toLowerCase()) || cacheData.masterMesh.name === mesh.name) {
@@ -4915,34 +4915,34 @@ class VirtualStudio {
         break;
       }
     }
-    
+
     // Create target position relative to mesh position
     // We want the light head to point at a position along the direction vector
     const targetPoint = mesh.position.add(dir.scale(10));
     void targetPoint; // Computed for reference; actual rotation uses quaternion below
-    
+
     // Use Babylon's lookAt functionality
     // First, reset rotation
     mesh.rotationQuaternion = null;
     mesh.rotation = BABYLON.Vector3.Zero();
-    
+
     // The beauty dish model has light head pointing in +Z direction (not -Z)
     // So we need to invert the direction for FromLookDirectionLH
     const invertedDir = dir.negate();
-    
+
     let up = BABYLON.Vector3.Up();
-    
+
     // Handle near-vertical directions
     const dotUp = Math.abs(BABYLON.Vector3.Dot(invertedDir, up));
     if (dotUp > 0.99) {
       up = new BABYLON.Vector3(0, 0, invertedDir.y > 0 ? -1 : 1);
     }
-    
+
     // Create quaternion that makes the mesh look in the opposite direction
     // This effectively makes the light head point toward the target
     mesh.rotationQuaternion = BABYLON.Quaternion.FromLookDirectionLH(invertedDir, up);
   }
-  
+
   /**
    * Get event position for both mouse and touch events
    */
@@ -4952,9 +4952,9 @@ class VirtualStudio {
     }
     return { x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY };
   }
-  
+
   // ===== LIGHT POV (POINT OF VIEW) MODE =====
-  
+
   /**
    * Activate POV mode - view scene from light's perspective
    * Uses drag counting to handle overlapping drags safely
@@ -4962,23 +4962,23 @@ class VirtualStudio {
   private activateLightPOV(lightId: string): void {
     const lightData = this.lights.get(lightId);
     if (!lightData) return;
-    
+
     // If already in POV mode for same light, just increment drag count
     if (this.lightPOVActive && this.lightPOVLightId === lightId) {
       this.lightPOVDragCount++;
       return;
     }
-    
+
     // If already active for a different light, restore first then activate new
     if (this.lightPOVActive && this.lightPOVLightId !== lightId) {
       // Force restore previous camera state
       this.lightPOVDragCount = 0;
       this.forceDeactivateLightPOV();
     }
-    
+
     // First activation - set drag count to 1
     this.lightPOVDragCount = 1;
-    
+
     // Save current camera state only on first activation
     if (!this.savedCameraState) {
       this.savedCameraState = {
@@ -4988,34 +4988,34 @@ class VirtualStudio {
         target: this.camera.target.clone()
       };
     }
-    
+
     this.lightPOVLightId = lightId;
-    
+
     // Create or reuse POV camera for this light
     if (!this.lightPOVCamera) {
       this.lightPOVCamera = new BABYLON.FreeCamera('lightPOVCamera', BABYLON.Vector3.Zero(), this.scene);
       this.lightPOVCamera.minZ = 0.01;
       this.lightPOVCamera.maxZ = 1000;
     }
-    
+
     // Smoothly transition to light's POV (use mesh position for consistency)
     const lightPos = lightData.mesh.position.clone();
     let lightDir: BABYLON.Vector3;
-    
+
     if (lightData.light instanceof BABYLON.SpotLight) {
       lightDir = lightData.light.direction.clone();
     } else {
       lightDir = new BABYLON.Vector3(0, -1, 0); // Default down
     }
-    
+
     // Calculate camera position slightly behind the light
     const povOffset = lightDir.scale(-0.5);
     const povPos = lightPos.add(povOffset);
     const povTarget = lightPos.add(lightDir.scale(5));
-    
+
     // Stop any existing animations before starting new ones
     this.scene.stopAnimation(this.camera);
-    
+
     // Animate camera to POV position
     BABYLON.Animation.CreateAndStartAnimation(
       'povAlpha',
@@ -5027,7 +5027,7 @@ class VirtualStudio {
       Math.atan2(povPos.x - povTarget.x, povPos.z - povTarget.z) + Math.PI,
       BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
     );
-    
+
     BABYLON.Animation.CreateAndStartAnimation(
       'povBeta',
       this.camera,
@@ -5038,7 +5038,7 @@ class VirtualStudio {
       Math.acos((povPos.y - povTarget.y) / povPos.subtract(povTarget).length()),
       BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
     );
-    
+
     BABYLON.Animation.CreateAndStartAnimation(
       'povRadius',
       this.camera,
@@ -5049,7 +5049,7 @@ class VirtualStudio {
       3,
       BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
     );
-    
+
     BABYLON.Animation.CreateAndStartAnimation(
       'povTarget',
       this.camera,
@@ -5060,38 +5060,38 @@ class VirtualStudio {
       povTarget,
       BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
     );
-    
+
     this.lightPOVActive = true;
-    
+
     // Show POV indicator in UI
     window.dispatchEvent(new CustomEvent('vs-pov-mode-changed', { 
       detail: { active: true, lightId } 
     }));
   }
-  
+
   /**
    * Update POV camera position when light moves
    */
   private updateLightPOVCamera(lightId: string): void {
     if (!this.lightPOVActive) return;
-    
+
     const lightData = this.lights.get(lightId);
     if (!lightData) return;
-    
+
     // Use mesh position for consistency
     const lightPos = lightData.mesh.position.clone();
     let lightDir: BABYLON.Vector3;
-    
+
     if (lightData.light instanceof BABYLON.SpotLight) {
       lightDir = lightData.light.direction.clone();
     } else {
       lightDir = new BABYLON.Vector3(0, -1, 0);
     }
-    
+
     const povTarget = lightPos.add(lightDir.scale(5));
     this.camera.target = povTarget;
   }
-  
+
   /**
    * Deactivate POV mode - return to saved camera position
    * Only restores when all concurrent drags have finished
@@ -5099,21 +5099,21 @@ class VirtualStudio {
   private deactivateLightPOV(): void {
     // Decrement drag count
     this.lightPOVDragCount = Math.max(0, this.lightPOVDragCount - 1);
-    
+
     // Only restore camera if all drags are complete
     if (this.lightPOVDragCount > 0) {
       return; // Still have active drags
     }
-    
+
     if (!this.lightPOVActive || !this.savedCameraState) {
       // Clear state even if no animation needed
       this.lightPOVLightId = null;
       return;
     }
-    
+
     // Stop any existing animations before starting new ones
     this.scene.stopAnimation(this.camera);
-    
+
     // Animate back to saved camera position
     BABYLON.Animation.CreateAndStartAnimation(
       'povAlphaBack',
@@ -5125,7 +5125,7 @@ class VirtualStudio {
       this.savedCameraState.alpha,
       BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
     );
-    
+
     BABYLON.Animation.CreateAndStartAnimation(
       'povBetaBack',
       this.camera,
@@ -5136,7 +5136,7 @@ class VirtualStudio {
       this.savedCameraState.beta,
       BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
     );
-    
+
     BABYLON.Animation.CreateAndStartAnimation(
       'povRadiusBack',
       this.camera,
@@ -5147,7 +5147,7 @@ class VirtualStudio {
       this.savedCameraState.radius,
       BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
     );
-    
+
     BABYLON.Animation.CreateAndStartAnimation(
       'povTargetBack',
       this.camera,
@@ -5158,16 +5158,16 @@ class VirtualStudio {
       this.savedCameraState.target,
       BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
     );
-    
+
     this.lightPOVActive = false;
     this.lightPOVLightId = null;
     this.savedCameraState = null;
-    
+
     window.dispatchEvent(new CustomEvent('vs-pov-mode-changed', { 
       detail: { active: false } 
     }));
   }
-  
+
   /**
    * Force deactivate POV mode immediately (used when switching lights)
    */
@@ -5177,25 +5177,25 @@ class VirtualStudio {
       this.lightPOVLightId = null;
       return;
     }
-    
+
     // Stop any existing animations
     this.scene.stopAnimation(this.camera);
-    
+
     // Instantly restore camera (no animation)
     this.camera.alpha = this.savedCameraState.alpha;
     this.camera.beta = this.savedCameraState.beta;
     this.camera.radius = this.savedCameraState.radius;
     this.camera.target = this.savedCameraState.target.clone();
-    
+
     this.lightPOVActive = false;
     this.lightPOVLightId = null;
     this.savedCameraState = null;
-    
+
     window.dispatchEvent(new CustomEvent('vs-pov-mode-changed', { 
       detail: { active: false } 
     }));
   }
-  
+
   /**
    * Toggle studio gizmo mode (vs standard Babylon gizmos)
    */
@@ -5279,7 +5279,7 @@ class VirtualStudio {
     // Default 3-point lighting setup with Aputure 300D lights
     // IMPORTANT: Must await this to ensure lights are fully loaded before continuing
     await this.setupDefaultLighting();
-    
+
     console.log('[VirtualStudio] Default lighting setup complete. Lights loaded:', this.lights.size);
 
       // Initialize and subscribe to environment service for wall/floor/ambient lighting sync
@@ -5696,9 +5696,9 @@ class VirtualStudio {
   // Helper: Add a light model to the scene
   public async addLight(modelId: string, position: BABYLON.Vector3): Promise<string> {
     const lightId = `light_${this.lightCounter++}`;
-    
+
     console.log(`[addLight] Loading light model: ${modelId} at position ${position.toString()}`);
-    
+
     // Map model IDs to light specs — softbox/octabox GLBs generated for realistic studio look
     // Physical intensity values in candela — calibrated for FALLOFF_PHYSICAL (1/d²).
     // Formula: E_lux = I_cd / d².  Key light at ~4.5m needs I ≈ E × d² ≈ 250 × 20 = 5000 cd.
@@ -5753,16 +5753,16 @@ class VirtualStudio {
       'profoto-a10':     { intensity: 220, name: 'Profoto A10',      cct: 5500, beamAngle: Math.PI / 3, exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
       'canon-600ex-rt':  { intensity: 180, name: 'Canon 600EX-RT',  cct: 5600, beamAngle: Math.PI / 3, exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
     };
-    
+
     const lightConfig = lightSpecs[modelId] || { intensity: 350, name: modelId, cct: 5600, beamAngle: Math.PI / 3, exponent: 2.0, shadowKernel: 64, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 };
-    
+
     try {
       const modelUrl = resolveModelPath(lightConfig.glbFile);
       console.log(`[addLight] Loading GLB from: ${modelUrl}`);
-      
+
       let mesh: BABYLON.Mesh;
       let lightHeadHeight = position.y;
-      
+
       try {
         const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
         if (result.meshes.length === 0) throw new Error('No meshes in GLB');
@@ -5964,10 +5964,10 @@ class VirtualStudio {
         (mesh as any)._headPivot = fallbackHeadPivot;
         (mesh as any)._headMeshes = [head]; // track for live emissive updates
       }
-      
+
       mesh.name = lightId;
       const color = this.cctToColor(lightConfig.cct);
-      
+
       // Create the actual SpotLight at the light head position (not on the ground)
       // The light head is at the specified height, mesh base is on ground
       const lightHeadPosition = new BABYLON.Vector3(position.x, lightHeadHeight, position.z);
@@ -5979,17 +5979,17 @@ class VirtualStudio {
         lightConfig.exponent,
         this.scene
       );
-      
+
       // Physical inverse-square-law falloff: E = I / d²
       // FALLOFF_PHYSICAL disables the legacy "range" soft cutoff and uses true 1/d² attenuation.
       babylonLight.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
       babylonLight.intensity = lightConfig.intensity;
       babylonLight.diffuse = color;
       babylonLight.range = 200; // Large value — acts as hard-cutoff only, not attenuation
-      
+
       // Store light head height for later use in aiming
       (mesh as any)._lightHeadHeight = lightHeadHeight;
-      
+
       // Create light data object
       const lightData: LightData = {
         light: babylonLight,
@@ -6007,7 +6007,7 @@ class VirtualStudio {
         baseIntensity: lightConfig.intensity,  // physical candela — glow reference
         powerMultiplier: 1.0
       };
-      
+
       // Store light in lights map
       this.lights.set(lightId, lightData);
 
@@ -6027,17 +6027,17 @@ class VirtualStudio {
       this.scene.meshes.forEach(m => { if (m.isVisible && m.getTotalVertices() > 0) m.receiveShadows = true; });
       lightData.shadowGenerator = shadowGen;
       console.log(`[addLight] Shadow generator created: kernel=${lightConfig.shadowKernel}, PCF quality=HIGH`);
-      
+
       // Add mesh to gizmo manager for selection
       if (this.gizmoManager?.attachableMeshes) {
         this.gizmoManager.attachableMeshes.push(mesh);
       }
-      
+
       // Dispatch event to notify UI that lights have changed
       window.dispatchEvent(new CustomEvent('lights-updated', { 
         detail: { action: 'added', lightId, lightCount: this.lights.size } 
       }));
-      
+
       // Initial glow — apply at the current intensity right away
       this.updateLightHeadGlow(lightData);
 
@@ -6094,22 +6094,22 @@ class VirtualStudio {
       console.warn(`[aimLightAt] No light data found for ${lightId}`);
       return;
     }
-    
+
     const mesh = lightData.mesh;
     const light = lightData.light;
-    
+
     if (!mesh) {
       console.warn(`[aimLightAt] No mesh for light ${lightId}`);
       return;
     }
-    
+
     // Get the light head position (where the SpotLight is, not the mesh base)
     const lightHeadPos = light instanceof BABYLON.SpotLight ? (light as BABYLON.SpotLight).position : mesh.position;
-    
+
     // Calculate direction from light HEAD position to target
     const direction = target.subtract(lightHeadPos).normalize();
     console.log(`[aimLightAt] ${lightId}: lightHead=${lightHeadPos}, target=${target}, dir=${direction}`);
-    
+
     // Rotate the light stand to fully aim at the target (both horizontal + vertical tilt)
     try {
       const dx = target.x - mesh.position.x;
@@ -6145,7 +6145,7 @@ class VirtualStudio {
     } catch (e) {
       console.error(`[aimLightAt] Error rotating mesh:`, e);
     }
-    
+
     // Update the SpotLight position and direction to point at target
     if (light instanceof BABYLON.SpotLight) {
       // Calculate direction from light position to target
@@ -6153,16 +6153,16 @@ class VirtualStudio {
       light.direction = spotDirection;
       console.log(`[aimLightAt] ${lightId}: SpotLight at ${light.position}, direction=${spotDirection}, target=${target}`);
     }
-    
+
     // Store the aimed direction on mesh for reference
     const aimDirection = target.subtract(lightHeadPos).normalize();
     (mesh as any)._initialWorldForward = aimDirection.clone();
-    
+
     // Clear azimuth/elevation to stay in automatic mode
     lightData.azimuth = undefined;
     lightData.elevation = undefined;
   }
-  
+
   public async setupDefaultLighting(): Promise<void> {
     const subjectCenter = new BABYLON.Vector3(0, 1.2, 0);
 
@@ -6306,15 +6306,15 @@ class VirtualStudio {
         mat.maxSimultaneousLights = 8;
       }
     });
-    
+
     // Update scene list to show all lights
     this.updateSceneList();
-    
+
     // Dispatch event to notify UI that lights have been set up
     window.dispatchEvent(new CustomEvent('lights-updated', { 
       detail: { action: 'setup-complete', lightCount: this.lights.size } 
     }));
-    
+
     // Debug: Log lighting setup status
     console.log('[Lighting Debug] Setup complete. Light status:');
     this.lights.forEach((light, id) => {
@@ -6325,7 +6325,7 @@ class VirtualStudio {
         console.log(`    direction=(${spot.direction.x.toFixed(2)}, ${spot.direction.y.toFixed(2)}, ${spot.direction.z.toFixed(2)}), angle=${(spot.angle * 180 / Math.PI).toFixed(1)}°`);
       }
     });
-    
+
     // Debug: Check avatar materials
     setTimeout(() => {
       const avatarMesh = this.scene.getMeshByName('default_avatar');
@@ -6347,14 +6347,14 @@ class VirtualStudio {
         console.warn('[Lighting Debug] Avatar not found yet');
       }
     }, 2000);
-    
+
     // Deselect all lights so user starts fresh
     this.selectedLightId = null;
     this.gizmoManager?.attachToMesh(null);
-    
+
     // Hide the light control HUD since no light is selected at startup
     this.hideLightControlHUD();
-    
+
     // Hide all beam visualizations and studio gizmos since no light is selected
     this.disposeStudioGizmos();
     for (const [, lightData] of this.lights) {
@@ -6489,7 +6489,7 @@ class VirtualStudio {
         }
       }
     });
-    
+
     // Double-tap/double-click to focus - use POINTERUP with double-click detection
     // Performance optimized: Uses Babylon's canvas-scoped pointer observable, no document listeners
     let lastClickTime = 0;
@@ -6570,7 +6570,7 @@ class VirtualStudio {
         const now = Date.now();
         const timeDiff = now - lastClickTime;
         lastClickTime = now;
-        
+
         // Check if this is a double-click (within 400ms, widened from 300)
         if (timeDiff > 50 && timeDiff < 400) {
           // Try to get pick info - if not available from observer, do manual pick
@@ -6579,10 +6579,10 @@ class VirtualStudio {
             // Manual raycast pick
             pickInfo = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
           }
-          
+
           if (this.autoFocusSystem && pickInfo?.pickedPoint) {
             const pickedMesh = pickInfo.pickedMesh;
-            
+
             // Skip certain meshes (walls, ground, gizmos)
             if (pickedMesh) {
               const name = pickedMesh.name.toLowerCase();
@@ -6591,9 +6591,9 @@ class VirtualStudio {
                 return;
               }
             }
-            
+
             const distance = BABYLON.Vector3.Distance(this.camera.position, pickInfo.pickedPoint!);
-            
+
             // Create synthetic focus target
             const screenPos = BABYLON.Vector3.Project(
               pickInfo.pickedPoint!,
@@ -6601,7 +6601,7 @@ class VirtualStudio {
               this.scene.getTransformMatrix(),
               this.camera.viewport.toGlobal(this.engine.getRenderWidth(), this.engine.getRenderHeight())
             );
-            
+
             const syntheticTarget = {
               id: `clickfocus_${Date.now()}`,
               actorName: pickedMesh?.name || 'ClickFocus',
@@ -6617,9 +6617,9 @@ class VirtualStudio {
               },
               distanceFromCamera: distance
             };
-            
+
             this.autoFocusSystem.setFocusTarget(syntheticTarget);
-            
+
             // Temporarily pause AF-C tracking to prevent immediate override
             this.autoFocusSystem.pauseTracking(2000); // Pause for 2 seconds
           }
@@ -6661,7 +6661,7 @@ class VirtualStudio {
   }
 
   private finalRenderInterval: ReturnType<typeof setInterval> | null = null;
-  
+
   /**
    * Setup render mode toggle (Work Mode / Final Mode)
    */
@@ -6672,14 +6672,14 @@ class VirtualStudio {
     const renderProgressBar = document.getElementById('renderProgressBar');
     const renderProgressText = document.getElementById('renderProgressText');
     const cancelFinalRender = document.getElementById('cancelFinalRender');
-    
+
     // Initialize progress elements
     if (renderProgressBar) renderProgressBar.style.width = '0%';
     if (renderProgressText) renderProgressText.textContent = '0%';
-    
+
     // Store original progress HTML for reset
     const originalProgressHTML = renderProgress?.innerHTML || '';
-    
+
     const resetProgressUI = () => {
       if (renderProgress) {
         renderProgress.innerHTML = originalProgressHTML;
@@ -6689,14 +6689,14 @@ class VirtualStudio {
       if (newProgressBar) newProgressBar.style.width = '0%';
       if (newProgressText) newProgressText.textContent = '0%';
     };
-    
+
     const stopFinalRender = () => {
       if (this.finalRenderInterval) {
         clearInterval(this.finalRenderInterval);
         this.finalRenderInterval = null;
       }
     };
-    
+
     const updateModeUI = (mode: 'work' | 'final') => {
       if (mode === 'work') {
         stopFinalRender();
@@ -6726,21 +6726,21 @@ class VirtualStudio {
         if (renderProgress) renderProgress.style.display = 'block';
       }
     };
-    
+
     const startFinalRender = () => {
       stopFinalRender();
       resetProgressUI();
-      
+
       let progress = 0;
       const progressBar = document.getElementById('renderProgressBar');
       const progressText = document.getElementById('renderProgressText');
       const progressStep = Math.max(1, Math.round(100 / this.finalRenderMaxSamples));
-      
+
       this.finalRenderInterval = setInterval(() => {
         progress += progressStep;
         if (progressBar) progressBar.style.width = `${Math.min(progress, 100)}%`;
         if (progressText) progressText.textContent = `${Math.min(progress, 100)}%`;
-        
+
         if (progress >= 100) {
           stopFinalRender();
           setTimeout(() => {
@@ -6765,29 +6765,29 @@ class VirtualStudio {
         }
       }, 100);
     };
-    
+
     workModeBtn?.addEventListener('click', () => {
       this.setRenderMode('work');
       updateModeUI('work');
     });
-    
+
     finalModeBtn?.addEventListener('click', () => {
       this.setRenderMode('final');
       updateModeUI('final');
       startFinalRender();
     });
-    
+
     cancelFinalRender?.addEventListener('click', () => {
       this.setRenderMode('work');
       updateModeUI('work');
     });
-    
+
     // Listen for render mode changes from code
     window.addEventListener('vs-render-mode-changed', ((e: CustomEvent) => {
       updateModeUI(e.detail.mode);
     }) as EventListener);
   }
-  
+
   /**
    * Export screenshot of the current viewport
    */
@@ -6829,7 +6829,7 @@ class VirtualStudio {
       // Sync both selects
       if (scopeModeSelect) scopeModeSelect.value = mode;
       if (scopeModeSelectDropdown) scopeModeSelectDropdown.value = mode;
-      
+
       // Show/hide histogram style panel
       if (histogramStylePanel) {
         histogramStylePanel.style.display = mode === 'histogram' ? 'flex' : 'none';
@@ -6839,15 +6839,15 @@ class VirtualStudio {
     scopeModeSelect?.addEventListener('change', () => {
       setScopeMode(scopeModeSelect.value as typeof this.currentScopeMode);
     });
-    
+
     scopeModeSelectDropdown?.addEventListener('change', () => {
       setScopeMode(scopeModeSelectDropdown.value as typeof this.currentScopeMode);
     });
-    
+
     // Histogram style controls
     this.setupHistogramStyleControls();
   }
-  
+
   private setupHistogramStyleControls(): void {
     const styleButtons = {
       overlay: document.getElementById('histStyleOverlay'),
@@ -6855,34 +6855,34 @@ class VirtualStudio {
       'rgb-parade': document.getElementById('histStyleRGBParade'),
       parade: document.getElementById('histStyleParade')
     };
-    
+
     const setHistogramStyle = (style: typeof this.histogramStyle) => {
       this.histogramStyle = style;
-      
+
       // Update button states
       Object.entries(styleButtons).forEach(([key, btn]) => {
         if (btn) {
           btn.classList.toggle('active', key === style);
         }
       });
-      
+
       console.log(`[Histogram] Style changed to: ${style}`);
     };
-    
+
     // Wire up style buttons
     Object.entries(styleButtons).forEach(([style, btn]) => {
       btn?.addEventListener('click', () => {
         setHistogramStyle(style as typeof this.histogramStyle);
       });
     });
-    
+
     // Log scale checkbox
     const logScaleCheckbox = document.getElementById('histLogScale') as HTMLInputElement;
     logScaleCheckbox?.addEventListener('change', () => {
       this.histogramLogScale = logScaleCheckbox.checked;
       console.log(`[Histogram] Log scale: ${this.histogramLogScale}`);
     });
-    
+
     // Show stats checkbox
     const showStatsCheckbox = document.getElementById('histShowStats') as HTMLInputElement;
     showStatsCheckbox?.addEventListener('change', () => {
@@ -6897,7 +6897,7 @@ class VirtualStudio {
     posAxes.forEach((axis, index) => {
       const slider = document.getElementById(`pos${axis}Slider`) as HTMLInputElement;
       const input = document.getElementById(`pos${axis}Input`) as HTMLInputElement;
-      
+
       const updatePosition = (val: number) => {
         if (!this.selectedLightId) return;
         if (this.animationState.isPlaying) return; // Skip during playback
@@ -6906,26 +6906,26 @@ class VirtualStudio {
           if (index === 0) data.mesh.position.x = val;
           if (index === 1) data.mesh.position.y = val;
           if (index === 2) data.mesh.position.z = val;
-          
+
           // Update light position if applicable
           if (data.light instanceof BABYLON.SpotLight || data.light instanceof BABYLON.DirectionalLight) {
             data.light.position = data.mesh.position.clone();
           }
-          
+
           // Dispatch event for updates
           window.dispatchEvent(new CustomEvent('ch-light-position-changed', {
             detail: { lightId: this.selectedLightId }
           }));
         }
       };
-      
+
       slider?.addEventListener('input', () => {
         if (this.animationState.isPlaying) return;
         const val = parseFloat(slider.value);
         if (input) input.value = val.toFixed(1);
         updatePosition(val);
       });
-      
+
       input?.addEventListener('change', () => {
         if (this.animationState.isPlaying) return;
         const val = parseFloat(input.value);
@@ -6933,13 +6933,13 @@ class VirtualStudio {
         updatePosition(val);
       });
     });
-    
+
     // Rotation sliders and inputs
     const rotAxes = ['X', 'Y', 'Z'];
     rotAxes.forEach((axis, index) => {
       const slider = document.getElementById(`rot${axis}Slider`) as HTMLInputElement;
       const input = document.getElementById(`rot${axis}Input`) as HTMLInputElement;
-      
+
       const updateRotation = (val: number) => {
         if (!this.selectedLightId) return;
         if (this.animationState.isPlaying) return; // Skip during playback
@@ -6951,14 +6951,14 @@ class VirtualStudio {
           if (index === 2) data.mesh.rotation.z = rad;
         }
       };
-      
+
       slider?.addEventListener('input', () => {
         if (this.animationState.isPlaying) return;
         const val = parseFloat(slider.value);
         if (input) input.value = val.toString();
         updateRotation(val);
       });
-      
+
       input?.addEventListener('change', () => {
         if (this.animationState.isPlaying) return;
         const val = parseFloat(input.value);
@@ -6966,7 +6966,7 @@ class VirtualStudio {
         updateRotation(val);
       });
     });
-    
+
     // Increment/decrement buttons
     document.querySelectorAll('.inc-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -6974,26 +6974,26 @@ class VirtualStudio {
         if (!targetId) return;
         const slider = document.getElementById(targetId) as HTMLInputElement;
         if (!slider) return;
-        
+
         const isInc = btn.classList.contains('inc');
         const step = parseFloat(slider.step) || 1;
         const currentVal = parseFloat(slider.value);
         const newVal = isInc ? currentVal + step : currentVal - step;
         const clampedVal = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), newVal));
-        
+
         slider.value = clampedVal.toString();
         slider.dispatchEvent(new Event('input', { bubbles: true }));
       });
     });
-    
+
     // Reset position button - also centers camera on object
     document.getElementById('resetPosBtn')?.addEventListener('click', () => {
       if (!this.selectedLightId) return;
       const data = this.lights.get(this.selectedLightId);
       if (!data) return;
-      
+
       data.mesh.position.set(0, 3, 0);
-      
+
       ['X', 'Y', 'Z'].forEach((axis, i) => {
         const slider = document.getElementById(`pos${axis}Slider`) as HTMLInputElement;
         const input = document.getElementById(`pos${axis}Input`) as HTMLInputElement;
@@ -7001,30 +7001,30 @@ class VirtualStudio {
         if (slider) slider.value = val.toString();
         if (input) input.value = val.toFixed(1);
       });
-      
+
       // Center camera on object
       this.centerCameraOnObject(data.mesh);
     });
-    
+
     // Reset rotation button - also centers camera on object
     document.getElementById('resetRotBtn')?.addEventListener('click', () => {
       if (!this.selectedLightId) return;
       const data = this.lights.get(this.selectedLightId);
       if (!data) return;
-      
+
       data.mesh.rotation.set(0, 0, 0);
-      
+
       ['X', 'Y', 'Z'].forEach(axis => {
         const slider = document.getElementById(`rot${axis}Slider`) as HTMLInputElement;
         const input = document.getElementById(`rot${axis}Input`) as HTMLInputElement;
         if (slider) slider.value = '0';
         if (input) input.value = '0';
       });
-      
+
       // Center camera on object
       this.centerCameraOnObject(data.mesh);
     });
-    
+
     // Axis select buttons - toggle selection
     document.querySelectorAll('.axis-select-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -7032,7 +7032,7 @@ class VirtualStudio {
         const type = target.dataset.type as 'position' | 'rotation';
         const axis = target.dataset.axis as 'x' | 'y' | 'z';
         const selectedAxes = type === 'position' ? this.selectedPosAxes : this.selectedRotAxes;
-        
+
         if (selectedAxes.has(axis)) {
           selectedAxes.delete(axis);
           target.classList.remove('selected');
@@ -7044,7 +7044,7 @@ class VirtualStudio {
         }
       });
     });
-    
+
     // Axis keyframe buttons - add keyframe for clicked axis plus any other selected axes
     document.querySelectorAll('.axis-keyframe').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -7052,11 +7052,11 @@ class VirtualStudio {
         const type = target.dataset.type as 'position' | 'rotation';
         const clickedAxis = target.dataset.axis as 'x' | 'y' | 'z';
         const selectedAxes = type === 'position' ? this.selectedPosAxes : this.selectedRotAxes;
-        
+
         // Build set of axes to keyframe: clicked axis plus any selected axes
         const axesToKeyframe = new Set<string>([clickedAxis]);
         selectedAxes.forEach(axis => axesToKeyframe.add(axis));
-        
+
         if (axesToKeyframe.size === 3) {
           // All axes - use grouped keyframe for better animation interpolation
           this.addKeyframe(type);
@@ -7123,14 +7123,14 @@ class VirtualStudio {
     const shutterValues = ['1/8', '1/15', '1/30', '1/60', '1/125', '1/250', '1/500', '1/1000', '1/2000', '1/4000', '1/8000', '1/16000', '1/32000'];
     const isoValues = [100, 125, 160, 200, 250, 320, 400, 500, 640, 800, 1600];
     const ndValues = [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12];
-    
+
     if (!(window as any).__cameraSettingsListenerAttached) {
       (window as any).__cameraSettingsListenerAttached = true;
       window.addEventListener('request-camera-settings', () => {
         window.dispatchEvent(new CustomEvent('camera-settings-changed', {
           detail: { ...this.cameraSettings }
         }));
-        
+
         this.cameraPresets.forEach((preset, presetId) => {
           if (preset) {
             window.dispatchEvent(new CustomEvent('camera-preset-changed', {
@@ -7153,12 +7153,12 @@ class VirtualStudio {
         });
       });
     }
-    
+
     const apertureSlider = document.getElementById('apertureSlider') as HTMLInputElement;
     const apertureDisplay = document.getElementById('apertureDisplay');
     // Initialize with default lens apertures
     (apertureSlider as any)._validApertures = apertureValues;
-    
+
     apertureSlider?.addEventListener('input', () => {
       const validApertures = (apertureSlider as any)._validApertures || apertureValues;
       const idx = parseInt(apertureSlider.value);
@@ -7166,13 +7166,13 @@ class VirtualStudio {
       this.cameraSettings.aperture = aperture;
       if (apertureDisplay) apertureDisplay.textContent = `f/${aperture}`;
       this.updateExposureDisplay();
-      
+
       // Update DOF based on aperture - use focus distance from store if available
       // Enable DOF for wide apertures (f/5.6 or lower) for visible effect
       const enableDOF = aperture <= 5.6;
       const storedFocusDistance = useFocusStore.getState().focusDistance;
       const focusDistance = storedFocusDistance > 0.1 ? storedFocusDistance : this.camera.radius;
-      
+
       // Dispatch event for PhysicsBasedDOF to respond
       window.dispatchEvent(new CustomEvent('vs-aperture-changed', {
         detail: { aperture, focusDistance, enabled: enableDOF }
@@ -7211,19 +7211,19 @@ class VirtualStudio {
       chip.addEventListener('click', () => {
         const focal = parseInt(chip.getAttribute('data-focal') || '50');
         const aperture = parseFloat(chip.getAttribute('data-aperture') || '2.8');
-        
+
         lensPresetChips.forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
-        
+
         const closestApertureIdx = apertureValues.reduce((prev, curr, idx) => 
           Math.abs(curr - aperture) < Math.abs(apertureValues[prev] - aperture) ? idx : prev, 0);
-        
+
         this.cameraSettings.aperture = apertureValues[closestApertureIdx];
         if (apertureSlider) apertureSlider.value = closestApertureIdx.toString();
         if (apertureDisplay) apertureDisplay.textContent = `f/${apertureValues[closestApertureIdx]}`;
-        
+
         this.updateExposureDisplay();
-        
+
         window.dispatchEvent(new CustomEvent('ch-lens-preset', {
           detail: { focal, aperture: apertureValues[closestApertureIdx] }
         }));
@@ -7236,19 +7236,19 @@ class VirtualStudio {
     if (exposureInfo) {
       exposureInfo.textContent = `f/${this.cameraSettings.aperture} · ${this.cameraSettings.shutter}s · ISO ${this.cameraSettings.iso}`;
     }
-    
+
     const quickISO = document.getElementById('quickISO');
     if (quickISO) quickISO.textContent = `ISO ${this.cameraSettings.iso}`;
-    
+
     const ev = Math.log2(100 / this.cameraSettings.iso) + Math.log2(this.cameraSettings.aperture * this.cameraSettings.aperture) - this.cameraSettings.nd * 0.3;
     const quickEV = document.getElementById('quickEV');
     if (quickEV) quickEV.textContent = `${ev.toFixed(1)} EV`;
-    
+
     const evDisplay = document.getElementById('evDisplay');
     if (evDisplay) evDisplay.textContent = `EV ${ev.toFixed(1)}`;
 
     this.updateSceneBrightness();
-    
+
     window.dispatchEvent(new CustomEvent('camera-settings-changed', {
       detail: { ...this.cameraSettings }
     }));
@@ -7258,15 +7258,15 @@ class VirtualStudio {
     // Parse shutter speed to get exposure time
     const shutterMatch = this.cameraSettings.shutter.match(/1\/(\d+)/);
     const shutterSeconds = shutterMatch ? 1 / parseInt(shutterMatch[1]) : 1/125;
-    
+
     // Calculate exposure value (EV)
     const isoFactor = this.cameraSettings.iso / 100;
     const apertureFactor = 1 / (this.cameraSettings.aperture * this.cameraSettings.aperture);
     const shutterFactor = shutterSeconds * 125; // Normalize to 1/125s baseline
     const ndFactor = 1 / Math.pow(2, this.cameraSettings.nd);
-    
+
     const brightness = isoFactor * apertureFactor * shutterFactor * ndFactor * 2;
-    
+
     // Update all studio lights - preserve user's intensity settings
     for (const [, data] of this.lights) {
       // Initialize baseIntensity if not set
@@ -7283,7 +7283,7 @@ class VirtualStudio {
       // Sync visual glow on the softbox/octabox head to the power level
       this.updateLightHeadGlow(data);
     }
-    
+
     // Update ambient/hemisphere light if exists
     this.scene.lights.forEach(light => {
       if (light instanceof BABYLON.HemisphericLight) {
@@ -7366,11 +7366,11 @@ class VirtualStudio {
         header.addEventListener('click', (e) => {
           // Don't collapse if clicking on a button inside the header
           if ((e.target as HTMLElement).closest('button')) return;
-          
+
           const section = header.closest('.overlay-section');
           if (section) {
             section.classList.toggle('collapsed');
-            
+
             // Save state to settings
             const sectionId = section.querySelector('span:not(.material-icons-outlined)')?.textContent?.trim();
             if (sectionId) {
@@ -7380,7 +7380,7 @@ class VirtualStudio {
           }
         });
       });
-      
+
       // Restore collapsed state from settings cache
       const applyCollapsedSections = (collapsedSections: Record<string, boolean>) => {
         sectionHeaders.forEach(header => {
@@ -7401,7 +7401,7 @@ class VirtualStudio {
         });
     };
     setupCollapsibleSections();
-    
+
     // ============================================
     // COLLAPSIBLE SECTION GROUPS
     // ============================================
@@ -7414,7 +7414,7 @@ class VirtualStudio {
           const group = header.closest('.overlay-section-group');
           if (group) {
             group.classList.toggle('collapsed');
-            
+
             // Save state to settings
             const groupName = header.textContent?.trim();
             if (groupName) {
@@ -7424,7 +7424,7 @@ class VirtualStudio {
           }
         });
       });
-      
+
       // Restore collapsed state from settings cache
       const applyCollapsedGroups = (collapsedGroups: Record<string, boolean>) => {
         groupHeaders.forEach(header => {
@@ -7479,7 +7479,7 @@ class VirtualStudio {
         overlayPanelHeader.style.cursor = 'grab';
       });
     }
-    
+
     // ============================================
     // OVERLAY PANEL RESIZE FUNCTIONALITY
     // ============================================
@@ -7492,31 +7492,31 @@ class VirtualStudio {
       let overlayResizeStartHeight = 0;
       let overlayResizeStartLeft = 0;
       let overlayResizeStartTop = 0;
-      
+
       const overlayResizeHandles = overlayPanel.querySelectorAll('.resize-handle');
-      
+
       const startOverlayResize = (e: MouseEvent | TouchEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         const target = e.target as HTMLElement;
         overlayResizeDirection = target.dataset.resize || '';
         if (!overlayResizeDirection) return;
-        
+
         overlayResizing = true;
-        
+
         const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
         const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-        
+
         overlayResizeStartX = clientX;
         overlayResizeStartY = clientY;
-        
+
         const rect = overlayPanel.getBoundingClientRect();
         overlayResizeStartWidth = rect.width;
         overlayResizeStartHeight = rect.height;
         overlayResizeStartLeft = rect.left;
         overlayResizeStartTop = rect.top;
-        
+
         // Convert to fixed positioning for resize
         overlayPanel.classList.add('resizing');
         overlayPanel.style.left = rect.left + 'px';
@@ -7527,32 +7527,32 @@ class VirtualStudio {
         overlayPanel.style.width = rect.width + 'px';
         overlayPanel.style.height = rect.height + 'px';
       };
-      
+
       overlayResizeHandles.forEach(handle => {
         handle.addEventListener('mousedown', startOverlayResize as EventListener);
         handle.addEventListener('touchstart', startOverlayResize as EventListener, { passive: false });
       });
-      
+
       const doOverlayResize = (e: MouseEvent | TouchEvent) => {
         if (!overlayResizing) return;
         e.preventDefault();
-        
+
         const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
         const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-        
+
         const deltaX = clientX - overlayResizeStartX;
         const deltaY = clientY - overlayResizeStartY;
-        
+
         const minWidth = 280;
         const minHeight = 200;
         const maxWidth = 700;
         const maxHeight = window.innerHeight - 80;
-        
+
         let newWidth = overlayResizeStartWidth;
         let newHeight = overlayResizeStartHeight;
         let newLeft = overlayResizeStartLeft;
         let newTop = overlayResizeStartTop;
-        
+
         // Handle different resize directions
         if (overlayResizeDirection.includes('e')) {
           newWidth = Math.min(maxWidth, Math.max(minWidth, overlayResizeStartWidth + deltaX));
@@ -7574,16 +7574,16 @@ class VirtualStudio {
             newTop = overlayResizeStartTop + deltaY;
           }
         }
-        
+
         // Apply constraints to keep panel in viewport
         newLeft = Math.max(10, Math.min(newLeft, window.innerWidth - newWidth - 10));
         newTop = Math.max(10, Math.min(newTop, window.innerHeight - newHeight - 10));
-        
+
         overlayPanel.style.width = newWidth + 'px';
         overlayPanel.style.height = newHeight + 'px';
         overlayPanel.style.left = newLeft + 'px';
         overlayPanel.style.top = newTop + 'px';
-        
+
         // Update content area height
         const header = document.getElementById('overlayPanelHeader');
         const content = document.getElementById('overlayPanelContent');
@@ -7594,7 +7594,7 @@ class VirtualStudio {
           content.style.maxHeight = contentHeight + 'px';
         }
       };
-      
+
       const endOverlayResize = () => {
         if (overlayResizing) {
           overlayPanel.classList.remove('resizing');
@@ -7602,12 +7602,12 @@ class VirtualStudio {
           overlayResizeDirection = '';
         }
       };
-      
+
       document.addEventListener('mousemove', doOverlayResize as EventListener);
       document.addEventListener('touchmove', doOverlayResize as EventListener, { passive: false });
       document.addEventListener('mouseup', endOverlayResize);
       document.addEventListener('touchend', endOverlayResize);
-      
+
       console.log('[Overlay Panel] Resize handlers attached');
     }
     // ============================================
@@ -7617,27 +7617,27 @@ class VirtualStudio {
     if (overlayContent) {
       // Force scroll styles via JavaScript with setAttribute for priority
       overlayContent.setAttribute('style', 'overflow-y: auto !important; flex: 1; min-height: 0; display: block !important; -webkit-overflow-scrolling: touch;');
-      
+
       // Add wheel event listener to ensure scroll works
       overlayContent.addEventListener('wheel', (e: WheelEvent) => {
         e.stopPropagation();
         const scrollAmount = e.deltaY;
         overlayContent.scrollTop += scrollAmount;
       }, { passive: true });
-      
+
       // Also handle touch scroll for trackpad
       let touchStartY = 0;
       overlayContent.addEventListener('touchstart', (e: TouchEvent) => {
         touchStartY = e.touches[0].clientY;
       }, { passive: true });
-      
+
       overlayContent.addEventListener('touchmove', (e: TouchEvent) => {
         const touchY = e.touches[0].clientY;
         const deltaY = touchStartY - touchY;
         overlayContent.scrollTop += deltaY;
         touchStartY = touchY;
       }, { passive: true });
-      
+
       console.log('[Overlay] Scroll enabled on content area, height:', overlayContent.style.height);
     }
 
@@ -7648,7 +7648,7 @@ class VirtualStudio {
   private setupOverlayToggles(): void {
     // Grid toggle
     const gridToggle = document.getElementById('overlayGridToggle') as HTMLInputElement;
-    
+
     // Get overlay elements
     const getOverlayElements = () => ({
       grid: document.querySelector('#thirdGridOverlay') as HTMLElement,
@@ -7662,10 +7662,10 @@ class VirtualStudio {
     const updateGridVisibility = () => {
       const elements = getOverlayElements();
       const isEnabled = gridToggle?.checked ?? false;
-      
+
       // Update store
       useFocusStore.getState().setShowGrid(isEnabled);
-      
+
       if (elements.grid) {
         elements.grid.style.display = isEnabled ? 'block' : 'none';
       }
@@ -7680,7 +7680,7 @@ class VirtualStudio {
           const value = target.value;
           // Update overlay focus mode store
           useFocusStore.getState().setMode(value as any);
-          
+
           // Integrate with AutoFocus system
           const afStore = useAutoFocusStore.getState();
           switch (value) {
@@ -7710,7 +7710,7 @@ class VirtualStudio {
               afStore.setDofEnabled(true);
               break;
           }
-          
+
           // Show/hide focus grid based on mode
           const focusGrid = document.querySelector('#focusGrid') as HTMLElement;
           const focusGridToggle = document.getElementById('overlayFocusGridToggle') as HTMLInputElement;
@@ -7718,7 +7718,7 @@ class VirtualStudio {
             const showGrid = (value === 'zone' || value === 'wide') && focusGridToggle?.checked;
             focusGrid.style.display = showGrid ? 'block' : 'none';
           }
-          
+
           console.log('[Focus Mode] Changed to:', value, '→ AutoFocus:', afStore.mode);
         }
       });
@@ -7833,7 +7833,7 @@ class VirtualStudio {
         const preset = (btn as HTMLElement).dataset.preset;
         presetBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        
+
         // Apply preset settings
         switch (preset) {
           case 'portrait':
@@ -7877,7 +7877,7 @@ class VirtualStudio {
     let compPanelDragging = false;
     let compDragOffsetX = 0;
     let compDragOffsetY = 0;
-    
+
     // RESIZABLE PANEL FUNCTIONALITY
     let resizing = false;
     let resizeDirection = '';
@@ -7888,100 +7888,100 @@ class VirtualStudio {
     let resizeStartLeft = 0;
     let resizeStartTop = 0;
     let resizePanel: HTMLElement | null = null;
-    
+
     // Use MutationObserver to attach drag handlers when panel is created
     const compositionOverlay = document.getElementById('compositionOverlay');
     if (compositionOverlay) {
       const attachCompPanelDrag = () => {
         const panel = document.getElementById('compositionFeedbackPanel');
         const dragHandle = panel?.querySelector('.composition-drag-handle');
-        
+
         if (panel && dragHandle && !panel.dataset.dragInitialized) {
           panel.dataset.dragInitialized = 'true';
-          
+
           const startCompDrag = (e: MouseEvent | TouchEvent) => {
             // Don't start drag if we're resizing
             if (resizing) return;
             e.preventDefault();
             const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
             const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-            
+
             compPanelDragging = true;
             const rect = panel.getBoundingClientRect();
             compDragOffsetX = clientX - rect.left;
             compDragOffsetY = clientY - rect.top;
-            
+
             panel.classList.add('dragging', 'user-positioned');
             panel.style.left = rect.left + 'px';
             panel.style.top = rect.top + 'px';
             panel.style.bottom = 'auto';
             panel.style.right = 'auto';
           };
-          
+
           const doCompDrag = (e: MouseEvent | TouchEvent) => {
             if (!compPanelDragging) return;
             e.preventDefault();
-            
+
             const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
             const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-            
+
             let newX = clientX - compDragOffsetX;
             let newY = clientY - compDragOffsetY;
-            
+
             // Constrain to viewport
             const panelRect = panel.getBoundingClientRect();
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
-            
+
             newX = Math.max(10, Math.min(newX, viewportWidth - panelRect.width - 10));
             newY = Math.max(10, Math.min(newY, viewportHeight - panelRect.height - 10));
-            
+
             panel.style.left = newX + 'px';
             panel.style.top = newY + 'px';
           };
-          
+
           const endCompDrag = () => {
             if (compPanelDragging) {
               compPanelDragging = false;
               panel.classList.remove('dragging');
             }
           };
-          
+
           dragHandle.addEventListener('mousedown', startCompDrag as EventListener);
           dragHandle.addEventListener('touchstart', startCompDrag as EventListener, { passive: false });
           document.addEventListener('mousemove', doCompDrag as EventListener);
           document.addEventListener('touchmove', doCompDrag as EventListener, { passive: false });
           document.addEventListener('mouseup', endCompDrag);
           document.addEventListener('touchend', endCompDrag);
-          
+
           // ============================================
           // RESIZE HANDLERS FOR COMPOSITION PANEL
           // ============================================
           const resizeHandles = panel.querySelectorAll('.resize-handle');
-          
+
           const startResize = (e: MouseEvent | TouchEvent) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             const target = e.target as HTMLElement;
             resizeDirection = target.dataset.resize || '';
             if (!resizeDirection) return;
-            
+
             resizing = true;
             resizePanel = panel;
-            
+
             const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
             const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-            
+
             resizeStartX = clientX;
             resizeStartY = clientY;
-            
+
             const rect = panel.getBoundingClientRect();
             resizeStartWidth = rect.width;
             resizeStartHeight = rect.height;
             resizeStartLeft = rect.left;
             resizeStartTop = rect.top;
-            
+
             // Convert to fixed positioning for resize
             panel.classList.add('resizing', 'user-positioned');
             panel.style.left = rect.left + 'px';
@@ -7991,37 +7991,37 @@ class VirtualStudio {
             panel.style.width = rect.width + 'px';
             panel.style.height = rect.height + 'px';
           };
-          
+
           resizeHandles.forEach(handle => {
             handle.addEventListener('mousedown', startResize as EventListener);
             handle.addEventListener('touchstart', startResize as EventListener, { passive: false });
           });
-          
+
           console.log('[Composition] Drag and resize handlers attached to feedback panel');
         }
       };
-      
+
       // Global resize move/end handlers
       const doResize = (e: MouseEvent | TouchEvent) => {
         if (!resizing || !resizePanel) return;
         e.preventDefault();
-        
+
         const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
         const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-        
+
         const deltaX = clientX - resizeStartX;
         const deltaY = clientY - resizeStartY;
-        
+
         const minWidth = 180;
         const minHeight = 120;
         const maxWidth = 600;
         const maxHeight = window.innerHeight - 100;
-        
+
         let newWidth = resizeStartWidth;
         let newHeight = resizeStartHeight;
         let newLeft = resizeStartLeft;
         let newTop = resizeStartTop;
-        
+
         // Handle different resize directions
         if (resizeDirection.includes('e')) {
           newWidth = Math.min(maxWidth, Math.max(minWidth, resizeStartWidth + deltaX));
@@ -8043,17 +8043,17 @@ class VirtualStudio {
             newTop = resizeStartTop + deltaY;
           }
         }
-        
+
         // Apply constraints to keep panel in viewport
         newLeft = Math.max(10, Math.min(newLeft, window.innerWidth - newWidth - 10));
         newTop = Math.max(10, Math.min(newTop, window.innerHeight - newHeight - 10));
-        
+
         resizePanel.style.width = newWidth + 'px';
         resizePanel.style.height = newHeight + 'px';
         resizePanel.style.left = newLeft + 'px';
         resizePanel.style.top = newTop + 'px';
       };
-      
+
       const endResize = () => {
         if (resizing && resizePanel) {
           resizePanel.classList.remove('resizing');
@@ -8062,19 +8062,19 @@ class VirtualStudio {
           resizeDirection = '';
         }
       };
-      
+
       document.addEventListener('mousemove', doResize as EventListener);
       document.addEventListener('touchmove', doResize as EventListener, { passive: false });
       document.addEventListener('mouseup', endResize);
       document.addEventListener('touchend', endResize);
-      
+
       // Observe for composition panel creation
       const compObserver = new MutationObserver(() => {
         attachCompPanelDrag();
       });
-      
+
       compObserver.observe(compositionOverlay, { childList: true, subtree: true });
-      
+
       // Also try attaching immediately in case panel already exists
       attachCompPanelDrag();
     }
@@ -8088,7 +8088,7 @@ class VirtualStudio {
         const checkedValues = Array.from(safeAreaCheckboxes)
           .filter(cb => cb.checked)
           .map(cb => cb.value);
-        
+
         // Determine mode based on checked values
         let mode: 'none' | 'action' | 'title' | 'both' = 'none';
         if (checkedValues.includes('action') && checkedValues.includes('title')) {
@@ -8098,7 +8098,7 @@ class VirtualStudio {
         } else if (checkedValues.includes('title')) {
           mode = 'title';
         }
-        
+
         // Update store directly
         useFocusStore.getState().setSafeAreaMode(mode);
         console.log('Safe area changed:', mode);
@@ -8108,7 +8108,7 @@ class VirtualStudio {
     // ============================================
     // PROFESSIONAL SAFE ZONE CONTROLS
     // ============================================
-    
+
     // Initialize safe zone settings
     (window as any).safeZoneSettings = {
       actionColor: '#ffc800',
@@ -8124,51 +8124,51 @@ class VirtualStudio {
       customTitleMargin: 10,
       zoneType: 'none'
     };
-    
+
     // Safe Zone Grid Selector
     const safeZoneGridItems = document.querySelectorAll('.safe-zone-grid-item');
     const customMarginsSection = document.getElementById('customMarginsSection');
-    
+
     safeZoneGridItems.forEach(item => {
       item.addEventListener('click', () => {
         // Update active state
         safeZoneGridItems.forEach(i => i.classList.remove('active'));
         item.classList.add('active');
-        
+
         const zone = (item as HTMLElement).dataset.zone as any;
         (window as any).safeZoneSettings.zoneType = zone;
-        
+
         // Show/hide custom margins section
         if (customMarginsSection) {
           customMarginsSection.style.display = zone === 'custom' ? 'block' : 'none';
         }
-        
+
         // Update legacy checkboxes for compatibility
         const actionCheckbox = document.querySelector('input[name="safeArea"][value="action"]') as HTMLInputElement;
         const titleCheckbox = document.querySelector('input[name="safeArea"][value="title"]') as HTMLInputElement;
-        
+
         if (actionCheckbox && titleCheckbox) {
           actionCheckbox.checked = zone === 'action' || zone === 'both' || zone === 'custom';
           titleCheckbox.checked = zone === 'title' || zone === 'both' || zone === 'custom';
         }
-        
+
         // Update store
         useFocusStore.getState().setSafeAreaMode(zone);
         console.log('[SafeZone] Zone changed:', zone);
       });
     });
-    
+
     // Color pickers
     const actionColorPicker = document.getElementById('actionZoneColor') as HTMLInputElement;
     const titleColorPicker = document.getElementById('titleZoneColor') as HTMLInputElement;
-    
+
     const updateColorHexDisplay = (picker: HTMLInputElement) => {
       const hexSpan = picker.parentElement?.querySelector('.color-hex-value');
       if (hexSpan) {
         hexSpan.textContent = picker.value;
       }
     };
-    
+
     actionColorPicker?.addEventListener('input', (e) => {
       const color = (e.target as HTMLInputElement).value;
       (window as any).safeZoneSettings.actionColor = color;
@@ -8179,7 +8179,7 @@ class VirtualStudio {
         useFocusStore.getState().setSafeAreaMode(currentMode);
       }
     });
-    
+
     titleColorPicker?.addEventListener('input', (e) => {
       const color = (e.target as HTMLInputElement).value;
       (window as any).safeZoneSettings.titleColor = color;
@@ -8190,11 +8190,11 @@ class VirtualStudio {
         useFocusStore.getState().setSafeAreaMode(currentMode);
       }
     });
-    
+
     // Line width slider
     const lineWidthSlider = document.getElementById('zoneLineWidth') as HTMLInputElement;
     const lineWidthValue = document.getElementById('zoneLineWidthValue');
-    
+
     lineWidthSlider?.addEventListener('input', (e) => {
       const value = parseFloat((e.target as HTMLInputElement).value);
       (window as any).safeZoneSettings.lineWidth = value;
@@ -8205,11 +8205,11 @@ class VirtualStudio {
         useFocusStore.getState().setSafeAreaMode(currentMode);
       }
     });
-    
+
     // Opacity slider
     const opacitySlider = document.getElementById('zoneOpacity') as HTMLInputElement;
     const opacityValue = document.getElementById('zoneOpacityValue');
-    
+
     opacitySlider?.addEventListener('input', (e) => {
       const value = parseInt((e.target as HTMLInputElement).value);
       (window as any).safeZoneSettings.opacity = value;
@@ -8220,11 +8220,11 @@ class VirtualStudio {
         useFocusStore.getState().setSafeAreaMode(currentMode);
       }
     });
-    
+
     // Custom margin inputs
     const customActionMargin = document.getElementById('customActionMargin') as HTMLInputElement;
     const customTitleMargin = document.getElementById('customTitleMargin') as HTMLInputElement;
-    
+
     customActionMargin?.addEventListener('change', (e) => {
       const value = parseInt((e.target as HTMLInputElement).value);
       (window as any).safeZoneSettings.customActionMargin = Math.max(1, Math.min(20, value));
@@ -8233,7 +8233,7 @@ class VirtualStudio {
         useFocusStore.getState().setSafeAreaMode('custom');
       }
     });
-    
+
     customTitleMargin?.addEventListener('change', (e) => {
       const value = parseInt((e.target as HTMLInputElement).value);
       (window as any).safeZoneSettings.customTitleMargin = Math.max(5, Math.min(30, value));
@@ -8242,7 +8242,7 @@ class VirtualStudio {
         useFocusStore.getState().setSafeAreaMode('custom');
       }
     });
-    
+
     // Toggle options
     const toggleOptionIds = [
       { id: 'showCenterMarker', key: 'showCenter' },
@@ -8250,7 +8250,7 @@ class VirtualStudio {
       { id: 'showZoneLabels', key: 'showLabels' },
       { id: 'animateZones', key: 'animated' }
     ];
-    
+
     toggleOptionIds.forEach(({ id, key }) => {
       const toggle = document.getElementById(id) as HTMLInputElement;
       toggle?.addEventListener('change', (e) => {
@@ -8262,7 +8262,7 @@ class VirtualStudio {
         }
       });
     });
-    
+
     // Aspect ratio buttons
     const aspectButtons = document.querySelectorAll('.aspect-btn');
     aspectButtons.forEach(btn => {
@@ -8278,90 +8278,90 @@ class VirtualStudio {
         }
       });
     });
-    
+
     console.log('[SafeZone] Professional safe zone controls initialized');
-    
+
     // ============================================
     // DRAGGABLE SAFE AREA FEEDBACK PANEL
     // ============================================
     let safePanelDragging = false;
     let safeDragOffsetX = 0;
     let safeDragOffsetY = 0;
-    
+
     // Use MutationObserver to attach drag handlers when panel is created
     const safeAreaOverlay = document.getElementById('safeAreaOverlay');
     if (safeAreaOverlay) {
       const attachSafePanelDrag = () => {
         const panel = document.getElementById('safeAreaFeedbackPanel');
         const dragHandle = panel?.querySelector('.safe-area-drag-handle');
-        
+
         if (panel && dragHandle && !panel.dataset.dragInitialized) {
           panel.dataset.dragInitialized = 'true';
-          
+
           const startSafeDrag = (e: MouseEvent | TouchEvent) => {
             e.preventDefault();
             const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
             const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-            
+
             safePanelDragging = true;
             const rect = panel.getBoundingClientRect();
             safeDragOffsetX = clientX - rect.left;
             safeDragOffsetY = clientY - rect.top;
-            
+
             panel.classList.add('dragging', 'user-positioned');
             panel.style.left = rect.left + 'px';
             panel.style.top = rect.top + 'px';
             panel.style.bottom = 'auto';
             panel.style.right = 'auto';
           };
-          
+
           const doSafeDrag = (e: MouseEvent | TouchEvent) => {
             if (!safePanelDragging) return;
             e.preventDefault();
-            
+
             const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
             const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-            
+
             let newX = clientX - safeDragOffsetX;
             let newY = clientY - safeDragOffsetY;
-            
+
             // Constrain to viewport
             const panelRect = panel.getBoundingClientRect();
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
-            
+
             newX = Math.max(10, Math.min(newX, viewportWidth - panelRect.width - 10));
             newY = Math.max(10, Math.min(newY, viewportHeight - panelRect.height - 10));
-            
+
             panel.style.left = newX + 'px';
             panel.style.top = newY + 'px';
           };
-          
+
           const endSafeDrag = () => {
             if (safePanelDragging) {
               safePanelDragging = false;
               panel.classList.remove('dragging');
             }
           };
-          
+
           dragHandle.addEventListener('mousedown', startSafeDrag as EventListener);
           dragHandle.addEventListener('touchstart', startSafeDrag as EventListener, { passive: false });
           document.addEventListener('mousemove', doSafeDrag as EventListener);
           document.addEventListener('touchmove', doSafeDrag as EventListener, { passive: false });
           document.addEventListener('mouseup', endSafeDrag);
           document.addEventListener('touchend', endSafeDrag);
-          
+
           console.log('[SafeZone] Drag handlers attached to feedback panel');
         }
       };
-      
+
       // Observe for safe area panel creation
       const safeObserver = new MutationObserver(() => {
         attachSafePanelDrag();
       });
-      
+
       safeObserver.observe(safeAreaOverlay, { childList: true, subtree: true });
-      
+
       // Also try attaching immediately in case panel already exists
       attachSafePanelDrag();
     }
@@ -8384,12 +8384,12 @@ class VirtualStudio {
 
     // Focus Grid toggle
     const focusGridToggle = document.getElementById('overlayFocusGridToggle') as HTMLInputElement;
-    
+
     // Update focus grid overlay visibility
     const updateFocusGridVisibility = () => {
       const elements = getOverlayElements();
       const isEnabled = focusGridToggle?.checked ?? false;
-      
+
       if (elements.focusGrid) {
         elements.focusGrid.style.display = isEnabled ? 'block' : 'none';
       }
@@ -8397,14 +8397,14 @@ class VirtualStudio {
 
     // Add event listener for grid toggle
     gridToggle?.addEventListener('change', updateGridVisibility);
-    
+
     // Add event listener for focus grid toggle
     focusGridToggle?.addEventListener('change', updateFocusGridVisibility);
 
     // Initial state
     updateGridVisibility();
     updateFocusGridVisibility();
-    
+
     // Sync focus mode UI with store default (tracking = AF-C)
     const currentFocusMode = useFocusStore.getState().mode;
     const matchingRadio = document.querySelector(`input[name="focusMode"][value="${currentFocusMode}"]`) as HTMLInputElement;
@@ -8471,7 +8471,7 @@ class VirtualStudio {
     document.getElementById('redoBtn')?.addEventListener('click', () => {
       this.performRedo();
     });
-    
+
     // Keyboard shortcuts for undo/redo
     document.addEventListener('keydown', (e) => {
       if (e.ctrlKey || e.metaKey) {
@@ -8498,10 +8498,10 @@ class VirtualStudio {
         this.showRecordingDialog();
       }
     });
-    
+
     // Initialize recording arc on startup (collapsed, expands on hover)
     this.initRecordingArc();
-    
+
     // Space bar to toggle recording
     document.addEventListener('keydown', (e) => {
       if (e.code === 'Space' && !e.ctrlKey && !e.altKey && !e.metaKey) {
@@ -8734,15 +8734,15 @@ class VirtualStudio {
           const panelWidth = 420;
           const maxWidth = window.innerWidth - 32;
           const actualWidth = Math.min(panelWidth, maxWidth);
-          
+
           // Position panel below the button, aligned to left edge of button
           const leftPosition = buttonRect.left;
           const topPosition = buttonRect.bottom;
-          
+
           scopeDropdownPanel.style.left = `${leftPosition}px`;
           scopeDropdownPanel.style.top = `${topPosition}px`;
           scopeDropdownPanel.style.width = `${actualWidth}px`;
-          
+
           scopeDropdownPanel.classList.add('open');
           scopeDropdownPanel.setAttribute('aria-hidden', 'false');
           scopeToggleBtn.classList.add('active');
@@ -8758,7 +8758,7 @@ class VirtualStudio {
         const panelWidth = 420;
         const maxWidth = window.innerWidth - 32;
         const actualWidth = Math.min(panelWidth, maxWidth);
-        
+
         scopeDropdownPanel.style.left = `${buttonRect.left}px`;
         scopeDropdownPanel.style.top = `${buttonRect.bottom}px`;
         scopeDropdownPanel.style.width = `${actualWidth}px`;
@@ -8863,7 +8863,7 @@ class VirtualStudio {
     // User menu button
     const userMenuBtn = document.getElementById('userMenuBtn');
     const userMenu = document.getElementById('userMenu');
-    
+
     userMenuBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       if (userMenu) {
@@ -8872,7 +8872,7 @@ class VirtualStudio {
         userMenuBtn.setAttribute('aria-expanded', String(!isVisible));
       }
     });
-    
+
     // Close user menu when clicking outside
     document.addEventListener('click', (e) => {
       if (userMenu && userMenu.style.display !== 'none') {
@@ -8883,7 +8883,7 @@ class VirtualStudio {
         }
       }
     });
-    
+
     // Close user menu on Escape key
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && userMenu && userMenu.style.display !== 'none') {
@@ -8919,16 +8919,16 @@ class VirtualStudio {
     document.getElementById('editTitleBtn')?.addEventListener('click', () => {
       this.showProjectTypeSelector();
     });
-    
+
     // Project name click - Opens project type selector
     document.getElementById('projectName')?.addEventListener('click', () => {
       this.showProjectTypeSelector();
     });
-    
+
     // Monitor dialog buttons
     this.setupMonitorDialogHandlers();
   }
-  
+
   private setupMonitorDialogHandlers(): void {
     // Fullscreen buttons for monitor viewports
     document.querySelectorAll('.monitor-fullscreen-btn').forEach(btn => {
@@ -8943,7 +8943,7 @@ class VirtualStudio {
         }
       });
     });
-    
+
     // Screenshot buttons for monitor viewports
     document.querySelectorAll('.monitor-screenshot-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -8968,7 +8968,7 @@ class VirtualStudio {
         }
       });
     });
-    
+
     // Click on monitor viewport to load camera preset
     document.querySelectorAll('.monitor-viewport').forEach(viewport => {
       viewport.addEventListener('click', (e) => {
@@ -10601,9 +10601,9 @@ class VirtualStudio {
               <div class="title">Virtual Studio - Lysoppsett</div>
               <div class="date">${dateStr}</div>
             </div>
-            
+
             <img class="screenshot" src="${screenshotData}" alt="Studio oppsett" />
-            
+
             <div class="grid">
               <div class="section">
                 <div class="section-title">🎥 Kamerainnstillinger</div>
@@ -10612,18 +10612,18 @@ class VirtualStudio {
                 <div class="param"><span class="param-label">ISO</span><span class="param-value">${cameraSettings.iso}</span></div>
                 <div class="param"><span class="param-label">Lukker</span><span class="param-value">${cameraSettings.shutter}s</span></div>
               </div>
-              
+
               <div class="section">
                 <div class="section-title" style="color:#fbbf24;">💡 Lys (${lightsArray.length})</div>
                 ${lightsHtml}
               </div>
             </div>
-            
+
             <div class="section">
               <div class="section-title notes">📝 Notater</div>
               ${notesHtml}
             </div>
-            
+
             <div class="footer">
               Generert med Virtual Studio | ${dateStr}
             </div>
@@ -10635,7 +10635,7 @@ class VirtualStudio {
         if (printWindow) {
           printWindow.document.write(htmlContent);
           printWindow.document.close();
-          
+
           printWindow.onload = () => {
             setTimeout(() => {
               printWindow.print();
@@ -10668,7 +10668,7 @@ class VirtualStudio {
     window.addEventListener('ch-add-asset', ((e: CustomEvent) => {
       const { asset } = e.detail;
       console.log('Asset added:', asset.title);
-      
+
       if (asset.type === 'light') {
         const position = new BABYLON.Vector3(
           Math.random() * 4 - 2,
@@ -10684,21 +10684,21 @@ class VirtualStudio {
     window.addEventListener('ch-add-asset-at', ((e: CustomEvent) => {
       const { asset, position } = e.detail;
       console.log('Asset placed at:', position);
-      
+
       const pos = new BABYLON.Vector3(position[0], position[1], position[2]);
-      
+
       if (asset.type === 'light') {
         // Check if light type is specified in asset data
         const lightType = asset.data?.userData?.lightId || 
                          asset.data?.userData?.specifications?.lightId ||
                          asset.data?.lightId ||
                          'godox-ad600'; // Default fallback
-        
+
         // Also check if we have light specs that match a known light ID
         if (asset.data?.userData?.specifications || asset.data?.userData) {
           const userData = asset.data?.userData || {};
           const specs = userData.specifications || {};
-          
+
           // Try to find matching light ID from brand/model
           if (userData.brand && userData.model) {
             const searchKey = `${userData.brand} ${userData.model}`.toLowerCase();
@@ -10736,7 +10736,7 @@ class VirtualStudio {
             }
           }
         }
-        
+
         this.addLight(lightType, pos);
       } else {
         this.loadAssetFromLibrary(asset.id, asset.title, asset.data, pos);
@@ -11571,13 +11571,13 @@ class VirtualStudio {
     window.addEventListener('ch-add-light', (async (e: CustomEvent) => {
       const { id: nodeId, brand, model, type: _type, power: _power, powerUnit: _powerUnit, cct: _cct, cri: _cri, lux1m: _lux1m, beamAngle: _beamAngle, guideNumber: _guideNumber, lumens: _lumens } = e.detail;
       console.log('Adding light from library:', brand, model);
-      
+
       const position = new BABYLON.Vector3(
         Math.random() * 4 - 2,
         3 + Math.random() * 2,
         Math.random() * 4 - 2
       );
-      
+
       // Find light ID from brand and model
       let lightId: string | null = null;
       if (brand && model) {
@@ -11591,7 +11591,7 @@ class VirtualStudio {
           lightId = foundLight.id;
         }
       }
-      
+
       // Use light ID if found, otherwise fall back to extracting from id
       if (!lightId && nodeId && nodeId.startsWith('light-')) {
         // Extract light ID from nodeId format: 'light-aputure-300d-123456'
@@ -11600,16 +11600,16 @@ class VirtualStudio {
           lightId = parts.slice(1, -1).join('-'); // Get 'aputure-300d' from 'light-aputure-300d-123456'
         }
       }
-      
+
       // Fallback to default if still not found
       if (!lightId) {
         lightId = 'godox-ad600';
       }
-      
+
       // Use addLight to ensure 3D models are loaded
       // This creates both the light and the 3D model, and they are automatically connected
       const lightDataId = await this.addLight(lightId, position);
-      
+
       // Store the nodeId in the light data so we can link them
       if (lightDataId && nodeId) {
         const lightData = this.lights.get(lightDataId);
@@ -11860,14 +11860,41 @@ class VirtualStudio {
       this.removeBackdrop();
     }) as EventListener);
 
+    // Asset Browser: load an external HDRI (equirectangular .hdr file) as environment map
+    window.addEventListener('vs-load-environment-hdri', ((e: CustomEvent) => {
+      const { url, name } = e.detail || {};
+      if (!url || typeof url !== 'string') return;
+      console.log('[AssetBrowser] Loading HDRI environment:', name || url);
+      try {
+        const hdrTexture = new BABYLON.HDRCubeTexture(url, this.scene, 512, false, true, false, true);
+        this.scene.environmentTexture = hdrTexture;
+        this.scene.environmentIntensity = 1.0;
+        console.log('[AssetBrowser] HDRI environment applied:', name || url);
+      } catch (err) {
+        console.warn('[AssetBrowser] Failed to load HDRI:', err);
+      }
+    }) as EventListener);
+
+    // Asset Browser: load an external GLB directly by URL (bypasses LIGHT_DATABASE lookup)
+    window.addEventListener('vs-load-external-glb', ((e: CustomEvent) => {
+      const { url, name, position } = e.detail || {};
+      if (!url || typeof url !== 'string') return;
+      const propId = `external_${Date.now()}`;
+      console.log('[AssetBrowser] Loading external GLB:', name || url);
+      const pos = Array.isArray(position) && position.length >= 3
+        ? new BABYLON.Vector3(Number(position[0]) || 0, Number(position[1]) || 0, Number(position[2]) || 0)
+        : undefined;
+      void this.loadAssetFromLibrary(propId, name || 'External Asset', { modelUrl: url }, pos);
+    }) as EventListener);
+
     window.addEventListener('ch-add-casting-candidate', ((e: CustomEvent) => {
       const { candidate, generateAvatar } = e.detail;
       console.log('Adding casting candidate to scene:', candidate.name);
-      
+
       const position = candidate.position 
         ? new BABYLON.Vector3(candidate.position.x, candidate.position.y, candidate.position.z)
         : new BABYLON.Vector3(0, 0, 0);
-      
+
       if (candidate.avatarUrl) {
         this.loadCastingAvatarModel(candidate.candidateId, candidate.name, candidate.avatarUrl, position);
       } else if (generateAvatar && candidate.photo) {
@@ -11995,9 +12022,9 @@ class VirtualStudio {
     const fps = 30;
     const totalFrames = preset.duration * fps;
     const shouldResetCamera = preset.autoResetCamera !== false;
-    
+
     const easingFunction = this.getEasingFunction(preset.easing);
-    
+
     if (preset.category === 'kamera') {
       if (shouldResetCamera) {
         this.resetCameraToDefault().then(() => {
@@ -12013,10 +12040,10 @@ class VirtualStudio {
     } else if (preset.category === 'fokus') {
       this.animateDOF(preset.id, totalFrames, fps, easingFunction, preset.dofSettings);
     }
-    
+
     console.log(`Animation "${preset.name}" started - ${preset.duration}s @ ${fps}fps`);
   }
-  
+
   private animateDOF(
     presetId: string,
     totalFrames: number,
@@ -12035,12 +12062,12 @@ class VirtualStudio {
       console.warn('PhysicsBasedDOF not initialized');
       return;
     }
-    
+
     // Use defaults from current DOF state if settings not provided
     const settings = dofSettings || {};
     const currentAperture = this.physicsBasedDOF.getAperture();
     const currentFocusDistance = this.physicsBasedDOF.getFocusDistance();
-    
+
     const { 
       apertureStart = currentAperture, 
       apertureEnd = currentAperture, 
@@ -12049,66 +12076,66 @@ class VirtualStudio {
       useAutoFocus = false,
       focusTargetType
     } = settings;
-    
+
     // Check if there's anything to animate
     const hasApertureChange = apertureStart !== apertureEnd;
     const hasFocusChange = focusDistanceStart !== undefined && focusDistanceEnd !== undefined;
-    
+
     if (!hasApertureChange && !hasFocusChange) {
       console.log(`DOF preset "${presetId}" has no animation values, using current DOF state`);
       return;
     }
-    
+
     const duration = totalFrames / fps;
     const startTime = performance.now();
-    
+
     // Create numeric easing function from Babylon easing
     const easeValue = (t: number): number => {
       if (!babylonEasing) return t; // Linear if no easing
       return babylonEasing.ease(t);
     };
-    
+
     // Enable DOF if not already enabled
     if (!this.physicsBasedDOF.isEnabled()) {
       this.physicsBasedDOF.enable();
     }
-    
+
     // Pause autofocus during DOF animation if we're manually controlling focus
     // pauseTracking auto-resumes after the animation duration
     if (this.autoFocusSystem && focusDistanceStart !== undefined && focusDistanceEnd !== undefined) {
       this.autoFocusSystem.pauseTracking(duration * 1000 + 500);
     }
-    
+
     const animate = () => {
       const elapsed = (performance.now() - startTime) / 1000;
       const progress = Math.min(elapsed / duration, 1);
       const eased = easeValue(progress);
-      
+
       // Animate aperture
       if (apertureStart !== apertureEnd) {
         const currentAperture = apertureStart + (apertureEnd - apertureStart) * eased;
         this.physicsBasedDOF!.setAperture(currentAperture);
       }
-      
+
       // Animate focus distance
       if (focusDistanceStart !== undefined && focusDistanceEnd !== undefined) {
         const currentFocusDistance = focusDistanceStart + (focusDistanceEnd - focusDistanceStart) * eased;
         this.physicsBasedDOF!.setFocusDistance(currentFocusDistance);
       }
-      
+
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
         // Animation complete
         console.log(`DOF animation "${presetId}" completed`);
-        
+
         // Always sync focus target type to store if specified (even for manual focus presets)
         if (focusTargetType) {
           window.dispatchEvent(new CustomEvent('vs-set-focus-target-type', { 
             detail: { targetType: focusTargetType } 
           }));
         }
-        
+
         // Handle useAutoFocus - resume autofocus tracking after animation
         if (useAutoFocus && this.autoFocusSystem) {
           // Resume autofocus tracking and enter AF-C continuous mode
@@ -12117,14 +12144,14 @@ class VirtualStudio {
         } else if (focusTargetType) {
           console.log(`DOF animation: Focus target type set to "${focusTargetType}" (manual focus mode)`);
         }
-        
+
         // Dispatch completion event
         window.dispatchEvent(new CustomEvent('ch-dof-animation-complete', { 
           detail: { presetId, finalAperture: apertureEnd, finalFocusDistance: focusDistanceEnd, useAutoFocus, focusTargetType } 
         }));
       }
     };
-    
+
     animate();
   }
 
@@ -12146,7 +12173,7 @@ class VirtualStudio {
       items.forEach(preset => {
         const totalFrames = preset.duration * fps;
         const easingFunction = this.getEasingFunction(preset.easing);
-        
+
         if (preset.category === 'kamera') {
           this.animateCamera(preset.id, totalFrames, fps, easingFunction);
         } else if (preset.category === 'lys') {
@@ -12165,7 +12192,7 @@ class VirtualStudio {
           setTimeout(() => {
             const totalFrames = preset.duration * fps;
             const easingFunction = this.getEasingFunction(preset.easing);
-            
+
             if (preset.category === 'kamera') {
               this.animateCamera(preset.id, totalFrames, fps, easingFunction);
             } else if (preset.category === 'lys') {
@@ -12175,7 +12202,7 @@ class VirtualStudio {
             } else if (preset.category === 'fokus') {
               this.animateDOF(preset.id, totalFrames, fps, easingFunction, preset.dofSettings);
             }
-            
+
             setTimeout(resolve, preset.duration * 1000);
           }, delay);
         });
@@ -12210,14 +12237,14 @@ class VirtualStudio {
 
   private animateCamera(presetId: string, totalFrames: number, fps: number, easing?: BABYLON.EasingFunction): void {
     if (!this.camera) return;
-    
+
     const startRadius = this.camera.radius;
     const startAlpha = this.camera.alpha;
     const startBeta = this.camera.beta;
-    
+
     let animation: BABYLON.Animation;
     let keys: { frame: number; value: number }[] = [];
-    
+
     switch (presetId) {
       case 'dolly_in':
         animation = new BABYLON.Animation('dollyIn', 'radius', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
@@ -12226,7 +12253,7 @@ class VirtualStudio {
           { frame: totalFrames, value: Math.max(startRadius * 0.5, 2) }
         ];
         break;
-        
+
       case 'dolly_out':
         animation = new BABYLON.Animation('dollyOut', 'radius', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
         keys = [
@@ -12234,7 +12261,7 @@ class VirtualStudio {
           { frame: totalFrames, value: startRadius * 2 }
         ];
         break;
-        
+
       case 'orbit_360':
         animation = new BABYLON.Animation('orbit', 'alpha', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
         keys = [
@@ -12245,7 +12272,7 @@ class VirtualStudio {
           { frame: totalFrames, value: startAlpha + Math.PI * 2 }
         ];
         break;
-        
+
       case 'crane_up':
         animation = new BABYLON.Animation('craneUp', 'beta', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
         keys = [
@@ -12253,7 +12280,7 @@ class VirtualStudio {
           { frame: totalFrames, value: Math.max(startBeta - 0.5, 0.3) }
         ];
         break;
-        
+
       case 'slow_pan':
         animation = new BABYLON.Animation('slowPan', 'alpha', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
         keys = [
@@ -12261,7 +12288,7 @@ class VirtualStudio {
           { frame: totalFrames, value: startAlpha + Math.PI * 0.5 }
         ];
         break;
-        
+
       case 'focus_pull':
         animation = new BABYLON.Animation('focusPull', 'radius', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
         keys = [
@@ -12270,14 +12297,14 @@ class VirtualStudio {
           { frame: totalFrames, value: startRadius }
         ];
         break;
-        
+
       default:
         return;
     }
-    
+
     animation.setKeys(keys);
     if (easing) animation.setEasingFunction(easing);
-    
+
     this.camera.animations = [animation];
     this.scene.beginAnimation(this.camera, 0, totalFrames, false, 1, () => {
       console.log(`Camera animation "${presetId}" completed`);
@@ -12289,14 +12316,14 @@ class VirtualStudio {
       console.log('No lights in scene to animate');
       return;
     }
-    
+
     this.lights.forEach((lightData) => {
       const light = lightData.light;
       const startIntensity = light.intensity;
-      
+
       let animation: BABYLON.Animation;
       let keys: { frame: number; value: number }[] = [];
-      
+
       switch (presetId) {
         case 'light_fade_in':
           animation = new BABYLON.Animation('fadeIn', 'intensity', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
@@ -12305,7 +12332,7 @@ class VirtualStudio {
             { frame: totalFrames, value: startIntensity }
           ];
           break;
-          
+
         case 'light_fade_out':
           animation = new BABYLON.Animation('fadeOut', 'intensity', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
           keys = [
@@ -12313,7 +12340,7 @@ class VirtualStudio {
             { frame: totalFrames, value: 0 }
           ];
           break;
-          
+
         case 'dramatic_reveal':
           animation = new BABYLON.Animation('dramaticReveal', 'intensity', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
           keys = [
@@ -12323,7 +12350,7 @@ class VirtualStudio {
             { frame: totalFrames, value: startIntensity }
           ];
           break;
-          
+
         case 'breathing_light':
           animation = new BABYLON.Animation('breathing', 'intensity', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
           keys = [
@@ -12332,21 +12359,21 @@ class VirtualStudio {
             { frame: totalFrames, value: startIntensity }
           ];
           break;
-          
+
         case 'color_shift':
           return;
-          
+
         default:
           return;
       }
-      
+
       animation.setKeys(keys);
       if (easing) animation.setEasingFunction(easing);
-      
+
       light.animations = [animation];
       this.scene.beginAnimation(light, 0, totalFrames, presetId === 'breathing_light', 1);
     });
-    
+
     console.log(`Light animation "${presetId}" applied to ${this.lights.size} lights`);
   }
 
@@ -12356,36 +12383,36 @@ class VirtualStudio {
         this.lights.forEach((lightData) => {
           const light = lightData.light;
           const startIntensity = light.intensity;
-          
+
           const animation = new BABYLON.Animation('strobe', 'intensity', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
           const keys: { frame: number; value: number }[] = [];
-          
+
           for (let i = 0; i <= 8; i++) {
             keys.push({ frame: (totalFrames / 8) * i, value: i % 2 === 0 ? startIntensity : 0 });
           }
-          
+
           animation.setKeys(keys);
           light.animations = [animation];
           this.scene.beginAnimation(light, 0, totalFrames, false, 1);
         });
         break;
-        
+
       case 'smooth_transition':
       case 'quick_cut':
         const fadeAnimation = new BABYLON.Animation('fade', 'intensity', fps, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
         this.lights.forEach((lightData) => {
           const light = lightData.light;
           const startIntensity = light.intensity;
-          
+
           const keys = [
             { frame: 0, value: startIntensity },
             { frame: totalFrames * 0.5, value: 0 },
             { frame: totalFrames, value: startIntensity }
           ];
-          
+
           fadeAnimation.setKeys(keys);
           if (easing) fadeAnimation.setEasingFunction(easing);
-          
+
           light.animations = [fadeAnimation];
           this.scene.beginAnimation(light, 0, totalFrames, false, 1);
         });
@@ -12395,7 +12422,7 @@ class VirtualStudio {
 
   getCurrentSceneConfig(): ScenarioPreset['sceneConfig'] {
     const lightsArray: ScenarioPreset['sceneConfig']['lights'] = [];
-    
+
     this.lights.forEach((lightData) => {
       const pos = lightData.mesh.position;
       const rot = lightData.mesh.rotation;
@@ -12416,9 +12443,9 @@ class VirtualStudio {
     const camera = this.camera;
     const cameraPos = camera.position;
     const cameraTarget = camera.target;
-    
+
     const focalLength = this.cameraSettings?.focalLength || 50;
-    
+
     let backdropColor = '#808080';
     const backWall = this.scene.getMeshByName('backWall');
     if (backWall && backWall.material) {
@@ -12476,7 +12503,7 @@ class VirtualStudio {
         }
       });
     });
-    
+
     const eyePriorityRadios = document.querySelectorAll('input[name="eyePriority"]') as NodeListOf<HTMLInputElement>;
     eyePriorityRadios.forEach(radio => {
       radio.addEventListener('change', (e) => {
@@ -12486,14 +12513,14 @@ class VirtualStudio {
         }
       });
     });
-    
+
     const afTriggerBtn = document.getElementById('afTriggerBtn');
     if (afTriggerBtn) {
       afTriggerBtn.addEventListener('click', () => {
         this.autoFocusSystem?.triggerSingleFocus();
       });
     }
-    
+
     const afLockBtn = document.getElementById('afLockBtn');
     if (afLockBtn) {
       afLockBtn.addEventListener('click', () => {
@@ -12502,26 +12529,26 @@ class VirtualStudio {
         afLockBtn.classList.toggle('active', isLocked);
       });
     }
-    
+
     const eyeIndicatorToggle = document.getElementById('eyeIndicatorToggle') as HTMLInputElement;
     if (eyeIndicatorToggle) {
       eyeIndicatorToggle.addEventListener('change', () => {
         useAutoFocusStore.getState().setShowEyeIndicators(eyeIndicatorToggle.checked);
       });
     }
-    
+
     useAutoFocusStore.subscribe((state) => {
       const modeIndicator = document.getElementById('afModeIndicator');
       if (modeIndicator) {
         modeIndicator.textContent = state.mode;
         modeIndicator.className = `af-mode-indicator af-mode-${state.mode.toLowerCase()}`;
       }
-      
+
       const lockIndicator = document.getElementById('afLockIndicator');
       if (lockIndicator) {
         lockIndicator.style.display = state.focusLocked ? 'flex' : 'none';
       }
-      
+
       const targetName = document.getElementById('afTargetName');
       if (targetName) {
         if (state.currentTarget) {
@@ -12533,7 +12560,7 @@ class VirtualStudio {
           targetName.textContent = '—';
         }
       }
-      
+
       const targetDistance = document.getElementById('afTargetDistance');
       if (targetDistance) {
         if (state.currentTarget) {
@@ -12542,13 +12569,13 @@ class VirtualStudio {
           targetDistance.textContent = '—';
         }
       }
-      
+
       const eyeCount = document.getElementById('afEyeCount');
       if (eyeCount) {
         eyeCount.textContent = `${state.detectedEyes.length} øyne`;
       }
     });
-    
+
     console.log('[AutoFocus UI] Setup complete');
   }
 
@@ -12563,7 +12590,7 @@ class VirtualStudio {
         }
       });
     }
-    
+
     // Camera mode selection (Sony, RED, Blackmagic)
     const peakingModeSelect = document.getElementById('focusPeakingMode') as HTMLSelectElement;
     if (peakingModeSelect) {
@@ -12572,14 +12599,14 @@ class VirtualStudio {
         console.log(`[Focus Peaking] Mode changed to: ${peakingModeSelect.value}`);
       });
     }
-    
+
     // RED DSMC2 style level buttons
     const levelButtons = document.querySelectorAll('.peaking-level-btn');
     levelButtons.forEach((btn) => {
       btn.addEventListener('click', () => {
         const level = (btn as HTMLElement).dataset.level as any;
         useFocusPeakingStore.getState().setLevel(level);
-        
+
         // Update button styles
         levelButtons.forEach((b) => {
           (b as HTMLElement).style.background = 'rgba(0,0,0,0.3)';
@@ -12589,18 +12616,18 @@ class VirtualStudio {
         (btn as HTMLElement).style.background = 'rgba(255,100,100,0.3)';
         (btn as HTMLElement).style.borderColor = 'rgba(255,100,100,0.5)';
         (btn as HTMLElement).style.color = '#fff';
-        
+
         console.log(`[Focus Peaking] Level changed to: ${level}`);
       });
     });
-    
+
     const peakingColorSelect = document.getElementById('focusPeakingColor') as HTMLSelectElement;
     if (peakingColorSelect) {
       peakingColorSelect.addEventListener('change', () => {
         useFocusPeakingStore.getState().setColor(peakingColorSelect.value as any);
       });
     }
-    
+
     // Line width selection
     const lineWidthSelect = document.getElementById('focusPeakingLineWidth') as HTMLSelectElement;
     if (lineWidthSelect) {
@@ -12608,7 +12635,7 @@ class VirtualStudio {
         useFocusPeakingStore.getState().setLineWidth(parseInt(lineWidthSelect.value));
       });
     }
-    
+
     const peakingIntensitySlider = document.getElementById('focusPeakingIntensity') as HTMLInputElement;
     const peakingIntensityValue = document.getElementById('focusPeakingIntensityValue');
     if (peakingIntensitySlider) {
@@ -12620,7 +12647,7 @@ class VirtualStudio {
         }
       });
     }
-    
+
     const peakingThresholdSlider = document.getElementById('focusPeakingThreshold') as HTMLInputElement;
     const peakingThresholdValue = document.getElementById('focusPeakingThresholdValue');
     if (peakingThresholdSlider) {
@@ -12632,14 +12659,14 @@ class VirtualStudio {
         }
       });
     }
-    
+
     const depthAwareToggle = document.getElementById('focusPeakingDepthAware') as HTMLInputElement;
     if (depthAwareToggle) {
       depthAwareToggle.addEventListener('change', () => {
         useFocusPeakingStore.getState().setDepthAware(depthAwareToggle.checked);
       });
     }
-    
+
     // Multi-scale toggle
     const multiScaleToggle = document.getElementById('focusPeakingMultiScale') as HTMLInputElement;
     if (multiScaleToggle) {
@@ -12647,7 +12674,7 @@ class VirtualStudio {
         useFocusPeakingStore.getState().setMultiScale(multiScaleToggle.checked);
       });
     }
-    
+
     // Adaptive threshold toggle
     const adaptiveToggle = document.getElementById('focusPeakingAdaptive') as HTMLInputElement;
     if (adaptiveToggle) {
@@ -12655,7 +12682,7 @@ class VirtualStudio {
         useFocusPeakingStore.getState().setAdaptiveThreshold(adaptiveToggle.checked);
       });
     }
-    
+
     // Strict focus plane toggle
     const strictFocusToggle = document.getElementById('focusPeakingStrictFocus') as HTMLInputElement;
     if (strictFocusToggle) {
@@ -12663,7 +12690,7 @@ class VirtualStudio {
         useFocusPeakingStore.getState().setShowOnlyInFocus(strictFocusToggle.checked);
       });
     }
-    
+
     useFocusPeakingStore.subscribe((state) => {
       const indicator = document.getElementById('focusPeakingIndicator');
       if (indicator) {
@@ -12679,7 +12706,7 @@ class VirtualStudio {
         indicator.textContent = modeLabels[state.mode] || 'PEAK';
       }
     });
-    
+
     console.log('[Focus Peaking UI] Professional camera peaking setup complete');
   }
 
@@ -12709,7 +12736,7 @@ class VirtualStudio {
       const cameraPos = this.camera.position;
       const focusPlaneY = 0;
       const t = (focusPlaneY - cameraPos.y) / direction.y;
-      
+
       if (t > 0) {
         distance = t;
       } else {
@@ -12723,7 +12750,7 @@ class VirtualStudio {
 
   private updateCameraFocus(distance: number): void {
     if (!this.camera) return;
-    
+
     // Store focus distance for DOF effects (Babylon.js doesn't have focalLength on ArcRotateCamera)
     (this.camera as any)._focusDistance = distance;
   }
@@ -12736,7 +12763,7 @@ class VirtualStudio {
     if (mesh) {
       const currentPosition = mesh.position.clone();
       mesh.scaling = new BABYLON.Vector3(weightScale, heightScale, weightScale);
-      
+
       // Reposition mesh on ground after scaling (preserve X and Z, recalculate Y)
       const newPosition = this.positionMeshOnGround(mesh, new BABYLON.Vector3(currentPosition.x, 0, currentPosition.z));
       mesh.position = newPosition;
@@ -12750,7 +12777,7 @@ class VirtualStudio {
   private applyMaterialColor(mesh: BABYLON.AbstractMesh, colorHex: string): void {
     const color = BABYLON.Color3.FromHexString(colorHex);
     const mat = mesh.material;
-    
+
     if (!mat) return;
 
     if ((mat as BABYLON.PBRMaterial).albedoColor !== undefined) {
@@ -12766,7 +12793,7 @@ class VirtualStudio {
     let standardCount = 0;
     let createdCount = 0;
     let shadowCasterCount = 0;
-    
+
     // PHASE 2 ENHANCEMENT: If avatar ID provided, use enhanced PBR material definitions
     // This replaces generic gray fallback with realistic skin/fabric/hair materials
     if (avatarId) {
@@ -12775,7 +12802,7 @@ class VirtualStudio {
         // Apply enhanced PBR using avatar material definitions
         // This includes skin tone, fabric textures, subsurface scattering, etc.
         AvatarMaterialService.applyEnhancedPBR(meshes, avatarId, this.scene);
-        
+
         // Add shadow casting to all meshes
         meshes.forEach(m => {
           m.receiveShadows = true;
@@ -12785,7 +12812,7 @@ class VirtualStudio {
             }
           });
         });
-        
+
         console.log(`[PBR] Enhanced PBR applied successfully to ${meshes.length} meshes`);
 
         if (useRenderingStore.getState().activePreset === 'portrait-realistic') {
@@ -12797,12 +12824,12 @@ class VirtualStudio {
         // Fall through to generic fallback below
       }
     }
-    
+
     // FALLBACK: Generic PBR shading (original behavior)
     // Used when no avatar definition exists or enhancement fails
     meshes.forEach(m => {
       m.receiveShadows = true;
-      
+
       // Add as shadow caster to existing lights
       this.lights.forEach(lightData => {
         if (lightData.shadowGenerator) {
@@ -12810,12 +12837,12 @@ class VirtualStudio {
           shadowCasterCount++;
         }
       });
-      
+
       const meshName = m.name || 'unnamed';
-      
+
       if (m.material) {
         (m.material as BABYLON.Material).wireframe = false;
-        
+
         if (m.material instanceof BABYLON.PBRMaterial) {
           m.material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
           m.material.alpha = 1.0;
@@ -12860,7 +12887,7 @@ class VirtualStudio {
         m.material = pbrMat;
         createdCount++;
       }
-      
+
       m.getChildMeshes(true).forEach(child => {
         child.receiveShadows = true;
         this.lights.forEach(lightData => {
@@ -12869,7 +12896,7 @@ class VirtualStudio {
             shadowCasterCount++;
           }
         });
-        
+
         if (child.material) {
           (child.material as BABYLON.Material).wireframe = false;
           if (child.material instanceof BABYLON.PBRMaterial) {
@@ -12902,7 +12929,7 @@ class VirtualStudio {
         }
       });
     });
-    
+
     console.log(`[GLB Shading] Applied PBR shading to ${meshes.length} meshes:`, {
       pbrMaterialsConfigured: pbrCount,
       standardMaterialsConfigured: standardCount,
@@ -12936,7 +12963,7 @@ class VirtualStudio {
         let hasAlbedo = false;
         let hasNormal = false;
         let hasORM = false;
-        
+
         if (mat instanceof BABYLON.PBRMaterial) {
           hasAlbedo = !!(mat.albedoTexture);
           hasNormal = !!(mat.bumpTexture);
@@ -12945,7 +12972,7 @@ class VirtualStudio {
           hasAlbedo = !!(mat.diffuseTexture);
           hasNormal = !!(mat.bumpTexture);
         }
-        
+
         return {
           meshName: m.name,
           hasAlbedo,
@@ -12953,11 +12980,11 @@ class VirtualStudio {
           hasORM
         };
       });
-    
+
     // Log summary
     const totalWithTextures = results.filter(r => r.hasAlbedo || r.hasNormal || r.hasORM).length;
     console.log(`[TextureDetection] Scanned ${meshes.length} meshes, found ${totalWithTextures} with embedded textures:`, results);
-    
+
     return results;
   }
 
@@ -12967,34 +12994,34 @@ class VirtualStudio {
       const originalPos = mesh.position.clone();
       const originalRot = mesh.rotation.clone();
       const originalScale = mesh.scaling.clone();
-      
+
       // Use current position to calculate bounds (don't move to origin as it breaks child meshes like eyes)
       // Get bounding box in world space (true = world space) to account for rotations
       const worldBounds = mesh.getHierarchyBoundingVectors(true);
       const bottomY = worldBounds.min.y; // Lowest point of the model in world space
-      
+
       console.log(`[positionMeshOnGround] bottomY=${bottomY.toFixed(3)}, worldBounds.min=(${worldBounds.min.x.toFixed(3)}, ${worldBounds.min.y.toFixed(3)}, ${worldBounds.min.z.toFixed(3)}), worldBounds.max=(${worldBounds.max.x.toFixed(3)}, ${worldBounds.max.y.toFixed(3)}, ${worldBounds.max.z.toFixed(3)})`);
-      
+
       // Check if bounding box is valid
       if (isFinite(bottomY) && bottomY !== Number.MAX_VALUE && bottomY !== -Number.MAX_VALUE) {
         // Calculate the adjustment needed: current bottomY should become 0.001
         const yAdjustment = -bottomY + 0.001;
-        
+
         // Adjust Y position so the bottom of the model is at ground level (y=0)
         const adjustedPosition = position.clone();
         adjustedPosition.y = mesh.position.y + yAdjustment;
-        
+
         // Restore rotation and scale, then set the adjusted position
         mesh.rotation = originalRot;
         mesh.scaling = originalScale;
         mesh.position = adjustedPosition;
         mesh.computeWorldMatrix(true);
-        
+
         // Verify the final position - recalculate bounds to ensure it's on the ground
         const finalBounds = mesh.getHierarchyBoundingVectors(true);
         const finalBottomY = finalBounds.min.y;
         console.log(`[positionMeshOnGround] Final position=(${adjustedPosition.x.toFixed(3)}, ${adjustedPosition.y.toFixed(3)}, ${adjustedPosition.z.toFixed(3)}), finalBounds.min.y=${finalBottomY.toFixed(3)}`);
-        
+
         // If the final bottom Y is not close to 0, adjust again
         if (Math.abs(finalBottomY) > 0.01) {
           console.log(`[positionMeshOnGround] Adjusting position again, finalBottomY=${finalBottomY.toFixed(3)}`);
@@ -13003,7 +13030,7 @@ class VirtualStudio {
           mesh.position = adjustedPosition;
           mesh.computeWorldMatrix(true);
         }
-        
+
         return adjustedPosition;
       } else {
         // Invalid bounding box - use original position with default height
@@ -13030,22 +13057,22 @@ class VirtualStudio {
       // Get camera position and target
       const cameraPos = this.camera.position.clone();
       const cameraTarget = this.camera.target.clone();
-      
+
       // Calculate direction from camera to target (where camera is looking)
       const cameraDirection = cameraTarget.subtract(cameraPos).normalize();
       void cameraDirection; // Direction computed for potential use in tilt adjustment
-      
+
       // Calculate direction from mesh to camera (so mesh faces camera)
       const directionToCamera = cameraPos.subtract(mesh.position).normalize();
-      
+
       // Project direction onto XZ plane (horizontal plane) to get rotation around Y axis
       const directionXZ = new BABYLON.Vector3(directionToCamera.x, 0, directionToCamera.z).normalize();
-      
+
       // Calculate angle around Y axis (rotation.y)
       // Atan2 gives angle from positive X axis, but we want angle from positive Z axis (forward)
       // In Babylon.js, positive Z is typically forward, so we use atan2(x, z)
       const angleY = Math.atan2(directionXZ.x, directionXZ.z);
-      
+
       // Set rotation (only Y rotation to face camera horizontally)
       mesh.rotation.y = angleY;
       mesh.computeWorldMatrix(true);
@@ -13719,7 +13746,7 @@ class VirtualStudio {
     const rotationY = typeof data?.metadata?.rotationY === 'number'
       ? data.metadata.rotationY
       : null;
-    
+
     // Create a node ID for this asset
     const nodeId = `prop-${Date.now()}-${assetId}`;
 
@@ -13729,31 +13756,31 @@ class VirtualStudio {
           position: pos,
           scale: propDef.defaultScale,
         });
-        
+
         // Find root mesh (in case mesh is a child)
         let rootMesh = mesh;
         while (rootMesh.parent) {
           rootMesh = rootMesh.parent as BABYLON.AbstractMesh;
         }
-        
+
         if (placementMode === 'ground') {
           pos = this.positionMeshOnGround(rootMesh, pos);
         }
         rootMesh.position = pos;
-        
+
         if (rotationY !== null) {
           rootMesh.rotation.y = rotationY;
         } else if (placementMode === 'ground') {
           this.rotateMeshTowardCamera(rootMesh);
         }
-        
+
         // Set mesh name to node ID so we can find it later
         rootMesh.name = nodeId;
         // Also set on the original mesh in case it's different
         if (mesh !== rootMesh) {
           mesh.name = nodeId;
         }
-        
+
         // Add node to store so it can be moved in 2D top view
         useAppStore.getState().addNode({
           id: nodeId,
@@ -13772,7 +13799,7 @@ class VirtualStudio {
             ...data?.metadata,
           },
         });
-        
+
         // Track in scene state (Phase 3: Metadata Tracking)
         this.sceneState.props.set(nodeId, {
           id: nodeId,
@@ -13781,7 +13808,7 @@ class VirtualStudio {
           name: propDef.name || name,
           metadata: data?.metadata
         });
-        
+
         if (this.gizmoManager) {
           this.gizmoManager.attachToMesh(mesh as BABYLON.AbstractMesh);
         }
@@ -13813,7 +13840,7 @@ class VirtualStudio {
 
         // Fix up-axis / upside-down issues in AI-generated GLBs
         fixGLBOrientationInPlace(mesh as BABYLON.AbstractMesh, this.scene, nodeId, { snapToGround: false });
-        
+
         // Find root mesh (in case mesh is a child)
         let rootMesh = mesh;
         while (rootMesh.parent) {
@@ -13823,24 +13850,24 @@ class VirtualStudio {
         if (mesh !== rootMesh) {
           mesh.name = nodeId;
         }
-        
+
         if (placementMode === 'ground') {
           pos = this.positionMeshOnGround(rootMesh, pos);
         }
         rootMesh.position = pos;
-        
+
         if (rotationY !== null) {
           rootMesh.rotation.y = rotationY;
         } else if (placementMode === 'ground') {
           this.rotateMeshTowardCamera(rootMesh);
         }
-        
+
         // Apply proper PBR shading to all meshes
         this.applyPBRShadingToMeshes(result.meshes);
-        
+
         // Register all child meshes (geometry_0, etc.) for proper scene tracking
         this.registerModelMeshesInScene(rootMesh, nodeId, name);
-        
+
         // Add node to store so it can be moved in 2D top view
         useAppStore.getState().addNode({
           id: nodeId,
@@ -13866,7 +13893,7 @@ class VirtualStudio {
           name: name,
           metadata: data?.metadata,
         });
-        
+
         if (this.gizmoManager) {
           this.gizmoManager.attachToMesh(mesh as BABYLON.AbstractMesh);
         }
@@ -13924,7 +13951,7 @@ class VirtualStudio {
       pos = this.positionMeshOnGround(mesh, pos);
     }
     mesh.position = pos;
-    
+
     if (rotationY !== null) {
       mesh.rotation.y = rotationY;
     } else if (placementMode === 'ground') {
@@ -17179,25 +17206,25 @@ class VirtualStudio {
       rootMesh.name = `casting_${candidateId}`;
       rootMesh.position = position;
       rootMesh.scaling = new BABYLON.Vector3(1, 1, 1);
-      
+
       const boundingInfo = rootMesh.getHierarchyBoundingVectors(true);
       const modelHeight = boundingInfo.max.y - boundingInfo.min.y;
       if (modelHeight > 0.001) {
         const scale = 1.7 / modelHeight;
         rootMesh.scaling = new BABYLON.Vector3(scale, scale, scale);
       }
-      
+
       rootMesh.rotation = new BABYLON.Vector3(Math.PI, 0, 0);
-      
+
       this.applyPBRShadingToMeshes(result.meshes, `casting_${candidateId}`);
       this.trackAnimationGroupsForMesh(rootMesh, result.animationGroups || []);
       this.stopAnimationGroupsForMesh(rootMesh, result.animationGroups || []);
-      
+
       // Register all child meshes (geometry_0, etc.) for proper scene tracking
       this.registerModelMeshesInScene(rootMesh, `casting_${candidateId}`, name);
-      
+
       this.castingCandidates.set(candidateId, { mesh: rootMesh, name, avatarUrl });
-      
+
       // Track in scene state (Phase 3: Metadata Tracking)
       this.sceneState.characters.set(candidateId, {
         id: candidateId,
@@ -17205,13 +17232,13 @@ class VirtualStudio {
         name,
         avatarUrl
       });
-      
+
       console.log(`[Casting Avatar] Loaded ${name} with ${result.meshes.length} meshes, shading applied, position: (${position.x.toFixed(1)}, ${position.y.toFixed(1)}, ${position.z.toFixed(1)})`);
-      
+
       // Update shadows and lighting for new character (Phase 3)
       this.regenerateShadowMaps();
       this.recalculateAmbientLighting();
-      
+
       // Add synthetic eye markers for autofocus
       setTimeout(() => {
         if (this.autoFocusSystem) {
@@ -17226,10 +17253,10 @@ class VirtualStudio {
 
   private async generateAndLoadCastingAvatar(candidateId: string, name: string, photoUrl: string, position: BABYLON.Vector3): Promise<void> {
     this.createPlaceholderActor(candidateId, name, position);
-    
+
     try {
       let blob: Blob;
-      
+
       if (photoUrl.startsWith('data:')) {
         const response = await fetch(photoUrl);
         blob = await response.blob();
@@ -17237,15 +17264,15 @@ class VirtualStudio {
         const response = await fetch(photoUrl);
         blob = await response.blob();
       }
-      
+
       const formData = new FormData();
       formData.append('file', blob, 'photo.jpg');
-      
+
       const apiResponse = await fetch('/api/generate-avatar', {
         method: 'POST',
         body: formData
       });
-      
+
       if (apiResponse.ok) {
         const result = await apiResponse.json();
         if (result.success && result.glb_url) {
@@ -17262,26 +17289,26 @@ class VirtualStudio {
       height: 1.7,
       radius: 0.25,
     }, this.scene);
-    
+
     capsule.position = position.clone();
     capsule.position.y = 0.85;
-    
+
     const material = new BABYLON.StandardMaterial(`casting_${candidateId}_mat`, this.scene);
     material.diffuseColor = new BABYLON.Color3(0.6, 0.5, 0.4);
     material.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
     capsule.material = material;
-    
+
     this.castingCandidates.set(candidateId, { mesh: capsule, name });
     console.log(`Created placeholder actor for ${name}`);
   }
-  
+
   /**
    * Add a default avatar model to the scene for focus target testing
    */
   private addDefaultMannequin(): void {
     this.loadDefaultAvatar();
   }
-  
+
   /**
    * Load a default avatar from the library
    */
@@ -17370,7 +17397,7 @@ class VirtualStudio {
     console.error('Failed to load default avatar candidates, using placeholder:', lastError);
     this.createSimpleMannequin(avatarId);
   }
-  
+
   /**
    * Create a simple capsule mannequin as fallback
    */
@@ -17379,15 +17406,15 @@ class VirtualStudio {
       height: 1.75,
       radius: 0.25,
     }, this.scene);
-    
+
     capsule.position = new BABYLON.Vector3(0, 0.875, 0);
-    
+
     const material = new BABYLON.StandardMaterial(`${id}_mat`, this.scene);
     material.diffuseColor = new BABYLON.Color3(0.6, 0.5, 0.45);
     capsule.material = material;
-    
+
     this.castingCandidates.set(id, { mesh: capsule, name: 'Mannequin' });
-    
+
     setTimeout(() => {
       this.updateFocusObjectsList();
     }, 200);
@@ -17396,7 +17423,7 @@ class VirtualStudio {
   private async generateAvatarFromCastingPhoto(candidateId: string, candidateName: string, photoUrl: string): Promise<void> {
     try {
       let blob: Blob;
-      
+
       if (photoUrl.startsWith('data:')) {
         const response = await fetch(photoUrl);
         blob = await response.blob();
@@ -17404,15 +17431,15 @@ class VirtualStudio {
         const response = await fetch(photoUrl);
         blob = await response.blob();
       }
-      
+
       const formData = new FormData();
       formData.append('file', blob, 'photo.jpg');
-      
+
       const apiResponse = await fetch('/api/generate-avatar', {
         method: 'POST',
         body: formData
       });
-      
+
       if (apiResponse.ok) {
         const result = await apiResponse.json();
         if (result.success && result.glb_url) {
@@ -17433,11 +17460,11 @@ class VirtualStudio {
   private updateCandidateAvatarModel(candidateId: string, avatarUrl: string): void {
     const existing = this.castingCandidates.get(candidateId);
     if (!existing) return;
-    
+
     const position = existing.mesh.position.clone();
     this.clearTrackedAnimationGroupsForMesh(existing.mesh);
     existing.mesh.dispose();
-    
+
     this.loadCastingAvatarModel(candidateId, existing.name, avatarUrl, position);
   }
 
@@ -17496,7 +17523,7 @@ class VirtualStudio {
         lightConfig.position[1],
         lightConfig.position[2]
       );
-      
+
       // Use the existing addLight method to properly create lights
       this.addLight(lightConfig.type || 'aputure-300d', position);
     });
@@ -17549,7 +17576,7 @@ class VirtualStudio {
 
     const bannerTexture = new BABYLON.DynamicTexture('bannerTexture', { width: 1024, height: 256 }, this.scene, true);
     const textureContext = bannerTexture.getContext();
-    
+
     const gradient = textureContext.createLinearGradient(0, 0, 1024, 0);
     gradient.addColorStop(0, '#2d1f3d');
     gradient.addColorStop(0.5, bgColor);
@@ -17565,12 +17592,12 @@ class VirtualStudio {
     ctx2d.font = 'bold 72px Arial';
     ctx2d.textAlign = 'center';
     ctx2d.textBaseline = 'middle';
-    
+
     ctx2d.shadowColor = glowColor;
     ctx2d.shadowBlur = 20;
     ctx2d.fillStyle = '#ffffff';
     ctx2d.fillText(text, 512, 128);
-    
+
     textureContext.shadowBlur = 40;
     textureContext.fillStyle = glowColor;
     textureContext.globalAlpha = 0.3;
@@ -17611,7 +17638,7 @@ class VirtualStudio {
     let time = 0;
     const animObserver = this.scene.onBeforeRenderObservable.add(() => {
       time += this.scene.getEngine().getDeltaTime() * 0.001 * animSpeed;
-      
+
       if (this.sceneBanner.originalPositions && banner.isVerticesDataPresent(BABYLON.VertexBuffer.PositionKind)) {
         const positions = banner.getVerticesData(BABYLON.VertexBuffer.PositionKind);
         if (positions) {
@@ -17619,11 +17646,11 @@ class VirtualStudio {
           for (let i = 0; i < vertexCount; i++) {
             const origX = this.sceneBanner.originalPositions[i * 3];
             const origY = this.sceneBanner.originalPositions[i * 3 + 1];
-            
+
             const wave1 = Math.sin(origX * 2 + time * 2) * waveAmp;
             const wave2 = Math.sin(origY * 3 + time * 1.5) * waveAmp * 0.5;
             const wave3 = Math.sin(origX * 4 + origY * 2 + time * 3) * waveAmp * 0.3;
-            
+
             positions[i * 3 + 2] = wave1 + wave2 + wave3;
           }
           banner.updateVerticesData(BABYLON.VertexBuffer.PositionKind, positions);
@@ -17632,7 +17659,7 @@ class VirtualStudio {
 
       const glowPulse = 0.6 + Math.sin(time * 2) * 0.2;
       bannerMaterial.emissiveColor = BABYLON.Color3.FromHexString(glowColor).scale(glowPulse * 0.4);
-      
+
       const lightPulse = 25 + Math.sin(time * 1.5) * 10;
       spotlight.intensity = lightPulse;
     });
@@ -17643,7 +17670,7 @@ class VirtualStudio {
     this.sceneBanner.animationObserver = animObserver;
 
     console.log(`[Scene Banner] Created banner "${text}" at (${pos.x}, ${pos.y}, ${pos.z}) with animation and glow effects`);
-    
+
     window.dispatchEvent(new CustomEvent('scene-banner-created', {
       detail: { text, position: pos }
     }));
@@ -17804,10 +17831,10 @@ class VirtualStudio {
     },
   ): Promise<void> {
     if (!options?.additive && !options?.storyRigId) this.removeCharacterModel();
-    
+
     let meshPosition = new BABYLON.Vector3(0, 0, 0);
     let importedAnimationGroups: BABYLON.AnimationGroup[] = [];
-    
+
     try {
       const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
       importedAnimationGroups = result.animationGroups || [];
@@ -17817,25 +17844,25 @@ class VirtualStudio {
       (this.characterMesh.metadata as Record<string, unknown>).sourceModelUrl = modelUrl;
       this.trackAnimationGroupsForMesh(this.characterMesh, importedAnimationGroups);
       this.stopAnimationGroupsForMesh(this.characterMesh, importedAnimationGroups);
-      
+
       // Calculate bounding box to properly scale and position the model
       const boundingInfo = this.characterMesh.getHierarchyBoundingVectors(true);
       const modelHeight = boundingInfo.max.y - boundingInfo.min.y;
       const modelWidth = boundingInfo.max.x - boundingInfo.min.x;
       const modelDepth = boundingInfo.max.z - boundingInfo.min.z;
-      
+
       console.log(`Model dimensions: H=${modelHeight.toFixed(3)}, W=${modelWidth.toFixed(3)}, D=${modelDepth.toFixed(3)}`);
-      
+
       // Target human height (1.7m default, can be adjusted by height parameter)
       const targetHeight = 1.7 * (height || 1.0);
-      
+
       // Scale model to target height if it's too small or too large
       if (modelHeight > 0.001) {
         const scale = targetHeight / modelHeight;
         this.characterMesh.scaling = new BABYLON.Vector3(scale, scale, scale);
         console.log(`Scaling model by ${scale.toFixed(3)} to reach ${targetHeight}m height`);
       }
-      
+
       // SAM 3D Body exports are upside-down → need Math.PI X-flip.
       // Ready Player Me, Tripo, Cesium and other Y-up models are already correct.
       const isSamModel = /\/avatar_\w+\.glb(\?.*)?$/.test(modelUrl);
@@ -17845,7 +17872,7 @@ class VirtualStudio {
       if (isRpmModel) {
         console.log('[loadCharacterModel] Ready Player Me avatar detected — preserving PBR materials');
       }
-      
+
       // Position mesh on ground using the helper function (after rotation so bounds are correct)
       const storyPos = options?.position;
       const originXZ = storyPos ? new BABYLON.Vector3(storyPos[0], 0, storyPos[2]) : new BABYLON.Vector3(0, 0, 0);
@@ -17868,7 +17895,7 @@ class VirtualStudio {
       // Ensure position is still correct after rotation
       this.characterMesh.position = meshPosition;
       this.characterMesh.computeWorldMatrix(true);
-      
+
       // Get all meshes including root
       const allMeshes = this.characterMesh.getChildMeshes(true);
       allMeshes.push(this.characterMesh);
@@ -17958,16 +17985,16 @@ class VirtualStudio {
         });
         console.log(`Applied PBR material stack (skin: ${skinMeshCount}, shirt: ${shirtMeshCount}, pants: ${pantsMeshCount}) to ${meshCount} mesh(es)`);
       }
-      
+
       // Add eyes to the character model
       this.addEyesToMesh(this.characterMesh, name);
-      
+
       // Reposition mesh on ground after adding eyes (eyes change the bounding box)
       // Use positionMeshOnGround to ensure correct positioning
       meshPosition = this.positionMeshOnGround(this.characterMesh, meshPosition.clone());
       this.characterMesh.position = meshPosition;
       this.characterMesh.computeWorldMatrix(true);
-      
+
       // Final verification
       const finalBounds = this.characterMesh.getHierarchyBoundingVectors(true);
       if (Math.abs(finalBounds.min.y) > 0.01) {
@@ -17978,53 +18005,53 @@ class VirtualStudio {
         this.characterMesh.computeWorldMatrix(true);
         meshPosition.y = this.characterMesh.position.y;
       }
-      
+
       console.log(`Loaded character: ${name} at position (${meshPosition.x}, ${meshPosition.y}, ${meshPosition.z})`);
     } catch (error) {
       console.warn(`Character model not found: ${modelUrl}, creating placeholder`, error);
       const capsule = BABYLON.MeshBuilder.CreateCapsule(name, { height: 1.75, radius: 0.22 }, this.scene);
-      
+
       // Position capsule on ground
       meshPosition = this.positionMeshOnGround(capsule, new BABYLON.Vector3(0, 0, 0));
       capsule.position = meshPosition;
-      
+
       // Rotate capsule toward camera
       this.rotateMeshTowardCamera(capsule);
-      
+
       const skinColor = BABYLON.Color3.FromHexString(skinTone || '#EAC086');
       const pbrMaterial = this.createProceduralCharacterMaterial(`${name}_pbr_mat`, skinColor, 'skin');
       capsule.material = pbrMaterial;
-      
+
       // Enable shadows
       capsule.receiveShadows = true;
       capsule.castShadows = true;
-      
+
       // Add to shadow generators
       this.lights.forEach((lightData) => {
         if (lightData.shadowGenerator) {
           lightData.shadowGenerator.addShadowCaster(capsule);
         }
       });
-      
+
       // Add eyes to placeholder capsule
       this.addEyesToActor(capsule, 1.75, skinTone || '#EAC086');
-      
+
       this.characterMesh = capsule;
     }
 
     // Add to scene hierarchy store
     const store = useAppStore.getState();
     const modelId = `model_${Date.now()}`;
-    
+
     // Set mesh name to node ID so we can find it when dragging
     if (this.characterMesh) {
       this.characterMesh.name = modelId;
-      
+
       // Register all child meshes (geometry_0, geometry_1, etc.) in the scene
       // This ensures autofocus and other systems can find them
       this.registerModelMeshesInScene(this.characterMesh, modelId, name);
     }
-    
+
     const newNode: SceneNode = {
       id: modelId,
       name: name,
@@ -18040,7 +18067,7 @@ class VirtualStudio {
         meshNames: this.characterMesh ? this.getChildMeshNames(this.characterMesh) : []
       }
     };
-    
+
     store.addNode(newNode);
     store.selectNode(modelId);
     this.characterModelId = modelId;
@@ -18076,12 +18103,12 @@ class VirtualStudio {
     } else {
       console.warn('addToHierarchy not available yet');
     }
-    
+
     // Add to Studio Library (Mine Avatarer section)
     if ((window as any).addToStudioLibrary) {
       (window as any).addToStudioLibrary(modelId, name, modelUrl);
     }
-    
+
     // Attach gizmo for interaction
     if (this.gizmoManager && this.characterMesh) {
       this.gizmoManager.attachToMesh(this.characterMesh as BABYLON.Mesh);
@@ -18113,36 +18140,36 @@ class VirtualStudio {
   private registerModelMeshesInScene(rootMesh: BABYLON.AbstractMesh, modelId: string, modelName: string): void {
     const childMeshes = rootMesh.getChildMeshes(true);
     const registeredMeshes: string[] = [];
-    
+
     childMeshes.forEach((mesh, _index) => {
       // Store original name for reference
       const originalName = mesh.name;
-      
+
       // Add metadata to link child mesh to parent model
       mesh.metadata = mesh.metadata || {};
       mesh.metadata.parentModelId = modelId;
       mesh.metadata.parentModelName = modelName;
       mesh.metadata.originalMeshName = originalName;
       mesh.metadata.isModelGeometry = true;
-      
+
       // Log geometry_0 specifically as it's commonly used for face detection
       if (originalName.includes('geometry_0') || originalName === 'geometry_0') {
         console.log(`[Model Registration] Primary geometry mesh found: ${originalName} → parent: ${modelId} (${modelName})`);
         mesh.metadata.isPrimaryGeometry = true;
       }
-      
+
       registeredMeshes.push(originalName);
     });
-    
+
     // Also register the root mesh
     rootMesh.metadata = rootMesh.metadata || {};
     rootMesh.metadata.isModelRoot = true;
     rootMesh.metadata.modelId = modelId;
     rootMesh.metadata.modelName = modelName;
     rootMesh.metadata.childMeshCount = childMeshes.length;
-    
+
     console.log(`[Model Registration] Registered ${childMeshes.length} child meshes for model "${modelName}" (${modelId}):`, registeredMeshes);
-    
+
     // Dispatch event for other systems to know about the new model
     window.dispatchEvent(new CustomEvent('model-meshes-registered', {
       detail: {
@@ -18154,14 +18181,14 @@ class VirtualStudio {
       }
     }));
   }
-  
+
   /**
    * Get all child mesh names from a model
    */
   private getChildMeshNames(rootMesh: BABYLON.AbstractMesh): string[] {
     return rootMesh.getChildMeshes(true).map(m => m.name);
   }
-  
+
   /**
    * Find a model by its geometry mesh name (e.g., find parent model from geometry_0)
    */
@@ -18178,7 +18205,7 @@ class VirtualStudio {
         };
       }
     }
-    
+
     // Search all meshes for matching geometry
     for (const sceneMesh of this.scene.meshes) {
       if (sceneMesh.name === meshName || sceneMesh.metadata?.originalMeshName === meshName) {
@@ -18194,16 +18221,16 @@ class VirtualStudio {
         }
       }
     }
-    
+
     return null;
   }
-  
+
   /**
    * Get all registered model geometries (useful for autofocus, selection, etc.)
    */
   public getRegisteredModelGeometries(): Array<{ meshName: string; modelId: string; modelName: string; isPrimary: boolean }> {
     const geometries: Array<{ meshName: string; modelId: string; modelName: string; isPrimary: boolean }> = [];
-    
+
     for (const mesh of this.scene.meshes) {
       if (mesh.metadata?.isModelGeometry) {
         geometries.push({
@@ -18214,7 +18241,7 @@ class VirtualStudio {
         });
       }
     }
-    
+
     return geometries;
   }
 
@@ -19028,18 +19055,18 @@ class VirtualStudio {
         const rembrandtRad = (rembrandtAngle - 90) * Math.PI / 180; // Convert to canvas coordinates
         const rembrandtX = cx + Math.cos(rembrandtRad) * guideRadius;
         const rembrandtZ = cy + Math.sin(rembrandtRad) * guideRadius;
-        
+
         // Draw guide arc for key light
         ctx.beginPath();
         ctx.arc(cx, cy, guideRadius, rembrandtRad - 0.3, rembrandtRad + 0.3);
         ctx.stroke();
-        
+
         // Draw line from subject to key position
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.lineTo(rembrandtX, rembrandtZ);
         ctx.stroke();
-        
+
         // Label
         ctx.fillStyle = guideColor.replace('0.6', '0.9');
         ctx.font = 'bold 11px Inter, system-ui, sans-serif';
@@ -19055,13 +19082,13 @@ class VirtualStudio {
         ctx.moveTo(cx, cy - guideRadius * 0.5);
         ctx.lineTo(cx, cy - guideRadius * 1.5);
         ctx.stroke();
-        
+
         // Draw horizontal line to show it's directly in front
         ctx.beginPath();
         ctx.moveTo(cx - guideRadius * 0.3, cy - guideRadius);
         ctx.lineTo(cx + guideRadius * 0.3, cy - guideRadius);
         ctx.stroke();
-        
+
         // Label
         ctx.fillStyle = guideColor.replace('0.6', '0.9');
         ctx.font = 'bold 11px Inter, system-ui, sans-serif';
@@ -19077,18 +19104,18 @@ class VirtualStudio {
         const loopRad = (loopAngle - 90) * Math.PI / 180;
         const loopX = cx + Math.cos(loopRad) * guideRadius;
         const loopZ = cy + Math.sin(loopRad) * guideRadius;
-        
+
         // Draw guide arc
         ctx.beginPath();
         ctx.arc(cx, cy, guideRadius, loopRad - 0.25, loopRad + 0.25);
         ctx.stroke();
-        
+
         // Draw line from subject
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.lineTo(loopX, loopZ);
         ctx.stroke();
-        
+
         // Label
         ctx.fillStyle = guideColor.replace('0.6', '0.9');
         ctx.font = 'bold 11px Inter, system-ui, sans-serif';
@@ -19104,27 +19131,27 @@ class VirtualStudio {
   private drawShadowVisualization(ctx: CanvasRenderingContext2D, cx: number, cy: number, scale: number): void {
     // Draw shadow direction indicators from lights to subject
     const subjectPos = { x: cx, y: cy };
-    
+
     for (const [_id, data] of this.lights) {
       const lightX = cx + data.mesh.position.x * scale;
       const lightZ = cy - data.mesh.position.z * scale;
-      
+
       // Calculate direction from light to subject
       const dirX = subjectPos.x - lightX;
       const dirZ = subjectPos.y - lightZ;
       const distance = Math.sqrt(dirX * dirX + dirZ * dirZ);
-      
+
       if (distance < 1) continue; // Skip if too close
-      
+
       // Normalize direction
       const normX = dirX / distance;
       const normZ = dirZ / distance;
-      
+
       // Draw shadow direction line (extended beyond subject)
       const shadowLength = distance * 1.5;
       const shadowEndX = subjectPos.x + normX * shadowLength * 0.5;
       const shadowEndZ = subjectPos.y + normZ * shadowLength * 0.5;
-      
+
       ctx.strokeStyle = 'rgba(100, 100, 100, 0.5)';
       ctx.lineWidth = 2;
       ctx.setLineDash([8, 4]);
@@ -19133,7 +19160,7 @@ class VirtualStudio {
       ctx.lineTo(shadowEndX, shadowEndZ);
       ctx.stroke();
       ctx.setLineDash([]);
-      
+
       // Draw arrow head
       const arrowSize = 8;
       const angle = Math.atan2(normZ, normX);
@@ -19150,7 +19177,7 @@ class VirtualStudio {
       ctx.closePath();
       ctx.fillStyle = 'rgba(100, 100, 100, 0.7)';
       ctx.fill();
-      
+
       // Draw estimated shadow area (semi-transparent ellipse)
       const shadowWidth = 0.5 * scale; // Shadow width in meters
       const shadowAreaLength = shadowLength * 0.4;
@@ -19193,7 +19220,7 @@ class VirtualStudio {
     const store = useAppStore.getState();
     // Draw actors/models from store nodes (type 'actor' or 'model')
     const actorNodes = store.scene.filter(n => n.type === 'model' && n.visible);
-    
+
     // Also draw any loaded actors/models from the scene meshes (for backwards compatibility)
     const actorMeshes = this.scene.meshes.filter(m =>
       m.name.startsWith('actor_') || m.name.startsWith('model_') || m.name.startsWith('character_')
@@ -19239,11 +19266,11 @@ class VirtualStudio {
       const [_rotX, rotY, _rotZ] = actorNode.transform.rotation;
       const arrowLength = 15 * scale; // Arrow length in pixels
       const arrowAngle = rotY; // Y rotation is the horizontal rotation
-      
+
       // Calculate arrow end point
       const arrowEndX = x + Math.sin(arrowAngle) * arrowLength;
       const arrowEndZ = z - Math.cos(arrowAngle) * arrowLength;
-      
+
       // Draw direction line
       ctx.strokeStyle = isSelected || isDragging ? 'rgba(236, 72, 153, 0.8)' : 'rgba(236, 72, 153, 0.5)';
       ctx.lineWidth = isSelected || isDragging ? 2 : 1.5;
@@ -19251,7 +19278,7 @@ class VirtualStudio {
       ctx.moveTo(x, z);
       ctx.lineTo(arrowEndX, arrowEndZ);
       ctx.stroke();
-      
+
       // Draw arrowhead
       const arrowHeadSize = 4;
       const arrowHeadAngle = Math.atan2(arrowEndZ - z, arrowEndX - x);
@@ -19308,7 +19335,7 @@ class VirtualStudio {
     const getWallColor = (wallId: keyof typeof envState.walls): string => {
       const wall = envState.walls[wallId];
       if (!wall.visible) return 'rgba(128, 128, 128, 0.15)'; // Hidden wall - very faint
-      
+
       // Different colors for different walls for distinction
       switch (wallId) {
         case 'backWall': return 'rgba(100, 150, 255, 0.7)';
@@ -19333,7 +19360,7 @@ class VirtualStudio {
         (studioSize * 2) * scale + wallThicknessScaled,
         wallThicknessScaled
       );
-      
+
       // Wall label
       if (this.topViewShowLabels && envState.walls.backWall.visible) {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
@@ -19357,7 +19384,7 @@ class VirtualStudio {
         wallThicknessScaled,
         (studioSize * 2) * scale + wallThicknessScaled
       );
-      
+
       // Wall label
       if (this.topViewShowLabels && envState.walls.leftWall.visible) {
         ctx.save();
@@ -19385,7 +19412,7 @@ class VirtualStudio {
         wallThicknessScaled,
         (studioSize * 2) * scale + wallThicknessScaled
       );
-      
+
       // Wall label
       if (this.topViewShowLabels && envState.walls.rightWall.visible) {
         ctx.save();
@@ -19413,7 +19440,7 @@ class VirtualStudio {
         (studioSize * 2) * scale + wallThicknessScaled,
         wallThicknessScaled
       );
-      
+
       // Wall label
       if (this.topViewShowLabels && envState.walls.rearWall.visible) {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
@@ -19596,22 +19623,22 @@ class VirtualStudio {
   private drawLightFalloff(ctx: CanvasRenderingContext2D, x: number, y: number, data: LightData, scale: number): void {
     const baseLux = LightingPhysics.calculateLux1mFromSpecs(data.specs || {});
     const falloffZones = LightingPhysics.generateFalloffZones(baseLux);
-    
+
     const lightColor = this.topViewShowCCTColors 
       ? this.cctToCanvasColor(data.cct || 5600, 1.0)
       : 'rgba(255, 255, 0, 1)';
-    
+
     const colorMatch = lightColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
     const r = colorMatch ? parseInt(colorMatch[1]) : 255;
     const g = colorMatch ? parseInt(colorMatch[2]) : 255;
     const b = colorMatch ? parseInt(colorMatch[3]) : 0;
-    
+
     falloffZones.slice(0, 5).forEach((zone, index) => {
       const radius = zone.distance * scale;
       const intensity = zone.intensity / 100;
-      
+
       const opacity = Math.max(0.12, Math.min(0.55, intensity * 0.7));
-      
+
       ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
       ctx.lineWidth = index === 0 ? 2.5 : (index === 1 ? 2 : 1.5);
       ctx.setLineDash(index === 0 ? [] : [4, 4]);
@@ -19619,24 +19646,24 @@ class VirtualStudio {
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
-      
+
       if (this.topViewShowLabels && index < 4) {
         const labelText = zone.stops === 0 
           ? '100%' 
           : `${zone.intensity.toFixed(0)}% (-${zone.stops.toFixed(1)} stopp)`;
-        
+
         ctx.font = '9px Inter, system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        
+
         const labelAngle = -Math.PI / 4;
         const labelX = x + Math.cos(labelAngle) * radius;
         const labelY = y + Math.sin(labelAngle) * radius;
-        
+
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         const textWidth = ctx.measureText(labelText).width;
         ctx.fillRect(labelX - textWidth/2 - 2, labelY - 6, textWidth + 4, 12);
-        
+
         ctx.fillStyle = `rgba(255, 255, 255, 0.9)`;
         ctx.fillText(labelText, labelX, labelY);
       }
@@ -19648,14 +19675,14 @@ class VirtualStudio {
     ctx.font = '9px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    
+
     // Background
     const textWidth = ctx.measureText(labelText).width;
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.beginPath();
     ctx.roundRect(x - textWidth / 2 - 3, y + 18, textWidth + 6, 12, 2);
     ctx.fill();
-    
+
     // Text
     ctx.fillStyle = isSelected ? '#fff' : 'rgba(255, 255, 255, 0.9)';
     ctx.fillText(labelText, x, y + 20);
@@ -19859,7 +19886,7 @@ class VirtualStudio {
     // Get camera position and target
     const camPos = this.camera.position;
     const camTarget = this.camera.target;
-    
+
     // Convert to 2D coordinates
     const camX = cx + camPos.x * scale;
     const camZ = cy - camPos.z * scale;
@@ -19879,22 +19906,22 @@ class VirtualStudio {
     // Draw view frustum cone (FOV visualization)
     const fov = this.camera.fov || 0.8;
     const fovAngle = fov / 2; // Half FOV in radians
-    
+
     // Calculate direction from camera to target
     const dirX = targetX - camX;
     const dirZ = targetZ - camZ;
     const dirLength = Math.sqrt(dirX * dirX + dirZ * dirZ);
     const normDirX = dirX / dirLength;
     const normDirZ = dirZ / dirLength;
-    
+
     // Calculate angle of direction
     const baseAngle = Math.atan2(normDirZ, normDirX);
-    
+
     // FOV cone length (projected on ground plane)
     const coneLength = Math.min(dirLength * 0.8, 80);
     const farWidth = Math.tan(fovAngle) * coneLength * 2;
     void farWidth; // Stored for potential tooltip display of FOV coverage width
-    
+
     // Draw filled FOV cone
     const gradient = ctx.createLinearGradient(camX, camZ, targetX, targetZ);
     gradient.addColorStop(0, 'rgba(63, 185, 80, 0.15)');
@@ -19914,7 +19941,7 @@ class VirtualStudio {
     ctx.lineTo(rightX, rightZ);
     ctx.closePath();
     ctx.fill();
-    
+
     // Draw FOV edge lines
     ctx.strokeStyle = 'rgba(63, 185, 80, 0.6)';
     ctx.lineWidth = 1.5;
@@ -20002,11 +20029,11 @@ class VirtualStudio {
 
   private exportTopView(): void {
     if (!this.topViewCanvas) return;
-    
+
     // Simply export the current canvas as-is
     this.topViewCanvas.toBlob((blob) => {
       if (!blob) return;
-      
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -20050,7 +20077,7 @@ class VirtualStudio {
         // Drag light - IMPORTANT: Use topViewDraggingLightId, not selectedLightId
         const light = this.lights.get(this.topViewDraggingLightId);
         if (light) {
-          
+
           let worldX = (mouseX - cx) / scale;
           let worldZ = -(mouseY - cy) / scale;
 
@@ -20067,7 +20094,7 @@ class VirtualStudio {
             light.light.position.x = worldX;
             light.light.position.z = worldZ;
           }
-          
+
           // Dispatch event for real-time updates - use the dragging light ID
           window.dispatchEvent(new CustomEvent('ch-light-position-changed', {
             detail: { lightId: this.topViewDraggingLightId }
@@ -20108,14 +20135,14 @@ class VirtualStudio {
             const foundMesh = this.scene.meshes.find(m => m.name === prop.id || m.name.includes(prop.id));
             propMesh = foundMesh ?? null;
           }
-          
+
           if (propMesh) {
             // Find root mesh if this is a child mesh
             let rootMesh: BABYLON.Nullable<BABYLON.AbstractMesh> = propMesh;
             while (rootMesh && rootMesh.parent) {
               rootMesh = rootMesh.parent as BABYLON.AbstractMesh;
             }
-            
+
             if (rootMesh) {
               rootMesh.position.x = worldX;
               rootMesh.position.y = posY;
@@ -20161,16 +20188,16 @@ class VirtualStudio {
             this.addActorToScene(actor.id);
             actorMesh = this.scene.getMeshByName(actor.id);
           }
-          
+
           if (actorMesh) {
             // Set X and Z position first
             actorMesh.position.x = worldX;
             actorMesh.position.z = worldZ;
-            
+
             // Use positionMeshOnGround to calculate correct Y position so object lands on floor
             const newPosition = this.positionMeshOnGround(actorMesh, new BABYLON.Vector3(worldX, 0, worldZ));
             actorMesh.position = newPosition;
-            
+
             // Update the node's Y position in store to match the calculated position
             useAppStore.getState().updateNode(this.topViewDraggingActorId, {
               transform: {
@@ -20178,7 +20205,7 @@ class VirtualStudio {
                 position: [worldX, newPosition.y, worldZ]
               }
             });
-            
+
             // Force mesh update and ensure highlight is visible during drag
             actorMesh.computeWorldMatrix(true);
             this.addActorHighlight(actorMesh as BABYLON.Mesh);
@@ -20314,18 +20341,18 @@ class VirtualStudio {
           let deleted = false;
           this.topViewMeasurements = this.topViewMeasurements.filter(measurement => {
             if (deleted) return true;
-            
+
             // Check if click is near the measurement line
             const startX = measurement.start.x;
             const startZ = measurement.start.z;
             const endX = measurement.end.x;
             const endZ = measurement.end.z;
-            
+
             // Calculate distance from point to line segment
             const dx = endX - startX;
             const dz = endZ - startZ;
             const length2 = dx * dx + dz * dz;
-            
+
             if (length2 === 0) {
               // Line is a point
               const dist = Math.sqrt((worldX - startX) ** 2 + (worldZ - startZ) ** 2);
@@ -20338,7 +20365,7 @@ class VirtualStudio {
               const projX = startX + t * dx;
               const projZ = startZ + t * dz;
               const dist = Math.sqrt((worldX - projX) ** 2 + (worldZ - projZ) ** 2);
-              
+
               if (dist < threshold) {
                 deleted = true;
                 return false;
@@ -20393,7 +20420,7 @@ class VirtualStudio {
       let closestActorId: string | null = null;
       let closestCameraId: string | null = null;
       let closestDist = Infinity;
-      
+
       // Check lights first
       const lightDistances: Array<{ id: string; dist: number }> = [];
       for (const [id, data] of this.lights) {
@@ -20493,13 +20520,13 @@ class VirtualStudio {
         this.selectedActorId = closestActorId;
         this.selectedLightId = null;
         canvas.style.cursor = 'grabbing';
-        
+
         // Add visual highlight to actor mesh when dragging starts
         const actorMesh = this.scene.getMeshByName(closestActorId);
         if (actorMesh) {
           this.addActorHighlight(actorMesh as BABYLON.Mesh);
         }
-        
+
         // Dispatch event for selection
         window.dispatchEvent(new CustomEvent('ch-scene-node-selected', {
           detail: { nodeId: closestActorId }
@@ -20571,7 +20598,7 @@ class VirtualStudio {
     canvas.addEventListener('click', (_e) => {
       // Close context menu if clicking elsewhere
       this.hideTopViewContextMenu();
-      
+
       // Only handle click if not dragging (click after drag ends)
       if (this.topViewHoveredLightId && !this.topViewDraggingLightId && !this.topViewDraggingPropId && !this.topViewDraggingActorId && !this.topViewDraggingCameraId) {
         this.selectedActorId = null; // Clear actor selection
@@ -20710,7 +20737,7 @@ class VirtualStudio {
         let closestActorId: string | null = null;
         let closestCameraId: string | null = null;
         let closestDist = Infinity;
-        
+
         // Check lights
         for (const [id, data] of this.lights) {
           const x = cx + data.mesh.position.x * scale;
@@ -20769,7 +20796,7 @@ class VirtualStudio {
             }
           }
         }
-        
+
         if (closestLightId) {
           this.topViewDraggingLightId = closestLightId;
           this.selectLight(closestLightId);
@@ -20786,13 +20813,13 @@ class VirtualStudio {
           store.selectNode(closestActorId);
           this.selectedActorId = closestActorId;
           this.selectedLightId = null;
-          
+
           // Add visual highlight to actor mesh when touch dragging starts
           const actorMesh = this.scene.getMeshByName(closestActorId);
           if (actorMesh) {
             this.addActorHighlight(actorMesh as BABYLON.Mesh);
           }
-          
+
           window.dispatchEvent(new CustomEvent('ch-scene-node-selected', {
             detail: { nodeId: closestActorId }
           }));
@@ -20847,7 +20874,7 @@ class VirtualStudio {
               light.light.position.x = worldX;
               light.light.position.z = worldZ;
             }
-            
+
             window.dispatchEvent(new CustomEvent('ch-light-position-changed', {
               detail: { lightId: this.topViewDraggingLightId }
             }));
@@ -20897,16 +20924,16 @@ class VirtualStudio {
               this.addActorToScene(actor.id);
               actorMesh = this.scene.getMeshByName(actor.id);
             }
-            
+
             if (actorMesh) {
               // Set X and Z position first
               actorMesh.position.x = worldX;
               actorMesh.position.z = worldZ;
-              
+
               // Use positionMeshOnGround to calculate correct Y position so object lands on floor
               const newPosition = this.positionMeshOnGround(actorMesh, new BABYLON.Vector3(worldX, 0, worldZ));
               actorMesh.position = newPosition;
-              
+
               // Update the node's Y position in store to match the calculated position
               store.updateNode(this.topViewDraggingActorId, {
                 transform: {
@@ -20914,7 +20941,7 @@ class VirtualStudio {
                   position: [worldX, newPosition.y, worldZ]
                 }
               });
-              
+
               // Force mesh update and ensure highlight is visible during drag
               actorMesh.computeWorldMatrix(true);
               this.addActorHighlight(actorMesh as BABYLON.Mesh);
@@ -21075,7 +21102,7 @@ class VirtualStudio {
     document.getElementById('topviewContextSelect')?.addEventListener('click', () => {
       if (!this.topViewContextMenuTarget) return;
       const { type, id } = this.topViewContextMenuTarget;
-      
+
       if (type === 'light') {
         this.selectLight(id);
       } else if (type === 'model') {
@@ -21088,7 +21115,7 @@ class VirtualStudio {
         this.selectedCameraPresetId = id;
         window.dispatchEvent(new CustomEvent('ch-camera-preset-selected', { detail: { presetId: id } }));
       }
-      
+
       this.hideTopViewContextMenu();
     });
 
@@ -21096,7 +21123,7 @@ class VirtualStudio {
     document.getElementById('topviewContextDelete')?.addEventListener('click', () => {
       if (!this.topViewContextMenuTarget) return;
       const { type, id } = this.topViewContextMenuTarget;
-      
+
       if (type === 'light') {
         this.removeLight(id);
       } else if (type === 'model') {
@@ -21120,7 +21147,7 @@ class VirtualStudio {
         this.cameraPresets.delete(id);
         window.dispatchEvent(new CustomEvent('ch-camera-preset-removed', { detail: { presetId: id } }));
       }
-      
+
       this.hideTopViewContextMenu();
       this.updateTopView();
     });
@@ -21129,7 +21156,7 @@ class VirtualStudio {
     document.getElementById('topviewContextProperties')?.addEventListener('click', () => {
       if (!this.topViewContextMenuTarget) return;
       const { type, id } = this.topViewContextMenuTarget;
-      
+
       // Select first, which will show properties
       if (type === 'light') {
         this.selectLight(id);
@@ -21143,7 +21170,7 @@ class VirtualStudio {
         this.selectedCameraPresetId = id;
         window.dispatchEvent(new CustomEvent('ch-camera-preset-selected', { detail: { presetId: id } }));
       }
-      
+
       this.hideTopViewContextMenu();
     });
 
@@ -21151,7 +21178,7 @@ class VirtualStudio {
     document.getElementById('topviewContextDuplicate')?.addEventListener('click', () => {
       if (!this.topViewContextMenuTarget) return;
       const { type, id } = this.topViewContextMenuTarget;
-      
+
       if (type === 'model') {
         const store = useAppStore.getState();
         const node = store.getNode(id);
@@ -21171,14 +21198,14 @@ class VirtualStudio {
             },
           };
           store.addNode(newNode);
-          
+
           // Create the mesh in 3D scene
           this.addActorToScene(newNode.id);
-          
+
           window.dispatchEvent(new CustomEvent('ch-scene-node-selected', { detail: { nodeId: newNode.id } }));
         }
       }
-      
+
       this.hideTopViewContextMenu();
       this.updateTopView();
     });
@@ -21187,7 +21214,7 @@ class VirtualStudio {
     document.getElementById('topviewContextRename')?.addEventListener('click', () => {
       if (!this.topViewContextMenuTarget) return;
       const { type, id } = this.topViewContextMenuTarget;
-      
+
       if (type === 'model') {
         const store = useAppStore.getState();
         const node = store.getNode(id);
@@ -21200,7 +21227,7 @@ class VirtualStudio {
           }
         }
       }
-      
+
       this.hideTopViewContextMenu();
     });
 
@@ -21208,12 +21235,12 @@ class VirtualStudio {
     document.getElementById('topviewContextLock')?.addEventListener('click', () => {
       if (!this.topViewContextMenuTarget) return;
       const { type, id } = this.topViewContextMenuTarget;
-      
+
       if (type === 'model') {
         const store = useAppStore.getState();
         store.updateNode(id, { locked: true });
       }
-      
+
       this.hideTopViewContextMenu();
     });
 
@@ -21221,12 +21248,12 @@ class VirtualStudio {
     document.getElementById('topviewContextUnlock')?.addEventListener('click', () => {
       if (!this.topViewContextMenuTarget) return;
       const { type, id } = this.topViewContextMenuTarget;
-      
+
       if (type === 'model') {
         const store = useAppStore.getState();
         store.updateNode(id, { locked: false });
       }
-      
+
       this.hideTopViewContextMenu();
     });
 
@@ -21234,7 +21261,7 @@ class VirtualStudio {
     document.getElementById('topviewContextHide')?.addEventListener('click', () => {
       if (!this.topViewContextMenuTarget) return;
       const { type, id } = this.topViewContextMenuTarget;
-      
+
       if (type === 'model') {
         const store = useAppStore.getState();
         store.updateNode(id, { visible: false });
@@ -21244,7 +21271,7 @@ class VirtualStudio {
         }
         this.updateTopView();
       }
-      
+
       this.hideTopViewContextMenu();
     });
 
@@ -21252,7 +21279,7 @@ class VirtualStudio {
     document.getElementById('topviewContextShow')?.addEventListener('click', () => {
       if (!this.topViewContextMenuTarget) return;
       const { type, id } = this.topViewContextMenuTarget;
-      
+
       if (type === 'model') {
         const store = useAppStore.getState();
         store.updateNode(id, { visible: true });
@@ -21262,7 +21289,7 @@ class VirtualStudio {
         }
         this.updateTopView();
       }
-      
+
       this.hideTopViewContextMenu();
     });
 
@@ -21277,7 +21304,7 @@ class VirtualStudio {
     if (!contextMenu) return;
 
     this.topViewContextMenuTarget = { type, id };
-    
+
     // Show/hide context menu items based on type
     const duplicateBtn = document.getElementById('topviewContextDuplicate');
     const renameBtn = document.getElementById('topviewContextRename');
@@ -21285,14 +21312,14 @@ class VirtualStudio {
     const unlockBtn = document.getElementById('topviewContextUnlock');
     const hideBtn = document.getElementById('topviewContextHide');
     const showBtn = document.getElementById('topviewContextShow');
-    
+
     if (type === 'model') {
       const store = useAppStore.getState();
       const node = store.getNode(id);
-      
+
       if (duplicateBtn) duplicateBtn.style.display = 'block';
       if (renameBtn) renameBtn.style.display = 'block';
-      
+
       if (node) {
         if (node.locked) {
           if (lockBtn) lockBtn.style.display = 'none';
@@ -21301,7 +21328,7 @@ class VirtualStudio {
           if (lockBtn) lockBtn.style.display = 'block';
           if (unlockBtn) unlockBtn.style.display = 'none';
         }
-        
+
         if (node.visible) {
           if (hideBtn) hideBtn.style.display = 'block';
           if (showBtn) showBtn.style.display = 'none';
@@ -21318,11 +21345,11 @@ class VirtualStudio {
       if (hideBtn) hideBtn.style.display = 'none';
       if (showBtn) showBtn.style.display = 'none';
     }
-    
+
     contextMenu.style.display = 'block';
     contextMenu.style.left = `${x}px`;
     contextMenu.style.top = `${y}px`;
-    
+
     // Adjust position if menu goes off screen
     setTimeout(() => {
       const rect = contextMenu.getBoundingClientRect();
@@ -21498,7 +21525,7 @@ class VirtualStudio {
         this.topViewShowPatternGuides = this.topViewSelectedPattern !== 'none';
         patternBtn.classList.toggle('active', this.topViewShowPatternGuides);
       });
-      
+
       // Single click cycles through patterns
       patternBtn.addEventListener('click', (e) => {
         if (e.button === 0 && !e.ctrlKey && !e.metaKey) {
@@ -21545,26 +21572,26 @@ class VirtualStudio {
         this.toggleTopViewFullscreen(false);
       }
     });
-    
+
     // ============================================
     // PRO MENU IN TOPVIEW
     // ============================================
     const proMenuBtn = document.getElementById('topviewProMenu');
     const proDropdown = document.getElementById('topviewProDropdown');
-    
+
     if (proMenuBtn && proDropdown) {
       proMenuBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         proDropdown.classList.toggle('open');
       });
-      
+
       // Close on outside click
       document.addEventListener('click', (e) => {
         if (!proMenuBtn.contains(e.target as Node) && !proDropdown.contains(e.target as Node)) {
           proDropdown.classList.remove('open');
         }
       });
-      
+
       // Handle pro panel selection
       proDropdown.querySelectorAll('.topview-pro-item').forEach(item => {
         item.addEventListener('click', () => {
@@ -21572,19 +21599,19 @@ class VirtualStudio {
           if (panel) {
             // Dispatch event for VirtualStudioPro component
             window.dispatchEvent(new CustomEvent('toggle-pro-panel', { detail: { panel } }));
-            
+
             // Update active state
             proDropdown.querySelectorAll('.topview-pro-item').forEach(i => i.classList.remove('active'));
             item.classList.add('active');
-            
+
             proDropdown.classList.remove('open');
-            
+
             console.log(`[Pro Menu] Toggled panel: ${panel}`);
           }
         });
       });
     }
-    
+
     // Delete/Backspace to remove selected light
     document.addEventListener('keydown', (e) => {
       // Don't trigger if user is typing in an input field
@@ -21592,14 +21619,14 @@ class VirtualStudio {
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
       }
-      
+
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (this.selectedLightId) {
           e.preventDefault();
           const lightName = this.lights.get(this.selectedLightId)?.name || this.selectedLightId;
           this.removeLight(this.selectedLightId);
           console.log(`Deleted light: ${lightName}`);
-          
+
           // Dispatch event to update UI
           window.dispatchEvent(new CustomEvent('light-deleted'));
         }
@@ -21657,18 +21684,18 @@ class VirtualStudio {
     const heightRow = document.getElementById('topviewInfoHeightRow');
     const intensityRow = document.getElementById('topviewInfoIntensity')?.parentElement;
     const keyFillRow = document.getElementById('topviewInfoKeyFill')?.parentElement;
-    
+
     // Check if actor is selected
     if (this.selectedActorId) {
       const store = useAppStore.getState();
       const actorNode = store.getNode(this.selectedActorId);
-      
+
       if (actorNode && actorNode.type === 'model') {
         const [posX, posY, posZ] = actorNode.transform.position;
         const [_rotX, rotY, _rotZ] = actorNode.transform.rotation;
         const _distance = Math.sqrt(posX * posX + posZ * posZ);
         void _distance; // Distance from origin for proximity-based calculations
-        
+
         // Calculate distance to camera
         const cameraPos = this.camera.position;
         const cameraDist = Math.sqrt(
@@ -21676,37 +21703,37 @@ class VirtualStudio {
           (posY - cameraPos.y) ** 2 + 
           (posZ - cameraPos.z) ** 2
         );
-        
+
         // Get height from userData or calculate from scale
         const userData = actorNode.userData as Record<string, unknown> | undefined;
         const height = (userData?.height as number) || 175;
         const heightInMeters = height / 100;
-        
+
         document.getElementById('topviewInfoTitle')!.textContent = actorNode.name || 'Actor';
         document.getElementById('topviewInfoPosX')!.textContent = `${posX.toFixed(2)} m`;
         document.getElementById('topviewInfoPosZ')!.textContent = `${posZ.toFixed(2)} m`;
         document.getElementById('topviewInfoDist')!.textContent = `${cameraDist.toFixed(2)} m`;
         document.getElementById('topviewInfoAngle')!.textContent = `${(rotY * 180 / Math.PI).toFixed(1)}°`;
-        
+
         // Show actor-specific fields
         if (posYRow) posYRow.style.display = 'flex';
         if (rotationRow) rotationRow.style.display = 'flex';
         if (heightRow) heightRow.style.display = 'flex';
         if (intensityRow) intensityRow.style.display = 'none';
         if (keyFillRow) keyFillRow.style.display = 'none';
-        
+
         const posYEl = document.getElementById('topviewInfoPosY');
         const rotationEl = document.getElementById('topviewInfoRotation');
         const heightEl = document.getElementById('topviewInfoHeight');
-        
+
         if (posYEl) posYEl.textContent = `${posY.toFixed(2)} m`;
         if (rotationEl) rotationEl.textContent = `${(rotY * 180 / Math.PI).toFixed(1)}°`;
         if (heightEl) heightEl.textContent = `${heightInMeters.toFixed(2)} m`;
-        
+
         return;
       }
     }
-    
+
     // Default to light info panel
     if (!this.selectedLightId) {
       document.getElementById('topviewInfoTitle')!.textContent = 'Ingen lys valgt';
@@ -21716,14 +21743,14 @@ class VirtualStudio {
       document.getElementById('topviewInfoAngle')!.textContent = '-';
       document.getElementById('topviewInfoIntensity')!.textContent = '-';
       document.getElementById('topviewInfoKeyFill')!.textContent = '-';
-      
+
       // Hide actor-specific fields
       if (posYRow) posYRow.style.display = 'none';
       if (rotationRow) rotationRow.style.display = 'none';
       if (heightRow) heightRow.style.display = 'none';
       if (intensityRow) intensityRow.style.display = 'flex';
       if (keyFillRow) keyFillRow.style.display = 'flex';
-      
+
       return;
     }
 
@@ -21742,14 +21769,14 @@ class VirtualStudio {
     document.getElementById('topviewInfoDist')!.textContent = `${distance.toFixed(2)} m`;
     document.getElementById('topviewInfoAngle')!.textContent = `${angle.toFixed(1)}°`;
     document.getElementById('topviewInfoIntensity')!.textContent = `${(intensity * 100).toFixed(0)}%`;
-    
+
     // Hide actor-specific fields
     if (posYRow) posYRow.style.display = 'none';
     if (rotationRow) rotationRow.style.display = 'none';
     if (heightRow) heightRow.style.display = 'none';
     if (intensityRow) intensityRow.style.display = 'flex';
     if (keyFillRow) keyFillRow.style.display = 'flex';
-    
+
     // Calculate Key:Fill ratio
     const keyFillRatio = this.calculateKeyFillRatio();
     const keyFillElement = document.getElementById('topviewInfoKeyFill');
@@ -21766,9 +21793,9 @@ class VirtualStudio {
     // Find key light (brightest light, typically at 30-60° angle)
     let keyLight: { id: string; intensity: number } | null = null;
     let fillLight: { id: string; intensity: number } | null = null;
-    
+
     const lights: Array<{ id: string; data: LightData; intensity: number; angle: number }> = [];
-    
+
     for (const [id, data] of this.lights) {
       if (!data.enabled) continue;
       const posX = data.mesh.position.x;
@@ -21777,12 +21804,12 @@ class VirtualStudio {
       const effectiveIntensity = data.light.intensity * (data.powerMultiplier || 1.0);
       lights.push({ id, data, intensity: effectiveIntensity, angle });
     }
-    
+
     if (lights.length < 2) return null;
-    
+
     // Sort by intensity (descending)
     lights.sort((a, b) => b.intensity - a.intensity);
-    
+
     // Key light is typically the brightest, or one positioned at ~45° (key angle)
     // Look for lights in the key light position range (30-60°)
     const keyCandidates = lights.filter(l => Math.abs(l.angle) >= 30 && Math.abs(l.angle) <= 60);
@@ -21792,7 +21819,7 @@ class VirtualStudio {
       // Fallback: brightest light is key
       keyLight = { id: lights[0].id, intensity: lights[0].intensity };
     }
-    
+
     // Fill light is typically on the opposite side or second brightest
     // Look for lights on opposite side or second brightest
     if (keyLight) {
@@ -21802,7 +21829,7 @@ class VirtualStudio {
         l.id !== keyLight!.id && 
         (Math.abs(l.angle - oppositeAngle) < 45 || Math.abs(l.angle + oppositeAngle) < 45)
       );
-      
+
       if (fillCandidates.length > 0) {
         fillLight = { id: fillCandidates[0].id, intensity: fillCandidates[0].intensity };
       } else {
@@ -21813,11 +21840,11 @@ class VirtualStudio {
         }
       }
     }
-    
+
     if (!keyLight || !fillLight || fillLight.intensity === 0) {
       return null;
     }
-    
+
     return keyLight.intensity / fillLight.intensity;
   }
 
@@ -21842,7 +21869,7 @@ class VirtualStudio {
   private histogramUpdateInterval: number = 100; // ms between updates
   private pixelReadBuffer: Uint8Array | null = null;
   private isReadingPixels: boolean = false;
-  
+
   // Professional histogram settings
   private histogramStyle: 'parade' | 'overlay' | 'luma' | 'rgb-parade' = 'overlay';
   private histogramLogScale: boolean = false; // Logarithmic scale like cinema cameras
@@ -21853,7 +21880,7 @@ class VirtualStudio {
     if (!this.histogramCtx || !this.histogramCanvas) return;
 
     const now = performance.now();
-    
+
     // Throttle histogram calculation for performance (every 100ms)
     if (now - this.lastHistogramUpdate >= this.histogramUpdateInterval && !this.isReadingPixels) {
       this.lastHistogramUpdate = now;
@@ -21888,34 +21915,34 @@ class VirtualStudio {
   private calculateHistogramFromScene(): void {
     if (this.isReadingPixels) return;
     this.isReadingPixels = true;
-    
+
     const width = this.engine.getRenderWidth();
     const height = this.engine.getRenderHeight();
-    
+
     // Professional sampling: more samples for accuracy (like Atomos/SmallHD monitors)
     const targetSamples = 25000;
     const sampleStep = Math.max(1, Math.floor(Math.sqrt((width * height) / targetSamples)));
-    
+
     // Read pixels from engine
     this.engine.readPixels(0, 0, width, height).then((pixels) => {
       if (!pixels) {
         this.isReadingPixels = false;
         return;
       }
-      
+
       // Reset histogram bins using typed arrays for performance
       const rHist = new Uint32Array(256);
       const gHist = new Uint32Array(256);
       const bHist = new Uint32Array(256);
       const lumHist = new Uint32Array(256);
-      
+
       const data = new Uint8Array(pixels.buffer);
       let totalPixels = 0;
       let highlightClipped = 0;
       let shadowClipped = 0;
       let midtoneSum = 0;
       let midtoneCount = 0;
-      
+
       // Optimized sampling with staggered pattern for better coverage
       for (let y = 0; y < height; y += sampleStep) {
         const rowOffset = (y % 2) * Math.floor(sampleStep / 2); // Stagger odd rows
@@ -21924,27 +21951,27 @@ class VirtualStudio {
           const r = data[idx];
           const g = data[idx + 1];
           const b = data[idx + 2];
-          
+
           // Calculate luminance (Rec. 709 standard - professional broadcast)
           const lum = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
-          
+
           rHist[r]++;
           gHist[g]++;
           bHist[b]++;
           lumHist[lum]++;
-          
+
           totalPixels++;
-          
+
           // Highlight clipping detection (any channel >= 250)
           if (r >= 250 || g >= 250 || b >= 250) {
             highlightClipped++;
           }
-          
+
           // Shadow clipping detection (all channels <= 5)
           if (r <= 5 && g <= 5 && b <= 5) {
             shadowClipped++;
           }
-          
+
           // Midtone exposure (18% gray zone: ~95-160 luminance)
           if (lum >= 95 && lum <= 160) {
             midtoneSum += lum;
@@ -21952,33 +21979,33 @@ class VirtualStudio {
           }
         }
       }
-      
+
       // Apply temporal smoothing for stable readout (like professional monitors)
       const smooth = this.histogramSmoothingFactor;
       const instant = 1 - smooth;
-      
+
       for (let i = 0; i < 256; i++) {
         this.histogramSmoothed.r[i] = this.histogramSmoothed.r[i] * smooth + rHist[i] * instant;
         this.histogramSmoothed.g[i] = this.histogramSmoothed.g[i] * smooth + gHist[i] * instant;
         this.histogramSmoothed.b[i] = this.histogramSmoothed.b[i] * smooth + bHist[i] * instant;
         this.histogramSmoothed.lum[i] = this.histogramSmoothed.lum[i] * smooth + lumHist[i] * instant;
-        
+
         // Also keep raw data
         this.histogramData.r[i] = rHist[i];
         this.histogramData.g[i] = gHist[i];
         this.histogramData.b[i] = bHist[i];
         this.histogramData.lum[i] = lumHist[i];
       }
-      
+
       // Calculate clipping percentages with smoothing
       const newHighlight = totalPixels > 0 ? (highlightClipped / totalPixels) * 100 : 0;
       const newShadow = totalPixels > 0 ? (shadowClipped / totalPixels) * 100 : 0;
       const newMidtone = midtoneCount > 0 ? midtoneSum / midtoneCount : 128;
-      
+
       this.highlightClipping = this.highlightClipping * smooth + newHighlight * instant;
       this.shadowClipping = this.shadowClipping * smooth + newShadow * instant;
       this.midtoneExposure = this.midtoneExposure * smooth + newMidtone * instant;
-      
+
       // Update UI displays
       const highlightEl = document.getElementById('highlightPercent');
       if (highlightEl) {
@@ -21987,14 +22014,14 @@ class VirtualStudio {
         highlightEl.style.color = this.highlightClipping > 3 ? '#ff6b6b' : 
                                    this.highlightClipping > 1 ? '#ffaa00' : '#00d4ff';
       }
-      
+
       const shadowEl = document.getElementById('shadowPercent');
       if (shadowEl) {
         const status = this.shadowClipping > 5 ? '⚠️' : '';
         shadowEl.textContent = `${status} Skygge ${this.shadowClipping.toFixed(1)}%`;
         shadowEl.style.color = this.shadowClipping > 5 ? '#ff6b6b' : '#00d4ff';
       }
-      
+
       this.isReadingPixels = false;
     }).catch(() => {
       this.isReadingPixels = false;
@@ -22005,7 +22032,7 @@ class VirtualStudio {
     const ctx = this.histogramCtx!;
     const w = this.histogramCanvas!.width;
     const h = this.histogramCanvas!.height;
-    
+
     // Use smoothed data for stable display
     const histData = this.histogramSmoothed;
 
@@ -22018,7 +22045,7 @@ class VirtualStudio {
 
     // Professional IRE/stop grid lines (like SmallHD/Atomos)
     this.drawHistogramGrid(ctx, w, h);
-    
+
     // Draw exposure zone indicators
     this.drawExposureZones(ctx, w, h);
 
@@ -22027,7 +22054,7 @@ class VirtualStudio {
     for (let i = 5; i < 250; i++) {
       maxVal = Math.max(maxVal, histData.lum[i], histData.r[i], histData.g[i], histData.b[i]);
     }
-    
+
     // Apply logarithmic scaling if enabled (like cinema cameras)
     const getHeight = (val: number) => {
       if (this.histogramLogScale && val > 0) {
@@ -22039,7 +22066,7 @@ class VirtualStudio {
     const binWidth = w / 256;
     const padding = 8;
     void padding; // Reserved for future margin/padding around histogram display
-    
+
     // Draw based on selected style
     switch (this.histogramStyle) {
       case 'rgb-parade':
@@ -22059,18 +22086,18 @@ class VirtualStudio {
 
     // Draw clipping warnings
     this.drawClippingWarnings(ctx, w, h);
-    
+
     // Draw professional exposure statistics
     if (this.histogramShowStats) {
       this.drawExposureStats(ctx, w, h);
     }
   }
-  
+
   private drawHistogramGrid(ctx: CanvasRenderingContext2D, w: number, h: number): void {
     // IRE-style grid lines (0%, 25%, 50%, 75%, 100%)
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1;
-    
+
     // Horizontal grid (exposure levels)
     for (let i = 1; i < 4; i++) {
       const y = (i / 4) * h;
@@ -22081,7 +22108,7 @@ class VirtualStudio {
       ctx.stroke();
     }
     ctx.setLineDash([]);
-    
+
     // Vertical grid (brightness levels: 0, 64, 128, 192, 255)
     const stops = [0.25, 0.5, 0.75]; // Skip 0 and 1
     for (const stop of stops) {
@@ -22092,7 +22119,7 @@ class VirtualStudio {
       ctx.lineTo(x, h);
       ctx.stroke();
     }
-    
+
     // 18% gray marker (IRE 42 / value ~118)
     const grayX = (118 / 255) * w;
     ctx.strokeStyle = 'rgba(255, 180, 0, 0.3)';
@@ -22103,7 +22130,7 @@ class VirtualStudio {
     ctx.stroke();
     ctx.lineWidth = 1;
   }
-  
+
   private drawExposureZones(ctx: CanvasRenderingContext2D, w: number, h: number): void {
     // Shadow zone (crushed blacks warning)
     const shadowGrad = ctx.createLinearGradient(0, 0, w * 0.12, 0);
@@ -22111,7 +22138,7 @@ class VirtualStudio {
     shadowGrad.addColorStop(1, 'rgba(0, 100, 255, 0)');
     ctx.fillStyle = shadowGrad;
     ctx.fillRect(0, 0, w * 0.12, h);
-    
+
     // Highlight zone (blown highlights warning)
     const hlGrad = ctx.createLinearGradient(w * 0.88, 0, w, 0);
     hlGrad.addColorStop(0, 'rgba(255, 100, 0, 0)');
@@ -22119,7 +22146,7 @@ class VirtualStudio {
     ctx.fillStyle = hlGrad;
     ctx.fillRect(w * 0.88, 0, w * 0.12, h);
   }
-  
+
   private drawOverlayHistogram(ctx: CanvasRenderingContext2D, histData: typeof this.histogramSmoothed, 
                                 getHeight: (v: number) => number, w: number, h: number, binWidth: number): void {
     // Draw luminance fill first
@@ -22127,11 +22154,11 @@ class VirtualStudio {
     lumGrad.addColorStop(0, 'rgba(60, 60, 80, 0.95)');
     lumGrad.addColorStop(0.5, 'rgba(100, 100, 120, 0.7)');
     lumGrad.addColorStop(1, 'rgba(140, 140, 160, 0.4)');
-    
+
     ctx.fillStyle = lumGrad;
     ctx.beginPath();
     ctx.moveTo(0, h);
-    
+
     for (let i = 0; i < 256; i++) {
       const x = i * binWidth;
       // Gaussian smoothing for professional look
@@ -22142,26 +22169,26 @@ class VirtualStudio {
     ctx.lineTo(w, h);
     ctx.closePath();
     ctx.fill();
-    
+
     // Draw RGB channels with blend modes
     ctx.globalCompositeOperation = 'screen';
-    
+
     // Red channel
     this.drawChannelFill(ctx, histData.r, getHeight, 'rgba(255, 50, 50, 0.5)', w, h, binWidth);
     // Green channel
     this.drawChannelFill(ctx, histData.g, getHeight, 'rgba(50, 255, 50, 0.4)', w, h, binWidth);
     // Blue channel
     this.drawChannelFill(ctx, histData.b, getHeight, 'rgba(80, 80, 255, 0.5)', w, h, binWidth);
-    
+
     ctx.globalCompositeOperation = 'source-over';
-    
+
     // Draw channel outlines for clarity
     ctx.lineWidth = 1.5;
     this.drawChannelOutline(ctx, histData.r, getHeight, 'rgba(255, 100, 100, 0.8)', w, h, binWidth);
     this.drawChannelOutline(ctx, histData.g, getHeight, 'rgba(100, 255, 100, 0.7)', w, h, binWidth);
     this.drawChannelOutline(ctx, histData.b, getHeight, 'rgba(130, 130, 255, 0.8)', w, h, binWidth);
   }
-  
+
   private drawLumaHistogram(ctx: CanvasRenderingContext2D, histData: typeof this.histogramSmoothed,
                              getHeight: (v: number) => number, w: number, h: number, binWidth: number): void {
     // Cinema-style luminance only with gradient
@@ -22170,11 +22197,11 @@ class VirtualStudio {
     lumGrad.addColorStop(0.3, 'rgba(0, 220, 200, 0.8)');
     lumGrad.addColorStop(0.6, 'rgba(100, 255, 180, 0.6)');
     lumGrad.addColorStop(1, 'rgba(200, 255, 220, 0.3)');
-    
+
     ctx.fillStyle = lumGrad;
     ctx.beginPath();
     ctx.moveTo(0, h);
-    
+
     for (let i = 0; i < 256; i++) {
       const x = i * binWidth;
       const val = this.gaussianSmooth(histData.lum, i, 3);
@@ -22184,7 +22211,7 @@ class VirtualStudio {
     ctx.lineTo(w, h);
     ctx.closePath();
     ctx.fill();
-    
+
     // Add glow effect
     ctx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
     ctx.lineWidth = 2;
@@ -22198,27 +22225,27 @@ class VirtualStudio {
     }
     ctx.stroke();
   }
-  
+
   private drawRGBParade(ctx: CanvasRenderingContext2D, histData: typeof this.histogramSmoothed,
                          getHeight: (v: number) => number, w: number, h: number, _binWidth: number): void {
     // Split into 3 sections for R, G, B
     const sectionWidth = w / 3;
     const sectionBinWidth = sectionWidth / 256;
-    
+
     const channels = [
       { data: histData.r, color: 'rgba(255, 80, 80, 0.85)', outline: 'rgba(255, 120, 120, 0.9)' },
       { data: histData.g, color: 'rgba(80, 255, 80, 0.75)', outline: 'rgba(120, 255, 120, 0.85)' },
       { data: histData.b, color: 'rgba(100, 100, 255, 0.85)', outline: 'rgba(140, 140, 255, 0.9)' }
     ];
-    
+
     channels.forEach((channel, idx) => {
       const offsetX = idx * sectionWidth;
-      
+
       // Draw channel histogram
       ctx.fillStyle = channel.color;
       ctx.beginPath();
       ctx.moveTo(offsetX, h);
-      
+
       for (let i = 0; i < 256; i++) {
         const x = offsetX + i * sectionBinWidth;
         const val = this.gaussianSmooth(channel.data, i, 2);
@@ -22228,7 +22255,7 @@ class VirtualStudio {
       ctx.lineTo(offsetX + sectionWidth, h);
       ctx.closePath();
       ctx.fill();
-      
+
       // Outline
       ctx.strokeStyle = channel.outline;
       ctx.lineWidth = 1;
@@ -22241,7 +22268,7 @@ class VirtualStudio {
         else ctx.lineTo(x, h - barHeight);
       }
       ctx.stroke();
-      
+
       // Section divider
       if (idx < 2) {
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
@@ -22251,7 +22278,7 @@ class VirtualStudio {
         ctx.stroke();
       }
     });
-    
+
     // Channel labels
     ctx.font = '10px "SF Mono", Monaco, monospace';
     ctx.fillStyle = 'rgba(255, 100, 100, 0.9)';
@@ -22261,19 +22288,19 @@ class VirtualStudio {
     ctx.fillStyle = 'rgba(140, 140, 255, 0.9)';
     ctx.fillText('B', sectionWidth * 2 + 4, 14);
   }
-  
+
   private drawParadeHistogram(ctx: CanvasRenderingContext2D, histData: typeof this.histogramSmoothed,
                                getHeight: (v: number) => number, w: number, h: number, binWidth: number): void {
     // Stacked parade: Luma on top, RGB below
     const lumaHeight = h * 0.4;
     const rgbHeight = h * 0.55;
     const gap = h * 0.05;
-    
+
     // Draw Luma
     const lumGrad = ctx.createLinearGradient(0, lumaHeight, 0, 0);
     lumGrad.addColorStop(0, 'rgba(200, 200, 220, 0.9)');
     lumGrad.addColorStop(1, 'rgba(255, 255, 255, 0.5)');
-    
+
     ctx.fillStyle = lumGrad;
     ctx.beginPath();
     ctx.moveTo(0, lumaHeight);
@@ -22286,17 +22313,17 @@ class VirtualStudio {
     ctx.lineTo(w, lumaHeight);
     ctx.closePath();
     ctx.fill();
-    
+
     // Draw RGB overlaid below
     const rgbTop = lumaHeight + gap;
     ctx.globalCompositeOperation = 'screen';
-    
+
     const rgbChannels = [
       { data: histData.r, color: 'rgba(255, 60, 60, 0.7)' },
       { data: histData.g, color: 'rgba(60, 255, 60, 0.6)' },
       { data: histData.b, color: 'rgba(80, 80, 255, 0.7)' }
     ];
-    
+
     rgbChannels.forEach(channel => {
       ctx.fillStyle = channel.color;
       ctx.beginPath();
@@ -22311,16 +22338,16 @@ class VirtualStudio {
       ctx.closePath();
       ctx.fill();
     });
-    
+
     ctx.globalCompositeOperation = 'source-over';
-    
+
     // Labels
     ctx.font = '9px "SF Mono", Monaco, monospace';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
     ctx.fillText('Y', 4, 12);
     ctx.fillText('RGB', 4, rgbTop + 12);
   }
-  
+
   private drawChannelFill(ctx: CanvasRenderingContext2D, data: number[], getHeight: (v: number) => number,
                            color: string, w: number, h: number, binWidth: number): void {
     ctx.fillStyle = color;
@@ -22336,7 +22363,7 @@ class VirtualStudio {
     ctx.closePath();
     ctx.fill();
   }
-  
+
   private drawChannelOutline(ctx: CanvasRenderingContext2D, data: number[], getHeight: (v: number) => number,
                               color: string, _w: number, h: number, binWidth: number): void {
     ctx.strokeStyle = color;
@@ -22350,7 +22377,7 @@ class VirtualStudio {
     }
     ctx.stroke();
   }
-  
+
   private gaussianSmooth(data: number[], index: number, radius: number): number {
     // Simple Gaussian smoothing for professional look
     let sum = 0;
@@ -22363,7 +22390,7 @@ class VirtualStudio {
     }
     return sum / weight;
   }
-  
+
   private drawClippingWarnings(ctx: CanvasRenderingContext2D, w: number, h: number): void {
     // Animated shadow clipping warning
     if (this.shadowClipping > 2) {
@@ -22374,14 +22401,14 @@ class VirtualStudio {
       shadowGrad.addColorStop(1, 'rgba(0, 100, 255, 0)');
       ctx.fillStyle = shadowGrad;
       ctx.fillRect(0, 0, 30, h);
-      
+
       // Warning indicator
       ctx.fillStyle = `rgba(80, 150, 255, ${0.9 * pulse})`;
       ctx.beginPath();
       ctx.arc(8, h - 12, 4, 0, Math.PI * 2);
       ctx.fill();
     }
-    
+
     // Animated highlight clipping warning
     if (this.highlightClipping > 1) {
       const intensity = Math.min(this.highlightClipping / 5, 1);
@@ -22391,7 +22418,7 @@ class VirtualStudio {
       hlGrad.addColorStop(1, `rgba(255, 80, 0, ${0.5 * intensity * pulse})`);
       ctx.fillStyle = hlGrad;
       ctx.fillRect(w - 30, 0, 30, h);
-      
+
       // Warning indicator
       ctx.fillStyle = `rgba(255, 150, 80, ${0.9 * pulse})`;
       ctx.beginPath();
@@ -22399,16 +22426,16 @@ class VirtualStudio {
       ctx.fill();
     }
   }
-  
+
   private drawExposureStats(ctx: CanvasRenderingContext2D, w: number, h: number): void {
     ctx.font = '9px "SF Mono", Monaco, monospace';
-    
+
     // Shadow percentage
     if (this.shadowClipping > 0.5) {
       ctx.fillStyle = this.shadowClipping > 5 ? '#ff6666' : '#6699ff';
       ctx.fillText(`${this.shadowClipping.toFixed(1)}%`, 3, 12);
     }
-    
+
     // Highlight percentage
     if (this.highlightClipping > 0.5) {
       ctx.fillStyle = this.highlightClipping > 3 ? '#ff6666' : '#ffaa66';
@@ -22416,13 +22443,13 @@ class VirtualStudio {
       ctx.fillText(`${this.highlightClipping.toFixed(1)}%`, w - 3, 12);
       ctx.textAlign = 'left';
     }
-    
+
     // Midtone exposure indicator (18% gray reference)
     const exposureStops = ((this.midtoneExposure - 118) / 118) * 5; // Convert to stops from 18% gray
     const expText = exposureStops >= 0 ? `+${exposureStops.toFixed(1)}` : exposureStops.toFixed(1);
     const expColor = Math.abs(exposureStops) < 0.5 ? '#00ff88' : 
                      Math.abs(exposureStops) < 1 ? '#ffcc00' : '#ff6666';
-    
+
     ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
     ctx.fillRect(w / 2 - 25, h - 16, 50, 14);
     ctx.fillStyle = expColor;
@@ -22452,11 +22479,11 @@ class VirtualStudio {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
     ctx.lineWidth = 1;
     ctx.font = '8px "SF Mono", Monaco, monospace';
-    
+
     const ireValues = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
     ireValues.forEach(ire => {
       const py = topMargin + waveHeight - (ire / 100) * waveHeight;
-      
+
       // Grid line
       ctx.strokeStyle = ire === 0 || ire === 100 ? 'rgba(255, 255, 255, 0.15)' : 
                         ire === 70 ? 'rgba(255, 200, 150, 0.2)' : 'rgba(255, 255, 255, 0.06)';
@@ -22464,14 +22491,14 @@ class VirtualStudio {
       ctx.moveTo(leftMargin, py);
       ctx.lineTo(w - 4, py);
       ctx.stroke();
-      
+
       // Label
       if (ire % 20 === 0 || ire === 70) {
         ctx.fillStyle = ire === 70 ? 'rgba(255, 200, 150, 0.7)' : 'rgba(255, 255, 255, 0.4)';
         ctx.fillText(`${ire}`, 2, py + 3);
       }
     });
-    
+
     // Draw warning zones
     // Super-white zone (>100 IRE) - broadcast illegal
     const superWhiteGrad = ctx.createLinearGradient(0, topMargin, 0, topMargin + waveHeight * 0.05);
@@ -22479,7 +22506,7 @@ class VirtualStudio {
     superWhiteGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
     ctx.fillStyle = superWhiteGrad;
     ctx.fillRect(leftMargin, topMargin, waveWidth, waveHeight * 0.05);
-    
+
     // Sub-black zone (<0 IRE)
     const subBlackGrad = ctx.createLinearGradient(0, topMargin + waveHeight * 0.95, 0, topMargin + waveHeight);
     subBlackGrad.addColorStop(0, 'rgba(0, 0, 255, 0)');
@@ -22491,22 +22518,22 @@ class VirtualStudio {
     const histData = this.histogramSmoothed;
     const maxVal = Math.max(...histData.lum.slice(2, 253), 1);
     const binWidth = waveWidth / 256;
-    
+
     // Create waveform trace using luminance distribution
     // Each column shows the intensity distribution at that brightness level
     ctx.globalCompositeOperation = 'lighter';
-    
+
     for (let lumLevel = 0; lumLevel < 256; lumLevel++) {
       const count = histData.lum[lumLevel];
       if (count < maxVal * 0.005) continue; // Skip very low counts
-      
+
       const x = leftMargin + lumLevel * binWidth;
       const ire = (lumLevel / 255) * 100;
       const y = topMargin + waveHeight - (ire / 100) * waveHeight;
-      
+
       // Intensity based on pixel count
       const intensity = Math.pow(count / maxVal, 0.6); // Gamma for visibility
-      
+
       // Color coding by IRE level (like SmallHD monitors)
       let r: number, g: number, b: number;
       if (ire > 95) {
@@ -22525,23 +22552,23 @@ class VirtualStudio {
         // Normal - green phosphor style
         r = 0; g = 180 + intensity * 75; b = 100 + intensity * 80;
       }
-      
+
       const alpha = 0.15 + intensity * 0.7;
       ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
-      
+
       // Draw trace with variable thickness based on intensity
       const thickness = 2 + intensity * 4;
       ctx.fillRect(x, y - thickness/2, binWidth + 0.5, thickness);
-      
+
       // Add glow for high intensity
       if (intensity > 0.5) {
         ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${intensity * 0.3})`;
         ctx.fillRect(x - 1, y - thickness, binWidth + 2, thickness * 2);
       }
     }
-    
+
     ctx.globalCompositeOperation = 'source-over';
-    
+
     // Skin tone reference line at 70 IRE
     ctx.strokeStyle = 'rgba(255, 200, 150, 0.5)';
     ctx.lineWidth = 1;
@@ -22552,7 +22579,7 @@ class VirtualStudio {
     ctx.lineTo(w - 4, skinY);
     ctx.stroke();
     ctx.setLineDash([]);
-    
+
     // Stats overlay
     ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
     ctx.fillRect(w - 60, h - 28, 56, 24);
@@ -22586,7 +22613,7 @@ class VirtualStudio {
       ctx.beginPath();
       ctx.arc(cx, cy, radius * scale, 0, Math.PI * 2);
       ctx.stroke();
-      
+
       // Label at 75% ring
       if (scale === 0.75) {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
@@ -22614,17 +22641,17 @@ class VirtualStudio {
       { name: 'G', angle: -165.2, sat: 0.75, color: '#44ff44' },
       { name: 'Yl', angle: 167.1, sat: 0.75, color: '#ffff44' }
     ];
-    
+
     colorTargets.forEach(target => {
       const rad = (target.angle * Math.PI) / 180;
       const tx = cx + Math.cos(rad) * radius * target.sat;
       const ty = cy - Math.sin(rad) * radius * target.sat;
-      
+
       // Target box
       ctx.strokeStyle = target.color;
       ctx.lineWidth = 1.5;
       ctx.strokeRect(tx - 5, ty - 5, 10, 10);
-      
+
       // Inner crosshair
       ctx.beginPath();
       ctx.moveTo(tx - 3, ty);
@@ -22632,7 +22659,7 @@ class VirtualStudio {
       ctx.moveTo(tx, ty - 3);
       ctx.lineTo(tx, ty + 3);
       ctx.stroke();
-      
+
       // Label
       ctx.fillStyle = target.color;
       ctx.font = '8px "SF Mono", Monaco, monospace';
@@ -22651,7 +22678,7 @@ class VirtualStudio {
     ctx.moveTo(cx, cy);
     ctx.lineTo(cx + Math.cos(skinAngle) * radius * 0.95, cy - Math.sin(skinAngle) * radius * 0.95);
     ctx.stroke();
-    
+
     // Skin tone tolerance zone (±10°)
     ctx.fillStyle = 'rgba(255, 200, 150, 0.08)';
     ctx.beginPath();
@@ -22659,7 +22686,7 @@ class VirtualStudio {
     ctx.arc(cx, cy, radius * 0.95, -(133 * Math.PI) / 180, -(113 * Math.PI) / 180);
     ctx.closePath();
     ctx.fill();
-    
+
     // I-line label
     ctx.fillStyle = 'rgba(255, 200, 150, 0.8)';
     ctx.font = '9px "SF Mono", Monaco, monospace';
@@ -22668,48 +22695,48 @@ class VirtualStudio {
     // Plot actual color distribution using RGB histogram data
     // We need to convert histogram data to approximate chrominance values
     ctx.globalCompositeOperation = 'lighter';
-    
+
     const maxCount = Math.max(
       Math.max(...this.histogramSmoothed.r.slice(10, 245)),
       Math.max(...this.histogramSmoothed.g.slice(10, 245)),
       Math.max(...this.histogramSmoothed.b.slice(10, 245)),
       1
     );
-    
+
     // Plot chrominance for each brightness level
     for (let lum = 20; lum < 240; lum += 2) {
       const rCount = this.histogramSmoothed.r[lum];
       const gCount = this.histogramSmoothed.g[lum];
       const bCount = this.histogramSmoothed.b[lum];
-      
+
       const totalCount = rCount + gCount + bCount;
       if (totalCount < maxCount * 0.01) continue;
-      
+
       // Calculate approximate chrominance from channel imbalance
       // This is a simplified model - real vectorscopes read per-pixel Cb/Cr
       const rNorm = lum / 255;
       const gNorm = lum / 255;
       const bNorm = lum / 255;
       void rNorm; void gNorm; void bNorm; // Reference normalized luminance values for debug
-      
+
       // Weighted contribution based on channel counts
       const rWeight = rCount / (totalCount + 1);
       const gWeight = gCount / (totalCount + 1);
       const bWeight = bCount / (totalCount + 1);
-      
+
       // Calculate Cb (U) and Cr (V) from weighted RGB
       // Cb = 0.564 * (B - Y), Cr = 0.713 * (R - Y)
       const y = 0.299 * rWeight + 0.587 * gWeight + 0.114 * bWeight;
       const cb = 0.564 * (bWeight - y);
       const cr = 0.713 * (rWeight - y);
-      
+
       // Map to vectorscope coordinates
       const u = cb * radius * 3.5;
       const v = cr * radius * 3.5;
-      
+
       const intensity = Math.min(totalCount / maxCount, 1);
       const size = 1 + intensity * 3;
-      
+
       // Color based on dominant channel
       let color: string;
       if (rWeight > gWeight && rWeight > bWeight) {
@@ -22721,15 +22748,15 @@ class VirtualStudio {
       } else {
         color = `rgba(200, 200, 200, ${0.2 + intensity * 0.4})`;
       }
-      
+
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.arc(cx + u, cy - v, size, 0, Math.PI * 2);
       ctx.fill();
     }
-    
+
     ctx.globalCompositeOperation = 'source-over';
-    
+
     // Center dot (neutral)
     ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
     ctx.beginPath();
@@ -22753,7 +22780,7 @@ class VirtualStudio {
     const vsRadius = Math.min(w * 0.35, h * 0.4);
     const vsCx = w * 0.3;
     const vsCy = h * 0.5;
-    
+
     // Draw mini vectorscope background
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
     ctx.lineWidth = 1;
@@ -22763,10 +22790,10 @@ class VirtualStudio {
     ctx.beginPath();
     ctx.arc(vsCx, vsCy, vsRadius * 0.5, 0, Math.PI * 2);
     ctx.stroke();
-    
+
     // Draw skin tone I-line with tolerance zone
     const skinAngle = (123 * Math.PI) / 180;
-    
+
     // Tolerance zone (±15° for all skin tones)
     ctx.fillStyle = 'rgba(255, 200, 150, 0.15)';
     ctx.beginPath();
@@ -22774,7 +22801,7 @@ class VirtualStudio {
     ctx.arc(vsCx, vsCy, vsRadius, -(138 * Math.PI) / 180, -(108 * Math.PI) / 180);
     ctx.closePath();
     ctx.fill();
-    
+
     // I-line
     ctx.strokeStyle = 'rgba(255, 200, 150, 0.8)';
     ctx.lineWidth = 2;
@@ -22782,65 +22809,65 @@ class VirtualStudio {
     ctx.moveTo(vsCx, vsCy);
     ctx.lineTo(vsCx + Math.cos(skinAngle) * vsRadius, vsCy - Math.sin(skinAngle) * vsRadius);
     ctx.stroke();
-    
+
     // Plot chrominance data in skin tone zone
     ctx.globalCompositeOperation = 'lighter';
     const maxCount = Math.max(...this.histogramSmoothed.r.slice(30, 220), 1);
-    
+
     let skinTonePixels = 0;
     let totalPixels = 0;
-    
+
     for (let lum = 40; lum < 220; lum += 3) {
       const rCount = this.histogramSmoothed.r[lum];
       const gCount = this.histogramSmoothed.g[lum];
       const bCount = this.histogramSmoothed.b[lum];
       const total = rCount + gCount + bCount;
       if (total < maxCount * 0.02) continue;
-      
+
       totalPixels += total;
-      
+
       // Calculate chrominance angle
       const rWeight = rCount / (total + 1);
       const gWeight = gCount / (total + 1);
       const bWeight = bCount / (total + 1);
-      
+
       const y = 0.299 * rWeight + 0.587 * gWeight + 0.114 * bWeight;
       const cb = 0.564 * (bWeight - y);
       const cr = 0.713 * (rWeight - y);
-      
+
       const angle = Math.atan2(cr, cb) * (180 / Math.PI);
       const sat = Math.sqrt(cb * cb + cr * cr);
       void sat; // Saturation metric stored for potential per-pixel filtering
-      
+
       // Check if in skin tone zone (108° to 138°)
       const normalizedAngle = ((angle % 360) + 360) % 360;
       const isInSkinZone = normalizedAngle >= 108 && normalizedAngle <= 138;
-      
+
       if (isInSkinZone) {
         skinTonePixels += total;
       }
-      
+
       // Plot point
       const u = cb * vsRadius * 4;
       const v = cr * vsRadius * 4;
       const intensity = Math.min(total / maxCount, 1);
-      
+
       ctx.fillStyle = isInSkinZone 
         ? `rgba(255, 200, 150, ${0.4 + intensity * 0.5})`
         : `rgba(100, 150, 200, ${0.2 + intensity * 0.3})`;
-      
+
       ctx.beginPath();
       ctx.arc(vsCx + u, vsCy - v, 2 + intensity * 2, 0, Math.PI * 2);
       ctx.fill();
     }
-    
+
     ctx.globalCompositeOperation = 'source-over';
-    
+
     // Right side: Skin tone luminance guide
     const guideX = w * 0.55;
     const guideW = w * 0.4;
     const guideH = h - 20;
-    
+
     // Fitzpatrick skin tone scale with luminance ranges
     const skinTones = [
       { name: 'Type I', range: [75, 90], color: '#ffe0d0', textColor: '#333' },
@@ -22850,36 +22877,36 @@ class VirtualStudio {
       { name: 'Type V', range: [35, 50], color: '#6b4423', textColor: '#fff' },
       { name: 'Type VI', range: [20, 40], color: '#3d2314', textColor: '#fff' }
     ];
-    
+
     const zoneH = guideH / skinTones.length;
-    
+
     skinTones.forEach((tone, i) => {
       const y = 10 + i * zoneH;
-      
+
       // Background
       ctx.fillStyle = tone.color;
       ctx.fillRect(guideX, y, 25, zoneH - 2);
-      
+
       // IRE range bar
       const ireMin = tone.range[0];
       const ireMax = tone.range[1];
       const barY = y + 4;
       const barH = zoneH - 10;
-      
+
       ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
       ctx.fillRect(guideX + 30, barY, guideW - 35, barH);
-      
+
       // Optimal zone highlight
       const optStart = ((ireMin - 20) / 80) * (guideW - 35);
       const optWidth = ((ireMax - ireMin) / 80) * (guideW - 35);
       ctx.fillStyle = 'rgba(255, 200, 150, 0.3)';
       ctx.fillRect(guideX + 30 + optStart, barY, optWidth, barH);
-      
+
       // Label
       ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
       ctx.font = '9px "SF Mono", Monaco, monospace';
       ctx.fillText(tone.name, guideX + 30, y + zoneH / 2 + 3);
-      
+
       // IRE values
       ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
       ctx.font = '8px "SF Mono", Monaco, monospace';
@@ -22887,7 +22914,7 @@ class VirtualStudio {
       ctx.fillText(`${ireMin}-${ireMax}%`, guideX + guideW - 2, y + zoneH / 2 + 3);
       ctx.textAlign = 'left';
     });
-    
+
     // Skin tone percentage indicator
     const skinPercent = totalPixels > 0 ? (skinTonePixels / totalPixels) * 100 : 0;
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -22916,11 +22943,11 @@ class VirtualStudio {
     const meterW = 20;
     const meterH = h - 20;
     const meterTop = 10;
-    
+
     // Meter background
     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
     ctx.fillRect(meterX, meterTop, meterW, meterH);
-    
+
     // Exposure zones with zebra-style diagonal patterns
     const zones = [
       { name: 'CLIP', min: 100, max: 110, color: '#ff0000', stripeColor: '#ff4444' },
@@ -22931,64 +22958,64 @@ class VirtualStudio {
       { name: '30%', min: 15, max: 40, color: '#0066aa', stripeColor: '#3388cc' },
       { name: 'BLACK', min: 0, max: 15, color: '#2244aa', stripeColor: '#4466cc' }
     ];
-    
+
     zones.forEach(zone => {
       const y1 = meterTop + meterH - (zone.max / 110) * meterH;
       const y2 = meterTop + meterH - (zone.min / 110) * meterH;
       const zoneH = y2 - y1;
-      
+
       // Zone fill
       ctx.fillStyle = zone.color;
       ctx.fillRect(meterX, y1, meterW, zoneH);
     });
-    
+
     // Draw zebra pattern preview in main area
     const previewX = 40;
     const previewW = w - 50;
     const previewH = h - 20;
     const previewTop = 10;
-    
+
     // Calculate luminance distribution for zebra preview
     const histData = this.histogramSmoothed;
     const maxVal = Math.max(...histData.lum.slice(5, 250), 1);
-    
+
     // Create zebra stripe pattern
     const stripeWidth = 4;
     const stripeAngle = 45 * (Math.PI / 180);
     void stripeAngle; // Angle for diagonal zebra stripe pattern rendering
-    
+
     // Draw luminance distribution as horizontal bands with zebra patterns
     zones.forEach((zone, _zoneIdx) => {
       const y1 = previewTop + previewH - (zone.max / 110) * previewH;
       const y2 = previewTop + previewH - (zone.min / 110) * previewH;
       const zoneH = y2 - y1;
-      
+
       // Calculate how much of the image is in this zone
       let zonePixels = 0;
       const minBin = Math.floor((zone.min / 100) * 255);
       const maxBin = Math.min(255, Math.ceil((zone.max / 100) * 255));
-      
+
       for (let i = minBin; i <= maxBin; i++) {
         zonePixels += histData.lum[i];
       }
-      
+
       const zoneIntensity = zonePixels / maxVal;
-      
+
       // Background
       ctx.fillStyle = `rgba(${parseInt(zone.color.slice(1, 3), 16)}, ${parseInt(zone.color.slice(3, 5), 16)}, ${parseInt(zone.color.slice(5, 7), 16)}, 0.15)`;
       ctx.fillRect(previewX, y1, previewW, zoneH);
-      
+
       // Draw zebra stripes if zone has significant content
       if (zoneIntensity > 0.05) {
         ctx.save();
         ctx.beginPath();
         ctx.rect(previewX, y1, previewW * Math.min(zoneIntensity * 3, 1), zoneH);
         ctx.clip();
-        
+
         // Draw diagonal stripes
         ctx.strokeStyle = zone.stripeColor;
         ctx.lineWidth = 2;
-        
+
         const numStripes = Math.ceil((previewW + zoneH) / stripeWidth / 2);
         for (let i = -numStripes; i < numStripes * 2; i++) {
           const startX = previewX + i * stripeWidth * 2;
@@ -22997,15 +23024,15 @@ class VirtualStudio {
           ctx.lineTo(startX + zoneH, y1);
           ctx.stroke();
         }
-        
+
         ctx.restore();
       }
-      
+
       // Zone label and percentage
       ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
       ctx.font = '9px "SF Mono", Monaco, monospace';
       ctx.fillText(zone.name, previewX + 4, y1 + zoneH / 2 + 3);
-      
+
       if (zoneIntensity > 0.01) {
         const percent = (zoneIntensity * 100 / 3).toFixed(1); // Normalize to rough percentage
         ctx.fillStyle = zone.color;
@@ -23014,12 +23041,12 @@ class VirtualStudio {
         ctx.textAlign = 'left';
       }
     });
-    
+
     // Draw grid lines at key IRE levels
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
     ctx.lineWidth = 1;
     ctx.setLineDash([2, 4]);
-    
+
     [70, 100].forEach(ire => {
       const y = previewTop + previewH - (ire / 110) * previewH;
       ctx.beginPath();
@@ -23028,13 +23055,13 @@ class VirtualStudio {
       ctx.stroke();
     });
     ctx.setLineDash([]);
-    
+
     // Clipping warning at top
     if (this.highlightClipping > 0.5) {
       const pulse = 0.6 + 0.4 * Math.sin(performance.now() / 200);
       ctx.fillStyle = `rgba(255, 0, 0, ${0.3 * pulse})`;
       ctx.fillRect(previewX, previewTop, previewW, 15);
-      
+
       ctx.fillStyle = '#ff4444';
       ctx.font = 'bold 10px "SF Mono", Monaco, monospace';
       ctx.textAlign = 'center';
@@ -23116,7 +23143,7 @@ class VirtualStudio {
   private reassignMonitorRTTSettings(presetId: string): void {
     const preset = this.cameraPresets.get(presetId);
     if (!preset) return;
-    
+
     // Get current visible meshes - exclude camera preset meshes from RTT
     const visibleMeshes = this.scene.meshes.filter(mesh => 
       mesh.isVisible && 
@@ -23125,14 +23152,14 @@ class VirtualStudio {
       !mesh.name.startsWith('__') &&
       !mesh.name.startsWith('camera-')  // Exclude camera preset meshes from monitor view
     );
-    
+
     // Create RTT if it doesn't exist yet - this fixes the "no signal" issue
     // when activating a camera before updateMonitorCanvases has run
     let renderTarget = this.monitorRenderTargets.get(presetId);
     let monitorCamera = this.monitorCameras.get(presetId);
     const monitorCanvas = document.querySelector(`.monitor-canvas[data-preset="${presetId}"]`) as HTMLCanvasElement | null;
     const renderTargetSize = this.getMonitorRenderTargetSize(monitorCanvas);
-    
+
     let cameraJustCreated = false;
     if (!monitorCamera) {
       // Create monitor camera from preset
@@ -23149,17 +23176,17 @@ class VirtualStudio {
       monitorCamera.fov = preset.fov;
       monitorCamera.minZ = 0.1;
       monitorCamera.maxZ = 1000;
-      
+
       // DO NOT call rebuildAnglesAndRadius() - it recalculates angles FROM position, not the other way around
       // The constructor already set up the camera correctly from the spherical coordinates
-      
+
       // CRITICAL: Detach control so user input doesn't affect monitor camera
       monitorCamera.detachControl();
       this.monitorCameras.set(presetId, monitorCamera);
       cameraJustCreated = true;
       console.log(`[Monitor] Created camera for ${presetId} - alpha=${preset.alpha.toFixed(2)}, beta=${preset.beta.toFixed(2)}, radius=${preset.radius.toFixed(2)}, pos=${monitorCamera.position.toString()}`);
     }
-    
+
     // NOTE: Camera parameters are ONLY set when the camera is created.
     // This function does NOT update existing camera parameters!
     // To update an existing monitor camera's perspective, call updateMonitorCameraFromPreset() instead.
@@ -23170,7 +23197,7 @@ class VirtualStudio {
     } else {
       console.log(`[Monitor] ${presetId}: Using existing camera values (alpha=${monitorCamera.alpha.toFixed(2)}, beta=${monitorCamera.beta.toFixed(2)})`);
     }
-    
+
     if (!renderTarget) {
       // Create RTT for this preset
       renderTarget = new BABYLON.RenderTargetTexture(
@@ -23182,13 +23209,13 @@ class VirtualStudio {
         BABYLON.Engine.TEXTURETYPE_UNSIGNED_INT
       );
       this.monitorRenderTargets.set(presetId, renderTarget);
-      
+
       // Add to scene's custom render targets
       if (this.scene.customRenderTargets.indexOf(renderTarget) === -1) {
         this.scene.customRenderTargets.push(renderTarget);
         console.log(`[Monitor] Added RTT ${presetId} to customRenderTargets during reassign`);
       }
-      
+
       // Monitor if RTT gets disposed
       renderTarget.onDisposeObservable.addOnce(() => {
         console.warn(`[Monitor] WARNING: RTT ${presetId} was disposed!`);
@@ -23199,39 +23226,39 @@ class VirtualStudio {
         this.monitorTempFramebuffers.delete(presetId);
         this.monitorLoggedWarnings.delete(presetId);
       });
-      
+
       console.log(`[Monitor] Created RTT for ${presetId} during reassign`);
     }
 
     this.ensureMonitorRenderTargetSize(presetId, renderTarget, monitorCanvas);
-    
+
     // HARD RE-ASSIGN: Force these settings back to correct values
     // These assignments are idempotent - safe to call multiple times
     renderTarget.activeCamera = monitorCamera;
     renderTarget.renderList = visibleMeshes;
     renderTarget.refreshRate = BABYLON.RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME;
-    
+
     // DEBUG: Log camera comparison to verify RTT is using preset camera, not main camera
     console.log(`[Monitor] ${presetId}: RTT camera = ${monitorCamera.name}, alpha=${monitorCamera.alpha.toFixed(2)}, beta=${monitorCamera.beta.toFixed(2)}, radius=${monitorCamera.radius.toFixed(2)}`);
     console.log(`[Monitor] ${presetId}: Main camera = ${this.camera.name}, alpha=${this.camera.alpha.toFixed(2)}, beta=${this.camera.beta.toFixed(2)}, radius=${this.camera.radius.toFixed(2)}`);
-    
+
     // Update tracked renderList length (for change detection in updateMonitorCanvases)
     this.monitorLastRenderListLength.set(presetId, visibleMeshes.length);
-    
+
     // Hide "no signal" overlay since we now have a valid setup
     const noSignal = document.querySelector(`.monitor-no-signal[data-preset="${presetId}"]`) as HTMLElement;
     if (noSignal) {
       noSignal.style.display = 'none';
     }
   }
-  
+
   private updateMonitorCanvases(): void {
     // Update monitor canvases less frequently for performance (every 3 frames)
     this.monitorFrameCount++;
     if (this.monitorFrameCount % 3 !== 0) return;
 
     const presetIds = ['camA', 'camB', 'camC', 'camD', 'camE'];
-    
+
     // Filter visible meshes - critical for RTT to work!
     // According to checklist: "Hvis renderList er tom og du ikke har aktiv renderParticles/renderSprites-oppsett, blir resultatet typisk 'ingenting'."
     // CRITICAL: Exclude camera preset meshes (camera-camA-body, etc.) from RTT - they would block the view
@@ -23242,7 +23269,7 @@ class VirtualStudio {
       !mesh.name.startsWith('__') &&
       !mesh.name.startsWith('camera-')  // Exclude camera preset meshes from monitor view
     );
-    
+
     if (visibleMeshes.length === 0) {
       // No visible meshes to render - show "no signal" for all
       for (const presetId of presetIds) {
@@ -23251,7 +23278,7 @@ class VirtualStudio {
       }
       return;
     }
-    
+
     for (const presetId of presetIds) {
       const preset = this.cameraPresets.get(presetId);
       if (!preset) {
@@ -23271,7 +23298,7 @@ class VirtualStudio {
       if (!renderTarget) {
         console.log(`[Monitor] Creating RTT for ${presetId}`);
         const renderTargetSize = this.getMonitorRenderTargetSize(monitorCanvas);
-        
+
         renderTarget = new BABYLON.RenderTargetTexture(
           `monitor-${presetId}`,
           renderTargetSize,
@@ -23281,7 +23308,7 @@ class VirtualStudio {
           BABYLON.Engine.TEXTURETYPE_UNSIGNED_INT
         );
         this.monitorRenderTargets.set(presetId, renderTarget);
-        
+
         // Create or get camera for this preset
         let monitorCamera = this.monitorCameras.get(presetId);
         if (!monitorCamera) {
@@ -23298,20 +23325,20 @@ class VirtualStudio {
           monitorCamera.fov = preset.fov;
           monitorCamera.minZ = 0.1;
           monitorCamera.maxZ = 1000;
-          
+
           // DO NOT call rebuildAnglesAndRadius() - it recalculates angles FROM position
-          
+
           monitorCamera.detachControl();
           this.monitorCameras.set(presetId, monitorCamera);
           console.log(`[Monitor] Created camera ${presetId} in updateMonitorCanvases - alpha=${preset.alpha.toFixed(2)}, beta=${preset.beta.toFixed(2)}, pos=${monitorCamera.position.toString()}`);
         }
-        
+
         // CRITICAL: HARD LOCK activeCamera, renderList, and refreshRate at creation
         // These settings MUST remain correct for RTT to render continuously
         if (renderTarget) {
           renderTarget.activeCamera = monitorCamera;
           renderTarget.renderList = visibleMeshes;
-          
+
           // DEBUG: Add onBeforeRender to verify correct camera is being used
           renderTarget.onBeforeRenderObservable.addOnce(() => {
             const activeCam = renderTarget?.activeCamera;
@@ -23319,11 +23346,11 @@ class VirtualStudio {
           });
           // HARD LOCK: Force refreshRate to render every frame - DO NOT ALLOW THIS TO CHANGE
           renderTarget.refreshRate = BABYLON.RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME;
-          
+
           // Track initial renderList length for change detection
           this.monitorLastRenderListLength.set(presetId, visibleMeshes.length);
         }
-        
+
         // Add to scene's custom render targets so it gets rendered
         // CRITICAL: RTT must stay in customRenderTargets or signals will disappear
         // This is REQUIRED according to checklist: "scene.customRenderTargets.push(rtt)"
@@ -23331,7 +23358,7 @@ class VirtualStudio {
           this.scene.customRenderTargets.push(renderTarget);
           console.log(`[Monitor] Added RTT ${presetId} to customRenderTargets`);
         }
-        
+
         // Monitor if RTT gets disposed (shouldn't happen)
         // This is diagnostic - helps identify lifecycle/cleanup issues
         renderTarget.onDisposeObservable.addOnce(() => {
@@ -23345,14 +23372,14 @@ class VirtualStudio {
           this.monitorTempFramebuffers.delete(presetId);
           this.monitorLoggedWarnings.delete(presetId);
         });
-        
+
         // Set up pixel reading callback AFTER render completes
         // CRITICAL: Only register callbacks once to avoid duplicates
         // Duplicate callbacks can cause signals to flicker or disappear
         if (!this.monitorCallbacksRegistered.get(presetId)) {
           const targetRenderTarget = renderTarget; // Capture for closure
           const targetPresetId = presetId; // Capture for closure
-          
+
           // Wait for first render to ensure framebuffer is created
           // CRITICAL: If this never fires, RTT is not rendering (check renderList, customRenderTargets, refreshRate)
           const firstRenderTimeout = setTimeout(() => {
@@ -23360,13 +23387,13 @@ class VirtualStudio {
               console.error(`[Monitor] ${targetPresetId}: onAfterRenderObservable never fired! This indicates RTT is not rendering. Check: renderList=${targetRenderTarget.renderList?.length || 0} meshes, in customRenderTargets=${this.scene.customRenderTargets.indexOf(targetRenderTarget) !== -1}, refreshRate=${targetRenderTarget.refreshRate}`);
             }
           }, 5000); // 5 second timeout
-          
+
           targetRenderTarget.onAfterRenderObservable.addOnce(() => {
             clearTimeout(firstRenderTimeout);
             this.monitorFirstRenderComplete.set(targetPresetId, true);
             console.log(`[Monitor] ${targetPresetId}: First render complete, framebuffer should be ready`);
           });
-          
+
         // Set up ongoing pixel reading after each render
         // CRITICAL: Read pixels immediately in callback - onAfterRenderObservable fires after render is complete
         const pixelReadCallback = () => {
@@ -23374,95 +23401,95 @@ class VirtualStudio {
           if (!this.monitorFirstRenderComplete.get(targetPresetId)) {
             return;
           }
-          
+
           // Skip if context was lost (will be handled by context restore handler)
           if (this.monitorContextLost) {
             return;
           }
-          
+
           const canvas = document.querySelector(`.monitor-canvas[data-preset="${targetPresetId}"]`) as HTMLCanvasElement;
           if (!canvas) {
             // Canvas removed - skip this frame, it might come back
             return;
           }
-          
+
           const ctx = canvas.getContext('2d', { willReadFrequently: true });
           if (!ctx) {
             // 2D context lost - skip this frame, it might recover
             return;
           }
-          
+
           const size = targetRenderTarget.getSize();
           const width = size.width;
           const height = size.height;
-          
+
           // Only update canvas size if it changed (performance optimization)
           if (canvas.width !== width || canvas.height !== height) {
             canvas.width = width;
             canvas.height = height;
           }
-          
+
           // Read pixels from the render target's framebuffer
           // NOTE: This is called after RTT has rendered, so framebuffer should be ready
           this.readPixelsFromRenderTarget(targetRenderTarget, ctx, width, height, targetPresetId);
         };
-          
+
           targetRenderTarget.onAfterRenderObservable.add(pixelReadCallback);
           this.monitorCallbacksRegistered.set(presetId, true);
           console.log(`[Monitor] ${presetId}: Callbacks registered (one-time setup)`);
         }
-        
+
         console.log(`[Monitor] RTT ${presetId} setup complete: ${visibleMeshes.length} meshes, camera=${monitorCamera.name}`);
       }
-      
+
       // Ensure renderTarget is defined (could be created here or by reassignMonitorRTTSettings)
       if (!renderTarget) continue;
 
       // Keep RTT resolution in sync with monitor/main canvas size
       this.ensureMonitorRenderTargetSize(presetId, renderTarget, monitorCanvas);
-      
+
       // CRITICAL FIX: Register callbacks even if RTT was created by reassignMonitorRTTSettings
       // This fixes the issue where RTT exists but callbacks were never registered
       if (!this.monitorCallbacksRegistered.get(presetId)) {
         const targetRenderTarget = renderTarget; // Capture for closure
         const targetPresetId = presetId; // Capture for closure
-        
+
         // Wait for first render to ensure framebuffer is created
         const firstRenderTimeout = setTimeout(() => {
           if (!this.monitorFirstRenderComplete.get(targetPresetId)) {
             console.error(`[Monitor] ${targetPresetId}: onAfterRenderObservable never fired! RTT not rendering. renderList=${targetRenderTarget.renderList?.length || 0}, inCustomRTTs=${this.scene.customRenderTargets.indexOf(targetRenderTarget) !== -1}`);
           }
         }, 5000);
-        
+
         targetRenderTarget.onAfterRenderObservable.addOnce(() => {
           clearTimeout(firstRenderTimeout);
           this.monitorFirstRenderComplete.set(targetPresetId, true);
           console.log(`[Monitor] ${targetPresetId}: First render complete, framebuffer ready`);
         });
-        
+
         // Set up ongoing pixel reading after each render
         const pixelReadCallback = () => {
           if (!this.monitorFirstRenderComplete.get(targetPresetId)) return;
           if (this.monitorContextLost) return;
-          
+
           const canvas = document.querySelector(`.monitor-canvas[data-preset="${targetPresetId}"]`) as HTMLCanvasElement;
           if (!canvas) return;
-          
+
           const ctx = canvas.getContext('2d', { willReadFrequently: true });
           if (!ctx) return;
-          
+
           const size = targetRenderTarget.getSize();
           const width = size.width;
           const height = size.height;
-          
+
           if (canvas.width !== width || canvas.height !== height) {
             canvas.width = width;
             canvas.height = height;
           }
-          
+
           this.readPixelsFromRenderTarget(targetRenderTarget, ctx, width, height, targetPresetId);
         };
-        
+
         targetRenderTarget.onAfterRenderObservable.add(pixelReadCallback);
         this.monitorCallbacksRegistered.set(presetId, true);
         console.log(`[Monitor] ${presetId}: Callbacks registered for existing RTT`);
@@ -23474,7 +23501,7 @@ class VirtualStudio {
       // 1. First created (in reassignMonitorRTTSettings or above)
       // 2. When preset is EXPLICITLY saved via saveCameraPreset()
       // This ensures the monitor shows the saved perspective, not the live main camera view.
-      
+
       const monitorCamera = this.monitorCameras.get(presetId);
       if (monitorCamera) {
         // CRITICAL: Ensure activeCamera still points to the same camera object
@@ -23500,20 +23527,20 @@ class VirtualStudio {
           console.warn(`[Monitor] RTT ${presetId} was removed from customRenderTargets! This indicates something is disposing/clearing scene.customRenderTargets. Re-adding...`);
           warnings.add('removed_from_custom');
           this.monitorLoggedWarnings.set(presetId, warnings);
-          
+
           // Log stack trace to help identify who removed it
           console.trace(`[Monitor] Stack trace for ${presetId} removal:`);
         }
         this.scene.customRenderTargets.push(renderTarget);
       }
-      
+
       // CRITICAL FIX: Always keep renderList up-to-date with current visible meshes
       // If meshes are added/removed from scene, we need to update the RTT's renderList
       // Otherwise the RTT will render an empty/stale list and show "no signal"
       // NOTE: Use splice to modify in-place so Babylon retains its reference to the array
       const currentRenderList = renderTarget.renderList || [];
       const currentRenderListLength = currentRenderList.length;
-      
+
       // Check if we need to update: length mismatch OR mesh identity change
       // Mesh identity change: a mesh was swapped (removed + added same frame, count stays equal)
       let needsUpdate = false;
@@ -23528,7 +23555,7 @@ class VirtualStudio {
           needsUpdate = true;
         }
       }
-      
+
       if (needsUpdate && visibleMeshes.length > 0) {
         // Use splice to modify array in-place, preserving Babylon's internal reference
         if (renderTarget.renderList) {
@@ -23537,13 +23564,13 @@ class VirtualStudio {
           // Initialize renderList if it doesn't exist
           renderTarget.renderList = [...visibleMeshes];
         }
-        
+
         // Log the update
         const lastLength = this.monitorLastRenderListLength.get(presetId);
         if (lastLength !== undefined && lastLength !== visibleMeshes.length) {
           console.log(`[Monitor] ${presetId}: Updated renderList from ${lastLength} to ${visibleMeshes.length} meshes`);
         }
-        
+
         this.monitorLastRenderListLength.set(presetId, visibleMeshes.length);
       } else if (visibleMeshes.length === 0 && currentRenderListLength === 0) {
         // Scene is confirmed empty, track this state
@@ -23551,7 +23578,7 @@ class VirtualStudio {
       }
       // Note: If visibleMeshes is empty but renderList has meshes, we keep the existing
       // renderList to prevent flickering during transient empty states
-      
+
       // NOTE: Do NOT call renderTarget.render() manually!
       // When renderTarget is in scene.customRenderTargets (which it is),
       // it is automatically rendered by scene.render() in the render loop.
@@ -23589,70 +23616,70 @@ class VirtualStudio {
 
     const legendWidth = 90;
     const barHeight = (h - 10) / colors.length;
-    
+
     // Draw false color legend with IRE values
     colors.forEach((c, i) => {
       const y = 5 + i * barHeight;
-      
+
       // Color swatch
       ctx.fillStyle = c.color;
       ctx.fillRect(4, y, 20, barHeight - 2);
-      
+
       // IRE range
       ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
       ctx.font = '8px "SF Mono", Monaco, monospace';
       ctx.fillText(`${c.ire[0]}-${c.ire[1]}`, 28, y + barHeight / 2 + 2);
-      
+
       // Description
       ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
       ctx.fillText(c.name, 55, y + barHeight / 2 + 2);
     });
-    
+
     // Draw histogram visualization with false colors
     const histX = legendWidth + 10;
     const histW = w - legendWidth - 20;
     const histH = h - 20;
     const histTop = 10;
-    
+
     // Background
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.fillRect(histX, histTop, histW, histH);
-    
+
     // Plot luminance histogram with false color coding
     const histData = this.histogramSmoothed;
     const maxVal = Math.max(...histData.lum.slice(3, 252), 1);
     const binWidth = histW / 256;
-    
+
     for (let i = 0; i < 256; i++) {
       const count = histData.lum[i];
       if (count < maxVal * 0.005) continue;
-      
+
       const ire = (i / 255) * 100;
       const x = histX + i * binWidth;
-      
+
       // Find matching color zone
       const zone = colors.find(c => ire >= c.ire[0] && ire < c.ire[1]);
       const color = zone?.color || '#888888';
-      
+
       // Draw bar with false color
       const barH = (count / maxVal) * histH * 0.9;
-      
+
       // Gradient from color to darker version
       const grad = ctx.createLinearGradient(0, histTop + histH - barH, 0, histTop + histH);
       grad.addColorStop(0, color);
       grad.addColorStop(1, this.darkenColor(color, 0.5));
-      
+
       ctx.fillStyle = grad;
       ctx.fillRect(x, histTop + histH - barH, binWidth + 0.5, barH);
     }
-    
+
     // IRE scale at bottom
     ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
     ctx.font = '8px "SF Mono", Monaco, monospace';
     [0, 25, 50, 75, 100].forEach(ire => {
       const x = histX + (ire / 100) * histW;
       ctx.fillText(`${ire}`, x - 6, histTop + histH + 10);
-      
+
       // Tick mark
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
       ctx.beginPath();
@@ -23660,7 +23687,7 @@ class VirtualStudio {
       ctx.lineTo(x, histTop + histH);
       ctx.stroke();
     });
-    
+
     // 18% gray marker
     const grayX = histX + (38 / 100) * histW;
     ctx.strokeStyle = 'rgba(100, 255, 100, 0.5)';
@@ -23672,24 +23699,24 @@ class VirtualStudio {
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.lineWidth = 1;
-    
+
     // Exposure statistics
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.fillRect(histX + histW - 80, histTop + 4, 76, 36);
-    
+
     ctx.font = '9px "SF Mono", Monaco, monospace';
     ctx.fillStyle = this.highlightClipping > 1 ? '#ff4444' : '#66ff99';
     ctx.fillText(`Clip: ${this.highlightClipping.toFixed(1)}%`, histX + histW - 76, histTop + 16);
-    
+
     ctx.fillStyle = this.shadowClipping > 2 ? '#4488ff' : '#66ff99';
     ctx.fillText(`Black: ${this.shadowClipping.toFixed(1)}%`, histX + histW - 76, histTop + 28);
-    
+
     // Midtone indicator
     const midEV = ((this.midtoneExposure - 118) / 118) * 5;
     ctx.fillStyle = Math.abs(midEV) < 0.5 ? '#66ff99' : Math.abs(midEV) < 1 ? '#ffcc44' : '#ff6644';
     ctx.fillText(`EV: ${midEV >= 0 ? '+' : ''}${midEV.toFixed(1)}`, histX + histW - 76, histTop + 40);
   }
-  
+
   private darkenColor(hex: string, factor: number): string {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
@@ -23700,11 +23727,11 @@ class VirtualStudio {
   // ============================================
   // UNDO/REDO SYSTEM
   // ============================================
-  
+
   private getLightState(lightId: string): any {
     const data = this.lights.get(lightId);
     if (!data) return null;
-    
+
     return {
       position: data.mesh.position.clone(),
       rotation: data.mesh.rotation.clone(),
@@ -23716,39 +23743,39 @@ class VirtualStudio {
       name: data.name
     };
   }
-  
+
   private restoreLightState(lightId: string, state: any): void {
     const data = this.lights.get(lightId);
     if (!data || !state) return;
-    
+
     // Restore position
     data.mesh.position.copyFrom(state.position);
     if (data.light instanceof BABYLON.SpotLight || data.light instanceof BABYLON.DirectionalLight) {
       data.light.position = data.mesh.position.clone();
     }
-    
+
     // Restore rotation
     data.mesh.rotation.copyFrom(state.rotation);
-    
+
     // Restore intensity
     data.light.intensity = state.intensity;
     data.baseIntensity = state.baseIntensity;
     data.powerMultiplier = state.powerMultiplier;
-    
+
     // Restore other properties
     data.cct = state.cct;
     data.enabled = state.enabled;
     data.name = state.name;
-    
+
     // Update UI if this light is selected
     if (this.selectedLightId === lightId) {
       this.updateSelectedLightProperties();
     }
   }
-  
+
   public pushUndoAction(type: UndoActionType, description: string, lightId?: string, previousState?: any, newState?: any): void {
     if (this.isUndoRedoAction) return; // Don't record undo/redo actions
-    
+
     const action: UndoAction = {
       type,
       timestamp: Date.now(),
@@ -23759,30 +23786,30 @@ class VirtualStudio {
         newState
       }
     };
-    
+
     this.undoStack.push(action);
-    
+
     // Limit stack size
     if (this.undoStack.length > this.maxUndoSteps) {
       this.undoStack.shift();
     }
-    
+
     // Clear redo stack on new action
     this.redoStack = [];
-    
+
     // Update button states
     this.updateUndoRedoButtons();
   }
-  
+
   private performUndo(): void {
     if (this.undoStack.length === 0) {
       this.showNotification('Ingen handlinger å angre', 'info');
       return;
     }
-    
+
     const action = this.undoStack.pop()!;
     this.isUndoRedoAction = true;
-    
+
     try {
       switch (action.type) {
         case 'light-move':
@@ -23792,20 +23819,20 @@ class VirtualStudio {
             this.restoreLightState(action.data.lightId, action.data.previousState);
           }
           break;
-          
+
         case 'light-add':
           // Remove the light that was added
           if (action.data.lightId) {
             this.removeLight(action.data.lightId);
           }
           break;
-          
+
         case 'light-remove':
           // Re-add the light that was removed (complex - would need to store full light data)
           // For now, show message
           this.showNotification('Kan ikke gjenopprette slettet lys', 'warning');
           break;
-          
+
         case 'camera-change':
           if (action.data.previousState) {
             this.camera.alpha = action.data.previousState.alpha;
@@ -23814,7 +23841,7 @@ class VirtualStudio {
             this.camera.target = action.data.previousState.target.clone();
           }
           break;
-          
+
         case 'selection-change':
           if (action.data.previousState?.lightId) {
             this.selectLight(action.data.previousState.lightId);
@@ -23823,29 +23850,29 @@ class VirtualStudio {
           }
           break;
       }
-      
+
       // Push to redo stack
       this.redoStack.push(action);
       this.showNotification(`Angret: ${action.description}`, 'success');
-      
+
     } catch (error) {
       console.error('Undo failed:', error);
       this.showNotification('Kunne ikke angre handling', 'error');
     }
-    
+
     this.isUndoRedoAction = false;
     this.updateUndoRedoButtons();
   }
-  
+
   private performRedo(): void {
     if (this.redoStack.length === 0) {
       this.showNotification('Ingen handlinger å gjøre om', 'info');
       return;
     }
-    
+
     const action = this.redoStack.pop()!;
     this.isUndoRedoAction = true;
-    
+
     try {
       switch (action.type) {
         case 'light-move':
@@ -23855,19 +23882,19 @@ class VirtualStudio {
             this.restoreLightState(action.data.lightId, action.data.newState);
           }
           break;
-          
+
         case 'light-add':
           // Would need to re-add the light - complex
           this.showNotification('Kan ikke gjenta lyslegging', 'warning');
           break;
-          
+
         case 'light-remove':
           // Remove the light again
           if (action.data.lightId) {
             this.removeLight(action.data.lightId);
           }
           break;
-          
+
         case 'camera-change':
           if (action.data.newState) {
             this.camera.alpha = action.data.newState.alpha;
@@ -23876,7 +23903,7 @@ class VirtualStudio {
             this.camera.target = action.data.newState.target.clone();
           }
           break;
-          
+
         case 'selection-change':
           if (action.data.newState?.lightId) {
             this.selectLight(action.data.newState.lightId);
@@ -23885,31 +23912,31 @@ class VirtualStudio {
           }
           break;
       }
-      
+
       // Push back to undo stack
       this.undoStack.push(action);
       this.showNotification(`Gjort om: ${action.description}`, 'success');
-      
+
     } catch (error) {
       console.error('Redo failed:', error);
       this.showNotification('Kunne ikke gjøre om handling', 'error');
     }
-    
+
     this.isUndoRedoAction = false;
     this.updateUndoRedoButtons();
   }
-  
+
   private updateUndoRedoButtons(): void {
     const undoBtn = document.getElementById('undoBtn');
     const redoBtn = document.getElementById('redoBtn');
-    
+
     if (undoBtn) {
       undoBtn.classList.toggle('disabled', this.undoStack.length === 0);
       undoBtn.setAttribute('aria-disabled', String(this.undoStack.length === 0));
       const lastUndo = this.undoStack[this.undoStack.length - 1];
       undoBtn.title = lastUndo ? `Angre: ${lastUndo.description} (Ctrl+Z)` : 'Angre (Ctrl+Z)';
     }
-    
+
     if (redoBtn) {
       redoBtn.classList.toggle('disabled', this.redoStack.length === 0);
       redoBtn.setAttribute('aria-disabled', String(this.redoStack.length === 0));
@@ -23917,14 +23944,14 @@ class VirtualStudio {
       redoBtn.title = lastRedo ? `Gjør om: ${lastRedo.description} (Ctrl+Y)` : 'Gjør om (Ctrl+Y)';
     }
   }
-  
+
   private showNotification(message: string, type: 'success' | 'error' | 'warning' | 'info'): void {
     // Dispatch event for notification system
     window.dispatchEvent(new CustomEvent('show-notification', {
       detail: { message, type }
     }));
   }
-  
+
   private deselectLight(): void {
     this.selectedLightId = null;
     this.hideLightControlHUD();
@@ -23956,20 +23983,20 @@ class VirtualStudio {
         if (noSignal) noSignal.style.display = 'flex';
         return;
       }
-      
+
       // Try to find the framebuffer in various possible locations
       // In Babylon.js/WebGL2, framebuffers are often stored in RenderTargetWrapper, not directly on InternalTexture
       // CRITICAL: In newer Babylon versions, framebuffer lookup must check wrapper objects first
       let framebuffer: WebGLFramebuffer | null = null;
       const rttAny = renderTarget as any;
-      
+
       // Method 1: Check RenderTargetWrapper (WebGL2 path - most common in newer Babylon versions)
       // This is where framebuffers are typically stored when using WebGL2
       const wrapper = rttAny._renderTargetWrapper ||
                      rttAny._renderTarget ||
                      rttAny._renderTargetTexture?.renderTarget ||
                      (internalTexture as any)._renderTargetWrapper;
-      
+
       if (wrapper) {
         framebuffer = wrapper._framebuffer ||
                      wrapper._MSAAFramebuffer ||
@@ -23977,23 +24004,23 @@ class VirtualStudio {
                      wrapper._framebufferObject?._framebuffer ||
                      wrapper.framebuffer;
       }
-      
+
       // Method 2: Direct property access on internal texture (older path)
       if (!framebuffer && (internalTexture as any)._framebuffer) {
         framebuffer = (internalTexture as any)._framebuffer;
       }
-      
+
       // Method 3: MSAA framebuffer on internal texture
       if (!framebuffer && (internalTexture as any)._MSAAFramebuffer) {
         framebuffer = (internalTexture as any)._MSAAFramebuffer;
       }
-      
+
       // Method 4: Through framebufferObject on internal texture
       if (!framebuffer && (internalTexture as any)._framebufferObject) {
         const fbo = (internalTexture as any)._framebufferObject;
         framebuffer = fbo.framebuffer || fbo._framebuffer || fbo.framebufferObject;
       }
-      
+
       // Method 5: Through hardwareTexture
       if (!framebuffer && internalTexture._hardwareTexture) {
         const hwTexture = internalTexture._hardwareTexture as any;
@@ -24002,14 +24029,14 @@ class VirtualStudio {
                      hwTexture._framebufferObject?.framebuffer ||
                      hwTexture.framebuffer;
       }
-      
+
       // Method 6: Try render target's internal framebuffer reference (legacy)
       if (!framebuffer) {
         framebuffer = rttAny._framebuffer || 
                      rttAny._MSAAFramebuffer ||
                      rttAny._framebufferObject?.framebuffer;
       }
-      
+
       // If still no framebuffer found, fallback to alternative method
       // This can happen if framebuffer is stored in a location we haven't checked yet
       // The alternative method creates a temporary framebuffer and attaches the texture to it
@@ -24024,23 +24051,23 @@ class VirtualStudio {
           warnings.add('no_framebuffer');
           this.monitorLoggedWarnings.set(presetId, warnings);
         }
-        
+
         // Alternative: Create a temporary framebuffer and attach the texture to it
         // This works around the issue where RenderTargetTexture's framebuffer isn't directly accessible
         this.readPixelsAlternative(renderTarget, internalTexture, ctx, width, height, presetId, gl);
         return;
       }
-      
+
       // Save current WebGL state
       const currentFramebuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING);
       const currentViewport = gl.getParameter(gl.VIEWPORT) as Int32Array;
-      
+
       // Bind the render target's framebuffer
       gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-      
+
       // Set viewport to match render target size
       gl.viewport(0, 0, width, height);
-      
+
       // Check framebuffer status
       const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
       if (status !== gl.FRAMEBUFFER_COMPLETE) {
@@ -24057,15 +24084,15 @@ class VirtualStudio {
         if (noSignal) noSignal.style.display = 'flex';
         return;
       }
-      
+
       // Read pixels from the framebuffer
       const pixelData = new Uint8Array(width * height * 4);
       gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixelData);
-      
+
       // Restore previous WebGL state
       gl.bindFramebuffer(gl.FRAMEBUFFER, currentFramebuffer);
       gl.viewport(currentViewport[0], currentViewport[1], currentViewport[2], currentViewport[3]);
-      
+
       // Check if we got valid pixel data (not all zeros/black)
       let hasNonZeroPixels = false;
       for (let i = 0; i < pixelData.length; i += 4) {
@@ -24074,14 +24101,14 @@ class VirtualStudio {
           break;
         }
       }
-      
+
       if (!hasNonZeroPixels) {
         console.warn(`[Monitor] ${presetId}: All pixels are black/zero - RTT may not be rendering`);
         const noSignal = document.querySelector(`.monitor-no-signal[data-preset="${presetId}"]`) as HTMLElement;
         if (noSignal) noSignal.style.display = 'flex';
         return;
       }
-      
+
       // Convert to Uint8ClampedArray and draw to canvas
       const clampedData = new Uint8ClampedArray(pixelData.buffer);
       this.drawPixelsToCanvas(ctx, clampedData, width, height, presetId);
@@ -24091,7 +24118,7 @@ class VirtualStudio {
       if (noSignal) noSignal.style.display = 'flex';
     }
   }
-  
+
   private readPixelsAlternative(
     _renderTarget: BABYLON.RenderTargetTexture,
     internalTexture: BABYLON.InternalTexture,
@@ -24112,7 +24139,7 @@ class VirtualStudio {
         if (noSignal) noSignal.style.display = 'flex';
         return;
       }
-      
+
       // WebGL2 optimization: Cache texture handles and framebuffers
       // Get or find cached texture handle (only lookup once per preset)
       let textureHandle = this.monitorTextureHandles.get(presetId);
@@ -24126,17 +24153,17 @@ class VirtualStudio {
                          hwTex._nativeTexture ||
                          (hwTex as any).texture;
         }
-        
+
         if (!textureHandle) {
           textureHandle = (internalTexture as any)._webGLTexture || 
                          (internalTexture as any).webGLTexture ||
                          (internalTexture as any).nativeTexture ||
                          (internalTexture as any)._nativeTexture;
         }
-        
+
         // Cache result (even if null)
         this.monitorTextureHandles.set(presetId, textureHandle || null);
-        
+
         if (!textureHandle) {
           // Log only once per preset to reduce noise
           const warnings = this.monitorLoggedWarnings.get(presetId) || new Set();
@@ -24150,11 +24177,11 @@ class VirtualStudio {
           return;
         }
       }
-      
+
       if (!textureHandle) {
         return; // Already cached as null
       }
-      
+
       // Get or create cached framebuffer (reuse instead of creating new each frame)
       let tempFramebuffer = this.monitorTempFramebuffers.get(presetId);
       if (!tempFramebuffer) {
@@ -24167,16 +24194,16 @@ class VirtualStudio {
         }
         this.monitorTempFramebuffers.set(presetId, tempFramebuffer);
       }
-      
+
       const currentFramebuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING);
       const currentViewport = gl.getParameter(gl.VIEWPORT) as Int32Array;
-      
+
       gl.bindFramebuffer(gl.FRAMEBUFFER, tempFramebuffer);
-      
+
       // Save current texture binding (minimal state changes)
       const currentActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE);
       const currentTextureBinding = gl.getParameter(gl.TEXTURE_BINDING_2D);
-      
+
       // Check if texture is already attached (WebGL2 optimization)
       let needsAttachment = true;
       if (gl instanceof WebGL2RenderingContext && textureHandle) {
@@ -24191,14 +24218,14 @@ class VirtualStudio {
           // Fallback if WebGL2 query fails
         }
       }
-      
+
       if (needsAttachment) {
         // Only bind texture if not already bound
         if (currentTextureBinding !== textureHandle) {
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, textureHandle);
         }
-        
+
         // Attach texture to framebuffer
         gl.framebufferTexture2D(
           gl.FRAMEBUFFER,
@@ -24207,7 +24234,7 @@ class VirtualStudio {
           textureHandle,
           0
         );
-        
+
         // Check framebuffer status (only when attaching)
         const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
         if (status !== gl.FRAMEBUFFER_COMPLETE) {
@@ -24221,17 +24248,17 @@ class VirtualStudio {
           return;
         }
       }
-      
+
       // Set viewport only if changed (optimization)
       if (currentViewport[0] !== 0 || currentViewport[1] !== 0 || 
           currentViewport[2] !== width || currentViewport[3] !== height) {
         gl.viewport(0, 0, width, height);
       }
-      
+
       // Read pixels from the texture
       const pixelData = new Uint8Array(width * height * 4);
       gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixelData);
-      
+
       // Restore WebGL state (only if changed)
       gl.bindFramebuffer(gl.FRAMEBUFFER, currentFramebuffer);
       if (currentViewport[0] !== 0 || currentViewport[1] !== 0 || 
@@ -24242,7 +24269,7 @@ class VirtualStudio {
         gl.activeTexture(currentActiveTexture);
         gl.bindTexture(gl.TEXTURE_2D, currentTextureBinding);
       }
-      
+
       // Fast pixel validation (sample fewer pixels for WebGL2 performance)
       let hasNonZeroPixels = false;
       const sampleCount = 100; // Reduced from 1000 for better performance
@@ -24253,7 +24280,7 @@ class VirtualStudio {
           break;
         }
       }
-      
+
       if (!hasNonZeroPixels) {
         // All pixels are black - RTT might not have rendered content yet
         // This can happen if RTT hasn't rendered or scene is empty
@@ -24261,7 +24288,7 @@ class VirtualStudio {
         // Signal will come back when RTT renders again
         return;
       }
-      
+
       // We have valid pixel data - draw to canvas
       const clampedData = new Uint8ClampedArray(pixelData.buffer);
       this.drawPixelsToCanvas(ctx, clampedData, width, height, presetId);
@@ -24282,7 +24309,7 @@ class VirtualStudio {
     try {
       // Create ImageData from pixels
       const imageData = ctx.createImageData(width, height);
-      
+
       // Copy pixels (RGBA format) - flip vertically because WebGL uses bottom-up coordinates
       for (let y = 0; y < height; y++) {
         const srcY = height - 1 - y; // Flip vertically
@@ -24310,7 +24337,7 @@ class VirtualStudio {
 
   private updateSelectedLightProperties(): void {
     if (!this.selectedLightId) return;
-    
+
     const data = this.lights.get(this.selectedLightId);
     if (!data) return;
 
@@ -24366,9 +24393,9 @@ class VirtualStudio {
       powerUnit: specs.powerUnit as 'W' | 'Ws',
       beamAngle: specs.beamAngle
     });
-    
+
     const babylonIntensity = Math.log10(lux1m + 1) * 0.5;
-    
+
     return Math.max(0.5, Math.min(babylonIntensity, 50));
   }
 
@@ -24382,35 +24409,35 @@ class VirtualStudio {
       'aputure-600d': '300D_Light.glb',
       'aputure-300x': '300D_Light.glb',
       'aputure-nova': '300D_Light.glb',
-      
+
       // Godox strobes - use Profoto B10 model (similar form factor)
       'godox-ad200': 'Profoto_B10.glb',
       'godox-ad200pro': 'Profoto_B10.glb',
       'godox-ad400pro': 'Profoto_B10.glb',
       'godox-ad600': 'Profoto_B10.glb',
       'godox-ad600pro': 'Profoto_B10.glb',
-      
+
       // Profoto strobes
       'profoto-b10': 'Profoto_B10.glb',
       'profoto-b10plus': 'Profoto_B10.glb',
       'profoto-b1x': 'Profoto_B10.glb',
       'profoto-d2': 'Profoto_B10.glb',
       'profoto-a1': 'Profoto_B10.glb',
-      
+
       // Softbox modifiers
       'softbox': 'softbox.glb',
       'softbox-rect': 'softbox.glb',
       'softbox-octa': 'softbox.glb',
       'profoto-softbox': 'profoto_softbox.glb',
-      
+
       // Generic/default mappings
       'led-panel': '300D_Light.glb',
       'strobe': 'Profoto_B10.glb',
     };
-    
+
     // Get model filename or fallback
     let modelFile = modelMap[type];
-    
+
     if (!modelFile) {
       // Fallback: LEDs/continuous use 300D, strobes use Profoto
       if (type.includes('strobe') || type.includes('flash')) {
@@ -24419,11 +24446,11 @@ class VirtualStudio {
         modelFile = '300D_Light.glb';
       }
     }
-    
+
     // Resolve to full URL (local or R2 CDN)
     return resolveModelPath(`/models/${modelFile}`);
   }
-  
+
   /**
    * Setup materials for a cloned light mesh
    * Dark metal fixture - glow is added as separate disc mesh
@@ -24433,10 +24460,10 @@ class VirtualStudio {
       // Clone the material so each light instance has its own
       const originalMat = mesh.material;
       const clonedMat = originalMat.clone(`${originalMat.name}_cloned_${Date.now()}`);
-      
+
       if (clonedMat) {
         clonedMat.alpha = 1.0;
-        
+
         if (clonedMat instanceof BABYLON.PBRMaterial) {
           clonedMat.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
           clonedMat.emissiveTexture = null;
@@ -24453,12 +24480,12 @@ class VirtualStudio {
           clonedMat.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.18);
           clonedMat.emissiveColor = new BABYLON.Color3(0, 0, 0);
         }
-        
+
         mesh.material = clonedMat;
       }
     }
   }
-  
+
   private createDefaultLightMesh(id: string, type: string, _beamAngle: number): BABYLON.Mesh {
     if (type.includes('softbox') || type.includes('umbrella')) {
       const mesh = BABYLON.MeshBuilder.CreateBox(`mesh_${id}`, { width: 1.5, height: 0.3, depth: 1.2 }, this.scene);
@@ -24489,7 +24516,7 @@ class VirtualStudio {
   public getPowerStepsForLight(lightType: string, brand?: string): { values: number[], labels: string[], isFlash: boolean } {
     const lightSpec = getLightById(lightType);
     const isStrobe = lightSpec?.type === 'strobe' || lightType.includes('strobe');
-    
+
     // For strobes/flashes, use brand-specific controls
     if (isStrobe && brand) {
       const brandLower = brand.toLowerCase();
@@ -24515,7 +24542,7 @@ class VirtualStudio {
         };
       }
     }
-    
+
     // For continuous/LED lights, use percentage steps
     const continuousSteps = [10, 25, 50, 75, 100];
     return {
@@ -24568,7 +24595,7 @@ class VirtualStudio {
     if (specs.cri) {
       color = this.applyCRIEffect(color, specs.cri);
     }
-    
+
     const lightSpecs: LightSpecs = {
       power: specs.power,
       powerUnit: specs.powerUnit as 'Ws' | 'W',
@@ -24578,7 +24605,7 @@ class VirtualStudio {
       guideNumber: specs.guideNumber,
       lumens: specs.lumens
     };
-    
+
     const intensity = this.calculateLightIntensity(lightSpecs);
     const beamAngle = this.calculateBeamAngle(lightSpecs);
 
@@ -24665,7 +24692,7 @@ class VirtualStudio {
     const id = nodeId || `light_${this.lightCounter++}`;
     const cct = specs.cct || 5600;
     const color = this.cctToColor(cct);
-    
+
     const lightSpecs: LightSpecs = {
       power: specs.power,
       powerUnit: specs.powerUnit as 'Ws' | 'W',
@@ -24675,7 +24702,7 @@ class VirtualStudio {
       guideNumber: specs.guideNumber,
       lumens: specs.lumens
     };
-    
+
     const intensity = this.calculateLightIntensity(lightSpecs);
     const beamAngle = this.calculateBeamAngle(lightSpecs);
 
@@ -24900,7 +24927,7 @@ class VirtualStudio {
       this.lights.set(id, lightData);
       this.gizmoManager?.attachableMeshes?.push(mesh);
     });
-    
+
     if (preset.sceneConfig.camera) {
       const camConfig = preset.sceneConfig.camera;
       const position = new BABYLON.Vector3(
@@ -24913,16 +24940,16 @@ class VirtualStudio {
         camConfig.target[1],
         camConfig.target[2]
       );
-      
+
       this.camera.position = position;
       this.camera.setTarget(target);
-      
+
       if (camConfig.focalLength) {
         const fov = 2 * Math.atan(18 / camConfig.focalLength);
         this.camera.fov = fov;
       }
     }
-    
+
     // ── Backdrop / Environment ─────────────────────────────────────────────
     const backdropConfig = preset.sceneConfig.backdrop as any;
     if (backdropConfig) {
@@ -24984,7 +25011,7 @@ class VirtualStudio {
    */
   async applyLightPattern(pattern: any): Promise<void> {
     console.log('Applying light pattern:', pattern.name || pattern.id);
-    
+
     // Clear existing lights first (optional - could be configurable)
     this.lights.forEach((lightData, _id) => {
       lightData.light.dispose();
@@ -24992,19 +25019,19 @@ class VirtualStudio {
     });
     this.lights.clear();
     this.lightCounter = 0;
-    
+
     // Determine which format the pattern uses
     const lightsConfig = pattern.lights || pattern.lightSetup || [];
-    
+
     if (lightsConfig.length === 0) {
       console.warn('No lights defined in pattern:', pattern.name);
       return;
     }
-    
+
     // Apply each light from the pattern
     for (let index = 0; index < lightsConfig.length; index++) {
       const lightConfig = lightsConfig[index];
-      
+
       // Handle different position formats
       let position: BABYLON.Vector3;
       if (lightConfig.position) {
@@ -25036,11 +25063,11 @@ class VirtualStudio {
           Math.cos(angle) * distance
         );
       }
-      
+
       // Determine light type based on role/type
       const role = lightConfig.type || lightConfig.role || 'key';
       let lightType = 'aputure-300d'; // Default light
-      
+
       // Choose light type based on role
       switch (role) {
         case 'key':
@@ -25064,10 +25091,10 @@ class VirtualStudio {
         default:
           lightType = 'aputure-300d';
       }
-      
+
       // Create the light
       const lightId = await this.addLight(lightType, position);
-      
+
       // Apply additional settings if available
       if (lightId) {
         const lightData = this.lights.get(lightId);
@@ -25081,7 +25108,7 @@ class VirtualStudio {
               lightData.light instanceof BABYLON.HemisphericLight) {
             lightData.light.diffuse = color;
           }
-          
+
           // Set intensity
           const intensityPercent = lightConfig.intensity || lightConfig.power || 100;
           const intensity = lightData.specs ? 
@@ -25089,16 +25116,16 @@ class VirtualStudio {
             intensityPercent / 100;
           lightData.light.intensity = intensity;
           lightData.intensity = intensityPercent / 100;
-          
+
           // Set modifier if specified
           if (lightConfig.modifier) {
             lightData.modifier = lightConfig.modifier;
           }
-          
+
           // Set light name based on role
           const roleName = role.charAt(0).toUpperCase() + role.slice(1);
           lightData.name = `${pattern.name} - ${roleName} Light`;
-          
+
           // Point light toward center (actor position)
           if (lightData.light instanceof BABYLON.SpotLight) {
             lightData.light.setDirectionToTarget(new BABYLON.Vector3(0, 1.5, 0));
@@ -25106,7 +25133,7 @@ class VirtualStudio {
         }
       }
     }
-    
+
     // Notify light panel that lights have changed
     window.dispatchEvent(new CustomEvent('lights-updated', { 
       detail: { 
@@ -25114,7 +25141,7 @@ class VirtualStudio {
         lightCount: lightsConfig.length 
       } 
     }));
-    
+
     this.updateSceneList();
     this.updateLightMeterReading();
     console.log(`Light pattern "${pattern.name}" applied with ${lightsConfig.length} lights`);
@@ -25122,13 +25149,13 @@ class VirtualStudio {
 
   private async addLightDuplicate(type: string, position: BABYLON.Vector3): Promise<string> {
     const id = `light_${this.lightCounter++}`;
-    
+
     // Try to get light specs from database
     const lightSpec = getLightById(type);
     let specs: LightSpecs;
     let cct: number;
     let name: string;
-    
+
     if (lightSpec) {
       // Use real specifications from database
       specs = {
@@ -25155,7 +25182,7 @@ class VirtualStudio {
       cct = 5600;
       name = this.getLightName(type);
     }
-    
+
     let color = this.cctToColor(cct);
     // Apply CRI effect if specified
     if (lightSpec && lightSpec.cri) {
@@ -25164,42 +25191,42 @@ class VirtualStudio {
     const intensity = this.calculateLightIntensity(specs);
 
     let light: BABYLON.Light;
-    
+
     // Calculate beam angle from specs
     const beamAngle = this.calculateBeamAngle(specs);
-    
+
     // Check if we should load a 3D model for this light
     const modelUrl = this.getLightModelUrl(type);
     let lightMesh: BABYLON.Mesh | null = null;
     let loadedFromModel = false;
-    
+
     if (modelUrl) {
       // Check if we have a cached version of this light type
       const cachedModel = this.lightModelCache.get(type);
-      
+
       if (cachedModel) {
         // CLONE from cache - much faster than re-loading GLB
         console.log(`[Mesh Instancing] Cloning cached model for ${type} (avoiding GLB reload)`);
-        
+
         try {
           // Clone the master mesh hierarchy
           const clonedMesh = cachedModel.masterMesh.clone(`mesh_${id}`, null, true);
           if (!clonedMesh) {
             throw new Error('Clone returned null');
           }
-          
+
           lightMesh = clonedMesh;
           lightMesh.position = position.clone();
-          
+
           // Copy forward axis data
           (lightMesh as any)._localForwardAxis = cachedModel.localForwardAxis.clone();
           (lightMesh as any)._initialWorldForward = cachedModel.initialWorldForward.clone();
-          
+
           // Initialize rotationQuaternion for gizmo support
           if (!lightMesh.rotationQuaternion) {
             lightMesh.rotationQuaternion = BABYLON.Quaternion.Identity();
           }
-          
+
           // Position on ground
           try {
             lightMesh.computeWorldMatrix(true);
@@ -25211,16 +25238,16 @@ class VirtualStudio {
           } catch (e) {
             lightMesh.position.y = 0.5;
           }
-          
+
           // Make visible and pickable
           lightMesh.isPickable = true;
           lightMesh.isVisible = true;
           lightMesh.setEnabled(true);
           lightMesh.alwaysSelectAsActiveMesh = true;
-          
+
           // Setup materials for cloned mesh with this light's color
           this.setupClonedLightMaterials(lightMesh, color, intensity);
-          
+
           // Add to shadow casters
           if (lightMesh) {
             lightMesh.receiveShadows = true;
@@ -25230,7 +25257,7 @@ class VirtualStudio {
               }
             });
           }
-          
+
           // Also setup child meshes
           const children = lightMesh.getChildMeshes(true);
           children.forEach(child => {
@@ -25248,10 +25275,10 @@ class VirtualStudio {
               this.setupClonedLightMaterials(child, color, intensity);
             }
           });
-          
+
           // Register all child meshes (geometry_0, etc.) for cloned model too
           this.registerModelMeshesInScene(lightMesh, id, name);
-          
+
           loadedFromModel = true;
           console.log(`[Mesh Instancing] Clone successful for ${type}: ${lightMesh.name}`);
         } catch (cloneError) {
@@ -25259,19 +25286,19 @@ class VirtualStudio {
           // Fall through to normal loading
         }
       }
-      
+
       // Load 3D model if not cloned from cache
       if (!loadedFromModel) {
       try {
         console.log(`Loading light 3D model from: ${modelUrl} for light type: ${type}`);
         const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
         console.log(`Loaded ${result.meshes.length} meshes from light model ${modelUrl}`);
-        
+
         // Verify that meshes were actually loaded
         if (!result.meshes || result.meshes.length === 0) {
           throw new Error(`No meshes returned from model loader for ${modelUrl}`);
         }
-        
+
         if (result.meshes && result.meshes.length > 0) {
           // Find root mesh (mesh without parent)
           let rootMesh: BABYLON.AbstractMesh | null = null;
@@ -25281,13 +25308,13 @@ class VirtualStudio {
               break;
             }
           }
-          
+
           // If no root mesh found, use the first mesh
           if (!rootMesh) {
             rootMesh = result.meshes[0];
             console.warn('No root mesh found, using first mesh');
           }
-          
+
           // Check if root mesh has geometry, if not, find a mesh that does
           let meshWithGeometry = rootMesh as BABYLON.Mesh;
           if (meshWithGeometry instanceof BABYLON.Mesh) {
@@ -25323,33 +25350,33 @@ class VirtualStudio {
               }
             }
           }
-          
+
           lightMesh = meshWithGeometry;
           lightMesh.name = `mesh_${id}`;
-          
+
           // Ensure mesh is in the scene
           if (!lightMesh.getScene()) {
             console.warn('Mesh not in scene, adding it...');
             this.scene.addMesh(lightMesh);
           }
-          
+
           // Reset transforms to ensure proper positioning
           // Don't reset rotation - let the model keep its original orientation
           // The light direction will be calculated from the mesh's actual rotation
           lightMesh.scaling.setAll(1);
-          
+
           console.log(`Root mesh selected: ${lightMesh.name}, visible: ${lightMesh.isVisible}, enabled: ${lightMesh.isEnabled}, in scene: ${!!lightMesh.getScene()}`);
-          
+
           // If the model appears to be pointing down (common for light models),
           // we might need to adjust it. But first, let's see what the model's natural orientation is.
           // We'll calculate the light direction based on the mesh's actual rotation.
-          
+
           // Check if model needs scaling (some models are very large/small)
           try {
             const bounds = lightMesh.getHierarchyBoundingVectors(true);
             const size = bounds.max.subtract(bounds.min);
             const maxDim = Math.max(size.x, size.y, size.z);
-            
+
             // If model is very large (> 10 units) or very small (< 0.1 units), scale it
             if (maxDim > 10) {
               const scale = 2 / maxDim;
@@ -25363,19 +25390,19 @@ class VirtualStudio {
           } catch (e) {
             console.warn('Could not calculate bounds for scaling:', e);
           }
-          
+
           // Position the model so it sits on the ground (y=0)
           // Calculate the bottom of the model's bounding box in local space
           let adjustedPosition = position.clone();
           try {
             // First set a temporary position to calculate bounds
             lightMesh.position = position.clone();
-            
+
             // Get bounding box in local space (false = local space)
             // This gives us the model's dimensions relative to its origin
             const localBounds = lightMesh.getHierarchyBoundingVectors(false);
             const bottomY = localBounds.min.y; // Lowest point of the model in local space
-            
+
             // Check if bounding box is valid (not infinity or max value)
             if (isFinite(bottomY) && bottomY !== Number.MAX_VALUE && bottomY !== -Number.MAX_VALUE) {
               // Adjust Y position so the bottom of the model is at ground level (y=0)
@@ -25394,33 +25421,33 @@ class VirtualStudio {
             adjustedPosition = position.clone();
             adjustedPosition.y = 0.5; // Default height above ground
           }
-          
+
           lightMesh.position = adjustedPosition;
-          
+
           // Visibility and interaction - ensure everything is visible
           lightMesh.isPickable = true;
           lightMesh.isVisible = true;
           lightMesh.setEnabled(true);
-          
+
           // Force mesh to be in scene
           if (!lightMesh.getScene()) {
             this.scene.addMesh(lightMesh);
             console.log('Added lightMesh to scene');
           }
-          
+
           // Ensure mesh is not culled
           lightMesh.alwaysSelectAsActiveMesh = true;
-          
+
           // Log mesh visibility status
           console.log(`Mesh visibility check: name=${lightMesh.name}, visible=${lightMesh.isVisible}, enabled=${lightMesh.isEnabled}, inScene=${!!lightMesh.getScene()}, hasMaterial=${!!lightMesh.material}`);
-          
+
           // Force material visibility - some GLB models might have invisible materials
           // Also add emissive glow based on CCT and intensity
           if (lightMesh.material) {
             (lightMesh.material as BABYLON.Material).alpha = 1.0;
             if (lightMesh.material instanceof BABYLON.StandardMaterial || lightMesh.material instanceof BABYLON.PBRMaterial) {
               lightMesh.material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
-              
+
               // Add emissive glow based on CCT color and intensity
               // Improved formula: minimum 0.3 for visibility, scales up to 2.5 for strong lights
               const emissiveIntensity = Math.min(2.5, 0.3 + intensity / 3);
@@ -25429,7 +25456,7 @@ class VirtualStudio {
                 Math.min(2.5, color.g * emissiveIntensity),
                 Math.min(2.5, color.b * emissiveIntensity)
               );
-              
+
               if (lightMesh.material instanceof BABYLON.StandardMaterial) {
                 lightMesh.material.emissiveColor = emissiveColor;
                 lightMesh.material.useEmissiveAsIllumination = true; // Make it self-illuminating
@@ -25469,7 +25496,7 @@ class VirtualStudio {
             lightMesh.material = mat;
             console.log(`Default material created and assigned to ${lightMesh.name}`);
           }
-          
+
           // Ensure parent visibility if it exists
           let parent = lightMesh.parent;
           while (parent) {
@@ -25477,30 +25504,30 @@ class VirtualStudio {
             parent.setEnabled(true);
             parent = parent.parent;
           }
-          
+
           loadedFromModel = true;
-          
+
           // Calculate rotation offset to align model's forward direction with the light beam
           // Different 3D models may have different default orientations
           // This offset ensures the SpotLight direction matches the model's visual appearance
           try {
             // Auto-detect forward axis from mesh geometry if not specified
             let detectedAxis: string | null = null;
-            
+
             // Analyze mesh bounding box to detect dominant axis (likely beam direction)
             try {
               const boundingInfo = lightMesh.getBoundingInfo();
               const extents = boundingInfo.boundingBox.extendSizeWorld;
-              
+
               // Find the axis with maximum extent (usually the beam/body direction)
               const absX = Math.abs(extents.x);
               const absY = Math.abs(extents.y);
               const absZ = Math.abs(extents.z);
-              
+
               // Determine dominant axis
               let dominantAxis: string;
               let maxExtent: number;
-              
+
               if (absY >= absX && absY >= absZ) {
                 dominantAxis = 'y';
                 maxExtent = absY;
@@ -25517,24 +25544,24 @@ class VirtualStudio {
                 // If X is dominant, beam usually points +X or -X
                 detectedAxis = '+x';
               }
-              
+
               console.log(`[Light Direction] Detected mesh extents: X=${absX.toFixed(3)}, Y=${absY.toFixed(3)}, Z=${absZ.toFixed(3)}`);
               console.log(`[Light Direction] Auto-detected dominant axis: ${dominantAxis} (extent=${maxExtent.toFixed(3)}), suggested forwardAxis: ${detectedAxis}`);
             } catch (e) {
               console.warn('[Light Direction] Could not auto-detect forward axis from geometry:', e);
             }
-            
+
             // Get local forward axis from lightSpec metadata, or use auto-detected, or default to -Z
             let localForward: BABYLON.Vector3;
             const forwardAxisSpec = lightSpec?.forwardAxis || detectedAxis || '-z';
-            
+
             // Log warning if forwardAxis is not specified in metadata
             if (!lightSpec?.forwardAxis) {
               console.warn(`[Light Direction] No forwardAxis specified for '${type}'. ` +
                 `Using ${detectedAxis ? 'auto-detected' : 'default'} '${forwardAxisSpec}'. ` +
                 `If light direction is incorrect, add forwardAxis to lightFixtures.ts for this model.`);
             }
-            
+
             switch (forwardAxisSpec) {
               case '+x': localForward = new BABYLON.Vector3(1, 0, 0); break;
               case '-x': localForward = new BABYLON.Vector3(-1, 0, 0); break;
@@ -25545,18 +25572,18 @@ class VirtualStudio {
               default: localForward = new BABYLON.Vector3(0, 0, -1); break;
             }
             console.log(`[Light Direction] Using forwardAxis '${forwardAxisSpec}' for ${type}: (${localForward.x}, ${localForward.y}, ${localForward.z})`);
-            
+
             // Store the local forward for use in updateLightPosition
             (lightMesh as any)._localForwardAxis = localForward.clone();
-            
+
             // Get the model's absolute world orientation
             // Use absoluteRotationQuaternion if available (handles parent transforms and quaternion-authored rotations)
             // Otherwise fall back to rotationQuaternion, then Euler angles
             let worldForward: BABYLON.Vector3;
-            
+
             // Force compute world matrix to ensure absoluteRotationQuaternion is up to date
             lightMesh.computeWorldMatrix(true);
-            
+
             if (lightMesh.absoluteRotationQuaternion) {
               // Use absolute rotation quaternion (includes parent transforms)
               const rotationMatrix = new BABYLON.Matrix();
@@ -25579,13 +25606,13 @@ class VirtualStudio {
               worldForward = BABYLON.Vector3.TransformNormal(localForward, rotationMatrix);
               console.log('Using Euler rotation for light orientation');
             }
-            
+
             worldForward.normalize();
-            
+
             // Store the initial forward direction for reference
             (lightMesh as any)._initialWorldForward = worldForward.clone();
             console.log(`Calculated world forward for light model: (${worldForward.x.toFixed(3)}, ${worldForward.y.toFixed(3)}, ${worldForward.z.toFixed(3)})`);
-            
+
             // Initialize rotationQuaternion if not already set
             // This is required for gizmo rotation to work properly
             if (!lightMesh.rotationQuaternion) {
@@ -25600,29 +25627,29 @@ class VirtualStudio {
             console.warn('Could not calculate orientation, using default:', e);
             (lightMesh as any)._localForwardAxis = new BABYLON.Vector3(0, 0, -1);
           }
-          
+
           // Make all meshes visible, pickable, and enable shadows
           // PRESERVE original GLB materials/textures - only add emissive glow
           result.meshes.forEach(m => {
             m.isPickable = true;
             m.isVisible = true;
             m.setEnabled(true);
-            
+
             // Enable shadows for this mesh
             m.receiveShadows = true;
-            
+
             // Add mesh as shadow caster to all existing lights with shadow generators
             this.lights.forEach(lightData => {
               if (lightData.shadowGenerator) {
                 lightData.shadowGenerator.addShadowCaster(m);
               }
             });
-            
+
             // Ensure mesh is in scene
             if (!m.getScene()) {
               this.scene.addMesh(m);
             }
-            
+
             // Fix Rodin-generated models - make fixture dark metal (no glow on body)
             // Light glow will be added as a separate mesh
             if (m.material) {
@@ -25644,7 +25671,7 @@ class VirtualStudio {
                 m.material.emissiveColor = new BABYLON.Color3(0, 0, 0);
               }
             }
-            
+
             // Check if mesh has geometry
             if (m instanceof BABYLON.Mesh) {
               const vertices = m.getVerticesData(BABYLON.VertexBuffer.PositionKind);
@@ -25654,14 +25681,14 @@ class VirtualStudio {
                 console.log(`Mesh ${m.name} has ${vertices.length / 3} vertices`);
               }
             }
-            
+
             // Recursively enable all children and preserve their materials
             const children = m.getChildMeshes(true);
             children.forEach(child => {
               child.isPickable = true;
               child.isVisible = true;
               child.setEnabled(true);
-              
+
               // Enable shadows for child mesh
               child.receiveShadows = true;
               this.lights.forEach(lightData => {
@@ -25669,12 +25696,12 @@ class VirtualStudio {
                   lightData.shadowGenerator.addShadowCaster(child);
                 }
               });
-              
+
               // Ensure child is in scene
               if (!child.getScene()) {
                 this.scene.addMesh(child);
               }
-              
+
               // Fix Rodin-generated models for children too
               if (child.material) {
                 child.material.alpha = 1.0;
@@ -25696,7 +25723,7 @@ class VirtualStudio {
               }
             });
           });
-          
+
           // Also ensure all skeletons and animations are enabled
           if (result.skeletons && result.skeletons.length > 0) {
             result.skeletons.forEach(skeleton => {
@@ -25710,10 +25737,10 @@ class VirtualStudio {
               }
             });
           }
-          
+
           // Force a render update to ensure model is visible
           this.scene.render();
-          
+
           // Get bounding info for debugging
           try {
             if (lightMesh) {
@@ -25732,7 +25759,7 @@ class VirtualStudio {
                   hasMaterial: !!lightMesh.material
                 });
               }
-              
+
               // Double-check visibility
               if (!lightMesh.isVisible) {
                 console.warn('WARNING: Light mesh is not visible after loading! Forcing visibility...');
@@ -25742,11 +25769,11 @@ class VirtualStudio {
           } catch (e) {
             console.warn('Could not get bounding info:', e);
           }
-          
+
           // CACHE the loaded model for future cloning
           const localForward = ((lightMesh as any)._localForwardAxis as BABYLON.Vector3) || new BABYLON.Vector3(0, 0, -1);
           const initialForward = ((lightMesh as any)._initialWorldForward as BABYLON.Vector3) || new BABYLON.Vector3(0, -0.3, -1).normalize();
-          
+
           this.lightModelCache.set(type, {
             masterMesh: lightMesh,
             allMeshes: result.meshes,
@@ -25754,12 +25781,12 @@ class VirtualStudio {
             initialWorldForward: initialForward.clone()
           });
           console.log(`[Mesh Instancing] Cached model for ${type} - future lights will clone instead of reload`);
-          
+
           // Register all child meshes (geometry_0, etc.) for proper scene tracking
           this.registerModelMeshesInScene(lightMesh, id, name);
-          
+
           loadedFromModel = true;
-          
+
         } else {
           throw new Error('No meshes found in model');
         }
@@ -25779,12 +25806,12 @@ class VirtualStudio {
       // Create default procedural mesh
       lightMesh = this.createDefaultLightMesh(id, type, beamAngle);
     }
-    
+
     // Calculate initial light direction based on model orientation
     // For loaded models, use the stored initial forward direction
     // For procedural meshes, use default forward direction
     let initialDirection = new BABYLON.Vector3(0, -0.3, -1).normalize(); // Default: slightly down, pointing forward (-Z)
-    
+
     if (loadedFromModel && lightMesh) {
       try {
         // Use the stored initial world forward direction if available
@@ -25796,7 +25823,7 @@ class VirtualStudio {
           // Fall back to calculating from current orientation using stored local forward axis
           const localForward = ((lightMesh as any)._localForwardAxis as BABYLON.Vector3) || new BABYLON.Vector3(0, 0, -1);
           lightMesh.computeWorldMatrix(true);
-          
+
           if (lightMesh.absoluteRotationQuaternion) {
             const rotationMatrix = new BABYLON.Matrix();
             BABYLON.Matrix.FromQuaternionToRef(lightMesh.absoluteRotationQuaternion, rotationMatrix);
@@ -25815,7 +25842,7 @@ class VirtualStudio {
           }
           console.log(`Calculated initial direction for ${id}: (${initialDirection.x.toFixed(3)}, ${initialDirection.y.toFixed(3)}, ${initialDirection.z.toFixed(3)})`);
         }
-        
+
         // If the direction points mostly up, adjust it to point forward
         if (initialDirection.y > 0.7) {
           initialDirection = new BABYLON.Vector3(0, -0.3, -1).normalize();
@@ -25826,7 +25853,7 @@ class VirtualStudio {
         initialDirection = new BABYLON.Vector3(0, -0.3, -1).normalize();
       }
     }
-    
+
     // Create light source
     if (type.includes('softbox') || type.includes('umbrella')) {
       // Soft modifiers use PointLight for soft, diffused lighting
@@ -25846,29 +25873,29 @@ class VirtualStudio {
       light.intensity = intensity;
       light.diffuse = color;
     }
-    
+
     // Ensure light is enabled and will cast light
     light.setEnabled(true);
-    
+
     // Enable shadows for the light
     let shadowGenerator: BABYLON.ShadowGenerator | undefined;
     if (light instanceof BABYLON.SpotLight || light instanceof BABYLON.PointLight) {
       try {
         shadowGenerator = new BABYLON.ShadowGenerator(2048, light);
-        
+
         // Use PCF (Percentage Closer Filtering) for soft, realistic shadows
         shadowGenerator.usePercentageCloserFiltering = true;
         shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
-        
+
         // Shadow quality settings - softer, more subtle shadows
         shadowGenerator.setDarkness(0.35); // More subtle shadows
         shadowGenerator.bias = 0.00005;
         shadowGenerator.normalBias = 0.02;
-        
+
         // Enable contact hardening for distance-based shadow softness (more realistic)
         shadowGenerator.useContactHardeningShadow = true;
         shadowGenerator.contactHardeningLightSizeUVRatio = 0.05;
-        
+
         // Add all meshes in the scene as shadow casters (except ground and light meshes)
         this.scene.meshes.forEach(mesh => {
           if (mesh.name !== 'ground' && 
@@ -25879,13 +25906,13 @@ class VirtualStudio {
             shadowGenerator!.addShadowCaster(mesh);
           }
         });
-        
+
         console.log(`Shadow generator created for light ${id}`);
       } catch (e) {
         console.warn('Could not create shadow generator:', e);
       }
     }
-    
+
     // If we didn't load a model, apply material to default mesh
     if (!loadedFromModel && lightMesh) {
       lightMesh.position = position.clone();
@@ -25919,18 +25946,18 @@ class VirtualStudio {
               // So when user sets -180°/-10°, we want the direction that corresponds to 0°/0° in world space
               const azimuthOffset = -180; // Offset to compensate for model orientation
               const elevationOffset = -10; // Offset to compensate for model orientation
-              
+
               // Subtract offset: when user sets -180°/-10°, we calculate direction from 0°/0°
               const azimuth = ((lightData.azimuth || 0) - azimuthOffset) * Math.PI / 180; // Convert to radians and apply offset
               const elevation = ((lightData.elevation || 0) - elevationOffset) * Math.PI / 180; // Convert to radians and apply offset
-              
+
               // Calculate direction from azimuth and elevation (spherical to Cartesian)
               // Use precise trigonometric calculations
               const cosElevation = Math.cos(elevation);
               const sinElevation = Math.sin(elevation);
               const cosAzimuth = Math.cos(azimuth);
               const sinAzimuth = Math.sin(azimuth);
-              
+
               // Spherical to Cartesian conversion:
               // x = sin(azimuth) * cos(elevation)
               // y = -sin(elevation)  (negative because elevation positive = down in our convention)
@@ -25940,7 +25967,7 @@ class VirtualStudio {
                 -sinElevation,
                 -cosAzimuth * cosElevation
               );
-              
+
               // Normalize to ensure unit vector (handle floating point errors)
               const length = worldForward.length();
               if (length > 0.0001) {
@@ -25950,7 +25977,7 @@ class VirtualStudio {
                 worldForward.set(0, 0, -1);
                 worldForward.normalize();
               }
-              
+
               // Calculate light position: at mesh center or slightly forward
               let lightOffset = new BABYLON.Vector3(0, 0, 0);
               try {
@@ -25961,31 +25988,31 @@ class VirtualStudio {
               } catch (e) {
                 lightOffset = worldForward.scale(0.03);
               }
-              
+
               // Update light position to follow mesh (always relative to mesh position)
               light.position = lightMesh.position.add(lightOffset);
-              
+
               if (light instanceof BABYLON.SpotLight) {
                 // Update light direction to follow mesh rotation
                 light.direction = worldForward;
               }
               return; // Skip automatic calculation
             }
-            
+
             // Automatic direction calculation based on mesh rotation
             // Use quaternion-based calculation with per-model forward axis
-            
+
             light.position = lightMesh.position.clone();
-            
+
             // For SpotLight, calculate direction from mesh orientation
             if (light instanceof BABYLON.SpotLight) {
               // Use stored local forward axis from model metadata, or default to -Z
               const localForward = ((lightMesh as any)._localForwardAxis as BABYLON.Vector3) || new BABYLON.Vector3(0, 0, -1);
               let worldForward: BABYLON.Vector3;
-              
+
               // Force compute world matrix for accurate orientation
               lightMesh.computeWorldMatrix(true);
-              
+
               // Use the most accurate rotation representation available
               if (lightMesh.absoluteRotationQuaternion) {
                 // Best option: includes parent transforms
@@ -26006,7 +26033,7 @@ class VirtualStudio {
                 );
                 worldForward = BABYLON.Vector3.TransformNormal(localForward, rotationMatrix);
               }
-              
+
               light.direction = worldForward.normalize();
             }
           } catch (e) {
@@ -26023,9 +26050,9 @@ class VirtualStudio {
           if (light instanceof BABYLON.SpotLight) {
             const localForward = new BABYLON.Vector3(0, 0, -1);
             let worldForward: BABYLON.Vector3;
-            
+
             lightMesh.computeWorldMatrix(true);
-            
+
             if (lightMesh.absoluteRotationQuaternion) {
               const rotationMatrix = new BABYLON.Matrix();
               BABYLON.Matrix.FromQuaternionToRef(lightMesh.absoluteRotationQuaternion, rotationMatrix);
@@ -26042,16 +26069,16 @@ class VirtualStudio {
               );
               worldForward = BABYLON.Vector3.TransformNormal(localForward, rotationMatrix);
             }
-            
+
             light.direction = worldForward.normalize();
           }
         }
-        
+
         // Ensure light is enabled
         light.setEnabled(true);
       }
     };
-    
+
     // Create visual beam/cone for SpotLights to show direction
     let beamVisualization: BABYLON.Mesh | undefined;
     if (light instanceof BABYLON.SpotLight) {
@@ -26060,7 +26087,7 @@ class VirtualStudio {
         const beamLength = 5; // Length of the visualization
         const beamAngle = (light as BABYLON.SpotLight).angle;
         const beamRadius = Math.tan(beamAngle) * beamLength;
-        
+
         beamVisualization = BABYLON.MeshBuilder.CreateCylinder(
           `beam_${id}`,
           {
@@ -26071,7 +26098,7 @@ class VirtualStudio {
           },
           this.scene
         );
-        
+
         // Make it semi-transparent and emissive
         const beamMat = new BABYLON.StandardMaterial(`beamMat_${id}`, this.scene);
         beamMat.emissiveColor = color;
@@ -26080,26 +26107,26 @@ class VirtualStudio {
         beamMat.disableLighting = true;
         beamMat.sideOrientation = BABYLON.Mesh.DOUBLESIDE;
         beamVisualization.material = beamMat;
-        
+
         // Parent to lightMesh so it follows model position and rotation
         // Position will be relative to mesh (we'll update it in the update function)
         if (lightMesh) {
           beamVisualization.position = new BABYLON.Vector3(0, 0, 0); // Start at mesh origin
           beamVisualization.parent = lightMesh;
         }
-        
+
         // Initial rotation will be set by updateBeamVisualization
-        
+
         // Only show when light is selected (we'll toggle this in selectLight)
         beamVisualization.isVisible = false;
         beamVisualization.isPickable = false;
-        
+
         console.log(`Beam visualization created for light ${id}`);
       } catch (e) {
         console.warn('Could not create beam visualization:', e);
       }
     }
-    
+
     // Create a small glowing bulb at the SpotLight position
     // The SpotLight position is already calculated to be at the light source
     try {
@@ -26110,7 +26137,7 @@ class VirtualStudio {
           { diameter: 0.15, segments: 16 },
           this.scene
         );
-        
+
         // Create emissive material for the bulb
         const bulbMat = new BABYLON.PBRMaterial(`bulbMat_${id}`, this.scene);
         bulbMat.emissiveColor = color.clone();
@@ -26120,18 +26147,18 @@ class VirtualStudio {
         bulbMat.roughness = 1;
         bulbMat.unlit = true; // Make it always bright
         bulbSphere.material = bulbMat;
-        
+
         // Parent to lightMesh so it moves with the fixture
         bulbSphere.parent = lightMesh;
         bulbSphere.isPickable = false;
-        
+
         // Position bulb at the light source opening (inside reflector)
         // Use stored localForwardAxis from the mesh, or default to forward direction
         const storedForwardAxis = (lightMesh as any)._localForwardAxis as BABYLON.Vector3 | undefined;
         const forwardDir = storedForwardAxis ? storedForwardAxis.clone() : new BABYLON.Vector3(0, 0, -1);
         const bulbOffset = forwardDir.scale(0.4); // Moved back (was 0.55)
         bulbSphere.position = new BABYLON.Vector3(0, 1.35, 0).add(bulbOffset); // Lowered Y (was 1.5)
-        
+
         // Add to GlowLayer with improved settings
         if (!this.glowLayer) {
           this.glowLayer = new BABYLON.GlowLayer("studioGlow", this.scene, {
@@ -26140,48 +26167,48 @@ class VirtualStudio {
           });
           this.glowLayer.intensity = 0.85;
         }
-        
+
         this.glowLayer.addIncludedOnlyMesh(bulbSphere as BABYLON.Mesh);
-        
+
         // Store reference for later updates
         (lightMesh as any)._glowBulb = bulbSphere;
-        
+
         console.log(`Light bulb created for ${id}`);
       }
     } catch (e) {
       console.warn('Could not create light bulb:', e);
     }
-    
+
     // Update immediately
     updateLightPosition();
-    
+
     // Also update on each frame
     this.scene.onBeforeRenderObservable.add(updateLightPosition);
-    
+
     // Update beam visualization position and rotation to follow model
     if (beamVisualization && light instanceof BABYLON.SpotLight) {
       const updateBeamVisualization = () => {
         if (beamVisualization && light instanceof BABYLON.SpotLight) {
           // Since beamVisualization is parented to lightMesh, it will automatically follow position
           // We just need to update its rotation to match the light direction
-          
+
           // Get the light direction (which follows the model's rotation)
           const direction = light.direction;
-          
+
           // Calculate rotation matrix from direction vector
           // The beam should point in the same direction as the light
           const up = new BABYLON.Vector3(0, 1, 0);
           let right = BABYLON.Vector3.Cross(up, direction);
-          
+
           // Handle case where direction is parallel to up vector
           if (right.length() < 0.001) {
             right = new BABYLON.Vector3(1, 0, 0);
           }
           right.normalize();
-          
+
           const newUp = BABYLON.Vector3.Cross(direction, right);
           newUp.normalize();
-          
+
           // Create rotation matrix from direction
           const rotationMatrix = BABYLON.Matrix.FromValues(
             right.x, right.y, right.z, 0,
@@ -26189,11 +26216,11 @@ class VirtualStudio {
             direction.x, direction.y, direction.z, 0,
             0, 0, 0, 1
           );
-          
+
           // Convert to quaternion and apply
           const quaternion = BABYLON.Quaternion.FromRotationMatrix(rotationMatrix);
           beamVisualization.rotationQuaternion = quaternion;
-          
+
           // Position beam at light position (relative to mesh since it's parented)
           // Calculate offset from mesh to light position
           if (lightMesh) {
@@ -26204,12 +26231,12 @@ class VirtualStudio {
       };
       this.scene.onBeforeRenderObservable.add(updateBeamVisualization);
     }
-    
+
     // Create modeling light for strobes/flashes
     let modelingLight: BABYLON.Light | undefined;
     let modelingLightIntensity = 0;
     let modelingLightEnabled = false;
-    
+
     if (lightSpec && (lightSpec.type === 'strobe' || lightSpec.type === 'flash') && lightSpec.modelingLightPower) {
       // Calculate modeling light intensity
       if (lightSpec.modelingLightLux1m) {
@@ -26220,14 +26247,14 @@ class VirtualStudio {
         const estimatedLumens = lightSpec.modelingLightPower * 200;
         modelingLightIntensity = estimatedLumens / 2000; // Scale to Babylon.js intensity
       }
-      
+
       // Create PointLight for modeling light (softer, continuous light)
       modelingLight = new BABYLON.PointLight(`${id}_modeling`, position.clone(), this.scene);
       modelingLight.intensity = 0; // Start disabled
       modelingLight.diffuse = color; // Same color as flash
       (modelingLight as BABYLON.PointLight).range = 10; // Shorter range than flash
       modelingLight.setEnabled(false); // Explicitly disable to hide from scene
-      
+
       // Update modeling light position to follow mesh
       const updateModelingLightPosition = () => {
         if (modelingLight instanceof BABYLON.PointLight && lightMesh) {
@@ -26235,7 +26262,7 @@ class VirtualStudio {
         }
       };
       this.scene.onBeforeRenderObservable.add(updateModelingLightPosition);
-      
+
       modelingLightEnabled = false; // Start with modeling light off
     }
 
@@ -26265,21 +26292,21 @@ class VirtualStudio {
     this.selectLight(id);
     this.updateSceneList();
     this.updateAmbientLightIntensity(); // Auto-dim ambient based on studio lights
-    
+
     // Return the light ID so caller can link it to store nodes if needed
     return id;
   }
 
   public updateLightMeterReading(): void {
     const subjectPos = new BABYLON.Vector3(0, 1, 0);
-    
+
     const lightsArray: Array<{
       position: { x: number; y: number; z: number };
       specs: Partial<LightSpecs>;
       powerMultiplier?: number;
       enabled?: boolean;
     }> = [];
-    
+
     for (const [, data] of this.lights) {
       if (!data.enabled) continue;
       lightsArray.push({
@@ -26293,7 +26320,7 @@ class VirtualStudio {
         enabled: data.enabled
       });
     }
-    
+
     const shutterStr = this.cameraSettings.shutter || '1/125';
     let shutterSpeed = 1/125;
     if (shutterStr.includes('/')) {
@@ -26302,7 +26329,7 @@ class VirtualStudio {
     } else {
       shutterSpeed = parseFloat(shutterStr);
     }
-    
+
     const result = LightingPhysics.calculateLightMeter(
       lightsArray,
       { x: subjectPos.x, y: subjectPos.y, z: subjectPos.z },
@@ -26312,34 +26339,34 @@ class VirtualStudio {
         iso: this.cameraSettings.iso || 100
       }
     );
-    
+
     const evDisplay = document.getElementById('evValue');
     if (evDisplay) {
       const evClass = result.evAtISO100 < 8 ? 'ev-low' : result.evAtISO100 > 14 ? 'ev-high' : 'ev-good';
       evDisplay.textContent = `EV ${result.evAtISO100.toFixed(1)}`;
       evDisplay.className = `ev-value ${evClass}`;
     }
-    
+
     const luxDisplay = document.getElementById('luxValue');
     if (luxDisplay) {
       luxDisplay.textContent = `${Math.round(result.luxAtSubject).toLocaleString()} lux`;
     }
-    
+
     const stopsDiffDisplay = document.getElementById('stopsValue');
     if (stopsDiffDisplay) {
       const sign = result.stopsDifference > 0 ? '+' : '';
       stopsDiffDisplay.textContent = `${sign}${result.stopsDifference.toFixed(1)} stopp`;
     }
-    
+
     const percentDisplay = document.getElementById('intensityPercent');
     if (percentDisplay) {
       percentDisplay.textContent = `${result.percentIntensity.toFixed(0)}%`;
     }
-    
+
     const totalLux = result.luxAtSubject;
     void totalLux; // Total lux available for light recommendation logic below
     const ev = result.evAtISO100;
-    
+
     // Check if lights are too weak and recommend stronger lights
     // Target EV for well-lit studio is typically EV 10-12
     // Skip for story presets — atmospheric/practical lighting is intentionally dim
@@ -26360,7 +26387,7 @@ class VirtualStudio {
   private checkAndRecommendStrongerLights(currentEV: number, targetEV: number): void {
     // Find the weakest light(s) in the scene
     const weakLights: Array<{ id: string; data: LightData; currentStrength: number }> = [];
-    
+
     for (const [id, data] of this.lights) {
       // Calculate current light strength
       let strength = 0;
@@ -26373,16 +26400,16 @@ class VirtualStudio {
       } else if (data.specs?.power) {
         strength = data.specs.power * (data.specs.powerUnit === 'Ws' ? 40 : 100); // Rough conversion
       }
-      
+
       weakLights.push({ id, data, currentStrength: strength });
     }
-    
+
     // Sort by strength (weakest first)
     weakLights.sort((a, b) => a.currentStrength - b.currentStrength);
-    
+
     // Get recommended stronger lights from database
     const recommendedLights = this.getRecommendedLights(weakLights[0]?.data.type || 'strobe', weakLights[0]?.currentStrength || 0);
-    
+
     if (recommendedLights.length > 0) {
       // Show recommendation dialog
       this.showLightRecommendationDialog(weakLights[0]?.id || '', recommendedLights, currentEV, targetEV);
@@ -26393,11 +26420,11 @@ class VirtualStudio {
   private getRecommendedLights(currentType: string, minStrength: number): LightSpec[] {
     const isStrobe = currentType.includes('strobe') || currentType.includes('flash');
     const targetType = isStrobe ? 'strobe' : 'led';
-    
+
     // Filter lights by type and strength
     return LIGHT_DATABASE.filter(light => {
       if (light.type !== targetType && light.type !== 'continuous') return false;
-      
+
       // Calculate strength for comparison
       let strength = 0;
       if (light.lux1m) {
@@ -26409,7 +26436,7 @@ class VirtualStudio {
       } else if (light.power) {
         strength = light.power * (light.powerUnit === 'Ws' ? 40 : 100);
       }
-      
+
       // Return lights that are at least 50% stronger
       return strength > minStrength * 1.5;
     })
@@ -26427,17 +26454,17 @@ class VirtualStudio {
     // Create dialog HTML
     const dialogId = 'lightRecommendationDialog';
     let dialog = document.getElementById(dialogId);
-    
+
     if (!dialog) {
       dialog = document.createElement('div');
       dialog.id = dialogId;
       dialog.className = 'light-recommendation-dialog';
       document.body.appendChild(dialog);
     }
-    
+
     const evDiff = targetEV - currentEV;
     const evDiffText = evDiff > 0 ? `${evDiff.toFixed(1)} EV` : '';
-    
+
     dialog.innerHTML = `
       <div class="light-recommendation-overlay"></div>
       <div class="light-recommendation-content">
@@ -26511,23 +26538,23 @@ class VirtualStudio {
         </div>
       </div>
     `;
-    
+
     dialog.style.display = 'block';
-    
+
     // Add event listeners
     const closeBtn = dialog.querySelector('.light-recommendation-close');
     const dismissBtn = dialog.querySelector('.light-recommendation-dismiss');
     const overlay = dialog.querySelector('.light-recommendation-overlay');
     const selectBtns = dialog.querySelectorAll('.light-recommendation-select-btn');
-    
+
     const closeDialog = () => {
       dialog!.style.display = 'none';
     };
-    
+
     closeBtn?.addEventListener('click', closeDialog);
     dismissBtn?.addEventListener('click', closeDialog);
     overlay?.addEventListener('click', closeDialog);
-    
+
     selectBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
         const lightId = (e.target as HTMLElement).dataset.lightId;
@@ -26544,21 +26571,21 @@ class VirtualStudio {
   private replaceLightWithRecommended(weakLightId: string, recommendedLightId: string): void {
     const weakLight = this.lights.get(weakLightId);
     if (!weakLight) return;
-    
+
     const recommendedLight = getLightById(recommendedLightId);
     if (!recommendedLight) return;
-    
+
     // Get position and settings from weak light
     const position = weakLight.mesh.position.clone();
     const cct = weakLight.cct;
     const powerMultiplier = weakLight.powerMultiplier || 1.0;
-    
+
     // Remove weak light
     this.removeLight(weakLightId);
-    
+
     // Add recommended light at same position
     this.addLight(recommendedLightId, position);
-    
+
     // Update settings to match previous light
     const newLightId = Array.from(this.lights.keys()).pop(); // Get the last added light
     if (newLightId) {
@@ -26566,7 +26593,7 @@ class VirtualStudio {
       if (newLight) {
         newLight.cct = cct;
         newLight.powerMultiplier = powerMultiplier;
-        
+
         // Update color temperature
         let color = this.cctToColor(cct);
         if (recommendedLight.cri) {
@@ -26574,13 +26601,13 @@ class VirtualStudio {
         }
         newLight.light.diffuse = color;
         (newLight.mesh.material as BABYLON.StandardMaterial).emissiveColor = color;
-        
+
         // Update scene brightness to apply power multiplier
         this.updateSceneBrightness();
         this.updateLightMeterReading();
       }
     }
-    
+
     console.log(`Replaced weak light with ${recommendedLight.brand} ${recommendedLight.model}`);
   }
 
@@ -26590,7 +26617,7 @@ class VirtualStudio {
       console.warn(`[selectLight] Light with ID ${id} not found in lights Map!`);
       return; // Don't proceed if light not found
     }
-    
+
     // Deselect previous light (hide beam visualization and remove highlight)
     if (this.selectedLightId && this.selectedLightId !== id) {
       const prevData = this.lights.get(this.selectedLightId);
@@ -26603,7 +26630,7 @@ class VirtualStudio {
         this.removeLightHighlight(prevData.mesh);
       }
     }
-    
+
     this.selectedLightId = id;
     this.selectedActorId = null; // Clear actor selection when selecting light
 
@@ -26660,7 +26687,7 @@ class VirtualStudio {
           data.mesh.rotation.z
         );
       }
-      
+
       // Use studio gizmos by default - they replace standard gizmos for better UX
       // Standard gizmos are hidden when studio gizmos are active
       if (this.gizmoManager) {
@@ -26669,25 +26696,25 @@ class VirtualStudio {
         this.gizmoManager.rotationGizmoEnabled = false;
         this.gizmoManager.scaleGizmoEnabled = false;
         this.gizmoManager.attachToMesh(null);
-        
+
         // Note: Standard gizmo observers removed - studio gizmos handle all manipulation
         // Studio gizmos provide their own drag handlers for position/rotation updates
       }
-      
+
       // Show beam visualization for selected light
       if (data.beamVisualization) {
         data.beamVisualization.isVisible = true;
       }
-      
+
       // Add visual highlight to selected light
       this.addLightHighlight(data.mesh);
-      
+
       // Enable snapping to ground when moving
       this.enableGroundSnapping(data.mesh);
-      
+
       // Create studio gizmos for realistic light manipulation
       this.createStudioGizmos(id);
-      
+
       // Show game-style HUD for light control
       this.showLightControlHUD(id, data);
     }
@@ -26695,11 +26722,11 @@ class VirtualStudio {
     this.updateSceneList();
     window.dispatchEvent(new CustomEvent('light-selected', { detail: { id } }));
   }
-  
+
   private addLightHighlight(mesh: BABYLON.Mesh): void {
     const highlightColor = new BABYLON.Color3(0.3, 0.7, 1.0); // Cyan highlight
     const outlineWidth = 0.02;
-    
+
     // Apply to main mesh
     if (!(mesh as any)._originalOutlineWidth) {
       (mesh as any)._originalOutlineWidth = mesh.outlineWidth;
@@ -26708,7 +26735,7 @@ class VirtualStudio {
     mesh.renderOutline = true;
     mesh.outlineWidth = outlineWidth;
     mesh.outlineColor = highlightColor;
-    
+
     // Apply to all child meshes as well
     const children = mesh.getChildMeshes(false);
     children.forEach(child => {
@@ -26723,7 +26750,7 @@ class VirtualStudio {
       }
     });
   }
-  
+
   private removeLightHighlight(mesh: BABYLON.Mesh): void {
     // Restore original outline or remove it from main mesh
     if ((mesh as any)._originalOutlineWidth !== undefined) {
@@ -26733,7 +26760,7 @@ class VirtualStudio {
       }
     }
     mesh.renderOutline = false;
-    
+
     // Also remove from all child meshes
     const children = mesh.getChildMeshes(false);
     children.forEach(child => {
@@ -26748,20 +26775,20 @@ class VirtualStudio {
       }
     });
   }
-  
+
   private addActorHighlight(mesh: BABYLON.Mesh): void {
     // Store original outline width
     if (!(mesh as any)._originalOutlineWidth) {
       (mesh as any)._originalOutlineWidth = mesh.outlineWidth;
       (mesh as any)._originalOutlineColor = mesh.outlineColor;
     }
-    
+
     // Add outline highlight with pink/magenta color to match actor color scheme
     mesh.renderOutline = true;
     mesh.outlineWidth = 0.03; // Slightly thicker for better visibility
     mesh.outlineColor = new BABYLON.Color3(0.93, 0.28, 0.60); // Pink/magenta highlight (matches actor color #ec4899)
   }
-  
+
   private removeActorHighlight(mesh: BABYLON.Mesh): void {
     // Restore original outline or remove it
     if ((mesh as any)._originalOutlineWidth !== undefined) {
@@ -26773,12 +26800,12 @@ class VirtualStudio {
       }
     }
   }
-  
+
   private enableGroundSnapping(mesh: BABYLON.Mesh): void {
     // Store original position update handler
     if ((mesh as any)._groundSnappingEnabled) return;
     (mesh as any)._groundSnappingEnabled = true;
-    
+
     // Add observer to snap to ground when position changes
     const snapToGround = () => {
       try {
@@ -26792,22 +26819,22 @@ class VirtualStudio {
         // Ignore errors
       }
     };
-    
+
     // Store the observer for cleanup
     (mesh as any)._groundSnapObserver = this.scene.onBeforeRenderObservable.add(snapToGround);
   }
-  
+
   private updateLightVisualState(data: LightData, enabled: boolean): void {
     // Update emissive material based on enabled state
     // Note: We don't modify the fixture mesh emissive here - it should stay dark (it's the fixture body)
     // Only the glowBulb should emit light
-    
+
     // Update beam visualization visibility
     if (data.beamVisualization) {
       // Only show beam if light is enabled and selected
       data.beamVisualization.isVisible = enabled && this.selectedLightId === data.mesh.name.replace('mesh_', 'light_');
     }
-    
+
     // Update glow bulb visibility - hide when light is off
     const glowBulb = (data.mesh as any)._glowBulb as BABYLON.Mesh | undefined;
     if (glowBulb) {
@@ -26828,35 +26855,35 @@ class VirtualStudio {
 
   public updateBeamVisualization(lightId: string | null): void {
     if (!lightId) return;
-    
+
     const data = this.lights.get(lightId);
     if (!data || !data.beamVisualization) return;
-    
+
     const beam = data.beamVisualization;
     const light = data.light;
-    
+
     if (light instanceof BABYLON.SpotLight) {
       const direction = light.direction;
       const up = new BABYLON.Vector3(0, 1, 0);
       let right = BABYLON.Vector3.Cross(up, direction);
-      
+
       if (right.length() < 0.001) {
         right = new BABYLON.Vector3(1, 0, 0);
       }
       right.normalize();
-      
+
       const newUp = BABYLON.Vector3.Cross(direction, right);
       newUp.normalize();
-      
+
       const rotationMatrix = BABYLON.Matrix.FromValues(
         right.x, right.y, right.z, 0,
         newUp.x, newUp.y, newUp.z, 0,
         direction.x, direction.y, direction.z, 0,
         0, 0, 0, 1
       );
-      
+
       beam.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(rotationMatrix);
-      
+
       const lightOffset = light.position.subtract(data.mesh.position);
       beam.position = lightOffset;
     }
@@ -26893,7 +26920,7 @@ class VirtualStudio {
     // Dispose light and mesh
     data.light.dispose();
     data.mesh.dispose();
-    
+
     // Dispose beam visualization if exists
     if (data.beamVisualization) {
       data.beamVisualization.dispose();
@@ -26913,11 +26940,11 @@ class VirtualStudio {
     this.updateLightMeterReading();
     this.updateAmbientLightIntensity(); // Auto-dim ambient based on studio lights
   }
-  
+
   public clearAllLights(): void {
     // Get all light IDs first to avoid modifying map while iterating
     const lightIds = Array.from(this.lights.keys());
-    
+
     // Remove each light
     lightIds.forEach(id => {
       const data = this.lights.get(id);
@@ -26929,43 +26956,43 @@ class VirtualStudio {
         }
       }
     });
-    
+
     // Clear the map
     this.lights.clear();
-    
+
     // Clear selection and studio gizmos
     this.selectedLightId = null;
     this.gizmoManager?.attachToMesh(null);
     this.disposeStudioGizmos();
-    
+
     // Reset light counter for new IDs
     this.lightCounter = 0;
-    
+
     // Update UI
     this.updateSceneList();
     this.updateLightMeterReading();
     this.updateAmbientLightIntensity();
-    
+
     console.log('All lights cleared');
   }
-  
+
   // Update ambient light intensity based on studio lights and settings
   public updateAmbientLightIntensity(): void {
     if (!this.ambientLight) return;
-    
+
     // Check if ambient light is disabled by user
     if (!this.ambientLightEnabled) {
       this.ambientLight.intensity = 0;
       return;
     }
-    
+
     // Apply color temperature to ambient light
     const tempColor = this.cctToColor(this.ambientLightTemperature);
     this.ambientLight.diffuse = tempColor;
-    
+
     const sliderEl = document.getElementById('ambientLightSlider') as HTMLInputElement;
     const valueEl = document.getElementById('ambientLightValue');
-    
+
     if (this.autoAmbientEnabled && this.lights.size > 0) {
       // Auto-dim: reduce ambient based on number and intensity of ENABLED studio lights only
       let totalStudioIntensity = 0;
@@ -26977,7 +27004,7 @@ class VirtualStudio {
           enabledLightCount++;
         }
       });
-      
+
       // If all lights are turned off (power off), dim ambient significantly
       if (enabledLightCount === 0) {
         // All studio lights are off - reduce ambient to near zero for realistic darkness
@@ -26990,7 +27017,7 @@ class VirtualStudio {
         // Use a logarithmic curve for natural falloff
         const dimmingFactor = Math.max(0.05, 1 / (1 + totalStudioIntensity * 0.15));
         this.ambientLight.intensity = this.ambientLightBaseIntensity * dimmingFactor;
-        
+
         // Update slider to show current effective value
         const effectivePercent = Math.round((this.ambientLight.intensity / 0.3) * 30);
         if (sliderEl) sliderEl.value = String(effectivePercent);
@@ -26999,28 +27026,28 @@ class VirtualStudio {
     } else {
       // Manual mode or no studio lights: use base intensity
       this.ambientLight.intensity = this.ambientLightBaseIntensity;
-      
+
       const percent = Math.round((this.ambientLightBaseIntensity / 0.3) * 30);
       if (valueEl) valueEl.textContent = `${percent}%`;
     }
-    
+
     // Update scene list to reflect new ambient intensity percentage
     this.updateSceneList();
   }
-  
+
   // Set ambient light base intensity from slider
   public setAmbientLightIntensity(percent: number): void {
     // Map 0-100% to 0-0.5 intensity range
     this.ambientLightBaseIntensity = (percent / 100) * 0.5;
     this.updateAmbientLightIntensity();
   }
-  
+
   // Toggle auto-ambient mode
   public setAutoAmbient(enabled: boolean): void {
     this.autoAmbientEnabled = enabled;
     this.updateAmbientLightIntensity();
   }
-  
+
   // Toggle ambient light on/off
   public setAmbientLightEnabled(enabled: boolean): void {
     this.ambientLightEnabled = enabled;
@@ -27032,7 +27059,7 @@ class VirtualStudio {
     }
     this.updateSceneList();
   }
-  
+
   // Set ambient light color temperature (Kelvin)
   public setAmbientLightTemperature(kelvin: number): void {
     this.ambientLightTemperature = kelvin;
@@ -27041,7 +27068,7 @@ class VirtualStudio {
       this.ambientLight.diffuse = color;
     }
   }
-  
+
   // Set ambient light ground color intensity (0-100%)
   public setAmbientLightGroundIntensity(percent: number): void {
     this.ambientLightGroundIntensity = percent / 100;
@@ -27059,7 +27086,7 @@ class VirtualStudio {
       );
     }
   }
-  
+
   // Apply ambient light preset
   public setAmbientPreset(preset: 'day' | 'evening' | 'night' | 'studio'): void {
     const sliderEl = document.getElementById('ambientLightSlider') as HTMLInputElement;
@@ -27070,9 +27097,9 @@ class VirtualStudio {
     const groundValue = document.getElementById('ambientGroundValue');
     const toggleSwitch = document.getElementById('ambientToggleSwitch') as HTMLInputElement;
     const toggleStatus = document.getElementById('ambientToggleStatus');
-    
+
     let intensity: number, temperature: number, ground: number;
-    
+
     switch (preset) {
       case 'day':
         intensity = 60;
@@ -27096,17 +27123,17 @@ class VirtualStudio {
         ground = 50;
         break;
     }
-    
+
     // Enable ambient light
     this.setAmbientLightEnabled(true);
     if (toggleSwitch) toggleSwitch.checked = true;
     if (toggleStatus) toggleStatus.textContent = 'PÅ';
-    
+
     // Apply settings
     this.setAmbientLightIntensity(intensity);
     this.setAmbientLightTemperature(temperature);
     this.setAmbientLightGroundIntensity(ground);
-    
+
     // Update UI sliders
     if (sliderEl) sliderEl.value = String(intensity);
     if (valueEl) valueEl.textContent = `${intensity}%`;
@@ -27121,7 +27148,7 @@ class VirtualStudio {
     const lightsGroup = document.getElementById('lightsGroup');
     if (lightsGroup) {
       lightsGroup.innerHTML = '';
-      
+
       // Add ambient light to scene hierarchy
       if (this.ambientLight) {
         const ambientItem = document.createElement('li');
@@ -27141,12 +27168,12 @@ class VirtualStudio {
           const tabCamera = document.getElementById('tabCamera') as HTMLElement;
           const cameraTabContent = document.getElementById('cameraTabContent') as HTMLElement;
           const lightTabContent = document.getElementById('lightTabContent') as HTMLElement;
-          
+
           // Show the panel if hidden
           if (cameraControlsPanel && cameraControlsPanel.style.display === 'none') {
             cameraControlsPanel.style.display = 'block';
           }
-          
+
           // Switch to light tab
           if (tabLight && tabCamera && cameraTabContent && lightTabContent) {
             // Update tab styles
@@ -27154,23 +27181,23 @@ class VirtualStudio {
             tabCamera.style.background = 'transparent';
             tabCamera.style.borderBottom = '2px solid transparent';
             tabCamera.style.color = 'rgba(255,255,255,0.6)';
-            
+
             tabLight.classList.add('active');
             tabLight.style.background = 'rgba(255,170,0,0.15)';
             tabLight.style.borderBottom = '2px solid #ffaa00';
             tabLight.style.color = '#ffaa00';
-            
+
             // Show/hide content
             cameraTabContent.style.display = 'none';
             lightTabContent.style.display = 'flex';
-            
+
             // Setup collapse functionality
             setTimeout(() => {
               if ((window as any).setupLightSectionCollapse) {
                 (window as any).setupLightSectionCollapse();
               }
             }, 50);
-            
+
             // Increase panel width and remove height restriction when light tab is active (responsive based on screen size)
             const screenWidth = window.innerWidth;
             const lightTabWidth = screenWidth >= 1440 ? '1100px' : '900px';
@@ -27188,7 +27215,7 @@ class VirtualStudio {
         });
         lightsGroup.appendChild(ambientItem);
       }
-      
+
       // Add studio lights
       for (const [id, data] of this.lights) {
         const item = document.createElement('li');
@@ -27197,11 +27224,11 @@ class VirtualStudio {
         item.setAttribute('role', 'treeitem');
         item.setAttribute('tabindex', '0');
         item.setAttribute('aria-selected', id === this.selectedLightId ? 'true' : 'false');
-        
+
         // Determine light icon color based on CCT
         const cctColor = this.cctToColor(data.cct);
         const iconColor = `rgb(${Math.round(cctColor.r * 255)}, ${Math.round(cctColor.g * 255)}, ${Math.round(cctColor.b * 255)})`;
-        
+
         item.innerHTML = `
           <span class="hierarchy-icon" style="color: ${iconColor};">●</span>
           <span class="hierarchy-name">${data.name}</span>
@@ -27210,7 +27237,7 @@ class VirtualStudio {
         item.addEventListener('click', () => this.selectLight(id));
         lightsGroup.appendChild(item);
       }
-      
+
       // Show empty message if no lights
       if (this.lights.size === 0 && !this.ambientLight) {
         const emptyItem = document.createElement('li');
@@ -27219,7 +27246,7 @@ class VirtualStudio {
         emptyItem.innerHTML = '<span class="hierarchy-empty-text">Ingen lys lagt til</span>';
         lightsGroup.appendChild(emptyItem);
       }
-      
+
       // Update the lights count badge
       const lightsHeader = document.querySelector('[data-group="lights"]');
       if (lightsHeader) {
@@ -27239,7 +27266,7 @@ class VirtualStudio {
     const list = document.getElementById('sceneList');
     if (list) {
       list.innerHTML = '';
-      
+
       // Add ambient light
       if (this.ambientLight) {
         const ambientItem = document.createElement('div');
@@ -27253,7 +27280,7 @@ class VirtualStudio {
         });
         list.appendChild(ambientItem);
       }
-      
+
       // Add studio lights
       for (const [id, data] of this.lights) {
         const item = document.createElement('div');
@@ -27266,7 +27293,7 @@ class VirtualStudio {
       const actors = this.scene.meshes.filter(m => 
         m.name.startsWith('actor-') && !m.name.includes('gizmo')
       );
-      
+
       for (const actor of actors) {
         const item = document.createElement('div');
         item.className = 'scene-item';
@@ -27288,7 +27315,7 @@ class VirtualStudio {
     if (lens) {
       this.updateApertureForLens(lens.maxAperture, lens.minAperture);
     }
-    
+
     window.dispatchEvent(new CustomEvent('camera-settings-changed', {
       detail: { ...this.cameraSettings }
     }));
@@ -27319,21 +27346,21 @@ class VirtualStudio {
     this.createCameraMesh(presetId, preset);
     this.updateCameraPresetUI(presetId, true);
     console.log(`Camera preset ${presetId} saved with focal=${preset.focalLength}mm, distance=${preset.distance}m, height=${preset.height}m`);
-    
+
     // Re-assign RTT settings FIRST (creates RTT and camera if needed, updates renderList)
     this.reassignMonitorRTTSettings(presetId);
-    
+
     // THEN update monitor camera to match the newly saved preset
     // This must come AFTER reassignMonitorRTTSettings because the camera might not exist yet
     this.updateMonitorCameraFromPreset(presetId, preset);
-    
+
     // Update recording arc to show this camera as available
     const arc = document.getElementById('recordingArc');
     if (arc) {
       this.updateRecordingArcCameras(arc);
     }
   }
-  
+
   /**
    * Update an existing monitor camera to match the preset's perspective.
    * This is called ONLY when a preset is explicitly saved (not during navigation).
@@ -27342,7 +27369,7 @@ class VirtualStudio {
   private updateMonitorCameraFromPreset(presetId: string, preset: { alpha: number; beta: number; radius: number; target: BABYLON.Vector3; fov: number }): void {
     const monitorCamera = this.monitorCameras.get(presetId);
     if (!monitorCamera) return;
-    
+
     // Update camera parameters to match the saved preset
     // CRITICAL: Set spherical coordinates (alpha/beta/radius) - Babylon will calculate position
     // DO NOT call rebuildAnglesAndRadius() - that does the OPPOSITE (calculates angles from position)
@@ -27351,11 +27378,11 @@ class VirtualStudio {
     monitorCamera.beta = preset.beta;
     monitorCamera.radius = preset.radius;
     monitorCamera.fov = preset.fov;
-    
+
     // Force the camera to update its internal state by calling getViewMatrix
     // This triggers position calculation from alpha/beta/radius without overwriting them
     monitorCamera.getViewMatrix(true); // Force recalculation
-    
+
     console.log(`[Monitor] ${presetId}: Camera UPDATED - alpha=${monitorCamera.alpha.toFixed(2)}, beta=${monitorCamera.beta.toFixed(2)}, radius=${monitorCamera.radius.toFixed(2)}, pos=${monitorCamera.position.toString()}`);
   }
 
@@ -27506,13 +27533,13 @@ class VirtualStudio {
 
       // Load the camera preset to view
       this.loadCameraPreset(presetId);
-      
+
       // Ensure RTT is created and configured for this camera
       // This fixes "no signal" issue when opening monitor dialog
       this.reassignMonitorRTTSettings(presetId);
 
       console.log(`Camera ${presetId} activated for perspective control`);
-      
+
       // Update active indicator in monitor viewports
       document.querySelectorAll('.monitor-active-indicator').forEach(indicator => {
         const indicatorPresetId = (indicator as HTMLElement).getAttribute('data-preset');
@@ -27524,7 +27551,7 @@ class VirtualStudio {
       });
     } else {
       console.log('No camera active for perspective control');
-      
+
       // Hide all active indicators
       document.querySelectorAll('.monitor-active-indicator').forEach(indicator => {
         (indicator as HTMLElement).style.display = 'none';
@@ -27713,7 +27740,7 @@ class VirtualStudio {
 
     // Set this preset as selected (for top view highlighting)
     this.selectedCameraPresetId = presetId;
-    
+
     // CRITICAL: Re-assign RTT settings after preset change to ensure continuous rendering
     // This prevents RTT from becoming stale after preset-switch
     this.reassignMonitorRTTSettings(presetId);
@@ -27770,7 +27797,7 @@ class VirtualStudio {
 
     this.updateCameraPresetUI(presetId, false);
     console.log(`Camera preset ${presetId} cleared`);
-    
+
     // Note: RTT will continue to exist but will show "no signal" since preset is cleared
     // RTT settings are not cleared here - they remain for when preset is restored
   }
@@ -27996,7 +28023,7 @@ class VirtualStudio {
     if (monitorViewport) {
       monitorViewport.style.display = hasPreset ? 'block' : 'none';
     }
-    
+
     // Update active indicator in monitor viewport
     const activeIndicator = monitorViewport?.querySelector(`.monitor-active-indicator[data-preset="${presetId}"]`) as HTMLElement;
     if (activeIndicator) {
@@ -28019,36 +28046,36 @@ class VirtualStudio {
 
 
   // Video Recording Methods
-  
+
   private async fixMp4MoovAtom(blob: Blob): Promise<Blob> {
     // Move moov atom to the beginning for fast-start (better seeking/streaming)
     return new Promise((resolve, _reject) => {
       const mp4boxFile = MP4Box.createFile();
       const reader = new FileReader();
-      
+
       reader.onload = () => {
         try {
           const arrayBuffer = reader.result as ArrayBuffer;
           (arrayBuffer as any).fileStart = 0;
-          
+
           mp4boxFile.onReady = (info: any) => {
             console.log('[Recording] MP4 info:', info);
           };
-          
+
           mp4boxFile.onError = (e: any) => {
             console.warn('[Recording] MP4Box error, using original:', e);
             resolve(blob); // Return original on error
           };
-          
+
           mp4boxFile.appendBuffer(arrayBuffer);
           mp4boxFile.flush();
-          
+
           // Get the processed file with moov at start
           const segments: ArrayBuffer[] = [];
           mp4boxFile.onSegment = (_id: number, _user: any, buffer: ArrayBuffer) => {
             segments.push(buffer);
           };
-          
+
           // For now, return original - full remuxing is complex
           // The MediaRecorder in Chrome already produces fast-start MP4s
           resolve(blob);
@@ -28057,12 +28084,12 @@ class VirtualStudio {
           resolve(blob);
         }
       };
-      
+
       reader.onerror = () => resolve(blob);
       reader.readAsArrayBuffer(blob);
     });
   }
-  
+
   private getBestRecordingCodec(): { mimeType: string; extension: string; bitrate: number } {
     // Priority: MP4/H.264 (best compatibility) > VP9 (best quality) > VP8 (fallback)
     // Bitrates optimized for 4K @ 60fps
@@ -28074,20 +28101,20 @@ class VirtualStudio {
       { mime: 'video/webm;codecs=vp8,opus', ext: 'webm', bitrate: 50000000 }, // VP8 with Opus
       { mime: 'video/webm;codecs=vp8', ext: 'webm', bitrate: 50000000 }, // VP8
     ];
-    
+
     for (const codec of codecs) {
       if (MediaRecorder.isTypeSupported(codec.mime)) {
         console.log(`[Recording] Using codec: ${codec.mime} at ${codec.bitrate / 1000000} Mbps`);
         return { mimeType: codec.mime, extension: codec.ext, bitrate: codec.bitrate };
       }
     }
-    
+
     // Ultimate fallback
     return { mimeType: 'video/webm', extension: 'webm', bitrate: 8000000 };
   }
-  
+
   private recordingExtension: string = 'webm';
-  
+
   public async startRecording(cameraPresetId?: string): Promise<boolean> {
     if (this.isRecording) {
       console.log('Already recording');
@@ -28108,7 +28135,7 @@ class VirtualStudio {
 
     try {
       const stream = canvas.captureStream(60); // 60 fps for smoother video
-      
+
       // Get best available codec
       const codec = this.getBestRecordingCodec();
       this.recordingExtension = codec.extension;
@@ -28152,7 +28179,7 @@ class VirtualStudio {
       this.stopMultiCameraRecording();
       return;
     }
-    
+
     if (!this.isRecording || !this.mediaRecorder) {
       console.log('Not recording');
       return;
@@ -28259,12 +28286,12 @@ class VirtualStudio {
       }
       return;
     }
-    
+
     if (viewport.querySelector('.monitor-rec-badge')) return; // Already has indicator
-    
+
     this.createRecBadge(viewport, cameraId);
   }
-  
+
   private createRecBadge(container: HTMLElement, cameraId: string): void {
     const badge = document.createElement('div');
     badge.className = 'monitor-rec-badge';
@@ -28276,7 +28303,7 @@ class VirtualStudio {
     container.style.position = 'relative';
     container.appendChild(badge);
   }
-  
+
   private removeMonitorRecIndicator = (cameraId: string): void => {
     // Remove REC badge for this camera
     const badges = document.querySelectorAll(`.monitor-rec-badge[data-camera="${cameraId}"]`);
@@ -28287,10 +28314,10 @@ class VirtualStudio {
   private selectedRecordingCamera: string = 'main';
   private currentProjectId: string | null = null;
   private currentProjectType: 'studio' | null = null;
-  
+
   private showProjectTypeSelector(): void {
     let dialog = document.getElementById('projectTypeDialog') as HTMLDialogElement;
-    
+
     if (!dialog) {
       dialog = document.createElement('dialog');
       dialog.id = 'projectTypeDialog';
@@ -28306,13 +28333,13 @@ class VirtualStudio {
               </svg>
             </button>
           </div>
-          
+
           <div class="project-type-tabs">
             <button class="project-type-tab active" data-tab="new">Nytt prosjekt</button>
             <button class="project-type-tab" data-tab="drafts">Utkast</button>
             <button class="project-type-tab" data-tab="recent">Siste prosjekter</button>
           </div>
-          
+
           <div class="project-type-content" data-content="new">
             <div class="project-type-options">
               <button class="project-type-option" data-type="studio">
@@ -28331,7 +28358,7 @@ class VirtualStudio {
               </button>
             </div>
           </div>
-          
+
           <div class="project-type-content" data-content="drafts" style="display:none;">
             <div class="project-drafts-list" id="projectDraftsList">
               <div class="project-drafts-empty">
@@ -28343,7 +28370,7 @@ class VirtualStudio {
               </div>
             </div>
           </div>
-          
+
           <div class="project-type-content" data-content="recent" style="display:none;">
             <div class="project-recent-list" id="projectRecentList">
               <div class="project-recent-empty">
@@ -28358,34 +28385,34 @@ class VirtualStudio {
         </div>
       `;
       document.body.appendChild(dialog);
-      
+
       this.setupProjectTypeDialogEvents(dialog);
     }
-    
+
     // Load drafts and recent projects
     this.loadProjectDrafts();
     this.loadRecentProjects();
-    
+
     dialog.showModal();
   }
-  
+
   private setupProjectTypeDialogEvents(dialog: HTMLDialogElement): void {
     const closeBtn = dialog.querySelector('#projectTypeDialogClose');
     const tabs = dialog.querySelectorAll('.project-type-tab');
     const typeOptions = dialog.querySelectorAll('.project-type-option');
-    
+
     closeBtn?.addEventListener('click', () => dialog.close());
-    
+
     dialog.addEventListener('click', (e) => {
       if (e.target === dialog) dialog.close();
     });
-    
+
     // Tab switching
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         tabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
-        
+
         const tabName = tab.getAttribute('data-tab');
         dialog.querySelectorAll('.project-type-content').forEach(content => {
           (content as HTMLElement).style.display = 
@@ -28393,13 +28420,13 @@ class VirtualStudio {
         });
       });
     });
-    
+
     // Project type selection
     typeOptions.forEach(option => {
       option.addEventListener('click', () => {
         const type = option.getAttribute('data-type');
         dialog.close();
-        
+
         if (type === 'studio') {
           // Create new Virtual Studio project
           this.createNewStudioProject();
@@ -28408,17 +28435,17 @@ class VirtualStudio {
       });
     });
   }
-  
+
   private async loadProjectDrafts(): Promise<void> {
     const listEl = document.getElementById('projectDraftsList');
     if (!listEl) return;
-    
+
     try {
       const response = await fetch('/api/casting/projects');
       const projects = await response.json();
-      
+
       const drafts = projects.filter((p: any) => p.status === 'draft' || !p.status);
-      
+
       if (drafts.length === 0) {
         listEl.innerHTML = `
           <div class="project-drafts-empty">
@@ -28431,7 +28458,7 @@ class VirtualStudio {
         `;
         return;
       }
-      
+
       listEl.innerHTML = drafts.map((project: any) => `
         <button class="project-draft-item" data-project-id="${project.id}" data-project-type="studio">
           <div class="project-draft-icon">
@@ -28447,13 +28474,13 @@ class VirtualStudio {
           <div class="project-draft-type">Studio</div>
         </button>
       `).join('');
-      
+
       // Add click handlers for drafts
       listEl.querySelectorAll('.project-draft-item').forEach(item => {
         item.addEventListener('click', () => {
           const projectId = item.getAttribute('data-project-id');
           const projectType = item.getAttribute('data-project-type');
-          
+
           if (projectId) {
             this.openProject(projectId, projectType as 'studio');
             (document.getElementById('projectTypeDialog') as HTMLDialogElement)?.close();
@@ -28464,20 +28491,20 @@ class VirtualStudio {
       console.error('Failed to load project drafts:', error);
     }
   }
-  
+
   private async loadRecentProjects(): Promise<void> {
     const listEl = document.getElementById('projectRecentList');
     if (!listEl) return;
-    
+
     try {
       const response = await fetch('/api/casting/projects');
       const projects = await response.json();
-      
+
       // Sort by updatedAt, most recent first
       const recent = projects
         .sort((a: any, b: any) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
         .slice(0, 10);
-      
+
       if (recent.length === 0) {
         listEl.innerHTML = `
           <div class="project-recent-empty">
@@ -28490,7 +28517,7 @@ class VirtualStudio {
         `;
         return;
       }
-      
+
       listEl.innerHTML = recent.map((project: any) => `
         <button class="project-recent-item" data-project-id="${project.id}" data-project-type="studio">
           <div class="project-recent-icon ${project.status === 'active' ? 'active' : ''}">
@@ -28506,13 +28533,13 @@ class VirtualStudio {
           <span class="project-recent-date">${new Date(project.updatedAt || project.createdAt).toLocaleDateString('nb-NO')}</span>
         </button>
       `).join('');
-      
+
       // Add click handlers for recent projects
       listEl.querySelectorAll('.project-recent-item').forEach(item => {
         item.addEventListener('click', () => {
           const projectId = item.getAttribute('data-project-id');
           const projectType = item.getAttribute('data-project-type');
-          
+
           if (projectId) {
             this.openProject(projectId, projectType as 'studio');
             (document.getElementById('projectTypeDialog') as HTMLDialogElement)?.close();
@@ -28523,18 +28550,18 @@ class VirtualStudio {
       console.error('Failed to load recent projects:', error);
     }
   }
-  
+
   private openProject(projectId: string, type: 'studio'): void {
     this.currentProjectId = projectId;
     this.currentProjectType = type;
-    
+
     // Load Virtual Studio project
     this.loadStudioProject(projectId);
-    
+
     // Update project name in header
     this.updateProjectNameDisplay(projectId);
   }
-  
+
   private async updateProjectNameDisplay(projectId: string): Promise<void> {
     try {
       const response = await fetch(`/api/casting/projects/${projectId}`);
@@ -28549,45 +28576,45 @@ class VirtualStudio {
       console.error('Failed to update project name:', error);
     }
   }
-  
+
   private createNewStudioProject(): void {
     const projectId = `studio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     this.currentProjectId = projectId;
-    
+
     // Reset project name
     const nameInput = document.getElementById('projectName') as HTMLInputElement;
     if (nameInput) {
       nameInput.value = 'NYTT PROSJEKT';
     }
-    
+
     // Clear scene and reset
     this.clearStudio();
-    
+
     this.showNotification('Nytt Virtual Studio prosjekt opprettet', 'success');
   }
-  
+
   private loadStudioProject(projectId: string): void {
     // For now, just set the project ID
     // Future: Load saved scene state from backend
     this.currentProjectId = projectId;
     this.showNotification('Laster prosjekt...', 'info');
   }
-  
+
   private clearStudio(): void {
     // Clear all lights and objects
     this.lights.forEach((_, id) => this.removeLight(id));
-    
+
     // Reset camera
     this.camera.alpha = Math.PI / 4;
     this.camera.beta = Math.PI / 3;
     this.camera.radius = 15;
     this.camera.target = BABYLON.Vector3.Zero();
   }
-  
+
   public getCurrentProjectId(): string | null {
     return this.currentProjectId;
   }
-  
+
   public getCurrentProjectType(): 'studio' | null {
     return this.currentProjectType;
   }
@@ -28600,7 +28627,7 @@ class VirtualStudio {
       return;
     }
     console.log('[RecordingArc] Creating new recording arc');
-    
+
     const arc = document.createElement('div');
     arc.id = 'recordingArc';
     arc.className = 'recording-arc';
@@ -28614,7 +28641,7 @@ class VirtualStudio {
           </div>
           <div class="recording-arc-timer" id="arcRecordTimer">00:00:00</div>
         </div>
-        
+
         <div class="recording-arc-cameras">
           <button class="arc-camera-btn active" data-camera="main" title="Hovedkamera">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -28635,7 +28662,7 @@ class VirtualStudio {
             </svg>
           </button>
         </div>
-        
+
         <div class="recording-arc-controls">
           <button class="arc-record-btn" id="arcRecordBtn" title="Start opptak">
             <div class="arc-record-icon"></div>
@@ -28649,7 +28676,7 @@ class VirtualStudio {
         </div>
       </div>
     `;
-    
+
     document.body.appendChild(arc);
     this.setupRecordingArcEvents(arc);
     this.updateRecordingArcCameras(arc);
@@ -28659,7 +28686,7 @@ class VirtualStudio {
     console.log('[Recording] showRecordingDialog called');
     // Check if arc already exists
     let arc = document.getElementById('recordingArc');
-    
+
     if (!arc) {
       // Create the recording arc overlay
       arc = document.createElement('div');
@@ -28675,7 +28702,7 @@ class VirtualStudio {
             </div>
             <div class="recording-arc-timer" id="arcRecordTimer">00:00:00</div>
           </div>
-          
+
           <div class="recording-arc-cameras">
             <button class="arc-camera-btn active" data-camera="main" title="Hovedkamera">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -28696,7 +28723,7 @@ class VirtualStudio {
               </svg>
             </button>
           </div>
-          
+
           <div class="recording-arc-controls">
             <button class="arc-record-btn" id="arcRecordBtn" title="Start opptak">
               <div class="arc-record-icon"></div>
@@ -28710,13 +28737,13 @@ class VirtualStudio {
           </div>
         </div>
       `;
-      
+
       document.body.appendChild(arc);
       this.setupRecordingArcEvents(arc);
     }
-    
+
     this.updateRecordingArcCameras(arc);
-    
+
     // Toggle expanded state
     if (this.recordingArcVisible) {
       arc.classList.remove('expanded');
@@ -28726,38 +28753,38 @@ class VirtualStudio {
       this.recordingArcVisible = true;
     }
   }
-  
+
   private setupRecordingArcEvents(arc: HTMLElement): void {
     const closeBtn = arc.querySelector('#arcCloseBtn');
     const recordBtn = arc.querySelector('#arcRecordBtn');
     const cameraBtns = arc.querySelectorAll('.arc-camera-btn');
-    
+
     // Close handler
     closeBtn?.addEventListener('click', () => {
       arc.classList.remove('expanded');
       this.recordingArcVisible = false;
     });
-    
+
     // Camera selection
     cameraBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         const cameraId = btn.getAttribute('data-camera') || 'main';
-        
+
         // Check if this is an inactive camera (not saved)
         if (btn.classList.contains('inactive')) {
           this.handleInactiveCameraClick(cameraId);
           return;
         }
-        
+
         cameraBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         this.selectedRecordingCamera = cameraId;
-        
+
         // If a specific camera is selected, switch view to it
         if (this.selectedRecordingCamera !== 'main' && this.selectedRecordingCamera !== 'all') {
           this.loadCameraPreset(this.selectedRecordingCamera);
         }
-        
+
         // Dispatch event for panel synchronization
         window.dispatchEvent(new CustomEvent('ch-recording-camera-changed', {
           detail: { 
@@ -28767,7 +28794,7 @@ class VirtualStudio {
         }));
       });
     });
-    
+
     // Listen for external camera selection changes (from panels) - use fresh query
     if (!(window as any).__chPanelCameraListenerAttached) {
       (window as any).__chPanelCameraListenerAttached = true;
@@ -28787,20 +28814,20 @@ class VirtualStudio {
         }
       }) as EventListener);
     }
-    
+
     // Listen for CameraPathRecorder recording state changes
     if (!(window as any).__chCameraPathRecordingListenerAttached) {
       (window as any).__chCameraPathRecordingListenerAttached = true;
       window.addEventListener('ch-camera-path-recording-changed', ((e: CustomEvent) => {
         const { isRecording, cameraId } = e.detail;
         console.log('[Recording Arc] CameraPathRecorder state changed:', isRecording, cameraId);
-        
+
         const arcEl = document.getElementById('recordingArc');
         if (!arcEl) return;
-        
+
         const allBtns = arcEl.querySelectorAll('.arc-camera-btn');
         const recordBtn = arcEl.querySelector('#arcRecordBtn');
-        
+
         if (isRecording) {
           // Gray out all camera buttons and record button when CameraPathRecorder is active
           // Use setProperty with !important to override existing inline styles
@@ -28828,14 +28855,14 @@ class VirtualStudio {
         }
       }) as EventListener);
     }
-    
+
     // Record button - toggle recording
     recordBtn?.addEventListener('click', () => {
       if (this.isRecording) {
         this.stopRecording();
         recordBtn.classList.remove('recording');
         arc.classList.remove('is-recording');
-        
+
         // Reset play button
         const playBtn = document.getElementById('playBtn');
         if (playBtn) {
@@ -28846,14 +28873,14 @@ class VirtualStudio {
         // Start recording
         recordBtn.classList.add('recording');
         arc.classList.add('is-recording');
-        
+
         // Update play button
         const playBtn = document.getElementById('playBtn');
         if (playBtn) {
           playBtn.classList.add('recording');
           playBtn.innerHTML = '<span aria-hidden="true">⏹</span>';
         }
-        
+
         // Start recording with selected camera
         if (this.selectedRecordingCamera === 'all') {
           this.startMultiCameraRecording();
@@ -28862,32 +28889,32 @@ class VirtualStudio {
         } else {
           this.startRecording(this.selectedRecordingCamera);
         }
-        
+
         // Start updating arc timer
         this.startArcRecordingTimer();
       }
     });
   }
-  
+
   private updateRecordingArcCameras(arc: HTMLElement): void {
     console.log('%c[RecordingArc] updateRecordingArcCameras called', 'background: red; color: white; font-size: 16px;');
     console.log('[RecordingArc] cameraPresets:', Array.from(this.cameraPresets.keys()));
     console.log('[RecordingArc] Found buttons:', arc.querySelectorAll('.arc-camera-btn[data-camera^="cam"]').length);
-    
+
     const cameraBtns = arc.querySelectorAll('.arc-camera-btn[data-camera^="cam"]');
     const allBtn = arc.querySelector('.arc-camera-btn[data-camera="all"]') as HTMLElement;
-    
+
     let hasSavedCameras = false;
-    
+
     cameraBtns.forEach(btn => {
       const cameraId = btn.getAttribute('data-camera');
       const htmlBtn = btn as HTMLButtonElement;
-      
+
       // Check if preset exists AND has actual data (not null)
       const preset = cameraId ? this.cameraPresets.get(cameraId) : null;
       const isSaved = cameraId && preset !== null && preset !== undefined;
       console.log(`[RecordingArc] Button ${cameraId}: saved=${isSaved}, preset=${preset ? 'exists' : 'null/undefined'}`);
-      
+
       if (isSaved) {
         // Camera is saved - enable and style as available
         htmlBtn.disabled = false;
@@ -28907,7 +28934,7 @@ class VirtualStudio {
         console.log(`[RecordingArc] Set ${cameraId} to INACTIVE`);
       }
     });
-    
+
     // Gray out "all cameras" button if no saved cameras
     if (allBtn) {
       allBtn.style.removeProperty('opacity');
@@ -28922,24 +28949,24 @@ class VirtualStudio {
       }
     }
   }
-  
+
   private handleInactiveCameraClick(cameraId: string): void {
     // Show confirmation popup
     const cameraLabel = cameraId.replace('cam', 'Kamera ');
     this.showCameraActivationPrompt(cameraId, cameraLabel);
   }
-  
+
   private showCameraActivationPrompt(cameraId: string, cameraLabel: string): void {
     // Use existing prompt container or create once
     let prompt = document.getElementById('cameraActivationPrompt') as HTMLElement;
-    
+
     if (!prompt) {
       prompt = document.createElement('div');
       prompt.id = 'cameraActivationPrompt';
       prompt.className = 'camera-activation-prompt';
       document.body.appendChild(prompt);
     }
-    
+
     // Update content
     prompt.innerHTML = `
       <div class="prompt-content">
@@ -28951,25 +28978,25 @@ class VirtualStudio {
         </div>
       </div>
     `;
-    
+
     // Show the prompt
     prompt.style.display = 'flex';
-    
+
     // Event handlers (use one-time listeners)
     const cancelBtn = prompt.querySelector('.cancel');
     const confirmBtn = prompt.querySelector('.confirm');
-    
+
     const hidePrompt = () => {
       prompt.style.display = 'none';
     };
-    
+
     cancelBtn?.addEventListener('click', hidePrompt, { once: true });
-    
+
     confirmBtn?.addEventListener('click', () => {
       hidePrompt();
       this.openCameraPanel(cameraId);
     }, { once: true });
-    
+
     // Close on outside click
     const outsideClickHandler = (e: MouseEvent) => {
       if (e.target === prompt) {
@@ -28979,7 +29006,7 @@ class VirtualStudio {
     };
     prompt.addEventListener('click', outsideClickHandler as EventListener);
   }
-  
+
   private openCameraPanel(cameraId: string): void {
     // Click the Kamera & Lys button in the footer to open the panel
     const cameraControlBtn = document.getElementById('cameraControlBtn') as HTMLElement;
@@ -28987,7 +29014,7 @@ class VirtualStudio {
       cameraControlBtn.click();
       console.log('[CameraPanel] Clicked cameraControlBtn to open panel');
     }
-    
+
     // Fallback: try data-panel selector
     if (!cameraControlBtn) {
       const cameraTab = document.querySelector('[data-panel="camera-light"]') as HTMLElement;
@@ -28996,120 +29023,120 @@ class VirtualStudio {
         console.log('[CameraPanel] Clicked data-panel selector');
       }
     }
-    
+
     // Also dispatch event for panel system
     window.dispatchEvent(new CustomEvent('ch-open-panel', { 
       detail: { panel: 'camera-light', tab: 'monitors', targetCamera: cameraId }
     }));
-    
+
     // After panel opens, scroll to and highlight the camera preset button
     setTimeout(() => {
       this.scrollToAndHighlightCameraPreset(cameraId);
     }, 400);
-    
+
     this.showNotification(`Lagre nåværende vinkel som ${cameraId.replace('cam', 'Cam ')}`, 'info');
   }
-  
+
   private scrollToAndHighlightCameraPreset(cameraId: string): void {
     // Find the camera preset button
     const presetBtn = document.querySelector(`.camera-preset-btn[data-preset="${cameraId}"]`) as HTMLElement;
-    
+
     if (presetBtn) {
       // Scroll the button into view
       presetBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      
+
       // Add highlight effect
       presetBtn.classList.add('needs-save');
-      
+
       // Remove highlight after 5 seconds or when preset is saved
       setTimeout(() => {
         presetBtn.classList.remove('needs-save');
       }, 5000);
     }
-    
+
     // Also try to find and scroll to the presets section container
     const presetsSection = document.querySelector('.camera-presets-section, .preset-buttons-container, #cameraPresetsContainer') as HTMLElement;
     if (presetsSection && !presetBtn) {
       presetsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }
-  
+
   private arcTimerInterval: number | null = null;
-  
+
   private startArcRecordingTimer(): void {
     const timerEl = document.getElementById('arcRecordTimer');
-    
+
     this.arcTimerInterval = window.setInterval(() => {
       if (!this.isRecording) {
         this.stopArcRecordingTimer();
         return;
       }
-      
+
       const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
       const hours = Math.floor(elapsed / 3600).toString().padStart(2, '0');
       const minutes = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
       const seconds = (elapsed % 60).toString().padStart(2, '0');
-      
+
       if (timerEl) timerEl.textContent = `${hours}:${minutes}:${seconds}`;
     }, 1000);
   }
-  
+
   private stopArcRecordingTimer(): void {
     if (this.arcTimerInterval) {
       clearInterval(this.arcTimerInterval);
       this.arcTimerInterval = null;
     }
-    
+
     const timerEl = document.getElementById('arcRecordTimer');
     if (timerEl) timerEl.textContent = '00:00:00';
-    
+
     // Reset arc UI
     const arc = document.getElementById('recordingArc');
     const recordBtn = arc?.querySelector('#arcRecordBtn');
     if (recordBtn) recordBtn.classList.remove('recording');
     if (arc) arc.classList.remove('is-recording');
   }
-  
+
   private async startMultiCameraRecording(): Promise<void> {
     // Record from all saved camera presets simultaneously using their RTT feeds
     const savedPresets = Array.from(this.cameraPresets.keys());
-    
+
     if (savedPresets.length === 0) {
       // Just record main view
       this.startRecording();
       return;
     }
-    
+
     this.isMultiCameraRecording = true;
     this.recordingStartTime = Date.now();
     this.isRecording = true;
-    
+
     // Dispatch event to show recording indicators on monitors
     const allCameras = ['main', ...Array.from(this.cameraPresets.keys())];
     window.dispatchEvent(new CustomEvent('ch-monitor-recording-started', {
       detail: { cameras: allCameras, isAll: true }
     }));
-    
+
     // Add REC indicator to each monitor viewport
     allCameras.forEach(camId => {
       this.addMonitorRecIndicator(camId);
     });
-    
+
     // Get best codec for all recordings
     const codec = this.getBestRecordingCodec();
     this.recordingExtension = codec.extension;
-    
+
     // Start recording from main camera
     const mainCanvas = this.engine.getRenderingCanvas();
     if (mainCanvas) {
       try {
         const mainStream = mainCanvas.captureStream(60); // 60fps
-        
+
         const mainRecorder = new MediaRecorder(mainStream, {
           mimeType: codec.mimeType,
           videoBitsPerSecond: codec.bitrate
         });
-        
+
         this.multiCameraChunks.set('main', []);
         mainRecorder.ondataavailable = (event) => {
           if (event.data.size > 0) {
@@ -29118,19 +29145,19 @@ class VirtualStudio {
             this.multiCameraChunks.set('main', chunks);
           }
         };
-        
+
         mainRecorder.start(100);
         this.multiCameraRecorders.set('main', mainRecorder);
       } catch (e) {
         console.error('Failed to start main camera recording:', e);
       }
     }
-    
+
     // Start recording from each RTT using offscreen canvases
     for (const presetId of savedPresets) {
       const rtt = this.monitorRenderTargets.get(presetId);
       if (!rtt) continue;
-      
+
       try {
         // Create offscreen canvas for this RTT (4K resolution)
         const offscreenCanvas = document.createElement('canvas');
@@ -29138,17 +29165,17 @@ class VirtualStudio {
         offscreenCanvas.height = 2160;
         const ctx = offscreenCanvas.getContext('2d');
         if (!ctx) continue;
-        
+
         this.multiCameraCanvases.set(presetId, offscreenCanvas);
-        
+
         // Capture stream from offscreen canvas
         const stream = offscreenCanvas.captureStream(60); // 60fps
-        
+
         const recorder = new MediaRecorder(stream, {
           mimeType: codec.mimeType,
           videoBitsPerSecond: codec.bitrate
         });
-        
+
         this.multiCameraChunks.set(presetId, []);
         recorder.ondataavailable = (event) => {
           if (event.data.size > 0) {
@@ -29157,23 +29184,23 @@ class VirtualStudio {
             this.multiCameraChunks.set(presetId, chunks);
           }
         };
-        
+
         recorder.start(100);
         this.multiCameraRecorders.set(presetId, recorder);
-        
+
         // Set up RTT to canvas copying
         rtt.onAfterRenderObservable.add(() => {
           if (!this.isMultiCameraRecording) return;
-          
+
           const offCanvas = this.multiCameraCanvases.get(presetId);
           if (!offCanvas) return;
-          
+
           const offCtx = offCanvas.getContext('2d');
           if (!offCtx) return;
-          
+
           // Read RTT pixels and draw to offscreen canvas
           const size = rtt.getSize();
-          
+
           try {
             // Use readPixels to get RTT content  
             const pixelsData = rtt.readPixels();
@@ -29182,10 +29209,10 @@ class VirtualStudio {
               return;
             }
             const pixels = pixelsData;
-            
+
             // Create ImageData and draw to canvas
             const imageData = new ImageData(new Uint8ClampedArray(pixels), size.width, size.height);
-            
+
             // Create temporary canvas for flipping (RTT is upside down)
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = size.width;
@@ -29193,7 +29220,7 @@ class VirtualStudio {
             const tempCtx = tempCanvas.getContext('2d');
             if (tempCtx) {
               tempCtx.putImageData(imageData, 0, 0);
-              
+
               // Flip vertically when drawing to offscreen canvas
               offCtx.save();
               offCtx.translate(0, offCanvas.height);
@@ -29205,44 +29232,44 @@ class VirtualStudio {
             // Silently fail - RTT might not be ready
           }
         });
-        
+
       } catch (e) {
         console.error(`Failed to start recording for ${presetId}:`, e);
       }
     }
-    
+
     // Update UI
     this.updateRecordingUI(true);
     this.startRecordingTimer();
-    
+
     // Show notification about multi-camera recording
     this.showNotification(`Tar opp fra ${savedPresets.length + 1} kameraer (Hovedkamera + ${savedPresets.join(', ')})`, 'info');
     console.log(`[Recording] Started multi-camera recording: main + ${savedPresets.join(', ')}`);
   }
-  
+
   public stopMultiCameraRecording(): void {
     if (!this.isMultiCameraRecording) return;
-    
+
     this.isMultiCameraRecording = false;
     this.isRecording = false;
-    
+
     // Remove REC indicators from monitors
     const allCameras = ['main', ...Array.from(this.cameraPresets.keys())];
     allCameras.forEach(camId => {
       this.removeMonitorRecIndicator(camId);
     });
-    
+
     // Dispatch event to hide recording indicators
     window.dispatchEvent(new CustomEvent('ch-monitor-recording-stopped', {
       detail: { cameras: allCameras }
     }));
-    
+
     // Collect all recordings as promises, then create ZIP
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const totalRecorders = this.multiCameraRecorders.size;
-    
+
     const blobPromises: Promise<{ name: string; data: Uint8Array }>[] = [];
-    
+
     for (const [cameraId, recorder] of this.multiCameraRecorders.entries()) {
       if (recorder.state === 'recording') {
         const promise = new Promise<{ name: string; data: Uint8Array }>((resolve, reject) => {
@@ -29269,7 +29296,7 @@ class VirtualStudio {
         recorder.stop();
       }
     }
-    
+
     // Wait for all recordings then create ZIP
     Promise.all(blobPromises)
       .then(files => {
@@ -29277,24 +29304,24 @@ class VirtualStudio {
           console.warn('[Recording] No files to save');
           return;
         }
-        
+
         // Create ZIP file
         const zipData: { [key: string]: Uint8Array } = {};
         files.forEach(file => {
           zipData[file.name] = file.data;
         });
-        
+
         const zipped = zipSync(zipData);
         const zipBlob = new Blob([zipped as unknown as BlobPart], { type: 'application/zip' });
         const url = URL.createObjectURL(zipBlob);
-        
+
         const a = document.createElement('a');
         a.href = url;
         a.download = `creatorhub-opptak-${timestamp}.zip`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        
+
         URL.revokeObjectURL(url);
         console.log(`[Recording] Saved ${files.length} recordings as ZIP`);
         this.showNotification(`${files.length} opptak lagret som ZIP-fil`, 'success');
@@ -29309,57 +29336,57 @@ class VirtualStudio {
         this.multiCameraCanvases.clear();
         console.log('[Recording] Multi-camera recording cleanup complete');
       });
-    
+
     // Update UI immediately
     this.updateRecordingUI(false);
     this.stopRecordingTimer();
-    
+
     this.showNotification(`Pakker ${totalRecorders} opptak...`, 'info');
     console.log(`[Recording] Multi-camera recording stopped - creating ZIP with ${totalRecorders} files`);
   }
 
   private centerCameraOnObject(mesh: BABYLON.Mesh): void {
     const targetPos = mesh.getAbsolutePosition();
-    
+
     // Smoothly animate camera to target
     const currentTarget = this.camera.target.clone();
     const startRadius = this.camera.radius;
     const targetRadius = Math.max(5, startRadius); // Ensure good viewing distance
-    
+
     // Animate camera target over 500ms
     const animationDuration = 500;
     const startTime = Date.now();
-    
+
     const animateCamera = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(1, elapsed / animationDuration);
       const easeProgress = 1 - Math.pow(1 - progress, 3); // Ease out cubic
-      
+
       // Interpolate target position
       this.camera.target = BABYLON.Vector3.Lerp(currentTarget, targetPos, easeProgress);
-      
+
       // Adjust radius if needed
       this.camera.radius = startRadius + (targetRadius - startRadius) * easeProgress;
-      
+
       if (progress < 1) {
         requestAnimationFrame(animateCamera);
       }
     };
-    
+
     animateCamera();
   }
-  
+
   private updateApertureForLens(maxAperture: number, minAperture: number): void {
     const allApertures = [1.0, 1.2, 1.4, 1.8, 2.0, 2.8, 4.0, 5.6, 8.0, 11, 16, 22, 32];
     const validApertures = allApertures.filter(a => a >= maxAperture && a <= minAperture);
-    
+
     const apertureSlider = document.getElementById('apertureSlider') as HTMLInputElement;
     const apertureDisplay = document.getElementById('apertureDisplay');
-    
+
     if (apertureSlider && validApertures.length > 0) {
       apertureSlider.min = '0';
       apertureSlider.max = (validApertures.length - 1).toString();
-      
+
       // Find closest valid aperture to current setting
       let closestIdx = 0;
       let minDiff = Math.abs(validApertures[0] - this.cameraSettings.aperture);
@@ -29370,22 +29397,22 @@ class VirtualStudio {
           closestIdx = i;
         }
       });
-      
+
       apertureSlider.value = closestIdx.toString();
       this.cameraSettings.aperture = validApertures[closestIdx];
       if (apertureDisplay) apertureDisplay.textContent = `f/${validApertures[closestIdx]}`;
-      
+
       // Store current valid apertures for slider handler
       (apertureSlider as any)._validApertures = validApertures;
     }
-    
+
     this.updateExposureDisplay();
   }
 
   // ============================================================================
   // Animation / Keyframe System
   // ============================================================================
-  
+
   private setupTimelineListeners(): void {
     const timeline = document.getElementById('animationTimeline');
     const playBtn = document.getElementById('tlPlay');
@@ -29394,40 +29421,40 @@ class VirtualStudio {
     const scrubber = document.getElementById('tlScrubber') as HTMLInputElement;
     const prevBtn = document.getElementById('tlPrevKeyframe');
     const nextBtn = document.getElementById('tlNextKeyframe');
-    
+
     playBtn?.addEventListener('click', () => this.togglePlayAnimation());
     stopBtn?.addEventListener('click', () => this.stopAnimation());
     closeBtn?.addEventListener('click', () => {
       timeline?.classList.remove('visible');
     });
-    
+
     scrubber?.addEventListener('mousedown', () => {
       this.isScrubbing = true;
     });
-    
+
     scrubber?.addEventListener('mouseup', () => {
       this.isScrubbing = false;
     });
-    
+
     scrubber?.addEventListener('input', () => {
       const percent = parseFloat(scrubber.value) / 100;
       this.animationState.currentTime = percent * this.animationState.duration;
       this.updateTimelineUI(false);
       this.applyAnimationAtTime(this.animationState.currentTime);
     });
-    
+
     prevBtn?.addEventListener('click', () => this.jumpToPreviousKeyframe());
     nextBtn?.addEventListener('click', () => this.jumpToNextKeyframe());
   }
-  
+
   private addKeyframe(type: 'position' | 'rotation'): void {
     if (!this.selectedLightId) return;
     const data = this.lights.get(this.selectedLightId);
     if (!data) return;
-    
+
     const trackId = `${this.selectedLightId}_${type}`;
     let track = this.animationState.tracks.find(t => t.id === trackId);
-    
+
     if (!track) {
       track = {
         id: trackId,
@@ -29437,11 +29464,11 @@ class VirtualStudio {
       };
       this.animationState.tracks.push(track);
     }
-    
+
     const value = type === 'position' 
       ? { x: data.mesh.position.x, y: data.mesh.position.y, z: data.mesh.position.z }
       : { x: data.mesh.rotation.x * 180 / Math.PI, y: data.mesh.rotation.y * 180 / Math.PI, z: data.mesh.rotation.z * 180 / Math.PI };
-    
+
     // Check if keyframe exists at current time
     const existingIdx = track.keyframes.findIndex(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.01);
     if (existingIdx >= 0) {
@@ -29450,23 +29477,23 @@ class VirtualStudio {
       track.keyframes.push({ time: this.animationState.currentTime, value });
       track.keyframes.sort((a, b) => a.time - b.time);
     }
-    
+
     this.updateTimelineUI(false);
     this.renderTimelineTracks();
-    
+
     // Show timeline if hidden
     const timeline = document.getElementById('animationTimeline');
     timeline?.classList.add('visible');
   }
-  
+
   private addKeyframeForAxis(type: 'position' | 'rotation', axis: 'x' | 'y' | 'z'): void {
     if (!this.selectedLightId) return;
     const data = this.lights.get(this.selectedLightId);
     if (!data) return;
-    
+
     const trackId = `${this.selectedLightId}_${type}_${axis}`;
     let track = this.animationState.tracks.find(t => t.id === trackId);
-    
+
     if (!track) {
       track = {
         id: trackId,
@@ -29476,7 +29503,7 @@ class VirtualStudio {
       };
       this.animationState.tracks.push(track);
     }
-    
+
     let value: { x: number; y: number; z: number };
     if (type === 'position') {
       const axisVal = axis === 'x' ? data.mesh.position.x : axis === 'y' ? data.mesh.position.y : data.mesh.position.z;
@@ -29485,7 +29512,7 @@ class VirtualStudio {
       const axisVal = axis === 'x' ? data.mesh.rotation.x * 180 / Math.PI : axis === 'y' ? data.mesh.rotation.y * 180 / Math.PI : data.mesh.rotation.z * 180 / Math.PI;
       value = { x: axis === 'x' ? axisVal : 0, y: axis === 'y' ? axisVal : 0, z: axis === 'z' ? axisVal : 0 };
     }
-    
+
     const existingIdx = track.keyframes.findIndex(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.01);
     if (existingIdx >= 0) {
       track.keyframes[existingIdx].value = value;
@@ -29493,14 +29520,14 @@ class VirtualStudio {
       track.keyframes.push({ time: this.animationState.currentTime, value });
       track.keyframes.sort((a, b) => a.time - b.time);
     }
-    
+
     this.updateTimelineUI(false);
     this.renderTimelineTracks();
-    
+
     const timeline = document.getElementById('animationTimeline');
     timeline?.classList.add('visible');
   }
-  
+
   private togglePlayAnimation(): void {
     if (this.animationState.isPlaying) {
       this.pauseAnimation();
@@ -29508,90 +29535,90 @@ class VirtualStudio {
       this.playAnimation();
     }
   }
-  
+
   private playAnimation(): void {
     if (this.animationState.tracks.length === 0) return;
-    
+
     this.animationState.isPlaying = true;
     const playBtn = document.getElementById('tlPlay');
     if (playBtn) {
       playBtn.textContent = '⏸';
       playBtn.classList.add('active');
     }
-    
+
     let lastTime = performance.now();
-    
+
     const animate = (currentTime: number) => {
       const delta = (currentTime - lastTime) / 1000;
       lastTime = currentTime;
-      
+
       this.animationState.currentTime += delta;
-      
+
       if (this.animationState.currentTime >= this.animationState.duration) {
         this.animationState.currentTime = 0;
       }
-      
+
       this.applyAnimationAtTime(this.animationState.currentTime);
       this.updateTimelineUI(true);
-      
+
       if (this.animationState.isPlaying) {
         this.animationFrameId = requestAnimationFrame(animate);
       }
     };
-    
+
     this.animationFrameId = requestAnimationFrame(animate);
   }
-  
+
   private pauseAnimation(): void {
     this.animationState.isPlaying = false;
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
-    
+
     const playBtn = document.getElementById('tlPlay');
     if (playBtn) {
       playBtn.textContent = '▶';
       playBtn.classList.remove('active');
     }
   }
-  
+
   private stopAnimation(): void {
     this.pauseAnimation();
     this.animationState.currentTime = 0;
     this.updateTimelineUI();
     this.applyAnimationAtTime(0);
   }
-  
+
   private applyAnimationAtTime(time: number): void {
     for (const track of this.animationState.tracks) {
       const data = this.lights.get(track.nodeId);
       if (!data) continue;
-      
+
       const value = this.interpolateKeyframes(track.keyframes, time);
       if (!value) continue;
-      
+
       if (track.type === 'position') {
         data.mesh.position.set(value.x, value.y, value.z);
       } else {
         data.mesh.rotation.set(value.x * Math.PI / 180, value.y * Math.PI / 180, value.z * Math.PI / 180);
       }
     }
-    
+
     // Update UI if this is the selected light
     if (this.selectedLightId) {
       this.updatePropertyPanel();
     }
   }
-  
+
   private interpolateKeyframes(keyframes: Keyframe[], time: number): { x: number; y: number; z: number } | null {
     if (keyframes.length === 0) return null;
     if (keyframes.length === 1) return keyframes[0].value;
-    
+
     // Find surrounding keyframes
     let prev = keyframes[0];
     let next = keyframes[keyframes.length - 1];
-    
+
     for (let i = 0; i < keyframes.length - 1; i++) {
       if (time >= keyframes[i].time && time <= keyframes[i + 1].time) {
         prev = keyframes[i];
@@ -29599,10 +29626,10 @@ class VirtualStudio {
         break;
       }
     }
-    
+
     if (time <= prev.time) return prev.value;
     if (time >= next.time) return next.value;
-    
+
     // Linear interpolation
     const t = (time - prev.time) / (next.time - prev.time);
     return {
@@ -29611,38 +29638,38 @@ class VirtualStudio {
       z: prev.value.z + (next.value.z - prev.value.z) * t
     };
   }
-  
+
   private isScrubbing: boolean = false;
-  
+
   private updateTimelineUI(fromPlayback: boolean = false): void {
     const currentTimeEl = document.getElementById('tlCurrentTime');
     const scrubber = document.getElementById('tlScrubber') as HTMLInputElement;
-    
+
     if (currentTimeEl) {
       currentTimeEl.textContent = `${this.animationState.currentTime.toFixed(2)}s`;
     }
-    
+
     // Only update scrubber if we're not actively scrubbing and update is from playback
     if (scrubber && fromPlayback && !this.isScrubbing) {
       scrubber.value = ((this.animationState.currentTime / this.animationState.duration) * 100).toString();
     }
-    
+
     // Update playhead position
     this.updatePlayhead();
-    
+
     // Update keyframe button states
     this.updateKeyframeButtonStates();
   }
-  
+
   private updateKeyframeButtonStates(): void {
     if (!this.selectedLightId) return;
-    
+
     const posTrack = this.animationState.tracks.find(t => t.id === `${this.selectedLightId}_position`);
     const rotTrack = this.animationState.tracks.find(t => t.id === `${this.selectedLightId}_rotation`);
-    
+
     const hasGroupedPosKeyframe = posTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
     const hasGroupedRotKeyframe = rotTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
-    
+
     // Update each position axis button independently
     document.querySelectorAll('.pos-keyframe').forEach(btn => {
       const axis = (btn as HTMLElement).dataset.axis;
@@ -29651,7 +29678,7 @@ class VirtualStudio {
       const hasAxisKeyframe = axisTrack?.keyframes.some(kf => Math.abs(kf.time - this.animationState.currentTime) < 0.05);
       btn.classList.toggle('has-keyframe', !!hasGroupedPosKeyframe || !!hasAxisKeyframe);
     });
-    
+
     // Update each rotation axis button independently
     document.querySelectorAll('.rot-keyframe').forEach(btn => {
       const axis = (btn as HTMLElement).dataset.axis;
@@ -29661,11 +29688,11 @@ class VirtualStudio {
       btn.classList.toggle('has-keyframe', !!hasGroupedRotKeyframe || !!hasAxisKeyframe);
     });
   }
-  
+
   private updatePlayhead(): void {
     const tracks = document.getElementById('tlTracksContainer');
     if (!tracks) return;
-    
+
     let playhead = document.getElementById('animationPlayhead');
     if (!playhead) {
       playhead = document.createElement('div');
@@ -29674,34 +29701,34 @@ class VirtualStudio {
       tracks.style.position = 'relative';
       tracks.appendChild(playhead);
     }
-    
+
     const percent = (this.animationState.currentTime / this.animationState.duration) * 100;
     playhead.style.left = `calc(120px + ${percent}% * 0.85)`;
   }
-  
+
   private renderTimelineTracks(): void {
     const container = document.getElementById('tlTracksContainer');
     if (!container) return;
-    
+
     // Remove existing tracks (keep playhead)
     Array.from(container.children).forEach(child => {
       if (child.id !== 'animationPlayhead') {
         container.removeChild(child);
       }
     });
-    
+
     for (const track of this.animationState.tracks) {
       const lightData = this.lights.get(track.nodeId);
       const trackEl = document.createElement('div');
       trackEl.className = 'timeline-track';
-      
+
       const label = document.createElement('div');
       label.className = 'track-label';
       label.innerHTML = `<span>${lightData?.name || track.nodeId}</span><small>${track.type === 'position' ? 'Pos' : 'Rot'}</small>`;
-      
+
       const lane = document.createElement('div');
       lane.className = 'track-lane';
-      
+
       for (const kf of track.keyframes) {
         const diamond = document.createElement('div');
         diamond.className = 'keyframe-diamond';
@@ -29714,13 +29741,13 @@ class VirtualStudio {
         });
         lane.appendChild(diamond);
       }
-      
+
       trackEl.appendChild(label);
       trackEl.appendChild(lane);
       container.appendChild(trackEl);
     }
   }
-  
+
   private jumpToPreviousKeyframe(): void {
     const allTimes = this.getAllKeyframeTimes();
     const prev = allTimes.filter(t => t < this.animationState.currentTime - 0.01).pop();
@@ -29730,7 +29757,7 @@ class VirtualStudio {
       this.applyAnimationAtTime(prev);
     }
   }
-  
+
   private jumpToNextKeyframe(): void {
     const allTimes = this.getAllKeyframeTimes();
     const next = allTimes.find(t => t > this.animationState.currentTime + 0.01);
@@ -29740,7 +29767,7 @@ class VirtualStudio {
       this.applyAnimationAtTime(next);
     }
   }
-  
+
   private getAllKeyframeTimes(): number[] {
     const times = new Set<number>();
     for (const track of this.animationState.tracks) {
@@ -29750,21 +29777,21 @@ class VirtualStudio {
     }
     return Array.from(times).sort((a, b) => a - b);
   }
-  
+
   private updatePropertyPanel(): void {
     if (!this.selectedLightId) return;
     const data = this.lights.get(this.selectedLightId);
     if (!data) return;
-    
+
     ['X', 'Y', 'Z'].forEach((axis, i) => {
       const posSlider = document.getElementById(`pos${axis}Slider`) as HTMLInputElement;
       const posInput = document.getElementById(`pos${axis}Input`) as HTMLInputElement;
       const rotSlider = document.getElementById(`rot${axis}Slider`) as HTMLInputElement;
       const rotInput = document.getElementById(`rot${axis}Input`) as HTMLInputElement;
-      
+
       const posVal = i === 0 ? data.mesh.position.x : i === 1 ? data.mesh.position.y : data.mesh.position.z;
       const rotVal = (i === 0 ? data.mesh.rotation.x : i === 1 ? data.mesh.rotation.y : data.mesh.rotation.z) * 180 / Math.PI;
-      
+
       if (posSlider) posSlider.value = posVal.toFixed(1);
       if (posInput) posInput.value = posVal.toFixed(1);
       if (rotSlider) rotSlider.value = rotVal.toFixed(0);
@@ -29775,26 +29802,26 @@ class VirtualStudio {
   private async loadModel(file: File): Promise<void> {
     const ext = file.name.toLowerCase().endsWith('.gltf') ? '.gltf' : '.glb';
     const url = URL.createObjectURL(file);
-    
+
     try {
       const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', url, this.scene, undefined, ext);
-      
+
       if (result.meshes.length > 0) {
         const root = result.meshes[0];
         const bounds = root.getHierarchyBoundingVectors(true);
         const center = bounds.min.add(bounds.max).scale(0.5);
         const size = bounds.max.subtract(bounds.min);
         const maxDim = Math.max(size.x, size.y, size.z);
-        
+
         const scale = maxDim > 2 ? 2 / maxDim : 1;
         result.meshes.forEach(m => {
           m.position.subtractInPlace(new BABYLON.Vector3(center.x, bounds.min.y, center.z));
           m.scaling.scaleInPlace(scale);
         });
-        
+
         // Apply proper PBR shading to all meshes
         this.applyPBRShadingToMeshes(result.meshes);
-        
+
         console.log(`Loaded model "${file.name}" with PBR shading enabled`);
       }
     } catch (err) {
@@ -29836,7 +29863,7 @@ class VirtualStudio {
     } = {}
   ): void {
     if (!textureBasePath) return;
-    
+
     try {
       // Albedo/BaseColor texture (sRGB)
       if (options.albedoTexture) {
@@ -29844,7 +29871,7 @@ class VirtualStudio {
         albedoTexture.gammaSpace = true; // sRGB
         material.albedoTexture = albedoTexture;
       }
-      
+
       // Normal map (linear, non-color)
       if (options.normalTexture) {
         const normalTexture = new BABYLON.Texture(`${textureBasePath}/${options.normalTexture}`, this.scene);
@@ -29856,21 +29883,21 @@ class VirtualStudio {
         // Normal strength: 0.6-1.2 range
         material.bumpTexture.level = 1.0;
       }
-      
+
       // ORM texture (packed: R=AO, G=Roughness, B=Metallic)
       if (options.ormTexture) {
         const ormTexture = new BABYLON.Texture(`${textureBasePath}/${options.ormTexture}`, this.scene);
         ormTexture.gammaSpace = false; // Linear
-        
+
         // Use ORM texture for AO, Roughness, and Metallic
         material.ambientTexture = ormTexture;
         material.ambientTexture.hasAlpha = false;
         material.useAmbientInGrayScale = true;
-        
+
         // Roughness from ORM (green channel)
         material.roughnessTexture = ormTexture;
         material.roughnessTexture.getAlphaFromRGB = false;
-        
+
         // Metallic from ORM (blue channel)
         material.metallicTexture = ormTexture;
         material.metallicTexture.getAlphaFromRGB = false;
@@ -29881,13 +29908,13 @@ class VirtualStudio {
           roughnessTexture.gammaSpace = false; // Linear
           material.roughnessTexture = roughnessTexture;
         }
-        
+
         if (options.metallicTexture) {
           const metallicTexture = new BABYLON.Texture(`${textureBasePath}/${options.metallicTexture}`, this.scene);
           metallicTexture.gammaSpace = false; // Linear
           material.metallicTexture = metallicTexture;
         }
-        
+
         if (options.aoTexture) {
           const aoTexture = new BABYLON.Texture(`${textureBasePath}/${options.aoTexture}`, this.scene);
           aoTexture.gammaSpace = false; // Linear
@@ -29895,10 +29922,10 @@ class VirtualStudio {
           material.useAmbientInGrayScale = true;
         }
       }
-      
+
       // Thickness/SSS mask (optional, for subsurface scattering)
       // Can be added if available: material.subSurface.thicknessTexture
-      
+
     } catch (error) {
       console.warn('Failed to load texture maps:', error);
       // Continue without textures - material will use procedural values
@@ -29908,13 +29935,13 @@ class VirtualStudio {
   private createSkinPbrMaterial(materialId: string, skinTone: string): BABYLON.PBRMaterial {
     const pbrMaterial = new BABYLON.PBRMaterial(`${materialId}_pbr_mat`, this.scene);
     const skinColor = BABYLON.Color3.FromHexString(skinTone);
-    
+
     // Base skin properties (PBR workflow)
     pbrMaterial.albedoColor = skinColor;
     pbrMaterial.metallic = 0.0; // Skin is not metallic
     pbrMaterial.roughness = 0.75; // Skin roughness: 0.6-0.9 range, start at 0.75
     pbrMaterial.specularIntensity = 0.3; // Subtle specular highlights
-    
+
     // Subsurface scattering (fake SSS for real-time)
     pbrMaterial.subSurface.isTranslucencyEnabled = true;
     pbrMaterial.subSurface.translucencyIntensity = 0.3; // Moderate translucency
@@ -29924,7 +29951,7 @@ class VirtualStudio {
       skinColor.g * 0.95,
       skinColor.b * 0.85
     );
-    
+
     // Additional skin properties for realism
     // Wrap lighting (simulated via emissive for warm glow)
     const emissiveIntensity = 0.08; // Reduced for more realistic look
@@ -29933,26 +29960,26 @@ class VirtualStudio {
       skinColor.g * emissiveIntensity * 0.7,
       skinColor.b * emissiveIntensity * 0.5
     );
-    
+
     // Normal map strength (if texture is available, will be set later)
     // For procedural materials, we can use a subtle normal effect
     pbrMaterial.bumpTexture = null; // Will be set if texture available
-    
+
     // AO (Ambient Occlusion) - will be set if texture available
     // For now, use a subtle ambient occlusion effect
     pbrMaterial.ambientTexture = null; // Will be set if texture available
-    
+
     // Enable clearcoat for skin sheen (optional, can be enabled if needed)
     // pbrMaterial.clearCoat.isEnabled = true;
     // pbrMaterial.clearCoat.intensity = 0.1;
-    
+
     return pbrMaterial;
   }
 
   public addActorToScene(actorId: string): void {
     const state = useAppStore.getState();
     const actorNode = state.getNode(actorId);
-    
+
     if (!actorNode) {
       console.warn('Actor not found in state:', actorId);
       return;
@@ -29963,7 +29990,7 @@ class VirtualStudio {
     const height = (userData?.height as number) || 175;
     const scaledHeight = height / 100;
     const storedGeometry = userData?.geometry as BABYLON.AbstractMesh | undefined;
-    
+
     const existingMesh = this.scene.getMeshByName(actorId);
     if (existingMesh && existingMesh !== storedGeometry) {
       existingMesh.dispose();
@@ -30006,7 +30033,7 @@ class VirtualStudio {
         }
         mesh.receiveShadows = true;
         mesh.castShadows = true;
-        
+
         this.lights.forEach((lightData) => {
           if (lightData.shadowGenerator) {
             lightData.shadowGenerator.addShadowCaster(mesh);
@@ -30046,20 +30073,20 @@ class VirtualStudio {
 
     // Character Material Stack: PBRMaterial with subsurface scattering for realistic skin
     const pbrMaterial = this.createSkinPbrMaterial(actorId, skinTone);
-    
+
     // Enable shadows
     capsule.receiveShadows = true;
     capsule.castShadows = true;
-    
+
     capsule.material = pbrMaterial;
-    
+
     // Add to all existing shadow generators
     this.lights.forEach((lightData) => {
       if (lightData.shadowGenerator) {
         lightData.shadowGenerator.addShadowCaster(capsule);
       }
     });
-    
+
     // Add eyes to the actor
     this.addEyesToActor(capsule, scaledHeight, skinTone);
 
@@ -30071,7 +30098,7 @@ class VirtualStudio {
     this.updateSceneList();
     console.log('Actor added to 3D scene with PBR skin material:', actorId);
   }
-  
+
   private addEyesToMesh(targetMesh: BABYLON.AbstractMesh, name: string): void {
     const existingEyes = targetMesh.getChildMeshes(true).some(mesh =>
       mesh.name.includes('_leftEye') || mesh.name.includes('_rightEye')
@@ -30090,15 +30117,15 @@ class VirtualStudio {
       console.warn(`Invalid model height for ${safeName}, skipping eye generation.`);
       return;
     }
-    
+
     const worldBoundsMin = worldBoundingInfo.min;
     const worldBoundsMax = worldBoundingInfo.max;
     const worldBoundsCenter = worldBoundsMin.add(worldBoundsMax).scale(0.5);
     const basisOrigin = worldBoundsCenter.clone();
-    
+
     const worldMatrix = targetMesh.getWorldMatrix();
     const invWorld = worldMatrix.clone().invert();
-    
+
     let upWorld = BABYLON.Vector3.TransformNormal(BABYLON.Axis.Y, worldMatrix);
     if (!isFinite(upWorld.length()) || upWorld.lengthSquared() < 1e-6) {
       upWorld = new BABYLON.Vector3(0, 1, 0);
@@ -30107,13 +30134,13 @@ class VirtualStudio {
     if (BABYLON.Vector3.Dot(upWorld, BABYLON.Axis.Y) < 0) {
       upWorld.scaleInPlace(-1);
     }
-    
+
     let forwardWorld = BABYLON.Vector3.TransformNormal(BABYLON.Axis.Z, worldMatrix);
     if (!isFinite(forwardWorld.length()) || forwardWorld.lengthSquared() < 1e-6) {
       forwardWorld = new BABYLON.Vector3(0, 0, 1);
     }
     forwardWorld.normalize();
-    
+
     let rightWorld = BABYLON.Vector3.Cross(upWorld, forwardWorld);
     if (rightWorld.lengthSquared() < 1e-6 || !isFinite(rightWorld.length())) {
       rightWorld = BABYLON.Vector3.TransformNormal(BABYLON.Axis.X, worldMatrix);
@@ -30122,7 +30149,7 @@ class VirtualStudio {
       }
     }
     rightWorld.normalize();
-    
+
     const boundsCorners = [
       new BABYLON.Vector3(worldBoundsMin.x, worldBoundsMin.y, worldBoundsMin.z),
       new BABYLON.Vector3(worldBoundsMin.x, worldBoundsMin.y, worldBoundsMax.z),
@@ -30133,7 +30160,7 @@ class VirtualStudio {
       new BABYLON.Vector3(worldBoundsMax.x, worldBoundsMax.y, worldBoundsMin.z),
       new BABYLON.Vector3(worldBoundsMax.x, worldBoundsMax.y, worldBoundsMax.z),
     ];
-    
+
     let modelUpMin = Number.POSITIVE_INFINITY;
     let modelUpMax = Number.NEGATIVE_INFINITY;
     boundsCorners.forEach(corner => {
@@ -30148,7 +30175,7 @@ class VirtualStudio {
     const headSampleMinUp = modelUpMax - modelUpHeight * 0.22;
     const torsoSampleMinUp = modelUpMin + modelUpHeight * 0.35;
     const torsoSampleMaxUp = modelUpMin + modelUpHeight * 0.75;
-    
+
     const headBoundsMin = new BABYLON.Vector3(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
     const headBoundsMax = new BABYLON.Vector3(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY);
     const headSamplePositions: BABYLON.Vector3[] = [];
@@ -30159,7 +30186,7 @@ class VirtualStudio {
     let torsoCovUU = 0;
     let torsoCovUV = 0;
     let torsoCovVV = 0;
-    
+
     const upAxisDot = Math.abs(BABYLON.Vector3.Dot(upWorld, BABYLON.Axis.Y));
     let planeSeed = upAxisDot > 0.8 ? BABYLON.Axis.X : BABYLON.Axis.Y;
     let planeU = BABYLON.Vector3.Cross(upWorld, planeSeed);
@@ -30171,7 +30198,7 @@ class VirtualStudio {
       planeU = rightWorld.clone();
     }
     planeU.normalize();
-    
+
     let planeV = BABYLON.Vector3.Cross(upWorld, planeU);
     if (planeV.lengthSquared() < 1e-6 || !isFinite(planeV.length())) {
       planeV = BABYLON.Vector3.Cross(upWorld, rightWorld);
@@ -30180,36 +30207,36 @@ class VirtualStudio {
       planeV = new BABYLON.Vector3(0, 0, 1);
     }
     planeV.normalize();
-    
+
     const headSampleMeshes = targetMesh.getChildMeshes(true);
     if (targetMesh instanceof BABYLON.Mesh) {
       headSampleMeshes.push(targetMesh);
     }
-    
+
     const tempWorld = new BABYLON.Vector3();
     headSampleMeshes.forEach(mesh => {
       if (!(mesh instanceof BABYLON.Mesh)) return;
       const positions = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
       if (!positions || positions.length < 3) return;
-      
+
       const vertexCount = positions.length / 3;
       const step = Math.max(1, Math.floor(vertexCount / 5000));
       const meshWorld = mesh.getWorldMatrix();
-      
+
       for (let v = 0; v < vertexCount; v += step) {
         const idx = v * 3;
         const x = positions[idx];
         const y = positions[idx + 1];
         const z = positions[idx + 2];
         if (x === undefined || y === undefined || z === undefined) continue;
-        
+
         BABYLON.Vector3.TransformCoordinatesFromFloatsToRef(x, y, z, meshWorld, tempWorld);
         const relX = tempWorld.x - basisOrigin.x;
         const relY = tempWorld.y - basisOrigin.y;
         const relZ = tempWorld.z - basisOrigin.z;
         const upDot = relX * upWorld.x + relY * upWorld.y + relZ * upWorld.z;
         if (!isFinite(upDot)) continue;
-        
+
         if (upDot >= torsoSampleMinUp && upDot <= torsoSampleMaxUp) {
           const u = relX * planeU.x + relY * planeU.y + relZ * planeU.z;
           const v = relX * planeV.x + relY * planeV.y + relZ * planeV.z;
@@ -30222,9 +30249,9 @@ class VirtualStudio {
           torsoCovUV += du * (v - torsoMeanV);
           torsoCovVV += dv * (v - torsoMeanV);
         }
-        
+
         if (upDot < headSampleMinUp) continue;
-        
+
         headBoundsMin.x = Math.min(headBoundsMin.x, tempWorld.x);
         headBoundsMin.y = Math.min(headBoundsMin.y, tempWorld.y);
         headBoundsMin.z = Math.min(headBoundsMin.z, tempWorld.z);
@@ -30235,7 +30262,7 @@ class VirtualStudio {
         headSamplePositions.push(new BABYLON.Vector3(relX, relY, relZ));
       }
     });
-    
+
     if (torsoSamples > 20) {
       const a = torsoCovUU / torsoSamples;
       const b = torsoCovUV / torsoSamples;
@@ -30246,7 +30273,7 @@ class VirtualStudio {
       const lambda1 = trace * 0.5 + disc;
       let evU = 1;
       let evV = 0;
-      
+
       if (Math.abs(b) > 1e-6 || Math.abs(a - c) > 1e-6) {
         const x = b;
         const y = lambda1 - a;
@@ -30262,7 +30289,7 @@ class VirtualStudio {
         evU = 0;
         evV = 1;
       }
-      
+
       const candidateRight = planeU.scale(evU).add(planeV.scale(evV));
       if (candidateRight.lengthSquared() > 1e-6 && isFinite(candidateRight.length())) {
         rightWorld = candidateRight.normalize();
@@ -30276,7 +30303,7 @@ class VirtualStudio {
         forwardWorld.normalize();
       }
     }
-    
+
     const headCenterWorld = headSamples > 0
       ? headBoundsMin.add(headBoundsMax).scale(0.5)
       : worldBoundsCenter;
@@ -30290,7 +30317,7 @@ class VirtualStudio {
         }
       }
     }
-    
+
     rightWorld = BABYLON.Vector3.Cross(upWorld, forwardWorld);
     if (rightWorld.lengthSquared() < 1e-6 || !isFinite(rightWorld.length())) {
       rightWorld = planeU.clone();
@@ -30304,14 +30331,14 @@ class VirtualStudio {
       forwardWorld = new BABYLON.Vector3(0, 0, 1);
     }
     forwardWorld.normalize();
-    
+
     let headRightMin = Number.POSITIVE_INFINITY;
     let headRightMax = Number.NEGATIVE_INFINITY;
     let headUpMin = Number.POSITIVE_INFINITY;
     let headUpMax = Number.NEGATIVE_INFINITY;
     let headForwardMin = Number.POSITIVE_INFINITY;
     let headForwardMax = Number.NEGATIVE_INFINITY;
-    
+
     headSamplePositions.forEach(sample => {
       const rightDot = BABYLON.Vector3.Dot(sample, rightWorld);
       const upDot = BABYLON.Vector3.Dot(sample, upWorld);
@@ -30323,19 +30350,19 @@ class VirtualStudio {
       headForwardMin = Math.min(headForwardMin, forwardDot);
       headForwardMax = Math.max(headForwardMax, forwardDot);
     });
-    
+
     const useHeadBounds = headSamples > 20 &&
       isFinite(headRightMin) && isFinite(headRightMax) &&
       isFinite(headUpMin) && isFinite(headUpMax) &&
       isFinite(headForwardMin) && isFinite(headForwardMax);
-    
+
     let fallbackRightMin = Number.POSITIVE_INFINITY;
     let fallbackRightMax = Number.NEGATIVE_INFINITY;
     let fallbackUpMin = Number.POSITIVE_INFINITY;
     let fallbackUpMax = Number.NEGATIVE_INFINITY;
     let fallbackForwardMin = Number.POSITIVE_INFINITY;
     let fallbackForwardMax = Number.NEGATIVE_INFINITY;
-    
+
     boundsCorners.forEach(corner => {
       const relX = corner.x - basisOrigin.x;
       const relY = corner.y - basisOrigin.y;
@@ -30350,27 +30377,27 @@ class VirtualStudio {
       fallbackForwardMin = Math.min(fallbackForwardMin, forwardDot);
       fallbackForwardMax = Math.max(fallbackForwardMax, forwardDot);
     });
-    
+
     let rightMin = useHeadBounds ? headRightMin : fallbackRightMin;
     let rightMax = useHeadBounds ? headRightMax : fallbackRightMax;
     const upMin = useHeadBounds ? headUpMin : fallbackUpMin;
     const upMax = useHeadBounds ? headUpMax : fallbackUpMax;
     let forwardMin = useHeadBounds ? headForwardMin : fallbackForwardMin;
     let forwardMax = useHeadBounds ? headForwardMax : fallbackForwardMax;
-    
+
     if (Math.abs(forwardMin) > Math.abs(forwardMax)) {
       forwardWorld.scaleInPlace(-1);
       const oldMin = forwardMin;
       forwardMin = -forwardMax;
       forwardMax = -oldMin;
     }
-    
+
     const rawHeadHeight = Math.max(upMax - upMin, 0.001);
     const minHeadHeight = modelUpHeight * 0.12;
     const maxHeadHeight = modelUpHeight * 0.28;
     const headHeight = Math.min(Math.max(rawHeadHeight, minHeadHeight), maxHeadHeight);
     const eyeUp = upMax - headHeight * 0.35;
-    
+
     const rawHeadWidth = Math.max(rightMax - rightMin, 0.001);
     const rawHeadDepth = Math.max(forwardMax - forwardMin, 0.001);
     const minHeadWidth = modelUpHeight * 0.1;
@@ -30379,14 +30406,14 @@ class VirtualStudio {
     const maxHeadDepth = modelUpHeight * 0.22;
     const headWidth = Math.min(Math.max(rawHeadWidth, minHeadWidth), maxHeadWidth);
     const headDepth = Math.min(Math.max(rawHeadDepth, minHeadDepth), maxHeadDepth);
-    
+
     // Size/space eyes relative to head bounds
     const eyeRadius = Math.max(headHeight * 0.06, headWidth * 0.04, 0.01);
     let eyeSpacing = Math.max(headWidth * 0.32, eyeRadius * 2.6, 0.055);
     if (headWidth > 0.1) {
       eyeSpacing = Math.min(eyeSpacing, headWidth * 0.6);
     }
-    
+
     const depthInset = Math.max(eyeRadius * 0.8, headDepth * 0.1);
     const eyeCenterForward = forwardMax - depthInset;
     const eyeCenterRight = (rightMin + rightMax) / 2;
@@ -30395,24 +30422,24 @@ class VirtualStudio {
       .add(forwardWorld.scale(eyeCenterForward));
     const worldLeftEye = worldEyeCenter.add(rightWorld.scale(-eyeSpacing / 2));
     const worldRightEye = worldEyeCenter.add(rightWorld.scale(eyeSpacing / 2));
-    
+
     let leftLocal = BABYLON.Vector3.TransformCoordinates(worldLeftEye, invWorld);
     let rightLocal = BABYLON.Vector3.TransformCoordinates(worldRightEye, invWorld);
-    
+
     if (!isFinite(leftLocal.x) || !isFinite(leftLocal.y) || !isFinite(leftLocal.z) ||
         !isFinite(rightLocal.x) || !isFinite(rightLocal.y) || !isFinite(rightLocal.z)) {
       console.warn(`Invalid eye parameters for ${safeName}, using fallback values.`);
       leftLocal = new BABYLON.Vector3(-eyeSpacing / 2, worldModelHeight * 0.85, eyeRadius * 2);
       rightLocal = new BABYLON.Vector3(eyeSpacing / 2, worldModelHeight * 0.85, eyeRadius * 2);
     }
-    
+
     let forwardLocal = BABYLON.Vector3.TransformNormal(forwardWorld, invWorld);
     forwardLocal.y = 0;
     if (forwardLocal.lengthSquared() < 1e-6 || !isFinite(forwardLocal.length())) {
       forwardLocal = new BABYLON.Vector3(0, 0, 1);
     }
     forwardLocal.normalize();
-    
+
     // Create left eye - make it more visible
     const leftEye = BABYLON.MeshBuilder.CreateSphere(`${safeName}_leftEye`, {
       diameter: eyeRadius * 2,
@@ -30422,7 +30449,7 @@ class VirtualStudio {
     leftEye.parent = targetMesh;
     leftEye.isVisible = true;
     leftEye.setEnabled(true);
-    
+
     // Create right eye - make it more visible
     const rightEye = BABYLON.MeshBuilder.CreateSphere(`${safeName}_rightEye`, {
       diameter: eyeRadius * 2,
@@ -30432,34 +30459,34 @@ class VirtualStudio {
     rightEye.parent = targetMesh;
     rightEye.isVisible = true;
     rightEye.setEnabled(true);
-    
+
     // Eye Material Stack: PBRMaterial for sclera/iris (opaque)
     const scleraIrisMaterial = new BABYLON.PBRMaterial(`${safeName}_sclera_iris_mat`, this.scene);
     scleraIrisMaterial.albedoColor = new BABYLON.Color3(0.98, 0.96, 0.94); // Warm white, not chalk white
     scleraIrisMaterial.metallic = 0.0;
     scleraIrisMaterial.roughness = 0.4; // Eyes have moderate roughness (0.2-0.6 range)
     scleraIrisMaterial.specularIntensity = 0.2;
-    
+
     const irisMaterial = new BABYLON.PBRMaterial(`${safeName}_iris_mat`, this.scene);
     irisMaterial.albedoColor = new BABYLON.Color3(0.5, 0.3, 0.2); // Brown iris
     irisMaterial.metallic = 0.0;
     irisMaterial.roughness = 0.5;
     irisMaterial.specularIntensity = 0.15;
-    
+
     const pupilMaterial = new BABYLON.PBRMaterial(`${safeName}_pupil_mat`, this.scene);
     pupilMaterial.albedoColor = new BABYLON.Color3(0.0, 0.0, 0.0); // Pure black
     pupilMaterial.metallic = 0.0;
     pupilMaterial.roughness = 0.1; // Very low roughness for depth
     pupilMaterial.specularIntensity = 0.0;
-    
+
     leftEye.material = scleraIrisMaterial;
     rightEye.material = scleraIrisMaterial;
-    
+
     // Add iris and pupil - make them visible
     const irisOffset = forwardLocal.scale(eyeRadius * 0.7);
     const pupilOffset = forwardLocal.scale(eyeRadius * 0.75);
     const corneaOffset = forwardLocal.scale(eyeRadius * 0.1);
-    
+
     const leftIris = BABYLON.MeshBuilder.CreateSphere(`${safeName}_leftIris`, {
       diameter: eyeRadius * 1.6,
       segments: 16
@@ -30469,7 +30496,7 @@ class VirtualStudio {
     leftIris.material = irisMaterial;
     leftIris.isVisible = true;
     leftIris.setEnabled(true);
-    
+
     const leftPupil = BABYLON.MeshBuilder.CreateSphere(`${safeName}_leftPupil`, {
       diameter: eyeRadius * 0.6,
       segments: 12
@@ -30479,7 +30506,7 @@ class VirtualStudio {
     leftPupil.material = pupilMaterial;
     leftPupil.isVisible = true;
     leftPupil.setEnabled(true);
-    
+
     const rightIris = BABYLON.MeshBuilder.CreateSphere(`${safeName}_rightIris`, {
       diameter: eyeRadius * 1.6,
       segments: 16
@@ -30489,7 +30516,7 @@ class VirtualStudio {
     rightIris.material = irisMaterial;
     rightIris.isVisible = true;
     rightIris.setEnabled(true);
-    
+
     const rightPupil = BABYLON.MeshBuilder.CreateSphere(`${safeName}_rightPupil`, {
       diameter: eyeRadius * 0.6,
       segments: 12
@@ -30499,7 +30526,7 @@ class VirtualStudio {
     rightPupil.material = pupilMaterial;
     rightPupil.isVisible = true;
     rightPupil.setEnabled(true);
-    
+
     // Cornea Material Stack: Transparent PBRMaterial with IOR
     // Left cornea
     const leftCornea = BABYLON.MeshBuilder.CreateSphere(`${safeName}_leftCornea`, {
@@ -30508,7 +30535,7 @@ class VirtualStudio {
     }, this.scene);
     leftCornea.position = corneaOffset.clone();
     leftCornea.parent = leftEye;
-    
+
     const leftCorneaMaterial = new BABYLON.PBRMaterial(`${safeName}_leftCornea_mat`, this.scene);
     leftCorneaMaterial.albedoColor = new BABYLON.Color3(1.0, 1.0, 1.0);
     leftCorneaMaterial.metallic = 0.0;
@@ -30520,12 +30547,12 @@ class VirtualStudio {
     leftCorneaMaterial.useRefraction = true;
     leftCorneaMaterial.refractionIntensity = 0.1;
     leftCorneaMaterial.environmentIntensity = 1.0;
-    
+
     leftCornea.material = leftCorneaMaterial;
     leftCornea.isVisible = true;
     leftCornea.setEnabled(true);
     leftCornea.castShadows = false; // Cornea doesn't cast shadows (transparent)
-    
+
     // Right cornea
     const rightCornea = BABYLON.MeshBuilder.CreateSphere(`${safeName}_rightCornea`, {
       diameter: eyeRadius * 2.1,
@@ -30533,7 +30560,7 @@ class VirtualStudio {
     }, this.scene);
     rightCornea.position = corneaOffset.clone();
     rightCornea.parent = rightEye;
-    
+
     const rightCorneaMaterial = new BABYLON.PBRMaterial(`${safeName}_rightCornea_mat`, this.scene);
     rightCorneaMaterial.albedoColor = new BABYLON.Color3(1.0, 1.0, 1.0);
     rightCorneaMaterial.metallic = 0.0;
@@ -30545,18 +30572,18 @@ class VirtualStudio {
     rightCorneaMaterial.useRefraction = true;
     rightCorneaMaterial.refractionIntensity = 0.1;
     rightCorneaMaterial.environmentIntensity = 1.0;
-    
+
     rightCornea.material = rightCorneaMaterial;
     rightCornea.isVisible = true;
     rightCornea.setEnabled(true);
     rightCornea.castShadows = false; // Cornea doesn't cast shadows (transparent)
-    
+
     // Enable shadows for eyes (but not cornea)
     leftEye.receiveShadows = true;
     leftEye.castShadows = true;
     rightEye.receiveShadows = true;
     rightEye.castShadows = true;
-    
+
     // Add to shadow generators
     this.lights.forEach((lightData) => {
       if (lightData.shadowGenerator) {
@@ -30564,12 +30591,12 @@ class VirtualStudio {
         lightData.shadowGenerator.addShadowCaster(rightEye);
       }
     });
-    
+
     // Force compute world matrix to ensure eyes are positioned correctly
     targetMesh.computeWorldMatrix(true);
     leftEye.computeWorldMatrix(true);
     rightEye.computeWorldMatrix(true);
-    
+
     console.log(`Added eyes to character model: ${safeName}`, {
       eyeRadius: eyeRadius.toFixed(4),
       eyeSpacing: eyeSpacing.toFixed(4),
@@ -30598,7 +30625,7 @@ class VirtualStudio {
     const eyeHeight = height * 0.85; // Eyes at ~85% of height (upper face area)
     // Position eyes on the surface of the capsule (at capsule radius)
     const eyeDepth = capsuleRadius * 1.05; // Slightly forward from capsule surface
-    
+
     // Create left eye (sclera/iris ball)
     const leftEye = BABYLON.MeshBuilder.CreateSphere(`${capsule.name}_leftEye`, {
       diameter: eyeRadius * 2,
@@ -30606,7 +30633,7 @@ class VirtualStudio {
     }, this.scene);
     leftEye.position = new BABYLON.Vector3(-eyeSpacing / 2, eyeHeight, eyeDepth);
     leftEye.parent = capsule;
-    
+
     // Create right eye (sclera/iris ball)
     const rightEye = BABYLON.MeshBuilder.CreateSphere(`${capsule.name}_rightEye`, {
       diameter: eyeRadius * 2,
@@ -30614,7 +30641,7 @@ class VirtualStudio {
     }, this.scene);
     rightEye.position = new BABYLON.Vector3(eyeSpacing / 2, eyeHeight, eyeDepth);
     rightEye.parent = capsule;
-    
+
     // Eye Material Stack: PBRMaterial for sclera/iris (opaque)
     // Sclera/Iris material (PBR opaque)
     const scleraIrisMaterial = new BABYLON.PBRMaterial(`${capsule.name}_sclera_iris_mat`, this.scene);
@@ -30625,25 +30652,25 @@ class VirtualStudio {
     scleraIrisMaterial.specularIntensity = 0.2; // Subtle specular
     // Normal map (if available) - very subtle for eyes
     scleraIrisMaterial.bumpTexture = null;
-    
+
     // Iris material (will be applied to iris submesh)
     const irisMaterial = new BABYLON.PBRMaterial(`${capsule.name}_iris_mat`, this.scene);
     irisMaterial.albedoColor = new BABYLON.Color3(0.5, 0.3, 0.2); // Brown iris (can be customized)
     irisMaterial.metallic = 0.0;
     irisMaterial.roughness = 0.5; // Iris has slightly more roughness than sclera
     irisMaterial.specularIntensity = 0.15;
-    
+
     // Pupil material (black, very low roughness for depth)
     const pupilMaterial = new BABYLON.PBRMaterial(`${capsule.name}_pupil_mat`, this.scene);
     pupilMaterial.albedoColor = new BABYLON.Color3(0.0, 0.0, 0.0); // Pure black
     pupilMaterial.metallic = 0.0;
     pupilMaterial.roughness = 0.1; // Very low roughness for depth
     pupilMaterial.specularIntensity = 0.0;
-    
+
     // Apply sclera material to eyes
     leftEye.material = scleraIrisMaterial;
     rightEye.material = scleraIrisMaterial;
-    
+
     // Create iris and pupil as child meshes on the eye surface
     // Left iris - use a sphere that's slightly smaller and positioned forward
     const leftIris = BABYLON.MeshBuilder.CreateSphere(`${capsule.name}_leftIris`, {
@@ -30655,7 +30682,7 @@ class VirtualStudio {
     leftIris.material = irisMaterial;
     leftIris.isVisible = true;
     leftIris.setEnabled(true);
-    
+
     // Left pupil - smaller sphere in center
     const leftPupil = BABYLON.MeshBuilder.CreateSphere(`${capsule.name}_leftPupil`, {
       diameter: eyeRadius * 0.6,
@@ -30666,7 +30693,7 @@ class VirtualStudio {
     leftPupil.material = pupilMaterial;
     leftPupil.isVisible = true;
     leftPupil.setEnabled(true);
-    
+
     // Right iris
     const rightIris = BABYLON.MeshBuilder.CreateSphere(`${capsule.name}_rightIris`, {
       diameter: eyeRadius * 1.6,
@@ -30677,7 +30704,7 @@ class VirtualStudio {
     rightIris.material = irisMaterial;
     rightIris.isVisible = true;
     rightIris.setEnabled(true);
-    
+
     // Right pupil
     const rightPupil = BABYLON.MeshBuilder.CreateSphere(`${capsule.name}_rightPupil`, {
       diameter: eyeRadius * 0.6,
@@ -30688,7 +30715,7 @@ class VirtualStudio {
     rightPupil.material = pupilMaterial;
     rightPupil.isVisible = true;
     rightPupil.setEnabled(true);
-    
+
     // Cornea Material Stack: Transparent PBRMaterial with IOR (Index of Refraction)
     // Cornea is a separate "shell" mesh that sits on top of the eye
     // Left cornea - transparent dome over the eye
@@ -30698,29 +30725,29 @@ class VirtualStudio {
     }, this.scene);
     leftCornea.position = new BABYLON.Vector3(0, 0, eyeRadius * 0.1); // Slightly forward
     leftCornea.parent = leftEye;
-    
+
     const leftCorneaMaterial = new BABYLON.PBRMaterial(`${capsule.name}_leftCornea_mat`, this.scene);
     leftCorneaMaterial.albedoColor = new BABYLON.Color3(1.0, 1.0, 1.0); // White base
     leftCorneaMaterial.metallic = 0.0;
     leftCorneaMaterial.roughness = 0.05; // Very low roughness (0.02-0.08 range) for glossy cornea
     leftCorneaMaterial.specularIntensity = 1.0; // High specular for highlights
-    
+
     // Transparency and IOR (Index of Refraction) for cornea
     leftCorneaMaterial.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
     leftCorneaMaterial.alpha = 0.15; // Mostly transparent (0.15 opacity)
     leftCorneaMaterial.indexOfRefraction = 1.376; // Cornea IOR ≈ 1.376
-    
+
     // Enable refraction if supported
     leftCorneaMaterial.useRefraction = true;
     leftCorneaMaterial.refractionIntensity = 0.1; // Subtle refraction
-    
+
     // Environment reflection for cornea highlights
     leftCorneaMaterial.environmentIntensity = 1.0;
-    
+
     leftCornea.material = leftCorneaMaterial;
     leftCornea.isVisible = true;
     leftCornea.setEnabled(true);
-    
+
     // Right cornea
     const rightCornea = BABYLON.MeshBuilder.CreateSphere(`${capsule.name}_rightCornea`, {
       diameter: eyeRadius * 2.1,
@@ -30728,7 +30755,7 @@ class VirtualStudio {
     }, this.scene);
     rightCornea.position = new BABYLON.Vector3(0, 0, eyeRadius * 0.1);
     rightCornea.parent = rightEye;
-    
+
     const rightCorneaMaterial = new BABYLON.PBRMaterial(`${capsule.name}_rightCornea_mat`, this.scene);
     rightCorneaMaterial.albedoColor = new BABYLON.Color3(1.0, 1.0, 1.0);
     rightCorneaMaterial.metallic = 0.0;
@@ -30740,18 +30767,18 @@ class VirtualStudio {
     rightCorneaMaterial.useRefraction = true;
     rightCorneaMaterial.refractionIntensity = 0.1;
     rightCorneaMaterial.environmentIntensity = 1.0;
-    
+
     rightCornea.material = rightCorneaMaterial;
     rightCornea.isVisible = true;
     rightCornea.setEnabled(true);
     rightCornea.castShadows = false; // Cornea doesn't cast shadows (transparent)
-    
+
     // Enable shadows for eyes (but not cornea)
     leftEye.receiveShadows = true;
     leftEye.castShadows = true;
     rightEye.receiveShadows = true;
     rightEye.castShadows = true;
-    
+
     // Add eyes to shadow generators
     this.lights.forEach((lightData) => {
       if (lightData.shadowGenerator) {
@@ -30759,7 +30786,7 @@ class VirtualStudio {
         lightData.shadowGenerator.addShadowCaster(rightEye);
       }
     });
-    
+
     // Debug logging
     console.log(`Added eyes to actor ${capsule.name}:`, {
       eyeRadius,
@@ -30797,16 +30824,16 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement;
   console.log('[Init] Canvas found:', canvas);
-  
+
   if (canvas) {
     updateProgress(30, 'Laster 3D-motor...');
-    
+
     let studio: VirtualStudio;
     try {
       studio = new VirtualStudio(canvas);
     } catch (err) {
       console.error('[Init] Failed to create VirtualStudio:', err);
-      
+
       // Show error in loading overlay
       const loadingOverlay = document.getElementById('loadingOverlay');
       if (loadingOverlay) {
@@ -30822,7 +30849,7 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       return; // Stop initialization
     }
-    
+
     window.virtualStudio = studio;
     environmentLearningService.start();
 
@@ -30830,11 +30857,11 @@ window.addEventListener('DOMContentLoaded', () => {
     animationComposerService.initialize(studio);
     // Expose store for E2E tests and developer tooling
     (window as any).__animationComposerStore = useAnimationComposerStore;
-    
+
     // Expose model geometry registration helpers on window for debugging/external access
     (window as any).getRegisteredModelGeometries = () => studio.getRegisteredModelGeometries();
     (window as any).findModelByGeometryMesh = (meshName: string) => studio.findModelByGeometryMesh(meshName);
-    
+
     updateProgress(70, 'Konfigurerer scene...');
 
     // ========================================
@@ -30845,10 +30872,10 @@ window.addEventListener('DOMContentLoaded', () => {
     const dragPreview = document.getElementById('dragPreview');
     const dragPreviewThumb = document.getElementById('dragPreviewThumb') as HTMLImageElement;
     const dragPreviewTitle = document.getElementById('dragPreviewTitle');
-    
+
     let currentDragAsset: any = null;
     let ghostMesh: BABYLON.Mesh | null = null;
-    
+
     // Create ghost mesh for placement preview
     const createGhostMesh = () => {
       if (ghostMesh) {
@@ -30864,20 +30891,20 @@ window.addEventListener('DOMContentLoaded', () => {
       ghostMesh.visibility = 0.6;
       return ghostMesh;
     };
-    
+
     // Update ghost mesh position based on raycast
     const updateGhostPosition = (e: DragEvent) => {
       if (!ghostMesh || !studio.scene) return;
-      
+
       const canvasRect = canvas.getBoundingClientRect();
       const x = e.clientX - canvasRect.left;
       const y = e.clientY - canvasRect.top;
-      
+
       // Create pick ray
       const pickResult = studio.scene.pick(x, y, (mesh) => {
         return mesh.name === 'floor' || mesh.name === 'ground' || mesh.name.includes('floor');
       });
-      
+
       if (pickResult?.hit && pickResult.pickedPoint) {
         ghostMesh.position = pickResult.pickedPoint.clone();
         ghostMesh.position.y = 0.25; // Slight offset above floor
@@ -30887,7 +30914,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const ray = studio.scene.createPickingRay(x, y, BABYLON.Matrix.Identity(), studio.camera);
         const groundPlane = BABYLON.Plane.FromPositionAndNormal(BABYLON.Vector3.Zero(), BABYLON.Vector3.Up());
         const distance = ray.intersectsPlane(groundPlane);
-        
+
         if (distance !== null && distance > 0) {
           const hitPoint = ray.origin.add(ray.direction.scale(distance));
           ghostMesh.position = hitPoint;
@@ -30896,12 +30923,12 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       }
     };
-    
+
     // Handle drag start anywhere in document (capture asset data)
     document.addEventListener('dragstart', (e) => {
       const target = e.target as HTMLElement;
       if (!target || !e.dataTransfer) return;
-      
+
       // Check if drag contains asset data
       setTimeout(() => {
         try {
@@ -30910,7 +30937,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const parsed = JSON.parse(data);
             if (parsed.asset) {
               currentDragAsset = parsed.asset;
-              
+
               // Show drag preview
               if (dragPreview && dragPreviewThumb && dragPreviewTitle) {
                 dragPreviewThumb.src = parsed.asset.thumbUrl || '/library/generic.png';
@@ -30923,27 +30950,27 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       }, 0);
     });
-    
+
     // Update preview position on drag
     document.addEventListener('drag', (e) => {
       if (!currentDragAsset || !dragPreview) return;
-      
+
       if (e.clientX > 0 && e.clientY > 0) {
         dragPreview.style.left = `${e.clientX + 20}px`;
         dragPreview.style.top = `${e.clientY + 20}px`;
         dragPreview.classList.add('active');
       }
     });
-    
+
     // Handle drag over viewport
     if (viewport3d && dropZone) {
       viewport3d.addEventListener('dragover', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         if (currentDragAsset) {
           dropZone.classList.add('active');
-          
+
           // Create and update ghost mesh
           if (!ghostMesh) {
             createGhostMesh();
@@ -30951,7 +30978,7 @@ window.addEventListener('DOMContentLoaded', () => {
           updateGhostPosition(e);
         }
       });
-      
+
       viewport3d.addEventListener('dragleave', (e) => {
         // Only hide if leaving viewport entirely
         const rect = viewport3d.getBoundingClientRect();
@@ -30963,16 +30990,16 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       viewport3d.addEventListener('drop', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         dropZone.classList.remove('active');
-        
+
         if (currentDragAsset && ghostMesh) {
           const position = ghostMesh.position.clone();
-          
+
           // Dispatch event to add asset at position
           const event = new CustomEvent('ch-add-asset-at', {
             detail: {
@@ -30981,10 +31008,10 @@ window.addEventListener('DOMContentLoaded', () => {
             }
           });
           window.dispatchEvent(event);
-          
+
           console.log('Asset dropped at position:', position.x, position.y, position.z);
         }
-        
+
         // Clean up
         if (ghostMesh) {
           ghostMesh.dispose();
@@ -30996,7 +31023,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       });
     }
-    
+
     // Clean up on drag end
     document.addEventListener('dragend', () => {
       currentDragAsset = null;
@@ -31029,12 +31056,12 @@ window.addEventListener('DOMContentLoaded', () => {
         hierarchyToggle.classList.toggle('collapsed', isExpanded);
         hierarchyContent.classList.toggle('collapsed', isExpanded);
       };
-      
+
       hierarchyToggle.addEventListener('click', (e) => {
         if ((e.target as HTMLElement).closest('.view-toggle')) return;
         toggleHierarchy();
       });
-      
+
       hierarchyToggle.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           if ((e.target as HTMLElement).closest('.view-toggle')) return;
@@ -31043,11 +31070,11 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       });
     }
-    
+
     const listViewBtn = document.getElementById('listViewBtn');
     const gridViewBtn = document.getElementById('gridViewBtn');
     const hierarchySection = document.getElementById('hierarchySection');
-    
+
     if (listViewBtn && gridViewBtn && hierarchySection) {
       listViewBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -31058,7 +31085,7 @@ window.addEventListener('DOMContentLoaded', () => {
         hierarchySection.classList.remove('grid-view');
         hierarchySection.classList.add('list-view');
       });
-      
+
       gridViewBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         gridViewBtn.classList.add('active');
@@ -31069,20 +31096,20 @@ window.addEventListener('DOMContentLoaded', () => {
         hierarchySection.classList.add('grid-view');
       });
     }
-    
+
     const toggleAllBtn = document.getElementById('toggleAllBtn');
     let allExpanded = false;
-    
+
     const toggleGroup = (header: HTMLElement, expand: boolean) => {
       const group = header.closest('.hierarchy-group');
       const arrow = header.querySelector('.hierarchy-arrow');
       const itemsId = header.getAttribute('aria-controls');
       const items = itemsId ? document.getElementById(itemsId) : null;
-      
+
       if (group && arrow && items) {
         header.setAttribute('aria-expanded', String(expand));
         group.setAttribute('aria-expanded', String(expand));
-        
+
         if (expand) {
           group.classList.remove('collapsed');
           arrow.textContent = '▾';
@@ -31094,16 +31121,16 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       }
     };
-    
+
     document.querySelectorAll('.hierarchy-header').forEach((header) => {
       header.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
         if (target.closest('.group-count')) return;
-        
+
         const isExpanded = header.getAttribute('aria-expanded') === 'true';
         toggleGroup(header as HTMLElement, !isExpanded);
       });
-      
+
       header.addEventListener('keydown', (e) => {
         const keyEvent = e as KeyboardEvent;
         if (keyEvent.key === 'Enter' || keyEvent.key === ' ') {
@@ -31113,7 +31140,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       });
     });
-    
+
     if (toggleAllBtn) {
       toggleAllBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -31124,13 +31151,13 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         toggleAllBtn.setAttribute('aria-pressed', String(allExpanded));
         toggleAllBtn.title = allExpanded ? 'Kollaps alle' : 'Utvid alle';
-        
+
         document.querySelectorAll('.hierarchy-header').forEach((header) => {
           toggleGroup(header as HTMLElement, allExpanded);
         });
       });
     }
-    
+
     // Hook up visibility toggle and color picker for individual walls
     const wallIds = ['backWall', 'leftWall', 'rightWall', 'rearWall'];
     wallIds.forEach(wallId => {
@@ -31159,7 +31186,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       }
     });
-    
+
     // Hook up visibility toggle for Gulv (floor)
     const studioFloorItem = document.querySelector('.hierarchy-item[data-id="studio-floor"]');
     if (studioFloorItem) {
@@ -31173,7 +31200,7 @@ window.addEventListener('DOMContentLoaded', () => {
           window.dispatchEvent(new CustomEvent('ch-toggle-floor', { detail: { visible: isActive } }));
         });
       }
-      
+
       // Floor color picker
       const floorColorPicker = document.getElementById('floorColorPicker') as HTMLInputElement;
       if (floorColorPicker) {
@@ -31184,82 +31211,82 @@ window.addEventListener('DOMContentLoaded', () => {
         });
       }
     }
-    
+
     const actorPanelRoot = document.getElementById('actorPanelRoot');
     const actorBottomPanel = document.getElementById('actorBottomPanel');
     const actorPanelTrigger = document.getElementById('actorPanelTrigger');
     const actorTab = document.getElementById('actorTab');
-    
+
     console.log('Studio Library elements:', { actorPanelRoot: !!actorPanelRoot, actorBottomPanel: !!actorBottomPanel, actorPanelTrigger: !!actorPanelTrigger });
-    
+
     const keyframeTimelineRoot = document.getElementById('keyframeTimelineRoot');
     if (keyframeTimelineRoot) {
       const timelineRoot = createRoot(keyframeTimelineRoot);
       timelineRoot.render(React.createElement(TidslinjeLibraryPanelApp, {}));
     }
-    
+
     const assetLibraryRoot = document.getElementById('assetLibraryRoot');
     if (assetLibraryRoot) {
       const assetRoot = createRoot(assetLibraryRoot);
       assetRoot.render(React.createElement(AssetLibraryApp, {}));
     }
-    
+
     const characterLoaderRoot = document.getElementById('characterLoaderRoot');
     if (characterLoaderRoot) {
       const characterRoot = createRoot(characterLoaderRoot);
       characterRoot.render(React.createElement(CharacterLoaderApp, {}));
     }
-    
+
     const lightsBrowserRoot = document.getElementById('lightsBrowserRoot');
     if (lightsBrowserRoot) {
       const lightsRoot = createRoot(lightsBrowserRoot);
       lightsRoot.render(React.createElement(LightsBrowserApp, {}));
     }
-    
+
     const cameraGearRoot = document.getElementById('cameraGearRoot');
     if (cameraGearRoot) {
       const cameraRoot = createRoot(cameraGearRoot);
       cameraRoot.render(React.createElement(CameraGearApp, {}));
     }
-    
+
     const hdriPanelRoot = document.getElementById('hdriPanelRoot');
     if (hdriPanelRoot) {
       const hdriRoot = createRoot(hdriPanelRoot);
       hdriRoot.render(React.createElement(HDRIPanelApp, {}));
     }
-    
+
     const equipmentPanelRoot = document.getElementById('equipmentPanelRoot');
     if (equipmentPanelRoot) {
       const equipRoot = createRoot(equipmentPanelRoot);
       equipRoot.render(React.createElement(EquipmentPanelApp, {}));
     }
-    
+
     const scenerPanelRoot = document.getElementById('scenerPanelRoot');
     if (scenerPanelRoot) {
       const scenerRoot = createRoot(scenerPanelRoot);
       scenerRoot.render(React.createElement(ScenerPanelApp, {}));
     }
-    
+
     const notesPanelRoot = document.getElementById('notesPanelRoot');
     if (notesPanelRoot) {
       const notesRoot = createRoot(notesPanelRoot);
       notesRoot.render(React.createElement(NotesPanelApp, {}));
     }
-    
+
     // Mount Cinematography Patterns App
     const cinematographyRoot = document.getElementById('cinematographyPatternsRoot');
     if (cinematographyRoot) {
       const cineRoot = createRoot(cinematographyRoot);
       cineRoot.render(React.createElement(CinematographyPatternsApp, {}));
     }
-    
+
     // Mount Light Pattern Library App
     const lightPatternRoot = document.getElementById('lightPatternLibraryRoot');
     if (lightPatternRoot) {
       const lpRoot = createRoot(lightPatternRoot);
       lpRoot.render(React.createElement(LightPatternLibraryApp, {}));
     }
-    
+
     // Mount Avatar Generator App
     const avatarGenRoot = document.getElementById('avatarGeneratorRoot');
     if (avatarGenRoot) {
@@ -31278,6 +31305,16 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // Mount Marketplace Panel App
+    // Mount Asset Browser Panel App
+    const assetBrowserPanelRoot = document.getElementById('assetBrowserPanelRoot');
+    if (assetBrowserPanelRoot) {
+      const abRoot = createRoot(assetBrowserPanelRoot);
+      abRoot.render(React.createElement(AssetBrowserPanelApp, {}));
+      console.log('AssetBrowserPanelApp mounted');
+    } else {
+      console.warn('assetBrowserPanelRoot element not found');
+    }
+
     const marketplacePanelRoot = document.getElementById('marketplacePanelRoot');
     if (marketplacePanelRoot) {
       const mpRoot = createRoot(marketplacePanelRoot);
@@ -31506,7 +31543,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       }, { capture: false }); // Use bubbling phase, not capture
     }
-    
+
     if (cameraControlsPanel) {
       // Speed multiplier state
       let speedMultiplier = 1;
@@ -31514,10 +31551,10 @@ window.addEventListener('DOMContentLoaded', () => {
       const baseZoomStep = 0.1;
       const basePanStep = 0.05;
       const updateInterval = 30; // ms between updates when holding
-      
+
       // Active interval for continuous movement
       let activeInterval: number | null = null;
-      
+
       // Speed button handlers
       const speedButtons = document.querySelectorAll('.speed-btn');
       speedButtons.forEach(btn => {
@@ -31533,7 +31570,7 @@ window.addEventListener('DOMContentLoaded', () => {
           speedMultiplier = parseFloat((btn as HTMLElement).dataset.speed || '1');
         });
       });
-      
+
       // Camera action functions
       const cameraActions: { [key: string]: () => void } = {
         orbitUp: () => {
@@ -31577,7 +31614,7 @@ window.addEventListener('DOMContentLoaded', () => {
           studio.setCameraTarget(new BABYLON.Vector3(target.x + basePanStep * speedMultiplier, target.y, target.z));
         }
       };
-      
+
       // Start continuous movement
       const startAction = (action: string, btn: HTMLElement) => {
         if (activeInterval) return;
@@ -31588,7 +31625,7 @@ window.addEventListener('DOMContentLoaded', () => {
           cameraActions[action]?.();
         }, updateInterval);
       };
-      
+
       // Stop continuous movement
       const stopAction = (btn: HTMLElement) => {
         if (activeInterval) {
@@ -31598,13 +31635,13 @@ window.addEventListener('DOMContentLoaded', () => {
         btn.style.background = 'rgba(255,255,255,0.1)';
         btn.style.borderColor = 'rgba(255,255,255,0.2)';
       };
-      
+
       // Bind control buttons with hold-to-move
       const controlButtons = document.querySelectorAll('.cam-ctrl-btn');
       controlButtons.forEach(btn => {
         const action = (btn as HTMLElement).dataset.action;
         if (!action) return;
-        
+
         // Mouse events
         btn.addEventListener('mousedown', (e) => {
           e.preventDefault();
@@ -31612,7 +31649,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
         btn.addEventListener('mouseup', () => stopAction(btn as HTMLElement));
         btn.addEventListener('mouseleave', () => stopAction(btn as HTMLElement));
-        
+
         // Touch events
         btn.addEventListener('touchstart', (e) => {
           e.preventDefault();
@@ -31621,7 +31658,7 @@ window.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('touchend', () => stopAction(btn as HTMLElement));
         btn.addEventListener('touchcancel', () => stopAction(btn as HTMLElement));
       });
-      
+
       // Reset camera
       document.getElementById('resetCamera')?.addEventListener('click', () => {
         studio.resetCamera();
@@ -31685,7 +31722,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
       // Get studio instance (must be defined before use)
       const studio = (window as any).virtualStudio as VirtualStudio;
-      
+
       // Function to sync sliders with current camera state
       const syncCameraSliders = () => {
         const studioInstance = (window as any).virtualStudio as VirtualStudio;
@@ -31799,88 +31836,88 @@ window.addEventListener('DOMContentLoaded', () => {
         const infoDialogTitle = document.getElementById('cameraInfoDialogTitle');
         const infoDialogText = document.getElementById('cameraInfoDialogText');
         const infoDialogClose = document.getElementById('cameraInfoDialogClose');
-        
+
         if (!infoDialog || !infoDialogTitle || !infoDialogText) {
           console.warn('[Camera Info] Dialog elements not found, retrying...');
           return false;
         }
-        
+
         console.log('[Camera Info] Dialog elements found, setting up handlers');
-        
+
         // === Make dialog draggable ===
         let isDragging = false;
         let dragOffsetX = 0;
         let dragOffsetY = 0;
-        
+
         const startDrag = (e: MouseEvent | TouchEvent) => {
           if (!infoDialog.classList.contains('show')) return;
-          
+
           const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
           const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-          
+
           const rect = infoDialog.getBoundingClientRect();
           dragOffsetX = clientX - rect.left;
           dragOffsetY = clientY - rect.top;
-          
+
           isDragging = true;
           infoDialog.classList.add('dragging');
           infoDialog.classList.add('user-positioned');
-          
+
           e.preventDefault();
         };
-        
+
         const doDrag = (e: MouseEvent | TouchEvent) => {
           if (!isDragging) return;
-          
+
           const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
           const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-          
+
           let newX = clientX - dragOffsetX;
           let newY = clientY - dragOffsetY;
-          
+
           // Keep dialog within viewport bounds
           const rect = infoDialog.getBoundingClientRect();
           const maxX = window.innerWidth - rect.width;
           const maxY = window.innerHeight - rect.height;
-          
+
           newX = Math.max(0, Math.min(newX, maxX));
           newY = Math.max(0, Math.min(newY, maxY));
-          
+
           infoDialog.style.left = newX + 'px';
           infoDialog.style.top = newY + 'px';
-          
+
           e.preventDefault();
         };
-        
+
         const endDrag = () => {
           if (isDragging) {
             isDragging = false;
             infoDialog.classList.remove('dragging');
           }
         };
-        
+
         // Attach drag handlers to header
         if (infoDialogHeader) {
           infoDialogHeader.addEventListener('mousedown', startDrag);
           infoDialogHeader.addEventListener('touchstart', startDrag, { passive: false });
         }
-        
+
         document.addEventListener('mousemove', doDrag);
         document.addEventListener('touchmove', doDrag, { passive: false });
         document.addEventListener('mouseup', endDrag);
         document.addEventListener('touchend', endDrag);
-        
+
         const showInfoDialog = (title: string, text: string) => {
           console.log('[Camera Info] showInfoDialog called:', title);
           infoDialogTitle.textContent = title;
           infoDialogText.textContent = text;
-          
+
           // Reset position to center if not user-positioned
           if (!infoDialog.classList.contains('user-positioned')) {
             infoDialog.style.left = '50%';
             infoDialog.style.top = '50%';
           }
-          
+
           infoDialog.style.display = 'block';
           infoDialog.style.opacity = '0';
           // Force reflow
@@ -31889,7 +31926,7 @@ window.addEventListener('DOMContentLoaded', () => {
           infoDialog.classList.add('show');
           console.log('[Camera Info] Dialog should now be visible');
         };
-        
+
         const hideInfoDialog = () => {
           infoDialog.classList.remove('show');
           setTimeout(() => {
@@ -31898,7 +31935,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
           }, 300);
         };
-        
+
         // Use event delegation on document - works even if elements are added dynamically
         const clickHandler = (e: MouseEvent) => {
           const target = e.target as HTMLElement;
@@ -31915,9 +31952,9 @@ window.addEventListener('DOMContentLoaded', () => {
             }
           }
         };
-        
+
         document.addEventListener('click', clickHandler, true);
-        
+
         // Close button handler
         if (infoDialogClose) {
           infoDialogClose.addEventListener('click', (e) => {
@@ -31926,7 +31963,7 @@ window.addEventListener('DOMContentLoaded', () => {
             hideInfoDialog();
           });
         }
-        
+
         // Close dialog on Escape key
         const escapeHandler = (e: KeyboardEvent) => {
           if (e.key === 'Escape' && infoDialog.classList.contains('show')) {
@@ -31934,10 +31971,10 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         };
         document.addEventListener('keydown', escapeHandler);
-        
+
         return true;
       };
-      
+
       // Try to setup immediately
       if (!setupCameraInfoDialogs()) {
         // Retry after a short delay
@@ -31945,7 +31982,7 @@ window.addEventListener('DOMContentLoaded', () => {
           setupCameraInfoDialogs();
         }, 500);
       }
-      
+
       // Also setup when camera panel is opened
       const cameraControlsPanel = document.getElementById('cameraControlsPanel');
       if (cameraControlsPanel) {
@@ -31970,33 +32007,33 @@ window.addEventListener('DOMContentLoaded', () => {
       const isoValues = [50, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600];
       const focalLengths = [14, 16, 20, 24, 28, 35, 50, 70, 85, 105, 135, 200, 300, 400];
       const whiteBalances = [2700, 3200, 4000, 4500, 5000, 5600, 6500, 7500, 9000, 10000];
-      
+
       let apertureIndex = 2; // f/2.8
       let shutterIndex = 6; // 1/125s
       let isoIndex = 1; // 100
       let focalIndex = 6; // 50mm
       let wbIndex = 5; // 5600K
-      
+
       const updateCameraSettings = () => {
         const studioInstance = (window as any).virtualStudio as VirtualStudio;
         if (!studioInstance) return;
-        
+
         // Parse aperture from string (e.g., 'f/2.8' -> 2.8)
         const apertureStr = apertureStops[apertureIndex];
         const apertureMatch = apertureStr.match(/f\/([\d.]+)/);
         const aperture = apertureMatch ? parseFloat(apertureMatch[1]) : apertureValues[apertureIndex];
-        
+
         // Update studio camera settings
         studioInstance.cameraSettings.aperture = aperture;
         studioInstance.cameraSettings.shutter = shutterValues[shutterIndex];
         studioInstance.cameraSettings.iso = isoValues[isoIndex];
         studioInstance.cameraSettings.focalLength = focalLengths[focalIndex];
         (studioInstance.cameraSettings as any).whiteBalance = whiteBalances[wbIndex];
-        
+
         // Update scene brightness based on new settings
         studioInstance.updateSceneBrightness();
         studioInstance.updateExposureDisplay();
-        
+
         // Dispatch event for PhysicsBasedDOF to respond to aperture changes
         const enableDOF = aperture <= 5.6;
         const storedFocusDistance = useFocusStore.getState().focusDistance;
@@ -32005,7 +32042,7 @@ window.addEventListener('DOMContentLoaded', () => {
           detail: { aperture, focusDistance, enabled: enableDOF }
         }));
       };
-      
+
       const updateCameraDisplay = () => {
         const apertureEl = document.getElementById('apertureValue');
         const shutterEl = document.getElementById('shutterValue');
@@ -32013,22 +32050,22 @@ window.addEventListener('DOMContentLoaded', () => {
         const focalEl = document.getElementById('focalValue');
         const wbEl = document.getElementById('wbValue');
         const camExposure = document.getElementById('camExposure');
-        
+
         if (apertureEl) apertureEl.textContent = apertureStops[apertureIndex];
         if (shutterEl) shutterEl.textContent = shutterSpeeds[shutterIndex];
         if (isoEl) isoEl.textContent = isoValues[isoIndex].toString();
         if (focalEl) focalEl.textContent = focalLengths[focalIndex] + 'mm';
         if (wbEl) wbEl.textContent = whiteBalances[wbIndex] + 'K';
-        
+
         // Update viewport camera info display
         if (camExposure) {
           camExposure.textContent = `${apertureStops[apertureIndex]} · ${shutterSpeeds[shutterIndex]} · ISO ${isoValues[isoIndex]}`;
         }
-        
+
         // Update camera settings in studio
         updateCameraSettings();
       };
-      
+
       // Helper to add pointer handlers for touch-friendly controls
       const addSettingHandler = (btnId: string, handler: () => void) => {
         const btn = document.getElementById(btnId);
@@ -32040,7 +32077,7 @@ window.addEventListener('DOMContentLoaded', () => {
           });
         }
       };
-      
+
       // Aperture controls
       addSettingHandler('apertureUp', () => {
         apertureIndex = Math.min(apertureStops.length - 1, apertureIndex + 1);
@@ -32050,7 +32087,7 @@ window.addEventListener('DOMContentLoaded', () => {
         apertureIndex = Math.max(0, apertureIndex - 1);
         updateCameraDisplay();
       });
-      
+
       // Shutter controls
       addSettingHandler('shutterUp', () => {
         shutterIndex = Math.max(0, shutterIndex - 1);
@@ -32060,7 +32097,7 @@ window.addEventListener('DOMContentLoaded', () => {
         shutterIndex = Math.min(shutterSpeeds.length - 1, shutterIndex + 1);
         updateCameraDisplay();
       });
-      
+
       // ISO controls
       addSettingHandler('isoUp', () => {
         isoIndex = Math.min(isoValues.length - 1, isoIndex + 1);
@@ -32070,7 +32107,7 @@ window.addEventListener('DOMContentLoaded', () => {
         isoIndex = Math.max(0, isoIndex - 1);
         updateCameraDisplay();
       });
-      
+
       // Focal length controls
       addSettingHandler('focalUp', () => {
         focalIndex = Math.min(focalLengths.length - 1, focalIndex + 1);
@@ -32094,7 +32131,7 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // White balance controls
       addSettingHandler('wbUp', () => {
         wbIndex = Math.min(whiteBalances.length - 1, wbIndex + 1);
@@ -32104,7 +32141,7 @@ window.addEventListener('DOMContentLoaded', () => {
         wbIndex = Math.max(0, wbIndex - 1);
         updateCameraDisplay();
       });
-      
+
       // ND Filter controls
       const ndValues = [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12];
       let ndIndex = 0; // 0 (no filter)
@@ -32130,19 +32167,19 @@ window.addEventListener('DOMContentLoaded', () => {
           studioInstance.updateExposureDisplay();
         }
       });
-      
+
       // Tab switching
       const tabCamera = document.getElementById('tabCamera');
       const tabLight = document.getElementById('tabLight');
       const cameraTabContent = document.getElementById('cameraTabContent');
       const lightTabContent = document.getElementById('lightTabContent');
-      
+
       const switchToTab = (tab: 'camera' | 'light') => {        const cameraControlsPanel = document.getElementById('cameraControlsPanel') as HTMLElement;
         const cameraControlsScrollable = document.getElementById('cameraControlsScrollable') as HTMLElement;
         const screenWidth = window.innerWidth;
         // Determine width based on screen size: 1100px for screens 1440px+, 900px otherwise
         const lightTabWidth = screenWidth >= 1440 ? '1100px' : '900px';
-        
+
         if (tab === 'camera') {
           if (tabCamera) {
             tabCamera.style.background = 'rgba(0,212,255,0.15)';
@@ -32196,7 +32233,7 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       };
-      
+
       // Collapse/expand functionality for light tab sections
       // Make it available globally so it can be called from other places
       (window as any).setupLightSectionCollapse = () => {
@@ -32204,12 +32241,12 @@ window.addEventListener('DOMContentLoaded', () => {
         const lightSectionHeaders = lightTabContent 
           ? Array.from(lightTabContent.querySelectorAll('.light-section-header'))
           : Array.from(document.querySelectorAll('.light-section-header'));
-        
+
         lightSectionHeaders.forEach((header) => {
           // Skip if already has event listener
           if ((header as HTMLElement).dataset.hasListener === 'true') return;
           (header as HTMLElement).dataset.hasListener = 'true';
-          
+
           // Find content element
           let content = header.nextElementSibling as HTMLElement;
           if (!content || !content.classList.contains('light-section-content')) {
@@ -32220,15 +32257,15 @@ window.addEventListener('DOMContentLoaded', () => {
             }
           }
           if (!content) return;
-          
+
           header.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             // Toggle collapsed class on header
             header.classList.toggle('collapsed');
             const isCollapsed = header.classList.contains('collapsed');
-            
+
             // Toggle content visibility
             if (isCollapsed) {
               content.style.display = 'none';
@@ -32238,9 +32275,9 @@ window.addEventListener('DOMContentLoaded', () => {
           });
         });
       };
-      
+
       const setupLightSectionCollapse = (window as any).setupLightSectionCollapse;
-      
+
       tabCamera?.addEventListener('click', () => {
         switchToTab('camera');
       });
@@ -32249,15 +32286,15 @@ window.addEventListener('DOMContentLoaded', () => {
         // Setup collapse functionality when light tab is shown
         setTimeout(setupLightSectionCollapse, 50);
       });
-      
+
       // Initialize: Light sections are now inside #lightTabContent and will be hidden automatically
       // when lightTabContent has display:none (set in HTML)
-      
+
       // Also setup on initial load if light tab is already active
       if (lightTabContent && lightTabContent.style.display !== 'none') {
         setTimeout(setupLightSectionCollapse, 100);
       }
-      
+
       // Update panel width on window resize if light tab is active
       window.addEventListener('resize', () => {
         const cameraControlsPanel = document.getElementById('cameraControlsPanel') as HTMLElement;
@@ -32275,7 +32312,7 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // Light controls state
       let lightPower = 100;
       let lightTemp = 5600;
@@ -32287,7 +32324,7 @@ window.addEventListener('DOMContentLoaded', () => {
       let powerIndex = 4;
       let tempIndex = 4;
       let beamIndex = 2;
-      
+
       const updateLightDisplay = () => {
         // Sync state variables with current step indices
         lightPower = currentPowerSteps.values[powerIndex] * 100;
@@ -32300,10 +32337,10 @@ window.addEventListener('DOMContentLoaded', () => {
         const softnessEl = document.getElementById('softnessValue');
         const intensitySlider = document.getElementById('intensitySlider') as HTMLInputElement;
         const softnessSlider = document.getElementById('softnessSlider') as HTMLInputElement;
-        
+
         // Log light state for debugging/telemetry
         console.debug(`[LightControls] Power: ${lightPower}%, Temp: ${lightTemp}K, Beam: ${lightBeam}°`);
-        
+
         if (powerEl) {
           if (powerIndex >= 0 && powerIndex < currentPowerSteps.labels.length) {
             powerEl.textContent = currentPowerSteps.labels[powerIndex];
@@ -32316,7 +32353,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (intensityEl && intensitySlider) intensityEl.textContent = intensitySlider.value + '%';
         if (softnessEl && softnessSlider) softnessEl.textContent = softnessSlider.value + '%';
       };
-      
+
       // Light setting handlers
       const addLightHandler = (btnId: string, handler: () => void) => {
         const btn = document.getElementById(btnId);
@@ -32328,7 +32365,7 @@ window.addEventListener('DOMContentLoaded', () => {
           });
         }
       };
-      
+
       addLightHandler('powerUp', () => {
         powerIndex = Math.min(currentPowerSteps.values.length - 1, powerIndex + 1);
         // Update power multiplier
@@ -32401,7 +32438,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const lightSpec = getLightById(light.type);
             const finalColor = lightSpec?.cri ? studio.applyCRIEffect(color, lightSpec.cri) : color;
             light.light.diffuse = finalColor;
-            
+
             // Update emissive material on mesh with improved formula
             if (light.mesh.material) {
               const mat = light.mesh.material as BABYLON.StandardMaterial | BABYLON.PBRMaterial;
@@ -32415,7 +32452,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 );
               }
             }
-            
+
             // Update modeling light color if it exists
             if (light.modelingLight) {
               light.modelingLight.diffuse = finalColor;
@@ -32437,7 +32474,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const lightSpec = getLightById(light.type);
             const finalColor = lightSpec?.cri ? studio.applyCRIEffect(color, lightSpec.cri) : color;
             light.light.diffuse = finalColor;
-            
+
             // Update emissive material on mesh with improved formula
             if (light.mesh.material) {
               const mat = light.mesh.material as BABYLON.StandardMaterial | BABYLON.PBRMaterial;
@@ -32451,7 +32488,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 );
               }
             }
-            
+
             // Update modeling light color if it exists
             if (light.modelingLight) {
               light.modelingLight.diffuse = finalColor;
@@ -32470,17 +32507,17 @@ window.addEventListener('DOMContentLoaded', () => {
               // For SpotLights: update angle
               const angle = beamSteps[beamIndex];
               light.light.angle = (angle * Math.PI) / 180;
-              
+
               // Update beam visualization if it exists
               if (light.beamVisualization) {
                 const beamLength = 5;
                 const beamRadius = Math.tan(light.light.angle) * beamLength;
-                
+
                 // Update existing beam visualization geometry
                 const oldMesh = light.beamVisualization;
                 const oldMat = oldMesh.material;
                 oldMesh.dispose();
-                
+
                 // Recreate beam visualization with new angle
                 light.beamVisualization = BABYLON.MeshBuilder.CreateCylinder(
                   `beam_${studio.selectedLightId}`,
@@ -32492,7 +32529,7 @@ window.addEventListener('DOMContentLoaded', () => {
                   },
                   studio.scene
                 );
-                
+
                 if (oldMat) {
                   light.beamVisualization.material = oldMat;
                 } else {
@@ -32504,7 +32541,7 @@ window.addEventListener('DOMContentLoaded', () => {
                   beamMat.sideOrientation = BABYLON.Mesh.DOUBLESIDE;
                   light.beamVisualization.material = beamMat;
                 }
-                
+
                 light.beamVisualization.parent = light.mesh;
                 light.beamVisualization.isVisible = studio.selectedLightId === light.mesh.name.replace('mesh_', 'light_');
                 light.beamVisualization.isPickable = false;
@@ -32539,17 +32576,17 @@ window.addEventListener('DOMContentLoaded', () => {
               // For SpotLights: update angle
               const angle = beamSteps[beamIndex];
               light.light.angle = (angle * Math.PI) / 180;
-              
+
               // Update beam visualization if it exists
               if (light.beamVisualization) {
                 const beamLength = 5;
                 const beamRadius = Math.tan(light.light.angle) * beamLength;
-                
+
                 // Update existing beam visualization geometry
                 const oldMesh = light.beamVisualization;
                 const oldMat = oldMesh.material;
                 oldMesh.dispose();
-                
+
                 // Recreate beam visualization with new angle
                 light.beamVisualization = BABYLON.MeshBuilder.CreateCylinder(
                   `beam_${studio.selectedLightId}`,
@@ -32561,7 +32598,7 @@ window.addEventListener('DOMContentLoaded', () => {
                   },
                   studio.scene
                 );
-                
+
                 if (oldMat) {
                   light.beamVisualization.material = oldMat;
                 } else {
@@ -32573,7 +32610,7 @@ window.addEventListener('DOMContentLoaded', () => {
                   beamMat.sideOrientation = BABYLON.Mesh.DOUBLESIDE;
                   light.beamVisualization.material = beamMat;
                 }
-                
+
                 light.beamVisualization.parent = light.mesh;
                 light.beamVisualization.isVisible = studio.selectedLightId === light.mesh.name.replace('mesh_', 'light_');
                 light.beamVisualization.isPickable = false;
@@ -32597,7 +32634,7 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // Slider handlers - connected to actual lights
       // Light toggle switch handler
       document.getElementById('lightToggleSwitch')?.addEventListener('change', (e) => {
@@ -32659,25 +32696,25 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // Ambient light slider handler with precise calculations
       document.getElementById('ambientLightSlider')?.addEventListener('input', (e) => {
         const value = parseInt((e.target as HTMLInputElement).value);
         const valueEl = document.getElementById('ambientLightValue');
         if (valueEl) valueEl.textContent = `${value}%`;
         studio.setAmbientLightIntensity(value);
-        
+
         // Update slider fill indicator
         const slider = e.target as HTMLInputElement;
         const percent = (value / 100) * 100;
         slider.style.setProperty('--slider-percent', `${percent}%`);
       });
-      
+
       // Auto-ambient checkbox handler with visual toggle update
       document.getElementById('autoAmbientCheckbox')?.addEventListener('change', (e) => {
         const isChecked = (e.target as HTMLInputElement).checked;
         studio.setAutoAmbient(isChecked);
-        
+
         // Update toggle visual state
         const parent = (e.target as HTMLElement).parentElement;
         if (parent) {
@@ -32689,17 +32726,17 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // Ambient light toggle handler with visual state update
       document.getElementById('ambientToggleSwitch')?.addEventListener('change', (e) => {
         const isChecked = (e.target as HTMLInputElement).checked;
         studio.setAmbientLightEnabled(isChecked);
-        
+
         // Update toggle visual state
         const track = document.getElementById('ambientToggleTrack');
         const thumb = document.getElementById('ambientToggleThumb');
         const badge = document.getElementById('ambientStatusBadge');
-        
+
         if (track) {
           track.style.background = isChecked 
             ? 'linear-gradient(90deg,#4CAF50,#66BB6A)' 
@@ -32718,12 +32755,12 @@ window.addEventListener('DOMContentLoaded', () => {
           badge.style.borderColor = isChecked ? 'rgba(76,175,80,0.4)' : 'rgba(255,100,100,0.4)';
         }
       });
-      
+
       // Ambient light temperature slider with precise Kelvin calculations
       document.getElementById('ambientTempSlider')?.addEventListener('input', (e) => {
         const value = parseInt((e.target as HTMLInputElement).value);
         const valueEl = document.getElementById('ambientTempValue');
-        
+
         // Format temperature value with proper precision
         if (valueEl) {
           if (value >= 10000) {
@@ -32732,28 +32769,28 @@ window.addEventListener('DOMContentLoaded', () => {
             valueEl.textContent = `${value}K`;
           }
         }
-        
+
         studio.setAmbientLightTemperature(value);
-        
+
         // Update slider position indicator
         const slider = e.target as HTMLInputElement;
         const percent = ((value - 2700) / (10000 - 2700)) * 100;
         slider.style.setProperty('--slider-percent', `${percent}%`);
       });
-      
+
       // Ambient light ground intensity slider with precise calculations
       document.getElementById('ambientGroundSlider')?.addEventListener('input', (e) => {
         const value = parseInt((e.target as HTMLInputElement).value);
         const valueEl = document.getElementById('ambientGroundValue');
         if (valueEl) valueEl.textContent = `${value}%`;
         studio.setAmbientLightGroundIntensity(value);
-        
+
         // Update slider fill indicator
         const slider = e.target as HTMLInputElement;
         const percent = (value / 100) * 100;
         slider.style.setProperty('--slider-percent', `${percent}%`);
       });
-      
+
       // Ambient preset buttons
       document.getElementById('ambientPresetDay')?.addEventListener('click', () => {
         studio.setAmbientPreset('day');
@@ -32779,13 +32816,13 @@ window.addEventListener('DOMContentLoaded', () => {
               light.modelingLight.intensity = isChecked ? light.modelingLightIntensity : 0;
               light.modelingLight.setEnabled(isChecked); // Enable/disable based on toggle
             }
-            
+
             // Update status display
             const modelingLightStatus = document.getElementById('modelingLightStatus');
             if (modelingLightStatus) {
               modelingLightStatus.textContent = isChecked ? 'På' : 'Av';
             }
-            
+
             // Update scene to reflect modeling light changes
             // (updateLightMeterReading is called automatically on next render)
           }
@@ -32799,12 +32836,12 @@ window.addEventListener('DOMContentLoaded', () => {
           const light = studio.lights.get(studio.selectedLightId);
           if (light) {
             light.modifier = modifier;
-            
+
             // Apply modifier effect by adjusting light properties
             // Note: We keep the light type (SpotLight/PointLight) but adjust properties based on modifier
             // For soft modifiers (softbox, octabox, umbrella), adjust for softer lighting
             // For directional modifiers (snoot, grid), adjust for sharper, more focused lighting
-            
+
             if (light.light instanceof BABYLON.SpotLight) {
               // Physical modifier profiles — inverse square law already active (FALLOFF_PHYSICAL).
               // exponent: controls beam concentration within the cone (cos^exponent falloff).
@@ -32868,11 +32905,11 @@ window.addEventListener('DOMContentLoaded', () => {
         if (!studio.selectedLightId) return;
         const light = studio.lights.get(studio.selectedLightId);
         if (!light) return;
-        
+
         const intensitySlider = document.getElementById('intensitySlider') as HTMLInputElement;
         const softnessSlider = document.getElementById('softnessSlider') as HTMLInputElement;
         const modifierSelect = document.getElementById('modifierSelect') as HTMLSelectElement;
-        
+
         switch (preset) {
           case 'key':
             // Key light: Strong, slightly warm, medium-soft
@@ -32888,7 +32925,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (modifierSelect) modifierSelect.value = 'softbox';
             light.modifier = 'softbox';
             break;
-            
+
           case 'fill':
             // Fill light: Softer, cooler, lower power
             light.powerMultiplier = 0.35;
@@ -32902,7 +32939,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (modifierSelect) modifierSelect.value = 'umbrella';
             light.modifier = 'umbrella';
             break;
-            
+
           case 'rim':
             // Rim/Hair light: Narrow, sharp, strong
             light.powerMultiplier = 0.75;
@@ -32917,7 +32954,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (modifierSelect) modifierSelect.value = 'grid';
             light.modifier = 'grid';
             break;
-            
+
           case 'background':
             // Background light: Wide, colored option, medium power
             light.powerMultiplier = 0.5;
@@ -32932,22 +32969,22 @@ window.addEventListener('DOMContentLoaded', () => {
             light.modifier = 'none';
             break;
         }
-        
+
         // Update light intensity
         light.light.intensity = (light.intensity || 1) * light.powerMultiplier;
-        
+
         // Update color temperature
         const color = studio.cctToColor(light.cct);
         light.light.diffuse = color;
-        
+
         // Update display
         updateLightDisplay();
         studio.updateSceneBrightness();
         studio.updateLightMeterReading();
-        
+
         console.log(`Applied ${preset} light preset`);
       };
-      
+
       document.getElementById('presetKeyLight')?.addEventListener('click', () => applyLightPreset('key'));
       document.getElementById('presetFillLight')?.addEventListener('click', () => applyLightPreset('fill'));
       document.getElementById('presetRimLight')?.addEventListener('click', () => applyLightPreset('rim'));
@@ -32956,13 +32993,13 @@ window.addEventListener('DOMContentLoaded', () => {
       // ============================================
       // ADVANCED LIGHT CONTROLS
       // ============================================
-      
+
       // Light Range Control
       document.getElementById('lightRangeSlider')?.addEventListener('input', (e) => {
         const value = parseInt((e.target as HTMLInputElement).value);
         const valueEl = document.getElementById('lightRangeValue');
         if (valueEl) valueEl.textContent = `${value}m`;
-        
+
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light) {
@@ -32974,13 +33011,13 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // Light Falloff Control
       document.getElementById('lightFalloffSlider')?.addEventListener('input', (e) => {
         const value = parseInt((e.target as HTMLInputElement).value);
         const valueEl = document.getElementById('lightFalloffValue');
         if (valueEl) valueEl.textContent = `${value}%`;
-        
+
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light && light.light instanceof BABYLON.SpotLight) {
@@ -32989,13 +33026,13 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // Inner Cone Angle Control
       document.getElementById('innerConeSlider')?.addEventListener('input', (e) => {
         const value = parseInt((e.target as HTMLInputElement).value);
         const valueEl = document.getElementById('innerConeValue');
         if (valueEl) valueEl.textContent = `${value}°`;
-        
+
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light && light.light instanceof BABYLON.SpotLight) {
@@ -33004,13 +33041,13 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // Outer Cone Angle Control
       document.getElementById('outerConeSlider')?.addEventListener('input', (e) => {
         const value = parseInt((e.target as HTMLInputElement).value);
         const valueEl = document.getElementById('outerConeValue');
         if (valueEl) valueEl.textContent = `${value}°`;
-        
+
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light && light.light instanceof BABYLON.SpotLight) {
@@ -33019,13 +33056,13 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // Specular Intensity Control
       document.getElementById('specularSlider')?.addEventListener('input', (e) => {
         const value = parseInt((e.target as HTMLInputElement).value);
         const valueEl = document.getElementById('specularValue');
         if (valueEl) valueEl.textContent = `${value}%`;
-        
+
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light) {
@@ -33039,13 +33076,13 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // Diffuse Intensity Control
       document.getElementById('diffuseSlider')?.addEventListener('input', (e) => {
         const value = parseInt((e.target as HTMLInputElement).value);
         const valueEl = document.getElementById('diffuseValue');
         if (valueEl) valueEl.textContent = `${value}%`;
-        
+
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light) {
@@ -33063,12 +33100,12 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // Custom Color Picker
       document.getElementById('lightColorPicker')?.addEventListener('input', (e) => {
         const colorHex = (e.target as HTMLInputElement).value;
         const useCustom = (document.getElementById('useCustomColor') as HTMLInputElement)?.checked;
-        
+
         if (useCustom && studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light) {
@@ -33080,11 +33117,11 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       document.getElementById('useCustomColor')?.addEventListener('change', (e) => {
         const isChecked = (e.target as HTMLInputElement).checked;
         const colorPicker = document.getElementById('lightColorPicker') as HTMLInputElement;
-        
+
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light) {
@@ -33104,17 +33141,17 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // ============================================
       // SHADOW CONTROLS
       // ============================================
-      
+
       // Shadow Toggle
       document.getElementById('shadowToggle')?.addEventListener('change', (e) => {
         const isChecked = (e.target as HTMLInputElement).checked;
         const statusEl = document.getElementById('shadowToggleStatus');
         if (statusEl) statusEl.textContent = isChecked ? 'PÅ' : 'AV';
-        
+
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light && light.shadowGenerator) {
@@ -33124,13 +33161,13 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // Shadow Intensity
       document.getElementById('shadowIntensitySlider')?.addEventListener('input', (e) => {
         const value = parseInt((e.target as HTMLInputElement).value);
         const valueEl = document.getElementById('shadowIntensityValue');
         if (valueEl) valueEl.textContent = `${value}%`;
-        
+
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light && light.shadowGenerator) {
@@ -33140,13 +33177,13 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // Shadow Blur
       document.getElementById('shadowBlurSlider')?.addEventListener('input', (e) => {
         const value = parseInt((e.target as HTMLInputElement).value);
         const valueEl = document.getElementById('shadowBlurValue');
         if (valueEl) valueEl.textContent = `${value}%`;
-        
+
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light && light.shadowGenerator) {
@@ -33157,7 +33194,7 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // Shadow Bias
       document.getElementById('shadowBiasSlider')?.addEventListener('input', (e) => {
         const value = parseInt((e.target as HTMLInputElement).value);
@@ -33165,7 +33202,7 @@ window.addEventListener('DOMContentLoaded', () => {
         // Map 0-100 to 0.00-0.10
         const bias = value / 1000;
         if (valueEl) valueEl.textContent = bias.toFixed(3);
-        
+
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light && light.shadowGenerator) {
@@ -33173,47 +33210,47 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // Shadow Map Size
       document.getElementById('shadowMapSize')?.addEventListener('change', (e) => {
         const size = parseInt((e.target as HTMLSelectElement).value);
-        
+
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light && light.shadowGenerator) {
             // Need to recreate shadow generator with new size
             const oldGenerator = light.shadowGenerator;
             const newGenerator = new BABYLON.ShadowGenerator(size, light.light as BABYLON.IShadowLight);
-            
+
             // Copy settings
             newGenerator.setDarkness(oldGenerator.getDarkness());
             newGenerator.blurKernel = oldGenerator.blurKernel;
             newGenerator.bias = oldGenerator.bias;
             newGenerator.usePercentageCloserFiltering = true;
             newGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
-            
+
             // Add shadow casters
             studio.scene.meshes.forEach(mesh => {
               if (mesh.receiveShadows) {
                 newGenerator.addShadowCaster(mesh);
               }
             });
-            
+
             // Dispose old and replace
             oldGenerator.dispose();
             light.shadowGenerator = newGenerator;
           }
         }
       });
-      
+
       // ============================================
       // VISUALIZATION CONTROLS
       // ============================================
-      
+
       // Show Beam Visualization
       document.getElementById('showBeamViz')?.addEventListener('change', (e) => {
         const isChecked = (e.target as HTMLInputElement).checked;
-        
+
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light && light.beamVisualization) {
@@ -33221,11 +33258,11 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // Show Light Helper
       document.getElementById('showLightHelper')?.addEventListener('change', (e) => {
         const isChecked = (e.target as HTMLInputElement).checked;
-        
+
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light) {
@@ -33236,7 +33273,7 @@ window.addEventListener('DOMContentLoaded', () => {
               const direction = light.light instanceof BABYLON.SpotLight ? 
                 (light.light as BABYLON.SpotLight).direction.clone() : 
                 new BABYLON.Vector3(0, -1, 0);
-              
+
               light.directionHelper = BABYLON.MeshBuilder.CreateLines("lightHelper_" + studio.selectedLightId, {
                 points: [
                   BABYLON.Vector3.Zero(),
@@ -33252,11 +33289,11 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // Show Shadow Frustum
       document.getElementById('showShadowFrustum')?.addEventListener('change', (e) => {
         const isChecked = (e.target as HTMLInputElement).checked;
-        
+
         if (studio.selectedLightId) {
           const light = studio.lights.get(studio.selectedLightId);
           if (light && light.shadowGenerator) {
@@ -33267,11 +33304,11 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
+
       // ============================================
       // LIGHT TARGETING CONTROLS
       // ============================================
-      
+
       // Aim at Actor
       document.getElementById('aimAtActor')?.addEventListener('click', () => {
         if (studio.selectedLightId) {
@@ -33279,7 +33316,7 @@ window.addEventListener('DOMContentLoaded', () => {
           if (light) {
             // Find the first avatar/actor in the scene
             let targetPos = new BABYLON.Vector3(0, 1.6, 0); // Default human head height
-            
+
             // Look for avatar meshes
             studio.scene.meshes.forEach(mesh => {
               if (mesh.name.includes('avatar') || mesh.name.includes('actor') || mesh.name.includes('character')) {
@@ -33289,12 +33326,12 @@ window.addEventListener('DOMContentLoaded', () => {
                 targetPos.y = targetHeight;
               }
             });
-            
+
             studio.aimLightAt(studio.selectedLightId, targetPos);
           }
         }
       });
-      
+
       // Aim at Center
       document.getElementById('aimAtCenter')?.addEventListener('click', () => {
         if (studio.selectedLightId) {
@@ -33303,7 +33340,7 @@ window.addEventListener('DOMContentLoaded', () => {
           studio.aimLightAt(studio.selectedLightId, targetPos);
         }
       });
-      
+
       // Target Height
       document.getElementById('targetHeightSlider')?.addEventListener('input', (e) => {
         const value = parseInt((e.target as HTMLInputElement).value);
@@ -33344,11 +33381,11 @@ window.addEventListener('DOMContentLoaded', () => {
       if (lightTypeSelect) {
         // Clear existing options
         lightTypeSelect.innerHTML = '';
-        
+
         // Group lights by type
         const strobeLights = LIGHT_DATABASE.filter(l => l.type === 'strobe' || l.type === 'flash');
         const continuousLights = LIGHT_DATABASE.filter(l => l.type === 'led' || l.type === 'continuous');
-        
+
         // Add optgroup for strobes/flashes
         if (strobeLights.length > 0) {
           const strobeGroup = document.createElement('optgroup');
@@ -33362,7 +33399,7 @@ window.addEventListener('DOMContentLoaded', () => {
           });
           lightTypeSelect.appendChild(strobeGroup);
         }
-        
+
         // Add optgroup for continuous/LED lights
         if (continuousLights.length > 0) {
           const continuousGroup = document.createElement('optgroup');
@@ -33401,7 +33438,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const countEl = document.getElementById('sceneLightCount');
         const scrollIndicator = document.getElementById('scrollIndicator');
         if (!listEl) return;
-        
+
         // Update light count indicator
         const lightCount = studio.lights.size;
         if (countEl) {
@@ -33430,7 +33467,7 @@ window.addEventListener('DOMContentLoaded', () => {
             </label>
             <button class="delete-light-btn" data-id="${id}" style="background:rgba(255,0,0,0.2);border:none;color:#ff6b6b;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px;">✕</button>
           `;
-          
+
           // Toggle switch handler
           const toggleSwitch = item.querySelector('.light-list-toggle') as HTMLInputElement;
           if (toggleSwitch) {
@@ -33463,7 +33500,7 @@ window.addEventListener('DOMContentLoaded', () => {
           });
           listEl.appendChild(item);
         });
-        
+
         // Show/hide scroll indicator based on scrollable content
         setTimeout(() => {
           if (scrollIndicator) {
@@ -33472,7 +33509,7 @@ window.addEventListener('DOMContentLoaded', () => {
             scrollIndicator.style.display = isScrollable && !isAtBottom ? 'block' : 'none';
           }
         }, 10);
-        
+
         // Update scroll indicator on scroll
         listEl.onscroll = () => {
           if (scrollIndicator) {
@@ -33489,7 +33526,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const azimuthValue = document.getElementById('azimuthValue');
       const elevationValue = document.getElementById('elevationValue');
       const resetLightDirectionBtn = document.getElementById('resetLightDirection');
-      
+
       const updateLightSettingsFromSelected = () => {
         const settingsSection = document.getElementById('lightSettingsSection');
         const selectedNameEl = document.getElementById('selectedLightName');
@@ -33534,7 +33571,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const lightSpec = getLightById(light.type);
         const brand = lightSpec?.brand;
         currentPowerSteps = studio.getPowerStepsForLight(light.type, brand);
-        
+
         // Update power index based on powerMultiplier
         if (light.powerMultiplier !== undefined) {
           // Find closest matching step
@@ -33596,7 +33633,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // Update display
         updateLightDisplay();
-        
+
         // Update azimuth/elevation sliders (use variables declared outside function)
         if (azimuthSlider && elevationSlider) {
           // Calculate current azimuth/elevation from light direction if not manually set
@@ -33608,17 +33645,17 @@ window.addEventListener('DOMContentLoaded', () => {
               // Use precise calculations for accurate conversion
               const azimuthOffset = -180;
               const elevationOffset = -10;
-              
+
               // Precise azimuth calculation: angle in XZ plane from negative Z axis
               const azimuthRad = Math.atan2(dir.x, -dir.z);
               const azimuth = azimuthRad * 180 / Math.PI + azimuthOffset;
-              
+
               // Precise elevation calculation: angle from horizontal plane
               // Clamp Y component to valid range for asin [-1, 1]
               const clampedY = Math.max(-1, Math.min(1, dir.y));
               const elevationRad = -Math.asin(clampedY);
               const elevation = elevationRad * 180 / Math.PI + elevationOffset;
-              
+
               light.azimuth = azimuth;
               light.elevation = elevation;
             } else {
@@ -33626,10 +33663,10 @@ window.addEventListener('DOMContentLoaded', () => {
               light.elevation = 0;
             }
           }
-          
+
           azimuthSlider.value = String(Math.round(light.azimuth));
           elevationSlider.value = String(Math.round(light.elevation));
-          
+
           if (azimuthValue) azimuthValue.textContent = `${Math.round(light.azimuth)}°`;
           if (elevationValue) elevationValue.textContent = `${Math.round(light.elevation)}°`;
         }
@@ -33641,19 +33678,19 @@ window.addEventListener('DOMContentLoaded', () => {
         const modelingLightStatus = document.getElementById('modelingLightStatus');
         const modelingLightPower = document.getElementById('modelingLightPower');
         const modelingLightLux = document.getElementById('modelingLightLux');
-        
+
         const modelingLightSpec = getLightById(light.type);
         const isStrobe = modelingLightSpec?.type === 'strobe' || modelingLightSpec?.type === 'flash';
         const hasModelingLight = isStrobe && modelingLightSpec?.modelingLightPower;
-        
+
         if (modelingLightSection) {
           modelingLightSection.style.display = hasModelingLight ? 'flex' : 'none';
         }
-        
+
         if (hasModelingLight && modelingLightToggle && modelingLightStatus && modelingLightPower && modelingLightLux) {
           modelingLightToggle.checked = light.modelingLightEnabled || false;
           modelingLightStatus.textContent = light.modelingLightEnabled ? 'På' : 'Av';
-          
+
           // Show modeling light specs
           if (modelingLightSpec.modelingLightPower) {
             modelingLightPower.textContent = String(modelingLightSpec.modelingLightPower);
@@ -33672,7 +33709,7 @@ window.addEventListener('DOMContentLoaded', () => {
         azimuthSlider.addEventListener('input', (e) => {
           const value = parseInt((e.target as HTMLInputElement).value);
           if (azimuthValue) azimuthValue.textContent = `${value}°`;
-          
+
           if (studio.selectedLightId) {
             const light = studio.lights.get(studio.selectedLightId);
             if (light) {
@@ -33683,12 +33720,12 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         });
       }
-      
+
       if (elevationSlider) {
         elevationSlider.addEventListener('input', (e) => {
           const value = parseInt((e.target as HTMLInputElement).value);
           if (elevationValue) elevationValue.textContent = `${value}°`;
-          
+
           if (studio.selectedLightId) {
             const light = studio.lights.get(studio.selectedLightId);
             if (light) {
@@ -33699,7 +33736,7 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         });
       }
-      
+
       if (resetLightDirectionBtn) {
         resetLightDirectionBtn.addEventListener('click', () => {
           if (studio.selectedLightId) {
@@ -33707,7 +33744,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (light) {
               light.azimuth = undefined;
               light.elevation = undefined;
-              
+
               // Reset sliders
               if (azimuthSlider) {
                 azimuthSlider.value = '0';
@@ -33717,7 +33754,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 elevationSlider.value = '0';
                 if (elevationValue) elevationValue.textContent = '0°';
               }
-              
+
               // Trigger light direction update to use automatic calculation
               studio.scene.render();
             }
@@ -33730,7 +33767,7 @@ window.addEventListener('DOMContentLoaded', () => {
         updateLightSelectionList();
         updateLightSettingsFromSelected();
       });
-      
+
       // Listen for light deletion (Delete/Backspace key)
       window.addEventListener('light-deleted', () => {
         updateLightSelectionList();
@@ -33748,21 +33785,21 @@ window.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
           const preset = btn.getAttribute('data-preset');
           if (!preset) return;
-          
+
           // Define preset positions and settings
           const presets: Record<string, { pos: [number, number, number], cct: number, intensity: number }> = {
             key:  { pos: [2, 3, 2],      cct: 5600, intensity: 420 },  // candela, FALLOFF_PHYSICAL
             fill: { pos: [-1.5, 2.5, 2], cct: 5600, intensity: 190 },  // ~45% of key
             rim:  { pos: [-2, 3.5, -2],  cct: 5600, intensity: 340 }   // strong rim
           };
-          
+
           const presetData = presets[preset];
           if (!presetData) return;
-          
+
           // Add light at preset position
           const pos = new BABYLON.Vector3(...presetData.pos);
           studio.addLight('godox-ad600', pos);
-          
+
           // Update light settings after a short delay to ensure light is created
           setTimeout(() => {
             if (studio.selectedLightId) {
@@ -33774,7 +33811,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 const color = studio.cctToColor(presetData.cct);
                 light.light.diffuse = color;
                 (light.mesh.material as BABYLON.StandardMaterial).emissiveColor = color;
-                
+
                 // Update UI
                 updateLightSelectionList();
                 updateLightSettingsFromSelected();
@@ -33789,7 +33826,7 @@ window.addEventListener('DOMContentLoaded', () => {
         console.log('[UI] lights-updated event received:', (e as CustomEvent).detail);
         updateLightSelectionList();
       });
-      
+
       // Initial update to show any lights already in scene
       setTimeout(() => {
         console.log('[UI] Initial light list update');
@@ -33799,13 +33836,13 @@ window.addEventListener('DOMContentLoaded', () => {
       // 3-Point Lighting Preset Button
       document.getElementById('threePointPresetBtn')?.addEventListener('click', () => {
         console.log('Applying 3-Point Lighting preset...');
-        
+
         // Clear existing lights first
         studio.clearAllLights();
-        
+
         // Apply the 3-point lighting setup
         studio.setupDefaultLighting();
-        
+
         // Update UI after lights are created
         setTimeout(() => {
           updateLightSelectionList();
@@ -33824,20 +33861,20 @@ window.addEventListener('DOMContentLoaded', () => {
         window.dispatchEvent(new CustomEvent('openLightPatternLibrary'));
         console.log('Opening photo light pattern library');
       });
-      
+
       // Open Avatar Generator panel
       document.getElementById('openAvatarGeneratorBtn')?.addEventListener('click', () => {
         window.dispatchEvent(new CustomEvent('openAvatarGenerator'));
         console.log('Opening avatar generator panel');
       });
-      
+
       // Handle avatar generation completed
       window.addEventListener('avatarGenerated', (event: Event) => {
         const customEvent = event as CustomEvent;
         const { glbUrl, metadata } = customEvent.detail;
         console.log('Avatar generated event received:', glbUrl, metadata);
         console.log('window.virtualStudio exists:', !!window.virtualStudio);
-        
+
         // Load the avatar GLB into the scene with name and category
         if (window.virtualStudio) {
           console.log('Calling loadAvatarModel...');
@@ -33853,13 +33890,13 @@ window.addEventListener('DOMContentLoaded', () => {
           console.error('window.virtualStudio is not available!');
         }
       });
-      
+
       // Drag functionality for camera controls panel
       const panelHeader = document.getElementById('cameraControlsHeader');
       let isDragging = false;
       let dragOffsetX = 0;
       let dragOffsetY = 0;
-      
+
       const startDrag = (clientX: number, clientY: number) => {
         if (!cameraControlsPanel) return;
         isDragging = true;
@@ -33870,25 +33907,25 @@ window.addEventListener('DOMContentLoaded', () => {
         cameraControlsPanel.style.right = 'auto';
         if (panelHeader) panelHeader.style.cursor = 'grabbing';
       };
-      
+
       const doDrag = (clientX: number, clientY: number) => {
         if (!isDragging || !cameraControlsPanel) return;
         const viewport = document.getElementById('main-viewport');
         if (!viewport) return;
         const viewportRect = viewport.getBoundingClientRect();
-        
+
         let newX = clientX - dragOffsetX - viewportRect.left;
         let newY = clientY - dragOffsetY - viewportRect.top;
-        
+
         // Constrain to viewport
         const panelRect = cameraControlsPanel.getBoundingClientRect();
         newX = Math.max(0, Math.min(newX, viewportRect.width - panelRect.width));
         newY = Math.max(0, Math.min(newY, viewportRect.height - panelRect.height));
-        
+
         cameraControlsPanel.style.left = newX + 'px';
         cameraControlsPanel.style.top = newY + 'px';
       };
-      
+
       const endDrag = () => {
         isDragging = false;
         if (cameraControlsPanel) {
@@ -33896,31 +33933,31 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         if (panelHeader) panelHeader.style.cursor = 'grab';
       };
-      
+
       panelHeader?.addEventListener('pointerdown', (e) => {
         if ((e.target as HTMLElement).tagName === 'BUTTON') return;
         e.preventDefault();
         startDrag(e.clientX, e.clientY);
       });
-      
+
       document.addEventListener('pointermove', (e) => {
         if (isDragging) {
           e.preventDefault();
           doDrag(e.clientX, e.clientY);
         }
       });
-      
+
       document.addEventListener('pointerup', endDrag);
       document.addEventListener('pointercancel', endDrag);
-      
+
       console.log('Camera controls initialized with drag, hold-to-move, speed control, and camera settings');
     }
-    
+
     // Mount Accessible 3D Controls with camera connection (hidden, kept for accessibility)
     const accessible3DControlsRoot = document.getElementById('accessible3DControlsRoot');
     if (accessible3DControlsRoot) {
       const controls3DRoot = createRoot(accessible3DControlsRoot);
-      
+
       // Get initial camera state from Babylon.js camera
       const getCameraState = () => {
         const pos = studio.getCameraPosition();
@@ -33932,7 +33969,7 @@ window.addEventListener('DOMContentLoaded', () => {
           fov: studio.getCameraFov()
         };
       };
-      
+
       // Get scene objects from store
       const getSceneObjects = () => {
         const store = useAppStore.getState();
@@ -33946,7 +33983,7 @@ window.addEventListener('DOMContentLoaded', () => {
           visible: node.visible
         }));
       };
-      
+
       // Get selected object
       const getSelectedObject = () => {
         const store = useAppStore.getState();
@@ -33964,7 +34001,7 @@ window.addEventListener('DOMContentLoaded', () => {
           visible: node.visible
         };
       };
-      
+
       // Camera change handler
       const handleCameraChange = (state: Partial<{
         position: [number, number, number];
@@ -33983,20 +34020,20 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         renderControls();
       };
-      
+
       // Camera reset handler
       const handleCameraReset = () => {
         studio.resetCamera();
         renderControls();
       };
-      
+
       // Object select handler
       const handleObjectSelect = (id: string | null) => {
         const store = useAppStore.getState();
         store.selectNode(id);
         renderControls();
       };
-      
+
       // Object transform handler
       const handleObjectTransform = (id: string, transform: Partial<{
         id: string;
@@ -34022,7 +34059,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         renderControls();
       };
-      
+
       const renderControls = () => {
         controls3DRoot.render(React.createElement(Accessible3DControlsApp, {
           cameraState: getCameraState(),
@@ -34034,16 +34071,16 @@ window.addEventListener('DOMContentLoaded', () => {
           onObjectTransform: handleObjectTransform
         }));
       };
-      
+
       // Initial render
       renderControls();
-      
+
       // Re-render when store changes
       useAppStore.subscribe(() => {
         renderControls();
       });
     }
-    
+
     if (actorPanelRoot && actorBottomPanel && actorPanelTrigger) {
       const root = createRoot(actorPanelRoot);
       root.render(React.createElement(App, { 
@@ -34052,7 +34089,7 @@ window.addEventListener('DOMContentLoaded', () => {
           studio.addActorToScene(actorId);
         }
       }));
-      
+
       const togglePanel = () => {
         console.log('togglePanel called');
         const isOpen = actorBottomPanel.classList.contains('open');
@@ -34084,19 +34121,19 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         console.log('Panel classes after toggle:', actorBottomPanel.className);
       };
-      
+
       // Note: Primary click handler is set up via event delegation at top of file
       // This is a backup that runs after React components are mounted
       if (actorTab) {
         actorTab.addEventListener('click', togglePanel);
       }
-      
+
       const panelFullscreenBtn = document.getElementById('panelFullscreenBtn');
       const panelCloseBtn = document.getElementById('panelCloseBtn');
       const panelResizeHandle = document.getElementById('panelResizeHandle');
       let savedPanelHeight = '200px';
       let isFullscreenMode = false;
-      
+
       const closePanel = () => {
         actorBottomPanel.classList.remove('open');
         actorBottomPanel.classList.remove('fullscreen');
@@ -34113,7 +34150,7 @@ window.addEventListener('DOMContentLoaded', () => {
           panelFullscreenBtn.setAttribute('aria-pressed', 'false');
         }
       };
-      
+
       if (panelFullscreenBtn) {
         panelFullscreenBtn.addEventListener('click', () => {
           isFullscreenMode = !isFullscreenMode;
@@ -34133,16 +34170,16 @@ window.addEventListener('DOMContentLoaded', () => {
           panelFullscreenBtn.setAttribute('aria-pressed', String(isFullscreenMode));
         });
       }
-      
+
       if (panelCloseBtn) {
         panelCloseBtn.addEventListener('click', closePanel);
       }
-      
+
       if (panelResizeHandle) {
         let isResizing = false;
         let startY = 0;
         let startHeight = 0;
-        
+
         const startResize = (clientY: number) => {
           if (isFullscreenMode) return;
           isResizing = true;
@@ -34151,7 +34188,7 @@ window.addEventListener('DOMContentLoaded', () => {
           document.body.style.cursor = 'ns-resize';
           document.body.style.userSelect = 'none';
         };
-        
+
         const doResize = (clientY: number) => {
           if (!isResizing || isFullscreenMode) return;
           const diff = startY - clientY;
@@ -34159,44 +34196,44 @@ window.addEventListener('DOMContentLoaded', () => {
           actorBottomPanel.style.height = `${newHeight}px`;
           savedPanelHeight = `${newHeight}px`;
         };
-        
+
         const stopResize = () => {
           isResizing = false;
           document.body.style.cursor = '';
           document.body.style.userSelect = '';
         };
-        
+
         panelResizeHandle.addEventListener('mousedown', (e) => {
           e.preventDefault();
           startResize(e.clientY);
         });
-        
+
         panelResizeHandle.addEventListener('touchstart', (e) => {
           if (e.touches.length === 1) {
             startResize(e.touches[0].clientY);
           }
         }, { passive: true });
-        
+
         document.addEventListener('mousemove', (e) => {
           doResize(e.clientY);
         });
-        
+
         document.addEventListener('touchmove', (e) => {
           if (isResizing && e.touches.length === 1) {
             doResize(e.touches[0].clientY);
           }
         }, { passive: true });
-        
+
         document.addEventListener('mouseup', stopResize);
         document.addEventListener('touchend', stopResize);
       }
-      
+
       const addToHierarchy = (id: string, name: string, type: 'model' | 'light' | 'equipment') => {
         let groupId = '';
         let countId = '';
         let thumbClass = '';
         let itemType = '';
-        
+
         switch (type) {
           case 'model':
             groupId = 'modelsGroup';
@@ -34217,10 +34254,10 @@ window.addEventListener('DOMContentLoaded', () => {
             itemType = 'Modifier';
             break;
         }
-        
+
         const group = document.getElementById(groupId);
         const countEl = document.getElementById(countId);
-        
+
         // Auto-expand the group when adding items
         if (group) {
           group.style.display = 'block';
@@ -34230,11 +34267,11 @@ window.addEventListener('DOMContentLoaded', () => {
             header.classList.add('expanded');
           }
         }
-        
+
         if (group) {
           const emptyMsg = group.querySelector('.hierarchy-empty');
           if (emptyMsg) emptyMsg.remove();
-          
+
           const itemHtml = `
             <div class="hierarchy-item selected" data-id="${id}">
               <div class="item-thumbnail ${thumbClass}"></div>
@@ -34248,39 +34285,39 @@ window.addEventListener('DOMContentLoaded', () => {
               </div>
             </div>
           `;
-          
+
           if (countEl) {
             const currentCount = parseInt(countEl.textContent || '0');
             countEl.textContent = String(currentCount + 1);
           }
           group.insertAdjacentHTML('beforeend', itemHtml);
-          
+
           document.querySelectorAll('.hierarchy-item').forEach(item => item.classList.remove('selected'));
           const newItem = group.querySelector(`[data-id="${id}"]`);
           if (newItem) {
             newItem.classList.add('selected');
-            
+
             newItem.addEventListener('click', () => {
               document.querySelectorAll('.hierarchy-item').forEach(i => i.classList.remove('selected'));
               newItem.classList.add('selected');
-              
+
               // For lights, also select in 3D scene and open light panel
               if (type === 'light' && id.startsWith('light')) {
                 studio.selectLight(id);
               }
             });
-            
+
             const deleteBtn = newItem.querySelector('.delete-btn');
             if (deleteBtn) {
               deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 newItem.remove();
-                
+
                 if (countEl) {
                   const currentCount = parseInt(countEl.textContent || '1');
                   countEl.textContent = String(Math.max(0, currentCount - 1));
                 }
-                
+
                 if (group.querySelectorAll('.hierarchy-item').length === 0) {
                   const emptyClass = type === 'model' ? 'model-empty' : type === 'light' ? 'light-empty' : 'equip-empty';
                   const emptyText = type === 'model' ? 'Ingen modeller' : 
@@ -34307,7 +34344,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (lightProperties) lightProperties.style.display = 'none';
               });
             }
-            
+
             const visibilityBtn = newItem.querySelector('.visibility-btn');
             if (visibilityBtn) {
               visibilityBtn.addEventListener('click', (e) => {
@@ -34318,18 +34355,18 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
       };
-      
+
       // Expose addToHierarchy globally for use by character loader
       (window as any).addToHierarchy = addToHierarchy;
-      
+
       // Function to add avatar to Studio Library "Mine Avatarer" section
       const addToStudioLibrary = (id: string, name: string, _modelUrl: string) => {
         const section = document.getElementById('generatedAvatarsSection');
         const list = document.getElementById('generatedAvatarsList');
         if (!section || !list) return;
-        
+
         section.style.display = 'block';
-        
+
         // Create avatar card matching the gallery style
         const card = document.createElement('div');
         card.className = 'actor-model-card';
@@ -34341,7 +34378,7 @@ window.addEventListener('DOMContentLoaded', () => {
           <div class="model-name">${name}</div>
           <div style="position:absolute;top:4px;left:4px;background:rgba(0,212,255,0.8);color:#fff;font-size:9px;padding:2px 4px;border-radius:3px;">I scene</div>
         `;
-        
+
         // Click to select/focus the avatar in scene
         card.addEventListener('click', () => {
           // Select in hierarchy
@@ -34353,14 +34390,14 @@ window.addEventListener('DOMContentLoaded', () => {
           useAppStore.getState().selectNode(id);
           console.log('Selected avatar in scene:', name);
         });
-        
+
         list.appendChild(card);
         console.log('Added avatar to Studio Library:', name);
       };
-      
+
       // Expose addToStudioLibrary globally
       (window as any).addToStudioLibrary = addToStudioLibrary;
-      
+
       const showObjectProperties = (name: string, type: 'model' | 'light' | 'equipment', position = [0, 0, 0], rotation = [0, 0, 0]) => {
         const noSelection = document.getElementById('noSelection');
         const objectHeader = document.getElementById('objectHeader');
@@ -34369,26 +34406,26 @@ window.addEventListener('DOMContentLoaded', () => {
         const handsSection = document.getElementById('handsSection');
         const lightProperties = document.getElementById('lightProperties');
         const objectName = document.getElementById('objectName');
-        
+
         if (noSelection) noSelection.style.display = 'none';
         if (objectHeader) objectHeader.style.display = 'block';
         if (transformSection) transformSection.style.display = 'block';
         if (objectName) objectName.textContent = name;
-        
+
         const posXInput = document.getElementById('posX') as HTMLInputElement;
         const posYInput = document.getElementById('posY') as HTMLInputElement;
         const posZInput = document.getElementById('posZ') as HTMLInputElement;
         const rotXInput = document.getElementById('rotX') as HTMLInputElement;
         const rotYInput = document.getElementById('rotY') as HTMLInputElement;
         const rotZInput = document.getElementById('rotZ') as HTMLInputElement;
-        
+
         if (posXInput) posXInput.value = `${position[0].toFixed(2)} m`;
         if (posYInput) posYInput.value = `${position[1].toFixed(2)} m`;
         if (posZInput) posZInput.value = `${position[2].toFixed(2)} m`;
         if (rotXInput) rotXInput.value = `${rotation[0].toFixed(0)} °`;
         if (rotYInput) rotYInput.value = `${rotation[1].toFixed(0)} °`;
         if (rotZInput) rotZInput.value = `${rotation[2].toFixed(0)} °`;
-        
+
         if (type === 'model') {
           if (feetSection) feetSection.style.display = 'block';
           if (handsSection) handsSection.style.display = 'block';
@@ -34403,13 +34440,13 @@ window.addEventListener('DOMContentLoaded', () => {
           if (lightProperties) lightProperties.style.display = 'none';
         }
       };
-      
+
       document.querySelectorAll('.actor-model-card').forEach(card => {
         card.addEventListener('click', () => {
           const actorName = card.getAttribute('data-actor') || 'Actor';
           const actorId = `actor-${Date.now()}`;
           const displayName = actorName.charAt(0).toUpperCase() + actorName.slice(1);
-          
+
           useAppStore.getState().addNode({
             id: actorId,
             type: 'model',
@@ -34418,19 +34455,19 @@ window.addEventListener('DOMContentLoaded', () => {
             visible: true,
             userData: { skinTone: '#D4A574', height: 170 }
           });
-          
+
           studio.addActorToScene(actorId);
           addToHierarchy(actorId, displayName, 'model');
           showObjectProperties(displayName, 'model', [0, 0, 0], [0, 0, 0]);
           console.log('Added actor:', actorName);
         });
       });
-      
+
       document.querySelectorAll('.equipment-card[data-light]').forEach(card => {
         card.addEventListener('click', () => {
           const lightName = card.querySelector('.equipment-name')?.textContent || 'Light';
           const lightId = `light-${Date.now()}`;
-          
+
           useAppStore.getState().addNode({
             id: lightId,
             type: 'light',
@@ -34439,42 +34476,42 @@ window.addEventListener('DOMContentLoaded', () => {
             visible: true,
             userData: { power: 100, cct: 5600 }
           });
-          
+
           addToHierarchy(lightId, lightName, 'light');
           showObjectProperties(lightName, 'light', [2, 3, 0], [0, 0, 0]);
           console.log('Added light:', lightName);
         });
       });
-      
+
       document.querySelectorAll('.equipment-card[data-equip]').forEach(card => {
         card.addEventListener('click', () => {
           const equipName = card.querySelector('.equipment-name')?.textContent?.split('<br>')[0] || 'Equipment';
           const equipId = `equip-${Date.now()}`;
-          
+
           addToHierarchy(equipId, equipName, 'equipment');
           showObjectProperties(equipName, 'equipment', [0, 0, 0], [0, 0, 0]);
           console.log('Added equipment:', equipName);
         });
       });
-      
+
       document.querySelectorAll('.actor-category').forEach(cat => {
         cat.addEventListener('click', () => {
           document.querySelectorAll('.actor-category').forEach(c => c.classList.remove('active'));
           cat.classList.add('active');
         });
       });
-      
+
       // Panel resizing functionality
       const leftPanel = document.querySelector('.left-panel') as HTMLElement;
       const rightPanel = document.querySelector('.right-panel') as HTMLElement;
       const leftResizeHandle = document.getElementById('leftResizeHandle');
       const rightResizeHandle = document.getElementById('rightResizeHandle');
-      
+
       let isResizing = false;
       let currentHandle: 'left' | 'right' | null = null;
       let startX = 0;
       let startWidth = 0;
-      
+
       const startResize = (e: MouseEvent, handle: 'left' | 'right') => {
         isResizing = true;
         currentHandle = handle;
@@ -34483,14 +34520,14 @@ window.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('resizing-panels');
         (handle === 'left' ? leftResizeHandle : rightResizeHandle)?.classList.add('resizing');
       };
-      
+
       const doResize = (e: MouseEvent) => {
         if (!isResizing || !currentHandle) return;
-        
+
         const diff = e.clientX - startX;
         const minWidth = 180;
         const maxWidth = 400;
-        
+
         if (currentHandle === 'left') {
           const newWidth = Math.min(maxWidth, Math.max(minWidth, startWidth + diff));
           leftPanel.style.width = `${newWidth}px`;
@@ -34499,7 +34536,7 @@ window.addEventListener('DOMContentLoaded', () => {
           rightPanel.style.width = `${newWidth}px`;
         }
       };
-      
+
       const stopResize = () => {
         if (isResizing) {
           isResizing = false;
@@ -34509,12 +34546,12 @@ window.addEventListener('DOMContentLoaded', () => {
           currentHandle = null;
         }
       };
-      
+
       leftResizeHandle?.addEventListener('mousedown', (e) => startResize(e, 'left'));
       rightResizeHandle?.addEventListener('mousedown', (e) => startResize(e, 'right'));
       document.addEventListener('mousemove', doResize);
       document.addEventListener('mouseup', stopResize);
-      
+
       // Keyboard support for resize handles
       const handleKeyResize = (e: KeyboardEvent, panel: HTMLElement, direction: number) => {
         if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
@@ -34526,10 +34563,10 @@ window.addEventListener('DOMContentLoaded', () => {
           panel.style.width = `${newWidth}px`;
         }
       };
-      
+
       leftResizeHandle?.addEventListener('keydown', (e) => handleKeyResize(e, leftPanel, 1));
       rightResizeHandle?.addEventListener('keydown', (e) => handleKeyResize(e, rightPanel, -1));
-      
+
       const categoryConfig: Record<string, string[]> = {
         models: ['Alle', 'Kvinner', 'Menn', 'Barn', 'Dyr'],
         lights: [],
@@ -34538,22 +34575,22 @@ window.addEventListener('DOMContentLoaded', () => {
         assets: [],
         timeline: []
       };
-      
+
       document.querySelectorAll('.actor-tab').forEach(tab => {
         tab.addEventListener('click', () => {
           const tabName = tab.getAttribute('data-tab') || 'models';
-          
+
           document.querySelectorAll('.actor-tab').forEach(t => t.classList.remove('active'));
           tab.classList.add('active');
-          
+
           document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.remove('active');
             if (content.getAttribute('data-content') === tabName) {
               content.classList.add('active');
             }
           });
-          
-          
+
+
           const categoriesEl = document.getElementById('panelCategories');
           const sidebarEl = document.querySelector('.actor-sidebar') as HTMLElement;
           if (categoriesEl && sidebarEl) {
@@ -34566,7 +34603,7 @@ window.addEventListener('DOMContentLoaded', () => {
               categoriesEl.innerHTML = cats.map((cat, i) => 
                 `<div class="actor-category${i === 0 ? ' active' : ''}" data-category="${cat.toLowerCase().replace(' ', '-')}">${cat}</div>`
               ).join('');
-              
+
               categoriesEl.querySelectorAll('.actor-category').forEach(catEl => {
                 catEl.addEventListener('click', () => {
                   categoriesEl.querySelectorAll('.actor-category').forEach(c => c.classList.remove('active'));
@@ -34578,14 +34615,14 @@ window.addEventListener('DOMContentLoaded', () => {
         });
       });
     }
-    
+
     // Secondary menu bar event listeners
     const menuHjelp = document.getElementById('menuHjelp');
     const menuMarketplace = document.getElementById('menuMarketplace');
     const menuStudioLibrary = document.getElementById('menuStudioLibrary');
     const menuPanelCreator = document.getElementById('menuPanelCreator');
     const menuSceneHierarchy = document.getElementById('menuSceneHierarchy');
-    
+
     if (menuHjelp) {
       menuHjelp.addEventListener('click', () => {
         const helpPanel = document.getElementById('helpPanel');
@@ -34604,13 +34641,13 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       });
     }
-    
+
     if (menuMarketplace) {
       menuMarketplace.addEventListener('click', () => {
         window.dispatchEvent(new CustomEvent('toggle-marketplace-panel'));
       });
     }
-    
+
     if (menuStudioLibrary) {
       menuStudioLibrary.addEventListener('click', () => {
         const actorBottomPanel = document.getElementById('actorBottomPanel');
@@ -34627,7 +34664,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       });
     }
-    
+
     if (menuPanelCreator) {
       menuPanelCreator.addEventListener('click', () => {
         console.log('Menu Panel Creator clicked, dispatching event');
@@ -34635,7 +34672,7 @@ window.addEventListener('DOMContentLoaded', () => {
         window.dispatchEvent(new CustomEvent('open-panel-creator'));
       });
     }
-    
+
     // Also add click handler to the panel creator trigger button itself
     const panelCreatorTriggerBtn = document.getElementById('panelCreatorTriggerBtn');
     if (panelCreatorTriggerBtn) {
@@ -34645,7 +34682,7 @@ window.addEventListener('DOMContentLoaded', () => {
         window.dispatchEvent(new CustomEvent('open-panel-creator'));
       });
     }
-    
+
     if (menuSceneHierarchy) {
       menuSceneHierarchy.addEventListener('click', () => {
         const leftPanel = document.querySelector('.left-panel') as HTMLElement;
