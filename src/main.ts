@@ -5757,12 +5757,15 @@ class VirtualStudio {
 
             if (isFinite(fxMin) && fxMax > fxMin) {
               panelW = fxMax - fxMin;
-              // Height: the TRELLIS front-face strip may be thin (only top edge vertices).
-              // Since softbox is square and octabox is circular, height = width is correct.
-              panelH = panelW;
-              // X center: vertex-measured (avoids flash-mount bracket X-offset).
-              // Y center: anchor bottom at headJointWorldY, top at headJointWorldY + panelW.
-              const diffuserYCenter = headJointWorldY + panelW * 0.5;
+              // Height: use the ACTUAL vertex-measured face height when both edges are captured.
+              // Extend by 20% so the glow covers the diffuser frame border visible from angles.
+              const faceH = (isFinite(fyMin) && fyMax > fyMin) ? (fyMax - fyMin) : panelW;
+              panelH = Math.max(panelW, faceH) * 1.2;
+              // X center: vertex-measured.
+              // Y center: midpoint of the actual measured face span.
+              const diffuserYCenter = (isFinite(fyMin) && fyMax > fyMin)
+                ? (fyMin + fyMax) * 0.5
+                : headJointWorldY + panelW * 0.5;
               (geoMesh as any)._diffuserXCenter = (fxMin + fxMax) * 0.5;
               (geoMesh as any)._diffuserYCenter = diffuserYCenter;
               measuredFromVertices = true;
@@ -5792,14 +5795,9 @@ class VirtualStudio {
         const vertexYCenter = (measuredFromVertices && geoMesh)
           ? (geoMesh as any)._diffuserYCenter as number
           : (bMin.y + bMax.y) * 0.5;
-        // Octabox: the disc should sit at the centre of the octagonal panel face.
-        // The head's flash-mount hardware pushes the face-centre Y above the panel midpoint.
-        // Shift the disc down by 25% of its diameter so it aligns with the diffuser centre.
-        const isOctaboxEarly = lightConfig.glbFile.includes('octabox');
-        const yOffset = isOctaboxEarly ? -panelW * 0.75 : 0;
         const worldCenter = new BABYLON.Vector3(
           vertexXCenter,
-          vertexYCenter + yOffset,
+          vertexYCenter,
           diffuserFaceZ - 0.015    // 1.5 cm in front of the HEAD's actual front face
         );
 
