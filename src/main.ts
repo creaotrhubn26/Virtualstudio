@@ -6234,66 +6234,6 @@ class VirtualStudio {
       }
     }
 
-    // === BACKGROUND LIGHT 1 — Electric blue/violet gel ===
-    // Right side, between subject and backdrop, floods the left half of backdrop
-    const bgBlueId = await this.addLight('aputure-300d', new BABYLON.Vector3(5, 3.5, 4));
-    const bgBlue = this.lights.get(bgBlueId);
-    if (bgBlue) {
-      bgBlue.name = 'Bakgrunnsys (Blå gel)';
-      this.aimLightAt(bgBlueId, new BABYLON.Vector3(-2, 2.5, 8));
-      if (bgBlue.light instanceof BABYLON.SpotLight) {
-        bgBlue.light.angle = Math.PI / 1.9;   // very wide flood
-        bgBlue.light.exponent = 0.3;           // ultra-uniform, gradient edge
-        bgBlue.light.intensity = 4000;         // must overcome distance (4-6m to backdrop)
-        bgBlue.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        bgBlue.light.diffuse = new BABYLON.Color3(0.10, 0.06, 1.0);   // deep electric blue-violet
-        bgBlue.light.specular = new BABYLON.Color3(0.10, 0.06, 1.0);
-      }
-      if (bgBlue.shadowGenerator) {
-        bgBlue.shadowGenerator.blurKernel = 8;
-      }
-    }
-
-    // === BACKGROUND LIGHT 2 — Warm rose/magenta gel ===
-    // Left side, floods the right half of backdrop for complementary split-tone
-    const bgPinkId = await this.addLight('aputure-300d', new BABYLON.Vector3(-5, 2.8, 3.5));
-    const bgPink = this.lights.get(bgPinkId);
-    if (bgPink) {
-      bgPink.name = 'Bakgrunnsys (Rosa gel)';
-      this.aimLightAt(bgPinkId, new BABYLON.Vector3(2.5, 2, 8));
-      if (bgPink.light instanceof BABYLON.SpotLight) {
-        bgPink.light.angle = Math.PI / 2;
-        bgPink.light.exponent = 0.3;
-        bgPink.light.intensity = 3200;
-        bgPink.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        bgPink.light.diffuse = new BABYLON.Color3(1.0, 0.12, 0.45);   // vivid hot magenta
-        bgPink.light.specular = new BABYLON.Color3(1.0, 0.12, 0.45);
-      }
-      if (bgPink.shadowGenerator) {
-        bgPink.shadowGenerator.blurKernel = 8;
-      }
-    }
-
-    // === HAIR / KICKER LIGHT — warm amber separation ===
-    // High overhead from the front, narrow spot aimed at crown — golden hair separation
-    const hairLightId = await this.addLight('aputure-300d', new BABYLON.Vector3(1.2, 5, -1));
-    const hairLight = this.lights.get(hairLightId);
-    if (hairLight) {
-      hairLight.name = 'Hårlys (Kicker)';
-      this.aimLightAt(hairLightId, new BABYLON.Vector3(0, 1.7, 0));
-      if (hairLight.light instanceof BABYLON.SpotLight) {
-        hairLight.light.angle = Math.PI / 7;   // tight 25° — only touches crown/shoulders
-        hairLight.light.exponent = 5.0;        // centre hotspot → crisp specular on hair
-        hairLight.light.intensity = 320;
-        hairLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        hairLight.light.diffuse  = new BABYLON.Color3(1.0, 0.82, 0.55);  // warm amber
-        hairLight.light.specular = new BABYLON.Color3(1.0, 0.82, 0.55);
-      }
-      if (hairLight.shadowGenerator) {
-        hairLight.shadowGenerator.blurKernel = 24;
-      }
-    }
-
     // After all lights are created, patch every existing material to accept 8 lights
     this.scene.materials.forEach((mat) => {
       if (mat instanceof BABYLON.PBRMaterial || mat instanceof BABYLON.StandardMaterial) {
