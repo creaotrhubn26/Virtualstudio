@@ -3070,9 +3070,11 @@ class VirtualStudio {
       diameter: 0.04,
       tessellation: 8
     }, this.scene);
-    // Scale and position to match current light height
-    standPole.scaling.y = lightPos.y;
-    standPole.position = new BABYLON.Vector3(0, -lightPos.y / 2, 0);
+    // Scale and position to match current light height.
+    // heightSlider sits at lightHeadY, so the pole must reach from Y=0 (ground)
+    // to Y=lightHeadY. Parent-relative: center at -lightHeadY/2, scale = lightHeadY.
+    standPole.scaling.y = lightHeadY;
+    standPole.position = new BABYLON.Vector3(0, -lightHeadY / 2, 0);
     const poleMat = new BABYLON.StandardMaterial('poleMat', this.scene);
     poleMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.3);
     poleMat.alpha = 0.5;
@@ -6465,8 +6467,15 @@ class VirtualStudio {
   private setupUI(): void {
     this.scene.onPointerObservable.add((info) => {
       if (info.type === BABYLON.PointerEventTypes.POINTERPICK && info.pickInfo?.pickedMesh) {
+        const picked = info.pickInfo.pickedMesh;
+        // Skip gizmo meshes so clicking on rings doesn't swallow the event
+        if (picked.name.startsWith('studioGizmo_') || picked.name.startsWith('baseMarker_') || picked.name.startsWith('standPole') || picked.name.startsWith('arrowUp') || picked.name.startsWith('arrowDown')) {
+          return;
+        }
+        // Check root mesh AND all child meshes so clicking the visible 3D model selects the light
         for (const [id, data] of this.lights) {
-          if (data.mesh === info.pickInfo.pickedMesh) {
+          const childMeshes = data.mesh.getChildMeshes(true);
+          if (data.mesh === picked || childMeshes.includes(picked)) {
             this.selectLight(id);
             return;
           }
@@ -6474,7 +6483,7 @@ class VirtualStudio {
         // Select story character for WASD control when clicked
         for (const [storyRigId, data] of this.storyCharacters) {
           const childMeshes = data.mesh.getChildMeshes(true);
-          if (data.mesh === info.pickInfo.pickedMesh || childMeshes.includes(info.pickInfo.pickedMesh)) {
+          if (data.mesh === picked || childMeshes.includes(picked)) {
             this.selectStoryCharacterForKeyboard(storyRigId);
             return;
           }
