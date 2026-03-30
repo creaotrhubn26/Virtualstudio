@@ -5801,10 +5801,7 @@ class VirtualStudio {
           diffuserFaceZ - 0.015    // 1.5 cm in front of the HEAD's actual front face
         );
 
-        // CreatePlane sizes are in LOCAL units. parentMesh inherits scaleFactor so we
-        // must divide by scaleFactor to get the correct displayed world-space size.
-        const localPanelW = panelW / scaleFactor;
-        const localPanelH = panelH / scaleFactor;
+        // Plane has no parent so sizes are in WORLD units directly (no scaleFactor division).
         const isOctabox = lightConfig.glbFile.includes('octabox');
         let diffuserPlane: BABYLON.Mesh;
         if (isOctabox) {
@@ -5812,12 +5809,12 @@ class VirtualStudio {
           // panelH = panelW so no Y-stretch needed; radius = half diameter.
           diffuserPlane = BABYLON.MeshBuilder.CreateDisc(
             `${lightId}_diffuserGlow`,
-            { radius: localPanelW * 0.5, tessellation: 8 },
+            { radius: panelW * 0.5, tessellation: 8 },
             this.scene
           );
         } else {
           diffuserPlane = BABYLON.MeshBuilder.CreatePlane(
-            `${lightId}_diffuserGlow`, { width: localPanelW, height: localPanelH }, this.scene
+            `${lightId}_diffuserGlow`, { width: panelW, height: panelH }, this.scene
           );
         }
         // Billboard around Y so the panel always faces the camera horizontally while
