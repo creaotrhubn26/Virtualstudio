@@ -293,10 +293,8 @@ export const AIAssistantApp: React.FC = () => {
 
   React.useEffect(() => {
     const handleToggle = () => {
-      console.log('AIAssistantApp: toggle event received, current isOpen:', isOpen);
       setIsOpen(prev => {
         const newState = !prev;
-        console.log('AIAssistantApp: setting isOpen from', prev, 'to', newState);
 
         // Toggle panel visibility
         const panel = document.getElementById('aiAssistantPanel');
@@ -369,13 +367,12 @@ export const AIAssistantApp: React.FC = () => {
 
     window.addEventListener('toggle-ai-assistant-panel', handleToggle);
     window.addEventListener('ai-assistant-toggle-fullscreen', handleFullscreen);
-    console.log('AIAssistantApp: Event listeners registered');
 
     return () => {
       window.removeEventListener('toggle-ai-assistant-panel', handleToggle);
       window.removeEventListener('ai-assistant-toggle-fullscreen', handleFullscreen);
     };
-  }, [isOpen]);
+  }, []);
 
   const handleClose = () => {
     setIsOpen(false);
@@ -395,33 +392,26 @@ export const AIAssistantApp: React.FC = () => {
     }
   };
 
-  console.log('AIAssistantApp: render, isOpen =', isOpen);
-
-  if (!isOpen) return null;
-
   return (
-    
-      
-      <Suspense fallback={<PanelLoadingFallback />}>
-        <AIAssistantPanel
-          onClose={handleClose}
-          isFullscreen={isFullscreen}
-          onToggleFullscreen={() => {
-            const panel = document.getElementById('aiAssistantPanel');
-            if (panel) {
-              const newState = !panel.classList.contains('fullscreen');
-              setIsFullscreen(newState);
-              if (newState) {
-                panel.classList.add('fullscreen');
-              } else {
-                panel.classList.remove('fullscreen');
-              }
-              window.dispatchEvent(new CustomEvent('ai-assistant-toggle-fullscreen', { detail: newState }));
+    <Suspense fallback={<PanelLoadingFallback />}>
+      <AIAssistantPanel
+        onClose={handleClose}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={() => {
+          const panel = document.getElementById('aiAssistantPanel');
+          if (panel) {
+            const newState = !panel.classList.contains('fullscreen');
+            setIsFullscreen(newState);
+            if (newState) {
+              panel.classList.add('fullscreen');
+            } else {
+              panel.classList.remove('fullscreen');
             }
-          }}
-        />
-      </Suspense>
-    
+            window.dispatchEvent(new CustomEvent('ai-assistant-toggle-fullscreen', { detail: newState }));
+          }
+        }}
+      />
+    </Suspense>
   );
 };
 
