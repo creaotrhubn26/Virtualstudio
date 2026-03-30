@@ -1190,6 +1190,19 @@ class VirtualStudio {
           target: cameraTarget ? [cameraTarget.x, cameraTarget.y, cameraTarget.z] : null,
           fov: this.camera.fov,
         },
+        lights: Array.from(this.lights.values()).map((light) => ({
+          id: light.name,
+          lightType: light.type || 'spot',
+          position: [
+            parseFloat(light.mesh.position.x.toFixed(2)),
+            parseFloat(light.mesh.position.y.toFixed(2)),
+            parseFloat(light.mesh.position.z.toFixed(2)),
+          ],
+          intensity: parseFloat((light.intensity || 0).toFixed(2)),
+          cct: light.cct || 5600,
+          modifier: light.modifier || 'none',
+          enabled: light.mesh.isVisible,
+        })),
         props: Array.from(this.sceneState.props.values()).map((prop) => {
           const mesh = prop.mesh as BABYLON.AbstractMesh;
           let size: [number, number, number] | null = null;

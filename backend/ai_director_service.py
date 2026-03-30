@@ -16,13 +16,14 @@ import os
 import re
 from typing import Any, Dict, List, Optional
 
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 
 _openai_client: Optional[OpenAI] = None
+_async_openai_client: Optional[AsyncOpenAI] = None
 
 
 def _get_client() -> OpenAI:
-    """Lazy OpenAI client — reads env vars at first call so integration secrets are available."""
+    """Lazy sync OpenAI client — used for non-streaming calls."""
     global _openai_client
     if _openai_client is None:
         api_key = os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY")
@@ -34,6 +35,21 @@ def _get_client() -> OpenAI:
             kwargs["base_url"] = base_url
         _openai_client = OpenAI(**kwargs)
     return _openai_client
+
+
+def _get_async_client() -> AsyncOpenAI:
+    """Lazy async OpenAI client — used for real-time token streaming."""
+    global _async_openai_client
+    if _async_openai_client is None:
+        api_key = os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY")
+        base_url = os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL")
+        kwargs: Dict[str, Any] = {}
+        if api_key:
+            kwargs["api_key"] = api_key
+        if base_url:
+            kwargs["base_url"] = base_url
+        _async_openai_client = AsyncOpenAI(**kwargs)
+    return _async_openai_client
 
 DIRECTOR_TOOLS: List[Dict[str, Any]] = [
     {
@@ -743,6 +759,71 @@ def _describe_tool_call(tool_name: str, args: Dict[str, Any]) -> str:
     return descriptions.get(tool_name, f"Utfører {tool_name}…")
 
 
+def _generate_suggestions(
+    tool_calls_made: List[str],
+    scene_context: Optional[Dict[str, Any]],
+) -> List[str]:
+    """Return 3 proactive Norwegian follow-up action suggestions based on what was just done."""
+    props = (scene_context or {}).get("props", [])
+    lights = (scene_context or {}).get("lights", [])
+    has_props = len(props) > 0
+    has_lights = len(lights) > 0
+
+    if "apply_scenario_preset" in tool_calls_made:
+        return [
+            "Legg til karakterer i scenen",
+            "Generer 3D-props automatisk for scenen",
+            "Juster fargegradering og mood",
+        ]
+    if "generate_prop" in tool_calls_made or "load_prop" in tool_calls_made:
+        return [
+            "Korriger plasseringen av alle props",
+            "Legg til en karakter i scenen",
+            "Tilpass lysretning mot propsen",
+        ]
+    if "reposition_prop" in tool_calls_made or "remove_prop" in tool_calls_made:
+        return [
+            "Sjekk helhetskomposisjonen",
+            "Juster belysningen for scenen",
+            "Legg til en karakter i forgrunnen",
+        ]
+    if any(t in tool_calls_made for t in ["set_light_property", "apply_lut", "set_camera_fov"]):
+        return [
+            "Lag en low-key dramatisk versjon",
+            "Optimaliser key-to-fill forholdet",
+            "Legg til rim-lys for dybde",
+        ]
+    if "set_outdoor_sun" in tool_calls_made or "set_fog" in tool_calls_made:
+        return [
+            "Juster solhøyden til gyllen time (15°)",
+            "Legg til tåke for stemningseffekt",
+            "Analyser og gjenskap lyssettingen fra et bilde",
+        ]
+    if "load_story_character" in tool_calls_made:
+        return [
+            "Legg til et prop til karakteren",
+            "Juster kameravinkelen mot karakteren",
+            "Endre belysningen for scenen",
+        ]
+    if has_props and not has_lights:
+        return [
+            "Sett opp tre-punkt belysning",
+            "Dramatisk noir-oppsett med sidelys",
+            "Korriger plasseringen av props",
+        ]
+    if not has_lights:
+        return [
+            "Tre-punkt belysning for portrett",
+            "Dramatisk noir med hardt sidelys",
+            "Filmisk gyllen time-belysning",
+        ]
+    return [
+        "Sjekk og korriger plasseringen av props",
+        "Finjuster fargegradering",
+        "Legg til karakterer i scenen",
+    ]
+
+
 class AiDirectorService:
     def __init__(self) -> None:
         print("AI Director Service: Initialized (GPT-4o via Replit AI Integrations)")
@@ -885,14 +966,16 @@ class AiDirectorService:
         scene_context: Optional[Dict[str, Any]] = None,
     ):
         """
-        SSE streaming version of chat().
+        SSE streaming version of chat() using real-time token streaming.
         Yields newline-delimited JSON strings, each prefixed with 'data: '.
 
         Event types:
-          {"type": "step",   "text": "..."}        — tool-call progress label
-          {"type": "events", "events": [...]}        — frontend events to dispatch
-          {"type": "reply",  "text": "..."}          — final assistant reply
-          {"type": "error",  "text": "..."}          — error message
+          {"type": "token",       "text": "..."}      — streaming text token (appears in real-time)
+          {"type": "step",        "text": "..."}      — tool-call progress label
+          {"type": "events",      "events": [...]}    — frontend events to dispatch
+          {"type": "reply",       "text": "..."}      — final complete reply (text may already be shown via tokens)
+          {"type": "suggestions", "items": [...]}     — proactive follow-up action chips
+          {"type": "error",       "text": "..."}      — error message
         """
         import asyncio
 
@@ -906,29 +989,40 @@ class AiDirectorService:
         system_message = {"role": "system", "content": SYSTEM_PROMPT}
         chat_messages = [system_message]
 
-        # Inject current scene state so the AI knows what's already placed and where
+        # Inject current scene state (props + lights + camera) so AI knows exactly what exists
         if scene_context:
             props = scene_context.get("props", [])
+            lights = scene_context.get("lights", [])
             camera = scene_context.get("camera", {})
             scene_lines = ["NÅVÆRENDE SCENE-TILSTAND (oppdatert):"]
-            scene_lines.append(f"Kamera: posisjon={camera.get('position', 'ukjent')}")
+            cam_pos = camera.get("position", [])
+            if cam_pos:
+                scene_lines.append(f"Kamera: posisjon=[{cam_pos[0]:.1f}, {cam_pos[1]:.1f}, {cam_pos[2]:.1f}]")
+            if lights:
+                scene_lines.append(f"Lys i scenen ({len(lights)} stk):")
+                for lt in lights:
+                    pos = lt.get("position", [0, 0, 0])
+                    scene_lines.append(
+                        f"  • id={lt.get('id', '?')} type={lt.get('lightType', '?')} "
+                        f"intensitet={lt.get('intensity', 0):.2f} CCT={lt.get('cct', 5600)}K "
+                        f"modifier={lt.get('modifier', 'none')} "
+                        f"pos=[{pos[0]:.1f}, {pos[1]:.1f}, {pos[2]:.1f}]"
+                    )
+            else:
+                scene_lines.append("Ingen lys satt opp ennå.")
             if props:
                 scene_lines.append(f"Props i scenen ({len(props)} stk):")
                 for p in props:
                     pos = p.get("position", [0, 0, 0])
                     size = p.get("size")
-                    size_str = f", størrelse=[{size[0]:.2f}m × {size[1]:.2f}m × {size[2]:.2f}m]" if size else ""
+                    size_str = f" størrelse=[{size[0]:.2f}×{size[1]:.2f}×{size[2]:.2f}m]" if size else ""
                     scene_lines.append(
-                        f"  • id={p.get('id')} navn=\"{p.get('name', p.get('assetId', 'ukjent'))}\" "
+                        f"  • id={p.get('id')} navn=\"{p.get('name', p.get('assetId', '?'))}\" "
                         f"pos=[{pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f}]{size_str}"
                     )
             else:
                 scene_lines.append("Ingen props i scenen ennå.")
-            scene_context_text = "\n".join(scene_lines)
-            chat_messages.append({
-                "role": "system",
-                "content": scene_context_text,
-            })
+            chat_messages.append({"role": "system", "content": "\n".join(scene_lines)})
 
         chat_messages += list(messages)
 
@@ -944,29 +1038,50 @@ class AiDirectorService:
                         {"type": "image_url", "image_url": {"url": image_data_url}},
                     ]
 
-        all_events: List[Dict[str, Any]] = []
+        # Accumulate streaming tool call deltas by index
+        accumulated_tool_calls: Dict[int, Dict[str, str]] = {}
+        reply_text = ""
         tool_calls_made: List[str] = []
 
         try:
-            response = await asyncio.get_event_loop().run_in_executor(
-                None,
-                lambda: _get_client().chat.completions.create(
-                    model="gpt-4o",
-                    messages=chat_messages,
-                    tools=DIRECTOR_TOOLS,
-                    tool_choice="auto",
-                    max_tokens=1500,
-                ),
+            stream = await _get_async_client().chat.completions.create(
+                model="gpt-4o",
+                messages=chat_messages,
+                tools=DIRECTOR_TOOLS,
+                tool_choice="auto",
+                max_tokens=1500,
+                stream=True,
             )
 
-            message = response.choices[0].message
-            reply_text = message.content or ""
-            tool_calls = message.tool_calls or []
+            async for chunk in stream:
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta
 
-            for tc in tool_calls:
-                fn_name = tc.function.name
+                # Stream text tokens in real-time
+                if delta.content:
+                    reply_text += delta.content
+                    yield "data: " + json.dumps({"type": "token", "text": delta.content}) + "\n\n"
+                    await asyncio.sleep(0)
+
+                # Accumulate tool call argument deltas
+                if delta.tool_calls:
+                    for tc in delta.tool_calls:
+                        idx = tc.index
+                        if idx not in accumulated_tool_calls:
+                            accumulated_tool_calls[idx] = {"name": "", "arguments": ""}
+                        if tc.function:
+                            if tc.function.name:
+                                accumulated_tool_calls[idx]["name"] += tc.function.name
+                            if tc.function.arguments:
+                                accumulated_tool_calls[idx]["arguments"] += tc.function.arguments
+
+            # Execute assembled tool calls in order
+            for idx in sorted(accumulated_tool_calls.keys()):
+                tc = accumulated_tool_calls[idx]
+                fn_name = tc["name"]
                 try:
-                    args = json.loads(tc.function.arguments)
+                    args = json.loads(tc["arguments"])
                 except json.JSONDecodeError:
                     args = {}
 
@@ -977,13 +1092,12 @@ class AiDirectorService:
                 await asyncio.sleep(0)
 
                 events = _tool_call_to_events(fn_name, args)
-                all_events.extend(events)
-
                 if events:
                     yield "data: " + json.dumps({"type": "events", "events": events}) + "\n\n"
                     await asyncio.sleep(0)
 
-            if not reply_text and tool_calls:
+            # Auto-generate reply when GPT-4o only called tools (no text)
+            if not reply_text and tool_calls_made:
                 tool_names_no = {
                     "apply_scenario_preset": "lysoppsett",
                     "set_outdoor_sun": "sol",
@@ -992,14 +1106,22 @@ class AiDirectorService:
                     "set_camera": "kamera",
                     "set_camera_fov": "kamera-vinkel",
                     "add_prop": "prop",
-                    "load_character": "karakter",
+                    "load_prop": "prop",
+                    "load_story_character": "karakter",
                     "clear_characters": "rydding",
                     "set_light_property": "lysjustering",
+                    "generate_prop": "3D-prop-generering",
+                    "reposition_prop": "omposisjonering",
+                    "remove_prop": "fjerning",
                 }
                 done_items = [tool_names_no.get(n, n) for n in tool_calls_made]
-                reply_text = f"Ferdig! Jeg har satt opp: {', '.join(done_items)}."
+                reply_text = f"Ferdig! Jeg har utført: {', '.join(done_items)}."
 
             yield "data: " + json.dumps({"type": "reply", "text": reply_text}) + "\n\n"
+
+            # Emit proactive follow-up suggestions
+            suggestions = _generate_suggestions(tool_calls_made, scene_context)
+            yield "data: " + json.dumps({"type": "suggestions", "items": suggestions}) + "\n\n"
 
         except Exception as exc:
             error_msg = str(exc)

@@ -39,6 +39,7 @@ interface ChatMessage {
   content: string;
   steps?: string[];
   isLoading?: boolean;
+  suggestions?: string[];
 }
 
 interface PropGenState {
@@ -126,8 +127,9 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
 
       const accumulatedSteps: string[] = [];
       let finalReply = '';
+      let finalSuggestions: string[] = [];
 
-      // Capture live scene state so the AI knows exactly what's placed and where
+      // Capture live scene state (props + lights + camera) so the AI knows exactly what exists
       const sceneContext = (() => {
         const diag = (window as Record<string, unknown>).__virtualStudioDiagnostics as
           { environment?: { sceneState?: Record<string, unknown> } } | undefined;
@@ -164,14 +166,26 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
             const jsonStr = trimmed.slice(6);
             if (!jsonStr) continue;
 
-            let evt: { type: string; text?: string; events?: Array<{ event: string; detail: unknown }> };
+            let evt: {
+              type: string;
+              text?: string;
+              items?: string[];
+              events?: Array<{ event: string; detail: unknown }>;
+            };
             try {
               evt = JSON.parse(jsonStr);
             } catch {
               continue;
             }
 
-            if (evt.type === 'step' && evt.text) {
+            if (evt.type === 'token' && evt.text) {
+              // Real-time character streaming — show partial text immediately
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.isLoading ? { ...m, content: (m.content || '') + evt.text! } : m
+                )
+              );
+            } else if (evt.type === 'step' && evt.text) {
               accumulatedSteps.push(evt.text);
               setMessages((prev) =>
                 prev.map((m) =>
@@ -182,6 +196,8 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
               dispatchStudioEvents(evt.events);
             } else if (evt.type === 'reply' && evt.text !== undefined) {
               finalReply = evt.text;
+            } else if (evt.type === 'suggestions' && evt.items?.length) {
+              finalSuggestions = evt.items;
             } else if (evt.type === 'error' && evt.text) {
               finalReply = `Feil: ${evt.text}`;
             }
@@ -191,7 +207,12 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
         setMessages((prev) =>
           prev.map((m) =>
             m.isLoading
-              ? { role: 'assistant' as const, content: finalReply || 'Ferdig!', steps: accumulatedSteps }
+              ? {
+                  role: 'assistant' as const,
+                  content: finalReply || m.content || 'Ferdig!',
+                  steps: accumulatedSteps,
+                  suggestions: finalSuggestions.length ? finalSuggestions : undefined,
+                }
               : m
           )
         );
@@ -442,12 +463,52 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
                   }}
                 >
                   {msg.isLoading ? (
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <CircularProgress size={14} sx={{ color: '#00d4ff' }} />
-                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>
-                        Tenker…
-                      </Typography>
-                    </Stack>
+                    <Box>
+                      {msg.steps && msg.steps.length > 0 && (
+                        <Box sx={{ mb: 0.5 }}>
+                          {msg.steps.map((step, si) => (
+                            <Stack key={si} direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.3 }}>
+                              <CheckIcon sx={{ fontSize: 12, color: '#4caf50' }} />
+                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>
+                                {step}
+                              </Typography>
+                            </Stack>
+                          ))}
+                          {msg.content && <Divider sx={{ my: 0.5, borderColor: 'rgba(255,255,255,0.08)' }} />}
+                        </Box>
+                      )}
+                      {msg.content ? (
+                        <Typography
+                          variant="body2"
+                          sx={{ color: 'rgba(255,255,255,0.9)', fontSize: 13, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}
+                        >
+                          {msg.content}
+                          <Box
+                            component="span"
+                            sx={{
+                              display: 'inline-block',
+                              width: '2px',
+                              height: '1em',
+                              bgcolor: '#00d4ff',
+                              ml: '2px',
+                              verticalAlign: 'text-bottom',
+                              animation: 'vs-blink 1s step-end infinite',
+                              '@keyframes vs-blink': {
+                                '0%, 100%': { opacity: 1 },
+                                '50%': { opacity: 0 },
+                              },
+                            }}
+                          />
+                        </Typography>
+                      ) : (
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                          <CircularProgress size={14} sx={{ color: '#00d4ff' }} />
+                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>
+                            Tenker…
+                          </Typography>
+                        </Stack>
+                      )}
+                    </Box>
                   ) : (
                     <>
                       {msg.steps && msg.steps.length > 0 && (
@@ -474,6 +535,27 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
                       >
                         {msg.content}
                       </Typography>
+                      {msg.suggestions && msg.suggestions.length > 0 && (
+                        <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {msg.suggestions.map((s) => (
+                            <Chip
+                              key={s}
+                              label={s}
+                              size="small"
+                              onClick={() => sendMessage(s)}
+                              disabled={isSending}
+                              sx={{
+                                bgcolor: 'rgba(0,212,255,0.06)',
+                                color: '#00d4ff',
+                                border: '1px solid rgba(0,212,255,0.25)',
+                                fontSize: 11,
+                                cursor: 'pointer',
+                                '&:hover': { bgcolor: 'rgba(0,212,255,0.16)' },
+                              }}
+                            />
+                          ))}
+                        </Box>
+                      )}
                     </>
                   )}
                 </Box>
