@@ -957,25 +957,25 @@ class VirtualStudio {
 
     this.camera = new BABYLON.ArcRotateCamera(
       'mainCamera',
-      -Math.PI / 2,
-      Math.PI / 3,
-      5, // Reduced from 18 for better DOF visibility
-      new BABYLON.Vector3(0, 1.5, 0),
+      -Math.PI / 2,         // alpha: camera sits at negative Z, looking toward positive Z
+      Math.PI / 3.5,        // beta: ~51° from vertical — shows subject + backdrop comfortably
+      7,                    // radius: wider frame shows the full studio context
+      new BABYLON.Vector3(0, 1.2, 0),  // target: chest/face height
       this.scene
     );
     this.camera.attachControl(canvas, true);
-    this.camera.lowerRadiusLimit = 3;
+    this.camera.lowerRadiusLimit = 2;
     this.camera.upperRadiusLimit = 50;
     this.camera.wheelDeltaPercentage = 0.01;
-    this.camera.minZ = 0.5;
+    this.camera.minZ = 0.3;
     this.camera.maxZ = 200;
     this.camera.fov = (this.cameraSettings.focalLength / 50) * 0.8;
     
     // Smooth camera movement to reduce visual artifacts during motion
-    this.camera.inertia = 0.9; // Higher inertia = smoother movement
-    this.camera.panningSensibility = 50; // Lower = smoother panning
-    this.camera.angularSensibilityX = 500; // Smoother horizontal rotation
-    this.camera.angularSensibilityY = 500; // Smoother vertical rotation
+    this.camera.inertia = 0.9;
+    this.camera.panningSensibility = 50;
+    this.camera.angularSensibilityX = 500;
+    this.camera.angularSensibilityY = 500;
     this.setupCharacterKeyboardControls(canvas);
 
     // Setup professional rendering pipeline (Work Mode)
@@ -1206,9 +1206,11 @@ class VirtualStudio {
   }
   
   public resetCamera(): void {
-    this.camera.position = new BABYLON.Vector3(0, 2.5, -8);
-    this.camera.target = new BABYLON.Vector3(0, 1, 0);
-    this.camera.fov = 0.8;
+    this.camera.alpha = -Math.PI / 2;
+    this.camera.beta = Math.PI / 3.5;
+    this.camera.radius = 7;
+    this.camera.target = new BABYLON.Vector3(0, 1.2, 0);
+    this.camera.fov = (this.cameraSettings?.focalLength ?? 50) / 50 * 0.8;
   }
 
   public toggleWalls(visible?: boolean): boolean {
@@ -2462,24 +2464,24 @@ class VirtualStudio {
   }
 
   private createSeamlessBackdrop(backdropId: string, scale: number, receiveShadow: boolean): void {
-    const W = 8 * scale;       // total width — wider for dramatic colored gradients
-    const H = 5 * scale;       // wall height
-    const R = 2 * scale;       // curve radius (floor-to-wall transition)
-    const D = 5 * scale;       // floor depth in front of curve
-    const Z = -8;              // back wall Z position
+    const W = 9 * scale;       // total width — wide for colored gel gradients
+    const H = 5.5 * scale;     // wall height
+    const R = 2.2 * scale;     // curve radius (floor-to-wall transition)
+    const D = 6 * scale;       // floor depth in front of curve
+    const Z = 8;               // back wall at POSITIVE Z (behind the subject, in front of rearWall at Z=10)
 
     const backdropMat = new BABYLON.PBRMaterial('backdropMat_' + backdropId, this.scene);
-    backdropMat.albedoColor = new BABYLON.Color3(0.85, 0.85, 0.87);
-    backdropMat.roughness = 0.95;
+    backdropMat.albedoColor = new BABYLON.Color3(0.84, 0.84, 0.86);   // neutral grey
+    backdropMat.roughness = 0.96;
     backdropMat.metallic = 0;
     backdropMat.backFaceCulling = false;
 
-    // Root node at origin — children inherit world positions correctly (no double-offset)
+    // Root node at origin — all children keep their own world-space positions
     const rootNode = new BABYLON.Mesh('backdropRoot_' + backdropId, this.scene);
     rootNode.isVisible = false;
     rootNode.position.set(0, 0, 0);
 
-    // 1. Back wall (flat vertical plane)
+    // 1. Back wall — vertical flat plane at Z, bottom edge at y=R, top at y=R+H
     const backWall = BABYLON.MeshBuilder.CreatePlane('backdropWall_' + backdropId, {
       width: W, height: H,
       sideOrientation: BABYLON.Mesh.DOUBLESIDE
@@ -2489,14 +2491,17 @@ class VirtualStudio {
     backWall.receiveShadows = receiveShadow;
     backWall.parent = rootNode;
 
-    // 2. Smooth curved cove (ribbon from floor to wall, 32 segments)
+    // 2. Smooth quarter-circle cove: rises from floor (y=0, z=Z-R) to wall base (y=R, z=Z)
+    //    Parameterisation: t ∈ [0, π/2]
+    //      t=0  → floor tangent point  (y=0,   z=Z-R)
+    //      t=π/2 → wall tangent point  (y=R,   z=Z)
     const segs = 32;
     const leftPath: BABYLON.Vector3[] = [];
     const rightPath: BABYLON.Vector3[] = [];
     for (let i = 0; i <= segs; i++) {
       const t = (i / segs) * (Math.PI / 2);
-      const y = R * (1 - Math.cos(t));
-      const z = Z + R * Math.sin(t);
+      const y = R * Math.sin(t);        // 0 → R (rising from floor to wall base)
+      const z = Z - R * Math.cos(t);   // Z-R → Z (approaching back wall)
       leftPath.push(new BABYLON.Vector3(-W / 2, y, z));
       rightPath.push(new BABYLON.Vector3( W / 2, y, z));
     }
@@ -2508,17 +2513,17 @@ class VirtualStudio {
     cove.receiveShadows = receiveShadow;
     cove.parent = rootNode;
 
-    // 3. Floor extension in front
+    // 3. Floor extension — from the cove front (Z-R) toward the camera (-Z direction)
     const floorExt = BABYLON.MeshBuilder.CreateGround('backdropFloorExt_' + backdropId, {
       width: W, height: D, subdivisions: 4
     }, this.scene);
-    floorExt.position.set(0, 0.001, Z + R + D / 2);
+    floorExt.position.set(0, 0.002, Z - R - D / 2);   // slightly above main ground to prevent z-fight
     floorExt.material = backdropMat;
     floorExt.receiveShadows = receiveShadow;
     floorExt.parent = rootNode;
 
     this.currentBackdropMesh = rootNode;
-    console.log('Infinity-cove backdrop created:', backdropId);
+    console.log(`Infinity-cove backdrop created: ${backdropId}  (Z=${Z}, W=${W}, R=${R}, D=${D})`);
   }
 
   private createCycloramaBackdrop(backdropId: string, scale: number, receiveShadow: boolean): void {
@@ -2527,21 +2532,21 @@ class VirtualStudio {
     const height = 5 * scale;
     const curveRadius = 2 * scale;
 
-    // Create back wall
+    // Create back wall — at positive Z (behind subject, visible to camera at negative Z)
     const backWall = BABYLON.MeshBuilder.CreatePlane('cycloBackWall', {
       width: width,
       height: height - curveRadius,
       sideOrientation: BABYLON.Mesh.DOUBLESIDE
     }, this.scene);
-    backWall.position.set(0, (height - curveRadius) / 2 + curveRadius, -8);
+    backWall.position.set(0, (height - curveRadius) / 2 + curveRadius, 8);
 
-    // Create curved transition using ribbon
+    // Create curved transition: rises from floor (y=0, z=8-R) to wall base (y=R, z=8)
     const pathPoints: BABYLON.Vector3[][] = [];
     const segments = 16;
     for (let i = 0; i <= segments; i++) {
       const angle = (i / segments) * (Math.PI / 2);
-      const y = curveRadius * (1 - Math.cos(angle));
-      const z = -8 + curveRadius * Math.sin(angle);
+      const y = curveRadius * Math.sin(angle);
+      const z = 8 - curveRadius * Math.cos(angle);
       pathPoints.push([
         new BABYLON.Vector3(-width / 2, y, z),
         new BABYLON.Vector3(width / 2, y, z)
@@ -2559,11 +2564,13 @@ class VirtualStudio {
     }, this.scene);
     
     // Create floor
+    const floorDepth = 8 + curveRadius;
     const floor = BABYLON.MeshBuilder.CreateGround('cycloFloor', {
       width: width,
-      height: 8 + curveRadius
+      height: floorDepth
     }, this.scene);
-    floor.position.set(0, 0.01, -4);
+    // Floor center: between cove front (8-R) and camera-side edge (8-R-floorDepth)
+    floor.position.set(0, 0.002, (8 - curveRadius) - floorDepth / 2);
 
     // Create material
     const cycloMat = new BABYLON.StandardMaterial('cycloMat', this.scene);
@@ -2692,17 +2699,18 @@ class VirtualStudio {
       [this.camera]
     );
 
-    // ACES Tone Mapping for cinematic look
+    // ACES Tone Mapping — cinematic, preserves saturated colour well
     this.renderingPipeline.imageProcessing.toneMappingEnabled = true;
     this.renderingPipeline.imageProcessing.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
 
-    // Exposure and contrast — slightly lifted for studio feel
-    this.renderingPipeline.imageProcessing.exposure = 1.05;
-    this.renderingPipeline.imageProcessing.contrast = 1.15;
+    // Exposure / contrast — neutral exposure so gel colours read true; lifted contrast for punch
+    this.renderingPipeline.imageProcessing.exposure = 1.0;
+    this.renderingPipeline.imageProcessing.contrast = 1.2;
 
-    // Subtle vignette for professional look
+    // Vignette — moderate oval that draws the eye to the subject without crushing edges
     this.renderingPipeline.imageProcessing.vignetteEnabled = true;
-    this.renderingPipeline.imageProcessing.vignetteWeight = 1.8;
+    this.renderingPipeline.imageProcessing.vignetteWeight = 2.2;
+    this.renderingPipeline.imageProcessing.vignetteStretch = 0.5;
     this.renderingPipeline.imageProcessing.vignetteColor = new BABYLON.Color4(0, 0, 0, 0);
     this.renderingPipeline.imageProcessing.vignetteBlendMode = BABYLON.ImageProcessingConfiguration.VIGNETTEMODE_MULTIPLY;
 
@@ -2710,28 +2718,28 @@ class VirtualStudio {
     this.renderingPipeline.fxaaEnabled = true;
     this.renderingPipeline.samples = 8;
 
-    // Bloom — tuned for light fixtures and emissive glow
+    // Bloom — lower threshold so coloured gel on backdrop halos nicely
     this.renderingPipeline.bloomEnabled = true;
-    this.renderingPipeline.bloomThreshold = 0.6;
-    this.renderingPipeline.bloomWeight = 0.4;
-    this.renderingPipeline.bloomKernel = 96;
+    this.renderingPipeline.bloomThreshold = 0.45;
+    this.renderingPipeline.bloomWeight = 0.55;
+    this.renderingPipeline.bloomKernel = 128;
     this.renderingPipeline.bloomScale = 0.5;
 
     // Depth of Field - DISABLED: Using custom PhysicsBasedDOF instead
     this.renderingPipeline.depthOfFieldEnabled = false;
 
-    // Film grain — subtle, off by default
-    this.renderingPipeline.grainEnabled = false;
-    this.renderingPipeline.grain.intensity = 4;
+    // Film grain — very subtle on by default for photorealistic texture
+    this.renderingPipeline.grainEnabled = true;
+    this.renderingPipeline.grain.intensity = 3;
     this.renderingPipeline.grain.animated = true;
 
     // Chromatic aberration (off by default, user can enable)
     this.renderingPipeline.chromaticAberrationEnabled = false;
     this.renderingPipeline.chromaticAberration.aberrationAmount = 20;
 
-    // Sharpen for crisp detail
+    // Sharpen — slightly higher for crisp studio detail
     this.renderingPipeline.sharpenEnabled = true;
-    this.renderingPipeline.sharpen.edgeAmount = 0.25;
+    this.renderingPipeline.sharpen.edgeAmount = 0.35;
     
     // Setup SSR (Screen-Space Reflections) for realistic reflections
     try {
@@ -5139,7 +5147,9 @@ class VirtualStudio {
     // Create ambient hemispheric light and store reference for control
     this.ambientLight = new BABYLON.HemisphericLight('ambient', new BABYLON.Vector3(0, 1, 0), this.scene);
     this.ambientLight.intensity = this.ambientLightBaseIntensity;
-    this.ambientLight.groundColor = new BABYLON.Color3(0.15, 0.15, 0.18);
+    // Slightly cool sky + slightly warm ground — classic studio fill bounce
+    this.ambientLight.diffuse = new BABYLON.Color3(0.92, 0.95, 1.0);    // cool overhead sky
+    this.ambientLight.groundColor = new BABYLON.Color3(0.18, 0.16, 0.14); // warm-dark floor bounce
 
     const ground = BABYLON.MeshBuilder.CreateGround('ground', { width: 20, height: 20 }, this.scene);
     const groundMat = new BABYLON.StandardMaterial('groundMat', this.scene);
@@ -6091,39 +6101,39 @@ class VirtualStudio {
     }
 
     // === BACKGROUND LIGHT 1 — Electric blue/violet gel ===
-    // Positioned right-rear, aimed at the centre-left of the backdrop → vivid purple gradient
-    const bgBlueId = await this.addLight('aputure-300d', new BABYLON.Vector3(5, 3.5, -4.5));
+    // Positioned right-side, between subject and backdrop, aimed at the left-centre of backdrop
+    const bgBlueId = await this.addLight('aputure-300d', new BABYLON.Vector3(4.5, 3.5, 4));
     const bgBlue = this.lights.get(bgBlueId);
     if (bgBlue) {
       bgBlue.name = 'Bakgrunnsys (Blå gel)';
-      this.aimLightAt(bgBlueId, new BABYLON.Vector3(-1.5, 2, -8));
+      this.aimLightAt(bgBlueId, new BABYLON.Vector3(-1.5, 2, 8));   // aimed at backdrop wall
       if (bgBlue.light instanceof BABYLON.SpotLight) {
-        bgBlue.light.angle = Math.PI / 1.8;   // Very wide — floods the backdrop
-        bgBlue.light.exponent = 0.5;          // Uniform, no hotspot
-        bgBlue.light.intensity = 900;
+        bgBlue.light.angle = Math.PI / 2;      // wide flood
+        bgBlue.light.exponent = 0.4;           // very uniform, gradient across backdrop
+        bgBlue.light.intensity = 1000;
         bgBlue.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        bgBlue.light.diffuse = new BABYLON.Color3(0.18, 0.12, 1.0);   // Electric blue-violet
-        bgBlue.light.specular = new BABYLON.Color3(0.18, 0.12, 1.0);
+        bgBlue.light.diffuse = new BABYLON.Color3(0.15, 0.10, 1.0);   // electric blue-violet
+        bgBlue.light.specular = new BABYLON.Color3(0.15, 0.10, 1.0);
       }
-      // Background lights do not need to cast detailed character shadows
       if (bgBlue.shadowGenerator) {
         bgBlue.shadowGenerator.blurKernel = 16;
       }
     }
 
-    // === BACKGROUND LIGHT 2 — Warm rose/magenta gel (opposite side) ===
-    const bgPinkId = await this.addLight('aputure-300d', new BABYLON.Vector3(-5, 2.5, -5));
+    // === BACKGROUND LIGHT 2 — Warm rose/magenta gel ===
+    // Left side, aimed at the right-centre of the backdrop
+    const bgPinkId = await this.addLight('aputure-300d', new BABYLON.Vector3(-4.5, 2.5, 3.5));
     const bgPink = this.lights.get(bgPinkId);
     if (bgPink) {
       bgPink.name = 'Bakgrunnsys (Rosa gel)';
-      this.aimLightAt(bgPinkId, new BABYLON.Vector3(2, 1.5, -8));
+      this.aimLightAt(bgPinkId, new BABYLON.Vector3(2, 1.5, 8));     // aimed at backdrop wall
       if (bgPink.light instanceof BABYLON.SpotLight) {
         bgPink.light.angle = Math.PI / 2;
-        bgPink.light.exponent = 0.5;
-        bgPink.light.intensity = 700;
+        bgPink.light.exponent = 0.4;
+        bgPink.light.intensity = 800;
         bgPink.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        bgPink.light.diffuse = new BABYLON.Color3(1.0, 0.2, 0.55);    // Warm magenta/pink
-        bgPink.light.specular = new BABYLON.Color3(1.0, 0.2, 0.55);
+        bgPink.light.diffuse = new BABYLON.Color3(1.0, 0.18, 0.50);   // vivid magenta/rose
+        bgPink.light.specular = new BABYLON.Color3(1.0, 0.18, 0.50);
       }
       if (bgPink.shadowGenerator) {
         bgPink.shadowGenerator.blurKernel = 16;
