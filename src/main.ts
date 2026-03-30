@@ -5695,12 +5695,21 @@ class VirtualStudio {
 
         console.log(`[addLight] HEAD bbox (headMeshes=${headCount}): X[${bMin.x.toFixed(2)},${bMax.x.toFixed(2)}] Y[${bMin.y.toFixed(2)},${bMax.y.toFixed(2)}] Z[${bMin.z.toFixed(2)},${bMax.z.toFixed(2)}]`);
 
-        // Measure the diffuser panel exactly by scanning the geometry mesh's vertices.
-        // Strategy: find all vertices that are (a) near the minimum Z of the head bbox
-        // (the −Z diffuser face) AND (b) above the head joint Y (excludes tripod legs
-        // that share the same bMin.z because the model is Z-symmetric).
+        // Measure the diffuser panel using a two-pass vertex scan.
+        //
+        // PROBLEM: bMin.z is the FULL MODEL's minimum Z (the tripod legs may protrude
+        // further forward than the softbox diffuser face). Scanning at bMin.z finds only
+        // tripod vertices (at low Y, filtered out by headJointWorldY), so the scan fails
+        // and the plane ends up at the TRIPOD front face instead of the DIFFUSER face.
+        //
+        // SOLUTION: 
+        //   Pass 1 — find headBMinZ: the minimum Z of all vertices above headJointWorldY.
+        //             This is the actual Z of the softbox HEAD's front face.
+        //   Pass 2 — scan for X, Y, Z extent at headBMinZ ± epsilon to measure the
+        //             diffuser panel width, height, and precise Z position.
         let panelW: number = Math.max(0.05, bMax.x - bMin.x);
         let panelH: number = Math.max(0.05, bMax.y - bMin.y);
+        let diffuserFaceZ: number = bMin.z;   // default: full-model front face
 
         const geoMesh = glowSource.find(sm => sm.getTotalVertices() > 0) as BABYLON.Mesh | undefined;
         let measuredFromVertices = false;
@@ -5710,19 +5719,35 @@ class VirtualStudio {
           if (positions && positions.length > 0) {
             geoMesh.computeWorldMatrix(true);
             const wm = geoMesh.getWorldMatrix();
-            // Epsilon: 4% of the model depth, minimum 3 cm.
             const modelDepth = Math.abs(bMax.z - bMin.z);
+            // Epsilon: 4% of model depth, min 3 cm. Used as Z-band thickness for the scan.
             const epsilon = Math.max(0.03, modelDepth * 0.04);
 
-            let fxMin = Infinity, fxMax = -Infinity;
-            let fyMin = Infinity, fyMax = -Infinity;
             const src = new BABYLON.Vector3();
             const dst = new BABYLON.Vector3();
+
+            // --- Pass 1: find the HEAD's minimum Z (front face of softbox head, not tripod) ---
+            let headBMinZ = Infinity;
             for (let vi = 0; vi < positions.length; vi += 3) {
               src.x = positions[vi]; src.y = positions[vi + 1]; src.z = positions[vi + 2];
               BABYLON.Vector3.TransformCoordinatesToRef(src, wm, dst);
-              // Front face filter: near bMin.z, above the stand/tripod joint.
-              if (Math.abs(dst.z - bMin.z) <= epsilon && dst.y >= headJointWorldY) {
+              if (dst.y >= headJointWorldY && dst.z < headBMinZ) headBMinZ = dst.z;
+            }
+
+            if (isFinite(headBMinZ)) {
+              diffuserFaceZ = headBMinZ;
+              console.log(`[addLight] Pass1: headBMinZ=${headBMinZ.toFixed(3)} bMinZ=${bMin.z.toFixed(3)} delta=${(headBMinZ - bMin.z).toFixed(3)}`);
+            } else {
+              console.warn(`[addLight] Pass1: no head vertices above headJointY=${headJointWorldY.toFixed(2)}, using bMinZ=${bMin.z.toFixed(3)}`);
+            }
+
+            // --- Pass 2: X/Y extent of head-face vertices at headBMinZ ± epsilon ---
+            let fxMin = Infinity, fxMax = -Infinity;
+            let fyMin = Infinity, fyMax = -Infinity;
+            for (let vi = 0; vi < positions.length; vi += 3) {
+              src.x = positions[vi]; src.y = positions[vi + 1]; src.z = positions[vi + 2];
+              BABYLON.Vector3.TransformCoordinatesToRef(src, wm, dst);
+              if (dst.y >= headJointWorldY && Math.abs(dst.z - diffuserFaceZ) <= epsilon) {
                 if (dst.x < fxMin) fxMin = dst.x;
                 if (dst.x > fxMax) fxMax = dst.x;
                 if (dst.y < fyMin) fyMin = dst.y;
@@ -5730,37 +5755,32 @@ class VirtualStudio {
               }
             }
 
-            if (isFinite(fxMin) && isFinite(fyMin) && fxMax > fxMin) {
-              // Width: measured from front-face vertices — accurate.
+            if (isFinite(fxMin) && fxMax > fxMin) {
               panelW = fxMax - fxMin;
-              // Height: the TRELLIS GLB only has front-face geometry at the very top of
-              // the head; fyMax-fyMin captures only that thin strip. Since the TRELLIS
-              // softbox is square and the octabox is circular, height = width is correct.
+              // Height: the TRELLIS front-face strip may be thin (only top edge vertices).
+              // Since softbox is square and octabox is circular, height = width is correct.
               panelH = panelW;
               // X center: vertex-measured (avoids flash-mount bracket X-offset).
-              // Y center: anchor the BOTTOM of the plane at headJointWorldY and the TOP
-              // at headJointWorldY + panelW. Center = headJointWorldY + panelW * 0.5.
-              // Using (fyMin+fyMax)/2 overshoots because the front-face strip is only at
-              // the very top of the head, centering a panelW-tall plane above the model.
+              // Y center: anchor bottom at headJointWorldY, top at headJointWorldY + panelW.
               const diffuserYCenter = headJointWorldY + panelW * 0.5;
               (geoMesh as any)._diffuserXCenter = (fxMin + fxMax) * 0.5;
               (geoMesh as any)._diffuserYCenter = diffuserYCenter;
               measuredFromVertices = true;
               console.log(`[addLight] VERTEX diffuser: W=${panelW.toFixed(3)}m H(=W)=${panelH.toFixed(3)}m` +
                 ` Xcenter=${((fxMin + fxMax) * 0.5).toFixed(3)} Ycenter=${diffuserYCenter.toFixed(3)}` +
-                ` (headJointY=${headJointWorldY.toFixed(3)} + panelW/2=${(panelW*0.5).toFixed(3)})` +
-                ` rawX=[${fxMin.toFixed(3)},${fxMax.toFixed(3)}] eps=${epsilon.toFixed(3)}`);
+                ` headFaceZ=${diffuserFaceZ.toFixed(3)} eps=${epsilon.toFixed(3)}` +
+                ` rawX=[${fxMin.toFixed(3)},${fxMax.toFixed(3)}] rawY=[${fyMin.toFixed(3)},${fyMax.toFixed(3)}]`);
             } else {
-              console.warn(`[addLight] No front-face vertices found (eps=${epsilon.toFixed(3)}, bMinZ=${bMin.z.toFixed(3)}); using bbox fallback`);
+              console.warn(`[addLight] Pass2: no face vertices at headBMinZ=${diffuserFaceZ.toFixed(3)} eps=${epsilon.toFixed(3)}`);
             }
           }
         }
 
         if (!measuredFromVertices) {
-          // Fallback: use the full head bounding box extents.
+          // Fallback: square head area from clipped bbox.
           panelW = Math.max(0.05, bMax.x - bMin.x);
-          panelH = Math.max(0.05, bMax.y - bMin.y);
-          console.log(`[addLight] BBOX diffuser fallback: W=${panelW.toFixed(3)}m H=${panelH.toFixed(3)}m`);
+          panelH = panelW;
+          console.log(`[addLight] BBOX diffuser fallback: W=${panelW.toFixed(3)}m H(=W)=${panelH.toFixed(3)}m`);
         }
         // World-space centre on the −Z (diffuser) face.
         // Use vertex-measured X and Y centers when available (avoids hardware inflation
@@ -5775,7 +5795,7 @@ class VirtualStudio {
         const worldCenter = new BABYLON.Vector3(
           vertexXCenter,
           vertexYCenter,
-          bMin.z - 0.015
+          diffuserFaceZ - 0.015    // 1.5 cm in front of the HEAD's actual front face
         );
 
         // CreatePlane sizes are in LOCAL units. parentMesh inherits scaleFactor so we
