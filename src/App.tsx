@@ -46,6 +46,7 @@ const VirtualStudioPro = lazy(() => import('./components/VirtualStudioPro').then
 const AccessoriesPanel = lazy(() => import('./panels/AccessoriesPanel').then(m => ({ default: m.AccessoriesPanel })));
 const PosingModePanel = lazy(() => import('./panels/PosingModePanel').then(m => ({ default: m.PosingModePanel })));
 const GelPickerPanel = lazy(() => import('./panels/GelPickerPanel').then(m => ({ default: m.GelPickerPanel })));
+const OutdoorLightingPanel = lazy(() => import('./panels/OutdoorLightingPanel').then(m => ({ default: m.OutdoorLightingPanel })));
 
 // Loading fallback for lazy-loaded components
 const PanelLoadingFallback = () => (
@@ -873,6 +874,16 @@ export const GelPickerApp: React.FC = () => (
     <ToastProvider>
       <Suspense fallback={<PanelLoadingFallback />}>
         <GelPickerPanel />
+      </Suspense>
+    </ToastProvider>
+  </CustomThemeProvider>
+);
+
+export const OutdoorLightingApp: React.FC = () => (
+  <CustomThemeProvider>
+    <ToastProvider>
+      <Suspense fallback={<PanelLoadingFallback />}>
+        <OutdoorLightingPanel />
       </Suspense>
     </ToastProvider>
   </CustomThemeProvider>

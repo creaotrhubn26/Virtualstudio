@@ -3,7 +3,7 @@ import '@babylonjs/loaders/glTF';
 import { GLTFFileLoader, GLTFLoaderAnimationStartMode } from '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, AIAssistantApp, SceneComposerPanelApp, AnimationComposerApp, VirtualStudioProApp, InteractiveElementsBrowserApp, AmbientSoundsBrowserApp, AccessoriesPanelApp, StoryCharacterHUDApp, PosingModePanelApp, GelPickerApp } from './App';
+import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, AIAssistantApp, SceneComposerPanelApp, AnimationComposerApp, VirtualStudioProApp, InteractiveElementsBrowserApp, AmbientSoundsBrowserApp, AccessoriesPanelApp, StoryCharacterHUDApp, PosingModePanelApp, GelPickerApp, OutdoorLightingApp } from './App';
 import { useAppStore, useFocusStore, useAutoFocusStore, useFocusPeakingStore, SceneNode } from './state/store';
 import { AutoFocusSystem } from './core/AutoFocusSystem';
 import { FocusPeakingEffect } from './core/FocusPeakingEffect';
@@ -704,6 +704,9 @@ class VirtualStudio {
   // Ambient light control
   private ambientLight: BABYLON.HemisphericLight | null = null;
   private ambientLightBaseIntensity: number = 0.3;
+
+  // Outdoor sun directional light
+  private outdoorSunLight: BABYLON.DirectionalLight | null = null;
   private ambientLightEnabled: boolean = true;
   private ambientLightTemperature: number = 6500;
   private ambientLightGroundIntensity: number = 0.5;
@@ -8567,6 +8570,26 @@ class VirtualStudio {
       }
     });
 
+    // Outdoor Lighting button
+    const outdoorLightingBtn = document.getElementById('outdoorLightingBtn');
+    const outdoorLightingPanel = document.getElementById('outdoorLightingPanel');
+    const outdoorLightingCloseBtn = document.getElementById('outdoorLightingClose');
+
+    outdoorLightingBtn?.addEventListener('click', () => {
+      if (outdoorLightingPanel) {
+        const isVisible = outdoorLightingPanel.style.display !== 'none';
+        outdoorLightingPanel.style.display = isVisible ? 'none' : 'flex';
+        outdoorLightingBtn.classList.toggle('active', !isVisible);
+      }
+    });
+
+    outdoorLightingCloseBtn?.addEventListener('click', () => {
+      if (outdoorLightingPanel) {
+        outdoorLightingPanel.style.display = 'none';
+        outdoorLightingBtn?.classList.remove('active');
+      }
+    });
+
     // Marketplace trigger
     const marketplaceTrigger = document.getElementById('marketplaceTrigger');
     console.log('Marketplace trigger element:', marketplaceTrigger);
@@ -10736,6 +10759,102 @@ class VirtualStudio {
         this.lights.forEach(resetLight);
       }
       console.log(`[vs-remove-gel] Removed gel from ${removed} light(s)`);
+    }) as EventListener);
+
+    // ── Outdoor Sun position ──────────────────────────────────────────────────
+    window.addEventListener('vs-outdoor-sun', ((e: CustomEvent) => {
+      const { elevation = 45, azimuth = 180, intensity = 2.5, color = '#fff8e8', enabled = true } = e.detail || {};
+
+      // Create or get the outdoor sun directional light
+      if (!this.outdoorSunLight) {
+        this.outdoorSunLight = new BABYLON.DirectionalLight('outdoor_sun', new BABYLON.Vector3(0, -1, 0), this.scene);
+        this.outdoorSunLight.diffuse = new BABYLON.Color3(1, 0.97, 0.88);
+        this.outdoorSunLight.specular = new BABYLON.Color3(1, 0.97, 0.88);
+        this.outdoorSunLight.intensity = 2.5;
+      }
+
+      if (!enabled) {
+        this.outdoorSunLight.setEnabled(false);
+        return;
+      }
+      this.outdoorSunLight.setEnabled(true);
+
+      // Convert spherical angles to Babylon.js direction vector
+      // elevation: degrees above horizon (0=horizon, 90=zenith)
+      // azimuth: 0=N, 90=E, 180=S, 270=W  → Babylon Z=forward(S), X=right(E)
+      const elRad = (elevation * Math.PI) / 180;
+      const azRad = (azimuth * Math.PI) / 180;
+      // Direction from sky toward ground (inverted)
+      const dx = Math.sin(azRad) * Math.cos(elRad);
+      const dy = -Math.sin(elRad);
+      const dz = Math.cos(azRad) * Math.cos(elRad);
+      this.outdoorSunLight.direction = new BABYLON.Vector3(dx, dy, dz);
+      this.outdoorSunLight.intensity = typeof intensity === 'number' ? intensity : 2.5;
+
+      // Parse colour
+      const normalHex = (h: string) => /^#[0-9a-fA-F]{6}$/.test(h) ? h : '#fff8e8';
+      const c = BABYLON.Color3.FromHexString(normalHex(color));
+      this.outdoorSunLight.diffuse = c.clone();
+      this.outdoorSunLight.specular = c.clone();
+
+      console.log(`[vs-outdoor-sun] el=${elevation.toFixed(1)}° az=${azimuth.toFixed(1)}° int=${intensity}`);
+    }) as EventListener);
+
+    // ── Outdoor Sky preset ────────────────────────────────────────────────────
+    window.addEventListener('vs-outdoor-sky', ((e: CustomEvent) => {
+      const {
+        clearColor = '#5a9fd4',
+        ambientColor = '#d4e8f0',
+        ambientIntensity = 0.9,
+        fogEnabled = false,
+        fogDensity = 0,
+        fogColor = '#c0c8d0',
+        sunEnabled = true,
+        sunIntensity = 2.5,
+        sunColor = '#fff8e8',
+        preset = '',
+      } = e.detail || {};
+
+      // Apply atmosphere (fog + ambient + clear color)
+      this.applyAtmosphereSettings({
+        fogEnabled,
+        fogDensity,
+        fogColor,
+        clearColor,
+        ambientColor,
+        ambientIntensity,
+      });
+
+      // Update sun light
+      if (this.outdoorSunLight || sunEnabled) {
+        window.dispatchEvent(new CustomEvent('vs-outdoor-sun', {
+          detail: { elevation: 45, azimuth: 180, intensity: sunIntensity, color: sunColor, enabled: sunEnabled },
+        }));
+      }
+
+      console.log(`[vs-outdoor-sky] preset=${preset} fog=${fogEnabled} ambInt=${ambientIntensity}`);
+    }) as EventListener);
+
+    // ── Outdoor Fog settings ──────────────────────────────────────────────────
+    window.addEventListener('vs-outdoor-fog', ((e: CustomEvent) => {
+      const { fogEnabled = false, mode = 'exp2', density = 0.005, color = '#c0c8d0', start = 5, end = 80 } = e.detail || {};
+
+      if (fogEnabled) {
+        if (mode === 'linear') {
+          this.scene.fogMode = BABYLON.Scene.FOGMODE_LINEAR;
+          this.scene.fogStart = typeof start === 'number' ? start : 5;
+          this.scene.fogEnd = typeof end === 'number' ? end : 80;
+        } else {
+          this.scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
+          this.scene.fogDensity = typeof density === 'number' ? density : 0.005;
+        }
+        const normalHex = (h: string) => /^#[0-9a-fA-F]{6}$/.test(h) ? h : '#c0c8d0';
+        this.scene.fogColor = BABYLON.Color3.FromHexString(normalHex(color));
+      } else {
+        this.scene.fogMode = BABYLON.Scene.FOGMODE_NONE;
+      }
+
+      console.log(`[vs-outdoor-fog] enabled=${fogEnabled} mode=${mode} density=${density}`);
     }) as EventListener);
 
     // Listen for scene node selection changes
@@ -30756,6 +30875,14 @@ window.addEventListener('DOMContentLoaded', () => {
       const gelPickerReactRoot = createRoot(gelPickerRoot);
       gelPickerReactRoot.render(React.createElement(GelPickerApp, {}));
       console.log('GelPickerApp mounted');
+    }
+
+    // Mount Outdoor Lighting App
+    const outdoorLightingRoot = document.getElementById('outdoorLightingRoot');
+    if (outdoorLightingRoot) {
+      const outdoorLightingReactRoot = createRoot(outdoorLightingRoot);
+      outdoorLightingReactRoot.render(React.createElement(OutdoorLightingApp, {}));
+      console.log('OutdoorLightingApp mounted');
     }
 
     // Render installed tools in the left panel
