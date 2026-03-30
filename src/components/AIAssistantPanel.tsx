@@ -120,11 +120,7 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
       setIsSending(true);
 
       const userMsg: ChatMessage = { role: 'user', content: text };
-      const loadingMsg: ChatMessage = {
-        role: 'assistant',
-        content: '',
-        isLoading: true,
-      };
+      const loadingMsg: ChatMessage = { role: 'assistant', content: '', isLoading: true, steps: [] };
 
       setMessages((prev) => [...prev, userMsg, loadingMsg]);
       setInputText('');
@@ -134,32 +130,67 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
         userMsg,
       ].map((m) => ({ role: m.role, content: m.content }));
 
+      const accumulatedSteps: string[] = [];
+      let finalReply = '';
+
       try {
-        const res = await fetch('/api/ai/director', {
+        const res = await fetch('/api/ai/director/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ messages: history }),
         });
 
-        if (!res.ok) {
+        if (!res.ok || !res.body) {
           const err = await res.json().catch(() => ({ detail: res.statusText }));
           throw new Error(err.detail || 'Forespørsel feilet');
         }
 
-        const data = await res.json();
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
 
-        if (data.events?.length) {
-          dispatchStudioEvents(data.events);
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith('data: ')) continue;
+            const jsonStr = trimmed.slice(6);
+            if (!jsonStr) continue;
+
+            let evt: { type: string; text?: string; events?: Array<{ event: string; detail: unknown }> };
+            try {
+              evt = JSON.parse(jsonStr);
+            } catch {
+              continue;
+            }
+
+            if (evt.type === 'step' && evt.text) {
+              accumulatedSteps.push(evt.text);
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.isLoading ? { ...m, steps: [...accumulatedSteps] } : m
+                )
+              );
+            } else if (evt.type === 'events' && evt.events?.length) {
+              dispatchStudioEvents(evt.events);
+            } else if (evt.type === 'reply' && evt.text !== undefined) {
+              finalReply = evt.text;
+            } else if (evt.type === 'error' && evt.text) {
+              finalReply = `Feil: ${evt.text}`;
+            }
+          }
         }
 
         setMessages((prev) =>
           prev.map((m) =>
             m.isLoading
-              ? {
-                  role: 'assistant',
-                  content: data.reply || 'Ferdig!',
-                  steps: data.steps || [],
-                }
+              ? { role: 'assistant' as const, content: finalReply || 'Ferdig!', steps: accumulatedSteps }
               : m
           )
         );
@@ -167,7 +198,7 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
         const msg = err instanceof Error ? err.message : 'Ukjent feil';
         setMessages((prev) =>
           prev.map((m) =>
-            m.isLoading ? { role: 'assistant', content: `Feil: ${msg}` } : m
+            m.isLoading ? { role: 'assistant' as const, content: `Feil: ${msg}`, steps: accumulatedSteps } : m
           )
         );
       } finally {
@@ -240,12 +271,11 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
         }));
         window.dispatchEvent(
           new CustomEvent('vs-add-prop', {
-            detail: { propId: 'triposr-generated', modelUrl, position: [0, 0, 0] },
-          })
-        );
-        window.dispatchEvent(
-          new CustomEvent('ch-load-environment', {
-            detail: { url: modelUrl, scale: 2.5 },
+            detail: {
+              propId: `triposr-generated-${Date.now()}`,
+              modelUrl,
+              position: [0, 0, 0],
+            },
           })
         );
       } else if (status === 'failed' || status === 'canceled') {

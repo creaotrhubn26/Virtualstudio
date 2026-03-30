@@ -320,6 +320,64 @@ DIRECTOR_TOOLS: List[Dict[str, Any]] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_light_property",
+            "description": (
+                "Modify a single property of an existing studio light by its ID. "
+                "Use this for fine-grained adjustments: intensity, color temperature (CCT), "
+                "or color. Call get_scene_lights first if you need to know available light IDs."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "light_id": {
+                        "type": "string",
+                        "description": "The light's ID (e.g. 'key-light-1', 'fill-light-1').",
+                    },
+                    "property": {
+                        "type": "string",
+                        "enum": ["intensity", "cct", "color", "enabled"],
+                        "description": "Which property to change.",
+                    },
+                    "value": {
+                        "description": (
+                            "New value: number 0–2 for intensity, "
+                            "number 2000–10000 for cct (Kelvin), "
+                            "hex string '#rrggbb' for color, "
+                            "boolean for enabled."
+                        ),
+                    },
+                },
+                "required": ["light_id", "property", "value"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_camera_fov",
+            "description": (
+                "Set the camera field of view by specifying a focal length in mm "
+                "(35mm full-frame equivalent). Also optionally sets white balance in Kelvin."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "focal_length": {
+                        "type": "number",
+                        "description": "Focal length in mm. E.g. 24=wide, 50=normal, 85=portrait, 135=telephoto.",
+                    },
+                    "white_balance": {
+                        "type": "number",
+                        "description": "White balance in Kelvin (2000–10000). 5500 = neutral daylight.",
+                    },
+                },
+                "required": ["focal_length"],
+            },
+        },
+    },
 ]
 
 SYSTEM_PROMPT = """Du er AI Direktør for Virtual Studio — en profesjonell 3D-lysstudio-simulator.
@@ -476,6 +534,25 @@ def _tool_call_to_events(tool_name: str, args: Dict[str, Any]) -> List[Dict[str,
     elif tool_name == "clear_characters":
         events.append({"event": "ch-clear-story-characters", "detail": {}})
 
+    elif tool_name == "set_light_property":
+        events.append({
+            "event": "vs-set-light-property",
+            "detail": {
+                "lightId": args.get("light_id"),
+                "property": args.get("property"),
+                "value": args.get("value"),
+            },
+        })
+
+    elif tool_name == "set_camera_fov":
+        photo: Dict[str, Any] = {"focalLength": args["focal_length"]}
+        if "white_balance" in args:
+            photo["whiteBalance"] = args["white_balance"]
+        events.append({
+            "event": "vs-camera-settings",
+            "detail": {"mode": "photo", "photo": photo},
+        })
+
     return events
 
 
@@ -490,6 +567,8 @@ def _describe_tool_call(tool_name: str, args: Dict[str, Any]) -> str:
         "add_prop": f"Legger til prop: {args.get('prop_id', '')}…",
         "load_character": f"Laster karakter: {args.get('avatar_type', '')}…",
         "clear_characters": "Fjerner alle karakterer…",
+        "set_light_property": f"Justerer {args.get('property', 'egenskap')} på lys {args.get('light_id', '')}…",
+        "set_camera_fov": f"Setter kamera-brennvidde til {args.get('focal_length', 50)}mm…",
     }
     return descriptions.get(tool_name, f"Utfører {tool_name}…")
 
@@ -628,6 +707,116 @@ class AiDirectorService:
                 "tool_calls_made": [],
                 "error": error_msg[:200],
             }
+
+    async def chat_stream(
+        self,
+        messages: List[Dict[str, Any]],
+        image_data_url: Optional[str] = None,
+    ):
+        """
+        SSE streaming version of chat().
+        Yields newline-delimited JSON strings, each prefixed with 'data: '.
+
+        Event types:
+          {"type": "step",   "text": "..."}        — tool-call progress label
+          {"type": "events", "events": [...]}        — frontend events to dispatch
+          {"type": "reply",  "text": "..."}          — final assistant reply
+          {"type": "error",  "text": "..."}          — error message
+        """
+        import asyncio
+
+        if not self.enabled:
+            yield "data: " + json.dumps({
+                "type": "error",
+                "text": "AI Direktør er ikke aktivert. Mangler API-konfigurasjon.",
+            }) + "\n\n"
+            return
+
+        system_message = {"role": "system", "content": SYSTEM_PROMPT}
+        chat_messages = [system_message] + list(messages)
+
+        if image_data_url:
+            last_user_msg = next(
+                (m for m in reversed(chat_messages) if m["role"] == "user"), None
+            )
+            if last_user_msg:
+                content = last_user_msg.get("content", "")
+                if isinstance(content, str):
+                    last_user_msg["content"] = [
+                        {"type": "text", "text": content or "Analyser dette bildet."},
+                        {"type": "image_url", "image_url": {"url": image_data_url}},
+                    ]
+
+        all_events: List[Dict[str, Any]] = []
+        tool_calls_made: List[str] = []
+
+        try:
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: _get_client().chat.completions.create(
+                    model="gpt-4o",
+                    messages=chat_messages,
+                    tools=DIRECTOR_TOOLS,
+                    tool_choice="auto",
+                    max_tokens=1500,
+                ),
+            )
+
+            message = response.choices[0].message
+            reply_text = message.content or ""
+            tool_calls = message.tool_calls or []
+
+            for tc in tool_calls:
+                fn_name = tc.function.name
+                try:
+                    args = json.loads(tc.function.arguments)
+                except json.JSONDecodeError:
+                    args = {}
+
+                step_label = _describe_tool_call(fn_name, args)
+                tool_calls_made.append(fn_name)
+
+                yield "data: " + json.dumps({"type": "step", "text": step_label}) + "\n\n"
+                await asyncio.sleep(0)
+
+                events = _tool_call_to_events(fn_name, args)
+                all_events.extend(events)
+
+                if events:
+                    yield "data: " + json.dumps({"type": "events", "events": events}) + "\n\n"
+                    await asyncio.sleep(0)
+
+            if not reply_text and tool_calls:
+                tool_names_no = {
+                    "apply_scenario_preset": "lysoppsett",
+                    "set_outdoor_sun": "sol",
+                    "set_fog": "tåke",
+                    "apply_lut": "fargegradering",
+                    "set_camera": "kamera",
+                    "set_camera_fov": "kamera-vinkel",
+                    "add_prop": "prop",
+                    "load_character": "karakter",
+                    "clear_characters": "rydding",
+                    "set_light_property": "lysjustering",
+                }
+                done_items = [tool_names_no.get(n, n) for n in tool_calls_made]
+                reply_text = f"Ferdig! Jeg har satt opp: {', '.join(done_items)}."
+
+            yield "data: " + json.dumps({"type": "reply", "text": reply_text}) + "\n\n"
+
+        except Exception as exc:
+            error_msg = str(exc)
+            print(f"[AiDirectorService.stream] Error: {error_msg}")
+            if "FREE_CLOUD_BUDGET_EXCEEDED" in error_msg:
+                yield "data: " + json.dumps({
+                    "type": "error",
+                    "text": "Kredittgrensen er nådd. Vennligst oppgrader din Replit-plan.",
+                }) + "\n\n"
+            else:
+                yield "data: " + json.dumps({
+                    "type": "error",
+                    "text": "En feil oppstod. Prøv igjen.",
+                }) + "\n\n"
 
     async def analyze_reference_image(self, image_data_url: str) -> Dict[str, Any]:
         """

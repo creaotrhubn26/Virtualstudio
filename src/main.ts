@@ -10705,7 +10705,7 @@ class VirtualStudio {
     }) as EventListener);
 
     window.addEventListener('vs-add-prop', ((e: CustomEvent) => {
-      const { propId, position, metadata } = e.detail || {};
+      const { propId, position, metadata, modelUrl: detailModelUrl } = e.detail || {};
       if (typeof propId !== 'string' || !propId) {
         return;
       }
@@ -10719,7 +10719,7 @@ class VirtualStudio {
         propId,
         propDef?.name || propId,
         {
-          modelUrl: propDef?.modelUrl || undefined,
+          modelUrl: (typeof detailModelUrl === 'string' && detailModelUrl) ? detailModelUrl : (propDef?.modelUrl || undefined),
           metadata,
         },
         pos,
@@ -10822,6 +10822,57 @@ class VirtualStudio {
       this.outdoorSunLight.specular = c.clone();
 
       console.log(`[vs-outdoor-sun] el=${elevation.toFixed(1)}° az=${azimuth.toFixed(1)}° int=${intensity}`);
+    }) as EventListener);
+
+    // ── Set individual light property (from AI Director) ────────────────────
+    window.addEventListener('vs-set-light-property', ((e: CustomEvent) => {
+      const { lightId, property, value } = e.detail || {};
+      if (!lightId || !property) return;
+
+      const applyToLight = (data: LightData) => {
+        if (property === 'intensity') {
+          const iv = Number(value);
+          if (!isNaN(iv)) {
+            data.light.intensity = iv;
+            data.intensity = iv;
+          }
+        } else if (property === 'enabled') {
+          data.light.setEnabled(Boolean(value));
+        } else if (property === 'color') {
+          const hex = String(value);
+          if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+            const c = BABYLON.Color3.FromHexString(hex);
+            (data.light as BABYLON.PointLight | BABYLON.SpotLight | BABYLON.DirectionalLight).diffuse = c.clone();
+            (data.light as BABYLON.PointLight | BABYLON.SpotLight | BABYLON.DirectionalLight).specular = c.clone();
+          }
+        } else if (property === 'cct') {
+          const cct = Number(value);
+          if (!isNaN(cct)) {
+            const t = Math.max(0, Math.min(1, (cct - 2000) / 8000));
+            const r = 1.0;
+            const g = 0.6 + t * 0.35;
+            const b = 0.2 + t * 0.8;
+            const c = new BABYLON.Color3(r, g, b);
+            (data.light as BABYLON.PointLight | BABYLON.SpotLight | BABYLON.DirectionalLight).diffuse = c;
+            data.cct = cct;
+          }
+        }
+        window.dispatchEvent(new CustomEvent('vs-light-changed', {
+          detail: { lightId: lightId, property, value },
+        }));
+      };
+
+      if (lightId === '*') {
+        this.lights.forEach(applyToLight);
+      } else if (this.lights.has(lightId)) {
+        applyToLight(this.lights.get(lightId)!);
+      } else {
+        const entry = Array.from(this.lights.entries()).find(
+          ([id]) => id.startsWith(lightId) || id.includes(lightId)
+        );
+        if (entry) applyToLight(entry[1]);
+        else console.warn(`[vs-set-light-property] Light not found: ${lightId}`);
+      }
     }) as EventListener);
 
     // ── Outdoor Sky preset ────────────────────────────────────────────────────

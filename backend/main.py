@@ -5,7 +5,7 @@ FastAPI service for generating 3D avatars from images using Meta SAM 3D Body
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 import os
 from typing import Any, Dict, List, Optional
@@ -1448,6 +1448,41 @@ async def ai_director_chat(request: Request):
 
     result = await ai_director_service.chat(messages, image_data_url)
     return JSONResponse(result)
+
+
+@app.post("/api/ai/director/stream")
+async def ai_director_stream(request: Request):
+    """
+    SSE streaming version of /api/ai/director.
+    Body: { messages: [...], imageDataUrl?: string }
+    Returns: text/event-stream with data lines:
+      {"type":"step","text":"..."}
+      {"type":"events","events":[...]}
+      {"type":"reply","text":"..."}
+      {"type":"error","text":"..."}
+    """
+    if ai_director_service is None:
+        raise HTTPException(status_code=503, detail="AI Director Service not initialized")
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    messages = body.get("messages", [])
+    image_data_url = body.get("imageDataUrl")
+
+    if not messages:
+        raise HTTPException(status_code=400, detail="messages is required")
+
+    return StreamingResponse(
+        ai_director_service.chat_stream(messages, image_data_url),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.post("/api/ai/analyze-reference")
