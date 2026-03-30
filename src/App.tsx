@@ -482,22 +482,24 @@ export const MarketplacePanelApp: React.FC = () => {
   if (!isOpen) return null;
 
   return (
-    <Suspense fallback={<PanelLoadingFallback />}>
-      <MarketplacePanel
-        isFullscreen={isFullscreen}
-        onClose={() => window.dispatchEvent(new CustomEvent('toggle-marketplace-panel'))}
-        onToggleFullscreen={() => {
-          const panel = document.getElementById('marketplacePanel');
-          if (panel) {
-            const newFs = !panel.classList.contains('fullscreen');
-            setIsFullscreen(newFs);
-            if (newFs) panel.classList.add('fullscreen');
-            else panel.classList.remove('fullscreen');
-            window.dispatchEvent(new CustomEvent('marketplace-toggle-fullscreen', { detail: newFs }));
-          }
-        }}
-      />
-    </Suspense>
+    <ToastProvider>
+      <Suspense fallback={<PanelLoadingFallback />}>
+        <MarketplacePanel
+          isFullscreen={isFullscreen}
+          onClose={() => window.dispatchEvent(new CustomEvent('toggle-marketplace-panel'))}
+          onToggleFullscreen={() => {
+            const panel = document.getElementById('marketplacePanel');
+            if (panel) {
+              const newFs = !panel.classList.contains('fullscreen');
+              setIsFullscreen(newFs);
+              if (newFs) panel.classList.add('fullscreen');
+              else panel.classList.remove('fullscreen');
+              window.dispatchEvent(new CustomEvent('marketplace-toggle-fullscreen', { detail: newFs }));
+            }
+          }}
+        />
+      </Suspense>
+    </ToastProvider>
   );
 };
 
