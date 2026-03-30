@@ -5794,7 +5794,7 @@ class VirtualStudio {
         // Shift glow centre downward so it aligns with the visual centre of the diffuser face.
         // The flash-mount bracket at the top of the head pushes the geometric centre (headJoint
         // + panelW*0.5) above the actual diffuser cloth centre. 30% of panelW corrects this.
-        const glowYCenter = vertexYCenter - panelW * 0.30;
+        const glowYCenter = vertexYCenter - panelW * 0.40;
         const worldCenter = new BABYLON.Vector3(
           vertexXCenter,
           glowYCenter,
