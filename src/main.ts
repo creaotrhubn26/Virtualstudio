@@ -5888,45 +5888,8 @@ class VirtualStudio {
           (parentMesh as any)._faceYawOffset = faceYawOffset;
         }
 
-        // White emissive glow plane representing the softbox diffuser panel.
-        // Sized at ~22% of stand height; always faces the camera (billboardMode Y)
-        // so it looks correct from any angle without tilting.
-        const cctColor = this.cctToColor(lightConfig.cct);
-        const initT = Math.min(1.0, lightConfig.intensity / 500);
-        const initStrength = Math.sqrt(initT) * 1.6;
-
-        // Strip boxes: narrow (10% of stand height) × tall (fills the head area, 26%).
-        // Softboxes: square panel at 22% of stand height.
-        // All panels are constrained to the head zone (top 28% of model height).
-        const isStrip = modelId.includes('strip');
-        const panelW = lightHeadHeight * (isStrip ? 0.10 : 0.22);
-        const panelH = isStrip ? lightHeadHeight * 0.26 : panelW;
-        const panelCenterY = headJointWorldY + panelH * 0.5;
-
-        const glowPlane = BABYLON.MeshBuilder.CreatePlane(
-          `${lightId}_diffuserGlow`,
-          { width: panelW, height: panelH },
-          this.scene
-        );
-        // Full billboard so it always faces the camera from any angle.
-        // Position in world space — X/Z are synced every frame by the lightPosSync observer.
-        glowPlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
-        glowPlane.position.set(position.x, panelCenterY, position.z);
-
-        const glowMat = new BABYLON.StandardMaterial(`${lightId}_diffuserGlowMat`, this.scene);
-        glowMat.disableLighting = true;
-        glowMat.backFaceCulling = false;
-        glowMat.alpha = 0.92;
-        glowMat.emissiveColor = new BABYLON.Color3(
-          cctColor.r * initStrength,
-          cctColor.g * initStrength,
-          cctColor.b * initStrength
-        );
-        glowPlane.material = glowMat;
-
-        // Store for live updates via updateLightHeadGlow.
-        (mesh as any)._headMeshes = [glowPlane];
-        console.log(`[addLight] glow plane: W=${panelW.toFixed(3)}m H=${panelH.toFixed(3)}m Y=${panelCenterY.toFixed(3)} strip=${isStrip}`);
+        // No diffuser glow plane — the 3D GLB model already provides the visual.
+        (mesh as any)._headMeshes = [];
 
         console.log(`[addLight] GLB loaded: ${result.meshes.length} meshes, scale=${scaleFactor.toFixed(3)}, lightHeadY=${lightHeadHeight.toFixed(2)}m, headMeshes=${headCount}`);
       } catch (loadErr) {
