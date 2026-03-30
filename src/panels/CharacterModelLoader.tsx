@@ -52,7 +52,7 @@ const createCharacterSVG = (type: 'female' | 'male' | 'couple', color = '#666') 
 };
 
 // Create avatar thumbnail placeholder SVG - must be defined before CHARACTER_MODELS
-const createAvatarSVG = (type: 'child' | 'teenager' | 'woman' | 'man' | 'elderly' | 'athlete' | 'pregnant' | 'dancer', color = '#00d4ff') => {
+const createAvatarSVG = (type: 'child' | 'teenager' | 'woman' | 'man' | 'elderly' | 'athlete' | 'pregnant' | 'dancer' | 'realistic_man', color = '#00d4ff') => {
   const svgs: Record<string, string> = {
     child: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150" fill="none"><circle cx="50" cy="25" r="18" fill="${color}"/><rect x="32" y="48" width="36" height="42" rx="4" fill="${color}"/><rect x="36" y="90" width="12" height="38" fill="${color}"/><rect x="52" y="90" width="12" height="38" fill="${color}"/></svg>`,
     teenager: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150" fill="${color}"><circle cx="50" cy="22" r="16"/><path d="M35 42h30l5 48H30z"/><rect x="38" y="90" width="10" height="42"/><rect x="52" y="90" width="10" height="42"/></svg>`,
@@ -61,7 +61,8 @@ const createAvatarSVG = (type: 'child' | 'teenager' | 'woman' | 'man' | 'elderly
     elderly: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150" fill="${color}"><circle cx="50" cy="22" r="14"/><path d="M36 40h28l6 46H30z"/><rect x="38" y="86" width="10" height="40"/><rect x="52" y="86" width="10" height="40"/><line x1="75" y1="50" x2="75" y2="110" stroke="${color}" stroke-width="3"/></svg>`,
     athlete: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150" fill="${color}"><circle cx="50" cy="18" r="14"/><rect x="28" y="36" width="44" height="48" rx="6"/><rect x="32" y="84" width="14" height="48"/><rect x="54" y="84" width="14" height="48"/><rect x="18" y="42" width="18" height="10" rx="3"/><rect x="64" y="42" width="18" height="10" rx="3"/></svg>`,
     pregnant: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150" fill="${color}"><circle cx="50" cy="20" r="14"/><ellipse cx="50" cy="65" rx="24" ry="28"/><rect x="36" y="93" width="11" height="42"/><rect x="53" y="93" width="11" height="42"/></svg>`,
-    dancer: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150" fill="${color}"><circle cx="50" cy="18" r="13"/><path d="M38 34h24l4 38H34z"/><line x1="45" y1="72" x2="35" y2="120" stroke="${color}" stroke-width="8"/><line x1="55" y1="72" x2="70" y2="115" stroke="${color}" stroke-width="8"/><line x1="38" y1="38" x2="15" y2="28" stroke="${color}" stroke-width="6"/><line x1="62" y1="38" x2="85" y2="50" stroke="${color}" stroke-width="6"/></svg>`
+    dancer: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150" fill="${color}"><circle cx="50" cy="18" r="13"/><path d="M38 34h24l4 38H34z"/><line x1="45" y1="72" x2="35" y2="120" stroke="${color}" stroke-width="8"/><line x1="55" y1="72" x2="70" y2="115" stroke="${color}" stroke-width="8"/><line x1="38" y1="38" x2="15" y2="28" stroke="${color}" stroke-width="6"/><line x1="62" y1="38" x2="85" y2="50" stroke="${color}" stroke-width="6"/></svg>`,
+    realistic_man: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150" fill="none"><circle cx="50" cy="18" r="14" fill="${color}"/><rect x="32" y="36" width="36" height="44" rx="6" fill="${color}"/><rect x="15" y="40" width="18" height="10" rx="3" fill="${color}"/><rect x="67" y="40" width="18" height="10" rx="3" fill="${color}"/><rect x="34" y="80" width="13" height="46" rx="3" fill="${color}"/><rect x="53" y="80" width="13" height="46" rx="3" fill="${color}"/><circle cx="50" cy="16" r="5" fill="#1a1a2e"/><ellipse cx="50" cy="32" rx="6" ry="2" fill="${color}" opacity="0.5"/></svg>`
   };
   return `data:image/svg+xml,${encodeURIComponent(svgs[type])}`;
 };
@@ -155,6 +156,16 @@ const CHARACTER_MODELS: CharacterModel[] = [
     modelUrl: '/models/avatars/avatar_dancer.glb',
     thumbnail: createAvatarSVG('dancer'),
     description: 'SAM 3D Body - Grasiøs danser',
+    poses: 1,
+  },
+  {
+    id: 'human_realistic_male',
+    name: 'Fotorealistisk Mann',
+    gender: 'male',
+    category: 'portrett' as any,
+    modelUrl: '/models/avatars/human-male-realistic.glb',
+    thumbnail: createAvatarSVG('realistic_man', '#f97316'),
+    description: 'Fotorealistisk 3D-mann — PBR-materialer, detaljert hud',
     poses: 1,
   },
 ];
