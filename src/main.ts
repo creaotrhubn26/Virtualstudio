@@ -5574,7 +5574,7 @@ class VirtualStudio {
     // Octabox (circular)    → even wider, near-uniform field, maximum shadow softness.
     const lightSpecs: { [key: string]: { intensity: number; name: string; cct: number; beamAngle: number; exponent: number; shadowKernel: number; glbFile: string } } = {
       'aputure-300d':        { intensity: 450, name: 'Aputure 300D',          cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb'  },
-      'aputure-300d-strip':  { intensity: 350, name: 'Aputure 300D Stripbox',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 3.5, shadowKernel: 32,  glbFile: '/models/lights/stripbox-stand.glb' },
+      'aputure-300d-strip':  { intensity: 350, name: 'Aputure 300D Stripbox',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 3.5, shadowKernel: 32,  glbFile: '/models/lights/softbox-stand.glb'  },
       'aputure-120d':        { intensity: 300, name: 'Aputure 120D',           cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb'  },
       'aputure-600d':        { intensity: 700, name: 'Aputure 600D Pro',       cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb'  },
       'godox-ad600':    { intensity: 380, name: 'Godox AD600',      cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb' },
@@ -5663,12 +5663,15 @@ class VirtualStudio {
         const initT = Math.min(1.0, lightConfig.intensity / 500);
         const initStrength = Math.sqrt(initT) * 1.6;
 
-        const panelSize = lightHeadHeight * 0.22;
-        const panelCenterY = headJointWorldY + panelSize * 0.5;
+        // Strip boxes have a tall narrow panel (1:4 width:height ratio).
+        const isStrip = modelId.includes('strip');
+        const panelW = lightHeadHeight * 0.22;
+        const panelH = isStrip ? panelW * 4 : panelW;
+        const panelCenterY = headJointWorldY + (isStrip ? panelH * 0.5 : panelW * 0.5);
 
         const glowPlane = BABYLON.MeshBuilder.CreatePlane(
           `${lightId}_diffuserGlow`,
-          { width: panelSize, height: panelSize },
+          { width: panelW, height: panelH },
           this.scene
         );
         glowPlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_Y;
@@ -5687,7 +5690,7 @@ class VirtualStudio {
 
         // Store for live updates via updateLightHeadGlow.
         (mesh as any)._headMeshes = [glowPlane];
-        console.log(`[addLight] glow plane: size=${panelSize.toFixed(3)}m Y=${panelCenterY.toFixed(3)} strength=${initStrength.toFixed(2)}`);
+        console.log(`[addLight] glow plane: W=${panelW.toFixed(3)}m H=${panelH.toFixed(3)}m Y=${panelCenterY.toFixed(3)} strip=${isStrip}`);
 
         console.log(`[addLight] GLB loaded: ${result.meshes.length} meshes, scale=${scaleFactor.toFixed(3)}, lightHeadY=${lightHeadHeight.toFixed(2)}m, headMeshes=${headCount}`);
       } catch (loadErr) {
