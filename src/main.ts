@@ -2928,6 +2928,9 @@ class VirtualStudio {
     this.disposeStudioGizmos();
 
     const lightPos = lightData.mesh.position.clone();
+    // Use stored light head height so height slider + yoke ring sit at the actual softbox head,
+    // not at the mesh root (which is at ground level Y≈0).
+    const lightHeadY: number = (lightData.mesh as any)._lightHeadHeight ?? lightData.light.position.y;
     const studioAmber = new BABYLON.Color3(1.0, 0.67, 0.0);
     const studioGreen = new BABYLON.Color3(0.3, 0.85, 0.4);
     const studioCyan = new BABYLON.Color3(0.3, 0.8, 1.0);
@@ -3039,7 +3042,7 @@ class VirtualStudio {
       diameter: 0.15,
       tessellation: 16
     }, this.scene);
-    heightSlider.position = new BABYLON.Vector3(lightPos.x, lightPos.y, lightPos.z);
+    heightSlider.position = new BABYLON.Vector3(lightPos.x, lightHeadY, lightPos.z);
 
     const heightSliderMat = new BABYLON.StandardMaterial('heightSliderMat', this.scene);
     heightSliderMat.emissiveColor = studioGreen;
@@ -3090,11 +3093,12 @@ class VirtualStudio {
         const newY = Math.max(0.5, Math.min(6.0, heightSlider.position.y));
         heightSlider.position.y = newY;
 
-        // Update light position
+        // Update _lightHeadHeight so the per-frame sync observer keeps the SpotLight at newY.
+        // Also update light.position.y directly for immediate effect and for old-path lights
+        // that have no sync observer.
+        (lightData.mesh as any)._lightHeadHeight = newY;
         lightData.mesh.position.y = newY;
-        if (lightData.light instanceof BABYLON.SpotLight || lightData.light instanceof BABYLON.PointLight) {
-          lightData.light.position.y = newY;
-        }
+        lightData.light.position.y = newY;
 
         // Update stand pole - use absolute scaling since we used unit height
         const pole = heightSlider.getChildMeshes().find(m => m.name === 'standPole');
@@ -3124,13 +3128,14 @@ class VirtualStudio {
 
     // 3. YOKE RING - Arc for tilt/pan control (Lampehode Yoke)
     const yokeRing = BABYLON.MeshBuilder.CreateTorus('studioGizmo_yokeRing', {
-      diameter: 0.8,
-      thickness: 0.05,
+      diameter: 1.2,
+      thickness: 0.07,
       tessellation: 32,
       sideOrientation: BABYLON.Mesh.DOUBLESIDE
     }, this.scene);
-    yokeRing.position = lightData.mesh.position.clone();
-    yokeRing.rotation.x = Math.PI / 2; // Vertical orientation
+    // Position at the actual light head (top of stand), not the mesh root (ground level)
+    yokeRing.position = new BABYLON.Vector3(lightPos.x, lightHeadY, lightPos.z);
+    yokeRing.rotation.x = Math.PI / 2; // Vertical orientation (like a steering wheel)
 
     const yokeRingMat = new BABYLON.StandardMaterial('yokeRingMat', this.scene);
     yokeRingMat.emissiveColor = studioCyan;
