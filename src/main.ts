@@ -983,6 +983,14 @@ class VirtualStudio {
     this.setupRenderingPipeline();
     console.log('[Constructor] Rendering pipeline complete');
 
+    // Ensure every material created from this point on can receive all studio lights.
+    // Babylon.js defaults to maxSimultaneousLights=4; we need at least 8 for 5-light rigs.
+    this.scene.onNewMaterialAddedObservable.add((mat) => {
+      if (mat instanceof BABYLON.PBRMaterial || mat instanceof BABYLON.StandardMaterial) {
+        mat.maxSimultaneousLights = 8;
+      }
+    });
+
     // Start render loop immediately to ensure scene renders even if later setup fails
     let renderCount = 0;
     this.engine.runRenderLoop(() => {
@@ -2471,10 +2479,11 @@ class VirtualStudio {
     const Z = 8;               // back wall at POSITIVE Z (behind the subject, in front of rearWall at Z=10)
 
     const backdropMat = new BABYLON.PBRMaterial('backdropMat_' + backdropId, this.scene);
-    backdropMat.albedoColor = new BABYLON.Color3(0.84, 0.84, 0.86);   // neutral grey
-    backdropMat.roughness = 0.96;
-    backdropMat.metallic = 0;
+    backdropMat.albedoColor = new BABYLON.Color3(0.82, 0.82, 0.84);   // neutral cool-grey
+    backdropMat.roughness = 0.55;   // semi-gloss so coloured gels show specular hotspots
+    backdropMat.metallic = 0.02;    // hint of metallic keeps the specular physically correct
     backdropMat.backFaceCulling = false;
+    backdropMat.maxSimultaneousLights = 8;  // receive all studio lights, not just 4
 
     // Root node at origin — all children keep their own world-space positions
     const rootNode = new BABYLON.Mesh('backdropRoot_' + backdropId, this.scene);
@@ -6089,11 +6098,11 @@ class VirtualStudio {
       this.aimLightAt(rimLightId, new BABYLON.Vector3(0, 1.5, 0));
       if (rimLight.light instanceof BABYLON.SpotLight) {
         rimLight.light.angle = Math.PI / 5;
-        rimLight.light.exponent = 3.5;
-        rimLight.light.intensity = 350;
+        rimLight.light.exponent = 4.0;          // tighter centre hotspot → crisper edge light
+        rimLight.light.intensity = 500;          // stronger separation
         rimLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        rimLight.light.diffuse = new BABYLON.Color3(1.0, 0.94, 0.82);
-        rimLight.light.specular = new BABYLON.Color3(1.0, 0.94, 0.82);
+        rimLight.light.diffuse = new BABYLON.Color3(1.0, 0.90, 0.72);  // richer warm amber
+        rimLight.light.specular = new BABYLON.Color3(1.0, 0.90, 0.72);
       }
       if (rimLight.shadowGenerator) {
         rimLight.shadowGenerator.blurKernel = 32;
@@ -6101,44 +6110,71 @@ class VirtualStudio {
     }
 
     // === BACKGROUND LIGHT 1 — Electric blue/violet gel ===
-    // Positioned right-side, between subject and backdrop, aimed at the left-centre of backdrop
-    const bgBlueId = await this.addLight('aputure-300d', new BABYLON.Vector3(4.5, 3.5, 4));
+    // Right side, between subject and backdrop, floods the left half of backdrop
+    const bgBlueId = await this.addLight('aputure-300d', new BABYLON.Vector3(5, 3.5, 4));
     const bgBlue = this.lights.get(bgBlueId);
     if (bgBlue) {
       bgBlue.name = 'Bakgrunnsys (Blå gel)';
-      this.aimLightAt(bgBlueId, new BABYLON.Vector3(-1.5, 2, 8));   // aimed at backdrop wall
+      this.aimLightAt(bgBlueId, new BABYLON.Vector3(-2, 2.5, 8));
       if (bgBlue.light instanceof BABYLON.SpotLight) {
-        bgBlue.light.angle = Math.PI / 2;      // wide flood
-        bgBlue.light.exponent = 0.4;           // very uniform, gradient across backdrop
-        bgBlue.light.intensity = 1000;
+        bgBlue.light.angle = Math.PI / 1.9;   // very wide flood
+        bgBlue.light.exponent = 0.3;           // ultra-uniform, gradient edge
+        bgBlue.light.intensity = 4000;         // must overcome distance (4-6m to backdrop)
         bgBlue.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        bgBlue.light.diffuse = new BABYLON.Color3(0.15, 0.10, 1.0);   // electric blue-violet
-        bgBlue.light.specular = new BABYLON.Color3(0.15, 0.10, 1.0);
+        bgBlue.light.diffuse = new BABYLON.Color3(0.10, 0.06, 1.0);   // deep electric blue-violet
+        bgBlue.light.specular = new BABYLON.Color3(0.10, 0.06, 1.0);
       }
       if (bgBlue.shadowGenerator) {
-        bgBlue.shadowGenerator.blurKernel = 16;
+        bgBlue.shadowGenerator.blurKernel = 8;
       }
     }
 
     // === BACKGROUND LIGHT 2 — Warm rose/magenta gel ===
-    // Left side, aimed at the right-centre of the backdrop
-    const bgPinkId = await this.addLight('aputure-300d', new BABYLON.Vector3(-4.5, 2.5, 3.5));
+    // Left side, floods the right half of backdrop for complementary split-tone
+    const bgPinkId = await this.addLight('aputure-300d', new BABYLON.Vector3(-5, 2.8, 3.5));
     const bgPink = this.lights.get(bgPinkId);
     if (bgPink) {
       bgPink.name = 'Bakgrunnsys (Rosa gel)';
-      this.aimLightAt(bgPinkId, new BABYLON.Vector3(2, 1.5, 8));     // aimed at backdrop wall
+      this.aimLightAt(bgPinkId, new BABYLON.Vector3(2.5, 2, 8));
       if (bgPink.light instanceof BABYLON.SpotLight) {
         bgPink.light.angle = Math.PI / 2;
-        bgPink.light.exponent = 0.4;
-        bgPink.light.intensity = 800;
+        bgPink.light.exponent = 0.3;
+        bgPink.light.intensity = 3200;
         bgPink.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-        bgPink.light.diffuse = new BABYLON.Color3(1.0, 0.18, 0.50);   // vivid magenta/rose
-        bgPink.light.specular = new BABYLON.Color3(1.0, 0.18, 0.50);
+        bgPink.light.diffuse = new BABYLON.Color3(1.0, 0.12, 0.45);   // vivid hot magenta
+        bgPink.light.specular = new BABYLON.Color3(1.0, 0.12, 0.45);
       }
       if (bgPink.shadowGenerator) {
-        bgPink.shadowGenerator.blurKernel = 16;
+        bgPink.shadowGenerator.blurKernel = 8;
       }
     }
+
+    // === HAIR / KICKER LIGHT — warm amber separation ===
+    // High overhead from the front, narrow spot aimed at crown — golden hair separation
+    const hairLightId = await this.addLight('aputure-300d', new BABYLON.Vector3(1.2, 5, -1));
+    const hairLight = this.lights.get(hairLightId);
+    if (hairLight) {
+      hairLight.name = 'Hårlys (Kicker)';
+      this.aimLightAt(hairLightId, new BABYLON.Vector3(0, 1.7, 0));
+      if (hairLight.light instanceof BABYLON.SpotLight) {
+        hairLight.light.angle = Math.PI / 7;   // tight 25° — only touches crown/shoulders
+        hairLight.light.exponent = 5.0;        // centre hotspot → crisp specular on hair
+        hairLight.light.intensity = 320;
+        hairLight.light.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
+        hairLight.light.diffuse  = new BABYLON.Color3(1.0, 0.82, 0.55);  // warm amber
+        hairLight.light.specular = new BABYLON.Color3(1.0, 0.82, 0.55);
+      }
+      if (hairLight.shadowGenerator) {
+        hairLight.shadowGenerator.blurKernel = 24;
+      }
+    }
+
+    // After all lights are created, patch every existing material to accept 8 lights
+    this.scene.materials.forEach((mat) => {
+      if (mat instanceof BABYLON.PBRMaterial || mat instanceof BABYLON.StandardMaterial) {
+        mat.maxSimultaneousLights = 8;
+      }
+    });
     
     // Update scene list to show all lights
     this.updateSceneList();
