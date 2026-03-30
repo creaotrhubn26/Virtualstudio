@@ -283,6 +283,16 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
   const [rpmCopied, setRpmCopied] = useState(false);
   const rpmIframeRef = useRef<HTMLIFrameElement>(null);
 
+  // Custom event listener for switching tabs — used by Playwright E2E tests and deep-links
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const tab = (e as CustomEvent<{ tab: number }>).detail?.tab;
+      if (typeof tab === 'number') setActiveTab(tab);
+    };
+    window.addEventListener('ch-set-charloader-tab', handler);
+    return () => window.removeEventListener('ch-set-charloader-tab', handler);
+  }, []);
+
   // Listen for Ready Player Me avatar URL from the iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -505,6 +515,7 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
         <Tab label="Tilpass" sx={{ minHeight: shouldUseTabletMode ? 48 : 36, py: shouldUseTabletMode ? 1 : 0, fontSize: shouldUseTabletMode ? 14 : 12 }} />
         <Tab
           label="Ready Player Me"
+          data-testid="rpm-tab"
           sx={{
             minHeight: shouldUseTabletMode ? 48 : 36,
             py: shouldUseTabletMode ? 1 : 0,
@@ -999,6 +1010,7 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
             }}>
               <iframe
                 ref={rpmIframeRef}
+                data-testid="rpm-iframe"
                 src="https://demo.readyplayer.me/avatar?frameApi&clearCache"
                 title="Ready Player Me Avatar Creator"
                 allow="camera *; microphone *"
@@ -1029,6 +1041,7 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
                   setRpmStatus('idle');
                 }}
                 onKeyDown={(e) => { if (e.key === 'Enter') void loadRpmCharacter(); }}
+                inputProps={{ 'data-testid': 'rpm-url-input' }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -1065,6 +1078,7 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
             variant="contained"
             size="large"
             fullWidth
+            data-testid="rpm-load-btn"
             disabled={!isValidRpmUrl(rpmUrl) || rpmLoading}
             onClick={() => void loadRpmCharacter()}
             startIcon={rpmLoading ? <CircularProgress size={16} color="inherit" /> : <PersonAdd />}
