@@ -206,7 +206,9 @@ export function CameraPanel() {
   if (!cameraNode) {
     return (
       <Box sx={{ p: 2 }}>
-        <div>No camera in scene. Add a camera to use controls.</div>
+        <Typography variant="body2" color="text.secondary">
+          Ingen kamera i scenen. Legg til et kamera for å bruke kamerakontrollen.
+        </Typography>
       </Box>
     );
   }
@@ -216,10 +218,10 @@ export function CameraPanel() {
       <Tabs
         value={activeTab}
         onChange={(_: React.SyntheticEvent, v: number) => setActiveTab(v)}
-        sx={{ borderBottom: 1, borderColor:'divider' }}
+        sx={{ borderBottom: 1, borderColor: 'divider', minHeight: 38 }}
       >
-        <Tab label="Camera" />
-        <Tab label="Lens" />
+        <Tab label="Kamera" sx={{ fontSize: '0.72rem', minHeight: 38, py: 0.75 }} />
+        <Tab label="Objektiv" sx={{ fontSize: '0.72rem', minHeight: 38, py: 0.75 }} />
       </Tabs>
 
       {/* Atmosphere warning */}

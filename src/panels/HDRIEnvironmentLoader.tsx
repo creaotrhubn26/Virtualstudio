@@ -2157,11 +2157,11 @@ export const HDRIEnvironmentLoader: React.FC = () => {
           <Divider sx={{ my: 2, borderColor: '#333' }} />
 
           <Typography variant="subtitle2" gutterBottom>
-            Environment Settings
+            Miljøinnstillinger
           </Typography>
 
           <Box sx={{ mb: 2 }}>
-            <Typography variant="caption">Intensity</Typography>
+            <Typography variant="caption">Intensitet</Typography>
             <Slider
               value={intensity}
               onChange={(_, v) => setIntensity(v as number)}
@@ -2174,7 +2174,7 @@ export const HDRIEnvironmentLoader: React.FC = () => {
           </Box>
 
           <Box sx={{ mb: 2 }}>
-            <Typography variant="caption">Rotation (degrees)</Typography>
+            <Typography variant="caption">Rotasjon (grader)</Typography>
             <Slider
               value={rotation}
               onChange={(_, v) => setRotation(v as number)}
@@ -2193,26 +2193,26 @@ export const HDRIEnvironmentLoader: React.FC = () => {
                 onChange={(e) => setShowBackground(e.target.checked)}
               />
             }
-            label="Show as Background"
+            label="Vis som bakgrunn"
           />
 
           <Divider sx={{ my: 2, borderColor: '#333' }} />
 
           <Typography variant="subtitle2" gutterBottom>
-            Sun Simulation
+            Sol-simulering
           </Typography>
 
           <FormControlLabel
             control={
               <Switch checked={enableSun} onChange={(e) => setEnableSun(e.target.checked)} />
             }
-            label="Enable Sun Light"
+            label="Aktiver sollys"
           />
 
           {enableSun && (
             <>
               <Box sx={{ mb: 2, mt: 2 }}>
-                <Typography variant="caption">Sun Intensity</Typography>
+                <Typography variant="caption">Sol-intensitet</Typography>
                 <Slider
                   value={sunIntensity}
                   onChange={(_, v) => setSunIntensity(v as number)}
@@ -2226,7 +2226,7 @@ export const HDRIEnvironmentLoader: React.FC = () => {
 
               <Box sx={{ mb: 2 }}>
                 <Typography variant="caption">
-                  Sun Elevation (0° = horizon, 90° = overhead)
+                  Sol-høyde (0° = horisont, 90° = zenit)
                 </Typography>
                 <Slider
                   value={sunElevation}
@@ -2240,7 +2240,7 @@ export const HDRIEnvironmentLoader: React.FC = () => {
               </Box>
 
               <Box sx={{ mb: 2 }}>
-                <Typography variant="caption">Sun Azimuth (0° = North, 90° = East)</Typography>
+                <Typography variant="caption">Sol-asimut (0° = Nord, 90° = Øst)</Typography>
                 <Slider
                   value={sunAzimuth}
                   onChange={(_, v) => setSunAzimuth(v as number)}

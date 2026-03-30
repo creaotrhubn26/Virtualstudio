@@ -5,7 +5,7 @@
 
 import * as BABYLON from '@babylonjs/core';
 import { sceneGraphAnimationEngine, AnimationClip, AnimationTrack, Keyframe } from '../core/animation/SceneGraphAnimationEngine';
-import { useAnimationComposerStore, AnimationSequence, AnimationLayer, AnimationBehavior, TrackingConfig } from '../stores/animationComposerStore';
+import { useAnimationComposerStore, AnimationSequence, AnimationLayer, AnimationBehavior, TrackingConfig } from '../state/animationComposerStore';
 
 // Type for VirtualStudio tracking config
 interface LightTrackingConfig {

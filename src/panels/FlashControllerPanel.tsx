@@ -619,6 +619,22 @@ function GroupPowerDial({
         </IconButton>
       </Stack>
       
+      {/* Guide Number indicator */}
+      {group.powerMode === 'manual' && group.enabled && (() => {
+        const maxStops = controller.powerRange[1];
+        const powerRatio = Math.pow(2, stops - maxStops);
+        const gnBase = 58; // typical studio flash GN58 at full power, ISO 100
+        const gn = Math.round(gnBase * Math.sqrt(powerRatio));
+        const maxDist = gn > 0 ? (gn / 8).toFixed(1) : '–'; // at f/8
+        return (
+          <Box sx={{ textAlign: 'center', mt: 0.5, mb: 0.5 }}>
+            <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', lineHeight: 1 }}>
+              GN {gn} · f/8 → {maxDist}m
+            </Typography>
+          </Box>
+        );
+      })()}
+
       {/* Modeling Light Toggle */}
       {controller.supportsModelingLight && (
         <Button
@@ -633,7 +649,7 @@ function GroupPowerDial({
             py: 0.25,
             bgcolor: group.modelingLight ? 'warning.main' : undefined}}
         >
-          Modeling
+          Modellering
         </Button>
       )}
     </Paper>
@@ -672,7 +688,7 @@ function LightAssignmentDialog({
       <DialogTitle>
         <Stack direction="row" alignItems="center" spacing={1}>
           <LinkIcon />
-          <span>Assign Lights to Groups</span>
+          <span>Tilordne lys til grupper</span>
         </Stack>
       </DialogTitle>
       <DialogContent dividers>
@@ -1539,7 +1555,7 @@ export function FlashControllerPanel() {
                           boxShadow: `0 0 20px ${accentColor}`,
                         }}}
                     >
-                      Test Fire
+                      Test blits
                     </Button>
                   </span>
                 </Tooltip>
@@ -1554,7 +1570,7 @@ export function FlashControllerPanel() {
                       startIcon={isSyncing ? <CircularProgress size={16} /> : <SyncIcon />}
                       sx={{ borderColor: accentColor, color: accentColor }}
                     >
-                      Sync
+                      Synk
                     </Button>
                   </span>
                 </Tooltip>
@@ -1572,7 +1588,7 @@ export function FlashControllerPanel() {
                       startIcon={<LinkIcon />}
                       sx={{ borderColor: 'grey.600', color: 'grey.400' }}
                     >
-                      Assign ({connectedLights.length})
+                      Tilordne ({connectedLights.length})
                     </Button>
                   </Badge>
                 </Tooltip>
@@ -1585,7 +1601,7 @@ export function FlashControllerPanel() {
                   color="warning.main" 
                   sx={{ display: 'block', mb: 1, textAlign: 'center' }}
                 >
-                  {unassignedLights.length} light{unassignedLights.length > 1 ? 's' : ', '} not assigned to any group
+                  {unassignedLights.length} lys ikke tilordnet noen gruppe
                 </Typography>
               )}
               
@@ -1593,7 +1609,7 @@ export function FlashControllerPanel() {
               {connectedLights.length > 0 && (
                 <Box sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, p: 1.5 }}>
                   <Typography variant="caption" color="text.secondary" gutterBottom>
-                    Connected Lights
+                    Tilkoblede lys
                   </Typography>
                   <Stack direction="row" flexWrap="wrap" gap={0.5}>
                     {connectedLights.map((light) => (

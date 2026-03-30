@@ -45,6 +45,7 @@ const AmbientSoundsBrowserFallback = lazy(() => import('./components/AmbientSoun
 const VirtualStudioPro = lazy(() => import('./components/VirtualStudioPro').then(m => ({ default: m.VirtualStudioPro })));
 const AccessoriesPanel = lazy(() => import('./panels/AccessoriesPanel').then(m => ({ default: m.AccessoriesPanel })));
 const PosingModePanel = lazy(() => import('./panels/PosingModePanel').then(m => ({ default: m.PosingModePanel })));
+const GelPickerPanel = lazy(() => import('./panels/GelPickerPanel').then(m => ({ default: m.GelPickerPanel })));
 
 // Loading fallback for lazy-loaded components
 const PanelLoadingFallback = () => (
@@ -862,6 +863,16 @@ export const PosingModePanelApp: React.FC = () => (
     <ToastProvider>
       <Suspense fallback={<PanelLoadingFallback />}>
         <PosingModePanel />
+      </Suspense>
+    </ToastProvider>
+  </CustomThemeProvider>
+);
+
+export const GelPickerApp: React.FC = () => (
+  <CustomThemeProvider>
+    <ToastProvider>
+      <Suspense fallback={<PanelLoadingFallback />}>
+        <GelPickerPanel />
       </Suspense>
     </ToastProvider>
   </CustomThemeProvider>

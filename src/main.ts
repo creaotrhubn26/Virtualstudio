@@ -3,7 +3,7 @@ import '@babylonjs/loaders/glTF';
 import { GLTFFileLoader, GLTFLoaderAnimationStartMode } from '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, AIAssistantApp, SceneComposerPanelApp, AnimationComposerApp, VirtualStudioProApp, InteractiveElementsBrowserApp, AmbientSoundsBrowserApp, AccessoriesPanelApp, StoryCharacterHUDApp, PosingModePanelApp } from './App';
+import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, AIAssistantApp, SceneComposerPanelApp, AnimationComposerApp, VirtualStudioProApp, InteractiveElementsBrowserApp, AmbientSoundsBrowserApp, AccessoriesPanelApp, StoryCharacterHUDApp, PosingModePanelApp, GelPickerApp } from './App';
 import { useAppStore, useFocusStore, useAutoFocusStore, useFocusPeakingStore, SceneNode } from './state/store';
 import { AutoFocusSystem } from './core/AutoFocusSystem';
 import { FocusPeakingEffect } from './core/FocusPeakingEffect';
@@ -15,6 +15,8 @@ import { propRenderingService } from './core/services/propRenderingService';
 import { fixGLBOrientationInPlace } from './core/services/glbNormalizationService';
 import { environmentService } from './core/services/environmentService';
 import { assetBrainService } from './core/services/assetBrain';
+import { animationComposerService } from './services/animationComposerService';
+import { useAnimationComposerStore } from './state/animationComposerStore';
 import { useRenderingStore, RENDERING_PRESETS } from './services/renderingService';
 import { getWallById } from './data/wallDefinitions';
 import { getFloorById } from './data/floorDefinitions';
@@ -8545,6 +8547,26 @@ class VirtualStudio {
       }
     });
 
+    // Gel Picker button
+    const gelPickerBtn = document.getElementById('gelPickerBtn');
+    const gelPickerPanel = document.getElementById('gelPickerPanel');
+    const gelPickerCloseBtn = document.getElementById('gelPickerClose');
+
+    gelPickerBtn?.addEventListener('click', () => {
+      if (gelPickerPanel) {
+        const isVisible = gelPickerPanel.style.display !== 'none';
+        gelPickerPanel.style.display = isVisible ? 'none' : 'flex';
+        gelPickerBtn.classList.toggle('active', !isVisible);
+      }
+    });
+
+    gelPickerCloseBtn?.addEventListener('click', () => {
+      if (gelPickerPanel) {
+        gelPickerPanel.style.display = 'none';
+        gelPickerBtn?.classList.remove('active');
+      }
+    });
+
     // Marketplace trigger
     const marketplaceTrigger = document.getElementById('marketplaceTrigger');
     console.log('Marketplace trigger element:', marketplaceTrigger);
@@ -10655,6 +10677,65 @@ class VirtualStudio {
         },
         pos,
       );
+    }) as EventListener);
+
+    // Apply gel/colour filter to a light (fired by GelPickerPanel)
+    window.addEventListener('vs-apply-gel', ((e: CustomEvent) => {
+      const { lightId, hex, gelId, gelName, blendMode } = e.detail || {};
+      if (!hex || typeof hex !== 'string') return;
+
+      const parseHex = (h: string): BABYLON.Color3 => {
+        const clean = h.replace('#', '');
+        const r = parseInt(clean.slice(0, 2), 16) / 255;
+        const g = parseInt(clean.slice(2, 4), 16) / 255;
+        const b = parseInt(clean.slice(4, 6), 16) / 255;
+        return new BABYLON.Color3(r, g, b);
+      };
+
+      const gelColor = parseHex(hex);
+      let applied = 0;
+
+      const applyToLight = (data: LightData) => {
+        if (blendMode === 'multiply') {
+          data.light.diffuse = data.light.diffuse.multiply(gelColor);
+        } else {
+          data.light.diffuse = gelColor.clone();
+        }
+        (data.light as BABYLON.SpotLight | BABYLON.DirectionalLight).specular = data.light.diffuse.clone();
+        applied++;
+      };
+
+      if (lightId && this.lights.has(lightId)) {
+        const d = this.lights.get(lightId)!;
+        applyToLight(d);
+      } else {
+        this.lights.forEach(applyToLight);
+      }
+
+      console.log(`[vs-apply-gel] Applied gel "${gelName ?? gelId ?? hex}" to ${applied} light(s)`);
+      window.dispatchEvent(new CustomEvent('vs-gel-applied', {
+        detail: { lightId: lightId ?? null, gelId, gelName, hex, applied },
+      }));
+    }) as EventListener);
+
+    // Remove gel — restore light to white
+    window.addEventListener('vs-remove-gel', ((e: CustomEvent) => {
+      const { lightId } = e.detail || {};
+      const white = new BABYLON.Color3(1, 1, 1);
+      let removed = 0;
+
+      const resetLight = (data: LightData) => {
+        data.light.diffuse = white.clone();
+        (data.light as BABYLON.SpotLight | BABYLON.DirectionalLight).specular = white.clone();
+        removed++;
+      };
+
+      if (lightId && this.lights.has(lightId)) {
+        resetLight(this.lights.get(lightId)!);
+      } else {
+        this.lights.forEach(resetLight);
+      }
+      console.log(`[vs-remove-gel] Removed gel from ${removed} light(s)`);
     }) as EventListener);
 
     // Listen for scene node selection changes
@@ -30145,6 +30226,11 @@ window.addEventListener('DOMContentLoaded', () => {
     
     window.virtualStudio = studio;
     environmentLearningService.start();
+
+    // Animation Composer Service — bridges React panel to Babylon.js scene
+    animationComposerService.initialize(studio);
+    // Expose store for E2E tests and developer tooling
+    (window as any).__animationComposerStore = useAnimationComposerStore;
     
     // Expose model geometry registration helpers on window for debugging/external access
     (window as any).getRegisteredModelGeometries = () => studio.getRegisteredModelGeometries();
@@ -30662,6 +30748,14 @@ window.addEventListener('DOMContentLoaded', () => {
       const posingReactRoot = createRoot(posingPanelRoot);
       posingReactRoot.render(React.createElement(PosingModePanelApp, {}));
       console.log('PosingModePanelApp mounted');
+    }
+
+    // Mount Gel Picker App
+    const gelPickerRoot = document.getElementById('gelPickerRoot');
+    if (gelPickerRoot) {
+      const gelPickerReactRoot = createRoot(gelPickerRoot);
+      gelPickerReactRoot.render(React.createElement(GelPickerApp, {}));
+      console.log('GelPickerApp mounted');
     }
 
     // Render installed tools in the left panel
