@@ -5573,9 +5573,10 @@ class VirtualStudio {
     // Softbox (rectangular) → wider beam, lower exponent (uniform field), very soft shadows.
     // Octabox (circular)    → even wider, near-uniform field, maximum shadow softness.
     const lightSpecs: { [key: string]: { intensity: number; name: string; cct: number; beamAngle: number; exponent: number; shadowKernel: number; glbFile: string } } = {
-      'aputure-300d':   { intensity: 450, name: 'Aputure 300D',     cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb' },
-      'aputure-120d':   { intensity: 300, name: 'Aputure 120D',     cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb' },
-      'aputure-600d':   { intensity: 700, name: 'Aputure 600D Pro', cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb' },
+      'aputure-300d':        { intensity: 450, name: 'Aputure 300D',          cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb'  },
+      'aputure-300d-strip':  { intensity: 350, name: 'Aputure 300D Stripbox',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 3.5, shadowKernel: 32,  glbFile: '/models/lights/stripbox-stand.glb' },
+      'aputure-120d':        { intensity: 300, name: 'Aputure 120D',           cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb'  },
+      'aputure-600d':        { intensity: 700, name: 'Aputure 600D Pro',       cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb'  },
       'godox-ad600':    { intensity: 380, name: 'Godox AD600',      cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb' },
       'godox-ad200pro': { intensity: 240, name: 'Godox AD200Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb' },
       'godox-ad400pro': { intensity: 340, name: 'Godox AD400Pro',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb' },
@@ -5981,10 +5982,10 @@ class VirtualStudio {
     // === RIM/BACK LIGHT ===
     // Position: Behind and to the opposite side of key, elevated
     // Creates edge definition and separation from background
-    const rimLightId = await this.addLight('aputure-300d', new BABYLON.Vector3(-2.5, 4, 3.5));
+    const rimLightId = await this.addLight('aputure-300d-strip', new BABYLON.Vector3(-2.5, 4, 3.5));
     const rimLight = this.lights.get(rimLightId);
     if (rimLight) {
-      rimLight.name = 'Rim Light (Aputure 300D)';
+      rimLight.name = 'Rim Light (Stripbox)';
       rimLight.powerMultiplier = 0.6; // 60% power for visible rim
       
       // Aim at back of model's head/shoulders
