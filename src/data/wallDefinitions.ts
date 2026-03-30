@@ -18,6 +18,7 @@ export interface WallMaterial {
   emissive?: string;
   emissiveIntensity?: number;
   opacity?: number;
+  tileScale?: number;
   tags: string[];
   moodTags?: string[];
   previewUrl?: string;
@@ -50,12 +51,12 @@ export const WALL_MATERIALS: WallMaterial[] = [
   // ============================================
   // TEXTURED - Realistic Materials
   // ============================================
-  { id: 'concrete', name: 'Concrete', nameNo: 'Betong', category: 'textured', color: '#6b6b6b', textureUrl: '/textures/walls/concrete.jpg', normalMapUrl: '/textures/walls/concrete_normal.jpg', roughness: 0.95, metallic: 0, tags: ['industrial', 'urban', 'modern'], moodTags: ['industrial', 'raw'] },
-  { id: 'brick-red', name: 'Red Brick', nameNo: 'Rød murstein', category: 'textured', color: '#8b4513', textureUrl: '/textures/walls/brick_red.jpg', normalMapUrl: '/textures/walls/brick_normal.jpg', roughness: 0.9, metallic: 0, tags: ['industrial', 'vintage', 'warm'], moodTags: ['warm', 'industrial'] },
-  { id: 'brick-white', name: 'White Brick', nameNo: 'Hvit murstein', category: 'textured', color: '#e8e8e8', textureUrl: '/textures/walls/brick_white.jpg', roughness: 0.85, metallic: 0, tags: ['modern', 'clean', 'scandinavian'], moodTags: ['modern', 'clean'] },
-  { id: 'wood-panels', name: 'Wood Panels', nameNo: 'Trepanel', category: 'textured', color: '#8b6914', textureUrl: '/textures/walls/wood_panels.jpg', roughness: 0.7, metallic: 0, tags: ['warm', 'natural', 'vintage'], moodTags: ['warm', 'natural'] },
-  { id: 'plaster', name: 'Plaster', nameNo: 'Puss', category: 'textured', color: '#f0e6d3', textureUrl: '/textures/walls/plaster.jpg', roughness: 0.9, metallic: 0, tags: ['classic', 'european', 'elegant'], moodTags: ['classic', 'elegant'] },
-  { id: 'stucco', name: 'Stucco', nameNo: 'Stukkatur', category: 'textured', color: '#e8dcc8', textureUrl: '/textures/walls/stucco.jpg', roughness: 0.85, metallic: 0, tags: ['mediterranean', 'warm'], moodTags: ['warm', 'classic'] },
+  { id: 'concrete', name: 'Concrete', nameNo: 'Betong', category: 'textured', color: '#6b6b6b', textureUrl: '/textures/walls/concrete.png', roughness: 0.95, metallic: 0, tileScale: 2, tags: ['industrial', 'urban', 'modern'], moodTags: ['industrial', 'raw'] },
+  { id: 'brick-red', name: 'Red Brick', nameNo: 'Rød murstein', category: 'textured', color: '#8b4513', textureUrl: '/textures/walls/brick_red.png', roughness: 0.9, metallic: 0, tileScale: 3, tags: ['industrial', 'vintage', 'warm'], moodTags: ['warm', 'industrial'] },
+  { id: 'brick-white', name: 'White Brick', nameNo: 'Hvit murstein', category: 'textured', color: '#e8e8e8', textureUrl: '/textures/walls/brick_white.png', roughness: 0.85, metallic: 0, tileScale: 3, tags: ['modern', 'clean', 'scandinavian'], moodTags: ['modern', 'clean'] },
+  { id: 'wood-panels', name: 'Wood Panels', nameNo: 'Trepanel', category: 'textured', color: '#8b6914', textureUrl: '/textures/walls/wood_panels.png', roughness: 0.7, metallic: 0, tileScale: 1, tags: ['warm', 'natural', 'vintage'], moodTags: ['warm', 'natural'] },
+  { id: 'plaster', name: 'Plaster', nameNo: 'Puss', category: 'textured', color: '#f0e6d3', textureUrl: '/textures/walls/plaster.png', roughness: 0.9, metallic: 0, tileScale: 2, tags: ['classic', 'european', 'elegant'], moodTags: ['classic', 'elegant'] },
+  { id: 'stucco', name: 'Stucco', nameNo: 'Stukkatur', category: 'textured', color: '#e8dcc8', textureUrl: '/textures/walls/stucco.png', roughness: 0.85, metallic: 0, tileScale: 2, tags: ['mediterranean', 'warm'], moodTags: ['warm', 'classic'] },
 
   // ============================================
   // GRADIENT - Modern Looks
@@ -72,7 +73,7 @@ export const WALL_MATERIALS: WallMaterial[] = [
   { id: 'lovecraft-ritual', name: 'Ritual Chamber', nameNo: 'Ritualkammer', category: 'lovecraft', color: '#1a0a0a', emissive: '#3d0a0a', emissiveIntensity: 0.2, roughness: 0.85, metallic: 0.15, tags: ['lovecraft', 'horror', 'cult', 'ritual'], moodTags: ['dark', 'tense', 'ritual'] },
   { id: 'lovecraft-cosmic', name: 'Cosmic Horror', nameNo: 'Kosmisk skrekk', category: 'lovecraft', color: '#0f0a1a', emissive: '#2a0a4a', emissiveIntensity: 0.25, roughness: 0.8, metallic: 0.25, tags: ['lovecraft', 'horror', 'cosmic', 'stars'], moodTags: ['dark', 'mysterious', 'cosmic'] },
   { id: 'lovecraft-madness', name: 'Madness', nameNo: 'Galskap', category: 'lovecraft', color: '#1a1a0a', emissive: '#4a4a0a', emissiveIntensity: 0.3, roughness: 0.75, metallic: 0.1, tags: ['lovecraft', 'horror', 'insanity', 'yellow'], moodTags: ['tense', 'unsettling'] },
-  { id: 'lovecraft-ancient', name: 'Ancient Stone', nameNo: 'Eldgammel stein', category: 'lovecraft', color: '#2a2a2a', textureUrl: '/textures/walls/ancient_stone.jpg', roughness: 0.95, metallic: 0, tags: ['lovecraft', 'ancient', 'ruins', 'cyclopean'], moodTags: ['mysterious', 'ancient'] },
+  { id: 'lovecraft-ancient', name: 'Ancient Stone', nameNo: 'Eldgammel stein', category: 'lovecraft', color: '#2a2a2a', textureUrl: '/textures/walls/ancient_stone.png', roughness: 0.95, metallic: 0, tags: ['lovecraft', 'ancient', 'ruins', 'cyclopean'], moodTags: ['mysterious', 'ancient'] },
 
   // ============================================
   // CINEMATIC - Film Inspired

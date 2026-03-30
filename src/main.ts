@@ -5263,8 +5263,9 @@ class VirtualStudio {
         wallMaterial.color ?? '#808080',
         materialId,
       );
-      albedoTex.uScale = 2;
-      albedoTex.vScale = 2;
+      const wallScale = wallMaterial.tileScale ?? 2;
+      albedoTex.uScale = wallScale;
+      albedoTex.vScale = wallScale;
       mat.albedoTexture = albedoTex;
     }
     if (wallMaterial.normalMapUrl) {
@@ -5272,8 +5273,9 @@ class VirtualStudio {
         `${wallId}_${materialId}_normal`,
         wallMaterial.normalMapUrl,
       );
-      normalTex.uScale = 2;
-      normalTex.vScale = 2;
+      const wallScale = wallMaterial.tileScale ?? 2;
+      normalTex.uScale = wallScale;
+      normalTex.vScale = wallScale;
       mat.bumpTexture = normalTex;
     }
 
