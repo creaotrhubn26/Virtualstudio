@@ -1531,6 +1531,29 @@ async def asset_browser_search(
     return JSONResponse(result)
 
 
+@app.get("/api/assets/polyhaven/gltf/{slug}")
+async def asset_polyhaven_gltf(slug: str, resolution: str = "1k"):
+    """
+    Fetches the Poly Haven GLTF for {slug}, rewrites all relative asset URIs
+    to their absolute Poly Haven CDN URLs, and serves the patched GLTF JSON.
+    Babylon.js can then fetch each referenced binary/texture directly via CORS.
+    """
+    try:
+        from asset_browser_service import polyhaven_gltf_proxy
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    try:
+        gltf_bytes = await polyhaven_gltf_proxy(slug, resolution)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    from fastapi.responses import Response
+    return Response(
+        content=gltf_bytes,
+        media_type="model/gltf+json",
+        headers={"Access-Control-Allow-Origin": "*"},
+    )
+
+
 @app.get("/api/assets/sketchfab/download/{uid}")
 async def asset_sketchfab_download(uid: str):
     """Get a temporary GLB download URL for a Sketchfab model."""

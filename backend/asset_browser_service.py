@@ -95,8 +95,9 @@ async def search_polyhaven(
 
     results = []
     for slug, info in list(data.items())[:limit]:
-        if ph_type == "models":         # model → GLB
-            dl_url = f"{_PH_CDN}/Models/glb/{_PH_RES_MODEL}/{slug}_{_PH_RES_MODEL}.glb"
+        if ph_type == "models":
+            # Use backend proxy URL that fetches+rewrites the GLTF with absolute asset URLs
+            dl_url = f"/api/assets/polyhaven/gltf/{slug}"
             at = "model"
         elif ph_type == "hdris":        # HDRI → .hdr
             dl_url = f"{_PH_CDN}/HDRIs/hdr/{_PH_RES_HDRI}/{slug}_{_PH_RES_HDRI}.hdr"
@@ -253,6 +254,58 @@ async def search_sketchfab(
             uid=uid,
         ))
     return results
+
+
+async def polyhaven_gltf_proxy(slug: str, resolution: str = "1k") -> bytes:
+    """
+    Fetches the Poly Haven GLTF for `slug` and rewrites all relative URI references
+    to absolute Poly Haven CDN URLs using the files API include map.
+    Returns the patched GLTF as raw bytes.
+    """
+    import json as _json
+
+    # 1. Fetch the files API to get the canonical include URL map
+    files_r = await _client().get(
+        f"https://api.polyhaven.com/files/{slug}",
+        headers={"User-Agent": POLYHAVEN_UA},
+    )
+    files_r.raise_for_status()
+    files_data = files_r.json()
+
+    gltf_section = files_data.get("gltf", {}).get(resolution, {})
+    main_entry = gltf_section.get("gltf") or {}
+    main_url: str = main_entry.get("url", "")
+    include_map: Dict[str, Any] = main_entry.get("include", gltf_section.get("include", {}))
+
+    if not main_url:
+        raise ValueError(f"No GLTF URL found for slug={slug} resolution={resolution}")
+
+    # 2. Fetch the GLTF JSON
+    gltf_r = await _client().get(main_url, headers={"User-Agent": POLYHAVEN_UA})
+    gltf_r.raise_for_status()
+    gltf_obj = gltf_r.json()
+
+    # 3. Build relative-path → absolute-URL lookup
+    rel_to_abs: Dict[str, str] = {}
+    for rel_path, info in include_map.items():
+        if isinstance(info, dict) and "url" in info:
+            rel_to_abs[rel_path] = info["url"]
+
+    # 4. Rewrite buffers (*.bin)
+    for buf in gltf_obj.get("buffers", []):
+        uri = buf.get("uri", "")
+        if uri and not uri.startswith("data:") and not uri.startswith("http"):
+            if uri in rel_to_abs:
+                buf["uri"] = rel_to_abs[uri]
+
+    # 5. Rewrite images
+    for img in gltf_obj.get("images", []):
+        uri = img.get("uri", "")
+        if uri and not uri.startswith("data:") and not uri.startswith("http"):
+            if uri in rel_to_abs:
+                img["uri"] = rel_to_abs[uri]
+
+    return _json.dumps(gltf_obj).encode("utf-8")
 
 
 async def sketchfab_get_download_url(uid: str) -> Optional[str]:
