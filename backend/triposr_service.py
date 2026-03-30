@@ -77,33 +77,46 @@ class TripoSRService:
             "error": None,
         }
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                "https://api.replicate.com/v1/predictions",
-                headers={
-                    "Authorization": f"Bearer {self.api_token}",
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-            )
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    "https://api.replicate.com/v1/predictions",
+                    headers={
+                        "Authorization": f"Bearer {self.api_token}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+        except (httpx.ConnectTimeout, httpx.ReadTimeout) as exc:
+            err = f"Replicate API timeout — tjenesten svarte ikke innen 30 sekunder ({type(exc).__name__})"
+            print(f"[TripoSR] {err}")
+            self._jobs[job_id]["status"] = "failed"
+            self._jobs[job_id]["error"] = err
+            return {"success": False, "error": err}
+        except (httpx.ConnectError, httpx.NetworkError, httpx.RequestError) as exc:
+            err = f"Replicate API utilgjengelig — nettverksfeil: {type(exc).__name__}"
+            print(f"[TripoSR] {err}")
+            self._jobs[job_id]["status"] = "failed"
+            self._jobs[job_id]["error"] = err
+            return {"success": False, "error": err}
 
-            if response.status_code not in (200, 201):
-                err = response.text
-                try:
-                    err = response.json().get("detail", err)
-                except Exception:
-                    pass
-                self._jobs[job_id]["status"] = "failed"
-                self._jobs[job_id]["error"] = f"Replicate API error {response.status_code}: {err}"
-                return {"success": False, "error": self._jobs[job_id]["error"]}
+        if response.status_code not in (200, 201):
+            err = response.text
+            try:
+                err = response.json().get("detail", err)
+            except Exception:
+                pass
+            self._jobs[job_id]["status"] = "failed"
+            self._jobs[job_id]["error"] = f"Replicate API error {response.status_code}: {err}"
+            return {"success": False, "error": self._jobs[job_id]["error"]}
 
-            data = response.json()
-            prediction_id = data.get("id")
-            self._jobs[job_id]["prediction_id"] = prediction_id
-            self._jobs[job_id]["status"] = "processing"
+        data = response.json()
+        prediction_id = data.get("id")
+        self._jobs[job_id]["prediction_id"] = prediction_id
+        self._jobs[job_id]["status"] = "processing"
 
-            print(f"[TripoSR] Job {job_id} created — Replicate prediction {prediction_id}")
-            return {"success": True, "job_id": job_id, "prediction_id": prediction_id}
+        print(f"[TripoSR] Job {job_id} created — Replicate prediction {prediction_id}")
+        return {"success": True, "job_id": job_id, "prediction_id": prediction_id}
 
     async def check_status(self, job_id: str) -> Dict[str, Any]:
         """
@@ -125,58 +138,63 @@ class TripoSRService:
         if not prediction_id:
             return {"success": True, "status": "starting", "progress": 0}
 
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            response = await client.get(
-                f"https://api.replicate.com/v1/predictions/{prediction_id}",
-                headers={"Authorization": f"Bearer {self.api_token}"},
-            )
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                response = await client.get(
+                    f"https://api.replicate.com/v1/predictions/{prediction_id}",
+                    headers={"Authorization": f"Bearer {self.api_token}"},
+                )
+        except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.ConnectError,
+                httpx.NetworkError, httpx.RequestError) as exc:
+            print(f"[TripoSR] Status check network error for {job_id}: {type(exc).__name__}")
+            return {"success": True, "status": "processing", "progress": 10}
 
-            if response.status_code != 200:
-                return {"success": False, "error": f"Status check failed: {response.text}"}
+        if response.status_code != 200:
+            return {"success": False, "error": f"Status check failed: {response.text}"}
 
-            data = response.json()
-            replicate_status = data.get("status", "starting")
+        data = response.json()
+        replicate_status = data.get("status", "starting")
 
-            if replicate_status == "succeeded":
-                output = data.get("output")
-                # TripoSR outputs a single file URL or a list
-                glb_url = None
-                if isinstance(output, str):
-                    glb_url = output
-                elif isinstance(output, list) and output:
-                    glb_url = output[0]
+        if replicate_status == "succeeded":
+            output = data.get("output")
+            # TripoSR outputs a single file URL or a list
+            glb_url = None
+            if isinstance(output, str):
+                glb_url = output
+            elif isinstance(output, list) and output:
+                glb_url = output[0]
 
-                job["status"] = "succeeded"
-                job["model_url"] = glb_url
-                print(f"[TripoSR] Job {job_id} succeeded. Output URL: {glb_url}")
+            job["status"] = "succeeded"
+            job["model_url"] = glb_url
+            print(f"[TripoSR] Job {job_id} succeeded. Output URL: {glb_url}")
 
-            elif replicate_status == "failed":
-                err = data.get("error", "Generation failed")
-                job["status"] = "failed"
-                job["error"] = err
-                print(f"[TripoSR] Job {job_id} failed: {err}")
+        elif replicate_status == "failed":
+            err = data.get("error", "Generation failed")
+            job["status"] = "failed"
+            job["error"] = err
+            print(f"[TripoSR] Job {job_id} failed: {err}")
 
-            elif replicate_status in ("canceled",):
-                job["status"] = "canceled"
-            else:
-                # Still processing — keep as-is
-                pass
+        elif replicate_status in ("canceled",):
+            job["status"] = "canceled"
+        else:
+            # Still processing — keep as-is
+            pass
 
-            # Map Replicate status → our status labels
-            status_map = {
-                "starting": "processing",
-                "processing": "processing",
-                "succeeded": "succeeded",
-                "failed": "failed",
-                "canceled": "failed",
-            }
+        # Map Replicate status → our status labels
+        status_map = {
+            "starting": "processing",
+            "processing": "processing",
+            "succeeded": "succeeded",
+            "failed": "failed",
+            "canceled": "failed",
+        }
 
-            return {
-                "success": True,
-                "status": status_map.get(replicate_status, "processing"),
-                "model_url": job.get("model_url"),
-                "error": job.get("error"),
-            }
+        return {
+            "success": True,
+            "status": status_map.get(replicate_status, "processing"),
+            "model_url": job.get("model_url"),
+            "error": job.get("error"),
+        }
 
     async def download_model(self, job_id: str) -> Dict[str, Any]:
         """
@@ -207,13 +225,19 @@ class TripoSRService:
                 "filename": f"{output_filename}.glb",
             }
 
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.get(model_url)
-            if response.status_code != 200:
-                return {"success": False, "error": f"Failed to download GLB: {response.status_code}"}
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.get(model_url)
+        except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.ConnectError,
+                httpx.NetworkError, httpx.RequestError) as exc:
+            print(f"[TripoSR] GLB download network error for {job_id}: {type(exc).__name__}")
+            return {"success": False, "error": f"Nedlasting feilet — nettverksfeil: {type(exc).__name__}"}
 
-            with open(output_path, "wb") as f:
-                f.write(response.content)
+        if response.status_code != 200:
+            return {"success": False, "error": f"Failed to download GLB: {response.status_code}"}
+
+        with open(output_path, "wb") as f:
+            f.write(response.content)
 
         print(f"[TripoSR] GLB saved to {output_path}")
         return {

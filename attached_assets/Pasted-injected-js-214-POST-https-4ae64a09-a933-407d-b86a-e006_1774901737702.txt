@@ -1,0 +1,49 @@
+injected.js:214  POST https://4ae64a09-a933-407d-b86a-e006cf8f6ce0-00-19aca6m5c3rxa.kirk.replit.dev/api/ai/generate-prop-glb 500 (Internal Server Error)
+apply @ injected.js:214
+handleDirectorPropRequest @ AIAssistantPanel.tsx:288
+(anonymous) @ main.ts:10893
+dispatchStudioEvents @ AIAssistantPanel.tsx:68
+(anonymous) @ AIAssistantPanel.tsx:175
+await in (anonymous)
+onKeyDown @ AIAssistantPanel.tsx:533
+executeDispatch @ react-dom_client.js?v=8413c0b0:13622
+runWithFiberInDEV @ react-dom_client.js?v=8413c0b0:997
+processDispatchQueue @ react-dom_client.js?v=8413c0b0:13658
+(anonymous) @ react-dom_client.js?v=8413c0b0:14071
+batchedUpdates$1 @ react-dom_client.js?v=8413c0b0:2626
+dispatchEventForPluginEventSystem @ react-dom_client.js?v=8413c0b0:13763
+dispatchEvent @ react-dom_client.js?v=8413c0b0:16784
+dispatchDiscreteEvent @ react-dom_client.js?v=8413c0b0:16765Understand this error
+injected.js:214  POST https://4ae64a09-a933-407d-b86a-e006cf8f6ce0-00-19aca6m5c3rxa.kirk.replit.dev/api/ai/generate-prop-glb 502 (Bad Gateway)
+apply @ injected.js:214
+handleDirectorPropRequest @ AIAssistantPanel.tsx:288
+(anonymous) @ main.ts:10893
+dispatchStudioEvents @ AIAssistantPanel.tsx:68
+(anonymous) @ AIAssistantPanel.tsx:175
+await in (anonymous)
+onKeyDown @ AIAssistantPanel.tsx:533
+executeDispatch @ react-dom_client.js?v=8413c0b0:13622
+runWithFiberInDEV @ react-dom_client.js?v=8413c0b0:997
+processDispatchQueue @ react-dom_client.js?v=8413c0b0:13658
+(anonymous) @ react-dom_client.js?v=8413c0b0:14071
+batchedUpdates$1 @ react-dom_client.js?v=8413c0b0:2626
+dispatchEventForPluginEventSystem @ react-dom_client.js?v=8413c0b0:13763
+dispatchEvent @ react-dom_client.js?v=8413c0b0:16784
+dispatchDiscreteEvent @ react-dom_client.js?v=8413c0b0:16765Understand this error
+injected.js:214  POST https://4ae64a09-a933-407d-b86a-e006cf8f6ce0-00-19aca6m5c3rxa.kirk.replit.dev/api/ai/generate-prop-glb 502 (Bad Gateway)
+apply @ injected.js:214
+handleDirectorPropRequest @ AIAssistantPanel.tsx:288
+(anonymous) @ main.ts:10893
+dispatchStudioEvents @ AIAssistantPanel.tsx:68
+(anonymous) @ AIAssistantPanel.tsx:175
+await in (anonymous)
+onKeyDown @ AIAssistantPanel.tsx:533
+executeDispatch @ react-dom_client.js?v=8413c0b0:13622
+runWithFiberInDEV @ react-dom_client.js?v=8413c0b0:997
+processDispatchQueue @ react-dom_client.js?v=8413c0b0:13658
+(anonymous) @ react-dom_client.js?v=8413c0b0:14071
+batchedUpdates$1 @ react-dom_client.js?v=8413c0b0:2626
+dispatchEventForPluginEventSystem @ react-dom_client.js?v=8413c0b0:13763
+dispatchEvent @ react-dom_client.js?v=8413c0b0:16784
+dispatchDiscreteEvent @ react-dom_client.js?v=8413c0b0:16765Understand this error
+injected.js:214  POST https://4ae64a09-a933-407d-b86a-e006cf8f6ce0-00-19aca6m5c3rxa.kirk.replit.dev/api/ai/generate-prop-glb 502 (Bad Gateway)
