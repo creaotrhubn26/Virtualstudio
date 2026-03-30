@@ -1,0 +1,40 @@
+injected.js:37 [2026-03-30T19:32:16.939Z] [INFO] [PropRendering] Loaded prop model with PBR shading: Restaurantstol
+injected.js:37 [GLBNormFix] wooden-chair-restaurant: spans X=0.518 Y=1.000 Z=0.577
+injected.js:37 [positionMeshOnGround] bottomY=-0.440, worldBounds.min=(-0.728, -0.440, 1.946), worldBounds.max=(-0.272, 0.440, 2.454)
+injected.js:37 [positionMeshOnGround] Final position=(-0.500, 0.441, 2.200), finalBounds.min.y=0.001
+injected.js:37 Loaded prop via service: Restaurantstol
+injected.js:37 [Scene] Shadow maps regenerated for all lights
+injected.js:37 [Ambient] Lighting recalculated. Intensity: 0.80
+injected.js:37 [positionMeshOnGround] bottomY=-0.440, worldBounds.min=(0.272, -0.440, 1.946), worldBounds.max=(0.728, 0.440, 2.454)
+injected.js:37 [positionMeshOnGround] Final position=(0.500, 0.441, 2.200), finalBounds.min.y=0.001
+injected.js:37 Loaded prop via service: Restaurantstol
+injected.js:37 [Scene] Shadow maps regenerated for all lights
+injected.js:37 [Ambient] Lighting recalculated. Intensity: 0.80
+injected.js:37 Encountered two children with the same key, `Arri`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+injected.js:37 Encountered two children with the same key, `aputure-nova-p300c`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+injected.js:37 Encountered two children with the same key, `arri-skypanel-s60`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+injected.js:37 Encountered two children with the same key, `profoto-a10`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+injected.js:37 Encountered two children with the same key, `arri-skypanel-s30`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+injected.js:37 Encountered two children with the same key, `litepanels-gemini-2x1`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+injected.js:37 Encountered two children with the same key, `godox-ad600pro`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+injected.js:37 [addLight] Loading light model: godox-bd-07 at position {X: 0 Y: 3 Z: -2}
+injected.js:37 [addLight] Loading GLB from: /models/lights/beauty-dish-stand.glb
+injected.js:37 Replaced weak light with Godox BD-07 Beauty Dish 55cm
+injected.js:37 [GLBNormFix] light_light_0: spans X=0.455 Y=1.000 Z=0.501
+injected.js:37 [addLight] getChildMeshes(false) returned 2 meshes: ["__root__"(_Mesh), "tripo_node_e79a8a31-bf94-4395-8d71-1d37bbce2428"(_Mesh)]
+injected.js:37 [addLight] headPivot tilt meshes=0
+injected.js:37 [addLight] Face auto-detect: brightMeshes=1, offX=0.000, offZ=0.000, faceYawOffset=180.0°
+injected.js:37 [addLight] glow plane: W=0.660m H=0.660m Y=2.490 strip=false
+injected.js:37 [addLight] GLB loaded: 2 meshes, scale=3.000, lightHeadY=3.00m, headMeshes=0
+injected.js:37 [addLight] Shadow generator created: kernel=64, PCF quality=HIGH
+injected.js:37 [UI] lights-updated event received: 
+Object
+injected.js:37 [UI] updateLightSelectionList called, studio.lights.size = 2
+injected.js:37 [addLight] Light created successfully: light_0
+injected.js:37 [AutoFocusSystem] Focus target set: Avatar left eye at 6.3m
+injected.js:37 [AutoFocusSystem] Focus target set: Avatar left eye at 6.5m
+injected.js:37 [AutoFocusSystem] Focus target set: Avatar right eye at 6.5m
+injected.js:37 [AutoFocusSystem] Focus target set: Avatar left eye at 6.5m
+injected.js:37 [AutoFocusSystem] Focus target set: Avatar right eye at 6.5m
+5
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.

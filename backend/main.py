@@ -1556,9 +1556,14 @@ async def ai_generate_prop_glb(request: Request):
         foreground_ratio=0.88,
     )
 
+    job_id = triposr_result.get("job_id")
+    if not job_id:
+        error_msg = triposr_result.get("error", "TripoSR submission failed — no job ID returned")
+        raise HTTPException(status_code=502, detail=error_msg)
+
     return JSONResponse({
         "success": True,
-        "job_id": triposr_result.get("job_id"),
+        "job_id": job_id,
         "optimised_prompt": concept_result.get("optimised_prompt", description),
         "concept_image_base64": image_base64[:100] + "...",
         "triposr": triposr_result,

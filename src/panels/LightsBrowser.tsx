@@ -53,7 +53,6 @@ const LIGHT_BRANDS: CategoryInfo[] = [
   { key: 'Elinchrom', label: 'Elinchrom' },
   { key: 'Broncolor', label: 'Broncolor' },
   { key: 'Westcott', label: 'Westcott' },
-  { key: 'Arri', label: 'Arri' },
 ];
 
 interface ModifierSpec {
