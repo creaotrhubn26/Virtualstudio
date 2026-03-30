@@ -5990,6 +5990,17 @@ class VirtualStudio {
       // Store light head height for later use in aiming
       (mesh as any)._lightHeadHeight = lightHeadHeight;
 
+      // Sync SpotLight position to mesh XZ every frame.
+      // This means ANY movement of the mesh (gizmo ring, direct drag, scripted) automatically
+      // moves the actual light — the SpotLight Y stays fixed at the light head height.
+      const lightPosSync = this.scene.onBeforeRenderObservable.add(() => {
+        const headY = (mesh as any)._lightHeadHeight as number;
+        babylonLight.position.x = mesh.position.x;
+        babylonLight.position.y = headY;
+        babylonLight.position.z = mesh.position.z;
+      });
+      (mesh as any)._lightPositionSyncObserver = lightPosSync;
+
       // Create light data object
       const lightData: LightData = {
         light: babylonLight,
@@ -10841,6 +10852,8 @@ class VirtualStudio {
         for (const lid of lightIds) {
           const ld = this.lights.get(lid);
           if (ld) {
+            const syncObs = (ld.mesh as any)._lightPositionSyncObserver;
+            if (syncObs) this.scene.onBeforeRenderObservable.remove(syncObs);
             ld.shadowGenerator?.dispose();
             ld.light.dispose();
             ld.mesh.getChildMeshes().forEach(m => m.dispose());
@@ -17509,6 +17522,8 @@ class VirtualStudio {
   ): void {
     // Remove existing lights
     this.lights.forEach((lightData) => {
+      const syncObs = (lightData.mesh as any)?._lightPositionSyncObserver;
+      if (syncObs) this.scene.onBeforeRenderObservable.remove(syncObs);
       if (lightData.light) lightData.light.dispose();
       if (lightData.mesh) lightData.mesh.dispose();
       if (lightData.shadowGenerator) lightData.shadowGenerator.dispose();
@@ -24790,6 +24805,8 @@ class VirtualStudio {
     this.activePresetKategori = preset.kategori || '';
 
     this.lights.forEach((lightData, _id) => {
+      const syncObs = (lightData.mesh as any)._lightPositionSyncObserver;
+      if (syncObs) this.scene.onBeforeRenderObservable.remove(syncObs);
       lightData.light.dispose();
       lightData.mesh.dispose();
     });
@@ -25014,6 +25031,8 @@ class VirtualStudio {
 
     // Clear existing lights first (optional - could be configurable)
     this.lights.forEach((lightData, _id) => {
+      const syncObs = (lightData.mesh as any)._lightPositionSyncObserver;
+      if (syncObs) this.scene.onBeforeRenderObservable.remove(syncObs);
       lightData.light.dispose();
       lightData.mesh.dispose();
     });
@@ -26917,6 +26936,12 @@ class VirtualStudio {
     const data = this.lights.get(id);
     if (!data) return;
 
+    // Remove the per-frame SpotLight position sync observer before disposal
+    const syncObs = (data.mesh as any)._lightPositionSyncObserver;
+    if (syncObs) {
+      this.scene.onBeforeRenderObservable.remove(syncObs);
+    }
+
     // Dispose light and mesh
     data.light.dispose();
     data.mesh.dispose();
@@ -26949,6 +26974,8 @@ class VirtualStudio {
     lightIds.forEach(id => {
       const data = this.lights.get(id);
       if (data) {
+        const syncObs = (data.mesh as any)._lightPositionSyncObserver;
+        if (syncObs) this.scene.onBeforeRenderObservable.remove(syncObs);
         data.light.dispose();
         data.mesh.dispose();
         if (data.beamVisualization) {
