@@ -47,6 +47,7 @@ const AccessoriesPanel = lazy(() => import('./panels/AccessoriesPanel').then(m =
 const PosingModePanel = lazy(() => import('./panels/PosingModePanel').then(m => ({ default: m.PosingModePanel })));
 const GelPickerPanel = lazy(() => import('./panels/GelPickerPanel').then(m => ({ default: m.GelPickerPanel })));
 const OutdoorLightingPanel = lazy(() => import('./panels/OutdoorLightingPanel').then(m => ({ default: m.OutdoorLightingPanel })));
+const CinematicEvaluationPanel = lazy(() => import('./panels/CinematicEvaluationPanel').then(m => ({ default: m.CinematicEvaluationPanel })));
 
 // Loading fallback for lazy-loaded components
 const PanelLoadingFallback = () => (
@@ -884,6 +885,16 @@ export const OutdoorLightingApp: React.FC = () => (
     <ToastProvider>
       <Suspense fallback={<PanelLoadingFallback />}>
         <OutdoorLightingPanel />
+      </Suspense>
+    </ToastProvider>
+  </CustomThemeProvider>
+);
+
+export const CinematicEvaluationApp: React.FC = () => (
+  <CustomThemeProvider>
+    <ToastProvider>
+      <Suspense fallback={<PanelLoadingFallback />}>
+        <CinematicEvaluationPanel />
       </Suspense>
     </ToastProvider>
   </CustomThemeProvider>

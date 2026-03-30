@@ -3,7 +3,7 @@ import '@babylonjs/loaders/glTF';
 import { GLTFFileLoader, GLTFLoaderAnimationStartMode } from '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, AIAssistantApp, SceneComposerPanelApp, AnimationComposerApp, VirtualStudioProApp, InteractiveElementsBrowserApp, AmbientSoundsBrowserApp, AccessoriesPanelApp, StoryCharacterHUDApp, PosingModePanelApp, GelPickerApp, OutdoorLightingApp } from './App';
+import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, AIAssistantApp, SceneComposerPanelApp, AnimationComposerApp, VirtualStudioProApp, InteractiveElementsBrowserApp, AmbientSoundsBrowserApp, AccessoriesPanelApp, StoryCharacterHUDApp, PosingModePanelApp, GelPickerApp, OutdoorLightingApp, CinematicEvaluationApp } from './App';
 import { useAppStore, useFocusStore, useAutoFocusStore, useFocusPeakingStore, SceneNode } from './state/store';
 import { AutoFocusSystem } from './core/AutoFocusSystem';
 import { FocusPeakingEffect } from './core/FocusPeakingEffect';
@@ -707,6 +707,10 @@ class VirtualStudio {
 
   // Outdoor sun directional light
   private outdoorSunLight: BABYLON.DirectionalLight | null = null;
+
+  // Cinematic evaluation post-processes
+  private falseColorPostProcess: BABYLON.PostProcess | null = null;
+  private anamorphicPostProcess: BABYLON.PostProcess | null = null;
   private ambientLightEnabled: boolean = true;
   private ambientLightTemperature: number = 6500;
   private ambientLightGroundIntensity: number = 0.5;
@@ -8590,6 +8594,26 @@ class VirtualStudio {
       }
     });
 
+    // Cinematic Evaluation button
+    const cinematicEvalBtn = document.getElementById('cinematicEvalBtn');
+    const cinematicEvalPanel = document.getElementById('cinematicEvalPanel');
+    const cinematicEvalCloseBtn = document.getElementById('cinematicEvalClose');
+
+    cinematicEvalBtn?.addEventListener('click', () => {
+      if (cinematicEvalPanel) {
+        const isVisible = cinematicEvalPanel.style.display !== 'none';
+        cinematicEvalPanel.style.display = isVisible ? 'none' : 'flex';
+        cinematicEvalBtn.classList.toggle('active', !isVisible);
+      }
+    });
+
+    cinematicEvalCloseBtn?.addEventListener('click', () => {
+      if (cinematicEvalPanel) {
+        cinematicEvalPanel.style.display = 'none';
+        cinematicEvalBtn?.classList.remove('active');
+      }
+    });
+
     // Marketplace trigger
     const marketplaceTrigger = document.getElementById('marketplaceTrigger');
     console.log('Marketplace trigger element:', marketplaceTrigger);
@@ -10855,6 +10879,210 @@ class VirtualStudio {
       }
 
       console.log(`[vs-outdoor-fog] enabled=${fogEnabled} mode=${mode} density=${density}`);
+    }) as EventListener);
+
+    // ── LUT preview (ImageProcessing simulation) ──────────────────────────────
+    window.addEventListener('vs-lut-preview', ((e: CustomEvent) => {
+      const {
+        contrast = 1.0,
+        exposure = 1.0,
+        saturation = 100,
+        shadowsHue = 0, shadowsDensity = 0,
+        highlightsHue = 0, highlightsDensity = 0,
+        midtonesHue = 0, midtonesDensity = 0,
+        vignette = 0,
+        intensity = 1.0,
+        id = 'neutral',
+      } = e.detail || {};
+
+      if (!this.renderingPipeline?.imageProcessing) {
+        console.warn('[vs-lut-preview] No renderingPipeline available');
+        return;
+      }
+
+      const ip = this.renderingPipeline.imageProcessing;
+
+      // Blend toward neutral at lower intensity
+      const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+      ip.contrast = lerp(1.0, contrast, intensity);
+      ip.exposure = lerp(1.0, exposure, intensity);
+
+      // Color curves for shadows/highlights/midtones tinting
+      ip.colorCurvesEnabled = shadowsDensity > 0 || highlightsDensity > 0 || midtonesDensity > 0;
+      if (ip.colorCurvesEnabled) {
+        const cc = ip.colorCurves ?? new BABYLON.ColorCurves();
+        cc.globalHue = 0;
+        cc.globalDensity = lerp(0, 100 - saturation, intensity);
+        cc.shadowsHue = shadowsHue;
+        cc.shadowsDensity = lerp(0, shadowsDensity, intensity);
+        cc.highlightsHue = highlightsHue;
+        cc.highlightsDensity = lerp(0, highlightsDensity, intensity);
+        cc.midtonesHue = midtonesHue;
+        cc.midtonesDensity = lerp(0, midtonesDensity, intensity);
+        ip.colorCurves = cc;
+      }
+
+      // Vignette
+      ip.vignetteEnabled = vignette > 0;
+      if (vignette > 0) {
+        ip.vignetteWeight = lerp(0, vignette * 6, intensity);
+      }
+
+      console.log(`[vs-lut-preview] id=${id} contrast=${ip.contrast.toFixed(2)} exposure=${ip.exposure.toFixed(2)} intensity=${intensity}`);
+    }) as EventListener);
+
+    // ── False color post-process ──────────────────────────────────────────────
+    window.addEventListener('vs-false-color', ((e: CustomEvent) => {
+      const { enabled = false } = e.detail || {};
+
+      if (!enabled) {
+        if (this.falseColorPostProcess) {
+          this.falseColorPostProcess.dispose();
+          this.falseColorPostProcess = null;
+          console.log('[vs-false-color] Disposed');
+        }
+        return;
+      }
+
+      if (this.falseColorPostProcess) return; // already active
+
+      // Register shader if not yet done
+      if (!BABYLON.Effect.ShadersStore['falseColorFragmentShader']) {
+        BABYLON.Effect.ShadersStore['falseColorFragmentShader'] = `
+          varying vec2 vUV;
+          uniform sampler2D textureSampler;
+          void main(void) {
+            vec4 col = texture2D(textureSampler, vUV);
+            float luma = dot(col.rgb, vec3(0.2126, 0.7152, 0.0722));
+            vec3 fc;
+            if      (luma < 0.04) fc = vec3(0.40, 0.10, 0.55);
+            else if (luma < 0.18) fc = vec3(0.10, 0.47, 0.85);
+            else if (luma < 0.38) fc = vec3(0.16, 0.60, 0.22);
+            else if (luma < 0.55) fc = col.rgb;
+            else if (luma < 0.70) fc = vec3(0.98, 0.84, 0.10);
+            else if (luma < 0.88) fc = vec3(0.96, 0.42, 0.07);
+            else                  fc = vec3(0.93, 0.11, 0.14);
+            gl_FragColor = vec4(fc, col.a);
+          }
+        `;
+        BABYLON.Effect.ShadersStore['falseColorVertexShader'] = `
+          attribute vec2 position;
+          varying vec2 vUV;
+          void main(void) {
+            vUV = position * 0.5 + 0.5;
+            gl_Position = vec4(position, 0.0, 1.0);
+          }
+        `;
+      }
+
+      this.falseColorPostProcess = new BABYLON.PostProcess(
+        'falseColor', 'falseColor', null, null, 1.0, this.camera,
+      );
+      console.log('[vs-false-color] Enabled false color post-process');
+    }) as EventListener);
+
+    // ── Anamorphic + lens distortion ──────────────────────────────────────────
+    window.addEventListener('vs-anamorphic', ((e: CustomEvent) => {
+      const { enabled = false, squeezeRatio = 2, distortion = 0 } = e.detail || {};
+
+      // Clean up existing anamorphic PP
+      if (this.anamorphicPostProcess) {
+        this.anamorphicPostProcess.dispose();
+        this.anamorphicPostProcess = null;
+      }
+
+      // Reset canvas CSS transform
+      const canvas = this.scene.getEngine().getRenderingCanvas();
+
+      if (!enabled && distortion === 0) {
+        if (canvas) canvas.style.transform = '';
+        console.log('[vs-anamorphic] Disabled');
+        return;
+      }
+
+      // Register anamorphic/distortion shader
+      const shaderKey = 'anamorphicDistortionFragmentShader';
+      if (!BABYLON.Effect.ShadersStore[shaderKey]) {
+        BABYLON.Effect.ShadersStore[shaderKey] = `
+          varying vec2 vUV;
+          uniform sampler2D textureSampler;
+          uniform float squeezeRatio;
+          uniform float distortion;
+          void main(void) {
+            vec2 uv = vUV;
+            // Unsqueeze horizontal (anamorphic)
+            if (squeezeRatio > 1.0) {
+              uv.x = (uv.x - 0.5) / squeezeRatio + 0.5;
+            }
+            // Lens distortion (barrel < 0, pincushion > 0)
+            if (distortion != 0.0) {
+              vec2 c = uv - 0.5;
+              float r2 = dot(c, c);
+              float f = 1.0 + distortion * r2;
+              uv = c * f + 0.5;
+            }
+            // Clamp to black at edges
+            if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+              gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+            } else {
+              gl_FragColor = texture2D(textureSampler, uv);
+            }
+          }
+        `;
+        BABYLON.Effect.ShadersStore['anamorphicDistortionVertexShader'] = `
+          attribute vec2 position;
+          varying vec2 vUV;
+          void main(void) {
+            vUV = position * 0.5 + 0.5;
+            gl_Position = vec4(position, 0.0, 1.0);
+          }
+        `;
+      }
+
+      const normalizedDistortion = distortion / 500.0;
+      this.anamorphicPostProcess = new BABYLON.PostProcess(
+        'anamorphicDistortion', 'anamorphicDistortion',
+        ['squeezeRatio', 'distortion'],
+        null, 1.0, this.camera,
+      );
+      this.anamorphicPostProcess.onApply = (effect: BABYLON.Effect) => {
+        effect.setFloat('squeezeRatio', enabled ? (squeezeRatio as number) : 1.0);
+        effect.setFloat('distortion', normalizedDistortion);
+      };
+
+      console.log(`[vs-anamorphic] enabled=${enabled} squeeze=${squeezeRatio} distortion=${distortion}`);
+    }) as EventListener);
+
+    // ── Camera settings (FOV + WB sync) ──────────────────────────────────────
+    window.addEventListener('vs-camera-settings', ((e: CustomEvent) => {
+      const { mode = 'photo', photo, film } = e.detail || {};
+      const s = mode === 'film' ? film : photo;
+      if (!s) return;
+
+      // Update camera FOV based on focal length (35mm full-frame equivalent)
+      const focalLength = s.focalLength ?? 50;
+      this.camera.fov = Math.atan2(24, 2 * focalLength) * 2; // vertical FoV in radians
+
+      // Apply white balance as scene image processing tint
+      const wb = s.whiteBalance ?? 5500;
+      if (this.renderingPipeline?.imageProcessing) {
+        const ip = this.renderingPipeline.imageProcessing;
+        // Map WB 2000–10000K to a subtle tint on color curves
+        const wbNorm = (wb - 5500) / 4500; // -1 (cool) to +1 (warm)
+        ip.colorCurvesEnabled = true;
+        const cc = ip.colorCurves ?? new BABYLON.ColorCurves();
+        cc.highlightsHue = wbNorm > 0 ? 30 : 200;
+        cc.highlightsDensity = Math.abs(wbNorm) * 8;
+        ip.colorCurves = cc;
+
+        // B&W desaturation
+        if (s.bw) {
+          cc.globalDensity = 95;
+          cc.globalHue = 0;
+        }
+      }
+
+      console.log(`[vs-camera-settings] mode=${mode} fl=${focalLength}mm fov=${(this.camera.fov * 180 / Math.PI).toFixed(1)}° wb=${wb}K bw=${s.bw}`);
     }) as EventListener);
 
     // Listen for scene node selection changes
@@ -30883,6 +31111,14 @@ window.addEventListener('DOMContentLoaded', () => {
       const outdoorLightingReactRoot = createRoot(outdoorLightingRoot);
       outdoorLightingReactRoot.render(React.createElement(OutdoorLightingApp, {}));
       console.log('OutdoorLightingApp mounted');
+    }
+
+    // Mount Cinematic Evaluation App
+    const cinematicEvalRoot = document.getElementById('cinematicEvalRoot');
+    if (cinematicEvalRoot) {
+      const cinematicEvalReactRoot = createRoot(cinematicEvalRoot);
+      cinematicEvalReactRoot.render(React.createElement(CinematicEvaluationApp, {}));
+      console.log('CinematicEvaluationApp mounted');
     }
 
     // Render installed tools in the left panel
