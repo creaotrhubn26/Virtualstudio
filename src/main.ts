@@ -5908,8 +5908,12 @@ class VirtualStudio {
           { width: panelW, height: panelH },
           this.scene
         );
-        glowPlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_Y;
-        glowPlane.position.set(position.x, panelCenterY, position.z);
+        // Full billboard so it always faces the camera from any angle (not just Y-axis).
+        // Parent to the stand mesh so it automatically follows when the softbox is moved.
+        glowPlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+        glowPlane.parent = mesh;
+        // Local position relative to parent (parent sits at Y≈0, so localY ≈ worldY)
+        glowPlane.position.set(0, panelCenterY, 0);
 
         const glowMat = new BABYLON.StandardMaterial(`${lightId}_diffuserGlowMat`, this.scene);
         glowMat.disableLighting = true;
