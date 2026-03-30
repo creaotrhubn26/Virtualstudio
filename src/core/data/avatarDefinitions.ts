@@ -122,6 +122,13 @@ export const AVATAR_DEFINITIONS: AvatarDefinition[] = [
     skinHex: '#8B6343',
     defaultHeight: 1.82,
   },
+  {
+    type: 'human_realistic',
+    name: 'Fotorealistisk Mann',
+    modelUrl: '/models/avatars/human-male-realistic.glb',
+    skinHex: '#C68642',
+    defaultHeight: 1.80,
+  },
 ];
 
 /** Look up an avatar definition by type key. Returns `undefined` if unknown. */
