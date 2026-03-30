@@ -5908,12 +5908,10 @@ class VirtualStudio {
           { width: panelW, height: panelH },
           this.scene
         );
-        // Full billboard so it always faces the camera from any angle (not just Y-axis).
-        // Parent to the stand mesh so it automatically follows when the softbox is moved.
+        // Full billboard so it always faces the camera from any angle.
+        // Position in world space — X/Z are synced every frame by the lightPosSync observer.
         glowPlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
-        glowPlane.parent = mesh;
-        // Local position relative to parent (parent sits at Y≈0, so localY ≈ worldY)
-        glowPlane.position.set(0, panelCenterY, 0);
+        glowPlane.position.set(position.x, panelCenterY, position.z);
 
         const glowMat = new BABYLON.StandardMaterial(`${lightId}_diffuserGlowMat`, this.scene);
         glowMat.disableLighting = true;
@@ -5994,14 +5992,25 @@ class VirtualStudio {
       // Store light head height for later use in aiming
       (mesh as any)._lightHeadHeight = lightHeadHeight;
 
-      // Sync SpotLight position to mesh XZ every frame.
-      // This means ANY movement of the mesh (gizmo ring, direct drag, scripted) automatically
-      // moves the actual light — the SpotLight Y stays fixed at the light head height.
+      // Sync SpotLight + glow plane positions to mesh XZ every frame.
+      // This means ANY movement of the mesh (gizmo ring, scripted) automatically
+      // moves the actual light and its diffuser visualization.
+      // SpotLight Y stays fixed at the light head height; glow plane Y is fixed at panel height.
       const lightPosSync = this.scene.onBeforeRenderObservable.add(() => {
         const headY = (mesh as any)._lightHeadHeight as number;
         babylonLight.position.x = mesh.position.x;
         babylonLight.position.y = headY;
         babylonLight.position.z = mesh.position.z;
+        // Sync glow plane X/Z (Y stays at panelCenterY, set at creation)
+        const headMeshes = (mesh as any)._headMeshes as BABYLON.Mesh[] | undefined;
+        if (headMeshes) {
+          for (const gm of headMeshes) {
+            if (!gm.isDisposed()) {
+              gm.position.x = mesh.position.x;
+              gm.position.z = mesh.position.z;
+            }
+          }
+        }
       });
       (mesh as any)._lightPositionSyncObserver = lightPosSync;
 
