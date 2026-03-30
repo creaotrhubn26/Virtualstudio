@@ -154,11 +154,43 @@ A complete image-to-3D pipeline using TripoSR via Replicate API:
 - **Output**: GLB files saved in `backend/triposr_models/`, served via `/api/triposr/model/`
 
 ## Story Scenes & Multiview Skeleton
-- **Story presets** (`src/data/scenarioPresets.ts`): Three "Napoli Dreams" presets (Akt 1-3) under the `story` category, each with `characters[]` and `props[]` manifests defining positions/roles/poses.
-- **Schema extensions**: `StoryCharacterManifest` and `StoryPropManifest` interfaces added to `ScenarioPreset`.
-- **MultiviewSkeletonPanel** (`src/panels/MultiviewSkeletonPanel.tsx`): Full-screen 2×2 multiview SVG skeleton grid (Front, Side, 3/4, Back views) with interactive bone selection, character tab switching, and per-view zoom.
-- **BoneInspectorSidebar** (`src/panels/BoneInspectorSidebar.tsx`): Categorized bone picker (5 groups), per-bone X/Y/Z rotation sliders, and pose library browser (6 categories in Norwegian).
-- **ScenerPanel integration**: "🎬 Åpne Multiview" button on all story scene cards that have characters; opens the MultiviewSkeletonPanel overlay.
+
+### Schema & Data
+- **Schema extensions**: `StoryCharacterManifest` (id, role, avatarType, poseId, position, rotation, height, label) and `StoryPropManifest` (id, propId, position, rotation, scale, label) interfaces added to `ScenarioPreset`.
+- **Story presets** (`src/data/scenarioPresets.ts`): All four "Napoli Dreams" presets (Akt 1–4) have full `characters[]` and `props[]` manifests. Akt1 → 3 chars + 8 props (waiter, guest, bakemester, dining table, chairs, pizza, candles, counter). Akt2 → 2 chars + 6 props (baker assistant, food photographer, shooting table, reflectors). Akt3 → 2 chars + 5 props (chef, interviewer, broadcast chair, podium, monitor). Akt4 → 3 chars + outdoor props.
+
+### Prop Rendering
+- **Restaurant prop definitions** (`src/core/data/propDefinitions.ts`): `dining-table`, `wooden-chair-restaurant`, `pizza-plate`, `candle-holder`, `chef-counter`, `wine_bottle_red`, `shooting-table-studio`, `broadcast-chair`, `podium-branded` — all with procedural Babylon.js primitive fallbacks when GLB files are not found.
+- **`propRenderingService.loadStorySceneProps(manifests, onProgress)`**: Iterates manifest, resolves propDef, positions/rotates/scales each mesh, auto-corrects Y to land the prop's bottom face at the target height.
+
+### StorySceneLoaderService (`src/services/storySceneLoaderService.ts`)
+Phase-based async scene loader (Phase 0a clear → 0b environment GLB → 1 lights → 2 props → 3 characters → 4 poses → done):
+- Dispatches `ch-clear-story-characters` then `ch-load-story-character` per manifest character
+- Waits up to 10 s for `ch-story-rig-ready` events mapping storyRigId → rigId
+- Applies PoseLibrary presets deterministically using `setBoneRotation`
+- Emits `ch-story-scene-loaded` when complete
+- Exposed as `window.__storyLoader.loadById(presetId)` for Playwright E2E testing
+
+### MultiviewSkeletonPanel (`src/panels/MultiviewSkeletonPanel.tsx`)
+Full-screen overlay with real Babylon.js multi-camera rendering:
+- 4 `ArcRotateCamera` instances registered via `engine.registerView()` (Front α=π, Side α=π/2, 3/4 α=3π/4, Back α=0)
+- Babylon.js `SkeletonViewer` activated on the active character's mesh (scoped to that rig)
+- SVG overlay with clickable joint handles (16 joints × 4 views) for bone selection
+- IK drag handles (diamond markers at wrist/ankle end-effectors) — pointer drag translates to bone position deltas
+- Layout modes: 2×2 grid, 1-large + 3-pip, single fullscreen
+- Top toolbar: layout switch, skeleton toggle, character selector, reset-pose
+
+### BoneInspectorSidebar (`src/panels/BoneInspectorSidebar.tsx`)
+Collapsible right sidebar when a bone is selected:
+- 5 bone groups (Hode & rygg, Venstre arm, Høyre arm, Venstre bein, Høyre bein)
+- Per-bone XYZ rotation sliders (−π to +π) + position offset sliders for IK chains
+- Pose library browser: 6 relevant poses shown per scene type; clicking instantly applies
+- IK enable/disable toggle, skeleton overlay toggle, live rig indicator
+
+### ScenerPanel integration
+- "Last mal" button on story presets calls `storySceneLoaderService.load()` with phase progress bar (lights → props → characters → done)
+- "🎬 Åpne Multiview" button appears on story cards with characters — opens MultiviewSkeletonPanel overlay
+- Napoli Dreams story arc banner in ScenerPanel (amber #ff6d00 accent)
 
 ## Photorealistic Napoli Characters
 Six photorealistic 3D character GLBs generated for the Napoli Dreams story (stored in `public/models/avatars/`):

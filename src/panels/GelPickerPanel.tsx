@@ -26,7 +26,7 @@ import {
   FilterVintage,
   WbSunny,
   AcUnit,
-  Blur,
+  BlurOn,
   AutoAwesome,
   Close,
   CheckCircle,
@@ -53,7 +53,7 @@ const CATEGORIES: CategoryMeta[] = [
   { key: 'color',     labelNo: 'Farge',     icon: <FilterVintage fontSize="small" />,  description: 'Fargestyrte geler for kreative effekter' },
   { key: 'cto',       labelNo: 'CTO Varm',  icon: <WbSunny fontSize="small" />,        description: 'Color Temperature Orange — gjør lyset varmere' },
   { key: 'ctb',       labelNo: 'CTB Kjøl',  icon: <AcUnit fontSize="small" />,         description: 'Color Temperature Blue — gjør lyset kjøligere' },
-  { key: 'diffusion', labelNo: 'Diffusjon', icon: <Blur fontSize="small" />,           description: 'Myker opp og sprer lyset' },
+  { key: 'diffusion', labelNo: 'Diffusjon', icon: <BlurOn fontSize="small" />,           description: 'Myker opp og sprer lyset' },
   { key: 'special',   labelNo: 'Spesial',   icon: <AutoAwesome fontSize="small" />,    description: 'Spesialeffekter og unike looks' },
 ];
 
