@@ -5663,11 +5663,13 @@ class VirtualStudio {
         const initT = Math.min(1.0, lightConfig.intensity / 500);
         const initStrength = Math.sqrt(initT) * 1.6;
 
-        // Strip boxes have a tall narrow panel (1:4 width:height ratio).
+        // Strip boxes: narrow (10% of stand height) × tall (fills the head area, 26%).
+        // Softboxes: square panel at 22% of stand height.
+        // All panels are constrained to the head zone (top 28% of model height).
         const isStrip = modelId.includes('strip');
-        const panelW = lightHeadHeight * 0.22;
-        const panelH = isStrip ? panelW * 4 : panelW;
-        const panelCenterY = headJointWorldY + (isStrip ? panelH * 0.5 : panelW * 0.5);
+        const panelW = lightHeadHeight * (isStrip ? 0.10 : 0.22);
+        const panelH = isStrip ? lightHeadHeight * 0.26 : panelW;
+        const panelCenterY = headJointWorldY + panelH * 0.5;
 
         const glowPlane = BABYLON.MeshBuilder.CreatePlane(
           `${lightId}_diffuserGlow`,
