@@ -2462,41 +2462,58 @@ class VirtualStudio {
   }
 
   private createSeamlessBackdrop(backdropId: string, scale: number, receiveShadow: boolean): void {
-    // Create a curved seamless paper backdrop (like Savage seamless)
-    const width = 6 * scale;
-    const height = 4 * scale;
-    const depth = 3 * scale;
+    const W = 7 * scale;      // total width
+    const H = 4.5 * scale;   // wall height above curve
+    const R = 1.8 * scale;   // curve radius (floor-to-wall transition)
+    const D = 4 * scale;     // floor depth in front of curve
+    const Z = -8;            // back wall Z position
 
-    // Create the backdrop shape using a path
-    const backdropMesh = BABYLON.MeshBuilder.CreateBox('currentBackdrop', {
-      width: width,
-      height: height,
-      depth: 0.02
-    }, this.scene);
-
-    // Position behind the subject area
-    backdropMesh.position.set(0, height / 2, -5);
-    
-    // Create backdrop material
-    const backdropMat = new BABYLON.StandardMaterial('backdropMat', this.scene);
-    backdropMat.diffuseColor = new BABYLON.Color3(0.85, 0.85, 0.85); // Light gray seamless paper
-    backdropMat.specularColor = new BABYLON.Color3(0.05, 0.05, 0.05); // Matte finish
+    const backdropMat = new BABYLON.PBRMaterial('backdropMat_' + backdropId, this.scene);
+    backdropMat.albedoColor = new BABYLON.Color3(0.88, 0.88, 0.90);
+    backdropMat.roughness = 0.92;
+    backdropMat.metallic = 0;
     backdropMat.backFaceCulling = false;
-    backdropMesh.material = backdropMat;
-    backdropMesh.receiveShadows = receiveShadow;
 
-    // Create a curved floor extension for seamless paper look
-    const floorExtension = BABYLON.MeshBuilder.CreateGround('backdropFloor', {
-      width: width,
-      height: depth
+    // 1. Back wall (flat vertical plane)
+    const backWall = BABYLON.MeshBuilder.CreatePlane('backdropWall_' + backdropId, {
+      width: W, height: H + 0.1,
+      sideOrientation: BABYLON.Mesh.DOUBLESIDE
     }, this.scene);
-    floorExtension.position.set(0, 0.01, -5 + depth / 2);
-    floorExtension.material = backdropMat.clone('backdropFloorMat');
-    floorExtension.receiveShadows = receiveShadow;
-    floorExtension.parent = backdropMesh;
+    backWall.position.set(0, R + H / 2, Z);
+    backWall.material = backdropMat;
+    backWall.receiveShadows = receiveShadow;
 
-    this.currentBackdropMesh = backdropMesh;
-    console.log('Seamless backdrop created:', backdropId);
+    // 2. Smooth curved cove (ribbon from floor to wall)
+    const segs = 24;
+    const leftPath: BABYLON.Vector3[] = [];
+    const rightPath: BABYLON.Vector3[] = [];
+    for (let i = 0; i <= segs; i++) {
+      const t = (i / segs) * (Math.PI / 2);
+      const y = R * (1 - Math.cos(t));
+      const z = Z + R * Math.sin(t);
+      leftPath.push(new BABYLON.Vector3(-W / 2, y, z));
+      rightPath.push(new BABYLON.Vector3( W / 2, y, z));
+    }
+    const cove = BABYLON.MeshBuilder.CreateRibbon('backdropCove_' + backdropId, {
+      pathArray: [leftPath, rightPath],
+      sideOrientation: BABYLON.Mesh.DOUBLESIDE
+    }, this.scene);
+    cove.material = backdropMat;
+    cove.receiveShadows = receiveShadow;
+
+    // 3. Floor extension in front
+    const floorExt = BABYLON.MeshBuilder.CreateGround('backdropFloorExt_' + backdropId, {
+      width: W, height: D
+    }, this.scene);
+    floorExt.position.set(0, 0.001, Z + R + D / 2);
+    floorExt.material = backdropMat;
+    floorExt.receiveShadows = receiveShadow;
+
+    // Parent everything to the wall so it moves together
+    cove.parent = backWall;
+    floorExt.parent = backWall;
+    this.currentBackdropMesh = backWall;
+    console.log('Infinity-cove backdrop created:', backdropId);
   }
 
   private createCycloramaBackdrop(backdropId: string, scale: number, receiveShadow: boolean): void {
@@ -2673,38 +2690,43 @@ class VirtualStudio {
     // ACES Tone Mapping for cinematic look
     this.renderingPipeline.imageProcessing.toneMappingEnabled = true;
     this.renderingPipeline.imageProcessing.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-    
-    // Exposure and contrast
-    this.renderingPipeline.imageProcessing.exposure = 1.0;
-    this.renderingPipeline.imageProcessing.contrast = 1.1;
-    
-    // Enable high-quality anti-aliasing (FXAA + MSAA)
+
+    // Exposure and contrast — slightly lifted for studio feel
+    this.renderingPipeline.imageProcessing.exposure = 1.05;
+    this.renderingPipeline.imageProcessing.contrast = 1.15;
+
+    // Subtle vignette for professional look
+    this.renderingPipeline.imageProcessing.vignetteEnabled = true;
+    this.renderingPipeline.imageProcessing.vignetteWeight = 1.8;
+    this.renderingPipeline.imageProcessing.vignetteColor = new BABYLON.Color4(0, 0, 0, 0);
+    this.renderingPipeline.imageProcessing.vignetteBlendMode = BABYLON.ImageProcessingConfiguration.VIGNETTEMODE_MULTIPLY;
+
+    // High-quality anti-aliasing (FXAA + MSAA 8x)
     this.renderingPipeline.fxaaEnabled = true;
-    this.renderingPipeline.samples = 4; // MSAA samples
-    
-    // Subtle bloom for emissive materials (light bulbs, screens)
+    this.renderingPipeline.samples = 8;
+
+    // Bloom — tuned for light fixtures and emissive glow
     this.renderingPipeline.bloomEnabled = true;
-    this.renderingPipeline.bloomThreshold = 0.7;
-    this.renderingPipeline.bloomWeight = 0.35;
-    this.renderingPipeline.bloomKernel = 64;
-    this.renderingPipeline.bloomScale = 0.6;
-    
+    this.renderingPipeline.bloomThreshold = 0.6;
+    this.renderingPipeline.bloomWeight = 0.4;
+    this.renderingPipeline.bloomKernel = 96;
+    this.renderingPipeline.bloomScale = 0.5;
+
     // Depth of Field - DISABLED: Using custom PhysicsBasedDOF instead
-    // Our custom DOF uses accurate CoC calculations from optical physics research
     this.renderingPipeline.depthOfFieldEnabled = false;
-    
-    // Film grain for cinematic look (subtle)
+
+    // Film grain — subtle, off by default
     this.renderingPipeline.grainEnabled = false;
-    this.renderingPipeline.grain.intensity = 5;
+    this.renderingPipeline.grain.intensity = 4;
     this.renderingPipeline.grain.animated = true;
-    
-    // Chromatic aberration (disabled by default)
+
+    // Chromatic aberration (off by default, user can enable)
     this.renderingPipeline.chromaticAberrationEnabled = false;
-    this.renderingPipeline.chromaticAberration.aberrationAmount = 30;
-    
-    // Sharpen (subtle)
+    this.renderingPipeline.chromaticAberration.aberrationAmount = 20;
+
+    // Sharpen for crisp detail
     this.renderingPipeline.sharpenEnabled = true;
-    this.renderingPipeline.sharpen.edgeAmount = 0.2;
+    this.renderingPipeline.sharpen.edgeAmount = 0.25;
     
     // Setup SSR (Screen-Space Reflections) for realistic reflections
     try {
@@ -5354,6 +5376,9 @@ class VirtualStudio {
   }
 
   private shouldUseProceduralTexture(textureUrl: string): boolean {
+    // Real PNG files in /textures/floors/ exist on disk — load them directly.
+    // Fall back to procedural generation only for .jpg references that haven't been generated.
+    if (textureUrl.endsWith('.png')) return false;
     return textureUrl.startsWith('/textures/');
   }
 

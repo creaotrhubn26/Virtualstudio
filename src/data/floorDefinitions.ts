@@ -48,24 +48,24 @@ export const FLOOR_MATERIALS: FloorMaterial[] = [
   // ============================================
   // WOOD - Natural and Finished
   // ============================================
-  { id: 'oak-light', name: 'Light Oak', nameNo: 'Lys eik', category: 'wood', color: '#c4a77d', textureUrl: '/textures/floors/oak_light.jpg', normalMapUrl: '/textures/floors/wood_normal.jpg', roughness: 0.6, metallic: 0, reflectivity: 0.2, tags: ['natural', 'scandinavian', 'warm'], moodTags: ['warm', 'natural'] },
-  { id: 'oak-dark', name: 'Dark Oak', nameNo: 'Mørk eik', category: 'wood', color: '#5a4a3a', textureUrl: '/textures/floors/oak_dark.jpg', roughness: 0.55, metallic: 0, reflectivity: 0.25, tags: ['natural', 'classic', 'rich'], moodTags: ['warm', 'classic'] },
-  { id: 'walnut', name: 'Walnut', nameNo: 'Valnøtt', category: 'wood', color: '#4a3a2a', textureUrl: '/textures/floors/walnut.jpg', roughness: 0.5, metallic: 0, reflectivity: 0.3, tags: ['natural', 'elegant', 'rich'], moodTags: ['elegant', 'rich'] },
-  { id: 'pine', name: 'Pine', nameNo: 'Furu', category: 'wood', color: '#d4b896', textureUrl: '/textures/floors/pine.jpg', roughness: 0.65, metallic: 0, reflectivity: 0.15, tags: ['natural', 'rustic', 'light'], moodTags: ['natural', 'rustic'] },
-  { id: 'herringbone', name: 'Herringbone Parquet', nameNo: 'Fiskebenparkett', category: 'wood', color: '#8b7355', textureUrl: '/textures/floors/herringbone.jpg', roughness: 0.5, metallic: 0, reflectivity: 0.25, tileScale: 2, tags: ['elegant', 'classic', 'european'], moodTags: ['elegant', 'classic'] },
-  { id: 'reclaimed', name: 'Reclaimed Wood', nameNo: 'Gjenbrukstrevirke', category: 'wood', color: '#6b5b4b', textureUrl: '/textures/floors/reclaimed.jpg', roughness: 0.8, metallic: 0, reflectivity: 0.1, tags: ['rustic', 'vintage', 'character'], moodTags: ['rustic', 'authentic'] },
+  { id: 'oak-light', name: 'Light Oak', nameNo: 'Lys eik', category: 'wood', color: '#c4a77d', textureUrl: '/textures/floors/oak_light.png', roughness: 0.6, metallic: 0, reflectivity: 0.2, tileScale: 4, tags: ['natural', 'scandinavian', 'warm'], moodTags: ['warm', 'natural'] },
+  { id: 'oak-dark', name: 'Dark Oak', nameNo: 'Mørk eik', category: 'wood', color: '#5a4a3a', textureUrl: '/textures/floors/walnut.png', roughness: 0.55, metallic: 0, reflectivity: 0.25, tileScale: 4, tags: ['natural', 'classic', 'rich'], moodTags: ['warm', 'classic'] },
+  { id: 'walnut', name: 'Walnut', nameNo: 'Valnøtt', category: 'wood', color: '#4a3a2a', textureUrl: '/textures/floors/walnut.png', roughness: 0.5, metallic: 0, reflectivity: 0.3, tileScale: 4, tags: ['natural', 'elegant', 'rich'], moodTags: ['elegant', 'rich'] },
+  { id: 'pine', name: 'Pine', nameNo: 'Furu', category: 'wood', color: '#d4b896', textureUrl: '/textures/floors/oak_light.png', roughness: 0.65, metallic: 0, reflectivity: 0.15, tileScale: 4, tags: ['natural', 'rustic', 'light'], moodTags: ['natural', 'rustic'] },
+  { id: 'herringbone', name: 'Herringbone Parquet', nameNo: 'Fiskebenparkett', category: 'wood', color: '#8b7355', textureUrl: '/textures/floors/herringbone.png', roughness: 0.45, metallic: 0, reflectivity: 0.3, tileScale: 3, tags: ['elegant', 'classic', 'european'], moodTags: ['elegant', 'classic'] },
+  { id: 'reclaimed', name: 'Reclaimed Wood', nameNo: 'Gjenbrukstrevirke', category: 'wood', color: '#6b5b4b', textureUrl: '/textures/floors/walnut.png', roughness: 0.8, metallic: 0, reflectivity: 0.1, tileScale: 3, tags: ['rustic', 'vintage', 'character'], moodTags: ['rustic', 'authentic'] },
 
   // ============================================
   // CONCRETE - Industrial
   // ============================================
-  { id: 'concrete-raw', name: 'Raw Concrete', nameNo: 'Rå betong', category: 'concrete', color: '#6b6b6b', textureUrl: '/textures/floors/concrete_raw.jpg', normalMapUrl: '/textures/floors/concrete_normal.jpg', roughness: 0.95, metallic: 0, reflectivity: 0.05, tags: ['industrial', 'raw', 'modern'], moodTags: ['industrial', 'raw'] },
-  { id: 'concrete-polished', name: 'Polished Concrete', nameNo: 'Polert betong', category: 'concrete', color: '#808080', textureUrl: '/textures/floors/concrete_polished.jpg', roughness: 0.3, metallic: 0.1, reflectivity: 0.5, tags: ['industrial', 'modern', 'sleek'], moodTags: ['modern', 'sleek'] },
+  { id: 'concrete-raw', name: 'Raw Concrete', nameNo: 'Rå betong', category: 'concrete', color: '#6b6b6b', textureUrl: '/textures/floors/concrete_polished.png', roughness: 0.95, metallic: 0, reflectivity: 0.05, tileScale: 3, tags: ['industrial', 'raw', 'modern'], moodTags: ['industrial', 'raw'] },
+  { id: 'concrete-polished', name: 'Polished Concrete', nameNo: 'Polert betong', category: 'concrete', color: '#808080', textureUrl: '/textures/floors/concrete_polished.png', roughness: 0.3, metallic: 0.1, reflectivity: 0.5, tileScale: 3, tags: ['industrial', 'modern', 'sleek'], moodTags: ['modern', 'sleek'] },
   { id: 'concrete-stained', name: 'Stained Concrete', nameNo: 'Farget betong', category: 'concrete', color: '#4a4a4a', roughness: 0.6, metallic: 0.05, reflectivity: 0.3, tags: ['industrial', 'artistic', 'modern'], moodTags: ['modern', 'artistic'] },
 
   // ============================================
   // TILE - Various Styles
   // ============================================
-  { id: 'marble-white', name: 'White Marble', nameNo: 'Hvit marmor', category: 'tile', color: '#f8f8f8', textureUrl: '/textures/floors/marble_white.jpg', roughness: 0.2, metallic: 0, reflectivity: 0.6, tags: ['elegant', 'luxury', 'classic'], moodTags: ['elegant', 'luxury'] },
+  { id: 'marble-white', name: 'White Marble', nameNo: 'Hvit marmor', category: 'tile', color: '#f8f8f8', textureUrl: '/textures/floors/marble_white.png', roughness: 0.2, metallic: 0, reflectivity: 0.6, tileScale: 3, tags: ['elegant', 'luxury', 'classic'], moodTags: ['elegant', 'luxury'] },
   { id: 'marble-black', name: 'Black Marble', nameNo: 'Sort marmor', category: 'tile', color: '#1a1a1a', textureUrl: '/textures/floors/marble_black.jpg', roughness: 0.15, metallic: 0.05, reflectivity: 0.7, tags: ['elegant', 'luxury', 'dramatic'], moodTags: ['elegant', 'dramatic'] },
   { id: 'terrazzo', name: 'Terrazzo', nameNo: 'Terrazzo', category: 'tile', color: '#e8e0d8', textureUrl: '/textures/floors/terrazzo.jpg', roughness: 0.4, metallic: 0, reflectivity: 0.35, tags: ['retro', 'artistic', 'colorful'], moodTags: ['retro', 'artistic'] },
   { id: 'checkerboard', name: 'Checkerboard', nameNo: 'Sjakkmønster', category: 'tile', color: '#ffffff', textureUrl: '/textures/floors/checkerboard.jpg', roughness: 0.3, metallic: 0, reflectivity: 0.4, tileScale: 4, tags: ['classic', 'retro', 'diner'], moodTags: ['retro', 'classic'] },

@@ -36,9 +36,9 @@ class EnvironmentService {
       rearWall: { materialId: 'gray-dark', visible: true },
     },
     floor: {
-      materialId: 'gray-dark',
+      materialId: 'herringbone',
       visible: true,
-      gridVisible: true,
+      gridVisible: false,
     },
     ambientSounds: [],
   };
