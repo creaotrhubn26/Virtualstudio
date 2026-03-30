@@ -12,6 +12,7 @@ import { useLoadingStore } from './state/loadingStore';
 import { LoadingOverlay } from './components/LoadingOverlay';
 import { virtualActorService } from './core/services/virtualActorService';
 import { propRenderingService } from './core/services/propRenderingService';
+import { fixGLBOrientationInPlace } from './core/services/glbNormalizationService';
 import { environmentService } from './core/services/environmentService';
 import { assetBrainService } from './core/services/assetBrain';
 import { useRenderingStore, RENDERING_PRESETS } from './services/renderingService';
@@ -5717,6 +5718,13 @@ class VirtualStudio {
       try {
         const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
         if (result.meshes.length === 0) throw new Error('No meshes in GLB');
+
+        // ── Orientation normalization ─────────────────────────────────────
+        // Fix Z-up / upside-down issues common in AI-generated GLBs.
+        // We apply the correction directly to result.meshes[0] (the GLB __root__)
+        // BEFORE wrapping it — snapToGround=false because the parentMesh grounding
+        // step below handles Y positioning at the correct scale.
+        fixGLBOrientationInPlace(result.meshes[0] as BABYLON.AbstractMesh, this.scene, `light_${lightId}`, { snapToGround: false });
 
         // In Babylon.js GLB imports, result.meshes[0] is always the __root__ TransformNode.
         // Parent it under a plain Mesh so we can control position/scale/rotation cleanly.
@@ -13038,6 +13046,9 @@ class VirtualStudio {
       try {
         const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', data.modelUrl, this.scene);
         const mesh = result.meshes[0];
+
+        // Fix up-axis / upside-down issues in AI-generated GLBs
+        fixGLBOrientationInPlace(mesh as BABYLON.AbstractMesh, this.scene, nodeId, { snapToGround: false });
         
         // Find root mesh (in case mesh is a child)
         let rootMesh = mesh;
@@ -24066,16 +24077,56 @@ class VirtualStudio {
       }
     }
     
-    if (preset.sceneConfig.backdrop?.color) {
-      const color = BABYLON.Color3.FromHexString(preset.sceneConfig.backdrop.color);
-      const backWall = this.scene.getMeshByName('backWall');
-      if (backWall && backWall.material) {
-        const mat = backWall.material as BABYLON.StandardMaterial;
-        mat.diffuseColor = color;
-        mat.emissiveColor = color.scale(0.1);
+    // ── Backdrop / Environment ─────────────────────────────────────────────
+    const backdropConfig = preset.sceneConfig.backdrop as any;
+    if (backdropConfig) {
+      if (backdropConfig.type === 'environment' && backdropConfig.id) {
+        // Load a full environment backdrop (env-car-showroom, env-gym, etc.)
+        this.loadBackdrop(backdropConfig.id, {
+          category: 'miljo',
+          applyEnvironmentMap: true,
+          applyAmbientLight: true,
+          receiveShadow: true,
+        });
+      } else if (backdropConfig.type === 'seamless' || backdropConfig.color) {
+        // Seamless paper backdrop — pick an ID by color name if possible
+        const colorHex: string | undefined = backdropConfig.color;
+        const seamlessId = backdropConfig.id || 'seamless-white';
+        this.loadBackdrop(seamlessId, {
+          category: 'bakgrunn',
+          receiveShadow: true,
+        });
+        // Apply explicit color override if supplied
+        if (colorHex) {
+          try {
+            const color = BABYLON.Color3.FromHexString(colorHex);
+            // Tint all backdrop meshes in scene
+            this.scene.meshes.filter(m => m.name.startsWith('backdrop') || m.name.startsWith('backWall')).forEach(m => {
+              if (m.material instanceof BABYLON.PBRMaterial) {
+                m.material.albedoColor = color;
+              } else if (m.material instanceof BABYLON.StandardMaterial) {
+                m.material.diffuseColor = color;
+              }
+            });
+          } catch {
+            console.warn('[applyScenarioPreset] Invalid backdrop color:', colorHex);
+          }
+        }
       }
     }
-    
+
+    // ── HDRI Environment ───────────────────────────────────────────────────
+    const hdriUrl: string | undefined = (preset.sceneConfig as any).hdriUrl;
+    if (hdriUrl) {
+      try {
+        this.scene.environmentTexture = new BABYLON.CubeTexture(hdriUrl, this.scene);
+        this.scene.environmentIntensity = 0.5;
+        console.log(`[applyScenarioPreset] HDRI environment set: ${hdriUrl}`);
+      } catch (e) {
+        console.warn('[applyScenarioPreset] Failed to load HDRI:', hdriUrl, e);
+      }
+    }
+
     this.updateSceneList();
     this.updateLightMeterReading();
     console.log(`Scenario "${preset.navn}" applied with ${preset.sceneConfig.lights.length} lights`);

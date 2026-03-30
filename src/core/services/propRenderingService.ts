@@ -1,4 +1,5 @@
 import { Scene, SceneLoader, Mesh, MeshBuilder, StandardMaterial, PBRMaterial, Material, Color3, Vector3, AbstractMesh } from '@babylonjs/core';
+import { fixGLBOrientationInPlace } from './glbNormalizationService';
 import '@babylonjs/loaders/glTF';
 import { PropDefinition, PROP_DEFINITIONS } from '../data/propDefinitions';
 import { StoryPropManifest } from '../../data/scenarioPresets';
@@ -138,6 +139,11 @@ class PropRenderingService {
         });
 
         log.info(`Loaded prop model with PBR shading: ${prop.name}`);
+
+        // Fix orientation: detect Z-up / upside-down and ground-snap.
+        // propRenderingService sets position AFTER this call so snapToGround=false here;
+        // the caller (main.ts positionMeshOnGround) handles final Y placement.
+        fixGLBOrientationInPlace(mesh, this.scene!, prop.id, { snapToGround: false });
       } catch (error) {
         log.warn(`Failed to load prop model: ${prop.modelUrl}, creating placeholder`);
         mesh = this.createPlaceholderProp(prop);
