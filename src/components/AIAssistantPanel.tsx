@@ -108,47 +108,6 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  useEffect(() => {
-    const handleDirectorPropRequest = async (e: Event) => {
-      const { description, position } = (e as CustomEvent).detail || {};
-      if (!description) return;
-      if (propPollRef.current) clearTimeout(propPollRef.current);
-      setPropDesc(description);
-      setPropGen({ status: 'generating-image', description, progress: 10 });
-      setActiveTab(2);
-
-      try {
-        const res = await fetch('/api/ai/generate-prop-glb', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ description }),
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ detail: res.statusText }));
-          throw new Error(err.detail || 'Generering feilet');
-        }
-        const data = await res.json();
-        const jobId = data.job_id;
-        const targetPos: number[] = Array.isArray(position) ? position : [0, 0, 0];
-        setPropGen((prev) => ({ ...prev, status: 'converting-3d', jobId, progress: 25 }));
-        propPollRef.current = setTimeout(() => pollTriposrStatus(jobId, targetPos), 4000);
-      } catch (err) {
-        setPropGen({
-          status: 'error',
-          description,
-          error: err instanceof Error ? err.message : 'Ukjent feil',
-          progress: 0,
-        });
-      }
-    };
-
-    window.addEventListener('vs-ai-prop-generation-started', handleDirectorPropRequest);
-    return () => {
-      window.removeEventListener('vs-ai-prop-generation-started', handleDirectorPropRequest);
-      if (propPollRef.current) clearTimeout(propPollRef.current);
-    };
-  }, [pollTriposrStatus]);
-
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || isSending) return;
@@ -315,6 +274,47 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
       propPollRef.current = setTimeout(() => pollTriposrStatus(jobId, targetPos), 6000);
     }
   }, []);
+
+  useEffect(() => {
+    const handleDirectorPropRequest = async (e: Event) => {
+      const { description, position } = (e as CustomEvent).detail || {};
+      if (!description) return;
+      if (propPollRef.current) clearTimeout(propPollRef.current);
+      setPropDesc(description);
+      setPropGen({ status: 'generating-image', description, progress: 10 });
+      setActiveTab(2);
+
+      try {
+        const res = await fetch('/api/ai/generate-prop-glb', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: res.statusText }));
+          throw new Error(err.detail || 'Generering feilet');
+        }
+        const data = await res.json();
+        const jobId = data.job_id;
+        const targetPos: number[] = Array.isArray(position) ? position : [0, 0, 0];
+        setPropGen((prev) => ({ ...prev, status: 'converting-3d', jobId, progress: 25 }));
+        propPollRef.current = setTimeout(() => pollTriposrStatus(jobId, targetPos), 4000);
+      } catch (err) {
+        setPropGen({
+          status: 'error',
+          description,
+          error: err instanceof Error ? err.message : 'Ukjent feil',
+          progress: 0,
+        });
+      }
+    };
+
+    window.addEventListener('vs-ai-prop-generation-started', handleDirectorPropRequest);
+    return () => {
+      window.removeEventListener('vs-ai-prop-generation-started', handleDirectorPropRequest);
+      if (propPollRef.current) clearTimeout(propPollRef.current);
+    };
+  }, [pollTriposrStatus]);
 
   const handleGenerateProp = async () => {
     if (!propDesc.trim()) return;
