@@ -109,10 +109,45 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
   }, [messages]);
 
   useEffect(() => {
+    const handleDirectorPropRequest = async (e: Event) => {
+      const { description, position } = (e as CustomEvent).detail || {};
+      if (!description) return;
+      if (propPollRef.current) clearTimeout(propPollRef.current);
+      setPropDesc(description);
+      setPropGen({ status: 'generating-image', description, progress: 10 });
+      setActiveTab(2);
+
+      try {
+        const res = await fetch('/api/ai/generate-prop-glb', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: res.statusText }));
+          throw new Error(err.detail || 'Generering feilet');
+        }
+        const data = await res.json();
+        const jobId = data.job_id;
+        const targetPos: number[] = Array.isArray(position) ? position : [0, 0, 0];
+        setPropGen((prev) => ({ ...prev, status: 'converting-3d', jobId, progress: 25 }));
+        propPollRef.current = setTimeout(() => pollTriposrStatus(jobId, targetPos), 4000);
+      } catch (err) {
+        setPropGen({
+          status: 'error',
+          description,
+          error: err instanceof Error ? err.message : 'Ukjent feil',
+          progress: 0,
+        });
+      }
+    };
+
+    window.addEventListener('vs-ai-prop-generation-started', handleDirectorPropRequest);
     return () => {
+      window.removeEventListener('vs-ai-prop-generation-started', handleDirectorPropRequest);
       if (propPollRef.current) clearTimeout(propPollRef.current);
     };
-  }, []);
+  }, [pollTriposrStatus]);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -253,7 +288,7 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
     setRefApplied(true);
   };
 
-  const pollTriposrStatus = useCallback(async (jobId: string) => {
+  const pollTriposrStatus = useCallback(async (jobId: string, targetPos: number[] = [0, 0, 0]) => {
     try {
       const res = await fetch(`/api/triposr/status/${jobId}`);
       const data = await res.json();
@@ -263,38 +298,21 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
         const dlRes = await fetch(`/api/triposr/download/${jobId}`, { method: 'POST' });
         const dlData = await dlRes.json();
         const modelUrl = dlData.url || `/api/triposr/model/${dlData.filename}`;
-        setPropGen((prev) => ({
-          ...prev,
-          status: 'done',
-          modelUrl,
-          progress: 100,
-        }));
+        setPropGen((prev) => ({ ...prev, status: 'done', modelUrl, progress: 100 }));
         window.dispatchEvent(
           new CustomEvent('vs-add-prop', {
-            detail: {
-              propId: `triposr-generated-${Date.now()}`,
-              modelUrl,
-              position: [0, 0, 0],
-            },
+            detail: { propId: `triposr-generated-${Date.now()}`, modelUrl, position: targetPos },
           })
         );
       } else if (status === 'failed' || status === 'canceled') {
-        setPropGen((prev) => ({
-          ...prev,
-          status: 'error',
-          error: 'TripoSR-generering mislyktes.',
-          progress: 0,
-        }));
+        setPropGen((prev) => ({ ...prev, status: 'error', error: 'TripoSR-generering mislyktes.', progress: 0 }));
       } else {
-        setPropGen((prev) => ({
-          ...prev,
-          progress: Math.min((prev.progress || 0) + 8, 90),
-        }));
-        propPollRef.current = setTimeout(() => pollTriposrStatus(jobId), 4000);
+        setPropGen((prev) => ({ ...prev, progress: Math.min((prev.progress || 0) + 8, 90) }));
+        propPollRef.current = setTimeout(() => pollTriposrStatus(jobId, targetPos), 4000);
       }
     } catch (err) {
       console.warn('[PropGen] Polling error:', err);
-      propPollRef.current = setTimeout(() => pollTriposrStatus(jobId), 6000);
+      propPollRef.current = setTimeout(() => pollTriposrStatus(jobId, targetPos), 6000);
     }
   }, []);
 
@@ -315,13 +333,8 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
       }
       const data = await res.json();
       const jobId = data.job_id;
-      setPropGen((prev) => ({
-        ...prev,
-        status: 'converting-3d',
-        jobId,
-        progress: 25,
-      }));
-      propPollRef.current = setTimeout(() => pollTriposrStatus(jobId), 4000);
+      setPropGen((prev) => ({ ...prev, status: 'converting-3d', jobId, progress: 25 }));
+      propPollRef.current = setTimeout(() => pollTriposrStatus(jobId, [0, 0, 0]), 4000);
     } catch (err) {
       setPropGen({
         status: 'error',

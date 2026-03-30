@@ -250,8 +250,11 @@ DIRECTOR_TOOLS: List[Dict[str, Any]] = [
     {
         "type": "function",
         "function": {
-            "name": "add_prop",
-            "description": "Add a 3D prop/object to the scene.",
+            "name": "load_prop",
+            "description": (
+                "Add a 3D prop/object to the scene from the library. "
+                "If the prop is not in the library, call generate_prop instead."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -279,8 +282,40 @@ DIRECTOR_TOOLS: List[Dict[str, Any]] = [
     {
         "type": "function",
         "function": {
-            "name": "load_character",
-            "description": "Load an AI character into the scene.",
+            "name": "generate_prop",
+            "description": (
+                "Generate a new 3D prop from a text description using AI (gpt-image-1 → TripoSR). "
+                "Use this when load_prop cannot find the requested object in the library. "
+                "The prop will be generated and automatically loaded into the scene."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "description": (
+                            "Detailed description of the 3D object to generate. "
+                            "Be specific about materials, style, and details. "
+                            "E.g. 'vintage espresso machine in rustic copper and brass, detailed'"
+                        ),
+                    },
+                    "position": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "minItems": 3,
+                        "maxItems": 3,
+                        "description": "[x, y, z] position in metres where the prop will be placed",
+                    },
+                },
+                "required": ["description"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "load_story_character",
+            "description": "Load an AI story character (avatar) into the scene.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -325,28 +360,35 @@ DIRECTOR_TOOLS: List[Dict[str, Any]] = [
         "function": {
             "name": "set_light_property",
             "description": (
-                "Modify a single property of an existing studio light by its ID. "
-                "Use this for fine-grained adjustments: intensity, color temperature (CCT), "
-                "or color. Call get_scene_lights first if you need to know available light IDs."
+                "Modify a property of an existing studio light by its ID. "
+                "Supports fine-grained control: intensity, color temperature (CCT), "
+                "color, position, modifier (softbox type), and enabled state. "
+                "Use light_id='*' to apply to all lights."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "light_id": {
                         "type": "string",
-                        "description": "The light's ID (e.g. 'key-light-1', 'fill-light-1').",
+                        "description": (
+                            "The light's ID (e.g. 'key-light-1', 'fill-light-1', 'rim-light-1'). "
+                            "Use '*' to apply to all studio lights."
+                        ),
                     },
                     "property": {
                         "type": "string",
-                        "enum": ["intensity", "cct", "color", "enabled"],
+                        "enum": ["intensity", "cct", "color", "enabled", "position", "modifier"],
                         "description": "Which property to change.",
                     },
                     "value": {
                         "description": (
-                            "New value: number 0–2 for intensity, "
-                            "number 2000–10000 for cct (Kelvin), "
-                            "hex string '#rrggbb' for color, "
-                            "boolean for enabled."
+                            "New value: "
+                            "number 0–2 for intensity; "
+                            "number 2000–10000 for cct (Kelvin); "
+                            "hex string '#rrggbb' for color; "
+                            "boolean for enabled; "
+                            "[x,y,z] array in metres for position; "
+                            "string like 'softbox-60x90', 'umbrella', 'beauty-dish' for modifier."
                         ),
                     },
                 },
@@ -498,7 +540,7 @@ def _tool_call_to_events(tool_name: str, args: Dict[str, Any]) -> List[Dict[str,
                 "detail": {"mode": "photo", "photo": photo_settings},
             })
 
-    elif tool_name == "add_prop":
+    elif tool_name in ("add_prop", "load_prop"):
         events.append({
             "event": "vs-add-prop",
             "detail": {
@@ -507,7 +549,16 @@ def _tool_call_to_events(tool_name: str, args: Dict[str, Any]) -> List[Dict[str,
             },
         })
 
-    elif tool_name == "load_character":
+    elif tool_name == "generate_prop":
+        events.append({
+            "event": "vs-generate-prop-request",
+            "detail": {
+                "description": args.get("description", ""),
+                "position": args.get("position", [0, 0, 0]),
+            },
+        })
+
+    elif tool_name in ("load_character", "load_story_character"):
         avatar_type = args.get("avatar_type", "waiter")
         avatar_urls: Dict[str, str] = {
             "waiter": "/models/avatars/waiter.glb",
@@ -565,7 +616,10 @@ def _describe_tool_call(tool_name: str, args: Dict[str, Any]) -> str:
         "apply_lut": "Anvender fargegradering…",
         "set_camera": f"Setter kamera til {args.get('focal_length', 50)}mm…",
         "add_prop": f"Legger til prop: {args.get('prop_id', '')}…",
+        "load_prop": f"Laster prop: {args.get('prop_id', '')}…",
+        "generate_prop": f"Genererer 3D-prop: {args.get('description', '')[:40]}…",
         "load_character": f"Laster karakter: {args.get('avatar_type', '')}…",
+        "load_story_character": f"Laster karakter: {args.get('avatar_type', '')}…",
         "clear_characters": "Fjerner alle karakterer…",
         "set_light_property": f"Justerer {args.get('property', 'egenskap')} på lys {args.get('light_id', '')}…",
         "set_camera_fov": f"Setter kamera-brennvidde til {args.get('focal_length', 50)}mm…",

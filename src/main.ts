@@ -10856,6 +10856,17 @@ class VirtualStudio {
             (data.light as BABYLON.PointLight | BABYLON.SpotLight | BABYLON.DirectionalLight).diffuse = c;
             data.cct = cct;
           }
+        } else if (property === 'position') {
+          const pos = Array.isArray(value) && value.length >= 3 ? value : null;
+          if (pos) {
+            data.mesh.position.set(Number(pos[0]) || 0, Number(pos[1]) || 0, Number(pos[2]) || 0);
+            if ((data.light as BABYLON.PointLight).position) {
+              (data.light as BABYLON.PointLight).position.set(Number(pos[0]) || 0, Number(pos[1]) || 0, Number(pos[2]) || 0);
+            }
+          }
+        } else if (property === 'modifier') {
+          data.modifier = String(value);
+          console.log(`[vs-set-light-property] modifier=${data.modifier} on ${lightId}`);
         }
         window.dispatchEvent(new CustomEvent('vs-light-changed', {
           detail: { lightId: lightId, property, value },
@@ -10873,6 +10884,16 @@ class VirtualStudio {
         if (entry) applyToLight(entry[1]);
         else console.warn(`[vs-set-light-property] Light not found: ${lightId}`);
       }
+    }) as EventListener);
+
+    // ── AI Director: auto-generate 3D prop (gpt-image-1 → TripoSR pipeline) ─
+    window.addEventListener('vs-generate-prop-request', ((e: CustomEvent) => {
+      const { description, position } = e.detail || {};
+      if (!description) return;
+      console.log(`[vs-generate-prop-request] description="${description}" pos=${JSON.stringify(position)}`);
+      window.dispatchEvent(new CustomEvent('vs-ai-prop-generation-started', {
+        detail: { description, position: position || [0, 0, 0] },
+      }));
     }) as EventListener);
 
     // ── Outdoor Sky preset ────────────────────────────────────────────────────
