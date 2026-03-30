@@ -5820,14 +5820,13 @@ class VirtualStudio {
             `${lightId}_diffuserGlow`, { width: localPanelW, height: localPanelH }, this.scene
           );
         }
-        // Mesh normal defaults to +Z; rotate 180° around Y so it faces −Z (the subject side).
-        diffuserPlane.rotation.y = Math.PI;
-        // Parent to parentMesh (same as the geometry mesh) NOT headPivot.
-        // The TRELLIS GLB is a fused single mesh — head and stand can never be separated,
-        // so headCount is always 0 and headPivot.rotation.x (pitch) never moves the model.
-        // Parenting the plane to headPivot caused it to tilt when the model stayed vertical.
-        diffuserPlane.parent = parentMesh;
-        diffuserPlane.setAbsolutePosition(worldCenter);
+        // Billboard around Y so the panel always faces the camera horizontally while
+        // remaining vertical — eliminates the tilt that appeared when the stand was yaw-rotated.
+        // No rotation.y override needed; billboard handles facing automatically.
+        diffuserPlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_Y;
+        // No parent: position is set in world space directly so the stand's yaw rotation
+        // doesn't propagate into the plane's orientation.
+        diffuserPlane.position.copyFrom(worldCenter);
         diffuserPlane.computeWorldMatrix(true);
 
         const diffuserMat = new BABYLON.StandardMaterial(`${lightId}_diffuserGlowMat`, this.scene);
