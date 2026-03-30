@@ -61,6 +61,37 @@ export const LIGHT_DATABASE: LightSpec[] = [
   { id: 'elinchrom-elc1000', brand: 'Elinchrom', model: 'ELC Pro HD 1000', type: 'strobe', power: 1000, powerUnit: 'Ws', cct: 5500, cri: 97, guideNumber: 128, flashDuration: '1/2200-1/5000', recycleTime: 0.9, lumens: 40000, modelingLightPower: 50, modelingLightLux1m: 12000, thumbnail: '/images/gear/elinchrom_elc_1000.png' },
   { id: 'broncolor-siros400', brand: 'Broncolor', model: 'Siros 400 S', type: 'strobe', power: 400, powerUnit: 'Ws', cct: 5500, cri: 99, guideNumber: 76, flashDuration: '1/2000-1/11000', recycleTime: 0.6, lumens: 16000, modelingLightPower: 25, modelingLightLux1m: 6000, thumbnail: '/images/gear/broncolor_siros_400.png' },
   { id: 'broncolor-siros800', brand: 'Broncolor', model: 'Siros 800 S', type: 'strobe', power: 800, powerUnit: 'Ws', cct: 5500, cri: 99, guideNumber: 108, flashDuration: '1/1600-1/11000', recycleTime: 0.8, lumens: 32000, modelingLightPower: 40, modelingLightLux1m: 9500, thumbnail: '/images/gear/broncolor_siros_800.png' },
+
+  // --- Aputure Compact & Fresnel ---
+  { id: 'aputure-mc-pro', brand: 'Aputure', model: 'MC Pro', type: 'led', power: 40, powerUnit: 'W', cct: 5600, cri: 96, tlci: 96, lux1m: 4200, beamAngle: 120, lumens: 1800, thumbnail: '/images/gear/aputure_60x.png', forwardAxis: '-y', description: 'RGBWW pocketlys — perfekt on-location og som praktisk', colorGel: '#ffffff' },
+  { id: 'aputure-spotlight-mini', brand: 'Aputure', model: 'Spotlight Mini', type: 'led', power: 120, powerUnit: 'W', cct: 5600, cri: 96, tlci: 97, lux1m: 15000, beamAngle: 19, lumens: 5500, thumbnail: '/images/gear/aputure_60x.png', forwardAxis: '-y', description: 'LED fresnel med skarpt, presist lyskjerne — Bowens montering' },
+  { id: 'amaran-100x', brand: 'Amaran', model: '100x Bi-Color', type: 'led', power: 100, powerUnit: 'W', cct: 5600, cri: 96, tlci: 97, lux1m: 14000, beamAngle: 55, lumens: 5500, thumbnail: '/images/gear/aputure_120d_ii.png', forwardAxis: '-y', description: 'Kompakt bicolor LED — 2700-6500K — budsjettfavoritt' },
+  { id: 'amaran-200x', brand: 'Amaran', model: '200x Bi-Color', type: 'led', power: 200, powerUnit: 'W', cct: 5600, cri: 96, tlci: 97, lux1m: 28000, beamAngle: 55, lumens: 10000, thumbnail: '/images/gear/aputure_300d_ii.png', forwardAxis: '-y', description: 'Bicolor LED med kraftig lysstyrke — Bowens montering' },
+
+  // --- Nanlite Extended Tube & Panel ---
+  { id: 'nanlite-pavotube-60c', brand: 'Nanlite', model: 'PavoTube II 60C', type: 'led', power: 60, powerUnit: 'W', cct: 5600, cri: 96, tlci: 96, lux1m: 2400, beamAngle: 180, lumens: 2400, thumbnail: '/images/gear/nanlite_forza_60.png', forwardAxis: '-y', description: 'RGB rørlys 180cm — stor kreativ effektbelysning', colorGel: '#ffffff' },
+  { id: 'nanlite-mixpad-mix27c', brand: 'Nanlite', model: 'MixPad Mix 27C', type: 'led', power: 80, powerUnit: 'W', cct: 5600, cri: 96, tlci: 96, lux1m: 3200, beamAngle: 120, lumens: 5600, thumbnail: '/images/gear/aputure_300d_ii.png', forwardAxis: '+z', description: 'RGBWW LED-panel med bred lysspredning' },
+  { id: 'nanlite-forza300b', brand: 'Nanlite', model: 'Forza 300B II', type: 'led', power: 300, powerUnit: 'W', cct: 5600, cri: 97, tlci: 97, lux1m: 36000, beamAngle: 120, lumens: 13000, thumbnail: '/images/gear/nanlite_forza_300.png', forwardAxis: '-y', description: 'Bicolor Forza 300 — 2700-6500K, presis CCT-kontroll' },
+
+  // --- Godox RGB & Video ---
+  { id: 'godox-sz150r', brand: 'Godox', model: 'SZ150R', type: 'led', power: 150, powerUnit: 'W', cct: 5600, cri: 96, tlci: 97, lux1m: 14000, beamAngle: 45, lumens: 7000, thumbnail: '/images/gear/aputure_300d_ii.png', forwardAxis: '-y', description: 'Zoom RGB LED — 2800-6500K + full RGB', colorGel: '#ffffff' },
+  { id: 'godox-ml60ii', brand: 'Godox', model: 'ML60 II Bi', type: 'led', power: 60, powerUnit: 'W', cct: 5600, cri: 96, tlci: 97, lux1m: 9000, beamAngle: 55, lumens: 3000, thumbnail: '/images/gear/aputure_60x.png', forwardAxis: '-y', description: 'Kompakt bicolor LED — stille kjøling, Bowens montering' },
+
+  // --- Litepanels ---
+  { id: 'litepanels-astra-3x', brand: 'Litepanels', model: 'Astra 3X Bi', type: 'led', power: 50, powerUnit: 'W', cct: 5600, cri: 95, tlci: 96, lux1m: 2800, beamAngle: 115, lumens: 4500, thumbnail: '/images/gear/aputure_300d_ii.png', forwardAxis: '+z', description: 'Kompakt bicolor 1x1 panel — broadcast og dokumentar' },
+  { id: 'litepanels-gemini-2x1', brand: 'Litepanels', model: 'Gemini 2x1', type: 'led', power: 250, powerUnit: 'W', cct: 5600, cri: 95, tlci: 97, lux1m: 4200, beamAngle: 115, lumens: 20000, thumbnail: '/images/gear/aputure_300d_ii.png', forwardAxis: '+z', description: 'Stort RGBWW 2x1 panel — Netflix-godkjent for filmproduksjon' },
+
+  // --- Kino Flo ---
+  { id: 'kinoflo-diva-415', brand: 'Kino Flo', model: 'Diva-Lite 415', type: 'led', power: 80, powerUnit: 'W', cct: 5500, cri: 95, tlci: 96, lux1m: 2200, beamAngle: 120, lumens: 5200, thumbnail: '/images/gear/aputure_300d_ii.png', forwardAxis: '+z', description: 'Klassisk fluosescent-erstatning — flattery LED for portrett og beauty' },
+
+  // --- Zhiyun ---
+  { id: 'zhiyun-molus-x100', brand: 'Zhiyun', model: 'Molus X100', type: 'led', power: 100, powerUnit: 'W', cct: 5600, cri: 96, tlci: 97, lux1m: 11000, beamAngle: 55, lumens: 4500, thumbnail: '/images/gear/aputure_120d_ii.png', forwardAxis: '-y', description: 'Kompakt powerhouse LED — COB design, 2700-6500K' },
+
+  // --- Elinchrom Extended ---
+  { id: 'elinchrom-elb500', brand: 'Elinchrom', model: 'ELB 500 TTL', type: 'strobe', power: 500, powerUnit: 'Ws', cct: 5500, cri: 97, guideNumber: 90, flashDuration: '1/3800-1/9000', recycleTime: 0.5, lumens: 20000, modelingLightPower: 30, modelingLightLux1m: 7000, thumbnail: '/images/gear/elinchrom_elc_500.png', description: 'Bærbart TTL strobe-system med Ranger-batteripakke' },
+
+  // --- Dracast ---
+  { id: 'dracast-x4-500', brand: 'Dracast', model: 'X4 500 Bi-Color', type: 'led', power: 60, powerUnit: 'W', cct: 5600, cri: 96, tlci: 96, lux1m: 2600, beamAngle: 115, lumens: 5000, thumbnail: '/images/gear/aputure_300d_ii.png', forwardAxis: '+z', description: 'Kompakt 1x1 bicolor LED panel for studio og felt' },
   
   // ============================================
   // ATMOSPHERIC LIGHTS - For Lovecraft/mood environments

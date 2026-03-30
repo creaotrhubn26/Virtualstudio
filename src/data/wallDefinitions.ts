@@ -113,6 +113,33 @@ export const WALL_MATERIALS: WallMaterial[] = [
   { id: 'urban-chain-link', name: 'Chain Link Fence', nameNo: 'Nettinggjerde', category: 'urban', color: '#606060', roughness: 0.6, metallic: 0.8, opacity: 0.3, tags: ['urban', 'fence', 'industrial', 'street'], moodTags: ['industrial', 'gritty'] },
   { id: 'urban-posters', name: 'Poster Wall', nameNo: 'Plakatvegg', category: 'urban', color: '#3a3a3a', textureUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/plastered_wall_with_posters/plastered_wall_with_posters_diff_1k.jpg', normalMapUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/plastered_wall_with_posters/plastered_wall_with_posters_nor_gl_1k.jpg', roughness: 0.9, metallic: 0, tags: ['urban', 'street', 'posters', 'art'], moodTags: ['urban', 'artistic', 'street'] },
   { id: 'urban-painted-metal', name: 'Painted Metal Door', nameNo: 'Malt metalldør', category: 'urban', color: '#2a4a3a', roughness: 0.6, metallic: 0.7, tags: ['urban', 'industrial', 'door', 'warehouse'], moodTags: ['industrial'] },
+
+  // ============================================
+  // SOLID COLORS - Extended Studio Palette
+  // ============================================
+  { id: 'sage-green', name: 'Sage Green', nameNo: 'Salviegrønn', category: 'solid', color: '#8fab88', roughness: 0.85, metallic: 0, tags: ['nature', 'calm', 'muted', 'portrait'], moodTags: ['natural', 'calm', 'soft'] },
+  { id: 'muted-teal', name: 'Muted Teal', nameNo: 'Dempet teal', category: 'solid', color: '#4e8080', roughness: 0.82, metallic: 0, tags: ['cool', 'muted', 'portrait', 'editorial'], moodTags: ['cool', 'calm', 'professional'] },
+  { id: 'warm-beige', name: 'Warm Beige', nameNo: 'Varm beige', category: 'solid', color: '#d6c4a8', roughness: 0.88, metallic: 0, tags: ['warm', 'neutral', 'natural', 'portrait'], moodTags: ['warm', 'natural', 'soft'] },
+  { id: 'blush-pink', name: 'Blush Pink', nameNo: 'Rosabeige', category: 'solid', color: '#e8c4c4', roughness: 0.85, metallic: 0, tags: ['beauty', 'feminine', 'soft', 'pastel'], moodTags: ['soft', 'romantic', 'feminine'] },
+  { id: 'storm-blue', name: 'Storm Blue', nameNo: 'Stormblå', category: 'solid', color: '#3a5070', roughness: 0.82, metallic: 0.02, tags: ['cool', 'dramatic', 'moody', 'editorial'], moodTags: ['dramatic', 'moody', 'professional'] },
+  { id: 'antique-white', name: 'Antique White', nameNo: 'Antikk hvit', category: 'solid', color: '#efe8dc', roughness: 0.9, metallic: 0, tags: ['warm', 'classic', 'vintage', 'soft'], moodTags: ['classic', 'warm', 'soft'] },
+  { id: 'deep-plum', name: 'Deep Plum', nameNo: 'Dyp plomme', category: 'solid', color: '#3d1a3a', roughness: 0.8, metallic: 0.05, tags: ['dramatic', 'luxury', 'fashion', 'dark'], moodTags: ['dramatic', 'luxurious', 'rich'] },
+  { id: 'mustard-yellow', name: 'Mustard Yellow', nameNo: 'Sennepsgul', category: 'solid', color: '#c49a20', roughness: 0.82, metallic: 0, tags: ['warm', 'retro', 'vivid', 'fashion'], moodTags: ['warm', 'retro', 'bold'] },
+
+  // ============================================
+  // TEXTURED - Extended
+  // ============================================
+  { id: 'limewash', name: 'Limewash', nameNo: 'Kalkpuss', category: 'textured', color: '#e8dcc8', roughness: 0.92, metallic: 0, tileScale: 2, tags: ['mediterranean', 'rustic', 'warm', 'vintage'], moodTags: ['warm', 'rustic', 'authentic'] },
+  { id: 'exposed-concrete-fine', name: 'Fine Exposed Concrete', nameNo: 'Fin eksponert betong', category: 'textured', color: '#9a9a9a', textureUrl: '/textures/walls/concrete.png', roughness: 0.88, metallic: 0, tileScale: 2, tags: ['modern', 'minimal', 'architectural'], moodTags: ['modern', 'clean', 'minimal'] },
+  { id: 'shiplap', name: 'Shiplap Wood', nameNo: 'Shiplap tre', category: 'textured', color: '#e0d8cc', textureUrl: '/textures/walls/wood_panels.png', roughness: 0.8, metallic: 0, tileScale: 1, tags: ['farmhouse', 'rustic', 'warm', 'natural'], moodTags: ['warm', 'rustic', 'cozy'] },
+  { id: 'venetian-plaster', name: 'Venetian Plaster', nameNo: 'Venetiansk puss', category: 'textured', color: '#f0e4d0', roughness: 0.3, metallic: 0.1, tileScale: 2, tags: ['luxury', 'italian', 'elegant', 'reflective'], moodTags: ['elegant', 'luxury', 'warm'] },
+
+  // ============================================
+  // GRADIENT - Extended
+  // ============================================
+  { id: 'gradient-sage-cream', name: 'Sage to Cream', nameNo: 'Salvie til krem', category: 'gradient', gradientColors: ['#8fab88', '#f5ead0', '#fffff5'], roughness: 0.85, metallic: 0, tags: ['natural', 'soft', 'portrait', 'beauty'], moodTags: ['natural', 'soft', 'calm'] },
+  { id: 'gradient-golden-hour', name: 'Golden Hour', nameNo: 'Gyllen time', category: 'gradient', gradientColors: ['#ff8c00', '#ffb347', '#ffd700'], roughness: 0.8, metallic: 0.05, tags: ['warm', 'cinematic', 'sunset', 'golden'], moodTags: ['warm', 'cinematic', 'golden'] },
+  { id: 'gradient-dusk', name: 'Dusk Purple', nameNo: 'Skumring lilla', category: 'gradient', gradientColors: ['#2d1b69', '#7b2d8b', '#c77dff'], roughness: 0.82, metallic: 0.05, tags: ['dramatic', 'night', 'fashion', 'vibrant'], moodTags: ['dramatic', 'vivid', 'night'] },
 ];
 
 // Helper functions

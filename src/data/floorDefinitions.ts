@@ -111,6 +111,20 @@ export const FLOOR_MATERIALS: FloorMaterial[] = [
   { id: 'urban-neon-floor', name: 'Neon Reflective', nameNo: 'Neonreflekterende', category: 'urban', color: '#1a1a2a', roughness: 0.1, metallic: 0.2, reflectivity: 0.8, emissive: '#ff00ff', emissiveIntensity: 0.05, tags: ['urban', 'neon', 'night', 'cyberpunk'], moodTags: ['neon', 'night', 'futuristic'] },
   { id: 'urban-puddles', name: 'Street with Puddles', nameNo: 'Gate med sølepytter', category: 'urban', color: '#2a2a2a', roughness: 0.15, metallic: 0.15, reflectivity: 0.75, tags: ['urban', 'rainy', 'night', 'street'], moodTags: ['moody', 'rainy'] },
   { id: 'urban-rooftop', name: 'Rooftop Gravel', nameNo: 'Takgrus', category: 'urban', color: '#5a5a5a', textureUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/gravel_concrete_03/gravel_concrete_03_diff_1k.jpg', normalMapUrl: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/gravel_concrete_03/gravel_concrete_03_nor_gl_1k.jpg', roughness: 0.95, metallic: 0, reflectivity: 0.05, tags: ['urban', 'rooftop', 'outdoor'], moodTags: ['urban', 'outdoor'] },
+
+  // ============================================
+  // SPECIAL - Extended
+  // ============================================
+  { id: 'sand-desert', name: 'Desert Sand', nameNo: 'Ørkensan', category: 'special', color: '#c8b06a', roughness: 0.98, metallic: 0, reflectivity: 0.03, tileScale: 3, tags: ['outdoor', 'desert', 'warm', 'nature'], moodTags: ['warm', 'natural', 'exotic'] },
+  { id: 'sand-beach', name: 'Wet Beach Sand', nameNo: 'Våt strandsand', category: 'special', color: '#b8a05a', roughness: 0.85, metallic: 0, reflectivity: 0.12, tileScale: 3, tags: ['outdoor', 'beach', 'coastal', 'natural'], moodTags: ['natural', 'fresh'] },
+  { id: 'grass-lawn', name: 'Lawn Grass', nameNo: 'Plengressmatte', category: 'special', color: '#4a7a3a', roughness: 0.95, metallic: 0, reflectivity: 0.05, tileScale: 4, tags: ['outdoor', 'nature', 'green', 'garden'], moodTags: ['natural', 'fresh'] },
+  { id: 'studio-hardwood-lacquered', name: 'Lacquered Studio Hardwood', nameNo: 'Lakert studioparketter', category: 'wood', color: '#a08060', roughness: 0.25, metallic: 0, reflectivity: 0.55, tileScale: 4, tags: ['studio', 'elegant', 'reflective', 'professional'], moodTags: ['elegant', 'professional'] },
+  { id: 'cork', name: 'Cork Floor', nameNo: 'Korkgulv', category: 'wood', color: '#c4a060', roughness: 0.88, metallic: 0, reflectivity: 0.08, tileScale: 3, tags: ['natural', 'warm', 'eco', 'scandinavian'], moodTags: ['warm', 'natural'] },
+  { id: 'bamboo', name: 'Bamboo', nameNo: 'Bambus', category: 'wood', color: '#c8b870', roughness: 0.55, metallic: 0, reflectivity: 0.22, tileScale: 4, tags: ['natural', 'asian', 'warm', 'eco'], moodTags: ['warm', 'natural'] },
+  { id: 'slate-natural', name: 'Natural Slate', nameNo: 'Naturlig skifer', category: 'tile', color: '#4a4a5a', textureUrl: '/textures/floors/concrete_polished.png', roughness: 0.75, metallic: 0.1, reflectivity: 0.2, tileScale: 3, tags: ['natural', 'stone', 'rustic', 'nordic'], moodTags: ['natural', 'rustic'] },
+  { id: 'travertine', name: 'Travertine', nameNo: 'Travertin', category: 'tile', color: '#d4c4a8', roughness: 0.45, metallic: 0, reflectivity: 0.3, tileScale: 3, tags: ['elegant', 'mediterranean', 'luxury', 'natural'], moodTags: ['elegant', 'warm'] },
+  { id: 'epoxy-white', name: 'Epoxy White', nameNo: 'Epoxy hvit', category: 'special', color: '#f0f0f0', roughness: 0.08, metallic: 0.05, reflectivity: 0.82, tags: ['studio', 'clean', 'modern', 'sleek'], moodTags: ['clean', 'modern', 'professional'] },
+  { id: 'epoxy-charcoal', name: 'Epoxy Charcoal', nameNo: 'Epoxy kull', category: 'special', color: '#303030', roughness: 0.1, metallic: 0.1, reflectivity: 0.75, tags: ['studio', 'dramatic', 'modern', 'sleek'], moodTags: ['dramatic', 'modern'] },
 ];
 
 // Helper functions

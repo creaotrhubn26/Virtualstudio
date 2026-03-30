@@ -1155,6 +1155,290 @@ export const scenarioPresets: ScenarioPreset[] = [
       backdrops: []
     }
   },
+  {
+    id: 'bryllup-utendors',
+    navn: 'Bryllup - Utendørs Gyllen Time',
+    kategori: 'bryllup',
+    beskrivelse: 'Varmt utendørs bryllupsoppsett inspirert av gyllen time. Naturlig fill med reflektorer.',
+    tags: ['bryllup', 'utendørs', 'gyllen-time', 'naturlig', 'romantisk'],
+    previewImage: '/images/presets/bryllup-utendors.png',
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [-3, 2.2, 1.5],
+          rotation: [20, 40, 0],
+          intensity: 1.0,
+          cct: 3800,
+          color: '#ffd080',
+          modifier: 'large-octabox'
+        },
+        {
+          type: 'fill-light',
+          position: [2.5, 1.5, 1.5],
+          rotation: [10, -30, 0],
+          intensity: 0.35,
+          cct: 5500,
+          color: '#e8f8ff',
+          modifier: 'reflector-white'
+        },
+        {
+          type: 'hair-light',
+          position: [0, 3.5, -1.5],
+          rotation: [-40, 0, 0],
+          intensity: 0.6,
+          cct: 4500,
+          color: '#fff8e8'
+        }
+      ],
+      backdrop: {
+        type: 'outdoor',
+        color: '#a8c878'
+      },
+      camera: {
+        position: [0, 1.5, 4.5],
+        target: [0, 1.4, 0],
+        focalLength: 85
+      }
+    },
+    recommendedAssets: {
+      lights: ['aputure-600d', 'godox-ad400pro'],
+      modifiers: ['octabox-150', 'reflector-5in1', 'diffuser-silk'],
+      backdrops: ['outdoor-golden-meadow']
+    }
+  },
+  {
+    id: 'portrett-beauty',
+    navn: 'Portrett - Beauty Closeup',
+    kategori: 'portrett',
+    beskrivelse: 'Butterfly/clamshell beauty-oppsett for ansiktsnærbilder. Myk, flatsminkende belysning.',
+    tags: ['portrett', 'beauty', 'closeup', 'clamshell', 'butterfly'],
+    previewImage: '/images/presets/portrett-beauty.png',
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [0, 2.8, 2.5],
+          rotation: [-30, 0, 0],
+          intensity: 1.0,
+          cct: 5500,
+          modifier: 'beauty-dish'
+        },
+        {
+          type: 'fill-light',
+          position: [0, 0.4, 2.5],
+          rotation: [30, 0, 0],
+          intensity: 0.5,
+          cct: 5500,
+          modifier: 'reflector-white'
+        },
+        {
+          type: 'hair-light',
+          position: [0, 3.5, -1],
+          rotation: [-45, 0, 0],
+          intensity: 0.5,
+          cct: 5600
+        }
+      ],
+      backdrop: {
+        type: 'seamless',
+        color: '#f0f0f0'
+      },
+      camera: {
+        position: [0, 1.7, 3],
+        target: [0, 1.65, 0],
+        focalLength: 105
+      }
+    },
+    recommendedAssets: {
+      lights: ['profoto-b10plus', 'godox-ad400pro'],
+      modifiers: ['beauty-dish-65', 'reflector-card-white'],
+      backdrops: ['backdrop-white', 'backdrop-gray']
+    }
+  },
+  {
+    id: 'portrett-dramatic',
+    navn: 'Portrett - Dramatisk Low Key',
+    kategori: 'portrett',
+    beskrivelse: 'Mørk, dramatisk 1-lysoppsett med sterk skygge. Stilisert og modig.',
+    tags: ['portrett', 'dramatisk', 'low-key', 'noir', 'skygge'],
+    previewImage: '/images/presets/portrett-dramatic.png',
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [-2.5, 2.5, 1],
+          rotation: [15, 50, 0],
+          intensity: 1.2,
+          cct: 3200,
+          color: '#ffcc88',
+          modifier: 'grid-softbox'
+        }
+      ],
+      backdrop: {
+        type: 'seamless',
+        color: '#1a1a1a'
+      },
+      camera: {
+        position: [0, 1.6, 4],
+        target: [0, 1.5, 0],
+        focalLength: 85
+      }
+    },
+    recommendedAssets: {
+      lights: ['aputure-300d', 'profoto-d2'],
+      modifiers: ['gridded-softbox-60', 'snoot'],
+      backdrops: ['backdrop-black', 'velvet-black']
+    }
+  },
+  {
+    id: 'mote-high-fashion',
+    navn: 'Mote - High Fashion Studio',
+    kategori: 'mote',
+    beskrivelse: 'Kontrastfull mote-belysning for editorial og high fashion. Kraftig key, minimalt fill.',
+    tags: ['mote', 'high-fashion', 'editorial', 'kontrastfull', 'kunstnerisk'],
+    previewImage: '/images/presets/mote-high-fashion.png',
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [-2, 3, 1.5],
+          rotation: [20, 45, 0],
+          intensity: 1.2,
+          cct: 5600,
+          modifier: 'medium-softbox'
+        },
+        {
+          type: 'rim-light',
+          position: [3, 2.5, -1],
+          rotation: [20, -130, 0],
+          intensity: 0.8,
+          cct: 5600,
+          modifier: 'snoot'
+        },
+        {
+          type: 'background-light',
+          position: [-1.5, 1.5, -4],
+          rotation: [0, 0, 0],
+          intensity: 0.5,
+          cct: 5600,
+          modifier: 'spot'
+        }
+      ],
+      backdrop: {
+        type: 'seamless',
+        color: '#c0c0c0'
+      },
+      camera: {
+        position: [0, 1.6, 4.5],
+        target: [0, 1.3, 0],
+        focalLength: 70
+      }
+    },
+    recommendedAssets: {
+      lights: ['profoto-d2', 'aputure-600d'],
+      modifiers: ['softbox-90cm', 'snoot', 'honeycomb-grid-20'],
+      backdrops: ['backdrop-gray', 'backdrop-white']
+    }
+  },
+  {
+    id: 'naeringsliv-konferanse',
+    navn: 'Næringsliv - Konferanse Panel',
+    kategori: 'naeringsliv',
+    beskrivelse: 'Profesjonelt oppsett for paneldebatter og konferansefotografering. 3-4 personer.',
+    tags: ['næringsliv', 'konferanse', 'panel', 'gruppe', 'profesjonell'],
+    previewImage: '/images/presets/naeringsliv-konferanse.png',
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [-3, 3, 2],
+          rotation: [25, 45, 0],
+          intensity: 1.0,
+          cct: 5500,
+          modifier: 'large-softbox'
+        },
+        {
+          type: 'fill-light',
+          position: [3, 2.5, 2],
+          rotation: [20, -45, 0],
+          intensity: 0.6,
+          cct: 5500,
+          modifier: 'medium-softbox'
+        },
+        {
+          type: 'hair-light',
+          position: [0, 4, -1.5],
+          rotation: [-35, 0, 0],
+          intensity: 0.5,
+          cct: 5600
+        },
+        {
+          type: 'background-light',
+          position: [0, 1.5, -4],
+          rotation: [0, 180, 0],
+          intensity: 0.4,
+          cct: 4500
+        }
+      ],
+      backdrop: {
+        type: 'seamless',
+        color: '#2a3a50'
+      },
+      camera: {
+        position: [0, 1.4, 5],
+        target: [0, 1.3, 0],
+        focalLength: 50
+      }
+    },
+    recommendedAssets: {
+      lights: ['arri-skypanel-s30', 'aputure-300d', 'godox-ad400pro'],
+      modifiers: ['softbox-90x120', 'octabox-120'],
+      backdrops: ['backdrop-navy', 'backdrop-dark-gray']
+    }
+  },
+  {
+    id: 'naeringsliv-linkedin',
+    navn: 'Næringsliv - LinkedIn Headshot',
+    kategori: 'naeringsliv',
+    beskrivelse: 'Enkelt, rent og profesjonelt oppsett for LinkedIn-profilbilder og visittkortfoto.',
+    tags: ['næringsliv', 'linkedin', 'headshot', 'rent', 'profesjonelt'],
+    previewImage: '/images/presets/naeringsliv-linkedin.png',
+    sceneConfig: {
+      lights: [
+        {
+          type: 'key-light',
+          position: [-2, 2.2, 2],
+          rotation: [20, 35, 0],
+          intensity: 0.9,
+          cct: 5500,
+          modifier: 'octabox-90'
+        },
+        {
+          type: 'fill-light',
+          position: [2, 1.8, 1.5],
+          rotation: [10, -25, 0],
+          intensity: 0.45,
+          cct: 5500,
+          modifier: 'reflector-white'
+        }
+      ],
+      backdrop: {
+        type: 'seamless',
+        color: '#e8e8e8'
+      },
+      camera: {
+        position: [0, 1.65, 3.5],
+        target: [0, 1.6, 0],
+        focalLength: 85
+      }
+    },
+    recommendedAssets: {
+      lights: ['godox-ad400pro', 'profoto-b10'],
+      modifiers: ['octabox-90', 'reflector-5in1'],
+      backdrops: ['backdrop-white', 'backdrop-gray', 'backdrop-light-gray']
+    }
+  }
 ];
 
 export const getPresetsByKategori = (kategori: string): ScenarioPreset[] => {

@@ -38,6 +38,36 @@ export const BACKDROP_DATABASE: BackdropSpec[] = [
   { id: 'v-flat-black', name: 'V-Flat Sort', category: 'reflektor', size: '200 x 100 cm', thumbnail: '/images/gear/equipment_vflat.png', description: 'Sort side for lysstyring og flagging' },
   { id: 'reflector-gold', name: 'Reflektor Gull', category: 'reflektor', size: '110 cm', thumbnail: '/images/gear/equipment_vflat.png', description: 'Varm gull refleksjon — naturlig utendørslys' },
   { id: 'reflector-silver', name: 'Reflektor Sølv', category: 'reflektor', size: '110 cm', thumbnail: '/images/gear/equipment_vflat.png', description: 'Nøytral sølvrefleksjon — neutral fylling' },
+
+  // Mottled / håndmalt lerret
+  { id: 'canvas-mottled-gray', name: 'Mottled Grå Lerret', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Håndmalt mottled lerret — grå toner, kunstnerisk tekstur' },
+  { id: 'canvas-mottled-brown', name: 'Mottled Brun Lerret', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Håndmalt brun/oker lerret — varm filmisk bakgrunn' },
+  { id: 'canvas-mottled-sage', name: 'Mottled Salviegrønn Lerret', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Håndmalt lerret med salviegrønne toner — naturlig og rolig' },
+  { id: 'canvas-mottled-taupe', name: 'Mottled Taupe Lerret', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Håndmalt taupe lerret — nøytral og flaterende for portrett' },
+  { id: 'canvas-mottled-navy', name: 'Mottled Marineblå Lerret', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Håndmalt dyp blå lerret — dramatisk og elegant' },
+  { id: 'canvas-mottled-mauve', name: 'Mottled Mauve Lerret', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Håndmalt rosa/grå lerret — beauty og motebruk' },
+
+  // Fløyel (velvet)
+  { id: 'velvet-black', name: 'Sort Fløyel', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Sort fløyelbakgrunn — absorberer lys, dypeste svart mulig' },
+  { id: 'velvet-burgundy', name: 'Burgunder Fløyel', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Dyp burgunder fløyel — dramatisk og luksuriøs' },
+  { id: 'velvet-midnight-blue', name: 'Midnattsblå Fløyel', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Midnattsblå fløyel — rom-estetikk, myk og rik' },
+  { id: 'velvet-charcoal', name: 'Kull Fløyel', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Mørkegrå fløyel — elegant og allsidig' },
+
+  // Papir — mer farger
+  { id: 'backdrop-storm-gray', name: 'Stormgrå Seamless', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Mørk, kald grå seamless — dramatisk men nøytral' },
+  { id: 'backdrop-natural-linen', name: 'Linen Naturell', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Naturell linfarget seamless — varmt og organisk' },
+  { id: 'backdrop-sage', name: 'Salvie Seamless', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Dempet salviegrønn — rolig og naturinspirert' },
+  { id: 'backdrop-terracotta', name: 'Terrakotta Seamless', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Varm terrakotta — jordnær mediterran estetikk' },
+  { id: 'backdrop-dusty-blue', name: 'Støvblå Seamless', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Myk, dempet blå — klassisk portrett og beauty' },
+  { id: 'backdrop-nude', name: 'Nude/Hudfarget Seamless', category: 'bakgrunn', thumbnail: '/images/gear/equipment_backdrop.png', description: 'Hudfarget/beige seamless — subtil og naturlig skinntone-bakgrunn' },
+
+  // Reflektorer og modifikatorer
+  { id: 'reflector-5in1-kit', name: '5-i-1 Reflektor Kit', category: 'reflektor', size: '120 cm', thumbnail: '/images/gear/equipment_vflat.png', description: 'Sammenleggbar reflektorsett: gull, sølv, hvit, svart og hvit diffuser' },
+  { id: 'foam-core-white', name: 'Foam Core Hvit', category: 'reflektor', size: '60 x 90 cm', thumbnail: '/images/gear/equipment_vflat.png', description: 'Hvit foam core — lett og effektiv fill-kilde for nærbilder' },
+  { id: 'foam-core-black', name: 'Foam Core Sort', category: 'reflektor', size: '60 x 90 cm', thumbnail: '/images/gear/equipment_vflat.png', description: 'Sort foam core — negativt fill / flagg for lyskontroll' },
+  { id: 'popup-reflector-oval', name: 'Oval Pop-up Reflektor', category: 'reflektor', size: '60 x 90 cm', thumbnail: '/images/gear/equipment_vflat.png', description: 'Oval sammenleggbar reflektor — gull/sølv dobbeltside' },
+  { id: 'diffuser-frame-120', name: 'Diffuser Ramme', category: 'diffuser', size: '120 x 120 cm', thumbnail: '/images/gear/equipment_diffuser_panel.png', description: 'Fast diffuserramme med uttrekkbar white diffuser' },
+  { id: 'diffuser-silks', name: 'Diffuser Silks 1.5-stop', category: 'diffuser', size: '180 x 180 cm', thumbnail: '/images/gear/equipment_diffuser_panel.png', description: 'Filmdiffuser silks, 1.5-stop reduksjon — jevn myk kilde' },
 ];
 
 export const BACKDROP_CATEGORIES: { key: BackdropCategory; label: string }[] = [

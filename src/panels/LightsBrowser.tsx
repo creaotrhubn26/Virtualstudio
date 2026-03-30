@@ -104,6 +104,42 @@ const MODIFIER_DATABASE: ModifierSpec[] = [
   { id: 'diffuser-1-4', brand: 'Lee Filters', model: 'Grid Cloth 1/4 Stop', type: 'diffuser', stopLoss: 0.5, thumbnail: '/images/gear/modifier_diffuser.png' },
   { id: 'diffuser-1-2', brand: 'Lee Filters', model: 'Grid Cloth 1/2 Stop', type: 'diffuser', stopLoss: 1.0, thumbnail: '/images/gear/modifier_diffuser.png' },
   { id: 'diffuser-full', brand: 'Lee Filters', model: 'Grid Cloth Full Stop', type: 'diffuser', stopLoss: 2.0, thumbnail: '/images/gear/modifier_diffuser.png' },
+
+  // Extended umbrellas
+  { id: 'godox-ub-l-130', brand: 'Godox', model: 'UB-130D Deep Parabolic', type: 'umbrella', size: '130cm', shape: 'deep-parabolic', stopLoss: 1.5, mount: 'Bowens', thumbnail: '/images/gear/modifier_umbrella.png' },
+  { id: 'westcott-shoot-thru-43', brand: 'Westcott', model: 'Shoot-Through 43"', type: 'umbrella', size: '43"', shape: 'shoot-through', stopLoss: 1.5, thumbnail: '/images/gear/modifier_umbrella.png' },
+  { id: 'photoflex-umbrella-xl', brand: 'Photoflex', model: 'Umbrella White XL 60"', type: 'umbrella', size: '60"', stopLoss: 1.5, thumbnail: '/images/gear/modifier_umbrella.png' },
+  { id: 'phottix-luna-180', brand: 'Phottix', model: 'Luna 180cm Softbox Umbrella', type: 'umbrella', size: '180cm', shape: 'octagon', stopLoss: 2.0, mount: 'Bowens', thumbnail: '/images/gear/modifier_umbrella.png' },
+
+  // Large octaboxes
+  { id: 'godox-octa-150', brand: 'Godox', model: 'Octa 150cm', type: 'octabox', size: '150cm', shape: 'octagon', stopLoss: 2.0, mount: 'Bowens', thumbnail: '/images/gear/modifier_octabox.png' },
+  { id: 'profoto-xl-octa-175', brand: 'Profoto', model: 'XL Octa 175cm', type: 'octabox', size: '175cm', shape: 'octagon', stopLoss: 2.5, mount: 'Profoto', thumbnail: '/images/gear/modifier_octabox.png' },
+  { id: 'elinchrom-maxi-octa-190', brand: 'Elinchrom', model: 'Maxi Octa 190cm', type: 'octabox', size: '190cm', shape: 'octagon', stopLoss: 2.5, mount: 'Elinchrom', thumbnail: '/images/gear/modifier_octabox.png' },
+
+  // Nanlite softboxes
+  { id: 'nanlite-sb-fz60-60', brand: 'Nanlite', model: 'SB-FZ60 Softbox 60cm', type: 'softbox', size: '60cm', shape: 'square', stopLoss: 1.5, mount: 'Nanlite', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'nanlite-sb-fz120', brand: 'Nanlite', model: 'SB-FZ120 Strip 30x120cm', type: 'stripbox', size: '30x120cm', shape: 'strip', stopLoss: 2.0, mount: 'Nanlite', thumbnail: '/images/gear/modifier_stripbox.png' },
+
+  // Aputure extended
+  { id: 'aputure-light-dome-se', brand: 'Aputure', model: 'Light Dome SE 75cm', type: 'softbox', size: '75cm', shape: 'parabolic', stopLoss: 1.5, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'aputure-light-dome-mini-ii', brand: 'Aputure', model: 'Light Dome Mini II 55cm', type: 'softbox', size: '55cm', shape: 'parabolic', stopLoss: 1.5, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
+
+  // Barn doors & control
+  { id: 'barn-doors-2leaf', brand: 'Generic', model: 'Barn Doors 2-Leaf', type: 'barn-doors', stopLoss: 0, thumbnail: '/images/gear/modifier_barndoors.png' },
+  { id: 'cutter-flag-black', brand: 'Generic', model: 'Cutter / Flag 60x90cm', type: 'barn-doors', stopLoss: 0, thumbnail: '/images/gear/modifier_barndoors.png' },
+
+  // Grids extended
+  { id: 'honeycomb-grid-10', brand: 'Generic', model: 'Honeycomb Grid 10°', type: 'grid', size: '10°', stopLoss: 1.5, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'egg-crate-30', brand: 'Generic', model: 'Egg Crate 30°', type: 'grid', size: '30°', stopLoss: 0.5, thumbnail: '/images/gear/modifier_grid.png' },
+  { id: 'beauty-dish-grid', brand: 'Generic', model: 'Beauty Dish Honeycomb Grid', type: 'grid', size: '20°', stopLoss: 0.5, thumbnail: '/images/gear/modifier_grid.png' },
+
+  // Mola extended
+  { id: 'mola-euro', brand: 'Mola', model: 'Euro Beauty Dish 33"', type: 'beauty-dish', size: '33"', stopLoss: 0.5, mount: 'Bowens', thumbnail: '/images/gear/modifier_beautydish.png' },
+  { id: 'mola-demi', brand: 'Mola', model: 'Demi 22"', type: 'beauty-dish', size: '22"', stopLoss: 0.3, mount: 'Bowens', thumbnail: '/images/gear/modifier_beautydish.png' },
+
+  // Large 2x3 / 4x6 softboxes (video & broadcast)
+  { id: 'chimera-video-pro-s', brand: 'Chimera', model: 'Video Pro Plus S (60x80cm)', type: 'softbox', size: '60x80cm', shape: 'rectangle', stopLoss: 2.0, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
+  { id: 'chimera-video-pro-m', brand: 'Chimera', model: 'Video Pro Plus M (90x120cm)', type: 'softbox', size: '90x120cm', shape: 'rectangle', stopLoss: 2.0, mount: 'Bowens', thumbnail: '/images/gear/modifier_softbox.png' },
 ];
 
 const MODIFIER_CATEGORIES: CategoryInfo[] = [
