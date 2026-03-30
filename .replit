@@ -1,7 +1,7 @@
 modules = ["nodejs-20", "python-3.11", "web"]
 [agent]
 expertMode = true
-integrations = ["python_openai_ai_integrations:1.0.0"]
+integrations = ["python_openai_ai_integrations:1.0.0", "javascript_openai_ai_integrations:2.0.0"]
 
 [[ports]]
 localPort = 5000
