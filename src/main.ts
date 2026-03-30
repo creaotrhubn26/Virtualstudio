@@ -10505,9 +10505,9 @@ class VirtualStudio {
     }) as EventListener);
 
     window.addEventListener('ch-load-character', ((e: CustomEvent) => {
-      const { modelUrl, name, skinTone, height, position, rotation, storyRigId, additive } = e.detail;
+      const { modelUrl, name, skinTone, height, position, rotation, storyRigId, additive, tints } = e.detail;
       console.log('Loading character:', name, storyRigId ? `(story: ${storyRigId})` : '');
-      this.loadCharacterModel(modelUrl, name, skinTone, height, { position, rotation, storyRigId, additive });
+      this.loadCharacterModel(modelUrl, name, skinTone, height, { position, rotation, storyRigId, additive, tints });
     }) as EventListener);
 
     window.addEventListener('ch-remove-character', (() => {
@@ -16764,6 +16764,7 @@ class VirtualStudio {
       rotation?: [number, number, number];
       storyRigId?: string;
       additive?: boolean;
+      tints?: { skin: string; top: string; bottom: string; accent: string } | null;
     },
   ): Promise<void> {
     if (!options?.additive && !options?.storyRigId) this.removeCharacterModel();
@@ -16835,20 +16836,51 @@ class VirtualStudio {
       let meshCount = 0;
 
       if (preserveOriginalMaterials) {
-        // Tripo / Cesium / rigged models: keep the model's own PBR materials.
-        // Only wire up shadows and isPickable.
-        console.log(`[loadCharacterModel] preserveOriginalMaterials — keeping model PBR textures`);
-        allMeshes.forEach(mesh => {
-          if (mesh instanceof BABYLON.Mesh) {
-            mesh.receiveShadows = true;
-            mesh.castShadows = true;
-            this.lights.forEach((lightData) => {
-              if (lightData.shadowGenerator) lightData.shadowGenerator.addShadowCaster(mesh);
-            });
-            meshCount++;
-          }
-        });
-        console.log(`[loadCharacterModel] Shadow-wired ${meshCount} mesh(es), original materials kept`);
+        const tints = options?.tints;
+        if (tints) {
+          // Variant character: apply tint colors using Y-position heuristic (same logic as SAM).
+          console.log(`[loadCharacterModel] variant tints — applying procedural tint materials`);
+          const skinMat  = this.createProceduralCharacterMaterial(`${name}_skin_mat`,  BABYLON.Color3.FromHexString(tints.skin),   'skin');
+          const topMat   = this.createProceduralCharacterMaterial(`${name}_top_mat`,   BABYLON.Color3.FromHexString(tints.top),    'shirt');
+          const botMat   = this.createProceduralCharacterMaterial(`${name}_bot_mat`,   BABYLON.Color3.FromHexString(tints.bottom), 'pants');
+          const localMinY = boundingInfo.min.y;
+          const localMaxY = boundingInfo.max.y;
+          const localModelHeight = Math.max(localMaxY - localMinY, 0.001);
+          allMeshes.forEach(mesh => {
+            if (mesh instanceof BABYLON.Mesh && this.characterMesh) {
+              const mb = mesh.getBoundingInfo();
+              const cy = (mb.boundingBox.maximumWorld.y + mb.boundingBox.minimumWorld.y) / 2;
+              const ny = (cy - this.characterMesh.getAbsolutePosition().y - localMinY) / localModelHeight;
+              if (ny > 0.82) { mesh.material = skinMat; }
+              else if (ny > 0.38) {
+                const cx = (mb.boundingBox.maximumWorld.x + mb.boundingBox.minimumWorld.x) / 2;
+                const xd = Math.abs(cx - this.characterMesh.getAbsolutePosition().x);
+                mesh.material = (xd > 0.15 && ny > 0.55) ? skinMat : topMat;
+              } else { mesh.material = botMat; }
+              mesh.receiveShadows = true;
+              mesh.castShadows = true;
+              this.lights.forEach((lightData) => {
+                if (lightData.shadowGenerator) lightData.shadowGenerator.addShadowCaster(mesh);
+              });
+              meshCount++;
+            }
+          });
+          console.log(`[loadCharacterModel] Tint materials applied to ${meshCount} mesh(es)`);
+        } else {
+          // Tripo / Cesium / base Mixamo: keep the model's own PBR materials.
+          console.log(`[loadCharacterModel] preserveOriginalMaterials — keeping model PBR textures`);
+          allMeshes.forEach(mesh => {
+            if (mesh instanceof BABYLON.Mesh) {
+              mesh.receiveShadows = true;
+              mesh.castShadows = true;
+              this.lights.forEach((lightData) => {
+                if (lightData.shadowGenerator) lightData.shadowGenerator.addShadowCaster(mesh);
+              });
+              meshCount++;
+            }
+          });
+          console.log(`[loadCharacterModel] Shadow-wired ${meshCount} mesh(es), original materials kept`);
+        }
       } else {
         // SAM 3D Body models: apply procedural skin/shirt/pants material stack.
         const skinColor = BABYLON.Color3.FromHexString(skinTone || '#FFDAB9');

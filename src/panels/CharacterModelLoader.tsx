@@ -19,6 +19,8 @@ import { Person, Delete, Refresh, Add, Search, Male, Female, ChildCare, Face, Bu
 import { logger } from '../core/services/logger';
 import { ALL_POSES } from '../core/animation/PoseLibrary';
 import type { PosePreset } from '../core/animation/PoseLibrary';
+import { CHARACTER_VARIANTS } from '../core/data/characterVariants';
+import type { MaterialTints } from '../core/data/characterVariants';
 
 const log = logger.module('CharacterLoader');
 
@@ -31,6 +33,7 @@ interface CharacterModel {
   thumbnail: string;
   description: string;
   poses: number;
+  tints?: MaterialTints;
 }
 
 interface Pose {
@@ -179,6 +182,38 @@ const CHARACTER_MODELS: CharacterModel[] = [
     description: 'Fullrigget Mixamo-karakter — 49 bein, alle poser støttet',
     poses: ALL_POSES.length,
   },
+  {
+    id: 'mixamo_michelle',
+    name: 'Michelle (Mixamo, poseable)',
+    gender: 'female',
+    category: 'portrett' as any,
+    modelUrl: '/models/avatars/Michelle.glb',
+    thumbnail: createAvatarSVG('mixamo', '#f472b6'),
+    description: 'Rigget Mixamo-dame — dans + T-pose, alle poser støttet',
+    poses: ALL_POSES.length,
+  },
+  // ── 50 pre-configured poseable character variants ──────────────
+  ...CHARACTER_VARIANTS.map((v) => ({
+    id: v.id,
+    name: v.name,
+    gender: v.gender,
+    category: 'portrett' as any,
+    modelUrl: v.baseModelUrl,
+    thumbnail: `data:image/svg+xml,${encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150">` +
+      `<circle cx="50" cy="18" r="14" fill="${v.tints.skin}"/>` +
+      `<rect x="30" y="36" width="40" height="44" rx="5" fill="${v.tints.top}"/>` +
+      `<rect x="14" y="40" width="17" height="9" rx="3" fill="${v.tints.top}"/>` +
+      `<rect x="69" y="40" width="17" height="9" rx="3" fill="${v.tints.top}"/>` +
+      `<rect x="33" y="80" width="14" height="46" rx="3" fill="${v.tints.bottom}"/>` +
+      `<rect x="53" y="80" width="14" height="46" rx="3" fill="${v.tints.bottom}"/>` +
+      `<circle cx="50" cy="15" r="4" fill="${v.tints.accent}" opacity="0.7"/>` +
+      `</svg>`
+    )}`,
+    description: v.description,
+    poses: ALL_POSES.length,
+    tints: v.tints,
+  })),
 ];
 
 const createPoseSVG = (pose: string, color = '#666') => {
@@ -264,6 +299,7 @@ export const CharacterModelLoader: React.FC<CharacterModelLoaderProps> = ({
           name: model.name,
           skinTone,
           height,
+          tints: model.tints ?? null,
         },
       }));
     } catch (error) {
