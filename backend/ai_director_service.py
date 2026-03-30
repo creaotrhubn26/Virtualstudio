@@ -669,6 +669,11 @@ ALLTID norsk. ALLTID forklarende — si kort HVORFOR du gjør de valgene du gjø
 Bruk function calling aktivt. Kall gjerne 3–6 funksjoner i én respons for å bygge hele scenen.
 Etter oppsett: gi en kort vurdering av lysoppsettets styrker og eventuelt hva som kan forbedres.
 
+VISUELL KONTEKST: Hver brukermelding inneholder et live skjermbilde av den renderede 3D-scenen.
+Bruk bildet aktivt: kommenter hva du faktisk ser (lyssetting, skygger, kontrast, fargetone, komposisjon).
+Hvis du ser problemer i bildet — for eksempel for harde skygger, feil fargetemperatur eller dårlig
+nøkkel/fylforhold — nevn det eksplisitt og fiks det med function calls.
+
 ═══════════════════════════════════════════════════════
 STUDIO-KOORDINATSYSTEM (memoriser dette)
 ═══════════════════════════════════════════════════════
@@ -1282,6 +1287,7 @@ class AiDirectorService:
         messages: List[Dict[str, Any]],
         image_data_url: Optional[str] = None,
         scene_context: Optional[Dict[str, Any]] = None,
+        canvas_snapshot: Optional[str] = None,
     ):
         """
         SSE streaming version of chat() using real-time token streaming.
@@ -1374,6 +1380,29 @@ class AiDirectorService:
                         {"type": "text", "text": content or "Analyser dette bildet."},
                         {"type": "image_url", "image_url": {"url": image_data_url}},
                     ]
+
+        # Attach a live canvas screenshot so GPT-4o can see the rendered scene
+        if canvas_snapshot:
+            last_user_msg = next(
+                (m for m in reversed(chat_messages) if m["role"] == "user"), None
+            )
+            if last_user_msg:
+                snapshot_block = {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{canvas_snapshot}",
+                        "detail": "low",
+                    },
+                }
+                content = last_user_msg.get("content", "")
+                if isinstance(content, str):
+                    last_user_msg["content"] = [
+                        {"type": "text", "text": content or "Se på scenen og svar."},
+                        snapshot_block,
+                    ]
+                elif isinstance(content, list):
+                    # Already a list (e.g. image_data_url was also attached) — append
+                    last_user_msg["content"] = list(content) + [snapshot_block]
 
         # Accumulate streaming tool call deltas by index
         accumulated_tool_calls: Dict[int, Dict[str, str]] = {}

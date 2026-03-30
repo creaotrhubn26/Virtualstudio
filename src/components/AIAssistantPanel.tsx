@@ -268,11 +268,31 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
         return diag?.environment?.sceneState ?? null;
       })();
 
+      // Capture the rendered Babylon.js canvas as a 768×432 JPEG thumbnail
+      // so GPT-4o Vision can actually see the scene, not just its metadata.
+      const canvasSnapshot = await (async () => {
+        try {
+          const src = (document.getElementById('renderCanvas') ?? document.querySelector('canvas')) as HTMLCanvasElement | null;
+          if (!src || src.width === 0) return null;
+          const thumb = document.createElement('canvas');
+          thumb.width = 768;
+          thumb.height = Math.round(src.height * (768 / src.width));
+          const ctx = thumb.getContext('2d');
+          if (!ctx) return null;
+          ctx.drawImage(src, 0, 0, thumb.width, thumb.height);
+          const dataUrl = thumb.toDataURL('image/jpeg', 0.72);
+          return dataUrl.split(',')[1] ?? null; // base64 only
+        } catch (e) {
+          console.warn('[AIDirector] Canvas capture failed:', e);
+          return null;
+        }
+      })();
+
       try {
         const res = await fetch('/api/ai/director/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: history, sceneContext }),
+          body: JSON.stringify({ messages: history, sceneContext, canvasSnapshot }),
           signal: ctrl.signal,
         });
 

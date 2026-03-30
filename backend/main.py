@@ -1472,12 +1472,13 @@ async def ai_director_stream(request: Request):
     messages = body.get("messages", [])
     image_data_url = body.get("imageDataUrl")
     scene_context = body.get("sceneContext")
+    canvas_snapshot = body.get("canvasSnapshot")
 
     if not messages:
         raise HTTPException(status_code=400, detail="messages is required")
 
     return StreamingResponse(
-        ai_director_service.chat_stream(messages, image_data_url, scene_context),
+        ai_director_service.chat_stream(messages, image_data_url, scene_context, canvas_snapshot),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
