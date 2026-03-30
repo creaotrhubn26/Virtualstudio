@@ -1019,7 +1019,6 @@ export class AutoFocusSystem {
       
       // Accept if it matches avatar name OR is character-sized
       if (isAvatarByName || isCharacterSized) {
-        console.log(`[AutoFocusSystem] Candidate mesh: ${mesh.name}, height=${height.toFixed(2)}m, isAvatar=${isAvatarByName}`);
         return true;
       }
       

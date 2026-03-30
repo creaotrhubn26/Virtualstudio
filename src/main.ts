@@ -3,7 +3,7 @@ import '@babylonjs/loaders/glTF';
 import { GLTFFileLoader, GLTFLoaderAnimationStartMode } from '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, AIAssistantApp, SceneComposerPanelApp, AnimationComposerApp, VirtualStudioProApp, InteractiveElementsBrowserApp, AmbientSoundsBrowserApp, AccessoriesPanelApp, StoryCharacterHUDApp, PosingModePanelApp, GelPickerApp, OutdoorLightingApp, CinematicEvaluationApp } from './App';
+import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, AIAssistantApp, MarketplacePanelApp, SceneComposerPanelApp, AnimationComposerApp, VirtualStudioProApp, InteractiveElementsBrowserApp, AmbientSoundsBrowserApp, AccessoriesPanelApp, StoryCharacterHUDApp, PosingModePanelApp, GelPickerApp, OutdoorLightingApp, CinematicEvaluationApp } from './App';
 import { useAppStore, useFocusStore, useAutoFocusStore, useFocusPeakingStore, SceneNode } from './state/store';
 import { AutoFocusSystem } from './core/AutoFocusSystem';
 import { FocusPeakingEffect } from './core/FocusPeakingEffect';
@@ -31094,6 +31094,16 @@ window.addEventListener('DOMContentLoaded', () => {
       console.log('AIAssistantApp mounted');
     } else {
       console.error('aiAssistantPanelRoot element not found!');
+    }
+
+    // Mount Marketplace Panel App
+    const marketplacePanelRoot = document.getElementById('marketplacePanelRoot');
+    if (marketplacePanelRoot) {
+      const mpRoot = createRoot(marketplacePanelRoot);
+      mpRoot.render(React.createElement(MarketplacePanelApp, {}));
+      console.log('MarketplacePanelApp mounted');
+    } else {
+      console.warn('marketplacePanelRoot element not found');
     }
 
     // Mount Scene Composer Panel App
