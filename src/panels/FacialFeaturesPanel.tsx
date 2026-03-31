@@ -196,7 +196,7 @@ export const FacialFeaturesPanel: React.FC<FacialFeaturesPanelProps> = ({
           
           <Grid container spacing={1} mb={2}>
             {Object.keys(EXPRESSION_PRESETS).map((expr) => (
-              <Grid xs={4} key={expr}>
+              <Grid size={4} key={expr}>
                 <Card 
                   variant={selectedExpression === expr ? 'elevation' : 'outlined'}
                   sx={{ 
@@ -356,7 +356,7 @@ export const FacialFeaturesPanel: React.FC<FacialFeaturesPanelProps> = ({
 
               <Grid container spacing={1}>
                 {MAKEUP_PRESETS.map((preset) => (
-                  <Grid xs={6} key={preset.id}>
+                  <Grid size={6} key={preset.id}>
                     <Card
                       variant={selectedMakeupPreset === preset.id ? 'elevation' : 'outlined'}
                       sx={{

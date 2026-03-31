@@ -613,7 +613,7 @@ export default function ContractEditingInterface({
                     </IconButton>
                   </Box>
                   <Grid container spacing={{ xs: 1.5, sm: 2, md: 2.5, lg: 3, xl: 3.5 }}>
-                    <Grid xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField
                         label="Beløp"
                         fullWidth
@@ -632,7 +632,7 @@ export default function ContractEditingInterface({
                         }}
                       />
                     </Grid>
-                    <Grid xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <FormControl fullWidth>
                         <InputLabel
                           sx={{
@@ -656,7 +656,7 @@ export default function ContractEditingInterface({
                         </Select>
                       </FormControl>
                     </Grid>
-                    <Grid xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField
                         label="Forfallsdato (valgfritt)"
                         fullWidth
@@ -676,7 +676,7 @@ export default function ContractEditingInterface({
                         }}
                       />
                     </Grid>
-                    <Grid xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField
                         label="Prosentandel (valgfritt)"
                         fullWidth

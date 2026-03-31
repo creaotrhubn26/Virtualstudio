@@ -563,7 +563,7 @@ export default function LibraryPanel() {
       />
       <Grid container spacing={spacing}>
         {items.map((a) => (
-          <Grid xs={12 / gridColumns} key={a.id}>
+          <Grid size={12 / gridColumns} key={a.id}>
             <Card a={a} isTablet={isIPadFriendly} />
           </Grid>
         ))}

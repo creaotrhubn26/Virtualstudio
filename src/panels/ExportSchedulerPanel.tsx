@@ -719,7 +719,7 @@ export function ExportSchedulerPanel({
             <Typography variant="subtitle2">Select Presets</Typography>
             <Grid container spacing={1}>
               {Object.entries(presetsByPlatform).map(([platform, presets]) => (
-                <Grid xs={12} key={platform}>
+                <Grid size={12} key={platform}>
                   <Typography variant="caption" color="text.secondary" gutterBottom display="block">
                     {platform}
                   </Typography>

@@ -113,7 +113,7 @@ export const CharacterPresetsPanel: React.FC<CharacterPresetsPanelProps> = ({
             </Typography>
             <Grid container spacing={2}>
               {poses.map((pose) => (
-                <Grid xs={12} sm={6} key={pose.id}>
+                <Grid size={{ xs: 12, sm: 6 }} key={pose.id}>
                   <Card
                     sx={{
                       bgcolor: '#2a2a2a',
@@ -156,7 +156,7 @@ export const CharacterPresetsPanel: React.FC<CharacterPresetsPanelProps> = ({
             </Typography>
             <Grid container spacing={2}>
               {expressions.map((expression) => (
-                <Grid xs={12} sm={6} key={expression.id}>
+                <Grid size={{ xs: 12, sm: 6 }} key={expression.id}>
                   <Card
                     sx={{
                       bgcolor: '#2a2a2a',

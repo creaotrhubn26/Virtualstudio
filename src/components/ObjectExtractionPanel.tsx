@@ -245,7 +245,7 @@ export function ObjectExtractionPanel({
               </Typography>
               <Grid container spacing={2}>
                 {extractedObjects.map((obj) => (
-                  <Grid xs={12} sm={6} md={4} key={obj.id}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={obj.id}>
                     <Card
                       variant="outlined"
                       sx={{

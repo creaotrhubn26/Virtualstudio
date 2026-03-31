@@ -229,32 +229,32 @@ const DirectorGuidelines: FC<{ show: boolean; onDismiss: () => void }> = ({ show
               3. Keyboard Shortcuts
             </Typography>
             <Grid container spacing={1}>
-              <Grid xs={6}>
+              <Grid size={6}>
                 <Typography variant="caption" color="text.secondary">
                   Arrow Keys: Pan/Tilt
                 </Typography>
               </Grid>
-              <Grid xs={6}>
+              <Grid size={6}>
                 <Typography variant="caption" color="text.secondary">
                   WASD: Dolly/Truck
                 </Typography>
               </Grid>
-              <Grid xs={6}>
+              <Grid size={6}>
                 <Typography variant="caption" color="text.secondary">
                   Q/E: Roll
                 </Typography>
               </Grid>
-              <Grid xs={6}>
+              <Grid size={6}>
                 <Typography variant="caption" color="text.secondary">
                   +/-: Zoom
                 </Typography>
               </Grid>
-              <Grid xs={6}>
+              <Grid size={6}>
                 <Typography variant="caption" color="text.secondary">
                   ESC: Exit Director Mode
                 </Typography>
               </Grid>
-              <Grid xs={6}>
+              <Grid size={6}>
                 <Typography variant="caption" color="text.secondary">
                   R: Start/Stop Recording
                 </Typography>

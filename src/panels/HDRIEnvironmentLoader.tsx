@@ -1917,15 +1917,15 @@ export const HDRIEnvironmentLoader: React.FC = () => {
             <Typography variant="subtitle2">HDRI Cache</Typography>
           </Box>
           <Grid container spacing={2}>
-            <Grid xs={4}>
+            <Grid size={4}>
               <Typography variant="caption" color="text.secondary">Items</Typography>
               <Typography variant="body2">{cacheStats.itemCount}</Typography>
             </Grid>
-            <Grid xs={4}>
+            <Grid size={4}>
               <Typography variant="caption" color="text.secondary">Size</Typography>
               <Typography variant="body2">{hdriCacheService.formatSize(cacheStats.totalSize)}</Typography>
             </Grid>
-            <Grid xs={4}>
+            <Grid size={4}>
               <Typography variant="caption" color="text.secondary">Hit Rate</Typography>
               <Typography variant="body2">{cacheStats.hitRate.toFixed(0)}%</Typography>
             </Grid>
@@ -2078,7 +2078,7 @@ export const HDRIEnvironmentLoader: React.FC = () => {
             const isBlenderKit = hdri.url.startsWith('blenderkit://');
             const isCached = cachedIds.includes(hdri.id);
             return (
-              <Grid xs={6} sm={4} md={3} key={hdri.id}>
+              <Grid size={{ xs: 6, sm: 4, md: 3 }} key={hdri.id}>
                 <Card
                   sx={{
                     cursor: 'pointer',

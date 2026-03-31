@@ -381,13 +381,8 @@ export function MarketplacePanel({ onClose, isFullscreen = false, onToggleFullsc
         ) : (
           <Grid container spacing={{ xs: 1.5, sm: 2, md: 2, lg: 2.5, xl: 3 }}>
             {products.map((product) => (
-              <Grid
+              <Grid size={{ xs: 12, sm: viewMode === 'grid' ? 6 : 12, md: viewMode === 'grid' ? 6 : 12, lg: viewMode === 'grid' ? 4 : 12, xl: viewMode === 'grid' ? 3 : 12 }}
                 item
-                xs={12}
-                sm={viewMode === 'grid' ? 6 : 12}
-                md={viewMode === 'grid' ? 6 : 12}
-                lg={viewMode === 'grid' ? 4 : 12}
-                xl={viewMode === 'grid' ? 3 : 12}
                 key={product.id}
               >
                 <MarketplaceProductCard

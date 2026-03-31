@@ -896,7 +896,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
         <DialogTitle sx={{ fontSize: fontSize.title, p: spacing }}>{editingStep ? 'Rediger steg' : 'Nytt steg'}</DialogTitle>
         <DialogContent sx={{ p: spacing }}>
           <Grid container spacing={spacing} sx={{ mt: 0.5 }}>
-            <Grid xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="Tittel"
@@ -914,7 +914,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                 InputProps={{ sx: { color: '#fff' } }}
               />
             </Grid>
-            <Grid xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="Beskrivelse"
@@ -933,7 +933,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                 InputProps={{ sx: { color: '#fff' } }}
               />
             </Grid>
-            <Grid xs={isMobile ? 12 : 6}>
+            <Grid size={isMobile ? 12 : 6}>
               <FormControl fullWidth size={isMobile ? 'medium' : 'small'}>
                 <InputLabel sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body }}>Panel</InputLabel>
                 <Select
@@ -953,7 +953,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                 </Select>
               </FormControl>
             </Grid>
-            <Grid xs={isMobile ? 12 : 6}>
+            <Grid size={isMobile ? 12 : 6}>
               <FormControl fullWidth size={isMobile ? 'medium' : 'small'}>
                 <InputLabel sx={{ color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body }}>Handling</InputLabel>
                 <Select
@@ -973,7 +973,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                 </Select>
               </FormControl>
             </Grid>
-            <Grid xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="CSS Selector (valgfritt)"
@@ -992,7 +992,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                 InputProps={{ sx: { color: '#fff', fontFamily: 'monospace' } }}
               />
             </Grid>
-            <Grid xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="Handlingsbeskrivelse"
@@ -1011,7 +1011,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                 InputProps={{ sx: { color: '#fff' } }}
               />
             </Grid>
-            <Grid xs={isMobile ? 12 : 6}>
+            <Grid size={isMobile ? 12 : 6}>
               <TextField
                 fullWidth
                 label="Varighet (ms)"
@@ -1030,7 +1030,7 @@ export const TutorialEditorPanel: React.FC<TutorialEditorPanelProps> = ({
                 InputProps={{ sx: { color: '#fff' } }}
               />
             </Grid>
-            <Grid xs={12}>
+            <Grid size={12}>
               <Typography sx={{ mb: 1, color: 'rgba(255,255,255,0.87)', fontSize: fontSize.body }}>Tips</Typography>
               <Box sx={{ display: 'flex', gap: 1, mb: 1, flexDirection: isMobile ? 'column' : 'row' }}>
                 <TextField

@@ -196,7 +196,7 @@ function ControllerSelectorContent({ controllers, selectedId, sceneLights = [], 
               const recommendation = recommendations.find(r => r.controller.id === ctrl.id);
               
               return (
-              <Grid xs={6} key={ctrl.id}>
+              <Grid size={6} key={ctrl.id}>
                 <Card
                   variant="outlined"
                   sx={{
@@ -1522,7 +1522,7 @@ export function FlashControllerPanel() {
                 {/* Group Controls */}
                 <Grid container spacing={1.5}>
                   {groups.map((group) => (
-                    <Grid xs={6} sm={4} md={groups.length <= 4 ? 6 : 4} key={group.id}>
+                    <Grid size={{ xs: 6, sm: 4, md: groups.length <= 4 ? 6 : 4 }} key={group.id}>
                       <GroupPowerDial
                         group={group}
                         controller={controller}

@@ -261,15 +261,15 @@ function HDRIExposureTab() {
           <Typography variant="subtitle2" gutterBottom>Exposure Analysis</Typography>
           
           <Grid container spacing={2}>
-            <Grid xs={4}>
+            <Grid size={4}>
               <Typography variant="caption" color="text.secondary">Brightness</Typography>
               <Typography variant="body1">{Math.round(hdriExposure.brightness * 100)}%</Typography>
             </Grid>
-            <Grid xs={4}>
+            <Grid size={4}>
               <Typography variant="caption" color="text.secondary">EV Contribution</Typography>
               <Typography variant="body1">EV {hdriExposure.evContribution}</Typography>
             </Grid>
-            <Grid xs={4}>
+            <Grid size={4}>
               <Typography variant="caption" color="text.secondary">Color Temp</Typography>
               <Typography variant="body1">{hdriExposure.dominantColorTemp}K</Typography>
             </Grid>
@@ -347,19 +347,19 @@ function CostCalculatorTab() {
       {costAnalysis && (
         <Paper sx={{ p: 2 }}>
           <Grid container spacing={3} mb={2}>
-            <Grid xs={4}>
+            <Grid size={4}>
               <Typography variant="caption" color="text.secondary">Equipment Owned</Typography>
               <Typography variant="h5" color="success.main">
                 {formatCurrency(costAnalysis.ownedEquipmentValue)}
               </Typography>
             </Grid>
-            <Grid xs={4}>
+            <Grid size={4}>
               <Typography variant="caption" color="text.secondary">Missing Equipment</Typography>
               <Typography variant="h5" color="warning.main">
                 {formatCurrency(costAnalysis.missingEquipmentCost)}
               </Typography>
             </Grid>
-            <Grid xs={4}>
+            <Grid size={4}>
               <Typography variant="caption" color="text.secondary">Rental Cost ({rentalDays}d)</Typography>
               <Typography variant="h5" color="primary.main">
                 {formatCurrency(costAnalysis.rentalCost)}
@@ -596,7 +596,7 @@ function HistogramFeedbackTab() {
       {histogramFeedback ? (
         <Paper sx={{ p: 2 }}>
           <Grid container spacing={2} mb={2}>
-            <Grid xs={4}>
+            <Grid size={4}>
               <Typography variant="caption" color="text.secondary">Shadows</Typography>
               <Typography variant="h6" color={histogramFeedback.clipping.shadows ? 'error.main' : 'text.primary'}>
                 {histogramFeedback.underexposed.toFixed(1)}%
@@ -605,11 +605,11 @@ function HistogramFeedbackTab() {
                 <Chip label="Clipping" color="error" size="small" />
               )}
             </Grid>
-            <Grid xs={4}>
+            <Grid size={4}>
               <Typography variant="caption" color="text.secondary">Midtones</Typography>
               <Typography variant="h6">{histogramFeedback.midtones.toFixed(1)}%</Typography>
             </Grid>
-            <Grid xs={4}>
+            <Grid size={4}>
               <Typography variant="caption" color="text.secondary">Highlights</Typography>
               <Typography variant="h6" color={histogramFeedback.clipping.highlights ? 'error.main' : 'text.primary'}>
                 {histogramFeedback.overexposed.toFixed(1)}%

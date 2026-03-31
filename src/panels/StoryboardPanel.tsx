@@ -1065,7 +1065,7 @@ export const StoryboardPanel: React.FC = () => {
           // Grid View (default)
           <Grid container spacing={2}>
             {currentStoryboard.frames.map((frame) => (
-              <Grid xs={12} sm={6} md={4} lg={3} key={frame.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={frame.id}>
                 <FrameCard
                   frame={frame}
                   isSelected={selectedFrame?.id === frame.id}

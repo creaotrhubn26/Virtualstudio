@@ -2201,7 +2201,7 @@ const PanelCreatorContent: React.FC = () => {
           
           <Grid container spacing={2}>
             {getTemplatesByCategory(formData.type || 'function').map((template) => (
-              <Grid xs={12} sm={6} key={template.id}>
+              <Grid size={{ xs: 12, sm: 6 }} key={template.id}>
                 <Paper
                   sx={{
                     p: 2,

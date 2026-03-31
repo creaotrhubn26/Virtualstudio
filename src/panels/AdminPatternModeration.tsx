@@ -147,7 +147,7 @@ export const AdminPatternModeration: React.FC = () => {
       ) : (
         <Grid container spacing={2}>
           {patterns.map((pattern) => (
-            <Grid xs={12} sm={6} md={4} key={pattern.id}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={pattern.id}>
               <Card>
                 {pattern.thumbnail_url && (
                   <Box

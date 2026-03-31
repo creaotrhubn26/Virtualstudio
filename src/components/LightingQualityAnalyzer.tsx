@@ -339,7 +339,7 @@ export function LightingQualityAnalyzer({
 
                 {/* Detailed Metrics */}
                 <Grid container spacing={2}>
-                  <Grid xs={6}>
+                  <Grid size={6}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="body2" gutterBottom>
@@ -367,7 +367,7 @@ export function LightingQualityAnalyzer({
                       </CardContent>
                     </Card>
                   </Grid>
-                  <Grid xs={6}>
+                  <Grid size={6}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="body2" gutterBottom>
@@ -396,7 +396,7 @@ export function LightingQualityAnalyzer({
                       </CardContent>
                     </Card>
                   </Grid>
-                  <Grid xs={6}>
+                  <Grid size={6}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="body2" gutterBottom>
@@ -421,7 +421,7 @@ export function LightingQualityAnalyzer({
                       </CardContent>
                     </Card>
                   </Grid>
-                  <Grid xs={6}>
+                  <Grid size={6}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="body2" gutterBottom>

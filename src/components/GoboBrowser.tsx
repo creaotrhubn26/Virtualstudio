@@ -173,7 +173,7 @@ export const GoboBrowser: FC<GoboBrowserProps> = ({ selectedLightId, onClose }) 
       <Box sx={{ flex: 1, overflow: 'auto' }}>
         <Grid container spacing={2}>
           {filteredGobos.map(gobo => (
-            <Grid xs={6} sm={4} md={3} key={gobo.id}>
+            <Grid size={{ xs: 6, sm: 4, md: 3 }} key={gobo.id}>
               <Card
                 onClick={() => handleGoboSelect(gobo)}
                 sx={{

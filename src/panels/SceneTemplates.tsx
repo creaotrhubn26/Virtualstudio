@@ -507,7 +507,7 @@ export const SceneTemplates: React.FC = () => {
       <Box sx={{ maxHeight: 450, overflowY: 'auto' }}>
         <Grid container spacing={2}>
           {filteredTemplates.map((template) => (
-            <Grid xs={12} sm={6} md={4} key={template.id}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={template.id}>
               <Card
                 sx={{
                   cursor: 'pointer',

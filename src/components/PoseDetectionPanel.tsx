@@ -250,7 +250,7 @@ export function PoseDetectionPanel({
                       Pose Analysis
                     </Typography>
                     <Grid container spacing={2} sx={{ mt: 1 }}>
-                      <Grid xs={6}>
+                      <Grid size={6}>
                         <Typography variant="body2" color="text.secondary">
                           Posture
                         </Typography>
@@ -260,7 +260,7 @@ export function PoseDetectionPanel({
                           sx={{ bgcolor: getPostureColor(result.analysis.posture), color: 'white', mt: 0.5 }}
                         />
                       </Grid>
-                      <Grid xs={6}>
+                      <Grid size={6}>
                         <Typography variant="body2" color="text.secondary">
                           Stance
                         </Typography>
@@ -270,7 +270,7 @@ export function PoseDetectionPanel({
                           sx={{ mt: 0.5 }}
                         />
                       </Grid>
-                      <Grid xs={12}>
+                      <Grid size={12}>
                         <Typography variant="body2" color="text.secondary">
                           Symmetry Score
                         </Typography>

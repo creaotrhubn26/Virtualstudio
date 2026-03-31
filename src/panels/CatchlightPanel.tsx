@@ -173,7 +173,7 @@ export const CatchlightPanel: React.FC<CatchlightPanelProps> = ({ onSettingsChan
             </Typography>
             <Grid container spacing={1}>
               {EYE_COLOR_PRESETS.map((color) => (
-                <Grid xs={4} key={color.name}>
+                <Grid size={4} key={color.name}>
                   <Tooltip title={color.common}>
                     <Card
                       sx={{

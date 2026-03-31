@@ -152,20 +152,20 @@ export default function SongFlowPlatform() {
       <TabPanel value={activeTab} index={0}>
         <Grid container spacing={3}>
           {tracksLoading ? (
-            <Grid xs={12}>
+            <Grid size={12}>
               <Box sx={{ display: 'flex', justifyContent: 'center', p:  3 }}>
                 <Typography>Laster tracks...</Typography>
               </Box>
             </Grid>
           ) : tracksData.length > 0 ? tracksData.map((track: Track) => (
-            <Grid xs={12} key={track.id}>
+            <Grid size={12} key={track.id}>
               <MuiCard sx={{ 
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 color: 'white'
           }}>
                 <CardContent sx={theming.getThemedCardSx()}>
                   <Grid container spacing={2} alignItems="center">
-                    <Grid xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap:  2 }}>
                         <IconButton 
                           sx={{ color: 'white'}}
@@ -189,7 +189,7 @@ export default function SongFlowPlatform() {
                       </Box>
                     </Grid>
                     
-                    <Grid xs={12} md={3}>
+                    <Grid size={{ xs: 12, md: 3 }}>
                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap'}}>
                         <Chip 
                           label={track.status}
@@ -209,13 +209,13 @@ export default function SongFlowPlatform() {
                       </Box>
                     </Grid>
 
-                    <Grid xs={12} md={3}>
+                    <Grid size={{ xs: 12, md: 3 }}>
                       <Typography variant="caption" sx={{ opacity: 0.8}}>
                         {track.stemFiles} stem files
                       </Typography>
                     </Grid>
 
-                    <Grid xs={12} md={2}>
+                    <Grid size={{ xs: 12, md: 2 }}>
                       <Box sx={{ display: 'flex', gap:  1 }}>
                         <IconButton size="small" sx={{ color: 'white'}}>
                           <Equalizer />
@@ -238,7 +238,7 @@ export default function SongFlowPlatform() {
               </MuiCard>
             </Grid>
           )) : (
-            <Grid xs={12}>
+            <Grid size={12}>
               <MuiCard>
                 <CardContent sx={theming.getThemedCardSx()}>
                   <Typography variant="h6" align="center" color="text.secondary" sx={{ color: theming.colors.primary }}>
@@ -272,7 +272,7 @@ export default function SongFlowPlatform() {
         <DialogTitle>Opprett Nytt Spor</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt:  1 }}>
-            <Grid xs={12}>
+            <Grid size={12}>
               <TextField
                 label="Sporets tittel"
                 fullWidth
@@ -280,7 +280,7 @@ export default function SongFlowPlatform() {
                 onChange={(e) => setNewTrack({ ...newTrack, title: e.target.value })}
               />
             </Grid>
-            <Grid xs={12}>
+            <Grid size={12}>
               <TextField
                 label="Artist"
                 fullWidth
@@ -288,7 +288,7 @@ export default function SongFlowPlatform() {
                 onChange={(e) => setNewTrack({ ...newTrack, artist: e.target.value })}
               />
             </Grid>
-            <Grid xs={6}>
+            <Grid size={6}>
               <FormControl fullWidth>
                 <InputLabel>Genre</InputLabel>
                 <Select
@@ -303,7 +303,7 @@ export default function SongFlowPlatform() {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid xs={3}>
+            <Grid size={3}>
               <TextField
                 label="BPM"
                 type="number"
@@ -312,7 +312,7 @@ export default function SongFlowPlatform() {
                 onChange={(e) => setNewTrack({ ...newTrack, bpm: parseInt(e.target.value, 10) || 120 })}
               />
             </Grid>
-            <Grid xs={3}>
+            <Grid size={3}>
               <FormControl fullWidth>
                 <InputLabel>Toneart</InputLabel>
                 <Select

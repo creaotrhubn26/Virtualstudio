@@ -390,7 +390,7 @@ export default function SplitSheetViewer({
             </Typography>
             <Grid container spacing={2}>
               {fullSplitSheet.created_at && (
-                <Grid xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="body2">
                     <strong>Opprettet:</strong>{' '}
                     {new Date(fullSplitSheet.created_at).toLocaleDateString('no-NO', {
@@ -404,7 +404,7 @@ export default function SplitSheetViewer({
                 </Grid>
               )}
               {fullSplitSheet.completed_at && (
-                <Grid xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Typography variant="body2">
                     <strong>Fullført:</strong>{', '}
                     {new Date(fullSplitSheet.completed_at).toLocaleDateString('no-NO', {

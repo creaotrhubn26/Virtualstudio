@@ -167,7 +167,7 @@ export const ClothingPanel: React.FC = () => {  const { addNode } = useAppStore(
         ) : (
           <Grid container spacing={2}>
             {clothingItems.map((clothing) => (
-              <Grid xs={12} sm={6} key={clothing.id}>
+              <Grid size={{ xs: 12, sm: 6 }} key={clothing.id}>
                 <Card
                   sx={{
                     backgroundColor: selectedClothing === clothing.id ? '#333' : '#2a2a2a', '&:hover': { backgroundColor: '#333' },

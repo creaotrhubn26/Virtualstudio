@@ -140,7 +140,7 @@ export default function StreamingPlatformIntegration({
           const isConnected = connection?.connection_status === 'connected';
 
           return (
-            <Grid xs={12} md={4} key={platform}>
+            <Grid size={{ xs: 12, md: 4 }} key={platform}>
               <Card>
                 <CardContent>
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>

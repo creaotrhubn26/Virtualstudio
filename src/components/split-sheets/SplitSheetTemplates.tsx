@@ -336,12 +336,12 @@ export default function SplitSheetTemplates({
       {tabValue === 0 && (
         <Grid container spacing={2}>
           {systemTemplates.length === 0 ? (
-            <Grid xs={12}>
+            <Grid size={12}>
               <Alert severity="info">Ingen systemmaler tilgjengelig</Alert>
             </Grid>
           ) : (
             systemTemplates.map(template => (
-              <Grid xs={12} sm={6} md={4} key={template.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={template.id}>
                 {renderTemplateCard(template)}
               </Grid>
             ))
@@ -352,7 +352,7 @@ export default function SplitSheetTemplates({
       {tabValue === 1 && (
         <Grid container spacing={2}>
           {customTemplates.length === 0 ? (
-            <Grid xs={12}>
+            <Grid size={12}>
               <Card>
                 <CardContent sx={{ textAlign: 'center', py: 4 }}>
                   <PersonIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
@@ -374,7 +374,7 @@ export default function SplitSheetTemplates({
             </Grid>
           ) : (
             customTemplates.map(template => (
-              <Grid xs={12} sm={6} md={4} key={template.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={template.id}>
                 {renderTemplateCard(template)}
               </Grid>
             ))

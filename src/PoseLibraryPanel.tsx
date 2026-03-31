@@ -177,7 +177,7 @@ export const PoseLibraryPanel: React.FC<PoseLibraryPanelProps> = ({
       <Box sx={{ maxHeight: 400, overflowY: 'auto', mb: 2 }}>
         <Grid container spacing={2}>
           {poses.map((pose) => (
-            <Grid xs={12} sm={6} md={4} key={pose.id}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={pose.id}>
               <Card
                 sx={{
                   backgroundColor: '#2a2a2a', '&:hover': { backgroundColor: '#333' },
@@ -228,7 +228,7 @@ export const PoseLibraryPanel: React.FC<PoseLibraryPanelProps> = ({
           Pose Blending
         </Typography>
         <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid xs={6}>
+          <Grid size={6}>
             <FormControl fullWidth size="small">
               <InputLabel>Pose A</InputLabel>
               <Select
@@ -247,7 +247,7 @@ export const PoseLibraryPanel: React.FC<PoseLibraryPanelProps> = ({
               </Select>
             </FormControl>
           </Grid>
-          <Grid xs={6}>
+          <Grid size={6}>
             <FormControl fullWidth size="small">
               <InputLabel>Pose B</InputLabel>
               <Select
@@ -314,7 +314,7 @@ export const PoseLibraryPanel: React.FC<PoseLibraryPanelProps> = ({
           Quick Actions
         </Typography>
         <Grid container spacing={1}>
-          <Grid xs={6}>
+          <Grid size={6}>
             <Button
               variant="outlined"
               fullWidth
@@ -323,7 +323,7 @@ export const PoseLibraryPanel: React.FC<PoseLibraryPanelProps> = ({
               Reset T-Pose
             </Button>
           </Grid>
-          <Grid xs={6}>
+          <Grid size={6}>
             <Button
               variant="outlined"
               fullWidth

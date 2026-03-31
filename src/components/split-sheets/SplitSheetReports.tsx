@@ -173,7 +173,7 @@ export default function SplitSheetReports({
       {/* Quick Stats Overview */}
       {stats && (
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card sx={{ borderTop: '4px solid #9f7aea' }}>
               <CardContent>
                 <Typography variant="h6" sx={{ color: '#9f7aea', fontWeight: 600}}>
@@ -185,7 +185,7 @@ export default function SplitSheetReports({
               </CardContent>
             </Card>
           </Grid>
-          <Grid xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card sx={{ borderTop: '4px solid #4caf50' }}>
               <CardContent>
                 <Typography variant="h6" sx={{ color: '#4caf50', fontWeight: 600}}>
@@ -197,7 +197,7 @@ export default function SplitSheetReports({
               </CardContent>
             </Card>
           </Grid>
-          <Grid xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card sx={{ borderTop: '4px solid #ff9800' }}>
               <CardContent>
                 <Typography variant="h6" sx={{ color: '#ff9800', fontWeight: 600}}>
@@ -209,7 +209,7 @@ export default function SplitSheetReports({
               </CardContent>
             </Card>
           </Grid>
-          <Grid xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card sx={{ borderTop: '4px solid #2196f3' }}>
               <CardContent>
                 <Typography variant="h6" sx={{ color: '#2196f3', fontWeight: 600}}>

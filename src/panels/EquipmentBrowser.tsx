@@ -1088,7 +1088,7 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
             {!inventoryLoading && viewMode === 'grid' && filteredUserInventory.length > 0 && (
               <Grid container spacing={2}>
                 {filteredUserInventory.map((item) => (
-                  <Grid xs={12} sm={6} md={4} key={item.id}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={item.id}>
                     <Card
                       sx={{
                         cursor: 'pointer',
@@ -1334,7 +1334,7 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
         {/* Search and Filters (for Lighting/Cameras/Lenses tabs) */}
         {activeTab !== 'popular' && activeTab !== 'mygear' && (
           <Grid container spacing={2} sx={{ mb: 2 }}>
-            <Grid xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 size="small"
@@ -1345,7 +1345,7 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
                   startAdornment: <SearchIcon sx={{ mr: 1, color: 'action.active' }} />}}
               />
             </Grid>
-            <Grid xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Brand</InputLabel>
                 <Select
@@ -1376,7 +1376,7 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
         {!loading && activeTab !== 'popular' && activeTab !== 'mygear' && (
           <Grid container spacing={2}>
             {filteredEquipment.length === 0 ? (
-              <Grid xs={12}>
+              <Grid size={12}>
                 <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
                   {showOwnedOnly 
                     ? 'No owned equipment found in this category. Add equipment in Dashboard → Equipment tab.'
@@ -1387,7 +1387,7 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
               filteredEquipment.slice(0, 20).map((eq) => {
                 const equipmentIsOwned = isOwned(eq.brand, eq.model);
                 return (
-                  <Grid xs={12} sm={6} md={4} key={eq.id}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={eq.id}>
                     <Card
                       draggable
                       onDragStart={(e) => handleDragStart(eq, e)}

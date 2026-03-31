@@ -1316,7 +1316,7 @@ export function EquipmentCatalog({ onAddToScene, compact = false }: EquipmentCat
             </Typography>
             <Grid container spacing={viewMode === 'grid' ? 1.5 : 1}>
               {items.map((item) => (
-                <Grid xs={viewMode === 'grid' ? 6 : 12} sm={viewMode === 'grid' ? (isTouch ? 6 : 4) : 12} key={item.id}>
+                <Grid size={{ xs: viewMode === 'grid' ? 6 : 12, sm: viewMode === 'grid' ? (isTouch ? 6 : 4) : 12 }} key={item.id}>
                   <Card
                     sx={{
                       bgcolor: '#1e1e1e',

@@ -38,12 +38,12 @@ export default function MeasurementsPanel() {
       </Typography>
       <Stack spacing={1.25}>
         <Grid container spacing={1}>
-          <Grid xs={12}>
+          <Grid size={12}>
             <Typography variant="caption" color="text.secondary">
               Custom pair
             </Typography>
           </Grid>
-          <Grid xs={6}>
+          <Grid size={6}>
             <Select
               size="small"
               fullWidth
@@ -62,7 +62,7 @@ export default function MeasurementsPanel() {
               ))}
             </Select>
           </Grid>
-          <Grid xs={6}>
+          <Grid size={6}>
             <Select
               size="small"
               fullWidth
@@ -81,7 +81,7 @@ export default function MeasurementsPanel() {
               ))}
             </Select>
           </Grid>
-          <Grid xs={12}>
+          <Grid size={12}>
             <Button 
               variant="outlined" 
               onClick={addPair} 

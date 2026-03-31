@@ -65,7 +65,7 @@ export function EquipmentSpecsPanel({ lightId, modifierId }: EquipmentSpecsPanel
 
           <Grid container spacing={2}>
             {/* Power Specifications */}
-            <Grid xs={12}>
+            <Grid size={12}>
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600}}>
                 <PowerIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle' }} />
                 Power
@@ -83,7 +83,7 @@ export function EquipmentSpecsPanel({ lightId, modifierId }: EquipmentSpecsPanel
             </Grid>
 
             {/* Beam Characteristics */}
-            <Grid xs={12}>
+            <Grid size={12}>
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600}}>
                 Beam Pattern
               </Typography>
@@ -100,7 +100,7 @@ export function EquipmentSpecsPanel({ lightId, modifierId }: EquipmentSpecsPanel
             </Grid>
 
             {/* Color Accuracy */}
-            <Grid xs={12}>
+            <Grid size={12}>
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600}}>
                 <ColorIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle' }} />
                 Color Accuracy
@@ -126,7 +126,7 @@ export function EquipmentSpecsPanel({ lightId, modifierId }: EquipmentSpecsPanel
             </Grid>
 
             {/* Physical Specifications */}
-            <Grid xs={12}>
+            <Grid size={12}>
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600}}>
                 <DimensionsIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle' }} />
                 Physical
@@ -144,7 +144,7 @@ export function EquipmentSpecsPanel({ lightId, modifierId }: EquipmentSpecsPanel
             </Grid>
 
             {/* Compatibility */}
-            <Grid xs={12}>
+            <Grid size={12}>
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600}}>
                 <CompatibleIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle' }} />
                 Compatibility
@@ -167,7 +167,7 @@ export function EquipmentSpecsPanel({ lightId, modifierId }: EquipmentSpecsPanel
 
             {/* Price */}
             {lightSpecs.msrpPrice && (
-              <Grid xs={12}>
+              <Grid size={12}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600}}>
                   <PriceIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle' }} />
                   Price
@@ -195,7 +195,7 @@ export function EquipmentSpecsPanel({ lightId, modifierId }: EquipmentSpecsPanel
           </Stack>
 
           <Grid container spacing={2}>
-            <Grid xs={12}>
+            <Grid size={12}>
               <Typography variant="body2">Mount: {modifierSpecs.mountType}</Typography>
               <Typography variant="body2">Diffusion Layers: {modifierSpecs.diffusionLayers}</Typography>
               <Typography variant="body2">Power Loss: {modifierSpecs.powerLossStops} stops</Typography>

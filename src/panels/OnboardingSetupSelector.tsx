@@ -144,7 +144,7 @@ export const OnboardingSetupSelector: React.FC<OnboardingSetupSelectorProps> = (
         <>
           <Grid container spacing={3} sx={{ mb: 3 }}>
             {studios.map((studio) => (
-              <Grid xs={12} md={6} key={studio.id}>
+              <Grid size={{ xs: 12, md: 6 }} key={studio.id}>
                 <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <CardContent sx={{ flexGrow: 1 }}>
                     {/* Badges */}

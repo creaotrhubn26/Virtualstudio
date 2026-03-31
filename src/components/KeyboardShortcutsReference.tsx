@@ -256,7 +256,7 @@ export function ShortcutsReferenceCard({ theme, forExport = false }: ReferenceCa
       {/* Categories Grid */}
       <Grid container spacing={2}>
         {CATEGORIES.map((category) => (
-          <Grid xs={12} sm={6} md={forExport ? 4 : 6} key={category.name}>
+          <Grid size={{ xs: 12, sm: 6, md: forExport ? 4 : 6 }} key={category.name}>
             <Paper
               elevation={0}
               sx={{

@@ -481,7 +481,7 @@ function TemplatesGallery({ nodes = [], onApplyTemplate }: TemplatesGalleryProps
       <Box sx={{ flex: 1, overflow: 'auto' }}>
         <Grid container spacing={1}>
           {filteredTemplates.map((template) => (
-            <Grid xs={12} sm={6} key={template.id}>
+            <Grid size={{ xs: 12, sm: 6 }} key={template.id}>
               <Card
                 sx={{
                   cursor: 'pointer','&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' }}}

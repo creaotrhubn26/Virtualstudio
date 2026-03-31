@@ -276,7 +276,7 @@ export function ExposureColorAnalyzer({
                       Exposure Metrics
                     </Typography>
                     <Grid container spacing={2} sx={{ mt: 1 }}>
-                      <Grid xs={6}>
+                      <Grid size={6}>
                         <Typography variant="body2" color="text.secondary">
                           Subject Exposure
                         </Typography>
@@ -297,7 +297,7 @@ export function ExposureColorAnalyzer({
                           </Typography>
                         </Box>
                       </Grid>
-                      <Grid xs={6}>
+                      <Grid size={6}>
                         <Typography variant="body2" color="text.secondary">
                           Background Exposure
                         </Typography>
@@ -319,7 +319,7 @@ export function ExposureColorAnalyzer({
                           </Typography>
                         </Box>
                       </Grid>
-                      <Grid xs={6}>
+                      <Grid size={6}>
                         <Typography variant="body2" color="text.secondary">
                           Highlight Clipping
                         </Typography>
@@ -327,7 +327,7 @@ export function ExposureColorAnalyzer({
                           {analysis.exposure.highlightClipping}%
                         </Typography>
                       </Grid>
-                      <Grid xs={6}>
+                      <Grid size={6}>
                         <Typography variant="body2" color="text.secondary">
                           Shadow Clipping
                         </Typography>
@@ -346,7 +346,7 @@ export function ExposureColorAnalyzer({
                       Color Metrics
                     </Typography>
                     <Grid container spacing={2} sx={{ mt: 1 }}>
-                      <Grid xs={6}>
+                      <Grid size={6}>
                         <Typography variant="body2" color="text.secondary">
                           Color Harmony
                         </Typography>
@@ -367,7 +367,7 @@ export function ExposureColorAnalyzer({
                           </Typography>
                         </Box>
                       </Grid>
-                      <Grid xs={6}>
+                      <Grid size={6}>
                         <Typography variant="body2" color="text.secondary">
                           Skin Tone
                         </Typography>
@@ -389,7 +389,7 @@ export function ExposureColorAnalyzer({
                           </Typography>
                         </Box>
                       </Grid>
-                      <Grid xs={6}>
+                      <Grid size={6}>
                         <Typography variant="body2" color="text.secondary">
                           Color Temperature
                         </Typography>
@@ -397,7 +397,7 @@ export function ExposureColorAnalyzer({
                           {analysis.color.temperature}K
                         </Typography>
                       </Grid>
-                      <Grid xs={6}>
+                      <Grid size={6}>
                         <Typography variant="body2" color="text.secondary">
                           Saturation
                         </Typography>

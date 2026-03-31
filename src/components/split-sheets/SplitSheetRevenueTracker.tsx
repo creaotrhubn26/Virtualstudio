@@ -134,7 +134,7 @@ export default function SplitSheetRevenueTracker({
     <Box>
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
@@ -149,7 +149,7 @@ export default function SplitSheetRevenueTracker({
             </CardContent>
           </Card>
         </Grid>
-        <Grid xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
@@ -164,7 +164,7 @@ export default function SplitSheetRevenueTracker({
             </CardContent>
           </Card>
         </Grid>
-        <Grid xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card>
             <CardContent>
               <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -306,7 +306,7 @@ export default function SplitSheetRevenueTracker({
               placeholder="f.eks. Spotify, Apple Music"
             />
             <Grid container spacing={2}>
-              <Grid xs={6}>
+              <Grid size={6}>
                 <TextField
                   label="Periode start"
                   type="date"
@@ -317,7 +317,7 @@ export default function SplitSheetRevenueTracker({
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
-              <Grid xs={6}>
+              <Grid size={6}>
                 <TextField
                   label="Periode slutt"
                   type="date"

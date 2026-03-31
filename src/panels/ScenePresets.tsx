@@ -1312,7 +1312,7 @@ export function ScenePresets({ onLoadPreset, onCaptureForComparison }: ScenePres
       <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
         <Grid container spacing={2}>
           {filteredPresets.map((preset) => (
-            <Grid xs={12} sm={6} key={preset.id}>
+            <Grid size={{ xs: 12, sm: 6 }} key={preset.id}>
               <Card
                 sx={{
                   bgcolor: '#1e1e1e',
@@ -1421,7 +1421,7 @@ export function ScenePresets({ onLoadPreset, onCaptureForComparison }: ScenePres
               </Typography>
               <Grid container spacing={1} sx={{ mb: 2 }}>
                 {selectedPreset.equipment.map((item, index) => (
-                  <Grid xs={6} sm={4} key={index}>
+                  <Grid size={{ xs: 6, sm: 4 }} key={index}>
                     <Box
                       sx={{
                         p: 1,

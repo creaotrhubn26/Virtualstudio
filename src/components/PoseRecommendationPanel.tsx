@@ -119,7 +119,7 @@ export function PoseRecommendationPanel({
         {/* Recommendations */}
         <Grid container spacing={2}>
           {recommendations.map((pose, idx) => (
-            <Grid xs={12} sm={6} key={idx}>
+            <Grid size={{ xs: 12, sm: 6 }} key={idx}>
               <Card
                 variant="outlined"
                 sx={{

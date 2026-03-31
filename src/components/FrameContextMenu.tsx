@@ -181,13 +181,13 @@ const MetadataEditorDialog: FC<MetadataEditorProps> = ({
       <DialogContent>
         <Grid container spacing={3} sx={{ mt: 1 }}>
           {/* Camera Settings */}
-          <Grid xs={12}>
+          <Grid size={12}>
             <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <PhotoCamera fontSize="small" /> Camera Settings
             </Typography>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Grid container spacing={2}>
-                <Grid xs={6} sm={3}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                   <TextField
                     fullWidth
                     size="small"
@@ -198,7 +198,7 @@ const MetadataEditorDialog: FC<MetadataEditorProps> = ({
                     InputProps={{ endAdornment: <Typography variant="caption">mm</Typography> }}
                   />
                 </Grid>
-                <Grid xs={6} sm={3}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                   <FormControl fullWidth size="small">
                     <InputLabel>Aperture</InputLabel>
                     <Select
@@ -212,7 +212,7 @@ const MetadataEditorDialog: FC<MetadataEditorProps> = ({
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid xs={6} sm={3}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                   <FormControl fullWidth size="small">
                     <InputLabel>ISO</InputLabel>
                     <Select
@@ -226,7 +226,7 @@ const MetadataEditorDialog: FC<MetadataEditorProps> = ({
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid xs={6} sm={3}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                   <FormControl fullWidth size="small">
                     <InputLabel>Shutter</InputLabel>
                     <Select
@@ -245,7 +245,7 @@ const MetadataEditorDialog: FC<MetadataEditorProps> = ({
           </Grid>
 
           {/* Duration */}
-          <Grid xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Timer fontSize="small" /> Duration
             </Typography>
@@ -270,7 +270,7 @@ const MetadataEditorDialog: FC<MetadataEditorProps> = ({
           </Grid>
 
           {/* Tags */}
-          <Grid xs={12} sm={6}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <LocalOffer fontSize="small" /> Tags
             </Typography>
@@ -293,7 +293,7 @@ const MetadataEditorDialog: FC<MetadataEditorProps> = ({
           </Grid>
 
           {/* Dialogue */}
-          <Grid xs={12}>
+          <Grid size={12}>
             <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <VolumeUp fontSize="small" /> Dialogue / Audio Notes
             </Typography>
@@ -308,7 +308,7 @@ const MetadataEditorDialog: FC<MetadataEditorProps> = ({
           </Grid>
 
           {/* Technical Notes */}
-          <Grid xs={12}>
+          <Grid size={12}>
             <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Settings fontSize="small" /> Technical Notes
             </Typography>

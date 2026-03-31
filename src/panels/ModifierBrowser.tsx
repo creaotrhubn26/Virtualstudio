@@ -170,7 +170,7 @@ export default function ModifierBrowser() {
       {/* Modifier Grid */}
       <Grid container spacing={2}>
         {filteredModifiers.map((modifier) => (
-          <Grid xs={12} sm={6} md={4} key={modifier.id}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={modifier.id}>
             <Card
               sx={{
                 height: '100%',

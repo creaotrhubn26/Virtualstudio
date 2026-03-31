@@ -1026,9 +1026,16 @@ export class AutoFocusSystem {
     });
     
     if (characterMeshes.length === 0) {
-      console.log('[AutoFocusSystem] No character-sized meshes found');
+      // Deduplicate — this runs every 150ms in AF-C; only log when state changes.
+      if (!(this as any)._noMeshLogged) {
+        (this as any)._noMeshLogged = true;
+        console.log('[AutoFocusSystem] No character-sized meshes found');
+      }
       return null;
     }
+    // Reset flag once a mesh is present so the log fires again if all models
+    // are later removed.
+    (this as any)._noMeshLogged = false;
     
     // Find the topmost point across all character meshes
     let highestPoint: BABYLON.Vector3 | null = null;

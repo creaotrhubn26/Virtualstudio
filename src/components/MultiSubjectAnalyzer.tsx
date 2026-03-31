@@ -377,7 +377,7 @@ export function MultiSubjectAnalyzer({
               <>
                 {/* Scores */}
                 <Grid container spacing={2}>
-                  <Grid xs={6}>
+                  <Grid size={6}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="subtitle2" gutterBottom>
@@ -402,7 +402,7 @@ export function MultiSubjectAnalyzer({
                       </CardContent>
                     </Card>
                   </Grid>
-                  <Grid xs={6}>
+                  <Grid size={6}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="subtitle2" gutterBottom>

@@ -302,7 +302,7 @@ export const AccessoriesPanel: React.FC = () => {
       {/* Items Grid */}
       <Grid container spacing={2}>
         {currentItems.map((item) => (
-          <Grid xs={12} sm={6} key={item.id}>
+          <Grid size={{ xs: 12, sm: 6 }} key={item.id}>
             <Card>
               <CardContent>
                 <Typography variant="subtitle2" gutterBottom>

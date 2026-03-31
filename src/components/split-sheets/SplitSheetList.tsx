@@ -77,7 +77,7 @@ export default function SplitSheetList({
     return (
       <Grid container spacing={2}>
         {splitSheets.map((splitSheet) => (
-          <Grid xs={12} sm={6} md={4} key={splitSheet.id}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={splitSheet.id}>
             <Card
               sx={{
                 height: '100%',

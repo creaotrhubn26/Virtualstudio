@@ -193,7 +193,7 @@ export const GlassesSelector: React.FC<GlassesSelectorProps> = ({
             <AccordionDetails>
               <Grid container spacing={1}>
                 {presets.map((preset) => (
-                  <Grid xs={6} sm={4} key={preset.id}>
+                  <Grid size={{ xs: 6, sm: 4 }} key={preset.id}>
                     <Card
                       sx={{
                         bgcolor: activePreset === preset.id ? 'primary.dark' : 'background.paper',
@@ -229,7 +229,7 @@ export const GlassesSelector: React.FC<GlassesSelectorProps> = ({
             <AccordionDetails>
               <Grid container spacing={1}>
                 {FRAME_STYLES.map((style) => (
-                  <Grid xs={6} key={style.value}>
+                  <Grid size={6} key={style.value}>
                     <Card
                       sx={{
                         bgcolor: options.frameStyle === style.value ? 'primary.dark' : 'background.paper',

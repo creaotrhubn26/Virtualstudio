@@ -143,7 +143,7 @@ export function AIShotSuggestions({
                 </Typography>
                 <Grid container spacing={2}>
                   {suggestions.map((suggestion) => (
-                    <Grid xs={12} sm={6} key={suggestion.id}>
+                    <Grid size={{ xs: 12, sm: 6 }} key={suggestion.id}>
                       <Card
                         variant="outlined"
                         sx={{

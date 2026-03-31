@@ -168,7 +168,7 @@ export function LightShaperAttachmentPanel({
           ) : (
             <Grid container spacing={2}>
               {shapers.map((shaper) => (
-                <Grid xs={12} sm={6} md={4} key={shaper.shaper_id}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={shaper.shaper_id}>
                   <ShaperCard shaper={shaper} onSelect={() => handleSelectShaper(shaper)} />
                 </Grid>
               ))}

@@ -96,7 +96,7 @@ export const ShortcutHelp: FC<ShortcutHelpProps> = ({ open, onClose }) => {
               </Typography>
               <Grid container spacing={2}>
                 {categoryShortcuts.map((shortcut) => (
-                  <Grid xs={12} sm={6} key={shortcut.action}>
+                  <Grid size={{ xs: 12, sm: 6 }} key={shortcut.action}>
                     <Box
                       sx={{
                         display: 'flex',

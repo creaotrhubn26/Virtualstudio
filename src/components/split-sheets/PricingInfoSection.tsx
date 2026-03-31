@@ -57,7 +57,7 @@ export default function PricingInfoSection({ projectId }: PricingInfoSectionProp
           </Alert>
         ) : (
           <Grid container spacing={2}>
-            <Grid xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
                 <Typography variant="caption" color="text.secondary">
                   Total Kontraktverdi
@@ -67,7 +67,7 @@ export default function PricingInfoSection({ projectId }: PricingInfoSectionProp
                 </Typography>
               </Box>
             </Grid>
-            <Grid xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
                 <Typography variant="caption" color="text.secondary">
                   Antall Kontrakter
@@ -78,7 +78,7 @@ export default function PricingInfoSection({ projectId }: PricingInfoSectionProp
               </Box>
             </Grid>
             {contracts.map((contract: any) => (
-              <Grid xs={12} key={contract.id}>
+              <Grid size={12} key={contract.id}>
                 <Box sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="body2">

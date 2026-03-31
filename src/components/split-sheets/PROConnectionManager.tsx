@@ -148,7 +148,7 @@ export default function PROConnectionManager({
 
       {/* Available PROs */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card>
             <CardContent>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
@@ -188,7 +188,7 @@ export default function PROConnectionManager({
             </CardContent>
           </Card>
         </Grid>
-        <Grid xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card>
             <CardContent>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>

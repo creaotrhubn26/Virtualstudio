@@ -83,13 +83,13 @@ export const BrandKitShowcase: React.FC = () => {
       <TabPanel value={activeTab} index={0}>
         <Grid container spacing={3}>
           {/* Primary Colors */}
-          <Grid xs={12}>
+          <Grid size={12}>
             <Typography variant="h6" gutterBottom>
               Primary Palette
             </Typography>
             <Grid container spacing={2}>
               {Object.entries(brandColors.primary).map(([name, color]) => (
-                <Grid xs={12} sm={6} md={3} key={name}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={name}>
                   <Card
                     sx={{ cursor: 'pointer' }}
                     onClick={() => handleCopy(color, `primary-${name}`)}
@@ -130,13 +130,13 @@ export const BrandKitShowcase: React.FC = () => {
           </Grid>
 
           {/* Accent Colors */}
-          <Grid xs={12}>
+          <Grid size={12}>
             <Typography variant="h6" gutterBottom>
               Accent Palette
             </Typography>
             <Grid container spacing={2}>
               {Object.entries(brandColors.accent).map(([name, color]) => (
-                <Grid xs={12} sm={6} md={3} key={name}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={name}>
                   <Card
                     sx={{ cursor: 'pointer' }}
                     onClick={() => handleCopy(color, `accent-${name}`)}
@@ -164,13 +164,13 @@ export const BrandKitShowcase: React.FC = () => {
           </Grid>
 
           {/* Functional Colors */}
-          <Grid xs={12}>
+          <Grid size={12}>
             <Typography variant="h6" gutterBottom>
               Functional Colors
             </Typography>
             <Grid container spacing={2}>
               {Object.entries(brandColors.functional).map(([name, color]) => (
-                <Grid xs={12} sm={6} md={3} key={name}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={name}>
                   <Card
                     sx={{ cursor: 'pointer' }}
                     onClick={() => handleCopy(color, `func-${name}`)}
@@ -200,7 +200,7 @@ export const BrandKitShowcase: React.FC = () => {
       <TabPanel value={activeTab} index={1}>
         <Grid container spacing={4}>
           {/* Main Logo */}
-          <Grid xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper elevation={3} sx={{ p: 4, backgroundColor: '#0A0A0A' }}>
               <Typography variant="h6" gutterBottom sx={{ color: '#fff' }}>
                 Main Logo
@@ -226,7 +226,7 @@ export const BrandKitShowcase: React.FC = () => {
           </Grid>
 
           {/* Icon Logo */}
-          <Grid xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper elevation={3} sx={{ p: 4, backgroundColor: '#1A1A1A' }}>
               <Typography variant="h6" gutterBottom sx={{ color: '#fff' }}>
                 Icon Logo
@@ -252,7 +252,7 @@ export const BrandKitShowcase: React.FC = () => {
           </Grid>
 
           {/* Watermark */}
-          <Grid xs={12}>
+          <Grid size={12}>
             <Paper elevation={3} sx={{ p: 4, backgroundColor: '#3F3F46' }}>
               <Typography variant="h6" gutterBottom sx={{ color: '#fff' }}>
                 Export Watermark
@@ -279,7 +279,7 @@ export const BrandKitShowcase: React.FC = () => {
       <TabPanel value={activeTab} index={2}>
         <Grid container spacing={3}>
           {Object.entries(featureIcons).map(([name, svg]) => (
-            <Grid xs={6} sm={4} md={3} lg={2} key={name}>
+            <Grid size={{ xs: 6, sm: 4, md: 3, lg: 2 }} key={name}>
               <Card
                 sx={{
                   cursor: 'pointer', '&:hover': { transform: 'scale(1.05)', transition: '0.2s' }}}
@@ -315,7 +315,7 @@ export const BrandKitShowcase: React.FC = () => {
           Decorative Elements
         </Typography>
         <Grid container spacing={3}>
-          <Grid xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Paper elevation={3} sx={{ p: 2, backgroundColor: '#0A0A0A' }}>
               <Typography variant="subtitle2" gutterBottom sx={{ color: '#fff' }}>
                 Grid Pattern
@@ -323,7 +323,7 @@ export const BrandKitShowcase: React.FC = () => {
               <Box dangerouslySetInnerHTML={{ __html: brandKit.decorative.gridPattern }} />
             </Paper>
           </Grid>
-          <Grid xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Paper elevation={3} sx={{ p: 2, backgroundColor: '#0A0A0A' }}>
               <Typography variant="subtitle2" gutterBottom sx={{ color: '#fff' }}>
                 Gradient Orb
@@ -331,7 +331,7 @@ export const BrandKitShowcase: React.FC = () => {
               <Box dangerouslySetInnerHTML={{ __html: brandKit.decorative.gradientOrb }} />
             </Paper>
           </Grid>
-          <Grid xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Paper elevation={3} sx={{ p: 2, backgroundColor: '#0A0A0A' }}>
               <Typography variant="subtitle2" gutterBottom sx={{ color: '#fff' }}>
                 Loading Spinner

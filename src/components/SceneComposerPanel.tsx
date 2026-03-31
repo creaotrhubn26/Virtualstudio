@@ -914,7 +914,7 @@ export function SceneComposerPanel({ onClose, onSaveScene, onLoadScene }: SceneC
 
               <Grid container spacing={2}>
                 {filteredScenes.map((scene, index) => (
-                  <Grid xs={12} sm={6} md={4} key={scene.id}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={scene.id}>
                     <Card
                       draggable
                       onDragStart={(e) => handleDragStart(e, scene.id)}
@@ -1723,7 +1723,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
           {comparisonScene1 && comparisonScene2 && (
             <Box>
               <Grid container spacing={2}>
-                <Grid xs={6}>
+                <Grid size={6}>
                   <Typography variant="h6" sx={{ mb: 2, color: '#00d4ff' }}>
                     {comparisonScene1.name}
                   </Typography>
@@ -1742,7 +1742,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
                     />
                   )}
                 </Grid>
-                <Grid xs={6}>
+                <Grid size={6}>
                   <Typography variant="h6" sx={{ mb: 2, color: '#00d4ff' }}>
                     {comparisonScene2.name}
                   </Typography>

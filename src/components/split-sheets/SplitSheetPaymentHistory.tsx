@@ -159,7 +159,7 @@ export default function SplitSheetPaymentHistory({
     <Box>
       {/* Summary */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card>
             <CardContent>
               <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -171,7 +171,7 @@ export default function SplitSheetPaymentHistory({
             </CardContent>
           </Card>
         </Grid>
-        <Grid xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card>
             <CardContent>
               <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -183,7 +183,7 @@ export default function SplitSheetPaymentHistory({
             </CardContent>
           </Card>
         </Grid>
-        <Grid xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card>
             <CardContent>
               <Typography variant="body2" color="text.secondary" gutterBottom>
