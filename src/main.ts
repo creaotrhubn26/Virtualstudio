@@ -5752,6 +5752,51 @@ class VirtualStudio {
       'godox-tt685-ii':  { intensity: 180, name: 'Godox TT685 II',   cct: 5600, beamAngle: Math.PI / 3, exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
       'profoto-a10':     { intensity: 220, name: 'Profoto A10',      cct: 5500, beamAngle: Math.PI / 3, exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
       'canon-600ex-rt':  { intensity: 180, name: 'Canon 600EX-RT',  cct: 5600, beamAngle: Math.PI / 3, exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
+
+      // ── Light Shapers ──────────────────────────────────────────────────────
+      // Softbox — rectangular diffuse sources, very soft wrapping light
+      'shaper-softbox-60':     { intensity: 220, name: 'Softboks 60×60 cm',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2, shadowKernel: 128, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
+      'shaper-softbox-90x120': { intensity: 350, name: 'Softboks 90×120 cm',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 160, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
+      'shaper-softbox-120x180':{ intensity: 500, name: 'Softboks 120×180 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
+
+      // Octabox — circular diffuse, even fill with natural catchlight
+      'shaper-octabox-60':  { intensity: 250, name: 'Oktaboks 60 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2, shadowKernel: 128, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'shaper-octabox-95':  { intensity: 400, name: 'Oktaboks 95 cm',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 160, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'shaper-octabox-150': { intensity: 600, name: 'Oktaboks 150 cm', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+
+      // Stripbox — tall narrow softbox, hair/rim/background accent
+      'shaper-stripbox-30x120': { intensity: 280, name: 'Stripboks 30×120 cm', cct: 5600, beamAngle: Math.PI / 4,   exponent: 2.5, shadowKernel: 64,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: null },
+      'shaper-stripbox-60x180': { intensity: 380, name: 'Stripboks 60×180 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 96,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: null },
+
+      // Beauty dish — semi-specular, controlled wrap, beauty/portrait
+      'shaper-beautydish-40': { intensity: 300, name: 'Beauty dish 40 cm', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: null },
+      'shaper-beautydish-56': { intensity: 380, name: 'Beauty dish 56 cm', cct: 5600, beamAngle: Math.PI / 2.2, exponent: 1.5, shadowKernel: 80, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: null },
+
+      // Ring light — flat, shadow-free, catchlight ring
+      'shaper-ring-35': { intensity: 160, name: 'Ringslys 14" / 35 cm', cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: null },
+      'shaper-ring-65': { intensity: 260, name: 'Ringslys 26" / 65 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: null },
+
+      // Umbrella — wide, bounced or shot-through, economical diffusion
+      'shaper-umbrella-reflective':   { intensity: 320, name: 'Paraply (reflektiv) 100 cm',    cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb', faceYawOffset: null },
+      'shaper-umbrella-shootthrough': { intensity: 280, name: 'Paraply (shoot-through) 100 cm', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb', faceYawOffset: null },
+      'shaper-umbrella-xl':           { intensity: 440, name: 'Paraply XL 165 cm',              cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.6, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb', faceYawOffset: null },
+
+      // Snoot — cylindrical narrower, hard directional accent/hair light
+      'shaper-snoot':      { intensity: 280, name: 'Snoot standard',       cct: 5600, beamAngle: Math.PI / 8,  exponent: 6.0, shadowKernel: 16, glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: null },
+      'shaper-snoot-grid': { intensity: 250, name: 'Snoot med honeycomb',  cct: 5600, beamAngle: Math.PI / 12, exponent: 8.0, shadowKernel: 8,  glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: null },
+
+      // Parabolic reflector — deep dish, specular-to-diffuse adjustable
+      'shaper-para-90':  { intensity: 450, name: 'Parabolreflektor 90 cm',  cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, shadowKernel: 48, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: null },
+      'shaper-para-150': { intensity: 700, name: 'Parabolreflektor 150 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: null },
+
+      // Fresnel lens — variable spot/flood, sharp-edged theatrical beam
+      'shaper-fresnel-7':  { intensity: 320, name: 'Fresnel 7"',  cct: 5600, beamAngle: Math.PI / 6, exponent: 4.0, shadowKernel: 24, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
+      'shaper-fresnel-12': { intensity: 480, name: 'Fresnel 12"', cct: 5600, beamAngle: Math.PI / 5, exponent: 3.5, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
+
+      // LED panel — flat broad source, broadcast/interview fill
+      'shaper-ledpanel-30x60':  { intensity: 200, name: 'LED-panel 30×60 cm',  cct: 5600, beamAngle: Math.PI / 1.8, exponent: 1.0, shadowKernel: 96,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
+      'shaper-ledpanel-60x60':  { intensity: 360, name: 'LED-panel 60×60 cm',  cct: 5600, beamAngle: Math.PI / 1.6, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
+      'shaper-ledpanel-60x120': { intensity: 520, name: 'LED-panel 60×120 cm', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
     };
 
     const lightConfig = lightSpecs[modelId] || { intensity: 350, name: modelId, cct: 5600, beamAngle: Math.PI / 3, exponent: 2.0, shadowKernel: 64, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 };
@@ -26938,9 +26983,19 @@ class VirtualStudio {
     const existing = this.lights.get(lightId);
     if (!existing) return;
 
+    // Capture everything we want to preserve before removing the old fixture
     const savedPosition = existing.mesh.position.clone();
     const savedCCT = existing.cct;
     const savedPower = existing.powerMultiplier ?? 1.0;
+
+    // Reconstruct the aim target from the SpotLight's current direction.
+    // We project 5 m along the direction from the light head so aimLightAt
+    // can recalculate yaw + tilt (with the new fixture's faceYawOffset) correctly.
+    let savedAimTarget: BABYLON.Vector3 | null = null;
+    if (existing.light instanceof BABYLON.SpotLight) {
+      const spotLight = existing.light as BABYLON.SpotLight;
+      savedAimTarget = spotLight.position.add(spotLight.direction.normalize().scale(5));
+    }
 
     this.removeLight(lightId);
 
@@ -26949,13 +27004,19 @@ class VirtualStudio {
     const newLight = this.lights.get(newLightId);
     if (!newLight) return;
 
+    // Restore colour temperature and power
     newLight.cct = savedCCT;
     newLight.powerMultiplier = savedPower;
-
     const color = this.cctToColor(savedCCT);
     newLight.light.diffuse = color;
     if (newLight.mesh.material instanceof BABYLON.StandardMaterial) {
       (newLight.mesh.material as BABYLON.StandardMaterial).emissiveColor = color;
+    }
+
+    // Re-aim the new fixture at the same target — aimLightAt applies the
+    // new fixture's own faceYawOffset so the diffuser faces the right way.
+    if (savedAimTarget) {
+      this.aimLightAt(newLightId, savedAimTarget);
     }
 
     this.updateSceneBrightness();
@@ -26966,62 +27027,89 @@ class VirtualStudio {
   private showLightSwapMenu(lightId: string, screenX: number, screenY: number): void {
     document.getElementById('vs-light-swap-menu')?.remove();
 
-    const categories: { label: string; options: { id: string; label: string }[] }[] = [
+    const categories: { label: string; icon: string; options: { id: string; label: string; desc: string }[] }[] = [
       {
         label: 'Softboks',
+        icon: '▭',
         options: [
-          { id: 'aputure-120d',  label: 'Aputure 120D' },
-          { id: 'aputure-300d',  label: 'Aputure 300D' },
-          { id: 'aputure-600d',  label: 'Aputure 600D Pro' },
-          { id: 'godox-tt685-ii', label: 'Godox TT685 II' },
+          { id: 'shaper-softbox-60',      label: '60×60 cm',   desc: 'Kompakt, nær-kilde' },
+          { id: 'shaper-softbox-90x120',  label: '90×120 cm',  desc: 'Allsidig portrett' },
+          { id: 'shaper-softbox-120x180', label: '120×180 cm', desc: 'Stor, myk wrapping' },
         ],
       },
       {
         label: 'Oktaboks',
+        icon: '⬡',
         options: [
-          { id: 'godox-ad200pro',  label: 'Godox AD200 Pro' },
-          { id: 'godox-ad400pro',  label: 'Godox AD400 Pro' },
-          { id: 'profoto-b10',     label: 'Profoto B10' },
-          { id: 'profoto-b10plus', label: 'Profoto B10 Plus' },
+          { id: 'shaper-octabox-60',  label: '60 cm',  desc: 'Kompakt rund katchlight' },
+          { id: 'shaper-octabox-95',  label: '95 cm',  desc: 'Studio allrounder' },
+          { id: 'shaper-octabox-150', label: '150 cm', desc: 'Stor naturlig fill' },
         ],
       },
       {
         label: 'Stripboks',
+        icon: '▮',
         options: [
-          { id: 'aputure-300d-strip',      label: 'Aputure 300D Strip' },
-          { id: 'nanlite-pavotube-15c-kit', label: 'Nanlite PavoTube 15C' },
-        ],
-      },
-      {
-        label: 'LED-panel',
-        options: [
-          { id: 'aputure-nova-p300c', label: 'Aputure NOVA P300c' },
-          { id: 'arri-skypanel-s60',  label: 'Arri SkyPanel S60-C' },
-          { id: 'arri-skypanel-s120', label: 'Arri SkyPanel S120-C' },
-          { id: 'nanlite-mixpad-27c', label: 'Nanlite MixPad 27C' },
-        ],
-      },
-      {
-        label: 'Ringslys',
-        options: [
-          { id: 'nanlite-halo-14', label: 'Nanlite Halo 14"' },
-          { id: 'nanlite-halo-26', label: 'Nanlite Halo 26"' },
-          { id: 'godox-rl-60',     label: 'Godox RL-60 Ring' },
+          { id: 'shaper-stripbox-30x120', label: '30×120 cm', desc: 'Smal, kant/hår' },
+          { id: 'shaper-stripbox-60x180', label: '60×180 cm', desc: 'Bred rimbelysning' },
         ],
       },
       {
         label: 'Beauty dish',
+        icon: '◎',
         options: [
-          { id: 'godox-bd-07',          label: 'Godox BD-07' },
-          { id: 'profoto-softlight-65',  label: 'Profoto Softlight 65cm' },
+          { id: 'shaper-beautydish-40', label: '40 cm', desc: 'Kontrollert semi-spekulær' },
+          { id: 'shaper-beautydish-56', label: '56 cm', desc: 'Klassisk portrettlys' },
         ],
       },
       {
-        label: 'HMI / Fresnel',
+        label: 'Ringslys',
+        icon: '○',
         options: [
-          { id: 'arri-m18',      label: 'Arri M18 HMI' },
-          { id: 'arri-m40',      label: 'Arri M40 HMI' },
-          { id: 'dedolight-150', label: 'Dedolight 150W' },
+          { id: 'shaper-ring-35', label: '14" / 35 cm', desc: 'Tett, skyggefri' },
+          { id: 'shaper-ring-65', label: '26" / 65 cm', desc: 'Bred, flat fill' },
+        ],
+      },
+      {
+        label: 'Paraply',
+        icon: '☂',
+        options: [
+          { id: 'shaper-umbrella-reflective',   label: 'Reflektiv 100 cm',    desc: 'Varm, bounced diffusjon' },
+          { id: 'shaper-umbrella-shootthrough', label: 'Shoot-through 100 cm', desc: 'Bred, myk transmisjon' },
+          { id: 'shaper-umbrella-xl',           label: 'XL 165 cm',           desc: 'Maksimal spredning' },
+        ],
+      },
+      {
+        label: 'Snoot',
+        icon: '▶',
+        options: [
+          { id: 'shaper-snoot',      label: 'Standard',      desc: 'Smal spot, aksent' },
+          { id: 'shaper-snoot-grid', label: 'Med honeycomb', desc: 'Ekstra stram kontroll' },
+        ],
+      },
+      {
+        label: 'Parabolreflektor',
+        icon: '◗',
+        options: [
+          { id: 'shaper-para-90',  label: '90 cm',  desc: 'Spekulær–diffus, portrett' },
+          { id: 'shaper-para-150', label: '150 cm', desc: 'Bred parabolsk fill' },
+        ],
+      },
+      {
+        label: 'Fresnel',
+        icon: '◈',
+        options: [
+          { id: 'shaper-fresnel-7',  label: '7"',  desc: 'Fokusert teaterspot' },
+          { id: 'shaper-fresnel-12', label: '12"', desc: 'Bred, variabel spot/flood' },
+        ],
+      },
+      {
+        label: 'LED-panel',
+        icon: '▦',
+        options: [
+          { id: 'shaper-ledpanel-30x60',  label: '30×60 cm',  desc: 'Kompakt broadcast fill' },
+          { id: 'shaper-ledpanel-60x60',  label: '60×60 cm',  desc: 'Kvadrat intervju-lys' },
+          { id: 'shaper-ledpanel-60x120', label: '60×120 cm', desc: 'Stor flatscreen fill' },
         ],
       },
     ];
@@ -27033,36 +27121,47 @@ class VirtualStudio {
       `left:${screenX}px`,
       `top:${screenY}px`,
       'z-index:99999',
-      'background:#1a1a1f',
-      'border:1px solid rgba(255,255,255,0.12)',
-      'border-radius:8px',
-      'box-shadow:0 8px 32px rgba(0,0,0,0.6)',
+      'background:#18181d',
+      'border:1px solid rgba(255,255,255,0.13)',
+      'border-radius:10px',
+      'box-shadow:0 12px 40px rgba(0,0,0,0.7)',
       'font-family:system-ui,sans-serif',
       'font-size:12px',
       'color:#e0e0e0',
-      'min-width:200px',
-      'max-height:80vh',
+      'min-width:240px',
+      'max-height:82vh',
       'overflow-y:auto',
       'padding:6px 0',
       'user-select:none',
     ].join(';');
 
     const title = document.createElement('div');
-    title.textContent = 'Bytt lyskilde';
-    title.style.cssText = 'padding:6px 14px 8px;font-size:11px;font-weight:600;color:rgba(255,255,255,0.4);letter-spacing:0.08em;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:4px;';
+    title.textContent = 'Bytt lysformer';
+    title.style.cssText = 'padding:7px 14px 9px;font-size:11px;font-weight:600;color:rgba(255,255,255,0.38);letter-spacing:0.09em;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:4px;';
     menu.appendChild(title);
 
     for (const cat of categories) {
       const catLabel = document.createElement('div');
-      catLabel.textContent = cat.label;
-      catLabel.style.cssText = 'padding:5px 14px 3px;font-size:10px;font-weight:600;color:rgba(255,165,50,0.7);letter-spacing:0.07em;text-transform:uppercase;';
+      catLabel.textContent = `${cat.icon}  ${cat.label}`;
+      catLabel.style.cssText = 'padding:7px 14px 3px;font-size:10px;font-weight:700;color:rgba(255,175,60,0.75);letter-spacing:0.07em;text-transform:uppercase;';
       menu.appendChild(catLabel);
 
       for (const opt of cat.options) {
         const item = document.createElement('div');
-        item.textContent = opt.label;
-        item.style.cssText = 'padding:5px 14px 5px 20px;cursor:pointer;transition:background 0.1s;border-radius:4px;margin:1px 4px;';
-        item.addEventListener('mouseenter', () => { item.style.background = 'rgba(255,255,255,0.08)'; });
+        item.style.cssText = 'padding:5px 14px 5px 22px;cursor:pointer;transition:background 0.12s;border-radius:5px;margin:1px 4px;';
+
+        const nameEl = document.createElement('div');
+        nameEl.textContent = opt.label;
+        nameEl.style.cssText = 'font-size:12px;color:#e8e8e8;font-weight:500;';
+
+        const descEl = document.createElement('div');
+        descEl.textContent = opt.desc;
+        descEl.style.cssText = 'font-size:10px;color:rgba(255,255,255,0.38);margin-top:1px;';
+
+        item.appendChild(nameEl);
+        item.appendChild(descEl);
+
+        item.addEventListener('mouseenter', () => { item.style.background = 'rgba(255,255,255,0.07)'; });
         item.addEventListener('mouseleave', () => { item.style.background = 'transparent'; });
         item.addEventListener('mousedown', (ev) => {
           ev.stopPropagation();
@@ -27071,6 +27170,10 @@ class VirtualStudio {
         });
         menu.appendChild(item);
       }
+
+      const divider = document.createElement('div');
+      divider.style.cssText = 'height:1px;background:rgba(255,255,255,0.05);margin:4px 10px 2px;';
+      menu.appendChild(divider);
     }
 
     // Adjust position so menu stays on screen
