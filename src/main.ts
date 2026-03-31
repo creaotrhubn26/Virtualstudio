@@ -2979,8 +2979,6 @@ class VirtualStudio {
       this.studioGizmoDragStart = lightData.mesh.position.clone();
       this.studioGizmoOriginalPos = lightData.mesh.position.clone();
       this.studioGizmoOriginalHeight = lightData.mesh.position.y;
-      // Activate POV mode when starting to drag
-      this.activateLightPOV(lightId);
     });
     baseDragBehavior.onDragObservable.add((_event) => {
       if (this.studioGizmoDragging === 'base') {
@@ -3030,8 +3028,6 @@ class VirtualStudio {
           { position: endPos, height: endPos.y }
         );
       }
-      // Deactivate POV mode when done dragging
-      this.deactivateLightPOV();
     });
     baseRing.addBehavior(baseDragBehavior);
 
@@ -3088,7 +3084,6 @@ class VirtualStudio {
     heightDragBehavior.onDragStartObservable.add(() => {
       this.studioGizmoDragging = 'height';
       this.studioGizmoOriginalHeight = lightData.mesh.position.y;
-      this.activateLightPOV(lightId);
     });
     heightDragBehavior.onDragObservable.add(() => {
       if (this.studioGizmoDragging === 'height') {
@@ -3123,7 +3118,6 @@ class VirtualStudio {
     heightDragBehavior.onDragEndObservable.add(() => {
       this.studioGizmoDragging = null;
       this.hideHeightLabel();
-      this.deactivateLightPOV();
     });
     heightSlider.addBehavior(heightDragBehavior);
 
@@ -3153,7 +3147,6 @@ class VirtualStudio {
     const yokeDragBehavior = new BABYLON.PointerDragBehavior({ dragPlaneNormal: new BABYLON.Vector3(0, 0, 1) });
     yokeDragBehavior.onDragStartObservable.add(() => {
       this.studioGizmoDragging = 'yoke';
-      this.activateLightPOV(lightId);
     });
     yokeDragBehavior.onDragObservable.add((event) => {
       if (this.studioGizmoDragging === 'yoke' && lightData.light instanceof BABYLON.SpotLight) {
@@ -3191,7 +3184,6 @@ class VirtualStudio {
     yokeDragBehavior.onDragEndObservable.add(() => {
       this.studioGizmoDragging = null;
       this.hideAngleLabel();
-      this.deactivateLightPOV();
     });
     yokeRing.addBehavior(yokeDragBehavior);
 
