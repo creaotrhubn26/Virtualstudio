@@ -5338,12 +5338,22 @@ class VirtualStudio {
       console.log(`[PhysicalCamera] ${label} clicked — Kamera og lys panel opened`);
     };
 
+    // Shared dark-body material for viewfinder parts
+    const makeVFMat = (name: string, r = 0.06, g = 0.06, b = 0.06, emR = 0, emG = 0, emB = 0) => {
+      const m = new BABYLON.StandardMaterial(name, this.scene);
+      m.diffuseColor  = new BABYLON.Color3(r, g, b);
+      m.specularColor = new BABYLON.Color3(0.05, 0.05, 0.05);
+      if (emR || emG || emB) m.emissiveColor = new BABYLON.Color3(emR, emG, emB);
+      return m;
+    };
+
     const loadProp = (
       glbPath: string,
       position: BABYLON.Vector3,
       targetHeightM: number,
       label: string,
       meshName: string,
+      viewfinderType: 'dslr' | 'video',
     ) => {
       BABYLON.SceneLoader.ImportMeshAsync('', glbPath, '', this.scene).then((result) => {
         const root = result.meshes[0];
@@ -5365,7 +5375,151 @@ class VirtualStudio {
         // Face the scene centre
         root.lookAt(new BABYLON.Vector3(0, root.position.y, 0));
 
-        // Make every child mesh pickable
+        // Back direction = away from scene origin (toward the operator)
+        const toOriginXZ = new BABYLON.Vector3(-position.x, 0, -position.z).normalize();
+        const backDir    = toOriginXZ.negate(); // points away from scene
+
+        // Right direction (cross of up × back), used for EVF arm placement
+        const rightDir = BABYLON.Vector3.Cross(BABYLON.Vector3.Up(), backDir).normalize();
+
+        const rootY = root.position.y; // ground-snap Y
+        const bodyTopY = rootY + targetHeightM;       // top of camera+tripod assembly
+        const bodyMidY  = bodyTopY - targetHeightM * 0.11; // approx camera body centre
+
+        if (viewfinderType === 'dslr') {
+          // ── DSLR / mirrorless viewfinder ──────────────────────────────
+          // Pentaprism hump on top of camera body
+          const hump = BABYLON.MeshBuilder.CreateBox(`${meshName}-vf-hump`, {
+            width: 0.11, height: 0.07, depth: 0.09
+          }, this.scene);
+          hump.position = new BABYLON.Vector3(
+            root.position.x,
+            bodyTopY - 0.04,
+            root.position.z
+          );
+          hump.rotation.y = Math.atan2(backDir.x, backDir.z);
+          hump.material  = makeVFMat(`${meshName}-hump-mat`);
+
+          // Eyepiece housing (small box at the back of the hump)
+          const housing = BABYLON.MeshBuilder.CreateBox(`${meshName}-vf-housing`, {
+            width: 0.07, height: 0.06, depth: 0.05
+          }, this.scene);
+          housing.position = new BABYLON.Vector3(
+            root.position.x + backDir.x * 0.08,
+            bodyTopY - 0.05,
+            root.position.z + backDir.z * 0.08
+          );
+          housing.rotation.y = Math.atan2(backDir.x, backDir.z);
+          housing.material   = makeVFMat(`${meshName}-housing-mat`, 0.08, 0.08, 0.08);
+
+          // Rubber eye cup (cylinder protruding backward)
+          const eyecup = BABYLON.MeshBuilder.CreateCylinder(`${meshName}-vf-eyecup`, {
+            diameter: 0.038, height: 0.04, tessellation: 20
+          }, this.scene);
+          eyecup.position = new BABYLON.Vector3(
+            root.position.x + backDir.x * 0.12,
+            bodyTopY - 0.055,
+            root.position.z + backDir.z * 0.12
+          );
+          // Rotate cylinder so its axis aligns with backDir (lie it on its side pointing back)
+          const angle = Math.atan2(backDir.x, backDir.z);
+          eyecup.rotation = new BABYLON.Vector3(Math.PI / 2, 0, 0);
+          eyecup.rotation.y = angle;
+          eyecup.material   = makeVFMat(`${meshName}-eyecup-mat`, 0.04, 0.04, 0.04);
+
+          // Diopter adjustment ring
+          const diopter = BABYLON.MeshBuilder.CreateTorus(`${meshName}-vf-diopter`, {
+            diameter: 0.044, thickness: 0.006, tessellation: 20
+          }, this.scene);
+          diopter.position = eyecup.position.clone();
+          diopter.position.addInPlace(backDir.scale(-0.005));
+          diopter.rotation = eyecup.rotation.clone();
+          diopter.material  = makeVFMat(`${meshName}-diopter-mat`, 0.15, 0.15, 0.15);
+
+          // Eye cup inner dark glass (small disc, slightly emissive as if you see the optics)
+          const lens = BABYLON.MeshBuilder.CreateDisc(`${meshName}-vf-lens`, {
+            radius: 0.016, tessellation: 20
+          }, this.scene);
+          lens.position = eyecup.position.add(backDir.scale(0.022));
+          lens.rotation = eyecup.rotation.clone();
+          lens.material  = makeVFMat(`${meshName}-lens-mat`, 0.02, 0.06, 0.10, 0.0, 0.02, 0.05);
+
+          [hump, housing, eyecup, diopter, lens].forEach(m => { m.isPickable = false; });
+          console.log(`[PhysicalCamera] DSLR viewfinder attached to ${label}`);
+
+        } else {
+          // ── Video / cinema camera EVF ──────────────────────────────────
+          // EVF arm bracket extending from right side of camera body
+          const armOffset = rightDir.scale(0.12);
+          const armBase = BABYLON.MeshBuilder.CreateBox(`${meshName}-evf-arm`, {
+            width: 0.015, height: 0.015, depth: 0.10
+          }, this.scene);
+          armBase.position = new BABYLON.Vector3(
+            root.position.x + armOffset.x,
+            bodyMidY + 0.04,
+            root.position.z + armOffset.z
+          );
+          armBase.rotation.y = Math.atan2(backDir.x, backDir.z);
+          armBase.material   = makeVFMat(`${meshName}-arm-mat`, 0.12, 0.12, 0.12);
+
+          // EVF screen housing
+          const evfHousing = BABYLON.MeshBuilder.CreateBox(`${meshName}-evf-housing`, {
+            width: 0.13, height: 0.09, depth: 0.06
+          }, this.scene);
+          evfHousing.position = new BABYLON.Vector3(
+            root.position.x + armOffset.x + backDir.x * 0.08,
+            bodyMidY + 0.05,
+            root.position.z + armOffset.z + backDir.z * 0.08
+          );
+          evfHousing.rotation.y = Math.atan2(backDir.x, backDir.z);
+          evfHousing.material   = makeVFMat(`${meshName}-evf-mat`, 0.10, 0.10, 0.10);
+
+          // EVF screen face (slightly emissive cyan-white like a small LCD)
+          const evfScreen = BABYLON.MeshBuilder.CreatePlane(`${meshName}-evf-screen`, {
+            width: 0.10, height: 0.07
+          }, this.scene);
+          evfScreen.position = evfHousing.position.add(backDir.scale(0.032));
+          evfScreen.rotation.y = Math.atan2(backDir.x, backDir.z) + Math.PI;
+          evfScreen.material  = makeVFMat(`${meshName}-screen-mat`, 0.05, 0.08, 0.12, 0.04, 0.09, 0.18);
+
+          // EVF rubber eyepiece cup
+          const evfEyecup = BABYLON.MeshBuilder.CreateCylinder(`${meshName}-evf-eyecup`, {
+            diameter: 0.046, height: 0.04, tessellation: 20
+          }, this.scene);
+          evfEyecup.position = evfHousing.position.add(backDir.scale(0.055));
+          const evfAngle = Math.atan2(backDir.x, backDir.z);
+          evfEyecup.rotation = new BABYLON.Vector3(Math.PI / 2, 0, 0);
+          evfEyecup.rotation.y = evfAngle;
+          evfEyecup.material   = makeVFMat(`${meshName}-evfcup-mat`, 0.04, 0.04, 0.04);
+
+          // Tally / pilot light — red when "recording" (static red glow for realism)
+          const tally = BABYLON.MeshBuilder.CreateSphere(`${meshName}-tally`, {
+            diameter: 0.018, segments: 8
+          }, this.scene);
+          tally.position = new BABYLON.Vector3(
+            root.position.x - backDir.x * 0.08 + rightDir.x * 0.09,
+            bodyTopY - targetHeightM * 0.08,
+            root.position.z - backDir.z * 0.08 + rightDir.z * 0.09
+          );
+          tally.material = makeVFMat(`${meshName}-tally-mat`, 0.5, 0.0, 0.0, 0.8, 0.0, 0.0);
+
+          // Follow-focus wheel (small disc on lens side)
+          const ffWheel = BABYLON.MeshBuilder.CreateCylinder(`${meshName}-ff-wheel`, {
+            diameter: 0.07, height: 0.012, tessellation: 24
+          }, this.scene);
+          ffWheel.position = new BABYLON.Vector3(
+            root.position.x - backDir.x * 0.05 + rightDir.x * 0.11,
+            bodyMidY,
+            root.position.z - backDir.z * 0.05 + rightDir.z * 0.11
+          );
+          ffWheel.rotation.z = Math.PI / 2;
+          ffWheel.material   = makeVFMat(`${meshName}-ff-mat`, 0.18, 0.18, 0.18);
+
+          [armBase, evfHousing, evfScreen, evfEyecup, tally, ffWheel].forEach(m => { m.isPickable = false; });
+          console.log(`[PhysicalCamera] Video EVF attached to ${label}`);
+        }
+
+        // Make every child mesh pickable (GLB meshes only)
         const allMeshes = root.getChildMeshes(false);
         [...allMeshes, root].forEach((m) => {
           if (!(m instanceof BABYLON.Mesh)) return;
@@ -5391,6 +5545,7 @@ class VirtualStudio {
       1.5,
       'Fotokamera',
       'physical-photo-camera',
+      'dslr',
     );
 
     loadProp(
@@ -5399,6 +5554,7 @@ class VirtualStudio {
       1.6,
       'Videokamera',
       'physical-video-camera',
+      'video',
     );
   }
 
