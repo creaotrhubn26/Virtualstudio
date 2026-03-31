@@ -15,7 +15,8 @@
 import {
   useState,
   useEffect,
-  useMemo } from 'react';
+  useMemo,
+  useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -30,6 +31,14 @@ import {
   Stack,
   FormControlLabel,
   InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  List,
+  ListItemButton,
+  ListItemText,
+  InputBase,
+  CircularProgress,
 } from '@mui/material';
 import {
   PowerSettingsNew as PowerIcon,
@@ -55,6 +64,52 @@ export function AdvancedLightControlPanel({ lightNode, onUpdate }: AdvancedLight
   const [focus, setFocus] = useState(0.5);
   const [position, setPosition] = useState({ x: 0, y: 0, z: 0 });
   const [rotation, setRotation] = useState({ x: 0, y: 0, z: 0 });
+
+  interface IESEntry {
+    filename: string;
+    displayName: string;
+    manufacturer: string;
+    lumcat: string;
+    maxCandela: number;
+    lumens: number;
+    watts: number;
+  }
+  const [iesDialogOpen, setIesDialogOpen] = useState(false);
+  const [iesLibrary, setIesLibrary] = useState<IESEntry[]>([]);
+  const [iesLoading, setIesLoading] = useState(false);
+  const [iesSearch, setIesSearch] = useState('');
+  const [iesApplied, setIesApplied] = useState<string | null>(null);
+
+  const openIesLibrary = useCallback(async () => {
+    setIesDialogOpen(true);
+    if (iesLibrary.length > 0) return;
+    setIesLoading(true);
+    try {
+      const res = await fetch('/ies/index.json');
+      const data: IESEntry[] = await res.json();
+      setIesLibrary(data);
+    } catch (err) {
+      console.warn('[IES] Failed to load library index:', err);
+    } finally {
+      setIesLoading(false);
+    }
+  }, [iesLibrary.length]);
+
+  const applyIESFromLibrary = useCallback((entry: IESEntry) => {
+    window.dispatchEvent(new CustomEvent('vs-apply-ies-library', { detail: { filename: entry.filename, displayName: entry.displayName } }));
+    setIesApplied(entry.lumcat);
+    setIesDialogOpen(false);
+  }, []);
+
+  const filteredIES = useMemo(() => {
+    if (!iesSearch.trim()) return iesLibrary;
+    const q = iesSearch.toLowerCase();
+    return iesLibrary.filter(e =>
+      e.displayName.toLowerCase().includes(q) ||
+      e.manufacturer.toLowerCase().includes(q) ||
+      e.lumcat.toLowerCase().includes(q)
+    );
+  }, [iesLibrary, iesSearch]);
 
   // Initialize from light node
   useEffect(() => {
@@ -374,17 +429,17 @@ export function AdvancedLightControlPanel({ lightNode, onUpdate }: AdvancedLight
 
       <Divider sx={{ my: 2 }} />
 
-      {/* IES Profile Import */}
+      {/* IES Profile */}
       <Box sx={{ mb: 2 }}>
         <Typography variant="caption" sx={{ color: '#888', display: 'block', mb: 1, fontWeight: 600, letterSpacing: 0.5 }}>
-          IES-PROFIL
+          IES-PROFIL{iesApplied && <Box component="span" sx={{ color: '#63b3ed', ml: 1, fontWeight: 400, textTransform: 'none' }}>({iesApplied})</Box>}
         </Typography>
-        <Tooltip title="Last inn en .ies-fil (fotometrisk lysdata) for nøyaktig stråleform fra produsenten">
+        <Stack direction="row" spacing={0.75}>
           <Button
             variant="outlined"
             size="small"
             fullWidth
-            onClick={() => window.dispatchEvent(new CustomEvent('vs-open-ies-picker'))}
+            onClick={openIesLibrary}
             sx={{
               textTransform: 'none',
               fontSize: 11,
@@ -393,10 +448,117 @@ export function AdvancedLightControlPanel({ lightNode, onUpdate }: AdvancedLight
               '&:hover': { borderColor: '#63b3ed', color: '#63b3ed' },
             }}
           >
-            Importer IES-fotometrifil (.ies)
+            Velg IES fra bibliotek
           </Button>
-        </Tooltip>
+          <Tooltip title="Last inn din egen .ies-fil fra disken">
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => window.dispatchEvent(new CustomEvent('vs-open-ies-picker'))}
+              sx={{
+                textTransform: 'none',
+                fontSize: 10,
+                minWidth: 36,
+                px: 1,
+                color: '#718096',
+                borderColor: 'rgba(255,255,255,0.10)',
+                '&:hover': { borderColor: '#a0aec0', color: '#a0aec0' },
+              }}
+            >
+              .ies
+            </Button>
+          </Tooltip>
+        </Stack>
       </Box>
+
+      {/* IES Library Dialog */}
+      <Dialog
+        open={iesDialogOpen}
+        onClose={() => setIesDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: '#1a202c',
+            color: '#e2e8f0',
+            border: '1px solid rgba(255,255,255,0.10)',
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1, fontSize: 14, fontWeight: 700, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 1 }}>
+          IES-bibliotek
+          <Box component="span" sx={{ fontSize: 11, fontWeight: 400, color: '#718096', ml: 0.5 }}>
+            ({iesLibrary.length} armaturer, basert på ekte produsentdata)
+          </Box>
+        </DialogTitle>
+        <Box sx={{ px: 2, pb: 1 }}>
+          <InputBase
+            fullWidth
+            placeholder="Søk etter armatur, produsent…"
+            value={iesSearch}
+            onChange={e => setIesSearch(e.target.value)}
+            autoFocus
+            sx={{
+              bgcolor: 'rgba(255,255,255,0.05)',
+              borderRadius: 1,
+              px: 1.5,
+              py: 0.5,
+              fontSize: 12,
+              color: '#e2e8f0',
+              border: '1px solid rgba(255,255,255,0.12)',
+            }}
+          />
+        </Box>
+        <DialogContent sx={{ p: 0, maxHeight: 420, overflowY: 'auto' }}>
+          {iesLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress size={24} sx={{ color: '#63b3ed' }} />
+            </Box>
+          ) : (
+            <List dense disablePadding>
+              {filteredIES.map(entry => (
+                <ListItemButton
+                  key={entry.filename}
+                  onClick={() => applyIESFromLibrary(entry)}
+                  selected={iesApplied === entry.lumcat}
+                  sx={{
+                    py: 0.75,
+                    px: 2,
+                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    '&:hover': { bgcolor: 'rgba(99,179,237,0.08)' },
+                    '&.Mui-selected': { bgcolor: 'rgba(99,179,237,0.14)', '&:hover': { bgcolor: 'rgba(99,179,237,0.18)' } },
+                  }}
+                >
+                  <ListItemText
+                    primary={
+                      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+                        <Typography sx={{ fontSize: 12, fontWeight: 500, color: '#e2e8f0', flex: 1, lineHeight: 1.3 }}>
+                          {entry.displayName.split('—')[0].trim()}
+                        </Typography>
+                        <Typography sx={{ fontSize: 10, color: '#63b3ed', flexShrink: 0 }}>
+                          {(entry.maxCandela / 1000).toFixed(0)}k cd
+                        </Typography>
+                      </Box>
+                    }
+                    secondary={
+                      <Typography sx={{ fontSize: 10, color: '#718096', mt: 0.2 }}>
+                        {entry.manufacturer} · {entry.lumcat} · {entry.watts}W · {entry.lumens.toLocaleString('no-NO')} lm
+                        {entry.displayName.includes('—') && ` · ${entry.displayName.split('—')[1].trim()}`}
+                      </Typography>
+                    }
+                  />
+                </ListItemButton>
+              ))}
+              {filteredIES.length === 0 && !iesLoading && (
+                <Box sx={{ py: 3, textAlign: 'center', color: '#718096', fontSize: 12 }}>
+                  Ingen armaturer funnet for «{iesSearch}»
+                </Box>
+              )}
+            </List>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Physical Modifiers */}
       <Box sx={{ mb: 2 }}>

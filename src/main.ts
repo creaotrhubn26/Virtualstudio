@@ -9125,6 +9125,22 @@ class VirtualStudio {
       input.click();
     });
 
+    // IES library pick: fetch from /ies/<filename> and apply to selected light
+    window.addEventListener('vs-apply-ies-library', async (e: Event) => {
+      const { filename, displayName } = (e as CustomEvent).detail as { filename: string; displayName: string };
+      try {
+        const resp = await fetch(`/ies/${filename}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const text = await resp.text();
+        const file = new File([text], filename, { type: 'text/plain' });
+        await this.applyIESToSelectedLight(file);
+        this.showToast(`IES brukt: ${displayName.split('—')[0].trim()}`, 'success', 3000);
+      } catch (err) {
+        console.warn('[IES] Library apply failed:', err);
+        this.showToast('Kunne ikke laste IES-profil fra biblioteket.', 'error', 4000);
+      }
+    });
+
     // Physical light modifiers: flags, reflectors, diffusion frames
     window.addEventListener('vs-add-light-modifier', (e: Event) => {
       const detail = (e as CustomEvent).detail as { type?: string; x?: number; y?: number; z?: number };

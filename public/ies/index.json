@@ -1,0 +1,281 @@
+[
+  {
+    "filename": "aputure-ls300d-ii-openface.ies",
+    "displayName": "Aputure LS 300d II — Open Face Reflector (5600K, CRI96+)",
+    "manufacturer": "Aputure Imaging Industries",
+    "lumcat": "LS-300d-II",
+    "maxCandela": 26820,
+    "lumens": 25000,
+    "watts": 350
+  },
+  {
+    "filename": "aputure-ls300d-ii-fresnel-spot.ies",
+    "displayName": "Aputure LS 300d II — F10 Fresnel Spot (5600K)",
+    "manufacturer": "Aputure Imaging Industries",
+    "lumcat": "LS-300d-II-F10-SPOT",
+    "maxCandela": 82000,
+    "lumens": 18000,
+    "watts": 350
+  },
+  {
+    "filename": "aputure-ls300d-ii-fresnel-flood.ies",
+    "displayName": "Aputure LS 300d II — F10 Fresnel Flood (5600K)",
+    "manufacturer": "Aputure Imaging Industries",
+    "lumcat": "LS-300d-II-F10-FLOOD",
+    "maxCandela": 36000,
+    "lumens": 22000,
+    "watts": 350
+  },
+  {
+    "filename": "aputure-ls120d-ii-openface.ies",
+    "displayName": "Aputure LS 120d II — Open Face (5600K, CRI96+)",
+    "manufacturer": "Aputure Imaging Industries",
+    "lumcat": "LS-120d-II",
+    "maxCandela": 11000,
+    "lumens": 10000,
+    "watts": 135
+  },
+  {
+    "filename": "aputure-ls600d-pro-openface.ies",
+    "displayName": "Aputure LS 600d Pro — Open Face (5600K)",
+    "manufacturer": "Aputure Imaging Industries",
+    "lumcat": "LS-600d-Pro",
+    "maxCandela": 68000,
+    "lumens": 55000,
+    "watts": 720
+  },
+  {
+    "filename": "aputure-ls60x.ies",
+    "displayName": "Aputure LS 60x Bi-Color — Open Face (2700–6500K)",
+    "manufacturer": "Aputure Imaging Industries",
+    "lumcat": "LS-60x",
+    "maxCandela": 4200,
+    "lumens": 4200,
+    "watts": 80
+  },
+  {
+    "filename": "nanlite-forza-300.ies",
+    "displayName": "Nanlite Forza 300 — Open Face (5600K, CRI96)",
+    "manufacturer": "Nanlite",
+    "lumcat": "Forza-300",
+    "maxCandela": 22840,
+    "lumens": 18000,
+    "watts": 300
+  },
+  {
+    "filename": "nanlite-forza-60.ies",
+    "displayName": "Nanlite Forza 60 — Open Face (5600K, CRI96)",
+    "manufacturer": "Nanlite",
+    "lumcat": "Forza-60",
+    "maxCandela": 4800,
+    "lumens": 4500,
+    "watts": 60
+  },
+  {
+    "filename": "nanlite-pavotube-30c.ies",
+    "displayName": "Nanlite PavoTube 30C RGBWW Tube (2700–6500K)",
+    "manufacturer": "Nanlite",
+    "lumcat": "PavoTube-30C",
+    "maxCandela": 800,
+    "lumens": 1800,
+    "watts": 30
+  },
+  {
+    "filename": "arri-skypanel-s60-c.ies",
+    "displayName": "Arri SkyPanel S60-C RGBWW LED Panel (various CCT)",
+    "manufacturer": "Arnold & Richter Cine Technik (Arri)",
+    "lumcat": "SkyPanel-S60-C",
+    "maxCandela": 27900,
+    "lumens": 27000,
+    "watts": 380
+  },
+  {
+    "filename": "arri-skypanel-s120-c.ies",
+    "displayName": "Arri SkyPanel S120-C RGBWW LED Panel (various CCT)",
+    "manufacturer": "Arnold & Richter Cine Technik (Arri)",
+    "lumcat": "SkyPanel-S120-C",
+    "maxCandela": 55800,
+    "lumens": 54000,
+    "watts": 740
+  },
+  {
+    "filename": "litepanels-gemini-2x1.ies",
+    "displayName": "Litepanels Gemini 2x1 RGBWW LED Panel (various CCT)",
+    "manufacturer": "Litepanels",
+    "lumcat": "Gemini-2x1-RGBWW",
+    "maxCandela": 41112,
+    "lumens": 38000,
+    "watts": 250
+  },
+  {
+    "filename": "astera-helios-tube.ies",
+    "displayName": "Astera Helios Tube RGBWW (2700–10000K)",
+    "manufacturer": "Astera",
+    "lumcat": "Helios-Tube",
+    "maxCandela": 950,
+    "lumens": 2200,
+    "watts": 50
+  },
+  {
+    "filename": "arri-m18-hmi-flood.ies",
+    "displayName": "Arri M18 HMI PAR — Flood (5600K, CRI90)",
+    "manufacturer": "Arnold & Richter Cine Technik (Arri)",
+    "lumcat": "M18-HMI-FLOOD",
+    "maxCandela": 378000,
+    "lumens": 290000,
+    "watts": 1800
+  },
+  {
+    "filename": "arri-m18-hmi-spot.ies",
+    "displayName": "Arri M18 HMI PAR — Spot (5600K, CRI90)",
+    "manufacturer": "Arnold & Richter Cine Technik (Arri)",
+    "lumcat": "M18-HMI-SPOT",
+    "maxCandela": 1600000,
+    "lumens": 250000,
+    "watts": 1800
+  },
+  {
+    "filename": "joker-bug-400-hmi.ies",
+    "displayName": "K5600 Joker-Bug 400W HMI — Medium Lens (5600K)",
+    "manufacturer": "K5600 Lighting",
+    "lumcat": "Joker-Bug-400",
+    "maxCandela": 95000,
+    "lumens": 38000,
+    "watts": 400
+  },
+  {
+    "filename": "amaran-200x.ies",
+    "displayName": "Amaran 200x Bi-Color LED (2700–6500K, CRI95)",
+    "manufacturer": "Aputure Imaging Industries (Amaran)",
+    "lumcat": "Amaran-200x",
+    "maxCandela": 15500,
+    "lumens": 15000,
+    "watts": 200
+  },
+  {
+    "filename": "profoto-b10.ies",
+    "displayName": "Profoto B10 250Ws Strobe — Air TTL Reflector (5500K)",
+    "manufacturer": "Profoto",
+    "lumcat": "B10-250Ws",
+    "maxCandela": 25000,
+    "lumens": 5000,
+    "watts": 250
+  },
+  {
+    "filename": "profoto-d2-1000-reflector.ies",
+    "displayName": "Profoto D2 1000Ws Strobe — Standard Reflector (5500K)",
+    "manufacturer": "Profoto",
+    "lumcat": "D2-1000Ws",
+    "maxCandela": 85000,
+    "lumens": 18000,
+    "watts": 1000
+  },
+  {
+    "filename": "elinchrom-elb500.ies",
+    "displayName": "Elinchrom ELB 500 TTL 500Ws — Portable Head (5500K)",
+    "manufacturer": "Elinchrom",
+    "lumcat": "ELB-500-TTL",
+    "maxCandela": 42000,
+    "lumens": 9000,
+    "watts": 500
+  },
+  {
+    "filename": "elinchrom-elc1000.ies",
+    "displayName": "Elinchrom ELC Pro HD 1000Ws — Standard Head (5500K)",
+    "manufacturer": "Elinchrom",
+    "lumcat": "ELC-Pro-HD-1000",
+    "maxCandela": 82000,
+    "lumens": 18000,
+    "watts": 1000
+  },
+  {
+    "filename": "godox-ad600pro.ies",
+    "displayName": "Godox AD600Pro 600Ws Outdoor Strobe — Standard Reflector (5600K)",
+    "manufacturer": "Godox",
+    "lumcat": "AD600Pro",
+    "maxCandela": 55000,
+    "lumens": 11000,
+    "watts": 600
+  },
+  {
+    "filename": "godox-ad200pro.ies",
+    "displayName": "Godox AD200Pro 200Ws Pocket Strobe — Dome Diffuser (5600K)",
+    "manufacturer": "Godox",
+    "lumcat": "AD200Pro",
+    "maxCandela": 9500,
+    "lumens": 4000,
+    "watts": 200
+  },
+  {
+    "filename": "godox-ad400pro.ies",
+    "displayName": "Godox AD400Pro 400Ws Outdoor Strobe — Standard Reflector (5600K)",
+    "manufacturer": "Godox",
+    "lumcat": "AD400Pro",
+    "maxCandela": 36000,
+    "lumens": 8000,
+    "watts": 400
+  },
+  {
+    "filename": "broncolor-siros800.ies",
+    "displayName": "Broncolor Siros 800 S 800Ws Strobe — P70 Reflector (5500K)",
+    "manufacturer": "Broncolor",
+    "lumcat": "Siros-800-S",
+    "maxCandela": 78000,
+    "lumens": 16000,
+    "watts": 800
+  },
+  {
+    "filename": "hensel-nova-pro-1200.ies",
+    "displayName": "Hensel NOVA PRO 1200Ws Studio Pack — Standard Reflector (5500K)",
+    "manufacturer": "Hensel",
+    "lumcat": "NOVA-PRO-1200",
+    "maxCandela": 115000,
+    "lumens": 24000,
+    "watts": 1200
+  },
+  {
+    "filename": "westcott-fj200.ies",
+    "displayName": "Westcott FJ200 200Ws Strobe — Recessed Reflector (5500K)",
+    "manufacturer": "Westcott",
+    "lumcat": "FJ200",
+    "maxCandela": 20000,
+    "lumens": 4200,
+    "watts": 200
+  },
+  {
+    "filename": "par64-1000w-vnsp.ies",
+    "displayName": "PAR64 1000W Tungsten — Very Narrow Spot (3200K)",
+    "manufacturer": "Generic Stage Lighting",
+    "lumcat": "PAR64-1000W-VNSP",
+    "maxCandela": 88000,
+    "lumens": 22000,
+    "watts": 1000
+  },
+  {
+    "filename": "aputure-300d-softbox-90x90.ies",
+    "displayName": "Aputure LS 300d II — Softbox 90×90cm (5600K)",
+    "manufacturer": "Aputure Imaging Industries",
+    "lumcat": "LS-300d-II-SB90",
+    "maxCandela": 6200,
+    "lumens": 16000,
+    "watts": 350
+  },
+  {
+    "filename": "strobe-octabox-120cm.ies",
+    "displayName": "Studio Strobe — Octabox 120cm Modifier (5500K)",
+    "manufacturer": "Generic",
+    "lumcat": "OCTABOX-120CM",
+    "maxCandela": 3800,
+    "lumens": 8000,
+    "watts": 400
+  },
+  {
+    "filename": "strobe-stripbox-35x160.ies",
+    "displayName": "Studio Strobe — Stripbox 35×160cm (5500K)",
+    "manufacturer": "Generic",
+    "lumcat": "STRIPBOX-35x160",
+    "maxCandela": 4200,
+    "lumens": 6000,
+    "watts": 400
+  }
+]
