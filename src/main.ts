@@ -5306,6 +5306,100 @@ class VirtualStudio {
       });
       this.updateSceneEnvironment(environmentService.getState());
       console.log('[VirtualStudio] Environment service initialized and subscribed');
+
+    this.setupPhysicalCameraProps();
+  }
+
+  private setupPhysicalCameraProps(): void {
+    const openCameraPanel = (label: string) => {
+      const btn = document.getElementById('cameraControlBtn') as HTMLElement;
+      const panel = document.getElementById('cameraControlsPanel') as HTMLElement;
+      if (panel && panel.style.display === 'none') {
+        if (btn) btn.click();
+        else panel.style.display = 'block';
+      }
+      // Switch to Camera tab
+      const tabCamera = document.getElementById('tabCamera') as HTMLElement;
+      const tabLight = document.getElementById('tabLight') as HTMLElement;
+      const cameraTabContent = document.getElementById('cameraTabContent') as HTMLElement;
+      const lightTabContent = document.getElementById('lightTabContent') as HTMLElement;
+      if (tabCamera && tabLight && cameraTabContent && lightTabContent) {
+        tabLight.classList.remove('active');
+        tabLight.style.background = 'transparent';
+        tabLight.style.borderBottom = '2px solid transparent';
+        tabLight.style.color = 'rgba(255,255,255,0.6)';
+        tabCamera.classList.add('active');
+        tabCamera.style.background = 'rgba(100,180,255,0.15)';
+        tabCamera.style.borderBottom = '2px solid #64b4ff';
+        tabCamera.style.color = '#64b4ff';
+        lightTabContent.style.display = 'none';
+        cameraTabContent.style.display = 'block';
+      }
+      console.log(`[PhysicalCamera] ${label} clicked — Kamera og lys panel opened`);
+    };
+
+    const loadProp = (
+      glbPath: string,
+      position: BABYLON.Vector3,
+      targetHeightM: number,
+      label: string,
+      meshName: string,
+    ) => {
+      BABYLON.SceneLoader.ImportMeshAsync('', glbPath, '', this.scene).then((result) => {
+        const root = result.meshes[0];
+        if (!root) return;
+
+        root.name = meshName;
+
+        // Scale to target height
+        const bounds = root.getHierarchyBoundingVectors(true);
+        const h = bounds.max.y - bounds.min.y;
+        const scale = h > 0.01 ? (targetHeightM / h) : 1;
+        root.scaling.setAll(scale);
+
+        // Ground-snap
+        const b2 = root.getHierarchyBoundingVectors(true);
+        const bottomY = b2.min.y;
+        root.position = new BABYLON.Vector3(position.x, position.y + (0.001 - bottomY), position.z);
+
+        // Face the scene centre
+        root.lookAt(new BABYLON.Vector3(0, root.position.y, 0));
+
+        // Make every child mesh pickable
+        const allMeshes = root.getChildMeshes(false);
+        [...allMeshes, root].forEach((m) => {
+          if (!(m instanceof BABYLON.Mesh)) return;
+          m.isPickable = true;
+          m.actionManager = new BABYLON.ActionManager(this.scene);
+          m.actionManager.registerAction(
+            new BABYLON.ExecuteCodeAction(
+              BABYLON.ActionManager.OnPickTrigger,
+              () => openCameraPanel(label),
+            ),
+          );
+        });
+
+        console.log(`[PhysicalCamera] Loaded ${label} — scale=${scale.toFixed(3)}, meshes=${allMeshes.length + 1}`);
+      }).catch((err) => {
+        console.warn(`[PhysicalCamera] Failed to load ${glbPath}:`, err);
+      });
+    };
+
+    loadProp(
+      '/models/cameras/photo-camera-tripod.glb',
+      new BABYLON.Vector3(3, 0, 2.5),
+      1.5,
+      'Fotokamera',
+      'physical-photo-camera',
+    );
+
+    loadProp(
+      '/models/cameras/video-camera-tripod.glb',
+      new BABYLON.Vector3(-3, 0, 2.5),
+      1.6,
+      'Videokamera',
+      'physical-video-camera',
+    );
   }
 
   // Apply environment service state to scene walls/floor
@@ -26849,37 +26943,33 @@ class VirtualStudio {
     this.selectedActorId = null; // Clear actor selection when selecting light
 
     if (data) {
-      // Open the "Kamera & Lys" panel and switch to the light tab automatically
-      const cameraControlBtn = document.getElementById('cameraControlBtn') as HTMLElement;
+      // Switch to the Lys tab only if the panel is already open — never force-open it.
       const cameraControlsPanel = document.getElementById('cameraControlsPanel') as HTMLElement;
-      if (cameraControlsPanel && cameraControlsPanel.style.display === 'none') {
-        if (cameraControlBtn) cameraControlBtn.click();
-        else cameraControlsPanel.style.display = 'block';
-      }
-      const tabLight = document.getElementById('tabLight') as HTMLElement;
-      const tabCamera = document.getElementById('tabCamera') as HTMLElement;
-      const cameraTabContent = document.getElementById('cameraTabContent') as HTMLElement;
-      const lightTabContent = document.getElementById('lightTabContent') as HTMLElement;
-      if (tabLight && tabCamera && cameraTabContent && lightTabContent) {
-        tabCamera.classList.remove('active');
-        tabCamera.style.background = 'transparent';
-        tabCamera.style.borderBottom = '2px solid transparent';
-        tabCamera.style.color = 'rgba(255,255,255,0.6)';
-        tabLight.classList.add('active');
-        tabLight.style.background = 'rgba(255,170,0,0.15)';
-        tabLight.style.borderBottom = '2px solid #ffaa00';
-        tabLight.style.color = '#ffaa00';
-        cameraTabContent.style.display = 'none';
-        lightTabContent.style.display = 'flex';
-        const screenWidth = window.innerWidth;
-        const lightTabWidth = screenWidth >= 1440 ? '1100px' : '900px';
-        if (cameraControlsPanel) {
+      const panelIsOpen = cameraControlsPanel && cameraControlsPanel.style.display !== 'none';
+      if (panelIsOpen) {
+        const tabLight = document.getElementById('tabLight') as HTMLElement;
+        const tabCamera = document.getElementById('tabCamera') as HTMLElement;
+        const cameraTabContent = document.getElementById('cameraTabContent') as HTMLElement;
+        const lightTabContent = document.getElementById('lightTabContent') as HTMLElement;
+        if (tabLight && tabCamera && cameraTabContent && lightTabContent) {
+          tabCamera.classList.remove('active');
+          tabCamera.style.background = 'transparent';
+          tabCamera.style.borderBottom = '2px solid transparent';
+          tabCamera.style.color = 'rgba(255,255,255,0.6)';
+          tabLight.classList.add('active');
+          tabLight.style.background = 'rgba(255,170,0,0.15)';
+          tabLight.style.borderBottom = '2px solid #ffaa00';
+          tabLight.style.color = '#ffaa00';
+          cameraTabContent.style.display = 'none';
+          lightTabContent.style.display = 'flex';
+          const screenWidth = window.innerWidth;
+          const lightTabWidth = screenWidth >= 1440 ? '1100px' : '900px';
           cameraControlsPanel.style.width = lightTabWidth;
           cameraControlsPanel.style.maxHeight = 'none';
+          setTimeout(() => {
+            if ((window as any).setupLightSectionCollapse) (window as any).setupLightSectionCollapse();
+          }, 50);
         }
-        setTimeout(() => {
-          if ((window as any).setupLightSectionCollapse) (window as any).setupLightSectionCollapse();
-        }, 50);
       }
 
       const propsPanel = document.getElementById('lightProperties');
