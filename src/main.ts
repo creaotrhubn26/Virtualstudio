@@ -1043,14 +1043,10 @@ class VirtualStudio {
     try {
       console.log('[VirtualStudio] Starting gizmo setup...');
       this.gizmoManager = new BABYLON.GizmoManager(this.scene);
-      this.gizmoManager.positionGizmoEnabled = true;
+      this.gizmoManager.positionGizmoEnabled = false;
       this.gizmoManager.rotationGizmoEnabled = false;
       this.gizmoManager.scaleGizmoEnabled = false;
       this.gizmoManager.attachableMeshes = [];
-      // Disable auto-attach on click — our POINTERPICK observer manages selection.
-      // Without this, clicking the GLB model causes GizmoManager to auto-attach its
-      // position gizmo to the light parentMesh (via ancestor walk), which then conflicts
-      // with selectLight disabling the gizmo and causes the mesh to disappear.
       this.gizmoManager.usePointerToAttachGizmos = false;
 
       this.customizeGizmoAppearance();
@@ -26661,22 +26657,57 @@ class VirtualStudio {
         // Studio gizmos provide their own drag handlers for position/rotation updates
       }
 
-      // Show beam visualization for selected light
-      if (data.beamVisualization) {
-        data.beamVisualization.isVisible = true;
-      }
+      // Beam visualization kept hidden — cone geometry was incorrectly rotated (LOCAL Z
+      // aligned with direction instead of LOCAL Y), producing a sideways 17m-diameter cone
+      // that visually occluded the GLB model. Studio gizmos provide sufficient selection feedback.
+      // if (data.beamVisualization) data.beamVisualization.isVisible = true;
+
+      // Diagnostic helper — logs mesh + children enabled/visible/renderOutline state
+      const dbgLightMesh = (label: string) => {
+        const m = data.mesh;
+        const kids = m.getChildMeshes(false);
+        console.log(`[selectLight:${label}] root enabled=${m.isEnabled()} visible=${m.isVisible} outline=${m.renderOutline} pos=(${m.position.x.toFixed(2)},${m.position.y.toFixed(2)},${m.position.z.toFixed(2)})`);
+        kids.forEach(k => {
+          const km = k as BABYLON.Mesh;
+          console.log(`  child '${k.name}' enabled=${k.isEnabled()} visible=${k.isVisible} outline=${km.renderOutline ?? 'n/a'}`);
+        });
+      };
+
+      dbgLightMesh('BEFORE-highlight');
 
       // Add visual highlight to selected light
       this.addLightHighlight(data.mesh);
+      dbgLightMesh('AFTER-highlight');
 
       // Enable snapping to ground when moving
       this.enableGroundSnapping(data.mesh);
+      dbgLightMesh('AFTER-groundSnap');
 
       // Create studio gizmos for realistic light manipulation
       this.createStudioGizmos(id);
+      dbgLightMesh('AFTER-createGizmos');
 
       // Show game-style HUD for light control
       this.showLightControlHUD(id, data);
+      dbgLightMesh('AFTER-HUD');
+
+      // Post-selection watchdog: detect asynchronous visibility loss over the next 2 seconds
+      const watchdogMesh = data.mesh;
+      const watchdogId = id;
+      const checkTimes = [100, 250, 500, 1000, 2000];
+      checkTimes.forEach(ms => setTimeout(() => {
+        if (this.selectedLightId !== watchdogId) return;
+        const visible = watchdogMesh.isVisible;
+        const enabled = watchdogMesh.isEnabled();
+        const pos = watchdogMesh.position;
+        if (!visible || !enabled || Math.abs(pos.y) > 5) {
+          console.error(`[WATCHDOG:${ms}ms] Light ${watchdogId} mesh anomaly! visible=${visible} enabled=${enabled} pos=(${pos.x.toFixed(2)},${pos.y.toFixed(2)},${pos.z.toFixed(2)})`);
+          watchdogMesh.getChildMeshes(false).forEach(k => {
+            if (!k.isVisible || !k.isEnabled())
+              console.error(`  HIDDEN child '${k.name}' visible=${k.isVisible} enabled=${k.isEnabled()}`);
+          });
+        }
+      }, ms));
     }
 
     this.updateSceneList();
