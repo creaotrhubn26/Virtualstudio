@@ -22167,10 +22167,8 @@ class VirtualStudio {
   private highlightClipping: number = 0;
   private shadowClipping: number = 0;
   private midtoneExposure: number = 0; // Average exposure in middle 18% gray zone
-  private histogramFrameCount: number = 0;
   private lastHistogramUpdate: number = 0;
   private histogramUpdateInterval: number = 100; // ms between updates
-  private pixelReadBuffer: Uint8Array | null = null;
   private isReadingPixels: boolean = false;
 
   // Professional histogram settings
@@ -22239,7 +22237,10 @@ class VirtualStudio {
       const bHist = new Uint32Array(256);
       const lumHist = new Uint32Array(256);
 
-      const data = new Uint8Array(pixels.buffer);
+      // Safely convert any ArrayBufferView to uint8 bytes (handles Uint8Array and Float32Array)
+      const data = pixels instanceof Uint8Array
+        ? pixels
+        : new Uint8Array(pixels.buffer, pixels.byteOffset, pixels.byteLength);
       let totalPixels = 0;
       let highlightClipped = 0;
       let shadowClipped = 0;
