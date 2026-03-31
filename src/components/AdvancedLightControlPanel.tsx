@@ -40,7 +40,6 @@ import {
   Save as SaveIcon,
   Restore as LoadIcon,
 } from '@mui/icons-material';
-import { photometricUnitsService } from '@/core/services/photometricUnitsService';
 import { LightQualityPanel } from './LightQualityPanel';
 
 interface AdvancedLightControlPanelProps {
@@ -149,24 +148,19 @@ export function AdvancedLightControlPanel({ lightNode, onUpdate }: AdvancedLight
     return '#E0F0FF'; // Cool blue
   };
 
-  // Calculate precise photometric values
+  // Calculate photometric values inline (no external service needed).
   const photometrics = useMemo(() => {
-    const subjectPosition: [number, number, number] = [0, 0, 0];
-    const surfaceNormal: [number, number, number] = [0, 1, 0];
-
-    const lightProps = {
-      power: intensity / 100,
-      wattage: 500, // Assume 500W light
-      efficacy: 80, // LED efficacy
-      position: lightNode.transform.position,
-      beamAngle: beam,
-    };
-
-    return photometricUnitsService.calculatePhotometrics(
-      lightProps,
-      subjectPosition,
-      surfaceNormal
-    );
+    const [px, py, pz] = lightNode.transform.position as [number, number, number];
+    const wattage = 500;
+    const efficacy = 80;
+    const luminousFlux = wattage * efficacy * (intensity / 100);
+    const beamRad = (beam * Math.PI) / 180;
+    const steradians = 2 * Math.PI * (1 - Math.cos(beamRad / 2));
+    const luminousIntensity = steradians > 0 ? luminousFlux / steradians : 0;
+    const distance = Math.max(0.1, Math.sqrt(px * px + py * py + pz * pz));
+    const illuminance = luminousIntensity / (distance * distance);
+    const footCandles = illuminance / 10.764;
+    return { illuminance, footCandles, luminousIntensity, luminousFlux };
   }, [intensity, beam, lightNode.transform.position]);
 
   return (

@@ -369,10 +369,10 @@ export const DirectorModeOverlay: FC<DirectorModeOverlayProps> = ({
       switch (key) {
         // Movement (WASD)
         case 'w':
-          handleCameraMove('forward,', 0.5);
+          handleCameraMove('forward', 0.5);
           break;
         case 's':
-          handleCameraMove('backward,', 0.5);
+          handleCameraMove('backward', 0.5);
           break;
         case 'a':
           handleCameraMove('left', 0.5);
@@ -380,7 +380,7 @@ export const DirectorModeOverlay: FC<DirectorModeOverlayProps> = ({
         case 'd':
           handleCameraMove('right', 0.5);
           break;
-        case ', ': // Space for up
+        case ' ': // Space for up
           handleCameraMove('up', 0.5);
           e.preventDefault();
           break;

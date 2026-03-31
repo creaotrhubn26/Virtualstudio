@@ -25,6 +25,7 @@ import {
 import { useAppStore } from '../state/store';
 import { LIGHT_DATABASE, LightSpec } from '../data/lightFixtures';
 import { AtmosphereSettings } from '../core/models/sceneComposer';
+import { AdvancedLightControlPanel } from '../components/AdvancedLightControlPanel';
 export type { LightSpec };
 export { LIGHT_DATABASE };
 
@@ -312,6 +313,57 @@ export function LightsBrowser() {
   const [searchQuery, setSearchQuery] = useState('');
   const [modifierSearchQuery, setModifierSearchQuery] = useState('');
   const [activeAtmosphere, setActiveAtmosphere] = useState<AtmosphereSettings | null>(null);
+
+  // Track which studio light is currently selected so we can show its controls.
+  const [selectedLightNode, setSelectedLightNode] = useState<any>(null);
+
+  useEffect(() => {
+    const onLightSelected = (e: Event) => {
+      const { id, intensity, enabled, cct, beam, position } = (e as CustomEvent).detail ?? {};
+      if (!id) return;
+      setSelectedLightNode({
+        id,
+        visible: enabled !== false,
+        light: {
+          // power is 0-1; the raw studio intensity can be >1000 lux so we
+          // normalise to the panel's 0-100 % slider (max 2000 lux = 100 %).
+          power: Math.min(1, (intensity ?? 0) / 2000),
+          cct: cct ?? 5600,
+          beam: beam ?? 60,
+          focus: 0.5,
+        },
+        transform: {
+          position: position ?? [0, 3, 0],
+          rotation: [0, 0, 0],
+        },
+      });
+    };
+
+    window.addEventListener('light-selected', onLightSelected);
+    return () => window.removeEventListener('light-selected', onLightSelected);
+  }, []);
+
+  const handleLightUpdate = (updates: any) => {
+    const lightId = selectedLightNode?.id;
+    if (!lightId) return;
+
+    const dispatch = (property: string, value: unknown) =>
+      window.dispatchEvent(
+        new CustomEvent('vs-set-light-property', { detail: { lightId, property, value } })
+      );
+
+    if (updates.visible !== undefined) dispatch('enabled', updates.visible);
+    if (updates.light?.power !== undefined)
+      // Scale back from 0-1 to raw lux (reverse of the normalisation above).
+      dispatch('intensity', updates.light.power * 2000);
+    if (updates.light?.cct !== undefined) dispatch('cct', updates.light.cct);
+    if (updates.light?.beam !== undefined) dispatch('beam', updates.light.beam);
+    if (updates.transform?.position !== undefined)
+      dispatch('position', updates.transform.position);
+
+    // Keep local state in sync so the panel doesn't jump.
+    setSelectedLightNode((prev: any) => prev ? { ...prev, ...updates } : prev);
+  };
 
   const filteredLights = useMemo(() => {
     return LIGHT_DATABASE.filter((light) => {
@@ -1156,6 +1208,34 @@ export function LightsBrowser() {
             </Box>
           </Box>
         </>
+      )}
+      {/* ── Selected-light inspector ────────────────────────────────────── */}
+      {selectedLightNode && (
+        <Box sx={{ borderTop: '1px solid #333', mt: 1 }}>
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 2,
+            py: 1,
+            bgcolor: '#1a1a2e',
+          }}>
+            <Typography variant="caption" sx={{ color: '#fbbf24', fontWeight: 700, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' }}>
+              🎛️ {selectedLightNode.id} — kontroller
+            </Typography>
+            <Button
+              size="small"
+              onClick={() => setSelectedLightNode(null)}
+              sx={{ color: '#666', minWidth: 0, p: 0.5, fontSize: 18, lineHeight: 1 }}
+            >
+              ×
+            </Button>
+          </Box>
+          <AdvancedLightControlPanel
+            lightNode={selectedLightNode}
+            onUpdate={handleLightUpdate}
+          />
+        </Box>
       )}
     </Paper>
   );

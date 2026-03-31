@@ -11188,6 +11188,91 @@ class VirtualStudio {
       }
     }) as EventListener);
 
+    // ── Director Mode camera controls ─────────────────────────────────────────
+    // These events are fired by DirectorModeOverlay joystick / keyboard.
+    // The overlay dispatches them into the void when no listener exists, so
+    // they must be caught here and applied to the ArcRotateCamera.
+
+    window.addEventListener('vs-camera-move', ((e: CustomEvent) => {
+      const { direction, speed = 0.5 } = e.detail || {};
+      const step = speed * 0.5;
+      switch (direction) {
+        case 'forward':
+          this.camera.radius = Math.max(
+            this.camera.lowerRadiusLimit ?? 2,
+            this.camera.radius - step
+          );
+          break;
+        case 'backward':
+          this.camera.radius = Math.min(
+            this.camera.upperRadiusLimit ?? 50,
+            this.camera.radius + step
+          );
+          break;
+        case 'left': {
+          const rightX = Math.cos(this.camera.alpha) * step;
+          const rightZ = Math.sin(this.camera.alpha) * step;
+          this.camera.target.x -= rightX;
+          this.camera.target.z -= rightZ;
+          break;
+        }
+        case 'right': {
+          const rightX = Math.cos(this.camera.alpha) * step;
+          const rightZ = Math.sin(this.camera.alpha) * step;
+          this.camera.target.x += rightX;
+          this.camera.target.z += rightZ;
+          break;
+        }
+        case 'up':
+          this.camera.target.y += step;
+          break;
+        case 'down':
+          this.camera.target.y = Math.max(0, this.camera.target.y - step);
+          break;
+        default:
+          console.warn(`[vs-camera-move] Unknown direction: "${direction}"`);
+      }
+    }) as EventListener);
+
+    window.addEventListener('vs-camera-rotate', ((e: CustomEvent) => {
+      const { axis, amount = 0 } = e.detail || {};
+      const rad = (amount * Math.PI) / 180;
+      switch (axis) {
+        case 'pan':
+          this.camera.alpha += rad;
+          break;
+        case 'tilt':
+          this.camera.beta = Math.max(
+            0.01,
+            Math.min(Math.PI - 0.01, this.camera.beta - rad)
+          );
+          break;
+        case 'roll':
+          // ArcRotateCamera has no roll axis; silently ignore so controls
+          // don't throw an error if a free-cam roll event arrives.
+          break;
+        default:
+          console.warn(`[vs-camera-rotate] Unknown axis: "${axis}"`);
+      }
+    }) as EventListener);
+
+    window.addEventListener('vs-camera-zoom', ((e: CustomEvent) => {
+      const { amount = 0 } = e.detail || {};
+      // Positive amount = zoom in (decrease radius).
+      this.camera.radius = Math.max(
+        this.camera.lowerRadiusLimit ?? 2,
+        Math.min(
+          this.camera.upperRadiusLimit ?? 50,
+          this.camera.radius - amount * 5
+        )
+      );
+    }) as EventListener);
+
+    window.addEventListener('vs-camera-reset', (() => {
+      this.resetCamera();
+      console.log('[vs-camera-reset] Camera reset to home position');
+    }) as EventListener);
+
     // ── AI Director: auto-generate 3D prop (gpt-image-1 → TripoSR pipeline) ─
     window.addEventListener('vs-generate-prop-request', ((e: CustomEvent) => {
       const { description, position } = e.detail || {};
@@ -26884,7 +26969,20 @@ class VirtualStudio {
     }
 
     this.updateSceneList();
-    window.dispatchEvent(new CustomEvent('light-selected', { detail: { id } }));
+    // Enrich the event with current light state so React panels can read it.
+    const selData = this.lights.get(id);
+    window.dispatchEvent(new CustomEvent('light-selected', {
+      detail: {
+        id,
+        intensity: selData?.light.intensity ?? 0,
+        enabled: selData ? selData.light.isEnabled() : true,
+        cct: selData?.cct ?? 5600,
+        beam: selData ? ((selData.light as BABYLON.SpotLight).angle ?? Math.PI / 3) * (180 / Math.PI) : 60,
+        position: selData
+          ? [selData.mesh.position.x, selData.mesh.position.y, selData.mesh.position.z]
+          : [0, 3, 0],
+      },
+    }));
   }
 
   private addLightHighlight(mesh: BABYLON.Mesh): void {

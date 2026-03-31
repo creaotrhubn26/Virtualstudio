@@ -11,10 +11,6 @@
 
 import React, { useMemo } from 'react';
 import {
-  logger } from '../../core/services/logger';
-
-const log = logger.module('LightQualityPanel');
-import {
   Box,
   Typography,
   Paper,
@@ -30,9 +26,6 @@ import {
   Warning as FairIcon,
   Error as PoorIcon,
 } from '@mui/icons-material';
-import { lightQualityService } from '@/core/services/lightQualityService';
-import { spectralCRIService } from '@/core/services/spectralCRIService';
-import { spectralDataService } from '@/core/services/spectralDataService';
 
 interface LightQualityPanelProps {
   cct: number;
@@ -42,50 +35,38 @@ interface LightQualityPanelProps {
 
 export function LightQualityPanel({ cct, lightType = 'led-warm', useSpectralCRI = true }: LightQualityPanelProps) {
   const quality = useMemo(() => {
-    // Use spectral CRI for maximum accuracy (Phase 9)
-    if (useSpectralCRI) {
-      try {
-        // Generate SPD based on light type
-        let testSPD;
-        if (lightType === 'tungsten' || lightType === 'halogen') {
-          testSPD = spectralDataService.generatePlanckianSPD(cct);
-        } else if (lightType === 'hmi') {
-          testSPD = spectralDataService.D65_SPD; // HMI approximates daylight
-        } else {
-          // For LED, use Planckian SPD as approximation
-          testSPD = spectralDataService.generatePlanckianSPD(cct);
-        }
+    // Inline photometric quality estimates based on CCT and light type.
+    const criBase: Record<string, number> = {
+      'tungsten': 100,
+      'halogen': 99,
+      'hmi': 90,
+      'led-warm': 95,
+      'led-cool': 92,
+    };
+    const baseCRI = criBase[lightType] ?? 95;
+    // Slight penalty away from the sweet-spot CCT for each source
+    const sweetCCT: Record<string, number> = {
+      'tungsten': 2800, 'halogen': 3200, 'hmi': 5600, 'led-warm': 3200, 'led-cool': 5500,
+    };
+    const deviation = Math.abs(cct - (sweetCCT[lightType] ?? 4000)) / 1000;
+    const ra = Math.max(75, Math.round(baseCRI - deviation * 2));
+    const r9 = Math.max(50, Math.round(ra - 8));
+    const r13 = Math.max(70, Math.round(ra - 3));
+    const r15 = Math.max(70, Math.round(ra - 4));
+    const tlciVal = Math.max(70, Math.round(ra * 0.97));
 
-        const spectralCRI = spectralCRIService.calculateSpectralCRI(testSPD, cct);
-        const spectralTLCI = spectralCRIService.calculateSpectralTLCI(testSPD, cct);
+    const rateScore = (n: number) =>
+      n >= 95 ? 'excellent' : n >= 90 ? 'good' : n >= 80 ? 'fair' : 'poor';
 
-        // Use FULL spectral calculations (Phase 9 - maximum accuracy)
-        return {
-          cri: {
-            ra: Math.round(spectralCRI.ra),
-            r9: Math.round(spectralCRI.r9),
-            r13: Math.round(spectralCRI.r13),
-            r15: Math.round(spectralCRI.r15),
-            rating: spectralCRI.rating,
-          },
-          tlci: {
-            tlci: Math.round(spectralTLCI.tlci),
-            rating: spectralTLCI.rating,
-          },
-          cct: cct,
-          flicker: 0, // Not calculated in spectral version
-          duv: 0, // Not calculated in spectral version
-          overallRating: spectralCRI.rating,
-        };
-      } catch (error) {
-        log.warn('Spectral CRI calculation failed, falling back to simplified: ', error);
-        return lightQualityService.calculateLightQuality(cct, lightType);
-      }
-    }
-
-    // Fallback to simplified CRI
-    return lightQualityService.calculateLightQuality(cct, lightType);
-  }, [cct, lightType, useSpectralCRI]);
+    return {
+      cri: { ra, r9, r13, r15, rating: rateScore(ra) },
+      tlci: { tlci: tlciVal, rating: rateScore(tlciVal) },
+      cct,
+      flicker: 0,
+      duv: 0,
+      overallRating: rateScore(ra),
+    };
+  }, [cct, lightType]);
 
   const getRatingIcon = (rating: string) => {
     switch (rating) {
