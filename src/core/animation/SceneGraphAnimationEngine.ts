@@ -5,6 +5,7 @@
 
 export type EasingName =
   | 'linear'
+  | 'step'
   | 'easeIn'
   | 'easeOut'
   | 'easeInOut'
@@ -14,12 +15,22 @@ export type EasingName =
   | 'easeInCubic'
   | 'easeOutCubic'
   | 'easeInOutCubic'
+  | 'easeInQuart'
+  | 'easeOutQuart'
+  | 'easeInOutQuart'
   | 'easeInElastic'
   | 'easeOutElastic'
-  | 'easeOutBounce';
+  | 'easeInOutElastic'
+  | 'easeInBounce'
+  | 'easeOutBounce'
+  | 'easeInOutBounce'
+  | 'easeInBack'
+  | 'easeOutBack'
+  | 'easeInOutBack';
 
 export const EASING_FUNCTIONS: Record<EasingName, (t: number) => number> = {
   linear: (t) => t,
+  step: (t) => (t < 0.5 ? 0 : 1),
   easeIn: (t) => t * t,
   easeOut: (t) => t * (2 - t),
   easeInOut: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
@@ -28,8 +39,10 @@ export const EASING_FUNCTIONS: Record<EasingName, (t: number) => number> = {
   easeInOutQuad: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
   easeInCubic: (t) => t * t * t,
   easeOutCubic: (t) => 1 - Math.pow(1 - t, 3),
-  easeInOutCubic: (t) =>
-    t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+  easeInOutCubic: (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+  easeInQuart: (t) => t * t * t * t,
+  easeOutQuart: (t) => 1 - Math.pow(1 - t, 4),
+  easeInOutQuart: (t) => t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2,
   easeInElastic: (t) => {
     if (t === 0 || t === 1) return t;
     return -Math.pow(2, 10 * t - 10) * Math.sin((t * 10 - 10.75) * ((2 * Math.PI) / 3));
@@ -38,13 +51,28 @@ export const EASING_FUNCTIONS: Record<EasingName, (t: number) => number> = {
     if (t === 0 || t === 1) return t;
     return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * ((2 * Math.PI) / 3)) + 1;
   },
+  easeInOutElastic: (t) => {
+    if (t === 0 || t === 1) return t;
+    return t < 0.5
+      ? -(Math.pow(2, 20 * t - 10) * Math.sin((20 * t - 11.125) * ((2 * Math.PI) / 4.5))) / 2
+      : (Math.pow(2, -20 * t + 10) * Math.sin((20 * t - 11.125) * ((2 * Math.PI) / 4.5))) / 2 + 1;
+  },
   easeOutBounce: (t) => {
-    const n1 = 7.5625;
-    const d1 = 2.75;
+    const n1 = 7.5625; const d1 = 2.75;
     if (t < 1 / d1) return n1 * t * t;
     if (t < 2 / d1) return n1 * (t -= 1.5 / d1) * t + 0.75;
     if (t < 2.5 / d1) return n1 * (t -= 2.25 / d1) * t + 0.9375;
     return n1 * (t -= 2.625 / d1) * t + 0.984375;
+  },
+  easeInBounce: (t) => 1 - EASING_FUNCTIONS.easeOutBounce(1 - t),
+  easeInOutBounce: (t) => t < 0.5 ? (1 - EASING_FUNCTIONS.easeOutBounce(1 - 2 * t)) / 2 : (1 + EASING_FUNCTIONS.easeOutBounce(2 * t - 1)) / 2,
+  easeInBack: (t) => { const c1 = 1.70158; return (c1 + 1) * t * t * t - c1 * t * t; },
+  easeOutBack: (t) => { const c1 = 1.70158; return 1 + (c1 + 1) * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); },
+  easeInOutBack: (t) => {
+    const c1 = 1.70158 * 1.525;
+    return t < 0.5
+      ? (Math.pow(2 * t, 2) * ((c1 + 1) * 2 * t - c1)) / 2
+      : (Math.pow(2 * t - 2, 2) * ((c1 + 1) * (2 * t - 2) + c1) + 2) / 2;
   },
 };
 

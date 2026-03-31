@@ -193,6 +193,7 @@ export class AnimationMaterialController {
 
   private calculateBoneVelocities(rig: CharacterRig): Map<string, number> {
     const velocities = new Map<string, number>();
+    if (!rig.skeleton) return velocities;
     const bones = rig.skeleton.bones;
     const lastPositions = this.lastFramePositions.get(rig.id) || new Map();
 

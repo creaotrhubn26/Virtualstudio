@@ -188,7 +188,7 @@ class CinematicDirectorService {
   }
 
   playShot(shotId: string): void {
-    const vs = (window as Record<string, unknown>).virtualStudio as {
+    const vs = ((window as unknown as Record<string, unknown>)).virtualStudio as {
       scene: BABYLON.Scene;
       camera: BABYLON.ArcRotateCamera;
     } | undefined;

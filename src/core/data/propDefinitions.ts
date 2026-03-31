@@ -15,12 +15,16 @@ export interface PropDefinition {
   category: PropCategory;
   modelUrl: string | null;
   thumbnailUrl: string | null;
+  thumbnail?: string;
   defaultScale: number;
   size: 'small' | 'medium' | 'large';
   complexity: 'low' | 'medium' | 'high';
   supportsLOD: boolean;
   supportsInstancing: boolean;
   metadata?: Record<string, unknown>;
+  placementMode?: 'floor' | 'wall' | 'ceiling' | 'surface' | 'freeform';
+  anchoring?: 'floor' | 'wall' | 'ceiling' | 'float';
+  allowedSurfaces?: string[];
 }
 
 export const PROP_DEFINITIONS: PropDefinition[] = [

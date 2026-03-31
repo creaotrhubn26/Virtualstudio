@@ -5,7 +5,8 @@
  * Based on design system tokens
  */
 
-import type { CSSProperties, FC } from 'react';
+import type { FC } from 'react';
+import type { SxProps, Theme } from '@mui/material';
 import {
   Button as MuiButton,
   ButtonProps as MuiButtonProps,
@@ -52,8 +53,8 @@ export const Button: FC<ButtonProps> = ({
   fullWidth,
   ...props
 }) => {
-  const getVariantStyles = (): CSSProperties => {
-    const baseStyles: CSSProperties = {
+  const getVariantStyles = (): SxProps<Theme> => {
+    const baseStyles: SxProps<Theme> = {
       borderRadius: borderRadius.md,
       textTransform: 'none',
       fontWeight: 500,

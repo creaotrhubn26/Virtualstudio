@@ -116,7 +116,7 @@ export interface AnimationLayer {
   id: string;
   name: string;
   targetId: string;            // Light ID, Camera ID, Mesh ID, Wall ID, Floor ID, or 'atmosphere'
-  targetType: 'light' | 'camera' | 'mesh' | 'group' | 'wall' | 'floor' | 'atmosphere';
+  targetType: 'light' | 'camera' | 'mesh' | 'group' | 'wall' | 'floor' | 'atmosphere' | 'actor';
   enabled: boolean;
   solo: boolean;
   locked: boolean;

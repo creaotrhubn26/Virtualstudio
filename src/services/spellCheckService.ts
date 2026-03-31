@@ -234,7 +234,7 @@ class SpellCheckService {
     });
     
     try {
-      safeStorage.setItem(PROJECT_TERMS_KEY, JSON.stringify(terms));
+      localStorage?.setItem(PROJECT_TERMS_KEY, JSON.stringify(terms));
       void settingsService.setSetting(PROJECT_TERMS_KEY, terms, { userId: getCurrentUserId() });
     } catch (e) {
       console.warn('Failed to save project terms:', e);
@@ -560,7 +560,7 @@ class SpellCheckService {
       
       if (data.projectTerms) {
         data.projectTerms.forEach((term: string) => this.projectTerms.add(term.toLowerCase()));
-        safeStorage.setItem(PROJECT_TERMS_KEY, JSON.stringify(data.projectTerms));
+        localStorage?.setItem(PROJECT_TERMS_KEY, JSON.stringify(data.projectTerms));
         void settingsService.setSetting(PROJECT_TERMS_KEY, data.projectTerms, { userId: getCurrentUserId() });
       }
     } catch (e) {

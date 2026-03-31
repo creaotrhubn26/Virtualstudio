@@ -69,15 +69,15 @@ import {
   Build,
   AllInclusive,
 } from '@mui/icons-material';
-import { useSceneAnimation } from '../../hooks/useSceneAnimation';
-import { ANIMATION_PRESETS, AnimationClipConfig, AnimationState, EasingType } from '../../core/services/sceneAnimationService';
-import { useSelection } from '../../core/services/selectionService';
+import { useSceneAnimation } from '../hooks/useSceneAnimation';
+import { ANIMATION_PRESETS, AnimationClipConfig, AnimationState, EasingType } from '../core/services/sceneAnimationService';
+import { useSelection } from '../core/services/selectionService';
 
 // ============================================================================
 // Preset Info
 // ============================================================================
 
-const PRESET_INFO: Record<keyof typeof ANIMATION_PRESETS, { label: string; icon: React.ReactNode; description: string }> = {
+const PRESET_INFO: Record<string, { label: string; icon: React.ReactNode; description: string }> = {
   fadeIn: { label: 'Fade In', icon: <FiberManualRecord />, description: 'Gradually appear' },
   fadeOut: { label: 'Fade Out', icon: <FiberManualRecord />, description: 'Gradually disappear' },
   slideInLeft: { label: 'Slide In Left', icon: <KeyboardArrowRight sx={{ transform: 'rotate(180deg)' }} />, description: 'Enter from left' },
@@ -280,7 +280,7 @@ export function SceneAnimationPanel({ sceneNodes = [] }: SceneAnimationPanelProp
     }
   }, [animation, selectedObjectId]);
 
-  const handleApplyPreset = useCallback((preset: keyof typeof ANIMATION_PRESETS) => {
+  const handleApplyPreset = useCallback((preset: string) => {
     const targetId = selectedObjectId || selection.selectedIds[0];
     if (!targetId) return;
 
@@ -473,8 +473,8 @@ export function SceneAnimationPanel({ sceneNodes = [] }: SceneAnimationPanelProp
             </Typography>
           )}
           <List>
-            {(Object.keys(PRESET_INFO) as Array<keyof typeof ANIMATION_PRESETS>).map((preset) => (
-              <ListItem key={preset} disablePadding>
+            {(Object.keys(PRESET_INFO) as string[]).map((preset) => (
+              <ListItem key={String(preset)} disablePadding>
                 <ListItemButton
                   onClick={() => handleApplyPreset(preset)}
                   disabled={!selectedObjectId && selection.selectedIds.length === 0}

@@ -129,31 +129,36 @@ export function RecommendedSettingsPanel() {
     return nodes
       .filter(n => n.light && n.visible !== false)
       .map(n => {
-        const userData = n.userData || {};
-        const lightType = userData.lightType || 
-          (userData.specifications?.guideNumber ? 'speedlite' : 
-           userData.specifications?.lumens ? 'continuous' : 'strobe');
+        const raw = n.userData || {};
+        const userData = raw as {
+          lightType?: string;
+          wattage?: number;
+          specifications?: { guideNumber?: number; lumens?: number; colorTemp?: number };
+        };
+        const lightType: LightSource['type'] = (userData.lightType === 'speedlite' || userData.specifications?.guideNumber)
+          ? 'speedlite'
+          : (userData.specifications?.lumens ? 'continuous' : 'strobe');
         
-        // Get raw power (denormalize from 0-1)
-        let power = n.light.power || 0.5;
+        const light = n.light!;
+        let power = light.power || 0.5;
         if (userData.wattage) {
           power = userData.wattage;
         } else if (lightType === 'strobe') {
-          power = power * 1000; // Scale back to Ws
-        } else if (lightType === 'continuous' || lightType === 'led_panel') {
-          power = power * 600; // Scale back to W
+          power = power * 1000;
+        } else if (lightType === 'continuous') {
+          power = power * 600;
         } else if (lightType === 'speedlite') {
-          power = userData.specifications?.guideNumber || 40;
+          power = userData.specifications?.guideNumber ?? 40;
         }
         
         return {
           id: n.id,
           name: n.name,
-          type: lightType as any,
+          type: lightType,
           power: power,
           position: n.transform.position as [number, number, number],
-          modifier: n.light.modifier,
-          colorTemp: n.light.cct || userData.specifications?.colorTemp,
+          modifier: light.modifier,
+          colorTemp: light.cct ?? userData.specifications?.colorTemp,
           specifications: userData.specifications,
         };
       });
@@ -164,19 +169,20 @@ export function RecommendedSettingsPanel() {
     const camNode = nodes.find(n => n.camera && n.visible !== false);
     if (!camNode?.camera) return null;
     
+    const camUserData = camNode.userData as { brand?: string; model?: string; focusDistance?: number; attachedLens?: unknown; lensSpecs?: unknown } | undefined;
     return {
       id: camNode.id,
       name: camNode.name,
-      brand: camNode.userData?.brand,
-      model: camNode.userData?.model,
+      brand: camUserData?.brand,
+      model: camUserData?.model,
       aperture: camNode.camera.aperture || 2.8,
       shutter: camNode.camera.shutter || 1/125,
       iso: camNode.camera.iso || 100,
       focalLength: camNode.camera.focalLength || 50,
-      focusDistance: camNode.userData?.focusDistance || 2,
+      focusDistance: camUserData?.focusDistance ?? 2,
       sensorSize: camNode.camera.sensor || [36, 24],
-      attachedLens: camNode.userData?.attachedLens,
-      lensSpecs: camNode.userData?.lensSpecs,
+      attachedLens: camUserData?.attachedLens,
+      lensSpecs: camUserData?.lensSpecs,
     };
   }, [nodes]);
   
@@ -501,7 +507,7 @@ export function RecommendedSettingsPanel() {
                                 </TableCell>
                                 <TableCell align="right" sx={{ py: 0.5, border: 0 }}>
                                   <Typography variant="caption" color="warning.main">
-                                    -{lightAnalysis.modifierLoss.toFixed(1)} stops ({light.modifier})
+                                    -{(lightAnalysis.modifierLoss ?? 0).toFixed(1)} stops ({light.modifier})
                                   </Typography>
                                 </TableCell>
                               </TableRow>
@@ -514,7 +520,7 @@ export function RecommendedSettingsPanel() {
                               </TableCell>
                               <TableCell align="right" sx={{ py: 0.5, border: 0 }}>
                                 <Typography variant="caption">
-                                  {lightAnalysis.falloffPercent.toFixed(0)}% loss
+                                  {(lightAnalysis.falloffPercent ?? 0).toFixed(0)}% loss
                                 </Typography>
                               </TableCell>
                             </TableRow>
@@ -526,7 +532,7 @@ export function RecommendedSettingsPanel() {
                               </TableCell>
                               <TableCell align="right" sx={{ py: 0.5, border: 0 }}>
                                 <Typography variant="caption" fontWeight="bold" color="primary.main">
-                                  f/{lightAnalysis.fStopAt100ISO.toFixed(1)} @ ISO 100
+                                  f/{(lightAnalysis.fStopAt100ISO ?? 0).toFixed(1)} @ ISO 100
                                 </Typography>
                               </TableCell>
                             </TableRow>

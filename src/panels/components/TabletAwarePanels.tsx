@@ -6,6 +6,11 @@ import {
   BoxProps,
   Menu,
   MenuItem,
+  Slider,
+  SliderProps,
+  List,
+  ListItem,
+  ListItemProps,
 } from '@mui/material';
 
 // Touch-aware IconButton
@@ -111,4 +116,61 @@ export function TouchDraggable({ children, onDragStart, onDrag, onDragEnd, ...pr
     </Box>
   );
 }
+
+// Touch-optimised slider (44px thumb for fat-finger use)
+interface TouchSliderProps extends SliderProps {
+  thumbSize?: number;
+}
+
+export function TouchSlider({ thumbSize = 28, sx, ...props }: TouchSliderProps) {
+  return (
+    <Slider
+      sx={{
+        '& .MuiSlider-thumb': {
+          width: thumbSize,
+          height: thumbSize,
+        },
+        ...sx,
+      }}
+      {...props}
+    />
+  );
+}
+
+// Touch swipe list item (horizontally swipeable)
+interface TouchSwipeListItemProps extends ListItemProps {
+  children: ReactNode;
+  onSwipeLeft?: () => void;
+  onSwipeRight?: () => void;
+}
+
+export function TouchSwipeListItem({ children, onSwipeLeft, onSwipeRight, sx, ...props }: TouchSwipeListItemProps) {
+  let startX = 0;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startX = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const endX = e.changedTouches[0].clientX;
+    const delta = endX - startX;
+    if (Math.abs(delta) > 50) {
+      if (delta < 0) onSwipeLeft?.();
+      else onSwipeRight?.();
+    }
+  };
+
+  return (
+    <ListItem
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      sx={{ touchAction: 'pan-y', ...sx }}
+      {...props}
+    >
+      {children}
+    </ListItem>
+  );
+}
+
+export { List as TouchList };
 

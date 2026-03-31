@@ -1,3 +1,4 @@
+import * as BABYLON from '@babylonjs/core';
 import { useFocusStore, useAppStore, FocusMode, SafeAreaMode, CompositionGuide, HelperGuide } from '../state/store';
 
 export class FocusController {
@@ -823,7 +824,7 @@ export class FocusController {
           const modelName = mesh.metadata?.parentModelName || 
                            (mesh.name?.includes('avatar') ? 'Avatar' : 
                             mesh.name?.replace(/_geometry_\d+$/, '').replace('__root__', 'Model') || 'Model');
-          const pos = mesh.position ? [mesh.position.x, mesh.position.y, mesh.position.z] : [0, 0, 0];
+          const pos = mesh.position ? [mesh.position.x, mesh.position.y, mesh.position.z] as [number, number, number] : [0, 0, 0] as [number, number, number];
           models = [{
             id: mesh.uniqueId?.toString() || 'mesh-model',
             name: modelName,
@@ -886,14 +887,22 @@ export class FocusController {
       none: '',
       action: 'Action Safe (90%)',
       title: 'Title Safe (80%)',
-      both: 'Begge soner'
+      both: 'Begge soner',
+      broadcast: 'Broadcast Safe',
+      social: 'Social Media Safe',
+      cinema: 'Cinema Safe',
+      custom: 'Egendefinert',
     };
 
     const modeDescriptions: Record<SafeAreaMode, string> = {
       none: '',
       action: 'Innhold innenfor denne sonen vil være synlig på de fleste TV-er og monitorer.',
       title: 'Tekst og viktige elementer bør plasseres innenfor denne sonen for å unngå beskjæring.',
-      both: 'Vis både action- og tittel-soner for maksimal trygghet.'
+      both: 'Vis både action- og tittel-soner for maksimal trygghet.',
+      broadcast: 'Broadcast-standard sikker sone for TV-produksjon.',
+      social: 'Sikker sone for sosiale medier-plattformer.',
+      cinema: 'Kino-standard sikker sone.',
+      custom: 'Egendefinert sikker sone.',
     };
 
     return `
@@ -1170,7 +1179,7 @@ export class FocusController {
           const modelName = mesh.metadata?.parentModelName || 
                            (mesh.name?.includes('avatar') ? 'Avatar' : 
                             mesh.name?.replace(/_geometry_\d+$/, '').replace('__root__', 'Model') || 'Model');
-          const pos = mesh.position ? [mesh.position.x, mesh.position.y, mesh.position.z] : [0, 0, 0];
+          const pos = mesh.position ? [mesh.position.x, mesh.position.y, mesh.position.z] as [number, number, number] : [0, 0, 0] as [number, number, number];
           models = [{
             id: mesh.uniqueId?.toString() || 'mesh-model',
             name: modelName,

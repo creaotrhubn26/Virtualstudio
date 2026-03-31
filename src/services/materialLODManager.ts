@@ -313,11 +313,11 @@ export class MaterialLODManager {
 
       // Disable expensive effects for distant avatars
       if ('subSurface' in material) {
-        material.subSurface.isTranslucencyEnabled = config.ssEnabled;
+        (material as unknown as { subSurface: { isTranslucencyEnabled: boolean } }).subSurface.isTranslucencyEnabled = config.ssEnabled;
       }
 
       if ('clearCoat' in material) {
-        material.clearCoat.isEnabled = config.clearcoatEnabled;
+        (material as unknown as { clearCoat: { isEnabled: boolean } }).clearCoat.isEnabled = config.clearcoatEnabled;
       }
     }
 

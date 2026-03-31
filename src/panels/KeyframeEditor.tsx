@@ -356,19 +356,19 @@ function KeyframeRow({
             />
           ) : valueType === 'vector3' || valueType === 'euler' ? (
             <Vector3Editor
-              value={editedKeyframe.value}
-              onChange={(v) => setEditedKeyframe({ ...editedKeyframe, value: v })}
+              value={editedKeyframe.value as { x: number; y: number; z: number }}
+              onChange={(v) => setEditedKeyframe({ ...editedKeyframe, value: v as typeof editedKeyframe.value })}
             />
           ) : valueType === 'color' ? (
             <ColorEditor
-              value={editedKeyframe.value}
-              onChange={(v) => setEditedKeyframe({ ...editedKeyframe, value: v })}
+              value={(editedKeyframe.value as unknown) as string}
+              onChange={(v) => setEditedKeyframe({ ...editedKeyframe, value: (v as unknown) as typeof editedKeyframe.value })}
             />
           ) : (
             <TextField
               size="small"
-              value={editedKeyframe.value}
-              onChange={(e) => setEditedKeyframe({ ...editedKeyframe, value: e.target.value })}
+              value={(editedKeyframe.value as unknown) as string}
+              onChange={(e) => setEditedKeyframe({ ...editedKeyframe, value: (e.target.value as unknown) as typeof editedKeyframe.value })}
             />
           )
         ) : (
@@ -380,7 +380,7 @@ function KeyframeRow({
       <TableCell>
         {isEditing ? (
           <EasingSelector
-            value={editedKeyframe.easing}
+            value={editedKeyframe.easing ?? 'linear'}
             onChange={(e) => setEditedKeyframe({ ...editedKeyframe, easing: e })}
           />
         ) : (
@@ -750,25 +750,25 @@ export function KeyframeEditor({
                 />
               ) : valueType === 'vector3' || valueType === 'euler' ? (
                 <Vector3Editor
-                  value={newKeyframe.value || { x: 0, y: 0, z: 0 }}
-                  onChange={(v) => setNewKeyframe({ ...newKeyframe, value: v })}
+                  value={(newKeyframe.value || { x: 0, y: 0, z: 0 }) as { x: number; y: number; z: number }}
+                  onChange={(v) => setNewKeyframe({ ...newKeyframe, value: v as typeof newKeyframe.value })}
                 />
               ) : valueType === 'color' ? (
                 <ColorEditor
-                  value={newKeyframe.value ||'#ffffff'}
-                  onChange={(v) => setNewKeyframe({ ...newKeyframe, value: v })}
+                  value={((newKeyframe.value || '#ffffff') as unknown) as string}
+                  onChange={(v) => setNewKeyframe({ ...newKeyframe, value: (v as unknown) as typeof newKeyframe.value })}
                 />
               ) : (
                 <TextField
                   fullWidth
-                  value={newKeyframe.value}
-                  onChange={(e) => setNewKeyframe({ ...newKeyframe, value: e.target.value })}
+                  value={(newKeyframe.value as unknown) as string}
+                  onChange={(e) => setNewKeyframe({ ...newKeyframe, value: (e.target.value as unknown) as typeof newKeyframe.value })}
                 />
               )}
             </Box>
 
             <EasingSelector
-              value={newKeyframe.easing}
+              value={newKeyframe.easing ?? 'linear'}
               onChange={(e) => setNewKeyframe({ ...newKeyframe, easing: e })}
             />
           </Box>

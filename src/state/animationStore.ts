@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type EasingFunction = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'bounce' | 'elastic';
+export type EasingFunction = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'bounce' | 'elastic' | 'bezier';
 
 export interface Keyframe {
   id: string;
@@ -14,6 +14,7 @@ export interface AnimationTrack {
   name: string;
   property: string;
   targetId: string;
+  nodeId?: string;
   keyframes: Keyframe[];
   color?: string;
   muted?: boolean;
@@ -32,6 +33,12 @@ interface AnimationState {
   selectedTrack: string | null;
   zoom: number;
   scrollLeft: number;
+
+  // CameraPathRecorder compat aliases
+  currentTime: number;
+  duration: number;
+  startRecording: () => void;
+  stopRecording: () => void;
 
   // Actions
   setCurrentFrame: (frame: number) => void;
@@ -66,6 +73,11 @@ export const useAnimationStore = create<AnimationState>((set, get) => ({
   selectedTrack: null,
   zoom: 1,
   scrollLeft: 0,
+
+  currentTime: 0,
+  duration: 10,
+  startRecording: () => set({ isRecording: true }),
+  stopRecording: () => set({ isRecording: false }),
 
   setCurrentFrame: (frame) => set({ currentFrame: Math.max(0, Math.min(frame, get().totalFrames)) }),
   setTotalFrames: (frames) => set({ totalFrames: Math.max(1, frames) }),

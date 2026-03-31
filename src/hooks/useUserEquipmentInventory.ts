@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ALL_LIGHTS, ALL_MODIFIERS, type LightEquipment, type ModifierEquipment } from '../core/data/EquipmentDatabase';
 import settingsService, { getCurrentUserId } from '../services/settingsService';
 
@@ -6,6 +6,8 @@ export interface UserEquipmentInventory {
   lights: LightEquipment[];
   modifiers: ModifierEquipment[];
 }
+
+export type UserEquipmentItem = LightEquipment | ModifierEquipment;
 
 const STORAGE_KEY = 'virtualStudio_equipment_inventory';
 
@@ -20,20 +22,34 @@ const mergeUniqueById = <T extends { id: string }>(existing: T[], incoming: T[])
   return Array.from(map.values());
 };
 
+export function getEquipmentImageUrl(equipmentId: string): string {
+  return `/images/equipment/${equipmentId}.jpg`;
+}
+
 export const useUserEquipmentInventory = () => {
   const [inventory, setInventory] = useState<UserEquipmentInventory | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadInventory = async () => {
+  const loadInventory = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
       const resolvedUserId = getCurrentUserId();
       const remote = await settingsService.getSetting<UserEquipmentInventory>(STORAGE_KEY, { userId: resolvedUserId });
       const initial = remote ?? buildDefaultInventory();
       setInventory(initial);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load inventory');
+      setInventory(buildDefaultInventory());
+    } finally {
       setIsLoading(false);
-    };
-    void loadInventory();
+    }
   }, []);
+
+  useEffect(() => {
+    void loadInventory();
+  }, [loadInventory]);
 
   useEffect(() => {
     if (!inventory) return;
@@ -66,10 +82,24 @@ export const useUserEquipmentInventory = () => {
     };
   }, [inventory]);
 
-  const userInventory = useMemo(() => inventory, [inventory]);
+  const isOwned = useCallback(
+    (equipmentId: string): boolean => {
+      if (!inventory) return false;
+      return (
+        inventory.lights.some((l) => l.id === equipmentId) ||
+        inventory.modifiers.some((m) => m.id === equipmentId)
+      );
+    },
+    [inventory],
+  );
+
+  const userInventory = useMemo(() => inventory ? [...inventory.lights as UserEquipmentItem[], ...inventory.modifiers as UserEquipmentItem[]] : [] as UserEquipmentItem[], [inventory]);
 
   return {
     userInventory,
     isLoading,
+    error,
+    refresh: loadInventory,
+    isOwned,
   };
 };

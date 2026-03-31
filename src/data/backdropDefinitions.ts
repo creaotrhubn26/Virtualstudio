@@ -7,6 +7,10 @@ export interface BackdropSpec {
   size?: string;
   thumbnail: string;
   description?: string;
+  color?: string;
+  hexColor?: string;
+  texture?: string;
+  material?: string;
 }
 
 export const BACKDROP_DATABASE: BackdropSpec[] = [

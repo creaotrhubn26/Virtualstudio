@@ -2383,16 +2383,16 @@ class ExternalDataService {
     ].slice(0, limit);
   }
 
-  private getFallbackPropertyAnalysis(propertyId: string): PropertyAnalysis {
+  private async getFallbackPropertyAnalysis(propertyId: string): Promise<PropertyAnalysis> {
     const property = this.getFallbackKartverketProperty(propertyId);
     const elevation = this.getFallbackKartverketElevation(property.coordinates);
     
     return {
       property,
       photographySpots: this.calculatePhotographySpots(property, elevation),
-      droneRestrictions: this.calculateDroneRestrictions(property),
-      weatherExposure: this.analyzeWeatherExposure(property, elevation),
-      accessAnalysis: this.analyzeAccess(property)
+      droneRestrictions: await this.calculateDroneRestrictions(property),
+      weatherExposure: await this.analyzeWeatherExposure(property, elevation),
+      accessAnalysis: await this.analyzeAccess(property)
     };
   }
 

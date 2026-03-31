@@ -73,7 +73,7 @@ import {
   ExpandLess as CollapseIcon,
   RadioButtonChecked as ChannelIcon,
 } from '@mui/icons-material';
-import { useFlashController } from '../../hooks/useFlashController';
+import { useFlashController } from '../hooks/useFlashController';
 import { useAnnounce } from '../../providers/AccessibilityProvider';
 import { useVirtualStudio } from '../VirtualStudioContext';
 import {
@@ -85,10 +85,11 @@ import {
   getControllerThumbnail,
   CONTROLLER_THUMBNAILS,
   getControllerRecommendations,
+  getAllControllerRecommendations,
   getBestControllerForLights,
   ControllerRecommendation,
   LightInScene,
-} from '../../core/data/FlashControllerData';
+} from '../core/data/FlashControllerData';
 import { useTabletSupport } from '../../providers/TabletSupportProvider';
 import { TouchSlider, TouchIconButton } from '../components/TabletAwarePanels';
 // ============================================================================
@@ -106,7 +107,7 @@ interface ControllerRecommendationBannerProps {
 function ControllerRecommendationBanner({ sceneLights }: ControllerRecommendationBannerProps) {
   if (sceneLights.length === 0) return null;
   
-  const recommendations = getControllerRecommendations(sceneLights);
+  const recommendations = getAllControllerRecommendations(sceneLights);
   const topRec = recommendations[0];
   
   if (!topRec || topRec.matchScore < 30) return null;
@@ -148,7 +149,7 @@ interface ControllerSelectorContentProps {
 
 function ControllerSelectorContent({ controllers, selectedId, sceneLights = [], onSelect }: ControllerSelectorContentProps) {
   // Get recommendations
-  const recommendations = getControllerRecommendations(sceneLights);
+  const recommendations = getAllControllerRecommendations(sceneLights);
   const recommendedIds = new Set(
     recommendations
       .filter(r => r.matchScore >= 50)
@@ -481,7 +482,9 @@ function GroupPowerDial({
   connectedLightCount,
   accentColor,
 }: GroupPowerDialProps) {
-  const stops = group.powerStops ?? powerToStops(group.power, controller.powerRange[1]);
+  const pRange = controller.powerRange ?? [0, 10];
+  const pStep = controller.powerStepSize ?? 0.5;
+  const stops = group.powerStops ?? powerToStops(group.power);
   const fraction = formatPowerFraction(group.power);
   
   return (
@@ -588,31 +591,31 @@ function GroupPowerDial({
         <IconButton
           size="small"
           onClick={() => onAdjust(-1)}
-          disabled={!group.enabled || stops <= controller.powerRange[0]}
+          disabled={!group.enabled || stops <= pRange[0]}
           sx={{ bgcolor: 'action.hover' }}
         >
           <RemoveIcon />
         </IconButton>
         <IconButton
           size="small"
-          onClick={() => onAdjust(-controller.powerStepSize)}
-          disabled={!group.enabled || stops <= controller.powerRange[0]}
+          onClick={() => onAdjust(-pStep)}
+          disabled={!group.enabled || stops <= pRange[0]}
           sx={{ bgcolor: 'action.hover', fontSize: 10 }}
         >
-          -{controller.powerStepSize}
+          -{pStep}
         </IconButton>
         <IconButton
           size="small"
-          onClick={() => onAdjust(controller.powerStepSize)}
-          disabled={!group.enabled || stops >= controller.powerRange[1]}
+          onClick={() => onAdjust(pStep)}
+          disabled={!group.enabled || stops >= pRange[1]}
           sx={{ bgcolor: 'action.hover', fontSize: 10 }}
         >
-          +{controller.powerStepSize}
+          +{pStep}
         </IconButton>
         <IconButton
           size="small"
           onClick={() => onAdjust(1)}
-          disabled={!group.enabled || stops >= controller.powerRange[1]}
+          disabled={!group.enabled || stops >= pRange[1]}
           sx={{ bgcolor: 'action.hover' }}
         >
           <AddIcon />
@@ -621,7 +624,7 @@ function GroupPowerDial({
       
       {/* Guide Number indicator */}
       {group.powerMode === 'manual' && group.enabled && (() => {
-        const maxStops = controller.powerRange[1];
+        const maxStops = pRange[1];
         const powerRatio = Math.pow(2, stops - maxStops);
         const gnBase = 58; // typical studio flash GN58 at full power, ISO 100
         const gn = Math.round(gnBase * Math.sqrt(powerRatio));
@@ -664,10 +667,10 @@ interface LightAssignmentDialogProps {
   open: boolean;
   onClose: () => void;
   groups: FlashGroup[];
-  connectedLights: Array<{ nodeId: string; nodeName: string; groupId: string; brand: string; model: string }>;
-  unassignedLights: any[];
-  onAssign: (nodeId: string, groupId: string) => void;
-  onUnassign: (nodeId: string) => void;
+  connectedLights: LightInScene[];
+  unassignedLights: LightInScene[];
+  onAssign: (lightId: string, groupId: string) => void;
+  onUnassign: (lightId: string) => void;
   accentColor: string;
 }
 
@@ -1150,7 +1153,7 @@ export function FlashControllerPanel() {
   const { addToast } = useVirtualStudio();
 
   // Accessibility
-  const { announce } = useAnnounce();
+  const announce = useAnnounce();
 
   const {
     state,
@@ -1160,7 +1163,6 @@ export function FlashControllerPanel() {
     updateGroup,
     toggleGroup,
     setGroupPower,
-    setGroupPowerStops,
     adjustGroupPower,
     setGroupMode,
     toggleModelingLight,
@@ -1168,6 +1170,7 @@ export function FlashControllerPanel() {
     unassignLight,
     getUnassignedLights,
     setChannel,
+    unassignedLights,
     testFire,
     syncToScene,
     toggleHSS,
@@ -1177,16 +1180,16 @@ export function FlashControllerPanel() {
 
   // Wrapped handlers with toasts
   const handleSelectController = useCallback((controller: FlashController) => {
-    selectController(controller);
+    selectController(controller.id);
     addToast({
-      message: `Connected: ${controller.name}`,
+      message: `Connected: ${controller.displayName ?? controller.id}`,
       type: 'success',
       duration: 3000,
     });
   }, [selectController, addToast]);
 
   const handleClearController = useCallback(() => {
-    const controllerName = state.controller?.name;
+    const controllerName = state.controller?.displayName ?? state.controller?.id;
     clearController();
     addToast({
       message: controllerName ? `Disconnected: ${controllerName}` : 'Controller disconnected, ',
@@ -1244,8 +1247,7 @@ export function FlashControllerPanel() {
     announce(`Group ${groupId} mode: ${mode.toUpperCase()}`);
   }, [setGroupMode, announce]);
 
-  // Accessible test fire
-  const handleTestFire = useCallback(() => {
+  const handleTestFireAccessible = useCallback(() => {
     testFire();
     announce('Test fire triggered');
   }, [testFire, announce]);
@@ -1261,35 +1263,27 @@ export function FlashControllerPanel() {
   const accentColor = controller?.accentColor || '#2196f3';
   
   // Get all scene lights info
-  const unassignedLights = getUnassignedLights();
-  const allSceneLights = [...connectedLights.map(l => ({ 
-    name: l.nodeName, 
-    brand: l.brand,
-    type: l.lightType 
-  })), ...unassignedLights.map(l => ({ 
-    name: l.name || 'Light', 
-    brand: l.userData?.brand || 'Unknown',
-    type: l.userData?.lightType || 'light'
-  }))];
+  const allSceneLights: LightInScene[] = connectedLights;
   
   const hasLightsInScene = allSceneLights.length > 0;
-  const hasFlashesInScene = allSceneLights.some(l => 
-    l.type === 'strobe' || l.type === 'speedlite' || l.type === 'flash' ||
+  const hasFlashesInScene = allSceneLights.some((l: LightInScene) => 
     l.brand?.toLowerCase().includes('profoto') ||
     l.brand?.toLowerCase().includes('godox') ||
-    l.brand?.toLowerCase().includes('elinchrom')
+    l.brand?.toLowerCase().includes('elinchrom') ||
+    l.brand?.toLowerCase().includes('canon') ||
+    l.brand?.toLowerCase().includes('nikon')
   );
   
   // Find incompatible lights
   const incompatibleLights = controller 
     ? allSceneLights
-        .filter(l => l.brand && !canControlLight(l.brand))
-        .map(l => `${l.brand} ${l.name}`)
+        .filter((l: LightInScene) => !canControlLight(l.id))
+        .map((l: LightInScene) => `${l.brand} ${l.name}`)
     : [];
   
   // Count lights per group
-  const lightsPerGroup = groups.reduce((acc, g) => {
-    acc[g.id] = connectedLights.filter((l) => l.groupId === g.id).length;
+  const lightsPerGroup = groups.reduce((acc: Record<string, number>, g: FlashGroup) => {
+    acc[g.id] = connectedLights.filter((l: LightInScene) => l.groupId === g.id).length;
     return acc;
   }, {} as Record<string, number>);
   
@@ -1365,11 +1359,7 @@ export function FlashControllerPanel() {
               <NoControllerPrompt
                 hasLightsInScene={hasLightsInScene}
                 hasFlashesInScene={hasFlashesInScene}
-                sceneLights={allSceneLights.map(l => ({ 
-                  brand: l.brand, 
-                  model: l.name,
-                  type: l.type,
-                }))}
+                sceneLights={connectedLights}
                 onSelectController={() => setControllerSelectorOpen(true)}
                 onQuickSelect={(controllerId) => {
                   selectController(controllerId);
@@ -1392,20 +1382,12 @@ export function FlashControllerPanel() {
                 <DialogContent dividers>
                   {/* Show recommendation at top of dialog */}
                   <ControllerRecommendationBanner 
-                    sceneLights={allSceneLights.map(l => ({ 
-                      brand: l.brand, 
-                      model: l.name,
-                      type: l.type,
-                    }))}
+                    sceneLights={connectedLights}
                   />
                   
                   <ControllerSelectorContent
                     controllers={availableControllers}
-                    sceneLights={allSceneLights.map(l => ({ 
-                      brand: l.brand, 
-                      model: l.name,
-                      type: l.type,
-                    }))}
+                    sceneLights={connectedLights}
                     onSelect={(id) => {
                       selectController(id);
                       setControllerSelectorOpen(false);
@@ -1433,7 +1415,7 @@ export function FlashControllerPanel() {
               {/* Compatibility Warning */}
               {!dismissedWarning && incompatibleLights.length > 0 && (
                 <ConnectionError
-                  controllerName={controller.displayName}
+                  controllerName={controller.displayName ?? controller.model}
                   lightsNotCompatible={incompatibleLights}
                   onDismiss={() => setDismissedWarning(true)}
                 />
@@ -1481,8 +1463,8 @@ export function FlashControllerPanel() {
                           fontSize: 12}}
                       >
                         {Array.from(
-                          { length: controller.channelRange[1] - controller.channelRange[0] + 1 },
-                          (_, i) => controller.channelRange[0] + i
+                          { length: (controller.channelRange?.[1] ?? controller.maxChannels) - (controller.channelRange?.[0] ?? 1) + 1 },
+                          (_, i) => (controller.channelRange?.[0] ?? 1) + i
                         ).map((ch) => (
                           <MenuItem key={ch} value={ch}>
                             CH {ch}
@@ -1528,7 +1510,7 @@ export function FlashControllerPanel() {
                         controller={controller}
                         onAdjust={(delta) => adjustGroupPower(group.id, delta)}
                         onToggle={() => toggleGroup(group.id)}
-                        onModeChange={(mode) => setGroupMode(group.id, mode)}
+                        onModeChange={(mode) => { if (mode) setGroupMode(group.id, mode); }}
                         onModelingToggle={() => toggleModelingLight(group.id)}
                         connectedLightCount={lightsPerGroup[group.id] || 0}
                         accentColor={accentColor}
@@ -1614,8 +1596,8 @@ export function FlashControllerPanel() {
                   <Stack direction="row" flexWrap="wrap" gap={0.5}>
                     {connectedLights.map((light) => (
                       <Chip
-                        key={light.nodeId}
-                        label={`${groups.find((g) => g.id === light.groupId)?.name}: ${light.nodeName}`}
+                        key={light.id}
+                        label={`${groups.find((g) => g.id === light.groupId)?.name}: ${light.name}`}
                         size="small"
                         sx={{
                           bgcolor: groups.find((g) => g.id === light.groupId)?.enabled
@@ -1674,7 +1656,7 @@ export function FlashControllerWidget() {
     <Paper
       sx={{
         p: 1,
-        bgcolor: controller.primaryColor,
+        bgcolor: controller.primaryColor ?? '#1a1a1a',
         borderRadius: 1,
         display: 'flex',
         alignItems: 'center',

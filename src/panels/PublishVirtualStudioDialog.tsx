@@ -53,6 +53,7 @@ interface LightPatternMatch {
   confidence: number;
   matchedCharacteristics: string[];
   differences: string[];
+  thumbnailUrl?: string;
 }
 
 interface SetupAnalysis {
@@ -70,6 +71,8 @@ interface SetupAnalysis {
   estimatedSetupTime: number;
   detectedLightPattern?: LightPatternMatch;
   suggestedLightPatterns?: LightPatternMatch[];
+  hdri?: string;
+  background?: string;
 }
 
 interface PublishVirtualStudioDialogProps {
@@ -94,6 +97,7 @@ export const PublishVirtualStudioDialog: React.FC<PublishVirtualStudioDialogProp
   const [setupAnalysis, setSetupAnalysis] = useState<SetupAnalysis | null>(null);
 
   // Form state
+  const sceneId = (sceneData as { id?: string })?.id || projectId;
   const [title, setTitle] = useState(projectName);
   const [description, setDescription] = useState('');
   const [setupStory, setSetupStory] = useState('');

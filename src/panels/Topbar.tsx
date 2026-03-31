@@ -43,7 +43,7 @@ export default function Topbar() {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
 
   // Find the first camera node - use ref to track ID and prevent unnecessary re-finds
-  const cameraNodeRef = React.useRef<string | undefined>();
+  const cameraNodeRef = React.useRef<string | undefined>(undefined);
   const cameraNode = React.useMemo(() => {
     const cam = nodes.find((n: { type: string; id: string }) => n.type === 'camera');
     if (cam?.id !== cameraNodeRef.current) {

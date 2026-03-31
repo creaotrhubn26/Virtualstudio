@@ -58,7 +58,7 @@ export const customPresetService = {
         id: preset.id,
         name: preset.navn,
         type: 'custom',
-        preset_data: preset as Record<string, unknown>,
+        preset_data: preset as unknown as Record<string, unknown>,
       });
     } catch (error) {
       console.warn('Database save failed:', error);

@@ -44,7 +44,7 @@ import {
 interface CategoryMeta {
   key: GelCategory | 'all';
   labelNo: string;
-  icon: React.ReactNode;
+  icon: React.ReactElement;
   description: string;
 }
 

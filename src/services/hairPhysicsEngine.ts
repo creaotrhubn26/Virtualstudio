@@ -143,7 +143,7 @@ class HairStrand {
       if (p.pinned) continue;
 
       // Verlet integration: x = x + (x - prevX) + a*dt^2
-      const vel = Vector3.Subtract(p.position, p.prevPosition);
+      const vel = p.position.subtract(p.prevPosition);
       vel.scaleInPlace(p.damping); // Apply damping
 
       // Apply forces
@@ -166,7 +166,7 @@ class HairStrand {
         const p1 = this.particles[constraint.particle1Index];
         const p2 = this.particles[constraint.particle2Index];
 
-        const delta = Vector3.Subtract(p2.position, p1.position);
+        const delta = p2.position.subtract(p1.position);
         const distance = delta.length();
         const diff = (distance - constraint.restDistance) / distance;
 
@@ -189,7 +189,7 @@ class HairStrand {
     for (const particle of this.particles) {
       if (particle.pinned) continue;
 
-      const delta = Vector3.Subtract(particle.position, sphereCenter);
+      const delta = particle.position.subtract(sphereCenter);
       const distance = delta.length();
 
       if (distance < radius) {

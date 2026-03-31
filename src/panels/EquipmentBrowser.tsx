@@ -83,16 +83,16 @@ import {
   getDefaultLightSpec,
   lightSpecToNodeData,
   LightSpec 
-} from '../../core/data/LightSpecifications';
+} from '../core/data/LightSpecifications';
 import {
   findLensSpec,
   findLensSpecByBrand,
   getDefaultLensSpec,
   lensSpecToCameraData,
   LensSpec,
-} from '../../core/data/LensSpecifications';
+} from '../core/data/LensSpecifications';
 import { useAppStore } from '@/state/store';
-import { useVirtualStudio } from '../../../VirtualStudioContext';
+import { useVirtualStudio } from '../VirtualStudioContext';
 type CategoryTab = 'mygear' | 'lighting' | 'cameras' | 'lenses' | 'popular';
 type ViewMode = 'grid' | 'list';
 
@@ -117,7 +117,7 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
   // "My Equipment" filter - connects to user's inventory from dashboard
   const [showOwnedOnly, setShowOwnedOnly] = useState(false);
   const { 
-    inventory: userInventory, 
+    userInventory, 
     isLoading: inventoryLoading, 
     isOwned,
     error: inventoryError,
@@ -134,12 +134,12 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
   // Filter equipment based on "My Equipment" toggle
   const filteredEquipment = useMemo(() => {
     if (!showOwnedOnly) return equipment;
-    return equipment.filter((eq) => isOwned(eq.brand, eq.model));
+    return equipment.filter((eq) => isOwned(eq.id));
   }, [equipment, showOwnedOnly, isOwned]);
   
   // Count of owned equipment in current view
   const ownedCount = useMemo(() => {
-    return equipment.filter((eq) => isOwned(eq.brand, eq.model)).length;
+    return equipment.filter((eq) => isOwned(eq.id)).length;
   }, [equipment, isOwned]);
 
   // Load equipment when tab/filters change (skip for mygear tab)
@@ -223,12 +223,12 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
   };
 
   const handleAddToScene = (eq: EquipmentSpec) => {
-    let node: unknown;
+    let node: { type?: string; name?: string } | undefined;
 
     if (eq.category === 'lighting' || eq.category === 'flash') {
-      node = equipmentToLightNode(eq);
+      node = equipmentToLightNode(eq) as { type?: string; name?: string };
     } else if (eq.category === 'cameras') {
-      node = equipmentToCameraNode(eq);
+      node = equipmentToCameraNode(eq) as { type?: string; name?: string };
     }
 
     if (node) {
@@ -919,11 +919,11 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
   const handleDragStart = (eq: EquipmentSpec, e: React.DragEvent) => {
     setDraggingItem(eq);
 
-    let node: unknown;
+    let node: { type?: string; name?: string } | undefined;
     if (eq.category === 'lighting' || eq.category === 'flash') {
-      node = equipmentToLightNode(eq);
+      node = equipmentToLightNode(eq) as { type?: string; name?: string };
     } else if (eq.category === 'cameras') {
-      node = equipmentToCameraNode(eq);
+      node = equipmentToCameraNode(eq) as { type?: string; name?: string };
     }
 
     if (node) {
@@ -957,31 +957,34 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
   };
 
   const formatPrice = (eq: EquipmentSpec) => {
-    if (!eq.price?.msrp) return null;
-    return `${eq.price.msrp.toLocaleString()} ${eq.price.currency}`;
+    if (!eq.price) return null;
+    return `${eq.price.toLocaleString()} NOK`;
   };
 
   const getSpecsSummary = (eq: EquipmentSpec) => {
     const specs: string[] = [];
+    const s = eq.specifications;
+    if (!s) return '';
 
-    if (eq.specifications.power) {
-      specs.push(`${eq.specifications.power}W`);
+    if (s['power']) {
+      specs.push(`${s['power']}W`);
     }
-    if (eq.specifications.beam) {
-      specs.push(`${eq.specifications.beam}°`);
+    if (s['beam']) {
+      specs.push(`${s['beam']}°`);
     }
-    if (eq.specifications.colorTemp) {
-      specs.push(`${eq.specifications.colorTemp}K`);
+    if (s['colorTemp']) {
+      specs.push(`${s['colorTemp']}K`);
     }
-    if (eq.specifications.focalLength) {
-      const fl = eq.specifications.focalLength;
+    if (s['focalLength']) {
+      const fl = s['focalLength'];
       specs.push(Array.isArray(fl) ? `${fl[0]}-${fl[1]}mm` : `${fl}mm`);
     }
-    if (eq.specifications.maxAperture) {
-      specs.push(`f/${eq.specifications.maxAperture}`);
+    if (s['maxAperture']) {
+      specs.push(`f/${s['maxAperture']}`);
     }
-    if (eq.specifications.sensor) {
-      specs.push(`${eq.specifications.sensor[0]}×${eq.specifications.sensor[1]}mm`);
+    if (s['sensor']) {
+      const sen = s['sensor'] as [number, number];
+      specs.push(`${sen[0]}×${sen[1]}mm`);
     }
 
     return specs.join(' • ');
@@ -1103,7 +1106,7 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
                       <CardMedia
                         component="img"
                         height="140"
-                        image={getEquipmentImageUrl(item)}
+                        image={getEquipmentImageUrl(item.id)}
                         alt={item.name}
                         sx={{ objectFit: 'contain', bgcolor: 'grey.100', p: 1 }}
                         onError={(e) => {
@@ -1205,7 +1208,7 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
                   >
                     <ListItemAvatar>
                       <Avatar 
-                        src={getEquipmentImageUrl(item)}
+                        src={getEquipmentImageUrl(item.id)}
                         variant="rounded"
                         sx={{ width: 56, height: 56, mr: 1, bgcolor: 'grey.100' }}
                       >
@@ -1385,7 +1388,7 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
               </Grid>
             ) : (
               filteredEquipment.slice(0, 20).map((eq) => {
-                const equipmentIsOwned = isOwned(eq.brand, eq.model);
+                const equipmentIsOwned = isOwned(eq.id);
                 return (
                   <Grid size={{ xs: 12, sm: 6, md: 4 }} key={eq.id}>
                     <Card

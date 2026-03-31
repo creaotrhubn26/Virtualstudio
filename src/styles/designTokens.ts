@@ -1,6 +1,7 @@
 // Design tokens for the application
 export const colors = {
   primary: '#1976d2',
+  primaryHover: '#1565c0',
   secondary: '#dc004e',
   success: '#4caf50',
   error: '#f44336',
@@ -19,6 +20,7 @@ export const colors = {
     primary: 'rgba(0, 0, 0, 0.87)',
     secondary: 'rgba(0, 0, 0, 0.6)',
     disabled: 'rgba(0, 0, 0, 0.38)',
+    inverse: '#ffffff',
   },
   divider: 'rgba(0, 0, 0, 0.12)',
   action: {

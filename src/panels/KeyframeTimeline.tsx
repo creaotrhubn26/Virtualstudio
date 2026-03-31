@@ -528,6 +528,14 @@ function TimelineRuler({ duration, currentTime, zoom, scrollX, onSeek }: Timelin
 interface KeyframeTimelineProps {
   clipId?: string;
   height?: number;
+  tracks?: AnimationTrack[];
+  currentTime?: number;
+  selectedTrackId?: string | null;
+  onSelectTrack?: (id: string | null) => void;
+  onSeek?: (time: number) => void;
+  onKeyframeUpdate?: (trackId: string, index: number, keyframe: Keyframe) => void;
+  onAddKeyframe?: (trackId: string, keyframe: Keyframe) => void;
+  duration?: number;
 }
 
 export function KeyframeTimeline({ clipId, height = 300 }: KeyframeTimelineProps) {

@@ -92,7 +92,7 @@ export default function ModifierBrowser() {
 
       // Load 3D model
       const assetLoader = AssetLoader.getInstance();
-      const model = await assetLoader.loadModel(modifier.files.glb, {
+      const model = await assetLoader.loadModel(modifier.files?.glb ?? '', {
         cacheable: true,
         generateLODs: true,
       });
@@ -183,7 +183,7 @@ export default function ModifierBrowser() {
               <CardMedia
                 component="img"
                 height="180"
-                image={modifier.files.thumbnail}
+                image={modifier.files?.thumbnail ?? '/images/modifiers/default.jpg'}
                 alt={modifier.name}
                 sx={{ objectFit: 'contain', bgcolor: '#f5f5f5', p: 1 }}
               />
@@ -214,9 +214,11 @@ export default function ModifierBrowser() {
                     <Box>
                       <Typography variant="caption">
                         <strong>Dimensions:</strong>{', '}
-                        {modifier.dimensions.diameter
+                        {modifier.dimensions?.diameter
                           ? `Ø${modifier.dimensions.diameter}m`
-                          : `${modifier.dimensions.width}x${modifier.dimensions.height}m`}
+                          : modifier.dimensions
+                            ? `${modifier.dimensions.width}x${modifier.dimensions.height}m`
+                            : 'N/A'}
                       </Typography>
                       <br />
                       <Typography variant="caption">

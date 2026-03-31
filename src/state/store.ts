@@ -348,17 +348,23 @@ export interface CameraSettings {
 export interface LightSettings {
   power: number;
   modifier?: string;
+  modifierSize?: [number, number];
+  beam?: number;
   color?: string;
   temperature?: number;
+  cct?: number;
+  colorTemp?: number;
 }
 
 export interface SceneNode {
   id: string;
-  type: 'light' | 'model' | 'camera' | 'accessory' | 'background' | 'modifier' | 'prop';
+  type: 'light' | 'model' | 'camera' | 'accessory' | 'background' | 'modifier' | 'prop'
+      | 'mesh' | 'clothing' | 'avatar' | 'actor' | 'umbrella' | 'spot' | 'reflector';
   name: string;
   transform: NodeTransform;
   visible: boolean;
   locked?: boolean;
+  groupId?: string;
   userData?: Record<string, unknown>;
   camera?: CameraSettings;
   light?: LightSettings;
@@ -378,7 +384,7 @@ interface AppState {
   selectedNodeId: string | null;
   actorParams: ActorParams;
   
-  addNode: (node: SceneNode) => void;
+  addNode: (node: Partial<SceneNode> & { type: SceneNode['type'] }) => void;
   removeNode: (id: string) => void;
   updateNode: (id: string, updates: Partial<SceneNode>) => void;
   selectNode: (id: string | null) => void;
@@ -399,9 +405,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     muscle: 0.5,
   },
 
-  addNode: (node) => set((state) => ({
-    scene: [...state.scene, node]
-  })),
+  addNode: (partial) => set((state) => {
+    const node: SceneNode = {
+      id: partial.id ?? `node-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      name: partial.name ?? partial.type,
+      transform: partial.transform ?? { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+      visible: partial.visible ?? true,
+      ...(partial as Partial<SceneNode>),
+    } as SceneNode;
+    return { scene: [...state.scene, node] };
+  }),
 
   removeNode: (id) => set((state) => ({
     scene: state.scene.filter((n) => n.id !== id),

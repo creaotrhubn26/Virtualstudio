@@ -47,7 +47,7 @@ import {
 } from '@mui/icons-material';
 import { useLightLensIntegration } from '@/hooks/useLightLensIntegration';
 import { RecommendedSettingsPanel, InverseSquareLawCalculator } from './RecommendedSettingsPanel';
-import { LensAttachmentManager } from '@/ui/components/LensAttachmentManager';
+import { LensAttachmentManager } from '../components/LensAttachmentManager';
 import { LensEffectsPreview } from '@/ui/components/LensEffectsPreview';
 import { PatternExposurePanel } from './PatternExposurePanel';
 import { MasterIntegrationPanel } from './MasterIntegrationPanel';
@@ -134,7 +134,7 @@ function QuickStatusCard() {
         </Tooltip>
         
         {/* Contrast */}
-        {sceneAnalysis.contrastRatio !== 'N/A' && (
+        {sceneAnalysis.contrastRatio > 0 && (
           <Tooltip title="Key-to-Fill Contrast Ratio">
             <Chip
               label={sceneAnalysis.contrastRatio}
@@ -226,7 +226,7 @@ function QuickSettingsSummary() {
         <Button
           size="small"
           variant="contained"
-          onClick={applyRecommendedSettings}
+          onClick={() => applyRecommendedSettings({})}
           disabled={!camera}
           startIcon={<MagicIcon />}
         >
@@ -312,7 +312,7 @@ function LightsList() {
               <Box>
                 <Typography variant="caption" color="text.secondary">Modifier</Typography>
                 <Typography variant="body2" color="warning.main">
-                  {light.modifier} (-{light.modifierLoss.toFixed(1)} stops)
+                  {light.modifier} (-{(light.modifierLoss ?? 0).toFixed(1)} stops)
                 </Typography>
               </Box>
             )}
@@ -363,7 +363,7 @@ function CameraInfo() {
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">Shutter</Typography>
-            <Typography variant="body2">{formatShutter(camera.shutter)}</Typography>
+            <Typography variant="body2">{formatShutter(camera.shutter ?? 125)}</Typography>
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">ISO</Typography>
@@ -375,7 +375,7 @@ function CameraInfo() {
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">EV</Typography>
-            <Typography variant="body2">{camera.ev.toFixed(1)}</Typography>
+            <Typography variant="body2">{(camera.ev ?? 0).toFixed(1)}</Typography>
           </Box>
         </Stack>
         
@@ -405,7 +405,7 @@ function CameraInfo() {
       <Collapse in={showLensManager}>
         <Box sx={{ mt: 2 }}>
           <LensAttachmentManager 
-            cameraNodeId={camera.id} 
+            cameraNodeId={camera.id ?? ''} 
             onClose={() => setShowLensManager(false)}
           />
         </Box>
@@ -514,7 +514,7 @@ export function CompactExposureWidget() {
           <span>
             <IconButton 
               size="small" 
-              onClick={applyRecommendedSettings}
+              onClick={() => applyRecommendedSettings({})}
               disabled={!camera}
             >
               <MagicIcon fontSize="small" />

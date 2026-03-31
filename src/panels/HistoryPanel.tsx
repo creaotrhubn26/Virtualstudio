@@ -161,7 +161,6 @@ function ActionItem({ action, index, isCurrentState, isFuture, onClick, isTouch 
           // Could implement action removal in the future
           log.debug('Swiped left on action:', action.id);
         }}
-        leftAction={<Delete sx={{ color: '#fff' }} />}
       >
         {content}
       </TouchSwipeListItem>
@@ -200,8 +199,8 @@ export function HistoryPanel({ compact = false, maxVisible = 20 }: HistoryPanelP
   const isTouch = shouldUseTouch();
 
   // Accessibility
-  const { announce } = useAnnounce();
-  const { prefersKeyboard } = useAccessibility();
+  const announce = useAnnounce();
+  useAccessibility();
 
   const [state, setState] = useState<UndoRedoState>({
     undoStack: [],

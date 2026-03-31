@@ -248,7 +248,7 @@ export const brushLibraryService = {
    * Toggle favorite status
    */
   async toggleFavorite(presetId: string): Promise<void> {
-    const storageData = getStorageData();
+    const storageData = await getStorageData();
     const preset = storageData.presets.find(p => p.id === presetId);
     if (preset) {
       preset.isFavorite = !preset.isFavorite;
@@ -275,7 +275,7 @@ export const brushLibraryService = {
    */
   async importPresets(presets: BrushPreset[]): Promise<void> {
     const now = new Date().toISOString();
-    const storageData = getStorageData();
+    const storageData = await getStorageData();
     
     for (const preset of presets) {
       const existing = storageData.presets.find(p => p.id === preset.id);

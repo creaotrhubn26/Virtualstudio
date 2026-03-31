@@ -91,21 +91,21 @@ import {
   RecordingConfig,
   RecordingState,
   DEFAULT_RECORDING_CONFIG,
-} from '../../core/animation/AnimationRecorder';
+} from '../core/animation/AnimationRecorder';
 import {
   animationTemplateService,
   AnimationTemplate,
   TemplateCategory,
   ANIMATION_TEMPLATES,
-} from '../../core/animation/AnimationTemplates';
+} from '../core/animation/AnimationTemplates';
 import {
-  sceneAnimationService,
   AnimationTrack,
   AnimationClip,
-} from '../../core/animation/SceneGraphAnimationEngine';
+} from '../core/animation/SceneGraphAnimationEngine';
+import { sceneAnimationService } from '../core/services/sceneAnimationService';
 import { VideoExportPanel } from './VideoExportPanel';
 import { ExportSchedulerPanel } from './ExportSchedulerPanel';
-import { videoExportService, ExportResult } from '../../core/animation/VideoExportService';
+import { videoExportService, ExportResult } from '../core/animation/VideoExportService';
 // ============================================================================
 // Types
 // ============================================================================

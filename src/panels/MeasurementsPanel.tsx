@@ -195,7 +195,7 @@ export default function MeasurementsPanel() {
               />
               <Typography variant="body2" sx={{ flex: 1 }}>
                 {(m.label || m.name) ??
-                  `${Math.hypot(m.a[0] - m.b[0], m.a[1] - m.b[1]).toFixed(2)} m`}
+                  (m.a && m.b ? `${Math.hypot(m.a[0] - m.b[0], m.a[1] - m.b[1]).toFixed(2)} m` : `${m.distance?.toFixed(2) ?? '—'} m`)}
               </Typography>
               <Button size="small" color="error" onClick={() => removeMeasurement(m.id)}>
                 Remove

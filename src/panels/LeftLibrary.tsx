@@ -22,11 +22,11 @@ const EntryButton: React.FC<{ label: string; icon: React.ReactNode; onClick?: ()
   <Button
     onClick={onClick}
     variant="secondary"
-    size="medium"
-    sx={{
+    size="md"
+    style={{
       justifyContent: 'flex-start',
       width: '100%',
-      mb: spacing.sm,
+      marginBottom: spacing.sm,
     }}
   >
     <Box sx={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
@@ -49,7 +49,7 @@ export default function LeftLibrary() {
           icon={<WbSunnyOutlinedIcon />}
           onClick={() =>
             addNode({
-              type: 'softbox',
+              type: 'modifier',
               light: { power: 0.5, beam: 30, modifier: 'softbox', modifierSize: [0.6, 0.6] },
             })
           }

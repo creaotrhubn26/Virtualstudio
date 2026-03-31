@@ -146,9 +146,12 @@ const calculateRecommendedSettings = (
 export const patternExposureIntegration = {
   analyzePatternWithEquipment(
     pattern: CinematographyPattern,
-    inventory: UserEquipmentInventory,
+    inventoryInput: UserEquipmentInventory | (LightEquipment | ModifierEquipment)[],
     targets: { targetFStop: number; targetISO: number }
   ): PatternExposureAnalysis {
+    const inventory: UserEquipmentInventory = Array.isArray(inventoryInput)
+      ? { lights: inventoryInput.filter((i): i is LightEquipment => 'power' in i), modifiers: inventoryInput.filter((i): i is ModifierEquipment => !('power' in i)) }
+      : inventoryInput;
     const requirements = pattern.lights.map(buildRequirement);
     const equipmentMatches = requirements.map((req) => matchRequirement(req, inventory));
     const missingEquipment = equipmentMatches
@@ -220,7 +223,10 @@ export const patternExposureIntegration = {
     };
   },
 
-  suggestEquipmentForPatterns(inventory: UserEquipmentInventory): EquipmentSuggestion[] {
+  suggestEquipmentForPatterns(inventoryInput: UserEquipmentInventory | (LightEquipment | ModifierEquipment)[]): EquipmentSuggestion[] {
+    const inventory: UserEquipmentInventory = Array.isArray(inventoryInput)
+      ? { lights: inventoryInput.filter((i): i is LightEquipment => 'power' in i), modifiers: inventoryInput.filter((i): i is ModifierEquipment => !('power' in i)) }
+      : inventoryInput;
     const patterns = cinematographyPatternsService.getAllPatterns();
     const suggestions: EquipmentSuggestion[] = [];
 

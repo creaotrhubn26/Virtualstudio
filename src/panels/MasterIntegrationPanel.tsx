@@ -185,22 +185,22 @@ function AIRecommendationsTab() {
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                 <Typography variant="subtitle1" fontWeight="bold">
-                  {rec.pattern.name}
+                  {rec.pattern?.name}
                 </Typography>
                 <Chip 
-                  label={`${Math.round(rec.aiScore * 100)}% match`}
+                  label={`${Math.round((rec.aiScore ?? 0) * 100)}% match`}
                   size="small"
-                  color={rec.aiScore >= 0.7 ? 'success' : rec.aiScore >= 0.5 ? 'warning' : 'default'}
+                  color={(rec.aiScore ?? 0) >= 0.7 ? 'success' : (rec.aiScore ?? 0) >= 0.5 ? 'warning' : 'default'}
                 />
-                <Chip label={rec.pattern.difficulty} size="small" variant="outlined" />
+                <Chip label={rec.pattern?.difficulty} size="small" variant="outlined" />
               </Stack>
               <Typography variant="body2" color="text.secondary">
                 {rec.reasoning}
               </Typography>
               <Stack direction="row" spacing={1} mt={1}>
-                <Chip label={`${rec.analysis.requirements.length} lights`} size="small" />
-                <Chip label={rec.analysis.contrastRatio} size="small" />
-                <Chip label={`f/${rec.analysis.recommendedSettings.aperture}`} size="small" />
+                <Chip label={`${rec.analysis?.requirements?.length ?? 0} lights`} size="small" />
+                <Chip label={rec.analysis?.contrastRatio} size="small" />
+                <Chip label={`f/${rec.analysis?.recommendedSettings?.aperture}`} size="small" />
               </Stack>
             </CardContent>
           </Card>
@@ -324,8 +324,8 @@ function CostCalculatorTab() {
           <Select value={selectedPattern} onChange={(e) => setSelectedPattern(e.target.value)} label="Pattern" MenuProps={{ sx: { zIndex: 1400 } }}>
             <MenuItem value="">Select a pattern</MenuItem>
             {aiRecommendations.map(rec => (
-              <MenuItem key={rec.pattern.id} value={rec.pattern.id}>
-                {rec.pattern.name}
+              <MenuItem key={rec.pattern?.id ?? ''} value={rec.pattern?.id ?? ''}>
+                {rec.pattern?.name}
               </MenuItem>
             ))}
             <MenuItem value="rembrandt">Rembrandt</MenuItem>
@@ -378,7 +378,7 @@ function CostCalculatorTab() {
                 </ListItemIcon>
                 <ListItemText 
                   primary={item.item}
-                  secondary={item.owned ? 'Owned' : `Rental: ${formatCurrency(item.rentalPrice)}`}
+                  secondary={item.owned ? 'Owned' : `Rental: ${formatCurrency(item.rentalPrice ?? 0)}`}
                 />
               </ListItem>
             ))}
@@ -446,9 +446,9 @@ function GearPresetsTab() {
                 primary={preset.name}
                 secondary={
                   <Stack direction="row" spacing={1} mt={0.5}>
-                    <Chip label={`${preset.lights.length} lights`} size="small" />
-                    <Chip label={`EV ${preset.exposureData.ev.toFixed(1)}`} size="small" />
-                    <Chip label={preset.exposureData.contrastRatio} size="small" />
+                    <Chip label={`${preset.lights?.length ?? 0} lights`} size="small" />
+                    <Chip label={`EV ${(preset.exposureData?.ev ?? 0).toFixed(1)}`} size="small" />
+                    <Chip label={preset.exposureData?.contrastRatio} size="small" />
                     {preset.patternName && (
                       <Chip label={preset.patternName} size="small" color="primary" variant="outlined" />
                     )}
@@ -551,11 +551,11 @@ function MultiCameraSyncTab() {
                 color={cam.syncStatus === 'synced' ? 'success' : 'warning'}
                 size="small"
               />
-              {cam.evDifference !== 0 && (
+              {(cam.evDifference ?? 0) !== 0 && (
                 <Chip 
-                  label={`${cam.evDifference > 0 ? '+' : ', '}${cam.evDifference.toFixed(1)} EV`}
+                  label={`${(cam.evDifference ?? 0) > 0 ? '+' : ''}${(cam.evDifference ?? 0).toFixed(1)} EV`}
                   size="small"
-                  color={Math.abs(cam.evDifference) > 1 ? 'error' : 'default'}
+                  color={Math.abs(cam.evDifference ?? 0) > 1 ? 'error' : 'default'}
                 />
               )}
               <Button 

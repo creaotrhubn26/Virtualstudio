@@ -232,7 +232,7 @@ export const AnimaticPlayer: FC<AnimaticPlayerProps> = ({
   const [volume, setVolume] = useState(0.8);
   const [showSettings, setShowSettings] = useState(false);
   const [showControls, setShowControls] = useState(true);
-  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Refs for animation
   const playbackRef = useRef<number | null>(null);

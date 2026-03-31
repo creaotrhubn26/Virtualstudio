@@ -9,7 +9,7 @@ import { useAnimationComposerStore, AnimationSequence, AnimationLayer, Animation
 
 // Type for VirtualStudio tracking config
 interface LightTrackingConfig {
-  mode: 'none' | 'lookAt' | 'follow' | 'followWithOffset' | 'orbit' | 'mirror';
+  mode: 'none' | 'lookAt' | 'follow' | 'followWithOffset' | 'orbit' | 'mirror' | 'inverse' | 'parallel' | 'elastic' | 'leadFollow';
   targetId: string | null;
   targetType: 'light' | 'mesh' | 'camera' | 'point' | 'actor';
   offset: { x: number; y: number; z: number };

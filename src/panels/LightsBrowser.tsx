@@ -60,7 +60,8 @@ interface ModifierSpec {
   id: string;
   brand: string;
   model: string;
-  type: 'softbox' | 'octabox' | 'stripbox' | 'umbrella' | 'beauty-dish' | 'reflector' | 'grid' | 'snoot' | 'barn-doors' | 'diffuser';
+  type: 'softbox' | 'octabox' | 'stripbox' | 'umbrella' | 'beauty-dish' | 'reflector' | 'grid' | 'snoot' | 'barn-doors' | 'diffuser'
+      | 'led-panel' | 'tube' | 'parabolic' | 'flag' | 'gel' | 'ring-flash' | 'barndoor';
   size?: string;
   shape?: string;
   stopLoss?: number;
@@ -401,9 +402,9 @@ export function LightsBrowser() {
     // For Lovecraft environments: recommend low-intensity, warm-colored lights
     if (activeAtmosphere.fogEnabled && activeAtmosphere.fogColor && activeAtmosphere.fogColor.includes('0a')) {
       return LIGHT_DATABASE.filter(light => 
-        light.cct < 4000 || // Warm color
+        (light.cct ?? 5500) < 4000 || // Warm color
         light.power < 200 || // Low power
-        light.type === 'led-panel' // Continuous light for atmosphere
+        light.type === 'continuous' // Continuous light for atmosphere
       ).slice(0, 3);
     }
     

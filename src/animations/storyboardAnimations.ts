@@ -123,6 +123,19 @@ export const slideInRight = keyframes`
   100% { opacity: 1; transform: translateX(0); }
 `;
 
+/** Slide out to left */
+export const slideOutLeft = keyframes`
+  0%   { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-24px); }
+`;
+
+/** Pop in with spring */
+export const popIn = keyframes`
+  0%   { opacity: 0; transform: scale(0.6); }
+  70%  { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+`;
+
 /** Playhead pulse for timeline */
 export const playheadPulse = keyframes`
   0%,100% { opacity: 1; }

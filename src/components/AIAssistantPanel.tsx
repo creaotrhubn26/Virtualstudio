@@ -45,6 +45,46 @@ import {
 } from '@mui/icons-material';
 import { Tooltip } from '@mui/material';
 
+declare global {
+  interface Window {
+    SpeechRecognition?: new () => SpeechRecognition;
+    webkitSpeechRecognition?: new () => SpeechRecognition;
+    __virtualStudioDiagnostics?: {
+      environment?: {
+        sceneState?: {
+          lights?: unknown[];
+          props?: unknown[];
+          characters?: unknown[];
+          sceneName?: string;
+          [key: string]: unknown;
+        };
+      };
+    };
+  }
+  interface SpeechRecognition extends EventTarget {
+    lang: string;
+    interimResults: boolean;
+    onresult: ((e: SpeechRecognitionEvent) => void) | null;
+    onend: (() => void) | null;
+    onerror: (() => void) | null;
+    start(): void;
+    stop(): void;
+  }
+  interface SpeechRecognitionEvent extends Event {
+    results: SpeechRecognitionResultList;
+  }
+  interface SpeechRecognitionResultList {
+    [index: number]: SpeechRecognitionResult;
+  }
+  interface SpeechRecognitionResult {
+    [index: number]: SpeechRecognitionAlternative;
+  }
+  interface SpeechRecognitionAlternative {
+    transcript: string;
+    confidence: number;
+  }
+}
+
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -210,8 +250,7 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
   // Scene stats and name from diagnostics
   useEffect(() => {
     const updateStats = () => {
-      const diag = (window as Record<string, unknown>).__virtualStudioDiagnostics as
-        { environment?: { sceneState?: { lights?: unknown[]; props?: unknown[]; characters?: unknown[]; sceneName?: string } } } | undefined;
+      const diag = window.__virtualStudioDiagnostics;
       const ss = diag?.environment?.sceneState;
       if (ss) {
         setSceneStats({
@@ -263,8 +302,7 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
 
       // Capture live scene state (props + lights + camera) so the AI knows exactly what exists
       const sceneContext = (() => {
-        const diag = (window as Record<string, unknown>).__virtualStudioDiagnostics as
-          { environment?: { sceneState?: Record<string, unknown> } } | undefined;
+        const diag = window.__virtualStudioDiagnostics;
         return diag?.environment?.sceneState ?? null;
       })();
 
@@ -426,7 +464,8 @@ export function AIAssistantPanel({ onClose, isFullscreen = false, onToggleFullsc
       setIsListening(false);
       return;
     }
-    const SR = (window.SpeechRecognition || (window as Record<string, unknown>).webkitSpeechRecognition) as typeof SpeechRecognition;
+    const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    if (!SR) return;
     const rec = new SR();
     rec.lang = 'nb-NO';
     rec.interimResults = false;

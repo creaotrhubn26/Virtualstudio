@@ -21,8 +21,9 @@ export interface StoryPropManifest {
 export interface ScenarioPreset {
   id: string;
   navn: string;
-  kategori: 'bryllup' | 'portrett' | 'mote' | 'naeringsliv' | 'hollywood' | 'skolefoto' | 'story';
+  kategori: 'bryllup' | 'portrett' | 'mote' | 'naeringsliv' | 'hollywood' | 'skolefoto' | 'story' | 'beauty' | 'produktfoto' | 'foto' | 'video' | 'photo';
   beskrivelse: string;
+  description?: string;
   tags: string[];
   previewImage?: string;
   difficulty?: 'beginner' | 'intermediate' | 'advanced' | 'expert';
@@ -40,8 +41,10 @@ export interface ScenarioPreset {
       color?: string;
       cct?: number;
       modifier?: string;
+      gel?: string;
     }>;
     backdrop?: {
+      id?: string;
       type: string;
       color?: string;
     };
@@ -51,7 +54,7 @@ export interface ScenarioPreset {
       focalLength?: number;
     };
     gear?: {
-      setupType?: 'foto' | 'video';
+      setupType?: 'foto' | 'video' | 'photo';
       cameraBodyId?: string;
       cameraLabel?: string;
       cameraCount?: number;
@@ -67,6 +70,10 @@ export interface ScenarioPreset {
     modifiers: string[];
     backdrops: string[];
   };
+  thumbnail?: string;
+  previewUrl?: string;
+  durationMinutes?: number;
+  targetAudience?: string[];
 }
 
 export const scenarioPresets: ScenarioPreset[] = [

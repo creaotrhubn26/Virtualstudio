@@ -340,7 +340,7 @@ export const storySceneLoaderService = new StorySceneLoaderService();
 
 // Test helper — expose service on window so Playwright can trigger scene loads
 if (typeof window !== 'undefined') {
-  (window as Record<string, unknown>).__storyLoader = {
+  ((window as unknown as Record<string, unknown>)).__storyLoader = {
     loadById: (presetId: string) => {
       const preset = scenarioPresets.find(p => p.id === presetId);
       if (!preset) {

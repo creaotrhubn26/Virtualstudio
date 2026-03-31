@@ -6,6 +6,8 @@
  */
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { SceneNode } from '../../core/models/scene';
 import { logger } from '../../core/services/logger';
 import { getFacialFeatureById } from '../../core/data/facialFeaturesStyles';
@@ -13,17 +15,6 @@ import { getHeadAccessoryById } from '../../core/data/headAccessoriesStyles';
 import { getBodyAccessoryById } from '../../core/data/bodyAccessoriesStyles';
 
 const log = logger.module('AccessoryMesh');
-
-// Dynamic THREE import
-let THREE: any = null;
-let GLTFLoader: any = null;
-try {
-  THREE = require('three');
-  const loaderModule = require('three/examples/jsm/loaders/GLTFLoader');
-  GLTFLoader = loaderModule.GLTFLoader;
-} catch {
-  log.warn('THREE.js not available in AccessoryMesh');
-}
 
 export type AccessoryType = 'facial_feature' | 'head_accessory' | 'body_accessory';
 
@@ -148,20 +139,13 @@ export function AccessoryMesh({ node, actorNode, accessoryType }: AccessoryMeshP
   useEffect(() => {
     if (!groupRef.current || !actorNode) return;
 
-    // Position relative to actor
-    groupRef.current.position.set(
-      actorNode.position.x,
-      actorNode.position.y,
-      actorNode.position.z
-    );
-    groupRef.current.rotation.set(
-      actorNode.rotation.x,
-      actorNode.rotation.y,
-      actorNode.rotation.z
-    );
+    // Position relative to actor (SceneNode.transform stores arrays)
+    const [px, py, pz] = actorNode.transform.position;
+    const [rx, ry, rz] = actorNode.transform.rotation;
+    groupRef.current.position.set(px, py, pz);
+    groupRef.current.rotation.set(rx, ry, rz);
   }, [actorNode]);
 
-  if (!THREE) return null;
   if (loading) return <primitive object={new THREE.Group()} ref={groupRef} />;
   if (error) return null;
 
