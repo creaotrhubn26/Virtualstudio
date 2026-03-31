@@ -5709,7 +5709,7 @@ class VirtualStudio {
       // faceYawOffset: known TRELLIS models are confirmed -Z face (offset=0).
       //                null = auto-detect from bright submesh centroid (for Tripo/AI models).
       'aputure-300d':        { intensity: 450, name: 'Aputure 300D',          cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
-      'aputure-300d-strip':  { intensity: 350, name: 'Aputure 300D Stripbox',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 3.5, shadowKernel: 32,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: null },
+      'aputure-300d-strip':  { intensity: 350, name: 'Aputure 300D Stripbox',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 3.5, shadowKernel: 32,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
       'aputure-120d':        { intensity: 300, name: 'Aputure 120D',           cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
       'aputure-600d':        { intensity: 700, name: 'Aputure 600D Pro',       cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, shadowKernel: 64,  glbFile: '/models/lights/softbox-stand.glb',  faceYawOffset: 0    },
       'godox-ad600':    { intensity: 380, name: 'Godox AD600',      cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 96,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
@@ -5721,32 +5721,32 @@ class VirtualStudio {
       'profoto-d2':     { intensity: 380, name: 'Profoto D2',       cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 80,  glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
 
       // HMI / Fresnel / PAR
-      'arri-m18':        { intensity: 800, name: 'Arri M18 HMI',       cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.5, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
-      'arri-m40':        { intensity: 1400, name: 'Arri M40 HMI',      cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.5, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
-      'joker-400':       { intensity: 500, name: 'K5600 Joker 400',    cct: 5600, beamAngle: Math.PI / 3.5, exponent: 3.0, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
-      'par-can-1000':    { intensity: 700, name: 'PAR64 1000W',        cct: 3200, beamAngle: Math.PI / 8,   exponent: 5.0, shadowKernel: 16, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
-      'dedolight-150':   { intensity: 280, name: 'Dedolight 150W',     cct: 5600, beamAngle: Math.PI / 18,  exponent: 8.0, shadowKernel: 8,  glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
-      'dedolight-dled4': { intensity: 180, name: 'Dedolight DLED4',    cct: 5600, beamAngle: Math.PI / 18,  exponent: 8.0, shadowKernel: 8,  glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
-      'chauvet-fresnel-spot': { intensity: 220, name: 'Chauvet Fresnel', cct: 5600, beamAngle: Math.PI / 7, exponent: 6.0, shadowKernel: 16, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
+      'arri-m18':        { intensity: 800, name: 'Arri M18 HMI',       cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.5, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'arri-m40':        { intensity: 1400, name: 'Arri M40 HMI',      cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.5, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'joker-400':       { intensity: 500, name: 'K5600 Joker 400',    cct: 5600, beamAngle: Math.PI / 3.5, exponent: 3.0, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'par-can-1000':    { intensity: 700, name: 'PAR64 1000W',        cct: 3200, beamAngle: Math.PI / 8,   exponent: 5.0, shadowKernel: 16, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'dedolight-150':   { intensity: 280, name: 'Dedolight 150W',     cct: 5600, beamAngle: Math.PI / 18,  exponent: 8.0, shadowKernel: 8,  glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'dedolight-dled4': { intensity: 180, name: 'Dedolight DLED4',    cct: 5600, beamAngle: Math.PI / 18,  exponent: 8.0, shadowKernel: 8,  glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'chauvet-fresnel-spot': { intensity: 220, name: 'Chauvet Fresnel', cct: 5600, beamAngle: Math.PI / 7, exponent: 6.0, shadowKernel: 16, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
 
       // Beauty Dish / Ring
-      'godox-bd-07':         { intensity: 320, name: 'Godox BD-07 Beauty Dish', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: null },
-      'profoto-softlight-65':{ intensity: 350, name: 'Profoto Softlight 65cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: null },
-      'godox-ar400':         { intensity: 280, name: 'Godox AR400 Ring Flash',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.2, shadowKernel: 96, glbFile: '/models/lights/ring-light-stand.glb',   faceYawOffset: null },
-      'profoto-pro-ring2':   { intensity: 300, name: 'Profoto Pro-Ring2',       cct: 5500, beamAngle: Math.PI / 2,   exponent: 1.2, shadowKernel: 96, glbFile: '/models/lights/ring-light-stand.glb',   faceYawOffset: null },
+      'godox-bd-07':         { intensity: 320, name: 'Godox BD-07 Beauty Dish', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
+      'profoto-softlight-65':{ intensity: 350, name: 'Profoto Softlight 65cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
+      'godox-ar400':         { intensity: 280, name: 'Godox AR400 Ring Flash',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.2, shadowKernel: 96, glbFile: '/models/lights/ring-light-stand.glb',   faceYawOffset: Math.PI },
+      'profoto-pro-ring2':   { intensity: 300, name: 'Profoto Pro-Ring2',       cct: 5500, beamAngle: Math.PI / 2,   exponent: 1.2, shadowKernel: 96, glbFile: '/models/lights/ring-light-stand.glb',   faceYawOffset: Math.PI },
 
       // LED Ring Lights
-      'nanlite-halo-14':  { intensity: 160, name: 'Nanlite Halo 14"',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: null },
-      'nanlite-halo-26':  { intensity: 260, name: 'Nanlite Halo 26"',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: null },
-      'godox-rl-60':      { intensity: 200, name: 'Godox RL-60 Ring',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: null },
+      'nanlite-halo-14':  { intensity: 160, name: 'Nanlite Halo 14"',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'nanlite-halo-26':  { intensity: 260, name: 'Nanlite Halo 26"',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'godox-rl-60':      { intensity: 200, name: 'Godox RL-60 Ring',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
 
       // Large LED Panels
-      'aputure-nova-p300c':  { intensity: 550, name: 'Aputure NOVA P300c',   cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
-      'arri-skypanel-s60':   { intensity: 520, name: 'Arri SkyPanel S60-C',  cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
-      'arri-skypanel-s120':  { intensity: 800, name: 'Arri SkyPanel S120-C', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
-      'rosco-litepad-hol':   { intensity: 180, name: 'Rosco LitePad HO+',   cct: 5500, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 64,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
-      'nanlite-mixpad-27c':  { intensity: 140, name: 'Nanlite MixPad 27C',  cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 64,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
-      'nanlite-pavotube-15c-kit': { intensity: 120, name: 'Nanlite PavoTube 15C', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 64, glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: null },
+      'aputure-nova-p300c':  { intensity: 550, name: 'Aputure NOVA P300c',   cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'arri-skypanel-s60':   { intensity: 520, name: 'Arri SkyPanel S60-C',  cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'arri-skypanel-s120':  { intensity: 800, name: 'Arri SkyPanel S120-C', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'rosco-litepad-hol':   { intensity: 180, name: 'Rosco LitePad HO+',   cct: 5500, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 64,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'nanlite-mixpad-27c':  { intensity: 140, name: 'Nanlite MixPad 27C',  cct: 5600, beamAngle: Math.PI / 1.5, exponent: 1.0, shadowKernel: 64,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'nanlite-pavotube-15c-kit': { intensity: 120, name: 'Nanlite PavoTube 15C', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.5, shadowKernel: 64, glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
 
       // Speedlights
       'godox-tt685-ii':  { intensity: 180, name: 'Godox TT685 II',   cct: 5600, beamAngle: Math.PI / 3, exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 },
@@ -5769,85 +5769,85 @@ class VirtualStudio {
       'shaper-octabox-150': { intensity: 600, name: 'Oktaboks 150 cm', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
 
       // Stripbox — tall narrow softbox, hair/rim/background accent
-      'shaper-stripbox-15x90':  { intensity: 180, name: 'Stripboks 15×90 cm',  cct: 5600, beamAngle: Math.PI / 5,   exponent: 3.0, shadowKernel: 48,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: null },
-      'shaper-stripbox-30x120': { intensity: 280, name: 'Stripboks 30×120 cm', cct: 5600, beamAngle: Math.PI / 4,   exponent: 2.5, shadowKernel: 64,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: null },
-      'shaper-stripbox-40x140': { intensity: 340, name: 'Stripboks 40×140 cm', cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.2, shadowKernel: 80,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: null },
-      'shaper-stripbox-60x180': { intensity: 380, name: 'Stripboks 60×180 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 96,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: null },
+      'shaper-stripbox-15x90':  { intensity: 180, name: 'Stripboks 15×90 cm',  cct: 5600, beamAngle: Math.PI / 5,   exponent: 3.0, shadowKernel: 48,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
+      'shaper-stripbox-30x120': { intensity: 280, name: 'Stripboks 30×120 cm', cct: 5600, beamAngle: Math.PI / 4,   exponent: 2.5, shadowKernel: 64,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
+      'shaper-stripbox-40x140': { intensity: 340, name: 'Stripboks 40×140 cm', cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.2, shadowKernel: 80,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
+      'shaper-stripbox-60x180': { intensity: 380, name: 'Stripboks 60×180 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 96,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: Math.PI },
 
       // Beauty dish — semi-specular, controlled wrap, beauty/portrait
-      'shaper-beautydish-35': { intensity: 220, name: 'Beauty dish 35 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.2, shadowKernel: 48, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: null },
-      'shaper-beautydish-40': { intensity: 300, name: 'Beauty dish 40 cm', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: null },
-      'shaper-beautydish-56': { intensity: 380, name: 'Beauty dish 56 cm', cct: 5600, beamAngle: Math.PI / 2.2, exponent: 1.5, shadowKernel: 80, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: null },
-      'shaper-beautydish-70': { intensity: 480, name: 'Beauty dish 70 cm', cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.3, shadowKernel: 96, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: null },
+      'shaper-beautydish-35': { intensity: 220, name: 'Beauty dish 35 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.2, shadowKernel: 48, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
+      'shaper-beautydish-40': { intensity: 300, name: 'Beauty dish 40 cm', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
+      'shaper-beautydish-56': { intensity: 380, name: 'Beauty dish 56 cm', cct: 5600, beamAngle: Math.PI / 2.2, exponent: 1.5, shadowKernel: 80, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
+      'shaper-beautydish-70': { intensity: 480, name: 'Beauty dish 70 cm', cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.3, shadowKernel: 96, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: Math.PI },
 
       // Ring light — flat, shadow-free, catchlight ring
-      'shaper-ring-18': { intensity:  90, name: 'Ringslys 7" / 18 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2, shadowKernel: 96,  glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: null },
-      'shaper-ring-35': { intensity: 160, name: 'Ringslys 14" / 35 cm', cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: null },
-      'shaper-ring-48': { intensity: 210, name: 'Ringslys 19" / 48 cm', cct: 5600, beamAngle: Math.PI / 1.9, exponent: 0.9, shadowKernel: 144, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: null },
-      'shaper-ring-65': { intensity: 260, name: 'Ringslys 26" / 65 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: null },
+      'shaper-ring-18': { intensity:  90, name: 'Ringslys 7" / 18 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2, shadowKernel: 96,  glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ring-35': { intensity: 160, name: 'Ringslys 14" / 35 cm', cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ring-48': { intensity: 210, name: 'Ringslys 19" / 48 cm', cct: 5600, beamAngle: Math.PI / 1.9, exponent: 0.9, shadowKernel: 144, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ring-65': { intensity: 260, name: 'Ringslys 26" / 65 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: Math.PI },
 
       // Umbrella — silver reflective, bounced warm
-      'shaper-umbrella-reflective':  { intensity: 320, name: 'Paraply sølv 100 cm',  cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: null },
-      'shaper-umbrella-silver-150':  { intensity: 480, name: 'Paraply sølv 150 cm',  cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: null },
-      'shaper-umbrella-xl':          { intensity: 580, name: 'Paraply sølv XL 165 cm',cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.6, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: null },
+      'shaper-umbrella-reflective':  { intensity: 320, name: 'Paraply sølv 100 cm',  cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: Math.PI },
+      'shaper-umbrella-silver-150':  { intensity: 480, name: 'Paraply sølv 150 cm',  cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: Math.PI },
+      'shaper-umbrella-xl':          { intensity: 580, name: 'Paraply sølv XL 165 cm',cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.6, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: Math.PI },
 
       // Umbrella — shoot-through, soft transmitted
-      'shaper-umbrella-shootthrough':     { intensity: 280, name: 'Paraply shoot-through 100 cm', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/umbrella-shootthrough.glb', faceYawOffset: null },
-      'shaper-umbrella-shootthrough-150': { intensity: 400, name: 'Paraply shoot-through 150 cm', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.6, shadowKernel: 192, glbFile: '/models/lights/umbrella-shootthrough.glb', faceYawOffset: null },
+      'shaper-umbrella-shootthrough':     { intensity: 280, name: 'Paraply shoot-through 100 cm', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/umbrella-shootthrough.glb', faceYawOffset: Math.PI },
+      'shaper-umbrella-shootthrough-150': { intensity: 400, name: 'Paraply shoot-through 150 cm', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.6, shadowKernel: 192, glbFile: '/models/lights/umbrella-shootthrough.glb', faceYawOffset: Math.PI },
 
       // Umbrella — gold reflective, warm toned
-      'shaper-umbrella-gold':     { intensity: 300, name: 'Paraply gull 100 cm', cct: 4000, beamAngle: Math.PI / 1.6, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/umbrella-gold.glb', faceYawOffset: null },
-      'shaper-umbrella-gold-150': { intensity: 440, name: 'Paraply gull 150 cm', cct: 4000, beamAngle: Math.PI / 1.4, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/umbrella-gold.glb', faceYawOffset: null },
+      'shaper-umbrella-gold':     { intensity: 300, name: 'Paraply gull 100 cm', cct: 4000, beamAngle: Math.PI / 1.6, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/umbrella-gold.glb', faceYawOffset: Math.PI },
+      'shaper-umbrella-gold-150': { intensity: 440, name: 'Paraply gull 150 cm', cct: 4000, beamAngle: Math.PI / 1.4, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/umbrella-gold.glb', faceYawOffset: Math.PI },
 
       // Snoot — cylindrical narrower, hard directional accent/hair light
-      'shaper-snoot':      { intensity: 280, name: 'Snoot standard',      cct: 5600, beamAngle: Math.PI / 8,  exponent: 6.0, shadowKernel: 16, glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: null },
-      'shaper-snoot-grid': { intensity: 250, name: 'Snoot med honeycomb', cct: 5600, beamAngle: Math.PI / 12, exponent: 8.0, shadowKernel: 8,  glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: null },
-      'shaper-snoot-gel':  { intensity: 240, name: 'Snoot med gelramme',  cct: 5600, beamAngle: Math.PI / 10, exponent: 7.0, shadowKernel: 10, glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: null },
+      'shaper-snoot':      { intensity: 280, name: 'Snoot standard',      cct: 5600, beamAngle: Math.PI / 8,  exponent: 6.0, shadowKernel: 16, glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: Math.PI },
+      'shaper-snoot-grid': { intensity: 250, name: 'Snoot med honeycomb', cct: 5600, beamAngle: Math.PI / 12, exponent: 8.0, shadowKernel: 8,  glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: Math.PI },
+      'shaper-snoot-gel':  { intensity: 240, name: 'Snoot med gelramme',  cct: 5600, beamAngle: Math.PI / 10, exponent: 7.0, shadowKernel: 10, glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: Math.PI },
 
       // Parabolic reflector — deep dish, specular-to-diffuse adjustable
-      'shaper-para-75':  { intensity: 340, name: 'Parabolreflektor 75 cm',  cct: 5600, beamAngle: Math.PI / 4,   exponent: 2.2, shadowKernel: 40, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: null },
-      'shaper-para-90':  { intensity: 450, name: 'Parabolreflektor 90 cm',  cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, shadowKernel: 48, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: null },
-      'shaper-para-120': { intensity: 580, name: 'Parabolreflektor 120 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 1.8, shadowKernel: 56, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: null },
-      'shaper-para-150': { intensity: 700, name: 'Parabolreflektor 150 cm', cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.6, shadowKernel: 64, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: null },
+      'shaper-para-75':  { intensity: 340, name: 'Parabolreflektor 75 cm',  cct: 5600, beamAngle: Math.PI / 4,   exponent: 2.2, shadowKernel: 40, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
+      'shaper-para-90':  { intensity: 450, name: 'Parabolreflektor 90 cm',  cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, shadowKernel: 48, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
+      'shaper-para-120': { intensity: 580, name: 'Parabolreflektor 120 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 1.8, shadowKernel: 56, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
+      'shaper-para-150': { intensity: 700, name: 'Parabolreflektor 150 cm', cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.6, shadowKernel: 64, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: Math.PI },
 
       // Fresnel lens — variable spot/flood, sharp-edged theatrical beam
-      'shaper-fresnel-6':  { intensity: 240, name: 'Fresnel 6"',  cct: 5600, beamAngle: Math.PI / 7,   exponent: 4.5, shadowKernel: 20, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
-      'shaper-fresnel-7':  { intensity: 320, name: 'Fresnel 7"',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 4.0, shadowKernel: 24, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
-      'shaper-fresnel-12': { intensity: 480, name: 'Fresnel 12"', cct: 5600, beamAngle: Math.PI / 5,   exponent: 3.5, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
-      'shaper-fresnel-20': { intensity: 720, name: 'Fresnel 20"', cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.0, shadowKernel: 40, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
+      'shaper-fresnel-6':  { intensity: 240, name: 'Fresnel 6"',  cct: 5600, beamAngle: Math.PI / 7,   exponent: 4.5, shadowKernel: 20, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-fresnel-7':  { intensity: 320, name: 'Fresnel 7"',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 4.0, shadowKernel: 24, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-fresnel-12': { intensity: 480, name: 'Fresnel 12"', cct: 5600, beamAngle: Math.PI / 5,   exponent: 3.5, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-fresnel-20': { intensity: 720, name: 'Fresnel 20"', cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.0, shadowKernel: 40, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: Math.PI },
 
       // LED panel — flat broad source, broadcast/interview fill
-      'shaper-ledpanel-15x30':  { intensity: 100, name: 'LED-panel 15×30 cm',   cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.2, shadowKernel: 64,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
-      'shaper-ledpanel-30x60':  { intensity: 200, name: 'LED-panel 30×60 cm',   cct: 5600, beamAngle: Math.PI / 1.8, exponent: 1.0, shadowKernel: 96,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
-      'shaper-ledpanel-60x60':  { intensity: 360, name: 'LED-panel 60×60 cm',   cct: 5600, beamAngle: Math.PI / 1.6, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
-      'shaper-ledpanel-60x120': { intensity: 520, name: 'LED-panel 60×120 cm',  cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
-      'shaper-ledpanel-120x120':{ intensity: 720, name: 'LED-panel 120×120 cm', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
+      'shaper-ledpanel-15x30':  { intensity: 100, name: 'LED-panel 15×30 cm',   cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.2, shadowKernel: 64,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ledpanel-30x60':  { intensity: 200, name: 'LED-panel 30×60 cm',   cct: 5600, beamAngle: Math.PI / 1.8, exponent: 1.0, shadowKernel: 96,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ledpanel-60x60':  { intensity: 360, name: 'LED-panel 60×60 cm',   cct: 5600, beamAngle: Math.PI / 1.6, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ledpanel-60x120': { intensity: 520, name: 'LED-panel 60×120 cm',  cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
+      'shaper-ledpanel-120x120':{ intensity: 720, name: 'LED-panel 120×120 cm', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: Math.PI },
 
       // Chimera — fabric frame softbox, cinema/broadcast standard
-      'shaper-chimera-2x3': { intensity: 280, name: 'Chimera 60×90 cm (2×3 ft)',   cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: null },
-      'shaper-chimera-3x4': { intensity: 440, name: 'Chimera 90×120 cm (3×4 ft)',  cct: 5600, beamAngle: Math.PI / 1.7, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: null },
-      'shaper-chimera-4x6': { intensity: 640, name: 'Chimera 120×180 cm (4×6 ft)', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: null },
+      'shaper-chimera-2x3': { intensity: 280, name: 'Chimera 60×90 cm (2×3 ft)',   cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: Math.PI },
+      'shaper-chimera-3x4': { intensity: 440, name: 'Chimera 90×120 cm (3×4 ft)',  cct: 5600, beamAngle: Math.PI / 1.7, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: Math.PI },
+      'shaper-chimera-4x6': { intensity: 640, name: 'Chimera 120×180 cm (4×6 ft)', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: Math.PI },
 
       // Lantern / Globe — omnidirectional soft wrap-around light
-      'shaper-lantern-45': { intensity: 180, name: 'Lanterneglobus 45 cm', cct: 5600, beamAngle: Math.PI / 1.2, exponent: 0.5, shadowKernel: 192, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: null },
-      'shaper-lantern-75': { intensity: 280, name: 'Lanterneglobus 75 cm', cct: 5600, beamAngle: Math.PI / 1.1, exponent: 0.5, shadowKernel: 192, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: null },
-      'shaper-lantern-90': { intensity: 360, name: 'Lanterneglobus 90 cm', cct: 5600, beamAngle: Math.PI / 1.05,exponent: 0.4, shadowKernel: 192, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: null },
+      'shaper-lantern-45': { intensity: 180, name: 'Lanterneglobus 45 cm', cct: 5600, beamAngle: Math.PI / 1.2, exponent: 0.5, shadowKernel: 192, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: Math.PI },
+      'shaper-lantern-75': { intensity: 280, name: 'Lanterneglobus 75 cm', cct: 5600, beamAngle: Math.PI / 1.1, exponent: 0.5, shadowKernel: 192, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: Math.PI },
+      'shaper-lantern-90': { intensity: 360, name: 'Lanterneglobus 90 cm', cct: 5600, beamAngle: Math.PI / 1.05,exponent: 0.4, shadowKernel: 192, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: Math.PI },
 
       // Kino Flo — fluorescent tube bank, film/broadcast magazine fill
-      'shaper-kino-2bank': { intensity: 160, name: 'Kino Flo 2 rør 1 bank', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, shadowKernel: 128, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: null },
-      'shaper-kino-4bank': { intensity: 280, name: 'Kino Flo 4 rør 1 bank', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.9, shadowKernel: 144, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: null },
-      'shaper-kino-2x2':   { intensity: 360, name: 'Kino Flo 2 rør 2 bank', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.8, shadowKernel: 160, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: null },
-      'shaper-kino-4x4':   { intensity: 580, name: 'Kino Flo 4 rør 4 bank', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: null },
+      'shaper-kino-2bank': { intensity: 160, name: 'Kino Flo 2 rør 1 bank', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, shadowKernel: 128, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
+      'shaper-kino-4bank': { intensity: 280, name: 'Kino Flo 4 rør 1 bank', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.9, shadowKernel: 144, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
+      'shaper-kino-2x2':   { intensity: 360, name: 'Kino Flo 2 rør 2 bank', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.8, shadowKernel: 160, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
+      'shaper-kino-4x4':   { intensity: 580, name: 'Kino Flo 4 rør 4 bank', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: Math.PI },
 
       // Diffusion Frame — large silk/muslin scrim on stand
-      'shaper-diffframe-4x4': { intensity: 380, name: 'Diffusjonsramme 4×4 ft', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: null },
-      'shaper-diffframe-6x6': { intensity: 600, name: 'Diffusjonsramme 6×6 ft', cct: 5600, beamAngle: Math.PI / 1.2, exponent: 0.6, shadowKernel: 192, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: null },
-      'shaper-diffframe-8x8': { intensity: 820, name: 'Diffusjonsramme 8×8 ft', cct: 5600, beamAngle: Math.PI / 1.1, exponent: 0.5, shadowKernel: 192, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: null },
+      'shaper-diffframe-4x4': { intensity: 380, name: 'Diffusjonsramme 4×4 ft', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: Math.PI },
+      'shaper-diffframe-6x6': { intensity: 600, name: 'Diffusjonsramme 6×6 ft', cct: 5600, beamAngle: Math.PI / 1.2, exponent: 0.6, shadowKernel: 192, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: Math.PI },
+      'shaper-diffframe-8x8': { intensity: 820, name: 'Diffusjonsramme 8×8 ft', cct: 5600, beamAngle: Math.PI / 1.1, exponent: 0.5, shadowKernel: 192, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: Math.PI },
 
       // Open Reflector — bare bowl, hard specular punch
-      'shaper-openref-standard': { intensity: 420, name: 'Åpen reflektor 60 cm',      cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: null },
-      'shaper-openref-wide':     { intensity: 550, name: 'Åpen reflektor vid 90 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 2.0, shadowKernel: 40, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: null },
-      'shaper-openref-tele':     { intensity: 380, name: 'Åpen reflektor tele 45 cm', cct: 5600, beamAngle: Math.PI / 4.5, exponent: 3.5, shadowKernel: 24, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: null },
+      'shaper-openref-standard': { intensity: 420, name: 'Åpen reflektor 60 cm',      cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: Math.PI },
+      'shaper-openref-wide':     { intensity: 550, name: 'Åpen reflektor vid 90 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 2.0, shadowKernel: 40, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: Math.PI },
+      'shaper-openref-tele':     { intensity: 380, name: 'Åpen reflektor tele 45 cm', cct: 5600, beamAngle: Math.PI / 4.5, exponent: 3.5, shadowKernel: 24, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: Math.PI },
     };
 
     const lightConfig = lightSpecs[modelId] || { intensity: 350, name: modelId, cct: 5600, beamAngle: Math.PI / 3, exponent: 2.0, shadowKernel: 64, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 };
