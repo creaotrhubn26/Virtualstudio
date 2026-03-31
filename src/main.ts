@@ -3011,6 +3011,12 @@ class VirtualStudio {
           this.studioGizmoMeshes.yokeRing.position.z = newZ;
         }
 
+        // Re-aim at the stored target so the beam tracks the subject as the
+        // stand is dragged across the floor.  Without this the SpotLight direction
+        // stays fixed while the head position changes — the beam drifts off-subject.
+        const aimT = (lightData.mesh as any)._aimTarget as BABYLON.Vector3 | undefined;
+        if (aimT) this.aimLightAt(lightId, aimT);
+
         // Update POV camera position
         this.updateLightPOVCamera(lightId);
       }
@@ -3118,6 +3124,11 @@ class VirtualStudio {
     heightDragBehavior.onDragEndObservable.add(() => {
       this.studioGizmoDragging = null;
       this.hideHeightLabel();
+      // Re-aim at the stored target now that _lightHeadHeight has changed.
+      // The tilt angle (elevation) must be recomputed from the new head height
+      // so the beam elevation stays correct after a height adjustment.
+      const aimT = (lightData.mesh as any)._aimTarget as BABYLON.Vector3 | undefined;
+      if (aimT) this.aimLightAt(lightId, aimT);
     });
     heightSlider.addBehavior(heightDragBehavior);
 
@@ -3166,17 +3177,22 @@ class VirtualStudio {
         const xRotation = BABYLON.Quaternion.RotationAxis(BABYLON.Axis.X, deltaY);
         currentDir.rotateByQuaternionToRef(xRotation, currentDir);
 
-        lightData.light.direction = currentDir.normalize();
+        const newDir = currentDir.normalize();
 
-        // Update mesh rotation to match
-        if (lightData.mesh.rotationQuaternion) {
-          const lookAt = lightData.mesh.position.add(currentDir.scale(5));
-          lightData.mesh.lookAt(lookAt);
-        }
+        // Drive the full aim pipeline through aimLightAt rather than setting
+        // light.direction directly.  Reasons:
+        //   1. aimLightAt applies _faceYawOffset so the 3D model yaw is correct.
+        //   2. The previous lookAt() branch only ran when rotationQuaternion was
+        //      set — it was always null, so the mesh never rotated during yoke drag.
+        //   3. aimLightAt stores _aimTarget so subsequent base/height drags can
+        //      re-aim at the post-yoke target instead of the original setup target.
+        const headPos = lightData.light.position.clone();
+        const virtualTarget = headPos.add(newDir.scale(5));
+        this.aimLightAt(lightId, virtualTarget);
 
         // Show angle in degrees
-        const tiltDeg = Math.round(Math.asin(-currentDir.y) * 180 / Math.PI);
-        const panDeg = Math.round(Math.atan2(currentDir.x, -currentDir.z) * 180 / Math.PI);
+        const tiltDeg = Math.round(Math.asin(-newDir.y) * 180 / Math.PI);
+        const panDeg = Math.round(Math.atan2(newDir.x, -newDir.z) * 180 / Math.PI);
         this.updateAngleLabel(tiltDeg, panDeg);
         this.updateLightPOVCamera(lightId);
       }
@@ -6271,6 +6287,11 @@ class VirtualStudio {
     // Store the aimed direction on mesh for reference
     const aimDirection = target.subtract(lightHeadPos).normalize();
     (mesh as any)._initialWorldForward = aimDirection.clone();
+
+    // Persist the aim target so gizmo drags can re-aim after position changes.
+    // Any operation that moves the stand (base-ring drag, height drag, undo/redo)
+    // reads _aimTarget and calls aimLightAt again so the beam always stays on subject.
+    (mesh as any)._aimTarget = target.clone();
 
     // Clear azimuth/elevation to stay in automatic mode
     lightData.azimuth = undefined;
