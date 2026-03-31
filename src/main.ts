@@ -26983,8 +26983,20 @@ class VirtualStudio {
     const existing = this.lights.get(lightId);
     if (!existing) return;
 
-    // Capture everything we want to preserve before removing the old fixture
-    const savedPosition = existing.mesh.position.clone();
+    // _lightHeadHeight is the SpotLight Y elevation (top of the model).
+    // mesh.position.y is the grounded mesh CENTRE (≈ half the model height).
+    // addLight uses position.y as the TARGET head-height for model scaling,
+    // so we must pass _lightHeadHeight — not mesh.position.y — or the new
+    // fixture will be scaled to half its correct size.
+    const savedLightHeadY = (existing.mesh as any)._lightHeadHeight as number | undefined;
+    const savedPosition = new BABYLON.Vector3(
+      existing.mesh.position.x,
+      (savedLightHeadY !== undefined && savedLightHeadY > 0.1)
+        ? savedLightHeadY
+        : existing.light.position.y,
+      existing.mesh.position.z,
+    );
+
     const savedCCT = existing.cct;
     const savedPower = existing.powerMultiplier ?? 1.0;
 
