@@ -319,10 +319,11 @@ export function LightsBrowser() {
 
   useEffect(() => {
     const onLightSelected = (e: Event) => {
-      const { id, intensity, enabled, cct, beam, position } = (e as CustomEvent).detail ?? {};
+      const { id, lightType, intensity, enabled, cct, beam, position } = (e as CustomEvent).detail ?? {};
       if (!id) return;
       setSelectedLightNode({
         id,
+        lightType: lightType ?? 'led',
         visible: enabled !== false,
         light: {
           // power is 0-1; the raw studio intensity can be >1000 lux so we

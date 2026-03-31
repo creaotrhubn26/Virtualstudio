@@ -370,7 +370,7 @@ export function AdvancedLightControlPanel({ lightNode, onUpdate }: AdvancedLight
       <Divider sx={{ my: 2 }} />
 
       {/* Light Quality Metrics */}
-      <LightQualityPanel cct={cct} lightType="led-warm" />
+      <LightQualityPanel cct={cct} lightType={lightNode.lightType ?? 'led'} />
 
       <Divider sx={{ my: 2 }} />
 

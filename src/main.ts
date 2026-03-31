@@ -27064,6 +27064,7 @@ class VirtualStudio {
     window.dispatchEvent(new CustomEvent('light-selected', {
       detail: {
         id,
+        lightType: selData?.type ?? 'led',
         intensity: selData?.light.intensity ?? 0,
         enabled: selData ? selData.light.isEnabled() : true,
         cct: selData?.cct ?? 5600,
