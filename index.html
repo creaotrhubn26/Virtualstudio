@@ -114,8 +114,47 @@
             </svg>
             <span class="toolbar-btn-text">Eksporter</span>
           </button>
+
+          <div class="toolbar-divider" role="separator" aria-hidden="true"></div>
+
+          <!-- Lighting Plot Export -->
+          <button class="toolbar-btn" id="exportLightingPlotBtn" aria-label="Eksporter lysplan" title="Eksporter lysplan som SVG/PDF">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+            </svg>
+            <span class="toolbar-btn-text">Lysplan</span>
+          </button>
+
+          <!-- Rental CSV Export -->
+          <button class="toolbar-btn" id="exportRentalCsvBtn" aria-label="Eksporter leieutstyrsliste" title="Last ned CSV-liste for utleieselskap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="8" y1="13" x2="16" y2="13"/>
+              <line x1="8" y1="17" x2="16" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            <span class="toolbar-btn-text">Leielist</span>
+          </button>
         </div>
       </nav>
+
+      <!-- Backend Status Badge -->
+      <div id="backendStatusBadge" class="backend-status-badge" title="Tjenerstatus" aria-label="Backend tilkobling">
+        <span id="backendStatusDot" class="status-dot status-checking"></span>
+        <span id="backendStatusText" class="status-text">Kobler til…</span>
+      </div>
+
+      <!-- Auto-save indicator -->
+      <div id="autoSaveIndicator" class="autosave-indicator" title="Auto-lagring" aria-live="polite" aria-label="Siste lagring" style="display:none;">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        <span id="autoSaveText">Lagret</span>
+      </div>
 
       <!-- Top Right Actions -->
       <div class="top-right">

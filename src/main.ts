@@ -43,6 +43,11 @@ import { notesService } from './services/notesService';
 import { environmentLearningService } from './services/environmentLearningService';
 import { ALL_POSES } from './core/animation/PoseLibrary';
 import type { PosePreset } from './core/animation/PoseLibrary';
+import { printLightingPlot, downloadLightingPlotSVG } from './services/lightingPlotPDFService';
+import type { PlotLight, PlotCharacter, LightingPlotData } from './services/lightingPlotPDFService';
+import { downloadRentalCsv } from './services/rentalManifestService';
+import type { ManifestLight } from './services/rentalManifestService';
+import { loadIESFile, applyIESToSpotLight } from './services/iesProfileService';
 
 declare global {
   interface Window {
@@ -1075,6 +1080,13 @@ class VirtualStudio {
       console.log('[VirtualStudio] Starting addDefaultMannequin...');
       this.addDefaultMannequin();
       console.log('[VirtualStudio] Setup complete!');
+
+      // Auto-save every 30 seconds to localStorage
+      this.setupAutoSave();
+      // Backend health polling
+      this.setupBackendStatusPolling();
+      // WebGL context loss toast
+      this.setupWebGLContextLostHandler();
     } catch (err) {
       console.error('[VirtualStudio] Setup error (render loop still running):', err);
     }
@@ -9084,6 +9096,44 @@ class VirtualStudio {
       this.exportPdf();
     });
 
+    // Lighting plot export
+    document.getElementById('exportLightingPlotBtn')?.addEventListener('click', () => {
+      this.exportLightingPlot('print');
+    });
+    document.getElementById('exportLightingPlotBtn')?.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      this.exportLightingPlot('svg');
+    });
+
+    // Rental / equipment CSV export
+    document.getElementById('exportRentalCsvBtn')?.addEventListener('click', () => {
+      this.exportRentalCsv();
+    });
+
+    // IES profile file input (hidden, triggered from advanced light panel)
+    window.addEventListener('vs-open-ies-picker', () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.ies,.ldt,.ldtx';
+      input.style.display = 'none';
+      input.addEventListener('change', async () => {
+        const file = input.files?.[0];
+        if (file) await this.applyIESToSelectedLight(file);
+        input.remove();
+      });
+      document.body.appendChild(input);
+      input.click();
+    });
+
+    // Physical light modifiers: flags, reflectors, diffusion frames
+    window.addEventListener('vs-add-light-modifier', (e: Event) => {
+      const detail = (e as CustomEvent).detail as { type?: string; x?: number; y?: number; z?: number };
+      const mType = (detail?.type || 'flag') as 'flag' | 'cutter' | 'reflector' | 'diffusion';
+      const pos = new BABYLON.Vector3(detail?.x ?? 0, detail?.y ?? 1.5, detail?.z ?? 0);
+      this.addLightModifierMesh(mType, pos);
+      this.showToast('Lysmodifikator lagt til i scenen.', 'success', 2500);
+    });
+
     // Scope toggle button - toggles scopeDropdownPanel
     const scopeToggleBtn = document.getElementById('scopeToggleBtn');
     const scopeDropdownPanel = document.getElementById('scopeDropdownPanel');
@@ -10902,6 +10952,266 @@ class VirtualStudio {
     document.getElementById('profileRegisterBtn')?.addEventListener('click', () => {
       window.dispatchEvent(new CustomEvent('ch-show-register'));
     });
+  }
+
+  // ─── Toast utility ───────────────────────────────────────────────────────
+  private showToast(message: string, type: 'error' | 'warn' | 'info' | 'success' = 'error', durationMs = 5000): void {
+    const el = document.createElement('div');
+    el.className = `vs-toast${type === 'error' ? '' : ' ' + type}`;
+    el.textContent = message;
+    document.body.appendChild(el);
+    setTimeout(() => {
+      el.style.opacity = '0';
+      el.style.transition = 'opacity 0.4s ease';
+      setTimeout(() => el.remove(), 400);
+    }, durationMs);
+  }
+
+  // ─── WebGL context lost recovery ─────────────────────────────────────────
+  private setupWebGLContextLostHandler(): void {
+    const canvas = this.engine.getRenderingCanvas();
+    if (!canvas) return;
+    canvas.addEventListener('webglcontextlost', () => {
+      this.showToast('WebGL-kontekst mistet. Prøver å gjenopprette…', 'warn', 8000);
+    });
+    canvas.addEventListener('webglcontextrestored', () => {
+      this.showToast('WebGL-kontekst gjenopprettet.', 'success', 3000);
+    });
+  }
+
+  // ─── Auto-save (localStorage, 30 s) ──────────────────────────────────────
+  private _autoSaveTimer: ReturnType<typeof setInterval> | null = null;
+  private _lastAutoSaveMs = 0;
+
+  private setupAutoSave(): void {
+    if (this._autoSaveTimer) clearInterval(this._autoSaveTimer);
+    this._autoSaveTimer = setInterval(() => {
+      this.performAutoSave();
+    }, 30_000);
+    console.log('[AutoSave] Enabled at 30 s interval');
+  }
+
+  private performAutoSave(): void {
+    try {
+      const snapshot = {
+        savedAt: Date.now(),
+        sceneName: (document.getElementById('projectName') as HTMLInputElement)?.value || 'Studio',
+        lights: Array.from(this.lights.entries()).map(([id, ld]) => ({
+          id,
+          name: ld.name,
+          type: ld.type,
+          cct: ld.cct,
+          intensity: ld.intensity,
+          modifier: ld.modifier,
+          enabled: ld.mesh?.isVisible !== false,
+          position: [ld.mesh.position.x, ld.mesh.position.y, ld.mesh.position.z],
+        })),
+        characters: Array.from(this.sceneState.characters.values()).map(ch => ({
+          id: ch.id,
+          name: ch.name,
+          position: [ch.mesh.position.x, ch.mesh.position.y, ch.mesh.position.z],
+        })),
+      };
+      localStorage.setItem('vs_autosave', JSON.stringify(snapshot));
+      this._lastAutoSaveMs = Date.now();
+      this.updateAutoSaveIndicator();
+    } catch (err) {
+      console.warn('[AutoSave] Failed:', err);
+    }
+  }
+
+  private updateAutoSaveIndicator(): void {
+    const indicator = document.getElementById('autoSaveIndicator');
+    const text = document.getElementById('autoSaveText');
+    if (!indicator || !text) return;
+    indicator.style.display = 'flex';
+    indicator.classList.add('visible');
+    const d = new Date(this._lastAutoSaveMs);
+    text.textContent = `Lagret ${d.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+    setTimeout(() => indicator.classList.remove('visible'), 4000);
+  }
+
+  // ─── Backend status polling ───────────────────────────────────────────────
+  private _backendStatusTimer: ReturnType<typeof setInterval> | null = null;
+
+  private setupBackendStatusPolling(): void {
+    const check = async () => {
+      const dot  = document.getElementById('backendStatusDot');
+      const text = document.getElementById('backendStatusText');
+      if (!dot || !text) return;
+      try {
+        const res = await fetch('/api/ml/health', { signal: AbortSignal.timeout(4000) });
+        if (res.ok) {
+          dot.className = 'status-dot status-online';
+          text.textContent = 'Tjener tilkoblet';
+        } else {
+          dot.className = 'status-dot status-offline';
+          text.textContent = `Tjener feil (${res.status})`;
+        }
+      } catch {
+        dot.className = 'status-dot status-offline';
+        text.textContent = 'Tjener utilgjengelig';
+      }
+    };
+    check();
+    this._backendStatusTimer = setInterval(check, 12_000);
+  }
+
+  // ─── Build lighting-plot data from current scene ──────────────────────────
+  private buildLightingPlotData(): LightingPlotData {
+    const sceneName = (document.getElementById('projectName') as HTMLInputElement)?.value || 'Studio';
+    const plotLights: PlotLight[] = Array.from(this.lights.values()).map(ld => ({
+      id: ld.name,
+      name: ld.name,
+      type: ld.type || 'spot',
+      x: parseFloat(ld.mesh.position.x.toFixed(2)),
+      z: parseFloat(ld.mesh.position.z.toFixed(2)),
+      y: parseFloat(ld.mesh.position.y.toFixed(2)),
+      cct: ld.cct || 5600,
+      intensity: ld.intensity || 100,
+      modifier: ld.modifier || 'none',
+      enabled: ld.mesh?.isVisible !== false,
+    }));
+
+    const plotChars: PlotCharacter[] = Array.from(this.sceneState.characters.values()).map(ch => ({
+      id: ch.id,
+      name: ch.name,
+      x: parseFloat(ch.mesh.position.x.toFixed(2)),
+      z: parseFloat(ch.mesh.position.z.toFixed(2)),
+    }));
+
+    return {
+      sceneName,
+      lights: plotLights,
+      characters: plotChars,
+      props: [],
+      studioWidth: 12,
+      studioDepth: 10,
+      exportedAt: new Date().toLocaleString('nb-NO'),
+    };
+  }
+
+  // ─── Export: lighting plot ────────────────────────────────────────────────
+  private exportLightingPlot(mode: 'print' | 'svg' = 'print'): void {
+    const data = this.buildLightingPlotData();
+    if (mode === 'svg') {
+      downloadLightingPlotSVG(data);
+      this.showToast('Lysplan lastet ned som SVG.', 'success', 3000);
+    } else {
+      printLightingPlot(data);
+    }
+  }
+
+  // ─── Export: rental / equipment CSV ──────────────────────────────────────
+  private exportRentalCsv(): void {
+    const sceneName = (document.getElementById('projectName') as HTMLInputElement)?.value || 'Studio';
+    const manifestLights: ManifestLight[] = Array.from(this.lights.values()).map(ld => ({
+      id: ld.name,
+      name: ld.name,
+      type: ld.type || 'spot',
+      cct: ld.cct || 5600,
+      intensity: ld.intensity || 100,
+      modifier: ld.modifier || 'none',
+      enabled: ld.mesh?.isVisible !== false,
+    }));
+    if (manifestLights.filter(l => l.enabled).length === 0) {
+      this.showToast('Ingen aktive lyskilder i scenen. Legg til lys for å eksportere.', 'warn');
+      return;
+    }
+    downloadRentalCsv(manifestLights, sceneName);
+    this.showToast(`Leieutstyrsliste lastet ned (${manifestLights.filter(l => l.enabled).length} lyskilder).`, 'success', 3000);
+  }
+
+  // ─── Apply IES profile to selected light ─────────────────────────────────
+  private async applyIESToSelectedLight(file: File): Promise<void> {
+    if (!this.selectedLightId) {
+      this.showToast('Velg en lyskilde først, deretter importer IES-profil.', 'warn');
+      return;
+    }
+    const lightData = this.lights.get(this.selectedLightId);
+    if (!lightData) {
+      this.showToast('Lyskilde ikke funnet.', 'error');
+      return;
+    }
+    const spotLight = lightData.light instanceof BABYLON.SpotLight
+      ? lightData.light as BABYLON.SpotLight
+      : null;
+    if (!spotLight) {
+      this.showToast('IES-profiler støttes kun for spotlyskilder.', 'warn');
+      return;
+    }
+    try {
+      const profile = await loadIESFile(file);
+      applyIESToSpotLight(spotLight, profile, this.scene);
+      this.showToast(`IES-profil lastet: ${profile.description || file.name} (${profile.maxCandela.toFixed(0)} cd maks)`, 'success', 4000);
+      console.log('[IES] Applied profile:', profile.description, 'max cd:', profile.maxCandela);
+    } catch (err) {
+      console.warn('[IES] Failed to apply profile:', err);
+      this.showToast('Kunne ikke lese IES-filen. Sjekk at filen er i ANSI-format.', 'error');
+    }
+  }
+
+  // ─── Physical flags / cutters / reflectors as scene objects ───────────────
+  private addLightModifierMesh(
+    modifierType: 'flag' | 'cutter' | 'reflector' | 'diffusion',
+    position: BABYLON.Vector3 = new BABYLON.Vector3(0, 1.5, 0)
+  ): BABYLON.Mesh {
+    const id = `modifier_${modifierType}_${Date.now()}`;
+
+    // Panel dimensions (width × height in metres)
+    const dims: Record<string, [number, number]> = {
+      flag:       [1.2, 0.9],
+      cutter:     [0.6, 0.9],
+      reflector:  [1.2, 0.9],
+      diffusion:  [1.5, 1.2],
+    };
+    const [w, h] = dims[modifierType] ?? [1.2, 0.9];
+
+    const panel = BABYLON.MeshBuilder.CreatePlane(id, { width: w, height: h, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, this.scene);
+    panel.position = position.clone();
+    panel.isPickable = true;
+
+    const mat = new BABYLON.PBRMaterial(`${id}_mat`, this.scene);
+    if (modifierType === 'flag' || modifierType === 'cutter') {
+      mat.albedoColor = new BABYLON.Color3(0.02, 0.02, 0.02); // near-black
+      mat.roughness = 1;
+      mat.metallic = 0;
+    } else if (modifierType === 'reflector') {
+      mat.albedoColor = new BABYLON.Color3(0.95, 0.95, 0.95); // white
+      mat.roughness = 0.9;
+      mat.metallic = 0;
+    } else {
+      // diffusion: semi-transparent white
+      mat.albedoColor = new BABYLON.Color3(0.9, 0.9, 0.9);
+      mat.roughness = 1;
+      mat.metallic = 0;
+      mat.transparencyMode = BABYLON.PBRMaterial.PBRMATERIAL_ALPHABLEND;
+      mat.alpha = 0.45;
+    }
+    panel.material = mat;
+
+    // C-stand pole
+    const poleHeight = position.y;
+    const pole = BABYLON.MeshBuilder.CreateCylinder(`${id}_pole`, { height: poleHeight, diameter: 0.04, tessellation: 8 }, this.scene);
+    pole.position = new BABYLON.Vector3(position.x, poleHeight / 2, position.z);
+    pole.isPickable = false;
+    const poleMat = new BABYLON.StandardMaterial(`${id}_pole_mat`, this.scene);
+    poleMat.diffuseColor = new BABYLON.Color3(0.25, 0.25, 0.25);
+    pole.material = poleMat;
+
+    // Base disc
+    const base = BABYLON.MeshBuilder.CreateCylinder(`${id}_base`, { height: 0.04, diameter: 0.5, tessellation: 16 }, this.scene);
+    base.position = new BABYLON.Vector3(position.x, 0.02, position.z);
+    base.material = poleMat;
+    base.isPickable = false;
+
+    const names: Record<string, string> = {
+      flag: 'Flagg (sort)', cutter: 'Kutter', reflector: 'Reflektor (hvit)', diffusion: 'Diffusjonsramme',
+    };
+    panel.metadata = { type: 'lightModifier', modifierType, name: names[modifierType] ?? modifierType };
+
+    console.log(`[Modifier] Added ${modifierType} at`, position.toString());
+    return panel;
   }
 
   private async exportPdf(): Promise<void> {

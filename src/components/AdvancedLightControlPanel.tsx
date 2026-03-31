@@ -374,14 +374,73 @@ export function AdvancedLightControlPanel({ lightNode, onUpdate }: AdvancedLight
 
       <Divider sx={{ my: 2 }} />
 
+      {/* IES Profile Import */}
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="caption" sx={{ color: '#888', display: 'block', mb: 1, fontWeight: 600, letterSpacing: 0.5 }}>
+          IES-PROFIL
+        </Typography>
+        <Tooltip title="Last inn en .ies-fil (fotometrisk lysdata) for nøyaktig stråleform fra produsenten">
+          <Button
+            variant="outlined"
+            size="small"
+            fullWidth
+            onClick={() => window.dispatchEvent(new CustomEvent('vs-open-ies-picker'))}
+            sx={{
+              textTransform: 'none',
+              fontSize: 11,
+              color: '#a0aec0',
+              borderColor: 'rgba(255,255,255,0.15)',
+              '&:hover': { borderColor: '#63b3ed', color: '#63b3ed' },
+            }}
+          >
+            Importer IES-fotometrifil (.ies)
+          </Button>
+        </Tooltip>
+      </Box>
+
+      {/* Physical Modifiers */}
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="caption" sx={{ color: '#888', display: 'block', mb: 1, fontWeight: 600, letterSpacing: 0.5 }}>
+          LEGG TIL LYSMODIFIKATOR I SCENEN
+        </Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.75 }}>
+          {[
+            { type: 'flag',       label: 'Flagg',       title: 'Sort flagg — blokkerer/former lyset' },
+            { type: 'cutter',     label: 'Kutter',      title: 'Halvt flagg / cutter' },
+            { type: 'reflector',  label: 'Reflektor',   title: 'Hvit reflektorplate' },
+            { type: 'diffusion',  label: 'Diffusjon',   title: 'Halvgjennomsiktig diffusjonsramme' },
+          ].map(mod => (
+            <Button
+              key={mod.type}
+              variant="outlined"
+              size="small"
+              title={mod.title}
+              onClick={() => window.dispatchEvent(new CustomEvent('vs-add-light-modifier', { detail: { type: mod.type } }))}
+              sx={{
+                textTransform: 'none',
+                fontSize: 10,
+                color: '#a0aec0',
+                borderColor: 'rgba(255,255,255,0.12)',
+                py: 0.6,
+                '&:hover': { borderColor: '#68d391', color: '#68d391' },
+              }}
+            >
+              {mod.label}
+            </Button>
+          ))}
+        </Box>
+      </Box>
+
+      <Divider sx={{ my: 2 }} />
+
       {/* Quick Actions */}
       <Box sx={{ display: 'flex', gap: 1 }}>
-        <Tooltip title="Save preset">
+        <Tooltip title="Lagre forhåndsinnstilling">
           <IconButton size="small" sx={{ border: '1px solid #e0e0e0' }}>
             <SaveIcon fontSize="small" />
           </IconButton>
         </Tooltip>
-        <Tooltip title="Load preset">
+        <Tooltip title="Last inn forhåndsinnstilling">
           <IconButton size="small" sx={{ border: '1px solid #e0e0e0' }}>
             <LoadIcon fontSize="small" />
           </IconButton>
