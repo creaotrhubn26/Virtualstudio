@@ -8,7 +8,7 @@ import {
   useState,
   useEffect,
   type FC } from 'react';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import {
   Dialog,
   DialogTitle,

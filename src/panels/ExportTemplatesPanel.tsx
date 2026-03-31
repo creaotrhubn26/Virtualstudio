@@ -35,7 +35,7 @@ import {
   Alert,
   InputAdornment,
 } from '@mui/material';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import settingsService, { getCurrentUserId } from '../services/settingsService';
 import {
   PlayArrow,

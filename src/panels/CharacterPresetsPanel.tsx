@@ -16,7 +16,7 @@ import {
   Button,
   Chip,
 } from '@mui/material';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import { Person, SentimentSatisfied, DirectionsWalk } from '@mui/icons-material';
 import { presetLoader, PosePresetData, ExpressionPresetData } from '../../core/services/presetLoader';
 import { logger } from '../../core/services/logger';

@@ -47,7 +47,7 @@ import {
   Switch,
   FormControlLabel,
 } from '@mui/material';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import {
   AutoAwesome as AIIcon,
   Landscape as HDRIIcon,

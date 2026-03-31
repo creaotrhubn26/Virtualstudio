@@ -13,7 +13,7 @@ import {
   useCallback,
   useState,
   Fragment } from 'react';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import { logger } from '../../core/services/logger';
 
 const log = logger.module('');

@@ -7,7 +7,7 @@
 
 import {
   useState } from 'react';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import {
   Box,
   Typography,

@@ -210,7 +210,7 @@ export function CinematicEvaluationPanel() {
   const [mode, setMode] = useState<CameraMode>('photo');
 
   const [photo, setPhoto] = useState<PhotoSettings>({
-    sensor: 'Full Frame', format: '3:2', focalLength: 36,
+    sensor: 'Full Frame', format: '3:2', focalLength: 35,
     iso: 400, aperture: 8, shutterSpeed: '1/125',
     whiteBalance: 5500, bw: false,
     orientation: 'landscape', manualFocus: false, focusDistance: 1,

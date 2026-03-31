@@ -12,7 +12,7 @@ import {
   useCallback,
   type FC,
   type MouseEvent } from 'react';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import {
   Box,
   Paper,

@@ -13,7 +13,7 @@ import {
   useEffect,
   useCallback,
   type ReactNode } from 'react';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import {
   Dialog,
   DialogTitle,

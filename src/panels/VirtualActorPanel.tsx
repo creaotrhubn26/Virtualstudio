@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   logger } from '../core/services/logger';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import {
   Box,
   Paper,

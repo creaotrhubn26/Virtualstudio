@@ -10,7 +10,7 @@ import {
   Typography,
   Tooltip,
 } from '@mui/material';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import { useActions, useNodes, useMeasurements, useMeasureMode, useShowLightCones } from '@/state/selectors';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 export default function MeasurementsPanel() {

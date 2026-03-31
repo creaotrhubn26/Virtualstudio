@@ -2,7 +2,7 @@
 // This file is in the unused directory and may have outdated imports
 import {
   useTheming } from '../../../utils/theming-helper';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import React,
   { useState,
   useEffect } from 'react';

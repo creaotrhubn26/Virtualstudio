@@ -1100,7 +1100,11 @@ export class AutoFocusSystem {
         screenPosition: this.getScreenPosition(highestPoint)
       };
       
-      console.log(`[AutoFocusSystem] Auto-detected face at top of model: ${highestMesh.name} at ${distance.toFixed(2)}m (Y=${highestPoint.y.toFixed(2)})`);
+      // Only log when the detected mesh changes — avoids per-interval spam (every 150ms in AF-C)
+      if ((this as any)._lastAutoDetectedMesh !== highestMesh.name) {
+        (this as any)._lastAutoDetectedMesh = highestMesh.name;
+        console.log(`[AutoFocusSystem] Auto-detected face at top of model: ${highestMesh.name} at ${distance.toFixed(2)}m (Y=${highestPoint.y.toFixed(2)})`);
+      }
       return detected;
     }
     

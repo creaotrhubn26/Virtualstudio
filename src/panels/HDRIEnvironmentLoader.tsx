@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   logger } from '../../core/services/logger';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import { useLoadingStore } from '../../state/loadingStore';
 import * as BABYLON from '@babylonjs/core';
 

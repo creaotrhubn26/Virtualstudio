@@ -11,7 +11,7 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import { Search, Person, ChildCare, Elderly, FitnessCenter } from '@mui/icons-material';
 interface LibraryActor {
   id: string;

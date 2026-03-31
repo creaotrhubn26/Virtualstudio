@@ -51,7 +51,7 @@ import {
   FormControlLabel,
   Alert,
 } from '@mui/material';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import {
   FlashOn as FlashIcon,
   FlashOff as FlashOffIcon,

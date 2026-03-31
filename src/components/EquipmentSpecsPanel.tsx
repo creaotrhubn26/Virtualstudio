@@ -14,7 +14,7 @@ import {
   Tooltip,
   Stack,
 } from '@mui/material';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import {
   Lightbulb as LightIcon,
   Speed as PowerIcon,
