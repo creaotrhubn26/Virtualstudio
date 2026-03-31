@@ -5857,7 +5857,13 @@ class VirtualStudio {
       console.log(`[addLight] Loading GLB from: ${modelUrl}`);
 
       let mesh: BABYLON.Mesh;
-      let lightHeadHeight = position.y;
+      // Guardrail 1: clamp target head-height to a physically reasonable studio range.
+      // position.y below 0.3 m produces near-zero scale; above 10 m is off-screen.
+      const rawTargetH = position.y;
+      if (!isFinite(rawTargetH) || rawTargetH < 0.3 || rawTargetH > 10) {
+        console.warn(`[addLight] position.y=${rawTargetH} is out of range [0.3, 10] — clamping`);
+      }
+      let lightHeadHeight = Math.max(0.3, Math.min(10, isFinite(rawTargetH) ? rawTargetH : 2.2));
 
       try {
         const result = await BABYLON.SceneLoader.ImportMeshAsync('', '', modelUrl, this.scene);
@@ -5880,21 +5886,46 @@ class VirtualStudio {
         // Measure native model height via bounding box (model loaded at scale 1)
         parentMesh.computeWorldMatrix(true);
         const nativeBounds = parentMesh.getHierarchyBoundingVectors(true);
+        // Guardrail 2: degenerate GLB — no renderable geometry in bounding box.
+        // Throw here so the outer catch creates the fallback stand instead of
+        // producing a NaN-scaled invisible mesh.
+        if (!isFinite(nativeBounds.max.y) || !isFinite(nativeBounds.min.y)) {
+          throw new Error(`Degenerate GLB bounds: max.y=${nativeBounds.max.y} min.y=${nativeBounds.min.y}`);
+        }
         const nativeHeight = Math.max(0.01, nativeBounds.max.y - nativeBounds.min.y);
 
-        // Scale so the entire model height equals the desired lightHeadHeight
-        const scaleFactor = lightHeadHeight / nativeHeight;
+        // Scale so the entire model height equals the desired lightHeadHeight.
+        // Guardrail 3: clamp scale factor — a ratio > 200 means the GLB is microscopic
+        // (native height < 1 cm); > 0.02 means it is already enormous.  Both would
+        // produce unusable results; clamp and warn so the model at least appears.
+        const rawScale = lightHeadHeight / nativeHeight;
+        if (rawScale < 0.02 || rawScale > 200) {
+          console.warn(`[addLight] scaleFactor=${rawScale.toFixed(3)} out of safe range — clamping to [0.02, 200]`);
+        }
+        const scaleFactor = Math.max(0.02, Math.min(200, rawScale));
         parentMesh.scaling = new BABYLON.Vector3(scaleFactor, scaleFactor, scaleFactor);
 
-        // Ground: shift Y so the model's bottom face sits exactly on Y=0
+        // Ground: shift Y so the model's bottom face sits exactly on Y=0.
+        // Guardrail 4: skip ground-snap if bounding result is non-finite (e.g.
+        // a mesh whose world matrix collapsed to NaN after a bad rotation).
         parentMesh.computeWorldMatrix(true);
         const groundedBounds = parentMesh.getHierarchyBoundingVectors(true);
-        parentMesh.position.y -= groundedBounds.min.y;
+        if (isFinite(groundedBounds.min.y)) {
+          parentMesh.position.y -= groundedBounds.min.y;
+        } else {
+          console.warn(`[addLight] groundedBounds.min.y is non-finite — skipping ground-snap`);
+        }
 
-        // The SpotLight should originate from the top of the model (light head)
+        // The SpotLight should originate from the top of the model (light head).
+        // Guardrail 5: if the final bounding max is non-finite or ≤ 0, revert
+        // to the original target height so the SpotLight is still placed sensibly.
         parentMesh.computeWorldMatrix(true);
         const finalBounds = parentMesh.getHierarchyBoundingVectors(true);
-        lightHeadHeight = finalBounds.max.y;
+        if (isFinite(finalBounds.max.y) && finalBounds.max.y > 0.01) {
+          lightHeadHeight = finalBounds.max.y;
+        } else {
+          console.warn(`[addLight] finalBounds.max.y=${finalBounds.max.y} invalid — using target height ${lightHeadHeight.toFixed(2)}m`);
+        }
 
         // Create a headPivot at the stand-head junction (~72% of total height).
         // TRELLIS GLB: tripod+pole occupy the bottom 72%; the softbox box is the top 28%.
@@ -27040,11 +27071,21 @@ class VirtualStudio {
     // so we must pass _lightHeadHeight — not mesh.position.y — or the new
     // fixture will be scaled to half its correct size.
     const savedLightHeadY = (existing.mesh as any)._lightHeadHeight as number | undefined;
+    // Guardrail 6: clamp the head height coming out of the old fixture.
+    // Values outside [0.3, 10] m are either a corrupted mesh or a degenerate
+    // state; fall back to 2.2 m so the new fixture renders at a sensible height.
+    const rawHeadY = (savedLightHeadY !== undefined && savedLightHeadY > 0.1)
+      ? savedLightHeadY
+      : existing.light.position.y;
+    const clampedHeadY = (isFinite(rawHeadY) && rawHeadY >= 0.3 && rawHeadY <= 10)
+      ? rawHeadY
+      : 2.2;
+    if (clampedHeadY !== rawHeadY) {
+      console.warn(`[swapLightFixture] head height ${rawHeadY} out of range — using ${clampedHeadY}m`);
+    }
     const savedPosition = new BABYLON.Vector3(
       existing.mesh.position.x,
-      (savedLightHeadY !== undefined && savedLightHeadY > 0.1)
-        ? savedLightHeadY
-        : existing.light.position.y,
+      clampedHeadY,
       existing.mesh.position.z,
     );
 
@@ -27078,8 +27119,19 @@ class VirtualStudio {
 
     // Re-aim the new fixture at the same target — aimLightAt applies the
     // new fixture's own faceYawOffset so the diffuser faces the right way.
+    // Guardrail 7: validate aim target coordinates before calling aimLightAt.
+    // A non-finite or below-floor target would send the SpotLight in a wrong/
+    // undefined direction.  Fall back to a safe eye-level point in front of the
+    // stand so the new fixture at least points somewhere sensible.
     if (savedAimTarget) {
-      this.aimLightAt(newLightId, savedAimTarget);
+      const atX = savedAimTarget.x, atY = savedAimTarget.y, atZ = savedAimTarget.z;
+      const validTarget = isFinite(atX) && isFinite(atY) && isFinite(atZ) && atY >= -0.5;
+      if (!validTarget) {
+        console.warn(`[swapLightFixture] aim target ${JSON.stringify({atX,atY,atZ})} invalid — using default`);
+        this.aimLightAt(newLightId, new BABYLON.Vector3(0, 1.3, 0));
+      } else {
+        this.aimLightAt(newLightId, savedAimTarget);
+      }
     }
 
     this.updateSceneBrightness();
@@ -27337,10 +27389,14 @@ class VirtualStudio {
     const data = this.lights.get(id);
     if (!data) return;
 
-    // Remove the per-frame SpotLight position sync observer before disposal
+    // Remove the per-frame SpotLight position sync observer before disposal.
+    // Guardrail 8: null the ref immediately after removal so any second call
+    // to removeLight (e.g. from clearAllLights racing with a dispose event)
+    // cannot double-remove the same observer from the observable.
     const syncObs = (data.mesh as any)._lightPositionSyncObserver;
     if (syncObs) {
       this.scene.onBeforeRenderObservable.remove(syncObs);
+      (data.mesh as any)._lightPositionSyncObserver = null;
     }
 
     // Dispose light and mesh
