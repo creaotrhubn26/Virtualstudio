@@ -6430,6 +6430,38 @@ class VirtualStudio {
       }
     });
 
+    // Right-click on a 3D light mesh → show fixture-swap context menu
+    this.scene.onPointerObservable.add((info) => {
+      if (info.type !== BABYLON.PointerEventTypes.POINTERDOWN) return;
+      const pointerEvent = info.event as PointerEvent;
+      if (pointerEvent.button !== 2) return;
+
+      const pickResult = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
+      if (!pickResult?.pickedMesh) return;
+
+      const lightRootToId = new Map<BABYLON.Node, string>();
+      for (const [id, data] of this.lights) {
+        lightRootToId.set(data.mesh, id);
+      }
+
+      let node: BABYLON.Node | null = pickResult.pickedMesh;
+      let targetLightId: string | null = null;
+      while (node) {
+        const lightId = lightRootToId.get(node);
+        if (lightId) { targetLightId = lightId; break; }
+        node = node.parent;
+      }
+
+      if (!targetLightId) return;
+      this.showLightSwapMenu(targetLightId, pointerEvent.clientX, pointerEvent.clientY);
+    });
+
+    // Suppress native browser context menu on the 3D canvas so our custom menu can appear
+    const renderingCanvas = this.scene.getEngine().getRenderingCanvas();
+    if (renderingCanvas) {
+      renderingCanvas.addEventListener('contextmenu', (ev) => ev.preventDefault(), { capture: true });
+    }
+
     // Double-tap/double-click to focus - use POINTERUP with double-click detection
     // Performance optimized: Uses Babylon's canvas-scoped pointer observable, no document listeners
     let lastClickTime = 0;
@@ -26900,6 +26932,160 @@ class VirtualStudio {
 
     // Update ambient light if auto-dimming is enabled
     this.updateAmbientLightIntensity();
+  }
+
+  private async swapLightFixture(lightId: string, newModelId: string): Promise<void> {
+    const existing = this.lights.get(lightId);
+    if (!existing) return;
+
+    const savedPosition = existing.mesh.position.clone();
+    const savedCCT = existing.cct;
+    const savedPower = existing.powerMultiplier ?? 1.0;
+
+    this.removeLight(lightId);
+
+    const newLightId = await this.addLight(newModelId, savedPosition);
+
+    const newLight = this.lights.get(newLightId);
+    if (!newLight) return;
+
+    newLight.cct = savedCCT;
+    newLight.powerMultiplier = savedPower;
+
+    const color = this.cctToColor(savedCCT);
+    newLight.light.diffuse = color;
+    if (newLight.mesh.material instanceof BABYLON.StandardMaterial) {
+      (newLight.mesh.material as BABYLON.StandardMaterial).emissiveColor = color;
+    }
+
+    this.updateSceneBrightness();
+    this.updateLightMeterReading();
+    this.selectLight(newLightId);
+  }
+
+  private showLightSwapMenu(lightId: string, screenX: number, screenY: number): void {
+    document.getElementById('vs-light-swap-menu')?.remove();
+
+    const categories: { label: string; options: { id: string; label: string }[] }[] = [
+      {
+        label: 'Softboks',
+        options: [
+          { id: 'aputure-120d',  label: 'Aputure 120D' },
+          { id: 'aputure-300d',  label: 'Aputure 300D' },
+          { id: 'aputure-600d',  label: 'Aputure 600D Pro' },
+          { id: 'godox-tt685-ii', label: 'Godox TT685 II' },
+        ],
+      },
+      {
+        label: 'Oktaboks',
+        options: [
+          { id: 'godox-ad200pro',  label: 'Godox AD200 Pro' },
+          { id: 'godox-ad400pro',  label: 'Godox AD400 Pro' },
+          { id: 'profoto-b10',     label: 'Profoto B10' },
+          { id: 'profoto-b10plus', label: 'Profoto B10 Plus' },
+        ],
+      },
+      {
+        label: 'Stripboks',
+        options: [
+          { id: 'aputure-300d-strip',      label: 'Aputure 300D Strip' },
+          { id: 'nanlite-pavotube-15c-kit', label: 'Nanlite PavoTube 15C' },
+        ],
+      },
+      {
+        label: 'LED-panel',
+        options: [
+          { id: 'aputure-nova-p300c', label: 'Aputure NOVA P300c' },
+          { id: 'arri-skypanel-s60',  label: 'Arri SkyPanel S60-C' },
+          { id: 'arri-skypanel-s120', label: 'Arri SkyPanel S120-C' },
+          { id: 'nanlite-mixpad-27c', label: 'Nanlite MixPad 27C' },
+        ],
+      },
+      {
+        label: 'Ringslys',
+        options: [
+          { id: 'nanlite-halo-14', label: 'Nanlite Halo 14"' },
+          { id: 'nanlite-halo-26', label: 'Nanlite Halo 26"' },
+          { id: 'godox-rl-60',     label: 'Godox RL-60 Ring' },
+        ],
+      },
+      {
+        label: 'Beauty dish',
+        options: [
+          { id: 'godox-bd-07',          label: 'Godox BD-07' },
+          { id: 'profoto-softlight-65',  label: 'Profoto Softlight 65cm' },
+        ],
+      },
+      {
+        label: 'HMI / Fresnel',
+        options: [
+          { id: 'arri-m18',      label: 'Arri M18 HMI' },
+          { id: 'arri-m40',      label: 'Arri M40 HMI' },
+          { id: 'dedolight-150', label: 'Dedolight 150W' },
+        ],
+      },
+    ];
+
+    const menu = document.createElement('div');
+    menu.id = 'vs-light-swap-menu';
+    menu.style.cssText = [
+      'position:fixed',
+      `left:${screenX}px`,
+      `top:${screenY}px`,
+      'z-index:99999',
+      'background:#1a1a1f',
+      'border:1px solid rgba(255,255,255,0.12)',
+      'border-radius:8px',
+      'box-shadow:0 8px 32px rgba(0,0,0,0.6)',
+      'font-family:system-ui,sans-serif',
+      'font-size:12px',
+      'color:#e0e0e0',
+      'min-width:200px',
+      'max-height:80vh',
+      'overflow-y:auto',
+      'padding:6px 0',
+      'user-select:none',
+    ].join(';');
+
+    const title = document.createElement('div');
+    title.textContent = 'Bytt lyskilde';
+    title.style.cssText = 'padding:6px 14px 8px;font-size:11px;font-weight:600;color:rgba(255,255,255,0.4);letter-spacing:0.08em;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:4px;';
+    menu.appendChild(title);
+
+    for (const cat of categories) {
+      const catLabel = document.createElement('div');
+      catLabel.textContent = cat.label;
+      catLabel.style.cssText = 'padding:5px 14px 3px;font-size:10px;font-weight:600;color:rgba(255,165,50,0.7);letter-spacing:0.07em;text-transform:uppercase;';
+      menu.appendChild(catLabel);
+
+      for (const opt of cat.options) {
+        const item = document.createElement('div');
+        item.textContent = opt.label;
+        item.style.cssText = 'padding:5px 14px 5px 20px;cursor:pointer;transition:background 0.1s;border-radius:4px;margin:1px 4px;';
+        item.addEventListener('mouseenter', () => { item.style.background = 'rgba(255,255,255,0.08)'; });
+        item.addEventListener('mouseleave', () => { item.style.background = 'transparent'; });
+        item.addEventListener('mousedown', (ev) => {
+          ev.stopPropagation();
+          menu.remove();
+          this.swapLightFixture(lightId, opt.id).catch(err => console.warn('[swapLightFixture]', err));
+        });
+        menu.appendChild(item);
+      }
+    }
+
+    // Adjust position so menu stays on screen
+    document.body.appendChild(menu);
+    const rect = menu.getBoundingClientRect();
+    if (rect.right > window.innerWidth - 8)  menu.style.left = `${screenX - rect.width}px`;
+    if (rect.bottom > window.innerHeight - 8) menu.style.top  = `${screenY - rect.height}px`;
+
+    const dismiss = (ev: MouseEvent) => {
+      if (!menu.contains(ev.target as Node)) {
+        menu.remove();
+        document.removeEventListener('mousedown', dismiss, true);
+      }
+    };
+    document.addEventListener('mousedown', dismiss, true);
   }
 
   public removeLight(id: string): void {
