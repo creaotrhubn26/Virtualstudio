@@ -25186,9 +25186,9 @@ class VirtualStudio {
           // Position on ground
           try {
             lightMesh.computeWorldMatrix(true);
-            const localBounds = lightMesh.getHierarchyBoundingVectors(false);
+            const localBounds = lightMesh.getHierarchyBoundingVectors(true);
             const bottomY = localBounds.min.y;
-            if (isFinite(bottomY) && bottomY !== Number.MAX_VALUE) {
+            if (isFinite(bottomY) && bottomY !== Number.MAX_VALUE && bottomY !== -Number.MAX_VALUE) {
               lightMesh.position.y = position.y - bottomY + 0.001;
             }
           } catch (e) {
@@ -25354,9 +25354,10 @@ class VirtualStudio {
             // First set a temporary position to calculate bounds
             lightMesh.position = position.clone();
 
-            // Get bounding box in local space (false = local space)
-            // This gives us the model's dimensions relative to its origin
-            const localBounds = lightMesh.getHierarchyBoundingVectors(false);
+            // Get bounding box including all descendants (true = include sub-meshes nested
+            // inside __root__ TransformNode); false would only measure the parentMesh
+            // container (no geometry) and return MAX_VALUE, giving a wrong position.
+            const localBounds = lightMesh.getHierarchyBoundingVectors(true);
             const bottomY = localBounds.min.y; // Lowest point of the model in local space
 
             // Check if bounding box is valid (not infinity or max value)
@@ -26797,17 +26798,22 @@ class VirtualStudio {
     if ((mesh as any)._groundSnappingEnabled) return;
     (mesh as any)._groundSnappingEnabled = true;
 
-    // Add observer to snap to ground when position changes
+    // Add observer to keep the model's bottom face above world Y = 0.
+    // Uses includeDescendants=true so GLB sub-meshes nested inside the __root__
+    // TransformNode are included; false only measures the empty parentMesh container
+    // and returns min.y = +MAX_VALUE, which previously drove position.y to -MAX_VALUE.
+    // Correction: lift the entire parentMesh by however much its bottom is below ground,
+    // rather than the old "position.y = -bottomY" formula which assumed parentMesh.y ≈ 0.
     const snapToGround = () => {
       try {
-        const bounds = mesh.getHierarchyBoundingVectors(false);
+        const bounds = mesh.getHierarchyBoundingVectors(true);
         const bottomY = bounds.min.y;
-        if (mesh.position.y - bottomY < 0.01) {
-          // Snap to ground
-          mesh.position.y = -bottomY + 0.001;
+        if (!isFinite(bottomY) || Math.abs(bottomY) > 1e200) return;
+        if (bottomY < 0.001) {
+          mesh.position.y += (0.001 - bottomY);
         }
       } catch (e) {
-        // Ignore errors
+        console.warn('[groundSnap] bounds error:', e);
       }
     };
 
