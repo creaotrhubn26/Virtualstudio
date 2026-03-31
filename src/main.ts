@@ -9147,7 +9147,10 @@ class VirtualStudio {
       const mType = (detail?.type || 'flag') as 'flag' | 'cutter' | 'reflector' | 'diffusion';
       const pos = new BABYLON.Vector3(detail?.x ?? 0, detail?.y ?? 1.5, detail?.z ?? 0);
       this.addLightModifierMesh(mType, pos);
-      this.showToast('Lysmodifikator lagt til i scenen.', 'success', 2500);
+      const modNames: Record<string, string> = {
+        flag: 'Sort flagg', cutter: 'Kutter', reflector: 'Reflektor', diffusion: 'Diffusjonsramme',
+      };
+      this.showToast(`${modNames[mType] ?? 'Modifikator'} lagt til — dra for å flytte.`, 'success', 3000);
     });
 
     // Scope toggle button - toggles scopeDropdownPanel
@@ -11170,11 +11173,27 @@ class VirtualStudio {
   // ─── Physical flags / cutters / reflectors as scene objects ───────────────
   private addLightModifierMesh(
     modifierType: 'flag' | 'cutter' | 'reflector' | 'diffusion',
-    position: BABYLON.Vector3 = new BABYLON.Vector3(0, 1.5, 0)
+    positionHint?: BABYLON.Vector3
   ): BABYLON.Mesh {
     const id = `modifier_${modifierType}_${Date.now()}`;
 
-    // Panel dimensions (width × height in metres)
+    // ── 1. Smart spawn: beside the selected light, between it and the subject ──
+    let spawnPos: BABYLON.Vector3;
+    const selData = this.selectedLightId ? this.lights.get(this.selectedLightId) : null;
+    if (positionHint && (positionHint.x !== 0 || positionHint.z !== 0)) {
+      spawnPos = positionHint.clone();
+    } else if (selData) {
+      const lp = selData.light.position.clone();
+      // Offset 1m to the right of the light-to-subject vector (cross product with up)
+      const toSubject = new BABYLON.Vector3(0, 0, 0).subtract(lp).normalize();
+      const right = BABYLON.Vector3.Cross(toSubject, BABYLON.Vector3.Up()).normalize();
+      spawnPos = lp.add(right.scale(1.0)).add(toSubject.scale(0.8));
+      spawnPos.y = Math.max(1.2, lp.y * 0.65); // roughly 65% of light height
+    } else {
+      spawnPos = new BABYLON.Vector3(1.2, 1.5, 0);
+    }
+
+    // ── 2. Panel dimensions (width × height metres) ──────────────────────────
     const dims: Record<string, [number, number]> = {
       flag:       [1.2, 0.9],
       cutter:     [0.6, 0.9],
@@ -11183,50 +11202,120 @@ class VirtualStudio {
     };
     const [w, h] = dims[modifierType] ?? [1.2, 0.9];
 
-    const panel = BABYLON.MeshBuilder.CreatePlane(id, { width: w, height: h, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, this.scene);
-    panel.position = position.clone();
+    const panel = BABYLON.MeshBuilder.CreatePlane(id, {
+      width: w, height: h, sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+    }, this.scene);
+    panel.position = spawnPos.clone();
+    // Face toward the nearest light source
+    if (selData) {
+      panel.lookAt(selData.light.position, 0, Math.PI, 0);
+    }
     panel.isPickable = true;
 
+    // ── 3. PBR material ───────────────────────────────────────────────────────
     const mat = new BABYLON.PBRMaterial(`${id}_mat`, this.scene);
     if (modifierType === 'flag' || modifierType === 'cutter') {
-      mat.albedoColor = new BABYLON.Color3(0.02, 0.02, 0.02); // near-black
+      mat.albedoColor = new BABYLON.Color3(0.02, 0.02, 0.02);
       mat.roughness = 1;
       mat.metallic = 0;
     } else if (modifierType === 'reflector') {
-      mat.albedoColor = new BABYLON.Color3(0.95, 0.95, 0.95); // white
-      mat.roughness = 0.9;
+      mat.albedoColor = new BABYLON.Color3(0.95, 0.95, 0.95);
+      mat.roughness = 0.85;
       mat.metallic = 0;
     } else {
-      // diffusion: semi-transparent white
-      mat.albedoColor = new BABYLON.Color3(0.9, 0.9, 0.9);
+      mat.albedoColor = new BABYLON.Color3(0.92, 0.92, 0.92);
       mat.roughness = 1;
       mat.metallic = 0;
       mat.transparencyMode = BABYLON.PBRMaterial.PBRMATERIAL_ALPHABLEND;
-      mat.alpha = 0.45;
+      mat.alpha = 0.48;
     }
     panel.material = mat;
 
-    // C-stand pole
-    const poleHeight = position.y;
-    const pole = BABYLON.MeshBuilder.CreateCylinder(`${id}_pole`, { height: poleHeight, diameter: 0.04, tessellation: 8 }, this.scene);
-    pole.position = new BABYLON.Vector3(position.x, poleHeight / 2, position.z);
+    // ── 4. Register as shadow CASTER on every light's shadow generator ────────
+    // Flags and cutters must block light; reflector/diffusion also receive shadows.
+    this.lights.forEach(ld => {
+      if (ld.shadowGenerator) {
+        ld.shadowGenerator.addShadowCaster(panel, false);
+      }
+    });
+    // Also ensure panel receives shadows from scene lights
+    panel.receiveShadows = true;
+
+    // ── 5. Type-specific photometric side-effects ─────────────────────────────
+    if (modifierType === 'reflector') {
+      // Simulate bounce fill: low-intensity PointLight at the reflector surface
+      const bounceLight = new BABYLON.PointLight(`${id}_bounce`, spawnPos.clone(), this.scene);
+      const refIntensity = selData
+        ? (selData.light as BABYLON.SpotLight).intensity * 0.04
+        : 5;
+      bounceLight.intensity = refIntensity;
+      bounceLight.range = 4;
+      // Warm up the bounce slightly (reflectors add a tiny warmth compared to source)
+      bounceLight.diffuse = new BABYLON.Color3(1.0, 0.97, 0.93);
+      bounceLight.specular = new BABYLON.Color3(0.2, 0.2, 0.2);
+      // Store reference on panel metadata for cleanup
+      (panel as any).__bounceLight = bounceLight;
+      console.log(`[Modifier] Reflector bounce light: ${refIntensity.toFixed(1)} intensity`);
+    }
+
+    if (modifierType === 'diffusion') {
+      // Soften the selected SpotLight by widening its angle and dropping exponent
+      if (selData && selData.light instanceof BABYLON.SpotLight) {
+        const spot = selData.light as BABYLON.SpotLight;
+        const prevAngle = spot.angle;
+        const prevExp = spot.exponent;
+        spot.angle = Math.min(Math.PI * 0.85, spot.angle * 1.35); // wider cone
+        spot.exponent = Math.max(0, spot.exponent * 0.4);          // softer falloff
+        (panel as any).__diffusionRestore = { spot, prevAngle, prevExp };
+        console.log(`[Modifier] Diffusion applied: angle ${(prevAngle * 180 / Math.PI).toFixed(0)}° → ${(spot.angle * 180 / Math.PI).toFixed(0)}°, exp ${prevExp.toFixed(1)} → ${spot.exponent.toFixed(1)}`);
+      }
+    }
+
+    // ── 6. C-stand pole (follows the panel via parent) ────────────────────────
+    const poleH = spawnPos.y;
+    const pole = BABYLON.MeshBuilder.CreateCylinder(`${id}_pole`, {
+      height: poleH, diameter: 0.04, tessellation: 8,
+    }, this.scene);
+    pole.position = new BABYLON.Vector3(spawnPos.x, poleH / 2, spawnPos.z);
     pole.isPickable = false;
     const poleMat = new BABYLON.StandardMaterial(`${id}_pole_mat`, this.scene);
-    poleMat.diffuseColor = new BABYLON.Color3(0.25, 0.25, 0.25);
+    poleMat.diffuseColor = new BABYLON.Color3(0.28, 0.28, 0.28);
     pole.material = poleMat;
 
-    // Base disc
-    const base = BABYLON.MeshBuilder.CreateCylinder(`${id}_base`, { height: 0.04, diameter: 0.5, tessellation: 16 }, this.scene);
-    base.position = new BABYLON.Vector3(position.x, 0.02, position.z);
+    // ── 7. Weighted base disc ─────────────────────────────────────────────────
+    const base = BABYLON.MeshBuilder.CreateCylinder(`${id}_base`, {
+      height: 0.04, diameter: 0.55, tessellation: 18,
+    }, this.scene);
+    base.position = new BABYLON.Vector3(spawnPos.x, 0.02, spawnPos.z);
     base.material = poleMat;
     base.isPickable = false;
 
+    // ── 8. Drag-to-reposition (panel + pole + base move together) ────────────
+    const dragBehavior = new BABYLON.PointerDragBehavior({ dragPlaneNormal: new BABYLON.Vector3(0, 1, 0) });
+    dragBehavior.useObjectOrientationForDragging = false;
+    dragBehavior.onDragObservable.add(evt => {
+      const dx = evt.delta.x;
+      const dz = evt.delta.z;
+      pole.position.x += dx;
+      pole.position.z += dz;
+      base.position.x += dx;
+      base.position.z += dz;
+      // Move bounce light with panel
+      const bl = (panel as any).__bounceLight as BABYLON.PointLight | undefined;
+      if (bl) {
+        bl.position.x += dx;
+        bl.position.z += dz;
+      }
+    });
+    panel.addBehavior(dragBehavior);
+
+    // ── 9. Metadata ───────────────────────────────────────────────────────────
     const names: Record<string, string> = {
       flag: 'Flagg (sort)', cutter: 'Kutter', reflector: 'Reflektor (hvit)', diffusion: 'Diffusjonsramme',
     };
     panel.metadata = { type: 'lightModifier', modifierType, name: names[modifierType] ?? modifierType };
 
-    console.log(`[Modifier] Added ${modifierType} at`, position.toString());
+    console.log(`[Modifier] ${modifierType} added at`, spawnPos.toString(), '— shadow casters:', this.lights.size);
     return panel;
   }
 
