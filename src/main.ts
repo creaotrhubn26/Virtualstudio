@@ -5755,48 +5755,99 @@ class VirtualStudio {
 
       // ── Light Shapers ──────────────────────────────────────────────────────
       // Softbox — rectangular diffuse sources, very soft wrapping light
+      'shaper-softbox-40':     { intensity: 140, name: 'Softboks 40×40 cm',   cct: 5600, beamAngle: Math.PI / 3,   exponent: 1.4, shadowKernel: 96,  glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
       'shaper-softbox-60':     { intensity: 220, name: 'Softboks 60×60 cm',   cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2, shadowKernel: 128, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
       'shaper-softbox-90x120': { intensity: 350, name: 'Softboks 90×120 cm',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 160, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
       'shaper-softbox-120x180':{ intensity: 500, name: 'Softboks 120×180 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
+      'shaper-softbox-150x200':{ intensity: 650, name: 'Softboks 150×200 cm', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/softbox-stand.glb',   faceYawOffset: 0 },
 
       // Octabox — circular diffuse, even fill with natural catchlight
       'shaper-octabox-60':  { intensity: 250, name: 'Oktaboks 60 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2, shadowKernel: 128, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'shaper-octabox-75':  { intensity: 320, name: 'Oktaboks 75 cm',  cct: 5600, beamAngle: Math.PI / 2.2, exponent: 1.1, shadowKernel: 144, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
       'shaper-octabox-95':  { intensity: 400, name: 'Oktaboks 95 cm',  cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 160, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
+      'shaper-octabox-120': { intensity: 500, name: 'Oktaboks 120 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, shadowKernel: 176, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
       'shaper-octabox-150': { intensity: 600, name: 'Oktaboks 150 cm', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/octabox-stand.glb', faceYawOffset: 0 },
 
       // Stripbox — tall narrow softbox, hair/rim/background accent
+      'shaper-stripbox-15x90':  { intensity: 180, name: 'Stripboks 15×90 cm',  cct: 5600, beamAngle: Math.PI / 5,   exponent: 3.0, shadowKernel: 48,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: null },
       'shaper-stripbox-30x120': { intensity: 280, name: 'Stripboks 30×120 cm', cct: 5600, beamAngle: Math.PI / 4,   exponent: 2.5, shadowKernel: 64,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: null },
+      'shaper-stripbox-40x140': { intensity: 340, name: 'Stripboks 40×140 cm', cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.2, shadowKernel: 80,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: null },
       'shaper-stripbox-60x180': { intensity: 380, name: 'Stripboks 60×180 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.0, shadowKernel: 96,  glbFile: '/models/lights/stripbox-stand.glb', faceYawOffset: null },
 
       // Beauty dish — semi-specular, controlled wrap, beauty/portrait
+      'shaper-beautydish-35': { intensity: 220, name: 'Beauty dish 35 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.2, shadowKernel: 48, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: null },
       'shaper-beautydish-40': { intensity: 300, name: 'Beauty dish 40 cm', cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: null },
       'shaper-beautydish-56': { intensity: 380, name: 'Beauty dish 56 cm', cct: 5600, beamAngle: Math.PI / 2.2, exponent: 1.5, shadowKernel: 80, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: null },
+      'shaper-beautydish-70': { intensity: 480, name: 'Beauty dish 70 cm', cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.3, shadowKernel: 96, glbFile: '/models/lights/beauty-dish-stand.glb', faceYawOffset: null },
 
       // Ring light — flat, shadow-free, catchlight ring
+      'shaper-ring-18': { intensity:  90, name: 'Ringslys 7" / 18 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 1.2, shadowKernel: 96,  glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: null },
       'shaper-ring-35': { intensity: 160, name: 'Ringslys 14" / 35 cm', cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: null },
+      'shaper-ring-48': { intensity: 210, name: 'Ringslys 19" / 48 cm', cct: 5600, beamAngle: Math.PI / 1.9, exponent: 0.9, shadowKernel: 144, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: null },
       'shaper-ring-65': { intensity: 260, name: 'Ringslys 26" / 65 cm', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/ring-light-stand.glb', faceYawOffset: null },
 
-      // Umbrella — wide, bounced or shot-through, economical diffusion
-      'shaper-umbrella-reflective':   { intensity: 320, name: 'Paraply (reflektiv) 100 cm',    cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb', faceYawOffset: null },
-      'shaper-umbrella-shootthrough': { intensity: 280, name: 'Paraply (shoot-through) 100 cm', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb', faceYawOffset: null },
-      'shaper-umbrella-xl':           { intensity: 440, name: 'Paraply XL 165 cm',              cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.6, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb', faceYawOffset: null },
+      // Umbrella — silver reflective, bounced warm
+      'shaper-umbrella-reflective':  { intensity: 320, name: 'Paraply sølv 100 cm',  cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: null },
+      'shaper-umbrella-silver-150':  { intensity: 480, name: 'Paraply sølv 150 cm',  cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: null },
+      'shaper-umbrella-xl':          { intensity: 580, name: 'Paraply sølv XL 165 cm',cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.6, shadowKernel: 192, glbFile: '/models/lights/umbrella-stand.glb',       faceYawOffset: null },
+
+      // Umbrella — shoot-through, soft transmitted
+      'shaper-umbrella-shootthrough':     { intensity: 280, name: 'Paraply shoot-through 100 cm', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/umbrella-shootthrough.glb', faceYawOffset: null },
+      'shaper-umbrella-shootthrough-150': { intensity: 400, name: 'Paraply shoot-through 150 cm', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.6, shadowKernel: 192, glbFile: '/models/lights/umbrella-shootthrough.glb', faceYawOffset: null },
+
+      // Umbrella — gold reflective, warm toned
+      'shaper-umbrella-gold':     { intensity: 300, name: 'Paraply gull 100 cm', cct: 4000, beamAngle: Math.PI / 1.6, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/umbrella-gold.glb', faceYawOffset: null },
+      'shaper-umbrella-gold-150': { intensity: 440, name: 'Paraply gull 150 cm', cct: 4000, beamAngle: Math.PI / 1.4, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/umbrella-gold.glb', faceYawOffset: null },
 
       // Snoot — cylindrical narrower, hard directional accent/hair light
-      'shaper-snoot':      { intensity: 280, name: 'Snoot standard',       cct: 5600, beamAngle: Math.PI / 8,  exponent: 6.0, shadowKernel: 16, glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: null },
-      'shaper-snoot-grid': { intensity: 250, name: 'Snoot med honeycomb',  cct: 5600, beamAngle: Math.PI / 12, exponent: 8.0, shadowKernel: 8,  glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: null },
+      'shaper-snoot':      { intensity: 280, name: 'Snoot standard',      cct: 5600, beamAngle: Math.PI / 8,  exponent: 6.0, shadowKernel: 16, glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: null },
+      'shaper-snoot-grid': { intensity: 250, name: 'Snoot med honeycomb', cct: 5600, beamAngle: Math.PI / 12, exponent: 8.0, shadowKernel: 8,  glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: null },
+      'shaper-snoot-gel':  { intensity: 240, name: 'Snoot med gelramme',  cct: 5600, beamAngle: Math.PI / 10, exponent: 7.0, shadowKernel: 10, glbFile: '/models/lights/snoot-stand.glb', faceYawOffset: null },
 
       // Parabolic reflector — deep dish, specular-to-diffuse adjustable
+      'shaper-para-75':  { intensity: 340, name: 'Parabolreflektor 75 cm',  cct: 5600, beamAngle: Math.PI / 4,   exponent: 2.2, shadowKernel: 40, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: null },
       'shaper-para-90':  { intensity: 450, name: 'Parabolreflektor 90 cm',  cct: 5600, beamAngle: Math.PI / 3.5, exponent: 2.0, shadowKernel: 48, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: null },
-      'shaper-para-150': { intensity: 700, name: 'Parabolreflektor 150 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 1.8, shadowKernel: 64, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: null },
+      'shaper-para-120': { intensity: 580, name: 'Parabolreflektor 120 cm', cct: 5600, beamAngle: Math.PI / 3,   exponent: 1.8, shadowKernel: 56, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: null },
+      'shaper-para-150': { intensity: 700, name: 'Parabolreflektor 150 cm', cct: 5600, beamAngle: Math.PI / 2.8, exponent: 1.6, shadowKernel: 64, glbFile: '/models/lights/parabolic-stand.glb', faceYawOffset: null },
 
       // Fresnel lens — variable spot/flood, sharp-edged theatrical beam
-      'shaper-fresnel-7':  { intensity: 320, name: 'Fresnel 7"',  cct: 5600, beamAngle: Math.PI / 6, exponent: 4.0, shadowKernel: 24, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
-      'shaper-fresnel-12': { intensity: 480, name: 'Fresnel 12"', cct: 5600, beamAngle: Math.PI / 5, exponent: 3.5, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
+      'shaper-fresnel-6':  { intensity: 240, name: 'Fresnel 6"',  cct: 5600, beamAngle: Math.PI / 7,   exponent: 4.5, shadowKernel: 20, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
+      'shaper-fresnel-7':  { intensity: 320, name: 'Fresnel 7"',  cct: 5600, beamAngle: Math.PI / 6,   exponent: 4.0, shadowKernel: 24, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
+      'shaper-fresnel-12': { intensity: 480, name: 'Fresnel 12"', cct: 5600, beamAngle: Math.PI / 5,   exponent: 3.5, shadowKernel: 32, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
+      'shaper-fresnel-20': { intensity: 720, name: 'Fresnel 20"', cct: 5600, beamAngle: Math.PI / 4,   exponent: 3.0, shadowKernel: 40, glbFile: '/models/lights/hmi-fresnel-stand.glb', faceYawOffset: null },
 
       // LED panel — flat broad source, broadcast/interview fill
-      'shaper-ledpanel-30x60':  { intensity: 200, name: 'LED-panel 30×60 cm',  cct: 5600, beamAngle: Math.PI / 1.8, exponent: 1.0, shadowKernel: 96,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
-      'shaper-ledpanel-60x60':  { intensity: 360, name: 'LED-panel 60×60 cm',  cct: 5600, beamAngle: Math.PI / 1.6, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
-      'shaper-ledpanel-60x120': { intensity: 520, name: 'LED-panel 60×120 cm', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
+      'shaper-ledpanel-15x30':  { intensity: 100, name: 'LED-panel 15×30 cm',   cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.2, shadowKernel: 64,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
+      'shaper-ledpanel-30x60':  { intensity: 200, name: 'LED-panel 30×60 cm',   cct: 5600, beamAngle: Math.PI / 1.8, exponent: 1.0, shadowKernel: 96,  glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
+      'shaper-ledpanel-60x60':  { intensity: 360, name: 'LED-panel 60×60 cm',   cct: 5600, beamAngle: Math.PI / 1.6, exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
+      'shaper-ledpanel-60x120': { intensity: 520, name: 'LED-panel 60×120 cm',  cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
+      'shaper-ledpanel-120x120':{ intensity: 720, name: 'LED-panel 120×120 cm', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/led-panel-stand.glb', faceYawOffset: null },
+
+      // Chimera — fabric frame softbox, cinema/broadcast standard
+      'shaper-chimera-2x3': { intensity: 280, name: 'Chimera 60×90 cm (2×3 ft)',   cct: 5600, beamAngle: Math.PI / 2,   exponent: 1.0, shadowKernel: 128, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: null },
+      'shaper-chimera-3x4': { intensity: 440, name: 'Chimera 90×120 cm (3×4 ft)',  cct: 5600, beamAngle: Math.PI / 1.7, exponent: 0.9, shadowKernel: 160, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: null },
+      'shaper-chimera-4x6': { intensity: 640, name: 'Chimera 120×180 cm (4×6 ft)', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.8, shadowKernel: 192, glbFile: '/models/lights/chimera-frame.glb', faceYawOffset: null },
+
+      // Lantern / Globe — omnidirectional soft wrap-around light
+      'shaper-lantern-45': { intensity: 180, name: 'Lanterneglobus 45 cm', cct: 5600, beamAngle: Math.PI / 1.2, exponent: 0.5, shadowKernel: 192, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: null },
+      'shaper-lantern-75': { intensity: 280, name: 'Lanterneglobus 75 cm', cct: 5600, beamAngle: Math.PI / 1.1, exponent: 0.5, shadowKernel: 192, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: null },
+      'shaper-lantern-90': { intensity: 360, name: 'Lanterneglobus 90 cm', cct: 5600, beamAngle: Math.PI / 1.05,exponent: 0.4, shadowKernel: 192, glbFile: '/models/lights/lantern-globe.glb', faceYawOffset: null },
+
+      // Kino Flo — fluorescent tube bank, film/broadcast magazine fill
+      'shaper-kino-2bank': { intensity: 160, name: 'Kino Flo 2 rør 1 bank', cct: 5600, beamAngle: Math.PI / 1.8, exponent: 0.9, shadowKernel: 128, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: null },
+      'shaper-kino-4bank': { intensity: 280, name: 'Kino Flo 4 rør 1 bank', cct: 5600, beamAngle: Math.PI / 1.6, exponent: 0.9, shadowKernel: 144, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: null },
+      'shaper-kino-2x2':   { intensity: 360, name: 'Kino Flo 2 rør 2 bank', cct: 5600, beamAngle: Math.PI / 1.5, exponent: 0.8, shadowKernel: 160, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: null },
+      'shaper-kino-4x4':   { intensity: 580, name: 'Kino Flo 4 rør 4 bank', cct: 5600, beamAngle: Math.PI / 1.3, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/kino-flo-bank.glb', faceYawOffset: null },
+
+      // Diffusion Frame — large silk/muslin scrim on stand
+      'shaper-diffframe-4x4': { intensity: 380, name: 'Diffusjonsramme 4×4 ft', cct: 5600, beamAngle: Math.PI / 1.4, exponent: 0.7, shadowKernel: 192, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: null },
+      'shaper-diffframe-6x6': { intensity: 600, name: 'Diffusjonsramme 6×6 ft', cct: 5600, beamAngle: Math.PI / 1.2, exponent: 0.6, shadowKernel: 192, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: null },
+      'shaper-diffframe-8x8': { intensity: 820, name: 'Diffusjonsramme 8×8 ft', cct: 5600, beamAngle: Math.PI / 1.1, exponent: 0.5, shadowKernel: 192, glbFile: '/models/lights/diffusion-frame.glb', faceYawOffset: null },
+
+      // Open Reflector — bare bowl, hard specular punch
+      'shaper-openref-standard': { intensity: 420, name: 'Åpen reflektor 60 cm',      cct: 5600, beamAngle: Math.PI / 3,   exponent: 2.5, shadowKernel: 32, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: null },
+      'shaper-openref-wide':     { intensity: 550, name: 'Åpen reflektor vid 90 cm',  cct: 5600, beamAngle: Math.PI / 2.5, exponent: 2.0, shadowKernel: 40, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: null },
+      'shaper-openref-tele':     { intensity: 380, name: 'Åpen reflektor tele 45 cm', cct: 5600, beamAngle: Math.PI / 4.5, exponent: 3.5, shadowKernel: 24, glbFile: '/models/lights/open-reflector.glb', faceYawOffset: null },
     };
 
     const lightConfig = lightSpecs[modelId] || { intensity: 350, name: modelId, cct: 5600, beamAngle: Math.PI / 3, exponent: 2.0, shadowKernel: 64, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 };
@@ -27044,9 +27095,11 @@ class VirtualStudio {
         label: 'Softboks',
         icon: '▭',
         options: [
-          { id: 'shaper-softbox-60',      label: '60×60 cm',   desc: 'Kompakt, nær-kilde' },
-          { id: 'shaper-softbox-90x120',  label: '90×120 cm',  desc: 'Allsidig portrett' },
-          { id: 'shaper-softbox-120x180', label: '120×180 cm', desc: 'Stor, myk wrapping' },
+          { id: 'shaper-softbox-40',      label: '40×40 cm',   desc: 'Produktfoto, kompakt nær-kilde' },
+          { id: 'shaper-softbox-60',      label: '60×60 cm',   desc: 'Allsidig portrett, mykt lys' },
+          { id: 'shaper-softbox-90x120',  label: '90×120 cm',  desc: 'Portrett + halvfigur' },
+          { id: 'shaper-softbox-120x180', label: '120×180 cm', desc: 'Stor myk wrapping fill' },
+          { id: 'shaper-softbox-150x200', label: '150×200 cm', desc: 'Helfigur, maksimal mykhet' },
         ],
       },
       {
@@ -27054,74 +27107,151 @@ class VirtualStudio {
         icon: '⬡',
         options: [
           { id: 'shaper-octabox-60',  label: '60 cm',  desc: 'Kompakt rund katchlight' },
+          { id: 'shaper-octabox-75',  label: '75 cm',  desc: 'Portrett med naturlig fall-off' },
           { id: 'shaper-octabox-95',  label: '95 cm',  desc: 'Studio allrounder' },
-          { id: 'shaper-octabox-150', label: '150 cm', desc: 'Stor naturlig fill' },
+          { id: 'shaper-octabox-120', label: '120 cm', desc: 'Halvfigur, bred oktagonal fill' },
+          { id: 'shaper-octabox-150', label: '150 cm', desc: 'Stor naturlig wrap-around fill' },
         ],
       },
       {
         label: 'Stripboks',
         icon: '▮',
         options: [
-          { id: 'shaper-stripbox-30x120', label: '30×120 cm', desc: 'Smal, kant/hår' },
-          { id: 'shaper-stripbox-60x180', label: '60×180 cm', desc: 'Bred rimbelysning' },
+          { id: 'shaper-stripbox-15x90',  label: '15×90 cm',  desc: 'Ultra-smal, hårlys/kant' },
+          { id: 'shaper-stripbox-30x120', label: '30×120 cm', desc: 'Smal stripboks, kantlys' },
+          { id: 'shaper-stripbox-40x140', label: '40×140 cm', desc: 'Medium strip, rim/bakgrunn' },
+          { id: 'shaper-stripbox-60x180', label: '60×180 cm', desc: 'Bred helfigur rim' },
         ],
       },
       {
         label: 'Beauty dish',
         icon: '◎',
         options: [
-          { id: 'shaper-beautydish-40', label: '40 cm', desc: 'Kontrollert semi-spekulær' },
-          { id: 'shaper-beautydish-56', label: '56 cm', desc: 'Klassisk portrettlys' },
+          { id: 'shaper-beautydish-35', label: '35 cm', desc: 'Kompakt, tett semi-spekulær' },
+          { id: 'shaper-beautydish-40', label: '40 cm', desc: 'Kontrollert wrap, portrett' },
+          { id: 'shaper-beautydish-56', label: '56 cm', desc: 'Klassisk beauty/portrettlys' },
+          { id: 'shaper-beautydish-70', label: '70 cm', desc: 'Stor, mykere beauty wrap' },
         ],
       },
       {
         label: 'Ringslys',
         icon: '○',
         options: [
-          { id: 'shaper-ring-35', label: '14" / 35 cm', desc: 'Tett, skyggefri' },
-          { id: 'shaper-ring-65', label: '26" / 65 cm', desc: 'Bred, flat fill' },
+          { id: 'shaper-ring-18', label: '7" / 18 cm',  desc: 'Lite on-camera ringslys' },
+          { id: 'shaper-ring-35', label: '14" / 35 cm', desc: 'Kompakt studio, skyggefri' },
+          { id: 'shaper-ring-48', label: '19" / 48 cm', desc: 'Medium ringslys, flat fill' },
+          { id: 'shaper-ring-65', label: '26" / 65 cm', desc: 'Stor ring, bred flat fill' },
         ],
       },
       {
-        label: 'Paraply',
+        label: 'Paraply — sølv',
         icon: '☂',
         options: [
-          { id: 'shaper-umbrella-reflective',   label: 'Reflektiv 100 cm',    desc: 'Varm, bounced diffusjon' },
-          { id: 'shaper-umbrella-shootthrough', label: 'Shoot-through 100 cm', desc: 'Bred, myk transmisjon' },
-          { id: 'shaper-umbrella-xl',           label: 'XL 165 cm',           desc: 'Maksimal spredning' },
+          { id: 'shaper-umbrella-reflective', label: 'Sølv 100 cm', desc: 'Bounced, sølvreflektiv' },
+          { id: 'shaper-umbrella-silver-150', label: 'Sølv 150 cm', desc: 'Stor sølv, bred spredning' },
+          { id: 'shaper-umbrella-xl',         label: 'Sølv XL 165 cm', desc: 'Maksimal sølv bounce' },
+        ],
+      },
+      {
+        label: 'Paraply — shoot-through',
+        icon: '☂',
+        options: [
+          { id: 'shaper-umbrella-shootthrough',     label: 'Hvit 100 cm', desc: 'Myk transmisjon, bred' },
+          { id: 'shaper-umbrella-shootthrough-150', label: 'Hvit 150 cm', desc: 'Stor myk shoot-through' },
+        ],
+      },
+      {
+        label: 'Paraply — gull',
+        icon: '☂',
+        options: [
+          { id: 'shaper-umbrella-gold',     label: 'Gull 100 cm', desc: 'Varm gull-bounce, 4000K' },
+          { id: 'shaper-umbrella-gold-150', label: 'Gull 150 cm', desc: 'Stor varm gull-fill' },
         ],
       },
       {
         label: 'Snoot',
         icon: '▶',
         options: [
-          { id: 'shaper-snoot',      label: 'Standard',      desc: 'Smal spot, aksent' },
-          { id: 'shaper-snoot-grid', label: 'Med honeycomb', desc: 'Ekstra stram kontroll' },
+          { id: 'shaper-snoot',      label: 'Standard',      desc: 'Smal spot, hårlys/aksent' },
+          { id: 'shaper-snoot-grid', label: 'Med honeycomb', desc: 'Ekstra stram stråle' },
+          { id: 'shaper-snoot-gel',  label: 'Med gelramme',  desc: 'Smal med fargefilter' },
         ],
       },
       {
         label: 'Parabolreflektor',
         icon: '◗',
         options: [
-          { id: 'shaper-para-90',  label: '90 cm',  desc: 'Spekulær–diffus, portrett' },
-          { id: 'shaper-para-150', label: '150 cm', desc: 'Bred parabolsk fill' },
+          { id: 'shaper-para-75',  label: '75 cm',  desc: 'Kompakt parabolsk punch' },
+          { id: 'shaper-para-90',  label: '90 cm',  desc: 'Spekulær–diffus balanse' },
+          { id: 'shaper-para-120', label: '120 cm', desc: 'Bred parabolsk fill' },
+          { id: 'shaper-para-150', label: '150 cm', desc: 'Stor parabolreflektor' },
         ],
       },
       {
         label: 'Fresnel',
         icon: '◈',
         options: [
-          { id: 'shaper-fresnel-7',  label: '7"',  desc: 'Fokusert teaterspot' },
-          { id: 'shaper-fresnel-12', label: '12"', desc: 'Bred, variabel spot/flood' },
+          { id: 'shaper-fresnel-6',  label: '6"',  desc: 'Kompakt, fokusert spot' },
+          { id: 'shaper-fresnel-7',  label: '7"',  desc: 'Standard teaterspot' },
+          { id: 'shaper-fresnel-12', label: '12"', desc: 'Variabel spot/flood' },
+          { id: 'shaper-fresnel-20', label: '20"', desc: 'Stor scenespot, bred flood' },
         ],
       },
       {
         label: 'LED-panel',
         icon: '▦',
         options: [
-          { id: 'shaper-ledpanel-30x60',  label: '30×60 cm',  desc: 'Kompakt broadcast fill' },
-          { id: 'shaper-ledpanel-60x60',  label: '60×60 cm',  desc: 'Kvadrat intervju-lys' },
-          { id: 'shaper-ledpanel-60x120', label: '60×120 cm', desc: 'Stor flatscreen fill' },
+          { id: 'shaper-ledpanel-15x30',  label: '15×30 cm',   desc: 'Kompakt on-location fill' },
+          { id: 'shaper-ledpanel-30x60',  label: '30×60 cm',   desc: 'Broadcast intervju-fill' },
+          { id: 'shaper-ledpanel-60x60',  label: '60×60 cm',   desc: 'Kvadrat studio fill' },
+          { id: 'shaper-ledpanel-60x120', label: '60×120 cm',  desc: 'Stor flatscreen fill' },
+          { id: 'shaper-ledpanel-120x120',label: '120×120 cm', desc: 'Maxi LED-vegg, myk fill' },
+        ],
+      },
+      {
+        label: 'Chimera',
+        icon: '⬜',
+        options: [
+          { id: 'shaper-chimera-2x3', label: '60×90 cm (2×3 ft)',   desc: 'Kino fabric softbox' },
+          { id: 'shaper-chimera-3x4', label: '90×120 cm (3×4 ft)',  desc: 'Medium kino frame' },
+          { id: 'shaper-chimera-4x6', label: '120×180 cm (4×6 ft)', desc: 'Stor cinema softbox' },
+        ],
+      },
+      {
+        label: 'Lanterne/Globus',
+        icon: '◉',
+        options: [
+          { id: 'shaper-lantern-45', label: '45 cm', desc: 'Kompakt globus, 360° omni' },
+          { id: 'shaper-lantern-75', label: '75 cm', desc: 'Medium globus, jevn wrap' },
+          { id: 'shaper-lantern-90', label: '90 cm', desc: 'Stor papirlanterne, omnidireksjonell' },
+        ],
+      },
+      {
+        label: 'Kino Flo',
+        icon: '☰',
+        options: [
+          { id: 'shaper-kino-2bank', label: '2 rør 1 bank', desc: 'Kompakt fluorescerende fill' },
+          { id: 'shaper-kino-4bank', label: '4 rør 1 bank', desc: 'Standard Kino Flo bank' },
+          { id: 'shaper-kino-2x2',   label: '2 rør 2 bank', desc: 'Dobbel bank, bredere fill' },
+          { id: 'shaper-kino-4x4',   label: '4 rør 4 bank', desc: 'Full 4×4 bank, film fill' },
+        ],
+      },
+      {
+        label: 'Diffusjonsramme',
+        icon: '▢',
+        options: [
+          { id: 'shaper-diffframe-4x4', label: '4×4 ft', desc: 'Liten silduk, kontrollert mykhet' },
+          { id: 'shaper-diffframe-6x6', label: '6×6 ft', desc: 'Medium scrim/silduk' },
+          { id: 'shaper-diffframe-8x8', label: '8×8 ft', desc: 'Stor sildukramme, filmstandard' },
+        ],
+      },
+      {
+        label: 'Åpen reflektor',
+        icon: '⌒',
+        options: [
+          { id: 'shaper-openref-standard', label: '60 cm standard', desc: 'Åpen bolle, hard punch' },
+          { id: 'shaper-openref-wide',     label: '90 cm vid',     desc: 'Vid bolle, bred spekulær' },
+          { id: 'shaper-openref-tele',     label: '45 cm tele',    desc: 'Tele-bolle, fokusert stråle' },
         ],
       },
     ];
