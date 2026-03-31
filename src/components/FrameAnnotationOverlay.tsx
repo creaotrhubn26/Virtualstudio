@@ -21,7 +21,7 @@ import {
   type MouseEvent } from 'react';
 import { logger } from '../../core/services/logger';
 
-const log = logger.module('');
+const log = logger.module('FrameAnnotationOverlay');
 import {
   Box,
   Paper,

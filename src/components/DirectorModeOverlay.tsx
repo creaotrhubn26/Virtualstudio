@@ -50,7 +50,7 @@ import { MonitorLayout, monitorFeedService } from '../../core/services/monitorFe
 import { multiCameraRecordingService } from '../../core/services/multiCameraRecordingService';
 import { CameraControlPanel } from './CameraControlPanel';
 import { logger } from '../../core/services/logger';
-const log = logger.module('DirectorModeOverlay, ');
+const log = logger.module('DirectorModeOverlay');
 
 // ============================================================================
 // Types

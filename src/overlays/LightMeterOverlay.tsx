@@ -81,7 +81,7 @@ function HistogramDisplay({ canvas }: { canvas: HTMLCanvasElement | null }) {
     if (!canvas || !histCanvas.current) return;
 
     const interval = setInterval(() => {
-      const ctx = canvas.getContext('2d, ');
+      const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -110,7 +110,7 @@ function HistogramDisplay({ canvas }: { canvas: HTMLCanvasElement | null }) {
         }
         histCtx.lineTo(width, height);
         histCtx.closePath();
-        histCtx.fillStyle = color.replace(')', `, ${alpha})`).replace('rgb,', 'rgba');
+        histCtx.fillStyle = color.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
         histCtx.fill();
       };
 
@@ -126,7 +126,7 @@ function HistogramDisplay({ canvas }: { canvas: HTMLCanvasElement | null }) {
         const y = height - (histogram.luma[i] / maxVal) * height;
         histCtx.lineTo(x, y);
       }
-      histCtx.strokeStyle = 'rgba(2, 5, 5, 255, 255, 0.8)';
+      histCtx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
       histCtx.lineWidth = 1.5;
       histCtx.stroke();
 
@@ -197,6 +197,85 @@ function HistogramDisplay({ canvas }: { canvas: HTMLCanvasElement | null }) {
 }
 
 /**
+ * Waveform monitor — horizontal luma waveform (Rec. 709)
+ */
+function WaveformDisplay({ canvas }: { canvas: HTMLCanvasElement | null }) {
+  const wfCanvas = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (!canvas || !wfCanvas.current) return;
+
+    const interval = setInterval(() => {
+      const src = canvas.getContext('2d');
+      if (!src) return;
+
+      const imageData = src.getImageData(0, 0, canvas.width, canvas.height);
+      const wfCtx = wfCanvas.current!.getContext('2d')!;
+      const W = wfCanvas.current!.width;  // 256
+      const H = wfCanvas.current!.height; // 100
+
+      // Clear
+      wfCtx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+      wfCtx.fillRect(0, 0, W, H);
+
+      // IRE guide lines
+      wfCtx.strokeStyle = 'rgba(255,255,255,0.2)';
+      wfCtx.lineWidth = 0.5;
+      [0, 25, 50, 75, 100].forEach((pct) => {
+        const y = H - (pct / 100) * H;
+        wfCtx.beginPath();
+        wfCtx.moveTo(0, y);
+        wfCtx.lineTo(W, y);
+        wfCtx.stroke();
+        wfCtx.fillStyle = 'rgba(255,255,255,0.4)';
+        wfCtx.font = '8px monospace';
+        wfCtx.fillText(`${pct}`, 2, y - 2);
+      });
+
+      // Sample luma column-by-column across source width
+      const { data, width: srcW, height: srcH } = imageData;
+      const wfData = wfCtx.createImageData(W, H);
+
+      for (let col = 0; col < W; col++) {
+        const srcCol = Math.floor((col / W) * srcW);
+        for (let row = 0; row < srcH; row++) {
+          const idx = (row * srcW + srcCol) * 4;
+          const luma = 0.2126 * data[idx] + 0.7152 * data[idx + 1] + 0.0722 * data[idx + 2];
+          const wfRow = H - 1 - Math.round((luma / 255) * (H - 1));
+          const wfIdx = (wfRow * W + col) * 4;
+          wfData.data[wfIdx]     = 0;
+          wfData.data[wfIdx + 1] = Math.min(255, wfData.data[wfIdx + 1] + 30);
+          wfData.data[wfIdx + 2] = 0;
+          wfData.data[wfIdx + 3] = 200;
+        }
+      }
+      wfCtx.putImageData(wfData, 0, 0);
+    }, 150);
+
+    return () => clearInterval(interval);
+  }, [canvas]);
+
+  return (
+    <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.9)', borderRadius: 1 }}>
+      <Stack spacing={1}>
+        <Typography variant="caption" color="white" fontWeight="bold">
+          Waveform (Luma Rec.709)
+        </Typography>
+        <canvas
+          ref={wfCanvas}
+          width={256}
+          height={100}
+          style={{ width: '100%', height: 'auto', imageRendering: 'crisp-edges' }}
+        />
+        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: 9 }}>
+          Grønt = luma-nivå per kolonne. 0 = svart · 100 = hvit (klipping)
+        </Typography>
+      </Stack>
+    </Paper>
+  );
+}
+
+/**
  * Light Meter Overlay Component
  */
 export function LightMeterOverlay({ mode, onModeChange, canvas }: LightMeterOverlayProps) {
@@ -252,11 +331,24 @@ export function LightMeterOverlay({ mode, onModeChange, canvas }: LightMeterOver
                 Peaking
               </Button>
             </Tooltip>
+
+            <Tooltip title="Waveform Monitor (Luma Rec.709)" placement="left">
+              <Button
+                onClick={() => onModeChange(mode === 'waveform' ? 'none' : 'waveform')}
+                variant={mode === 'waveform' ? 'contained' : 'outlined'}
+                startIcon={<WaveformIcon />}
+              >
+                Waveform
+              </Button>
+            </Tooltip>
           </ButtonGroup>
         </Paper>
 
         {/* Histogram Display */}
         {mode === 'histogram' && canvas && <HistogramDisplay canvas={canvas} />}
+
+        {/* Waveform Display */}
+        {mode === 'waveform' && canvas && <WaveformDisplay canvas={canvas} />}
 
         {/* Legend for modes */}
         {mode === 'falsecolor' && (
