@@ -324,3 +324,6 @@ async def get_room(room_id: str):
         "version": room.scene_version,
         "createdAt": room.created_at
     }
+
+# Export alias expected by main.py
+collaboration_router = router

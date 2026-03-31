@@ -7,7 +7,9 @@ try {
   TransformControls = require('@react-three/drei').TransformControls;
   // @ts-ignore
   useThree = require('@react-three/fiber').useThree;
-} catch {}
+} catch (e) {
+  console.warn('[Gizmos] Optional R3F packages not available — gizmo overlay disabled:', e);
+}
 
 export default function Gizmos() {
   const scene = useScene();

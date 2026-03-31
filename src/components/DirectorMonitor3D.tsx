@@ -18,7 +18,9 @@ const log = logger.module('DirectorMonitor3D, ');
 let THREE: any = null;
 try {
   THREE = require('three');
-} catch {}
+} catch (e) {
+  console.warn('[DirectorMonitor3D] THREE not available — 3D monitor disabled:', e);
+}
 
 // ============================================================================
 // Types
