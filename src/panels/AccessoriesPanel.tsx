@@ -134,9 +134,7 @@ export const AccessoriesPanel: React.FC = () => {
       name: item.name,
       type: 'mesh',
       visible: true,
-      position: { x: 0, y: 0, z: 0 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: { x: 1, y: 1, z: 1 },
+      transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
       userData: {
         accessoryType: nodeType,
         accessoryId: itemId,

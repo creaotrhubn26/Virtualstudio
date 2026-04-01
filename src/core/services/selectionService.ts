@@ -4,6 +4,7 @@ export interface SelectionState {
   selectedIds: string[];
   lastSelectedId: string | null;
   selectionMode: 'single' | 'multi' | 'range';
+  hoveredId?: string | null;
 }
 
 class SelectionService {
@@ -84,6 +85,7 @@ export function useSelection(_context?: string) {
     deselect,
     multiSelect,
     clearSelection,
+    clear: clearSelection,
     isSelected,
   };
 }

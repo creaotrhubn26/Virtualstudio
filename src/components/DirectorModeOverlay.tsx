@@ -350,6 +350,47 @@ export const DirectorModeOverlay: FC<DirectorModeOverlayProps> = ({
     }
   }, [layout]);
   
+  const handleSelectCamera = useCallback((cameraId: string) => {
+    setSelectedCameraId(cameraId);
+    setCameras(prev => prev.map(c => ({
+      ...c,
+      isLive: c.id === cameraId,
+    })));
+    const renderer = monitorFeedService.getRenderer();
+    if (renderer) {
+      renderer.setActiveCamera(cameraId);
+    }
+    log.info('Selected camera: ', cameraId);
+  }, []);
+
+  const handleCameraMove = useCallback((direction: 'forward' | 'backward' | 'left' | 'right' | 'up' | 'down', speed: number) => {
+    if (!selectedCameraId) return;
+    window.dispatchEvent(new CustomEvent('vs-camera-move', {
+      detail: { cameraId: selectedCameraId, direction, speed },
+    }));
+  }, [selectedCameraId]);
+
+  const handleCameraRotate = useCallback((axis: 'pan' | 'tilt' | 'roll', amount: number) => {
+    if (!selectedCameraId) return;
+    window.dispatchEvent(new CustomEvent('vs-camera-rotate', {
+      detail: { cameraId: selectedCameraId, axis, amount },
+    }));
+  }, [selectedCameraId]);
+
+  const handleCameraZoom = useCallback((amount: number) => {
+    if (!selectedCameraId) return;
+    window.dispatchEvent(new CustomEvent('vs-camera-zoom', {
+      detail: { cameraId: selectedCameraId, amount },
+    }));
+  }, [selectedCameraId]);
+
+  const handleCameraReset = useCallback(() => {
+    if (!selectedCameraId) return;
+    window.dispatchEvent(new CustomEvent('vs-camera-reset', {
+      detail: { cameraId: selectedCameraId },
+    }));
+  }, [selectedCameraId]);
+
   // Keyboard controls
   useEffect(() => {
     if (!isActive || showGuidelines) return;
@@ -469,60 +510,6 @@ export const DirectorModeOverlay: FC<DirectorModeOverlayProps> = ({
       setLayout(newLayout);
     }
   };
-  
-  const handleSelectCamera = useCallback((cameraId: string) => {
-    setSelectedCameraId(cameraId);
-    
-    // Update live camera
-    setCameras(prev => prev.map(c => ({
-      ...c,
-      isLive: c.id === cameraId,
-    })));
-    
-    // Update monitor feed
-    const renderer = monitorFeedService.getRenderer();
-    if (renderer) {
-      renderer.setActiveCamera(cameraId);
-    }
-    
-    log.info('Selected camera: ', cameraId);
-  }, []);
-  
-  const handleCameraMove = useCallback((direction: 'forward' | 'backward' | 'left' | 'right' | 'up' | 'down', speed: number) => {
-    if (!selectedCameraId) return;
-    
-    // Dispatch camera move event
-    window.dispatchEvent(new CustomEvent('vs-camera-move', {
-      detail: { cameraId: selectedCameraId, direction, speed },
-    }));
-  }, [selectedCameraId]);
-  
-  const handleCameraRotate = useCallback((axis: 'pan' | 'tilt' | 'roll', amount: number) => {
-    if (!selectedCameraId) return;
-    
-    // Dispatch camera rotate event
-    window.dispatchEvent(new CustomEvent('vs-camera-rotate', {
-      detail: { cameraId: selectedCameraId, axis, amount },
-    }));
-  }, [selectedCameraId]);
-  
-  const handleCameraZoom = useCallback((amount: number) => {
-    if (!selectedCameraId) return;
-    
-    // Dispatch camera zoom event
-    window.dispatchEvent(new CustomEvent('vs-camera-zoom', {
-      detail: { cameraId: selectedCameraId, amount },
-    }));
-  }, [selectedCameraId]);
-  
-  const handleCameraReset = useCallback(() => {
-    if (!selectedCameraId) return;
-    
-    // Dispatch camera reset event
-    window.dispatchEvent(new CustomEvent('vs-camera-reset', {
-      detail: { cameraId: selectedCameraId },
-    }));
-  }, [selectedCameraId]);
   
   const handleToggleRecording = async () => {
     if (isRecording) {

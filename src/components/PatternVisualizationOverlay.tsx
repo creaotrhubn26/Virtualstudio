@@ -152,8 +152,7 @@ export function PatternVisualizationOverlay({
                 <bufferGeometry>
                   <bufferAttribute
                     attach="attributes-position"
-                    count={2}
-                    array={
+                    args={[
                       new Float32Array([
                         position[0],
                         position[1],
@@ -161,9 +160,9 @@ export function PatternVisualizationOverlay({
                         subjectPosition[0],
                         subjectPosition[1],
                         subjectPosition[2],
-                      ])
-                    }
-                    itemSize={3}
+                      ]),
+                      3,
+                    ]}
                   />
                 </bufferGeometry>
                 <lineBasicMaterial color={color} transparent opacity={0.5} linewidth={2} />

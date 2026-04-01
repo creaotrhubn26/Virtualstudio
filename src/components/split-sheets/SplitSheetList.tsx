@@ -57,8 +57,8 @@ export default function SplitSheetList({
   profession = 'music_producer'
 }: SplitSheetListProps) {
   // Get profession-specific styling
-  const { getUserProfessionColor } = useDynamicProfessions();
-  const professionColor = getUserProfessionColor(profession);
+  const { getProfessionColor } = useDynamicProfessions();
+  const professionColor = getProfessionColor(profession);
   const professionIcon = getProfessionIcon(profession);
   const getStatusIcon = (status: string) => {
     switch (status) {

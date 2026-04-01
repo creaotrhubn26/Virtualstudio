@@ -269,11 +269,11 @@ function ControlPoint({
       setIsDragging(false);
     };
 
-    window.addEventListener('mousemove, ', handleMouseMove);
-    window.addEventListener('mouseup,', handleMouseUp);
+    window.addEventListener('mousemove', handleMouseMove as unknown as EventListener);
+    window.addEventListener('mouseup', handleMouseUp);
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mousemove', handleMouseMove as unknown as EventListener);
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDragging, onChange, toNormX, toNormY]);

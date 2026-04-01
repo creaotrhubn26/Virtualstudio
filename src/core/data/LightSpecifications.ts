@@ -1,4 +1,4 @@
-export type LightSourceType = 'strobe' | 'led' | 'hmi' | 'tungsten' | 'fluorescent' | 'plasma' | 'xenon';
+export type LightSourceType = 'strobe' | 'led' | 'hmi' | 'tungsten' | 'fluorescent' | 'plasma' | 'xenon' | 'speedlite' | 'led_panel' | 'fresnel' | 'continuous';
 export type MountSystem = 'Bowens' | 'Profoto' | 'Elinchrom' | 'Broncolor' | 'Godox' | 'Nanlite' | 'Aputure' | 'Generic';
 
 export interface LightSpec {
@@ -24,6 +24,19 @@ export interface LightSpec {
   ipRating?: string;
   price?: number;
   description?: string;
+  powerWatts?: number;
+  colorTempK?: number;
+  hss?: boolean;
+  ttl?: boolean;
+  guideNumber?: number;
+  lumens?: number;
+  lux?: number;
+  colorTempRange?: [number, number];
+  wireless?: boolean;
+  battery?: boolean;
+  bicolor?: boolean;
+  rgbw?: boolean;
+  mountType?: string;
 }
 
 export const LIGHT_SPECS: LightSpec[] = [
@@ -158,4 +171,12 @@ export function lightSpecToNodeData(spec: LightSpec): Omit<LightNodeData, 'posit
     intensity: (spec.powerWatts ?? 400) / 400,
     colorTemp: spec.colorTempK ?? 5600,
   };
+}
+
+export function findLightSpec(id: string): LightSpec | undefined {
+  return getLightSpecById(id);
+}
+
+export function findLightSpecByBrand(brand: string): LightSpec | undefined {
+  return getLightsByBrand(brand)[0];
 }

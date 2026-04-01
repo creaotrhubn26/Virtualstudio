@@ -1,11 +1,14 @@
 import * as BABYLON from '@babylonjs/core';
 
 export interface GlassesOptions {
-  frameStyle: 'rectangular' | 'round' | 'aviator' | 'cat-eye' | 'rimless';
-  lensType: 'clear' | 'tinted' | 'mirror' | 'gradient';
-  frameMaterial: 'plastic' | 'metal' | 'titanium' | 'acetate';
+  frameStyle: 'rectangular' | 'round' | 'aviator' | 'cat-eye' | 'cat_eye' | 'rimless' | 'wayfarers' | 'half_rim' | 'oversized';
+  lensType: 'clear' | 'tinted' | 'mirror' | 'gradient' | 'prescription' | 'sunglasses' | 'blue_light' | 'anti_reflective';
+  frameMaterial: 'plastic' | 'metal' | 'titanium' | 'acetate' | 'wood';
   frameColor: string;
   lensColor?: string;
+  lensWidth?: number;
+  lensHeight?: number;
+  bridgeWidth?: number;
 }
 
 export interface GlassesModel {
@@ -98,3 +101,25 @@ export const buildGlassesMesh = (
 
   return parent;
 };
+
+export type GlassesFrameStyle = GlassesOptions['frameStyle'];
+export type GlassesLensType = GlassesOptions['lensType'];
+export type GlassesFrameMaterial = GlassesOptions['frameMaterial'];
+
+export interface GlassesPreset {
+  id: string;
+  name: string;
+  options: Partial<GlassesOptions>;
+}
+
+export const GLASSES_PRESETS: Record<string, GlassesPreset> = {
+  classic: { id: 'classic', name: 'Klassisk', options: { frameStyle: 'rectangular', lensType: 'clear', frameMaterial: 'plastic', frameColor: '#1a1a1a' } },
+  aviator: { id: 'aviator', name: 'Aviator', options: { frameStyle: 'aviator', lensType: 'tinted', frameMaterial: 'metal', frameColor: '#c0a060' } },
+  round: { id: 'round', name: 'Rund', options: { frameStyle: 'round', lensType: 'clear', frameMaterial: 'acetate', frameColor: '#4a2800' } },
+  catEye: { id: 'catEye', name: 'Cat-Eye', options: { frameStyle: 'cat-eye', lensType: 'clear', frameMaterial: 'plastic', frameColor: '#8b0000' } },
+  rimless: { id: 'rimless', name: 'Uten ramme', options: { frameStyle: 'rimless', lensType: 'clear', frameMaterial: 'titanium', frameColor: '#888' } },
+};
+
+export function getGlassesPresets(): GlassesPreset[] {
+  return Object.values(GLASSES_PRESETS);
+}

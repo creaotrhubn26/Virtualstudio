@@ -30,7 +30,7 @@ import { useAppStore } from '@/state/store';
 import { shadowAnalysisService } from '@/core/services/shadowAnalysisService';
 
 export function SceneIlluminationPanel() {
-  const nodes = useAppStore((s) => s.scene.nodes);
+  const nodes = useAppStore((s) => s.scene);
 
   // Analyze scene
   const analysis = useMemo(() => {
@@ -40,7 +40,7 @@ export function SceneIlluminationPanel() {
   const lightNodes = nodes.filter((n) => n.light && n.visible);
 
   // Calculate total exposure
-  const totalExposure = analysis.totalHighlightIntensity;
+  const totalExposure = analysis.totalHighlightIntensity ?? 0;
   const exposurePercentage = Math.min(totalExposure * 100, 100);
 
   // Determine exposure status

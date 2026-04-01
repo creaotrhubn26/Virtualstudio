@@ -84,7 +84,7 @@ import {
   ScheduleConfig,
   TemplateIconName,
   CategoryIconName,
-} from '../../core/animation/ExportTemplates';
+} from '../core/animation/ExportTemplates';
 
 // ============================================================================
 // Icon Mapping
@@ -112,7 +112,7 @@ const TEMPLATE_ICONS: Record<TemplateIconName, React.ReactNode> = {
   Save: <Save />,
 };
 
-const CATEGORY_ICONS: Record<CategoryIconName, React.ReactNode> = {
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   Smartphone: <Smartphone fontSize="small" />,
   Inventory: <Inventory fontSize="small" />,
   Palette: <Palette fontSize="small" />,
@@ -130,10 +130,10 @@ function getTemplateIcon(iconName: TemplateIconName): React.ReactNode {
 function getCategoryIcon(iconName: CategoryIconName): React.ReactNode {
   return CATEGORY_ICONS[iconName] || <Folder fontSize="small" />;
 }
-import { exportScheduler } from '../../core/animation/ExportScheduler';
-import { EXPORT_PRESETS } from '../../core/animation/GoogleDriveExportService';
-import { preferencesApi } from '../../core/api/virtualStudioApi';
-import { videoExportService } from '../../core/animation/VideoExportService';
+import { exportScheduler } from '../core/animation/ExportScheduler';
+import { EXPORT_PRESETS } from '../core/animation/GoogleDriveExportService';
+import { preferencesApi } from '../core/api/virtualStudioApi';
+import { videoExportService } from '../core/animation/VideoExportService';
 // ============================================================================
 // Types
 // ============================================================================
@@ -250,10 +250,10 @@ function TemplateCard({
             size="small"
             sx={{ height: 20, fontSize: 10 }}
           />
-          {template.schedule.type !== 'immediate' && (
+          {template.schedule?.type !== 'immediate' && (
             <Chip
               icon={<Schedule sx={{ fontSize: 14 }} />}
-              label={template.schedule.type}
+              label={template.schedule?.type}
               size="small"
               color="info"
               sx={{ height: 20, fontSize: 10 }}
@@ -355,13 +355,15 @@ function TemplateDialog({ open, template, onClose, onSave }: TemplateDialogProps
         setName(template.name);
         setDescription(template.description);
         setIcon(template.icon);
-        setSelectedPresets(template.presets);
-        setScheduleType(template.schedule.type === 'recurring' ? 'specific_time' : template.schedule.type);
-        setDelayMinutes(template.schedule.delayMinutes || 30);
-        setSpecificTime(template.schedule.specificTime || '');
-        setPriority(template.priority);
-        setUploadToDrive(template.uploadToDrive);
-        setCreateSubfolder(template.createSubfolder);
+        setSelectedPresets(template.presets ?? []);
+        setScheduleType((['delay', 'immediate', 'specific_time'].includes(template.schedule?.type ?? '')
+          ? template.schedule?.type as 'delay' | 'immediate' | 'specific_time'
+          : 'immediate') ?? 'immediate');
+        setDelayMinutes(template.schedule?.delayMinutes || 30);
+        setSpecificTime(template.schedule?.specificTime || '');
+        setPriority(template.priority ?? 'normal');
+        setUploadToDrive(template.uploadToDrive ?? false);
+        setCreateSubfolder(template.createSubfolder ?? false);
         setSubfolderName(template.subfolderName || '');
         setTags(template.tags.join(''));
       } else {
@@ -390,8 +392,13 @@ function TemplateDialog({ open, template, onClose, onSave }: TemplateDialogProps
 
     onSave({
       name,
+      label: name,
       description,
       icon,
+      format: 'mp4',
+      resolution: { width: 1920, height: 1080 },
+      fps: 30,
+      quality: 85,
       presets: selectedPresets,
       schedule,
       priority,
@@ -695,7 +702,7 @@ export function ExportTemplatesPanel({
     const jobIds = exportScheduler.createBatchExport(duration, batchConfig);
     
     // Handle scheduling if not immediate
-    if (template.schedule.type !== 'immediate') {
+    if (template.schedule?.type !== 'immediate') {
       // The scheduler handles this internally based on the job configuration
     }
 

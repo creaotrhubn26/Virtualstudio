@@ -22,9 +22,10 @@ export interface ScenarioPreset {
   id: string;
   navn: string;
   kategori: 'bryllup' | 'portrett' | 'mote' | 'naeringsliv' | 'hollywood' | 'skolefoto' | 'story' | 'beauty' | 'produktfoto' | 'foto' | 'video' | 'photo';
-  beskrivelse: string;
+  beskrivelse?: string;
   description?: string;
-  tags: string[];
+  style?: string;
+  tags?: string[];
   previewImage?: string;
   difficulty?: 'beginner' | 'intermediate' | 'advanced' | 'expert';
   usedIn?: string[];

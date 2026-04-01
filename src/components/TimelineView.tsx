@@ -62,7 +62,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     scenes.forEach(scene => {
       if (scene.locationName) {
         const existing = locationCounts.get(scene.locationName) || [];
-        locationCounts.set(scene.locationName, [...existing, scene.sceneNumber]);
+        locationCounts.set(scene.locationName ?? '', [...existing, scene.sceneNumber ?? '']);
       }
     });
 

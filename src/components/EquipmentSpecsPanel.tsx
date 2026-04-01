@@ -58,7 +58,7 @@ export function EquipmentSpecsPanel({ lightId, modifierId }: EquipmentSpecsPanel
           </Typography>
           
           <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-            <Chip label={lightSpecs.lightType.toUpperCase()} size="small" color="primary" />
+            <Chip label={(lightSpecs.lightType ?? lightSpecs.type ?? 'unknown').toUpperCase()} size="small" color="primary" />
             <Chip label={`${lightSpecs.wattage}W`} size="small" />
             <Chip label={`${lightSpecs.cct}K`} size="small" />
           </Stack>
@@ -78,7 +78,7 @@ export function EquipmentSpecsPanel({ lightId, modifierId }: EquipmentSpecsPanel
                     Equivalent: {lightSpecs.equivalentWattage}W Tungsten
                   </Typography>
                 )}
-                <Typography variant="body2">Output: {lightSpecs.lightOutput.toLocaleString()} lumens</Typography>
+                <Typography variant="body2">Output: {(lightSpecs.lightOutput ?? 0).toLocaleString()} lumens</Typography>
               </Box>
             </Grid>
 
@@ -108,12 +108,12 @@ export function EquipmentSpecsPanel({ lightId, modifierId }: EquipmentSpecsPanel
               <Box sx={{ ml: 2.5 }}>
                 <Tooltip title="Color Rendering Index - measures color accuracy">
                   <Typography variant="body2">
-                    CRI: {lightSpecs.cri} {lightSpecs.cri >= 95 ? '✅ Excellent' : lightSpecs.cri >= 90 ? '✓ Good' : ','}
+                    CRI: {lightSpecs.cri ?? '—'} {(lightSpecs.cri ?? 0) >= 95 ? '✅ Excellent' : (lightSpecs.cri ?? 0) >= 90 ? '✓ Good' : ''}
                   </Typography>
                 </Tooltip>
                 <Tooltip title="Television Lighting Consistency Index">
                   <Typography variant="body2">
-                    TLCI: {lightSpecs.tlci} {lightSpecs.tlci >= 95 ? '✅ Excellent' : lightSpecs.tlci >= 90 ? '✓ Good' : ','}
+                    TLCI: {lightSpecs.tlci ?? '—'} {(lightSpecs.tlci ?? 0) >= 95 ? '✅ Excellent' : (lightSpecs.tlci ?? 0) >= 90 ? '✓ Good' : ''}
                   </Typography>
                 </Tooltip>
                 <Typography variant="body2">CCT: {lightSpecs.cct}K</Typography>
@@ -133,7 +133,7 @@ export function EquipmentSpecsPanel({ lightId, modifierId }: EquipmentSpecsPanel
               </Typography>
               <Box sx={{ ml: 2.5 }}>
                 <Typography variant="body2">
-                  Dimensions: {lightSpecs.dimensions.width} × {lightSpecs.dimensions.height} × {lightSpecs.dimensions.depth} cm
+                  Dimensions: {lightSpecs.dimensions?.width ?? 0} × {lightSpecs.dimensions?.height ?? 0} × {lightSpecs.dimensions?.depth ?? 0} cm
                 </Typography>
                 <Typography variant="body2">Weight: {lightSpecs.weight} kg</Typography>
                 <Typography variant="body2">Mount: {lightSpecs.mountType}</Typography>
@@ -152,7 +152,7 @@ export function EquipmentSpecsPanel({ lightId, modifierId }: EquipmentSpecsPanel
               <Box sx={{ ml: 2.5 }}>
                 <Typography variant="body2" gutterBottom>Compatible Modifiers:</Typography>
                 <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
-                  {lightSpecs.compatibleModifiers.map((mod) => (
+                  {(lightSpecs.compatibleModifiers ?? []).map((mod) => (
                     <Chip key={mod} label={mod} size="small" variant="outlined" />
                   ))}
                 </Stack>
@@ -199,7 +199,7 @@ export function EquipmentSpecsPanel({ lightId, modifierId }: EquipmentSpecsPanel
               <Typography variant="body2">Mount: {modifierSpecs.mountType}</Typography>
               <Typography variant="body2">Diffusion Layers: {modifierSpecs.diffusionLayers}</Typography>
               <Typography variant="body2">Power Loss: {modifierSpecs.powerLossStops} stops</Typography>
-              <Typography variant="body2">Diffusion Factor: {(modifierSpecs.diffusionFactor * 100).toFixed(0)}%</Typography>
+              <Typography variant="body2">Diffusion Factor: {((modifierSpecs.diffusionFactor ?? 0) * 100).toFixed(0)}%</Typography>
               <Typography variant="body2">Weight: {modifierSpecs.weight} kg</Typography>
               {modifierSpecs.gridIncluded && (
                 <Typography variant="body2">✓ Grid Included ({modifierSpecs.gridDegrees}°)</Typography>

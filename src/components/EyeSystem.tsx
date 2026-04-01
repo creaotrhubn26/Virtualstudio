@@ -553,9 +553,9 @@ export const EyeSystem: FC<EyeSystemProps> = ({
     const newState = animControllerRef.current.update(delta, state.clock.elapsedTime);
     
     setAnimState({
-      gazeDirection: animControllerRef.current.getGazeWithMicroMovements() || new THREE.Vector3(0, 0, 1),
-      blinkState: newState.blinkProgress,
-      pupilDilation: newState.pupilDilation,
+      gazeDirection: (animControllerRef.current.getGazeWithMicroMovements() || new THREE.Vector3(0, 0, 1)) as THREE.Vector3,
+      blinkState: newState.blinkProgress ?? 0,
+      pupilDilation: newState.pupilDilation ?? 0,
     });
   });
   
@@ -773,12 +773,10 @@ export const CatchlightPreview: FC<CatchlightPreviewProps> = ({
               <bufferGeometry>
                 <bufferAttribute
                   attach="attributes-position"
-                  count={2}
-                  array={new Float32Array([
+                  args={[new Float32Array([
                     eyePos.x, eyePos.y, eyePos.z,
                     lightPos[0], lightPos[1], lightPos[2],
-                  ])}
-                  itemSize={3}
+                  ]), 3]}
                 />
               </bufferGeometry>
               <lineBasicMaterial color={effectiveLightColors[i] || '#ffff00'} transparent opacity={0.3} />

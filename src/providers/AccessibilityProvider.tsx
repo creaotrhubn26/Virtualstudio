@@ -41,6 +41,7 @@ interface AccessibilityContextValue {
   registerShortcut: (shortcut: KeyboardShortcut) => void;
   unregisterShortcut: (key: string) => void;
   shortcuts: KeyboardShortcut[];
+  prefersKeyboard: boolean;
 }
 
 const defaultSettings: AccessibilitySettings = {
@@ -66,6 +67,18 @@ export function AccessibilityProvider({
     ...initialSettings,
   });
   const [shortcuts, setShortcuts] = useState<KeyboardShortcut[]>([]);
+  const [prefersKeyboard, setPrefersKeyboard] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = () => setPrefersKeyboard(true);
+    const onMouseDown = () => setPrefersKeyboard(false);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('mousedown', onMouseDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('mousedown', onMouseDown);
+    };
+  }, []);
   const announcerRef = useRef<HTMLDivElement>(null);
   const announcerAssertiveRef = useRef<HTMLDivElement>(null);
 
@@ -151,6 +164,7 @@ export function AccessibilityProvider({
     registerShortcut,
     unregisterShortcut,
     shortcuts,
+    prefersKeyboard,
   };
 
   return (
@@ -204,6 +218,7 @@ export function useAccessibility(): AccessibilityContextValue {
       registerShortcut: () => {},
       unregisterShortcut: () => {},
       shortcuts: [],
+      prefersKeyboard: false,
     };
   }
   return context;

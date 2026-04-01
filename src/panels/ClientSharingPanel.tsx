@@ -63,7 +63,7 @@ import {
   ClientComment,
   ApprovalStatus,
 } from '../../core/services/clientSharingService';
-import { useVirtualStudio } from '../../../VirtualStudioContext';
+import { useVirtualStudio } from '../VirtualStudioContext';
 
 interface ClientSharingPanelProps {
   projectId: string;
@@ -85,9 +85,10 @@ export function ClientSharingPanel({ projectId, projectName }: ClientSharingPane
 
   // Create link form state
   const [newLinkPin, setNewLinkPin] = useState('');
-  const [newLinkExpiry, setNewLinkExpiry] = useState<number | ''>(',');
+  const [newLinkExpiry, setNewLinkExpiry] = useState<number | ''>('');
   const [newLinkPermissions, setNewLinkPermissions] = useState<SharePermissions>({
     canView: true,
+    canViewOriginals: false,
     canComment: true,
     canApprove: true,
     canDownload: false,
@@ -157,6 +158,7 @@ export function ClientSharingPanel({ projectId, projectName }: ClientSharingPane
     setNewLinkExpiry('');
     setNewLinkPermissions({
       canView: true,
+      canViewOriginals: false,
       canComment: true,
       canApprove: true,
       canDownload: false,

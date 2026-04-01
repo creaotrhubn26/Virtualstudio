@@ -6,6 +6,7 @@ export interface PosePresetData {
   joints: Record<string, { x: number; y: number; z: number; w?: number }>;
   thumbnail?: string;
   tags: string[];
+  description?: string;
 }
 
 export interface ExpressionPresetData {
@@ -16,6 +17,7 @@ export interface ExpressionPresetData {
   blendShapes: Record<string, number>;
   thumbnail?: string;
   tags: string[];
+  description?: string;
 }
 
 export const DEFAULT_POSE_PRESETS: PosePresetData[] = [
@@ -80,12 +82,28 @@ class PresetLoader {
     return [...this.posePresets];
   }
 
+  getAvailablePosePresets(): string[] {
+    return this.posePresets.map((p) => p.id);
+  }
+
+  async loadPosePreset(id: string): Promise<PosePresetData | undefined> {
+    return this.posePresets.find((p) => p.id === id);
+  }
+
   getPosePresetById(id: string): PosePresetData | undefined {
     return this.posePresets.find((p) => p.id === id);
   }
 
   getExpressionPresets(): ExpressionPresetData[] {
     return [...this.expressionPresets];
+  }
+
+  getAvailableExpressionPresets(): string[] {
+    return this.expressionPresets.map((p) => p.id);
+  }
+
+  async loadExpressionPreset(id: string): Promise<ExpressionPresetData | undefined> {
+    return this.expressionPresets.find((p) => p.id === id);
   }
 
   getExpressionPresetById(id: string): ExpressionPresetData | undefined {

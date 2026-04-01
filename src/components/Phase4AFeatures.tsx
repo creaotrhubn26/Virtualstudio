@@ -44,22 +44,22 @@ export function Phase4AFeatures() {
   const handleToggleLight = (lightId: string, enabled: boolean) => {
     lightContributionService.toggleLight(lightId, enabled);
     // Force re-render by toggling a dummy state
-    actions.toggleLightContribution();
-    actions.toggleLightContribution();
+    actions.toggleLightContribution(lightId);
+    actions.toggleLightContribution(lightId);
   };
 
   const handleSoloLight = (lightId: string) => {
     lightContributionService.soloLight(lightId);
     // Force re-render
-    actions.toggleLightContribution();
-    actions.toggleLightContribution();
+    actions.toggleLightContribution(lightId);
+    actions.toggleLightContribution(lightId);
   };
 
   const handleEnableAllLights = () => {
     lightContributionService.enableAllLights();
     // Force re-render
-    actions.toggleLightContribution();
-    actions.toggleLightContribution();
+    actions.toggleLightContribution('all');
+    actions.toggleLightContribution('all');
   };
 
   // HDRI handlers
@@ -72,7 +72,7 @@ export function Phase4AFeatures() {
 
   const handleClearEnvironment = () => {
     hdriEnvironmentService.clearEnvironment();
-    actions.setHDRIEnvironment(null);
+    actions.setHDRIEnvironment('');
   };
 
   return (

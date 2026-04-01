@@ -10,7 +10,6 @@ import {
   useState,
   type FC,
   type ReactElement } from 'react';
-import Grid from '@mui/material/Grid';
 import {
   Dialog,
   DialogTitle,
@@ -19,7 +18,7 @@ import {
   Button,
   Box,
   Typography,
-  Grid2 as Grid,
+  Grid,
   Card,
   CardContent,
   CardActionArea,
@@ -130,18 +129,18 @@ const LightDiagram: FC<{ lights: LightConfig[] }> = ({ lights }) => {
         };
         
         return (
-          <Tooltip key={index} title={`${light.name} (${light.power}%)`}>
+          <Tooltip key={index} title={`${light.name} (${light.power ?? 0}%)`}>
             <Box
               sx={{
                 position: 'absolute',
                 left: `${x}%`,
                 top: `${y}%`,
                 transform: 'translate(-50%, -50%)',
-                width: 12 + (light.power / 20),
-                height: 12 + (light.power / 20),
+                width: 12 + ((light.power ?? 0) / 20),
+                height: 12 + ((light.power ?? 0) / 20),
                 borderRadius: '50%',
                 bgcolor: lightColors[light.type] || '#fff',
-                boxShadow: `0 0 ${light.power / 10}px ${lightColors[light.type] || '#fff'}`,
+                boxShadow: `0 0 ${(light.power ?? 0) / 10}px ${lightColors[light.type] || '#fff'}`,
                 zIndex: 3,
                 cursor: 'pointer'}}
             />
@@ -319,11 +318,11 @@ export const LightSetupRecommendationDialog: FC<LightSetupRecommendationDialogPr
                     
                     {/* Category Badge */}
                     <Chip
-                      icon={CATEGORY_ICONS[setup.category]}
+                      icon={CATEGORY_ICONS[setup.category ?? '']}
                       label={setup.category}
                       size="small"
                       sx={{
-                        bgcolor: CATEGORY_COLORS[setup.category] || '#666',
+                        bgcolor: CATEGORY_COLORS[setup.category ?? ''] || '#666',
                         color: 'white',
                         fontSize: '0.65rem',
                         height: 22,
@@ -357,7 +356,7 @@ export const LightSetupRecommendationDialog: FC<LightSetupRecommendationDialogPr
                     {/* Match Score */}
                     <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        {getStars(setup.matchScore)}
+                        {getStars(setup.matchScore ?? 0)}
                       </Box>
                       <Typography variant="caption" color="text.secondary">
                         {setup.matchScore}% match
@@ -366,14 +365,14 @@ export const LightSetupRecommendationDialog: FC<LightSetupRecommendationDialogPr
                     
                     <LinearProgress
                       variant="determinate"
-                      value={setup.matchScore}
+                      value={setup.matchScore ?? 0}
                       sx={{
                         height: 3,
                         borderRadius: 2,
                         mt: 0.5,
                         bgcolor: 'rgba(255,255,255,0.1)','& .MuiLinearProgress-bar': {
-                          bgcolor: setup.matchScore >= 80 ? '#4caf50' : 
-                                  setup.matchScore >= 50 ? '#ff9800' : '#f44336',
+                          bgcolor: (setup.matchScore ?? 0) >= 80 ? '#4caf50' : 
+                                  (setup.matchScore ?? 0) >= 50 ? '#ff9800' : '#f44336',
                         }}}
                     />
                   </CardContent>
@@ -407,7 +406,7 @@ export const LightSetupRecommendationDialog: FC<LightSetupRecommendationDialogPr
               Pro Tips for {recommendations.find(s => s.id === showTips)?.name}
             </Typography>
             <List dense sx={{ py: 0 }}>
-              {recommendations.find(s => s.id === showTips)?.tips.map((tip, index) => (
+              {(recommendations.find(s => s.id === showTips)?.tips ?? []).map((tip, index) => (
                 <ListItem key={index} sx={{ py: 0.5 }}>
                   <ListItemIcon sx={{ minWidth: 32 }}>
                     <HighlightAlt sx={{ fontSize: 16, color: '#888' }} />
@@ -432,7 +431,7 @@ export const LightSetupRecommendationDialog: FC<LightSetupRecommendationDialogPr
               {selectedSetup.reason}
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-              {selectedSetup.bestFor.map((use, i) => (
+              {(selectedSetup.bestFor ?? []).map((use, i) => (
                 <Chip 
                   key={i} 
                   label={use} 

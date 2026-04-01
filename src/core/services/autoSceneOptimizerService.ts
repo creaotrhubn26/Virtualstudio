@@ -14,6 +14,7 @@ export interface SceneOptimizationSubject {
 
 export interface SceneOptimization {
   expectedImprovement: number;
+  overallScore?: number;
   camera: {
     suggested: boolean;
     position: number[];

@@ -62,3 +62,7 @@ class SerializerService {
 
 export const serializer = new SerializerService();
 export default serializer;
+
+export function saveLocal(scene: unknown, filename = 'scene.vss'): void {
+  serializer.saveToFile(scene, filename);
+}

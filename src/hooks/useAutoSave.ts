@@ -48,7 +48,7 @@ export const useAutoSave = (options: UseAutoSaveOptions = {}) => {
   const [errorCount, setErrorCount] = useState(0);
   const [conflictCount, setConflictCount] = useState(0);
 
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCountRef = useRef(0);
   const cacheRef = useRef<Map<string, any>>(new Map());
 

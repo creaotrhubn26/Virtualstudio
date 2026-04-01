@@ -56,7 +56,7 @@ import {
 } from '../../core/data/clothingStyles';
 
 export const ClothingPanel: React.FC = () => {  const { addNode } = useAppStore();
-  const nodes = useAppStore((s) => s.scene.nodes);
+  const nodes = useAppStore((s) => s.scene);
 
   // UI State
   const [activeCategory, setActiveCategory] = useState<ClothingCategory>('tops');
@@ -73,7 +73,7 @@ export const ClothingPanel: React.FC = () => {  const { addNode } = useAppStore(
 
   // Get actors from scene
   const actors = useMemo(() => {    if (!nodes || !Array.isArray(nodes)) return [];
-    return nodes.filter(node => node.type === 'model' || node.type === 'virtual');
+    return nodes.filter(node => node.type === 'mesh' || node.type === 'actor');
   }, [nodes]);
 
   // Get clothing for active category

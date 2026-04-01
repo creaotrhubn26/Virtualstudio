@@ -143,12 +143,12 @@ function convertDbScenes(dbScenes: SceneBreakdown[]): ParsedScene[] {
   return dbScenes.map((scene, index) => ({
     id: scene.id,
     sceneNumber: scene.sceneNumber || `${index + 1}`,
-    heading: scene.sceneHeading,
-    intExt: scene.intExt || null,
-    location: scene.locationName,
+    heading: scene.sceneHeading ?? '',
+    intExt: (scene.intExt as 'INT' | 'EXT' | 'INT/EXT' | 'I/E' | null) || null,
+    location: scene.locationName ?? '',
     timeOfDay: scene.timeOfDay || null,
     lineNumber: index * 20 + 1, // Estimate if not available
-    pageEstimate: scene.pageLength || 1,
+    pageEstimate: (scene.pageEstimate as number | undefined) ?? 1,
     characterCount: scene.characters?.length || 0,
   }));
 }

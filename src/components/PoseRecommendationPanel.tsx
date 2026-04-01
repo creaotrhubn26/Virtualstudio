@@ -49,8 +49,8 @@ export function PoseRecommendationPanel({
   const [selectedType, setSelectedType] = useState<string>(photographyType || 'all');
   const [selectedPose, setSelectedPose] = useState<PoseRecommendation | null>(null);
 
-  const recommendations = poseRecommendationService.getRecommendations({
-    photographyType: selectedType !== 'all' ? selectedType as any : undefined,
+  const recommendations = poseRecommendationService.recommend({
+    shootType: selectedType !== 'all' ? selectedType : 'portrait',
     subjectCount,
   });
 
@@ -149,14 +149,14 @@ export function PoseRecommendationPanel({
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1 }}>
                       <Chip
-                        label={pose.difficulty}
+                        label={pose.difficulty ?? 'easy'}
                         size="small"
                         sx={{
-                          bgcolor: getDifficultyColor(pose.difficulty),
+                          bgcolor: getDifficultyColor(pose.difficulty ?? ''),
                           color: 'white'}}
                       />
                       <Chip
-                        label={`${pose.keyPoints.length} key points`}
+                        label={`${(pose.keyPoints ?? []).length} key points`}
                         size="small"
                         variant="outlined"
                       />
@@ -183,7 +183,7 @@ export function PoseRecommendationPanel({
                       Key Points:
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selectedPose.keyPoints.map((point, idx) => (
+                      {(selectedPose.keyPoints ?? []).map((point, idx) => (
                         <Chip key={idx} label={point} size="small" />
                       ))}
                     </Box>

@@ -1,3 +1,26 @@
+export interface ShadowInfo {
+  id: string;
+  lightId?: string;
+  position: [number, number, number];
+  size: [number, number];
+  darkness: number;
+  sharpness: number;
+  direction?: [number, number, number];
+  color?: string;
+  intensity?: number;
+  softness?: number;
+}
+
+export interface HighlightInfo {
+  id: string;
+  lightId?: string;
+  position: [number, number, number];
+  size: [number, number];
+  brightness: number;
+  hotspot: boolean;
+  isClipping?: boolean;
+}
+
 export interface ShadowRegion {
   id: string;
   lightId: string;
@@ -15,6 +38,8 @@ export interface ShadowAnalysis {
   overexposedAreas: number;
   contrastRatio: number;
   recommendations: string[];
+  totalHighlightIntensity?: number;
+  hasClipping?: boolean;
 }
 
 class ShadowAnalysisService {
@@ -38,6 +63,21 @@ class ShadowAnalysisService {
 
   getSoftShadowScore(_analysis: ShadowAnalysis): number {
     return 0.7;
+  }
+
+  analyzeScene(_nodes: unknown[], _center: [number, number, number]): ShadowAnalysis {
+    return {
+      totalShadowCoverage: 0,
+      shadowRegions: [],
+      underexposedAreas: 0,
+      overexposedAreas: 0,
+      contrastRatio: 1,
+      recommendations: [],
+    };
+  }
+
+  async analyzeShadowsWithSAM2(_imageUrl: string): Promise<Array<{ bbox: [number, number, number, number]; quality: number }>> {
+    return [];
   }
 }
 

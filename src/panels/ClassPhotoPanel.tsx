@@ -131,8 +131,8 @@ const StudentHeightBar: React.FC<{
   const heightPercent = ((student.height - minHeight) / (maxHeight - minHeight)) * 100;
   
   const getVisibilityColor = () => {
-    if (student.visibilityScore >= 80) return '#4caf50';
-    if (student.visibilityScore >= 50) return '#ff9800';
+    if ((student.visibilityScore ?? 0) >= 80) return '#4caf50';
+    if ((student.visibilityScore ?? 0) >= 50) return '#ff9800';
     return '#f44336';
   };
   
@@ -187,7 +187,7 @@ const RowVisualization: React.FC<{
   return (
     <Box sx={{ p: 2, bgcolor: '#1a1a1a', borderRadius: 1 }}>
       {session.rows.map((row, rowIdx) => {
-        const people = row.studentIds.map(id => session.students.get(id)).filter(Boolean) as Student[];
+        const people = (row.studentIds ?? []).map(id => session.students.get(id)).filter(Boolean) as Student[];
         const teacherCount = people.filter(p => p.isTeacher).length;
         const studentCount = people.length - teacherCount;
         
@@ -197,8 +197,8 @@ const RowVisualization: React.FC<{
               <Typography variant="caption" color="text.secondary">
                 Row {rowIdx + 1}
               </Typography>
-              {row.baseHeight > 0 && (
-                <Chip label={`+${Math.round(row.baseHeight * 100)}cm`} size="small" color="info" />
+              {(row.baseHeight ?? 0) > 0 && (
+                <Chip label={`+${Math.round((row.baseHeight ?? 0) * 100)}cm`} size="small" color="info" />
               )}
               <Typography variant="caption" color="text.secondary">
                 ({studentCount} students{teacherCount > 0 ? `, ${teacherCount} teacher${teacherCount > 1 ? 's' : ','}` : ', '})
@@ -208,19 +208,19 @@ const RowVisualization: React.FC<{
               {people.map(person => (
                 <Chip
                   key={person.id}
-                  label={person.isTeacher ? 'T,' : `${person.index + 1}`}
+                  label={person.isTeacher ? 'T' : `${person.position + 1}`}
                   size="small"
                   onClick={() => onStudentSelect(person.id)}
                   icon={person.isTeacher ? <Person sx={{ fontSize: 14 }} /> : undefined}
                   sx={{
                     bgcolor: person.isTeacher 
                       ? (person.color || '#1565c0')
-                      : person.visibilityScore >= 80 ? '#2e7d32' : 
-                        person.visibilityScore >= 50 ? '#ed6c02' : '#d32f2f',
+                      : (person.visibilityScore ?? 0) >= 80 ? '#2e7d32' : 
+                        (person.visibilityScore ?? 0) >= 50 ? '#ed6c02' : '#d32f2f',
                     color: '#fff',
                     border: selectedStudentId === person.id ? '2px solid #2196f3' : 
                             person.isTeacher ? '2px solid rgba(255,255,255,0.3)' : 'none',
-                    fontWeight: erson.isTeacher ? 'bold' : 'normal'}}
+                    fontWeight: person.isTeacher ? 'bold' : 'normal'}}
                 />
               ))}
             </Stack>
@@ -295,7 +295,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
     });
   }, [onGuideSettingsChange]);
   
-  const handleAspectRatioChange = useCallback((ratio: ClassPhotoGuideSettings['aspectRatio,']) => {
+  const handleAspectRatioChange = useCallback((ratio: ClassPhotoGuideSettings['aspectRatio']) => {
     setGuideSettings(prev => {
       const newSettings = { ...prev, aspectRatio: ratio };
       onGuideSettingsChange?.(newSettings);
@@ -429,7 +429,7 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
   // Visibility score
   const overallVisibility = useMemo(() => {
     if (students.length === 0) return 100;
-    return Math.round(students.reduce((sum, s) => sum + s.visibilityScore, 0) / students.length);
+    return Math.round(students.reduce((sum, s) => sum + (s.visibilityScore ?? 0), 0) / students.length);
   }, [students]);
 
   // Open school photography setup dialog
@@ -980,13 +980,13 @@ export const ClassPhotoPanel: React.FC<ClassPhotoPanelProps> = ({
                       <IconButton
                         size="small"
                         onClick={() => handleAddRiser(idx)}
-                        disabled={row.baseHeight > 0}
+                        disabled={(row.baseHeight ?? 0) > 0}
                       >
                         <Add fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    {row.baseHeight > 0 && (
-                      <Chip label={`+${Math.round(row.baseHeight * 100)}cm`} size="small" />
+                    {(row.baseHeight ?? 0) > 0 && (
+                      <Chip label={`+${Math.round((row.baseHeight ?? 0) * 100)}cm`} size="small" />
                     )}
                   </Stack>
                 </Stack>

@@ -89,13 +89,13 @@ export const StoryboardIntegrationView: React.FC<StoryboardIntegrationViewProps>
       // Convert model frames to local format
       return scene.storyboardFrames.map((f): StoryboardFrame => ({
         id: f.id,
-        shotNumber: f.shotNumber,
+        shotNumber: f.shotNumber ?? '',
         imageUrl: f.imageUrl,
         sketch: f.sketch,
-        description: f.description,
-        cameraAngle: f.cameraAngle,
-        movement: f.movement,
-        duration: f.duration,
+        description: f.description ?? '',
+        cameraAngle: f.cameraAngle ?? '',
+        movement: f.movement ?? '',
+        duration: f.duration ?? 0,
         notes: f.notes,
         sceneId: f.sceneId,
         scriptLineRange: f.scriptLineRange,

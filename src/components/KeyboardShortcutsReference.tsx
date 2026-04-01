@@ -59,42 +59,20 @@ interface ShortcutCategory {
 // Styled Components
 // ============================================================================
 
+const _allShortcuts = SHORTCUT_REFERENCE.flatMap((cat) => cat.shortcuts);
+const _byCat = (cats: string[]) =>
+  _allShortcuts
+    .filter((s) => cats.includes(s.category))
+    .map((s) => ({ key: s.keys[0] ?? '', description: s.description }));
+
 const CATEGORIES: ShortcutCategory[] = [
-  {
-    name: 'View',
-    color: '#2196f3',
-    shortcuts: SHORTCUT_REFERENCE.filter((s) => s.category === 'View'),
-  },
-  {
-    name: 'Transform',
-    color: '#ff9800',
-    shortcuts: SHORTCUT_REFERENCE.filter((s) => s.category === 'Transform'),
-  },
-  {
-    name: 'Edit',
-    color: '#4caf50',
-    shortcuts: SHORTCUT_REFERENCE.filter((s) => s.category === 'Edit'),
-  },
-  {
-    name: 'History',
-    color: '#9c27b0',
-    shortcuts: SHORTCUT_REFERENCE.filter((s) => s.category === 'History'),
-  },
-  {
-    name: 'Selection',
-    color: '#00bcd4',
-    shortcuts: SHORTCUT_REFERENCE.filter((s) => s.category === 'Selection'),
-  },
-  {
-    name: 'Animation',
-    color: '#e91e63',
-    shortcuts: SHORTCUT_REFERENCE.filter((s) => s.category === 'Animation'),
-  },
-  {
-    name: 'Camera',
-    color: '#607d8b',
-    shortcuts: SHORTCUT_REFERENCE.filter((s) => s.category === 'Camera'),
-  },
+  { name: 'View', color: '#2196f3', shortcuts: _byCat(['navigation', 'view']) },
+  { name: 'Transform', color: '#ff9800', shortcuts: _byCat(['edit']) },
+  { name: 'Edit', color: '#4caf50', shortcuts: _byCat(['edit']) },
+  { name: 'History', color: '#9c27b0', shortcuts: _byCat(['system']) },
+  { name: 'Selection', color: '#00bcd4', shortcuts: _byCat(['view']) },
+  { name: 'Animation', color: '#e91e63', shortcuts: _byCat(['animation']) },
+  { name: 'Camera', color: '#607d8b', shortcuts: _byCat(['camera']) },
 ];
 
 // ============================================================================

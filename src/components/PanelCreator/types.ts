@@ -59,7 +59,7 @@ export interface CreatorHubFunction {
   id: string;
   name: string;
   description: string;
-  icon: React.ComponentType;
+  icon: React.ElementType<{ sx?: object }>;
 }
 
 export interface FormData {

@@ -3,21 +3,40 @@ export interface LightSpecifications {
   brand: string;
   model: string;
   type: 'strobe' | 'continuous' | 'led' | 'hmi' | 'tungsten' | 'fluorescent';
+  lightType?: string;
   maxPowerWatts: number;
+  wattage?: number;
+  powerConsumption?: number;
+  equivalentWattage?: number;
+  lightOutput?: number;
   colorTemperatureK: number | [number, number];
+  cct?: number;
+  cctRange?: [number, number];
   cri?: number;
   tlci?: number;
+  beamPattern?: string;
+  beamAngle?: number;
+  beamAngleDeg?: number;
+  fieldAngle?: number;
+  dimmingRange?: [number, number];
   bowensMountCompatible: boolean;
   batteryPowered: boolean;
   hssCapable: boolean;
   ttlCompatible: boolean;
   recycleTimeMs?: number;
   flashDurationMs?: number;
-  beamAngleDeg?: number;
+  weight?: number;
   weightKg: number;
   dimensions?: { width: number; height: number; depth: number };
+  mountType?: string;
+  compatibleModifiers?: string[];
+  fanNoise?: number;
+  wirelessControl?: boolean;
+  dmxChannels?: number;
   ipRating?: string;
   price?: number;
+  msrpPrice?: number;
+  [key: string]: unknown;
 }
 
 export interface ModifierCompatibility {
@@ -94,6 +113,43 @@ class EquipmentSpecsService {
 
   compareLights(idA: string, idB: string): { a: LightSpecifications | undefined; b: LightSpecifications | undefined } {
     return { a: this.getById(idA), b: this.getById(idB) };
+  }
+
+  getLightSpecs(id: string): LightSpecifications | undefined {
+    return this.getById(id);
+  }
+
+  getModifierSpecs(_id: string): {
+    brand?: string;
+    model?: string;
+    name?: string;
+    type?: string;
+    size?: string;
+    shape?: string;
+    mountType?: string;
+    diffusionLayers?: number;
+    powerLossStops?: number;
+    diffusionFactor?: number;
+    weight?: number;
+    gridIncluded?: boolean;
+    gridDegrees?: number;
+    [key: string]: unknown;
+  } | undefined {
+    return undefined;
+  }
+
+  isCompatible(lightId: string, _modifierId: string): boolean {
+    const spec = this.getById(lightId);
+    return spec !== undefined;
+  }
+
+  calculateEffectiveOutput(lightId: string, settings?: string | { power?: number; distance?: number }): number {
+    if (typeof settings === 'string') settings = undefined;
+    const spec = this.getById(lightId);
+    if (!spec) return 0;
+    const power = settings?.power ?? 1.0;
+    const distance = settings?.distance ?? 1.0;
+    return (spec.maxPowerWatts * power) / (distance * distance);
   }
 }
 

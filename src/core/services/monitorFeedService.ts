@@ -58,6 +58,23 @@ class MonitorFeedRenderer {
     return this.cameras.get(this.activeCameraId) || null;
   }
 
+  render(canvas?: HTMLCanvasElement): void {
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const cam = this.getActiveCamera();
+    if (cam) {
+      ctx.fillStyle = '#fff';
+      ctx.font = '12px monospace';
+      ctx.fillText(`CAM: ${cam.name}`, 8, 20);
+    }
+  }
+
+  setScene(_scene: unknown): void {
+  }
+
   setConfig(config: Partial<MonitorConfig>) {
     this.config = { ...this.config, ...config };
   }
@@ -83,7 +100,7 @@ class MonitorFeedRenderer {
 class MonitorFeedService {
   private renderer: MonitorFeedRenderer | null = null;
 
-  init(): MonitorFeedRenderer {
+  init(_width?: number, _height?: number): MonitorFeedRenderer {
     if (!this.renderer) {
       this.renderer = new MonitorFeedRenderer();
     }
@@ -96,3 +113,4 @@ class MonitorFeedService {
 }
 
 export const monitorFeedService = new MonitorFeedService();
+export type MonitorRenderer = MonitorFeedRenderer;

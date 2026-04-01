@@ -48,8 +48,6 @@ export function createGoboModel(
   const frameMaterial = new BABYLON.StandardMaterial(`${goboId}_frame_mat`, scene);
   frameMaterial.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.2);
   frameMaterial.specularColor = new BABYLON.Color3(0.5, 0.5, 0.5);
-  frameMaterial.metallic = 0.8;
-  frameMaterial.roughness = 0.2;
   frame.material = frameMaterial;
   frame.parent = parent;
 

@@ -15,6 +15,8 @@ export interface EyeAnimationState {
   gazeOffsetX: number;
   gazeOffsetY: number;
   isBlinking: boolean;
+  blinkProgress?: number;
+  pupilDilation?: number;
 }
 
 export class EyeAnimationController {
@@ -84,6 +86,35 @@ export class EyeAnimationController {
   getBlinkValue(): number {
     const t = this.state.blinkPhase;
     return t < 0.5 ? t * 2 : (1 - t) * 2;
+  }
+
+  saccadeTo(target: { x: number; y: number; z: number }): void {
+    const amplitude = this.config.saccadeAmplitude;
+    this.saccadeTargetX = Math.max(-amplitude, Math.min(amplitude, target.x * 0.1));
+    this.saccadeTargetY = Math.max(-amplitude, Math.min(amplitude, target.y * 0.1));
+    this.lastSaccadeTime = 0;
+  }
+
+  setLightIntensity(intensity: number): void {
+    const clamped = Math.max(0, Math.min(2, intensity));
+    this.state.pupilDilation = 1 - clamped * 0.3;
+  }
+
+  smoothPursuit(target: { x: number; y: number; z: number }, deltaTime: number): void {
+    const alpha = Math.min(1, deltaTime * this.config.smoothFollowSpeed);
+    const targetX = Math.max(-this.config.saccadeAmplitude, Math.min(this.config.saccadeAmplitude, target.x * 0.05));
+    const targetY = Math.max(-this.config.saccadeAmplitude, Math.min(this.config.saccadeAmplitude, target.y * 0.05));
+    this.state.gazeOffsetX += (targetX - this.state.gazeOffsetX) * alpha;
+    this.state.gazeOffsetY += (targetY - this.state.gazeOffsetY) * alpha;
+  }
+
+  getGazeWithMicroMovements(): { x: number; y: number; z: number } {
+    const micro = this.config.microTremoramplitude;
+    return {
+      x: this.state.gazeOffsetX + (Math.random() - 0.5) * micro,
+      y: this.state.gazeOffsetY + (Math.random() - 0.5) * micro,
+      z: 1,
+    };
   }
 
   setConfig(config: Partial<EyeAnimationConfig>): void {

@@ -108,8 +108,8 @@ class AudioService {
         }
       );
 
-      // Handle load errors gracefully
-      sound.onError = (message: string) => {
+      // Handle load errors gracefully (Babylon.js Sound uses a callback-based approach)
+      (sound as BABYLON.Sound & { onError?: (msg: string) => void }).onError = (message: string) => {
         console.warn(`[AudioService] Failed to load audio file: ${definition.url}`, message);
         this.activeSounds.delete(instanceId);
         window.dispatchEvent(new CustomEvent('audio-load-error', {

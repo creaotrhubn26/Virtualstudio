@@ -31,7 +31,9 @@ const EASING_PRESETS: Record<EasingFunction, [number, number, number, number]> =
   easeIn: [0.42, 0, 1, 1],
   easeOut: [0, 0, 0.58, 1],
   easeInOut: [0.42, 0, 0.58, 1],
-  bezier: [0.25, 0.1, 0.25, 1], // Default bezier
+  bezier: [0.25, 0.1, 0.25, 1],
+  bounce: [0.36, 0.07, 0.19, 0.97],
+  elastic: [0.64, 0.57, 0.67, 1.53],
 };
 
 export const CurveEditor: React.FC = () => {

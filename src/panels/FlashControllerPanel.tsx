@@ -710,7 +710,7 @@ function LightAssignmentDialog({
                     size="small"
                     sx={{ bgcolor: accentColor, color: 'white' }}
                   />
-                  <IconButton size="small" onClick={() => onUnassign(light.nodeId)}>
+                  <IconButton size="small" onClick={() => onUnassign(light.nodeId ?? '')}>
                     <UnlinkIcon fontSize="small" />
                   </IconButton>
                 </Stack>
@@ -775,7 +775,7 @@ function LightAssignmentDialog({
               </ListItemIcon>
               <ListItemText
                 primary={light.name || 'Light'}
-                secondary={`${light.userData?.brand || 'Unknown'} ${light.userData?.model || ','}`}
+                secondary={`${light.brand || 'Unknown'} ${light.model || ''}`}
               />
             </ListItem>
           ))}
@@ -911,7 +911,7 @@ function NoControllerPrompt({
                   
                   {/* Features */}
                   <Stack direction="row" spacing={0.5} sx={{ mt: 1, flexWrap: 'wrap', gap: 0.5 }}>
-                    {recommendation.features.slice(0, 5).map((feature) => (
+                    {(recommendation.features ?? []).slice(0, 5).map((feature) => (
                       <Chip
                         key={feature}
                         label={feature}

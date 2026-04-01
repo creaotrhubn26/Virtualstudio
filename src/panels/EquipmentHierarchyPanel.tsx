@@ -68,8 +68,8 @@ import {
   EquipmentNode,
   EquipmentGroup,
   LinkSuggestion,
-} from '../../core/services/equipmentGroupingService';
-import { useSelection } from '../../core/services/selectionService';
+} from '../core/services/equipmentGroupingService';
+import { useSelection } from '../core/services/selectionService';
 import { useTabletSupport } from '../../providers/TabletSupportProvider';
 import { TouchIconButton, TouchSwipeListItem, TouchContextMenu } from '../components/TabletAwarePanels';
 
@@ -574,7 +574,7 @@ export function EquipmentHierarchyPanel({
           )}
           <MenuItem onClick={() => {
             const duplicated = equipmentGroupingService.duplicateNodes(selection.selectedIds);
-            selection.select(duplicated);
+            duplicated.forEach((n) => selection.select(n.id));
             setRefreshKey((k) => k + 1);
             setAdvancedMenuAnchor(null);
           }} disabled={selection.selectedIds.length === 0}>
@@ -586,7 +586,7 @@ export function EquipmentHierarchyPanel({
             const stats = equipmentGroupingService.getStatistics();
             log.debug('Grouping Statistics: ', stats);
             alert(`Total: ${stats.totalNodes} items in ${stats.totalGroups} groups\n` +
-              `Grouped: ${stats.groupedNodes}, Linked: ${stats.linkedNodes}, Orphaned: ${stats.orphanedNodes}`);
+              `Groups: ${stats.totalGroups}, Linked pairs: ${stats.linkedPairs}`);
             setAdvancedMenuAnchor(null);
           }}>
             <ListItemIcon><Visibility fontSize="small" /></ListItemIcon>

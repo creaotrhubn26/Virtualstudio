@@ -79,9 +79,9 @@ import {
   ExportJobStatus,
   SchedulerState,
   BatchExportConfig,
-} from '../../core/animation/ExportScheduler';
-import { EXPORT_PRESETS, ExportPreset } from '../../core/animation/GoogleDriveExportService';
-import { videoExportService } from '../../core/animation/VideoExportService';
+} from '../core/animation/ExportScheduler';
+import { EXPORT_PRESETS, ExportPreset } from '../core/animation/GoogleDriveExportService';
+import { videoExportService } from '../core/animation/VideoExportService';
 // ============================================================================
 // Types
 // ============================================================================
@@ -91,7 +91,7 @@ interface ExportSchedulerPanelProps {
   userId?: string;
   projectId?: string;
   projectName?: string;
-  onFrameRender?: (time: number, frameIndex: number) => void;
+  onFrameRender?: (time: number, frameIndex?: number) => void;
 }
 
 type TabValue = 'queue' | 'schedule' | 'batch' | 'history';
@@ -107,6 +107,8 @@ const STATUS_CONFIG: Record<ExportJobStatus, { color: string; icon: React.ReactN
   exporting: { color: '#4caf50', icon: <VideoFile />, label: 'Exporting' },
   uploading: { color: '#9c27b0', icon: <CloudUpload />, label: 'Uploading' },
   complete: { color: '#4caf50', icon: <Check />, label: 'Complete' },
+  processing: { color: '#00bcd4', icon: <VideoFile />, label: 'Processing' },
+  completed: { color: '#4caf50', icon: <Check />, label: 'Completed' },
   failed: { color: '#f44336', icon: <Error />, label: 'Failed' },
   cancelled: { color: '#9e9e9e', icon: <Cancel />, label: 'Cancelled' },
 };
@@ -131,7 +133,7 @@ interface JobCardProps {
 
 function JobCard({ job, onCancel, onChangePriority, onDownload }: JobCardProps) {
   const statusConfig = STATUS_CONFIG[job.status];
-  const priorityConfig = PRIORITY_CONFIG[job.priority];
+  const priorityConfig = PRIORITY_CONFIG[job.priority ?? 'normal'];
 
   const progress = job.status === 'exporting'
     ? job.exportProgress?.percentage || 0
@@ -182,7 +184,7 @@ function JobCard({ job, onCancel, onChangePriority, onDownload }: JobCardProps) 
 
           {/* Details */}
           <Typography variant="caption" color="text.secondary" display="block">
-            {job.config.width}×{job.config.height} • {job.config.fps}fps • {videoExportService.formatDuration(job.config.duration)}
+            {job.config.width ?? job.config.resolution?.width}×{job.config.height ?? job.config.resolution?.height} • {job.config.fps ?? 25}fps • {videoExportService.formatDuration(job.config.duration ?? 0)}
           </Typography>
 
           {/* Scheduled time */}
@@ -212,7 +214,7 @@ function JobCard({ job, onCancel, onChangePriority, onDownload }: JobCardProps) 
                   {job.status === 'exporting' && job.exportProgress
                     ? `Frame ${job.exportProgress.currentFrame}/${job.exportProgress.totalFrames}`
                     : job.status === 'uploading' && job.uploadProgress
-                      ? `${videoExportService.formatFileSize(job.uploadProgress.bytesUploaded)} / ${videoExportService.formatFileSize(job.uploadProgress.totalBytes)}`
+                      ? `${videoExportService.formatFileSize(job.uploadProgress.bytesUploaded ?? 0)} / ${videoExportService.formatFileSize(job.uploadProgress.totalBytes ?? 0)}`
                       : ''
                   }
                 </Typography>
@@ -252,7 +254,7 @@ function JobCard({ job, onCancel, onChangePriority, onDownload }: JobCardProps) 
                   size="small"
                   onClick={() => {
                     const priorities: ExportJobPriority[] = ['low','normal','high','urgent'];
-                    const currentIndex = priorities.indexOf(job.priority);
+                    const currentIndex = priorities.indexOf(job.priority ?? 'normal');
                     if (currentIndex < priorities.length - 1) {
                       onChangePriority(priorities[currentIndex + 1]);
                     }
@@ -403,8 +405,9 @@ export function ExportSchedulerPanel({
 
   // Group presets by platform for batch selection
   const presetsByPlatform = EXPORT_PRESETS.reduce((acc, preset) => {
-    if (!acc[preset.platform]) acc[preset.platform] = [];
-    acc[preset.platform].push(preset);
+    const platform = preset.platform ?? 'other';
+    if (!acc[platform]) acc[platform] = [];
+    acc[platform].push(preset);
     return acc;
   }, {} as Record<string, ExportPreset[]>);
 
@@ -454,7 +457,7 @@ export function ExportSchedulerPanel({
           color="success"
           variant="outlined"
         />
-        {schedulerState.totalFailed > 0 && (
+        {(schedulerState.totalFailed ?? 0) > 0 && (
           <Chip
             icon={<Error />}
             label={`Failed: ${schedulerState.totalFailed}`}
@@ -599,7 +602,7 @@ export function ExportSchedulerPanel({
                       <Box>
                         <Typography variant="body2">{preset.name}</Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {preset.config.width}×{preset.config.height} • {preset.config.fps}fps
+                          {preset.config?.width}×{preset.config?.height} • {preset.config?.fps}fps
                         </Typography>
                       </Box>
                     </Box>

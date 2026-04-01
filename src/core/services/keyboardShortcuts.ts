@@ -49,6 +49,10 @@ class KeyboardShortcutsService {
     this.shortcuts.clear();
     this.listeners.clear();
   }
+
+  formatShortcut(shortcut: Shortcut): string {
+    return shortcut.keys.join(' / ');
+  }
 }
 
 export const keyboardShortcutsService = new KeyboardShortcutsService();

@@ -26,6 +26,7 @@ import {
   Alert,
   List,
   ListItem,
+  ListItemButton,
   ListItemText,
   ListItemSecondaryAction,
   Divider,
@@ -379,9 +380,8 @@ export default function SplitSheetLegalReferences({
                 </Typography>
                 <List>
                   {laws.map((law: any) => (
-                    <ListItem
+                    <ListItemButton
                       key={law.id}
-                      button
                       selected={selectedLawId === law.id}
                       onClick={() => setSelectedLawId(law.id)}
                     >
@@ -404,7 +404,7 @@ export default function SplitSheetLegalReferences({
                           </Typography>
                         }
                       />
-                    </ListItem>
+                    </ListItemButton>
                   ))}
                 </List>
               </Box>

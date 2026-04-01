@@ -1,5 +1,5 @@
+import React, { useMemo } from 'react';
 import { useTheme } from '@mui/material/styles';
-import { useMemo } from 'react';
 
 export interface ThemingColors {
   primary: string;
@@ -12,6 +12,9 @@ export interface ThemingColors {
   error: string;
   success: string;
   warning: string;
+  light?: string;
+  dark?: string;
+  accent?: string;
 }
 
 export interface ThemingResult {
@@ -20,6 +23,7 @@ export interface ThemingResult {
   alpha: (color: string, opacity: number) => string;
   getThemedCardSx: () => object;
   getThemedButtonSx: () => object;
+  getThemedIcon: (iconName: string) => React.ReactNode;
 }
 
 // Helper function to add alpha to a color
@@ -85,12 +89,15 @@ export function useTheming(_profession?: string): ThemingResult {
       },
     });
 
+    const getThemedIcon = (_iconName: string): React.ReactNode => null;
+
     return {
       colors,
       isDark,
       alpha: addAlpha,
       getThemedCardSx,
       getThemedButtonSx,
+      getThemedIcon,
     };
   }, [theme]);
 }

@@ -140,20 +140,22 @@ export const Button: FC<ButtonProps> = ({
       startIcon={startIcon}
       endIcon={endIcon}
       fullWidth={fullWidth}
-      sx={{
-        ...getVariantStyles(),
-        ...(fullWidth && { width: '100%' }),
-        '&:focus-visible': {
-          outline: `2px solid ${colors.border.focus}`,
-          outlineOffset: '2px',
+      sx={[
+        getVariantStyles() as object,
+        fullWidth ? { width: '100%' } : {},
+        {
+          '&:focus-visible': {
+            outline: `2px solid ${colors.border.focus}`,
+            outlineOffset: '2px',
+          },
+          '&:disabled': {
+            opacity: 0.5,
+            cursor: 'not-allowed',
+            pointerEvents: 'none',
+          },
         },
-        '&:disabled': {
-          opacity: 0.5,
-          cursor: 'not-allowed',
-          pointerEvents: 'none',
-        },
-        ...sx,
-      }}
+        ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+      ]}
     >
       {loading ? (
         <>

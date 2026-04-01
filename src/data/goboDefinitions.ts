@@ -2,6 +2,8 @@
  * Gobo Definitions - Pattern definitions and texture generators for gobos
  */
 
+import * as BABYLON from '@babylonjs/core';
+
 export type GoboPattern = 'window' | 'blinds' | 'leaves' | 'breakup' | 'dots' | 'lines' | 'custom';
 
 export interface GoboDefinition {
@@ -9,7 +11,7 @@ export interface GoboDefinition {
   name: string;
   nameNo: string;
   pattern: GoboPattern;
-  category: 'architectural' | 'nature' | 'abstract' | 'custom';
+  category: 'architectural' | 'nature' | 'abstract' | 'custom' | 'cinematic' | 'industrial';
   description: string;
   descriptionNo: string;
   defaultSize: number; // in meters

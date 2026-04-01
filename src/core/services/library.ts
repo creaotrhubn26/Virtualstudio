@@ -109,7 +109,7 @@ const PROP_ASSETS: LibraryAsset[] = getAllProps().map((prop: PropDefinition) => 
   id: prop.id,
   title: prop.name,
   type: 'prop',
-  thumbUrl: prop.thumbnailUrl,
+  thumbUrl: prop.thumbnailUrl ?? null,
   data: {
     modelUrl: prop.modelUrl || undefined,
     category: prop.category,

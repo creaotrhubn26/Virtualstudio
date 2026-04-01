@@ -17,7 +17,7 @@
 
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { SceneNode } from '../../core/models/scene';
-import { hairRenderingService, HairColorOptions } from '../../core/services/hairRenderingService';
+import { hairRenderingService } from '../../core/services/hairRenderingService';
 import { getHairStyleById } from '../../core/data/hairStyles';
 import { logger } from '../../core/services/logger';
 
@@ -55,7 +55,7 @@ export function HairMesh({ node, actorNode }: HairMeshProps) {
 
     return {
       hairStyleId: node.userData.hairStyleId as string,
-      hairColor: node.userData.hairColor as HairColorOptions | undefined,
+      hairColor: node.userData.hairColor as string | undefined,
       hairScale: node.userData.hairScale as number | undefined,
       hairOffset: node.userData.hairOffset as { x: number; y: number; z: number } | undefined,
     };

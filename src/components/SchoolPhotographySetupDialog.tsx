@@ -20,7 +20,6 @@ import {
   Button,
   Box,
   Typography,
-  Grid2 as Grid,
   Card,
   CardContent,
   CardActionArea,

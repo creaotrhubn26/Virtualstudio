@@ -9,6 +9,10 @@ export interface PoseRecommendation {
   lightingCompatibility: number;
   tags: string[];
   thumbnailUrl?: string;
+  idealAngles: Record<string, number>;
+  tips: string[];
+  keyPoints?: string[];
+  difficulty?: string;
 }
 
 export interface PoseRecommendationContext {
@@ -16,6 +20,7 @@ export interface PoseRecommendationContext {
   lightingStyle?: string;
   subjectCount?: number;
   gender?: string;
+  photographyType?: string;
 }
 
 class PoseRecommendationService {
@@ -32,6 +37,8 @@ class PoseRecommendationService {
         category: 'standing',
         lightingCompatibility: 0.95,
         tags: ['portrett', 'naturlig', 'avslappet'],
+        idealAngles: { faceAngle: 15, bodyAngle: 20 },
+        tips: ['Hold vekten på ett ben', 'Slapp av skuldrene', 'Legg hendene naturlig'],
       },
       {
         id: 'pose-rec-2',
@@ -43,6 +50,8 @@ class PoseRecommendationService {
         category: 'standing',
         lightingCompatibility: 0.88,
         tags: ['corporate', 'selvsikker', 'sterk'],
+        idealAngles: { faceAngle: 0, bodyAngle: 0 },
+        tips: ['Stå med rett rygg', 'Skuldrene tilbake og ned', 'Haken parallell med gulvet'],
       },
     ];
   }

@@ -105,7 +105,7 @@ interface ToolButtonProps {
   icon: React.ReactNode;
   label: string;
   shortcut?: string;
-  onClick?: () => void;
+  onClick?: (e?: React.MouseEvent<HTMLButtonElement>) => void;
   active?: boolean;
   disabled?: boolean;
   badge?: number;
@@ -183,7 +183,7 @@ function SelectionInfo() {
 // ============================================================================
 
 export function QuickAccessToolbar({
-  transformMode = 'translate,',
+  transformMode = 'translate' as 'translate' | 'rotate' | 'scale',
   onTransformModeChange,
   viewMode = 'perspective',
   onViewModeChange,
@@ -341,7 +341,7 @@ export function QuickAccessToolbar({
           <ToolButton
             icon={<ThreeDRotation />}
             label="View Mode"
-            onClick={(e: any) => setViewMenuAnchor(e?.currentTarget)}
+            onClick={(e) => setViewMenuAnchor((e?.currentTarget ?? null) as HTMLElement | null)}
           />
         </Box>
 
@@ -363,7 +363,7 @@ export function QuickAccessToolbar({
         <ToolButton
           icon={<MoreVert />}
           label="More Options"
-          onClick={(e: any) => setMoreMenuAnchor(e?.currentTarget)}
+          onClick={(e) => setMoreMenuAnchor((e?.currentTarget ?? null) as HTMLElement | null)}
         />
 
         {/* View Menu */}

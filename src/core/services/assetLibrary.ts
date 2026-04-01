@@ -75,8 +75,8 @@ const ENVIRONMENT_PROP_ASSETS: AssetLibraryItem[] = getAllProps().map((prop: Pro
   id: prop.id,
   name: prop.name,
   category: mapPropCategoryToAssetCategory(prop.category),
-  thumbnail_url: prop.thumbnailUrl,
-  model_url: prop.modelUrl,
+  thumbnail_url: prop.thumbnailUrl ?? null,
+  model_url: prop.modelUrl ?? null,
   is_system: true,
   metadata: {
     ...prop.metadata,

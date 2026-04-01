@@ -43,8 +43,32 @@ export function SmartLightPlacement({
   detectedPattern,
   tips,
   onClose,
+  imageUrl,
+  onLightPositionSuggest,
 }: SmartLightPlacementProps) {
   const [expanded, setExpanded] = React.useState(true);
+  const [subjectBounds, setSubjectBounds] = useState<{ center: [number, number] } | null>(null);
+  const [suggestedLightPosition, setSuggestedLightPosition] = useState<[number, number, number] | null>(null);
+
+  const detectSubject = useMutation({
+    mutationFn: async () => {
+      if (!imageUrl) throw new Error('No image URL');
+      const result = await sam2Service.segmentImageFromUrl(imageUrl);
+      const firstMask = result.masks[0];
+      if (!firstMask) throw new Error('No subject detected');
+      return firstMask;
+    },
+    onSuccess: (mask) => {
+      setSubjectBounds({ center: mask.center });
+      const suggested: [number, number, number] = [
+        position[0] + 1.5,
+        position[1] + 2.0,
+        position[2] - 1.0,
+      ];
+      setSuggestedLightPosition(suggested);
+      onLightPositionSuggest?.(suggested);
+    },
+  });
 
   if (!detectedPattern && tips.length === 0) {
     return null;
@@ -150,7 +174,7 @@ export function SmartLightPlacement({
             </Typography>
 
             <Typography variant="caption" sx={{ color: '#6B7280', display: 'block', mb: 1 }}>
-              {detectedPattern.role.replace('_',',').toUpperCase()}
+              {(detectedPattern.role ?? '').replace('_',',').toUpperCase()}
             </Typography>
 
             {/* Angle Indicator */}
@@ -181,9 +205,9 @@ export function SmartLightPlacement({
               </Box>
             </Box>
 
-            {detectedPattern.distance > 0.1 && (
+            {(detectedPattern.distance ?? 0) > 0.1 && (
               <Typography variant="caption" sx={{ color: '#F59E0B', display: 'block', mt: 1 }}>
-                📍 {detectedPattern.distance.toFixed(2)}m from ideal position
+                📍 {(detectedPattern.distance ?? 0).toFixed(2)}m from ideal position
               </Typography>
             )}
           </Box>
@@ -220,7 +244,7 @@ function TipCard({ tip }: { tip: LightPlacementTip }) {
     height: '#EC4899',
   };
 
-  const bgColor = categoryColors[tip.category] || '#6B7280';
+  const bgColor = categoryColors[tip.category ?? 'other'] || '#6B7280';
 
   return (
     <Tooltip title={tip.description} placement="left" arrow>

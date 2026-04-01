@@ -13,6 +13,17 @@ export interface IESProfile {
   fieldAngle: number;
   description?: string;
   thumbnail?: string;
+  metadata?: {
+    manufacturer?: string;
+    modelNumber?: string;
+    lumens?: number;
+    cct?: number;
+    cri?: number;
+    wattage?: number;
+    beamAngle?: number;
+    fieldAngle?: number;
+    luminaire?: string;
+  };
 }
 
 export const IES_PROFILES: IESProfile[] = [
@@ -94,3 +105,60 @@ class IESService {
 
 export const iesService = new IESService();
 export default iesService;
+
+export interface IESMetadata {
+  manufacturer?: string;
+  modelNumber?: string;
+  lumens?: number;
+  cct?: number;
+  cri?: number;
+  wattage?: number;
+  beamAngle?: number;
+  fieldAngle?: number;
+}
+
+declare module './ies' {
+}
+
+export function renderIESToCanvas(
+  profile: IESProfile,
+  canvas: HTMLCanvasElement | number,
+  options?: { colorMap?: string; resolution?: number }
+): HTMLCanvasElement {
+  let resolvedCanvas: HTMLCanvasElement;
+  if (typeof canvas === 'number') {
+    resolvedCanvas = document.createElement('canvas');
+    resolvedCanvas.width = canvas;
+    resolvedCanvas.height = canvas;
+  } else {
+    resolvedCanvas = canvas;
+  }
+  const ctx = resolvedCanvas.getContext('2d');
+  if (!ctx) return resolvedCanvas;
+  const w = resolvedCanvas.width;
+  const h = resolvedCanvas.height;
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, w, h);
+  const cx = w / 2;
+  const cy = h / 2;
+  const maxR = Math.min(w, h) / 2 - 10;
+  const beamAngle = profile.beamAngle ?? 45;
+  const halfAngle = (beamAngle / 2) * (Math.PI / 180);
+  const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR);
+  gradient.addColorStop(0, 'rgba(255,240,180,0.9)');
+  gradient.addColorStop(Math.min(halfAngle / Math.PI, 0.8), 'rgba(255,200,80,0.5)');
+  gradient.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.beginPath();
+  ctx.arc(cx, cy, maxR, 0, Math.PI * 2);
+  ctx.fillStyle = gradient;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,200,0.3)';
+  ctx.lineWidth = 1;
+  for (let r = maxR / 4; r <= maxR; r += maxR / 4) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  return resolvedCanvas;
+}

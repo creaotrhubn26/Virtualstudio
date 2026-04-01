@@ -181,7 +181,8 @@ export class FocusController {
       if (!studio || !studio.lights) return;
       
       let hasChanged = false;
-      const lights = Array.from(studio.lights.values());
+      type LightEntry = { mesh?: { position: { x: number; y: number; z: number }; name?: string }; name?: string };
+      const lights = Array.from(studio.lights.values()) as LightEntry[];
       
       for (const lightData of lights) {
         if (!lightData || !lightData.mesh || !lightData.mesh.position) continue;
@@ -829,6 +830,7 @@ export class FocusController {
             id: mesh.uniqueId?.toString() || 'mesh-model',
             name: modelName,
             type: 'model' as const,
+            visible: true,
             transform: { position: pos, rotation: [0, 0, 0], scale: [1, 1, 1] }
           }];
         }
@@ -1056,7 +1058,7 @@ export class FocusController {
         worldPos,
         BABYLON.Matrix.Identity(),
         studio.scene.getTransformMatrix(),
-        { x: 0, y: 0, width: canvasWidth, height: canvasHeight }
+        new BABYLON.Viewport(0, 0, canvasWidth, canvasHeight)
       );
       return { x: screenPos.x / canvasWidth, y: screenPos.y / canvasHeight };
     };
@@ -1184,6 +1186,7 @@ export class FocusController {
             id: mesh.uniqueId?.toString() || 'mesh-model',
             name: modelName,
             type: 'model' as const,
+            visible: true,
             transform: { position: pos, rotation: [0, 0, 0], scale: [1, 1, 1] }
           }];
         }
@@ -2396,7 +2399,7 @@ export class FocusController {
         try {
           const appStore = useAppStore.getState();
           const selectedNode = appStore.selectedNodeId 
-            ? appStore.scene.nodes.find(n => n.id === appStore.selectedNodeId)
+            ? appStore.scene.find((n) => n.id === appStore.selectedNodeId)
             : null;
           
           if (selectedNode && selectedNode.type === 'actor' && selectedNode.transform) {
@@ -2513,7 +2516,7 @@ export class FocusController {
               </defs>
               
               <rect x="${labelX - (positionLabel.length * 0.35)}%" 
-                    y="${parseFloat(screenY) - 2.2}%" 
+                    y="${screenY - 2.2}%" 
                     width="${positionLabel.length * 0.7}%" 
                     height="2.5%" 
                     fill="${positionColor}ee" 
@@ -2540,7 +2543,7 @@ export class FocusController {
               
               <!-- Light name with background -->
               <rect x="${labelX - (lightName.length * 0.25)}%" 
-                    y="${parseFloat(screenY) + 1.5}%" 
+                    y="${screenY + 1.5}%" 
                     width="${lightName.length * 0.5}%" 
                     height="1.8%" 
                     fill="rgba(0,0,0,0.7)" 
@@ -2548,7 +2551,7 @@ export class FocusController {
                     opacity="0.9"/>
               
               <text x="${labelX}%" 
-                    y="${parseFloat(screenY) + 2.4}%" 
+                    y="${screenY + 2.4}%" 
                     fill="${lightColor}" 
                     font-size="11" 
                     font-weight="700"
@@ -2560,7 +2563,7 @@ export class FocusController {
               
               <!-- Angle info with background -->
               <rect x="${labelX - 1.2}%" 
-                    y="${parseFloat(screenY) + 3.5}%" 
+                    y="${screenY + 3.5}%" 
                     width="2.4%" 
                     height="1.5%" 
                     fill="rgba(0,0,0,0.7)" 
@@ -2568,7 +2571,7 @@ export class FocusController {
                     opacity="0.9"/>
               
               <text x="${labelX}%" 
-                    y="${parseFloat(screenY) + 4.25}%" 
+                    y="${screenY + 4.25}%" 
                     fill="#ffffff" 
                     font-size="9" 
                     font-weight="600"

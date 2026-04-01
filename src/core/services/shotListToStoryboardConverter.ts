@@ -56,9 +56,9 @@ export function convertCastingShotToStoryboardFrame(
     thumbnailUrl: shot.imageUrl, // Use same image for thumbnail if available
     title: roleName || `Shot ${index + 1}`,
     description: shot.description || shot.notes,
-    shotType: shot.shotType,
-    cameraAngle: shot.cameraAngle,
-    cameraMovement: shot.cameraMovement,
+    shotType: shot.shotType ?? 'MS',
+    cameraAngle: shot.cameraAngle ?? 'eye-level',
+    cameraMovement: shot.cameraMovement ?? 'static',
     duration: shot.duration || 3, // Default 3 seconds if not specified
     status: 'draft',
     sceneSnapshot: shot.focalLength ? {
@@ -70,8 +70,8 @@ export function convertCastingShotToStoryboardFrame(
       },
       lights: [],
     } : undefined,
-    createdAt: shot.createdAt,
-    updatedAt: shot.updatedAt,
+    createdAt: shot.createdAt ?? new Date().toISOString(),
+    updatedAt: shot.updatedAt ?? new Date().toISOString(),
   };
 }
 

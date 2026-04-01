@@ -7,6 +7,9 @@ export interface ExportPreset {
   fps: number;
   quality: number;
   description: string;
+  icon?: string;
+  platform?: string;
+  config?: { width: number; height: number; fps: number };
 }
 
 export const EXPORT_PRESETS: ExportPreset[] = [

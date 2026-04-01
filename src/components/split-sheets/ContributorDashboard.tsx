@@ -17,6 +17,7 @@ import {
   CardContent,
   Stack,
   Chip,
+  Button,
   Table,
   TableBody,
   TableCell,
@@ -53,8 +54,8 @@ export default function ContributorDashboard({
   const [tabValue, setTabValue] = useState(0);
   
   // Get profession-specific styling
-  const { getUserProfessionColor, getProfessionDisplayName } = useDynamicProfessions();
-  const professionColor = getUserProfessionColor(profession);
+  const { getProfessionColor, getProfessionDisplayName } = useDynamicProfessions();
+  const professionColor = getProfessionColor(profession);
   const professionDisplayName = getProfessionDisplayName(profession);
   const professionIcon = getProfessionIcon(profession);
   

@@ -8,6 +8,8 @@ import React, { useState } from 'react';
 import {
   useQuery } from '@tanstack/react-query';
 import Grid from '@mui/material/Grid';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
 import { apiRequest } from '@/lib/queryClient';
 import {
   Box,
@@ -87,8 +89,8 @@ export default function SplitSheetViewer({
   const [editingContractId, setEditingContractId] = useState<string | undefined>(undefined);
   
   // Get profession-specific styling
-  const { getUserProfessionColor, getProfessionDisplayName } = useDynamicProfessions();
-  const professionColor = getUserProfessionColor(profession);
+  const { getProfessionColor, getProfessionDisplayName } = useDynamicProfessions();
+  const professionColor = getProfessionColor(profession);
   const professionDisplayName = getProfessionDisplayName(profession);
   const professionIcon = getProfessionIcon(profession);
 

@@ -63,6 +63,16 @@ class HairRenderingService {
   update(_deltaTime: number): void {
     if (!this.currentConfig?.physicsEnabled) return;
   }
+
+  async loadHairModel(_style: object, _options?: HairColorOptions): Promise<object> {
+    return {};
+  }
+}
+
+export interface HairColorOptions {
+  color?: string;
+  scale?: number;
+  position?: object;
 }
 
 export const hairRenderingService = new HairRenderingService();

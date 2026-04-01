@@ -177,6 +177,12 @@ class ExposureCalculatorService {
   calculateFalloff(distance1: number, distance2: number): number {
     return (distance1 / distance2) ** 2;
   }
+
+  checkMountCompatibility(lensMount: string, cameraMount: string): { compatible: boolean; warning?: string; adapterRequired?: boolean } {
+    const compatible = lensMount === cameraMount || lensMount === 'universal' || cameraMount === 'universal';
+    if (compatible) return { compatible: true };
+    return { compatible: false, warning: `Mount mismatch: ${lensMount} vs ${cameraMount}`, adapterRequired: true };
+  }
 }
 
 export const exposureCalculatorService = new ExposureCalculatorService();

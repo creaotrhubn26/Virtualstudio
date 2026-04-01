@@ -387,12 +387,12 @@ export const AnimatedTimeline: FC<AnimatedTimelineProps> = ({
     const handleMouseUp = () => setIsDragging(false);
     
     if (isDragging) {
-      window.addEventListener('mousemove', handleProgressDrag as EventListener);
+      window.addEventListener('mousemove', handleProgressDrag as unknown as EventListener);
       window.addEventListener('mouseup', handleMouseUp);
     }
     
     return () => {
-      window.removeEventListener('mousemove', handleProgressDrag as EventListener);
+      window.removeEventListener('mousemove', handleProgressDrag as unknown as EventListener);
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDragging, handleProgressDrag]);

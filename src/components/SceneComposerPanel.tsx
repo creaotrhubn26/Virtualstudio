@@ -1992,7 +1992,7 @@ ${analysis.recommendations.length > 0 ? analysis.recommendations.map(r => `- ${r
           <TextField
             fullWidth
             value={shareLink}
-            readOnly
+            inputProps={{ readOnly: true }}
             variant="outlined"
             sx={{
               '& .MuiOutlinedInput-root': {

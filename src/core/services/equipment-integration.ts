@@ -75,6 +75,7 @@ export interface EquipmentSpec {
   category?: string;
   specifications?: Record<string, unknown>;
   price?: number;
+  images?: string[];
 }
 
 export function searchEquipment(query: string, category?: string): EquipmentSpec[] {

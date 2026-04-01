@@ -264,7 +264,7 @@ export function AutoSceneOptimizer({
                             Expected Improvement: +{optimization.expectedImprovement}% composition score
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            Current Score: {optimization.overallScore}% → Expected: {optimization.overallScore + optimization.expectedImprovement}%
+                            Current Score: {optimization.overallScore ?? 0}% → Expected: {(optimization.overallScore ?? 0) + optimization.expectedImprovement}%
                           </Typography>
                         </Box>
                         <Button

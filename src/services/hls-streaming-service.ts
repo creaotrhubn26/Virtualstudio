@@ -152,5 +152,14 @@ export class HLSStreamingService {
     if (!Hls) return false;
     return Hls.isSupported() || document.createElement('video').canPlayType('application/vnd.apple.mpegurl') !== '';
   }
+  public static isSupported(): boolean {
+    const Hls = window.Hls;
+    if (!Hls) return false;
+    return Hls.isSupported() || document.createElement('video').canPlayType('application/vnd.apple.mpegurl') !== '';
+  }
+  public loadStream(videoElement: HTMLVideoElement, hlsUrl: string): void {
+    this.initialize(videoElement, hlsUrl).catch(err => console.warn('HLS loadStream error:', err));
+  }
+  public setQualityLevel(levelIndex: number): void { this.setQuality(levelIndex); }
 }
 

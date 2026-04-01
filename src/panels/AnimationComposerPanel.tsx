@@ -484,7 +484,7 @@ const TrackingEditor: React.FC<TrackingEditorProps> = ({ layer }) => {
     setTracking(layer.id, {
       ...tracking,
       targetId,
-      targetType: target?.type || 'mesh',
+      targetType: (['camera', 'light', 'mesh', 'actor', 'point'] as const).includes(target?.type as 'camera' | 'light' | 'mesh' | 'actor' | 'point') ? (target?.type as 'camera' | 'light' | 'mesh' | 'actor' | 'point') : 'mesh',
     });
   };
 

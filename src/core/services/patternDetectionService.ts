@@ -5,6 +5,11 @@ export interface DetectedPattern {
   description: string;
   label: string;
   lightIds: string[];
+  name?: string;
+  role?: string;
+  actualAngle?: number;
+  expectedAngle?: number;
+  distance?: number;
 }
 
 export interface LightPlacementTip {
@@ -14,6 +19,8 @@ export interface LightPlacementTip {
   priority: 'low' | 'medium' | 'high';
   actionType: 'move' | 'adjust-intensity' | 'adjust-angle' | 'add-modifier' | 'add-light';
   affectedLightId?: string;
+  category?: string;
+  icon?: string;
 }
 
 export interface PatternDetectionResult {

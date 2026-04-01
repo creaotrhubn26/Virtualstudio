@@ -168,7 +168,7 @@ export function LightShaperAttachmentPanel({
           ) : (
             <Grid container spacing={2}>
               {shapers.map((shaper) => (
-                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={shaper.shaper_id}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={shaper.id}>
                   <ShaperCard shaper={shaper} onSelect={() => handleSelectShaper(shaper)} />
                 </Grid>
               ))}
@@ -198,25 +198,22 @@ function ShaperCard({ shaper, onSelect }: { shaper: LightShaper; onSelect: () =>
       <CardMedia
         component="img"
         height="140"
-        image={shaper.thumbnail_url || '/library/placeholders/light-shaper.png'}
-        alt={shaper.shaper_name}
+        image={shaper.thumbnail || '/library/placeholders/light-shaper.png'}
+        alt={shaper.label}
         sx={{ objectFit: 'cover' }}
       />
       <CardContent sx={{ p: 1.5 }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 0.5 }}>
           <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13 }}>
-            {shaper.shaper_name}
+            {shaper.label}
           </Typography>
-          {shaper.is_recommended && (
-            <StarIcon sx={{ fontSize: 16, color: '#F59E0B' }} />
-          )}
         </Box>
 
         <Typography variant="caption" sx={{ color: '#6B7280', display: 'block', mb: 1 }}>
-          {shaper.mount_type.toUpperCase()} • {Math.round(shaper.compatibility_score * 100)}% match
+          {(shaper.mount ?? shaper.type).toUpperCase()}
         </Typography>
 
-        <Tooltip title={shaper.notes} placement="top">
+        <Tooltip title={shaper.type} placement="top">
           <Chip
             icon={<InfoIcon sx={{ fontSize: 14 }} />}
             label="Effects"

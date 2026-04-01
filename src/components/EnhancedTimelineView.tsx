@@ -97,7 +97,7 @@ export const EnhancedTimelineView: FC<EnhancedTimelineViewProps> = ({
           blocks.push({
             shot,
             scene,
-            color: SHOT_COLORS[shot.shotType] || '#9e9e9e',
+            color: SHOT_COLORS[shot.shotType ?? ''] || '#9e9e9e',
             startTime: cumulativeTime,
             duration: shot.duration || 10,
           });

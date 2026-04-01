@@ -10,6 +10,7 @@ export interface RecentItem {
 export interface PreferencesData {
   favorites: Record<string, string[]>;
   recent: Record<string, RecentItem[]>;
+  favoriteTemplates?: string[];
 }
 
 const PREFERENCES_KEY = 'virtualStudio_preferences';
@@ -100,6 +101,9 @@ export interface SnapshotPayload {
   description?: string;
   thumbnailUrl: string;
   sceneState: unknown;
+  cameraState?: unknown;
+  nodeCount?: number;
+  lightCount?: number;
 }
 
 export interface SnapshotRecord extends SnapshotPayload {

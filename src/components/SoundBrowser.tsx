@@ -20,6 +20,11 @@ import {
   Button,
   Divider,
   Collapse,
+  Card,
+  CardContent,
+  Stack,
+  Avatar,
+  Link,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';

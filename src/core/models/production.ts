@@ -352,8 +352,14 @@ export interface CastingShot {
   name?: string;
   description?: string;
   type?: ShotType;
-  cameraAngle?: CameraAngle;
-  cameraMovement?: CameraMovement;
+  shotType?: string;
+  cameraAngle?: string;
+  cameraMovement?: string;
+  focalLength?: number;
+  takesCount?: number | null;
+  lensRecommendation?: string;
+  lightingSetup?: string;
+  backgroundRecommendation?: string;
   status?: ShotStatus;
   priority?: ShotPriority;
   mediaType?: MediaType;
@@ -526,8 +532,10 @@ export interface SceneBreakdown {
   summary?: string;
   location?: string;
   locationId?: string;
+  sceneHeading?: string;
   timeOfDay?: 'day' | 'night' | 'dawn' | 'dusk' | (string & {});
   intExt?: 'INT' | 'EXT' | 'INT/EXT' | (string & {});
+  pageEstimate?: number;
   pages?: number;
   estimatedMinutes?: number;
   castIds?: string[];
@@ -535,6 +543,13 @@ export interface SceneBreakdown {
   notes?: string;
   createdAt?: string;
   updatedAt?: string;
+  // Extended fields used by timeline/storyboard components
+  locationName?: string;
+  estimatedDuration?: number;
+  duration?: number;
+  description?: string;
+  characters?: string[];
+  storyboardFrames?: StoryboardFrame[];
   [key: string]: unknown;
 }
 
@@ -546,6 +561,7 @@ export interface ScriptRevision {
   content?: string;
   createdAt?: string;
   createdBy?: string;
+  changesSummary?: string;
   [key: string]: unknown;
 }
 
@@ -606,6 +622,16 @@ export interface StoryboardFrame {
   sortOrder?: number;
   createdAt?: string;
   updatedAt?: string;
+  shotNumber?: string;
+  sketch?: string;
+  description?: string;
+  cameraAngle?: string;
+  movement?: string;
+  duration?: number;
+  scriptLineRange?: [number, number];
+  dialogueCharacter?: string;
+  imageSource?: 'ai' | 'ai-generated' | 'captured' | 'drawn' | 'uploaded' | 'generated' | 'sketch' | 'reference';
+  drawingData?: unknown;
   [key: string]: unknown;
 }
 

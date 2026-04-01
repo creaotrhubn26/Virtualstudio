@@ -158,7 +158,7 @@ export function LightContributionPanel({
                 {/* Light Info */}
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                   <Typography variant="caption" color="text.secondary">
-                    Power: {(light.power * 100).toFixed(0)}%
+                    Power: {((light.power ?? 0) * 100).toFixed(0)}%
                   </Typography>
                   {light.cct && (
                     <Typography variant="caption" color="text.secondary">

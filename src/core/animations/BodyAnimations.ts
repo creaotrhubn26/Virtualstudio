@@ -75,3 +75,55 @@ export class BodyAnimationController {
 }
 
 export const bodyAnimationController = new BodyAnimationController();
+
+export type HandGesture = 'relaxed' | 'fist' | 'open' | 'pointing' | 'peace' | 'thumbsUp' | 'ok' | 'grip' | 'pinch' | 'wave';
+
+export const HAND_PRESETS: Record<HandGesture, { label: string }> = {
+  relaxed: { label: 'Avslappet' },
+  fist: { label: 'Knyttneve' },
+  open: { label: 'Åpen' },
+  pointing: { label: 'Peker' },
+  peace: { label: 'Fredstegn' },
+  thumbsUp: { label: 'Tommel opp' },
+  ok: { label: 'OK' },
+  grip: { label: 'Grep' },
+  pinch: { label: 'Klype' },
+  wave: { label: 'Vinker' },
+};
+
+export const GESTURE_DEFINITIONS: Record<HandGesture, string> = {
+  relaxed: 'Fingers slightly curled, natural resting position',
+  fist: 'All fingers closed into a fist',
+  open: 'All fingers extended and spread',
+  pointing: 'Index finger extended, others curled',
+  peace: 'Index and middle finger extended in V shape',
+  thumbsUp: 'Thumb up, fingers curled',
+  ok: 'Index and thumb form circle, others extended',
+  grip: 'Fingers curled as if gripping object',
+  pinch: 'Thumb and index finger pinching',
+  wave: 'Fingers extended and slightly spread for waving',
+};
+
+export const HEAD_PRESETS: Record<string, { label: string; rotation: [number, number, number] }> = {
+  neutral: { label: 'Nøytral', rotation: [0, 0, 0] },
+  tiltLeft: { label: 'Tilt venstre', rotation: [0, 0, 15] },
+  tiltRight: { label: 'Tilt høyre', rotation: [0, 0, -15] },
+  lookUp: { label: 'Se opp', rotation: [-15, 0, 0] },
+  lookDown: { label: 'Se ned', rotation: [10, 0, 0] },
+  turnLeft: { label: 'Snu venstre', rotation: [0, -30, 0] },
+  turnRight: { label: 'Snu høyre', rotation: [0, 30, 0] },
+  chin: { label: 'Hake ned', rotation: [5, 0, 0] },
+};
+
+export const FULL_BODY_POSES: Record<string, { label: string }> = {
+  standing: { label: 'Stående' },
+  sitting: { label: 'Sittende' },
+  casual: { label: 'Avslappet' },
+  confident: { label: 'Selvsikker' },
+  crossed_arms: { label: 'Korslagte armer' },
+  hands_on_hips: { label: 'Hender på hofter' },
+  leaning: { label: 'Lener seg' },
+  walking: { label: 'Gående' },
+};
+
+export const BODY_ANIMATION_PRESETS = BODY_ANIMATION_CLIPS;

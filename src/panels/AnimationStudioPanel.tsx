@@ -132,7 +132,7 @@ interface AnimationStudioPanelProps {
   onToggleMotionPaths?: () => void;
   onExportStart?: () => void;
   onExportComplete?: (result: ExportResult) => void;
-  onFrameRender?: (time: number, frameIndex: number) => void;
+  onFrameRender?: (time: number, frameIndex?: number) => void;
   // Google Drive integration
   userId?: string;
   projectId?: string;
@@ -156,6 +156,10 @@ function RecordingControls({
   onRecordingStop,
 }: RecordingControlsProps) {
   const [recordingState, setRecordingState] = useState<RecordingState>({
+    status: 'idle',
+    startTime: null,
+    keyframes: [],
+    config: DEFAULT_RECORDING_CONFIG,
     isRecording: false,
     isPaused: false,
     currentTime: 0,
@@ -416,7 +420,7 @@ function TemplatesGallery({ nodes = [], onApplyTemplate }: TemplatesGalleryProps
     setSelectedTemplate(template);
     // Initialize node mapping
     const mapping: Record<string, string> = {};
-    template.requiredNodes.forEach((rn) => {
+    (template.requiredNodes ?? []).forEach((rn) => {
       // Try to auto-match
       const matchingNode = nodes.find(
         (n) => n.type === rn.type || n.name?.toLowerCase().includes(rn.role.toLowerCase())
@@ -506,7 +510,7 @@ function TemplatesGallery({ nodes = [], onApplyTemplate }: TemplatesGalleryProps
                         {template.name}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" noWrap>
-                        {template.totalDuration}s • {template.steps.length} steps
+                        {template.totalDuration}s • {(template.steps ?? []).length} steps
                       </Typography>
                     </Box>
                   </Box>
@@ -535,7 +539,7 @@ function TemplatesGallery({ nodes = [], onApplyTemplate }: TemplatesGalleryProps
             Map your scene objects to the template roles
           </Alert>
 
-          {selectedTemplate?.requiredNodes.map((rn) => (
+          {(selectedTemplate?.requiredNodes ?? []).map((rn) => (
             <Box key={rn.role} sx={{ mb: 2 }}>
               <Typography variant="subtitle2">
                 {rn.role}
@@ -568,7 +572,7 @@ function TemplatesGallery({ nodes = [], onApplyTemplate }: TemplatesGalleryProps
 
           <Box sx={{ mt: 2, p: 1, backgroundColor: '#1a1a2a', borderRadius: 1 }}>
             <Typography variant="caption" color="text.secondary">
-              Duration: {selectedTemplate?.totalDuration}s • Steps: {selectedTemplate?.steps.length}
+              Duration: {selectedTemplate?.totalDuration}s • Steps: {(selectedTemplate?.steps ?? []).length}
             </Typography>
           </Box>
         </DialogContent>
@@ -579,7 +583,7 @@ function TemplatesGallery({ nodes = [], onApplyTemplate }: TemplatesGalleryProps
             onClick={handleApplyTemplate}
             disabled={
               !selectedTemplate ||
-              selectedTemplate.requiredNodes.some((rn) => !nodeMapping[rn.role])
+              (selectedTemplate.requiredNodes ?? []).some((rn) => !nodeMapping[rn.role])
             }
           >
             Apply Template

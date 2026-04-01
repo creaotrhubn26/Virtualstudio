@@ -757,7 +757,7 @@ const PanelCreatorContent: React.FC = () => {
       ...formData,
       version: publishData.version,
       author: publishData.author,
-      category: publishData.category,
+      marketplaceCategory: publishData.category,
       tags: publishData.tags.split(',').map(t => t.trim()).filter(t => t),
       publishedToMarketplace: true,
       marketplaceId: formData.marketplaceId || `marketplace_${Date.now()}`,
@@ -1354,8 +1354,8 @@ const PanelCreatorContent: React.FC = () => {
                     Kategori
                   </InputLabel>
                   <Select
-                    value={formData.category || 'service'}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value as 'plugin' | 'service' | 'integration' })}
+                    value={formData.marketplaceCategory || 'plugin'}
+                    onChange={(e) => setFormData({ ...formData, marketplaceCategory: e.target.value as 'plugin' | 'service' | 'integration' })}
                     label="Kategori"
                     variant="outlined"
                     MenuProps={selectMenuProps}
@@ -1426,7 +1426,7 @@ const PanelCreatorContent: React.FC = () => {
                       setPublishData({
                         version: formData.version || '1.0.0',
                         author: formData.author || '',
-                        category: formData.category || 'service',
+                        category: formData.marketplaceCategory || 'plugin',
                         tags: formData.tags?.join(', ') || '',
                         price: 0,
                         makePublic: true,
@@ -1441,7 +1441,7 @@ const PanelCreatorContent: React.FC = () => {
                       setPublishData({
                         version: formData.version || '1.0.0',
                         author: formData.author || '',
-                        category: formData.category || 'service',
+                        category: formData.marketplaceCategory || 'plugin',
                         tags: formData.tags?.join(', ') || '',
                         price: 0,
                         makePublic: true,

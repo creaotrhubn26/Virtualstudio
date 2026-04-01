@@ -12,7 +12,7 @@ import { useMemo, type FC } from 'react';
 import { useThree } from '@react-three/fiber';
 import { Line, Sphere, Text } from '@react-three/drei';
 import * as THREE from 'three';
-import type { FaceLandmarks, HeadPose } from'../../services/FaceAnalysisEnhancements';
+import type { FaceLandmarks, HeadPose } from '../services/FaceAnalysisEnhancements';
 
 interface FaceAnalysisOverlayProps {
   landmarks?: FaceLandmarks[];

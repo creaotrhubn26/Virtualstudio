@@ -90,6 +90,16 @@ interface LayerItemProps {
 // ============================================================================
 
 const BLEND_MODE_INFO: Record<BlendMode, { label: string; description: string; color: string }> = {
+  override: {
+    label: 'Override',
+    description: 'Overrides all other layers',
+    color: '#f44336',
+  },
+  blend: {
+    label: 'Blend',
+    description: 'Blends with other layers',
+    color: '#00bcd4',
+  },
   replace: {
     label: 'Replace',
     description: 'Completely replaces the value',
@@ -432,7 +442,9 @@ export function AnimationLayersPanel({
     if (!original) return;
 
     const newLayer = animationBlendingService.createLayer(`${original.name} (Copy)`);
-    animationBlendingService.setLayerClip(newLayer.id, original.clipId);
+    if (original.clipId !== null) {
+      animationBlendingService.setLayerClip(newLayer.id, original.clipId);
+    }
     animationBlendingService.setLayerWeight(newLayer.id, original.weight);
     animationBlendingService.setLayerBlendMode(newLayer.id, original.blendMode);
     loadLayers();
@@ -497,7 +509,7 @@ export function AnimationLayersPanel({
   }, [clips]);
 
   const sortedLayers = useMemo(
-    () => [...layers].sort((a, b) => a.order - b.order),
+    () => [...layers].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
     [layers]
   );
 

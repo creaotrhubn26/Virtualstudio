@@ -43,7 +43,7 @@ export const usePanelForm = (
       publishedToMarketplace: panel.publishedToMarketplace || false,
       version: panel.version || '1.0.0',
       author: panel.author || '',
-      category: panel.category || 'service',
+      category: panel.category || 'custom',
       tags: panel.tags || [],
     });
     setValidationErrors({});

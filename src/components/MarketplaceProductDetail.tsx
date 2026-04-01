@@ -96,18 +96,20 @@ export function MarketplaceProductDetail({
         name: product?.name || '',
         description: product?.description || '',
         price: product?.price || 0,
-        category: product?.category || '',
+        category: (product?.category || 'feature') as 'feature' | 'asset' | 'template' | 'plugin',
         currency: product?.currency || 'NOK',
         version: product?.version || '',
-        author: product?.author ? { ...product.author } : { name: '', email: '' },
-        tags: product?.tags ? [...product.tags] : [],
-        features: product?.features ? [...product.features] : [],
-        requirements: product?.requirements ? { ...product.requirements } : { minVersion: '', dependencies: [] },
+        author: product?.author ? { ...product.author } : { id: '', name: '', avatar: undefined },
+        tags: product?.tags ? [...product.tags] : [] as string[],
+        features: product?.features ? [...product.features] : [] as string[],
+        requirements: product?.requirements
+          ? { minVersion: product.requirements.minVersion ?? '', dependencies: [...(product.requirements.dependencies ?? [])] as string[] }
+          : { minVersion: '', dependencies: [] as string[] },
         releaseDate: product?.releaseDate || '',
         license: product?.license || '',
         whatsNew: product?.whatsNew || '',
         thumbnail: product?.thumbnail || '',
-        screenshots: product?.screenshots ? [...product.screenshots] : [],
+        screenshots: product?.screenshots ? [...product.screenshots] : [] as string[],
       };
     } catch (error) {
       console.error('Error initializing editData:', error);
@@ -115,18 +117,18 @@ export function MarketplaceProductDetail({
         name: '',
         description: '',
         price: 0,
-        category: '',
+        category: 'feature' as 'feature' | 'asset' | 'template' | 'plugin',
         currency: 'NOK',
         version: '',
-        author: { name: '', email: '' },
-        tags: [],
-        features: [],
-        requirements: { minVersion: '', dependencies: [] },
+        author: { id: '', name: '', avatar: undefined },
+        tags: [] as string[],
+        features: [] as string[],
+        requirements: { minVersion: '', dependencies: [] as string[] },
         releaseDate: '',
         license: '',
         whatsNew: '',
         thumbnail: '',
-        screenshots: [],
+        screenshots: [] as string[],
       };
     }
   });
@@ -142,10 +144,10 @@ export function MarketplaceProductDetail({
         category: product.category || '',
         currency: product.currency || 'NOK',
         version: product.version || '',
-        author: product.author ? { ...product.author } : { name: '', email: '' },
+        author: product.author ? { ...product.author } : { id: '', name: '' },
         tags: product.tags ? [...product.tags] : [],
         features: product.features ? [...product.features] : [],
-        requirements: product.requirements ? { ...product.requirements } : { minVersion: '', dependencies: [] },
+        requirements: { minVersion: product.requirements?.minVersion ?? '', dependencies: product.requirements?.dependencies ?? [] },
         releaseDate: product.releaseDate || '',
         license: product.license || '',
         whatsNew: product.whatsNew || '',
@@ -213,9 +215,9 @@ export function MarketplaceProductDetail({
       }
     };
 
-    dialog.addEventListener('keydown', handleKeyDown);
+    dialog.addEventListener('keydown', handleKeyDown as unknown as EventListener);
     return () => {
-      dialog.removeEventListener('keydown', handleKeyDown);
+      dialog.removeEventListener('keydown', handleKeyDown as unknown as EventListener);
     };
   }, [open, isEditing, onClose]);
 
@@ -246,7 +248,7 @@ export function MarketplaceProductDetail({
       author: { ...product.author },
       tags: [...product.tags],
       features: [...product.features],
-      requirements: product.requirements ? { ...product.requirements } : { minVersion: '', dependencies: [] },
+      requirements: { minVersion: product.requirements?.minVersion ?? '', dependencies: product.requirements?.dependencies ?? [] },
       releaseDate: product.releaseDate,
       license: product.license,
       whatsNew: product.whatsNew || '',

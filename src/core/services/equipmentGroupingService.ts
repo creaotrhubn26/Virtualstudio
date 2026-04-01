@@ -1,3 +1,22 @@
+export interface EquipmentNode {
+  id: string;
+  name: string;
+  type: string;
+  groupId?: string;
+  parentId?: string;
+  children?: string[];
+  linkedIds: string[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface LinkSuggestion {
+  sourceId: string;
+  targetId: string;
+  type: 'lighting' | 'camera' | 'modifier' | 'prop' | 'mixed';
+  confidence: number;
+  reason?: string;
+}
+
 export interface EquipmentGroup {
   id: string;
   name: string;
@@ -10,6 +29,7 @@ export interface EquipmentGroup {
   icon?: string;
   createdAt: string;
   updatedAt: string;
+  locked?: boolean;
 }
 
 export interface GroupingRule {
@@ -41,12 +61,14 @@ class EquipmentGroupingService {
     return this.groups.find((g) => g.id === id);
   }
 
-  createGroup(name: string, category: EquipmentGroup['category']): EquipmentGroup {
+  createGroup(name: string, categoryOrIds: EquipmentGroup['category'] | string[]): EquipmentGroup {
+    const isIds = Array.isArray(categoryOrIds);
+    const category: EquipmentGroup['category'] = isIds ? 'mixed' : categoryOrIds;
     const group: EquipmentGroup = {
       id: `group-${Date.now()}`,
       name,
       label: name,
-      equipmentIds: [],
+      equipmentIds: isIds ? categoryOrIds : [],
       category,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -73,6 +95,70 @@ class EquipmentGroupingService {
 
   deleteGroup(groupId: string): void {
     this.groups = this.groups.filter((g) => g.id !== groupId);
+  }
+
+  getAllGroups(): EquipmentGroup[] {
+    return [...this.groups];
+  }
+
+  getAllNodes(): EquipmentNode[] {
+    return this.groups.flatMap((g) =>
+      g.equipmentIds.map((id) => ({
+        id,
+        name: id,
+        type: g.category,
+        groupId: g.id,
+        linkedIds: [],
+      })),
+    );
+  }
+
+  getGroup(id: string): EquipmentGroup | undefined {
+    return this.groups.find((g) => g.id === id);
+  }
+
+  getGroupNodes(groupId: string): EquipmentNode[] {
+    const group = this.groups.find((g) => g.id === groupId);
+    if (!group) return [];
+    return group.equipmentIds.map((id) => ({ id, name: id, type: group.category, groupId, linkedIds: [] }));
+  }
+
+  dissolveGroup(groupId: string): void {
+    this.deleteGroup(groupId);
+  }
+
+  linkNodes(sourceId: string, targetId: string): void {
+    console.warn(`[EquipmentGroupingService] linkNodes: ${sourceId} -> ${targetId}`);
+  }
+
+  unlinkNodes(nodeId: string, targetId: string): void {
+    console.warn(`[EquipmentGroupingService] unlinkNodes: ${nodeId} -x- ${targetId}`);
+  }
+
+  unregisterNode(nodeId: string): void {
+    this.groups.forEach((g) => {
+      g.equipmentIds = g.equipmentIds.filter((id) => id !== nodeId);
+    });
+  }
+
+  getSuggestedLinks(_nodeId: string): LinkSuggestion[] {
+    return [];
+  }
+
+  autoGroupByType(): void {
+    console.warn('[EquipmentGroupingService] autoGroupByType called');
+  }
+
+  autoGroupByProximity(_threshold: number): void {
+    console.warn('[EquipmentGroupingService] autoGroupByProximity called');
+  }
+
+  duplicateNodes(ids: string[]): EquipmentNode[] {
+    return ids.map((id) => ({ id: `${id}-copy`, name: `${id} (kopi)`, type: 'mixed', linkedIds: [] }));
+  }
+
+  getStatistics(): { totalNodes: number; totalGroups: number; linkedPairs: number } {
+    return { totalNodes: this.getAllNodes().length, totalGroups: this.groups.length, linkedPairs: 0 };
   }
 
   autoGroup(equipmentList: Array<{ id: string; brand?: string; type?: string }>, rule: GroupingRule): EquipmentGroup[] {

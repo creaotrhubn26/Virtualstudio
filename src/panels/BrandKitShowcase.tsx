@@ -19,8 +19,7 @@ import {
   Tooltip,
 } from '@mui/material';
 import { ContentCopy, Download, Palette, Image as ImageIcon, Code } from '@mui/icons-material';
-import { brandKit, brandColors, brandTypography, featureIcons } from '../../assets/brandkit';
-import { integrationService } from '../../services/integrations';
+import { brandKit, brandColors, brandTypography, featureIcons } from '../assets/brandkit';
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -40,25 +39,34 @@ export const BrandKitShowcase: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [copied, setCopied] = useState<string | null>(null);
 
+  // Adapt flat brandColors array to the palette shape the JSX expects
+  const colorGroups = {
+    primary: Object.fromEntries(brandColors.slice(0, 3).map(c => [c.name.toLowerCase().replace(/\s+/g, '_'), c.hex])),
+    accent: Object.fromEntries(brandColors.slice(3, 6).map(c => [c.name.toLowerCase().replace(/\s+/g, '_'), c.hex])),
+    functional: Object.fromEntries(brandColors.slice(6).map(c => [c.name.toLowerCase().replace(/\s+/g, '_'), c.hex])),
+  } as Record<string, Record<string, string>>;
+  // Adapt brandTypography to the shape the JSX expects
+  const typographyAdapted = {
+    fontFamily: { display: brandTypography.family, mono: 'monospace' },
+    fontSize: Object.fromEntries(Object.entries(brandTypography.sizes).map(([k, v]) => [k, v])) as Record<string, number>,
+    fontWeight: Object.fromEntries(brandTypography.weights.map(w => [`w${w}`, w])) as Record<string, number>,
+  };
+  // Adapt featureIcons array to icon record for path-based display
+  const iconEntries: [string, string][] = featureIcons.map(i => [i.name, i.path]);
+
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopied(id);
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const handleDownloadSVG = async (svg: string, filename: string) => {
+  const handleDownloadSVG = (svgContent: string, filename: string) => {
     try {
-      // Use SVG renderer to convert to PNG
-      const blob = await integrationService.svgRenderer.renderToBlob(svg, {
-        width: 1200,
-        height: 630,
-        format: 'png',
-      });
-
+      const blob = new Blob([svgContent], { type: 'image/svg+xml' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${filename}.png`;
+      a.download = `${filename}.svg`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (error) {
@@ -88,7 +96,7 @@ export const BrandKitShowcase: React.FC = () => {
               Primary Palette
             </Typography>
             <Grid container spacing={2}>
-              {Object.entries(brandColors.primary).map(([name, color]) => (
+              {Object.entries(colorGroups.primary).map(([name, color]) => (
                 <Grid size={{ xs: 12, sm: 6, md: 3 }} key={name}>
                   <Card
                     sx={{ cursor: 'pointer' }}
@@ -135,7 +143,7 @@ export const BrandKitShowcase: React.FC = () => {
               Accent Palette
             </Typography>
             <Grid container spacing={2}>
-              {Object.entries(brandColors.accent).map(([name, color]) => (
+              {Object.entries(colorGroups.accent).map(([name, color]) => (
                 <Grid size={{ xs: 12, sm: 6, md: 3 }} key={name}>
                   <Card
                     sx={{ cursor: 'pointer' }}
@@ -169,7 +177,7 @@ export const BrandKitShowcase: React.FC = () => {
               Functional Colors
             </Typography>
             <Grid container spacing={2}>
-              {Object.entries(brandColors.functional).map(([name, color]) => (
+              {Object.entries(colorGroups.functional).map(([name, color]) => (
                 <Grid size={{ xs: 12, sm: 6, md: 3 }} key={name}>
                   <Card
                     sx={{ cursor: 'pointer' }}
@@ -205,19 +213,19 @@ export const BrandKitShowcase: React.FC = () => {
               <Typography variant="h6" gutterBottom sx={{ color: '#fff' }}>
                 Main Logo
               </Typography>
-              <Box sx={{ mb: 2 }} dangerouslySetInnerHTML={{ __html: brandKit.logos.main }} />
+              <Box sx={{ mb: 2 }} dangerouslySetInnerHTML={{ __html: brandKit.logos?.main ?? `<img src="${brandKit.logoUrl}" alt="logo" style="max-height:80px" />` }} />
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button
                   size="small"
                   startIcon={<ContentCopy />}
-                  onClick={() => handleCopy(brandKit.logos.main, 'logo-main')}
+                  onClick={() => handleCopy(brandKit.logos?.main ?? brandKit.logoUrl, 'logo-main')}
                 >
                   {copied === 'logo-main' ? 'Copied!' : 'Copy SVG'}
                 </Button>
                 <Button
                   size="small"
                   startIcon={<Download />}
-                  onClick={() => handleDownloadSVG(brandKit.logos.main, 'virtual-studio-logo')}
+                  onClick={() => handleDownloadSVG(brandKit.logos?.main ?? brandKit.logoUrl, 'virtual-studio-logo')}
                 >
                   Export PNG
                 </Button>
@@ -231,19 +239,19 @@ export const BrandKitShowcase: React.FC = () => {
               <Typography variant="h6" gutterBottom sx={{ color: '#fff' }}>
                 Icon Logo
               </Typography>
-              <Box sx={{ mb: 2 }} dangerouslySetInnerHTML={{ __html: brandKit.logos.icon }} />
+              <Box sx={{ mb: 2 }} dangerouslySetInnerHTML={{ __html: brandKit.logos?.icon ?? `<img src="${brandKit.logomarkUrl}" alt="logomark" style="max-height:80px" />` }} />
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button
                   size="small"
                   startIcon={<ContentCopy />}
-                  onClick={() => handleCopy(brandKit.logos.icon, 'logo-icon')}
+                  onClick={() => handleCopy(brandKit.logos?.icon ?? brandKit.logomarkUrl, 'logo-icon')}
                 >
                   {copied === 'logo-icon' ? 'Copied!' : 'Copy SVG'}
                 </Button>
                 <Button
                   size="small"
                   startIcon={<Download />}
-                  onClick={() => handleDownloadSVG(brandKit.logos.icon, 'virtual-studio-icon')}
+                  onClick={() => handleDownloadSVG(brandKit.logos?.icon ?? brandKit.logomarkUrl, 'virtual-studio-icon')}
                 >
                   Export PNG
                 </Button>
@@ -260,12 +268,12 @@ export const BrandKitShowcase: React.FC = () => {
               <Typography variant="body2" color="text.secondary" gutterBottom>
                 Use this watermark on exported videos and renders
               </Typography>
-              <Box sx={{ mb: 2 }} dangerouslySetInnerHTML={{ __html: brandKit.watermark }} />
+              <Box sx={{ mb: 2 }} dangerouslySetInnerHTML={{ __html: brandKit.watermark ?? `<svg width="120" height="24" xmlns="http://www.w3.org/2000/svg"><text x="0" y="18" fill="#0A84FF" font-family="Inter,sans-serif" font-size="14">Virtual Studio</text></svg>` }} />
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button
                   size="small"
                   startIcon={<ContentCopy />}
-                  onClick={() => handleCopy(brandKit.watermark, 'watermark')}
+                  onClick={() => handleCopy(brandKit.watermark ?? '', 'watermark')}
                 >
                   {copied === 'watermark' ? 'Copied!' : 'Copy SVG'}
                 </Button>
@@ -278,12 +286,12 @@ export const BrandKitShowcase: React.FC = () => {
       {/* ICONS TAB */}
       <TabPanel value={activeTab} index={2}>
         <Grid container spacing={3}>
-          {Object.entries(featureIcons).map(([name, svg]) => (
+          {iconEntries.map(([name, iconPath]) => (
             <Grid size={{ xs: 6, sm: 4, md: 3, lg: 2 }} key={name}>
               <Card
                 sx={{
                   cursor: 'pointer', '&:hover': { transform: 'scale(1.05)', transition: '0.2s' }}}
-                onClick={() => handleCopy(svg, `icon-${name}`)}
+                onClick={() => handleCopy(iconPath, `icon-${name}`)}
               >
                 <Box
                   sx={{
@@ -292,9 +300,10 @@ export const BrandKitShowcase: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     backgroundColor: '#1A1A1A',
-                    color: brandColors.primary.main}}
-                  dangerouslySetInnerHTML={{ __html: svg }}
-                />
+                    color: Object.values(colorGroups.primary)[0] ?? '#0A84FF'}}
+                >
+                  <img src={iconPath} alt={name} style={{ width: 40, height: 40, filter: 'invert(1)' }} />
+                </Box>
                 <CardContent>
                   <Typography variant="caption" sx={{ textTransform: 'capitalize' }}>
                     {name}
@@ -320,7 +329,7 @@ export const BrandKitShowcase: React.FC = () => {
               <Typography variant="subtitle2" gutterBottom sx={{ color: '#fff' }}>
                 Grid Pattern
               </Typography>
-              <Box dangerouslySetInnerHTML={{ __html: brandKit.decorative.gridPattern }} />
+              <Box dangerouslySetInnerHTML={{ __html: brandKit.decorative?.gridPattern ?? '' }} />
             </Paper>
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
@@ -328,7 +337,7 @@ export const BrandKitShowcase: React.FC = () => {
               <Typography variant="subtitle2" gutterBottom sx={{ color: '#fff' }}>
                 Gradient Orb
               </Typography>
-              <Box dangerouslySetInnerHTML={{ __html: brandKit.decorative.gradientOrb }} />
+              <Box dangerouslySetInnerHTML={{ __html: brandKit.decorative?.gradientOrb ?? '' }} />
             </Paper>
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
@@ -336,7 +345,7 @@ export const BrandKitShowcase: React.FC = () => {
               <Typography variant="subtitle2" gutterBottom sx={{ color: '#fff' }}>
                 Loading Spinner
               </Typography>
-              <Box dangerouslySetInnerHTML={{ __html: brandKit.loadingSpinner }} />
+              <Box dangerouslySetInnerHTML={{ __html: brandKit.loadingSpinner ?? '' }} />
             </Paper>
           </Grid>
         </Grid>
@@ -352,12 +361,12 @@ export const BrandKitShowcase: React.FC = () => {
             <Typography
               variant="body1"
               gutterBottom
-              sx={{ fontFamily: brandTypography.fontFamily.display }}
+              sx={{ fontFamily: typographyAdapted.fontFamily.display }}
             >
-              <strong>Display/Body:</strong> {brandTypography.fontFamily.display}
+              <strong>Display/Body:</strong> {typographyAdapted.fontFamily.display}
             </Typography>
-            <Typography variant="body1" sx={{ fontFamily: brandTypography.fontFamily.mono }}>
-              <strong>Monospace:</strong> {brandTypography.fontFamily.mono}
+            <Typography variant="body1" sx={{ fontFamily: typographyAdapted.fontFamily.mono }}>
+              <strong>Monospace:</strong> {typographyAdapted.fontFamily.mono}
             </Typography>
           </Box>
 
@@ -367,7 +376,7 @@ export const BrandKitShowcase: React.FC = () => {
             Font Sizes
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {Object.entries(brandTypography.fontSize).map(([name, size]) => (
+            {Object.entries(typographyAdapted.fontSize).map(([name, size]) => (
               <Box key={name}>
                 <Typography variant="caption" color="text.secondary">
                   {name} - {size}
@@ -385,8 +394,8 @@ export const BrandKitShowcase: React.FC = () => {
             Font Weights
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {Object.entries(brandTypography.fontWeight).map(([name, weight]) => (
-              <Typography key={name} style={{ fontWeight: eight }}>
+            {Object.entries(typographyAdapted.fontWeight).map(([name, weight]) => (
+              <Typography key={name} style={{ fontWeight: weight }}>
                 {name} ({weight}) - CreatorHub Virtual Studio
               </Typography>
             ))}

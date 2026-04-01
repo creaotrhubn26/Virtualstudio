@@ -2535,9 +2535,10 @@ export const CrewCalendarPanel: React.FC<CrewCalendarPanelProps> = ({
                           </Typography>
                         )}
                         {event.crewIds.length > 0 && heightPx > 100 && (
-                          <AvatarGroup max={4} sx={{ mt: 1 }}>
+                          <Box style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                             {crew
                               .filter((c) => event.crewIds.includes(c.id))
+                              .slice(0, 4)
                               .map((member) => (
                                 <Avatar
                                   key={member.id}
@@ -2552,7 +2553,7 @@ export const CrewCalendarPanel: React.FC<CrewCalendarPanelProps> = ({
                                   {member.name.charAt(0)}
                                 </Avatar>
                               ))}
-                          </AvatarGroup>
+                          </Box>
                         )}
                       </Box>
                     );

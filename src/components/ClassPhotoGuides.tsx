@@ -93,7 +93,7 @@ const HeadAlignmentLines: FC<{
     
     for (const row of session.rows) {
       // Get students in this row
-      const rowStudents = row.studentIds
+      const rowStudents = (row.studentIds ?? [])
         .map(id => session.students.get(id))
         .filter(Boolean) as Student[];
       
@@ -101,13 +101,13 @@ const HeadAlignmentLines: FC<{
       
       // Calculate average head height for this row
       const avgHeadHeight = rowStudents.reduce((sum, s) => {
-        const headY = s.position3D.y + (s.height / 100) * 0.95; // Top of head
+        const headY = (s.position3D?.y ?? 0) + (s.height / 100) * 0.95; // Top of head
         return sum + headY;
       }, 0) / rowStudents.length;
       
       result.push({
         y: avgHeadHeight,
-        z: row.zPosition,
+        z: row.zPosition ?? 0,
         label: `Row ${row.index + 1}`,
       });
     }
@@ -115,7 +115,7 @@ const HeadAlignmentLines: FC<{
     return result;
   }, [session]);
   
-  const width = session.sceneWidth + 1;
+  const width = (session.sceneWidth ?? 8) + 1;
   
   return (
     <group name="HeadAlignmentLines">
@@ -168,8 +168,11 @@ const CameraFOVCone: FC<{
   const { cameraPosition, cameraTarget, sceneWidth, sceneDepth } = session;
   
   const fovLines = useMemo(() => {
+    if (!cameraPosition || !cameraTarget) return null;
     // Calculate FOV edges
-    const distance = cameraPosition.distanceTo(cameraTarget);
+    const cpVec = new THREE.Vector3(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+    const ctVec = new THREE.Vector3(cameraTarget.x, cameraTarget.y, cameraTarget.z);
+    const distance = cpVec.distanceTo(ctVec);
     const halfFOV = (fov / 2) * (Math.PI / 180);
     const halfWidth = Math.tan(halfFOV) * distance;
     
@@ -178,7 +181,7 @@ const CameraFOVCone: FC<{
     const halfHeight = halfWidth / aspectRatio;
     
     // Ground level intersection points
-    const groundZ = -sceneDepth;
+    const groundZ = -(sceneDepth ?? 5);
     const groundDistance = cameraPosition.z - groundZ;
     const groundHalfWidth = Math.tan(halfFOV) * groundDistance;
     
@@ -190,6 +193,8 @@ const CameraFOVCone: FC<{
     };
   }, [cameraPosition, cameraTarget, fov, sceneDepth]);
   
+  if (!cameraPosition || !fovLines) return null;
+
   const camPos: [number, number, number] = [
     cameraPosition.x,
     cameraPosition.y,
@@ -264,8 +269,10 @@ const EdgeWarningZones: FC<{
   const { cameraPosition, sceneDepth } = session;
   
   const zones = useMemo(() => {
+    if (!cameraPosition) return null;
+    const depth = sceneDepth ?? 5;
     const halfFOV = (fov / 2) * (Math.PI / 180);
-    const groundZ = -sceneDepth;
+    const groundZ = -depth;
     const groundDistance = cameraPosition.z - groundZ;
     const frameHalfWidth = Math.tan(halfFOV) * groundDistance;
     
@@ -279,12 +286,14 @@ const EdgeWarningZones: FC<{
       warningWidth,
       cautionWidth,
       groundZ,
-      depth: sceneDepth + 2,
+      depth: depth + 2,
     };
   }, [cameraPosition, fov, sceneDepth]);
   
   const height = 2.5; // Height of warning zone
   
+  if (!zones) return null;
+
   return (
     <group name="EdgeWarningZones">
       {/* Left warning zone */}
@@ -343,7 +352,7 @@ const SpacingRulers: FC<{
     
     // For each row, show spacing between first few students
     for (const row of session.rows) {
-      const rowStudents = row.studentIds
+      const rowStudents = (row.studentIds ?? [])
         .map(id => session.students.get(id))
         .filter(Boolean) as Student[];
       
@@ -352,13 +361,16 @@ const SpacingRulers: FC<{
       // Only show ruler between first two students per row
       const s1 = rowStudents[0];
       const s2 = rowStudents[1];
-      const y = row.baseHeight + 0.05;
+      const y = (row.baseHeight ?? 0) + 0.05;
+      const s1x = s1.position3D?.x ?? 0;
+      const s2x = s2.position3D?.x ?? 0;
+      const rowZ = row.zPosition ?? 0;
       
-      const distance = Math.abs(s2.position3D.x - s1.position3D.x);
+      const distance = Math.abs(s2x - s1x);
       
       result.push({
-        start: [s1.position3D.x, y, row.zPosition + 0.1],
-        end: [s2.position3D.x, y, row.zPosition + 0.1],
+        start: [s1x, y, rowZ + 0.1],
+        end: [s2x, y, rowZ + 0.1],
         distance,
         label: `${(distance * 100).toFixed(0)}cm`,
       });
@@ -431,6 +443,7 @@ const CenterLine: FC<{
   session: ClassPhotoSession;
 }> = ({ session }) => {
   const { sceneDepth, cameraPosition } = session;
+  if (!sceneDepth || !cameraPosition) return null;
   
   return (
     <group name="CenterLine">
@@ -503,19 +516,19 @@ const HeightGapIndicators: FC<{
       const backRow = session.rows[i + 1];
       
       // Get average head heights
-      const frontStudents = frontRow.studentIds
+      const frontStudents = (frontRow.studentIds ?? [])
         .map(id => session.students.get(id))
         .filter(Boolean) as Student[];
-      const backStudents = backRow.studentIds
+      const backStudents = (backRow.studentIds ?? [])
         .map(id => session.students.get(id))
         .filter(Boolean) as Student[];
       
       if (frontStudents.length === 0 || backStudents.length === 0) continue;
       
       const frontAvgHead = frontStudents.reduce((sum, s) => 
-        sum + s.position3D.y + (s.height / 100) * 0.95, 0) / frontStudents.length;
+        sum + (s.position3D?.y ?? 0) + (s.height / 100) * 0.95, 0) / frontStudents.length;
       const backAvgHead = backStudents.reduce((sum, s) => 
-        sum + s.position3D.y + (s.height / 100) * 0.95, 0) / backStudents.length;
+        sum + (s.position3D?.y ?? 0) + (s.height / 100) * 0.95, 0) / backStudents.length;
       
       const gap = backAvgHead - frontAvgHead;
       
@@ -524,7 +537,7 @@ const HeightGapIndicators: FC<{
         row2: i + 1,
         y1: frontAvgHead,
         y2: backAvgHead,
-        z: (frontRow.zPosition + backRow.zPosition) / 2,
+        z: ((frontRow.zPosition ?? 0) + (backRow.zPosition ?? 0)) / 2,
         gap,
         isGood: gap >= SPACING.minHeadGap,
       });
@@ -533,7 +546,7 @@ const HeightGapIndicators: FC<{
     return result;
   }, [session]);
   
-  const x = session.sceneWidth / 2 + 0.5;
+  const x = (session.sceneWidth ?? 8) / 2 + 0.5;
   
   return (
     <group name="HeightGapIndicators">
@@ -598,6 +611,7 @@ const EyeLineGuide: FC<{
   session: ClassPhotoSession;
 }> = ({ session }) => {
   const { cameraPosition, cameraTarget } = session;
+  if (!cameraPosition) return null;
   
   // Calculate eye convergence point (slightly above camera)
   const eyeTarget: [number, number, number] = [
@@ -613,7 +627,7 @@ const EyeLineGuide: FC<{
     const corners: Student[] = [];
     
     for (const row of session.rows) {
-      const rowStudents = row.studentIds
+      const rowStudents = (row.studentIds ?? [])
         .map(id => session.students.get(id))
         .filter(Boolean) as Student[];
       
@@ -638,11 +652,11 @@ const EyeLineGuide: FC<{
       
       {/* Eye lines from corners */}
       {cornerStudents.map((student, idx) => {
-        const eyeHeight = student.position3D.y + (student.height / 100) * 0.9;
+        const eyeHeight = (student.position3D?.y ?? 0) + (student.height / 100) * 0.9;
         const studentEye: [number, number, number] = [
-          student.position3D.x,
+          student.position3D?.x ?? 0,
           eyeHeight,
-          student.position3D.z,
+          student.position3D?.z ?? 0,
         ];
         
         return (
@@ -682,11 +696,12 @@ const DOFPreview: FC<{
   focusDistance?: number;
 }> = ({ session, aperture = 8, focusDistance }) => {
   const { cameraPosition, rows } = session;
+  if (!cameraPosition) return null;
   
   // Calculate focus distance (default to middle row)
   const focus = focusDistance || (
     rows.length > 0 
-      ? cameraPosition.z - rows[Math.floor(rows.length / 2)].zPosition 
+      ? cameraPosition.z - (rows[Math.floor(rows.length / 2)].zPosition ?? 0) 
       : 5
   );
   
@@ -709,7 +724,7 @@ const DOFPreview: FC<{
     };
   }, [focus, aperture]);
   
-  const width = session.sceneWidth + 2;
+  const width = (session.sceneWidth ?? 8) + 2;
   
   return (
     <group name="DOFPreview">
@@ -789,6 +804,7 @@ const AspectRatioFrame: FC<{
   fov?: number;
 }> = ({ session, aspectRatio, fov = 50 }) => {
   const { cameraPosition, sceneDepth } = session;
+  if (!cameraPosition || !sceneDepth) return null;
   
   const frame = useMemo(() => {
     const halfFOV = (fov / 2) * (Math.PI / 180);

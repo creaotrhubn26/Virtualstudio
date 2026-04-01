@@ -65,8 +65,8 @@ const StudentMesh: FC<StudentMeshProps> = ({
     // Teachers use their role color, students use visibility color
     const color = student.isTeacher && student.color
       ? student.color
-      : student.visibilityScore >= 80 ? '#2e7d32' : 
-        student.visibilityScore >= 50 ? '#ed6c02' : '#d32f2f';
+      : (student.visibilityScore ?? 100) >= 80 ? '#2e7d32' : 
+        (student.visibilityScore ?? 100) >= 50 ? '#ed6c02' : '#d32f2f';
     
     return createStudentPlaceholder({
       height: student.height,
@@ -93,7 +93,7 @@ const StudentMesh: FC<StudentMeshProps> = ({
   return (
     <group
       ref={meshRef}
-      position={[student.position3D.x, student.position3D.y, student.position3D.z]}
+      position={[student.position3D?.x ?? 0, student.position3D?.y ?? 0, student.position3D?.z ?? 0]}
       onClick={(e) => {
         e.stopPropagation();
         onClick();
@@ -139,19 +139,19 @@ const StudentMesh: FC<StudentMeshProps> = ({
       )}
       
       {/* Visibility warning */}
-      {student.visibilityScore < 80 && (
+      {(student.visibilityScore ?? 100) < 80 && (
         <Html
           position={[0, student.height / 100 + 0.05, 0]}
           center
           style={{ pointerEvents: 'none' }}
         >
           <div style={{
-            background: student.visibilityScore < 50 ? '#f44336' : '#ff9800',
+            background: (student.visibilityScore ?? 100) < 50 ? '#f44336' : '#ff9800',
             color: 'white',
             padding: '1px 4px',
             borderRadius: '2px',
             fontSize: '8px'}}>
-            {student.visibilityScore}%
+            {student.visibilityScore ?? 0}%
           </div>
         </Html>
       )}
@@ -169,19 +169,17 @@ const PropMesh: FC<{
   const propModel = useMemo(() => {
     switch (prop.type) {
       case 'riser':
-        return createPhotoRiser({
-          width: prop.width,
-          steps: Math.ceil(prop.height / 0.2),
-          stepHeight: 0.2,
-          stepDepth: 0.5,
-        });
+      case 'photo_riser':
+        return createPhotoRiser({ width: prop.width, height: prop.height });
       case 'bench':
-        return createGymBench(prop.width);
+      case 'gym_bench':
+        return createGymBench({ width: prop.width });
       case 'stool':
-        return createStool(prop.height);
+        return createStool({ height: prop.height });
       case 'apple_box':
-        return createAppleBox(prop.height >= 0.15 ? 'full' : 'half');
+        return createAppleBox({ height: prop.height });
       case 'chair':
+      case 'folding_chair':
         return createFoldingChair();
       default:
         return new THREE.Group();
@@ -190,8 +188,8 @@ const PropMesh: FC<{
   
   return (
     <group
-      position={[prop.position.x, prop.position.y, prop.position.z]}
-      rotation={[0, prop.rotation, 0]}
+      position={[prop.position?.x ?? 0, prop.position?.y ?? 0, prop.position?.z ?? 0]}
+      rotation={[0, prop.rotation?.y ?? 0, 0]}
     >
       <primitive object={propModel} />
     </group>
@@ -208,7 +206,7 @@ const RowIndicator: FC<{
   showLabel: boolean;
 }> = ({ row, width, showLabel }) => {
   return (
-    <group position={[0, 0.01, row.zPosition]}>
+    <group position={[0, 0.01, row.zPosition ?? 0]}>
       {/* Row line */}
       <Line
         points={[[-width / 2, 0, 0], [width / 2, 0, 0]]}
@@ -232,7 +230,7 @@ const RowIndicator: FC<{
             borderRadius: '4px',
             fontSize: '10px'}}>
             Row {row.index + 1}
-            {row.baseHeight > 0 && ` (+${Math.round(row.baseHeight * 100)}cm)`}
+            {(row.baseHeight ?? 0) > 0 && ` (+${Math.round((row.baseHeight ?? 0) * 100)}cm)`}
           </div>
         </Html>
       )}
@@ -253,23 +251,23 @@ const VisibilityLines: FC<{
   const student = session.students.get(selectedStudentId);
   if (!student) return null;
   
-  const eyeHeight = student.position3D.y + (student.height / 100) * 0.9;
+  const eyeHeight = (student.position3D?.y ?? 0) + (student.height / 100) * 0.9;
   const studentEyePos: [number, number, number] = [
-    student.position3D.x,
+    student.position3D?.x ?? 0,
     eyeHeight,
-    student.position3D.z,
+    student.position3D?.z ?? 0,
   ];
   
   const cameraPos: [number, number, number] = [
-    session.cameraPosition.x,
-    session.cameraPosition.y,
-    session.cameraPosition.z,
+    session.cameraPosition?.x ?? 0,
+    session.cameraPosition?.y ?? 1.5,
+    session.cameraPosition?.z ?? 5,
   ];
   
   return (
     <Line
       points={[studentEyePos, cameraPos]}
-      color={student.visibilityScore >= 80 ? '#4caf50' : '#f44336'}
+      color={(student.visibilityScore ?? 0) >= 80 ? '#4caf50' : '#f44336'}
       lineWidth={2}
       transparent
       opacity={0.5}
@@ -311,8 +309,8 @@ const SceneContent: FC<ClassPhotoViewProps> = ({
   // Update camera position from session
   useEffect(() => {
     if (session) {
-      camera.position.copy(session.cameraPosition);
-      camera.lookAt(session.cameraTarget);
+      if (session.cameraPosition) camera.position.copy(session.cameraPosition as THREE.Vector3);
+      if (session.cameraTarget) camera.lookAt(session.cameraTarget as THREE.Vector3);
     }
   }, [session, camera]);
   
@@ -320,7 +318,7 @@ const SceneContent: FC<ClassPhotoViewProps> = ({
   
   const students = Array.from(session.students.values());
   const props = Array.from(session.props.values());
-  const sceneWidth = session.sceneWidth;
+  const sceneWidth = session.sceneWidth ?? 8;
   
   return (
     <>
@@ -331,7 +329,7 @@ const SceneContent: FC<ClassPhotoViewProps> = ({
       
       {/* Floor */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[sceneWidth + 2, session.sceneDepth + 4]} />
+        <planeGeometry args={[sceneWidth + 2, (session.sceneDepth ?? 6) + 4]} />
         <meshStandardMaterial color="#2a2a2a" roughness={0.9} />
       </mesh>
       
@@ -388,7 +386,7 @@ const SceneContent: FC<ClassPhotoViewProps> = ({
       />
       
       {/* Camera position indicator */}
-      <group position={[session.cameraPosition.x, 0, session.cameraPosition.z]}>
+      <group position={[session.cameraPosition?.x ?? 0, 0, session.cameraPosition?.z ?? 5]}>
         <mesh>
           <coneGeometry args={[0.15, 0.3, 4]} />
           <meshBasicMaterial color="#2196f3" />

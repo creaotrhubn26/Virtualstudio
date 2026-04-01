@@ -6,6 +6,20 @@ export interface BlendConfig {
   weight: number;
 }
 
+export type BlendMode = 'override' | 'additive' | 'blend' | 'replace' | 'multiply' | 'screen' | 'overlay';
+
+export interface AnimationLayer {
+  id: string;
+  name: string;
+  clipId: string | null;
+  weight: number;
+  blendMode: BlendMode;
+  solo: boolean;
+  muted: boolean;
+  mask?: string[];
+  order?: number;
+}
+
 export interface CameraAnimationPreset {
   id: string;
   name: string;
@@ -107,12 +121,57 @@ export const LIGHT_ANIMATION_PRESETS: LightAnimationPreset[] = [
 ];
 
 class AnimationBlendingService {
+  layers: Map<string, AnimationLayer> = new Map();
+
   blend(fromWeight: number, toWeight: number, alpha: number): number {
     return fromWeight + (toWeight - fromWeight) * alpha;
   }
 
   crossFade(clipA: string, clipB: string, duration: number): BlendConfig {
     return { id: `${clipA}-to-${clipB}`, name: `${clipA} → ${clipB}`, duration, easing: 'easeInOut', weight: 0 };
+  }
+
+  createLayer(name: string): AnimationLayer {
+    const layer: AnimationLayer = {
+      id: `layer-${Date.now()}`,
+      name,
+      clipId: null,
+      weight: 1.0,
+      blendMode: 'blend',
+      solo: false,
+      muted: false,
+    };
+    this.layers.set(layer.id, layer);
+    return layer;
+  }
+
+  deleteLayer(id: string): void {
+    this.layers.delete(id);
+  }
+
+  setLayerClip(layerId: string, clipId: string): void {
+    const layer = this.layers.get(layerId);
+    if (layer) layer.clipId = clipId;
+  }
+
+  setLayerWeight(layerId: string, weight: number): void {
+    const layer = this.layers.get(layerId);
+    if (layer) layer.weight = weight;
+  }
+
+  setLayerBlendMode(layerId: string, mode: BlendMode): void {
+    const layer = this.layers.get(layerId);
+    if (layer) layer.blendMode = mode;
+  }
+
+  toggleLayerSolo(layerId: string): void {
+    const layer = this.layers.get(layerId);
+    if (layer) layer.solo = !layer.solo;
+  }
+
+  toggleLayerMute(layerId: string): void {
+    const layer = this.layers.get(layerId);
+    if (layer) layer.muted = !layer.muted;
   }
 }
 

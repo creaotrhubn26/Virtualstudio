@@ -12,8 +12,8 @@ export interface ExportResult {
   success: boolean;
   url?: string;
   blob?: Blob;
-  duration: number;
-  size: number;
+  duration?: number;
+  size?: number;
   error?: string;
 }
 
@@ -81,6 +81,22 @@ class VideoExportService {
 
   isCurrentlyExporting(): boolean {
     return this.isExporting;
+  }
+
+  formatFileSize(bytes: number): string {
+    if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${bytes} B`;
+  }
+
+  formatDuration(seconds: number): string {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    if (h > 0) return `${h}t ${m}m ${s}s`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
   }
 }
 

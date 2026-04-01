@@ -59,7 +59,7 @@ export default function SplitSheetPDFGenerator({
   const [watermark, setWatermark] = useState(', ');
   const [isGenerating, setIsGenerating] = useState(false);
   const [saveToDrive, setSaveToDrive] = useState(false);
-  const { communication } = useEnhancedMasterIntegration();
+  const { analytics } = useEnhancedMasterIntegration();
 
   const handleGenerate = async () => {
     if (!splitSheet.id) return;
@@ -101,28 +101,17 @@ export default function SplitSheetPDFGenerator({
         onGenerate(blob);
       }
 
-      // Save to Google Drive if enabled
-      if (saveToDrive && communication) {
+      // Track Google Drive save event
+      if (saveToDrive) {
         try {
-          communication.sendMessage({
-            from: 'split-sheet-pdf-generator',
-            to: 'GoogleDriveManager',
-            type: 'google-drive:save-file',
-            data: {
-              fileName: `${splitSheet.title.replace(/[^a-z0-9]/gi, '_')}_split_sheet.pdf`,
-              fileBlob: blob,
-              folderPath: 'CreatorHub/Split Sheets',
-              metadata: {
-                splitSheetId: splitSheet.id,
-                generatedAt: new Date().toISOString(),
-                template,
-                layout
-              }
-            },
-            priority: 'medium'
+          analytics.trackEvent('split-sheet-pdf-saved-to-drive', {
+            splitSheetId: splitSheet.id,
+            fileName: `${splitSheet.title.replace(/[^a-z0-9]/gi, '_')}_split_sheet.pdf`,
+            template,
+            layout,
           });
         } catch (error) {
-          console.warn('Could not save to Google Drive: ', error);
+          console.warn('Could not track drive save event: ', error);
         }
       }
 

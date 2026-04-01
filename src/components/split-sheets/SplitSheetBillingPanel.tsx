@@ -87,8 +87,8 @@ export default function SplitSheetBillingPanel({
   const [emailSubject, setEmailSubject] = useState('');
   
   // Get profession-specific styling
-  const { getUserProfessionColor, getProfessionDisplayName } = useDynamicProfessions();
-  const professionColor = getUserProfessionColor(profession);
+  const { getProfessionColor, getProfessionDisplayName } = useDynamicProfessions();
+  const professionColor = getProfessionColor(profession);
   const professionDisplayName = getProfessionDisplayName(profession);
   const professionIcon = getProfessionIcon(profession);
   

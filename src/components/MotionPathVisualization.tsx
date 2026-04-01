@@ -69,6 +69,13 @@ const DEFAULT_CONFIG: MotionPathConfig = {
 // Speed Gradient Colors
 // ============================================================================
 
+function toVec3(v: number | number[] | { x: number; y: number; z: number }): THREE.Vector3 {
+  if (v instanceof THREE.Vector3) return v;
+  if (Array.isArray(v)) return new THREE.Vector3(v[0] ?? 0, v[1] ?? 0, v[2] ?? 0);
+  if (typeof v === 'object') return new THREE.Vector3(v.x, v.y, v.z);
+  return new THREE.Vector3();
+}
+
 function getSpeedColor(speed: number): THREE.Color {
   // Map speed to color: slow=blue, medium=green, fast=red
   if (speed < 0.3) {
@@ -343,13 +350,8 @@ export function MotionPath({
       ? 0
       : (currentTime - prevKf.time) / (nextKf.time - prevKf.time);
 
-    const prevPos = prevKf.value instanceof THREE.Vector3
-      ? prevKf.value
-      : new THREE.Vector3(prevKf.value.x, prevKf.value.y, prevKf.value.z);
-    
-    const nextPos = nextKf.value instanceof THREE.Vector3
-      ? nextKf.value
-      : new THREE.Vector3(nextKf.value.x, nextKf.value.y, nextKf.value.z);
+    const prevPos = toVec3(prevKf.value);
+    const nextPos = toVec3(nextKf.value);
 
     return new THREE.Vector3().lerpVectors(prevPos, nextPos, Math.max(0, Math.min(1, t)));
   }, [track, currentTime]);
@@ -504,9 +506,7 @@ export function CameraPreviewPath({
   return (
     <group name="camera-preview-path">
       {previewKeyframes.map((kf, index) => {
-        const pos = kf.value instanceof THREE.Vector3
-          ? kf.value
-          : new THREE.Vector3(kf.value.x, kf.value.y, kf.value.z);
+        const pos = toVec3(kf.value);
 
         // Create mini frustum
         const near = 0.1;
@@ -529,39 +529,18 @@ export function CameraPreviewPath({
             <lineLoop geometry={new THREE.BufferGeometry().setFromPoints(points)}>
               <primitive object={frustumMaterial} attach="material" />
             </lineLoop>
-            {/* Near plane */}
-            <line
-              geometry={new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(0, 0, 0),
-                new THREE.Vector3(halfWidth, halfHeight, -far),
-              ])}
-            >
-              <primitive object={frustumMaterial} attach="material" />
-            </line>
-            <line
-              geometry={new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(0, 0, 0),
-                new THREE.Vector3(-halfWidth, halfHeight, -far),
-              ])}
-            >
-              <primitive object={frustumMaterial} attach="material" />
-            </line>
-            <line
-              geometry={new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(0, 0, 0),
-                new THREE.Vector3(halfWidth, -halfHeight, -far),
-              ])}
-            >
-              <primitive object={frustumMaterial} attach="material" />
-            </line>
-            <line
-              geometry={new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(0, 0, 0),
-                new THREE.Vector3(-halfWidth, -halfHeight, -far),
-              ])}
-            >
-              <primitive object={frustumMaterial} attach="material" />
-            </line>
+            {/* Near plane corner lines */}
+            {[
+              [halfWidth, halfHeight],
+              [-halfWidth, halfHeight],
+              [halfWidth, -halfHeight],
+              [-halfWidth, -halfHeight],
+            ].map(([hx, hy], li) => (
+              <primitive key={`fl-${li}`} object={new THREE.Line(
+                new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(hx, hy, -far)]),
+                frustumMaterial,
+              )} />
+            ))}
           </group>
         );
       })}

@@ -200,7 +200,7 @@ export function HDRIBrowserPanel({
                   <Chip
                     label={env.category}
                     size="small"
-                    icon={getCategoryIcon(env.category)}
+                    icon={getCategoryIcon(env.category) ?? undefined}
                     sx={{ fontSize: 10 }}
                   />
                   <Chip label={env.resolution} size="small" sx={{ fontSize: 10 }} />

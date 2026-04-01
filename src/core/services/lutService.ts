@@ -8,6 +8,8 @@ export interface LUTFile {
   preview?: string;
   description?: string;
   tags: string[];
+  size?: number;
+  data?: Float32Array | number[];
 }
 
 export const BUILT_IN_LUTS: LUTFile[] = [
@@ -50,6 +52,47 @@ class LUTService {
       lut: this.activeLUTId ? this.getById(this.activeLUTId) ?? null : null,
       intensity: this.activeIntensity,
     };
+  }
+
+  parseCubeFile(text: string): LUTFile {
+    const lines = text.split('\n');
+    const meta: Record<string, string> = {};
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('TITLE')) meta['title'] = trimmed.replace('TITLE', '').trim().replace(/^"|"$/g, '');
+      if (trimmed.startsWith('LUT_3D_SIZE')) meta['size'] = trimmed.split(/\s+/)[1] ?? '33';
+    }
+    const title = meta['title'] ?? `Custom LUT ${Date.now()}`;
+    const id = `parsed-${Date.now()}`;
+    return {
+      id,
+      name: id,
+      label: title,
+      filename: `${id}.cube`,
+      category: 'creative',
+      intensity: 1.0,
+      tags: ['imported'],
+    };
+  }
+
+  exportToCube(lut: LUTFile, options?: { size?: number; title?: string; domain?: [number, number] }): string {
+    const size = options?.size ?? lut.size ?? 33;
+    const lines: string[] = [
+      `TITLE "${options?.title ?? lut.label}"`,
+      `LUT_3D_SIZE ${size}`,
+      '',
+    ];
+    for (let r = 0; r < size; r++) {
+      for (let g = 0; g < size; g++) {
+        for (let b = 0; b < size; b++) {
+          const rv = (r / (size - 1)).toFixed(6);
+          const gv = (g / (size - 1)).toFixed(6);
+          const bv = (b / (size - 1)).toFixed(6);
+          lines.push(`${rv} ${gv} ${bv}`);
+        }
+      }
+    }
+    return lines.join('\n');
   }
 
   async loadCustomLUT(_file: File): Promise<LUTFile> {

@@ -40,7 +40,7 @@ export const EnhancedTextField: FC<EnhancedTextFieldProps> = ({
         '& .MuiInputBase-input': {
           color: colors.text.primary,
           '&::placeholder': {
-            color: colors.text.tertiary,
+            color: colors.text.disabled,
             opacity: 1,
           },
         },

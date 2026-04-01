@@ -3,6 +3,7 @@ export interface LightPattern {
   name: string;
   label: string;
   description: string;
+  slug?: string;
   category: 'portrait' | 'product' | 'fashion' | 'cinematic' | 'corporate';
   lights: Array<{
     role: 'key' | 'fill' | 'hair' | 'rim' | 'background' | 'accent';
@@ -68,6 +69,10 @@ class LightPatternService {
 
   getByCategory(category: LightPattern['category']): LightPattern[] {
     return LIGHT_PATTERNS.filter((p) => p.category === category);
+  }
+
+  getAllPatterns(): LightPattern[] {
+    return LIGHT_PATTERNS;
   }
 
   search(query: string): LightPattern[] {

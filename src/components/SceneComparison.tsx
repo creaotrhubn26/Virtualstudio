@@ -533,10 +533,10 @@ export function SceneComparisonPanel({
     }
   }, [onCaptureSnapshot, snapshots.length]);
 
-  const handleSaveSnapshot = useCallback(() => {
+  const handleSaveSnapshot = useCallback(async () => {
     if (!pendingImageData) return;
 
-    const snapshot = snapshotManager.addSnapshot({
+    const snapshot = await snapshotManager.addSnapshot({
       name: newSnapshotName || `Snapshot ${snapshots.length + 1}`,
       imageDataUrl: pendingImageData,
       sceneData: {}, // Would include actual scene data

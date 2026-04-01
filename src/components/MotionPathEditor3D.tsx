@@ -80,7 +80,7 @@ function DraggableKeyframe({
   const scale = isSelected ? 1.4 : isHovered ? 1.2 : 1;
 
   // Handle drag
-  const handlePointerDown = useCallback((e: THREE.Event) => {
+  const handlePointerDown = useCallback((e: { stopPropagation: () => void }) => {
     e.stopPropagation();
     setIsDragging(true);
     onDragStart();
@@ -145,17 +145,11 @@ function DraggableKeyframe({
       )}
 
       {/* Ground projection line */}
-      <line>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={2}
-            array={new Float32Array([0, 0, 0, 0, -position.y, 0])}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial color="#444" transparent opacity={0.3} />
-      </line>
+      <primitive object={(() => {
+        const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -position.y, 0)]);
+        const mat = new THREE.LineBasicMaterial({ color: '#444', transparent: true, opacity: 0.3 });
+        return new THREE.Line(geo, mat);
+      })()} />
 
       {/* Ground marker */}
       <mesh position={[0, -position.y, 0]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -505,20 +499,13 @@ export function MotionPathEditor3D({
       {/* Connection lines between keyframes */}
       {keyframePositions.length > 1 &&
         keyframePositions.slice(0, -1).map((pos, i) => (
-          <line key={`conn-${i}`}>
-            <bufferGeometry>
-              <bufferAttribute
-                attach="attributes-position"
-                count={2}
-                array={new Float32Array([
-                  pos.x, pos.y, pos.z,
-                  keyframePositions[i + 1].x, keyframePositions[i + 1].y, keyframePositions[i + 1].z,
-                ])}
-                itemSize={3}
-              />
-            </bufferGeometry>
-            <lineBasicMaterial color="#444" transparent opacity={0.2} />
-          </line>
+          <primitive key={`conn-${i}`} object={(() => {
+            const geo = new THREE.BufferGeometry().setFromPoints([
+              pos, keyframePositions[i + 1]
+            ]);
+            const mat = new THREE.LineBasicMaterial({ color: '#444', transparent: true, opacity: 0.2 });
+            return new THREE.Line(geo, mat);
+          })()} />
         ))}
     </group>
   );

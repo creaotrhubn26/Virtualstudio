@@ -164,6 +164,7 @@ interface LightSpecs {
   guideNumber?: number;
   lumens?: number;
   colorTemp?: number;
+  cct?: number;
 }
 
 // Undo/Redo action types
@@ -705,6 +706,8 @@ class VirtualStudio {
   private redoStack: UndoAction[] = [];
   private maxUndoSteps: number = 50;
   private isUndoRedoAction: boolean = false;
+
+  public backdropMesh: BABYLON.Mesh | null = null;
 
   // Ambient light control
   private ambientLight: BABYLON.HemisphericLight | null = null;
@@ -2038,7 +2041,7 @@ class VirtualStudio {
 
       // Apply camera settings from shot list
       if (shotList.cameraSettings) {
-        const settings = shotList.cameraSettings;
+        const settings = shotList.cameraSettings as { focalLength?: number };
         if (settings.focalLength) {
           // Convert focal length to FOV approximation
           // FOV (radians) ≈ 2 * atan(sensor_width / (2 * focal_length))
@@ -2069,9 +2072,10 @@ class VirtualStudio {
      */
     private applyShotListCamera(shot: CastingShot): void {
       // Set focal length from shot
-      if (shot.focalLength) {
+      const shotExt = shot as CastingShot & { focalLength?: number };
+      if (shotExt.focalLength) {
         const sensorWidth = 36; // mm
-        const fov = 2 * Math.atan(sensorWidth / (2 * shot.focalLength));
+        const fov = 2 * Math.atan(sensorWidth / (2 * shotExt.focalLength));
         this.camera.fov = fov;
       }
 
@@ -2113,7 +2117,7 @@ class VirtualStudio {
         'establishing': { key: 0.7, fill: 0.7, rim: 0.1 }, // Even lighting
       };
 
-      const multiplier = moodMultipliers[shot.shotType] || { key: 1.0, fill: 0.5, rim: 0.3 };
+      const multiplier = moodMultipliers[(shot as { shotType?: string }).shotType ?? ''] || { key: 1.0, fill: 0.5, rim: 0.3 };
 
       // Apply multipliers to lights based on their role
       this.lights.forEach((light, _lightId) => {
@@ -2943,7 +2947,7 @@ class VirtualStudio {
     const lightPos = lightData.mesh.position.clone();
     // Use stored light head height so height slider + yoke ring sit at the actual softbox head,
     // not at the mesh root (which is at ground level Y≈0).
-    const lightHeadY: number = (lightData.mesh as any)._lightHeadHeight ?? lightData.light.position.y;
+    const lightHeadY: number = (lightData.mesh as any)._lightHeadHeight ?? (lightData.light as unknown as { position: BABYLON.Vector3 }).position.y;
     const studioAmber = new BABYLON.Color3(1.0, 0.67, 0.0);
     const studioGreen = new BABYLON.Color3(0.3, 0.85, 0.4);
     const studioCyan = new BABYLON.Color3(0.3, 0.8, 1.0);
@@ -3114,7 +3118,7 @@ class VirtualStudio {
         // that have no sync observer.
         (lightData.mesh as any)._lightHeadHeight = newY;
         lightData.mesh.position.y = newY;
-        lightData.light.position.y = newY;
+        (lightData.light as unknown as { position: BABYLON.Vector3 }).position.y = newY;
 
         // Update stand pole - use absolute scaling since we used unit height
         const pole = heightSlider.getChildMeshes().find(m => m.name === 'standPole');
@@ -5798,7 +5802,7 @@ class VirtualStudio {
     texture.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
     texture.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
 
-    const ctx = texture.getContext();
+    const ctx = texture.getContext() as unknown as CanvasRenderingContext2D;
     const random = this.createSeededRandom(materialId);
     const light = this.adjustHexColor(baseHex, 0.12);
     const dark = this.adjustHexColor(baseHex, -0.12);
@@ -11183,7 +11187,7 @@ class VirtualStudio {
     if (positionHint && (positionHint.x !== 0 || positionHint.z !== 0)) {
       spawnPos = positionHint.clone();
     } else if (selData) {
-      const lp = selData.light.position.clone();
+      const lp = (selData.light as unknown as { position: BABYLON.Vector3 }).position.clone();
       // Offset 1m to the right of the light-to-subject vector (cross product with up)
       const toSubject = new BABYLON.Vector3(0, 0, 0).subtract(lp).normalize();
       const right = BABYLON.Vector3.Cross(toSubject, BABYLON.Vector3.Up()).normalize();
@@ -11208,7 +11212,7 @@ class VirtualStudio {
     panel.position = spawnPos.clone();
     // Face toward the nearest light source
     if (selData) {
-      panel.lookAt(selData.light.position, 0, Math.PI, 0);
+      panel.lookAt((selData.light as unknown as { position: BABYLON.Vector3 }).position, 0, Math.PI, 0);
     }
     panel.isPickable = true;
 
@@ -27858,7 +27862,7 @@ class VirtualStudio {
     // state; fall back to 2.2 m so the new fixture renders at a sensible height.
     const rawHeadY = (savedLightHeadY !== undefined && savedLightHeadY > 0.1)
       ? savedLightHeadY
-      : existing.light.position.y;
+      : (existing.light as unknown as { position: BABYLON.Vector3 }).position.y;
     const clampedHeadY = (isFinite(rawHeadY) && rawHeadY >= 0.3 && rawHeadY <= 10)
       ? rawHeadY
       : 2.2;

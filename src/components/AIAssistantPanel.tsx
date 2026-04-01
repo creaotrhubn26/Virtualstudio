@@ -80,8 +80,8 @@ declare global {
     [index: number]: SpeechRecognitionAlternative;
   }
   interface SpeechRecognitionAlternative {
-    transcript: string;
-    confidence: number;
+    readonly transcript: string;
+    readonly confidence: number;
   }
 }
 

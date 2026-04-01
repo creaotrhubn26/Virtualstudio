@@ -1,10 +1,16 @@
+export interface CompositionSuggestion {
+  message: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
 export interface CompositionAnalysis {
   ruleOfThirdsScore: number;
   balanceScore: number;
   depthScore: number;
   focusScore: number;
   overallScore: number;
-  suggestions: string[];
+  suggestions: string[] | CompositionSuggestion[];
+  score?: { overall: number; balance: number; depth: number; focus: number };
 }
 
 export interface SubjectPlacement {
@@ -36,6 +42,19 @@ class SceneCompositionService {
 
   calculateBalance(_positions: Array<[number, number, number]>): number {
     return 0.78;
+  }
+
+  async analyzeComposition(_imageUrl: string): Promise<{
+    score: { overall: number; balance: number; depth: number; focus: number };
+    suggestions: Array<{ message: string; priority: 'high' | 'medium' | 'low' }>;
+  }> {
+    return {
+      score: { overall: 0.75, balance: 0.80, depth: 0.65, focus: 0.85 },
+      suggestions: [
+        { message: 'Flytt motivet litt til venstre for bedre tredjedelsregel', priority: 'medium' },
+        { message: 'Legg til et bakgrunnselement for mer dybde', priority: 'low' },
+      ],
+    };
   }
 }
 

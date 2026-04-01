@@ -5,7 +5,7 @@
  * Runs in background, processes clips in batches, stores results in clip metadata
  */
 
-import { faceXFormerService, type FaceAnalysisResult } from '../components/creatorhubvirtualstudio/src/services/FaceXFormerService';
+import { faceXFormerService, type FaceAnalysisResult } from '../../services/FaceXFormerService';
 import { webWorkerEngine } from './web-worker-engine';
 
 export interface FaceDetectionResult {
@@ -214,46 +214,18 @@ export class FaceDetectionWorker {
         try {
           const frameFile = await this.extractFrameFromVideo(videoUrl, timestamp);
           
-          // Run analysis with specified tasks
-          let analysis: FaceAnalysisResult;
-          if (tasks === 'all') {
-            analysis = await faceXFormerService.analyzeAll(frameFile);
-          } else if (Array.isArray(tasks)) {
-            // Run multiple specific tasks - use 'all' and filter results
-            analysis = await faceXFormerService.analyzeAll(frameFile);
-            // Filter results to only include requested tasks
-            const filteredResults: any = {};
-            if (tasks.includes('parsing')) {
-              filteredResults.parsing = analysis.results.parsing;
-              filteredResults.parsing_visualization = analysis.results.parsing_visualization;
-            }
-            if (tasks.includes('landmarks')) {
-              filteredResults.landmarks = analysis.results.landmarks;
-              filteredResults.landmarks_visualization = analysis.results.landmarks_visualization;
-            }
-            if (tasks.includes('headpose')) {
-              filteredResults.headpose = analysis.results.headpose;
-              filteredResults.headpose_visualization = analysis.results.headpose_visualization;
-            }
-            if (tasks.includes('attributes')) {
-              filteredResults.attributes = analysis.results.attributes;
-            }
-            analysis = {
-              ...analysis,
-              results: { ...analysis.results, ...filteredResults },
-            };
-          } else {
-            // Single specific task
-            analysis = await faceXFormerService.analyzeFace(frameFile, tasks);
-          }
+          // Use the actual analyzeImage API which returns FaceAnalysisResult[]
+          const results = await faceXFormerService.analyzeImage(URL.createObjectURL(frameFile));
+          const analysis = results[0] ?? null;
           
-          // Check if face was detected (landmarks or parsing mask exists)
-          const detected = !!(analysis.results.landmarks?.length || analysis.results.parsing);
-          const confidence = detected ? 0.9 : 0.1;
+          // Check if face was detected (landmarks exist with high confidence)
+          const landmarkCount = analysis ? Object.keys(analysis.landmarks).length : 0;
+          const detected = landmarkCount > 0 && (analysis?.confidence ?? 0) > 0.5;
+          const confidence = detected ? (analysis?.confidence ?? 0.9) : 0.1;
           
           faceDetections.push({ timestamp, hasFace: detected, confidence });
           
-          if (detected && (!bestResult || (analysis.results.landmarks?.length || 0) > (bestResult.results.landmarks?.length || 0))) {
+          if (detected && analysis && (!bestResult || Object.keys(analysis.landmarks).length > Object.keys(bestResult.landmarks).length)) {
             bestResult = analysis;
             bestTimestamp = timestamp;
             hasFace = true;
@@ -273,36 +245,28 @@ export class FaceDetectionWorker {
       const framesWithFaces = faceDetections.filter(d => d.hasFace).length;
       const faceDetectionRate = faceDetections.length > 0 ? framesWithFaces / faceDetections.length : 0;
       
-      // Extract comprehensive analysis data
+      // Extract comprehensive analysis data from the actual FaceAnalysisResult structure
       const comprehensiveAnalysis = bestResult ? {
-        parsing: bestResult.results.parsing ? {
-          mask: bestResult.results.parsing,
-          visualization: bestResult.results.parsing_visualization,
+        landmarks: Object.keys(bestResult.landmarks).length > 0 ? {
+          points: bestResult.landmarks,
+          count: Object.keys(bestResult.landmarks).length,
         } : undefined,
-        landmarks: bestResult.results.landmarks ? {
-          points: bestResult.results.landmarks,
-          count: bestResult.results.landmarks.length,
-          visualization: bestResult.results.landmarks_visualization,
+        headpose: bestResult.poseAngles ? {
+          pitch: bestResult.poseAngles.pitch,
+          yaw: bestResult.poseAngles.yaw,
+          roll: bestResult.poseAngles.roll,
         } : undefined,
-        headpose: bestResult.results.headpose ? {
-          pitch: bestResult.results.headpose.pitch,
-          yaw: bestResult.results.headpose.yaw,
-          roll: bestResult.results.headpose.roll,
-          visualization: bestResult.results.headpose_visualization,
-        } : undefined,
-        attributes: bestResult.results.attributes ? {
-          values: bestResult.results.attributes,
-          count: bestResult.results.attributes.length,
-        } : undefined,
+        emotions: bestResult.emotions,
+        eyeGaze: bestResult.eyeGaze,
       } : undefined;
       
       return {
         clipId,
         hasFace,
-        faceCount: bestResult?.results.landmarks ? 1 : 0, // Could be enhanced to detect multiple faces
+        faceCount: bestResult ? 1 : 0,
         confidence: hasFace ? Math.max(0.9, faceDetectionRate) : 0.1,
         analysis: bestResult || undefined,
-        comprehensiveAnalysis, // New: structured analysis data
+        comprehensiveAnalysis,
         timestamp: bestTimestamp,
         // Add metadata about full scan
         ...(scanEntireVideo && {

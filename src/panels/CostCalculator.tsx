@@ -42,25 +42,21 @@ import { calculateSceneCost } from '@/core/services/equipment-integration';
 import { useAppStore } from '@/state/store';
 
 export function CostCalculator() {
-  const { scene } = useAppStore();
-  const [costData, setCostData] = useState<{
-    items: Array<{ name: string; price: number; currency: string }>;
-    totalMSRP: number;
-    currency: string;
-  } | null>(null);
+  const scene = useAppStore((s) => s.scene);
+  const [costData, setCostData] = useState<import('@/core/services/equipment-integration').SceneCostBreakdown | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     calculateCost();
-  }, [scene.nodes]);
+  }, [scene]);
 
   const calculateCost = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const cost = await calculateSceneCost(scene.nodes);
+      const cost = calculateSceneCost(scene.map(n => ({ id: n.id, name: n.name ?? n.id, type: n.type ?? 'prop' })));
       setCostData(cost);
 
       if (cost.items.length === 0) {
@@ -81,15 +77,15 @@ export function CostCalculator() {
 
     // Create text export
     let text = '# Equipment List - Virtual Studio\n\n';
-    text += `## Scene: ${scene.id}\n\n`;
+    text += `## Scene: Virtual Studio Scene\n\n`;
     text += '### Equipment:\n\n';
 
     costData.items.forEach((item, idx) => {
       text += `${idx + 1}. ${item.name}\n`;
-      text += `   Price: ${item.price.toLocaleString()} ${item.currency}\n\n`;
+      text += `   Price: ${item.subtotal.toLocaleString()} ${costData!.currency}\n\n`;
     });
 
-    text += `### Total Cost: ${costData.totalMSRP.toLocaleString()} ${costData.currency}\n`;
+    text += `### Total Cost: ${costData.total.toLocaleString()} ${costData.currency}\n`;
 
     // Download as text file
     const blob = new Blob([text], { type: 'text/plain' });
@@ -113,11 +109,11 @@ export function CostCalculator() {
 
     costData.items.forEach((item, idx) => {
       quote += `${idx + 1}. **${item.name}**\n`;
-      quote += `   MSRP: ${item.price.toLocaleString()} ${item.currency}\n\n`;
+      quote += `   MSRP: ${item.subtotal.toLocaleString()} ${costData!.currency}\n\n`;
     });
 
     quote += '---\n\n';
-    quote += `### TOTAL INVESTMENT: ${costData.totalMSRP.toLocaleString()} ${costData.currency}\n\n`;
+    quote += `### TOTAL INVESTMENT: ${costData.total.toLocaleString()} ${costData.currency}\n\n`;
     quote += '---\n\n';
     quote += '### Notes:\n';
     quote += '- Prices are MSRP and may vary by retailer\n';
@@ -181,7 +177,7 @@ export function CostCalculator() {
                     </ListItemAvatar>
                     <ListItemText
                       primary={item.name}
-                      secondary={`${item.price.toLocaleString()} ${item.currency}`}
+                      secondary={`${item.subtotal.toLocaleString()} ${costData!.currency}`}
                     />
                   </ListItem>
                   {idx < costData.items.length - 1 && <Divider variant="inset" component="li" />}
@@ -202,7 +198,7 @@ export function CostCalculator() {
                 Total Equipment Cost (MSRP)
               </Typography>
               <Typography variant="h4" fontWeight="bold" color="success.dark">
-                {costData.totalMSRP.toLocaleString()} {costData.currency}
+                {costData.total.toLocaleString()} {costData.currency}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 {costData.items.length} item{costData.items.length !== 1 ? 's' : ', '}

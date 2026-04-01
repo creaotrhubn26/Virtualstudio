@@ -132,7 +132,8 @@ function detectCameraMount(brand?: string, model?: string): string {
 function detectLensMount(brand?: string, model?: string, spec?: Partial<LensSpec>): string {
   // Use spec mount if available
   if (spec?.mount) {
-    const mount = spec.mount.toLowerCase().replace('_','-').replace('canon-',',').replace('sony-',',').replace('nikon-',',').replace('fujifilm-',',').replace('sigma-',', ').replace('tamron-', ', ');
+    const rawMount = Array.isArray(spec.mount) ? (spec.mount[0] ?? '') : String(spec.mount);
+    const mount = rawMount.toLowerCase().replace('_','-').replace('canon-',',').replace('sony-',',').replace('nikon-',',').replace('fujifilm-',',').replace('sigma-',', ').replace('tamron-', ', ');
     if (mount.includes('rf')) return 'rf';
     if (mount.includes('ef')) return 'ef';
     if (mount.includes('fe')) return 'fe';
@@ -202,7 +203,7 @@ export function LensAttachmentManager({ cameraNodeId, onClose }: LensAttachmentM
       name: node.name,
       brand: node.userData?.brand,
       model: node.userData?.model,
-      mount: detectCameraMount(node.userData?.brand, node.userData?.model),
+      mount: detectCameraMount(node.userData?.brand as string | undefined, node.userData?.model as string | undefined),
       attachedLens: node.userData?.attachedLens,
       camera: node.camera,
     } as CameraNodeWithLens;
@@ -440,7 +441,7 @@ export function LensAttachmentManager({ cameraNodeId, onClose }: LensAttachmentM
               >
                 <ListItemAvatar>
                   <Avatar
-                    src={getEquipmentImageUrl(lens)}
+                    src={getEquipmentImageUrl(lens.id || '')}
                     variant="rounded"
                     sx={{ width: 48, height: 48 }}
                   >

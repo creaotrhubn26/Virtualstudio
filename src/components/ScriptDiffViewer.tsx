@@ -44,7 +44,7 @@ export const ScriptDiffViewer: React.FC<ScriptDiffViewerProps> = ({
 
   const sortedRevisions = useMemo(() => {
     return [...revisions].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      (a, b) => new Date(b.createdAt ?? '').getTime() - new Date(a.createdAt ?? '').getTime()
     );
   }, [revisions]);
 
@@ -55,7 +55,7 @@ export const ScriptDiffViewer: React.FC<ScriptDiffViewerProps> = ({
   const diff = useMemo(() => {
     if (!currentRevision) return null;
 
-    const oldLines = currentRevision.content.split('\n');
+    const oldLines = (currentRevision.content ?? '').split('\n');
     const newLines = currentContent.split('\n');
 
     return computeDiff(oldLines, newLines);
@@ -102,7 +102,7 @@ export const ScriptDiffViewer: React.FC<ScriptDiffViewerProps> = ({
                       }}
                     />
                     <Typography variant="body2">
-                      {new Date(revision.createdAt).toLocaleDateString('nb-NO')}
+                      {new Date(revision.createdAt ?? '').toLocaleDateString('nb-NO')}
                     </Typography>
                     {revision.changesSummary && (
                       <Typography variant="caption" color="text.secondary">

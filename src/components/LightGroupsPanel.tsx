@@ -86,6 +86,8 @@ export function LightGroupsPanel() {
   const nodes = useAppStore((s: any) => s.scene.nodes);
 
   const storeActions = useActions();
+  const storeAddNode = useAppStore((s) => s.addNode);
+  const storeRemoveNode = useAppStore((s) => s.removeNode);
   
   // Light groups state (local for now - could be moved to store)
   interface LightGroup {
@@ -236,12 +238,12 @@ export function LightGroupsPanel() {
   const handleLoadPreset = (preset: LightingPreset) => {
     // Remove existing lights
     lightNodes.forEach((n: any) => {
-      actions.deleteNode(n.id);
+      storeRemoveNode(n.id);
     });
 
     // Add lights from preset
     preset.lights.forEach((light, idx) => {
-      actions.addNode({
+      storeAddNode({
         id: `light_${Date.now()}_${idx}`,
         type: light.type as any,
         name: `${light.type} ${idx + 1}`,
@@ -277,10 +279,9 @@ export function LightGroupsPanel() {
   // Fetch patterns on mount
   useEffect(() => {
     setLoading(true);
-    lightPatternService.getAllPatterns().then((p) => {
-      setPatterns(p);
-      setLoading(false);
-    });
+    const p = lightPatternService.getAllPatterns();
+    setPatterns(p);
+    setLoading(false);
   }, []);
 
   // Detect if any lights have pattern context
@@ -375,7 +376,7 @@ export function LightGroupsPanel() {
               <em>None</em>
             </MenuItem>
             {patterns.map((pattern) => (
-              <MenuItem key={pattern.id} value={pattern.slug}>
+              <MenuItem key={pattern.id} value={pattern.id}>
                 {pattern.name}
               </MenuItem>
             ))}

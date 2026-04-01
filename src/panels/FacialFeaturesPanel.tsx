@@ -55,7 +55,7 @@ import {
   SkinDetailOptions,
   createFacialHairModel,
   createMakeupOverlay,
-} from '../../core/models/FacialFeaturesModel';
+} from '../core/models/FacialFeaturesModel';
 
 interface FacialFeaturesPanelProps {
   onExpressionChange?: (expression: string, blendShapes: Record<string, number>) => void;

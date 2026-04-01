@@ -67,3 +67,14 @@ class ExporterService {
 
 export const exporter = new ExporterService();
 export default exporter;
+
+export function exportJSON(scene: unknown): void {
+  const json = JSON.stringify(scene, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `scene-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}

@@ -2,7 +2,7 @@ import {
   useState,
   useCallback,
   type FC,
-  type MouseEvent,
+  type MouseEvent as ReactMouseEvent,
   type ReactElement,
   type ReactNode } from 'react';
 import {
@@ -19,6 +19,7 @@ import {
   Videocam,
   CameraRoll,
   Check,
+  Block,
   PlayArrow,
   Schedule,
   Star,
@@ -72,6 +73,12 @@ const statusConfig: Record<ShotStatus, { label: string; color: string; bgColor: 
     color: '#4caf50', 
     bgColor: 'rgba(76,175,80,0.15)',
     icon: <Check sx={{ fontSize: 18 }} />
+  },
+  blocked: {
+    label: 'Blokkert',
+    color: '#f44336',
+    bgColor: 'rgba(244,67,54,0.15)',
+    icon: <Block sx={{ fontSize: 18 }} />,
   },
 };
 
@@ -146,7 +153,7 @@ export const InteractiveShotCard: FC<InteractiveShotCardProps> = ({
     setIsHolding(false);
   }, [holdTimer, isHolding, onTap, shot]);
   
-  const handleDragEnd = useCallback((event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+  const handleDragEnd = useCallback((event: PointerEvent | MouseEvent | TouchEvent, info: PanInfo) => {
     if (Math.abs(info.offset.x) > 80) {
       const direction = info.offset.x > 0 ? 'right' : 'left';
       if (onSwipe) {
@@ -249,7 +256,7 @@ export const InteractiveShotCard: FC<InteractiveShotCardProps> = ({
 
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
           <Box
-            onClick={(e: MouseEvent) => { e.stopPropagation(); cycleStatus(); }}
+            onClick={(e: ReactMouseEvent) => { e.stopPropagation(); cycleStatus(); }}
             sx={{
               width: 48,
               height: 48,
@@ -413,7 +420,7 @@ export const InteractiveShotCard: FC<InteractiveShotCardProps> = ({
           {onNotesClick && (
             <Tooltip title="Feltnotater">
               <IconButton
-                onClick={(e: MouseEvent) => { e.stopPropagation(); onNotesClick(shot); }}
+                onClick={(e: ReactMouseEvent) => { e.stopPropagation(); onNotesClick(shot); }}
                 size="small"
                 sx={{
                   color: shot.fieldNotes ? '#e91e63' : 'rgba(255,255,255,0.4)',
@@ -426,7 +433,7 @@ export const InteractiveShotCard: FC<InteractiveShotCardProps> = ({
           )}
         </Box>
 
-        {shot.takesCount !== undefined && shot.takesCount > 0 && (
+        {(shot.takesCount ?? 0) > 0 && (
           <Box
             sx={{
               position: 'absolute',

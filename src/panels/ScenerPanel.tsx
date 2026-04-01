@@ -185,8 +185,8 @@ const buttonStyle = {
     const searchLower = search.toLowerCase();
     const matchesSearch = search === '' || 
       p.navn.toLowerCase().includes(searchLower) ||
-      p.beskrivelse.toLowerCase().includes(searchLower) ||
-      p.tags.some(tag => tag.toLowerCase().includes(searchLower)) ||
+      (p.beskrivelse?.toLowerCase() ?? '').includes(searchLower) ||
+      (p.tags?.some(tag => tag.toLowerCase().includes(searchLower)) ?? false) ||
       ('usedIn' in p && p.usedIn && p.usedIn.some(film => film.toLowerCase().includes(searchLower)));
     return matchesKategori && matchesSearch;
   });
@@ -232,8 +232,8 @@ const buttonStyle = {
   const handleEditPreset = (preset: CustomPreset) => {
     setEditingPreset(preset);
     setPresetName(preset.navn);
-    setPresetDescription(preset.beskrivelse);
-    setPresetTags(preset.tags.filter(t => t !== 'egendefinert').join(', '));
+    setPresetDescription(preset.beskrivelse ?? '');
+    setPresetTags(preset.tags?.filter(t => t !== 'egendefinert').join(', ') ?? '');
     setShowCreateDialog(true);
   };
 

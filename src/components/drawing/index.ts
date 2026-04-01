@@ -13,7 +13,7 @@ export { ProBrushToolbar } from './ProBrushToolbar';
 export type { ProBrushToolbarProps } from './ProBrushToolbar';
 
 // Layers system
-export { LayersPanel, DEFAULT_LAYER } from './LayersPanel';
+export { LayersPanel } from './LayersPanel';
 export type { DrawingLayer, BlendMode, LayersPanelProps } from './LayersPanel';
 
 // Shape tools
@@ -21,7 +21,7 @@ export { ShapeTools, drawShape } from './ShapeTools';
 export type { ShapeType, ShapeStyle, ShapeToolsProps } from './ShapeTools';
 
 // Text annotations
-export { TextAnnotations, drawTextAnnotation } from './TextAnnotations';
+export { TextAnnotationsToolbar as TextAnnotations, drawTextAnnotation } from './TextAnnotations';
 export type { TextAnnotation, TextStyle, TextAnnotationsProps } from './TextAnnotations';
 
 // Selection and transform

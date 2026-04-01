@@ -1,11 +1,15 @@
 export interface HDRIRecommendation {
   id: string;
   environmentId: string;
+  name?: string;
+  category?: string;
   reason: string;
   score: number;
+  matchScore?: number;
   adjustedIntensity: number;
   adjustedRotation: number;
   tags: string[];
+  thumbnail?: string;
 }
 
 export interface HDRIRecommendationContext {
@@ -48,3 +52,15 @@ class HDRIRecommendationService {
 
 export const hdriRecommendationService = new HDRIRecommendationService();
 export default hdriRecommendationService;
+
+export function getHDRIRecommendations(
+  contextOrName: HDRIRecommendationContext | string,
+  _tagsOrExtra?: string[] | Record<string, unknown>,
+  _extraContext?: Record<string, unknown>
+): HDRIRecommendation[] {
+  const context: HDRIRecommendationContext =
+    typeof contextOrName === 'string'
+      ? { shootType: contextOrName }
+      : contextOrName;
+  return hdriRecommendationService.recommend(context);
+}

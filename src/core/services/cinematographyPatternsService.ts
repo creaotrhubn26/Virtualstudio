@@ -1,5 +1,5 @@
 export interface LightSetup {
-  type: 'key' | 'fill' | 'rim' | 'back' | 'hair' | 'kicker' | 'accent' | 'background' | 'practical';
+  type: 'key' | 'fill' | 'rim' | 'back' | 'hair' | 'kicker' | 'accent' | 'background' | 'practical' | 'ambient' | 'negative-fill';
   position: { x: number; y: number; z: number };
   intensity: number;
   colorTemp: number;
@@ -9,7 +9,7 @@ export interface LightSetup {
 export interface CinematographyPattern {
   id: string;
   name: string;
-  category: 'portrait' | 'dramatic' | 'commercial' | 'film-noir' | 'beauty' | 'interview' | 'product';
+  category: 'portrait' | 'dramatic' | 'commercial' | 'film-noir' | 'beauty' | 'interview' | 'product' | 'narrative' | 'natural' | 'cinematic' | 'editorial' | 'creative';
   difficulty: 'beginner' | 'intermediate' | 'advanced' | 'expert';
   description: string;
   mood: string;

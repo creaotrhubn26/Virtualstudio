@@ -72,8 +72,8 @@ export default function SplitSheetReports({
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   
   // Get profession-specific styling
-  const { getUserProfessionColor, getProfessionDisplayName } = useDynamicProfessions();
-  const professionColor = getUserProfessionColor(profession);
+  const { getProfessionColor, getProfessionDisplayName } = useDynamicProfessions();
+  const professionColor = getProfessionColor(profession);
   const professionDisplayName = getProfessionDisplayName(profession);
   const professionIcon = getProfessionIcon(profession);
   

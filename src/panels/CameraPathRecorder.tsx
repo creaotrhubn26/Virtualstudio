@@ -73,7 +73,7 @@ export const CameraPathRecorder: React.FC = () => {
 
   const { addToast } = useVirtualStudio();
 
-  const [recordingInterval, setRecordingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [recordingInterval, setRecordingInterval] = useState<ReturnType<typeof setInterval> | null>(null);
   const [captureRate, setCaptureRate] = useState(2); // Capture every N frames
   const [autoSmooth, setAutoSmooth] = useState(true);
   const [pathName, setPathName] = useState('Camera Path');
@@ -108,7 +108,7 @@ export const CameraPathRecorder: React.FC = () => {
       return;
     }
 
-    startRecording(activeCamera.id);
+    startRecording();
     setRecordingStartTime(Date.now());
     
     // Dispatch event to notify other components
@@ -130,39 +130,35 @@ export const CameraPathRecorder: React.FC = () => {
         );
 
         // Capture position
-        addKeyframe({
+        addKeyframe(`${activeCamera.id}-transform-position`, {
+          id: `${activeCamera.id}-pos-${frameTime}`,
           time: frameTime,
-          nodeId: activeCamera.id,
-          property: 'transform.position',
           value: activeCamera.transform.position,
           easing: autoSmooth ? 'easeInOut' : 'linear',
         });
 
         // Capture rotation
-        addKeyframe({
+        addKeyframe(`${activeCamera.id}-transform-rotation`, {
+          id: `${activeCamera.id}-rot-${frameTime}`,
           time: frameTime,
-          nodeId: activeCamera.id,
-          property: 'transform.rotation',
           value: activeCamera.transform.rotation,
           easing: autoSmooth ? 'easeInOut' : 'linear',
         });
 
         // Capture camera properties
         if (camera.focalLength) {
-          addKeyframe({
+          addKeyframe(`${activeCamera.id}-camera-focalLength`, {
+            id: `${activeCamera.id}-fl-${frameTime}`,
             time: frameTime,
-            nodeId: activeCamera.id,
-            property: 'camera.focalLength',
             value: camera.focalLength,
             easing: autoSmooth ? 'easeInOut' : 'linear',
           });
         }
 
         if (camera.aperture) {
-          addKeyframe({
+          addKeyframe(`${activeCamera.id}-camera-aperture`, {
+            id: `${activeCamera.id}-ap-${frameTime}`,
             time: frameTime,
-            nodeId: activeCamera.id,
-            property: 'camera.aperture',
             value: camera.aperture,
             easing: autoSmooth ? 'easeInOut' : 'linear',
           });
@@ -238,8 +234,8 @@ export const CameraPathRecorder: React.FC = () => {
 
         pathData.keyframes.push({
           time,
-          position: posKf?.value || [0, 0, 0],
-          rotation: rotKf?.value || [0, 0, 0],
+          position: (posKf?.value as [number, number, number]) || [0, 0, 0] as [number, number, number],
+          rotation: (rotKf?.value as [number, number, number]) || [0, 0, 0] as [number, number, number],
         });
       });
 
@@ -248,12 +244,6 @@ export const CameraPathRecorder: React.FC = () => {
       message: `✅ Camera path "${pathName}" saved locally`,
       type: 'success',
       duration: 3000,
-      actions: [
-        {
-          label: 'Sync to Drive',
-          action: () => handleSyncToGoogleDrive(),
-        },
-      ],
     });
   }, [activeCamera, tracks, pathName, duration, fps, addToast]);
 

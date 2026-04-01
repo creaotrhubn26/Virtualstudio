@@ -51,8 +51,8 @@ import {
   StarHalf,
 } from '@mui/icons-material';
 import LinearProgress from '@mui/material/LinearProgress';
-import { useVirtualStudio } from '../../../VirtualStudioContext';
-import { hdriCacheService, preCacheManager, PRE_CACHE_HDRIS, PreCacheProgress } from '../../core/services/hdriCacheService';
+import { useVirtualStudio } from '../VirtualStudioContext';
+import { hdriCacheService, preCacheManager, PRE_CACHE_HDRIS, PreCacheProgress } from '../core/services/hdriCacheService';
 // Helper to get Babylon.js scene from window.virtualStudio
 const getBabylonScene = (): BABYLON.Scene | null => {
   const studio = (window as any).virtualStudio;
@@ -1415,7 +1415,7 @@ export const HDRIEnvironmentLoader: React.FC = () => {
       const stats = await hdriCacheService.getStats();
       setCacheStats({
         totalSize: stats.totalSize,
-        itemCount: stats.itemCount,
+        itemCount: stats.count,
         hitRate: hdriCacheService.getHitRate(),
       });
       
@@ -1471,7 +1471,7 @@ export const HDRIEnvironmentLoader: React.FC = () => {
     const stats = await hdriCacheService.getStats();
     setCacheStats({
       totalSize: stats.totalSize,
-      itemCount: stats.itemCount,
+      itemCount: stats.count,
       hitRate: hdriCacheService.getHitRate(),
     });
     // Also update pre-cache needs
@@ -1670,7 +1670,7 @@ export const HDRIEnvironmentLoader: React.FC = () => {
         // Load from cache
         fromCache = true;
         updateProgress(50, 'Laster fra cache...');
-        const blob = new Blob([cachedData], { type: 'application/octet-stream' });
+        const blob = new Blob([cachedData.data], { type: 'application/octet-stream' });
         textureUrl = URL.createObjectURL(blob);
       } else {
         // Fetch from network
@@ -1775,7 +1775,7 @@ export const HDRIEnvironmentLoader: React.FC = () => {
               512
             );
 
-            equiTexture.onLoadObservable.addOnce(() => {
+            const applyEquiTexture = () => {
               scene.environmentTexture = equiTexture;
               scene.environmentIntensity = intensity;
 
@@ -1784,7 +1784,7 @@ export const HDRIEnvironmentLoader: React.FC = () => {
               }
 
               if (rotation !== 0) {
-                equiTexture.rotationY = rotation * Math.PI / 180;
+                (equiTexture as unknown as BABYLON.CubeTexture).rotationY = rotation * Math.PI / 180;
               }
 
               if (enableSun && preset.sunPosition) {
@@ -1793,7 +1793,13 @@ export const HDRIEnvironmentLoader: React.FC = () => {
 
               URL.revokeObjectURL(textureUrl);
               completeLoading(true, true);
-            });
+            };
+
+            if ((equiTexture as BABYLON.BaseTexture & { onLoadObservable?: { addOnce: (fn: () => void) => void } }).onLoadObservable) {
+              (equiTexture as unknown as BABYLON.BaseTexture & { onLoadObservable: { addOnce: (fn: () => void) => void } }).onLoadObservable.addOnce(applyEquiTexture);
+            } else {
+              applyEquiTexture();
+            }
           } catch (fallbackError) {
             log.error('Fallback texture loading failed:', fallbackError);
             URL.revokeObjectURL(textureUrl);

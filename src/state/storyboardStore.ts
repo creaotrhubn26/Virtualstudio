@@ -39,7 +39,7 @@ export type CameraMovement =
   | 'Orbit';
 
 // Types
-export type FrameStatus = 'draft' | 'pending' | 'approved' | 'revision';
+export type FrameStatus = 'draft' | 'pending' | 'approved' | 'revision' | 'revision_needed';
 
 export interface FrameAnnotationData {
   id: string;
@@ -84,6 +84,9 @@ export interface StoryboardFrame {
   cameraMovement: CameraMovement;
   duration: number; // seconds
   status: FrameStatus;
+  dialogue?: string;
+  technicalNotes?: string;
+  storyboardId?: string;
   sceneSnapshot?: {
     camera: {
       position: [number, number, number];
@@ -97,6 +100,9 @@ export interface StoryboardFrame {
       position: [number, number, number];
       intensity: number;
     }>;
+    cameraSettings?: Record<string, unknown>;
+    importedData?: Record<string, unknown>;
+    tags?: string[];
   };
   annotations?: FrameAnnotationData[];
   createdAt: string;
@@ -139,6 +145,8 @@ interface StoryboardState {
   addAnnotation: (frameId: string, annotation: Omit<FrameAnnotationData, 'id' | 'createdAt'>) => void;
   updateAnnotation: (frameId: string, annotationId: string, updates: Partial<FrameAnnotationData>) => void;
   deleteAnnotation: (frameId: string, annotationId: string) => void;
+  duplicateFrame: (frameId: string) => void;
+  reorderFrames: (storyboardId: string, frameId: string, newIndex: number) => void;
 }
 
 export const useStoryboardStore = create<StoryboardState>((set, get) => ({
@@ -333,6 +341,50 @@ export const useStoryboardStore = create<StoryboardState>((set, get) => ({
             }
           : sb
       ),
+    }));
+  },
+
+  duplicateFrame: (frameId) => {
+    set((state) => ({
+      storyboards: state.storyboards.map((sb) => {
+        if (sb.id !== state.currentStoryboardId) return sb;
+        const src = sb.frames.find((f) => f.id === frameId);
+        if (!src) return sb;
+        const copy: StoryboardFrame = {
+          ...src,
+          id: `frame-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          index: src.index + 1,
+          title: `${src.title} (kopi)`,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        const frames = [...sb.frames];
+        frames.splice(src.index + 1, 0, copy);
+        return {
+          ...sb,
+          frames: frames.map((f, i) => ({ ...f, index: i })),
+          updatedAt: new Date().toISOString(),
+        };
+      }),
+    }));
+  },
+
+  reorderFrames: (storyboardId, frameId, newIndex) => {
+    set((state) => ({
+      storyboards: state.storyboards.map((sb) => {
+        if (sb.id !== storyboardId && sb.id !== state.currentStoryboardId) return sb;
+        const frames = [...sb.frames];
+        const srcIdx = frames.findIndex((f) => f.id === frameId);
+        if (srcIdx === -1) return sb;
+        const [removed] = frames.splice(srcIdx, 1);
+        const clampedIndex = Math.max(0, Math.min(newIndex, frames.length));
+        frames.splice(clampedIndex, 0, removed);
+        return {
+          ...sb,
+          frames: frames.map((f, i) => ({ ...f, index: i })),
+          updatedAt: new Date().toISOString(),
+        };
+      }),
     }));
   },
 }));

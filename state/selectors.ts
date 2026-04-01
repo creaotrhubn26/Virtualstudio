@@ -9,3 +9,12 @@ export const useActions = () => {
   const updateNode = useAppStore((state) => state.updateNode);
   return { updateNode };
 };
+
+export const useStudioGuideSettings = () => ({
+  enabled: false,
+  gridVisible: true,
+  safeZoneVisible: true,
+  rulersVisible: false,
+  snapToGrid: false,
+  gridSize: 0.5,
+});

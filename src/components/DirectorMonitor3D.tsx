@@ -67,15 +67,8 @@ const MonitorScreen: FC<{
   useFrame(() => {
     if (!renderer || !material) return;
     
-    const newTexture = renderer.render();
-    if (newTexture && meshRef.current) {
-      // Dispose old texture
-      if (textureRef.current && textureRef.current !== newTexture) {
-        textureRef.current.dispose();
-      }
-      
-      textureRef.current = newTexture;
-      material.map = newTexture;
+    renderer.render();
+    if (meshRef.current) {
       material.needsUpdate = true;
     }
   });

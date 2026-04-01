@@ -125,7 +125,7 @@ function ShortcutItem({ shortcutKey, description, compact = false }: ShortcutIte
 
 interface CategorySectionProps {
   category: string;
-  shortcuts: typeof SHORTCUT_REFERENCE;
+  shortcuts: Array<{ key: string; description: string }>;
   defaultExpanded?: boolean;
   compact?: boolean;
 }
@@ -210,13 +210,12 @@ interface KeyboardShortcutsPanelProps {
 
 export function KeyboardShortcutsPanel({ compact = false }: KeyboardShortcutsPanelProps) {
   // Group shortcuts by category
-  const groupedShortcuts = SHORTCUT_REFERENCE.reduce((acc, shortcut) => {
-    if (!acc[shortcut.category]) {
-      acc[shortcut.category] = [];
-    }
-    acc[shortcut.category].push(shortcut);
+  const groupedShortcuts = SHORTCUT_REFERENCE.flatMap((cat) => cat.shortcuts).reduce((acc, shortcut) => {
+    const key = shortcut.category ?? 'Other';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push({ key: shortcut.keys[0] ?? '', description: shortcut.description });
     return acc;
-  }, {} as Record<string, typeof SHORTCUT_REFERENCE>);
+  }, {} as Record<string, Array<{ key: string; description: string }>>);
 
   const categoryOrder = ['View','Transform','Edit','History','Selection','Animation','Camera'];
 

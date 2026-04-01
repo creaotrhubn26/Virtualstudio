@@ -164,18 +164,20 @@ class AnimationRecorder {
       duration: session.keyframes.length > 0
         ? session.keyframes[session.keyframes.length - 1].time
         : 0,
+      loop: false,
+      speed: 1,
       tracks: [
         {
           id: `track-${session.id}`,
-          name: session.nodeId,
-          targetId: session.nodeId,
-          targetType: 'node',
+          nodeId: session.nodeId,
+          type: 'position',
           property: 'position',
           keyframes: session.keyframes.map((kf) => ({
             time: kf.time,
             value: typeof kf.value === 'number' ? kf.value : Array.isArray(kf.value) ? kf.value[0] ?? 0 : 0,
             easing: 'linear' as const,
           })),
+          enabled: true,
         },
       ],
     };

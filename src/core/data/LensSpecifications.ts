@@ -2,6 +2,8 @@ export type LensType = 'prime' | 'zoom' | 'macro' | 'tilt-shift' | 'fisheye' | '
 export type MountType = 'EF' | 'RF' | 'F' | 'Z' | 'E' | 'FE' | 'L' | 'M43' | 'X' | 'PL' | 'MFT';
 
 export interface LensSpec {
+  apertureBlades?: number;
+  bokehQuality?: number;
   id: string;
   brand: string;
   model: string;
@@ -23,6 +25,8 @@ export interface LensSpec {
   groups?: number;
   bladeCount?: number;
   magnification?: number;
+  stabilization?: boolean;
+  vignetting?: number;
 }
 
 export const LENS_DATABASE: LensSpec[] = [
@@ -127,8 +131,14 @@ export function getFocalLengthDisplay(lens: LensSpec): string {
   return `${lens.focalLength}mm`;
 }
 
-export function findLensSpec(id: string): LensSpec | undefined {
-  return getLensById(id);
+export function findLensSpec(idOrBrand: string, model?: string): LensSpec | undefined {
+  if (model) {
+    return LENS_DATABASE.find(
+      (l) => l.brand.toLowerCase() === idOrBrand.toLowerCase() &&
+             l.model.toLowerCase().includes(model.toLowerCase()),
+    );
+  }
+  return getLensById(idOrBrand);
 }
 
 export function findLensSpecByBrand(brand: string, model?: string): LensSpec | undefined {
@@ -174,6 +184,9 @@ export interface LensNodeData {
   focalLength: number;
   maxAperture: number;
   minFocusDistance: number;
+  aperture?: number;
+  fieldOfView?: number;
+  userData?: Record<string, unknown>;
 }
 
 export function lensSpecToCameraData(spec: LensSpec): LensNodeData {

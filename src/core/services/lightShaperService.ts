@@ -43,6 +43,10 @@ class LightShaperService {
   calculateEffectiveIntensity(baseIntensity: number, shaper: LightShaper): number {
     return baseIntensity * Math.pow(0.5, shaper.stopLoss);
   }
+
+  async getCompatibleShapers(_lightAssetId: string, _options?: { minScore?: number }): Promise<LightShaper[]> {
+    return LIGHT_SHAPERS;
+  }
 }
 
 export const lightShaperService = new LightShaperService();

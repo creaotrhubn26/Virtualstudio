@@ -28,6 +28,10 @@ export interface BrandKit {
   typography: BrandTypography;
   icons: FeatureIcon[];
   gradients: Record<string, string>;
+  logos?: { main: string; icon: string };
+  watermark?: string;
+  decorative?: { gridPattern: string; gradientOrb: string };
+  loadingSpinner?: string;
 }
 
 export const brandColors: BrandColor[] = [

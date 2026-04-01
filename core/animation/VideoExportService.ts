@@ -29,6 +29,7 @@ export interface ExportResult {
   url?: string;
   error?: string;
   duration?: number;
+  size?: number;
   fileSize?: number;
   filename?: string;
 }

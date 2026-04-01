@@ -8,7 +8,6 @@
 import {
   useMemo,
   useState } from 'react';
-import Grid from '@mui/material/Grid';
 import type { ReactElement } from 'react';
 import {
   Dialog,
@@ -18,7 +17,7 @@ import {
   Button,
   Box,
   Typography,
-  Grid2 as Grid,
+  Grid,
   Card,
   CardMedia,
   CardContent,
@@ -213,14 +212,14 @@ export const HDRIRecommendationDialog: React.FC<HDRIRecommendationDialogProps> =
                     
                     {/* Category Badge */}
                     <Chip
-                      icon={CATEGORY_ICONS[hdri.category] || <Landscape />}
+                      icon={CATEGORY_ICONS[hdri.category ?? ''] || <Landscape />}
                       label={hdri.category}
                       size="small"
                       sx={{
                         position: 'absolute',
                         top: 8,
                         left: 8,
-                        bgcolor: CATEGORY_COLORS[hdri.category] || '#666',
+                        bgcolor: CATEGORY_COLORS[hdri.category ?? ''] || '#666',
                         color: 'white',
                         fontSize: '0.7rem',
                         height: 24, '& .MuiChip-icon': { color: 'white', fontSize: 14 }}}
@@ -260,18 +259,18 @@ export const HDRIRecommendationDialog: React.FC<HDRIRecommendationDialogProps> =
                           Match
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          {getStars(hdri.matchScore)}
+                          {getStars(hdri.matchScore ?? 0)}
                         </Box>
                       </Box>
                       <LinearProgress
                         variant="determinate"
-                        value={hdri.matchScore}
+                        value={hdri.matchScore ?? 0}
                         sx={{
                           height: 4,
                           borderRadius: 2,
                           bgcolor: 'rgba(255,255,255,0.1)','& .MuiLinearProgress-bar': {
-                            bgcolor: hdri.matchScore >= 80 ? '#4caf50' : 
-                                    hdri.matchScore >= 50 ? '#ff9800' : '#f44336',
+                            bgcolor: (hdri.matchScore ?? 0) >= 80 ? '#4caf50' : 
+                                    (hdri.matchScore ?? 0) >= 50 ? '#ff9800' : '#f44336',
                           }}}
                       />
                     </Box>

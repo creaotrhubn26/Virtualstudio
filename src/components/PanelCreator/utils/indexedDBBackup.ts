@@ -76,7 +76,10 @@ export const savePanelsToIndexedDB = async (panels: PanelConfig[]): Promise<void
       });
     }
 
-    await transaction.complete;
+    await new Promise<void>((resolve, reject) => {
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
   } catch (error) {
     console.error('Error saving panels to IndexedDB:', error);
     throw error;
@@ -130,7 +133,10 @@ export const saveVersionsToIndexedDB = async (versions: PanelVersion[]): Promise
       });
     }
 
-    await transaction.complete;
+    await new Promise<void>((resolve, reject) => {
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
   } catch (error) {
     console.error('Error saving versions to IndexedDB:', error);
     throw error;

@@ -14,10 +14,10 @@ import {
 } from '@mui/material';
 import { colors, borderRadius, transitions } from '../../styles/designTokens';
 
-export interface EnhancedSelectProps extends SelectProps {
+export type EnhancedSelectProps = SelectProps & {
   options?: Array<{ value: string | number; label: string }>;
   label?: string;
-}
+};
 
 export const EnhancedSelect: FC<EnhancedSelectProps> = ({
   options = [],

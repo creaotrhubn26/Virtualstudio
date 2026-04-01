@@ -10,6 +10,8 @@ export interface HDRIEnvironment {
   tags: string[];
   description?: string;
   cct?: number;
+  isPremium?: boolean;
+  resolution?: string;
 }
 
 export const HDRI_ENVIRONMENTS: HDRIEnvironment[] = [
@@ -38,6 +40,35 @@ class HDRIEnvironmentService {
     return HDRI_ENVIRONMENTS.filter(
       (e) => e.name.includes(q) || e.label.toLowerCase().includes(q) || e.tags.some((t) => t.includes(q)),
     );
+  }
+
+  loadEnvironment(environmentId: string): { environmentId: string; intensity: number; rotation: number } {
+    const env = this.getById(environmentId);
+    return {
+      environmentId,
+      intensity: env?.intensity ?? 1.0,
+      rotation: env?.rotation ?? 0,
+    };
+  }
+
+  clearEnvironment(): void {
+    console.log('[HDRIEnvironmentService] Environment cleared');
+  }
+
+  getAllEnvironments(): HDRIEnvironment[] {
+    return this.getAll();
+  }
+
+  getEnvironmentsByCategory(category: string): HDRIEnvironment[] {
+    return HDRI_ENVIRONMENTS.filter((e) => e.category === category);
+  }
+
+  searchEnvironments(query: string): HDRIEnvironment[] {
+    return this.search(query);
+  }
+
+  getEnvironment(id: string): HDRIEnvironment | undefined {
+    return this.getById(id);
   }
 }
 

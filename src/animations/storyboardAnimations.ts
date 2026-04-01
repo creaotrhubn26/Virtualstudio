@@ -176,3 +176,25 @@ export const animationEasings = {
 export function getStaggerDelay(index: number, baseMs = 50): string {
   return `${index * baseMs}ms`;
 }
+
+export const buttonPress = keyframes`
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+`;
+
+export const checkmarkDraw = keyframes`
+  0% { stroke-dashoffset: 100; }
+  100% { stroke-dashoffset: 0; }
+`;
+
+export const spinnerRotate = keyframes`
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+`;
+
+export const sliderBounce = keyframes`
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+`;

@@ -26,7 +26,7 @@ window.ResizeObserver = ResizeObserverMock as any;
 
 // Mock requestAnimationFrame
 window.requestAnimationFrame = vi.fn((callback) => {
-  return setTimeout(callback, 0);
+  return Number(setTimeout(callback, 0));
 });
 
 window.cancelAnimationFrame = vi.fn((id) => {

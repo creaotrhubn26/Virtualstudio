@@ -35,7 +35,13 @@ export default function BottomPreview() {
   
   // Find camera node
   const cameraNode = nodes.find((n) => n.type === 'camera');
-  const cameraSettings = cameraNode?.camera || { focalLength: 50, aperture: 2.8, iso: 100, shutter: 1/125 };
+  const rawCamera = cameraNode?.camera;
+  const cameraSettings = {
+    focalLength: rawCamera?.focalLength ?? 50,
+    aperture: rawCamera?.aperture ?? 2.8,
+    iso: rawCamera?.iso ?? 100,
+    shutter: rawCamera?.shutter ?? (1 / 125),
+  };
   
   return (
     <Box sx={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#1a1a1a' }}>
@@ -326,7 +332,7 @@ export default function BottomPreview() {
         </Box>
       </Box>
       
-      <ExportDialog open={open} onClose={() => setOpen(false)} />
+      <ExportDialog open={open} onClose={() => setOpen(false)} onExport={() => setOpen(false)} />
     </Box>
   );
 }

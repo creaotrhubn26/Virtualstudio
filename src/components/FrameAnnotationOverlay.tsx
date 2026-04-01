@@ -223,7 +223,7 @@ const LightRaysEffect = styled(Box)({
   },
 });
 
-const ArrowFlowLine = styled('svg,')({
+const ArrowFlowLine = styled('svg')({
   position: 'absolute',
   top: 0,
   left: 0,

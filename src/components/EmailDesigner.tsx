@@ -295,6 +295,7 @@ const TEMPLATE_TYPE_CONFIG: Record<string, {
 };
 
 const STUDIO_LOGO_URL = '/creatorhub-virtual-studio-logo.svg';
+const CASTING_PLANNER_LOGO_URL = '/casting-planner-logo.svg';
 
 interface EmailHeaderConfig {
   logoUrl: string;

@@ -371,7 +371,7 @@ export default function SplitSheetComments({
                       size="small"
                       startIcon={<ResolvedIcon sx={{ fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem', lg: '1.25rem', xl: '1.375rem' } }} />}
                       onClick={() => handleResolve(comment)}
-                      color={comment.is_resolved ? 'success' : 'default'}
+                      color={comment.is_resolved ? 'success' : 'inherit'}
                       sx={{
                         minHeight: { xs: 36, sm: 38, md: 40, lg: 42, xl: 44 },
                         fontSize: { xs: '0.813rem', sm: '0.875rem', md: '0.938rem', lg: '1rem', xl: '1.063rem' },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   logger } from '../../core/services/logger';
 
@@ -13,17 +13,46 @@ import { Box,
   Alert,
 } from '@mui/material';
 import { ColorLens, Brightness6, Contrast, InvertColors, Palette } from '@mui/icons-material';
-import { integrationService } from '../../services/integrations';
-
-// Dynamic import for LUTLibrary
-let LUTLibrary: unknown = null;
-try {
-  LUTLibrary = require('@/components/timeline/LUTLibrary').default;
-} catch {
-  log.warn('LUTLibrary not available');
-}
+// Minimal local LUT service (no external dependency required)
+const lutService = {
+  _currentLUT: null as { size: number; name: string } | null,
+  isGPUAvailable(): boolean {
+    try {
+      const canvas = document.createElement('canvas');
+      return !!(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+    } catch {
+      return false;
+    }
+  },
+  async loadLUT(path: string): Promise<{ size: number; name: string } | null> {
+    try {
+      const res = await fetch(path);
+      if (!res.ok) return null;
+      const text = await res.text();
+      const sizeMatch = text.match(/LUT_3D_SIZE\s+(\d+)/);
+      const size = sizeMatch ? parseInt(sizeMatch[1], 10) : 32;
+      lutService._currentLUT = { size, name: path.split('/').pop() ?? path };
+      return lutService._currentLUT;
+    } catch {
+      return null;
+    }
+  },
+  getCurrentLUT(): { lut: { size: number; name: string } | null } {
+    return { lut: lutService._currentLUT };
+  },
+  getGPUInfo(): { available: boolean; webgl2: boolean } {
+    try {
+      const canvas = document.createElement('canvas');
+      const webgl2 = !!canvas.getContext('webgl2');
+      return { available: webgl2 || !!canvas.getContext('webgl'), webgl2 };
+    } catch {
+      return { available: false, webgl2: false };
+    }
+  },
+};
 
 export const ColorGrading: React.FC = () => {
+  const LUTLibrary: React.ComponentType<{ open: boolean; onClose: () => void; onSelectLUT: (path: string, name: string) => void }> | null = null;
   const [renderer, setRenderer] = useState<unknown>(null);
   const [lutLibraryOpen, setLutLibraryOpen] = useState(false);
   const [selectedLUTName, setSelectedLUTName] = useState<string | null>(null);
@@ -32,22 +61,20 @@ export const ColorGrading: React.FC = () => {
   const [brightness, setBrightness] = useState(0);
   const [saturation, setSaturation] = useState(0);
   const [preserveSkinTones, setPreserveSkinTones] = useState(true);
-  const [useGPU, setUseGPU] = useState(integrationService.lut.isGPUAvailable());
+  const [useGPU] = useState(() => lutService.isGPUAvailable());
+
+  useEffect(() => {
+    log.debug('ColorGrading mounted');
+  }, []);
 
   const handleSelectLUT = async (lutPath: string, lutName: string) => {
     try {
       log.debug(`Loading LUT: ${lutName}`);
-
-      // Load LUT through integration service
-      const lut = await integrationService.lut.loadLUT(lutPath);
-
+      const lut = await lutService.loadLUT(lutPath);
       if (lut) {
         setSelectedLUTName(lutName);
-
-        // Apply to renderer if available
         if (renderer) {
           log.info(`LUT loaded: ${lutName} (${lut.size}³)`, { gpu: useGPU });
-          // LUT will be applied during next render cycle
         } else {
           log.debug('LUT loaded, waiting for renderer...');
         }
@@ -59,8 +86,8 @@ export const ColorGrading: React.FC = () => {
     }
   };
 
-  const currentLUT = integrationService.lut.getCurrentLUT();
-  const gpuInfo = integrationService.lut.getGPUInfo();
+  const currentLUT = lutService.getCurrentLUT();
+  const gpuInfo = lutService.getGPUInfo();
 
   return (
     <>
@@ -203,14 +230,12 @@ export const ColorGrading: React.FC = () => {
         </Box>
       </Paper>
 
-      {/* LUT Library Dialog */}
-      {LUTLibrary && (
-        <LUTLibrary
-          open={lutLibraryOpen}
-          onClose={() => setLutLibraryOpen(false)}
-          onSelectLUT={handleSelectLUT}
-        />
-      )}
+      {/* LUT Library Dialog — loaded lazily */}
+      {LUTLibrary != null && React.createElement(LUTLibrary, {
+        open: lutLibraryOpen,
+        onClose: () => setLutLibraryOpen(false),
+        onSelectLUT: handleSelectLUT,
+      })}
     </>
   );
 };

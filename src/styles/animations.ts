@@ -78,3 +78,21 @@ export const transitionPresets = {
   transform: `transform ${ANIMATION_DURATIONS.normal}ms ${ANIMATION_EASINGS.default}`,
   color: `color ${ANIMATION_DURATIONS.fast}ms ${ANIMATION_EASINGS.default}, background-color ${ANIMATION_DURATIONS.fast}ms ${ANIMATION_EASINGS.default}`,
 } as const;
+
+export const animations = {
+  fadeIn: {
+    animation: `fadeIn ${ANIMATION_DURATIONS.normal}ms ${ANIMATION_EASINGS.enter} both`,
+  },
+  slideIn: {
+    animation: `slideInUp ${ANIMATION_DURATIONS.normal}ms ${ANIMATION_EASINGS.enter} both`,
+  },
+  pulse: {
+    animation: 'pulse 1.5s ease-in-out infinite',
+  },
+  shimmer: {
+    animation: 'shimmer 1.5s linear infinite',
+  },
+  spin: {
+    animation: `spin ${ANIMATION_DURATIONS.slow}ms ${ANIMATION_EASINGS.default} infinite`,
+  },
+} as const;

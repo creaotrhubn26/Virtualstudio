@@ -316,7 +316,7 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
     // Add camera-specific specs if it's a camera
     if (isCamera) {
       const specs = item.specifications || {};
-      const sensorSize = specs.sensor || getSensorSizeForCamera(item.brand, item.model);
+      const sensorSize = (specs.sensor as [number, number] | undefined) || getSensorSizeForCamera(item.brand, item.model);
       
       // Try to find attached lens specs
       const attachedLensBrand = specs.attachedLensBrand as string || item.brand;
@@ -331,9 +331,9 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
       
       // Try to find real lens specs if lens info is provided
       if (attachedLensModel) {
-        lensSpec = findLensSpec(attachedLensBrand || '', attachedLensModel);
+        lensSpec = findLensSpec(attachedLensModel) ?? null;
         if (!lensSpec) {
-          lensSpec = findLensSpecByBrand(attachedLensBrand || '');
+          lensSpec = findLensSpecByBrand(attachedLensBrand || '') ?? null;
         }
       }
       
@@ -341,10 +341,10 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
         // Use real lens specifications
         const lensData = lensSpecToCameraData(lensSpec);
         focalLength = lensData.focalLength;
-        aperture = lensData.aperture;
+        aperture = lensData.aperture ?? aperture;
         minFocusDistance = lensData.minFocusDistance;
         fieldOfView = lensData.fieldOfView;
-        lensSpecs = lensData.userData.specifications;
+        lensSpecs = (lensData.userData?.specifications as Record<string, any>) ?? {};
         
         log.debug(`Found real lens specs for ${lensSpec.brand} ${lensSpec.model}: ${focalLength}mm f/${aperture}`);
       } else {
@@ -403,7 +403,7 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
     // Add lens-specific specs if it's a lens (for future lens attachment feature)
     if (isLens) {
       // Try to find real lens specs
-      const lensSpec = findLensSpec(item.brand || '', item.model || ',')
+      const lensSpec = findLensSpec(item.model || '')
                     || findLensSpecByBrand(item.brand || '');
       
       if (lensSpec) {
@@ -418,19 +418,26 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
         
         assetData.userData = {
           ...assetData.userData,
-          specifications: lensData.userData.specifications,
+          specifications: (lensData.userData?.specifications as Record<string, unknown>) ?? {},
         };
         
         log.debug(`Found real lens specs for ${lensSpec.brand} ${lensSpec.model}`);
       } else {
         // Extract focal length and aperture from model name
-        const defaultSpec = getDefaultLensSpec(extractFocalLengthFromModel(item.model || ''));
+        const hintFl = extractFocalLengthFromModel(item.model || '') || 50;
+        const defaultSpec = getDefaultLensSpec();
+        const defaultFl = typeof defaultSpec.focalLength === 'number'
+          ? defaultSpec.focalLength
+          : (defaultSpec.focalLength as [number, number])[0];
+        const usedFl = hintFl || defaultFl;
+        const defaultFovRad = 2 * Math.atan(43.27 / (2 * usedFl));
+        const defaultFieldOfView = Math.round((defaultFovRad * 180) / Math.PI);
         
         assetData.lensData = {
-          focalLength: defaultSpec.focalLength as number,
-          aperture: defaultSpec.maxAperture as number,
-          minFocusDistance: defaultSpec.minFocusDistance as number,
-          fieldOfView: defaultSpec.fieldOfView as number,
+          focalLength: usedFl,
+          aperture: defaultSpec.maxAperture,
+          minFocusDistance: defaultSpec.minFocusDistance,
+          fieldOfView: defaultFieldOfView,
         };
       }
     }
@@ -438,7 +445,7 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
     // Add light-specific specs if it's a light
     if (isLight) {
       // Try to find real equipment specifications from database
-      const realSpec = findLightSpec(item.brand || '', item.model || ',') 
+      const realSpec = findLightSpec(item.model || '')
                     || findLightSpecByBrand(item.brand || '');
       
       // User-provided specs from inventory
@@ -460,9 +467,9 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
       
       if (realSpec) {
         // Use real equipment specifications
-        rawPower = realSpec.power;
-        beam = realSpec.beamAngle;
-        cct = realSpec.colorTemp;
+        rawPower = realSpec.powerWatts ?? realSpec.maxWatts;
+        beam = realSpec.beamAngle ?? 60;
+        cct = realSpec.colorTempK ?? (typeof realSpec.cct === 'number' ? realSpec.cct : 5600);
         cri = realSpec.cri;
         flashDuration = realSpec.flashDuration;
         recycleTime = realSpec.recycleTime;
@@ -1443,7 +1450,7 @@ export function EquipmentBrowser({ onAddToScene }: EquipmentBrowserProps) {
                       <CardContent>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                           <Avatar sx={{ width: 24, height: 24, bgcolor: equipmentIsOwned ? 'success.main' : 'primary.main' }}>
-                            {getEquipmentIcon(eq.category)}
+                            {getEquipmentIcon(eq.category ?? 'light')}
                           </Avatar>
                           <Typography variant="caption" color="text.secondary">
                             {eq.brand}

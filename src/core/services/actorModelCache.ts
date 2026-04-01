@@ -15,6 +15,17 @@ export interface CachedActorParameters {
 export interface CachedActorMetadata {
   genre?: string;
   mood?: string;
+  era?: string;
+  tags?: string[];
+}
+
+export interface CachedActorCostume {
+  top?: string;
+  bottom?: string;
+  shoes?: string;
+  accessories?: string[];
+  style?: string;
+  clothingStyle?: string;
 }
 
 export interface CachedActor {
@@ -25,6 +36,7 @@ export interface CachedActor {
   parameters: CachedActorParameters;
   metadata: CachedActorMetadata;
   appearance?: CachedActorAppearance;
+  costume?: CachedActorCostume;
 }
 
 const _cache = new Map<string, CachedActor>();

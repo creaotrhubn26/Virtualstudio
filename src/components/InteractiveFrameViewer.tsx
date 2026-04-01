@@ -67,7 +67,8 @@ export const InteractiveFrameViewer: FC<InteractiveFrameViewerProps> = ({
   // Convert store annotations to overlay format
   const annotations: FrameAnnotation[] = (frame.annotations || []).map((a) => ({
     ...a,
-    rotation: a.type === 'arrow' ? arrowRotation : a.rotation,
+    type: a.type as AnnotationType,
+    rotation: a.type === 'arrow' ? arrowRotation : (a.rotation ?? 0),
   }));
 
   // Handle adding annotation
@@ -75,7 +76,7 @@ export const InteractiveFrameViewer: FC<InteractiveFrameViewerProps> = ({
     annotation: Omit<FrameAnnotation, 'id' | 'createdAt'>
   ) => {
     const annotationData: Omit<FrameAnnotationData, 'id' | 'createdAt'> = {
-      type: annotation.type,
+      type: annotation.type as 'arrow' | 'circle' | 'rectangle' | 'line' | 'text' | 'focus',
       x: annotation.x,
       y: annotation.y,
       rotation: annotation.type === 'arrow' ? arrowRotation : annotation.rotation,
@@ -92,7 +93,7 @@ export const InteractiveFrameViewer: FC<InteractiveFrameViewerProps> = ({
     id: string,
     updates: Partial<FrameAnnotation>
   ) => {
-    updateAnnotation(frame.id, id, updates);
+    updateAnnotation(frame.id, id, updates as unknown as Partial<import('../state/storyboardStore').FrameAnnotationData>);
   }, [frame.id, updateAnnotation]);
 
   // Handle deleting annotation
@@ -223,7 +224,7 @@ export const InteractiveFrameViewer: FC<InteractiveFrameViewerProps> = ({
       >
         <FrameAnnotationOverlay
           frameId={frame.id}
-          imageUrl={frame.imageUrl}
+          imageUrl={frame.imageUrl ?? ''}
           annotations={annotations}
           onAddAnnotation={handleAddAnnotation}
           onUpdateAnnotation={handleUpdateAnnotation}

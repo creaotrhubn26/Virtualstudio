@@ -17,7 +17,7 @@ import {
   Button,
   Box,
   Typography,
-  Grid2 as Grid,
+  Grid,
   Card,
   CardContent,
   CardMedia,
@@ -35,7 +35,6 @@ import {
   Badge,
   Tooltip,
 } from '@mui/material';
-import Grid from '@mui/material/Grid';
 import {
   ViewInAr,
   Chair,
@@ -129,7 +128,7 @@ export const PBRRecommendationDialog: React.FC<PBRRecommendationDialogProps> = (
     if (open && recommendations.length > 0) {
       const essentialBundle = recommendations.find(r => r.category === 'essential');
       if (essentialBundle) {
-        const essentialIds = new Set(essentialBundle.items.map(item => item.id));
+        const essentialIds = new Set<string>((essentialBundle.items ?? []).map((item: import('../../core/services/pbrRecommendationService').PBRItem) => item.id));
         setSelectedItems(essentialIds);
       }
     }
@@ -150,7 +149,7 @@ export const PBRRecommendationDialog: React.FC<PBRRecommendationDialogProps> = (
   const toggleBundle = (bundle: PBRRecommendation, select: boolean) => {
     setSelectedItems(prev => {
       const next = new Set(prev);
-      bundle.items.forEach(item => {
+      (bundle.items ?? []).forEach(item => {
         if (select) {
           next.add(item.id);
         } else {
@@ -162,17 +161,17 @@ export const PBRRecommendationDialog: React.FC<PBRRecommendationDialogProps> = (
   };
 
   const isBundleSelected = (bundle: PBRRecommendation) => {
-    return bundle.items.every(item => selectedItems.has(item.id));
+    return (bundle.items ?? []).every(item => selectedItems.has(item.id));
   };
 
   const isBundlePartiallySelected = (bundle: PBRRecommendation) => {
-    const selectedCount = bundle.items.filter(item => selectedItems.has(item.id)).length;
-    return selectedCount > 0 && selectedCount < bundle.items.length;
+    const selectedCount = (bundle.items ?? []).filter(item => selectedItems.has(item.id)).length;
+    return selectedCount > 0 && selectedCount < (bundle.items ?? []).length;
   };
 
   const handleApply = () => {
     // Gather all selected items
-    const allItems = recommendations.flatMap(r => r.items);
+    const allItems = recommendations.flatMap(r => r.items ?? []);
     const selected = allItems.filter(item => selectedItems.has(item.id));
     
     if (selected.length > 0) {
@@ -194,10 +193,7 @@ export const PBRRecommendationDialog: React.FC<PBRRecommendationDialogProps> = (
   };
 
   // Get material preview color
-  const getMaterialPreview = (item: PBRItem) => {
-    if (item.material?.color) {
-      return item.material.color;
-    }
+  const getMaterialPreview = (_item: PBRItem) => {
     return '#666';
   };
 
@@ -225,7 +221,7 @@ export const PBRRecommendationDialog: React.FC<PBRRecommendationDialogProps> = (
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ display: 'block' }}>
             Add PBR elements for {actor.name}
-            {lighting && ` with ${lighting.name}`}
+            {hdri && ` with ${hdri.name ?? hdri.id}`}
           </Typography>
         </Box>
         <Stack direction="row" spacing={1} alignItems="center">
@@ -254,7 +250,7 @@ export const PBRRecommendationDialog: React.FC<PBRRecommendationDialogProps> = (
           <Typography variant="body2">
             Props and materials selected based on
             {actor.metadata?.genre && ` ${actor.metadata.genre}`} character
-            {lighting && ` and ${lighting.category} lighting`}
+            {hdri && ` and ${hdri.category ?? "ambient"} lighting`}
           </Typography>
         </Alert>
 
@@ -273,7 +269,7 @@ export const PBRRecommendationDialog: React.FC<PBRRecommendationDialogProps> = (
             <AccordionSummary 
               expandIcon={<ExpandMore sx={{ color: 'white' }} />}
               sx={{ 
-                borderLeft: `4px solid ${CATEGORY_COLORS[bundle.category]}`, '&:hover': { bgcolor: '#333' }}}
+                borderLeft: `4px solid ${CATEGORY_COLORS[bundle.category ?? 'optional']}`, '&:hover': { bgcolor: '#333' }}}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', pr: 2 }}>
                 <Checkbox
@@ -284,20 +280,20 @@ export const PBRRecommendationDialog: React.FC<PBRRecommendationDialogProps> = (
                     toggleBundle(bundle, !isBundleSelected(bundle));
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  sx={{ color: CATEGORY_COLORS[bundle.category] }}
+                  sx={{ color: CATEGORY_COLORS[bundle.category ?? 'optional'] }}
                 />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
-                  {CATEGORY_ICONS[bundle.category]}
+                  {CATEGORY_ICONS[bundle.category ?? 'optional']}
                   <Typography variant="subtitle1" sx={{ fontWeight: 600}}>
-                    {bundle.name}
+                    {bundle.name ?? bundle.label}
                   </Typography>
                   <Chip 
-                    label={`${bundle.items.length} items`} 
+                    label={`${(bundle.items ?? []).length} items`} 
                     size="small" 
                     sx={{ 
                       fontSize: '0.65rem', 
                       height: 20, 
-                      bgcolor: CATEGORY_COLORS[bundle.category],
+                      bgcolor: CATEGORY_COLORS[bundle.category ?? 'optional'],
                       color: 'white'}} 
                   />
                 </Box>
@@ -311,7 +307,7 @@ export const PBRRecommendationDialog: React.FC<PBRRecommendationDialogProps> = (
                 {bundle.description}
               </Typography>
               <Grid container spacing={2}>
-                {bundle.items.map((item) => (
+                {(bundle.items ?? []).map((item) => (
                   <Grid size={{ xs: 6, sm: 4, md: 3 }} key={item.id}>
                     <Card 
                       sx={{ 
@@ -337,7 +333,7 @@ export const PBRRecommendationDialog: React.FC<PBRRecommendationDialogProps> = (
                         >
                           {/* Type Icon */}
                           <Box sx={{ color: 'rgba(255,255,255,0.6)', fontSize: 40 }}>
-                            {TYPE_ICONS[item.type]}
+                            {TYPE_ICONS[item.category] ?? <ViewInAr />}
                           </Box>
                           
                           {/* Selected Checkmark */}
@@ -425,7 +421,7 @@ export const PBRRecommendationDialog: React.FC<PBRRecommendationDialogProps> = (
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
               {Array.from(selectedItems).map(id => {
-                const item = recommendations.flatMap(r => r.items).find(i => i.id === id);
+                const item = recommendations.flatMap(r => r.items ?? []).find(i => i.id === id);
                 return item ? (
                   <Chip
                     key={id}

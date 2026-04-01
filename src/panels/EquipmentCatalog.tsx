@@ -75,7 +75,7 @@ import { useTabletSupport } from '../../providers/TabletSupportProvider';
 import { TouchSlider, TouchIconButton, TouchContextMenu } from '../components/TabletAwarePanels';
 import { useAccessibility, useAnnounce, VisuallyHidden } from '../../providers/AccessibilityProvider';
 import { AccessibleButton, AccessibleDialog, AccessibleSlider } from '../components/AccessibleComponents';
-import { useVirtualStudio } from '../../../VirtualStudioContext';
+import { useVirtualStudio } from '../VirtualStudioContext';
 // ============================================================================
 // Equipment Categories and Items
 // ============================================================================
@@ -83,6 +83,7 @@ import { useVirtualStudio } from '../../../VirtualStudioContext';
 export type EquipmentCategory =
   | 'lights'
   | 'modifiers'
+  | 'accessories'
   | 'camera_motion'
   | 'audio'
   | 'furniture'
@@ -121,6 +122,7 @@ const CATEGORY_INFO: Record<EquipmentCategory, { label: string; icon: React.Reac
   video_production: { label: 'Video Production', icon: <Videocam />, color: '#e91e63' },
   effects: { label: 'Special Effects', icon: <Theaters />, color: '#9c27b0' },
   grip: { label: 'Grip Hardware', icon: <Build />, color: '#607d8b' },
+  accessories: { label: 'Accessories', icon: <Build />, color: '#78909c' },
 };
 
 // Generate SVG thumbnails for each equipment type
@@ -1030,7 +1032,7 @@ export function EquipmentCatalog({ onAddToScene, compact = false }: EquipmentCat
   
   // Touch state
   const [touchDragItem, setTouchDragItem] = useState<EquipmentItem | null>(null);
-  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
   const [itemOptions, setItemOptions] = useState<Record<string, any>>({});
   const [favorites, setFavorites] = useState<Set<string>>(new Set());

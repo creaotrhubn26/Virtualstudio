@@ -18,6 +18,7 @@ import {
   IconButton,
   Tooltip,
   useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import {
   Description as ContractIcon,
@@ -40,6 +41,7 @@ export default function RelatedContractsSection({
   onCreateContract,
 }: RelatedContractsSectionProps) {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const brandColor = theme.palette.primary.main;
 
   // Fetch related contracts by project_id - Fixed queryKey

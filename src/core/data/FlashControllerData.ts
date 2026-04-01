@@ -196,18 +196,10 @@ export function getControllerRecommendations(
   return recommendations;
 }
 
-export function getBestControllerForLights(lights: LightInScene[]): FlashController | null {
+export function getBestControllerForLights(lights: LightInScene[]): ControllerRanking | null {
   if (lights.length === 0) return null;
-  const needsHSS = lights.some(l => l.flashMode === 'hss');
-  const needsTTL = lights.some(l => l.flashMode === 'ttl');
-
-  return FLASH_CONTROLLERS.reduce<FlashController | null>((best, ctrl) => {
-    if (needsHSS && !ctrl.hssSupport) return best;
-    if (!best) return ctrl;
-    const score = (ctrl.hssSupport ? 2 : 0) + (ctrl.ttlSupport ? 2 : 0) + (needsTTL && ctrl.ttlSupport ? 3 : 0);
-    const bestScore = (best.hssSupport ? 2 : 0) + (best.ttlSupport ? 2 : 0) + (needsTTL && best.ttlSupport ? 3 : 0);
-    return score > bestScore ? ctrl : best;
-  }, null);
+  const ranked = getAllControllerRecommendations(lights);
+  return ranked[0] ?? null;
 }
 
 export interface ControllerRanking {

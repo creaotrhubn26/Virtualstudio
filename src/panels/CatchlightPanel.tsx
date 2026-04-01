@@ -150,7 +150,7 @@ export const CatchlightPanel: React.FC<CatchlightPanelProps> = ({ onSettingsChan
             control={
               <Switch
                 checked={settings.enabled}
-                onChange={(e) => updateSettings('enabled, ', e.target.checked)}
+                onChange={(e) => updateSettings('enabled', e.target.checked)}
               />
             }
             label={settings.enabled ? 'On' : 'Off'}
@@ -179,7 +179,7 @@ export const CatchlightPanel: React.FC<CatchlightPanelProps> = ({ onSettingsChan
                       sx={{
                         bgcolor: settings.eyeColor === color.value ? 'primary.dark' : '#2a2a2a',
                         cursor: 'pointer', '&:hover': { bgcolor: settings.eyeColor === color.value ? 'primary.dark' : '#333' }}}
-                      onClick={() => updateSettings('eyeColor,', color.value)}
+                      onClick={() => updateSettings('eyeColor', color.value)}
                     >
                       <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
                         <Stack direction="row" alignItems="center" spacing={1}>

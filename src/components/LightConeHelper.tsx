@@ -109,9 +109,7 @@ export function LightConeHelper({
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={2}
-            array={new Float32Array([0, 0, 0, 0, 0, -distance])}
-            itemSize={3}
+            args={[new Float32Array([0, 0, 0, 0, 0, -distance]), 3]}
           />
         </bufferGeometry>
         <lineBasicMaterial color={color} opacity={0.8} transparent />

@@ -170,7 +170,7 @@ export const ShotDetailPanel: React.FC<ShotDetailPanelProps> = ({ scene, onUpdat
     const updatedScene: SceneBreakdown = {
       ...scene,
       metadata: {
-        ...scene.metadata,
+        ...(scene.metadata as Record<string, unknown>),
         shotDetails,
       },
     };
@@ -180,7 +180,7 @@ export const ShotDetailPanel: React.FC<ShotDetailPanelProps> = ({ scene, onUpdat
 
   // Load shot data from scene metadata on mount
   useEffect(() => {
-    const shotDetails = scene.metadata?.shotDetails as {
+    const shotDetails = ((scene.metadata as Record<string, unknown>) || {}).shotDetails as {
       shots?: string[];
       cameras?: Record<string, ShotCamera>;
       lighting?: Record<string, ShotLighting>;
@@ -640,7 +640,7 @@ const AudioTab: React.FC<{ data: ShotAudio; onChange: (data: ShotAudio) => void 
 };
 
 const NotesTab: React.FC<{ notes: ShotNote[]; onChange: (notes: ShotNote[]) => void }> = ({ notes, onChange }) => {
-  const [newNote, setNewNote] = useState({ category: 'Director', content: '', priority: 'medium' as const });
+  const [newNote, setNewNote] = useState<{ category: string; content: string; priority: 'low' | 'medium' | 'high' }>({ category: 'Director', content: '', priority: 'medium' });
 
   const handleAddNote = () => {
     if (!newNote.content.trim()) return;

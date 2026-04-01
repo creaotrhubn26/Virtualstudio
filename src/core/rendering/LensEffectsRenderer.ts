@@ -1,4 +1,6 @@
 export interface LensEffectConfig {
+  vignetting?: number;
+  transmissionFactor?: number;
   enabled: boolean;
   chromaticAberration: number;
   vignette: number;

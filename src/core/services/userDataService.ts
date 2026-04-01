@@ -2,6 +2,8 @@ export interface LightPreset {
   id: string;
   name: string;
   description?: string;
+  category?: string;
+  isPublic?: boolean;
   lights: Array<{
     type: string;
     position: [number, number, number];
@@ -10,6 +12,7 @@ export interface LightPreset {
     color?: string;
     cct?: number;
     modifier?: string;
+    [key: string]: unknown;
   }>;
   createdAt: string;
   updatedAt: string;
@@ -37,6 +40,10 @@ class LightPresetsService {
     };
     this.presets.push(newPreset);
     return newPreset;
+  }
+
+  create(preset: Omit<LightPreset, 'id' | 'createdAt' | 'updatedAt'>): LightPreset {
+    return this.save(preset);
   }
 
   update(id: string, updates: Partial<LightPreset>): void {

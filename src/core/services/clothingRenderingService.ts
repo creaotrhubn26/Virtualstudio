@@ -69,6 +69,19 @@ class ClothingRenderingService {
     this.activeItems = [...outfit.items];
     console.log(`[ClothingRenderingService] Applied outfit: ${outfit.name}`);
   }
+
+  async loadClothingModel(_style: object, _options?: ClothingLoadOptions): Promise<object> {
+    return {};
+  }
+}
+
+export interface ClothingLoadOptions {
+  color?: string | { hue: number; saturation: number; lightness: number };
+  scale?: number;
+  roughness?: number;
+  metalness?: number;
+  enableLOD?: boolean;
+  position?: object;
 }
 
 export const clothingRenderingService = new ClothingRenderingService();

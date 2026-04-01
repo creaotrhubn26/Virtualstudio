@@ -126,7 +126,7 @@ export const GlassesSelector: React.FC<GlassesSelectorProps> = ({
     const preset = GLASSES_PRESETS[presetId];
     if (preset) {
       setActivePreset(presetId);
-      onOptionsChange(preset);
+      onOptionsChange(preset.options);
     }
   }, [onOptionsChange]);
 

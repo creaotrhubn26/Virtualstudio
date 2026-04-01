@@ -62,7 +62,7 @@ function AssetCard({ asset, isFavorite, onToggleFavorite, onPlaceManually, isTab
     if (asset.category === 'wall') {
       // Extract material ID from asset ID (format: "wall-{materialId}")
       const materialId = asset.id.replace(/^wall-/, '');
-      const wallId = asset.metadata?.wallId || 'backWall'; // Default to backWall
+      const wallId = String(asset.metadata?.wallId ?? 'backWall');
       
       // Use environmentService to set wall material
       environmentService.setWallMaterial(wallId, materialId);
@@ -425,7 +425,7 @@ export default function AssetLibraryPanel() {
     if (selectedAsset.category === 'wall') {
       // Extract material ID from asset ID (format: "wall-{materialId}")
       const materialId = selectedAsset.id.replace(/^wall-/, '');
-      const wallId = selectedAsset.metadata?.wallId || 'backWall'; // Default to backWall
+      const wallId = String(selectedAsset.metadata?.wallId ?? 'backWall');
       
       // Use environmentService to set wall material
       environmentService.setWallMaterial(wallId, materialId);

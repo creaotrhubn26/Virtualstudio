@@ -1,3 +1,5 @@
+import type { AnimationClip, AnimationTrack } from './SceneGraphAnimationEngine';
+
 export type TemplateCategory =
   | 'portrait'
   | 'fashion'
@@ -16,6 +18,7 @@ export interface RequiredNode {
   type: 'camera' | 'light' | 'mesh';
   label: string;
   role: string;
+  description?: string;
 }
 
 export interface TemplateStep {
@@ -144,7 +147,7 @@ class AnimationTemplateService {
   applyTemplate(
     templateId: string,
     nodeMapping: Record<string, string>,
-  ): { id: string; name: string; duration: number; tracks: unknown[] }[] {
+  ): AnimationClip[] {
     const template = ANIMATION_TEMPLATES.find((t) => t.id === templateId);
     if (!template) return [];
     return [
@@ -152,17 +155,19 @@ class AnimationTemplateService {
         id: `clip-${templateId}-${Date.now()}`,
         name: template.label,
         duration: template.totalDuration ?? template.duration,
-        tracks: template.tracks.map((tr, i) => ({
+        loop: false,
+        speed: 1,
+        tracks: template.tracks.map((tr, i): AnimationTrack => ({
           id: `track-${i}`,
-          name: `${tr.targetType}-${tr.property}`,
-          targetId: nodeMapping[tr.targetType] ?? tr.targetType,
-          targetType: 'node',
+          nodeId: nodeMapping[tr.targetType] ?? tr.targetType,
+          type: tr.property,
           property: tr.property,
           keyframes: tr.keyframes.map((kf) => ({
             time: kf.time,
             value: Array.isArray(kf.value) ? kf.value[0] ?? 0 : kf.value,
-            easing: 'linear',
+            easing: 'linear' as const,
           })),
+          enabled: true,
         })),
       },
     ];

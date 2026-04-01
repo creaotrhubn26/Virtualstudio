@@ -91,7 +91,7 @@ function VignetteCanvas({ vignetting, width = 200, height = 150, showGrid = true
     ctx.stroke();
     
     // Draw vignette
-    drawVignetteOverlay(ctx, width, height, { vignetting });
+    drawVignetteOverlay(ctx, width, height, vignetting);
     
   }, [vignetting, width, height, showGrid]);
   
@@ -226,8 +226,8 @@ export function LensEffectsPreview({ onEffectsChange }: LensEffectsPreviewProps)
     return nodes.find(n => n.camera && n.visible !== false);
   }, [nodes]);
   
-  const lensSpecs = activeCamera?.userData?.lensSpecs;
-  const attachedLens = activeCamera?.userData?.attachedLens;
+  const lensSpecs = activeCamera?.userData?.lensSpecs as import('@/core/data/LensSpecifications').LensSpec | undefined;
+  const attachedLens = activeCamera?.userData?.attachedLens as { brand: string; model: string; [key: string]: unknown } | undefined;
   
   // Derive effects from lens specs or use defaults
   const baseEffects = useMemo(() => {
@@ -321,16 +321,16 @@ export function LensEffectsPreview({ onEffectsChange }: LensEffectsPreviewProps)
                 Vignetting
               </Typography>
               <Chip
-                label={`${(effects.vignetting * 100).toFixed(0)}%`}
+                label={`${((effects.vignetting ?? 0) * 100).toFixed(0)}%`}
                 size="small"
-                color={effects.vignetting > 0.5 ? 'warning' : 'default'}
+                color={(effects.vignetting ?? 0) > 0.5 ? 'warning' : 'default'}
               />
             </Stack>
             
-            <VignetteCanvas vignetting={enabled ? effects.vignetting : 0} />
+            <VignetteCanvas vignetting={enabled ? (effects.vignetting ?? 0) : 0} />
             
             <Slider
-              value={effects.vignetting}
+              value={effects.vignetting ?? 0}
               onChange={(_, v) => handleEffectChange('vignetting', v as number)}
               min={0}
               max={1}

@@ -60,7 +60,7 @@ export const LUTPanel: FC<LUTPanelProps> = ({
       setLutName(file.name);
       onLUTLoaded?.(lut);
 
-      log.info(`LUT loaded: ${file.name}`, { size: lut.size, entries: lut.data.length });
+      log.info(`LUT loaded: ${file.name}`, { size: lut.size, entries: (lut.data ?? []).length });
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to load LUT';
       setError(errorMsg);

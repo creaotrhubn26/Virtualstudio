@@ -7,6 +7,9 @@ export interface SchoolHDRIPreset {
   rotation: number;
   description: string;
   tags: string[];
+  recommended?: boolean;
+  thumbnail?: string;
+  indoorOutdoor?: 'indoor' | 'outdoor';
 }
 
 export const SCHOOL_HDRI_PRESETS: SchoolHDRIPreset[] = [
@@ -19,6 +22,9 @@ export const SCHOOL_HDRI_PRESETS: SchoolHDRIPreset[] = [
     rotation: 0,
     description: 'Nøytralt studio-miljø for skolefoto',
     tags: ['studio', 'nøytral', 'skolefoto'],
+    recommended: true,
+    thumbnail: '/hdri/thumbnails/neutral-studio.jpg',
+    indoorOutdoor: 'indoor',
   },
   {
     id: 'warm-school',
@@ -29,6 +35,9 @@ export const SCHOOL_HDRI_PRESETS: SchoolHDRIPreset[] = [
     rotation: 45,
     description: 'Varmt innendørs skole-miljø',
     tags: ['varm', 'innendørs', 'skole'],
+    recommended: true,
+    thumbnail: '/hdri/thumbnails/warm-school.jpg',
+    indoorOutdoor: 'indoor',
   },
   {
     id: 'overcast-outdoor',
@@ -39,6 +48,9 @@ export const SCHOOL_HDRI_PRESETS: SchoolHDRIPreset[] = [
     rotation: 90,
     description: 'Overskyet himmellys for utendørs skolefoto',
     tags: ['utendørs', 'overskyet', 'naturlig'],
+    recommended: false,
+    thumbnail: '/hdri/thumbnails/overcast-outdoor.jpg',
+    indoorOutdoor: 'outdoor',
   },
 ];
 
@@ -73,6 +85,28 @@ class ClassPhotoSceneService {
 
   applySceneConfig(_config: ClassPhotoSceneConfig): void {
     console.log('[ClassPhotoSceneService] Scene config applied');
+  }
+
+  getRecommendedHDRIs(): SchoolHDRIPreset[] {
+    return SCHOOL_HDRI_PRESETS.filter((p) => p.recommended);
+  }
+
+  setClassPhotoHDRI(hdriId: string): void {
+    const preset = this.getHDRIPreset(hdriId);
+    if (preset) {
+      console.log(`[ClassPhotoSceneService] HDRI set to: ${preset.label}`);
+    }
+  }
+
+  addActorsToScene(
+    _session: import('./classPhotoService').ClassPhotoSession,
+    _ageGroup?: string
+  ): void {
+    console.log('[ClassPhotoSceneService] Actors added to scene');
+  }
+
+  removeActorFromScene(actorId: string): void {
+    console.log(`[ClassPhotoSceneService] Removed actor: ${actorId}`);
   }
 }
 

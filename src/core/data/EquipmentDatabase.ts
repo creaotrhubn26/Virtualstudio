@@ -13,6 +13,8 @@ export interface LightEquipment {
   specifications?: Record<string, unknown>;
   serialNumber?: string;
   condition?: string;
+  status?: 'available' | 'in-use' | 'maintenance' | 'retired';
+  location?: string;
 }
 
 export interface ModifierEquipment {
@@ -27,6 +29,8 @@ export interface ModifierEquipment {
   specifications?: Record<string, unknown>;
   serialNumber?: string;
   condition?: string;
+  status?: 'available' | 'in-use' | 'maintenance' | 'retired';
+  location?: string;
 }
 
 export const ALL_LIGHTS: LightEquipment[] = [

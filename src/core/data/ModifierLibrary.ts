@@ -125,7 +125,7 @@ export function searchModifiers(query: string): ModifierEntry[] {
   const q = query.toLowerCase();
   return MODIFIER_LIBRARY.filter(
     (m) =>
-      m.name.toLowerCase().includes(q) ||
+      (m.name ?? '').toLowerCase().includes(q) ||
       m.type.toLowerCase().includes(q) ||
       (m.brand?.toLowerCase().includes(q) ?? false),
   );

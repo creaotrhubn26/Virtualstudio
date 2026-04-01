@@ -121,15 +121,15 @@ const Joystick: FC<{
     const handleUp = () => handleEnd();
     
     if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('touchmove', handleTouchMove);
+      window.addEventListener('mousemove', handleMouseMove as unknown as EventListener);
+      window.addEventListener('touchmove', handleTouchMove as unknown as EventListener);
       window.addEventListener('mouseup', handleUp);
       window.addEventListener('touchend', handleUp);
     }
     
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('mousemove', handleMouseMove as unknown as EventListener);
+      window.removeEventListener('touchmove', handleTouchMove as unknown as EventListener);
       window.removeEventListener('mouseup', handleUp);
       window.removeEventListener('touchend', handleUp);
     };

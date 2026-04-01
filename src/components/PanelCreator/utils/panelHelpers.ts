@@ -2,7 +2,7 @@
  * Utility functions for PanelCreator
  */
 
-import { PanelConfig } from '../types';
+import type { PanelConfig, PanelCategory, MarketplaceCategory } from '../types';
 import { CREATORHUB_FUNCTIONS } from '../constants';
 
 /**
@@ -566,6 +566,13 @@ export const createDefaultFormData = () => ({
   type: 'function' as const,
   functionId: '',
   serviceId: '',
+  category: 'custom' as PanelCategory,
+  tags: [] as string[],
+  version: '1.0.0',
+  author: '',
+  marketplaceCategory: 'plugin' as MarketplaceCategory,
+  publishedToMarketplace: false,
+  marketplaceId: '',
 });
 
 /**

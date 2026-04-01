@@ -93,5 +93,3 @@ export function createAnimationClip(partial: Partial<AnimationClipConfig> & { id
     ...partial,
   };
 }
-
-export { sceneAnimationService };

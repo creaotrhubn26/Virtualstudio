@@ -115,7 +115,7 @@ export function ObjectExtractionPanel({
   });
 
   const handleAutoExtract = () => {
-    segmentImageMutation.mutate();
+    segmentImageMutation.mutate(undefined);
   };
 
   const handleExtractAtPoint = (x: number, y: number) => {
@@ -188,7 +188,7 @@ export function ObjectExtractionPanel({
                 <img
                   src={imageUrl}
                   alt="Source image"
-                  style={{ width: '100%', height: 'auto', display: 'block' }}
+                  style={{ width: '100%', height: 'auto', display: 'block', cursor: isSegmenting ? 'wait' : 'crosshair' }}
                   onClick={(e) => {
                     if (!isSegmenting) {
                       const rect = e.currentTarget.getBoundingClientRect();
@@ -197,7 +197,6 @@ export function ObjectExtractionPanel({
                       handleExtractAtPoint(x, y);
                     }
                   }}
-                  style={{ cursor: isSegmenting ? 'wait' : 'crosshair' }}
                 />
                 {isSegmenting && (
                   <Box

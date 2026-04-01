@@ -19,6 +19,7 @@ import {
   ListItem,
   ListItemText,
   Checkbox,
+  Divider,
 } from '@mui/material';
 import {
   PlayArrow as PlayIcon,

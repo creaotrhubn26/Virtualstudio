@@ -146,7 +146,7 @@ export const AnimatedActorCard: FC<AnimatedActorCardProps> = ({ actor, onAddToSc
               cx="20" 
               cy="8" 
               r="7" 
-              fill={SKIN_TONES[actor.skinTone] || '#888'}
+              fill={SKIN_TONES[actor.skinTone as keyof typeof SKIN_TONES] || '#888'}
               opacity="0.9"
             />
             {/* Hair indicator */}
@@ -175,8 +175,8 @@ export const AnimatedActorCard: FC<AnimatedActorCardProps> = ({ actor, onAddToSc
               opacity="0.8"
             />
             {/* Arms */}
-            <line x1="10" y1="18" x2="5" y2="35" stroke={SKIN_TONES[actor.skinTone] || '#888'} strokeWidth="3" strokeLinecap="round" opacity="0.8" />
-            <line x1="30" y1="18" x2="35" y2="35" stroke={SKIN_TONES[actor.skinTone] || '#888'} strokeWidth="3" strokeLinecap="round" opacity="0.8" />
+            <line x1="10" y1="18" x2="5" y2="35" stroke={SKIN_TONES[actor.skinTone as keyof typeof SKIN_TONES] || '#888'} strokeWidth="3" strokeLinecap="round" opacity="0.8" />
+            <line x1="30" y1="18" x2="35" y2="35" stroke={SKIN_TONES[actor.skinTone as keyof typeof SKIN_TONES] || '#888'} strokeWidth="3" strokeLinecap="round" opacity="0.8" />
             {/* Facial hair indicator */}
             {actor.appearance?.facialHair && actor.appearance.facialHair !== 'clean-shaven' && (
               <ellipse cx="20" cy="12" rx="4" ry="2" fill="#333" opacity="0.5" />
@@ -248,7 +248,7 @@ export const AnimatedActorCard: FC<AnimatedActorCardProps> = ({ actor, onAddToSc
             sx={{ 
               height: 18, 
               fontSize: '0.65rem',
-              backgroundColor: SKIN_TONES[actor.skinTone] || '#888',
+              backgroundColor: SKIN_TONES[actor.skinTone as keyof typeof SKIN_TONES] || '#888',
               color: actor.skinTone === 'dark' || actor.skinTone === 'brown' ? '#fff' : '#000'
             }}
             label={actor.skinTone}

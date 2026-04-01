@@ -59,41 +59,44 @@ function ShadowDirectionIndicator({
   subjectPosition: [number, number, number];
 }) {
   // Create arrow showing shadow direction
+  const dir = shadow.direction ?? [0, 1, 0];
+  const intensity = shadow.intensity ?? 1;
+  const softness = shadow.softness ?? 0;
+  const color = shadow.color ?? '#888888';
   const arrowLength = 1.5;
   const endPosition: [number, number, number] = [
-    subjectPosition[0] + shadow.direction[0] * arrowLength,
-    subjectPosition[1] + shadow.direction[1] * arrowLength,
-    subjectPosition[2] + shadow.direction[2] * arrowLength,
+    subjectPosition[0] + dir[0] * arrowLength,
+    subjectPosition[1] + dir[1] * arrowLength,
+    subjectPosition[2] + dir[2] * arrowLength,
   ];
 
-  // Create line geometry
+  // Create line geometry via THREE objects
   const points = [
     new THREE.Vector3(...subjectPosition),
     new THREE.Vector3(...endPosition),
   ];
   const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+  const lineMaterial = new THREE.LineBasicMaterial({
+    color,
+    opacity: intensity * 0.6,
+    transparent: true,
+  });
+  const lineObject = new THREE.Line(lineGeometry, lineMaterial);
 
   return (
     <group>
       {/* Shadow direction line */}
-      <line geometry={lineGeometry}>
-        <lineBasicMaterial
-          color={shadow.color}
-          opacity={shadow.intensity * 0.6}
-          transparent
-          linewidth={2}
-        />
-      </line>
+      <primitive object={lineObject} />
 
       {/* Shadow cone on ground */}
       <mesh
         position={[endPosition[0], 0.01, endPosition[2]]}
         rotation={[-Math.PI / 2, 0, 0]}
       >
-        <circleGeometry args={[0.3 * (1 - shadow.softness), 32]} />
+        <circleGeometry args={[0.3 * (1 - softness), 32]} />
         <meshBasicMaterial
-          color={shadow.color}
-          opacity={shadow.intensity * 0.4}
+          color={color}
+          opacity={intensity * 0.4}
           transparent
           side={THREE.DoubleSide}
         />

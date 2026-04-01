@@ -7,15 +7,7 @@ import {
   Folder,
 } from '@mui/icons-material';
 
-export type TemplateIconName =
-  | 'youtube'
-  | 'instagram'
-  | 'smartphone'
-  | 'inventory'
-  | 'folder'
-  | 'star'
-  | 'rocket'
-  | 'video-file';
+export type TemplateIconName = string;
 
 export type CategoryIconName =
   | 'social'
@@ -24,7 +16,8 @@ export type CategoryIconName =
   | 'mobile'
   | 'web'
   | 'cinema'
-  | 'custom';
+  | 'custom'
+  | 'Smartphone';
 
 export const TEMPLATE_ICONS: Record<TemplateIconName, React.ReactElement> = {
   youtube: React.createElement(YouTube, { fontSize: 'small' }),
@@ -45,6 +38,7 @@ export const CATEGORY_ICONS: Record<CategoryIconName, React.ReactElement> = {
   web: React.createElement(Folder, { fontSize: 'small' }),
   cinema: React.createElement(Folder, { fontSize: 'small' }),
   custom: React.createElement(Folder, { fontSize: 'small' }),
+  Smartphone: React.createElement(Smartphone, { fontSize: 'small' }),
 };
 
 export interface ExportTemplate {
@@ -60,6 +54,20 @@ export interface ExportTemplate {
   quality: number;
   isFavorite?: boolean;
   tags: string[];
+  schedule?: {
+    type?: 'immediate' | 'delayed' | 'scheduled' | 'recurring' | 'delay' | 'specific_time';
+    delayMinutes?: number;
+    specificTime?: string;
+  };
+  presets?: string[];
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  uploadToDrive?: boolean;
+  createSubfolder?: boolean;
+  subfolderName?: string;
+  userId?: string;
+  projectId?: string;
+  projectName?: string;
+  notifyOnComplete?: boolean;
 }
 
 export const EXPORT_TEMPLATES: ExportTemplate[] = [
@@ -111,3 +119,133 @@ export function getTemplateIcon(iconName: TemplateIconName): React.ReactElement 
 export function getCategoryIcon(iconName: CategoryIconName): React.ReactElement {
   return CATEGORY_ICONS[iconName] || React.createElement(Folder, { fontSize: 'small' });
 }
+
+export type ExportTemplateCategory = CategoryIconName;
+
+export interface ScheduleConfig {
+  type?: 'immediate' | 'delayed' | 'scheduled' | 'recurring' | 'delay' | 'specific_time';
+  enabled?: boolean;
+  startAt?: string;
+  recurrence?: 'daily' | 'weekly' | 'none';
+  notifyEmail?: string;
+  delayMinutes?: number;
+  specificTime?: string;
+}
+
+export interface CategoryConfig {
+  label: string;
+  icon: CategoryIconName;
+  color: string;
+}
+
+export const TEMPLATE_CATEGORIES: Record<CategoryIconName, CategoryConfig> = {
+  social: { label: 'Sosiale medier', icon: 'social', color: '#e91e63' },
+  broadcast: { label: 'Kringkasting', icon: 'broadcast', color: '#f44336' },
+  archive: { label: 'Arkiv', icon: 'archive', color: '#607d8b' },
+  mobile: { label: 'Mobil', icon: 'mobile', color: '#4caf50' },
+  web: { label: 'Web', icon: 'web', color: '#2196f3' },
+  cinema: { label: 'Kino', icon: 'cinema', color: '#9c27b0' },
+  custom: { label: 'Egendefinert', icon: 'custom', color: '#ff9800' },
+  Smartphone: { label: 'Smarttelefon', icon: 'Smartphone', color: '#4caf50' },
+};
+
+class ExportTemplateService {
+  private templates: ExportTemplate[] = [...EXPORT_TEMPLATES];
+  private favorites: Set<string> = new Set();
+
+  getAllTemplates(): ExportTemplate[] {
+    return this.templates.map((t) => ({ ...t, isFavorite: this.favorites.has(t.id) }));
+  }
+
+  getTemplatesByCategory(category: ExportTemplateCategory): ExportTemplate[] {
+    return this.getAllTemplates().filter((t) => t.category === category);
+  }
+
+  searchTemplates(query: string): ExportTemplate[] {
+    const q = query.toLowerCase();
+    return this.getAllTemplates().filter(
+      (t) =>
+        t.label.toLowerCase().includes(q) ||
+        t.description.toLowerCase().includes(q) ||
+        t.tags.some((tag) => tag.toLowerCase().includes(q)),
+    );
+  }
+
+  toggleFavorite(id: string): void {
+    if (this.favorites.has(id)) {
+      this.favorites.delete(id);
+    } else {
+      this.favorites.add(id);
+    }
+  }
+
+  getFavorites(): ExportTemplate[] {
+    return this.getAllTemplates().filter((t) => this.favorites.has(t.id));
+  }
+
+  addCustomTemplate(template: Omit<ExportTemplate, 'id'>): ExportTemplate {
+    const newTemplate: ExportTemplate = { ...template, id: `custom-${Date.now()}` };
+    this.templates.push(newTemplate);
+    return newTemplate;
+  }
+
+  deleteTemplate(id: string): void {
+    this.templates = this.templates.filter((t) => t.id !== id);
+  }
+
+  updateTemplate(id: string, updates: Partial<ExportTemplate>): void {
+    const idx = this.templates.findIndex((t) => t.id === id);
+    if (idx >= 0) {
+      this.templates[idx] = { ...this.templates[idx], ...updates };
+    }
+  }
+
+  duplicateTemplate(id: string): ExportTemplate | null {
+    const original = this.templates.find((t) => t.id === id);
+    if (!original) return null;
+    const copy: ExportTemplate = { ...original, id: `custom-${Date.now()}`, name: `${original.name}-copy`, label: `${original.label} (kopi)` };
+    this.templates.push(copy);
+    return copy;
+  }
+
+  createCustomTemplate(template: Omit<ExportTemplate, 'id'> | Omit<ExportTemplate, 'id' | 'category'>): ExportTemplate {
+    const withCategory = { category: 'social' as CategoryIconName, ...template };
+    return this.addCustomTemplate(withCategory as Omit<ExportTemplate, 'id'>);
+  }
+
+  getPresetsForTemplate(_templateId: string): ExportTemplate[] {
+    return this.templates.slice(0, 4);
+  }
+
+  estimateDuration(_templateId: string, durationSeconds: number): number {
+    return Math.round(durationSeconds * 0.5);
+  }
+
+  formatDuration(seconds: number): string {
+    if (seconds < 60) return `${Math.round(seconds)}s`;
+    const m = Math.floor(seconds / 60);
+    const s = Math.round(seconds % 60);
+    return `${m}m ${s}s`;
+  }
+
+  updateCustomTemplate(id: string, updates: Partial<ExportTemplate>): void {
+    this.updateTemplate(id, updates);
+  }
+
+  deleteCustomTemplate(id: string): void {
+    this.deleteTemplate(id);
+  }
+
+  toBatchConfig(template: ExportTemplate, overrides?: Partial<ExportTemplate>): import('./ExportScheduler').BatchExportConfig {
+    const merged = { ...template, ...overrides };
+    return {
+      name: merged.name,
+      presets: merged.presets,
+      uploadToDrive: merged.uploadToDrive,
+      driveConfig: undefined,
+      priority: merged.priority ?? 'normal',
+    };
+  }
+}
+
+export const exportTemplateService = new ExportTemplateService();

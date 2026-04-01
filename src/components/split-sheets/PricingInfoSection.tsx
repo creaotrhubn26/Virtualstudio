@@ -16,15 +16,15 @@ import {
   LocalOffer as PriceIcon,
   Receipt as QuoteIcon,
 } from '@mui/icons-material';
-import { useTheming } from '../../../utils/theming-helper';
-import { useClientServicePricing } from '../../../services/ClientServicePricingService';
+import { useTheming } from '@/utils/theming-helper';
+import { clientServicePricingService } from '@/services/ClientServicePricingService';
 interface PricingInfoSectionProps {
   projectId: string;
 }
 
 export default function PricingInfoSection({ projectId }: PricingInfoSectionProps) {
-  const theming = useTheming('music_producer');
-  const { formatCurrency } = useClientServicePricing();
+  const theming = useTheming();
+  const formatCurrency = (amount: number) => clientServicePricingService.formatPrice(amount);
 
   // Fetch contracts for the project to show total contract value
   const { data: contractsData, isLoading: contractsLoading } = useQuery({
@@ -37,12 +37,13 @@ export default function PricingInfoSection({ projectId }: PricingInfoSectionProp
   const contracts = contractsData?.contracts || [];
   const totalContractValue = contracts.reduce((sum: number, c: any) => sum + (parseFloat(c.totalAmount) || 0), 0);
 
+  const primaryColor = theming.colors.primary;
   return (
-    <Card variant="outlined" sx={theming.getThemedCardSx()}>
-      <CardContent sx={theming.getThemedCardSx()}>
+    <Card variant="outlined">
+      <CardContent>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <PriceIcon sx={{ color: theming.colors.primary }} />
-          <Typography variant="h6" sx={{ color: theming.colors.primary }}>
+          <PriceIcon sx={{ color: primaryColor }} />
+          <Typography variant="h6" sx={{ color: primaryColor }}>
             Prisinformasjon
           </Typography>
         </Box>
@@ -62,7 +63,7 @@ export default function PricingInfoSection({ projectId }: PricingInfoSectionProp
                 <Typography variant="caption" color="text.secondary">
                   Total Kontraktverdi
                 </Typography>
-                <Typography variant="h5" sx={{ color: theming.colors.primary, fontWeight: 600}}>
+                <Typography variant="h5" sx={{ color: primaryColor, fontWeight: 600}}>
                   {formatCurrency(totalContractValue)}
                 </Typography>
               </Box>
@@ -72,7 +73,7 @@ export default function PricingInfoSection({ projectId }: PricingInfoSectionProp
                 <Typography variant="caption" color="text.secondary">
                   Antall Kontrakter
                 </Typography>
-                <Typography variant="h5" sx={{ color: theming.colors.primary, fontWeight: 600}}>
+                <Typography variant="h5" sx={{ color: primaryColor, fontWeight: 600}}>
                   {contracts.length}
                 </Typography>
               </Box>
@@ -84,7 +85,7 @@ export default function PricingInfoSection({ projectId }: PricingInfoSectionProp
                     <Typography variant="body2">
                       {contract.clientName ||'Ukjent klient'}
                     </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: theming.colors.primary }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: primaryColor }}>
                       {formatCurrency(contract.totalAmount || 0)}
                     </Typography>
                   </Box>

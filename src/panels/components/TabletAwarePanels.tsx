@@ -120,9 +120,12 @@ export function TouchDraggable({ children, onDragStart, onDrag, onDragEnd, ...pr
 // Touch-optimised slider (44px thumb for fat-finger use)
 interface TouchSliderProps extends SliderProps {
   thumbSize?: number;
+  label?: string;
+  valueFormat?: (value: number) => string;
+  touchSize?: 'small' | 'medium' | 'large';
 }
 
-export function TouchSlider({ thumbSize = 28, sx, ...props }: TouchSliderProps) {
+export function TouchSlider({ thumbSize = 28, sx, label: _label, valueFormat: _valueFormat, touchSize: _touchSize, ...props }: TouchSliderProps) {
   return (
     <Slider
       sx={{

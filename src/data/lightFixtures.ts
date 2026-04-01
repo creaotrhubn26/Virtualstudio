@@ -2,7 +2,7 @@ export interface LightSpec {
   id: string;
   brand: string;
   model: string;
-  type: 'strobe' | 'continuous' | 'led' | 'flash' | 'atmospheric' | 'practical';
+  type: 'strobe' | 'continuous' | 'led' | 'flash' | 'atmospheric' | 'practical' | 'speedlight' | 'hmi' | 'par';
   power: number;
   powerUnit: 'Ws' | 'W';
   cct?: number;
@@ -442,7 +442,7 @@ export const LIGHT_DATABASE: LightSpec[] = [
     id: 'look-solutions-tiny-hazer',
     brand: 'Look Solutions',
     model: 'Tiny-Hazer',
-    type: 'atmospheric' as LightType,
+    type: 'atmospheric',
     power: 800,
     powerUnit: 'W',
     cct: 0,
@@ -461,7 +461,7 @@ export const LIGHT_DATABASE: LightSpec[] = [
     id: 'arri-m18',
     brand: 'Arri',
     model: 'M18 HMI',
-    type: 'hmi' as LightType,
+    type: 'hmi',
     power: 1800,
     powerUnit: 'W',
     cct: 5600,
@@ -478,7 +478,7 @@ export const LIGHT_DATABASE: LightSpec[] = [
     id: 'arri-m40',
     brand: 'Arri',
     model: 'M40 HMI',
-    type: 'hmi' as LightType,
+    type: 'hmi',
     power: 4000,
     powerUnit: 'W',
     cct: 5600,
@@ -495,7 +495,7 @@ export const LIGHT_DATABASE: LightSpec[] = [
     id: 'joker-400',
     brand: 'K5600',
     model: 'Joker-Bug 400',
-    type: 'hmi' as LightType,
+    type: 'hmi',
     power: 400,
     powerUnit: 'W',
     cct: 5600,
@@ -512,7 +512,7 @@ export const LIGHT_DATABASE: LightSpec[] = [
     id: 'par-can-1000',
     brand: 'Generic',
     model: 'PAR64 1000W (HMI/Tungsten)',
-    type: 'par' as LightType,
+    type: 'par',
     power: 1000,
     powerUnit: 'W',
     cct: 3200,

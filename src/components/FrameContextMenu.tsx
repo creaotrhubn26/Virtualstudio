@@ -79,7 +79,6 @@ import {
   Share,
   MoreHoriz,
   CameraAlt,
-  Aperture,
   Iso,
   ShutterSpeed,
   Straighten,
@@ -155,8 +154,10 @@ const MetadataEditorDialog: FC<MetadataEditorProps> = ({
       technicalNotes,
       // Store camera settings in scene snapshot
       sceneSnapshot: {
+        camera: frame?.sceneSnapshot?.camera ?? { position: [0, 0, 0] as [number, number, number], rotation: [0, 0, 0] as [number, number, number], focalLength: 50, aperture: 2.8 },
+        lights: frame?.sceneSnapshot?.lights ?? [],
         ...frame?.sceneSnapshot,
-        cameraSettings,
+        cameraSettings: cameraSettings as unknown as Record<string, unknown>,
         tags,
       },
     });
@@ -348,7 +349,7 @@ const ImportFromSceneDialog: FC<ImportFromSceneDialogProps> = ({
   onClose,
   onImport,
 }) => {
-  const { nodes } = useAppStore();
+  const { scene: nodes } = useAppStore();
   
   // Filter nodes by type
   const getCameraNodes = () => nodes.filter(n => n.type === 'camera');
@@ -398,11 +399,12 @@ const ImportFromSceneDialog: FC<ImportFromSceneDialogProps> = ({
             {items.map((node) => (
               <ListItem
                 key={node.id}
-                button
+                component="div"
                 onClick={() => {
                   onImport(node);
                   onClose();
                 }}
+                sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
               >
                 <ListItemAvatar>
                   <Avatar sx={{ bgcolor: 'primary.main' }}>
@@ -411,7 +413,7 @@ const ImportFromSceneDialog: FC<ImportFromSceneDialogProps> = ({
                 </ListItemAvatar>
                 <ListItemText
                   primary={node.name}
-                  secondary={`Position: ${node.position?.map(p => p.toFixed(1)).join(', ')}`}
+                  secondary={`Position: ${(node.transform?.position ?? []).map((p: number) => p.toFixed(1)).join(', ')}`}
                 />
               </ListItem>
             ))}
@@ -459,14 +461,14 @@ export const FrameContextMenu: FC<FrameContextMenuProps> = ({
 
   const handleMoveUp = () => {
     if (frame && frame.index > 0) {
-      reorderFrames(frame.storyboardId, frame.id, frame.index - 1);
+      reorderFrames(frame.storyboardId ?? '', frame.id ?? '', frame.index - 1);
     }
     onClose();
   };
 
   const handleMoveDown = () => {
     if (frame) {
-      reorderFrames(frame.storyboardId, frame.id, frame.index + 1);
+      reorderFrames(frame.storyboardId ?? '', frame.id ?? '', frame.index + 1);
     }
     onClose();
   };
@@ -494,12 +496,15 @@ export const FrameContextMenu: FC<FrameContextMenuProps> = ({
 
   const handleImportData = (data: any) => {
     if (frame) {
+      const prevSnapshot = frame.sceneSnapshot;
       updateFrame(frame.id, {
         sceneSnapshot: {
-          ...frame.sceneSnapshot,
+          camera: prevSnapshot?.camera ?? { position: [0, 0, 0], rotation: [0, 0, 0], focalLength: 50, aperture: 2.8 },
+          lights: prevSnapshot?.lights ?? [],
+          ...prevSnapshot,
           importedData: {
-            ...frame.sceneSnapshot?.importedData,
-            [importDialogType || 'data']: data,
+            ...prevSnapshot?.importedData,
+            [importDialogType ?? 'data']: data as unknown,
           },
         },
       });

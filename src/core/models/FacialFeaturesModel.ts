@@ -164,6 +164,8 @@ export interface SkinDetailOptions {
   pores: number;
   freckles: number;
   age: number;
+  moles?: number;
+  blemishes?: number;
 }
 
 export interface FacialHairPreset {

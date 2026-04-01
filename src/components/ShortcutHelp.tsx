@@ -21,7 +21,7 @@ import {
   Chip,
 } from '@mui/material';
 import KeyboardIcon from '@mui/icons-material/Keyboard';
-import { keyboardShortcutsService, Shortcut } from '../../core/services/keyboardShortcuts';
+import { keyboardShortcutsService, Shortcut } from '@/core/services/keyboardShortcuts';
 import { colors, spacing } from '../../styles/designTokens';
 export interface ShortcutHelpProps {
   open: boolean;
@@ -32,11 +32,11 @@ export const ShortcutHelp: FC<ShortcutHelpProps> = ({ open, onClose }) => {
   const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
 
   useEffect(() => {
-    setShortcuts(keyboardShortcutsService.getAllShortcuts());
+    setShortcuts(keyboardShortcutsService.getAll());
   }, []);
 
   const groupedShortcuts = shortcuts.reduce((acc, shortcut) => {
-    const category = getCategory(shortcut.action);
+    const category = shortcut.category || 'Other';
     if (!acc[category]) {
       acc[category] = [];
     }
@@ -96,7 +96,7 @@ export const ShortcutHelp: FC<ShortcutHelpProps> = ({ open, onClose }) => {
               </Typography>
               <Grid container spacing={2}>
                 {categoryShortcuts.map((shortcut) => (
-                  <Grid size={{ xs: 12, sm: 6 }} key={shortcut.action}>
+                  <Grid size={{ xs: 12, sm: 6 }} key={shortcut.id}>
                     <Box
                       sx={{
                         display: 'flex',
@@ -134,7 +134,7 @@ export const ShortcutHelp: FC<ShortcutHelpProps> = ({ open, onClose }) => {
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} variant="secondary">
+        <Button onClick={onClose} variant="outlined">
           Close
         </Button>
       </DialogActions>
