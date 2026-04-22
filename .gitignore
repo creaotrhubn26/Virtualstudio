@@ -12,6 +12,20 @@ backend/downloads/
 backend/test_images/
 backend/outputs/
 
+# Vendored upstream ML repos — these should be pip-installed, not checked in.
+# See backend/VENDORING.md for the migration plan. New clones will skip them
+# once they are removed from the tree. Existing tracked entries stay until
+# explicitly `git rm`-ed.
+backend/detectron2_install/
+backend/facexformer_repo/
+backend/humaniflow/
+backend/sam3d_repo/
+backend/trellis_models/
+backend/trellis_uploads/
+
+# Accidental shell-redirect files from `pip install X >=0.20.0`
+backend/=*
+
 # Store assets
 # attached_assets/ - Now tracked in git
 *.pth
