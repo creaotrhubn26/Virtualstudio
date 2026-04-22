@@ -185,6 +185,129 @@ async def direct_from_beat(payload: BeatPayload):
         raise HTTPException(status_code=500, detail=f"Scene Director error: {exc}")
 
 
+class DescribeRenderPayload(BaseModel):
+    """Request body for the reverse-describe endpoint."""
+    imageBase64: str = Field(
+        description="Base64 data-URL or bare base64 of the current Babylon render.",
+    )
+    context: Optional[str] = Field(
+        default=None,
+        description="Optional free-text context the director should use as a hint.",
+    )
+
+
+@router.post("/describe-current-render")
+async def describe_current_render(payload: DescribeRenderPayload):
+    """Claude Vision reads a render of the current Babylon scene and returns
+    a structured, script-ready description (scene heading, action, implied
+    mood, visible characters, suggested shot + lighting).
+
+    Requires ANTHROPIC_API_KEY. Useful for "I built a scene manually, now
+    show me the Fountain line" loops and for auto-generating storyboard
+    captions from the live 3D scene.
+    """
+    try:
+        from claude_client import get_claude_client  # type: ignore
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=503, detail=f"Claude client unavailable: {exc}"
+        )
+
+    client = get_claude_client()
+    if not client.enabled:
+        raise HTTPException(
+            status_code=503,
+            detail="ANTHROPIC_API_KEY not set — reverse-describe requires Claude Vision.",
+        )
+
+    schema = {
+        "type": "object",
+        "properties": {
+            "sceneHeading": {
+                "type": "string",
+                "description": "Fountain-style scene heading, e.g. 'INT. COZY CAFÉ - DAY'",
+            },
+            "intExt": {"type": "string", "enum": ["INT", "EXT"]},
+            "location": {"type": "string"},
+            "timeOfDay": {
+                "type": "string",
+                "enum": ["DAY", "NIGHT", "DAWN", "DUSK", "MAGIC HOUR"],
+            },
+            "mood": {
+                "type": "string",
+                "enum": [
+                    "tense", "romantic", "horror", "comedic",
+                    "melancholy", "grand", "cozy",
+                ],
+            },
+            "characters": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Characters or placeholders visible in the frame.",
+            },
+            "action": {
+                "type": "string",
+                "description": "One concise action line describing what's happening.",
+            },
+            "suggestedShotType": {
+                "type": "string",
+                "enum": [
+                    "close-up", "medium", "wide", "ots",
+                    "two-shot", "establishing",
+                ],
+            },
+            "lightingPattern": {
+                "type": "string",
+                "enum": [
+                    "rembrandt", "loop", "split", "butterfly",
+                    "clamshell", "broad", "short", "rim-only", "ambient",
+                ],
+            },
+            "colorPalette": {"type": "string"},
+            "caption": {
+                "type": "string",
+                "description": "One-sentence human caption.",
+            },
+        },
+        "required": [
+            "sceneHeading", "intExt", "location", "timeOfDay", "mood",
+            "characters", "action", "suggestedShotType",
+            "lightingPattern", "colorPalette", "caption",
+        ],
+    }
+
+    system = (
+        "You are a script supervisor + cinematographer. Given a rendered "
+        "3D scene, read it the way a film's script line would describe it. "
+        "Produce a Fountain-style scene heading, a concise action line, the "
+        "most likely mood (from our seven labels), and a shot + lighting "
+        "recommendation that matches what the DP would call."
+    )
+    user_prompt = payload.context or (
+        "Describe this rendered scene as a script line. Identify the "
+        "location, time of day, mood, any characters present, and what "
+        "shot + lighting a DP would use here. Return your answer via the "
+        "describe_render tool."
+    )
+
+    try:
+        result = client.analyze_image_structured(
+            image_base64=payload.imageBase64,
+            system=system,
+            user_prompt=user_prompt,
+            schema=schema,
+            tool_name="describe_render",
+            tool_description="Structured analysis of a rendered scene.",
+            max_tokens=1024,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Claude Vision describe failed: {exc}"
+        )
+
+    return JSONResponse({"success": True, "description": result})
+
+
 @router.post("/from-script")
 async def direct_from_script(payload: ScriptPayload):
     """Turn an array of parsed beats into an array of scene blueprints.

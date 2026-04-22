@@ -666,6 +666,14 @@ try:
 except ImportError as e:
     print(f"Warning: Scene Director routes not available: {e}")
 
+# Character casting — description → gpt-image-1 → TripoSR → GLB
+try:
+    from routes.characters import router as characters_router
+    app.include_router(characters_router)
+    print("Characters routes loaded")
+except ImportError as e:
+    print(f"Warning: Characters routes not available: {e}")
+
 # Collaboration routes (WebSocket real-time)
 try:
     if COLLABORATION_SERVICE_AVAILABLE:

@@ -242,6 +242,40 @@ export async function getDirectorStatus(): Promise<DirectorStatus> {
 }
 
 // ---------------------------------------------------------------------------
+// Reverse: Babylon render → structured script description via Claude Vision
+// ---------------------------------------------------------------------------
+
+export interface RenderDescription {
+  sceneHeading: string;
+  intExt: 'INT' | 'EXT';
+  location: string;
+  timeOfDay: TimeOfDay | string;
+  mood: string;
+  characters: string[];
+  action: string;
+  suggestedShotType: ShotPlan['type'];
+  lightingPattern: LightingPattern;
+  colorPalette: string;
+  caption: string;
+}
+
+/**
+ * Send a rendered image (base64 data-URL or bare b64) to Claude Vision
+ * and receive a structured Fountain-style scene description.
+ * Requires ANTHROPIC_API_KEY on the backend.
+ */
+export async function describeCurrentRender(
+  imageBase64: string,
+  context?: string,
+): Promise<RenderDescription> {
+  const result = await postJson<{ success: boolean; description: RenderDescription }>(
+    '/describe-current-render',
+    { imageBase64, context: context ?? null },
+  );
+  return result.description;
+}
+
+// ---------------------------------------------------------------------------
 // Helpers for turning assembly data into Babylon.js coordinates.
 // Not a full integration — that lives in src/main.ts / virtualStudio. These
 // are the math primitives the integration will need.
