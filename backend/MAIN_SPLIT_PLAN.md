@@ -53,10 +53,10 @@ For each group:
 | **Story logic** | `routes/story_logic.py` | 3 | ✓ EXTRACTED (`/api/projects/{project_id}/story-logic`) |
 | **Price admin / BRREG / weather** | `routes/price_admin.py` | 3 | ✓ EXTRACTED (BRREG company search + lookup, MET Norway weather forecast) |
 | Split sheets (contributions + sharing) | `routes/split_sheets.py` | ~30+ | PENDING — dominant remaining group |
-| Consent | `routes/consent.py` | 3 | PENDING — `/api/consent/portal/*`, `/api/consent/generate-access-code` |
+| **Consent** | `routes/consent.py` | 3 | ✓ EXTRACTED (`/api/consent/portal/access`, `/api/consent/portal/sign`, `/api/consent/generate-access-code`) |
 | Email / logo | `routes/email.py` | 2 | PENDING — `/api/email/*` |
 | Storyboards / environment | `routes/storyboards.py` | ~8 | PENDING — `/api/storyboards/*`, `/api/environment/*` |
-| Contracts | `routes/contracts.py` | 4 | PENDING — `/api/contracts/*` |
+| **Contracts** | `routes/contracts.py` | 4 | ✓ EXTRACTED (`/api/contracts/*` GET + list + POST + PUT) |
 | Norwegian laws | `routes/norwegian_laws.py` | 5 | PENDING — `/api/norwegian-laws/*` |
 | Production (days/stripboard/cast/crew/call-sheets) | `routes/production.py` | ~12 | PENDING — `/api/production/*` |
 
