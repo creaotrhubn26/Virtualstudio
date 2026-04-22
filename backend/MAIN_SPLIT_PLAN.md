@@ -44,9 +44,9 @@ For each group:
 | **Trellis** | `routes/trellis.py` | 6 | ✓ EXTRACTED |
 | Collaboration | `routes/collaboration.py` | — | ✓ already in `collaboration_server.py` |
 | External data | `routes/external_data.py` | — | ✓ already extracted |
-| Avatar generation | `routes/avatar.py` | 5 | PENDING — `/api/generate-avatar*`, `/api/avatar/{…}.glb`, `/api/analyze-face`, `/api/facexformer/analyze` |
-| AI Director | `routes/ai_director.py` | 5 | PENDING — `/api/ai/director*`, `/api/ai/analyze-reference`, `/api/ai/generate-prop-glb` |
-| Assets | `routes/assets.py` | 3 | PENDING — `/api/assets/*` |
+| **Avatar generation** | `routes/avatar.py` | 6 | ✓ EXTRACTED (generate-avatar, GLB serve/head/delete, analyze-face, facexformer/analyze, generate-avatar-with-analysis) |
+| **AI Director** | `routes/ai_director.py` | 5 | ✓ EXTRACTED (director/status, director, director/stream, analyze-reference, generate-prop-glb) |
+| **Assets** | `routes/assets.py` | 3 | ✓ EXTRACTED (assets/search, polyhaven/gltf, sketchfab/download) |
 | DECA / Face / SAM3D | `routes/face.py` | ~15 | PENDING — scattered; grep `deca\|sam3d\|facexformer` |
 | FLUX | `routes/flux.py` | ~10 | PENDING — `/api/flux/*` |
 | Admin | `routes/admin.py` | ~12 | PENDING — `/api/admin/*` |

@@ -384,228 +384,7 @@ import httpx
 
 # /api/test-r2 — extracted to backend/routes/core.py.
 
-@app.post("/api/generate-avatar")
-async def generate_avatar(file: UploadFile = File(...)):
-    """
-    Generate a 3D avatar from an uploaded image.
-    Returns a GLB file that can be loaded into Babylon.js.
-    """
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File must be an image")
-    
-    request_id = str(uuid.uuid4())
-    input_path = UPLOAD_DIR / f"{request_id}_{file.filename}"
-    output_path = OUTPUT_DIR / f"{request_id}_avatar.glb"
-    
-    try:
-        contents = await file.read()
-        with open(input_path, "wb") as f:
-            f.write(contents)
-        
-        if sam3d_service is None:
-            raise HTTPException(status_code=503, detail="SAM 3D service not initialized")
-        
-        result = await sam3d_service.generate_avatar(str(input_path), str(output_path))
-        
-        if not result["success"]:
-            raise HTTPException(status_code=500, detail=result.get("error", "Generation failed"))
-        
-        return JSONResponse({
-            "success": True,
-            "request_id": request_id,
-            "glb_url": f"/api/avatar/{request_id}.glb",
-            "metadata": result.get("metadata", {})
-        })
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if input_path.exists():
-            os.remove(input_path)
-
-@app.get("/api/avatar/{request_id}.glb")
-async def get_avatar(request_id: str):
-    """Download the generated GLB avatar file."""
-    output_path = OUTPUT_DIR / f"{request_id}_avatar.glb"
-    
-    if not output_path.exists():
-        raise HTTPException(status_code=404, detail="Avatar not found")
-    
-    return FileResponse(
-        path=str(output_path),
-        media_type="model/gltf-binary",
-        filename=f"avatar_{request_id}.glb"
-    )
-
-@app.head("/api/avatar/{request_id}.glb")
-async def head_avatar(request_id: str):
-    """Check if avatar exists (for Babylon.js loader)."""
-    output_path = OUTPUT_DIR / f"{request_id}_avatar.glb"
-    
-    if not output_path.exists():
-        raise HTTPException(status_code=404, detail="Avatar not found")
-    
-    from starlette.responses import Response
-    return Response(
-        headers={
-            "Content-Type": "model/gltf-binary",
-            "Content-Length": str(output_path.stat().st_size)
-        }
-    )
-
-@app.delete("/api/avatar/{request_id}")
-async def delete_avatar(request_id: str):
-    """Delete a generated avatar."""
-    output_path = OUTPUT_DIR / f"{request_id}_avatar.glb"
-    
-    if output_path.exists():
-        os.remove(output_path)
-        return {"success": True, "message": "Avatar deleted"}
-    
-    raise HTTPException(status_code=404, detail="Avatar not found")
-
-
-@app.post("/api/analyze-face")
-async def analyze_face(file: UploadFile = File(...)):
-    """
-    Analyze face in image to detect gender and age.
-    Returns detected gender, age range, and category (barn/ungdom/voksen).
-    """
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File must be an image")
-    
-    try:
-        contents = await file.read()
-        
-        if face_analysis is None:
-            raise HTTPException(status_code=503, detail="Face analysis service not initialized")
-        
-        result = face_analysis.analyze_image_bytes(contents)
-        
-        if result is None:
-            raise HTTPException(status_code=500, detail="Face analysis failed")
-        
-        return JSONResponse({
-            "success": result.get("detected", False),
-            "gender": result.get("gender"),
-            "gender_confidence": result.get("gender_confidence"),
-            "age_range": result.get("age_range"),
-            "age_confidence": result.get("age_confidence"),
-            "category": result.get("category"),
-            "message": result.get("message") or result.get("error")
-        })
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/facexformer/analyze")
-async def facexformer_analyze(file: UploadFile = File(...)):
-    """
-    Analyze face using FaceXFormer model.
-    Returns facial landmarks, head pose, and attributes.
-    Can be disabled via ENABLE_FACEXFORMER=false environment variable.
-    """
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File must be an image")
-    
-    if facexformer is None:
-        raise HTTPException(status_code=503, detail="FaceXFormer service not initialized")
-    
-    if not facexformer.is_enabled():
-        return JSONResponse({
-            "success": False,
-            "enabled": False,
-            "message": "FaceXFormer is disabled. Set ENABLE_FACEXFORMER=true to enable."
-        })
-    
-    request_id = str(uuid.uuid4())
-    input_path = UPLOAD_DIR / f"{request_id}_{file.filename}"
-    
-    try:
-        contents = await file.read()
-        with open(input_path, "wb") as f:
-            f.write(contents)
-        
-        result = await facexformer.analyze_face(str(input_path))
-        
-        return JSONResponse({
-            "success": result.get("face_detected", False),
-            "enabled": True,
-            **result
-        })
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if input_path.exists():
-            os.remove(input_path)
-
-
-@app.post("/api/generate-avatar-with-analysis")
-async def generate_avatar_with_analysis(file: UploadFile = File(...)):
-    """
-    Generate 3D avatar AND analyze face in one request.
-    Returns GLB file URL plus detected gender/age.
-    """
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File must be an image")
-    
-    request_id = str(uuid.uuid4())
-    input_path = UPLOAD_DIR / f"{request_id}_{file.filename}"
-    output_path = OUTPUT_DIR / f"{request_id}_avatar.glb"
-    
-    try:
-        contents = await file.read()
-        with open(input_path, "wb") as f:
-            f.write(contents)
-        
-        face_result = None
-        if face_analysis is not None:
-            face_result = face_analysis.analyze_image(str(input_path))
-        
-        facexformer_result = None
-        if facexformer is not None and facexformer.is_enabled():
-            facexformer_result = await facexformer.analyze_face(str(input_path))
-        
-        if sam3d_service is None:
-            raise HTTPException(status_code=503, detail="SAM 3D service not initialized")
-        
-        result = await sam3d_service.generate_avatar(str(input_path), str(output_path))
-        
-        if not result["success"]:
-            raise HTTPException(status_code=500, detail=result.get("error", "Generation failed"))
-        
-        response_data = {
-            "success": True,
-            "request_id": request_id,
-            "glb_url": f"/api/avatar/{request_id}.glb",
-            "metadata": result.get("metadata", {})
-        }
-        
-        if face_result and face_result.get("detected"):
-            response_data["face_analysis"] = {
-                "gender": face_result.get("gender"),
-                "gender_confidence": face_result.get("gender_confidence"),
-                "age_range": face_result.get("age_range"),
-                "age_confidence": face_result.get("age_confidence"),
-                "category": face_result.get("category")
-            }
-        
-        if facexformer_result and facexformer_result.get("face_detected"):
-            response_data["facexformer"] = {
-                "head_pose": facexformer_result.get("head_pose"),
-                "face_box": facexformer_result.get("face_box")
-            }
-        
-        return JSONResponse(response_data)
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if input_path.exists():
-            os.remove(input_path)
-
+# Avatar generation + face analysis routes — extracted to backend/routes/avatar.py.
 
 # Optional rodin_service import
 RODIN_SERVICE_AVAILABLE = False
@@ -715,6 +494,31 @@ try:
 except ImportError as e:
     print(f"Warning: TRELLIS routes not available: {e}")
 
+# Avatar generation + face analysis routes (generate-avatar, analyze-face,
+# facexformer/analyze, generate-avatar-with-analysis, avatar GLB serve/delete)
+try:
+    from routes.avatar import router as avatar_router
+    app.include_router(avatar_router)
+    print("Avatar routes loaded")
+except ImportError as e:
+    print(f"Warning: Avatar routes not available: {e}")
+
+# AI Director routes (GPT-4o chat + streaming + reference analysis + prop GLB)
+try:
+    from routes.ai_director import router as ai_director_router
+    app.include_router(ai_director_router)
+    print("AI Director routes loaded")
+except ImportError as e:
+    print(f"Warning: AI Director routes not available: {e}")
+
+# Asset browser routes (Poly Haven / ambientCG / Sketchfab / Poly Pizza)
+try:
+    from routes.assets import router as assets_router
+    app.include_router(assets_router)
+    print("Assets routes loaded")
+except ImportError as e:
+    print(f"Warning: Assets routes not available: {e}")
+
 # Collaboration routes (WebSocket real-time)
 try:
     if COLLABORATION_SERVICE_AVAILABLE:
@@ -760,222 +564,8 @@ class EnvironmentAssetRetrievalRequest(BaseModel):
 
 # TripoSR 3D generation routes — extracted to backend/routes/triposr.py.
 
-# ============================================================================
-# AI Studio Director — GPT-4o function calling orchestration
-# ============================================================================
-
-ai_director_service = None  # will be set in startup_event
-
-
-@app.get("/api/ai/director/status")
-async def ai_director_status():
-    """Return the AI Director service status."""
-    if ai_director_service is None:
-        return JSONResponse({"enabled": False, "error": "not_initialized"})
-    return JSONResponse(ai_director_service.get_status())
-
-
-@app.post("/api/ai/director")
-async def ai_director_chat(request: Request):
-    """
-    AI Director chat endpoint.
-    Body: { messages: [...], imageDataUrl?: string }
-    Returns: { reply, events, steps, tool_calls_made, error }
-    """
-    if ai_director_service is None:
-        raise HTTPException(status_code=503, detail="AI Director Service not initialized")
-
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
-
-    messages = body.get("messages", [])
-    image_data_url = body.get("imageDataUrl")
-
-    if not messages:
-        raise HTTPException(status_code=400, detail="messages is required")
-
-    result = await ai_director_service.chat(messages, image_data_url)
-    return JSONResponse(result)
-
-
-@app.post("/api/ai/director/stream")
-async def ai_director_stream(request: Request):
-    """
-    SSE streaming version of /api/ai/director.
-    Body: { messages: [...], imageDataUrl?: string }
-    Returns: text/event-stream with data lines:
-      {"type":"step","text":"..."}
-      {"type":"events","events":[...]}
-      {"type":"reply","text":"..."}
-      {"type":"error","text":"..."}
-    """
-    if ai_director_service is None:
-        raise HTTPException(status_code=503, detail="AI Director Service not initialized")
-
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
-
-    messages = body.get("messages", [])
-    image_data_url = body.get("imageDataUrl")
-    scene_context = body.get("sceneContext")
-    canvas_snapshot = body.get("canvasSnapshot")
-
-    if not messages:
-        raise HTTPException(status_code=400, detail="messages is required")
-
-    return StreamingResponse(
-        ai_director_service.chat_stream(messages, image_data_url, scene_context, canvas_snapshot),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-        },
-    )
-
-
-@app.post("/api/ai/analyze-reference")
-async def ai_analyze_reference(request: Request):
-    """
-    Analyse a reference photo using GPT-4o Vision.
-    Body: { imageDataUrl: string }  (base64 data URL)
-    Returns: { success, summary, mood, light_count, preset, events }
-    """
-    if ai_director_service is None:
-        raise HTTPException(status_code=503, detail="AI Director Service not initialized")
-
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
-
-    image_data_url = body.get("imageDataUrl")
-    if not image_data_url:
-        raise HTTPException(status_code=400, detail="imageDataUrl is required")
-
-    result = await ai_director_service.analyze_reference_image(image_data_url)
-    if not result.get("success"):
-        raise HTTPException(status_code=422, detail=result.get("error", "Analysis failed"))
-    return JSONResponse(result)
-
-
-@app.get("/api/assets/search")
-async def asset_browser_search(
-    source: str,
-    q: str = "",
-    type: str = "models",
-    limit: int = 24,
-):
-    """
-    Unified asset search proxy for Poly Haven, ambientCG, Sketchfab and Poly Pizza.
-    Query params: source, q, type (models|hdris|textures), limit
-    """
-    try:
-        from asset_browser_service import search_assets
-    except ImportError as exc:
-        raise HTTPException(status_code=503, detail=f"Asset browser service unavailable: {exc}")
-    result = await search_assets(source=source, query=q, asset_type=type, limit=min(limit, 48))
-    return JSONResponse(result)
-
-
-@app.get("/api/assets/polyhaven/gltf/{slug}")
-async def asset_polyhaven_gltf(slug: str, resolution: str = "1k"):
-    """
-    Fetches the Poly Haven GLTF for {slug}, rewrites all relative asset URIs
-    to their absolute Poly Haven CDN URLs, and serves the patched GLTF JSON.
-    Babylon.js can then fetch each referenced binary/texture directly via CORS.
-    """
-    try:
-        from asset_browser_service import polyhaven_gltf_proxy
-    except ImportError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
-    try:
-        gltf_bytes = await polyhaven_gltf_proxy(slug, resolution)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
-    from fastapi.responses import Response
-    return Response(
-        content=gltf_bytes,
-        media_type="model/gltf+json",
-        headers={"Access-Control-Allow-Origin": "*"},
-    )
-
-
-@app.get("/api/assets/sketchfab/download/{uid}")
-async def asset_sketchfab_download(uid: str):
-    """Get a temporary GLB download URL for a Sketchfab model."""
-    try:
-        from asset_browser_service import sketchfab_get_download_url
-    except ImportError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
-    url = await sketchfab_get_download_url(uid)
-    if not url:
-        raise HTTPException(status_code=404, detail="Download URL not available — check SKETCHFAB_API_TOKEN")
-    return JSONResponse({"url": url})
-
-
-@app.post("/api/ai/generate-prop-glb")
-async def ai_generate_prop_glb(request: Request):
-    """
-    AI asset pipeline: text description → gpt-image-1 concept image → TripoSR GLB.
-    Body: { description: string }
-    Returns: { success, job_id, optimised_prompt } (poll /api/triposr/status/{job_id})
-    """
-    if ai_director_service is None:
-        raise HTTPException(status_code=503, detail="AI Director Service not initialized")
-
-    if not TRIPOSR_SERVICE_AVAILABLE or triposr_service is None:
-        raise HTTPException(status_code=503, detail="TripoSR service not available — cannot generate 3D models")
-
-    if not triposr_service.api_token:
-        raise HTTPException(
-            status_code=503,
-            detail="REPLICATE_API_TOKEN is not set. Add it in your Replit project Secrets.",
-        )
-
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
-
-    description = (body.get("description") or "").strip()
-    if not description:
-        raise HTTPException(status_code=400, detail="description is required")
-
-    concept_result = await ai_director_service.generate_prop_concept_image(description)
-    if not concept_result.get("success"):
-        error = concept_result.get("error", "Image generation failed")
-        code = concept_result.get("error_code")
-        if code == "BUDGET_EXCEEDED":
-            raise HTTPException(status_code=402, detail=error)
-        raise HTTPException(status_code=422, detail=error)
-
-    image_base64 = concept_result["image_base64"]
-    image_bytes = base64.b64decode(image_base64)
-
-    triposr_result = await triposr_service.generate_from_image(
-        image_data=image_bytes,
-        original_filename="ai_prop_concept.png",
-        do_remove_background=True,
-        foreground_ratio=0.88,
-    )
-
-    job_id = triposr_result.get("job_id")
-    if not job_id:
-        error_msg = triposr_result.get("error", "TripoSR submission failed — no job ID returned")
-        raise HTTPException(status_code=502, detail=error_msg)
-
-    return JSONResponse({
-        "success": True,
-        "job_id": job_id,
-        "optimised_prompt": concept_result.get("optimised_prompt", description),
-        "concept_image_base64": image_base64[:100] + "...",
-        "triposr": triposr_result,
-    })
-
+# AI Director routes — extracted to backend/routes/ai_director.py.
+# Assets (Poly Haven / Sketchfab / ambientCG) — extracted to backend/routes/assets.py.
 
 # TRELLIS 3D environment generation routes — extracted to backend/routes/trellis.py.
 
