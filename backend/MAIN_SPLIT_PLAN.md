@@ -54,10 +54,11 @@ For each group:
 | **Price admin / BRREG / weather** | `routes/price_admin.py` | 3 | ✓ EXTRACTED (BRREG company search + lookup, MET Norway weather forecast) |
 | Split sheets (contributions + sharing) | `routes/split_sheets.py` | ~30+ | PENDING — dominant remaining group |
 | **Consent** | `routes/consent.py` | 3 | ✓ EXTRACTED (`/api/consent/portal/access`, `/api/consent/portal/sign`, `/api/consent/generate-access-code`) |
-| Email / logo | `routes/email.py` | 2 | PENDING — `/api/email/*` |
-| Storyboards / environment | `routes/storyboards.py` | ~8 | PENDING — `/api/storyboards/*`, `/api/environment/*` |
+| **Email / logo** | `routes/email.py` | 2 | ✓ EXTRACTED (`/api/email/logo-upload`, `/api/email/logo/{key}`) |
+| **Storyboards** | `routes/storyboards.py` | 4 | ✓ EXTRACTED (templates, camera-angles, camera-movements, generate-frame via gpt-image-1) |
+| **Environment** | `routes/environment.py` | 4 | ✓ EXTRACTED (planner status/plan + retrieve-assets status/search) |
 | **Contracts** | `routes/contracts.py` | 4 | ✓ EXTRACTED (`/api/contracts/*` GET + list + POST + PUT) |
-| Norwegian laws | `routes/norwegian_laws.py` | 5 | PENDING — `/api/norwegian-laws/*` |
+| **Norwegian laws** | `routes/norwegian_laws.py` | 5 | ✓ EXTRACTED (legal suggestions + references + law search) |
 | Production (days/stripboard/cast/crew/call-sheets) | `routes/production.py` | ~12 | PENDING — `/api/production/*` |
 
 ## Why this isn't done in one shot
