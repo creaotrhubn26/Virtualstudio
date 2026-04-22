@@ -351,10 +351,21 @@ class SceneDirectorService:
     # -- mood inference ------------------------------------------------------
 
     def _infer_mood(self, beat: ParsedBeat) -> str:
-        text = f"{beat.action} {beat.dialogue} {beat.location}".lower()
-        scores: Dict[str, int] = {}
+        """Score moods from text, weighted so the beat's action/dialogue
+        dominate the location descriptor — "a romantic moment in a cozy
+        kitchen" should be *romantic*, not *cozy*.
+        """
+        action_text = f"{beat.action} {beat.dialogue}".lower()
+        location_text = beat.location.lower()
+
+        scores: Dict[str, float] = {}
         for mood, keywords in _MOOD_KEYWORDS.items():
-            scores[mood] = sum(1 for kw in keywords if kw in text)
+            # 3× weight for hits in action/dialogue (where emotion lives),
+            # 1× for hits in the location (usually a backdrop).
+            action_hits = sum(1 for kw in keywords if kw in action_text)
+            location_hits = sum(1 for kw in keywords if kw in location_text)
+            scores[mood] = action_hits * 3 + location_hits
+
         best_mood, best_score = max(scores.items(), key=lambda kv: kv[1])
         if best_score == 0:
             # Use INT/EXT + time as a weak prior

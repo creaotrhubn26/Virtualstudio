@@ -74,6 +74,7 @@ import { mountPosingMode } from './bootstrap/mount-posing-mode';
 import { mountGelPicker } from './bootstrap/mount-gel-picker';
 import { mountOutdoorLighting } from './bootstrap/mount-outdoor-lighting';
 import { mountCinematicEval } from './bootstrap/mount-cinematic-eval';
+import { mountSceneDirector } from './bootstrap/mount-scene-director';
 
 declare global {
   interface Window {
@@ -32548,6 +32549,7 @@ window.addEventListener('DOMContentLoaded', () => {
     mountGelPicker().catch(logMountFailure('mountGelPicker'));
     mountOutdoorLighting().catch(logMountFailure('mountOutdoorLighting'));
     mountCinematicEval().catch(logMountFailure('mountCinematicEval'));
+    mountSceneDirector().catch(logMountFailure('mountSceneDirector'));
 
     // Render installed tools in the left panel
     const renderInstalledTools = () => {
