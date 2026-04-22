@@ -47,9 +47,18 @@ For each group:
 | **Avatar generation** | `routes/avatar.py` | 6 | ✓ EXTRACTED (generate-avatar, GLB serve/head/delete, analyze-face, facexformer/analyze, generate-avatar-with-analysis) |
 | **AI Director** | `routes/ai_director.py` | 5 | ✓ EXTRACTED (director/status, director, director/stream, analyze-reference, generate-prop-glb) |
 | **Assets** | `routes/assets.py` | 3 | ✓ EXTRACTED (assets/search, polyhaven/gltf, sketchfab/download) |
-| DECA / Face / SAM3D | `routes/face.py` | ~15 | PENDING — scattered; grep `deca\|sam3d\|facexformer` |
-| FLUX | `routes/flux.py` | ~10 | PENDING — `/api/flux/*` |
-| Admin | `routes/admin.py` | ~12 | PENDING — `/api/admin/*` |
+| **Auth** | `routes/auth.py` | 6 | ✓ EXTRACTED (login, admins CRUD, reset-password) |
+| **Brush presets** | `routes/brush_presets.py` | 8 | ✓ EXTRACTED (storyboard drawing tools; inline version had a latent NameError that this fix resolves) |
+| **Shot planner** | `routes/shot_planner.py` | 4 | ✓ EXTRACTED (2D scenes CRUD for top-down planner) |
+| Story logic | `routes/story_logic.py` | 3 | PENDING — `/api/projects/{project_id}/story-logic` |
+| Price admin / BRREG / weather | `routes/price_admin.py` | 3 | PENDING — `/api/price-administration/*` |
+| Split sheets (contributions + sharing) | `routes/split_sheets.py` | ~30+ | PENDING — dominant remaining group |
+| Consent | `routes/consent.py` | 3 | PENDING — `/api/consent/portal/*`, `/api/consent/generate-access-code` |
+| Email / logo | `routes/email.py` | 2 | PENDING — `/api/email/*` |
+| Storyboards / environment | `routes/storyboards.py` | ~8 | PENDING — `/api/storyboards/*`, `/api/environment/*` |
+| Contracts | `routes/contracts.py` | 4 | PENDING — `/api/contracts/*` |
+| Norwegian laws | `routes/norwegian_laws.py` | 5 | PENDING — `/api/norwegian-laws/*` |
+| Production (days/stripboard/cast/crew/call-sheets) | `routes/production.py` | ~12 | PENDING — `/api/production/*` |
 
 ## Why this isn't done in one shot
 
