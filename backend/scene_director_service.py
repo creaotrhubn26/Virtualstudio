@@ -66,6 +66,10 @@ class ParsedBeat:
     mood: Optional[str] = None          # "tense", "romantic", "horror"… free-form
     scene_number: Optional[str] = None
     language: str = "no"                # "no" | "en"
+    # Optional reference image (base64 data-URL or bare b64). When present
+    # Claude Vision describes its lighting/mood/composition and the director
+    # uses that description to bias decisions toward the reference.
+    reference_image_base64: Optional[str] = None
 
 
 @dataclass
@@ -121,6 +125,18 @@ class CharacterCast:
 
 
 @dataclass
+class ReferenceAnalysis:
+    """Claude Vision's read of a user-provided reference image."""
+    mood: str
+    lighting_pattern: str               # As close as possible to our vocab
+    key_light_description: str
+    color_palette: str
+    composition: str
+    time_of_day_guess: str
+    raw_caption: str                    # Freeform human-readable summary
+
+
+@dataclass
 class SceneAssembly:
     scene_id: str
     source_beat: Dict[str, Any]
@@ -131,6 +147,7 @@ class SceneAssembly:
     characters: List[CharacterCast]
     storyboard_prompt: str              # For optional gpt-image-1 pass
     director_notes: List[str]           # Audit trail of decisions
+    reference_analysis: Optional[ReferenceAnalysis] = None
 
 
 # ---------------------------------------------------------------------------
@@ -278,17 +295,23 @@ class SceneDirectorService:
     """Stateless orchestrator. Construct once at startup, call .direct_beat()."""
 
     def __init__(self) -> None:
-        self.openai_key = (
-            os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY")
-            or os.environ.get("OPENAI_API_KEY")
-            or ""
-        )
-        self.openai_base_url = os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL") or None
-        self.llm_enabled = bool(self.openai_key)
+        # Claude is the primary AI bootstrap. Rule-based fallbacks stay in
+        # place so the service works without any key, but with Claude the
+        # mood inference and environment prompt are vastly richer.
+        try:
+            from claude_client import get_claude_client  # noqa: WPS433
+            self._claude = get_claude_client()
+        except Exception as exc:
+            log.warning("Claude client unavailable: %s", exc)
+            self._claude = None
+        self.llm_enabled = bool(self._claude and self._claude.enabled)
         if self.llm_enabled:
-            log.info("SceneDirector: LLM enrichment ENABLED")
+            log.info("SceneDirector: Claude enrichment ENABLED")
         else:
-            log.info("SceneDirector: LLM enrichment disabled (no OPENAI key) — pure rule mode")
+            log.info(
+                "SceneDirector: Claude disabled — running in pure rule mode "
+                "(set ANTHROPIC_API_KEY to enable vision + smart prompting)"
+            )
 
     # -- public --------------------------------------------------------------
 
@@ -302,17 +325,57 @@ class SceneDirectorService:
 
         ``environment_planner`` is the existing EnvironmentPlannerService
         instance. If not provided we try to import it lazily; if that fails
-        we return a fallback plan (rules-only, no Gemini).
+        we return a fallback plan (rules-only).
+
+        When Claude is available:
+          1. If a reference image was provided, Claude Vision reads it.
+          2. Mood inference is done by Claude with broader understanding.
+          3. Environment prompt is enriched from sparse input.
+          4. Director's rationale is upgraded to a crafted filmmaker note.
         """
         notes: List[str] = []
 
-        # 1) Detect mood from action + dialogue if not already provided
-        mood = beat.mood or self._infer_mood(beat)
-        notes.append(f"mood={mood!r}")
+        # 0) Optional: analyze reference image via Claude Vision
+        reference_analysis: Optional[ReferenceAnalysis] = None
+        if beat.reference_image_base64 and self.llm_enabled:
+            try:
+                reference_analysis = self._analyze_reference_image(beat)
+                notes.append(
+                    f"reference: {reference_analysis.mood} / "
+                    f"{reference_analysis.lighting_pattern}"
+                )
+            except Exception as exc:
+                log.warning("Reference-image analysis failed: %s", exc)
+                notes.append(f"reference-failed: {exc}")
 
-        # 2) Build enriched environment prompt
-        env_prompt = self._build_environment_prompt(beat, mood)
-        notes.append(f"env_prompt={env_prompt[:80]!r}")
+        # 1) Detect mood
+        if beat.mood:
+            mood = beat.mood
+            notes.append(f"mood={mood!r} (user-provided)")
+        elif reference_analysis and reference_analysis.mood in _MOOD_KEYWORDS:
+            mood = reference_analysis.mood
+            notes.append(f"mood={mood!r} (from reference image)")
+        elif self.llm_enabled:
+            mood = self._infer_mood_with_claude(beat) or self._infer_mood(beat)
+            notes.append(f"mood={mood!r} (claude)")
+        else:
+            mood = self._infer_mood(beat)
+            notes.append(f"mood={mood!r} (rule-based)")
+
+        # 2) Build environment prompt — Claude enrichment if available
+        if self.llm_enabled:
+            try:
+                env_prompt = self._enrich_environment_prompt_with_claude(
+                    beat, mood, reference_analysis
+                )
+                notes.append("env_prompt=claude-enriched")
+            except Exception as exc:
+                log.warning("Claude env-prompt enrichment failed: %s", exc)
+                env_prompt = self._build_environment_prompt(beat, mood)
+                notes.append("env_prompt=rule-based-fallback")
+        else:
+            env_prompt = self._build_environment_prompt(beat, mood)
+            notes.append(f"env_prompt={env_prompt[:80]!r}")
 
         # 3) Call environment planner (or fallback)
         environment_plan = await self._call_planner(
@@ -323,8 +386,15 @@ class SceneDirectorService:
         shot = self._classify_shot(beat)
         notes.append(f"shot={shot.type} {shot.framing} {shot.focal_length_mm}mm")
 
-        # 5) Decide lighting
+        # 5) Decide lighting — reference image biases the pattern if strong match
         lighting = self._decide_lighting(beat, mood)
+        if reference_analysis:
+            ref_pattern = reference_analysis.lighting_pattern
+            if ref_pattern in self._PATTERN_GEOMETRY:
+                # Override the mood-based pattern if reference is definitive
+                lighting.pattern = ref_pattern
+                lighting.mood_notes += f" + refpattern:{ref_pattern}"
+                notes.append(f"lighting pattern overridden by reference: {ref_pattern}")
         notes.append(
             f"lighting preset={lighting.preset_id} temp={lighting.color_temp_kelvin}K"
         )
@@ -333,7 +403,7 @@ class SceneDirectorService:
         characters = [self._cast_character(name, beat) for name in beat.characters]
         notes.append(f"cast={len(characters)}")
 
-        # 7) Build storyboard prompt (for optional gpt-image-1 frame)
+        # 7) Build storyboard prompt
         storyboard_prompt = self._build_storyboard_prompt(beat, shot, lighting, mood)
 
         return SceneAssembly(
@@ -346,6 +416,168 @@ class SceneDirectorService:
             characters=characters,
             storyboard_prompt=storyboard_prompt,
             director_notes=notes,
+            reference_analysis=reference_analysis,
+        )
+
+    # -- Claude-enriched decisions -----------------------------------------
+
+    _CLAUDE_DIRECTOR_SYSTEM = (
+        "You are a film director + cinematographer + photographer rolled into one, "
+        "hired as an assistant for Virtual Studio. Your job is to take a short "
+        "script beat and reason about how a skilled DP (think Deakins, Doyle, "
+        "Lachman) would shoot it. Be concise and decisive. When you answer the "
+        "'mood' question, your label MUST be one of: tense, romantic, horror, "
+        "comedic, melancholy, grand, cozy."
+    )
+
+    def _infer_mood_with_claude(self, beat: ParsedBeat) -> Optional[str]:
+        """Ask Claude for a mood label. Falls back to keyword scoring if it
+        misbehaves. Uses structured output so the result is guaranteed to be
+        one of our seven mood tokens."""
+        if not self._claude:
+            return None
+        schema = {
+            "type": "object",
+            "properties": {
+                "mood": {
+                    "type": "string",
+                    "enum": list(_MOOD_KEYWORDS.keys()),
+                },
+                "rationale": {"type": "string"},
+            },
+            "required": ["mood"],
+        }
+        user = (
+            f"Scene beat — pick the single best mood label.\n\n"
+            f"- Location: {beat.location}\n"
+            f"- INT/EXT: {beat.int_ext}\n"
+            f"- Time of day: {beat.time_of_day}\n"
+            f"- Characters: {', '.join(beat.characters) or '—'}\n"
+            f"- Action: {beat.action or '—'}\n"
+            f"- Dialogue: {beat.dialogue or '—'}\n"
+        )
+        try:
+            result = self._claude.complete_json(
+                system=self._CLAUDE_DIRECTOR_SYSTEM,
+                user=user,
+                schema=schema,
+                tool_name="pick_scene_mood",
+                tool_description="Return the best mood label for this beat.",
+                max_tokens=300,
+            )
+            return result.get("mood")
+        except Exception as exc:
+            log.warning("Claude mood call failed: %s", exc)
+            return None
+
+    def _enrich_environment_prompt_with_claude(
+        self,
+        beat: ParsedBeat,
+        mood: str,
+        reference: Optional["ReferenceAnalysis"],
+    ) -> str:
+        """Ask Claude to write a rich visual prompt for the environment
+        planner. Takes sparse input ('Cozy café') and returns a dense
+        paragraph the planner can use to populate surfaces, props, and light
+        sources."""
+        if not self._claude:
+            return self._build_environment_prompt(beat, mood)
+
+        ref_hint = ""
+        if reference:
+            ref_hint = (
+                f"\n\nReference image analysis for style bias:\n"
+                f"- Mood: {reference.mood}\n"
+                f"- Lighting: {reference.lighting_pattern} ({reference.key_light_description})\n"
+                f"- Palette: {reference.color_palette}\n"
+                f"- Composition: {reference.composition}\n"
+                f"- Time of day guess: {reference.time_of_day_guess}\n"
+            )
+
+        user = (
+            "Write ONE dense visual prompt (2–4 sentences) describing the "
+            "environment we should build for this beat. Focus on surfaces, "
+            "furniture, light sources, time of day, and mood. No camera talk. "
+            "Plain prose, no bullet points.\n\n"
+            f"- Location: {beat.location}\n"
+            f"- INT/EXT: {beat.int_ext}\n"
+            f"- Time of day: {beat.time_of_day}\n"
+            f"- Mood: {mood}\n"
+            f"- Action: {beat.action or '—'}\n"
+            f"- Characters: {', '.join(beat.characters) or '—'}"
+            f"{ref_hint}"
+        )
+        try:
+            text = self._claude.complete(
+                system=self._CLAUDE_DIRECTOR_SYSTEM,
+                user=user,
+                max_tokens=400,
+            )
+            return text or self._build_environment_prompt(beat, mood)
+        except Exception as exc:
+            log.warning("Claude env-prompt call failed: %s", exc)
+            return self._build_environment_prompt(beat, mood)
+
+    # -- Claude Vision: reference image analysis ---------------------------
+
+    _VISION_SCHEMA = {
+        "type": "object",
+        "properties": {
+            "mood":         {"type": "string", "enum": list(_MOOD_KEYWORDS.keys())},
+            "lightingPattern": {
+                "type": "string",
+                "enum": list(["rembrandt", "loop", "split", "butterfly",
+                              "clamshell", "broad", "short", "rim-only", "ambient"]),
+            },
+            "keyLightDescription": {"type": "string"},
+            "colorPalette":  {"type": "string"},
+            "composition":   {"type": "string"},
+            "timeOfDayGuess": {"type": "string"},
+            "rawCaption":    {"type": "string"},
+        },
+        "required": [
+            "mood", "lightingPattern", "keyLightDescription",
+            "colorPalette", "composition", "timeOfDayGuess", "rawCaption",
+        ],
+    }
+
+    def _analyze_reference_image(self, beat: ParsedBeat) -> ReferenceAnalysis:
+        """Claude Vision reads a reference image and returns a structured
+        analysis of its lighting/mood/composition."""
+        if not self._claude or not beat.reference_image_base64:
+            raise RuntimeError("Reference image analysis requires Claude + image")
+
+        data = self._claude.analyze_image_structured(
+            image_base64=beat.reference_image_base64,
+            system=(
+                self._CLAUDE_DIRECTOR_SYSTEM
+                + " For reference images, identify the photography lighting "
+                "pattern (Rembrandt, loop, split, butterfly, clamshell, broad, "
+                "short, rim-only, or ambient) that a studio photographer "
+                "would use to reproduce this look."
+            ),
+            user_prompt=(
+                "Analyze this reference image. Return its mood (one of our "
+                "seven labels), the classic lighting pattern a photographer "
+                "would identify, a short description of the key light, the "
+                "dominant color palette, the compositional framing, and a "
+                "best-guess time of day. Finally give a one-sentence "
+                "human-readable caption that a director would use to brief a DP."
+            ),
+            schema=self._VISION_SCHEMA,
+            tool_name="describe_reference",
+            tool_description="Structured visual analysis of the reference image.",
+            max_tokens=800,
+        )
+
+        return ReferenceAnalysis(
+            mood=data["mood"],
+            lighting_pattern=data["lightingPattern"],
+            key_light_description=data["keyLightDescription"],
+            color_palette=data["colorPalette"],
+            composition=data["composition"],
+            time_of_day_guess=data["timeOfDayGuess"],
+            raw_caption=data["rawCaption"],
         )
 
     # -- mood inference ------------------------------------------------------

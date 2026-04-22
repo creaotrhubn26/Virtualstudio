@@ -28,7 +28,9 @@ import {
 } from '@mui/material';
 import {
   directFromBeat,
+  getDirectorStatus,
   type BeatInput,
+  type DirectorStatus,
   type SceneAssembly,
 } from '../services/sceneDirectorClient';
 import { applySceneAssembly } from '../services/applySceneAssembly';
@@ -58,10 +60,14 @@ const SceneDirectorApp: React.FC = () => {
   const [dialogue, setDialogue] = useState('');
   const [mood, setMood] = useState<string>('');
 
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [referenceFileName, setReferenceFileName] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assembly, setAssembly] = useState<SceneAssembly | null>(null);
   const [applyStatus, setApplyStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<DirectorStatus | null>(null);
 
   // Expose a window event-based toggle so anyone can open the panel from
   // anywhere (e.g. a toolbar button in ScreenplayEditor's parent).
@@ -72,7 +78,35 @@ const SceneDirectorApp: React.FC = () => {
     return () => window.removeEventListener('toggle-scene-director', handleToggle);
   }, []);
 
+  useEffect(() => {
+    getDirectorStatus()
+      .then(setStatus)
+      .catch(() => setStatus(null));
+  }, []);
+
   if (!visible) return null;
+
+  const onReferenceUpload = (file: File | null) => {
+    if (!file) {
+      setReferenceImage(null);
+      setReferenceFileName(null);
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Referansebilde er for stort (maks 5 MB).');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setReferenceImage(reader.result);
+        setReferenceFileName(file.name);
+        setError(null);
+      }
+    };
+    reader.onerror = () => setError('Klarte ikke å lese filen');
+    reader.readAsDataURL(file);
+  };
 
   const buildBeat = (): BeatInput => ({
     location,
@@ -86,6 +120,7 @@ const SceneDirectorApp: React.FC = () => {
     dialogue,
     mood: mood || undefined,
     language: 'en',
+    referenceImageBase64: referenceImage ?? undefined,
   });
 
   const onGenerate = async () => {
@@ -149,13 +184,27 @@ const SceneDirectorApp: React.FC = () => {
               Scene Director
             </Typography>
             <Chip
-              label="AI orchestrator"
+              label={
+                status
+                  ? status.aiBootstrap === 'claude'
+                    ? `Claude · ${status.claudeDirectorModel ?? ''}`
+                    : 'Rules (no Claude key)'
+                  : 'AI orchestrator'
+              }
               size="small"
-              sx={{ bgcolor: 'rgba(0, 212, 255, 0.2)', color: '#00d4ff' }}
+              sx={{
+                bgcolor:
+                  status?.aiBootstrap === 'claude'
+                    ? 'rgba(183, 116, 255, 0.2)'
+                    : 'rgba(0, 212, 255, 0.2)',
+                color:
+                  status?.aiBootstrap === 'claude' ? '#b774ff' : '#00d4ff',
+              }}
             />
           </Box>
           <Typography variant="caption" sx={{ color: '#999' }}>
             Skriv én scene-beat. AI velger shot, linse, lys-mønster, modifikatorer.
+            {status?.visionSupported && ' Last opp referansebilde for stil-bias.'}
           </Typography>
 
           <TextField
@@ -248,6 +297,36 @@ const SceneDirectorApp: React.FC = () => {
             ))}
           </TextField>
 
+          {status?.visionSupported && (
+            <Box>
+              <Button
+                variant="outlined"
+                component="label"
+                size="small"
+                sx={{ borderColor: '#b774ff', color: '#b774ff', textTransform: 'none' }}
+              >
+                {referenceFileName
+                  ? `📷 ${referenceFileName}`
+                  : 'Last opp referansebilde (valgfritt, Claude Vision)'}
+                <input
+                  type="file"
+                  hidden
+                  accept="image/*"
+                  onChange={(e) => onReferenceUpload(e.target.files?.[0] ?? null)}
+                />
+              </Button>
+              {referenceImage && (
+                <Button
+                  size="small"
+                  onClick={() => onReferenceUpload(null)}
+                  sx={{ ml: 1, color: '#aaa', textTransform: 'none' }}
+                >
+                  Fjern
+                </Button>
+              )}
+            </Box>
+          )}
+
           <Button
             variant="contained"
             onClick={onGenerate}
@@ -262,6 +341,28 @@ const SceneDirectorApp: React.FC = () => {
           {assembly && (
             <>
               <Divider sx={{ bgcolor: 'rgba(255,255,255,0.12)' }} />
+              {assembly.referenceAnalysis && (
+                <Box
+                  sx={{
+                    p: 1,
+                    borderRadius: 1,
+                    bgcolor: 'rgba(183, 116, 255, 0.08)',
+                    border: '1px solid rgba(183, 116, 255, 0.3)',
+                  }}
+                >
+                  <Typography variant="caption" sx={{ color: '#b774ff', fontWeight: 600 }}>
+                    Claude Vision på referansebilde
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#ddd', mt: 0.5 }}>
+                    {assembly.referenceAnalysis.rawCaption}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#aaa', display: 'block', mt: 0.5 }}>
+                    Pattern: {assembly.referenceAnalysis.lightingPattern} ·
+                    Palette: {assembly.referenceAnalysis.colorPalette} ·
+                    Tid: {assembly.referenceAnalysis.timeOfDayGuess}
+                  </Typography>
+                </Box>
+              )}
               <Typography variant="subtitle2" sx={{ color: '#00d4ff' }}>
                 Director's call
               </Typography>

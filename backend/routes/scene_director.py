@@ -34,6 +34,15 @@ class BeatPayload(BaseModel):
     mood: Optional[str] = None
     sceneNumber: Optional[str] = None
     language: str = Field(default="no", pattern="^(no|en)$")
+    referenceImageBase64: Optional[str] = Field(
+        default=None,
+        description=(
+            "Optional reference image (base64 data-URL or bare b64). When "
+            "provided AND Claude is configured, Claude Vision analyses "
+            "the image's lighting/mood/composition and the director uses "
+            "that to bias decisions."
+        ),
+    )
 
 
 class ScriptPayload(BaseModel):
@@ -54,6 +63,7 @@ def _to_internal(payload: BeatPayload):
         mood=payload.mood,
         scene_number=payload.sceneNumber,
         language=payload.language,
+        reference_image_base64=payload.referenceImageBase64,
     )
 
 
@@ -112,12 +122,27 @@ def _assembly_to_dict(assembly) -> dict:
         ],
         "storyboardPrompt": assembly.storyboard_prompt,
         "directorNotes": assembly.director_notes,
+        "referenceAnalysis": (
+            {
+                "mood": assembly.reference_analysis.mood,
+                "lightingPattern": assembly.reference_analysis.lighting_pattern,
+                "keyLightDescription": assembly.reference_analysis.key_light_description,
+                "colorPalette": assembly.reference_analysis.color_palette,
+                "composition": assembly.reference_analysis.composition,
+                "timeOfDayGuess": assembly.reference_analysis.time_of_day_guess,
+                "rawCaption": assembly.reference_analysis.raw_caption,
+            }
+            if assembly.reference_analysis
+            else None
+        ),
     }
 
 
 @router.get("/status")
 async def scene_director_status():
-    """Return availability + LLM mode."""
+    """Return availability + AI bootstrap mode (Claude or rule-based)."""
+    import os
+
     try:
         from scene_director_service import get_scene_director  # type: ignore
     except ImportError as exc:
@@ -126,11 +151,18 @@ async def scene_director_status():
             detail=f"Scene Director service not available: {exc}",
         )
     svc = get_scene_director()
+    claude_on = svc.llm_enabled
     return JSONResponse(
         {
             "available": True,
-            "llmEnrichmentEnabled": svc.llm_enabled,
-            "openaiBaseUrl": svc.openai_base_url,
+            "aiBootstrap": "claude" if claude_on else "rules",
+            "llmEnrichmentEnabled": claude_on,
+            "visionSupported": claude_on,
+            "claudeModel": os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
+            if claude_on else None,
+            "claudeDirectorModel": os.environ.get(
+                "CLAUDE_DIRECTOR_MODEL", "claude-opus-4-7"
+            ) if claude_on else None,
         }
     )
 

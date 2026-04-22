@@ -57,6 +57,23 @@ export interface BeatInput {
   mood?: string;
   sceneNumber?: string;
   language?: Language;
+  /**
+   * Optional base64 data-URL or bare base64 of a reference image.
+   * When provided and the backend has ANTHROPIC_API_KEY set, Claude
+   * Vision analyses the image and the director uses the result to bias
+   * its decisions (mood, lighting pattern, palette).
+   */
+  referenceImageBase64?: string;
+}
+
+export interface ReferenceAnalysis {
+  mood: string;
+  lightingPattern: LightingPattern;
+  keyLightDescription: string;
+  colorPalette: string;
+  composition: string;
+  timeOfDayGuess: string;
+  rawCaption: string;
 }
 
 export interface ShotPlan {
@@ -134,12 +151,16 @@ export interface SceneAssembly {
   characters: CharacterCast[];
   storyboardPrompt: string;
   directorNotes: string[];
+  referenceAnalysis: ReferenceAnalysis | null;
 }
 
 export interface DirectorStatus {
   available: boolean;
+  aiBootstrap: 'claude' | 'rules';
   llmEnrichmentEnabled: boolean;
-  openaiBaseUrl: string | null;
+  visionSupported: boolean;
+  claudeModel: string | null;
+  claudeDirectorModel: string | null;
 }
 
 const API_BASE = '/api/scene-director';
