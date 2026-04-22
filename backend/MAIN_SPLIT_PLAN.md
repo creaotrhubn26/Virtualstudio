@@ -52,7 +52,13 @@ For each group:
 | **Shot planner** | `routes/shot_planner.py` | 4 | ✓ EXTRACTED (2D scenes CRUD for top-down planner) |
 | **Story logic** | `routes/story_logic.py` | 3 | ✓ EXTRACTED (`/api/projects/{project_id}/story-logic`) |
 | **Price admin / BRREG / weather** | `routes/price_admin.py` | 3 | ✓ EXTRACTED (BRREG company search + lookup, MET Norway weather forecast) |
-| Split sheets (contributions + sharing) | `routes/split_sheets.py` | ~30+ | PENDING — dominant remaining group |
+| Split sheets CRUD + portal + contributor + songflow + sign + link + delete + export + security | `routes/split_sheets.py` | ~21 | PENDING — dominant remaining group |
+| **Split sheets workflow** (comments / templates / reports / statistics / pro-connections) | `routes/split_sheets_workflow.py` | 13 | ✓ EXTRACTED |
+| Split sheets revenue / payments / invoices | `routes/split_sheets_revenue.py` | 6 | PENDING |
+| Split sheets legal-documents generate/list | `routes/split_sheets_legal.py` | 2 | PENDING |
+| Split sheets demo/troll | `routes/demo.py` | 2 | PENDING (production seed-troll + split-sheets demo/troll) |
+| **Models** | `routes/models.py` | 1 | ✓ EXTRACTED (/api/models/{filename}) |
+| **Fiken accounting** | `routes/fiken.py` | 2 | ✓ EXTRACTED (status + send-invoice — both stubs in inline) |
 | **Consent** | `routes/consent.py` | 3 | ✓ EXTRACTED (`/api/consent/portal/access`, `/api/consent/portal/sign`, `/api/consent/generate-access-code`) |
 | **Email / logo** | `routes/email.py` | 2 | ✓ EXTRACTED (`/api/email/logo-upload`, `/api/email/logo/{key}`) |
 | **Storyboards** | `routes/storyboards.py` | 4 | ✓ EXTRACTED (templates, camera-angles, camera-movements, generate-frame via gpt-image-1) |
