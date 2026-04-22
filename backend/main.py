@@ -38,25 +38,50 @@ def load_local_env_file() -> None:
 
 load_local_env_file()
 
-# Auth service imports
-try:
-    from auth_service import (
-        init_admin_table,
-        generate_password,
-        create_admin_user,
-        authenticate_user,
-        get_all_admins,
-        update_admin_user,
-        delete_admin_user,
-        get_admin_count
-    )
-    AUTH_SERVICE_AVAILABLE = True
-except ImportError as e:
-    print(f"Warning: Auth service not available: {e}")
-    AUTH_SERVICE_AVAILABLE = False
+# When STRICT_SERVICES=true (recommended for production), ImportError on any
+# declared core service aborts startup instead of silently flipping the
+# *_AVAILABLE flag off. In dev it defaults to false so partial checkouts
+# still boot, but you get a loud WARN line instead of a quiet "Warning:".
+STRICT_SERVICES = os.environ.get("STRICT_SERVICES", "").lower() in {"1", "true", "yes"}
 
-# Tutorials service imports
-try:
+
+def _import_service(label: str, importer):
+    """Run ``importer()`` and return True on success. On ImportError, either
+    re-raise (STRICT_SERVICES=true) or log loudly and return False."""
+    try:
+        importer()
+        return True
+    except ImportError as exc:
+        if STRICT_SERVICES:
+            raise RuntimeError(
+                f"[startup] STRICT_SERVICES=true and service '{label}' failed "
+                f"to import: {exc}"
+            ) from exc
+        import sys
+        print(
+            f"[startup] WARN: service '{label}' unavailable — endpoints that "
+            f"depend on it will 503. ImportError: {exc}",
+            file=sys.stderr,
+            flush=True,
+        )
+        return False
+
+
+def _import_auth():
+    global init_admin_table, generate_password, create_admin_user
+    global authenticate_user, get_all_admins, update_admin_user
+    global delete_admin_user, get_admin_count
+    from auth_service import (
+        init_admin_table, generate_password, create_admin_user,
+        authenticate_user, get_all_admins, update_admin_user,
+        delete_admin_user, get_admin_count,
+    )
+
+
+def _import_tutorials():
+    global db_create_tutorial, db_get_all_tutorials, db_get_tutorial
+    global db_update_tutorial, db_delete_tutorial, db_set_active_tutorial
+    global db_get_active_tutorial, init_tutorials_table
     from tutorials_service import (
         init_tutorials_table,
         create_tutorial as db_create_tutorial,
@@ -65,15 +90,20 @@ try:
         update_tutorial as db_update_tutorial,
         delete_tutorial as db_delete_tutorial,
         set_active_tutorial as db_set_active_tutorial,
-        get_active_tutorial as db_get_active_tutorial
+        get_active_tutorial as db_get_active_tutorial,
     )
-    TUTORIALS_SERVICE_AVAILABLE = True
-except ImportError as e:
-    print(f"Warning: Tutorials service not available: {e}")
-    TUTORIALS_SERVICE_AVAILABLE = False
 
-# Virtual Studio service imports
-try:
+
+def _import_virtual_studio():
+    global init_virtual_studio_tables
+    global save_scene, get_scenes, get_scene, delete_scene
+    global save_preset, get_presets, delete_preset
+    global save_light_group, get_light_groups, delete_light_group
+    global save_user_asset, get_user_assets, delete_user_asset
+    global save_scene_version, get_scene_versions, delete_scene_version
+    global save_note, get_notes, delete_note
+    global save_camera_preset, get_camera_presets, delete_camera_preset
+    global save_export_template, get_export_templates, delete_export_template
     from virtual_studio_service import (
         init_virtual_studio_tables,
         save_scene, get_scenes, get_scene, delete_scene,
@@ -83,53 +113,44 @@ try:
         save_scene_version, get_scene_versions, delete_scene_version,
         save_note, get_notes, delete_note,
         save_camera_preset, get_camera_presets, delete_camera_preset,
-        save_export_template, get_export_templates, delete_export_template
+        save_export_template, get_export_templates, delete_export_template,
     )
-    VIRTUAL_STUDIO_SERVICE_AVAILABLE = True
-except ImportError as e:
-    print(f"Warning: Virtual Studio service not available: {e}")
-    VIRTUAL_STUDIO_SERVICE_AVAILABLE = False
 
-# User KV service imports
-try:
+
+def _import_user_kv():
+    global init_user_kv_tables, db_set_user_kv, db_get_user_kv
     from user_kv_service import (
         init_user_kv_tables,
         set_user_kv as db_set_user_kv,
-        get_user_kv as db_get_user_kv
+        get_user_kv as db_get_user_kv,
     )
-    USER_KV_SERVICE_AVAILABLE = True
-except ImportError as e:
-    print(f"Warning: User KV service not available: {e}")
-    USER_KV_SERVICE_AVAILABLE = False
 
-# Branding settings service imports
-try:
+
+def _import_branding():
+    global init_branding_settings_table, db_get_branding_settings, db_set_branding_settings
     from branding_service import (
         init_branding_settings_table,
         get_branding_settings as db_get_branding_settings,
-        set_branding_settings as db_set_branding_settings
+        set_branding_settings as db_set_branding_settings,
     )
-    BRANDING_SERVICE_AVAILABLE = True
-except ImportError as e:
-    print(f"Warning: Branding service not available: {e}")
-    BRANDING_SERVICE_AVAILABLE = False
 
-# App settings service imports
-try:
+
+def _import_settings():
+    global init_settings_table, db_get_settings, db_set_settings, db_delete_settings, db_list_settings
     from settings_service import (
         init_settings_table,
         get_settings as db_get_settings,
         set_settings as db_set_settings,
         delete_settings as db_delete_settings,
-        list_settings as db_list_settings
+        list_settings as db_list_settings,
     )
-    SETTINGS_SERVICE_AVAILABLE = True
-except ImportError as e:
-    print(f"Warning: Settings service not available: {e}")
-    SETTINGS_SERVICE_AVAILABLE = False
 
-# Word Bank service imports
-try:
+
+def _import_wordbank():
+    global wordbank_health_check, get_words_by_category, db_add_word
+    global db_suggest_word, db_record_feedback, db_track_usage
+    global db_get_wordbank_stats, get_pending_suggestions, approve_suggestion
+    global reject_suggestion, seed_builtin_words, get_misclassification_patterns
     from wordbank_service import (
         health_check as wordbank_health_check,
         get_words_by_category,
@@ -142,20 +163,23 @@ try:
         approve_suggestion,
         reject_suggestion,
         seed_builtin_words,
-        get_misclassification_patterns
+        get_misclassification_patterns,
     )
-    WORDBANK_SERVICE_AVAILABLE = True
-except ImportError as e:
-    print(f"Warning: Word Bank service not available: {e}")
-    WORDBANK_SERVICE_AVAILABLE = False
 
-# Collaboration service imports
-try:
+
+def _import_collaboration():
+    global collaboration_router
     from collaboration_server import collaboration_router
-    COLLABORATION_SERVICE_AVAILABLE = True
-except ImportError as e:
-    print(f"Warning: Collaboration service not available: {e}")
-    COLLABORATION_SERVICE_AVAILABLE = False
+
+
+AUTH_SERVICE_AVAILABLE = _import_service("auth", _import_auth)
+TUTORIALS_SERVICE_AVAILABLE = _import_service("tutorials", _import_tutorials)
+VIRTUAL_STUDIO_SERVICE_AVAILABLE = _import_service("virtual_studio", _import_virtual_studio)
+USER_KV_SERVICE_AVAILABLE = _import_service("user_kv", _import_user_kv)
+BRANDING_SERVICE_AVAILABLE = _import_service("branding", _import_branding)
+SETTINGS_SERVICE_AVAILABLE = _import_service("settings", _import_settings)
+WORDBANK_SERVICE_AVAILABLE = _import_service("wordbank", _import_wordbank)
+COLLABORATION_SERVICE_AVAILABLE = _import_service("collaboration", _import_collaboration)
 
 app = FastAPI(
     title="Virtual Studio Avatar API",
@@ -163,9 +187,20 @@ app = FastAPI(
     version="1.0.0"
 )
 
+_allowed_origins_env = os.environ.get(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5000,http://127.0.0.1:5000,http://localhost:5173,http://127.0.0.1:5173",
+)
+ALLOWED_ORIGINS = [o.strip() for o in _allowed_origins_env.split(",") if o.strip()]
+if ALLOWED_ORIGINS == ["*"]:
+    raise RuntimeError(
+        "ALLOWED_ORIGINS='*' is not allowed with credentialed CORS. "
+        "Set an explicit comma-separated list of origins."
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -331,541 +366,23 @@ async def startup_event():
         except Exception as e:
             print(f"Warning: Could not initialize app settings table: {e}")
 
-@app.get("/")
-async def root():
-    return {"status": "ok", "message": "Virtual Studio Avatar API"}
+# Root / health / ML health / test-r2 — extracted to backend/routes/core.py.
 
 # HTTP client for external API proxying
 import httpx
 
 # ============ SHOT.CAFE PROXY ENDPOINTS ============
-@app.get("/api/shotcafe/search")
-async def shotcafe_search(q: str = Query(..., description="Search query"), z: str = Query("nav", description="Search type: nav, cinematographers, directors, tags, colors, years")):
-    """Proxy for shot.cafe search API to avoid CORS issues."""
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(
-                f"https://shot.cafe/server.php",
-                params={"z": z, "q": q},
-                headers={
-                    "User-Agent": "VirtualStudio/1.0",
-                    "Accept": "application/json",
-                }
-            )
-            
-            if response.status_code == 200:
-                try:
-                    data = response.json()
-                    return JSONResponse(content=data)
-                except:
-                    # Return as text if not JSON
-                    return JSONResponse(content={"error": "Invalid JSON response", "text": response.text[:500]})
-            else:
-                return JSONResponse(
-                    status_code=response.status_code,
-                    content={"error": f"shot.cafe returned status {response.status_code}"}
-                )
-    except httpx.TimeoutException:
-        return JSONResponse(status_code=504, content={"error": "Request to shot.cafe timed out"})
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+# ShotCafe proxy routes — extracted to backend/routes/shotcafe.py.
 
-@app.get("/api/shotcafe/movie/{slug}")
-async def shotcafe_movie_info(slug: str):
-    """Get movie information and frames from shot.cafe."""
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            # Get movie page to scrape frame count
-            response = await client.get(
-                f"https://shot.cafe/movie/{slug}",
-                headers={"User-Agent": "VirtualStudio/1.0"}
-            )
-            
-            if response.status_code == 200:
-                # Parse frame URLs from HTML page
-                import re
-                html = response.text
-                
-                # Extract all image URLs from the page
-                # shot.cafe uses /images/t/slug-####.png format
-                image_pattern = rf'/images/t/[^"\']*\.(?:png|jpg|jpeg)'
-                image_matches = re.findall(image_pattern, html, re.IGNORECASE)
-                
-                # Generate frame URLs with proxy
-                frames = []
-                seen_urls = set()
-                for img_url in image_matches:
-                    if img_url not in seen_urls:
-                        seen_urls.add(img_url)
-                        full_url = f"https://shot.cafe{img_url}"
-                        frames.append({
-                            "id": f"{slug}-{len(frames) + 1}",
-                            "url": full_url,
-                            "thumbnailUrl": full_url,
-                            # Include proxy URL for frontend
-                            "proxyUrl": f"/api/shotcafe/image-proxy?url={full_url}"
-                        })
-                        if len(frames) >= 50:  # Limit to 50 frames
-                            break
-                
-                return JSONResponse(content={
-                    "slug": slug,
-                    "frames": frames,
-                    "frameCount": len(frames)
-                })
-            else:
-                return JSONResponse(
-                    status_code=response.status_code,
-                    content={"error": f"Movie not found: {slug}"}
-                )
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+# /api/health and /api/ml/health — extracted to backend/routes/core.py.
 
-@app.get("/api/shotcafe/image-proxy")
-async def shotcafe_image_proxy(url: str = Query(..., description="Image URL to proxy")):
-    """Proxy shot.cafe images to avoid CORS issues - returns image directly."""
-    try:
-        # Only allow shot.cafe URLs
-        if not url.startswith("https://shot.cafe/"):
-            return JSONResponse(status_code=400, content={"error": "Only shot.cafe URLs allowed"})
-        
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            response = await client.get(
-                url,
-                headers={"User-Agent": "VirtualStudio/1.0"}
-            )
-            
-            if response.status_code == 200:
-                # Return image directly with correct content type
-                content_type = response.headers.get("content-type", "image/jpeg")
-                return Response(
-                    content=response.content,
-                    media_type=content_type,
-                    headers={
-                        "Cache-Control": "public, max-age=86400",
-                        "Access-Control-Allow-Origin": "*"
-                    }
-                )
-            else:
-                return JSONResponse(
-                    status_code=response.status_code,
-                    content={"error": f"Image not found"}
-                )
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
-
-# ============ END SHOT.CAFE PROXY ============
-
-@app.get("/api/health")
-async def health_check():
-    response: dict = {"status": "healthy"}
-    
-    try:
-        if sam3d_service:
-            response["sam3d"] = {
-                "model_loaded": getattr(sam3d_service, 'model_loaded', False),
-                "model_loading": getattr(sam3d_service, 'model_loading', False),
-                "use_placeholder": getattr(sam3d_service, 'use_placeholder', True),
-                "model_files_available": getattr(sam3d_service, 'model_files_available', False)
-            }
-    except Exception as e:
-        response["sam3d"] = {"error": str(e)}
-    
-    try:
-        if facexformer:
-            response["facexformer"] = {
-                "enabled": facexformer.is_enabled() if hasattr(facexformer, 'is_enabled') else False,
-                "model_loaded": facexformer.is_model_loaded() if hasattr(facexformer, 'is_model_loaded') else False,
-                "model_loading": getattr(facexformer, 'model_loading', False)
-            }
-    except Exception as e:
-        response["facexformer"] = {"error": str(e)}
-    
-    try:
-        if flux_service:
-            response["flux"] = {
-                "enabled": flux_service.is_enabled() if hasattr(flux_service, 'is_enabled') else False,
-                "model_loaded": flux_service.is_model_loaded() if hasattr(flux_service, 'is_model_loaded') else False,
-                "model_loading": getattr(flux_service, 'model_loading', False)
-            }
-    except Exception as e:
-        response["flux"] = {"error": str(e)}
-    
-    return response
-
-@app.get("/api/ml/health")
-async def ml_health_check():
-    """ML service health check - alias for /api/health."""
-    response: dict = {"status": "healthy", "ml_ready": True}
-    
-    try:
-        if sam3d_service:
-            response["sam3d"] = {
-                "model_loaded": getattr(sam3d_service, 'model_loaded', False),
-                "model_loading": getattr(sam3d_service, 'model_loading', False),
-                "use_placeholder": getattr(sam3d_service, 'use_placeholder', True),
-                "model_files_available": getattr(sam3d_service, 'model_files_available', False)
-            }
-        else:
-            response["sam3d"] = {"available": False}
-    except Exception as e:
-        response["sam3d"] = {"error": str(e)}
-    
-    try:
-        if facexformer:
-            response["facexformer"] = {
-                "enabled": facexformer.is_enabled() if hasattr(facexformer, 'is_enabled') else False,
-                "model_loaded": facexformer.is_model_loaded() if hasattr(facexformer, 'is_model_loaded') else False,
-                "model_loading": getattr(facexformer, 'model_loading', False)
-            }
-        else:
-            response["facexformer"] = {"available": False}
-    except Exception as e:
-        response["facexformer"] = {"error": str(e)}
-    
-    try:
-        if flux_service:
-            response["flux"] = {
-                "enabled": flux_service.is_enabled() if hasattr(flux_service, 'is_enabled') else False,
-                "model_loaded": flux_service.is_model_loaded() if hasattr(flux_service, 'is_model_loaded') else False,
-                "model_loading": getattr(flux_service, 'model_loading', False)
-            }
-        else:
-            response["flux"] = {"available": False}
-    except Exception as e:
-        response["flux"] = {"error": str(e)}
-    
-    return response
-
-@app.post("/api/user/kv")
-async def store_user_kv(data: dict):
-    """Store user key-value settings."""
-    if not USER_KV_SERVICE_AVAILABLE:
-        return JSONResponse(
-            status_code=503,
-            content={"error": "User KV service not available"}
-        )
-    try:
-        key = data.get("key")
-        value = data.get("value")
-        user_id = data.get("user_id", "default")
-        
-        if not key:
-            return JSONResponse(
-                status_code=400,
-                content={"error": "Missing 'key' in request body"}
-            )
-
-        db_set_user_kv(user_id, key, value)
-        
-        return {"success": True, "key": key, "user_id": user_id}
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
-
-@app.get("/api/user/kv/{key}")
-async def get_user_kv(key: str, user_id: str = "default"):
-    """Get user key-value setting."""
-    if not USER_KV_SERVICE_AVAILABLE:
-        return JSONResponse(
-            status_code=503,
-            content={"error": "User KV service not available"}
-        )
-    try:
-        value = db_get_user_kv(user_id, key)
-        return {"key": key, "value": value, "user_id": user_id}
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
-
-@app.get("/api/branding/settings")
-async def get_branding_settings():
-    """Get branding settings."""
-    if not BRANDING_SERVICE_AVAILABLE:
-        return JSONResponse(
-            status_code=503,
-            content={"error": "Branding service not available"}
-        )
-    try:
-        settings = db_get_branding_settings()
-        return {"settings": settings}
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
-
-@app.put("/api/branding/settings")
-async def update_branding_settings(data: dict):
-    """Update branding settings."""
-    if not BRANDING_SERVICE_AVAILABLE:
-        return JSONResponse(
-            status_code=503,
-            content={"error": "Branding service not available"}
-        )
-    settings = data.get("settings")
-    if settings is None:
-        return JSONResponse(
-            status_code=400,
-            content={"error": "Missing 'settings' in request body"}
-        )
-    try:
-        updated = db_set_branding_settings(settings)
-        return {"settings": updated}
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
-
-@app.get("/api/settings")
-async def get_app_settings(user_id: str, namespace: str, project_id: Optional[str] = None):
-    """Get app settings by namespace and optional project scope."""
-    if not SETTINGS_SERVICE_AVAILABLE:
-        return JSONResponse(
-            status_code=503,
-            content={"error": "Settings service not available"}
-        )
-    try:
-        data = db_get_settings(user_id, namespace, project_id)
-        return {"data": data}
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
-
-@app.get("/api/settings/list")
-async def list_app_settings(user_id: str, namespace_prefix: str, project_id: Optional[str] = None):
-    """List app settings by namespace prefix and optional project scope."""
-    if not SETTINGS_SERVICE_AVAILABLE:
-        return JSONResponse(
-            status_code=503,
-            content={"error": "Settings service not available"}
-        )
-    try:
-        entries = db_list_settings(user_id, namespace_prefix, project_id)
-        return {"entries": entries}
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
-
-@app.put("/api/settings")
-async def update_app_settings(data: dict):
-    """Upsert app settings."""
-    if not SETTINGS_SERVICE_AVAILABLE:
-        return JSONResponse(
-            status_code=503,
-            content={"error": "Settings service not available"}
-        )
-    user_id = data.get("userId")
-    namespace = data.get("namespace")
-    payload = data.get("data")
-    project_id = data.get("projectId")
-    if not user_id or not namespace:
-        return JSONResponse(
-            status_code=400,
-            content={"error": "Missing 'userId' or 'namespace' in request body"}
-        )
-    if payload is None:
-        return JSONResponse(
-            status_code=400,
-            content={"error": "Missing 'data' in request body"}
-        )
-    try:
-        updated = db_set_settings(user_id, namespace, payload, project_id)
-        return {"data": updated}
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
-
-@app.delete("/api/settings")
-async def delete_app_settings(user_id: str, namespace: str, project_id: Optional[str] = None):
-    """Delete app settings for a namespace."""
-    if not SETTINGS_SERVICE_AVAILABLE:
-        return JSONResponse(
-            status_code=503,
-            content={"error": "Settings service not available"}
-        )
-    try:
-        deleted = db_delete_settings(user_id, namespace, project_id)
-        return {"success": deleted}
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
-
-@app.post("/api/analytics")
-async def track_analytics(data: dict):
-    """Analytics tracking endpoint (logging stub for development)."""
-    event_type = data.get("event", "unknown")
-    return {"success": True, "event": event_type, "tracked": True}
+# user_kv / branding / settings / analytics routes — extracted. See MAIN_SPLIT_PLAN.md.
 
 # ============ WORD BANK API ============
 
-@app.get("/api/wordbank/health")
-async def wordbank_health():
-    """Check if word bank database is available"""
-    if not WORDBANK_SERVICE_AVAILABLE:
-        return {"available": False, "error": "Word bank service not available"}
-    return wordbank_health_check()
+# Wordbank routes — extracted to backend/routes/wordbank.py. See MAIN_SPLIT_PLAN.md.
 
-@app.get("/api/wordbank/words/{category}")
-async def get_wordbank_words(category: str):
-    """Get all approved words for a category"""
-    if not WORDBANK_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Word bank service not available")
-    return get_words_by_category(category)
-
-@app.post("/api/wordbank/words")
-async def add_wordbank_word(data: dict):
-    """Add a word to the word bank"""
-    if not WORDBANK_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Word bank service not available")
-    
-    return db_add_word(
-        word=data.get("word", ""),
-        category=data.get("category", ""),
-        language=data.get("language", "both"),
-        weight=data.get("weight", 0.7),
-        user_id=data.get("user_id")
-    )
-
-@app.post("/api/wordbank/suggestions")
-async def submit_wordbank_suggestion(data: dict):
-    """Submit a word suggestion for admin review"""
-    if not WORDBANK_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Word bank service not available")
-    
-    return db_suggest_word(
-        word=data.get("word", ""),
-        category=data.get("category", ""),
-        language=data.get("language", "both"),
-        suggested_weight=data.get("suggested_weight", 0.7),
-        reason=data.get("reason"),
-        suggested_by=data.get("suggested_by")
-    )
-
-@app.get("/api/wordbank/suggestions/pending")
-async def get_wordbank_pending_suggestions():
-    """Get pending word suggestions for admin review"""
-    if not WORDBANK_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Word bank service not available")
-    return get_pending_suggestions()
-
-@app.post("/api/wordbank/suggestions/{suggestion_id}/approve")
-async def approve_wordbank_suggestion(suggestion_id: int, data: dict):
-    """Approve a word suggestion"""
-    if not WORDBANK_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Word bank service not available")
-    return approve_suggestion(suggestion_id, data.get("reviewer_id", ""))
-
-@app.post("/api/wordbank/suggestions/{suggestion_id}/reject")
-async def reject_wordbank_suggestion(suggestion_id: int, data: dict):
-    """Reject a word suggestion"""
-    if not WORDBANK_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Word bank service not available")
-    return reject_suggestion(suggestion_id, data.get("reviewer_id", ""))
-
-@app.post("/api/wordbank/feedback")
-async def record_wordbank_feedback(data: dict):
-    """Record feedback when user corrects a scene purpose"""
-    if not WORDBANK_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Word bank service not available")
-    
-    return db_record_feedback(
-        scene_text=data.get("scene_text", ""),
-        detected_purpose=data.get("detected_purpose", ""),
-        correct_purpose=data.get("correct_purpose", ""),
-        learned_words=data.get("learned_words", []),
-        project_id=data.get("project_id"),
-        user_id=data.get("user_id")
-    )
-
-@app.post("/api/wordbank/usage")
-async def track_wordbank_usage(data: dict):
-    """Track word usage"""
-    if not WORDBANK_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Word bank service not available")
-    
-    return db_track_usage(
-        word=data.get("word", ""),
-        category=data.get("category", ""),
-        project_id=data.get("project_id"),
-        user_id=data.get("user_id"),
-        scene_context=data.get("scene_context")
-    )
-
-@app.get("/api/wordbank/stats")
-async def get_wordbank_stats():
-    """Get word bank statistics"""
-    if not WORDBANK_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Word bank service not available")
-    return db_get_wordbank_stats()
-
-@app.post("/api/wordbank/seed")
-async def seed_wordbank_words(data: dict = None):
-    """Seed database with built-in words"""
-    if not WORDBANK_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Word bank service not available")
-    
-    words = data.get("words", []) if data else []
-    return seed_builtin_words(words)
-
-@app.get("/api/wordbank/patterns/misclassification")
-async def get_wordbank_misclassification_patterns():
-    """Get misclassification patterns for analysis"""
-    if not WORDBANK_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Word bank service not available")
-    return get_misclassification_patterns()
-
-# ============ END WORD BANK API ============
-
-@app.get("/api/test-r2")
-async def test_r2_connection():
-    """Test R2 connection and list Sam-3D models."""
-    import boto3
-    from botocore.config import Config
-    
-    # Try CLOUDFLARE_R2_* first, fallback to R2_* for backward compatibility
-    access_key = os.environ.get('CLOUDFLARE_R2_ACCESS_KEY_ID') or os.environ.get('R2_ACCESS_KEY_ID', '')
-    access_key = access_key.strip()
-    secret_key = os.environ.get('CLOUDFLARE_R2_SECRET_ACCESS_KEY') or os.environ.get('R2_SECRET_ACCESS_KEY', '')
-    secret_key = secret_key.strip()
-    
-    try:
-        client = boto3.client(
-            's3',
-            endpoint_url="https://bbda9f467577de94fefbc4f2954db032.r2.cloudflarestorage.com",
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
-            config=Config(signature_version='s3v4'),
-            region_name='auto'
-        )
-        
-        response = client.list_objects_v2(Bucket="ml-models", Prefix='Sam-3D/', MaxKeys=10)
-        objects = [{"key": obj['Key'], "size": obj['Size']} for obj in response.get('Contents', [])]
-        
-        return {
-            "success": True,
-            "credentials_configured": bool(access_key and secret_key),
-            "objects": objects
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "credentials_configured": bool(access_key and secret_key),
-            "error": str(e)
-        }
+# /api/test-r2 — extracted to backend/routes/core.py.
 
 @app.post("/api/generate-avatar")
 async def generate_avatar(file: UploadFile = File(...)):
@@ -1109,6 +626,95 @@ try:
 except ImportError as e:
     print(f"Warning: External data routes not available: {e}")
 
+# Tutorials routes — first group extracted from main.py per the split plan.
+try:
+    from routes.tutorials import router as tutorials_router
+    app.include_router(tutorials_router)
+    print("Tutorials routes loaded")
+except ImportError as e:
+    print(f"Warning: Tutorials routes not available: {e}")
+
+# Wordbank routes
+try:
+    from routes.wordbank import router as wordbank_router
+    app.include_router(wordbank_router)
+    print("Wordbank routes loaded")
+except ImportError as e:
+    print(f"Warning: Wordbank routes not available: {e}")
+
+# User KV routes
+try:
+    from routes.user_kv import router as user_kv_router
+    app.include_router(user_kv_router)
+    print("User KV routes loaded")
+except ImportError as e:
+    print(f"Warning: User KV routes not available: {e}")
+
+# Branding routes
+try:
+    from routes.branding import router as branding_router
+    app.include_router(branding_router)
+    print("Branding routes loaded")
+except ImportError as e:
+    print(f"Warning: Branding routes not available: {e}")
+
+# App settings + analytics routes
+try:
+    from routes.settings import router as settings_router
+    app.include_router(settings_router)
+    print("Settings routes loaded")
+except ImportError as e:
+    print(f"Warning: Settings routes not available: {e}")
+
+# ShotCafe proxy routes
+try:
+    from routes.shotcafe import router as shotcafe_router
+    app.include_router(shotcafe_router)
+    print("ShotCafe routes loaded")
+except ImportError as e:
+    print(f"Warning: ShotCafe routes not available: {e}")
+
+# Core routes: /, /api/health, /api/ml/health, /api/test-r2
+try:
+    from routes.core import router as core_router
+    app.include_router(core_router)
+    print("Core routes loaded")
+except ImportError as e:
+    print(f"Warning: Core routes not available: {e}")
+
+# Studio routes (scenes/presets/light-groups/assets/versions/notes/preferences/
+# snapshots/camera-presets/export-templates) — the largest single group
+try:
+    from routes.studio import router as studio_router
+    app.include_router(studio_router)
+    print("Studio routes loaded")
+except ImportError as e:
+    print(f"Warning: Studio routes not available: {e}")
+
+# Rodin 3D generation routes
+try:
+    from routes.rodin import router as rodin_router
+    app.include_router(rodin_router)
+    print("Rodin routes loaded")
+except ImportError as e:
+    print(f"Warning: Rodin routes not available: {e}")
+
+# TripoSR 3D generation routes
+try:
+    from routes.triposr import router as triposr_router
+    app.include_router(triposr_router)
+    print("TripoSR routes loaded")
+except ImportError as e:
+    print(f"Warning: TripoSR routes not available: {e}")
+
+# TRELLIS 3D environment generation routes
+try:
+    from routes.trellis import router as trellis_router
+    app.include_router(trellis_router)
+    print("TRELLIS routes loaded")
+except ImportError as e:
+    print(f"Warning: TRELLIS routes not available: {e}")
+
 # Collaboration routes (WebSocket real-time)
 try:
     if COLLABORATION_SERVICE_AVAILABLE:
@@ -1150,265 +756,9 @@ class EnvironmentAssetRetrievalRequest(BaseModel):
     limit: int = 5
     minScore: float = 0.75
 
-@app.post("/api/rodin/generate")
-async def rodin_generate(request: RodinGenerateRequest):
-    """Generate a single 3D model from text prompt using Rodin API."""
-    try:
-        gen_result = await rodin_service.generate_from_text(
-            prompt=request.prompt,
-            quality=request.quality
-        )
-        
-        if not gen_result.get("success"):
-            error_msg = gen_result.get("error", "Generation failed")
-            error_details = gen_result.get("details", "")
-            api_response = gen_result.get("api_response", {})
-            print(f"Rodin generation start failed: {error_msg}")
-            if error_details:
-                print(f"Error details: {error_details}")
-            if api_response:
-                print(f"API response: {json.dumps(api_response, indent=2)}")
-            raise HTTPException(status_code=500, detail=error_msg)
-        
-        subscription_key = gen_result.get("subscription_key")
-        task_uuid = gen_result.get("uuid")
-        
-        if not subscription_key:
-            print(f"ERROR: No subscription_key in gen_result: {gen_result}")
-            raise HTTPException(status_code=500, detail="No subscription_key returned from API")
-        
-        return JSONResponse({
-            "success": True,
-            "subscription_key": subscription_key,
-            "task_uuid": task_uuid,
-            "filename": request.filename,
-            "category": request.category,
-            "message": "Generation started. Use /api/rodin/status/{subscription_key} to check progress."
-        })
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Unexpected error in rodin_generate: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+# Rodin 3D generation routes — extracted to backend/routes/rodin.py.
 
-@app.get("/api/rodin/status/{subscription_key}")
-async def get_rodin_status(subscription_key: str):
-    """Check the status of a Rodin generation job using subscription_key."""
-    try:
-        result = await rodin_service.check_status(subscription_key)
-        return JSONResponse(result)
-    except Exception as e:
-        print(f"Error checking status: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Error checking status: {str(e)}")
-
-@app.post("/api/rodin/download/{task_uuid}")
-async def download_rodin_model(task_uuid: str, filename: str = ""):
-    """Download a completed Rodin model using task_uuid."""
-    try:
-        if not filename:
-            filename = f"model_{task_uuid[:8]}"
-        
-        result = await rodin_service.download_result(task_uuid, filename)
-        if not result.get("success"):
-            raise HTTPException(status_code=500, detail=result.get("error", "Download failed"))
-        return JSONResponse({
-            "success": True,
-            "path": result.get("path"),
-            "filename": result.get("filename")
-        })
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Error downloading model: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Error downloading model: {str(e)}")
-
-@app.post("/api/rodin/batch")
-async def rodin_batch_generate(request: RodinBatchRequest):
-    """Generate multiple 3D models in batch."""
-    results = await rodin_service.batch_generate(
-        items=request.items,
-        quality=request.quality
-    )
-    
-    successful = [r for r in results if r.get("success")]
-    failed = [r for r in results if not r.get("success")]
-    
-    return JSONResponse({
-        "success": True,
-        "total": len(results),
-        "successful": len(successful),
-        "failed": len(failed),
-        "results": results
-    })
-
-@app.get("/api/rodin/model/{filename}")
-async def get_rodin_model(filename: str):
-    """Download a generated Rodin model."""
-    model_path = rodin_service.output_dir / filename
-    
-    if not filename.endswith(".glb"):
-        model_path = rodin_service.output_dir / f"{filename}.glb"
-    
-    if not model_path.exists():
-        raise HTTPException(status_code=404, detail="Model not found")
-    
-    return FileResponse(
-        path=str(model_path),
-        media_type="model/gltf-binary",
-        filename=model_path.name
-    )
-
-@app.get("/api/rodin/models")
-async def list_rodin_models():
-    """List all generated Rodin models."""
-    models = []
-    for f in rodin_service.output_dir.glob("*.glb"):
-        models.append({
-            "filename": f.name,
-            "url": f"/api/rodin/model/{f.name}",
-            "size": f.stat().st_size
-        })
-    return JSONResponse({"models": models})
-
-@app.post("/api/rodin/test-status")
-async def test_rodin_status(request: dict):
-    """Test endpoint to check status using subscription_key."""
-    try:
-        subscription_key = request.get("subscription_key", "")
-        if not subscription_key:
-            return JSONResponse({"success": False, "error": "subscription_key required"})
-        result = await rodin_service.check_status(subscription_key)
-        return JSONResponse(result)
-    except Exception as e:
-        import traceback
-        return JSONResponse({
-            "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
-        })
-
-@app.post("/api/rodin/test-generate")
-async def test_rodin_generate(request: dict):
-    """Test endpoint to see what the API actually returns."""
-    try:
-        prompt = request.get("prompt", "test prompt")
-        quality = request.get("quality", "low")
-        
-        result = await rodin_service.generate_from_text(
-            prompt=prompt,
-            quality=quality
-        )
-        
-        return JSONResponse({
-            "success": True,
-            "result": result,
-            "uuid": result.get("uuid"),
-            "full_response": result.get("full_response")
-        })
-    except Exception as e:
-        import traceback
-        return JSONResponse({
-            "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
-        })
-
-
-# ============================================================================
-# TripoSR 3D Generation Endpoints (image → high-quality GLB via Replicate)
-# ============================================================================
-
-TRIPOSR_SERVICE_AVAILABLE = False
-try:
-    from triposr_service import triposr_service
-    TRIPOSR_SERVICE_AVAILABLE = True
-    print("TripoSR service loaded")
-except ImportError as e:
-    print(f"Warning: TripoSR service not available: {e}")
-    triposr_service = None
-
-
-@app.post("/api/triposr/generate")
-async def triposr_generate(
-    image: UploadFile = File(...),
-    do_remove_background: bool = True,
-    foreground_ratio: float = 0.85,
-):
-    """Upload an image and generate a high-quality GLB via TripoSR on Replicate."""
-    if not TRIPOSR_SERVICE_AVAILABLE or triposr_service is None:
-        raise HTTPException(status_code=503, detail="TripoSR service not available")
-
-    if not triposr_service.api_token:
-        raise HTTPException(
-            status_code=503,
-            detail="REPLICATE_API_TOKEN is not set. Add it in your Replit project Secrets.",
-        )
-
-    allowed_types = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
-    content_type = image.content_type or ""
-    if content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail=f"Unsupported image type: {content_type}. Use JPEG, PNG or WebP.")
-
-    image_data = await image.read()
-    if len(image_data) > 20 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="Image too large. Maximum 20 MB.")
-
-    result = await triposr_service.generate_from_image(
-        image_data=image_data,
-        original_filename=image.filename or "upload.png",
-        do_remove_background=do_remove_background,
-        foreground_ratio=foreground_ratio,
-    )
-    return JSONResponse(result)
-
-
-@app.get("/api/triposr/status/{job_id}")
-async def triposr_status(job_id: str):
-    """Poll the status of a TripoSR generation job."""
-    if not TRIPOSR_SERVICE_AVAILABLE or triposr_service is None:
-        raise HTTPException(status_code=503, detail="TripoSR service not available")
-    result = await triposr_service.check_status(job_id)
-    return JSONResponse(result)
-
-
-@app.post("/api/triposr/download/{job_id}")
-async def triposr_download(job_id: str):
-    """Download the finished GLB and save it locally. Returns a serveable URL."""
-    if not TRIPOSR_SERVICE_AVAILABLE or triposr_service is None:
-        raise HTTPException(status_code=503, detail="TripoSR service not available")
-    result = await triposr_service.download_model(job_id)
-    return JSONResponse(result)
-
-
-@app.get("/api/triposr/model/{filename:path}")
-async def serve_triposr_model(filename: str):
-    """Serve a generated TripoSR GLB file."""
-    if not TRIPOSR_SERVICE_AVAILABLE or triposr_service is None:
-        raise HTTPException(status_code=503, detail="TripoSR service not available")
-    file_path = triposr_service.output_dir / filename
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail=f"Model not found: {filename}")
-    return FileResponse(
-        path=str(file_path),
-        media_type="model/gltf-binary",
-        filename=filename,
-        headers={"Cache-Control": "public, max-age=3600"},
-    )
-
-
-@app.get("/api/triposr/models")
-async def list_triposr_models():
-    """List all generated TripoSR GLB models."""
-    if not TRIPOSR_SERVICE_AVAILABLE or triposr_service is None:
-        return JSONResponse({"models": []})
-    return JSONResponse({"models": triposr_service.list_models()})
-
+# TripoSR 3D generation routes — extracted to backend/routes/triposr.py.
 
 # ============================================================================
 # AI Studio Director — GPT-4o function calling orchestration
@@ -1627,122 +977,7 @@ async def ai_generate_prop_glb(request: Request):
     })
 
 
-# ============================================================================
-# TRELLIS 3D Environment Generation (image → scene GLB via Replicate)
-# ============================================================================
-
-TRELLIS_SERVICE_AVAILABLE = False
-try:
-    from trellis_service import trellis_service
-    TRELLIS_SERVICE_AVAILABLE = True
-    print("TRELLIS service loaded")
-except ImportError as e:
-    print(f"Warning: TRELLIS service not available: {e}")
-    trellis_service = None
-
-
-@app.post("/api/trellis/generate")
-async def trellis_generate(
-    request: Request,
-    image: UploadFile = File(...),
-    texture_size: int = 1024,
-    mesh_simplify: float = 0.95,
-    ss_steps: int = 12,
-    slat_steps: int = 12,
-):
-    """Upload a restaurant/scene image and convert it to a 3D GLB via TRELLIS on Replicate."""
-    if not TRELLIS_SERVICE_AVAILABLE or trellis_service is None:
-        raise HTTPException(status_code=503, detail="TRELLIS service ikke tilgjengelig")
-
-    if not trellis_service.api_token:
-        raise HTTPException(
-            status_code=503,
-            detail="REPLICATE_API_TOKEN er ikke satt. Legg det til under Secrets i Replit.",
-        )
-
-    allowed_types = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
-    content_type = image.content_type or ""
-    if content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail=f"Ikke støttet bildeformat: {content_type}. Bruk JPEG, PNG eller WebP.")
-
-    image_data = await image.read()
-    if len(image_data) > 25 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="Bildet er for stort. Maks 25 MB.")
-
-    # Build the public base URL so Replicate can fetch the uploaded image
-    public_base = os.environ.get("REPLIT_DEV_DOMAIN", "")
-    if public_base and not public_base.startswith("http"):
-        public_base = f"https://{public_base}"
-    if not public_base:
-        public_base = str(request.base_url).rstrip("/")
-
-    result = await trellis_service.generate_from_image(
-        image_data=image_data,
-        original_filename=image.filename or "upload.png",
-        public_base_url=public_base,
-        texture_size=texture_size,
-        mesh_simplify=mesh_simplify,
-        ss_steps=ss_steps,
-        slat_steps=slat_steps,
-    )
-    return JSONResponse(result)
-
-
-@app.get("/api/trellis/upload/{filename:path}")
-async def serve_trellis_upload(filename: str):
-    """Serve a temporarily stored upload image so Replicate can fetch it."""
-    if not TRELLIS_SERVICE_AVAILABLE or trellis_service is None:
-        raise HTTPException(status_code=503, detail="TRELLIS service ikke tilgjengelig")
-    file_path = trellis_service.uploads_dir / filename
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail=f"Opplastet bilde ikke funnet: {filename}")
-    ext = file_path.suffix.lower()
-    mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
-    media_type = mime_map.get(ext, "image/png")
-    return FileResponse(path=str(file_path), media_type=media_type)
-
-
-@app.get("/api/trellis/status/{job_id}")
-async def trellis_status(job_id: str):
-    """Poll the status of a TRELLIS generation job."""
-    if not TRELLIS_SERVICE_AVAILABLE or trellis_service is None:
-        raise HTTPException(status_code=503, detail="TRELLIS service ikke tilgjengelig")
-    result = await trellis_service.check_status(job_id)
-    return JSONResponse(result)
-
-
-@app.post("/api/trellis/download/{job_id}")
-async def trellis_download(job_id: str):
-    """Download the finished GLB and save it locally. Returns a serveable path."""
-    if not TRELLIS_SERVICE_AVAILABLE or trellis_service is None:
-        raise HTTPException(status_code=503, detail="TRELLIS service ikke tilgjengelig")
-    result = await trellis_service.download_model(job_id)
-    return JSONResponse(result)
-
-
-@app.get("/api/trellis/model/{filename:path}")
-async def serve_trellis_model(filename: str):
-    """Serve a generated TRELLIS GLB file."""
-    if not TRELLIS_SERVICE_AVAILABLE or trellis_service is None:
-        raise HTTPException(status_code=503, detail="TRELLIS service ikke tilgjengelig")
-    file_path = trellis_service.models_dir / filename
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail=f"Modell ikke funnet: {filename}")
-    return FileResponse(
-        path=str(file_path),
-        media_type="model/gltf-binary",
-        filename=filename,
-        headers={"Cache-Control": "public, max-age=3600"},
-    )
-
-
-@app.get("/api/trellis/models")
-async def list_trellis_models():
-    """List all generated TRELLIS GLB models."""
-    if not TRELLIS_SERVICE_AVAILABLE or trellis_service is None:
-        return JSONResponse({"models": []})
-    return JSONResponse({"models": trellis_service.list_models()})
-
+# TRELLIS 3D environment generation routes — extracted to backend/routes/trellis.py.
 
 # ============================================================================
 # Virtual Studio API Endpoints
@@ -1802,592 +1037,17 @@ async def list_trellis_models():
 # Tutorials API Endpoints
 # ============================================================================
 
-@app.get("/api/tutorials")
-async def get_tutorials(category: Optional[str] = None):
-    """Get all tutorials, optionally filtered by category"""
-    if not TUTORIALS_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Tutorials service not available")
-    
-    try:
-        tutorials = db_get_all_tutorials(category)
-        return JSONResponse({"success": True, "tutorials": tutorials})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/tutorials/active/{category}")
-async def get_active_tutorial(category: str):
-    """Get the active tutorial for a category"""
-    if not TUTORIALS_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Tutorials service not available")
-    
-    try:
-        tutorial = db_get_active_tutorial(category)
-        if tutorial:
-            return JSONResponse({"success": True, "tutorial": tutorial})
-        else:
-            return JSONResponse({"success": True, "tutorial": None})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/tutorials/{tutorial_id}")
-async def get_tutorial(tutorial_id: str):
-    """Get a single tutorial by ID"""
-    if not TUTORIALS_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Tutorials service not available")
-    
-    try:
-        tutorial = db_get_tutorial(tutorial_id)
-        if tutorial:
-            return JSONResponse({"success": True, "tutorial": tutorial})
-        else:
-            raise HTTPException(status_code=404, detail="Tutorial not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/tutorials")
-async def create_tutorial(request: Request):
-    """Create a new tutorial (admin only)"""
-    if not TUTORIALS_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Tutorials service not available")
-    
-    try:
-        data = await request.json()
-        created_by = data.pop('createdBy', None)
-        tutorial = db_create_tutorial(data, created_by)
-        return JSONResponse({"success": True, "tutorial": tutorial})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.put("/api/tutorials/{tutorial_id}")
-async def update_tutorial(tutorial_id: str, request: Request):
-    """Update a tutorial (admin only)"""
-    if not TUTORIALS_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Tutorials service not available")
-    
-    try:
-        data = await request.json()
-        tutorial = db_update_tutorial(tutorial_id, data)
-        if tutorial:
-            return JSONResponse({"success": True, "tutorial": tutorial})
-        else:
-            raise HTTPException(status_code=404, detail="Tutorial not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/tutorials/{tutorial_id}")
-async def delete_tutorial(tutorial_id: str):
-    """Delete a tutorial (admin only)"""
-    if not TUTORIALS_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Tutorials service not available")
-    
-    try:
-        success = db_delete_tutorial(tutorial_id)
-        if success:
-            return JSONResponse({"success": True, "message": "Tutorial deleted"})
-        else:
-            raise HTTPException(status_code=404, detail="Tutorial not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/tutorials/{tutorial_id}/activate")
-async def activate_tutorial(tutorial_id: str, request: Request):
-    """Set a tutorial as active for its category (admin only)"""
-    if not TUTORIALS_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Tutorials service not available")
-    
-    try:
-        data = await request.json()
-        category = data.get('category', 'virtual-studio')
-        success = db_set_active_tutorial(tutorial_id, category)
-        if success:
-            return JSONResponse({"success": True, "message": "Tutorial activated"})
-        else:
-            raise HTTPException(status_code=404, detail="Tutorial not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# Tutorials routes have been extracted to backend/routes/tutorials.py
+# (registered via app.include_router earlier). See backend/MAIN_SPLIT_PLAN.md.
 
 
 # ============================================================================
 # Virtual Studio API Endpoints
 # ============================================================================
 
-@app.get("/api/studio/scenes")
-async def api_get_scenes(user_id: Optional[str] = None, is_template: Optional[bool] = None):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        scenes = get_scenes(user_id, is_template)
-        return JSONResponse({"success": True, "scenes": scenes})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/studio/scenes/{scene_id}")
-async def api_get_scene(scene_id: str):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        scene = get_scene(scene_id)
-        if scene:
-            return JSONResponse({"success": True, "scene": scene})
-        raise HTTPException(status_code=404, detail="Scene not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/studio/scenes")
-async def api_save_scene(request: Request):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        data = await request.json()
-        user_id = data.pop('userId', None)
-        scene = save_scene(data, user_id)
-        return JSONResponse({"success": True, "scene": scene})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/studio/scenes/{scene_id}")
-async def api_delete_scene(scene_id: str):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        success = delete_scene(scene_id)
-        if success:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Scene not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/studio/presets")
-async def api_get_presets(user_id: Optional[str] = None, type: Optional[str] = None):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        presets = get_presets(user_id, type)
-        return JSONResponse({"success": True, "presets": presets})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/studio/presets")
-async def api_save_preset(request: Request):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        data = await request.json()
-        user_id = data.pop('userId', None)
-        preset = save_preset(data, user_id)
-        return JSONResponse({"success": True, "preset": preset})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/studio/presets/{preset_id}")
-async def api_delete_preset(preset_id: str):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        success = delete_preset(preset_id)
-        if success:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Preset not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/studio/light-groups")
-async def api_get_light_groups(user_id: Optional[str] = None, scene_id: Optional[str] = None):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        groups = get_light_groups(user_id, scene_id)
-        return JSONResponse({"success": True, "lightGroups": groups})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/studio/light-groups")
-async def api_save_light_group(request: Request):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        data = await request.json()
-        user_id = data.pop('userId', None)
-        group = save_light_group(data, user_id)
-        return JSONResponse({"success": True, "lightGroup": group})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/studio/light-groups/{group_id}")
-async def api_delete_light_group(group_id: str):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        success = delete_light_group(group_id)
-        if success:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Light group not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/studio/assets")
-async def api_get_user_assets(user_id: Optional[str] = None, type: Optional[str] = None):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        assets = get_user_assets(user_id, type)
-        return JSONResponse({"success": True, "assets": assets})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/studio/assets")
-async def api_save_user_asset(request: Request):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        data = await request.json()
-        user_id = data.pop('userId', None)
-        asset = save_user_asset(data, user_id)
-        return JSONResponse({"success": True, "asset": asset})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/studio/assets/{asset_id}")
-async def api_delete_user_asset(asset_id: str):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        success = delete_user_asset(asset_id)
-        if success:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Asset not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/studio/scenes/{scene_id}/versions")
-async def api_get_scene_versions(scene_id: str):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        versions = get_scene_versions(scene_id)
-        return JSONResponse({"success": True, "versions": versions})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/studio/scenes/{scene_id}/versions")
-async def api_save_scene_version(scene_id: str, request: Request):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        data = await request.json()
-        data['sceneId'] = scene_id
-        version = save_scene_version(data)
-        return JSONResponse({"success": True, "version": version})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/studio/versions/{version_id}")
-async def api_delete_scene_version(version_id: str):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        success = delete_scene_version(version_id)
-        if success:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Version not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/studio/notes")
-async def api_get_notes(user_id: Optional[str] = None, project_id: Optional[str] = None):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        notes = get_notes(user_id, project_id)
-        return JSONResponse({"success": True, "notes": notes})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/studio/notes")
-async def api_save_note(request: Request):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        data = await request.json()
-        user_id = data.pop('userId', None)
-        note = save_note(data, user_id)
-        return JSONResponse({"success": True, "note": note})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/studio/notes/{note_id}")
-async def api_delete_note(note_id: str):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        success = delete_note(note_id)
-        if success:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Note not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/notes")
-async def api_get_notes_alias(user_id: Optional[str] = None, projectId: Optional[str] = None, sceneId: Optional[str] = None):
-    """Alias for studio notes (supports legacy notes service)."""
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        notes = get_notes(user_id, projectId)
-        if sceneId:
-            notes = [note for note in notes if note.get("scene_id") == sceneId or note.get("sceneId") == sceneId]
-        return JSONResponse({"success": True, "notes": notes})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/notes")
-async def api_save_note_alias(request: Request):
-    """Alias for studio notes (supports legacy notes service)."""
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        data = await request.json()
-        user_id = data.pop("userId", None)
-        note = save_note(data, user_id)
-        return JSONResponse(note)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.put("/api/notes")
-async def api_update_note_alias(request: Request):
-    """Alias for studio notes updates."""
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        data = await request.json()
-        user_id = data.pop("userId", None)
-        note = save_note(data, user_id)
-        return JSONResponse(note)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/notes/{note_id}")
-async def api_delete_note_alias(note_id: str):
-    """Alias for studio notes deletion."""
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        success = delete_note(note_id)
-        if success:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Note not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.put("/api/notes/batch")
-async def api_save_notes_batch_alias(request: Request):
-    """Alias for batch notes save."""
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        data = await request.json()
-        notes = data.get("notes", [])
-        for note in notes:
-            user_id = note.pop("userId", None)
-            save_note(note, user_id)
-        return JSONResponse({"success": True})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/studio/preferences")
-async def api_get_studio_preferences(user_id: Optional[str] = None):
-    if not SETTINGS_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Settings service not available")
-    try:
-        data = db_get_settings(user_id or "default-user", "studio_preferences") or {"favorites": {}, "recent": {}}
-        return JSONResponse(data)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.put("/api/studio/preferences/favorites")
-async def api_update_studio_favorites(request: Request, user_id: Optional[str] = None):
-    if not SETTINGS_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Settings service not available")
-    try:
-        body = await request.json()
-        section = body.get("section")
-        favorites = body.get("favorites")
-        current = db_get_settings(user_id or "default-user", "studio_preferences") or {"favorites": {}, "recent": {}}
-        if section is None or favorites is None:
-            raise HTTPException(status_code=400, detail="section and favorites required")
-        current.setdefault("favorites", {})[section] = favorites
-        db_set_settings(user_id or "default-user", "studio_preferences", current)
-        return JSONResponse({"success": True})
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/studio/preferences/recent")
-async def api_add_studio_recent(request: Request, user_id: Optional[str] = None):
-    if not SETTINGS_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Settings service not available")
-    try:
-        body = await request.json()
-        section = body.get("section")
-        item = body.get("item")
-        if section is None or item is None:
-            raise HTTPException(status_code=400, detail="section and item required")
-        current = db_get_settings(user_id or "default-user", "studio_preferences") or {"favorites": {}, "recent": {}}
-        recent = current.setdefault("recent", {}).get(section, [])
-        recent = [entry for entry in recent if entry.get("id") != item.get("id")]
-        recent = [item] + recent
-        current["recent"][section] = recent[:10]
-        db_set_settings(user_id or "default-user", "studio_preferences", current)
-        return JSONResponse({"success": True})
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/studio/scenes/{scene_id}/snapshots")
-async def api_list_snapshots(scene_id: str, user_id: Optional[str] = None):
-    if not SETTINGS_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Settings service not available")
-    try:
-        data = db_get_settings(user_id or "default-user", "studio_snapshots", scene_id) or {"snapshots": []}
-        return JSONResponse({"snapshots": data.get("snapshots", [])})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/studio/snapshots")
-async def api_create_snapshot(request: Request, user_id: Optional[str] = None):
-    if not SETTINGS_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Settings service not available")
-    try:
-        payload = await request.json()
-        scene_id = payload.get("sceneId")
-        if not scene_id:
-            raise HTTPException(status_code=400, detail="sceneId required")
-        record = dict(payload)
-        if not record.get("id"):
-            record["id"] = f"snapshot_{uuid.uuid4().hex[:10]}"
-        if not record.get("createdAt"):
-            record["createdAt"] = datetime.utcnow().isoformat()
-        data = db_get_settings(user_id or "default-user", "studio_snapshots", scene_id) or {"snapshots": []}
-        snapshots = [record] + [s for s in data.get("snapshots", []) if s.get("id") != record["id"]]
-        db_set_settings(user_id or "default-user", "studio_snapshots", {"snapshots": snapshots[:10]}, scene_id)
-        return JSONResponse({"snapshot": record})
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/studio/snapshots/{snapshot_id}")
-async def api_delete_snapshot(snapshot_id: str, sceneId: Optional[str] = None, user_id: Optional[str] = None):
-    if not SETTINGS_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Settings service not available")
-    if not sceneId:
-        raise HTTPException(status_code=400, detail="sceneId required")
-    try:
-        data = db_get_settings(user_id or "default-user", "studio_snapshots", sceneId) or {"snapshots": []}
-        snapshots = [s for s in data.get("snapshots", []) if s.get("id") != snapshot_id]
-        db_set_settings(user_id or "default-user", "studio_snapshots", {"snapshots": snapshots}, sceneId)
-        return JSONResponse({"success": True})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/studio/camera-presets")
-async def api_get_camera_presets(user_id: Optional[str] = None):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        presets = get_camera_presets(user_id)
-        return JSONResponse({"success": True, "cameraPresets": presets})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/studio/camera-presets")
-async def api_save_camera_preset(request: Request):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        data = await request.json()
-        user_id = data.pop('userId', None)
-        preset = save_camera_preset(data, user_id)
-        return JSONResponse({"success": True, "cameraPreset": preset})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/studio/camera-presets/{preset_id}")
-async def api_delete_camera_preset(preset_id: str):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        success = delete_camera_preset(preset_id)
-        if success:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Camera preset not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/studio/export-templates")
-async def api_get_export_templates(user_id: Optional[str] = None, type: Optional[str] = None):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        templates = get_export_templates(user_id, type)
-        return JSONResponse({"success": True, "exportTemplates": templates})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/studio/export-templates")
-async def api_save_export_template(request: Request):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        data = await request.json()
-        user_id = data.pop('userId', None)
-        template = save_export_template(data, user_id)
-        return JSONResponse({"success": True, "exportTemplate": template})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/studio/export-templates/{template_id}")
-async def api_delete_export_template(template_id: str):
-    if not VIRTUAL_STUDIO_SERVICE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Virtual Studio service not available")
-    try:
-        success = delete_export_template(template_id)
-        if success:
-            return JSONResponse({"success": True})
-        raise HTTPException(status_code=404, detail="Export template not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
+# Studio routes (31 routes: scenes/presets/light-groups/assets/versions/
+# notes/preferences/snapshots/camera-presets/export-templates) extracted
+# to backend/routes/studio.py. See MAIN_SPLIT_PLAN.md.
 
 # ============================================================================
 # Shot List API Endpoints

@@ -48,6 +48,32 @@ import type { PlotLight, PlotCharacter, LightingPlotData } from './services/ligh
 import { downloadRentalCsv } from './services/rentalManifestService';
 import type { ManifestLight } from './services/rentalManifestService';
 import { loadIESFile, applyIESToSpotLight } from './services/iesProfileService';
+import { mountStoryCharacterHud } from './bootstrap/mount-story-character-hud';
+import { mountAssetLibrary } from './bootstrap/mount-asset-library';
+import { mountCharacterLoader } from './bootstrap/mount-character-loader';
+import { mountCameraGear } from './bootstrap/mount-camera-gear';
+import { mountHdriPanel } from './bootstrap/mount-hdri-panel';
+import { mountEquipmentPanel } from './bootstrap/mount-equipment-panel';
+import { mountKeyframeTimeline } from './bootstrap/mount-keyframe-timeline';
+import { mountLightsBrowser } from './bootstrap/mount-lights-browser';
+import { mountScenerPanel } from './bootstrap/mount-scener-panel';
+import { mountNotesPanel } from './bootstrap/mount-notes-panel';
+import { mountCinematographyPatterns } from './bootstrap/mount-cinematography-patterns';
+import { mountLightPatternLibrary } from './bootstrap/mount-light-pattern-library';
+import { mountAvatarGenerator } from './bootstrap/mount-avatar-generator';
+import { mountAiAssistant } from './bootstrap/mount-ai-assistant';
+import { mountAssetBrowserPanel } from './bootstrap/mount-asset-browser-panel';
+import { mountMarketplacePanel } from './bootstrap/mount-marketplace-panel';
+import { mountSceneComposer } from './bootstrap/mount-scene-composer';
+import { mountAnimationComposer } from './bootstrap/mount-animation-composer';
+import { mountVirtualStudioPro } from './bootstrap/mount-virtual-studio-pro';
+import { mountInteractiveElements } from './bootstrap/mount-interactive-elements';
+import { mountAmbientSounds } from './bootstrap/mount-ambient-sounds';
+import { mountAccessoriesPanel } from './bootstrap/mount-accessories-panel';
+import { mountPosingMode } from './bootstrap/mount-posing-mode';
+import { mountGelPicker } from './bootstrap/mount-gel-picker';
+import { mountOutdoorLighting } from './bootstrap/mount-outdoor-lighting';
+import { mountCinematicEval } from './bootstrap/mount-cinematic-eval';
 
 declare global {
   interface Window {
@@ -32491,206 +32517,37 @@ window.addEventListener('DOMContentLoaded', () => {
 
     console.log('Studio Library elements:', { actorPanelRoot: !!actorPanelRoot, actorBottomPanel: !!actorBottomPanel, actorPanelTrigger: !!actorPanelTrigger });
 
-    const keyframeTimelineRoot = document.getElementById('keyframeTimelineRoot');
-    if (keyframeTimelineRoot) {
-      const timelineRoot = createRoot(keyframeTimelineRoot);
-      timelineRoot.render(React.createElement(TidslinjeLibraryPanelApp, {}));
-    }
+    // All 21 React island mounts are now in ./bootstrap/mount-*.ts.
+    // See docs/MAIN_TS_SPLIT_PLAN.md.
+    const logMountFailure = (label: string) => (err: unknown) =>
+      console.error(`[bootstrap] ${label} failed:`, err);
 
-    const assetLibraryRoot = document.getElementById('assetLibraryRoot');
-    if (assetLibraryRoot) {
-      const assetRoot = createRoot(assetLibraryRoot);
-      assetRoot.render(React.createElement(AssetLibraryApp, {}));
-    }
-
-    const characterLoaderRoot = document.getElementById('characterLoaderRoot');
-    if (characterLoaderRoot) {
-      const characterRoot = createRoot(characterLoaderRoot);
-      characterRoot.render(React.createElement(CharacterLoaderApp, {}));
-    }
-
-    const lightsBrowserRoot = document.getElementById('lightsBrowserRoot');
-    if (lightsBrowserRoot) {
-      const lightsRoot = createRoot(lightsBrowserRoot);
-      lightsRoot.render(React.createElement(LightsBrowserApp, {}));
-    }
-
-    const cameraGearRoot = document.getElementById('cameraGearRoot');
-    if (cameraGearRoot) {
-      const cameraRoot = createRoot(cameraGearRoot);
-      cameraRoot.render(React.createElement(CameraGearApp, {}));
-    }
-
-    const hdriPanelRoot = document.getElementById('hdriPanelRoot');
-    if (hdriPanelRoot) {
-      const hdriRoot = createRoot(hdriPanelRoot);
-      hdriRoot.render(React.createElement(HDRIPanelApp, {}));
-    }
-
-    const equipmentPanelRoot = document.getElementById('equipmentPanelRoot');
-    if (equipmentPanelRoot) {
-      const equipRoot = createRoot(equipmentPanelRoot);
-      equipRoot.render(React.createElement(EquipmentPanelApp, {}));
-    }
-
-    const scenerPanelRoot = document.getElementById('scenerPanelRoot');
-    if (scenerPanelRoot) {
-      const scenerRoot = createRoot(scenerPanelRoot);
-      scenerRoot.render(React.createElement(ScenerPanelApp, {}));
-    }
-
-    const notesPanelRoot = document.getElementById('notesPanelRoot');
-    if (notesPanelRoot) {
-      const notesRoot = createRoot(notesPanelRoot);
-      notesRoot.render(React.createElement(NotesPanelApp, {}));
-    }
-
-    // Mount Cinematography Patterns App
-    const cinematographyRoot = document.getElementById('cinematographyPatternsRoot');
-    if (cinematographyRoot) {
-      const cineRoot = createRoot(cinematographyRoot);
-      cineRoot.render(React.createElement(CinematographyPatternsApp, {}));
-    }
-
-    // Mount Light Pattern Library App
-    const lightPatternRoot = document.getElementById('lightPatternLibraryRoot');
-    if (lightPatternRoot) {
-      const lpRoot = createRoot(lightPatternRoot);
-      lpRoot.render(React.createElement(LightPatternLibraryApp, {}));
-    }
-
-    // Mount Avatar Generator App
-    const avatarGenRoot = document.getElementById('avatarGeneratorRoot');
-    if (avatarGenRoot) {
-      const avRoot = createRoot(avatarGenRoot);
-      avRoot.render(React.createElement(AvatarGeneratorApp, {}));
-    }
-
-    // Mount AI Assistant Panel App
-    const aiAssistantPanelRoot = document.getElementById('aiAssistantPanelRoot');
-    if (aiAssistantPanelRoot) {
-      const aiRoot = createRoot(aiAssistantPanelRoot);
-      aiRoot.render(React.createElement(AIAssistantApp, {}));
-      console.log('AIAssistantApp mounted');
-    } else {
-      console.error('aiAssistantPanelRoot element not found!');
-    }
-
-    // Mount Marketplace Panel App
-    // Mount Asset Browser Panel App
-    const assetBrowserPanelRoot = document.getElementById('assetBrowserPanelRoot');
-    if (assetBrowserPanelRoot) {
-      const abRoot = createRoot(assetBrowserPanelRoot);
-      abRoot.render(React.createElement(AssetBrowserPanelApp, {}));
-      console.log('AssetBrowserPanelApp mounted');
-    } else {
-      console.warn('assetBrowserPanelRoot element not found');
-    }
-
-    const marketplacePanelRoot = document.getElementById('marketplacePanelRoot');
-    if (marketplacePanelRoot) {
-      const mpRoot = createRoot(marketplacePanelRoot);
-      mpRoot.render(React.createElement(MarketplacePanelApp, {}));
-      console.log('MarketplacePanelApp mounted');
-    } else {
-      console.warn('marketplacePanelRoot element not found');
-    }
-
-    // Mount Scene Composer Panel App
-    const sceneComposerRoot = document.getElementById('sceneComposerRoot');
-    if (sceneComposerRoot) {
-      const sceneComposerReactRoot = createRoot(sceneComposerRoot);
-      sceneComposerReactRoot.render(React.createElement(SceneComposerPanelApp, {}));
-      console.log('SceneComposerPanelApp mounted');
-    } else {
-      console.error('sceneComposerRoot element not found!');
-    }
-
-    // Mount Animation Composer Panel App
-    const animationComposerRoot = document.getElementById('animationComposerRoot');
-    if (animationComposerRoot) {
-      const animationComposerReactRoot = createRoot(animationComposerRoot);
-      animationComposerReactRoot.render(React.createElement(AnimationComposerApp, {}));
-      console.log('AnimationComposerApp mounted');
-    } else {
-      console.error('animationComposerRoot element not found!');
-    }
-
-    // Mount Virtual Studio Pro App (Collaboration, XR, Animation, Streaming, Rendering, Export, Particles, Audio)
-    const virtualStudioProRoot = document.getElementById('virtualStudioProRoot');
-    if (virtualStudioProRoot) {
-      const vsProReactRoot = createRoot(virtualStudioProRoot);
-      vsProReactRoot.render(React.createElement(VirtualStudioProApp, {}));
-      console.log('VirtualStudioProApp mounted - Pro features available');
-    } else {
-      console.warn('virtualStudioProRoot element not found - Pro features unavailable');
-    }
-
-    // Mount Interactive Elements Browser
-    const interactiveElementsRoot = document.getElementById('interactiveElementsRoot');
-    if (interactiveElementsRoot) {
-      const ieReactRoot = createRoot(interactiveElementsRoot);
-      ieReactRoot.render(React.createElement(InteractiveElementsBrowserApp, {}));
-      console.log('InteractiveElementsBrowserApp mounted');
-    }
-
-    // Mount Ambient Sounds Browser
-    const ambientSoundsRoot = document.getElementById('ambientSoundsRoot');
-    if (ambientSoundsRoot) {
-      const asReactRoot = createRoot(ambientSoundsRoot);
-      asReactRoot.render(React.createElement(AmbientSoundsBrowserApp, {}));
-      console.log('AmbientSoundsBrowserApp mounted');
-    }
-
-    // Mount Story Character HUD
-    const storyCharacterHudRoot = document.getElementById('storyCharacterHudRoot');
-    if (storyCharacterHudRoot) {
-      const hudReactRoot = createRoot(storyCharacterHudRoot);
-      hudReactRoot.render(React.createElement(StoryCharacterHUDApp, {}));
-      console.log('StoryCharacterHUDApp mounted');
-    }
-
-    // Mount Accessories Panel App
-    const accessoriesPanelRoot = document.getElementById('accessoriesPanelRoot');
-    if (accessoriesPanelRoot) {
-      const accessoriesRoot = createRoot(accessoriesPanelRoot);
-      accessoriesRoot.render(React.createElement(AccessoriesPanelApp, {}));
-      console.log('AccessoriesPanelApp mounted');
-    } else {
-      console.log('accessoriesPanelRoot element not found (will be created when needed)');
-    }
-
-    // Mount Posing Mode Panel App
-    const posingPanelRoot = document.getElementById('posingModePanelRoot');
-    if (posingPanelRoot) {
-      const posingReactRoot = createRoot(posingPanelRoot);
-      posingReactRoot.render(React.createElement(PosingModePanelApp, {}));
-      console.log('PosingModePanelApp mounted');
-    }
-
-    // Mount Gel Picker App
-    const gelPickerRoot = document.getElementById('gelPickerRoot');
-    if (gelPickerRoot) {
-      const gelPickerReactRoot = createRoot(gelPickerRoot);
-      gelPickerReactRoot.render(React.createElement(GelPickerApp, {}));
-      console.log('GelPickerApp mounted');
-    }
-
-    // Mount Outdoor Lighting App
-    const outdoorLightingRoot = document.getElementById('outdoorLightingRoot');
-    if (outdoorLightingRoot) {
-      const outdoorLightingReactRoot = createRoot(outdoorLightingRoot);
-      outdoorLightingReactRoot.render(React.createElement(OutdoorLightingApp, {}));
-      console.log('OutdoorLightingApp mounted');
-    }
-
-    // Mount Cinematic Evaluation App
-    const cinematicEvalRoot = document.getElementById('cinematicEvalRoot');
-    if (cinematicEvalRoot) {
-      const cinematicEvalReactRoot = createRoot(cinematicEvalRoot);
-      cinematicEvalReactRoot.render(React.createElement(CinematicEvaluationApp, {}));
-      console.log('CinematicEvaluationApp mounted');
-    }
+    mountKeyframeTimeline().catch(logMountFailure('mountKeyframeTimeline'));
+    mountAssetLibrary().catch(logMountFailure('mountAssetLibrary'));
+    mountCharacterLoader().catch(logMountFailure('mountCharacterLoader'));
+    mountCameraGear().catch(logMountFailure('mountCameraGear'));
+    mountHdriPanel().catch(logMountFailure('mountHdriPanel'));
+    mountEquipmentPanel().catch(logMountFailure('mountEquipmentPanel'));
+    mountLightsBrowser().catch(logMountFailure('mountLightsBrowser'));
+    mountScenerPanel().catch(logMountFailure('mountScenerPanel'));
+    mountNotesPanel().catch(logMountFailure('mountNotesPanel'));
+    mountCinematographyPatterns().catch(logMountFailure('mountCinematographyPatterns'));
+    mountLightPatternLibrary().catch(logMountFailure('mountLightPatternLibrary'));
+    mountAvatarGenerator().catch(logMountFailure('mountAvatarGenerator'));
+    mountAiAssistant().catch(logMountFailure('mountAiAssistant'));
+    mountAssetBrowserPanel().catch(logMountFailure('mountAssetBrowserPanel'));
+    mountMarketplacePanel().catch(logMountFailure('mountMarketplacePanel'));
+    mountSceneComposer().catch(logMountFailure('mountSceneComposer'));
+    mountAnimationComposer().catch(logMountFailure('mountAnimationComposer'));
+    mountVirtualStudioPro().catch(logMountFailure('mountVirtualStudioPro'));
+    mountInteractiveElements().catch(logMountFailure('mountInteractiveElements'));
+    mountAmbientSounds().catch(logMountFailure('mountAmbientSounds'));
+    mountStoryCharacterHud().catch(logMountFailure('mountStoryCharacterHud'));
+    mountAccessoriesPanel().catch(logMountFailure('mountAccessoriesPanel'));
+    mountPosingMode().catch(logMountFailure('mountPosingMode'));
+    mountGelPicker().catch(logMountFailure('mountGelPicker'));
+    mountOutdoorLighting().catch(logMountFailure('mountOutdoorLighting'));
+    mountCinematicEval().catch(logMountFailure('mountCinematicEval'));
 
     // Render installed tools in the left panel
     const renderInstalledTools = () => {
