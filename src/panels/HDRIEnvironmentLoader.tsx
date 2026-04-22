@@ -1628,13 +1628,18 @@ export const HDRIEnvironmentLoader: React.FC = () => {
         hdriSource = 'blenderkit';
         const assetId = preset.url.replace('blenderkit://', '');
 
+        const blenderKitToken = import.meta.env.VITE_BLENDERKIT_API_KEY as string | undefined;
+        if (!blenderKitToken) {
+          throw new Error('BlenderKit API key missing (set VITE_BLENDERKIT_API_KEY)');
+        }
+
         // Fetch download URL from BlenderKit API
         try {
           updateProgress(20, 'Henter BlenderKit URL...');
           const response = await fetch(`https://www.blenderkit.com/api/v1/assets/${assetId}/download/`, {
             method: 'GET',
             headers: {
-              'Authorization': 'Bearer 814e329085f612e96211d2156f993ef6a86f3cf6',
+              'Authorization': `Bearer ${blenderKitToken}`,
               'Content-Type': 'application/json',
             },
           });
