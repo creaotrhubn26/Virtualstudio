@@ -59,7 +59,7 @@ For each group:
 | **Environment** | `routes/environment.py` | 4 | ✓ EXTRACTED (planner status/plan + retrieve-assets status/search) |
 | **Contracts** | `routes/contracts.py` | 4 | ✓ EXTRACTED (`/api/contracts/*` GET + list + POST + PUT) |
 | **Norwegian laws** | `routes/norwegian_laws.py` | 5 | ✓ EXTRACTED (legal suggestions + references + law search) |
-| Production (days/stripboard/cast/crew/call-sheets) | `routes/production.py` | ~12 | PENDING — `/api/production/*` |
+| **Production** | `routes/production.py` | 12 | ✓ EXTRACTED (shooting-days CRUD, stripboard CRUD, cast, crew, call-sheets, live-set-status). Seed-troll demo seeder (~500 lines) still inline — move to `routes/demo.py` in follow-up. |
 
 ## Why this isn't done in one shot
 
