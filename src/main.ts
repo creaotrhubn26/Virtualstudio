@@ -3,7 +3,7 @@ import '@babylonjs/loaders/glTF';
 import { GLTFFileLoader, GLTFLoaderAnimationStartMode } from '@babylonjs/loaders/glTF';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, TimelineApp, AssetLibraryApp, CharacterLoaderApp, LightsBrowserApp, CameraGearApp, HDRIPanelApp, EquipmentPanelApp, ScenerPanelApp, NotesPanelApp, CinematographyPatternsApp, LightPatternLibraryApp, AvatarGeneratorApp, Accessible3DControlsApp, TidslinjeLibraryPanelApp, AIAssistantApp, MarketplacePanelApp, SceneComposerPanelApp, AnimationComposerApp, VirtualStudioProApp, InteractiveElementsBrowserApp, AmbientSoundsBrowserApp, AccessoriesPanelApp, StoryCharacterHUDApp, PosingModePanelApp, GelPickerApp, OutdoorLightingApp, CinematicEvaluationApp, AssetBrowserPanelApp } from './App';
+import { App, Accessible3DControlsApp } from './App';
 import { useAppStore, useFocusStore, useAutoFocusStore, useFocusPeakingStore, SceneNode } from './state/store';
 import { AutoFocusSystem } from './core/AutoFocusSystem';
 import { FocusPeakingEffect } from './core/FocusPeakingEffect';

@@ -10,6 +10,6 @@ import { mountIsland } from './mount';
 
 export function mountStoryCharacterHud(): Promise<unknown> {
   return mountIsland('storyCharacterHudRoot', () =>
-    import('../App').then((m) => m.StoryCharacterHUDApp),
+    import('../apps/StoryCharacterHUDApp').then((m) => m.default),
   );
 }
