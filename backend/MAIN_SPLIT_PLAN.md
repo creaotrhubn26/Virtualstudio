@@ -50,8 +50,8 @@ For each group:
 | **Auth** | `routes/auth.py` | 6 | ✓ EXTRACTED (login, admins CRUD, reset-password) |
 | **Brush presets** | `routes/brush_presets.py` | 8 | ✓ EXTRACTED (storyboard drawing tools; inline version had a latent NameError that this fix resolves) |
 | **Shot planner** | `routes/shot_planner.py` | 4 | ✓ EXTRACTED (2D scenes CRUD for top-down planner) |
-| Story logic | `routes/story_logic.py` | 3 | PENDING — `/api/projects/{project_id}/story-logic` |
-| Price admin / BRREG / weather | `routes/price_admin.py` | 3 | PENDING — `/api/price-administration/*` |
+| **Story logic** | `routes/story_logic.py` | 3 | ✓ EXTRACTED (`/api/projects/{project_id}/story-logic`) |
+| **Price admin / BRREG / weather** | `routes/price_admin.py` | 3 | ✓ EXTRACTED (BRREG company search + lookup, MET Norway weather forecast) |
 | Split sheets (contributions + sharing) | `routes/split_sheets.py` | ~30+ | PENDING — dominant remaining group |
 | Consent | `routes/consent.py` | 3 | PENDING — `/api/consent/portal/*`, `/api/consent/generate-access-code` |
 | Email / logo | `routes/email.py` | 2 | PENDING — `/api/email/*` |
