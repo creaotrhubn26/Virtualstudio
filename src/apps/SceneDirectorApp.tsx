@@ -27,14 +27,41 @@ import {
   Divider,
 } from '@mui/material';
 import {
+  describeCurrentRender,
   directFromBeat,
   getDirectorStatus,
   type BeatInput,
   type DirectorStatus,
   type SceneAssembly,
 } from '../services/sceneDirectorClient';
+import {
+  generateCharacter,
+  type CastingJob,
+} from '../services/charactersClient';
 import { applySceneAssembly } from '../services/applySceneAssembly';
 import { PanelLoadingFallback } from './shared';
+
+interface VirtualStudioSurface {
+  loadAvatarModel?: (
+    glbUrl: string,
+    metadata?: { name?: string; category?: string },
+  ) => Promise<void>;
+  scene?: { getEngine?: () => { getRenderingCanvas: () => HTMLCanvasElement | null } };
+  engine?: { getRenderingCanvas: () => HTMLCanvasElement | null };
+}
+
+function getBabylonCanvas(): HTMLCanvasElement | null {
+  const studio = (globalThis as { virtualStudio?: VirtualStudioSurface }).virtualStudio;
+  if (!studio) return null;
+  const engine =
+    studio.engine ??
+    (studio.scene?.getEngine ? studio.scene.getEngine() : undefined);
+  const canvas = engine?.getRenderingCanvas?.() ?? null;
+  if (canvas) return canvas;
+  // Fallback — find the main Babylon canvas by id or data attribute.
+  return document.querySelector<HTMLCanvasElement>('canvas#renderCanvas')
+    ?? document.querySelector<HTMLCanvasElement>('canvas');
+}
 
 const INT_EXT_OPTIONS = ['INT', 'EXT'] as const;
 const TIME_OPTIONS = ['DAY', 'DUSK', 'MAGIC HOUR', 'NIGHT', 'DAWN'] as const;
@@ -68,6 +95,15 @@ const SceneDirectorApp: React.FC = () => {
   const [assembly, setAssembly] = useState<SceneAssembly | null>(null);
   const [applyStatus, setApplyStatus] = useState<string | null>(null);
   const [status, setStatus] = useState<DirectorStatus | null>(null);
+
+  // Character generation state
+  const [charStatus, setCharStatus] = useState<string | null>(null);
+  const [charJobs, setCharJobs] = useState<CastingJob[]>([]);
+  const [charBusy, setCharBusy] = useState(false);
+
+  // Reverse-describe state
+  const [describing, setDescribing] = useState(false);
+  const [describeError, setDescribeError] = useState<string | null>(null);
 
   // Expose a window event-based toggle so anyone can open the panel from
   // anywhere (e.g. a toolbar button in ScreenplayEditor's parent).
@@ -156,6 +192,107 @@ const SceneDirectorApp: React.FC = () => {
       setApplyStatus(
         `Apply failed: ${err instanceof Error ? err.message : String(err)}`,
       );
+    }
+  };
+
+  /**
+   * Run the character casting pipeline for every character in the current
+   * assembly that needs generation, then load each resulting GLB into the
+   * live Babylon scene.
+   */
+  const onGenerateCharacters = async () => {
+    if (!assembly) return;
+    const pending = assembly.characters.filter((c) => c.needsGeneration);
+    if (pending.length === 0) {
+      setCharStatus('Ingen karakterer trenger generering.');
+      return;
+    }
+    setCharBusy(true);
+    setCharJobs([]);
+    setCharStatus(`Genererer ${pending.length} karakter(er)… (kan ta 30–90 s pr.)`);
+
+    const jobs: CastingJob[] = [];
+    for (const c of pending) {
+      try {
+        const job = await generateCharacter({
+          name: c.name,
+          description: c.description ?? undefined,
+        });
+        jobs.push(job);
+        setCharJobs([...jobs]);
+        if (job.glbUrl && (job.status === 'ready' || job.status === 'cached')) {
+          const studio = (globalThis as { virtualStudio?: VirtualStudioSurface })
+            .virtualStudio;
+          if (studio?.loadAvatarModel) {
+            try {
+              await studio.loadAvatarModel(job.glbUrl, {
+                name: c.name,
+                category: 'generated-character',
+              });
+            } catch (err) {
+              // eslint-disable-next-line no-console
+              console.warn('[SceneDirector] loadAvatarModel failed', err);
+            }
+          }
+        }
+      } catch (err) {
+        jobs.push({
+          key: c.name,
+          name: c.name,
+          description: c.description,
+          status: 'failed',
+          prompt: null,
+          imageUrl: null,
+          triposrJobId: null,
+          glbUrl: null,
+          error: err instanceof Error ? err.message : String(err),
+          directorNotes: [],
+        });
+        setCharJobs([...jobs]);
+      }
+    }
+
+    const ready = jobs.filter(
+      (j) => j.status === 'ready' || j.status === 'cached',
+    ).length;
+    setCharStatus(
+      `${ready}/${jobs.length} karakterer klare. ${
+        jobs.length - ready > 0 ? `${jobs.length - ready} feilet.` : ''
+      }`,
+    );
+    setCharBusy(false);
+  };
+
+  /**
+   * Snapshot the live Babylon canvas and ask Claude Vision to describe it
+   * as a Fountain-style scene line. Autofill the form so user can re-direct
+   * from the extracted description.
+   */
+  const onDescribeRender = async () => {
+    setDescribing(true);
+    setDescribeError(null);
+    try {
+      const canvas = getBabylonCanvas();
+      if (!canvas) {
+        setDescribeError('Fant ikke Babylon-canvas.');
+        setDescribing(false);
+        return;
+      }
+      const dataUrl = canvas.toDataURL('image/png');
+      const desc = await describeCurrentRender(dataUrl);
+      setLocation(desc.location || 'Untitled location');
+      setIntExt(desc.intExt);
+      setTimeOfDay(String(desc.timeOfDay));
+      if (desc.characters.length > 0) {
+        setCharactersCSV(desc.characters.join(', '));
+      }
+      setAction(desc.action || '');
+      setMood(desc.mood || '');
+      setApplyStatus(`🎬 ${desc.caption}`);
+    } catch (err) {
+      setDescribeError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDescribing(false);
     }
   };
 
@@ -327,15 +464,28 @@ const SceneDirectorApp: React.FC = () => {
             </Box>
           )}
 
-          <Button
-            variant="contained"
-            onClick={onGenerate}
-            disabled={loading}
-            sx={{ bgcolor: '#00d4ff', color: '#000', '&:hover': { bgcolor: '#00b8e0' } }}
-          >
-            {loading ? <CircularProgress size={18} sx={{ color: '#000' }} /> : 'Generer scene'}
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="contained"
+              onClick={onGenerate}
+              disabled={loading}
+              sx={{ flex: 1, bgcolor: '#00d4ff', color: '#000', '&:hover': { bgcolor: '#00b8e0' } }}
+            >
+              {loading ? <CircularProgress size={18} sx={{ color: '#000' }} /> : 'Generer scene'}
+            </Button>
+            {status?.visionSupported && (
+              <Button
+                variant="outlined"
+                onClick={onDescribeRender}
+                disabled={describing}
+                sx={{ borderColor: '#b774ff', color: '#b774ff', textTransform: 'none', whiteSpace: 'nowrap' }}
+              >
+                {describing ? <CircularProgress size={16} sx={{ color: '#b774ff' }} /> : '🎬 Beskriv render'}
+              </Button>
+            )}
+          </Stack>
 
+          {describeError && <Alert severity="warning">{describeError}</Alert>}
           {error && <Alert severity="error">{error}</Alert>}
 
           {assembly && (
@@ -386,13 +536,35 @@ const SceneDirectorApp: React.FC = () => {
                   {assembly.shot.rationale}
                 </Typography>
               </Stack>
-              <Button
-                variant="outlined"
-                onClick={onApply}
-                sx={{ borderColor: '#00d4ff', color: '#00d4ff' }}
-              >
-                Apply til Babylon-scenen
-              </Button>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="outlined"
+                  onClick={onApply}
+                  sx={{ flex: 1, borderColor: '#00d4ff', color: '#00d4ff' }}
+                >
+                  Apply til Babylon
+                </Button>
+                {assembly.characters.some((c) => c.needsGeneration) && (
+                  <Button
+                    variant="outlined"
+                    onClick={onGenerateCharacters}
+                    disabled={charBusy}
+                    sx={{
+                      flex: 1,
+                      borderColor: '#b774ff',
+                      color: '#b774ff',
+                      textTransform: 'none',
+                    }}
+                  >
+                    {charBusy ? (
+                      <CircularProgress size={16} sx={{ color: '#b774ff' }} />
+                    ) : (
+                      `Generer ${assembly.characters.filter((c) => c.needsGeneration).length} karakter(er)`
+                    )}
+                  </Button>
+                )}
+              </Stack>
+
               {applyStatus && (
                 <Alert
                   severity={applyStatus.startsWith('Apply failed') ? 'error' : 'success'}
@@ -400,6 +572,42 @@ const SceneDirectorApp: React.FC = () => {
                 >
                   {applyStatus}
                 </Alert>
+              )}
+
+              {charStatus && (
+                <Alert
+                  severity={charBusy ? 'info' : charJobs.some((j) => j.status === 'failed') ? 'warning' : 'success'}
+                  sx={{ fontSize: '0.85rem' }}
+                >
+                  {charStatus}
+                </Alert>
+              )}
+
+              {charJobs.length > 0 && (
+                <Box sx={{ bgcolor: 'rgba(183,116,255,0.06)', borderRadius: 1, p: 1 }}>
+                  {charJobs.map((job) => (
+                    <Typography
+                      key={job.key}
+                      variant="caption"
+                      sx={{ display: 'block', color: '#ddd' }}
+                    >
+                      <b>{job.name}</b> —{' '}
+                      <span
+                        style={{
+                          color:
+                            job.status === 'ready' || job.status === 'cached'
+                              ? '#8de0a5'
+                              : job.status === 'failed'
+                                ? '#ff8383'
+                                : '#ffd27a',
+                        }}
+                      >
+                        {job.status}
+                      </span>
+                      {job.error && ` — ${job.error}`}
+                    </Typography>
+                  ))}
+                </Box>
               )}
             </>
           )}

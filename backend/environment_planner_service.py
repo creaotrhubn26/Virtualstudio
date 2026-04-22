@@ -103,6 +103,15 @@ class EnvironmentPlannerService:
         self.api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or ""
         self.model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
         self.enabled = bool(self.api_key)
+
+        # Claude is preferred when available (unified AI bootstrap). Falls back
+        # to Gemini if Claude isn't configured, then rule-based if neither.
+        try:
+            from claude_client import get_claude_client  # type: ignore
+            self._claude = get_claude_client()
+        except Exception as _exc:  # pragma: no cover — optional dep
+            self._claude = None
+        self.claude_enabled = bool(self._claude and self._claude.enabled)
         self.wall_material_ids = self._load_known_material_ids(
             "src/data/wallDefinitions.ts",
             "WALL_MATERIALS",
@@ -150,12 +159,24 @@ class EnvironmentPlannerService:
             print("Environment Planner Service: Running in fallback mode (missing GEMINI_API_KEY)")
 
     def get_status(self) -> Dict[str, Any]:
+        # Advertise Claude first when available — that's the preferred
+        # provider. Gemini stays as a documented fallback.
+        if self.claude_enabled:
+            return {
+                "enabled": True,
+                "provider": "claude",
+                "model": os.environ.get("CLAUDE_DIRECTOR_MODEL", "claude-opus-4-7"),
+                "hasVisionSupport": True,
+                "supportedWorldModelProviders": ["none", "manual", "genie"],
+                "geminiFallbackAvailable": self.enabled,
+            }
         return {
             "enabled": self.enabled,
             "provider": "gemini" if self.enabled else "fallback",
             "model": self.model if self.enabled else "fallback",
             "hasVisionSupport": self.enabled,
             "supportedWorldModelProviders": ["none", "manual", "genie"],
+            "geminiFallbackAvailable": False,
         }
 
     def _load_known_material_ids(
@@ -361,13 +382,63 @@ class EnvironmentPlannerService:
             world_model_reference,
         )
 
-        if prefer_fallback or not self.enabled:
+        if prefer_fallback:
             return {
                 "success": True,
                 "provider": "fallback",
                 "model": "fallback",
                 "usedFallback": True,
-                "warning": None if prefer_fallback else "Gemini is not configured. Using local planner heuristics.",
+                "warning": None,
+                "plan": fallback_plan,
+            }
+
+        # Preferred path: Claude. Falls back to Gemini if Claude is
+        # unavailable or errors out.
+        if self.claude_enabled:
+            try:
+                live_plan = self._generate_with_claude(
+                    prompt,
+                    reference_images,
+                    room_constraints,
+                    preferred_preset_id,
+                    world_model_provider,
+                    world_model_reference,
+                )
+                normalized_plan = self._normalize_plan(
+                    live_plan,
+                    fallback_plan,
+                    prompt,
+                    reference_images,
+                    room_constraints,
+                    preferred_preset_id,
+                    world_model_provider,
+                    world_model_reference,
+                )
+                return {
+                    "success": True,
+                    "provider": "claude",
+                    "model": os.environ.get(
+                        "CLAUDE_DIRECTOR_MODEL", "claude-opus-4-7"
+                    ),
+                    "usedFallback": False,
+                    "plan": normalized_plan,
+                }
+            except Exception as exc:
+                print(
+                    "Environment Planner Service: Claude request failed, "
+                    f"trying Gemini next. Error: {self._safe_live_error_log(exc)}"
+                )
+
+        if not self.enabled:
+            return {
+                "success": True,
+                "provider": "fallback",
+                "model": "fallback",
+                "usedFallback": True,
+                "warning": (
+                    "Neither ANTHROPIC_API_KEY nor GEMINI_API_KEY is configured. "
+                    "Using local planner heuristics."
+                ),
                 "plan": fallback_plan,
             }
 
@@ -410,6 +481,95 @@ class EnvironmentPlannerService:
                 "warning": self._safe_live_error_message(exc),
                 "plan": fallback_plan,
             }
+
+    def _generate_with_claude(
+        self,
+        prompt: str,
+        reference_images: List[str],
+        room_constraints: Dict[str, Any],
+        preferred_preset_id: Optional[str],
+        world_model_provider: str,
+        world_model_reference: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Claude-backed replacement for _generate_with_gemini.
+
+        Uses the same instruction-building logic (which carries the
+        schema description, constraints, and world-model hints) but
+        calls Claude with forced tool use so the output is a guaranteed
+        JSON object matching our plan shape.
+
+        Multi-image vision: the first reference image (if provided as a
+        data-URL) is passed to Claude Vision so lighting/palette/composition
+        bias propagates into the plan. Additional images are referenced
+        textually.
+        """
+        if not self._claude:
+            raise RuntimeError("Claude client not available")
+
+        instruction = self._build_instruction(
+            prompt,
+            room_constraints,
+            preferred_preset_id,
+            world_model_provider,
+            world_model_reference,
+            reference_images,
+        )
+
+        # Permissive schema: let Claude populate the plan freely, validated
+        # by _normalize_plan afterwards. A stricter schema would mirror the
+        # plan spec — kept loose here to avoid duplicating the schema in
+        # two places that could drift.
+        schema = {
+            "type": "object",
+            "properties": {"plan": {"type": "object"}},
+            "required": ["plan"],
+        }
+
+        system = (
+            "You are an environment planning AI for a virtual studio. "
+            "Produce STRICT JSON matching the schema described in the user "
+            "message. Return via the build_environment_plan tool. Favor "
+            "material IDs and presets that the browser studio can render "
+            "today. Be honest about compatibility gaps."
+        )
+
+        # If we have one reference image as a data-URL, use Claude Vision.
+        data_image = None
+        for img in reference_images[:1]:
+            if isinstance(img, str) and img.startswith("data:"):
+                data_image = img
+                break
+
+        if data_image:
+            result = self._claude.analyze_image_structured(
+                image_base64=data_image,
+                system=system,
+                user_prompt=instruction,
+                schema=schema,
+                tool_name="build_environment_plan",
+                tool_description=(
+                    "Return the full environment plan JSON object."
+                ),
+                max_tokens=4096,
+            )
+        else:
+            result = self._claude.complete_json(
+                system=system,
+                user=instruction,
+                schema=schema,
+                tool_name="build_environment_plan",
+                tool_description=(
+                    "Return the full environment plan JSON object."
+                ),
+                max_tokens=4096,
+            )
+
+        plan = result.get("plan")
+        if not isinstance(plan, dict):
+            raise RuntimeError(
+                f"Claude did not return a plan dict: got {type(plan)}"
+            )
+        return plan
 
     async def _generate_with_gemini(
         self,
