@@ -657,6 +657,15 @@ try:
 except ImportError as e:
     print(f"Warning: Split-sheets legal-documents routes not available: {e}")
 
+# Scene Director — script beat → full scene blueprint
+# (cinematic shot grammar + set.a.light-style photography lighting)
+try:
+    from routes.scene_director import router as scene_director_router
+    app.include_router(scene_director_router)
+    print("Scene Director routes loaded")
+except ImportError as e:
+    print(f"Warning: Scene Director routes not available: {e}")
+
 # Collaboration routes (WebSocket real-time)
 try:
     if COLLABORATION_SERVICE_AVAILABLE:
