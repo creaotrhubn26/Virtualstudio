@@ -11,6 +11,10 @@ backend/models/
 backend/downloads/
 backend/test_images/
 backend/outputs/
+# Locally-cached GLBs from Meshy + BlenderKit resolvers — source of truth
+# is R2; these directories are pure disk-caches and can grow huge.
+backend/blenderkit_models/
+backend/meshy_models/
 
 # Vendored upstream ML repos — these should be pip-installed, not checked in.
 # See backend/VENDORING.md for the migration plan. New clones will skip them
@@ -71,3 +75,12 @@ env/
 # OS
 Thumbs.db
 .DS_Store
+
+# Claude Code local state
+.claude/
+
+# E2E probe output (screenshots + assembly dumps from scripts/*_probe.mjs)
+tmp-e2e-probe/
+
+# Large binary asset packs — too big for git, keep alongside the repo
+contexts/*.pak
