@@ -563,82 +563,89 @@ export function mountLocationScene(
     subject: { x: number; y: number; z: number } = { x: 0, y: 1.65, z: 0 },
   ): Promise<PlacedDirectorLight[]> {
     disposeDirectorRig();
-    const out: PlacedDirectorLight[] = [];
+    const sources = lighting.sources ?? [];
 
-    for (let i = 0; i < (lighting.sources?.length ?? 0); i++) {
-      const source: LightSource = lighting.sources[i];
-      // Position is director-relative (subject at origin facing +Z).
-      // In RH Babylon, +Z is "back" — but the director's azimuth=0 means
-      // "in front of subject", which we still want to map to +Z so a
-      // front-key light sits between subject and camera. The orientation
-      // matrix already mapped north → +Z, which means "back". To preserve
-      // director intent ("in front" = facing the camera), we negate Z.
-      const offset = sphericalToCartesian(
-        source.azimuthDeg,
-        source.elevationDeg,
-        source.distanceM,
-      );
-      const worldPos = {
-        x: subject.x + offset.x,
-        y: subject.y + offset.y,
-        z: subject.z - offset.z, // see comment above
-      };
-      const aimAt = new Vector3(subject.x, subject.y, subject.z);
-      const position = new Vector3(worldPos.x, worldPos.y, worldPos.z);
-      const dir = aimAt.subtract(position).normalize();
-      const light = new SpotLight(
-        `dir_${source.role}_${i}`,
-        position,
-        dir,
-        Math.PI / 3,   // half-angle (overridden by IES if attached)
-        2,              // exponent (overridden)
-        scene,
-      );
-      // CCT → colour via the shared Helland approximation in
-      // locationLighting; keeps the colour model consistent across
-      // sun/moon/practical sources. Falls back to neutral when CCT is
-      // missing or zero.
-      const cct = Number.isFinite(source.colorTempKelvin) && source.colorTempKelvin > 0
-        ? source.colorTempKelvin
-        : 5600;
-      light.diffuse = kelvinToColor3(cct);
-      // Intensity is director-relative (0..1). Map to PBR scene-units —
-      // we use a base of 200 (analogous to a Profoto B10 modeling
-      // light at ~600 cd) scaled by the source's relative weight.
-      light.intensity = Math.max(0, source.intensity) * 200;
-      // Physical inverse-square so the spread feels right without
-      // tuning per-light.
-      light.falloffType = 1; // FALLOFF_PHYSICAL
-      light.range = 50;
+    // SpotLight construction is synchronous, so the lights are all
+    // created in iteration order before any await. The IES fetches
+    // then race in parallel — five lights × cold-cache IES used to
+    // serialise into 5× round-trip latency. Promise.all gives back
+    // results in the same order Promise.all preserves on inputs, so
+    // the rig's audit log still reads top-to-bottom.
+    const placed = await Promise.all(
+      sources.map(async (source: LightSource, i: number) => {
+        // Position is director-relative (subject at origin facing +Z).
+        // In RH Babylon, +Z is "back" — but the director's azimuth=0 means
+        // "in front of subject", which we still want to map to +Z so a
+        // front-key light sits between subject and camera. The orientation
+        // matrix already mapped north → +Z, which means "back". To preserve
+        // director intent ("in front" = facing the camera), we negate Z.
+        const offset = sphericalToCartesian(
+          source.azimuthDeg,
+          source.elevationDeg,
+          source.distanceM,
+        );
+        const worldPos = {
+          x: subject.x + offset.x,
+          y: subject.y + offset.y,
+          z: subject.z - offset.z, // see comment above
+        };
+        const aimAt = new Vector3(subject.x, subject.y, subject.z);
+        const position = new Vector3(worldPos.x, worldPos.y, worldPos.z);
+        const dir = aimAt.subtract(position).normalize();
+        const light = new SpotLight(
+          `dir_${source.role}_${i}`,
+          position,
+          dir,
+          Math.PI / 3,   // half-angle (overridden by IES if attached)
+          2,              // exponent (overridden)
+          scene,
+        );
+        // CCT → colour via the shared Helland approximation in
+        // locationLighting; keeps the colour model consistent across
+        // sun/moon/practical sources. Falls back to neutral when CCT is
+        // missing or zero.
+        const cct = Number.isFinite(source.colorTempKelvin) && source.colorTempKelvin > 0
+          ? source.colorTempKelvin
+          : 5600;
+        light.diffuse = kelvinToColor3(cct);
+        // Intensity is director-relative (0..1). Map to PBR scene-units —
+        // we use a base of 200 (analogous to a Profoto B10 modeling
+        // light at ~600 cd) scaled by the source's relative weight.
+        light.intensity = Math.max(0, source.intensity) * 200;
+        // Physical inverse-square so the spread feels right without
+        // tuning per-light.
+        light.falloffType = 1; // FALLOFF_PHYSICAL
+        light.range = 50;
 
-      // Attempt IES — same modifier map + parser as the studio scene.
-      let iesAttached = false;
-      const iesMatch = iesForModifier(source.modifier);
-      if (iesMatch) {
-        try {
-          const resp = await fetch(iesMatch.url);
-          if (resp.ok) {
-            const text = await resp.text();
-            const profile = parseIES(text, iesMatch.filename);
-            const preservedAngle = light.angle;
-            applyIESToSpotLight(light, profile, scene);
-            if (iesMatch.preserveBeamAngle) light.angle = preservedAngle;
-            iesAttached = true;
+        // Attempt IES — same modifier map + parser as the studio scene.
+        let iesAttached = false;
+        const iesMatch = iesForModifier(source.modifier);
+        if (iesMatch) {
+          try {
+            const resp = await fetch(iesMatch.url);
+            if (resp.ok) {
+              const text = await resp.text();
+              const profile = parseIES(text, iesMatch.filename);
+              const preservedAngle = light.angle;
+              applyIESToSpotLight(light, profile, scene);
+              if (iesMatch.preserveBeamAngle) light.angle = preservedAngle;
+              iesAttached = true;
+            }
+          } catch (err) {
+            console.warn(`[LocationScene] IES fetch/parse failed for ${source.modifier}:`, err);
           }
-        } catch (err) {
-          console.warn(`[LocationScene] IES fetch/parse failed for ${source.modifier}:`, err);
         }
-      }
 
-      out.push({ source, light, worldPosition: worldPos, iesAttached });
-    }
-
-    directorRig = out;
-    console.log(
-      `[LocationScene] director rig applied — ${out.length} lights, ` +
-      `${out.filter((p) => p.iesAttached).length} with real IES`,
+        return { source, light, worldPosition: worldPos, iesAttached };
+      }),
     );
-    return out;
+
+    directorRig = placed;
+    console.log(
+      `[LocationScene] director rig applied — ${placed.length} lights, ` +
+      `${placed.filter((p) => p.iesAttached).length} with real IES`,
+    );
+    return placed;
   }
 
   // Track the active camera-movement handle so re-applying cancels
