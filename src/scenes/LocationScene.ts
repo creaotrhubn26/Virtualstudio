@@ -50,7 +50,7 @@ import { iesForModifier } from '../data/modifierIESMap';
 import { applyIESToSpotLight, parseIES } from '../services/iesProfileService';
 import { sphericalToCartesian } from '../services/sceneDirectorClient';
 import type { LightingPlan, LightSource } from '../services/sceneDirectorClient';
-import { buildLightingSpec } from './locationLighting';
+import { buildLightingSpec, kelvinToColor3 } from './locationLighting';
 import type { TimeOfDay } from './locationLighting';
 import { applyMovement } from './cameraMovements';
 import type { ShotMovement, MovementHandle } from './cameraMovements';
@@ -594,26 +594,14 @@ export function mountLocationScene(
         2,              // exponent (overridden)
         scene,
       );
-      // CCT → colour using the same Helland approximation we use for
-      // sun/moon; keeps the colour model consistent across the scene.
-      // Falls back to neutral if CCT is missing or zero.
+      // CCT → colour via the shared Helland approximation in
+      // locationLighting; keeps the colour model consistent across
+      // sun/moon/practical sources. Falls back to neutral when CCT is
+      // missing or zero.
       const cct = Number.isFinite(source.colorTempKelvin) && source.colorTempKelvin > 0
         ? source.colorTempKelvin
         : 5600;
-      const k = (() => {
-        const t = Math.max(1000, Math.min(40000, cct)) / 100;
-        const r = t <= 66 ? 255 : 329.698727446 * Math.pow(t - 60, -0.1332047592);
-        const g = t <= 66
-          ? 99.4708025861 * Math.log(t) - 161.1195681661
-          : 288.1221695283 * Math.pow(t - 60, -0.0755148492);
-        const b = t >= 66 ? 255 : t <= 19 ? 0 : 138.5177312231 * Math.log(t - 10) - 305.0447927307;
-        return new Color3(
-          Math.max(0, Math.min(255, r)) / 255,
-          Math.max(0, Math.min(255, g)) / 255,
-          Math.max(0, Math.min(255, b)) / 255,
-        );
-      })();
-      light.diffuse = k;
+      light.diffuse = kelvinToColor3(cct);
       // Intensity is director-relative (0..1). Map to PBR scene-units —
       // we use a base of 200 (analogous to a Profoto B10 modeling
       // light at ~600 cd) scaled by the source's relative weight.

@@ -28,6 +28,7 @@ import {
 } from './sceneDirectorClient';
 import { resolveHDRI } from '../data/hdriRegistry';
 import { iesForModifier } from '../data/modifierIESMap';
+import { kelvinToColor3 } from '../scenes/locationLighting';
 import {
   resolveProps as backendResolveProps,
   resolveCast as backendResolveCast,
@@ -533,17 +534,11 @@ export async function applySceneAssembly(
           placed.intensity = placed.intensity * source.intensity;
         }
         // Color temp: override with director's CCT so rim/hair lights get
-        // their distinct-from-key color the director intended.
-        if (
-          placed &&
-          Number.isFinite(source.colorTempKelvin) &&
-          typeof (studio as any).cctToColor === 'function'
-        ) {
-          try {
-            (placed as any).diffuse = (studio as any).cctToColor(source.colorTempKelvin);
-          } catch {
-            // non-fatal
-          }
+        // their distinct-from-key color the director intended. Use the
+        // shared Helland helper directly — no studio reach-through, no
+        // swallowed catch (the function is pure math, can't throw).
+        if (placed && Number.isFinite(source.colorTempKelvin)) {
+          (placed as any).diffuse = kelvinToColor3(source.colorTempKelvin);
         }
         options.onLightPlaced?.(source, lightId);
       } catch (err) {
