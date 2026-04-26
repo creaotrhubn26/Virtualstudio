@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>VS Location Scene — Google 3D Tiles smoke</title>
+    <style>
+      html, body { margin: 0; padding: 0; height: 100%; background: #111; color: #ddd; font-family: ui-monospace, SFMono-Regular, monospace; }
+      #renderCanvas { display: block; width: 100vw; height: 100vh; outline: none; touch-action: none; }
+      #status { position: fixed; left: 12px; bottom: 12px; padding: 6px 10px; background: rgba(0,0,0,0.55); border-radius: 6px; font-size: 12px; max-width: calc(100vw - 24px); }
+      #help { position: fixed; right: 12px; top: 12px; padding: 6px 10px; background: rgba(0,0,0,0.55); border-radius: 6px; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <canvas id="renderCanvas"></canvas>
+    <div id="status">Initialising…</div>
+    <div id="help">
+      ?lat=&amp;lon=&amp;provider=ion|google&amp;errorTarget=16
+    </div>
+    <script type="module" src="/src/location-test-entry.ts"></script>
+  </body>
+</html>

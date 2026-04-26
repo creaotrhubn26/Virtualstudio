@@ -146,6 +146,13 @@ export default defineConfig({
       '@babylonjs/core',
       '@babylonjs/loaders',
       '@babylonjs/gui',
+      // Pre-bundle so location-test.html / director-scene.html don't
+      // trigger a mid-navigation re-optimization (which 504s and breaks
+      // the GLTFFileLoader registration in the new tab).
+      '3d-tiles-renderer',
+      '3d-tiles-renderer/babylonjs',
+      '3d-tiles-renderer/core/plugins',
+      'suncalc',
       '@emotion/react',
       '@emotion/styled',
       '@mui/material',
@@ -200,6 +207,12 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: 'index.html',
+        // Multi-page entries — Vite pre-optimises deps for each so the
+        // dev server doesn't trigger a mid-navigation 504 "Outdated
+        // Optimize Dep" when the user clicks "Apply" and the studio
+        // tab pops open the location tab.
+        locationTest: 'location-test.html',
+        directorScene: 'director-scene.html',
       },
       output: {
         // Manual chunk splitting for better caching

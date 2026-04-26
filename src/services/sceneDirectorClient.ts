@@ -82,6 +82,10 @@ export interface ShotPlan {
   framing: 'headshot' | 'thirds' | 'center' | 'golden';
   focalLengthMm: number;
   apertureF: number;
+  /** Shutter time in seconds (e.g. 1/125 = 0.008). Optional for backward compat. */
+  shutterSpeedSec?: number;
+  /** ISO sensitivity (100, 200, 400 …). Optional for backward compat. */
+  iso?: number;
   depthOfField: 'deep' | 'normal' | 'shallow' | 'very-shallow';
   cameraHeightM: number;
   cameraDistanceM: number;
@@ -133,6 +137,19 @@ export interface LightingPlan {
   sources: LightSource[];
 }
 
+export interface LocationHint {
+  /** The original beat.location string the director was given. */
+  query: string;
+  lat: number;
+  lon: number;
+  /** Google's normalised name ("Manhattan, NY 10036, USA"). */
+  displayName: string;
+  placeId?: string | null;
+  /** ROOFTOP / GEOMETRIC_CENTER / RANGE_INTERPOLATED / APPROXIMATE. */
+  locationType?: string | null;
+  types?: string[];
+}
+
 export interface CharacterCast {
   name: string;
   description: string | null;
@@ -152,6 +169,13 @@ export interface SceneAssembly {
   storyboardPrompt: string;
   directorNotes: string[];
   referenceAnalysis: ReferenceAnalysis | null;
+  /**
+   * Geocoded location, present when `beat.location` resolved to a real
+   * place. Frontend can mount LocationScene with these coords to stream
+   * Google 3D Tiles. Null for fictional locations (Anna's café etc.) —
+   * caller falls back to studio backdrop.
+   */
+  locationHint?: LocationHint | null;
 }
 
 export interface DirectorStatus {
@@ -318,4 +342,45 @@ export function focalLengthToFovRadians(
 ): number {
   const sensorHeightMm = sensor === 'full-frame' ? 24 : sensor === 'super-35' ? 13.86 : 15.6;
   return 2 * Math.atan(sensorHeightMm / (2 * focalLengthMm));
+}
+
+/**
+ * EV100 — the photographic exposure value at ISO 100 for a given
+ * aperture/shutter/ISO triangle. Higher EV100 = camera set up for a
+ * brighter scene (tighter aperture / faster shutter / lower ISO).
+ *
+ *   EV100 = log2(N² / t) − log2(ISO / 100)
+ *
+ * Examples:
+ *   f/4,  1/125, ISO 200 → ~10.0   (neutral studio / overcast EXT)
+ *   f/1.4, 1/250, ISO 100 → ~8.9   (dim interior, wide open)
+ *   f/8,  1/250, ISO 100 → ~14.0   (sunlit EXT)
+ */
+export function shotEV100(shot: ShotPlan): number | null {
+  const N = shot.apertureF;
+  const t = shot.shutterSpeedSec ?? 1 / 125;
+  const iso = shot.iso ?? 200;
+  if (!Number.isFinite(N) || !Number.isFinite(t) || t <= 0) return null;
+  return Math.log2((N * N) / t) - Math.log2(iso / 100);
+}
+
+/** Reference EV100 that maps to the studio's baseline exposure. */
+export const REF_EV100 = 10;
+/** Base exposure multiplier at REF_EV100 (matches main.ts default). */
+export const BASE_EXPOSURE = 1.08;
+
+/**
+ * Babylon imageProcessingConfiguration.exposure multiplier derived from
+ * the director's camera triangle. We apply HALF the stop delta — in a
+ * real set the photographer partially compensates for aperture choice
+ * via rig power changes, so doubling the delta would blow out intimate
+ * wide-open looks. Clamp to [0.5, 2.0] so a single outlier can't nuke
+ * the shot.
+ */
+export function exposureMultiplierFromShot(shot: ShotPlan): number {
+  const ev100 = shotEV100(shot);
+  if (ev100 == null) return BASE_EXPOSURE;
+  const halfStops = (REF_EV100 - ev100) / 2;
+  const mult = BASE_EXPOSURE * Math.pow(2, halfStops);
+  return Math.max(0.5, Math.min(2.0, mult));
 }

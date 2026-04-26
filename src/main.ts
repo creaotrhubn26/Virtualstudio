@@ -47,7 +47,7 @@ import { printLightingPlot, downloadLightingPlotSVG } from './services/lightingP
 import type { PlotLight, PlotCharacter, LightingPlotData } from './services/lightingPlotPDFService';
 import { downloadRentalCsv } from './services/rentalManifestService';
 import type { ManifestLight } from './services/rentalManifestService';
-import { loadIESFile, applyIESToSpotLight } from './services/iesProfileService';
+import { loadIESFile, applyIESToSpotLight, parseIES } from './services/iesProfileService';
 import { mountStoryCharacterHud } from './bootstrap/mount-story-character-hud';
 import { mountAssetLibrary } from './bootstrap/mount-asset-library';
 import { mountCharacterLoader } from './bootstrap/mount-character-loader';
@@ -1156,6 +1156,145 @@ class VirtualStudio {
 
   public setCameraFov(fov: number): void {
     this.camera.fov = fov;
+  }
+
+  /**
+   * Set the post-process exposure multiplier on DefaultRenderingPipeline's
+   * imageProcessingConfiguration. Scene Director derives this from the
+   * ShotPlan's aperture/shutter/ISO (see exposureMultiplierFromShot).
+   * Input is clamped to [0.1, 4.0] so one bad plan can't black-frame
+   * or blow out the scene.
+   */
+  public setImageProcessingExposure(multiplier: number): boolean {
+    if (!this.renderingPipeline || !this.renderingPipeline.imageProcessing) {
+      return false;
+    }
+    if (!Number.isFinite(multiplier)) return false;
+    const clamped = Math.max(0.1, Math.min(4.0, multiplier));
+    this.renderingPipeline.imageProcessing.exposure = clamped;
+    return true;
+  }
+
+  /**
+   * Swap the scene's environment HDRI. Scene Director calls this with the
+   * URL resolved from src/data/hdriRegistry.ts. Uses HDRCubeTexture (the
+   * correct path for equirectangular .hdr files) and also sets
+   * environmentIntensity — the HDRI's suggested intensity propagates
+   * straight through to Babylon's PBR ambient without double-accounting.
+   */
+  public setEnvironmentHDRI(url: string, intensity = 0.8): boolean {
+    if (!url || typeof url !== 'string') return false;
+    try {
+      const tex = new BABYLON.HDRCubeTexture(
+        url,
+        this.scene,
+        512,
+        false,
+        true,
+        false,
+        true,
+      );
+      this.scene.environmentTexture = tex;
+      this.scene.environmentIntensity = Math.max(0.05, Math.min(2.0, intensity));
+      return true;
+    } catch (err) {
+      console.warn('[setEnvironmentHDRI] Failed to load HDRI:', url, err);
+      return false;
+    }
+  }
+
+  /**
+   * Attach a real IES photometric profile to an existing SpotLight by
+   * its id. Called by applySceneAssembly after each addLight so the
+   * director's snoot/softbox/fresnel distinction shows up as actual
+   * candela distribution rather than a generic cone.
+   *
+   * Returns the profile's description on success, null if the light
+   * isn't a SpotLight, the URL 404s, or parsing fails.
+   *
+   * `preserveBeamAngle=true` keeps the fixture's own cone (for wide
+   * soft modifiers the IES is a falloff stamp, not a cone override).
+   * `preserveBeamAngle=false` lets applyIESToSpotLight widen the cone
+   * to match the IES's vertical extent (the right thing for snoots).
+   */
+  /**
+   * Drive the PhysicsBasedDOF post-process from a ShotPlan. The
+   * director picks a lens + aperture + subject distance; this method
+   * routes those into the DOF shader's CoC math, sets focus distance
+   * to the camera→subject distance, and enables the pass unless the
+   * director called for 'deep' pan-focus (establishing/action beats).
+   *
+   * Returns the settings actually applied so callers can surface them.
+   */
+  public applyShotDepthOfField(opts: {
+    apertureF: number;
+    focalLengthMm: number;
+    sensor: 'full-frame' | 'super-35' | 'apsc';
+    focusDistanceM: number;
+    depthHint: 'deep' | 'normal' | 'shallow' | 'very-shallow';
+  }): { enabled: boolean; fStop: number; focalLength: number; focusDistanceM: number; sensorWidthMm: number } | null {
+    if (!this.physicsBasedDOF) return null;
+    // Physical sensor widths for CoC calculation. Full-frame = 36mm,
+    // Super-35 ≈ 24.89mm (ARRI Alexa 35), APS-C = 23.6mm (Sony/Nikon).
+    const sensorWidthMm =
+      opts.sensor === 'super-35' ? 24.89 : opts.sensor === 'apsc' ? 23.6 : 36;
+    // CoC limit scales with sensor — smaller sensors have tighter CoC
+    // (0.03mm FF is the reference; smaller sensors need ~0.02mm).
+    const cocLimit = opts.sensor === 'full-frame' ? 0.03 : 0.02;
+    const enabled = opts.depthHint !== 'deep';
+
+    this.physicsBasedDOF.updateSettings({
+      focalLength: opts.focalLengthMm,
+      fStop: opts.apertureF,
+      sensorWidth: sensorWidthMm,
+      cocLimit,
+    });
+    this.physicsBasedDOF.setFocusDistance(Math.max(0.2, opts.focusDistanceM));
+    this.physicsBasedDOF.setEnabled(enabled);
+    // Keep the legacy cameraSettings aperture in sync so other code paths
+    // (shader-on-apply hooks, UI reads) see the director's choice.
+    if ((this as any).cameraSettings) {
+      (this as any).cameraSettings.aperture = opts.apertureF;
+    }
+    return {
+      enabled,
+      fStop: opts.apertureF,
+      focalLength: opts.focalLengthMm,
+      focusDistanceM: opts.focusDistanceM,
+      sensorWidthMm,
+    };
+  }
+
+  public async applyIESToLightById(
+    lightId: string,
+    iesUrl: string,
+    preserveBeamAngle = false,
+  ): Promise<string | null> {
+    const lightData = this.lights.get(lightId);
+    if (!lightData || !(lightData.light instanceof BABYLON.SpotLight)) {
+      return null;
+    }
+    let text: string;
+    try {
+      const resp = await fetch(iesUrl);
+      if (!resp.ok) return null;
+      text = await resp.text();
+    } catch {
+      return null;
+    }
+    let profile;
+    try {
+      profile = parseIES(text, iesUrl.split('/').pop() || 'profile.ies');
+    } catch (err) {
+      console.warn('[applyIESToLightById] parseIES failed:', iesUrl, err);
+      return null;
+    }
+    const preservedAngle = lightData.light.angle;
+    applyIESToSpotLight(lightData.light, profile, this.scene);
+    if (preserveBeamAngle) {
+      lightData.light.angle = preservedAngle;
+    }
+    return profile.description || profile.filename;
   }
 
   public applySimpleCameraPreset(
@@ -6160,6 +6299,50 @@ class VirtualStudio {
     };
 
     const lightConfig = lightSpecs[modelId] || { intensity: 350, name: modelId, cct: 5600, beamAngle: Math.PI / 3, exponent: 2.0, shadowKernel: 64, glbFile: '/models/lights/softbox-stand.glb', faceYawOffset: 0 };
+
+    // Photometric override: when the fixture has real spec data in
+    // LIGHT_DATABASE (lumens, lux1m, beamAngle, cct), derive Babylon's
+    // SpotLight intensity from physical units instead of the hand-tuned
+    // scalar. This is how set.a.light gets consistent realism across
+    // fixtures: real candela feeds inverse-square falloff, which feeds PBR.
+    //
+    // cd = lumens / solid-angle, where solid-angle = 2π(1 − cos(beam/2))
+    // lux@1m == cd (since E = I/d² and d=1) — so if the spec gives
+    // lux1m, we use that directly.
+    const specFromDB = getLightById(modelId);
+    if (specFromDB) {
+      const realCct = specFromDB.cct ?? lightConfig.cct;
+      const realBeamAngleRad = specFromDB.beamAngle
+        ? (specFromDB.beamAngle * Math.PI) / 180
+        : lightConfig.beamAngle;
+
+      let candela: number | null = null;
+      if (specFromDB.lux1m && specFromDB.lux1m > 0) {
+        candela = specFromDB.lux1m;
+      } else if (specFromDB.lumens && specFromDB.lumens > 0) {
+        const solidAngle = 2 * Math.PI * (1 - Math.cos(realBeamAngleRad / 2));
+        candela = solidAngle > 1e-6 ? specFromDB.lumens / solidAngle : specFromDB.lumens;
+      }
+
+      if (candela !== null) {
+        // Scale real candela into Babylon scene-intensity units.
+        // Calibrated against the (previously hand-tuned) reference set so
+        // director-placed rigs read at roughly the same exposure as the
+        // hollywood-rembrandt preset's key ≈ 520. Aputure 300D lux1m=45000,
+        // target key ≈ 500 → scale ≈ 0.011, but at that scale low-output
+        // strobes (Profoto D2 lux1m=6000) fade. 0.1 gives Profoto D2 ≈ 600
+        // (right for a 1000Ws strobe in modeling range), Aputure 300D ≈
+        // 4500 (clamped), ARRI M18 continuous-HMI stays visible. Clamp so
+        // one outlier doesn't wash the scene.
+        const CANDELA_TO_BABYLON_INTENSITY = 0.1;
+        const INTENSITY_CEILING = 800;
+        const scaled = candela * CANDELA_TO_BABYLON_INTENSITY;
+        lightConfig.intensity = Math.min(scaled, INTENSITY_CEILING);
+        lightConfig.cct = realCct;
+        lightConfig.beamAngle = realBeamAngleRad;
+        lightConfig.name = `${specFromDB.brand} ${specFromDB.model}`;
+      }
+    }
 
     try {
       const modelUrl = resolveModelPath(lightConfig.glbFile);

@@ -176,13 +176,73 @@ const SceneDirectorApp: React.FC = () => {
 
   const onApply = async () => {
     if (!assembly) return;
+    // When the director resolved a real-world location, the studio
+    // scene (left-handed, indoor) is the wrong canvas to render it
+    // on. Stash the assembly in sessionStorage and pop a separate
+    // window that mounts the right-handed LocationScene + Google 3D
+    // Tiles + spawns the resolved props/cast on top. The studio
+    // editor stays open in this tab so the operator can iterate.
+    if (assembly.locationHint) {
+      try {
+        sessionStorage.setItem('vs:lastAssembly', JSON.stringify(assembly));
+      } catch (err) {
+        setApplyStatus(
+          `Could not stash assembly for location window: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+        return;
+      }
+      const popped = window.open(
+        '/director-scene.html',
+        '_blank',
+        'noopener,noreferrer',
+      );
+      if (!popped) {
+        setApplyStatus(
+          'Pop-up blocked. Allow pop-ups for this site, then click Apply again to launch the location scene.',
+        );
+        return;
+      }
+      setApplyStatus(
+        `📍 Opened location scene for "${assembly.locationHint.displayName}". Resolves props + cast over Google 3D Tiles.`,
+      );
+      return;
+    }
+
     setApplyStatus('Applying to scene…');
     try {
       const result = await applySceneAssembly(assembly);
       const placed = result.placedLights.length;
+      const iesHits = result.placedLights.filter((p) => p.ies?.applied).length;
+      const iesPart = placed > 0 ? `, ${iesHits}/${placed} IES` : '';
       const warn = result.warnings.length ? ` (${result.warnings.length} warnings)` : '';
+      const exp = result.exposure
+        ? `, EV100 ${result.exposure.ev100.toFixed(1)} → exp ×${result.exposure.multiplier.toFixed(2)}${
+            result.exposure.applied ? '' : ' (not wired)'
+          }`
+        : '';
+      const hdri = result.hdri
+        ? `, HDRI "${result.hdri.label}"${
+            result.hdri.fellBack ? ' (fallback)' : ''
+          }${result.hdri.applied ? '' : ' — not loaded'}`
+        : '';
+      const dof = result.dof
+        ? `, DOF ${result.dof.enabled ? 'on' : 'off'} f/${result.dof.fStop} ` +
+          `${result.dof.focalLengthMm}mm @${result.dof.focusDistanceM.toFixed(1)}m`
+        : '';
+      const propsPart = result.props
+        ? `, props ${result.props.loaded}/${result.props.total}${
+            result.props.failed.length ? ` (${result.props.failed.length} failed)` : ''
+          }`
+        : '';
+      const castPart = result.cast
+        ? `, cast ${result.cast.loaded}/${result.cast.total}${
+            result.cast.failed.length ? ` (${result.cast.failed.length} failed)` : ''
+          }`
+        : '';
       setApplyStatus(
-        `Applied — ${placed} lights placed, camera ${result.camera ? 'set' : 'skipped'}${warn}`,
+        `Applied — ${placed} lights placed${iesPart}, camera ${result.camera ? 'set' : 'skipped'}${exp}${dof}${hdri}${propsPart}${castPart}${warn}`,
       );
       if (result.warnings.length) {
         // eslint-disable-next-line no-console
@@ -491,6 +551,37 @@ const SceneDirectorApp: React.FC = () => {
           {assembly && (
             <>
               <Divider sx={{ bgcolor: 'rgba(255,255,255,0.12)' }} />
+              {assembly.locationHint && (
+                <Box
+                  sx={{
+                    p: 1,
+                    borderRadius: 1,
+                    bgcolor: 'rgba(0, 200, 120, 0.08)',
+                    border: '1px solid rgba(0, 200, 120, 0.35)',
+                  }}
+                >
+                  <Typography variant="caption" sx={{ color: '#00c878', fontWeight: 600 }}>
+                    📍 Real location resolved
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#ddd', mt: 0.5 }}>
+                    {assembly.locationHint.displayName}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#aaa', display: 'block', mt: 0.5 }}>
+                    lat={assembly.locationHint.lat.toFixed(5)}, lon={assembly.locationHint.lon.toFixed(5)} ·{' '}
+                    {assembly.locationHint.locationType ?? 'GEOMETRIC_CENTER'}
+                  </Typography>
+                  <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
+                    <a
+                      href={`/location-test.html?lat=${assembly.locationHint.lat}&lon=${assembly.locationHint.lon}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#00c878', textDecoration: 'underline' }}
+                    >
+                      Open scout view (Google 3D Tiles) →
+                    </a>
+                  </Typography>
+                </Box>
+              )}
               {assembly.referenceAnalysis && (
                 <Box
                   sx={{

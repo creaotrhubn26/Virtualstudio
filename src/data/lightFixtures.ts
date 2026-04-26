@@ -1189,6 +1189,62 @@ export const LIGHT_DATABASE: LightSpec[] = [
     description: 'Eventyrslys / lyslenke — bakgrunnsbelysning og bokeh-dekor for romantisk og lifestyle-foto',
     colorGel: '#fff0c0',
   },
+
+  // ============================================
+  // PASSIVE MODIFIERS — bounce & diffusion
+  // (represented as low-intensity emitters for bounced/diffused fill)
+  // ============================================
+  {
+    id: 'reflector-silver-v-flat',
+    brand: 'V-Flat World',
+    model: 'Silver V-Flat 8x4',
+    type: 'practical',
+    power: 0,
+    powerUnit: 'W',
+    cct: 5500,
+    cri: 98,
+    tlci: 98,
+    lux1m: 2000,
+    beamAngle: 180,
+    lumens: 1500,
+    thumbnail: '/images/gear/modifier_softbox.png',
+    forwardAxis: '-z',
+    description: 'Sølv V-flat 244×122 cm — bounce fill for å løfte skygger uten egen farge (passiv modifier, styrken avhenger av nøkkellys)',
+  },
+  {
+    id: 'scrim-6x6',
+    brand: 'Matthews',
+    model: '6x6 Silk / Grid Cloth',
+    type: 'atmospheric',
+    power: 0,
+    powerUnit: 'W',
+    cct: 5600,
+    cri: 98,
+    tlci: 98,
+    lux1m: 3500,
+    beamAngle: 150,
+    lumens: 4000,
+    thumbnail: '/images/gear/modifier_softbox.png',
+    forwardAxis: '-z',
+    description: '6×6 ft silkesscrim / grid cloth i butterfly-ramme — diffuserer hardt sollys til jevnt, stort vindusliknende lys',
+  },
+  {
+    id: 'practical-edison',
+    brand: 'Philips',
+    model: 'Vintage Edison ST64 Filament',
+    type: 'practical',
+    power: 40,
+    powerUnit: 'W',
+    cct: 2200,
+    cri: 90,
+    lux1m: 90,
+    beamAngle: 360,
+    lumens: 400,
+    thumbnail: '/images/gear/godox_sl60w.png',
+    forwardAxis: '-y',
+    description: 'Edison-pære med synlig glødetråd (ST64) — varm 2200K praktisk for restauranter, loft og vintage-scener',
+    colorGel: '#ffb366',
+  },
 ];
 
 // Export atmospheric lights separately for easy access
