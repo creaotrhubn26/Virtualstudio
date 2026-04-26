@@ -10,6 +10,7 @@ that looks like a photographer + cinematographer set it up on purpose.
 """
 
 from dataclasses import asdict
+import os
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Request
@@ -80,6 +81,8 @@ def _assembly_to_dict(assembly) -> dict:
             "framing": assembly.shot.framing,
             "focalLengthMm": assembly.shot.focal_length_mm,
             "apertureF": assembly.shot.aperture_f,
+            "shutterSpeedSec": assembly.shot.shutter_speed_sec,
+            "iso": assembly.shot.iso,
             "depthOfField": assembly.shot.depth_of_field,
             "cameraHeightM": assembly.shot.camera_height_m,
             "cameraDistanceM": assembly.shot.camera_distance_m,
@@ -133,6 +136,19 @@ def _assembly_to_dict(assembly) -> dict:
                 "rawCaption": assembly.reference_analysis.raw_caption,
             }
             if assembly.reference_analysis
+            else None
+        ),
+        "locationHint": (
+            {
+                "query": assembly.location_hint.query,
+                "lat": assembly.location_hint.lat,
+                "lon": assembly.location_hint.lon,
+                "displayName": assembly.location_hint.display_name,
+                "placeId": assembly.location_hint.place_id,
+                "locationType": assembly.location_hint.location_type,
+                "types": assembly.location_hint.types,
+            }
+            if assembly.location_hint
             else None
         ),
     }
@@ -339,3 +355,282 @@ async def direct_from_script(payload: ScriptPayload):
             "beatCount": len(payload.beats),
         }
     )
+
+
+# ---------------------------------------------------------------------------
+# Prop resolver — description → GLB URL
+# ---------------------------------------------------------------------------
+
+class ResolvePropPayload(BaseModel):
+    """Request body for a single prop resolution.
+
+    `description` is Claude's free-text prop name (e.g. "vintage brass
+    typewriter on desk"). The resolver fingerprints it, checks the R2
+    cache, and falls back through the provider chain (BlenderKit → Meshy
+    → Tripo) when there's a miss.
+    """
+    description: str = Field(min_length=1, max_length=400)
+    styleHint: str = Field(default="realistic")
+    forceRefresh: bool = Field(default=False)
+    # Meshy's text-to-3d preview is 60-180s in practice. Callers that
+    # can't wait that long (UI-facing requests) can lower the timeout
+    # and fall back to a skeleton mesh while polling separately.
+    meshyTimeoutSec: int = Field(default=300, ge=30, le=900)
+
+
+class ResolvePropsPayload(BaseModel):
+    """Batch resolution — one network round-trip for a whole SceneAssembly."""
+    descriptions: List[str] = Field(min_length=1, max_length=16)
+    styleHint: str = Field(default="realistic")
+    forceRefresh: bool = Field(default=False)
+    meshyTimeoutSec: int = Field(default=300, ge=30, le=900)
+    concurrency: int = Field(default=2, ge=1, le=4)
+
+
+@router.get("/prop-resolver/status")
+async def prop_resolver_status():
+    """Return which providers are wired + enabled. Frontend can degrade
+    gracefully when no provider is available (e.g. show a warning rather
+    than spinning forever)."""
+    try:
+        from prop_resolver_service import get_prop_resolver_service  # type: ignore
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Prop resolver unavailable: {exc}",
+        )
+    svc = get_prop_resolver_service()
+    chain = svc.describe_chain()
+    any_enabled = any(p["enabled"] for p in chain)
+    return JSONResponse(
+        {
+            "available": any_enabled,
+            "chain": chain,
+        }
+    )
+
+
+@router.post("/resolve-prop")
+async def resolve_prop(payload: ResolvePropPayload):
+    """Resolve one prop description to a browser-loadable GLB URL.
+
+    Cheap when it's a cache hit (~300 ms — R2 HEAD + presign). Expensive
+    when it's a first-time resolution through Meshy (~180 s, ~$0.10).
+    BlenderKit in the middle is fast-and-free when the description matches
+    a curated model.
+    """
+    try:
+        from prop_resolver_service import get_prop_resolver_service  # type: ignore
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Prop resolver unavailable: {exc}",
+        )
+    svc = get_prop_resolver_service()
+    resolved = await svc.resolve(
+        payload.description,
+        style_hint=payload.styleHint,
+        meshy_timeout_sec=payload.meshyTimeoutSec,
+        force_refresh=payload.forceRefresh,
+    )
+    return JSONResponse(resolved.to_dict())
+
+
+@router.post("/resolve-props")
+async def resolve_props(payload: ResolvePropsPayload):
+    """Batch resolution — takes a list of descriptions from one scene's
+    `plan.props[]` and returns a list of ResolvedProp dicts in the same
+    order. Concurrency is capped at 4 so an 8-prop scene with all cache
+    misses doesn't submit 8 parallel Meshy jobs.
+    """
+    try:
+        from prop_resolver_service import get_prop_resolver_service  # type: ignore
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Prop resolver unavailable: {exc}",
+        )
+    svc = get_prop_resolver_service()
+    resolved = await svc.resolve_many(
+        payload.descriptions,
+        style_hint=payload.styleHint,
+        meshy_timeout_sec=payload.meshyTimeoutSec,
+        concurrency=payload.concurrency,
+    )
+    return JSONResponse(
+        {
+            "count": len(resolved),
+            "results": [r.to_dict() for r in resolved],
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
+# Cast resolver — description → rigged humanoid GLB URL
+# ---------------------------------------------------------------------------
+
+class ResolveCharacterPayload(BaseModel):
+    """Request body for a single character resolution.
+
+    Meshy text-to-3D → auto-rigging pipeline. First-ever call costs
+    ~$0.05 and takes ~2 minutes; cache hits are ~300 ms.
+    """
+    description: str = Field(min_length=1, max_length=400)
+    heightMeters: float = Field(default=1.78, ge=0.5, le=2.5)
+    includeAnimations: bool = Field(default=True)
+    styleHint: str = Field(default="realistic")
+    forceRefresh: bool = Field(default=False)
+    previewTimeoutSec: int = Field(default=300, ge=30, le=900)
+    rigTimeoutSec: int = Field(default=600, ge=30, le=1800)
+
+
+class ResolveCastPayload(BaseModel):
+    """Batch cast resolution — Scene Director sends N humanoid
+    descriptions and the resolver walks them serially (default) or
+    in parallel (only safe with a warm cache; fresh Meshy generations
+    in parallel = crowded queue + simultaneous credit burn)."""
+    descriptions: List[str] = Field(min_length=1, max_length=12)
+    heightMeters: float = Field(default=1.78, ge=0.5, le=2.5)
+    includeAnimations: bool = Field(default=True)
+    styleHint: str = Field(default="realistic")
+    forceRefresh: bool = Field(default=False)
+    concurrency: int = Field(default=1, ge=1, le=4)
+
+
+@router.post("/resolve-character")
+async def resolve_character(payload: ResolveCharacterPayload):
+    """Resolve a single character description to a rigged humanoid GLB.
+
+    Always serves a presigned R2 URL — private bucket with a 7-day TTL.
+    Fingerprint includes the requested height so a 1.65 m "Anna" and a
+    1.78 m "Anna" don't share a cache entry (Meshy scales the skeleton).
+    """
+    try:
+        from prop_resolver_service import get_prop_resolver_service  # type: ignore
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=503, detail=f"Prop resolver unavailable: {exc}",
+        )
+    svc = get_prop_resolver_service()
+    resolved = await svc.resolve_character(
+        payload.description,
+        height_meters=payload.heightMeters,
+        include_animations=payload.includeAnimations,
+        style_hint=payload.styleHint,
+        force_refresh=payload.forceRefresh,
+        preview_timeout_sec=payload.previewTimeoutSec,
+        rig_timeout_sec=payload.rigTimeoutSec,
+    )
+    return JSONResponse(resolved.to_dict())
+
+
+@router.post("/resolve-cast")
+async def resolve_cast(payload: ResolveCastPayload):
+    """Batch character resolution for a whole scene's cast. Returns
+    an ordered list of ResolvedCharacter dicts — frontend dispatches
+    one `vs-load-external-glb` per success and places them around the
+    subject according to the scene blocking."""
+    try:
+        from prop_resolver_service import get_prop_resolver_service  # type: ignore
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=503, detail=f"Prop resolver unavailable: {exc}",
+        )
+    svc = get_prop_resolver_service()
+    resolved = await svc.resolve_cast(
+        payload.descriptions,
+        height_meters=payload.heightMeters,
+        include_animations=payload.includeAnimations,
+        style_hint=payload.styleHint,
+        force_refresh=payload.forceRefresh,
+        concurrency=payload.concurrency,
+    )
+    return JSONResponse(
+        {
+            "count": len(resolved),
+            "results": [r.to_dict() for r in resolved],
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
+# Location resolver — place name → (lat, lon) via Google Geocoding
+# ---------------------------------------------------------------------------
+
+class ResolveLocationPayload(BaseModel):
+    """Request body for geocoding a place name into a Google 3D Tiles
+    target. Frontend feeds the result into LocationScene.setLatLon."""
+    query: str = Field(min_length=1, max_length=300)
+
+
+@router.get("/r2/{key:path}")
+async def r2_proxy(key: str):
+    """Stream an R2 object with permissive CORS so the browser can
+    fetch GLBs without us needing public-bucket access on R2.
+
+    Why this exists
+    ---------------
+    Resolved props/characters live in the private `ml-models` bucket.
+    Pre-signed S3 GETs work for `curl` but get blocked by browsers
+    because R2's IAM-only token can't `PutBucketCors`. The Cloudflare
+    UI can set CORS, but that's a manual step. This proxy gives us
+    same-origin fetches today; switch back to direct presigned URLs
+    once an operator configures bucket CORS in the Cloudflare dashboard.
+
+    The route is rate-limited only by the underlying R2 bandwidth +
+    FastAPI's worker count. Cache-Control: 7 days lets the browser
+    + any Vite dev proxy cache aggressively (the URL is stable per
+    fingerprint, so safe).
+    """
+    from fastapi.responses import StreamingResponse
+    try:
+        from utils.r2_client import (  # type: ignore
+            get_r2_client, R2_BUCKET_NAME,
+        )
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail=f"R2 unavailable: {exc}")
+
+    # Defensive: require the key to live under the props/ prefix so the
+    # proxy can't be aimed at arbitrary keys in the bucket.
+    if not key.startswith("props/") or ".." in key:
+        raise HTTPException(status_code=400, detail="invalid key")
+
+    bucket = os.environ.get("CLOUDFLARE_R2_PROPS_BUCKET", R2_BUCKET_NAME)
+    client = get_r2_client()
+    try:
+        obj = client.get_object(Bucket=bucket, Key=key)
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail=f"R2 fetch: {exc}")
+
+    body = obj["Body"]   # botocore StreamingBody
+    headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD",
+        "Cache-Control": "public, max-age=604800, immutable",
+        "Content-Length": str(obj.get("ContentLength") or ""),
+    }
+    return StreamingResponse(
+        iter(lambda: body.read(65536), b""),
+        media_type=obj.get("ContentType", "model/gltf-binary"),
+        headers=headers,
+    )
+
+
+@router.post("/resolve-location")
+async def resolve_location(payload: ResolveLocationPayload):
+    """Geocode a free-text location string ("middle of Times Square at
+    night") into structured `{lat, lon, displayName, ...}` so the
+    Director can hand a real-world coordinate to the LocationScene.
+
+    Returns success=False (with status=ZERO_RESULTS) when the string
+    is fictional — caller should fall back to studio backdrop.
+    """
+    try:
+        from geocoder_service import get_geocoder_service  # type: ignore
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=503, detail=f"Geocoder unavailable: {exc}",
+        )
+    svc = get_geocoder_service()
+    result = await svc.geocode(payload.query)
+    return JSONResponse(result)

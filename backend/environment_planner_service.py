@@ -424,10 +424,12 @@ class EnvironmentPlannerService:
                     "plan": normalized_plan,
                 }
             except Exception as exc:
+                import traceback
                 print(
                     "Environment Planner Service: Claude request failed, "
                     f"trying Gemini next. Error: {self._safe_live_error_log(exc)}"
                 )
+                traceback.print_exc()
 
         if not self.enabled:
             return {
@@ -515,13 +517,85 @@ class EnvironmentPlannerService:
             reference_images,
         )
 
-        # Permissive schema: let Claude populate the plan freely, validated
-        # by _normalize_plan afterwards. A stricter schema would mirror the
-        # plan spec — kept loose here to avoid duplicating the schema in
-        # two places that could drift.
+        # Schema mirrors the canonical plan shape so Claude's tool-use
+        # actually fills it. A permissive `{"plan": {}}` schema causes Claude
+        # to return an empty object (tool calls with no work). The
+        # normalizer downstream fills any missing fields from the fallback.
         schema = {
             "type": "object",
-            "properties": {"plan": {"type": "object"}},
+            "properties": {
+                "plan": {
+                    "type": "object",
+                    "description": "The complete environment plan for this scene.",
+                    "properties": {
+                        "concept": {
+                            "type": "string",
+                            "description": "One-line vibe summary (e.g. 'rainy Oslo café interior, overcast Nordic dusk').",
+                        },
+                        "summary": {
+                            "type": "string",
+                            "description": "2-3 sentence description of the resulting space.",
+                        },
+                        "recommendedPresetId": {
+                            "type": ["string", "null"],
+                            "description": "Optional environment preset id that matches. Null if bespoke.",
+                        },
+                        "roomShell": {
+                            "type": "object",
+                            "description": "Room dimensions and shell metadata.",
+                            "properties": {
+                                "type": {"type": "string"},
+                                "width": {"type": "number"},
+                                "depth": {"type": "number"},
+                                "height": {"type": "number"},
+                                "openCeiling": {"type": "boolean"},
+                            },
+                        },
+                        "surfaces": {
+                            "type": "array",
+                            "description": "Wall/floor material assignments. Each item: {target, materialId, visible, rationale}. target ∈ {backWall,leftWall,rightWall,rearWall,floor}.",
+                            "items": {"type": "object"},
+                        },
+                        "atmosphere": {
+                            "type": "object",
+                            "description": "Fog, clear/ambient colors (hex), ambientIntensity.",
+                        },
+                        "lighting": {
+                            "type": "array",
+                            "description": "Suggested lights. Each: {role, position:[x,y,z], intensity, color(hex), cct, purpose}.",
+                            "items": {"type": "object"},
+                        },
+                        "props": {
+                            "type": "array",
+                            "description": "List of hero props motivated by the scene.",
+                            "items": {"type": "object"},
+                        },
+                        "ambientSounds": {"type": "array", "items": {"type": "string"}},
+                        "camera": {
+                            "type": "object",
+                            "description": "{shotType, mood, target:[x,y,z], positionHint:[x,y,z], fov}.",
+                        },
+                        "assemblySteps": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Ordered high-level steps for an operator to assemble this.",
+                        },
+                        "compatibility": {
+                            "type": "object",
+                            "description": "{currentStudioShellSupported, confidence, gaps[], nextBuildModules[]}",
+                        },
+                    },
+                    "required": [
+                        "concept",
+                        "summary",
+                        "roomShell",
+                        "surfaces",
+                        "atmosphere",
+                        "lighting",
+                        "camera",
+                    ],
+                }
+            },
             "required": ["plan"],
         }
 
@@ -566,9 +640,16 @@ class EnvironmentPlannerService:
 
         plan = result.get("plan")
         if not isinstance(plan, dict):
-            raise RuntimeError(
-                f"Claude did not return a plan dict: got {type(plan)}"
-            )
+            # Claude sometimes flattens tool args — if the result looks like a
+            # plan (has our canonical keys), accept it directly.
+            plan_like_keys = {"surfaces", "lighting", "atmosphere", "roomShell", "concept"}
+            if isinstance(result, dict) and plan_like_keys & result.keys():
+                plan = result
+            else:
+                raise RuntimeError(
+                    f"Claude did not return a plan dict: got {type(plan)}; "
+                    f"top-level keys={list(result.keys()) if isinstance(result, dict) else '-'}"
+                )
         return plan
 
     async def _generate_with_gemini(

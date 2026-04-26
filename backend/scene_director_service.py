@@ -83,6 +83,13 @@ class ShotPlan:
     camera_height_m: float              # Subject-relative in meters (1.65 = eye for ~180cm actor)
     camera_distance_m: float            # Front-of-subject distance in meters
     movement: str                       # "static" | "pan" | "tilt" | "dolly-in" | "dolly-out" | "tracking" | "handheld"
+    # Full exposure triangle. aperture_f above + these two let the client
+    # compute EV100 = log2(N² / t) − log2(ISO/100) and drive Babylon's
+    # DefaultRenderingPipeline.imageProcessing.exposure from it. Defaults
+    # are a photographically neutral triangle (EV100 ≈ 10 — typical for
+    # a lit studio interior).
+    shutter_speed_sec: float = 1.0 / 125.0   # 1/125 s
+    iso: int = 200
     sensor: str = "full-frame"          # "full-frame" | "super-35" | "apsc"
     rationale: str = ""                 # Human-readable why
 
@@ -137,6 +144,27 @@ class ReferenceAnalysis:
 
 
 @dataclass
+class LocationHint:
+    """Real-world coordinate resolved from `beat.location` via the
+    Geocoder service. Non-null on the SceneAssembly only when the
+    location string actually matches a place — fictional locations
+    (Anna's café, Norse fjord-of-the-mind) leave this null and the
+    frontend falls back to studio mode.
+
+    `display_name` is Google's normalised form ("20 W 34th St., New
+    York, NY 10001, USA") — useful both as a label and as a
+    deterministic cache key for downstream tile work.
+    """
+    query: str
+    lat: float
+    lon: float
+    display_name: str
+    place_id: Optional[str] = None
+    location_type: Optional[str] = None  # ROOFTOP / GEOMETRIC_CENTER / APPROXIMATE
+    types: List[str] = field(default_factory=list)
+
+
+@dataclass
 class SceneAssembly:
     scene_id: str
     source_beat: Dict[str, Any]
@@ -148,6 +176,10 @@ class SceneAssembly:
     storyboard_prompt: str              # For optional gpt-image-1 pass
     director_notes: List[str]           # Audit trail of decisions
     reference_analysis: Optional[ReferenceAnalysis] = None
+    # Geocoded location, if `beat.location` resolved to a real place.
+    # When set, the frontend can mount LocationScene with these
+    # coordinates to stream Google 3D Tiles for the area.
+    location_hint: Optional[LocationHint] = None
 
 
 # ---------------------------------------------------------------------------
@@ -406,6 +438,13 @@ class SceneDirectorService:
         # 7) Build storyboard prompt
         storyboard_prompt = self._build_storyboard_prompt(beat, shot, lighting, mood)
 
+        # 8) Geocode the location string. If it resolves to a real
+        # place we attach a LocationHint so the frontend can stream
+        # Google 3D Tiles for the area. Fictional locations (Anna's
+        # café, Norse fjord-of-the-mind) silently come back null and
+        # the frontend falls through to its studio backdrop logic.
+        location_hint = await self._maybe_geocode(beat.location, notes)
+
         return SceneAssembly(
             scene_id=f"scene-{uuid.uuid4().hex[:10]}",
             source_beat=asdict(beat),
@@ -417,6 +456,52 @@ class SceneDirectorService:
             storyboard_prompt=storyboard_prompt,
             director_notes=notes,
             reference_analysis=reference_analysis,
+            location_hint=location_hint,
+        )
+
+    async def _maybe_geocode(
+        self, location: str, notes: List[str]
+    ) -> Optional[LocationHint]:
+        """Best-effort geocode for the beat's location string.
+
+        Lazy import + per-call try/except so the director still produces
+        a valid SceneAssembly even when the geocoder is offline / quota
+        exhausted / key restricted. The result is informational — never
+        load-bearing for scene rendering.
+        """
+        loc = (location or "").strip()
+        if not loc:
+            return None
+        try:
+            from geocoder_service import get_geocoder_service  # noqa: WPS433
+            svc = get_geocoder_service()
+        except Exception as exc:
+            notes.append(f"geocode skipped: {type(exc).__name__}: {exc}")
+            return None
+        if not svc.enabled:
+            notes.append("geocode skipped: GOOGLE_MAP_TILES_KEY missing")
+            return None
+        try:
+            result = await svc.geocode(loc)
+        except Exception as exc:
+            notes.append(f"geocode raised: {type(exc).__name__}: {exc}")
+            return None
+        if not result.get("success"):
+            # ZERO_RESULTS is the common, expected case — Claude often
+            # writes a fictional location string. Quiet log.
+            notes.append(f"geocode={result.get('status') or 'fail'}")
+            return None
+        notes.append(
+            f"geocode=OK lat={result['lat']:.4f} lon={result['lon']:.4f}"
+        )
+        return LocationHint(
+            query=result.get("query", loc),
+            lat=float(result["lat"]),
+            lon=float(result["lon"]),
+            display_name=result.get("displayName") or loc,
+            place_id=result.get("placeId"),
+            location_type=result.get("locationType"),
+            types=list(result.get("types") or []),
         )
 
     # -- Claude-enriched decisions -----------------------------------------
@@ -705,6 +790,10 @@ class SceneDirectorService:
                 camera_height_m=1.55,       # Slightly below eye softens
                 camera_distance_m=1.2,
                 movement="static",
+                # f/1.4 at 1/250 ISO 100 → EV100 ≈ 9: ½ stop under
+                # neutral, leans warm & dreamy.
+                shutter_speed_sec=1.0 / 250.0,
+                iso=100,
                 rationale="Intimate beat — 85 mm f/1.4, razor-thin DOF, slight low eye",
             )
 
@@ -720,6 +809,10 @@ class SceneDirectorService:
                 camera_height_m=0.9,
                 camera_distance_m=4.0,
                 movement="handheld",
+                # f/5.6 at 1/500 ISO 400 freezes motion; EV100 ≈ 12 →
+                # ~1 stop under neutral for grittier, cooler tone.
+                shutter_speed_sec=1.0 / 500.0,
+                iso=400,
                 rationale="Action beat — 24 mm f/5.6 deep DOF, low hero angle, handheld energy",
             )
 
@@ -737,6 +830,11 @@ class SceneDirectorService:
                 camera_height_m=2.5,
                 camera_distance_m=8.0,
                 movement="dolly-in",
+                # f/8 at 1/250 ISO 100 → classic EXT daylight meter;
+                # EV100 ≈ 14 → ~2 stops under neutral (tone-mapped back
+                # up by ACES, simulates sunlit contrast).
+                shutter_speed_sec=1.0 / 250.0,
+                iso=100,
                 rationale="Establishing — 35 mm f/8 deep, slightly elevated, slow push-in",
             )
 
@@ -754,6 +852,10 @@ class SceneDirectorService:
                 camera_height_m=1.65,
                 camera_distance_m=1.8,
                 movement="static",
+                # f/2 at 1/125 ISO 200 → EV100 ≈ 8: ~1 stop over
+                # neutral, gives soft lift to skin tones.
+                shutter_speed_sec=1.0 / 125.0,
+                iso=200,
                 rationale="Dialogue — 50 mm f/2 OTS, eye level, shallow for separation",
             )
 
@@ -769,6 +871,9 @@ class SceneDirectorService:
                 camera_height_m=1.65,
                 camera_distance_m=2.2,
                 movement="static",
+                # f/2.8 at 1/125 ISO 200 → EV100 ≈ 9, ½ stop over neutral.
+                shutter_speed_sec=1.0 / 125.0,
+                iso=200,
                 rationale="Single character — clean 50 mm f/2.8 medium",
             )
 
@@ -784,10 +889,13 @@ class SceneDirectorService:
                 camera_height_m=1.65,
                 camera_distance_m=2.8,
                 movement="static",
+                # Neutral — matches the REF_EV100 used on the client.
+                shutter_speed_sec=1.0 / 125.0,
+                iso=200,
                 rationale="Two-character beat — 35 mm f/4 balanced two-shot",
             )
 
-        # Default — neutral medium wide
+        # Default — neutral medium wide (REF_EV100 anchor)
         return ShotPlan(
             type="medium",
             angle="eye-level",
@@ -798,6 +906,8 @@ class SceneDirectorService:
             camera_height_m=1.65,
             camera_distance_m=2.5,
             movement="static",
+            shutter_speed_sec=1.0 / 125.0,
+            iso=200,
             rationale="Default — 35 mm f/4 neutral medium wide",
         )
 
@@ -908,28 +1018,28 @@ class SceneDirectorService:
         if beat.int_ext == "INT":
             if "kitchen" in loc or "kjøkken" in loc:
                 sources.append(LightSource(
-                    role="practical", fixture="practical-pendant",
+                    role="practical", fixture="practical-pendant-warm",
                     modifier="bare-bulb", power_ws=None,
                     color_temp_kelvin=2700, azimuth_deg=0,
                     elevation_deg=80, distance_m=2.0, intensity=0.4,
                 ))
             elif "bedroom" in loc or "soverom" in loc:
                 sources.append(LightSource(
-                    role="practical", fixture="practical-table-lamp",
+                    role="practical", fixture="practical-desk-lamp",
                     modifier="bare-bulb", power_ws=None,
                     color_temp_kelvin=2700, azimuth_deg=-45,
                     elevation_deg=10, distance_m=1.5, intensity=0.3,
                 ))
             elif beat.time_of_day.upper() == "NIGHT":
                 sources.append(LightSource(
-                    role="practical", fixture="practical-table-lamp",
+                    role="practical", fixture="practical-desk-lamp",
                     modifier="bare-bulb", power_ws=None,
                     color_temp_kelvin=2700, azimuth_deg=120,
                     elevation_deg=10, distance_m=2.0, intensity=0.35,
                 ))
             else:
                 sources.append(LightSource(
-                    role="practical", fixture="window-daylight",
+                    role="practical", fixture="window-daylight-emitter",
                     modifier="gobo-window", power_ws=None,
                     color_temp_kelvin=5600, azimuth_deg=90,
                     elevation_deg=20, distance_m=3.0, intensity=0.6,
