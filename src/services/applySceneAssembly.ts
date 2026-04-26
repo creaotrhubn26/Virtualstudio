@@ -514,9 +514,17 @@ export async function applySceneAssembly(
         const sceneLights = (studio as any).scene?.lights as
           | Array<{ id?: string; name?: string; intensity?: number }>
           | undefined;
-        const placed = sceneLights?.find(
+        // Take the LAST matching light (not the first) so two sources
+        // sharing a modifier — and therefore a fixture name — don't
+        // compound: addLight appends, and we want the just-appended one,
+        // not a previously-multiplied namesake left over from earlier
+        // in this rig or from a prior apply when clearExistingLights
+        // was disabled. (filter+last instead of findLast since the lib
+        // target is ES2020.)
+        const matches = sceneLights?.filter(
           (l) => l.id === lightId || l.name === lightId,
         );
+        const placed = matches?.[matches.length - 1];
         if (
           placed &&
           typeof placed.intensity === 'number' &&
@@ -637,17 +645,20 @@ export async function applySceneAssembly(
   }
 
   // ---- props (Claude-authored → BlenderKit/Meshy/Tripo → Babylon) ------
+  // The callback fires whenever the phase ran — even on zero props — so
+  // a UI spinner triggered before applySceneAssembly() will always get
+  // a finish signal. Null is reserved for "skipped".
   if (!options.skipProps) {
     const planProps = extractPlanProps(assembly);
-    if (planProps.length > 0) {
-      props = await resolveAndDispatchProps(
-        planProps,
-        subject,
-        options.propMeshyTimeoutSec,
-        warnings,
-      );
-      options.onPropsResolved?.(props);
-    }
+    props = planProps.length > 0
+      ? await resolveAndDispatchProps(
+          planProps,
+          subject,
+          options.propMeshyTimeoutSec,
+          warnings,
+        )
+      : { total: 0, resolved: 0, loaded: 0, failed: [], items: [] };
+    options.onPropsResolved?.(props);
   }
 
   // ---- cast (Claude-authored → Meshy rigged humanoid → Babylon) -------
@@ -658,15 +669,15 @@ export async function applySceneAssembly(
   //   • Same fingerprint cache as props — repeated prompts are free.
   if (!options.skipCast) {
     const castInputs = extractCastInputs(assembly);
-    if (castInputs.length > 0) {
-      cast = await resolveAndDispatchCast(
-        castInputs,
-        subject,
-        options.castHeightMeters ?? 1.78,
-        warnings,
-      );
-      options.onCastResolved?.(cast);
-    }
+    cast = castInputs.length > 0
+      ? await resolveAndDispatchCast(
+          castInputs,
+          subject,
+          options.castHeightMeters ?? 1.78,
+          warnings,
+        )
+      : { total: 0, resolved: 0, loaded: 0, failed: [], items: [] };
+    options.onCastResolved?.(cast);
   }
 
   return {
@@ -733,6 +744,7 @@ function placementForHint(
   hint: string | null,
   subject: Vector3Like,
   index: number,
+  total: number,
 ): Vector3Like {
   const h = (hint || '').toLowerCase();
   // Subject floor is subject.y − SUBJECT_EYE_HEIGHT_M; most props sit
@@ -758,7 +770,8 @@ function placementForHint(
   }
   // Default: fan props out around the subject on the floor so they
   // don't all stack at the same (0,0,0) when Claude gives no hint.
-  const angle = (index * Math.PI * 2) / Math.max(1, index + 2);
+  // Use `total` (not index+2) so 6+ props don't pile up on one half.
+  const angle = (index * Math.PI * 2) / Math.max(1, total);
   const r = 1.5 + (index % 3) * 0.3;
   return {
     x: subject.x + Math.sin(angle) * r,
@@ -803,8 +816,44 @@ async function resolveAndDispatchProps(
   let resolved = 0;
   let loaded = 0;
 
-  batch.results.forEach((result, idx) => {
-    const planProp = planProps[idx];
+  // Match results to inputs by description rather than by array index.
+  // The backend may dedupe identical descriptions, return on completion
+  // order, or drop entries that errored before queue admission — any of
+  // which would silently shuffle GLBs onto the wrong props if we trusted
+  // position alone. ResolvedProp.description echoes the input verbatim.
+  const resultByDescription = new Map<string, ResolvedProp>();
+  for (const r of batch.results) {
+    if (r.description) resultByDescription.set(r.description, r);
+  }
+
+  planProps.forEach((planProp, idx) => {
+    let result = resultByDescription.get(planProp.description);
+    if (!result) {
+      // Fallback: tolerate older backends that don't echo description.
+      // Keep going via index but flag the soft mismatch so it surfaces.
+      result = batch.results[idx];
+      if (result) {
+        warnings.push(
+          `resolveProps: matched "${planProp.description}" by array index (backend echo missing)`,
+        );
+      }
+    }
+    if (!result) {
+      failed.push({
+        description: planProp.description,
+        error: 'no result returned by resolver',
+      });
+      items.push({
+        description: planProp.description,
+        glbUrl: null,
+        provider: null,
+        cacheHit: false,
+        sizeKb: null,
+        elapsedSec: null,
+        dispatched: false,
+      });
+      return;
+    }
     if (!result.success || !result.glbUrl) {
       failed.push({
         description: planProp.description,
@@ -823,7 +872,12 @@ async function resolveAndDispatchProps(
     }
 
     resolved += 1;
-    const position = placementForHint(planProp.placementHint, subject, idx);
+    const position = placementForHint(
+      planProp.placementHint,
+      subject,
+      idx,
+      planProps.length,
+    );
     let dispatched = false;
     try {
       window.dispatchEvent(
@@ -1007,8 +1061,42 @@ async function resolveAndDispatchCast(
   let resolved = 0;
   let loaded = 0;
 
-  batch.results.forEach((result, idx) => {
-    const input = inputs[idx];
+  // Same defence as resolveAndDispatchProps: match by description, not
+  // index, so dedupe / reorder / partial-failure on the backend can't
+  // shuffle rigged GLBs onto the wrong character slots.
+  const resultByDescription = new Map<string, ResolvedCharacter>();
+  for (const r of batch.results) {
+    if (r.description) resultByDescription.set(r.description, r);
+  }
+
+  inputs.forEach((input, idx) => {
+    let result = resultByDescription.get(input.description);
+    if (!result) {
+      result = batch.results[idx];
+      if (result) {
+        warnings.push(
+          `resolveCast: matched "${input.name}" by array index (backend echo missing)`,
+        );
+      }
+    }
+    if (!result) {
+      failed.push({
+        name: input.name,
+        description: input.description,
+        error: 'no result returned by resolver',
+      });
+      items.push({
+        name: input.name,
+        description: input.description,
+        glbUrl: null,
+        provider: null,
+        cacheHit: false,
+        sizeKb: null,
+        elapsedSec: null,
+        dispatched: false,
+      });
+      return;
+    }
     if (!result.success || !result.glbUrl) {
       failed.push({
         name: input.name,
