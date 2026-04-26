@@ -696,7 +696,7 @@ export async function applySceneAssembly(
  * available text so Meshy/BlenderKit have something to search on —
  * `name` alone is often too terse (e.g. "lamp").
  */
-interface PlanProp {
+export interface PlanProp {
   description: string;
   name: string;
   category: string | null;
@@ -735,7 +735,7 @@ function extractPlanProps(assembly: SceneAssembly): PlanProp[] {
  * sensible offset". Real spatial reasoning lives further down the
  * roadmap; this is the honest MVP.
  */
-function placementForHint(
+export function placementForHint(
   hint: string | null,
   subject: Vector3Like,
   index: number,
@@ -775,7 +775,7 @@ function placementForHint(
   };
 }
 
-async function resolveAndDispatchProps(
+export async function resolveAndDispatchProps(
   planProps: PlanProp[],
   subject: Vector3Like,
   meshyTimeoutSec: number | undefined,
@@ -816,16 +816,27 @@ async function resolveAndDispatchProps(
   // order, or drop entries that errored before queue admission — any of
   // which would silently shuffle GLBs onto the wrong props if we trusted
   // position alone. ResolvedProp.description echoes the input verbatim.
+  //
+  // Two regimes:
+  //   • All results carry a description → strict Map lookup. A missing
+  //     entry means the backend dropped that input — surface it as
+  //     failed, never fall through to index-match (which would
+  //     misalign and reintroduce the very bug this guards against).
+  //   • No result carries a description → older backend shape; index
+  //     matching is the only option, but warn per-item so the UX
+  //     knows the matching is fragile.
+  const allHaveDescription = batch.results.length > 0
+    && batch.results.every((r) => !!r.description);
   const resultByDescription = new Map<string, ResolvedProp>();
-  for (const r of batch.results) {
-    if (r.description) resultByDescription.set(r.description, r);
+  if (allHaveDescription) {
+    for (const r of batch.results) resultByDescription.set(r.description, r);
   }
 
   planProps.forEach((planProp, idx) => {
-    let result = resultByDescription.get(planProp.description);
-    if (!result) {
-      // Fallback: tolerate older backends that don't echo description.
-      // Keep going via index but flag the soft mismatch so it surfaces.
+    let result: ResolvedProp | undefined;
+    if (allHaveDescription) {
+      result = resultByDescription.get(planProp.description);
+    } else {
       result = batch.results[idx];
       if (result) {
         warnings.push(
@@ -918,7 +929,7 @@ async function resolveAndDispatchProps(
 // Cast extraction + dispatch
 // ---------------------------------------------------------------------------
 
-interface CastInput {
+export interface CastInput {
   name: string;
   description: string;
   suggestedPlacement: string | null;
@@ -1018,7 +1029,7 @@ function castPlacementForHint(
   };
 }
 
-async function resolveAndDispatchCast(
+export async function resolveAndDispatchCast(
   inputs: CastInput[],
   subject: Vector3Like,
   heightMeters: number,
@@ -1056,17 +1067,20 @@ async function resolveAndDispatchCast(
   let resolved = 0;
   let loaded = 0;
 
-  // Same defence as resolveAndDispatchProps: match by description, not
-  // index, so dedupe / reorder / partial-failure on the backend can't
-  // shuffle rigged GLBs onto the wrong character slots.
+  // Same two-regime defence as resolveAndDispatchProps. See comment
+  // there for the reasoning.
+  const allHaveDescription = batch.results.length > 0
+    && batch.results.every((r) => !!r.description);
   const resultByDescription = new Map<string, ResolvedCharacter>();
-  for (const r of batch.results) {
-    if (r.description) resultByDescription.set(r.description, r);
+  if (allHaveDescription) {
+    for (const r of batch.results) resultByDescription.set(r.description, r);
   }
 
   inputs.forEach((input, idx) => {
-    let result = resultByDescription.get(input.description);
-    if (!result) {
+    let result: ResolvedCharacter | undefined;
+    if (allHaveDescription) {
+      result = resultByDescription.get(input.description);
+    } else {
       result = batch.results[idx];
       if (result) {
         warnings.push(
