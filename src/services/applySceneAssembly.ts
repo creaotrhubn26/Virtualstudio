@@ -898,26 +898,14 @@ export async function resolveAndDispatchProps(
       idx,
       planProps.length,
     );
-    let dispatched = false;
-    try {
-      window.dispatchEvent(
-        new CustomEvent('vs-load-external-glb', {
-          detail: {
-            url: result.glbUrl,
-            name: planProp.name,
-            position: [position.x, position.y, position.z],
-          },
-        }),
-      );
-      dispatched = true;
-      loaded += 1;
-    } catch (err) {
-      warnings.push(
-        `vs-load-external-glb dispatch failed for ${planProp.name}: ${
-          err instanceof Error ? err.message : String(err)
-        }`,
-      );
-    }
+    const dispatched = dispatchGlbLoad(
+      result.glbUrl,
+      planProp.name,
+      position,
+      warnings,
+      planProp.name,
+    );
+    if (dispatched) loaded += 1;
 
     items.push({
       description: planProp.description,
@@ -1146,26 +1134,14 @@ export async function resolveAndDispatchCast(
       idx,
       inputs.length,
     );
-    let dispatched = false;
-    try {
-      window.dispatchEvent(
-        new CustomEvent('vs-load-external-glb', {
-          detail: {
-            url: result.glbUrl,
-            name: input.name,
-            position: [position.x, position.y, position.z],
-          },
-        }),
-      );
-      dispatched = true;
-      loaded += 1;
-    } catch (err) {
-      warnings.push(
-        `vs-load-external-glb dispatch failed for cast "${input.name}": ${
-          err instanceof Error ? err.message : String(err)
-        }`,
-      );
-    }
+    const dispatched = dispatchGlbLoad(
+      result.glbUrl,
+      input.name,
+      position,
+      warnings,
+      `cast "${input.name}"`,
+    );
+    if (dispatched) loaded += 1;
 
     items.push({
       name: input.name,
@@ -1186,6 +1162,41 @@ export async function resolveAndDispatchCast(
     failed,
     items,
   };
+}
+
+/**
+ * Fire a `vs-load-external-glb` CustomEvent the studio side listens
+ * for — used by both prop and cast dispatch paths. Returns true when
+ * the event was emitted without throwing; pushes a warning otherwise.
+ * The event is fire-and-forget: a true return only means we sent it,
+ * not that the consumer rendered it.
+ */
+function dispatchGlbLoad(
+  url: string,
+  name: string,
+  position: Vector3Like,
+  warnings: string[],
+  auditLabel: string,
+): boolean {
+  try {
+    window.dispatchEvent(
+      new CustomEvent('vs-load-external-glb', {
+        detail: {
+          url,
+          name,
+          position: [position.x, position.y, position.z],
+        },
+      }),
+    );
+    return true;
+  } catch (err) {
+    warnings.push(
+      `vs-load-external-glb dispatch failed for ${auditLabel}: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+    return false;
+  }
 }
 
 function parseHex(hex: string | undefined): { r: number; g: number; b: number } | null {
@@ -1255,9 +1266,27 @@ function applyEnvironment(
   const scene = studio?.scene;
   const atm = plan.atmosphere;
   if (scene && atm) {
-    const clearC = parseHex(atm.clearColor);
-    const ambientC = parseHex(atm.ambientColor);
-    const fogC = parseHex(atm.fogColor);
+    // parseHex returns null for both "missing" (we don't care) and
+    // "malformed" (we very much care — Claude occasionally ships
+    // "rgb(20,30,40)" or a CSS name and the atmosphere then fails
+    // silently). Distinguish with a small wrapper that surfaces the
+    // bad value through warnings.
+    const parseField = (
+      hex: string | undefined,
+      field: string,
+    ): { r: number; g: number; b: number } | null => {
+      if (!hex) return null;
+      const parsed = parseHex(hex);
+      if (!parsed) {
+        warnings.push(
+          `atmosphere.${field}: could not parse "${hex}" as #RRGGBB hex; field skipped`,
+        );
+      }
+      return parsed;
+    };
+    const clearC = parseField(atm.clearColor, 'clearColor');
+    const ambientC = parseField(atm.ambientColor, 'ambientColor');
+    const fogC = parseField(atm.fogColor, 'fogColor');
 
     if (clearC && scene.clearColor) {
       scene.clearColor.r = clearC.r;
