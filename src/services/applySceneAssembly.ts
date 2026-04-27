@@ -109,6 +109,17 @@ interface VirtualStudioAPI {
     fogColor?: { r: number; g: number; b: number };
     fogDensity?: number;
     environmentIntensity?: number;
+    /**
+     * Babylon's Scene.lights — read for the just-added light reference
+     * after addLight resolves. Each entry is a partial Light view
+     * with the fields we mutate (intensity, diffuse colour).
+     */
+    lights?: Array<{
+      id?: string;
+      name?: string;
+      intensity?: number;
+      diffuse?: { r: number; g: number; b: number };
+    }>;
   };
 }
 
@@ -512,9 +523,7 @@ export async function applySceneAssembly(
         // practicals ~0.3). addLight() sets the fixture's physical base
         // intensity; multiplying here preserves photometric ratios across
         // the rig (the *relative* key:fill ratio is what reads as mood).
-        const sceneLights = (studio as any).scene?.lights as
-          | Array<{ id?: string; name?: string; intensity?: number }>
-          | undefined;
+        const sceneLights = studio.scene?.lights;
         // Take the LAST matching light (not the first) so two sources
         // sharing a modifier — and therefore a fixture name — don't
         // compound: addLight appends, and we want the just-appended one,
@@ -538,7 +547,7 @@ export async function applySceneAssembly(
         // shared Helland helper directly — no studio reach-through, no
         // swallowed catch (the function is pure math, can't throw).
         if (placed && Number.isFinite(source.colorTempKelvin)) {
-          (placed as any).diffuse = kelvinToColor3(source.colorTempKelvin);
+          placed.diffuse = kelvinToColor3(source.colorTempKelvin);
         }
         options.onLightPlaced?.(source, lightId);
       } catch (err) {
@@ -705,9 +714,14 @@ export interface PlanProp {
 }
 
 function extractPlanProps(assembly: SceneAssembly): PlanProp[] {
-  const plan = (assembly as any).environmentPlan?.plan as
-    | { props?: Array<Record<string, unknown>> }
+  // SceneAssembly.environmentPlan is loosely typed as Record<string,
+  // unknown> server-side, so we narrow once here rather than scattering
+  // `as any` chains. The shape is what the backend's env_planner emits:
+  // plan.props[] = {name, description, category, priority, placementHint}.
+  const env = assembly.environmentPlan as
+    | { plan?: { props?: Array<Record<string, unknown>> } }
     | undefined;
+  const plan = env?.plan;
   const raw = Array.isArray(plan?.props) ? plan!.props : [];
   const out: PlanProp[] = [];
   for (const p of raw) {
@@ -1196,19 +1210,24 @@ function applyEnvironment(
   assembly: SceneAssembly,
   warnings: string[],
 ): { presetApplied: string | null; atmosphereApplied: boolean } {
-  const plan = (assembly as any).environmentPlan?.plan as
+  // Same narrowing as extractPlanProps — single typed assertion for
+  // the loosely-typed environmentPlan record.
+  const env = assembly.environmentPlan as
     | {
-        recommendedPresetId?: string | null;
-        atmosphere?: {
-          clearColor?: string;
-          ambientColor?: string;
-          ambientIntensity?: number;
-          fogEnabled?: boolean;
-          fogColor?: string;
-          fogDensity?: number;
+        plan?: {
+          recommendedPresetId?: string | null;
+          atmosphere?: {
+            clearColor?: string;
+            ambientColor?: string;
+            ambientIntensity?: number;
+            fogEnabled?: boolean;
+            fogColor?: string;
+            fogDensity?: number;
+          };
         };
       }
     | undefined;
+  const plan = env?.plan;
 
   if (!plan) return { presetApplied: null, atmosphereApplied: false };
 
@@ -1233,7 +1252,7 @@ function applyEnvironment(
   // 2. Apply atmosphere directly on the scene for cinematic feel
   let atmosphereApplied = false;
   const studio = getStudio();
-  const scene = studio?.scene as any;
+  const scene = studio?.scene;
   const atm = plan.atmosphere;
   if (scene && atm) {
     const clearC = parseHex(atm.clearColor);
@@ -1257,7 +1276,7 @@ function applyEnvironment(
       scene.environmentIntensity = Math.max(0.05, Math.min(2, atm.ambientIntensity));
       atmosphereApplied = true;
     }
-    if (atm.fogEnabled && fogC && typeof scene.fogMode === 'number') {
+    if (atm.fogEnabled && fogC && typeof scene.fogMode === 'number' && scene.fogColor) {
       // Babylon FOGMODE_EXP = 3
       scene.fogMode = 3;
       scene.fogColor.r = fogC.r;
