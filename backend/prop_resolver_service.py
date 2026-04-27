@@ -130,6 +130,12 @@ class ResolvedCharacter:
     # other actions go through Meshy's Animation API separately.
     walking_glb_url: Optional[str] = None
     running_glb_url: Optional[str] = None
+    # The PBR-textured (refined) variant of the same character — Meshy's
+    # rigged output ships without textures, so we keep this side-by-side
+    # for the frontend to use on static shots where appearance beats
+    # animation. None when a generation predates the refine pipeline or
+    # the refine step failed.
+    textured_glb_url: Optional[str] = None
     error: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
@@ -145,6 +151,7 @@ class ResolvedCharacter:
             "heightMeters": self.height_meters,
             "walkingGlbUrl": self.walking_glb_url,
             "runningGlbUrl": self.running_glb_url,
+            "texturedGlbUrl": self.textured_glb_url,
             "error": self.error,
         }
 
@@ -542,6 +549,7 @@ class PropResolverService:
         if not force_refresh and check_file_exists_in_r2(r2_key, bucket=PROPS_BUCKET):
             walking_url: Optional[str] = None
             running_url: Optional[str] = None
+            textured_url: Optional[str] = None
             if include_animations:
                 if check_file_exists_in_r2(
                     character_r2_key(fp, "walking"), bucket=PROPS_BUCKET,
@@ -551,6 +559,14 @@ class PropResolverService:
                     character_r2_key(fp, "running"), bucket=PROPS_BUCKET,
                 ):
                     running_url = character_presigned_url(fp, "running")
+            # Probe for the refined-textured variant — present only on
+            # characters generated after the refine pipeline shipped.
+            # Older cache entries return null and the frontend falls
+            # back to the rigged-with-default-PBR repaint.
+            if check_file_exists_in_r2(
+                character_r2_key(fp, "textured"), bucket=PROPS_BUCKET,
+            ):
+                textured_url = character_presigned_url(fp, "textured")
             return ResolvedCharacter(
                 success=True,
                 glb_url=character_presigned_url(fp, "rigged"),
@@ -563,6 +579,7 @@ class PropResolverService:
                 height_meters=height_meters,
                 walking_glb_url=walking_url,
                 running_glb_url=running_url,
+                textured_glb_url=textured_url,
             )
 
         # ---- live Meshy chain -------------------------------------------
@@ -650,14 +667,16 @@ class PropResolverService:
                 error=f"R2 upload failed (rigged): {err}",
             )
 
-        # Walking + running are best-effort. If a variant is missing on
-        # disk (Meshy returned partial output), we surface null URLs and
-        # let the frontend fall back to the rigged static. Don't fail
-        # the whole resolve over a missing animation — the rigged
-        # character is the load-bearing deliverable.
+        # Walking + running + textured are best-effort. If a variant is
+        # missing on disk (Meshy returned partial output, or refine
+        # failed), we surface null URLs and let the frontend fall back
+        # to the rigged-with-default-PBR repaint. Don't fail the whole
+        # resolve over a missing variant — the rigged character is the
+        # load-bearing deliverable.
         walking_url: Optional[str] = None
         running_url: Optional[str] = None
-        for variant in ("walking", "running"):
+        textured_url: Optional[str] = None
+        for variant in ("walking", "running", "textured"):
             local_path_str = (paths or {}).get(variant)
             if not local_path_str:
                 continue
@@ -679,8 +698,10 @@ class PropResolverService:
                 continue
             if variant == "walking":
                 walking_url = character_presigned_url(fp, "walking")
-            else:
+            elif variant == "running":
                 running_url = character_presigned_url(fp, "running")
+            elif variant == "textured":
+                textured_url = character_presigned_url(fp, "textured")
 
         return ResolvedCharacter(
             success=True,
@@ -694,6 +715,7 @@ class PropResolverService:
             height_meters=height_meters,
             walking_glb_url=walking_url,
             running_glb_url=running_url,
+            textured_glb_url=textured_url,
         )
 
     async def resolve_cast(

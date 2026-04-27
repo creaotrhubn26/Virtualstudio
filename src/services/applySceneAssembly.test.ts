@@ -209,6 +209,7 @@ describe('resolveAndDispatchCast — match by description, not index', () => {
       heightMeters: 1.78,
       walkingGlbUrl: null,
       runningGlbUrl: null,
+      texturedGlbUrl: null,
       error: null,
     };
   }

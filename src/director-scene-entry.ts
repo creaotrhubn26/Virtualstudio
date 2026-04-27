@@ -252,19 +252,33 @@ function fanPosition(index: number, total: number, radius: number): { x: number;
  * predate the animation upload).
  */
 function pickCharacterVariant(
-  result: { glbUrl: string | null; walkingGlbUrl: string | null; runningGlbUrl: string | null },
+  result: {
+    glbUrl: string | null;
+    walkingGlbUrl: string | null;
+    runningGlbUrl: string | null;
+    texturedGlbUrl: string | null;
+  },
   mood: string | null,
   shotType: string | null,
-): { url: string; variant: 'rigged' | 'walking' | 'running' } {
+): { url: string; variant: 'rigged' | 'walking' | 'running' | 'textured' } {
   const m = (mood || '').toLowerCase();
   const isAction = /action|chase|tense|combat|fight/i.test(m)
     || /chase|run|fight/i.test(shotType || '');
   if (isAction && result.runningGlbUrl) {
     return { url: result.runningGlbUrl, variant: 'running' };
   }
+  // For non-action shots prefer the textured variant when we have it —
+  // Meshy's rigged + walking GLBs ship without materials (Blender glTF
+  // I/O strips them through the rig pipeline), so they render as flat
+  // grey. The textured variant is the same character with proper PBR
+  // textures but no skeleton — a fair trade for static / dialogue
+  // shots where animation isn't load-bearing.
+  if (!isAction && result.texturedGlbUrl) {
+    return { url: result.texturedGlbUrl, variant: 'textured' };
+  }
   // Walking is a good general-purpose default for non-action ambient
-  // scenes. Use it when a walking variant exists AND the scene mood
-  // isn't explicitly static-portrait-y.
+  // scenes when textured isn't available. Use it when a walking
+  // variant exists AND the scene mood isn't explicitly static-portrait.
   const isStatic = /portrait|posed|still|romantic|melancholy/i.test(m);
   if (!isStatic && result.walkingGlbUrl) {
     return { url: result.walkingGlbUrl, variant: 'walking' };
@@ -343,7 +357,12 @@ async function loadCast(): Promise<{ ok: number; fail: number }> {
         // first AnimationGroup so the cast actually moves. The rigged
         // variant has only a single-keyframe rest pose; playing it
         // is harmless but pointless.
-        autoplayFirstAnimation: picked.variant !== 'rigged',
+        // Walking + running ship with skinned animation; rigged + textured
+        // variants ship without (rigged has only a single-keyframe rest
+        // pose; textured has no skeleton at all). loadGlbAt guards the
+        // start() call on container.animationGroups.length>0 so a true
+        // here is harmless even when the GLB has nothing to play.
+        autoplayFirstAnimation: picked.variant === 'walking' || picked.variant === 'running',
         loop: true,
         // ENU origin sits on the WGS-84 ellipsoid surface, not actual
         // terrain — characters at y=0 float ~30 m above NYC streets.

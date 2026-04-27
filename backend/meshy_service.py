@@ -637,6 +637,91 @@ class MeshyService:
             **self._jobs.get(job_id, {}),
         }
 
+    async def submit_refine(
+        self,
+        preview_task_id: str,
+        *,
+        art_style: str = DEFAULT_ART_STYLE,
+        enable_pbr: bool = True,
+    ) -> Dict[str, Any]:
+        """Submit a Meshy text-to-3d *refine* job — generates the textured
+        PBR variant of a previously-completed preview mesh.
+
+        Why this exists: `submit_text_to_3d(mode="preview")` produces a
+        naked humanoid (geometry + skinning prep, NO materials/textures),
+        and `submit_rigging` doesn't add textures either. So the rigged
+        GLB Meshy gives back has `materials: 0, textures: 0, images: 0`
+        — Babylon's GLTFLoader assigns its `__GLTFLoader._default`
+        white-chrome material and the cast renders flat grey/white.
+        Refine takes the preview's task id and returns a separate task
+        whose `model_urls.glb` is the same geometry with PBR textures
+        baked in. We then have two GLBs per character:
+          • rigged.glb     — skinned skeleton + animations, no textures
+          • textured.glb   — full PBR appearance, no skeleton
+        The frontend uses the textured one for static shots and the
+        rigged one when animation matters more than appearance.
+
+        Costs ~5 credits per call (Meshy's standard refine pricing).
+        Latency similar to preview (~60–120s).
+        """
+        if not self.enabled:
+            return {"success": False, "error": "MESHY_API_KEY not configured"}
+
+        job_id = str(uuid.uuid4())
+        payload: Dict[str, Any] = {
+            "mode": "refine",
+            "preview_task_id": preview_task_id,
+            "enable_pbr": enable_pbr,
+        }
+        # art_style passed for parity with preview; Meshy ignores when not
+        # needed but accepts it harmlessly.
+        if art_style:
+            payload["art_style"] = art_style
+
+        self._jobs[job_id] = {
+            "status": "starting",
+            "task_id": None,
+            "kind": "refine",
+            "preview_task_id": preview_task_id,
+            "model_url": None,
+            "local_path": None,
+            "error": None,
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{MESHY_BASE_URL}/text-to-3d",
+                    headers=self._headers(),
+                    json=payload,
+                )
+        except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.NetworkError, httpx.RequestError) as exc:
+            err = f"Meshy refine network: {type(exc).__name__}"
+            self._jobs[job_id].update(status="failed", error=err)
+            return {"success": False, "error": err}
+
+        if response.status_code not in (200, 201, 202):
+            try:
+                body = response.json()
+                detail = body.get("message") or body.get("detail") or response.text
+            except Exception:
+                detail = response.text
+            err = f"Meshy refine {response.status_code}: {detail}"
+            self._jobs[job_id].update(status="failed", error=err)
+            print(f"[Meshy refine] {err}")
+            return {"success": False, "error": err}
+
+        data = response.json()
+        task_id = data.get("result") or data.get("id") or data.get("task_id")
+        if not task_id:
+            err = f"Meshy refine response missing task id: {data}"
+            self._jobs[job_id].update(status="failed", error=err)
+            return {"success": False, "error": err}
+
+        self._jobs[job_id].update(task_id=task_id, status="processing")
+        print(f"[Meshy refine] Job {job_id} → task {task_id} (preview {preview_task_id[:8]})")
+        return {"success": True, "job_id": job_id, "task_id": task_id}
+
     async def submit_rigging(
         self,
         preview_task_id: str,
@@ -803,6 +888,12 @@ class MeshyService:
             return {"success": False, "error": "Rigging job has no URLs yet"}
 
         targets = {"rigged": job["rigged_glb_url"]}
+        # The textured (refined) GLB lives on the same rigging job
+        # record after generate_character stuffs it there. It's the PBR
+        # appearance of the same character — used by the frontend for
+        # static shots where animation isn't needed.
+        if job.get("textured_glb_url"):
+            targets["textured"] = job["textured_glb_url"]
         if include_animations:
             if job.get("walking_glb_url"):
                 targets["walking"] = job["walking_glb_url"]
@@ -899,7 +990,42 @@ class MeshyService:
                 "preview_task_id": preview_task_id,
             }
 
-        # Step 2 — rigging. If Meshy returns the 300k-face-limit error
+        # Step 2 — refine. Generates the textured PBR variant of the
+        # preview mesh in a separate task. Without this we'd ship rigged
+        # GLBs with `materials: 0, textures: 0` (Meshy preview output is
+        # naked geometry; rigging preserves nothing). Failure is non-
+        # fatal — we still ship the rigged-without-textures path; just
+        # log and continue. Refine costs ~5 credits + ~60–120s.
+        textured_task_id: Optional[str] = None
+        textured_model_url: Optional[str] = None
+        refine_submit = await self.submit_refine(
+            preview_task_id, art_style=art_style,
+        )
+        if refine_submit.get("success"):
+            refine_job_id = refine_submit["job_id"]
+            refine_done = await self.wait_for_completion(
+                refine_job_id, timeout_sec=preview_timeout_sec,
+            )
+            refine_job = self._jobs.get(refine_job_id, {})
+            if refine_job.get("status") == "succeeded" and refine_job.get("model_url"):
+                textured_task_id = refine_job.get("task_id")
+                textured_model_url = refine_job["model_url"]
+                print(
+                    f"[Meshy char] refine OK → {textured_task_id[:8] if textured_task_id else '?'}  "
+                    f"({textured_model_url[:60]}…)"
+                )
+            else:
+                print(
+                    f"[Meshy char] refine failed for preview {preview_task_id[:8]}: "
+                    f"{refine_done.get('error') or 'no model_url'} — proceeding with untextured rig"
+                )
+        else:
+            print(
+                f"[Meshy char] refine submit failed: {refine_submit.get('error')} "
+                f"— proceeding with untextured rig"
+            )
+
+        # Step 3 — rigging. If Meshy returns the 300k-face-limit error
         # (preview ignores target_polycount and we have no way to predict
         # which prompts over-tessellate), fall through to remesh + retry.
         rigging_input_task_id = preview_task_id
@@ -955,7 +1081,14 @@ class MeshyService:
                 "rig_job_id": rig_job_id,
             }
 
-        # Step 3 — download
+        # Stuff the textured (refined) URL onto the rig-job record so
+        # download_character pulls it alongside the rigged + animated
+        # variants in a single pass.
+        if textured_model_url:
+            rig_job["textured_glb_url"] = textured_model_url
+            rig_job["textured_task_id"] = textured_task_id
+
+        # Step 4 — download
         dl = await self.download_character(rig_job_id, include_animations=include_animations)
         if not dl.get("success"):
             return {
@@ -971,6 +1104,7 @@ class MeshyService:
             "rig_job_id": rig_job_id,
             "local_paths": dl["local_paths"],
             "rigged_glb_url": rig_job["rigged_glb_url"],
+            "textured_glb_url": textured_model_url,
             "prompt": prompt,
         }
 

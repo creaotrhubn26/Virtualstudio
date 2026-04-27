@@ -108,6 +108,16 @@ export interface ResolvedCharacter {
   heightMeters: number;
   walkingGlbUrl: string | null;
   runningGlbUrl: string | null;
+  /**
+   * The PBR-textured (refined) variant of the character. Meshy's
+   * rigged output ships without textures — its meshes have zero
+   * materials and Babylon's GLTFLoader assigns a chrome-white default.
+   * The textured variant is the same character with the proper
+   * appearance but no skeleton, used by the frontend for static
+   * shots where appearance beats animation. Null on older cache
+   * entries that predate the refine pipeline.
+   */
+  texturedGlbUrl: string | null;
   error: string | null;
 }
 
