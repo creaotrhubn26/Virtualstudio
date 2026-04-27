@@ -46,6 +46,7 @@ import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader';
 import { AssetContainer } from '@babylonjs/core/assetContainer';
 import { Ray } from '@babylonjs/core/Culling/ray';
+import { HDRCubeTexture } from '@babylonjs/core/Materials/Textures/hdrCubeTexture';
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
 import type { Node } from '@babylonjs/core/node';
 import '@babylonjs/core/Animations/animatable';
@@ -179,6 +180,16 @@ export interface LocationSceneHandle {
   setCameraLockedTarget: (node: TransformNode | null) => void;
   /** Set camera radius (distance from target) in metres. */
   setCameraRadius: (radiusM: number) => void;
+  /**
+   * Load an HDRI from URL and assign it as `scene.environmentTexture`,
+   * driving IBL for every PBR material in the scene. Without this,
+   * PBR characters/props (Meshy outputs are PBR) read as flat grey —
+   * spotlights provide direct illumination but there's no ambient
+   * indirect lighting to fill shadows or tint the rim. Returns true
+   * when the texture was scheduled for load (it loads async; PBR
+   * materials pick it up once ready).
+   */
+  setEnvironmentHDRI: (url: string, intensity?: number) => boolean;
   /**
    * Swap the time-of-day baseline (sun direction, ambient fill,
    * exposure, fog). Re-runs the astronomical calc against the
@@ -744,6 +755,30 @@ export function mountLocationScene(
     },
     setCameraRadius(radiusM: number) {
       camera.radius = Math.max(camera.lowerRadiusLimit ?? 1, Math.min(camera.upperRadiusLimit ?? 50_000, radiusM));
+    },
+    setEnvironmentHDRI(url: string, intensity = 1.0): boolean {
+      // PBR materials on the loaded cast/props need an environmentTexture
+      // for IBL — without it Meshy's PBR outputs render as flat grey
+      // because there's no ambient indirect lighting. HDRCubeTexture
+      // loads async; PBR materials sample it once ready, so we can
+      // assign and forget. We dispose any previous env to avoid GPU
+      // leaks when the operator iterates the HDRI choice.
+      try {
+        const previous = scene.environmentTexture;
+        // 256 = balanced quality/speed for a sky env — high enough to
+        // not show banding on smooth metals, low enough to keep the
+        // mip chain cheap on mid-range GPUs.
+        const tex = new HDRCubeTexture(url, scene, 256);
+        scene.environmentTexture = tex;
+        scene.environmentIntensity = Math.max(0, intensity);
+        if (previous) {
+          try { previous.dispose(); } catch { /* noop */ }
+        }
+        return true;
+      } catch (err) {
+        console.warn(`[LocationScene] setEnvironmentHDRI failed for ${url}:`, err);
+        return false;
+      }
     },
     dispose() {
       window.removeEventListener('resize', onResize);

@@ -35,6 +35,7 @@ void GLTFFileLoader;
 import { mountLocationScene } from './scenes/LocationScene';
 import { resolveProps, resolveCast } from './services/propResolverClient';
 import type { SceneAssembly } from './services/sceneDirectorClient';
+import { resolveHDRI } from './data/hdriRegistry';
 
 const SESSION_KEY = 'vs:lastAssembly';
 const FALLBACK_DEFAULT_LAT = 40.7484;
@@ -135,6 +136,26 @@ const handle = mountLocationScene(canvas, {
   initialRadiusM,
 });
 (window as unknown as { directorScene?: typeof handle }).directorScene = handle;
+
+// HDRI environment — resolves the director's mood-keyed HDRI id
+// (daylight-soft, dawn-golden, dusk-magic, …) to a real .hdr file
+// and assigns it as scene.environmentTexture. Without this, PBR
+// materials on Meshy cast/props read as flat grey (no IBL fill).
+// Falls back to the shipped venice_sunset_2k when the requested
+// .hdr isn't on disk; see hdriRegistry.resolveHDRI.
+if (assembly?.lighting?.hdri) {
+  resolveHDRI(assembly.lighting.hdri)
+    .then((resolved) => {
+      handle.setEnvironmentHDRI(resolved.entry.url, resolved.entry.defaultIntensity);
+      console.log(
+        `[director-scene] HDRI → ${resolved.entry.label} (${resolved.entry.url})` +
+        (resolved.fellBack ? `  fell back: ${resolved.reason}` : ''),
+      );
+    })
+    .catch((err) => {
+      console.warn('[director-scene] HDRI resolve failed:', err);
+    });
+}
 
 // Apply the SAME LightingPlan the studio uses — director's key/fill/
 // rim/practical with their real IES profiles + CCT. Runs once at
