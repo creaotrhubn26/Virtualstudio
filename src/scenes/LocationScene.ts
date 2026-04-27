@@ -47,6 +47,7 @@ import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader';
 import { AssetContainer } from '@babylonjs/core/assetContainer';
 import { Ray } from '@babylonjs/core/Culling/ray';
 import { HDRCubeTexture } from '@babylonjs/core/Materials/Textures/hdrCubeTexture';
+import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial';
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
 import type { Node } from '@babylonjs/core/node';
 import '@babylonjs/core/Animations/animatable';
@@ -567,6 +568,24 @@ export function mountLocationScene(
       '.glb',
     );
     container.addAllToScene();
+
+    // Meshy's rigged-variant outputs sometimes ship without their PBR
+    // textures — Babylon's GLTFLoader then assigns its `__GLTFLoader.
+    // _default` material (metallic=1, roughness=1, albedoColor=white).
+    // Under PBR + a sky HDRI that produces a chrome-ball blowout, not
+    // the textured character we wanted. Repaint those defaults with a
+    // sensible grey PBR so the cast at least reads as properly shaded
+    // geometry instead of white silhouettes. Authored materials with
+    // real textures aren't touched. The right fix lives at the
+    // resolver tier (preserve textures through the rig pipeline);
+    // this is the on-the-wire mitigation.
+    for (const mat of container.materials) {
+      if (mat instanceof PBRMaterial && mat.name === '__GLTFLoader._default') {
+        mat.albedoColor.set(0.55, 0.55, 0.58);   // mid-grey, slight cool tint
+        mat.metallic = 0.05;                      // dielectric, not chrome
+        mat.roughness = 0.75;                     // cloth/skin-ish
+      }
+    }
 
     // Build a holder so we can position the whole asset uniformly
     // regardless of how the GLB authored its own root transforms.
