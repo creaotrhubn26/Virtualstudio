@@ -48,7 +48,7 @@ import { AssetContainer } from '@babylonjs/core/assetContainer';
 import '@babylonjs/core/Animations/animatable';
 import { iesForModifier } from '../data/modifierIESMap';
 import { applyIESToSpotLight, parseIES } from '../services/iesProfileService';
-import { sphericalToCartesian } from '../services/sceneDirectorClient';
+import { lightWorldPosition } from '../services/applySceneAssembly';
 import type { LightingPlan, LightSource } from '../services/sceneDirectorClient';
 import { buildLightingSpec, kelvinToColor3 } from './locationLighting';
 import type { TimeOfDay } from './locationLighting';
@@ -573,22 +573,8 @@ export function mountLocationScene(
     // the rig's audit log still reads top-to-bottom.
     const placed = await Promise.all(
       sources.map(async (source: LightSource, i: number) => {
-        // Position is director-relative (subject at origin facing +Z).
-        // In RH Babylon, +Z is "back" — but the director's azimuth=0 means
-        // "in front of subject", which we still want to map to +Z so a
-        // front-key light sits between subject and camera. The orientation
-        // matrix already mapped north → +Z, which means "back". To preserve
-        // director intent ("in front" = facing the camera), we negate Z.
-        const offset = sphericalToCartesian(
-          source.azimuthDeg,
-          source.elevationDeg,
-          source.distanceM,
-        );
-        const worldPos = {
-          x: subject.x + offset.x,
-          y: subject.y + offset.y,
-          z: subject.z - offset.z, // see comment above
-        };
+        // Right-handed convention (Cesium/3D-Tiles); see lightWorldPosition.
+        const worldPos = lightWorldPosition(source, subject, { handedness: 'RH' });
         const aimAt = new Vector3(subject.x, subject.y, subject.z);
         const position = new Vector3(worldPos.x, worldPos.y, worldPos.z);
         const dir = aimAt.subtract(position).normalize();

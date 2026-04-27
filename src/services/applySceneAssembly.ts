@@ -315,22 +315,76 @@ export interface ApplyResult {
 }
 
 /**
+ * Drive Babylon's imageProcessing.exposure from the ShotPlan's EV100
+ * triangle (aperture/shutter/iso). Returns the exposure outcome the
+ * orchestrator records on ApplyResult — null when the shot didn't
+ * carry shutter/iso, otherwise an audit object with the computed
+ * EV100, multiplier, and whether the studio actually accepted it.
+ *
+ * Centralises the multi-warning pattern (missing setter / setter
+ * threw / shot underspecified) that previously inflated the lights
+ * phase by ~25 lines.
+ */
+function setExposureFromShot(
+  shot: ShotPlan,
+  studio: VirtualStudioAPI,
+  warnings: string[],
+): ApplyResult['exposure'] {
+  const ev100 = shotEV100(shot);
+  if (ev100 == null) {
+    warnings.push(
+      'ShotPlan missing shutterSpeedSec/iso; exposure left at pipeline default',
+    );
+    return null;
+  }
+  const multiplier = exposureMultiplierFromShot(shot);
+  let applied = false;
+  if (studio.setImageProcessingExposure) {
+    try {
+      applied = studio.setImageProcessingExposure(multiplier);
+    } catch (err) {
+      warnings.push(
+        `setImageProcessingExposure threw: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+  } else {
+    warnings.push(
+      'studio.setImageProcessingExposure unavailable; exposure not applied',
+    );
+  }
+  return { ev100, multiplier, applied };
+}
+
+/**
  * Compute the world-space position for a LightSource given the subject
  * anchor. The light's azimuth/elevation/distance are director-relative.
+ *
+ * Handedness:
+ *   • LH (default) — Babylon's left-handed studio convention. azimuth=0
+ *     places the light at +Z (in front of subject as Babylon sees it).
+ *   • RH — right-handed Cesium/3D-Tiles convention used by LocationScene.
+ *     +Z in director-space ("in front of subject") maps to −Z in world,
+ *     so we negate the offset's Z. The orientation matrix already
+ *     mapped north → +Z, so this preserves "front-key sits between
+ *     subject and camera" intent across both scenes.
  */
 export function lightWorldPosition(
   source: LightSource,
   subject: Vector3Like,
+  opts: { handedness?: 'LH' | 'RH' } = {},
 ): Vector3Like {
   const offset = sphericalToCartesian(
     source.azimuthDeg,
     source.elevationDeg,
     source.distanceM,
   );
+  const zSign = opts.handedness === 'RH' ? -1 : 1;
   return {
     x: subject.x + offset.x,
     y: subject.y + offset.y,
-    z: subject.z + offset.z,
+    z: subject.z + zSign * offset.z,
   };
 }
 
@@ -581,31 +635,7 @@ export async function applySceneAssembly(
 
   // ---- exposure (from the director's ShotPlan triangle) ----------------
   if (!options.skipCamera) {
-    const ev100 = shotEV100(assembly.shot);
-    if (ev100 == null) {
-      warnings.push(
-        'ShotPlan missing shutterSpeedSec/iso; exposure left at pipeline default',
-      );
-    } else {
-      const multiplier = exposureMultiplierFromShot(assembly.shot);
-      let applied = false;
-      if (studio.setImageProcessingExposure) {
-        try {
-          applied = studio.setImageProcessingExposure(multiplier);
-        } catch (err) {
-          warnings.push(
-            `setImageProcessingExposure threw: ${
-              err instanceof Error ? err.message : String(err)
-            }`,
-          );
-        }
-      } else {
-        warnings.push(
-          'studio.setImageProcessingExposure unavailable; exposure not applied',
-        );
-      }
-      exposure = { ev100, multiplier, applied };
-    }
+    exposure = setExposureFromShot(assembly.shot, studio, warnings);
   }
 
   // ---- depth of field (PhysicsBasedDOF driven by the ShotPlan) ---------
@@ -803,11 +833,7 @@ export async function resolveAndDispatchProps(
       concurrency: 2,
     });
   } catch (err) {
-    warnings.push(
-      `resolveProps request failed: ${
-        err instanceof Error ? err.message : String(err)
-      }`,
-    );
+    pushBackendFailure('resolveProps', err, warnings);
     return {
       total: planProps.length,
       resolved: 0,
@@ -1025,11 +1051,7 @@ export async function resolveAndDispatchCast(
       concurrency: 1,
     });
   } catch (err) {
-    warnings.push(
-      `resolveCast request failed: ${
-        err instanceof Error ? err.message : String(err)
-      }`,
-    );
+    pushBackendFailure('resolveCast', err, warnings);
     return {
       total: inputs.length,
       resolved: 0,
@@ -1130,6 +1152,23 @@ export async function resolveAndDispatchCast(
     failed,
     items,
   };
+}
+
+/**
+ * Push the standard "backend unreachable" warning when a resolver
+ * call throws (network error, 5xx, etc.). Caller still constructs
+ * the result shape because the failed[] entry differs by domain
+ * (props use {description, error}, cast adds {name}); centralising
+ * just the message format prevents drift.
+ */
+function pushBackendFailure(
+  fnName: string,
+  err: unknown,
+  warnings: string[],
+): void {
+  warnings.push(
+    `${fnName} request failed: ${err instanceof Error ? err.message : String(err)}`,
+  );
 }
 
 /**
