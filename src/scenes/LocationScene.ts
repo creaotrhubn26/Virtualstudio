@@ -182,6 +182,20 @@ export interface LocationSceneHandle {
   /** Set camera radius (distance from target) in metres. */
   setCameraRadius: (radiusM: number) => void;
   /**
+   * Find the actual terrain Y at the lat/lon origin (raycast against
+   * the streamed tile geometry) and anchor the scene to it: shifts the
+   * assetsRoot so children placed at local y=0 land on the street, and
+   * retargets the camera at subject head height (groundY + 1.65 m) so
+   * the user sees the action instead of empty space below the WGS-84
+   * ellipsoid surface (which is where Vector3.Zero() sits — usually
+   * tens of metres below the actual ground in built-up locations).
+   *
+   * Returns null when no tile geometry is reachable yet — caller
+   * retries on a backoff. The director-scene entry awaits a successful
+   * anchor before applying lights and loading cast.
+   */
+  anchorToTerrain: () => { groundY: number } | null;
+  /**
    * Load an HDRI from URL and assign it as `scene.environmentTexture`,
    * driving IBL for every PBR material in the scene. Without this,
    * PBR characters/props (Meshy outputs are PBR) read as flat grey —
@@ -774,6 +788,29 @@ export function mountLocationScene(
     },
     setCameraRadius(radiusM: number) {
       camera.radius = Math.max(camera.lowerRadiusLimit ?? 1, Math.min(camera.upperRadiusLimit ?? 50_000, radiusM));
+    },
+    anchorToTerrain(): { groundY: number } | null {
+      // Raycast straight down from 200 m above origin. Filter to tile
+      // descendants so we never hit a previously-placed asset. First
+      // hit wins; in NYC the tile under origin is a rooftop (Empire
+      // State, Times Square has open plaza, etc.) — that's still the
+      // honest "ground" at this lat/lon for our purposes.
+      const start = new Vector3(0, 200, 0);
+      const ray = new Ray(start, new Vector3(0, -1, 0), 800);
+      const pick = scene.pickWithRay(ray, (mesh) => isUnderTilesHolder(mesh as AbstractMesh));
+      if (!pick?.hit || !pick.pickedPoint) return null;
+      const groundY = pick.pickedPoint.y;
+      // Shift the assets parent so anything spawned with local y=0
+      // (cast, props) lands on the street rather than the ellipsoid
+      // surface tens of metres below.
+      assetsRoot.position.y = groundY;
+      // Retarget the camera at subject head height. Without this the
+      // ArcRotateCamera orbits Vector3.Zero() — looking at empty space
+      // below the visible ground.
+      // 1.65 m = average actor eye height; matches the studio's
+      // SUBJECT_EYE_HEIGHT_M and the applyDirectorLighting default.
+      camera.target = new Vector3(0, groundY + 1.65, 0);
+      return { groundY };
     },
     setEnvironmentHDRI(url: string, intensity = 1.0): boolean {
       // PBR materials on the loaded cast/props need an environmentTexture

@@ -143,6 +143,9 @@ const handle = mountLocationScene(canvas, {
 // materials on Meshy cast/props read as flat grey (no IBL fill).
 // Falls back to the shipped venice_sunset_2k when the requested
 // .hdr isn't on disk; see hdriRegistry.resolveHDRI.
+//
+// Independent of terrain anchoring (HDRI is sky/env, not ground), so
+// fire-and-forget alongside the anchor wait below.
 if (assembly?.lighting?.hdri) {
   resolveHDRI(assembly.lighting.hdri)
     .then((resolved) => {
@@ -157,13 +160,64 @@ if (assembly?.lighting?.hdri) {
     });
 }
 
+// Camera movement attached early — radius was already set at mount via
+// initialRadiusM, this just wires the movement style (handheld jitter,
+// tracking lock-on, etc).
+if (directorMovement) {
+  handle.setCameraMovement(directorMovement);
+  console.log(
+    `[director-scene] camera movement → ${directorMovement}  radius=${initialRadiusM}m`,
+  );
+}
+
+/**
+ * Wait until the tile geometry under the lat/lon origin has streamed in,
+ * then anchor the scene to it: assetsRoot.position.y = groundY (so cast
+ * + props at local y=0 land on the street rather than tens of metres
+ * below the WGS-84 ellipsoid surface) and camera.target = (0, groundY +
+ * 1.65, 0) (so the camera frames the action, not empty subterranean
+ * space).
+ *
+ * Without this the camera ends up looking at a "random place" — namely
+ * Vector3.Zero(), which in NYC is ~30 m below the actual street because
+ * the ENU origin sits on the ellipsoid, not on the geoid+terrain.
+ *
+ * Retries with backoff because 3D Tiles streams in based on camera
+ * frustum: the chunk under origin can take 1–10 s to arrive on a cold
+ * start. Returns groundY=0 as a last-resort fallback after ~25 s of
+ * total wait so we don't block the rest of the bootstrap forever.
+ */
+async function anchorWhenReady(): Promise<{ groundY: number; anchored: boolean }> {
+  const delaysMs = [200, 500, 1000, 2000, 4000, 7000, 10000];
+  for (let i = 0; i < delaysMs.length; i++) {
+    await new Promise((r) => setTimeout(r, delaysMs[i]));
+    const result = handle.anchorToTerrain();
+    if (result) {
+      console.log(
+        `[director-scene] anchored to terrain at Y=${result.groundY.toFixed(2)} m ` +
+        `(attempt ${i + 1})`,
+      );
+      return { groundY: result.groundY, anchored: true };
+    }
+  }
+  console.warn('[director-scene] anchor failed after 25 s — using y=0 default');
+  return { groundY: 0, anchored: false };
+}
+const anchorPromise = anchorWhenReady();
+
 // Apply the SAME LightingPlan the studio uses — director's key/fill/
-// rim/practical with their real IES profiles + CCT. Runs once at
-// mount; the operator can re-run it from the JS console via
-// `directorScene.applyDirectorLighting(...)` when iterating.
+// rim/practical with their real IES profiles + CCT. Defer until the
+// anchor has resolved so lights aim at the actual subject head height
+// (groundY + 1.65) instead of empty space below the visible ground.
 if (assembly?.lighting?.sources?.length) {
-  handle
-    .applyDirectorLighting(assembly.lighting)
+  anchorPromise
+    .then(({ groundY }) =>
+      handle.applyDirectorLighting(assembly.lighting, {
+        x: 0,
+        y: groundY + 1.65,
+        z: 0,
+      }),
+    )
     .then((rig) => {
       const iesHits = rig.filter((p) => p.iesAttached).length;
       console.log(
@@ -173,22 +227,6 @@ if (assembly?.lighting?.sources?.length) {
     .catch((err) => {
       console.error('[director-scene] applyDirectorLighting failed', err);
     });
-}
-
-// Cinematic camera movement from the director's ShotPlan. Action
-// scenes pick "handheld" for chase energy, establishing shots pick
-// "dolly-in", dialogue scenes "static" or "pan". Tracking ALSO locks
-// the camera target onto the lead cast member so the camera follows
-// them through space — Babylon's ArcRotateCamera.lockedTarget
-// re-reads world position every frame.
-//
-// Radius was already set at mount via initialRadiusM above; here we
-// just attach the movement style.
-if (directorMovement) {
-  handle.setCameraMovement(directorMovement);
-  console.log(
-    `[director-scene] camera movement → ${directorMovement}  radius=${initialRadiusM}m`,
-  );
 }
 
 /**
@@ -389,6 +427,12 @@ async function loadProps(): Promise<{ ok: number; fail: number }> {
 
 (async () => {
   try {
+    // Wait for the scene to be anchored to the actual terrain before
+    // dispatching cast/props — otherwise their first frame renders at
+    // world y=0 (below the visible street) and the user sees them
+    // "appear from underground" once the anchor lands. Anchor itself
+    // has its own retry/timeout; we don't block forever.
+    await anchorPromise;
     // Run props + cast in parallel — both are I/O bound and the
     // resolver server-side caps its own concurrency, so it's safe.
     const [props, cast] = await Promise.all([loadProps(), loadCast()]);
