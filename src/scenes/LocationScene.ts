@@ -45,6 +45,9 @@ import { SpotLight } from '@babylonjs/core/Lights/spotLight';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader';
 import { AssetContainer } from '@babylonjs/core/assetContainer';
+import { Ray } from '@babylonjs/core/Culling/ray';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
+import type { Node } from '@babylonjs/core/node';
 import '@babylonjs/core/Animations/animatable';
 import { iesForModifier } from '../data/modifierIESMap';
 import { applyIESToSpotLight, parseIES } from '../services/iesProfileService';
@@ -157,6 +160,14 @@ export interface LocationSceneHandle {
        * autoplayFirstAnimation is true).
        */
       loop?: boolean;
+      /**
+       * After load, raycast straight down onto the tile geometry
+       * and snap the asset's Y to the hit point. Default false —
+       * pass true for cast/props that should sit on terrain (the
+       * ENU origin sits on the WGS-84 ellipsoid surface, often
+       * tens of metres off the actual ground).
+       */
+      dropToGround?: boolean;
     },
   ) => Promise<LoadedGlb>;
   /**
@@ -474,6 +485,45 @@ export function mountLocationScene(
   // whole crowd at once, etc.
   const assetsRoot = new TransformNode('locAssets', scene);
 
+  /**
+   * Snap a node's Y to the tile geometry directly underneath it.
+   *
+   * The ECEF→ENU origin sits on the WGS-84 ellipsoid surface — but real
+   * terrain rarely does. NYC's geoid is ~30 m below the ellipsoid so
+   * Manhattan tile geometry lands at roughly y = −30 m in our world,
+   * which means a character placed naively at y = 0 floats ~30 m above
+   * the street. Same problem affects every ENU-anchored location.
+   *
+   * The fix: cast a ray straight down from well above `node` and snap
+   * its Y to the first hit on the tile geometry. Picks are filtered to
+   * descendants of `holder` (the tiles' parent) so we never snap onto
+   * an asset placed earlier in the same scene.
+   *
+   * Returns true on a successful snap, false when no tile geometry was
+   * found below the node — typical when 3D Tiles streaming hasn't
+   * delivered the chunk under the subject yet. Callers retry with a
+   * delay; see loadGlbAt below.
+   */
+  function isUnderTilesHolder(mesh: AbstractMesh): boolean {
+    let p: Node | null = mesh;
+    for (let i = 0; i < 16 && p; i++) {
+      if (p === holder) return true;
+      p = p.parent;
+    }
+    return false;
+  }
+
+  function dropToGround(node: TransformNode, fromAboveM = 200, maxDownM = 800): boolean {
+    const here = node.getAbsolutePosition().clone();
+    here.y += fromAboveM;
+    const ray = new Ray(here, new Vector3(0, -1, 0), maxDownM);
+    const pick = scene.pickWithRay(ray, (mesh) => isUnderTilesHolder(mesh as AbstractMesh));
+    if (!pick?.hit || !pick.pickedPoint) return false;
+    const delta = pick.pickedPoint.y - node.getAbsolutePosition().y;
+    node.position.y += delta;
+    return true;
+  }
+
   async function loadGlbAt(
     url: string,
     options: {
@@ -484,6 +534,14 @@ export function mountLocationScene(
       name?: string;
       autoplayFirstAnimation?: boolean;
       loop?: boolean;
+      /**
+       * After load, raycast straight down onto the tile geometry and
+       * snap the asset's Y to the hit point. Default false — keep
+       * loadGlbAt primitive and let callers opt in. Director-driven
+       * cast and props pass true; location-test debugging passes
+       * the user-supplied Y verbatim by leaving this unset.
+       */
+      dropToGround?: boolean;
     } = {},
   ): Promise<LoadedGlb> {
     if (!url) throw new Error('loadGlbAt: empty url');
@@ -534,6 +592,19 @@ export function mountLocationScene(
         );
       }
     }
+    // Snap-to-terrain. Tiles stream in based on camera frustum, so the
+    // tile under (x,z) might not have arrived yet when this fires. Try
+    // immediately, then again twice with backoff — the second/third
+    // attempt almost always wins once tiles populate around the
+    // subject.
+    if (options.dropToGround === true) {
+      const tryDrop = (attempt: number) => {
+        if (dropToGround(root)) return;
+        if (attempt < 3) setTimeout(() => tryDrop(attempt + 1), 1500 * attempt);
+      };
+      tryDrop(1);
+    }
+
     return { container, root, url };
   }
 

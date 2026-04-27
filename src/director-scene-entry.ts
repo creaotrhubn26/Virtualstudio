@@ -286,6 +286,11 @@ async function loadCast(): Promise<{ ok: number; fail: number }> {
         // is harmless but pointless.
         autoplayFirstAnimation: picked.variant !== 'rigged',
         loop: true,
+        // ENU origin sits on the WGS-84 ellipsoid surface, not actual
+        // terrain — characters at y=0 float ~30 m above NYC streets.
+        // Snap onto the tile geometry once tiles around the subject
+        // have streamed in.
+        dropToGround: true,
       });
       ok += 1;
       console.log(
@@ -340,13 +345,16 @@ async function loadProps(): Promise<{ ok: number; fail: number }> {
     }
     const pos = fanPosition(i, response.results.length, 3);
     try {
-      // Props sit on the ground (y=0). Scale 1 because Meshy returns
-      // models that are roughly meter-scale.
+      // Props sit on the ground. Scale 1 because Meshy returns models
+      // that are roughly meter-scale. dropToGround snaps Y to the tile
+      // terrain after load (ENU origin is on the WGS-84 ellipsoid,
+      // not the actual street level).
       await handle.loadGlbAt(result.glbUrl, {
         x: pos.x,
         y: 0,
         z: pos.z,
         scale: 1,
+        dropToGround: true,
         name: `prop_${i}`,
       });
       ok += 1;
