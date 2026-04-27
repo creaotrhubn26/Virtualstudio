@@ -825,39 +825,18 @@ export async function resolveAndDispatchProps(
   let resolved = 0;
   let loaded = 0;
 
-  // Match results to inputs by description rather than by array index.
-  // The backend may dedupe identical descriptions, return on completion
-  // order, or drop entries that errored before queue admission — any of
-  // which would silently shuffle GLBs onto the wrong props if we trusted
-  // position alone. ResolvedProp.description echoes the input verbatim.
-  //
-  // Two regimes:
-  //   • All results carry a description → strict Map lookup. A missing
-  //     entry means the backend dropped that input — surface it as
-  //     failed, never fall through to index-match (which would
-  //     misalign and reintroduce the very bug this guards against).
-  //   • No result carries a description → older backend shape; index
-  //     matching is the only option, but warn per-item so the UX
-  //     knows the matching is fragile.
-  const allHaveDescription = batch.results.length > 0
-    && batch.results.every((r) => !!r.description);
-  const resultByDescription = new Map<string, ResolvedProp>();
-  if (allHaveDescription) {
-    for (const r of batch.results) resultByDescription.set(r.description, r);
-  }
+  // Pair results to inputs by description (with index fallback only
+  // when the whole batch lacks descriptions). See matchByDescription.
+  const matched = matchByDescription(
+    planProps.map((p) => p.description),
+    batch.results,
+    warnings,
+    'resolveProps',
+    (idx) => planProps[idx].description,
+  );
 
   planProps.forEach((planProp, idx) => {
-    let result: ResolvedProp | undefined;
-    if (allHaveDescription) {
-      result = resultByDescription.get(planProp.description);
-    } else {
-      result = batch.results[idx];
-      if (result) {
-        warnings.push(
-          `resolveProps: matched "${planProp.description}" by array index (backend echo missing)`,
-        );
-      }
-    }
+    const result = matched[idx];
     if (!result) {
       failed.push({
         description: planProp.description,
@@ -1069,27 +1048,16 @@ export async function resolveAndDispatchCast(
   let resolved = 0;
   let loaded = 0;
 
-  // Same two-regime defence as resolveAndDispatchProps. See comment
-  // there for the reasoning.
-  const allHaveDescription = batch.results.length > 0
-    && batch.results.every((r) => !!r.description);
-  const resultByDescription = new Map<string, ResolvedCharacter>();
-  if (allHaveDescription) {
-    for (const r of batch.results) resultByDescription.set(r.description, r);
-  }
+  const matched = matchByDescription(
+    inputs.map((c) => c.description),
+    batch.results,
+    warnings,
+    'resolveCast',
+    (idx) => inputs[idx].name,
+  );
 
   inputs.forEach((input, idx) => {
-    let result: ResolvedCharacter | undefined;
-    if (allHaveDescription) {
-      result = resultByDescription.get(input.description);
-    } else {
-      result = batch.results[idx];
-      if (result) {
-        warnings.push(
-          `resolveCast: matched "${input.name}" by array index (backend echo missing)`,
-        );
-      }
-    }
+    const result = matched[idx];
     if (!result) {
       failed.push({
         name: input.name,
@@ -1162,6 +1130,43 @@ export async function resolveAndDispatchCast(
     failed,
     items,
   };
+}
+
+/**
+ * Pair backend resolver results to their inputs by description, with
+ * a typed-fallback to index matching when the whole batch is missing
+ * descriptions (older backend shape). Used by both prop and cast
+ * dispatch paths so the matching logic — and the regime detection
+ * that prevents partial-echo from re-introducing index-misalignment —
+ * lives in one place.
+ *
+ * Returns an array parallel to `inputDescriptions`; entries are the
+ * matched result or undefined when nothing was found. Warnings get a
+ * "matched by array index" line per item when the fallback fires.
+ */
+function matchByDescription<T extends { description: string }>(
+  inputDescriptions: string[],
+  results: T[],
+  warnings: string[],
+  fnName: string,
+  itemLabel: (idx: number) => string,
+): Array<T | undefined> {
+  const allHaveDescription =
+    results.length > 0 && results.every((r) => !!r.description);
+  const byDescription = new Map<string, T>();
+  if (allHaveDescription) {
+    for (const r of results) byDescription.set(r.description, r);
+  }
+  return inputDescriptions.map((desc, idx) => {
+    if (allHaveDescription) return byDescription.get(desc);
+    const fallback = results[idx];
+    if (fallback) {
+      warnings.push(
+        `${fnName}: matched "${itemLabel(idx)}" by array index (backend echo missing)`,
+      );
+    }
+    return fallback;
+  });
 }
 
 /**
