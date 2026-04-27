@@ -421,304 +421,346 @@ export function cameraWorldTransform(
  *     call environmentService.applyPreset(assembly.environmentPlan.preset.id)
  *     and queue character GLB generation separately for v1.
  */
+
+// ---------------------------------------------------------------------------
+// Phase pipeline
+//
+// applySceneAssembly used to be a 300-line orchestrator with nine inlined
+// phases, each mixing skip-flag checks, capability-guards, soft-failure
+// warnings, and result-field writes. The phase split here is mechanical —
+// every phase body is exactly the code that lived in the inline section,
+// just hoisted under a typed function that takes a shared context.
+//
+// The shared ApplyContext threads `studio`, `subject`, `warnings`, and
+// the original options through. Phases mutate ctx.warnings in place and
+// return their slice of ApplyResult. Order is load-bearing: env preset
+// before HDRI (PBR materials read environmentTexture), HDRI before lights
+// (same reason), clear before place. The orchestrator documents each
+// dependency at the call site.
+// ---------------------------------------------------------------------------
+
+interface ApplyContext {
+  assembly: SceneAssembly;
+  options: ApplyOptions;
+  /** Non-null — orchestrator early-returns when window.virtualStudio is missing. */
+  studio: VirtualStudioAPI;
+  /** World-space subject anchor; defaults to (0, eye-height, 0). */
+  subject: Vector3Like;
+  /** Mutated by every phase. Aggregated into ApplyResult.warnings. */
+  warnings: string[];
+}
+
+function computeSubject(options: ApplyOptions): Vector3Like {
+  return options.subject ?? { x: 0, y: SUBJECT_EYE_HEIGHT_M, z: 0 };
+}
+
+function applyEnvironmentPhase(
+  ctx: ApplyContext,
+): { presetApplied: string | null; atmosphereApplied: boolean } {
+  if (ctx.options.skipEnvironment) {
+    return { presetApplied: null, atmosphereApplied: false };
+  }
+  return applyEnvironment(ctx.assembly, ctx.warnings);
+}
+
+async function applyHDRIPhase(ctx: ApplyContext): Promise<ApplyResult['hdri']> {
+  if (ctx.options.skipEnvironment) return null;
+  const requestedId = ctx.assembly.lighting?.hdri ?? null;
+  if (!requestedId) return null;
+  const resolved = await resolveHDRI(requestedId);
+  let applied = false;
+  if (ctx.studio.setEnvironmentHDRI) {
+    try {
+      applied = ctx.studio.setEnvironmentHDRI(
+        resolved.entry.url,
+        resolved.entry.defaultIntensity,
+      );
+    } catch (err) {
+      ctx.warnings.push(
+        `setEnvironmentHDRI threw: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+  } else {
+    ctx.warnings.push(
+      'studio.setEnvironmentHDRI unavailable; HDRI not applied',
+    );
+  }
+  if (resolved.fellBack && resolved.reason) {
+    ctx.warnings.push(`HDRI fallback: ${resolved.reason}`);
+  }
+  return {
+    requestedId,
+    resolvedUrl: resolved.entry.url,
+    label: resolved.entry.label,
+    cctKelvin: resolved.entry.cctKelvin,
+    applied,
+    fellBack: resolved.fellBack,
+    fallbackReason: resolved.reason,
+  };
+}
+
+function clearExistingLightsPhase(ctx: ApplyContext): void {
+  const shouldClear = ctx.options.clearExistingLights ?? true;
+  if (!shouldClear || ctx.options.skipLights || !ctx.studio.clearAllLights) return;
+  try {
+    ctx.studio.clearAllLights();
+  } catch (err) {
+    ctx.warnings.push(
+      `clearAllLights threw: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+}
+
+async function placeLightsPhase(ctx: ApplyContext): Promise<PlacedLight[]> {
+  const placedLights: PlacedLight[] = [];
+  if (ctx.options.skipLights) return placedLights;
+  if (!ctx.studio.addLight) {
+    ctx.warnings.push('studio.addLight is not available; lights not placed');
+    return placedLights;
+  }
+  for (const source of ctx.assembly.lighting.sources) {
+    const fixture = MODIFIER_TO_FIXTURE[source.modifier] ?? DEFAULT_FIXTURE;
+    const worldPos = lightWorldPosition(source, ctx.subject);
+    const babylonPos = makeVector3(worldPos.x, worldPos.y, worldPos.z);
+    try {
+      const lightId = await ctx.studio.addLight(fixture, babylonPos);
+      const iesMatch = iesForModifier(source.modifier);
+      let iesOut: PlacedLight['ies'] = null;
+      if (iesMatch) {
+        // Initialise the record before the await so even a thrown error
+        // below leaves an audit trail of what we attempted.
+        iesOut = {
+          modifier: source.modifier,
+          iesUrl: iesMatch.url,
+          label: iesMatch.label,
+          profile: null,
+          applied: false,
+        };
+        if (ctx.studio.applyIESToLightById) {
+          try {
+            const profile = await ctx.studio.applyIESToLightById(
+              lightId,
+              iesMatch.url,
+              iesMatch.preserveBeamAngle,
+            );
+            iesOut = {
+              ...iesOut,
+              profile,
+              applied: profile != null,
+            };
+            if (profile == null) {
+              ctx.warnings.push(
+                `IES not attached to ${source.role} (${source.modifier}): ` +
+                  `fetch/parse failed at ${iesMatch.url}`,
+              );
+            }
+          } catch (err) {
+            ctx.warnings.push(
+              `applyIESToLightById threw for ${source.role}: ${
+                err instanceof Error ? err.message : String(err)
+              }`,
+            );
+          }
+        } else {
+          ctx.warnings.push(
+            'studio.applyIESToLightById unavailable; IES profiles not attached',
+          );
+        }
+      }
+      placedLights.push({ source, lightId, position: worldPos, ies: iesOut });
+      // Honor the director's intensity decision (key=1.0, fill=0.35, rim=0.6,
+      // practicals ~0.3). addLight() sets the fixture's physical base
+      // intensity; multiplying here preserves photometric ratios across
+      // the rig (the *relative* key:fill ratio is what reads as mood).
+      const sceneLights = ctx.studio.scene?.lights;
+      // Take the LAST matching light (not the first) so two sources
+      // sharing a modifier — and therefore a fixture name — don't
+      // compound: addLight appends, and we want the just-appended one,
+      // not a previously-multiplied namesake left over from earlier
+      // in this rig or from a prior apply when clearExistingLights
+      // was disabled. (filter+last instead of findLast since the lib
+      // target is ES2020.)
+      const matches = sceneLights?.filter(
+        (l) => l.id === lightId || l.name === lightId,
+      );
+      const placed = matches?.[matches.length - 1];
+      if (
+        placed &&
+        typeof placed.intensity === 'number' &&
+        Number.isFinite(source.intensity)
+      ) {
+        placed.intensity = placed.intensity * source.intensity;
+      }
+      // Color temp: override with director's CCT so rim/hair lights get
+      // their distinct-from-key color the director intended. Use the
+      // shared Helland helper directly — no studio reach-through, no
+      // swallowed catch (the function is pure math, can't throw).
+      if (placed && Number.isFinite(source.colorTempKelvin)) {
+        placed.diffuse = kelvinToColor3(source.colorTempKelvin);
+      }
+      ctx.options.onLightPlaced?.(source, lightId);
+    } catch (err) {
+      ctx.warnings.push(
+        `Failed to place ${source.role} light (${source.modifier}): ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+  }
+  return placedLights;
+}
+
+function applyCameraPhase(ctx: ApplyContext): ApplyResult['camera'] {
+  if (ctx.options.skipCamera) return null;
+  if (!ctx.studio.setCameraPosition || !ctx.studio.setCameraTarget) {
+    ctx.warnings.push('studio.setCamera* not available; camera not applied');
+    return null;
+  }
+  const { position, target } = cameraWorldTransform(ctx.assembly.shot, ctx.subject);
+  const fovRad = focalLengthToFovRadians(
+    ctx.assembly.shot.focalLengthMm,
+    ctx.assembly.shot.sensor,
+  );
+  ctx.studio.setCameraPosition(makeVector3(position.x, position.y, position.z));
+  ctx.studio.setCameraTarget(makeVector3(target.x, target.y, target.z));
+  if (ctx.studio.setCameraFov) ctx.studio.setCameraFov(fovRad);
+  return { position, target, fovRad };
+}
+
+function applyExposurePhase(ctx: ApplyContext): ApplyResult['exposure'] {
+  if (ctx.options.skipCamera) return null;
+  return setExposureFromShot(ctx.assembly.shot, ctx.studio, ctx.warnings);
+}
+
+function applyDOFPhase(ctx: ApplyContext): ApplyResult['dof'] {
+  if (ctx.options.skipCamera) return null;
+  const shot = ctx.assembly.shot;
+  if (!ctx.studio.applyShotDepthOfField) {
+    ctx.warnings.push('studio.applyShotDepthOfField unavailable; DOF not driven');
+    return null;
+  }
+  try {
+    const out = ctx.studio.applyShotDepthOfField({
+      apertureF: shot.apertureF,
+      focalLengthMm: shot.focalLengthMm,
+      sensor: shot.sensor,
+      focusDistanceM: shot.cameraDistanceM,
+      depthHint: shot.depthOfField,
+    });
+    if (!out) {
+      ctx.warnings.push('applyShotDepthOfField returned null (PhysicsBasedDOF not initialised)');
+      return null;
+    }
+    return {
+      applied: true,
+      enabled: out.enabled,
+      fStop: out.fStop,
+      focalLengthMm: out.focalLength,
+      focusDistanceM: out.focusDistanceM,
+      sensorWidthMm: out.sensorWidthMm,
+      depthHint: shot.depthOfField,
+    };
+  } catch (err) {
+    ctx.warnings.push(
+      `applyShotDepthOfField threw: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+    return null;
+  }
+}
+
+async function resolvePropsPhase(ctx: ApplyContext): Promise<ApplyResult['props']> {
+  if (ctx.options.skipProps) return null;
+  // Callback fires whenever the phase ran — even on zero props — so a UI
+  // spinner triggered before applySceneAssembly() always gets a finish
+  // signal. Null is reserved for "skipped".
+  const planProps = extractPlanProps(ctx.assembly);
+  const result = planProps.length > 0
+    ? await resolveAndDispatchProps(
+        planProps,
+        ctx.subject,
+        ctx.options.propMeshyTimeoutSec,
+        ctx.warnings,
+      )
+    : { total: 0, resolved: 0, loaded: 0, failed: [], items: [] };
+  ctx.options.onPropsResolved?.(result);
+  return result;
+}
+
+async function resolveCastPhase(ctx: ApplyContext): Promise<ApplyResult['cast']> {
+  if (ctx.options.skipCast) return null;
+  // Same callback contract as props.
+  const inputs = extractCastInputs(ctx.assembly);
+  const result = inputs.length > 0
+    ? await resolveAndDispatchCast(
+        inputs,
+        ctx.subject,
+        ctx.options.castHeightMeters ?? 1.78,
+        ctx.warnings,
+      )
+    : { total: 0, resolved: 0, loaded: 0, failed: [], items: [] };
+  ctx.options.onCastResolved?.(result);
+  return result;
+}
+
 export async function applySceneAssembly(
   assembly: SceneAssembly,
   options: ApplyOptions = {},
 ): Promise<ApplyResult> {
-  const studio = getStudio();
   const warnings: string[] = [];
-  const placedLights: ApplyResult['placedLights'] = [];
-  let cameraOut: ApplyResult['camera'] = null;
-  let environmentPresetApplied: string | null = null;
-  let atmosphereApplied = false;
-  let exposure: ApplyResult['exposure'] = null;
-  let hdri: ApplyResult['hdri'] = null;
-  let dof: ApplyResult['dof'] = null;
-  let props: ApplyResult['props'] = null;
-  let cast: ApplyResult['cast'] = null;
-
+  const studio = getStudio();
   if (!studio) {
     warnings.push('window.virtualStudio is not available; nothing applied');
     return {
-      placedLights,
-      camera: cameraOut,
-      environmentPresetApplied,
-      atmosphereApplied,
-      exposure,
-      hdri,
-      dof,
-      props,
-      cast,
+      placedLights: [],
+      camera: null,
+      environmentPresetApplied: null,
+      atmosphereApplied: false,
+      exposure: null,
+      hdri: null,
+      dof: null,
+      props: null,
+      cast: null,
       warnings,
     };
   }
 
-  const subject = options.subject ?? {
-    x: 0,
-    y: SUBJECT_EYE_HEIGHT_M,
-    z: 0,
+  const ctx: ApplyContext = {
+    assembly,
+    options,
+    studio,
+    subject: computeSubject(options),
+    warnings,
   };
 
-  // ---- environment preset + atmosphere ---------------------------------
-  // Apply FIRST so walls/floor are in place before director lights land.
-  if (!options.skipEnvironment) {
-    const envResult = applyEnvironment(assembly, warnings);
-    environmentPresetApplied = envResult.presetApplied;
-    atmosphereApplied = envResult.atmosphereApplied;
-  }
-
-  // ---- HDRI environment (drives PBR ambient) --------------------------
-  // Runs BEFORE lights so PBR materials see the correct environmentTexture
-  // when the new fixtures land. Missing .hdr files degrade to the shipped
-  // default instead of hanging the Babylon texture loader.
-  if (!options.skipEnvironment) {
-    const requestedId = assembly.lighting?.hdri ?? null;
-    if (requestedId) {
-      const resolved = await resolveHDRI(requestedId);
-      let applied = false;
-      if (studio.setEnvironmentHDRI) {
-        try {
-          applied = studio.setEnvironmentHDRI(
-            resolved.entry.url,
-            resolved.entry.defaultIntensity,
-          );
-        } catch (err) {
-          warnings.push(
-            `setEnvironmentHDRI threw: ${
-              err instanceof Error ? err.message : String(err)
-            }`,
-          );
-        }
-      } else {
-        warnings.push(
-          'studio.setEnvironmentHDRI unavailable; HDRI not applied',
-        );
-      }
-      if (resolved.fellBack && resolved.reason) {
-        warnings.push(`HDRI fallback: ${resolved.reason}`);
-      }
-      hdri = {
-        requestedId,
-        resolvedUrl: resolved.entry.url,
-        label: resolved.entry.label,
-        cctKelvin: resolved.entry.cctKelvin,
-        applied,
-        fellBack: resolved.fellBack,
-        fallbackReason: resolved.reason,
-      };
-    }
-  }
-
-  // ---- clear existing fixtures so director owns the rig ----------------
-  const shouldClear = options.clearExistingLights ?? true;
-  if (shouldClear && !options.skipLights && studio.clearAllLights) {
-    try {
-      studio.clearAllLights();
-    } catch (err) {
-      warnings.push(
-        `clearAllLights threw: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
-  }
-
-  // ---- lights -----------------------------------------------------------
-  if (!options.skipLights && studio.addLight) {
-    for (const source of assembly.lighting.sources) {
-      const fixture = MODIFIER_TO_FIXTURE[source.modifier] ?? DEFAULT_FIXTURE;
-      const worldPos = lightWorldPosition(source, subject);
-      const babylonPos = makeVector3(worldPos.x, worldPos.y, worldPos.z);
-      try {
-        const lightId = await studio.addLight(fixture, babylonPos);
-        const iesMatch = iesForModifier(source.modifier);
-        let iesOut: PlacedLight['ies'] = null;
-        if (iesMatch) {
-          // Initialise the record before the await so even a thrown error
-          // below leaves an audit trail of what we attempted.
-          iesOut = {
-            modifier: source.modifier,
-            iesUrl: iesMatch.url,
-            label: iesMatch.label,
-            profile: null,
-            applied: false,
-          };
-          if (studio.applyIESToLightById) {
-            try {
-              const profile = await studio.applyIESToLightById(
-                lightId,
-                iesMatch.url,
-                iesMatch.preserveBeamAngle,
-              );
-              iesOut = {
-                ...iesOut,
-                profile,
-                applied: profile != null,
-              };
-              if (profile == null) {
-                warnings.push(
-                  `IES not attached to ${source.role} (${source.modifier}): ` +
-                    `fetch/parse failed at ${iesMatch.url}`,
-                );
-              }
-            } catch (err) {
-              warnings.push(
-                `applyIESToLightById threw for ${source.role}: ${
-                  err instanceof Error ? err.message : String(err)
-                }`,
-              );
-            }
-          } else {
-            warnings.push(
-              'studio.applyIESToLightById unavailable; IES profiles not attached',
-            );
-          }
-        }
-        placedLights.push({ source, lightId, position: worldPos, ies: iesOut });
-        // Honor the director's intensity decision (key=1.0, fill=0.35, rim=0.6,
-        // practicals ~0.3). addLight() sets the fixture's physical base
-        // intensity; multiplying here preserves photometric ratios across
-        // the rig (the *relative* key:fill ratio is what reads as mood).
-        const sceneLights = studio.scene?.lights;
-        // Take the LAST matching light (not the first) so two sources
-        // sharing a modifier — and therefore a fixture name — don't
-        // compound: addLight appends, and we want the just-appended one,
-        // not a previously-multiplied namesake left over from earlier
-        // in this rig or from a prior apply when clearExistingLights
-        // was disabled. (filter+last instead of findLast since the lib
-        // target is ES2020.)
-        const matches = sceneLights?.filter(
-          (l) => l.id === lightId || l.name === lightId,
-        );
-        const placed = matches?.[matches.length - 1];
-        if (
-          placed &&
-          typeof placed.intensity === 'number' &&
-          Number.isFinite(source.intensity)
-        ) {
-          placed.intensity = placed.intensity * source.intensity;
-        }
-        // Color temp: override with director's CCT so rim/hair lights get
-        // their distinct-from-key color the director intended. Use the
-        // shared Helland helper directly — no studio reach-through, no
-        // swallowed catch (the function is pure math, can't throw).
-        if (placed && Number.isFinite(source.colorTempKelvin)) {
-          placed.diffuse = kelvinToColor3(source.colorTempKelvin);
-        }
-        options.onLightPlaced?.(source, lightId);
-      } catch (err) {
-        warnings.push(
-          `Failed to place ${source.role} light (${source.modifier}): ${
-            err instanceof Error ? err.message : String(err)
-          }`,
-        );
-      }
-    }
-  } else if (!options.skipLights) {
-    warnings.push('studio.addLight is not available; lights not placed');
-  }
-
-  // ---- camera -----------------------------------------------------------
-  if (!options.skipCamera && studio.setCameraPosition && studio.setCameraTarget) {
-    const { position, target } = cameraWorldTransform(assembly.shot, subject);
-    const fovRad = focalLengthToFovRadians(
-      assembly.shot.focalLengthMm,
-      assembly.shot.sensor,
-    );
-    studio.setCameraPosition(
-      makeVector3(position.x, position.y, position.z),
-    );
-    studio.setCameraTarget(makeVector3(target.x, target.y, target.z));
-    if (studio.setCameraFov) studio.setCameraFov(fovRad);
-    cameraOut = { position, target, fovRad };
-  } else if (!options.skipCamera) {
-    warnings.push('studio.setCamera* not available; camera not applied');
-  }
-
-  // ---- exposure (from the director's ShotPlan triangle) ----------------
-  if (!options.skipCamera) {
-    exposure = setExposureFromShot(assembly.shot, studio, warnings);
-  }
-
-  // ---- depth of field (PhysicsBasedDOF driven by the ShotPlan) ---------
-  // Focus distance = the camera→subject distance (the ShotPlan's own
-  // cameraDistanceM — subject is at camera target). Enabled iff the
-  // director didn't ask for 'deep' pan-focus.
-  if (!options.skipCamera) {
-    const shot = assembly.shot;
-    if (studio.applyShotDepthOfField) {
-      try {
-        const out = studio.applyShotDepthOfField({
-          apertureF: shot.apertureF,
-          focalLengthMm: shot.focalLengthMm,
-          sensor: shot.sensor,
-          focusDistanceM: shot.cameraDistanceM,
-          depthHint: shot.depthOfField,
-        });
-        if (out) {
-          dof = {
-            applied: true,
-            enabled: out.enabled,
-            fStop: out.fStop,
-            focalLengthMm: out.focalLength,
-            focusDistanceM: out.focusDistanceM,
-            sensorWidthMm: out.sensorWidthMm,
-            depthHint: shot.depthOfField,
-          };
-        } else {
-          warnings.push('applyShotDepthOfField returned null (PhysicsBasedDOF not initialised)');
-        }
-      } catch (err) {
-        warnings.push(
-          `applyShotDepthOfField threw: ${
-            err instanceof Error ? err.message : String(err)
-          }`,
-        );
-      }
-    } else {
-      warnings.push('studio.applyShotDepthOfField unavailable; DOF not driven');
-    }
-  }
-
-  // ---- props (Claude-authored → BlenderKit/Meshy/Tripo → Babylon) ------
-  // The callback fires whenever the phase ran — even on zero props — so
-  // a UI spinner triggered before applySceneAssembly() will always get
-  // a finish signal. Null is reserved for "skipped".
-  if (!options.skipProps) {
-    const planProps = extractPlanProps(assembly);
-    props = planProps.length > 0
-      ? await resolveAndDispatchProps(
-          planProps,
-          subject,
-          options.propMeshyTimeoutSec,
-          warnings,
-        )
-      : { total: 0, resolved: 0, loaded: 0, failed: [], items: [] };
-    options.onPropsResolved?.(props);
-  }
-
-  // ---- cast (Claude-authored → Meshy rigged humanoid → Babylon) -------
-  // Characters are expensive (~3 min + ~$0.05 each on cache miss), so:
-  //   • Only characters with `needsGeneration=true` OR missing avatarRef
-  //     are sent to the resolver — ones the director already matched to
-  //     an existing avatar are skipped.
-  //   • Same fingerprint cache as props — repeated prompts are free.
-  if (!options.skipCast) {
-    const castInputs = extractCastInputs(assembly);
-    cast = castInputs.length > 0
-      ? await resolveAndDispatchCast(
-          castInputs,
-          subject,
-          options.castHeightMeters ?? 1.78,
-          warnings,
-        )
-      : { total: 0, resolved: 0, loaded: 0, failed: [], items: [] };
-    options.onCastResolved?.(cast);
-  }
+  // Order is load-bearing across phases:
+  //   • environment preset before HDRI: PBR materials read environmentTexture
+  //     after walls/floor are in place
+  //   • HDRI before lights: same — fixtures inherit the env map
+  //   • clear before place: scenario-preset lights with unscaled intensities
+  //     would otherwise dominate the physically-lit director rig
+  //   • camera before exposure / DOF: exposure + DOF are derived from the
+  //     ShotPlan, but only meaningful once the camera is positioned
+  //   • props + cast last: GLB dispatch is fire-and-forget into a
+  //     scene that's already lit and framed
+  const env       = applyEnvironmentPhase(ctx);
+  const hdri      = await applyHDRIPhase(ctx);
+  clearExistingLightsPhase(ctx);
+  const placedLights = await placeLightsPhase(ctx);
+  const camera    = applyCameraPhase(ctx);
+  const exposure  = applyExposurePhase(ctx);
+  const dof       = applyDOFPhase(ctx);
+  const props     = await resolvePropsPhase(ctx);
+  const cast      = await resolveCastPhase(ctx);
 
   return {
     placedLights,
-    camera: cameraOut,
-    environmentPresetApplied,
-    atmosphereApplied,
+    camera,
+    environmentPresetApplied: env.presetApplied,
+    atmosphereApplied: env.atmosphereApplied,
     exposure,
     hdri,
     dof,
