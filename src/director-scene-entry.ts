@@ -98,6 +98,33 @@ const timeOfDay = (() => {
   return 'DAY' as const;
 })();
 
+// Compute the camera radius the ShotPlan implies BEFORE mounting so
+// the camera starts framed for the scene — otherwise it pops in from
+// 600 m (the helicopter default) once cast loads, several seconds in.
+//
+// Camera height/distance are movement-aware:
+//   • handheld     → 4 m radius (operator running with the action)
+//   • tracking     → 6 m radius (Steadicam following at distance)
+//   • static / pan → director's cameraDistanceM (typically 2-3 m)
+//   • dolly-* / tilt → 8 m radius (mid-range)
+//   • establishing → keep the helicopter altitude
+function radiusForMovement(movement: string | undefined, directorDist: number): number {
+  switch (movement) {
+    case 'handheld': return directorDist > 0 ? Math.max(directorDist, 3) : 4;
+    case 'tracking': return 6;
+    case 'dolly-in':
+    case 'dolly-out':
+    case 'tilt': return 8;
+    case 'pan': return 12;
+    case 'static': return directorDist > 0 ? Math.max(directorDist, 3) : 5;
+    default: return 600; // establishing / unknown — keep helicopter altitude
+  }
+}
+
+const directorMovement = assembly?.shot?.movement;
+const directorCameraDist = assembly?.shot?.cameraDistanceM ?? 0;
+const initialRadiusM = radiusForMovement(directorMovement, directorCameraDist);
+
 setStatus(`Mounting tiles for ${label} (${timeOfDay})…`);
 
 const handle = mountLocationScene(canvas, {
@@ -105,6 +132,7 @@ const handle = mountLocationScene(canvas, {
   lon,
   errorTarget: 16,
   timeOfDay,
+  initialRadiusM,
 });
 (window as unknown as { directorScene?: typeof handle }).directorScene = handle;
 
@@ -128,42 +156,17 @@ if (assembly?.lighting?.sources?.length) {
 
 // Cinematic camera movement from the director's ShotPlan. Action
 // scenes pick "handheld" for chase energy, establishing shots pick
-// "dolly-in", dialogue scenes "static" or "pan".
+// "dolly-in", dialogue scenes "static" or "pan". Tracking ALSO locks
+// the camera target onto the lead cast member so the camera follows
+// them through space — Babylon's ArcRotateCamera.lockedTarget
+// re-reads world position every frame.
 //
-// Camera height/distance are also movement-aware: a handheld chase
-// at 600m altitude looks like a satellite. Match the human eye to
-// the kind of operator the director called for:
-//   • handheld     → 4m radius (operator running with the action)
-//   • tracking     → 6m radius (Steadicam following at distance)
-//   • static / pan → director's cameraDistanceM (typically 2-3m)
-//   • dolly-* / tilt → 8m radius (mid-range)
-//   • establishing → keep the helicopter altitude
-//
-// Tracking ALSO locks the camera target onto the lead cast member
-// so the camera follows them through space — Babylon's
-// ArcRotateCamera.lockedTarget re-reads world position every frame.
-const movement = assembly?.shot?.movement;
-if (movement) {
-  handle.setCameraMovement(movement);
-  // Pick a sensible radius after movement is set so handheld jitter
-  // operates at the right scale.
-  const directorDist = assembly?.shot?.cameraDistanceM ?? 0;
-  const radiusByMovement: Record<string, number> = {
-    handheld: directorDist > 0 ? Math.max(directorDist, 3) : 4,
-    tracking: 6,
-    'dolly-in': 8,
-    'dolly-out': 8,
-    tilt: 8,
-    pan: 12,
-    static: directorDist > 0 ? Math.max(directorDist, 3) : 5,
-  };
-  const targetRadius = radiusByMovement[movement];
-  if (targetRadius) {
-    handle.setCameraRadius(targetRadius);
-  }
+// Radius was already set at mount via initialRadiusM above; here we
+// just attach the movement style.
+if (directorMovement) {
+  handle.setCameraMovement(directorMovement);
   console.log(
-    `[director-scene] camera movement → ${movement}` +
-    (targetRadius ? `  radius=${targetRadius}m` : ''),
+    `[director-scene] camera movement → ${directorMovement}  radius=${initialRadiusM}m`,
   );
 }
 
@@ -360,7 +363,7 @@ async function loadProps(): Promise<{ ok: number; fail: number }> {
     // Run props + cast in parallel — both are I/O bound and the
     // resolver server-side caps its own concurrency, so it's safe.
     const [props, cast] = await Promise.all([loadProps(), loadCast()]);
-    if (movement === 'tracking' && leadCastNode) {
+    if (directorMovement === 'tracking' && leadCastNode) {
       handle.setCameraLockedTarget(leadCastNode);
       console.log('[director-scene] camera locked to lead cast member');
     }

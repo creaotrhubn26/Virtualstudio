@@ -317,7 +317,13 @@ export function mountLocationScene(
   camera.minZ = 1;
   camera.maxZ = 50_000;
   camera.wheelDeltaPercentage = 0.02;
-  camera.lowerRadiusLimit = 50;
+  // Allow the camera to come right up to the subject (humans are
+  // ~1.78 m tall; an action-scene close-up wants 2–4 m radius).
+  // The previous 50 m floor was sized for city-scale establishing
+  // shots and silently clamped every director-driven shot to a
+  // helicopter view of the cast, no matter what cameraDistanceM
+  // the ShotPlan asked for.
+  camera.lowerRadiusLimit = 1;
   camera.upperRadiusLimit = 20_000;
 
   // ---- lighting ------------------------------------------------------
