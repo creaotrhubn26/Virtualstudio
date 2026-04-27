@@ -152,6 +152,12 @@ export default defineConfig({
       '3d-tiles-renderer',
       '3d-tiles-renderer/babylonjs',
       '3d-tiles-renderer/core/plugins',
+      // Used by LocationScene's dropToGround raycast, HDRI env map,
+      // and Meshy default-material repaint. Pre-bundle to avoid
+      // mid-mount reloads when these are first hit.
+      '@babylonjs/core/Culling/ray',
+      '@babylonjs/core/Materials/Textures/hdrCubeTexture',
+      '@babylonjs/core/Materials/PBR/pbrMaterial',
       'suncalc',
       '@emotion/react',
       '@emotion/styled',
