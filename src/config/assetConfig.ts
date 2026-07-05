@@ -56,15 +56,55 @@ export function getAssetBaseUrl(): string {
 }
 
 /**
+ * Generic avatar GLBs that the asset manifest references but that were never
+ * shipped in public/models/avatars/. Loading them 404s and leaves a placeholder
+ * capsule in the scene, so redirect each to a rigged base avatar that exists.
+ * Michelle.glb / mixamo-character.glb are the female/male base rigs used
+ * elsewhere (see core/data/characterVariants.ts).
+ */
+const MISSING_AVATAR_FALLBACKS: Record<string, string> = {
+  'avatar_woman.glb': '/models/avatars/Michelle.glb',
+  'avatar_child.glb': '/models/avatars/Michelle.glb',
+  'avatar_teenager.glb': '/models/avatars/Michelle.glb',
+  'avatar_elderly.glb': '/models/avatars/Michelle.glb',
+  'avatar_pregnant.glb': '/models/avatars/Michelle.glb',
+  'avatar_dancer.glb': '/models/avatars/Michelle.glb',
+  'avatar_man.glb': '/models/avatars/mixamo-character.glb',
+  'avatar_athlete.glb': '/models/avatars/mixamo-character.glb',
+};
+
+/**
+ * Swap a referenced-but-missing avatar path for its existing fallback.
+ * Leaves every other path (real models, external URLs) untouched.
+ */
+function applyAvatarFallback(localPath: string): string {
+  const file = localPath.slice(localPath.lastIndexOf('/') + 1);
+  return MISSING_AVATAR_FALLBACKS[file] ?? localPath;
+}
+
+/**
+ * Redirect a missing avatar GLB to an existing one for loaders that call
+ * SceneLoader directly with a raw URL (bypassing resolveModelPath). External
+ * https URLs and models that actually exist are returned unchanged.
+ */
+export function remapAvatarUrl(url: string): string {
+  if (!url.includes('/models/avatars/')) return url;
+  const file = url.slice(url.lastIndexOf('/') + 1);
+  const fallback = MISSING_AVATAR_FALLBACKS[file];
+  return fallback ? resolveModelPath(fallback) : url;
+}
+
+/**
  * Resolve a model path to either local or R2 URL
  * @param localPath - Local path like '/models/300D_Light.glb'
  * @returns Full URL for the asset
  */
 export function resolveModelPath(localPath: string): string {
-  if (!USE_R2) return localPath;
-  
+  const resolved = applyAvatarFallback(localPath);
+  if (!USE_R2) return resolved;
+
   // Strip leading slash and 'models/' prefix
-  const cleanPath = localPath.replace(/^\/?(models\/)?/, '');
+  const cleanPath = resolved.replace(/^\/?(models\/)?/, '');
   return `${getR2BaseUrl()}/${R2_PATHS.models}/${cleanPath}`;
 }
 

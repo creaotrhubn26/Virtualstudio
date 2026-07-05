@@ -37,7 +37,7 @@ import { useCollaborationStore } from './services/collaborationService';
 import { AvatarMaterialService } from './services/avatarMaterialService';
 import { useSkeletalAnimationStore } from './services/skeletalAnimationService';
 import { getAvatarById } from './data/avatarDefinitions';
-import { resolveModelPath, resolveAudioPath, resolveImagePath, resolveAssetPath } from './config/assetConfig';
+import { resolveModelPath, resolveAudioPath, resolveImagePath, resolveAssetPath, remapAvatarUrl } from './config/assetConfig';
 import settingsService, { getCurrentUserId } from './services/settingsService';
 import { notesService } from './services/notesService';
 import { environmentLearningService } from './services/environmentLearningService';
@@ -18287,6 +18287,7 @@ class VirtualStudio {
   }
 
   private loadCastingAvatarModel(candidateId: string, name: string, avatarUrl: string, position: BABYLON.Vector3): void {
+    avatarUrl = remapAvatarUrl(avatarUrl);
     BABYLON.SceneLoader.ImportMeshAsync('', '', avatarUrl, this.scene).then(result => {
       const rootMesh = result.meshes[0] as BABYLON.Mesh;
       rootMesh.name = `casting_${candidateId}`;
@@ -18920,6 +18921,9 @@ class VirtualStudio {
   ): Promise<void> {
     if (!options?.additive && !options?.storyRigId) this.removeCharacterModel();
 
+    // Redirect missing generic avatar GLBs to an existing base rig.
+    modelUrl = remapAvatarUrl(modelUrl);
+
     let meshPosition = new BABYLON.Vector3(0, 0, 0);
     let importedAnimationGroups: BABYLON.AnimationGroup[] = [];
 
@@ -19371,6 +19375,9 @@ class VirtualStudio {
     rotation: [number, number, number],
     storyRigId: string,
   ): Promise<void> {
+    // Redirect missing generic avatar GLBs to an existing base rig.
+    modelUrl = remapAvatarUrl(modelUrl);
+
     // Remove a previous instance of this storyRigId if present
     const existing = this.storyCharacters.get(storyRigId);
     if (existing) {
