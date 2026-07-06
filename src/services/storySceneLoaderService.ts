@@ -243,6 +243,18 @@ class StorySceneLoaderService {
           return;
         }
 
+        // Animated direction takes precedence over a static pose: a character
+        // with a `motion` prompt is driven by text-to-motion on its own rig.
+        if (charManifest.motion && charManifest.motion.trim()) {
+          window.dispatchEvent(new CustomEvent('ch-generate-motion', {
+            detail: { prompt: charManifest.motion, storyRigId: charManifest.id },
+          }));
+          posesApplied++;
+          report('poses', 0.7 + (idx + 1) / characters.length * 0.3, `Regisserte: ${charManifest.label}`);
+          log.info(`Directed motion "${charManifest.motion}" for ${charManifest.label} (${charManifest.id})`);
+          return;
+        }
+
         const posePreset = ALL_POSES.find(p => p.id === charManifest.poseId);
         if (!posePreset) {
           log.warn(`Pose not found: ${charManifest.poseId} for ${charManifest.label}`);

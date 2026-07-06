@@ -120,6 +120,8 @@ def _assembly_to_dict(assembly) -> dict:
                 "avatarRef": c.avatar_ref,
                 "needsGeneration": c.needs_generation,
                 "suggestedPlacement": c.suggested_placement,
+                "action": c.action,
+                "motion": c.motion,
             }
             for c in assembly.characters
         ],

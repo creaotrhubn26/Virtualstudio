@@ -129,6 +129,8 @@ class CharacterCast:
     avatar_ref: Optional[str]           # Known avatar ID if already generated
     needs_generation: bool              # True if no avatar yet
     suggested_placement: Optional[str]  # "at window", "center", "seated"
+    action: str = ""                    # This character's clause from the beat
+    motion: str = "idle"                # Resolved motion keyword (walk/sit/wave/…)
 
 
 @dataclass
@@ -1073,13 +1075,44 @@ class SceneDirectorService:
         else:
             placement = "standing-center"
 
+        # Per-character action + motion: isolate the clause that mentions this
+        # character so each SAM actor can be directed independently, then route
+        # it through the text-to-motion keyword router.
+        char_action = self._extract_character_clause(name, beat.action)
+        try:
+            from mhr_rig_export import text_to_action
+            motion = text_to_action(char_action or beat.action)
+        except Exception:
+            motion = "idle"
+
         return CharacterCast(
             name=name,
             description=None,
             avatar_ref=f"placeholder:{clean}",
             needs_generation=True,
             suggested_placement=placement,
+            action=char_action,
+            motion=motion,
         )
+
+    @staticmethod
+    def _extract_character_clause(name: str, action: str) -> str:
+        """Return the sentence/clause in `action` that mentions `name`.
+
+        Splits on sentence and clause boundaries ("and", "while", ",", ";") and
+        picks the fragment containing the character's name, so "Anna sits while
+        Ben walks in" yields "Anna sits" for Anna and "Ben walks in" for Ben.
+        Falls back to "" when the character isn't named explicitly.
+        """
+        if not action or not name:
+            return ""
+        n = name.lower()
+        # Split into clauses on common separators (keep it language-light).
+        fragments = re.split(r"[.;,]|\b(?:and|while|as|mens|og|samtidig)\b", action, flags=re.IGNORECASE)
+        for frag in fragments:
+            if n in frag.lower():
+                return frag.strip()
+        return ""
 
     # -- storyboard prompt --------------------------------------------------
 

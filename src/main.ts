@@ -12565,41 +12565,34 @@ class VirtualStudio {
     }) as EventListener);
 
     // ── Text-to-motion events ──────────────────────────────────────────────
-    // Apply a pre-generated motion clip (name-keyed quaternion tracks).
+    // Apply a pre-generated motion clip. Optional storyRigId targets a specific
+    // actor in a multi-character scene.
     window.addEventListener('ch-apply-motion-tracks', ((e: CustomEvent) => {
-      const clip = e.detail as {
-        name?: string; fps?: number; loop?: boolean; tracks?: Record<string, number[][]>;
+      const { storyRigId, ...clip } = (e.detail || {}) as {
+        storyRigId?: string; name?: string; fps?: number; loop?: boolean; tracks?: Record<string, number[][]>;
       };
-      if (!this.applyMotionClip(clip)) {
+      if (!this.applyMotionClip(clip, { storyRigId })) {
         console.warn('[TextToMotion] Could not apply motion clip:', clip?.name);
       }
     }) as EventListener);
 
-    // Prompt → motion: ask the backend for a clip, fall back to a baked rig clip.
+    // Prompt → motion for one actor: fetch a clip, fall back to a baked rig clip.
     window.addEventListener('ch-generate-motion', ((e: CustomEvent) => {
-      const { prompt } = (e.detail || {}) as { prompt?: string };
+      const { prompt, storyRigId } = (e.detail || {}) as { prompt?: string; storyRigId?: string };
       if (!prompt || !prompt.trim()) return;
+      void this.directActorMotion(prompt, storyRigId);
+    }) as EventListener);
+
+    // Direct a whole scene: apply a motion prompt to each SAM actor by storyRigId.
+    // detail: { actors: [{ storyRigId, prompt }, ...] }
+    window.addEventListener('ch-direct-scene', ((e: CustomEvent) => {
+      const { actors } = (e.detail || {}) as { actors?: Array<{ storyRigId?: string; prompt?: string }> };
+      if (!Array.isArray(actors) || actors.length === 0) return;
       void (async () => {
-        try {
-          const resp = await fetch('/api/motion/text', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt }),
-            signal: AbortSignal.timeout(15000),
-          });
-          if (resp.ok) {
-            const clip = await resp.json();
-            if (this.applyMotionClip(clip)) {
-              this.showNotification(`Bevegelse: ${clip.action || prompt}`, 'success');
-              return;
-            }
-          } else {
-            console.warn('[TextToMotion] backend returned', resp.status);
-          }
-        } catch (err) {
-          console.warn('[TextToMotion] backend unavailable, using local fallback:', err);
+        for (const a of actors) {
+          if (a?.prompt) await this.directActorMotion(a.prompt, a.storyRigId);
         }
-        this.playMotionFallbackByKeyword(prompt);
+        this.showNotification(`Regisserte ${actors.length} skuespiller(e)`, 'success');
       })();
     }) as EventListener);
 
@@ -16400,18 +16393,21 @@ class VirtualStudio {
     fps?: number;
     loop?: boolean;
     tracks?: Record<string, number[][]>;
-  }): boolean {
+  }, opts?: { storyRigId?: string; mesh?: BABYLON.AbstractMesh }): boolean {
     const tracks = clip?.tracks || {};
     const boneNames = Object.keys(tracks);
     if (boneNames.length === 0) { console.warn('[TextToMotion] no tracks in clip'); return false; }
 
-    // Resolve the target skeleton robustly: prefer the active character, else
-    // pick the scene skeleton whose bone names best match the clip's tracks
-    // (handles freshly-loaded/unselected avatars and multi-skeleton scenes).
-    const primaryMesh = this.getPrimaryCharacterMesh()
+    // Explicit target wins — lets the Scene Director drive a specific actor in a
+    // multi-character scene. Otherwise fall back to the active/best-match rig.
+    const explicitMesh = opts?.mesh
+      || (opts?.storyRigId ? this.storyCharacters.get(opts.storyRigId)?.mesh : undefined)
+      || null;
+    const primaryMesh = explicitMesh
+      || this.getPrimaryCharacterMesh()
       || (this.characterMesh && !this.characterMesh.isDisposed() ? this.characterMesh : null);
     let skeleton = primaryMesh ? (this.findSkeletonCarrierMesh(primaryMesh)?.skeleton ?? null) : null;
-    if (!skeleton) {
+    if (!skeleton && !explicitMesh) {
       let bestScore = 0;
       for (const sk of this.scene.skeletons) {
         const score = boneNames.reduce((n, bn) => n + (this.resolveSkeletonBone(sk, bn) ? 1 : 0), 0);
@@ -16496,8 +16492,37 @@ class VirtualStudio {
    * Fallback when the text-to-motion backend is unreachable: play the closest
    * baked rig clip (idle/walk/run) chosen by keyword.
    */
-  private playMotionFallbackByKeyword(prompt: string): void {
-    const mesh = this.getPrimaryCharacterMesh()
+  /**
+   * Direct one actor: fetch a motion clip for `prompt` from the backend and
+   * apply it to the actor identified by `storyRigId` (or the active character).
+   * Falls back to a baked rig clip when the backend is unreachable.
+   */
+  private async directActorMotion(prompt: string, storyRigId?: string): Promise<void> {
+    try {
+      const resp = await fetch('/api/motion/text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (resp.ok) {
+        const clip = await resp.json();
+        if (this.applyMotionClip(clip, { storyRigId })) {
+          this.showNotification(`Bevegelse: ${clip.action || prompt}`, 'success');
+          return;
+        }
+      } else {
+        console.warn('[TextToMotion] backend returned', resp.status);
+      }
+    } catch (err) {
+      console.warn('[TextToMotion] backend unavailable, using local fallback:', err);
+    }
+    this.playMotionFallbackByKeyword(prompt, storyRigId);
+  }
+
+  private playMotionFallbackByKeyword(prompt: string, storyRigId?: string): void {
+    const mesh = (storyRigId ? this.storyCharacters.get(storyRigId)?.mesh : null)
+      || this.getPrimaryCharacterMesh()
       || (this.characterMesh && !this.characterMesh.isDisposed() ? this.characterMesh : null);
     if (!mesh) return;
     const rigId = this.getTrackedRigForMesh(mesh);

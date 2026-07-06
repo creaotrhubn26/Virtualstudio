@@ -7,6 +7,9 @@ export interface StoryCharacterManifest {
   rotation?: [number, number, number];
   label: string;
   height?: number;
+  /** Optional natural-language action → text-to-motion clip for this actor
+   *  (e.g. "walks in", "sits down"). Overrides the static poseId when set. */
+  motion?: string;
 }
 
 export interface StoryPropManifest {
