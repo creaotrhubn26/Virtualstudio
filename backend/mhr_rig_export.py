@@ -428,6 +428,62 @@ def tracks_by_joint_name(
     return out
 
 
+# Standard SMPL 24-joint order — the output space of most neural text-to-motion
+# models (MoMask / MDM / T2M-GPT via HumanML3D → SMPL). Names use MHR spelling
+# so shared joints retarget by name.
+SMPL_JOINT_NAMES: Sequence[str] = (
+    "pelvis", "left_hip", "right_hip", "spine1", "left_knee", "right_knee",
+    "spine2", "left_ankle", "right_ankle", "spine3", "left_foot", "right_foot",
+    "neck", "left_collar", "right_collar", "head", "left_shoulder",
+    "right_shoulder", "left_elbow", "right_elbow", "left_wrist", "right_wrist",
+    "left_hand", "right_hand",
+)
+
+
+def _axis_angle_to_quat(rotvecs: np.ndarray) -> np.ndarray:
+    """(N,3) axis-angle → (N,4) xyzw quaternions."""
+    rotvecs = np.asarray(rotvecs, dtype=np.float64).reshape(-1, 3)
+    angles = np.linalg.norm(rotvecs, axis=1)
+    out = np.zeros((len(rotvecs), 4), dtype=np.float32)
+    out[:, 3] = 1.0
+    nz = angles > 1e-8
+    axes = rotvecs[nz] / angles[nz, None]
+    half = angles[nz] / 2.0
+    s = np.sin(half)
+    out[nz, 0] = axes[:, 0] * s
+    out[nz, 1] = axes[:, 1] * s
+    out[nz, 2] = axes[:, 2] * s
+    out[nz, 3] = np.cos(half)
+    return out
+
+
+def smpl_poses_to_tracks(
+    poses: np.ndarray,
+    target_joint_names: Sequence[str],
+    smpl_names: Sequence[str] = SMPL_JOINT_NAMES,
+) -> Dict[str, list]:
+    """Retarget neural SMPL motion → MHR name-keyed quaternion tracks.
+
+    `poses` is (T, J, 3) axis-angle per frame (J≈24 SMPL joints), or (T, J*3).
+    Only joints whose SMPL name also exists on the target rig are emitted, so a
+    MoMask/MDM clip drops straight onto a SAM 3D avatar. Root translation is not
+    applied (in-place motion), matching how the studio drives characters.
+    """
+    poses = np.asarray(poses, dtype=np.float32)
+    if poses.ndim == 2:  # (T, J*3) → (T, J, 3)
+        poses = poses.reshape(poses.shape[0], -1, 3)
+    T, J, _ = poses.shape
+    target = set(target_joint_names)
+    tracks: Dict[str, list] = {}
+    for j in range(min(J, len(smpl_names))):
+        name = smpl_names[j]
+        if name not in target:
+            continue
+        quats = _axis_angle_to_quat(poses[:, j, :])  # (T,4)
+        tracks[name] = quats.reshape(T, 4).tolist()
+    return tracks
+
+
 # ── glTF assembly ───────────────────────────────────────────────────────────
 
 

@@ -30,6 +30,7 @@ import numpy as np
 from mhr_rig_export import (
     load_mhr70_hierarchy,
     make_action_animation,
+    smpl_poses_to_tracks,
     text_to_action,
     tracks_by_joint_name,
 )
@@ -50,6 +51,10 @@ class TextToMotionService:
             "true",
             "yes",
         )
+        # HTTP endpoint of a text-to-motion model that returns SMPL axis-angle
+        # poses (e.g. a MoMask / MDM server, or a Replicate proxy). Expected JSON:
+        #   { "poses": [[ [x,y,z], ...24 ], ...frames], "fps": 20 }
+        self.neural_endpoint = os.environ.get("TEXT_TO_MOTION_ENDPOINT", "").strip()
         self._names: Optional[Sequence[str]] = None
         self._parents: Optional[np.ndarray] = None
 
@@ -62,11 +67,42 @@ class TextToMotionService:
     def _neural_generate(
         self, prompt: str, joint_names: Sequence[str], fps: int
     ) -> Optional[Dict[str, Any]]:
-        """Tier 1 seam. Plug a MoMask/MDM model (or hosted API) here: generate
-        SMPL-X motion from `prompt`, retarget to the MHR joint names, and return
-        the same clip dict shape as `generate`. Returns None when unavailable."""
-        # Intentionally not implemented in-repo: needs GPU/weights or an API key.
-        return None
+        """Tier 1: call a text-to-motion model that returns SMPL axis-angle poses
+        and retarget them onto the MHR joint names. The model (MoMask/MDM/T2M-GPT)
+        runs behind `TEXT_TO_MOTION_ENDPOINT`; this keeps GPU/weights out of the
+        API process. Returns None on any failure so `generate` falls back."""
+        if not self.neural_endpoint:
+            return None
+        try:
+            import httpx
+
+            resp = httpx.post(
+                self.neural_endpoint,
+                json={"prompt": prompt, "fps": fps},
+                timeout=60.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            poses = data.get("poses")
+            if not poses:
+                return None
+            out_fps = int(data.get("fps", fps)) or fps
+            tracks = smpl_poses_to_tracks(np.asarray(poses, dtype=np.float32), joint_names)
+            if not tracks:
+                return None
+            frames = len(next(iter(tracks.values())))
+            return {
+                "prompt": prompt,
+                "action": "neural",
+                "fps": out_fps,
+                "duration": max(0.0, (frames - 1) / out_fps),
+                "loop": False,
+                "tracks": tracks,
+                "tier": "neural",
+            }
+        except Exception as e:  # noqa: BLE001 - any failure → procedural fallback
+            print(f"[text_to_motion] neural tier failed, falling back: {e}")
+            return None
 
     def generate(
         self,
