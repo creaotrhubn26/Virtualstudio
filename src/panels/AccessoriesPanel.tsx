@@ -89,7 +89,7 @@ export const AccessoriesPanel: React.FC = () => {
   const [roughness, setRoughness] = useState(0.8);
   const [metalness, setMetalness] = useState(0);
 
-  const actors = nodes.filter(n => n.type === 'avatar' || n.type === 'actor');
+  const actors = nodes.filter(n => n.type === 'model' || n.type === 'avatar' || n.type === 'actor' || n.type === 'mesh');
 
   const getCurrentItems = () => {
     switch (accessoryType) {

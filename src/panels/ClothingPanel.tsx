@@ -73,7 +73,7 @@ export const ClothingPanel: React.FC = () => {  const { addNode } = useAppStore(
 
   // Get actors from scene
   const actors = useMemo(() => {    if (!nodes || !Array.isArray(nodes)) return [];
-    return nodes.filter(node => node.type === 'mesh' || node.type === 'actor');
+    return nodes.filter(node => node.type === 'model' || node.type === 'mesh' || node.type === 'actor' || node.type === 'avatar');
   }, [nodes]);
 
   // Get clothing for active category
