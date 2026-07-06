@@ -44,6 +44,10 @@ class DialogueRequest(BaseModel):
     text: str
     fps: int = 24
     joint_names: Optional[List[str]] = None
+    # Real audio duration (seconds), once TTS is wired up client- or server-side.
+    # Pins the talk clip's length so head motion matches the actual voice line
+    # instead of the word-count estimate.
+    duration_sec: Optional[float] = None
 
 
 @router.post("/api/motion/dialogue")
@@ -59,4 +63,5 @@ def generate_dialogue(req: DialogueRequest) -> Dict[str, Any]:
         req.text,
         joint_names=req.joint_names,
         fps=max(1, min(60, req.fps)),
+        duration_sec=req.duration_sec,
     )

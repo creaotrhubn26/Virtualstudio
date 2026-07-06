@@ -150,12 +150,15 @@ class TextToMotionService:
         joint_names: Optional[Sequence[str]] = None,
         parents: Optional[np.ndarray] = None,
         fps: int = 24,
+        duration_sec: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Turn a spoken line into a talking-head clip with a co-speech gesture.
 
-        Duration scales with word count. Neck 'talking' motion plays over the
-        whole line; a detected gesture (wave/nod/shake) is overlaid on its own
-        joints. Note: MHR-70 has no facial blendshapes, so this is head/neck +
+        `duration_sec`, when given, pins the clip to that exact length — pass the
+        real audio duration once TTS is wired up so head motion matches the actual
+        voice line instead of the word-count estimate. Neck 'talking' motion plays
+        over the whole line; a detected gesture (wave/nod/shake) is overlaid on its
+        own joints. Note: MHR-70 has no facial blendshapes, so this is head/neck +
         gesture, not viseme lipsync (that needs MHR face export)."""
         if joint_names is None or parents is None:
             joint_names, parents = self._default_skeleton()
@@ -163,8 +166,11 @@ class TextToMotionService:
             return {"prompt": text, "action": "talk", "fps": fps,
                     "duration": 0.0, "loop": False, "tracks": {}, "error": "no skeleton"}
 
-        words = max(1, len((text or "").split()))
-        duration = float(min(8.0, max(1.2, words * 0.38)))
+        if duration_sec is not None:
+            duration = float(min(30.0, max(0.3, duration_sec)))
+        else:
+            words = max(1, len((text or "").split()))
+            duration = float(min(8.0, max(1.2, words * 0.38)))
         parents = np.asarray(parents)
 
         talk_anim, times = make_talking_animation(parents, joint_names, duration=duration, fps=fps)

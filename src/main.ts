@@ -12596,12 +12596,15 @@ class VirtualStudio {
       })();
     }) as EventListener);
 
-    // Dialogue → talking-head + co-speech gesture on an actor.
-    // detail: { text, storyRigId? }
+    // Dialogue → talking-head + co-speech gesture on an actor. `audioUrl` is
+    // optional — the seam for a real TTS voice line (see directActorDialogue).
+    // detail: { text, storyRigId?, audioUrl? }
     window.addEventListener('ch-speak', ((e: CustomEvent) => {
-      const { text, storyRigId } = (e.detail || {}) as { text?: string; storyRigId?: string };
+      const { text, storyRigId, audioUrl } = (e.detail || {}) as {
+        text?: string; storyRigId?: string; audioUrl?: string;
+      };
       if (!text || !text.trim()) return;
-      void this.directActorDialogue(text, storyRigId);
+      void this.directActorDialogue(text, storyRigId, audioUrl);
     }) as EventListener);
 
     // ── Posing Mode Panel events ───────────────────────────────────────────
@@ -16401,10 +16404,10 @@ class VirtualStudio {
     fps?: number;
     loop?: boolean;
     tracks?: Record<string, number[][]>;
-  }, opts?: { storyRigId?: string; mesh?: BABYLON.AbstractMesh }): boolean {
+  }, opts?: { storyRigId?: string; mesh?: BABYLON.AbstractMesh }): BABYLON.AnimationGroup | null {
     const tracks = clip?.tracks || {};
     const boneNames = Object.keys(tracks);
-    if (boneNames.length === 0) { console.warn('[TextToMotion] no tracks in clip'); return false; }
+    if (boneNames.length === 0) { console.warn('[TextToMotion] no tracks in clip'); return null; }
 
     // Explicit target wins — lets the Scene Director drive a specific actor in a
     // multi-character scene. Otherwise fall back to the active/best-match rig.
@@ -16425,7 +16428,7 @@ class VirtualStudio {
     if (!skeleton) {
       console.warn('[TextToMotion] no matching skeleton for motion tracks');
       this.showNotification('Ingen rigget karakter for bevegelse', 'warning');
-      return false;
+      return null;
     }
 
     const targetMesh = primaryMesh
@@ -16474,7 +16477,7 @@ class VirtualStudio {
     if (bound === 0) {
       console.warn('[TextToMotion] bound 0 bones; sample bone names:', skeleton.bones.slice(0, 6).map(b => b.name), 'want:', boneNames.slice(0, 6));
       group.dispose();
-      return false;
+      return null;
     }
 
     // Stop anything else driving these bones (baked Idle/Walk/Run groups and the
@@ -16493,13 +16496,9 @@ class VirtualStudio {
 
     group.play(loop);
     console.log(`[TextToMotion] Playing "${clip.name}" on ${bound} bone(s), loop=${loop}`);
-    return true;
+    return group;
   }
 
-  /**
-   * Fallback when the text-to-motion backend is unreachable: play the closest
-   * baked rig clip (idle/walk/run) chosen by keyword.
-   */
   /**
    * Direct one actor: fetch a motion clip for `prompt` from the backend and
    * apply it to the actor identified by `storyRigId` (or the active character).
@@ -16531,18 +16530,56 @@ class VirtualStudio {
   /**
    * Make an actor speak: fetch a talking-head + co-speech-gesture clip for the
    * dialogue line and apply it to `storyRigId` (or the active character).
+   *
+   * `audioUrl` is the seam for a real voice line (any TTS provider — none is
+   * wired up yet). When given: the actual audio duration pins the backend clip
+   * length (so head motion matches the real line instead of a word-count guess),
+   * playback is started alongside the animation, and the motion is stopped when
+   * the audio ends. Without `audioUrl` this is exactly the prior silent behavior.
    */
-  private async directActorDialogue(text: string, storyRigId?: string): Promise<void> {
+  private async directActorDialogue(text: string, storyRigId?: string, audioUrl?: string): Promise<void> {
+    let durationSec: number | undefined;
+    let audio: HTMLAudioElement | null = null;
+
+    if (audioUrl) {
+      try {
+        audio = new Audio(audioUrl);
+        const metadataLoaded = new Promise<number>((resolve, reject) => {
+          const el = audio as HTMLAudioElement;
+          el.addEventListener('loadedmetadata', () => resolve(el.duration), { once: true });
+          el.addEventListener('error', () => reject(new Error('audio failed to load')), { once: true });
+          el.load();
+        });
+        // Guard against environments where metadata events never fire (e.g. no
+        // audio subsystem) — fall back to the text-based estimate instead of
+        // hanging the whole dialogue flow.
+        const timeout = new Promise<number>((_, reject) =>
+          setTimeout(() => reject(new Error('audio metadata timed out')), 3000));
+        durationSec = await Promise.race([metadataLoaded, timeout]);
+        if (!Number.isFinite(durationSec) || durationSec <= 0) durationSec = undefined;
+      } catch (err) {
+        console.warn('[Dialogue] could not read audio duration, using text estimate:', err);
+        audio = null;
+      }
+    }
+
     try {
       const resp = await fetch('/api/motion/dialogue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, duration_sec: durationSec }),
         signal: AbortSignal.timeout(15000),
       });
       if (resp.ok) {
         const clip = await resp.json();
-        if (this.applyMotionClip(clip, { storyRigId })) return;
+        const group = this.applyMotionClip(clip, { storyRigId });
+        if (group) {
+          if (audio) {
+            audio.play().catch((err) => console.warn('[Dialogue] audio playback failed:', err));
+            audio.addEventListener('ended', () => group.stop(), { once: true });
+          }
+          return;
+        }
       } else {
         console.warn('[Dialogue] backend returned', resp.status);
       }
