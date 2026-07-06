@@ -242,6 +242,74 @@ def make_idle_animation(
     return anim, t.astype(np.float32)
 
 
+def make_locomotion_animation(
+    parents: np.ndarray,
+    joint_names: Optional[Sequence[str]] = None,
+    run: bool = False,
+    fps: int = 24,
+):
+    """Procedural walk/run cycle: hips/knees/shoulders/elbows swing in
+    counter-phase (left leg with right arm). Amplitudes and speed scale up for
+    a run. Rotations are about the lateral (X) axis; since every joint node is
+    world-aligned in the bind pose (translation-only nodes) this reads as a
+    forward/back pitch. Returns ({joint_index: quats (T,4)}, times).
+
+    Requires named joints (left_hip, right_knee, …). Falls back to an empty
+    clip when names are unavailable — locomotion needs anatomy to look right.
+    """
+    duration = 0.7 if run else 1.0  # one full stride loop
+    T = int(duration * fps) + 1
+    t = np.linspace(0.0, duration, T)
+    ph = 2.0 * np.pi * t / duration
+
+    if not joint_names:
+        return {}, t.astype(np.float32)
+    lname = [str(n).lower() for n in joint_names]
+
+    def find(substr: str) -> Optional[int]:
+        return next((i for i, n in enumerate(lname) if substr in n), None)
+
+    X = np.array([1.0, 0.0, 0.0])
+    hip_amp = 0.85 if run else 0.50       # leg pitch (rad)
+    knee_amp = 1.30 if run else 0.70      # knee flexion (rad, one-sided)
+    arm_amp = 0.90 if run else 0.45       # shoulder pitch (rad)
+    elbow_amp = 0.50 if run else 0.25
+
+    # (joint substring, driver phase, wave→angle function)
+    def swing(offset):        # symmetric fore/aft
+        return lambda a: a * np.sin(ph + offset)
+
+    def flex(offset):         # knees/elbows only bend one way (rectified)
+        return lambda a: a * np.clip(np.sin(ph + offset), 0.0, None)
+
+    plan = [
+        ("left_hip", X, hip_amp, swing(0.0)),
+        ("right_hip", X, hip_amp, swing(np.pi)),
+        ("left_knee", X, -knee_amp, flex(np.pi * 0.5)),
+        ("right_knee", X, -knee_amp, flex(np.pi * 1.5)),
+        ("left_shoulder", X, arm_amp, swing(np.pi)),   # opposite to left leg
+        ("right_shoulder", X, arm_amp, swing(0.0)),
+        ("left_elbow", X, -elbow_amp, flex(np.pi)),
+        ("right_elbow", X, -elbow_amp, flex(0.0)),
+    ]
+
+    anim: Dict[int, np.ndarray] = {}
+    for name, axis, amp, fn in plan:
+        j = find(name)
+        if j is None:
+            continue
+        angles = fn(amp)
+        anim[j] = np.stack([_axis_angle_quat(axis, float(a)) for a in angles], axis=0).astype(np.float32)
+
+    # Subtle vertical bob on the spine/root for weight shift.
+    spine = find("spine") or find("chest")
+    if spine is not None:
+        bob = (0.06 if run else 0.03) * np.sin(2 * ph)  # twice per stride
+        anim.setdefault(spine, np.stack([_axis_angle_quat(X, float(b)) for b in bob], axis=0).astype(np.float32))
+
+    return anim, t.astype(np.float32)
+
+
 # ── glTF assembly ───────────────────────────────────────────────────────────
 
 
@@ -268,9 +336,10 @@ def export_rigged_glb(
     uv: Optional[np.ndarray] = None,
     texture_path: Optional[str] = None,
     idle: bool = True,
+    locomotion: bool = True,
     root: int = 0,
 ) -> Dict[str, object]:
-    """Write a skinned, idle-animated GLB from a SAM 3D Body prediction.
+    """Write a skinned, animated GLB from a SAM 3D Body prediction.
 
     Parameters mirror what `sam3d_service` has on hand: `vertices`/`faces` from
     the MHR mesh, `joint_coords` from `pred_joint_coords`. `parents` defaults to
@@ -306,7 +375,20 @@ def export_rigged_glb(
     ibm = np.tile(np.eye(4, dtype=np.float32), (J, 1, 1))
     ibm[:, 3, 0:3] = -joint_coords  # row-3 xyz in column-major layout = translation
 
-    idle_anim, idle_times = (make_idle_animation(parents, joint_names) if idle else ({}, None))
+    # Animation clips to bake. The studio's rig library matches by name
+    # (idle/walk/run), so these names light up idle + locomotion out of the box.
+    clips: List[Tuple[str, Dict[int, np.ndarray], np.ndarray]] = []
+    if idle:
+        a, ts = make_idle_animation(parents, joint_names)
+        if a:
+            clips.append(("Idle", a, ts))
+    if locomotion:
+        wa, wts = make_locomotion_animation(parents, joint_names, run=False)
+        if wa:
+            clips.append(("Walk", wa, wts))
+        ra, rts = make_locomotion_animation(parents, joint_names, run=True)
+        if ra:
+            clips.append(("Run", ra, rts))
 
     # ---- binary blob (single buffer, tightly packed, 4-byte aligned) ----------
     blob = bytearray()
@@ -373,15 +455,15 @@ def export_rigged_glb(
     skin = Skin(joints=list(range(J)), inverseBindMatrices=acc_ibm,
                 skeleton=joint_roots[0] if joint_roots else 0)
 
-    # ---- animation ------------------------------------------------------------
+    # ---- animation (Idle / Walk / Run) ----------------------------------------
     animations: List[Animation] = []
-    if idle_anim:
-        time_view = add_view(idle_times.tobytes())
-        acc_time = add_accessor(time_view, FLOAT, len(idle_times), "SCALAR",
-                                [float(idle_times.min())], [float(idle_times.max())])
+    for clip_name, clip_anim, clip_times in clips:
+        time_view = add_view(np.asarray(clip_times, np.float32).tobytes())
+        acc_time = add_accessor(time_view, FLOAT, len(clip_times), "SCALAR",
+                                [float(clip_times.min())], [float(clip_times.max())])
         samplers: List[AnimationSampler] = []
         channels: List[AnimationChannel] = []
-        for jidx, quats in idle_anim.items():
+        for jidx, quats in clip_anim.items():
             q_view = add_view(np.asarray(quats, np.float32).tobytes())
             acc_q = add_accessor(q_view, FLOAT, len(quats), "VEC4")
             samplers.append(AnimationSampler(input=acc_time, output=acc_q, interpolation="LINEAR"))
@@ -389,7 +471,7 @@ def export_rigged_glb(
                 sampler=len(samplers) - 1,
                 target=AnimationChannelTarget(node=int(jidx), path="rotation"),
             ))
-        animations.append(Animation(name="Idle", samplers=samplers, channels=channels))
+        animations.append(Animation(name=clip_name, samplers=samplers, channels=channels))
 
     # ---- assemble -------------------------------------------------------------
     gltf = GLTF2(
@@ -426,7 +508,8 @@ def export_rigged_glb(
         "vertices": int(len(vertices)),
         "faces": int(len(faces)),
         "joints": int(J),
-        "animated": bool(idle_anim),
+        "animated": bool(clips),
+        "clips": [name for name, _, _ in clips],
         "has_texture": bool(texture_path and Path(texture_path).exists()),
         "output": out_path,
     }

@@ -540,12 +540,14 @@ class SAM3DService:
         # skeleton so the avatar can move in Virtual Studio. Fall back to the
         # static trimesh export if rigging is unavailable or fails.
         rigged = False
+        rig_clips = []
         if joint_coords is not None and len(joint_coords) >= 2:
             try:
                 from mhr_rig_export import export_rigged_glb, load_mhr70_hierarchy
                 mhr70_path = str(SAM3D_REPO_PATH / "sam_3d_body" / "metadata" / "mhr70.py")
                 joint_names, parents = load_mhr70_hierarchy(mhr70_path)
                 # Only trust the named MHR hierarchy when the joint count matches.
+                # Names also drive the Walk/Run cycles (they need left_hip, …).
                 if parents is None or len(parents) != len(joint_coords):
                     joint_names, parents = None, None
                 summary = export_rigged_glb(
@@ -558,8 +560,10 @@ class SAM3DService:
                     uv=np.asarray(uv_coords, dtype=np.float32) if uv_coords is not None else None,
                     texture_path=texture_path if texture_applied else None,
                     idle=True,
+                    locomotion=True,
                 )
                 rigged = True
+                rig_clips = summary.get("clips", [])
                 print(f"Exported rigged avatar: {summary}")
             except Exception as e:
                 import traceback
@@ -573,6 +577,7 @@ class SAM3DService:
             "type": "sam3d_body",
             "rigged": rigged,
             "animated": rigged,
+            "clips": rig_clips,
             "joints": int(len(joint_coords)) if joint_coords is not None else 0,
             "vertices": len(mesh.vertices),
             "faces": len(mesh.faces),
