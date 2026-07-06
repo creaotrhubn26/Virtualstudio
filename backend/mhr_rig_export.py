@@ -23,11 +23,68 @@ Design notes
 
 from __future__ import annotations
 
+import re
 import struct
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
+
+
+# ── joint-role resolution ────────────────────────────────────────────────────
+#
+# Every motion builder below needs to find "the left hip", "the neck", etc. by
+# name. mhr70.py uses "left_hip"/"neck" naming, but the REAL skinning skeleton
+# (see sam3d_service._get_mhr_skeleton_hierarchy) comes from Meta's momentum
+# framework and its actual naming convention is unconfirmed — likely FBX-rig
+# style ("LeftUpLeg", "b_LeftUpLeg") rather than mhr70's. Matching a single
+# hardcoded substring per role would silently no-op every motion feature if the
+# real rig uses a different convention.
+#
+# ROLE_ALIASES lists several common humanoid rig conventions per role
+# (mhr70, Mixamo/FBX, Unreal Mannequin, generic prefix/suffix L_/_L styles).
+# Names are normalised (lowercased, separators stripped) before matching, so
+# "left_hip", "LeftUpLeg", "b_LeftUpLeg" and "L_Hip" all resolve consistently.
+# Aliases are kept specific enough to avoid cross-role collisions (e.g. the
+# left_elbow alias "leftforearm" does not accidentally satisfy left_shoulder).
+ROLE_ALIASES: Dict[str, Sequence[str]] = {
+    "pelvis": ("pelvis", "hips", "root"),
+    "spine": ("spine1", "spine01", "spine", "chest", "torso"),
+    "chest": ("chest", "spine2", "spine02", "upperchest"),
+    "neck": ("neck",),
+    "head": ("head",),
+    "jaw": ("jaw", "mouth", "chin"),
+    "left_hip": ("leftupleg", "leftupperleg", "lefthip", "thighl", "hipl", "upplegl", "lhip", "lthigh", "lupleg", "lupperleg"),
+    "right_hip": ("rightupleg", "rightupperleg", "righthip", "thighr", "hipr", "upplegr", "rhip", "rthigh", "rupleg", "rupperleg"),
+    "left_knee": ("leftleg", "leftlowerleg", "leftknee", "calfl", "shinl", "kneel", "lknee", "lcalf", "lshin", "llowerleg"),
+    "right_knee": ("rightleg", "rightlowerleg", "rightknee", "calfr", "shinr", "kneer", "rknee", "rcalf", "rshin", "rlowerleg"),
+    "left_shoulder": ("leftshoulder", "leftupperarm", "leftarm", "claviclel", "upperarml", "shoulderl", "lshoulder", "lclavicle", "lupperarm"),
+    "right_shoulder": ("rightshoulder", "rightupperarm", "rightarm", "clavicler", "upperarmr", "shoulderr", "rshoulder", "rclavicle", "rupperarm"),
+    "left_elbow": ("leftforearm", "leftlowerarm", "leftelbow", "lowerarml", "forearml", "elbowl", "lelbow", "lforearm", "llowerarm"),
+    "right_elbow": ("rightforearm", "rightlowerarm", "rightelbow", "lowerarmr", "forearmr", "elbowr", "relbow", "rforearm", "rlowerarm"),
+}
+
+
+def _normalize_joint_name(name: str) -> str:
+    """Lowercase and strip separators so naming-convention differences
+    ("left_hip" vs "LeftHip" vs "b_LeftHip") compare equal."""
+    return re.sub(r"[^a-z0-9]", "", str(name).lower())
+
+
+def find_joint_by_role(names: Optional[Sequence[str]], role: str) -> Optional[int]:
+    """Find the joint index matching a canonical role (see ROLE_ALIASES).
+
+    Tries every known naming convention for that role; returns the first
+    match, or None if no joint name matches or `names` is empty.
+    """
+    if not names:
+        return None
+    normalized = [_normalize_joint_name(n) for n in names]
+    for alias in ROLE_ALIASES.get(role, ()):
+        for i, n in enumerate(normalized):
+            if alias in n:
+                return i
+    return None
 
 def load_mhr70_hierarchy(mhr70_path: str):
     """Load the MHR-70 keypoint names + a spanning-tree parent array.
@@ -209,22 +266,14 @@ def make_idle_animation(
 
     targets: Dict[int, Tuple[np.ndarray, float, float]] = {}  # jidx -> (axis, amp, phase_off)
     if joint_names:
-        lname = [str(n).lower() for n in joint_names]
-
-        def find(substr: str) -> Optional[int]:
-            for i, n in enumerate(lname):
-                if substr in n:
-                    return i
-            return None
-
-        for key, axis, amp, off in [
+        for role, axis, amp, off in [
             ("spine", np.array([1, 0, 0.0]), 0.020, 0.0),
             ("chest", np.array([1, 0, 0.0]), 0.020, 0.0),
             ("neck", np.array([1, 0, 0.0]), 0.015, 0.5),
             ("left_shoulder", np.array([0, 0, 1.0]), 0.020, 0.0),
             ("right_shoulder", np.array([0, 0, 1.0]), -0.020, 0.0),
         ]:
-            j = find(key)
+            j = find_joint_by_role(joint_names, role)
             if j is not None:
                 targets[j] = (axis, amp, off)
 
@@ -264,10 +313,6 @@ def make_locomotion_animation(
 
     if not joint_names:
         return {}, t.astype(np.float32)
-    lname = [str(n).lower() for n in joint_names]
-
-    def find(substr: str) -> Optional[int]:
-        return next((i for i, n in enumerate(lname) if substr in n), None)
 
     X = np.array([1.0, 0.0, 0.0])
     hip_amp = 0.85 if run else 0.50       # leg pitch (rad)
@@ -294,15 +339,17 @@ def make_locomotion_animation(
     ]
 
     anim: Dict[int, np.ndarray] = {}
-    for name, axis, amp, fn in plan:
-        j = find(name)
+    for role, axis, amp, fn in plan:
+        j = find_joint_by_role(joint_names, role)
         if j is None:
             continue
         angles = fn(amp)
         anim[j] = np.stack([_axis_angle_quat(axis, float(a)) for a in angles], axis=0).astype(np.float32)
 
     # Subtle vertical bob on the spine/root for weight shift.
-    spine = find("spine") or find("chest")
+    spine = find_joint_by_role(joint_names, "spine")
+    if spine is None:
+        spine = find_joint_by_role(joint_names, "chest")
     if spine is not None:
         bob = (0.06 if run else 0.03) * np.sin(2 * ph)  # twice per stride
         anim.setdefault(spine, np.stack([_axis_angle_quat(X, float(b)) for b in bob], axis=0).astype(np.float32))
@@ -328,11 +375,6 @@ def make_action_animation(
         return make_locomotion_animation(parents, joint_names, run=(action == "run"), fps=fps)
     if action in ("", "idle", "stand", "rest", "breathe"):
         return make_idle_animation(parents, joint_names, fps=fps)
-
-    names = [str(n).lower() for n in (joint_names or [])]
-
-    def find(sub: str) -> Optional[int]:
-        return next((i for i, n in enumerate(names) if sub in n), None)
 
     X = np.array([1.0, 0.0, 0.0])
     Y = np.array([0.0, 1.0, 0.0])
@@ -373,8 +415,8 @@ def make_action_animation(
         return amp * np.sin(2 * np.pi * u)
 
     anim: Dict[int, np.ndarray] = {}
-    for sub, axis, amp, kind in plan:
-        j = find(sub)
+    for role, axis, amp, kind in plan:
+        j = find_joint_by_role(joint_names, role)
         if j is None:
             continue
         angles = wave_fn(kind, amp)
@@ -399,16 +441,8 @@ def make_talking_animation(
     X = np.array([1.0, 0.0, 0.0])
     Y = np.array([0.0, 1.0, 0.0])
 
-    names = [str(n).lower() for n in (joint_names or [])]
-
-    def find(*subs):
-        for i, n in enumerate(names):
-            if any(s in n for s in subs):
-                return i
-        return None
-
     anim: Dict[int, np.ndarray] = {}
-    neck = find("neck")
+    neck = find_joint_by_role(joint_names, "neck")
     if neck is not None:
         # ~3 Hz micro-nods + slow sway; small amplitudes so it reads natural.
         nod = 0.04 * np.sin(2 * np.pi * 3.0 * t) + 0.02 * np.sin(2 * np.pi * 0.7 * t)
@@ -421,7 +455,7 @@ def make_talking_animation(
             quats.append(_quat_mul(qs, qn))
         anim[neck] = np.stack(quats, axis=0).astype(np.float32)
 
-    jaw = find("jaw", "mouth", "chin")
+    jaw = find_joint_by_role(joint_names, "jaw")
     if jaw is not None:
         # Open/close on a syllable rhythm — real lipsync when a jaw joint exists.
         open_amt = 0.12 * (0.5 + 0.5 * np.sin(2 * np.pi * 4.0 * t))

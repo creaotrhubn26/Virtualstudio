@@ -352,6 +352,13 @@ class SAM3DService:
             skeleton = self.estimator.model.head_pose.mhr.character.skeleton
             names = list(skeleton.joint_names)
             parents = np.asarray(list(skeleton.joint_parents), dtype=np.int64)
+            if not getattr(self, "_logged_skeleton_names", False):
+                # One-time diagnostic: capture the real joint naming convention
+                # so make_*_animation's ROLE_ALIASES can be extended if a role
+                # (left_hip, neck, …) doesn't resolve for this rig.
+                print(f"[SAM3D] real MHR skeleton: {len(names)} joints -> {names}")
+                print(f"[SAM3D] real MHR joint_parents: {parents.tolist()}")
+                self._logged_skeleton_names = True
             if len(names) == num_joints:
                 return names, parents
             print(
