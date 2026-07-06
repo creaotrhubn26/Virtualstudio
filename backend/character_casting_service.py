@@ -110,6 +110,13 @@ class CharacterCastingService:
             log.warning("triposr_service unavailable: %s", exc)
             self._triposr = None
 
+        try:
+            from fal_sam3d_service import get_fal_sam3d_service
+            self._fal_sam3d = get_fal_sam3d_service()
+        except Exception as exc:
+            log.warning("fal_sam3d_service unavailable: %s", exc)
+            self._fal_sam3d = None
+
     # -- public API --------------------------------------------------------
 
     def get_cached(self, name: str, description: Optional[str]) -> Optional[CastingJob]:
@@ -156,9 +163,11 @@ class CharacterCastingService:
                 log.info("Character cache hit for %s", cached.key)
                 return cached
 
+        use_fal_sam3d = bool(self._fal_sam3d and self._fal_sam3d.enabled)
+
         # 1. PROMPT ---------------------------------------------------------
         job.status = "prompting"
-        job.prompt = self._write_prompt(name, description, job)
+        job.prompt = self._write_prompt(name, description, job, natural_pose=use_fal_sam3d)
 
         # 2. IMAGE ----------------------------------------------------------
         job.status = "imaging"
@@ -174,9 +183,16 @@ class CharacterCastingService:
         job.image_url = f"/api/characters/{job.key}.png"
         job.director_notes.append(f"image {len(image_bytes)/1024:.0f} kB")
 
-        # 3. MESH (TripoSR) -------------------------------------------------
+        # 3. MESH — prefer SAM 3D Body (rigged, animation-ready) over TripoSR
+        # (static, unrigged) whenever fal.ai is configured. -------------------
         job.status = "meshing"
-        mesh_error = await self._run_triposr(image_bytes, job)
+        mesh_error = None
+        if use_fal_sam3d:
+            mesh_error = await self._run_fal_sam3d(image_bytes, job)
+            if mesh_error:
+                job.director_notes.append(f"fal SAM3D failed, falling back to TripoSR: {mesh_error}")
+        if not use_fal_sam3d or mesh_error:
+            mesh_error = await self._run_triposr(image_bytes, job)
         if mesh_error:
             job.status = "failed"
             job.error = mesh_error
@@ -200,12 +216,25 @@ class CharacterCastingService:
     # -- step 1: prompt-writing -------------------------------------------
 
     def _write_prompt(
-        self, name: str, description: Optional[str], job: CastingJob
+        self, name: str, description: Optional[str], job: CastingJob,
+        natural_pose: bool = False,
     ) -> str:
-        """Generate an image prompt optimized for TripoSR full-body 3D
-        conversion. Uses Claude if available, else a simple template."""
+        """Generate an image prompt optimized for the image→3D converter that
+        will run next. Uses Claude if available, else a simple template.
+
+        `natural_pose=True` (fal.ai SAM 3D Body is configured) asks for a
+        relaxed standing pose instead of T-pose — SAM 3D Body estimates pose
+        FROM the photo, so a bind-pose reference is unnecessary and can look
+        stiffer than a natural photo would. TripoSR (no pose estimation, pure
+        reconstruction) still wants the T-pose/A-pose reference.
+        """
+        pose_clause = (
+            "standing naturally, arms relaxed at the sides, weight even on both feet"
+            if natural_pose
+            else "standing in T-pose or neutral A-pose"
+        )
         base_spec = (
-            "Full-body character portrait, standing in T-pose or neutral A-pose, "
+            f"Full-body character portrait, {pose_clause}, "
             "centered, head-to-toe visible, facing camera, uniform neutral-gray "
             "studio background, even flat lighting with no harsh shadows, "
             "sharp focus, realistic proportions, no crop, no accessories "
@@ -230,10 +259,11 @@ class CharacterCastingService:
                     "verbatim:\n\n"
                     f'"{base_spec}"'
                 )
+                converter = "SAM 3D Body" if natural_pose else "TripoSR"
                 system = (
                     "You write image prompts for character casting. The "
-                    "generated image will be fed into a 2D → 3D converter "
-                    "(TripoSR), so the image must be a clean full-body "
+                    f"generated image will be fed into a 2D → 3D converter "
+                    f"({converter}), so the image must be a clean full-body "
                     "reference with a neutral background."
                 )
                 result = self._claude.complete_json(
@@ -316,7 +346,48 @@ class CharacterCastingService:
 
         return None, "No image generator available (set AI_INTEGRATIONS_OPENAI_API_KEY or enable FLUX)"
 
-    # -- step 3: TripoSR --------------------------------------------------
+    # -- step 3a: fal.ai SAM 3D Body (preferred — rigged + animation-ready) --
+
+    async def _run_fal_sam3d(self, image_bytes: bytes, job: CastingJob) -> Optional[str]:
+        """Upload the generated character photo to R2 (fal.ai needs a public
+        URL, not a data: URI), submit it to fal.ai's hosted SAM 3D Body, and
+        cache the returned rigged GLB. Returns an error message on failure,
+        or None on success."""
+        if not self._fal_sam3d or not self._fal_sam3d.enabled:
+            return "fal.ai SAM 3D Body unavailable (FAL_KEY not set)"
+
+        try:
+            from utils.r2_client import upload_to_r2, CASTING_ASSETS_BUCKET
+            image_url = upload_to_r2(
+                image_bytes,
+                r2_key=f"casting-source-images/{job.key}.png",
+                content_type="image/png",
+                bucket=CASTING_ASSETS_BUCKET,
+            )
+        except Exception as exc:
+            return f"Could not upload source image to R2 for fal.ai: {exc}"
+
+        job.director_notes.append("submitted to fal.ai SAM 3D Body")
+        result = await self._fal_sam3d.generate_from_image_url(image_url)
+        if not result.get("success"):
+            return f"fal SAM3D: {result.get('error')}"
+
+        try:
+            glb_bytes = await self._fal_sam3d.download_glb(result["glbUrl"])
+        except Exception as exc:
+            return f"fal SAM3D GLB download failed: {exc}"
+
+        dest = _CHARACTERS_DIR / f"{job.key}.glb"
+        dest.write_bytes(glb_bytes)
+        job.glb_path = str(dest)
+        job.glb_url = f"/api/characters/{job.key}.glb"
+        job.director_notes.append(
+            f"glb via fal SAM3D {dest.stat().st_size/1024:.0f} kB "
+            f"(persons={result.get('personCount')})"
+        )
+        return None
+
+    # -- step 3b: TripoSR (fallback — static, unrigged mesh) ----------------
 
     async def _run_triposr(self, image_bytes: bytes, job: CastingJob) -> Optional[str]:
         """Submit the image to TripoSR and poll until done. Returns an
