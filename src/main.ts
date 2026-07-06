@@ -18951,6 +18951,24 @@ class VirtualStudio {
 
         this.applyPBRShadingToMeshes(result.meshes, candidate.pbrKey);
         this.registerModelMeshesInScene(rootMesh, avatarId, candidate.name);
+
+        // Register in the scene-node store so the default avatar is selectable
+        // as an actor in store-driven panels (Accessories, Clothing, etc.), not
+        // just tracked in the internal castingCandidates map.
+        useAppStore.getState().addNode({
+          id: avatarId,
+          name: candidate.name,
+          type: 'model',
+          visible: true,
+          locked: false,
+          transform: {
+            position: [rootMesh.position.x, rootMesh.position.y, rootMesh.position.z],
+            rotation: [rootMesh.rotation.x, rootMesh.rotation.y, rootMesh.rotation.z],
+            scale: [rootMesh.scaling.x, rootMesh.scaling.y, rootMesh.scaling.z],
+          },
+          userData: { meshNames: this.getChildMeshNames(rootMesh) },
+        });
+
         this.trackAnimationGroupsForMesh(rootMesh, result.animationGroups || []);
         // Play an idle clip if the rig ships one (SAM 3D avatars do); else hold pose.
         if (!this.playIdleAnimationGroups(rootMesh, result.animationGroups || [])) {
