@@ -328,7 +328,50 @@ class SAM3DService:
                 "note": "Placeholder mannequin. Full SAM 3D Body inference requires additional setup."
             }
         }
-    
+
+    def _get_mhr_skeleton_hierarchy(self, num_joints: int):
+        """Resolve joint names + parent hierarchy for `pred_joint_coords`.
+
+        `pred_joint_coords` comes from MHRHead's underlying `mhr` (Meta's MHR
+        package) skinning skeleton — a different joint set than the 70
+        pose-estimation keypoints in metadata/mhr70.py (mhr_head.py explicitly
+        slices *keypoints* to `[:70]` but does NOT slice `jcoords`, so the
+        skinning skeleton's joint count is whatever the loaded character rig
+        defines, not necessarily 70).
+
+        Prefer introspecting the real skeleton the model already loaded
+        (`self.estimator.model.head_pose.mhr.character.skeleton`, per Meta's
+        momentum pybind bindings: `.joint_names` / `.joint_parents`) — this is
+        authoritative and correct regardless of the actual joint count/naming
+        convention. Falls back to the mhr70.py keypoint hierarchy only if it
+        happens to match `num_joints` (unlikely but harmless to try), and
+        finally to an unnamed hierarchy (motion-by-name features no-op, but
+        the avatar still imports skinned and animatable).
+        """
+        try:
+            skeleton = self.estimator.model.head_pose.mhr.character.skeleton
+            names = list(skeleton.joint_names)
+            parents = np.asarray(list(skeleton.joint_parents), dtype=np.int64)
+            if len(names) == num_joints:
+                return names, parents
+            print(
+                f"[SAM3D] real skeleton has {len(names)} joints, "
+                f"pred_joint_coords has {num_joints} — mismatch, trying fallback"
+            )
+        except Exception as e:
+            print(f"[SAM3D] could not introspect real MHR skeleton, trying fallback: {e}")
+
+        try:
+            from mhr_rig_export import load_mhr70_hierarchy
+            mhr70_path = str(SAM3D_REPO_PATH / "sam_3d_body" / "metadata" / "mhr70.py")
+            names, parents = load_mhr70_hierarchy(mhr70_path)
+            if names is not None and len(names) == num_joints:
+                return names, parents
+        except Exception as e:
+            print(f"[SAM3D] mhr70 fallback hierarchy failed: {e}")
+
+        return None, None
+
     async def _generate_sam3d_avatar(self, input_path: str, output_path: str, with_texture: bool = True) -> Dict[str, Any]:
         """
         Generate avatar using the actual SAM 3D Body model.
@@ -543,13 +586,8 @@ class SAM3DService:
         rig_clips = []
         if joint_coords is not None and len(joint_coords) >= 2:
             try:
-                from mhr_rig_export import export_rigged_glb, load_mhr70_hierarchy
-                mhr70_path = str(SAM3D_REPO_PATH / "sam_3d_body" / "metadata" / "mhr70.py")
-                joint_names, parents = load_mhr70_hierarchy(mhr70_path)
-                # Only trust the named MHR hierarchy when the joint count matches.
-                # Names also drive the Walk/Run cycles (they need left_hip, …).
-                if parents is None or len(parents) != len(joint_coords):
-                    joint_names, parents = None, None
+                from mhr_rig_export import export_rigged_glb
+                joint_names, parents = self._get_mhr_skeleton_hierarchy(len(joint_coords))
                 summary = export_rigged_glb(
                     vertices=np.asarray(vertices, dtype=np.float32),
                     faces=np.asarray(faces),
