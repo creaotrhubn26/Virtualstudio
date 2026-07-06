@@ -19007,6 +19007,24 @@ class VirtualStudio {
 
     this.castingCandidates.set(id, { mesh: capsule, name: 'Mannequin' });
 
+    // Register in the scene-node store too, so this fallback (used whenever every
+    // real avatar candidate fails to load) is still selectable as an actor in
+    // panels like Accessories/Clothing that read from useAppStore, not just the
+    // internal castingCandidates map.
+    useAppStore.getState().addNode({
+      id,
+      name: 'Mannequin',
+      type: 'model',
+      visible: true,
+      locked: false,
+      transform: {
+        position: [capsule.position.x, capsule.position.y, capsule.position.z],
+        rotation: [0, 0, 0],
+        scale: [1, 1, 1],
+      },
+      userData: { meshNames: [id] },
+    });
+
     setTimeout(() => {
       this.updateFocusObjectsList();
     }, 200);
