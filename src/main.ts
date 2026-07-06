@@ -18434,7 +18434,13 @@ class VirtualStudio {
         const rootMesh = result.meshes[0] as BABYLON.Mesh;
         rootMesh.name = avatarId;
         rootMesh.position = new BABYLON.Vector3(0, 0, 0);
-        rootMesh.rotation = candidate.baseRotation.clone();
+        // Only SAM exports (avatar_*.glb) are upside-down and need the X-flip.
+        // Other rigs (Michelle/mixamo fallbacks, Cesium) are already upright, so
+        // applying the flip would lay them flat. Mirrors loadCharacterModel.
+        const isSamCandidate = /\/avatar_\w+\.glb(\?.*)?$/.test(candidate.url);
+        const baseRotation = candidate.baseRotation.clone();
+        if (!isSamCandidate) baseRotation.x = 0;
+        rootMesh.rotation = baseRotation;
         rootMesh.scaling = new BABYLON.Vector3(1, 1, 1);
         rootMesh.metadata = rootMesh.metadata || {};
         (rootMesh.metadata as Record<string, unknown>).avatarSourceUrl = candidate.url;
