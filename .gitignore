@@ -87,6 +87,7 @@ qa-screens/
 live_test.cjs
 check_panel_tmp.cjs
 inspect_select.cjs
+shot_canvas.cjs
 
 # Large binary asset packs — too big for git, keep alongside the repo
 contexts/*.pak
