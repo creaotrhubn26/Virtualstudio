@@ -12607,6 +12607,19 @@ class VirtualStudio {
       void this.directActorDialogue(text, storyRigId, audioUrl);
     }) as EventListener);
 
+    // ── Wardrobe / accessories ─────────────────────────────────────────────
+    // Rigidly attach a clothing/accessory GLB to a character bone. Falls back
+    // to on-demand Meshy/BlenderKit generation (resolve-prop) when the static
+    // modelUrl 404s — see attachWardrobeItem for the full flow + caveats.
+    window.addEventListener('ch-attach-wardrobe-item', ((e: CustomEvent) => {
+      void this.attachWardrobeItem(e.detail);
+    }) as EventListener);
+
+    window.addEventListener('ch-detach-wardrobe-item', ((e: CustomEvent) => {
+      const { nodeId } = (e.detail || {}) as { nodeId?: string };
+      if (nodeId) this.detachWardrobeItem(nodeId);
+    }) as EventListener);
+
     // ── Posing Mode Panel events ───────────────────────────────────────────
     // When the panel requests character info (on open), broadcast it back
     window.addEventListener('ch-posing-request-info', (async () => {
@@ -15145,6 +15158,8 @@ class VirtualStudio {
   private characterModelId: string | null = null;
   // Multi-character story support — storyRigId → {mesh, modelId}
   private storyCharacters: Map<string, { mesh: BABYLON.AbstractMesh; modelId: string }> = new Map();
+  // Wardrobe/accessory items attached to a character bone — nodeId → mesh, for detach/cleanup.
+  private wardrobeAttachments: Map<string, BABYLON.AbstractMesh> = new Map();
   private selectedStoryRigId: string | null = null;
   private storySelectionIndicator: BABYLON.AbstractMesh | null = null;
   private characterRigByMeshUniqueId: Map<number, string> = new Map();
@@ -16604,6 +16619,201 @@ class VirtualStudio {
     else if (/(walk|gå|går|spaser|vandre|step)/.test(p)) clip = lib?.walk || lib?.idle || null;
     else clip = lib?.idle || null;
     if (clip) this.playCharacterAnimationClip(mesh, rigId, clip, true);
+  }
+
+  /**
+   * Canonical HUMANOID_BONE_ALIASES key an item attaches to, by wardrobe kind
+   * and (sub-)category. This is a RIGID attachment (the item is parented to
+   * one bone's transform node) — not per-vertex skin deformation. That's a
+   * reasonable approximation for hats/jewelry/bags, and for clothing it moves
+   * naturally with the torso/hips/etc. for normal studio poses, but won't
+   * deform with extreme bends the way authored, properly-skinned garments
+   * would. True cloth skinning is future work.
+   */
+  private resolveWardrobeAttachBone(
+    kind: 'clothing' | 'head_accessory' | 'body_accessory' | 'facial_feature',
+    category: string,
+    itemId: string,
+  ): string {
+    if (kind === 'head_accessory' || kind === 'facial_feature') return 'head';
+
+    if (kind === 'body_accessory') {
+      switch (category) {
+        case 'necklaces': return 'chest';
+        case 'bracelets':
+        case 'watches': return 'leftHand';
+        case 'bags': return 'chest';
+        case 'earrings':
+        default: return 'head';
+      }
+    }
+
+    // kind === 'clothing'
+    switch (category) {
+      case 'tops':
+      case 'dresses':
+      case 'outerwear': return 'chest';
+      case 'bottoms':
+      case 'footwear': return 'hips';
+      case 'accessories': {
+        const id = itemId.toLowerCase();
+        if (id.includes('belt')) return 'hips';
+        if (id.includes('beanie') || id.includes('hat')) return 'head';
+        // scarf, necktie, and anything else that hangs from the neck.
+        return 'neck';
+      }
+      default: return 'chest';
+    }
+  }
+
+  /** Target bounding-box height (m) per wardrobe kind/category — rigidly
+   * attached items have no guaranteed export scale, so every item is
+   * normalised to a plausible real-world size before being parented. */
+  private resolveWardrobeTargetSize(
+    kind: 'clothing' | 'head_accessory' | 'body_accessory' | 'facial_feature',
+    category: string,
+  ): number {
+    if (kind === 'facial_feature') return 0.05;
+    if (kind === 'head_accessory') return category === 'hair' ? 0.28 : 0.24;
+    if (kind === 'body_accessory') {
+      switch (category) {
+        case 'bags': return 0.30;
+        case 'necklaces': return 0.18;
+        case 'bracelets':
+        case 'watches': return 0.08;
+        case 'earrings':
+        default: return 0.03;
+      }
+    }
+    // clothing
+    switch (category) {
+      case 'footwear': return 0.12;
+      case 'accessories': return 0.15;
+      default: return 0.60; // tops/bottoms/dresses/outerwear, torso-scale
+    }
+  }
+
+  /**
+   * Load a wardrobe/accessory GLB and rigidly attach it to the resolved bone
+   * on the target character. Tries the static `modelUrl` first; on failure
+   * (the asset manifest references many GLBs that were never generated —
+   * see the visual QA that found ~111 missing wardrobe files) falls back to
+   * `/api/scene-director/resolve-prop`, which generates one on demand via the
+   * existing Meshy/BlenderKit resolver chain and caches it in R2.
+   */
+  private async attachWardrobeItem(detail: {
+    nodeId: string;
+    kind: 'clothing' | 'head_accessory' | 'body_accessory' | 'facial_feature';
+    category: string;
+    itemId: string;
+    name?: string;
+    modelUrl: string;
+    description?: string;
+    storyRigId?: string;
+    actorNodeId?: string;
+    scale?: number;
+    color?: { hue: number; saturation: number; lightness: number };
+  }): Promise<void> {
+    const targetMesh = (detail.storyRigId ? this.storyCharacters.get(detail.storyRigId)?.mesh : null)
+      || (detail.actorNodeId ? this.resolveMeshForNodeId(detail.actorNodeId) : null)
+      || this.getPrimaryCharacterMesh()
+      || (this.characterMesh && !this.characterMesh.isDisposed() ? this.characterMesh : null);
+
+    // Resolve the skeleton robustly: prefer the resolved character mesh, else
+    // fall back to any scene skeleton (handles freshly-loaded/unselected
+    // avatars — getPrimaryCharacterMesh() can miss those; same fallback used
+    // by applyMotionClip for the same reason).
+    let skeleton = targetMesh ? (this.findSkeletonCarrierMesh(targetMesh)?.skeleton ?? null) : null;
+    if (!skeleton && this.scene.skeletons.length > 0) {
+      skeleton = this.scene.skeletons[this.scene.skeletons.length - 1];
+    }
+    if (!skeleton) {
+      this.showNotification('Ingen rigget karakter å feste plagg/tilbehør på', 'warning');
+      return;
+    }
+    const boneKey = this.resolveWardrobeAttachBone(detail.kind, detail.category, detail.itemId);
+    const bone = this.resolveSkeletonBone(skeleton, boneKey);
+    if (!bone) {
+      console.warn(`[Wardrobe] no "${boneKey}" bone found for ${detail.itemId}`);
+      this.showNotification('Fant ikke festepunkt på karakteren', 'warning');
+      return;
+    }
+    const boneNode = bone.getTransformNode?.();
+    if (!boneNode) {
+      console.warn(`[Wardrobe] bone "${boneKey}" has no linked transform node`);
+      return;
+    }
+
+    let url = detail.modelUrl;
+    let result: BABYLON.ISceneLoaderAsyncResult;
+    try {
+      result = await BABYLON.SceneLoader.ImportMeshAsync('', '', url, this.scene);
+    } catch (firstError) {
+      if (!detail.description) {
+        console.warn(`[Wardrobe] failed to load ${url} and no description for fallback:`, firstError);
+        this.showNotification(`Kunne ikke laste ${detail.name || detail.itemId}`, 'error');
+        return;
+      }
+      try {
+        const resp = await fetch('/api/scene-director/resolve-prop', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description: detail.description, styleHint: 'product photo, plain background, game-ready topology' }),
+          signal: AbortSignal.timeout(300_000), // generation can take minutes on a cold cache
+        });
+        const resolved = await resp.json();
+        if (!resp.ok || !resolved.success || !resolved.glbUrl) {
+          throw new Error(resolved.error || `resolve-prop failed (${resp.status})`);
+        }
+        url = resolved.glbUrl;
+        result = await BABYLON.SceneLoader.ImportMeshAsync('', '', url, this.scene);
+        console.log(`[Wardrobe] generated "${detail.itemId}" via ${resolved.provider} (cacheHit=${resolved.cacheHit})`);
+      } catch (fallbackError) {
+        console.warn(`[Wardrobe] resolve-prop fallback failed for ${detail.itemId}:`, fallbackError);
+        this.showNotification(`Kunne ikke generere ${detail.name || detail.itemId}`, 'error');
+        return;
+      }
+    }
+
+    if (result.meshes.length === 0) {
+      console.warn(`[Wardrobe] ${url} imported zero meshes`);
+      return;
+    }
+    const rootMesh = result.meshes[0] as BABYLON.Mesh;
+    rootMesh.name = `wardrobe_${detail.itemId}`;
+
+    // Normalise to a plausible real-world size, then parent to the bone.
+    rootMesh.computeWorldMatrix(true);
+    const bounds = rootMesh.getHierarchyBoundingVectors(true);
+    const nativeHeight = bounds.max.y - bounds.min.y;
+    const targetHeight = this.resolveWardrobeTargetSize(detail.kind, detail.category) * (detail.scale || 1);
+    if (nativeHeight > 0.001) {
+      const s = targetHeight / nativeHeight;
+      rootMesh.scaling = new BABYLON.Vector3(s, s, s);
+    }
+    rootMesh.parent = boneNode;
+    rootMesh.position = BABYLON.Vector3.Zero();
+    rootMesh.rotationQuaternion = BABYLON.Quaternion.Identity();
+
+    if (detail.color) {
+      const c = BABYLON.Color3.FromHSV(detail.color.hue, detail.color.saturation / 100, detail.color.lightness / 100);
+      result.meshes.forEach((m) => {
+        const mat = (m as BABYLON.Mesh).material as BABYLON.PBRMaterial | BABYLON.StandardMaterial | null;
+        if (mat && 'albedoColor' in mat) (mat as BABYLON.PBRMaterial).albedoColor = c;
+        else if (mat && 'diffuseColor' in mat) (mat as BABYLON.StandardMaterial).diffuseColor = c;
+      });
+    }
+
+    const existing = this.wardrobeAttachments.get(detail.nodeId);
+    if (existing && !existing.isDisposed()) existing.dispose();
+    this.wardrobeAttachments.set(detail.nodeId, rootMesh);
+    console.log(`[Wardrobe] attached "${detail.itemId}" to "${boneKey}" bone`);
+  }
+
+  private detachWardrobeItem(nodeId: string): void {
+    const mesh = this.wardrobeAttachments.get(nodeId);
+    if (mesh && !mesh.isDisposed()) mesh.dispose();
+    this.wardrobeAttachments.delete(nodeId);
   }
 
   private forceStopCharacterAnimations(

@@ -117,6 +117,21 @@ export const ClothingPanel: React.FC = () => {  const { addNode } = useAppStore(
       },
     });
 
+    window.dispatchEvent(new CustomEvent('ch-attach-wardrobe-item', {
+      detail: {
+        nodeId: clothingId,
+        kind: 'clothing',
+        category: clothing.category,
+        itemId: clothing.id,
+        name: clothing.name,
+        modelUrl: clothing.modelUrl,
+        description: clothing.description,
+        actorNodeId: selectedActor,
+        scale: clothing.defaultScale,
+        color: { hue, saturation, lightness },
+      },
+    }));
+
     log.debug('Clothing added: ', {
       id: clothingId,
       clothing: clothing.name,

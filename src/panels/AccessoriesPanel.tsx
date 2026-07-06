@@ -129,8 +129,9 @@ export const AccessoriesPanel: React.FC = () => {
 
     if (!item) return;
 
+    const nodeId = `${itemId}_${Date.now()}`;
     addNode({
-      id: `${itemId}_${Date.now()}`,
+      id: nodeId,
       name: item.name,
       type: 'mesh',
       visible: true,
@@ -144,6 +145,26 @@ export const AccessoriesPanel: React.FC = () => {
         metalness,
       },
     });
+
+    const category = accessoryType === 'facial' ? facialCategory
+      : accessoryType === 'head' ? headCategory
+      : bodyCategory;
+    window.dispatchEvent(new CustomEvent('ch-attach-wardrobe-item', {
+      detail: {
+        nodeId,
+        kind: nodeType,
+        category,
+        itemId,
+        name: item.name,
+        modelUrl: item.modelUrl,
+        // These three registries don't carry a generation description (only
+        // clothingStyles.ts does) — the item name is descriptive enough to
+        // seed the Meshy/BlenderKit fallback when the static GLB is missing.
+        description: `${item.name}, ${category.replace(/_/g, ' ')}, product photo, isolated on plain background`,
+        actorNodeId: selectedActor,
+        color: customColor,
+      },
+    }));
 
     log.info(`Added ${item.name} to actor`);
   };
