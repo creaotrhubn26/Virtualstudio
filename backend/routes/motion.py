@@ -38,3 +38,25 @@ def generate_motion(req: MotionRequest) -> Dict[str, Any]:
         fps=max(1, min(60, req.fps)),
     )
     return clip
+
+
+class DialogueRequest(BaseModel):
+    text: str
+    fps: int = 24
+    joint_names: Optional[List[str]] = None
+
+
+@router.post("/api/motion/dialogue")
+def generate_dialogue(req: DialogueRequest) -> Dict[str, Any]:
+    if not req.text or not req.text.strip():
+        raise HTTPException(status_code=400, detail="text is required")
+    try:
+        from text_to_motion_service import text_to_motion_service
+    except Exception as e:  # pragma: no cover - import guard
+        raise HTTPException(status_code=503, detail=f"motion service unavailable: {e}")
+
+    return text_to_motion_service.generate_dialogue(
+        req.text,
+        joint_names=req.joint_names,
+        fps=max(1, min(60, req.fps)),
+    )

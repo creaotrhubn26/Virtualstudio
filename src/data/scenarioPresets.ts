@@ -10,6 +10,8 @@ export interface StoryCharacterManifest {
   /** Optional natural-language action → text-to-motion clip for this actor
    *  (e.g. "walks in", "sits down"). Overrides the static poseId when set. */
   motion?: string;
+  /** Optional spoken line → talking-head + co-speech gesture for this actor. */
+  dialogue?: string;
 }
 
 export interface StoryPropManifest {

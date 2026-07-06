@@ -28,8 +28,10 @@ from typing import Any, Dict, Optional, Sequence
 import numpy as np
 
 from mhr_rig_export import (
+    dialogue_to_gesture,
     load_mhr70_hierarchy,
     make_action_animation,
+    make_talking_animation,
     smpl_poses_to_tracks,
     text_to_action,
     tracks_by_joint_name,
@@ -138,6 +140,56 @@ class TextToMotionService:
             "duration": duration,
             "loop": action in _LOOPING,
             "tracks": tracks,
+            "tier": "procedural",
+        }
+
+
+    def generate_dialogue(
+        self,
+        text: str,
+        joint_names: Optional[Sequence[str]] = None,
+        parents: Optional[np.ndarray] = None,
+        fps: int = 24,
+    ) -> Dict[str, Any]:
+        """Turn a spoken line into a talking-head clip with a co-speech gesture.
+
+        Duration scales with word count. Neck 'talking' motion plays over the
+        whole line; a detected gesture (wave/nod/shake) is overlaid on its own
+        joints. Note: MHR-70 has no facial blendshapes, so this is head/neck +
+        gesture, not viseme lipsync (that needs MHR face export)."""
+        if joint_names is None or parents is None:
+            joint_names, parents = self._default_skeleton()
+        if joint_names is None:
+            return {"prompt": text, "action": "talk", "fps": fps,
+                    "duration": 0.0, "loop": False, "tracks": {}, "error": "no skeleton"}
+
+        words = max(1, len((text or "").split()))
+        duration = float(min(8.0, max(1.2, words * 0.38)))
+        parents = np.asarray(parents)
+
+        talk_anim, times = make_talking_animation(parents, joint_names, duration=duration, fps=fps)
+        tracks = tracks_by_joint_name(talk_anim, joint_names)
+
+        gesture = dialogue_to_gesture(text)
+        if gesture:
+            g_anim, _ = make_action_animation(gesture, parents, joint_names, fps=fps)
+            g_tracks = tracks_by_joint_name(g_anim, joint_names)
+            # Overlay gesture joints; pad/trim to the talk-clip frame count.
+            n = len(times)
+            for name, quats in g_tracks.items():
+                q = list(quats)
+                if len(q) < n:
+                    q = q + [q[-1]] * (n - len(q))
+                tracks[name] = q[:n]
+
+        return {
+            "prompt": text,
+            "action": f"talk+{gesture}" if gesture else "talk",
+            "fps": fps,
+            "duration": float(times[-1]) if len(times) else 0.0,
+            "loop": False,
+            "tracks": tracks,
+            "gesture": gesture or None,
             "tier": "procedural",
         }
 

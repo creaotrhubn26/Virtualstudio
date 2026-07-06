@@ -244,14 +244,25 @@ class StorySceneLoaderService {
         }
 
         // Animated direction takes precedence over a static pose: a character
-        // with a `motion` prompt is driven by text-to-motion on its own rig.
-        if (charManifest.motion && charManifest.motion.trim()) {
-          window.dispatchEvent(new CustomEvent('ch-generate-motion', {
-            detail: { prompt: charManifest.motion, storyRigId: charManifest.id },
-          }));
+        // with a `motion` prompt is driven by text-to-motion, and a `dialogue`
+        // line makes them talk (both target mostly different bones, so layer).
+        if (
+          (charManifest.motion && charManifest.motion.trim()) ||
+          (charManifest.dialogue && charManifest.dialogue.trim())
+        ) {
+          if (charManifest.motion && charManifest.motion.trim()) {
+            window.dispatchEvent(new CustomEvent('ch-generate-motion', {
+              detail: { prompt: charManifest.motion, storyRigId: charManifest.id },
+            }));
+          }
+          if (charManifest.dialogue && charManifest.dialogue.trim()) {
+            window.dispatchEvent(new CustomEvent('ch-speak', {
+              detail: { text: charManifest.dialogue, storyRigId: charManifest.id },
+            }));
+          }
           posesApplied++;
           report('poses', 0.7 + (idx + 1) / characters.length * 0.3, `Regisserte: ${charManifest.label}`);
-          log.info(`Directed motion "${charManifest.motion}" for ${charManifest.label} (${charManifest.id})`);
+          log.info(`Directed ${charManifest.label} (${charManifest.id}): motion="${charManifest.motion || ''}" dialogue="${charManifest.dialogue || ''}"`);
           return;
         }
 

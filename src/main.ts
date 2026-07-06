@@ -12596,6 +12596,14 @@ class VirtualStudio {
       })();
     }) as EventListener);
 
+    // Dialogue → talking-head + co-speech gesture on an actor.
+    // detail: { text, storyRigId? }
+    window.addEventListener('ch-speak', ((e: CustomEvent) => {
+      const { text, storyRigId } = (e.detail || {}) as { text?: string; storyRigId?: string };
+      if (!text || !text.trim()) return;
+      void this.directActorDialogue(text, storyRigId);
+    }) as EventListener);
+
     // ── Posing Mode Panel events ───────────────────────────────────────────
     // When the panel requests character info (on open), broadcast it back
     window.addEventListener('ch-posing-request-info', (async () => {
@@ -16518,6 +16526,31 @@ class VirtualStudio {
       console.warn('[TextToMotion] backend unavailable, using local fallback:', err);
     }
     this.playMotionFallbackByKeyword(prompt, storyRigId);
+  }
+
+  /**
+   * Make an actor speak: fetch a talking-head + co-speech-gesture clip for the
+   * dialogue line and apply it to `storyRigId` (or the active character).
+   */
+  private async directActorDialogue(text: string, storyRigId?: string): Promise<void> {
+    try {
+      const resp = await fetch('/api/motion/dialogue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (resp.ok) {
+        const clip = await resp.json();
+        if (this.applyMotionClip(clip, { storyRigId })) return;
+      } else {
+        console.warn('[Dialogue] backend returned', resp.status);
+      }
+    } catch (err) {
+      console.warn('[Dialogue] backend unavailable:', err);
+    }
+    // Offline fallback: at least gesture from the dialogue keyword.
+    this.playMotionFallbackByKeyword(text, storyRigId);
   }
 
   private playMotionFallbackByKeyword(prompt: string, storyRigId?: string): void {

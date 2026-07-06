@@ -347,6 +347,14 @@ const SceneDirectorApp: React.FC = () => {
       window.dispatchEvent(
         new CustomEvent('ch-direct-scene', { detail: { actors: directed } }),
       );
+      // The beat's dialogue is spoken by the first actor (talking-head + gesture).
+      if (dialogue.trim() && directed[0]) {
+        window.dispatchEvent(
+          new CustomEvent('ch-speak', {
+            detail: { text: dialogue, storyRigId: directed[0].storyRigId },
+          }),
+        );
+      }
     }
 
     setCharStatus(

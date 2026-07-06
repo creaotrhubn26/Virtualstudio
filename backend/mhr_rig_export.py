@@ -384,6 +384,82 @@ def make_action_animation(
     return anim, t.astype(np.float32)
 
 
+def make_talking_animation(
+    parents: np.ndarray,
+    joint_names: Optional[Sequence[str]] = None,
+    duration: float = 2.0,
+    fps: int = 24,
+):
+    """Procedural 'talking' motion: rhythmic neck nods + slight sway so an actor
+    reads as speaking. MHR-70 has no jaw/blendshape face, so this drives the neck
+    (the head keypoints are its children). If a jaw/mouth joint exists it is
+    opened/closed too. Returns ({joint_index: quats (T,4)}, times)."""
+    T = int(duration * fps) + 1
+    t = np.linspace(0.0, duration, T)
+    X = np.array([1.0, 0.0, 0.0])
+    Y = np.array([0.0, 1.0, 0.0])
+
+    names = [str(n).lower() for n in (joint_names or [])]
+
+    def find(*subs):
+        for i, n in enumerate(names):
+            if any(s in n for s in subs):
+                return i
+        return None
+
+    anim: Dict[int, np.ndarray] = {}
+    neck = find("neck")
+    if neck is not None:
+        # ~3 Hz micro-nods + slow sway; small amplitudes so it reads natural.
+        nod = 0.04 * np.sin(2 * np.pi * 3.0 * t) + 0.02 * np.sin(2 * np.pi * 0.7 * t)
+        sway = 0.02 * np.sin(2 * np.pi * 0.5 * t + 1.0)
+        quats = []
+        for a, b in zip(nod, sway):
+            qn = _axis_angle_quat(X, float(a))
+            qs = _axis_angle_quat(Y, float(b))
+            # compose sway∘nod (small angles → order barely matters)
+            quats.append(_quat_mul(qs, qn))
+        anim[neck] = np.stack(quats, axis=0).astype(np.float32)
+
+    jaw = find("jaw", "mouth", "chin")
+    if jaw is not None:
+        # Open/close on a syllable rhythm — real lipsync when a jaw joint exists.
+        open_amt = 0.12 * (0.5 + 0.5 * np.sin(2 * np.pi * 4.0 * t))
+        anim[jaw] = np.stack([_axis_angle_quat(X, float(a)) for a in open_amt], axis=0).astype(np.float32)
+
+    return anim, t.astype(np.float32)
+
+
+def _quat_mul(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    ax, ay, az, aw = a
+    bx, by, bz, bw = b
+    return np.array([
+        aw * bx + ax * bw + ay * bz - az * by,
+        aw * by - ax * bz + ay * bw + az * bx,
+        aw * bz + ax * by - ay * bx + az * bw,
+        aw * bw - ax * bx - ay * by - az * bz,
+    ], dtype=np.float32)
+
+
+# Dialogue cue → co-speech gesture (EN + NO).
+_DIALOGUE_GESTURES = [
+    ("wave",  ("hi", "hello", "hey", "hei", "hallo", "goodbye", "bye", "ha det")),
+    ("nod",   ("yes", "yeah", "sure", "ok", "ja", "jepp", "greit", "enig")),
+    ("shake", ("no", "nope", "never", "nei", "aldri", "ikke")),
+]
+
+
+def dialogue_to_gesture(text: str) -> str:
+    """Pick a co-speech gesture from a dialogue line, or '' for none."""
+    p = f" {(text or '').lower()} "
+    for gesture, cues in _DIALOGUE_GESTURES:
+        if any(f"{c} " in p or f" {c}" in p for c in cues):
+            return gesture
+    if "?" in (text or ""):
+        return "nod"  # questions get a small head tilt/nod
+    return ""
+
+
 # Text → action routing. English + Norwegian keywords per action.
 ACTION_KEYWORDS: Dict[str, Sequence[str]] = {
     "run":        ("run", "sprint", "jog", "løp", "løper", "springe"),
