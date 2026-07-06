@@ -16169,6 +16169,35 @@ class VirtualStudio {
     }
   }
 
+  /**
+   * Play a looping idle clip on a freshly loaded rig so it doesn't stand frozen
+   * in its bind pose. SAM 3D avatars ship with an "Idle" animation (baked by
+   * mhr_rig_export). Only an explicitly idle/breath-named clip is used — playing
+   * an arbitrary clip risks a walk cycle translating the avatar out of frame.
+   * Returns false when no idle clip exists so the caller can stop animations.
+   */
+  private playIdleAnimationGroups(
+    rootMesh: BABYLON.AbstractMesh,
+    animationGroups?: BABYLON.AnimationGroup[]
+  ): boolean {
+    if (!rootMesh || rootMesh.isDisposed()) return false;
+    const groups = (animationGroups && animationGroups.length > 0)
+      ? animationGroups
+      : this.getAnimationGroupsForMesh(rootMesh) || [];
+    if (groups.length === 0) return false;
+
+    const idle = groups.find((g) => /idle|breath/i.test(g.name));
+    if (!idle) return false;
+
+    groups.forEach((g) => { try { g.stop(); } catch { /* noop */ } });
+    try {
+      idle.play(true); // loop
+    } catch {
+      return false;
+    }
+    return true;
+  }
+
   private stopAnimationGroupsForMesh(
     rootMesh: BABYLON.AbstractMesh,
     animationGroups?: BABYLON.AnimationGroup[]
@@ -18456,7 +18485,10 @@ class VirtualStudio {
         this.applyPBRShadingToMeshes(result.meshes, candidate.pbrKey);
         this.registerModelMeshesInScene(rootMesh, avatarId, candidate.name);
         this.trackAnimationGroupsForMesh(rootMesh, result.animationGroups || []);
-        this.stopAnimationGroupsForMesh(rootMesh, result.animationGroups || []);
+        // Play an idle clip if the rig ships one (SAM 3D avatars do); else hold pose.
+        if (!this.playIdleAnimationGroups(rootMesh, result.animationGroups || [])) {
+          this.stopAnimationGroupsForMesh(rootMesh, result.animationGroups || []);
+        }
 
         this.castingCandidates.set(avatarId, {
           mesh: rootMesh,
@@ -18941,7 +18973,11 @@ class VirtualStudio {
       this.characterMesh.metadata = this.characterMesh.metadata || {};
       (this.characterMesh.metadata as Record<string, unknown>).sourceModelUrl = modelUrl;
       this.trackAnimationGroupsForMesh(this.characterMesh, importedAnimationGroups);
-      this.stopAnimationGroupsForMesh(this.characterMesh, importedAnimationGroups);
+      // SAM 3D avatars carry an "Idle" clip — play it so they breathe/sway in
+      // the studio; otherwise hold the bind pose.
+      if (!this.playIdleAnimationGroups(this.characterMesh, importedAnimationGroups)) {
+        this.stopAnimationGroupsForMesh(this.characterMesh, importedAnimationGroups);
+      }
 
       // Calculate bounding box to properly scale and position the model
       const boundingInfo = this.characterMesh.getHierarchyBoundingVectors(true);
@@ -19176,7 +19212,17 @@ class VirtualStudio {
     }));
 
     if (this.characterMesh) {
-      await this.ensureRigRegisteredForMesh(this.characterMesh, name, importedAnimationGroups);
+      const rigId = await this.ensureRigRegisteredForMesh(this.characterMesh, name, importedAnimationGroups);
+
+      // Auto-play the idle clip so rigged avatars (SAM 3D bakes an "Idle") breathe
+      // at rest instead of standing frozen. Skipped for story characters, whose
+      // pose is driven by the scene manifest.
+      if (rigId && !options?.storyRigId) {
+        const lib = this.getCharacterAnimationLibrary(rigId, this.characterMesh);
+        if (lib?.idle) {
+          this.playCharacterAnimationClip(this.characterMesh, rigId, lib.idle, true);
+        }
+      }
 
       // Notify story loader which rig was created for this character
       if (options?.storyRigId) {

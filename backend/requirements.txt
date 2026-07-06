@@ -24,3 +24,4 @@ ninja>=1.10.0
 fvcore>=0.1.5
 pytorch3d>=0.7.0  # Required for CPU-only DECA inference (avoids OpenGL requirements)
 # Note: chumpy is listed in DECA requirements but not actually used in the codebase
+pygltflib>=1.16.0

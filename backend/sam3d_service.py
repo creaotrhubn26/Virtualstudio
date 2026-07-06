@@ -376,7 +376,17 @@ class SAM3DService:
         
         vertices = result["pred_vertices"]
         faces = self.faces
-        
+
+        # Skeleton for rigging — SAM 3D also predicts joint positions, which the
+        # old pipeline discarded. Keeping them lets us export an animatable rig.
+        joint_coords = result.get("pred_joint_coords", None)
+        if isinstance(joint_coords, torch.Tensor):
+            joint_coords = joint_coords.cpu().numpy()
+
+        # UV / texture handles used by the rigged exporter (set in texture block).
+        uv_coords = None
+        texture_path = None
+
         # Extract camera parameters
         cam_t = result.get("pred_cam_t", np.array([0, 0, 0]))
         if isinstance(cam_t, torch.Tensor):
@@ -526,11 +536,44 @@ class SAM3DService:
             )
             texture_applied = False
         
-        # Export mesh
-        mesh.export(output_path, file_type='glb')
-        
+        # Export mesh — prefer a rigged, animatable GLB built from the predicted
+        # skeleton so the avatar can move in Virtual Studio. Fall back to the
+        # static trimesh export if rigging is unavailable or fails.
+        rigged = False
+        if joint_coords is not None and len(joint_coords) >= 2:
+            try:
+                from mhr_rig_export import export_rigged_glb, load_mhr70_hierarchy
+                mhr70_path = str(SAM3D_REPO_PATH / "sam_3d_body" / "metadata" / "mhr70.py")
+                joint_names, parents = load_mhr70_hierarchy(mhr70_path)
+                # Only trust the named MHR hierarchy when the joint count matches.
+                if parents is None or len(parents) != len(joint_coords):
+                    joint_names, parents = None, None
+                summary = export_rigged_glb(
+                    vertices=np.asarray(vertices, dtype=np.float32),
+                    faces=np.asarray(faces),
+                    joint_coords=np.asarray(joint_coords, dtype=np.float32),
+                    out_path=output_path,
+                    parents=parents,
+                    joint_names=joint_names,
+                    uv=np.asarray(uv_coords, dtype=np.float32) if uv_coords is not None else None,
+                    texture_path=texture_path if texture_applied else None,
+                    idle=True,
+                )
+                rigged = True
+                print(f"Exported rigged avatar: {summary}")
+            except Exception as e:
+                import traceback
+                print(f"Rigged export failed, falling back to static mesh: {e}")
+                traceback.print_exc()
+
+        if not rigged:
+            mesh.export(output_path, file_type='glb')
+
         metadata = {
             "type": "sam3d_body",
+            "rigged": rigged,
+            "animated": rigged,
+            "joints": int(len(joint_coords)) if joint_coords is not None else 0,
             "vertices": len(mesh.vertices),
             "faces": len(mesh.faces),
             "shape_params": result.get("shape_params", []).tolist() if hasattr(result.get("shape_params", []), "tolist") else [],
