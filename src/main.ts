@@ -12564,6 +12564,45 @@ class VirtualStudio {
       void this.applyPosePreset(preset);
     }) as EventListener);
 
+    // ── Text-to-motion events ──────────────────────────────────────────────
+    // Apply a pre-generated motion clip (name-keyed quaternion tracks).
+    window.addEventListener('ch-apply-motion-tracks', ((e: CustomEvent) => {
+      const clip = e.detail as {
+        name?: string; fps?: number; loop?: boolean; tracks?: Record<string, number[][]>;
+      };
+      if (!this.applyMotionClip(clip)) {
+        console.warn('[TextToMotion] Could not apply motion clip:', clip?.name);
+      }
+    }) as EventListener);
+
+    // Prompt → motion: ask the backend for a clip, fall back to a baked rig clip.
+    window.addEventListener('ch-generate-motion', ((e: CustomEvent) => {
+      const { prompt } = (e.detail || {}) as { prompt?: string };
+      if (!prompt || !prompt.trim()) return;
+      void (async () => {
+        try {
+          const resp = await fetch('/api/motion/text', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt }),
+            signal: AbortSignal.timeout(15000),
+          });
+          if (resp.ok) {
+            const clip = await resp.json();
+            if (this.applyMotionClip(clip)) {
+              this.showNotification(`Bevegelse: ${clip.action || prompt}`, 'success');
+              return;
+            }
+          } else {
+            console.warn('[TextToMotion] backend returned', resp.status);
+          }
+        } catch (err) {
+          console.warn('[TextToMotion] backend unavailable, using local fallback:', err);
+        }
+        this.playMotionFallbackByKeyword(prompt);
+      })();
+    }) as EventListener);
+
     // ── Posing Mode Panel events ───────────────────────────────────────────
     // When the panel requests character info (on open), broadcast it back
     window.addEventListener('ch-posing-request-info', (async () => {
@@ -16347,6 +16386,129 @@ class VirtualStudio {
     }
     const groupPlayed = this.playAnimationGroupForMesh(rootMesh, clipName, loop);
     return groupPlayed ? 'group' : null;
+  }
+
+  /**
+   * Apply a text-to-motion clip to the active character at runtime. `clip.tracks`
+   * maps MHR joint name → per-frame [x,y,z,w] quaternions (local rotations).
+   * Builds a Babylon AnimationGroup on the skeleton bones and plays it. Works for
+   * any rig with MHR-named bones (SAM 3D avatars) and for neural text-to-motion
+   * output in the same format. Returns true if at least one track bound.
+   */
+  private applyMotionClip(clip: {
+    name?: string;
+    fps?: number;
+    loop?: boolean;
+    tracks?: Record<string, number[][]>;
+  }): boolean {
+    const tracks = clip?.tracks || {};
+    const boneNames = Object.keys(tracks);
+    if (boneNames.length === 0) { console.warn('[TextToMotion] no tracks in clip'); return false; }
+
+    // Resolve the target skeleton robustly: prefer the active character, else
+    // pick the scene skeleton whose bone names best match the clip's tracks
+    // (handles freshly-loaded/unselected avatars and multi-skeleton scenes).
+    const primaryMesh = this.getPrimaryCharacterMesh()
+      || (this.characterMesh && !this.characterMesh.isDisposed() ? this.characterMesh : null);
+    let skeleton = primaryMesh ? (this.findSkeletonCarrierMesh(primaryMesh)?.skeleton ?? null) : null;
+    if (!skeleton) {
+      let bestScore = 0;
+      for (const sk of this.scene.skeletons) {
+        const score = boneNames.reduce((n, bn) => n + (this.resolveSkeletonBone(sk, bn) ? 1 : 0), 0);
+        if (score > bestScore) { bestScore = score; skeleton = sk; }
+      }
+    }
+    if (!skeleton) {
+      console.warn('[TextToMotion] no matching skeleton for motion tracks');
+      this.showNotification('Ingen rigget karakter for bevegelse', 'warning');
+      return false;
+    }
+
+    const targetMesh = primaryMesh
+      || this.scene.meshes.find((m) => m.skeleton === skeleton)
+      || this.characterMesh
+      || null;
+    const rigId = targetMesh ? this.getTrackedRigForMesh(targetMesh) : null;
+    if (targetMesh) this.forceStopCharacterAnimations(targetMesh, rigId);
+    console.log(`[TextToMotion] apply "${clip.name}" bones=${skeleton.bones.length} tracks=${boneNames.length}`);
+
+    const fps = Math.max(1, clip.fps || 24);
+    const loop = !!clip.loop;
+    const group = new BABYLON.AnimationGroup(clip.name || 'Motion', this.scene);
+    let bound = 0;
+
+    for (const boneName of boneNames) {
+      const bone = this.resolveSkeletonBone(skeleton, boneName);
+      if (!bone) continue;
+      const linked = bone.getTransformNode?.() as BABYLON.TransformNode | null;
+      const target = (linked || bone) as unknown as BABYLON.IAnimatable & {
+        rotationQuaternion?: BABYLON.Quaternion | null;
+        rotation?: BABYLON.Vector3;
+      };
+      if (target.rotationQuaternion == null) {
+        target.rotationQuaternion = target.rotation
+          ? BABYLON.Quaternion.FromEulerVector(target.rotation)
+          : BABYLON.Quaternion.Identity();
+      }
+      const quats = tracks[boneName];
+      if (!Array.isArray(quats) || quats.length === 0) continue;
+      const anim = new BABYLON.Animation(
+        `${clip.name || 'motion'}_${boneName}`,
+        'rotationQuaternion',
+        fps,
+        BABYLON.Animation.ANIMATIONTYPE_QUATERNION,
+        loop ? BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE : BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT,
+      );
+      anim.setKeys(quats.map((q, i) => ({
+        frame: i,
+        value: new BABYLON.Quaternion(q[0], q[1], q[2], q[3]),
+      })));
+      group.addTargetedAnimation(anim, target);
+      bound++;
+    }
+
+    if (bound === 0) {
+      console.warn('[TextToMotion] bound 0 bones; sample bone names:', skeleton.bones.slice(0, 6).map(b => b.name), 'want:', boneNames.slice(0, 6));
+      group.dispose();
+      return false;
+    }
+
+    // Stop anything else driving these bones (baked Idle/Walk/Run groups and the
+    // rig store's clip) so this motion isn't fought over the same targets.
+    const myTargets = new Set(group.targetedAnimations.map((ta) => ta.target));
+    for (const g of this.scene.animationGroups) {
+      if (g === group) continue;
+      if (g.targetedAnimations.some((ta) => myTargets.has(ta.target))) g.stop();
+    }
+    try {
+      const store = useSkeletalAnimationStore.getState();
+      for (const [id, rig] of store.rigs) {
+        if (rig.skeleton === skeleton) store.stopAnimation(id);
+      }
+    } catch { /* store optional */ }
+
+    group.play(loop);
+    console.log(`[TextToMotion] Playing "${clip.name}" on ${bound} bone(s), loop=${loop}`);
+    return true;
+  }
+
+  /**
+   * Fallback when the text-to-motion backend is unreachable: play the closest
+   * baked rig clip (idle/walk/run) chosen by keyword.
+   */
+  private playMotionFallbackByKeyword(prompt: string): void {
+    const mesh = this.getPrimaryCharacterMesh()
+      || (this.characterMesh && !this.characterMesh.isDisposed() ? this.characterMesh : null);
+    if (!mesh) return;
+    const rigId = this.getTrackedRigForMesh(mesh);
+    if (!rigId) return;
+    const lib = this.getCharacterAnimationLibrary(rigId, mesh);
+    const p = (prompt || '').toLowerCase();
+    let clip: string | null;
+    if (/(run|løp|sprint|jog)/.test(p)) clip = lib?.walk || lib?.idle || null;
+    else if (/(walk|gå|går|spaser|vandre|step)/.test(p)) clip = lib?.walk || lib?.idle || null;
+    else clip = lib?.idle || null;
+    if (clip) this.playCharacterAnimationClip(mesh, rigId, clip, true);
   }
 
   private forceStopCharacterAnimations(

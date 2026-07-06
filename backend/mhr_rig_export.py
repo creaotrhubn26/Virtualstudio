@@ -310,6 +310,124 @@ def make_locomotion_animation(
     return anim, t.astype(np.float32)
 
 
+def make_action_animation(
+    action: str,
+    parents: np.ndarray,
+    joint_names: Optional[Sequence[str]] = None,
+    fps: int = 24,
+):
+    """Procedural clip for a named action (text-to-motion vocabulary).
+
+    Delegates locomotion/idle to the dedicated builders; adds wave, jump, sit,
+    turn_left/right, nod, shake. Returns ({joint_index: quats (T,4)}, times).
+    Unknown actions fall back to idle. Needs named joints for the anatomical
+    ones; no-ops gracefully otherwise.
+    """
+    action = (action or "").lower().strip()
+    if action in ("walk", "run"):
+        return make_locomotion_animation(parents, joint_names, run=(action == "run"), fps=fps)
+    if action in ("", "idle", "stand", "rest", "breathe"):
+        return make_idle_animation(parents, joint_names, fps=fps)
+
+    names = [str(n).lower() for n in (joint_names or [])]
+
+    def find(sub: str) -> Optional[int]:
+        return next((i for i, n in enumerate(names) if sub in n), None)
+
+    X = np.array([1.0, 0.0, 0.0])
+    Y = np.array([0.0, 1.0, 0.0])
+    Z = np.array([0.0, 0.0, 1.0])
+
+    specs = {
+        # action:   duration, [(joint substr, axis, amp, wave)]
+        "wave":     (1.2, [("right_shoulder", Z, -1.4, "hold"),
+                           ("right_elbow", X, 0.5, "wave")]),
+        "jump":     (0.9, [("left_knee", X, -0.9, "crouch"), ("right_knee", X, -0.9, "crouch"),
+                           ("left_hip", X, 0.4, "crouch"), ("right_hip", X, 0.4, "crouch")]),
+        "sit":      (1.5, [("left_hip", X, 1.4, "ease"), ("right_hip", X, 1.4, "ease"),
+                           ("left_knee", X, -1.5, "ease"), ("right_knee", X, -1.5, "ease")]),
+        "turn_left":  (1.0, [("pelvis", Y, 1.2, "ease"), ("spine", Y, 0.4, "ease")]),
+        "turn_right": (1.0, [("pelvis", Y, -1.2, "ease"), ("spine", Y, -0.4, "ease")]),
+        "nod":      (1.2, [("neck", X, 0.35, "cycle"), ("head", X, 0.35, "cycle")]),
+        "shake":    (1.2, [("neck", Y, 0.4, "cycle"), ("head", Y, 0.4, "cycle")]),
+    }
+    dur, plan = specs.get(action, (None, None))
+    if plan is None:
+        return make_idle_animation(parents, joint_names, fps=fps)
+
+    T = int(dur * fps) + 1
+    t = np.linspace(0.0, dur, T)
+    u = t / dur  # 0..1
+
+    def wave_fn(kind, amp):
+        if kind == "hold":     # ease to target and stay
+            return amp * np.clip(u * 3.0, 0.0, 1.0)
+        if kind == "wave":     # oscillate around raised pose
+            return amp * np.sin(2 * np.pi * u * 3.0) * np.clip(u * 3.0, 0.0, 1.0)
+        if kind == "crouch":   # down then up (jump)
+            return amp * np.sin(np.pi * u)
+        if kind == "ease":     # ease to target and hold (sit / turn)
+            return amp * (0.5 - 0.5 * np.cos(np.pi * np.clip(u * 1.2, 0, 1)))
+        if kind == "cycle":    # nod / shake, returns to zero
+            return amp * np.sin(2 * np.pi * u)
+        return amp * np.sin(2 * np.pi * u)
+
+    anim: Dict[int, np.ndarray] = {}
+    for sub, axis, amp, kind in plan:
+        j = find(sub)
+        if j is None:
+            continue
+        angles = wave_fn(kind, amp)
+        anim[j] = np.stack([_axis_angle_quat(axis, float(a)) for a in angles], axis=0).astype(np.float32)
+    if not anim:
+        return make_idle_animation(parents, joint_names, fps=fps)
+    return anim, t.astype(np.float32)
+
+
+# Text → action routing. English + Norwegian keywords per action.
+ACTION_KEYWORDS: Dict[str, Sequence[str]] = {
+    "run":        ("run", "sprint", "jog", "løp", "løper", "springe"),
+    "walk":       ("walk", "stroll", "step", "gå", "går", "spaser", "vandre"),
+    "wave":       ("wave", "greet", "hello", "hi", "vink", "vinke", "hils"),
+    "jump":       ("jump", "hop", "leap", "hopp", "hoppe"),
+    "sit":        ("sit", "seat", "sette seg", "sett deg", "sitt ned", "sitte", "sitter"),
+    "turn_left":  ("turn left", "left turn", "snu venstre", "til venstre", "venstre", "vend venstre"),
+    "turn_right": ("turn right", "right turn", "snu høyre", "til høyre", "høyre", "vend høyre"),
+    "nod":        ("nod", "yes", "agree", "nikk", "nikke"),
+    "shake":      ("shake head", "no", "disagree", "rist", "riste"),
+    "idle":       ("idle", "stand", "rest", "wait", "stå", "hvil", "vent", "puste"),
+}
+
+
+def text_to_action(prompt: str) -> str:
+    """Map a free-text prompt to the best-matching action name.
+
+    Longest keyword match wins (so "turn left" beats "walk" in "walk and turn
+    left"). Defaults to "idle" when nothing matches. This is the procedural
+    tier; a neural text-to-motion model (MoMask/MDM) can replace it upstream.
+    """
+    p = (prompt or "").lower()
+    best, best_len = "idle", 0
+    for action, kws in ACTION_KEYWORDS.items():
+        for kw in kws:
+            if kw in p and len(kw) > best_len:
+                best, best_len = action, len(kw)
+    return best
+
+
+def tracks_by_joint_name(
+    anim: Dict[int, np.ndarray],
+    joint_names: Sequence[str],
+) -> Dict[str, list]:
+    """Convert an index-keyed clip to name-keyed quaternion tracks for runtime
+    application on any rig with matching bone names (the neural-output format too)."""
+    out: Dict[str, list] = {}
+    for jidx, quats in anim.items():
+        if 0 <= jidx < len(joint_names):
+            out[str(joint_names[jidx])] = np.asarray(quats, dtype=np.float32).tolist()
+    return out
+
+
 # ── glTF assembly ───────────────────────────────────────────────────────────
 
 

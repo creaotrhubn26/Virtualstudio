@@ -511,6 +511,14 @@ try:
 except ImportError as e:
     print(f"Warning: AI Director routes not available: {e}")
 
+# Text-to-motion routes (prompt → animation clip for SAM 3D avatars)
+try:
+    from routes.motion import router as motion_router
+    app.include_router(motion_router)
+    print("Motion routes loaded")
+except ImportError as e:
+    print(f"Warning: Motion routes not available: {e}")
+
 # Asset browser routes (Poly Haven / ambientCG / Sketchfab / Poly Pizza)
 try:
     from routes.assets import router as assets_router
