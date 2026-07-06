@@ -156,6 +156,10 @@ export interface CharacterCast {
   avatarRef: string | null;
   needsGeneration: boolean;
   suggestedPlacement: string | null;
+  /** This character's clause from the beat, e.g. "Ben walks in". */
+  action?: string;
+  /** Resolved motion keyword (walk/sit/wave/idle/…) for text-to-motion. */
+  motion?: string;
 }
 
 export interface SceneAssembly {

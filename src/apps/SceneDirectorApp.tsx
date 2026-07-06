@@ -271,8 +271,27 @@ const SceneDirectorApp: React.FC = () => {
     setCharJobs([]);
     setCharStatus(`Genererer ${pending.length} karakter(er)… (kan ta 30–90 s pr.)`);
 
+    // Placement → floor position; spread actors along X so they don't overlap.
+    const placementToPos = (
+      placement: string | null,
+      i: number,
+      n: number,
+    ): [number, number, number] => {
+      const x = (i - (n - 1) / 2) * 0.9;
+      switch (placement) {
+        case 'at-window': return [x, 0, 1.0];
+        case 'doorway': return [x, 0, -1.2];
+        default: return [x, 0, 0];
+      }
+    };
+    const slug = (s: string) =>
+      s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'actor';
+
+    const directed: Array<{ storyRigId: string; prompt: string }> = [];
+
     const jobs: CastingJob[] = [];
-    for (const c of pending) {
+    for (let i = 0; i < pending.length; i++) {
+      const c = pending[i];
       try {
         const job = await generateCharacter({
           name: c.name,
@@ -281,19 +300,23 @@ const SceneDirectorApp: React.FC = () => {
         jobs.push(job);
         setCharJobs([...jobs]);
         if (job.glbUrl && (job.status === 'ready' || job.status === 'cached')) {
-          const studio = (globalThis as { virtualStudio?: VirtualStudioSurface })
-            .virtualStudio;
-          if (studio?.loadAvatarModel) {
-            try {
-              await studio.loadAvatarModel(job.glbUrl, {
+          // Load each generated SAM avatar as an additive STORY actor (so
+          // multiple characters coexist) and remember its direction prompt.
+          const storyRigId = `sd_${i}_${slug(c.name)}`;
+          window.dispatchEvent(
+            new CustomEvent('ch-load-story-character', {
+              detail: {
+                modelUrl: job.glbUrl,
                 name: c.name,
-                category: 'generated-character',
-              });
-            } catch (err) {
-              // eslint-disable-next-line no-console
-              console.warn('[SceneDirector] loadAvatarModel failed', err);
-            }
-          }
+                storyRigId,
+                position: placementToPos(c.suggestedPlacement, i, pending.length),
+                rotation: [0, 0, 0],
+                height: 1.75,
+              },
+            }),
+          );
+          const prompt = (c.action && c.action.trim()) || c.motion || '';
+          if (prompt) directed.push({ storyRigId, prompt });
         }
       } catch (err) {
         jobs.push({
@@ -315,10 +338,21 @@ const SceneDirectorApp: React.FC = () => {
     const ready = jobs.filter(
       (j) => j.status === 'ready' || j.status === 'cached',
     ).length;
+
+    // Direct the loaded actors: each performs its beat action via text-to-motion.
+    // Small settle so the story rigs finish importing before we drive them.
+    if (directed.length > 0) {
+      setCharStatus(`Regisserer ${directed.length} skuespiller(e)…`);
+      await new Promise((r) => setTimeout(r, 2000));
+      window.dispatchEvent(
+        new CustomEvent('ch-direct-scene', { detail: { actors: directed } }),
+      );
+    }
+
     setCharStatus(
-      `${ready}/${jobs.length} karakterer klare. ${
-        jobs.length - ready > 0 ? `${jobs.length - ready} feilet.` : ''
-      }`,
+      `${ready}/${jobs.length} karakterer klare${
+        directed.length ? `, ${directed.length} regissert` : ''
+      }. ${jobs.length - ready > 0 ? `${jobs.length - ready} feilet.` : ''}`,
     );
     setCharBusy(false);
   };
