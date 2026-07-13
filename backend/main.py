@@ -519,6 +519,14 @@ try:
 except ImportError as e:
     print(f"Warning: Motion routes not available: {e}")
 
+# Mesh utility routes (GLB analyze + cleanup/decimation)
+try:
+    from routes.mesh import router as mesh_router
+    app.include_router(mesh_router)
+    print("Mesh routes loaded")
+except ImportError as e:
+    print(f"Warning: Mesh routes not available: {e}")
+
 # Asset browser routes (Poly Haven / ambientCG / Sketchfab / Poly Pizza)
 try:
     from routes.assets import router as assets_router

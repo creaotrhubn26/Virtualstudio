@@ -371,6 +371,24 @@ class PropResolverService:
                 )
                 continue
 
+            # Shrink dense provider output before it's cached forever — a
+            # Meshy prop is routinely 100k+ faces for something that renders
+            # at 300px. maybe_clean_glb never raises and returns the original
+            # bytes untouched when optimization is off, unsafe, or not worth it.
+            try:
+                from mesh_cleanup_service import maybe_clean_glb
+
+                glb_bytes, clean_stats = maybe_clean_glb(glb_bytes)
+                if clean_stats:
+                    attempts[-1]["meshCleanup"] = {
+                        "engine": clean_stats.get("engine"),
+                        "savedKb": clean_stats.get("savedKb"),
+                        "facesBefore": clean_stats.get("before", {}).get("faces"),
+                        "facesAfter": clean_stats.get("after", {}).get("faces"),
+                    }
+            except Exception as exc:  # noqa: BLE001 - cleanup must never block delivery
+                print(f"[prop_resolver] mesh cleanup skipped: {exc}")
+
             # Upload to R2 so the browser can load it, and so the next call
             # for this exact description skips the provider entirely.
             # Upload directly via the S3 client (bypassing the upload_to_r2

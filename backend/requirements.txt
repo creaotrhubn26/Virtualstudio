@@ -8,6 +8,7 @@ diffusers>=0.21.0  # For FLUX and other diffusion models
 transformers>=4.30.0  # For FLUX text encoders
 accelerate>=0.20.0  # For FLUX model loading
 trimesh>=4.0.0
+fast_simplification>=0.1.13  # quadric decimation backend for trimesh (mesh_cleanup_service)
 numpy>=1.24.0
 scipy>=1.10.0
 torch>=2.0.0
