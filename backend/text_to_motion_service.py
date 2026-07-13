@@ -9,12 +9,19 @@ retargeting, so the frontend bridge is model-agnostic.
 
 Resolver chain (mirrors prop_resolver_service / meshy_service tiers)
 -------------------------------------------------------------------
+  Tier 0: the motion library — real mocap BVH clips (CMU) matched by
+    keyword and retargeted onto the rig. Free and instant, so it goes first
+    for SIMPLE prompts ("walk", "dans"); nuanced prompts ("walk sadly like
+    an old man") skip ahead to DeepMotion when that's configured, since a
+    generic walk cycle would discard the nuance.
   Tier 1a: DeepMotion SayMotion (hosted text-to-motion). Configured via
     DEEPMOTION_CLIENT_ID / DEEPMOTION_CLIENT_SECRET / DEEPMOTION_API_HOST;
     returns BVH which bvh_retarget maps onto the target rig's joint names.
   Tier 1b: a generic neural endpoint (MoMask / MDM / T2M-GPT behind
     TEXT_TO_MOTION_ENDPOINT) that returns SMPL axis-angle poses, retargeted
     via smpl_poses_to_tracks. Requires TEXT_TO_MOTION_NEURAL=1.
+  Tier 1c: the motion library again — catches DeepMotion/endpoint outages
+    with mocap before degrading further.
   Tier 2: a procedural vocabulary (walk/run/idle/wave/jump/sit/turn/
     nod/shake) selected by keyword. Self-contained, no model, always available.
 
@@ -68,6 +75,12 @@ class TextToMotionService:
             self._deepmotion = get_deepmotion_service()
         except Exception:  # noqa: BLE001 - service module optional
             self._deepmotion = None
+        try:
+            from motion_library_service import get_motion_library_service
+
+            self._library = get_motion_library_service()
+        except Exception:  # noqa: BLE001 - service module optional
+            self._library = None
         self._names: Optional[Sequence[str]] = None
         self._parents: Optional[np.ndarray] = None
 
@@ -168,6 +181,17 @@ class TextToMotionService:
             return {"prompt": prompt, "action": "idle", "fps": fps,
                     "duration": 0.0, "loop": True, "tracks": {}, "error": "no skeleton"}
 
+        action = text_to_action(prompt)
+
+        # Tier 0: mocap library first for simple prompts (or whenever
+        # DeepMotion isn't configured) — free, instant, real motion.
+        deepmotion_ready = bool(self._deepmotion and self._deepmotion.enabled)
+        simple_prompt = len((prompt or "").split()) <= 3
+        if self._library and (simple_prompt or not deepmotion_ready):
+            library = self._library.generate(prompt, joint_names, action=action)
+            if library:
+                return library
+
         deepmotion = self._deepmotion_generate(prompt, joint_names)
         if deepmotion:
             return deepmotion
@@ -177,7 +201,12 @@ class TextToMotionService:
             if neural:
                 return neural
 
-        action = text_to_action(prompt)
+        # Tier 1c: library as post-neural fallback — mocap beats sine waves
+        # even when the prompt was nuanced enough to prefer DeepMotion.
+        if self._library:
+            library = self._library.generate(prompt, joint_names, action=action)
+            if library:
+                return library
         anim, times = make_action_animation(action, np.asarray(parents), joint_names, fps=fps)
         tracks = tracks_by_joint_name(anim, joint_names)
         duration = float(times[-1]) if len(times) else 0.0

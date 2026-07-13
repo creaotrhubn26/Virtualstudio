@@ -256,7 +256,13 @@ def main() -> int:
 
     svc.generate = lambda prompt, **kw: {"success": False, "error": "simulated outage"}
     clip = tts.generate("walk forward", joint_names=MHR_TARGET, parents=np.zeros(len(MHR_TARGET), dtype=np.int64))
-    check("tier: falls back to procedural on outage", clip.get("tier") == "procedural", str(clip.get("tier")))
+    # With the motion library wired in, a DeepMotion outage on a walk prompt
+    # degrades to library mocap (better) — procedural is only the last resort.
+    check("tier: falls back below deepmotion on outage",
+          clip.get("tier") in ("library", "procedural"), str(clip.get("tier")))
+    tts._library = None
+    clip = tts.generate("walk forward", joint_names=MHR_TARGET, parents=np.zeros(len(MHR_TARGET), dtype=np.int64))
+    check("tier: procedural is last resort (no library)", clip.get("tier") == "procedural", str(clip.get("tier")))
 
     print()
     if failures:

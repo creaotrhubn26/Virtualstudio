@@ -40,6 +40,43 @@ def generate_motion(req: MotionRequest) -> Dict[str, Any]:
     return clip
 
 
+@router.get("/api/motion/library")
+def list_library() -> Dict[str, Any]:
+    """Catalog of mocap clips available to the motion tier."""
+    try:
+        from motion_library_service import get_motion_library_service
+    except Exception as e:  # pragma: no cover - import guard
+        raise HTTPException(status_code=503, detail=f"motion library unavailable: {e}")
+    return {"clips": get_motion_library_service().describe()}
+
+
+class LibraryUploadRequest(BaseModel):
+    name: str
+    bvh: str  # BVH file contents (plain text)
+    keywords: Optional[List[str]] = None
+    actions: Optional[List[str]] = None
+    loop: bool = False
+
+
+@router.post("/api/motion/library/upload")
+def upload_library_clip(req: LibraryUploadRequest) -> Dict[str, Any]:
+    """Add a BVH clip to the library. Validated by the BVH parser before it's
+    persisted; registered in manifest.json and live on the next motion call."""
+    if len(req.bvh) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="BVH exceeds 20 MB")
+    try:
+        from motion_library_service import get_motion_library_service
+    except Exception as e:  # pragma: no cover - import guard
+        raise HTTPException(status_code=503, detail=f"motion library unavailable: {e}")
+    result = get_motion_library_service().add_clip(
+        req.name, req.bvh,
+        keywords=req.keywords, actions=req.actions, loop=req.loop,
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error"))
+    return result
+
+
 class DialogueRequest(BaseModel):
     text: str
     fps: int = 24
