@@ -9,14 +9,17 @@ retargeting, so the frontend bridge is model-agnostic.
 
 Resolver chain (mirrors prop_resolver_service / meshy_service tiers)
 -------------------------------------------------------------------
-  Tier 1 (future): a neural text-to-motion model — MoMask / MDM / T2M-GPT —
-    generates SMPL-X motion from arbitrary text, which we retarget onto the MHR
-    skeleton. Needs GPU + weights (or a hosted API), so it lives behind
-    `_neural_generate` and is off by default.
-  Tier 2 (now): a procedural vocabulary (walk/run/idle/wave/jump/sit/turn/
+  Tier 1a: DeepMotion SayMotion (hosted text-to-motion). Configured via
+    DEEPMOTION_CLIENT_ID / DEEPMOTION_CLIENT_SECRET / DEEPMOTION_API_HOST;
+    returns BVH which bvh_retarget maps onto the target rig's joint names.
+  Tier 1b: a generic neural endpoint (MoMask / MDM / T2M-GPT behind
+    TEXT_TO_MOTION_ENDPOINT) that returns SMPL axis-angle poses, retargeted
+    via smpl_poses_to_tracks. Requires TEXT_TO_MOTION_NEURAL=1.
+  Tier 2: a procedural vocabulary (walk/run/idle/wave/jump/sit/turn/
     nod/shake) selected by keyword. Self-contained, no model, always available.
 
-`generate()` tries the neural tier when enabled and falls back to procedural.
+`generate()` walks the tiers top-down; every failure falls through silently
+to the next tier, so a vendor outage degrades quality, never availability.
 """
 
 from __future__ import annotations
@@ -57,6 +60,14 @@ class TextToMotionService:
         # poses (e.g. a MoMask / MDM server, or a Replicate proxy). Expected JSON:
         #   { "poses": [[ [x,y,z], ...24 ], ...frames], "fps": 20 }
         self.neural_endpoint = os.environ.get("TEXT_TO_MOTION_ENDPOINT", "").strip()
+        # DeepMotion SayMotion — preferred neural tier when configured
+        # (enabled purely by its own env vars, no extra flag needed).
+        try:
+            from deepmotion_motion_service import get_deepmotion_service
+
+            self._deepmotion = get_deepmotion_service()
+        except Exception:  # noqa: BLE001 - service module optional
+            self._deepmotion = None
         self._names: Optional[Sequence[str]] = None
         self._parents: Optional[np.ndarray] = None
 
@@ -65,6 +76,39 @@ class TextToMotionService:
             names, parents = load_mhr70_hierarchy(_MHR70_PATH)
             self._names, self._parents = names, parents
         return self._names, self._parents
+
+    def _deepmotion_generate(
+        self, prompt: str, joint_names: Sequence[str]
+    ) -> Optional[Dict[str, Any]]:
+        """Tier 1a: DeepMotion SayMotion → BVH → retargeted quaternion tracks.
+        Returns None on any failure so `generate` falls through."""
+        if not self._deepmotion or not self._deepmotion.enabled:
+            return None
+        try:
+            result = self._deepmotion.generate(prompt)
+            if not result.get("success"):
+                print(f"[text_to_motion] DeepMotion tier failed: {result.get('error')}")
+                return None
+
+            from bvh_retarget import bvh_to_tracks
+
+            tracks, bvh_fps = bvh_to_tracks(result["bvhText"], joint_names)
+            if not tracks:
+                print("[text_to_motion] DeepMotion BVH mapped 0 joints onto target rig")
+                return None
+            frames = len(next(iter(tracks.values())))
+            return {
+                "prompt": prompt,
+                "action": "neural",
+                "fps": bvh_fps,
+                "duration": max(0.0, (frames - 1) / bvh_fps),
+                "loop": False,
+                "tracks": tracks,
+                "tier": "deepmotion",
+            }
+        except Exception as e:  # noqa: BLE001 - any failure → next tier
+            print(f"[text_to_motion] DeepMotion tier failed, falling back: {e}")
+            return None
 
     def _neural_generate(
         self, prompt: str, joint_names: Sequence[str], fps: int
@@ -123,6 +167,10 @@ class TextToMotionService:
         if joint_names is None:
             return {"prompt": prompt, "action": "idle", "fps": fps,
                     "duration": 0.0, "loop": True, "tracks": {}, "error": "no skeleton"}
+
+        deepmotion = self._deepmotion_generate(prompt, joint_names)
+        if deepmotion:
+            return deepmotion
 
         if self.neural_enabled:
             neural = self._neural_generate(prompt, joint_names, fps)

@@ -62,6 +62,10 @@ ROLE_ALIASES: Dict[str, Sequence[str]] = {
     "right_shoulder": ("rightshoulder", "rightupperarm", "rightarm", "clavicler", "upperarmr", "shoulderr", "rshoulder", "rclavicle", "rupperarm"),
     "left_elbow": ("leftforearm", "leftlowerarm", "leftelbow", "lowerarml", "forearml", "elbowl", "lelbow", "lforearm", "llowerarm"),
     "right_elbow": ("rightforearm", "rightlowerarm", "rightelbow", "lowerarmr", "forearmr", "elbowr", "relbow", "rforearm", "rlowerarm"),
+    "left_wrist": ("leftwrist", "lefthand", "wristl", "handl", "lwrist", "lhand"),
+    "right_wrist": ("rightwrist", "righthand", "wristr", "handr", "rwrist", "rhand"),
+    "left_ankle": ("leftankle", "leftfoot", "anklel", "footl", "lankle", "lfoot"),
+    "right_ankle": ("rightankle", "rightfoot", "ankler", "footr", "rankle", "rfoot"),
 }
 
 
